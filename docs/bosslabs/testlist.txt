@@ -6,7 +6,7 @@ Documentation-only baseline
 3. Confirm new BossLabs work is driven by the first complete custom boss rather than speculative tool expansion.
 
 Current Java foundation acceptance
-4. Eclipse clean/build the Server with Java 8. Confirm BossAttackDefinition, BossPhaseDefinition, BossDefinition, BossDefinitionRegistry, and BossCombatScript compile with the narrow CombatScriptsHandler hook.
+4. Eclipse clean/build the Server with Java 8. Confirm BossAttackDefinition, BossPhaseDefinition, BossDefinition, BossDefinitionRegistry, BossCombatScript, BossNpcInspection, and BossNpcSearchService compile with the narrow CombatScriptsHandler hooks.
 5. Construct a BossAttackDefinition with MELEE, RANGE, and MAGE values. Confirm valid styles are accepted and an unsupported style throws IllegalArgumentException.
 6. Construct health phases such as 71-100, 31-70, and 0-30. Confirm BossDefinition accepts non-overlapping ranges and rejects overlapping phase ranges.
 7. Confirm BossDefinition.getPhaseForHealth() resolves 100%, 70%, 30%, and 0% to the intended configured phase and clamps current HP above max/below zero safely.
@@ -19,25 +19,42 @@ Current Java foundation acceptance
 14. Confirm unregistering the test definition immediately returns that NPC id to the normal Matrix3 combat-script path without restarting the server.
 15. Confirm BossLabs registry/adapter code does not spawn NPCs, select targets outside NPCCombat, alter pathing, replace death/respawn handling, load drop tables, or directly mutate loot ownership.
 
+NPC search / existing-boss inspection acceptance
+16. Call BossNpcSearchService.search() with a valid all-digit NPC id string. Confirm it performs direct id inspection and returns only that exact NPC without requiring the name index.
+17. Search by a case-insensitive NPC name fragment. Confirm exact-name matches rank first, prefix matches second, broader substring matches after them, and duplicate-name NPC ids remain separately selectable.
+18. Search for an invalid/nonexistent numeric NPC id. Confirm no phantom NPC definition is returned.
+19. Confirm name indexing uses valid cache index-18 files within Utils.getNPCDefinitionsSize(), is reused after its first build, and can be deliberately invalidated through invalidateNameIndex().
+20. Inspect an existing NPC and confirm id, name, combat level, size, model ids, HP, attack speed, attack/defence/death animations, respawn delay, attack GFX/projectile, aggression, aggression range, and poison immunity match Matrix3 cache/combat-definition authorities.
+21. Inspect an NPC controlled by a specific Matrix3 CombatScript. Confirm combat source reports MATRIX3_SCRIPT and the resolved script class matches the same script CombatScriptsHandler would execute.
+22. Inspect an NPC with no specific custom script. Confirm combat source reports MATRIX3_DEFAULT and the resolved script is Matrix3 Default.
+23. Register a BossLabs definition for a safe test NPC id, inspect it, and confirm combat source reports BOSSLABS, the resolved script is BossCombatScript, and the current BossDefinition is returned for editor auto-population.
+24. Confirm inspection/search never spawns a temporary NPC, applies hits, mutates target state, edits drops, or changes combat registration merely by reading an NPC.
+25. Confirm docs/bosslabs/NPC_SEARCH.md remains the detailed authority for the one-field automatic ID/name search behavior; no ID-vs-name dropdown/toggle is introduced in the future UI.
+
 BossLabs external-window acceptance once implemented
-16. Open BossLabs through its approved launcher path. Confirm the Matrix3 client continues rendering and receiving input normally.
-17. Confirm BossLabs uses the intentional Client Console dark visual system and does not present unfinished default Swing styling.
-18. Resize BossLabs at practical non-maximized sizes. Confirm important controls remain reachable through layout reflow/scrolling and are never clipped off-screen.
-19. Test common Windows display scaling targets (100%, 125%, 150%). Confirm text remains readable and controls do not overlap or disappear.
-20. Type W/A/S/D and other game hotkeys in BossLabs text fields. Confirm the game does not also consume those keys. Return focus to the game and confirm normal input resumes.
-21. Move/resize BossLabs, close it cleanly, and reopen/relaunch when geometry persistence exists. Confirm valid window geometry restores and invalid/off-screen geometry is clamped safely.
-22. Repeatedly resize/move the BossLabs window. Confirm preference writes are quiet/coalesced and do not cause visible client hitching.
-23. Trigger any intentionally testable panel/definition validation failure. Confirm the tool reports the problem without crashing the running game client where practical.
+26. Open BossLabs through its approved launcher path. Confirm the Matrix3 client continues rendering and receiving input normally.
+27. Confirm BossLabs uses the intentional Client Console dark visual system and does not present unfinished default Swing styling.
+28. Confirm the NPC selector is one search field: numeric text is interpreted as NPC id and non-numeric text as name search, with no mode dropdown/radio/toggle.
+29. Select an existing NPC/boss from search results. Confirm all verified inspection fields populate automatically and the current combat source/script is visible.
+30. Select an already-registered BossLabs boss. Confirm its current BossDefinition/phases/attacks populate rather than opening a blank definition.
+31. Select a legacy Matrix3 Java boss. Confirm BossLabs identifies and displays its current script but does not falsely present arbitrary Java mechanics as converted editable BossLabs actions.
+32. Resize BossLabs at practical non-maximized sizes. Confirm important controls remain reachable through layout reflow/scrolling and are never clipped off-screen.
+33. Test common Windows display scaling targets (100%, 125%, 150%). Confirm text remains readable and controls do not overlap or disappear.
+34. Type W/A/S/D and other game hotkeys in BossLabs text fields. Confirm the game does not also consume those keys. Return focus to the game and confirm normal input resumes.
+35. Confirm first-time name-index building/refresh is performed away from the Swing EDT so the game/client window does not freeze while NPC names are indexed.
+36. Move/resize BossLabs, close it cleanly, and reopen/relaunch when geometry persistence exists. Confirm valid window geometry restores and invalid/off-screen geometry is clamped safely.
+37. Repeatedly resize/move the BossLabs window. Confirm preference writes are quiet/coalesced and do not cause visible client hitching.
+38. Trigger any intentionally testable panel/definition validation failure. Confirm the tool reports the problem without crashing the running game client where practical.
 
 First-boss runtime acceptance
-24. Spawn the first boss through the authoritative Matrix3 development path and confirm normal NPC lifecycle/pathing remains Matrix3-owned.
-25. Verify the boss can execute its minimal Phase 1 attack loop without BossLabs directly owning target validation, movement, death, respawn, or drops.
-26. Verify projectile, AoE, hazard, targeting, minion, and timed mechanics individually as they are added; classify runtime-proven behavior as VERIFIED.
-27. Force common HP thresholds/phases through safe development controls and confirm phase transition/cleanup behavior matches the encounter definition.
-28. Reset the encounter repeatedly. Confirm boss state, minions, hazards, timers, targets, and temporary encounter objects clean up without leaking into the world.
-29. Kill the boss normally. Confirm death/cleanup and reward/drop behavior routes through Matrix3-owned systems.
-30. Relaunch/reload the same boss definition after persistence/storage support exists and confirm the saved definition reproduces the intended encounter configuration.
-31. Run the relevant Matrix3 smoke-test portion after any meaningful engine/runtime extension. Core ownership regressions are blockers.
+39. Spawn the first boss through the authoritative Matrix3 development path and confirm normal NPC lifecycle/pathing remains Matrix3-owned.
+40. Verify the boss can execute its minimal Phase 1 attack loop without BossLabs directly owning target validation, movement, death, respawn, or drops.
+41. Verify projectile, AoE, hazard, targeting, minion, and timed mechanics individually as they are added; classify runtime-proven behavior as VERIFIED.
+42. Force common HP thresholds/phases through safe development controls and confirm phase transition/cleanup behavior matches the encounter definition.
+43. Reset the encounter repeatedly. Confirm boss state, minions, hazards, timers, targets, and temporary encounter objects clean up without leaking into the world.
+44. Kill the boss normally. Confirm death/cleanup and reward/drop behavior routes through Matrix3-owned systems.
+45. Relaunch/reload the same boss definition after persistence/storage support exists and confirm the saved definition reproduces the intended encounter configuration.
+46. Run the relevant Matrix3 smoke-test portion after any meaningful engine/runtime extension. Core ownership regressions are blockers.
 
 Framework acceptance after boss #1
-32. Create a second small boss/encounter using the proven reusable framework. Confirm it can reuse definitions/components without copying boss #1's encounter implementation wholesale.
+47. Create a second small boss/encounter using the proven reusable framework. Confirm it can reuse definitions/components without copying boss #1's encounter implementation wholesale.
