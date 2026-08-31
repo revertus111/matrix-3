@@ -14,6 +14,10 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+tasks.withType(JavaCompile) {
+    options.encoding = 'windows-1252'
+}
+
 jar {
     from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -35,5 +39,4 @@ task runLogin(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     applicationName = "LoginLauncher"
     main = "com.rs.LoginLauncher"
-    jvmArgs = ['-Xms2048m', '-Xmx4096m']
 }
