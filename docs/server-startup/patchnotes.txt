@@ -3,3 +3,4 @@
 - Added shared Eclipse Buildship Run configurations for :runGame and :runLogin so Eclipse can start the same Gradle-owned launch path instead of launching GameLauncher directly as a Java Application.
 - Kept normal local startup on :runGame; GameLauncher remains responsible for starting the embedded local login core in non-hosted mode.
 - Fixed the shared Eclipse Gradle working directory to ${workspace_loc:/Matrix3-Server}, matching settings.gradle rootProject.name so Buildship can resolve the project.
+- Replaced the long-running Buildship task launchers with Eclipse External Tools Program launchers that detach run_game.bat/run_login.bat into separate Windows consoles; Eclipse no longer waits on the permanent :runGame/:runLogin process.
