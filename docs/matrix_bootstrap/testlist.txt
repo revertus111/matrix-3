@@ -1,0 +1,16 @@
+Matrix3 bootstrap - Phase 1 runtime tests
+
+Targeted checks:
+- [ ] Eclipse clean/build succeeds using Java 8.
+- [ ] Run only com.rs.GameLauncher for local development.
+- [ ] Local login core starts before the game world login client connects.
+- [ ] Client can log in normally.
+- [ ] Local non-master account receives rights 2 and admin commands work.
+- [ ] Change player position, inventory, equipment, and bank contents.
+- [ ] Logout and relog; confirm all changed player state persists.
+- [ ] Restart the full server and relog; confirm persisted state still survives.
+- [ ] Shutdown GameLauncher cleanly; confirm the embedded local login core also shuts down.
+- [ ] Hosted startup behavior remains separate when Settings.HOSTED is true.
+
+Required regression pass:
+- [ ] Run the full docs/rs3/SMOKE_TEST.md checklist because this phase changes login/startup and persistence infrastructure.
