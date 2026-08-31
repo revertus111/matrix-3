@@ -1,0 +1,4 @@
+2026-08-31
+- Hardened run_game.bat and run_login.bat so double-click startup always runs from the Server directory and calls the repository Gradle wrapper explicitly.
+- Added shared Eclipse Buildship Run configurations for :runGame and :runLogin so Eclipse can start the same Gradle-owned launch path instead of launching GameLauncher directly as a Java Application.
+- Kept normal local startup on :runGame; GameLauncher remains responsible for starting the embedded local login core in non-hosted mode.

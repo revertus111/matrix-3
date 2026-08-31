@@ -1,0 +1,20 @@
+Matrix3 server startup test list
+
+1. From Windows Explorer, double-click Server\run_game.bat.
+   - Gradle wrapper starts from the Server directory.
+   - :runGame launches successfully.
+   - Local embedded login core starts as part of normal non-hosted GameLauncher startup.
+   - No historical stack-map/verifier failure appears from bypassing the Gradle path.
+
+2. Close the game server, then double-click Server\run_login.bat by itself.
+   - :runLogin launches successfully as the standalone/debug login-server path.
+   - Do not leave standalone login running when starting normal local :runGame, because the normal game path starts its own embedded local login core.
+
+3. Refresh the Server project in Eclipse.
+   - Shared run configuration "Matrix3 Game - Gradle" is visible under Run Configurations -> Gradle Task.
+   - Shared run configuration "Matrix3 Login - Gradle" is visible under Run Configurations -> Gradle Task.
+
+4. Run "Matrix3 Game - Gradle" once from Eclipse.
+   - Eclipse executes the Gradle :runGame task using the wrapper-backed Buildship configuration.
+   - The configuration is available from the normal Run history/green Run button afterward.
+   - Do not use a raw Java Application configuration for com.rs.GameLauncher for normal development startup.
