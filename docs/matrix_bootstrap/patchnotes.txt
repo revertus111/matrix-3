@@ -1,0 +1,7 @@
+Matrix3 bootstrap - Phase 1
+
+- Local non-master accounts are locked to rights 2 so forum-rank synchronization cannot remove developer owner/admin access.
+- Completed local player-file writes now save and flush the login account store immediately for stronger character persistence.
+- Local GameLauncher startup now starts the login core automatically before the game world connects.
+- GameLauncher shuts down the embedded local login core during game shutdown.
+- Hosted login/server behavior remains separate and unchanged.
