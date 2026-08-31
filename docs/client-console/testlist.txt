@@ -1,0 +1,14 @@
+Matrix3 Client Console - Phase 2 shell runtime test list
+
+1. Start the client through the normal Matrix3 client launch path. Confirm the game still renders and reaches normal login/gameplay with the Client Console attached beside the game view.
+2. Confirm the shell is dark-themed, the M3 rail remains visible, the C button visibly indicates the open state, and the placeholder content scrolls vertically when space is limited.
+3. Click C to collapse the console. Confirm only the narrow rail remains, the game expands into the freed space, and clicking C again restores the panel immediately.
+4. Drag the console's left divider repeatedly while logged in. Confirm resize is continuous, does not reload/rebuild interfaces or game state, and does not visibly stall rendering.
+5. Drag the console as wide as possible. Confirm it clamps before the RuneScape game view becomes narrower than roughly 640px at supported frame sizes.
+6. Resize the main client window while the console is open and collapsed. Confirm important shell controls remain reachable and the panel does not require maximized/fullscreen mode.
+7. In the Focus test field, type W/A/S/D and other game hotkeys. Confirm text entry receives the keys and the game does not also consume them. Click the game view again and confirm normal game input resumes.
+8. Move/resize the client, change console width/open state, then close Matrix3 normally. Relaunch and confirm the previous valid window geometry, maximized/restored state, console width, and open/collapsed state restore automatically.
+9. Move the client to a second monitor, close normally, disconnect/disable that monitor, then relaunch. Confirm the saved window is clamped onto an available monitor rather than reopening off-screen.
+10. Click Reset Client Console Layout. Confirm the frame returns to a safe normal-state default, the console opens at its default width, and the new state persists on the next clean restart.
+11. Exercise rapid frame resizing and divider dragging for several seconds. Confirm there is no obvious disk-I/O hitching; preference writes are coalesced rather than issued for every drag event.
+12. Run the normal client smoke path after the shell test: login, move, interact with the world/interface, and close normally. Any Canvas/Swing flicker, z-order issue, stuck focus, or input leak is a Phase 2 blocker and should be reported as runtime evidence before adding Owner/Commands panels.

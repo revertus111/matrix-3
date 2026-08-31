@@ -9,6 +9,9 @@ import java.util.Properties;
 
 import javax.swing.JFrame;
 
+import game.console.ClientConsoleShell;
+import game.console.ConsolePreferences;
+
 /**
  * An Applet used for loading the RS3 Client.
  * 
@@ -33,6 +36,12 @@ public class RS3Applet extends Applet implements AppletStub {
 	 * The current frame of the client application.
 	 */
 	public JFrame clientFrame = null;
+
+	/**
+	 * Client Console shell and its single workspace preference authority.
+	 */
+	private ClientConsoleShell clientConsoleShell;
+	private ConsolePreferences consolePreferences;
 
 	/**
 	 * 
@@ -102,9 +111,13 @@ public class RS3Applet extends Applet implements AppletStub {
 	 */
 	private void openFrame() {
 		clientFrame = new JFrame("Matrix 3");
-		clientFrame.add(this);
+		clientConsoleShell = new ClientConsoleShell(this);
+		consolePreferences = new ConsolePreferences();
+		clientFrame.setContentPane(clientConsoleShell);
+		clientFrame.setMinimumSize(ClientConsoleShell.getMinimumFrameSize());
+		consolePreferences.restore(clientFrame, clientConsoleShell);
+		consolePreferences.install(clientFrame, clientConsoleShell);
 		clientFrame.setVisible(true);
-		clientFrame.setSize(1024, 768);
 	}
 
 	/**
