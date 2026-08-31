@@ -144,6 +144,14 @@ Candidate fields:
 
 Only expose fields that are verified to have a stable Matrix3 owner/path.
 
+NPC selection/search behavior is refined by `docs/bosslabs/NPC_SEARCH.md`:
+
+- one search field,
+- numeric input means NPC id,
+- text input means NPC name search,
+- no ID/name mode dropdown,
+- existing NPC/boss data and current combat ownership auto-populate from Matrix3 authorities.
+
 ## Stats
 
 Candidate editable/viewable values include:
@@ -336,17 +344,44 @@ Boss/Encounter runtime
 Matrix3 combat/NPC/world/drop authorities
 ```
 
-This is a conceptual target, not approval for these exact class names.
-
-The implementation scan must establish Matrix3's existing NPC combat/content structure before new runtime classes are created.
+This is a conceptual responsibility model. The current V1 implementation uses `BossDefinition`, `BossPhaseDefinition`, `BossAttackDefinition`, `BossDefinitionRegistry`, and `BossCombatScript` for the proven portion of that model.
 
 ## Storage direction
 
-Boss definitions should eventually live in a dedicated content location rather than being hidden inside UI code.
+The storage scan verified Matrix3's existing convention of dedicated `data/...` content locations with explicit Java loader/writer ownership, including NPC combat/drop/examine data.
 
-A data-driven format such as JSON may be appropriate, but no storage format is approved until the relevant Matrix3 content/configuration/loading conventions are scanned.
+BossLabs V1 therefore uses its own versioned binary definition store:
 
-The tool must not introduce a new parser/config authority just because JSON is convenient.
+```text
+Server/data/bosslabs/definitions.bld
+```
+
+`BossDefinitionStore` owns only BossLabs definition serialization. It must not replace or rewrite Matrix3's existing NPC combat-definition, spawn, examine, or drop files.
+
+Saved BossLabs definitions load into `BossDefinitionRegistry` during combat-script initialization before live NPC combat uses them.
+
+Do not add JSON or another parser/dependency merely for convenience unless a later content need justifies a deliberate storage migration.
+
+## Live editing and publishing
+
+The detailed contract is `docs/bosslabs/LIVE_EDITING.md`.
+
+BossLabs must distinguish three states:
+
+```text
+DRAFT
+LIVE
+SAVED
+```
+
+- Draft edits remain local to the future tool until explicitly applied.
+- `Apply Live` publishes one complete immutable definition through `BossDefinitionPublisher` without writing to disk.
+- `Save & Apply` persists first; only a successful save publishes that exact definition live.
+- `Undo Last Apply` restores the immediately previous live registration state, including restoring normal Matrix3 Java/default combat when the NPC was not previously BossLabs-owned.
+- `Apply Saved` may republish the last persisted definition without rewriting it.
+- Do not publish every keystroke.
+- Definition-backed combat changes may take effect on subsequent attack/phase resolution without recreating the NPC.
+- Identity/cache/world-instance changes may require an explicit controlled respawn rather than unsafe live mutation.
 
 ## Custom Java escape hatch
 
@@ -372,8 +407,9 @@ BossLabs must follow the Client Console lifecycle contract:
 - No heavy cache or world scans on UI/game threads.
 - BossLabs text fields must not leak W/A/S/D or other developer typing into game movement/hotkeys.
 - Returning focus to the game must restore normal game input cleanly.
+- Boss definition persistence must not block the Swing EDT.
 
-The exact game/server bridge must be verified before runtime actions are implemented.
+The exact client/server development bridge must be verified before the external window invokes runtime actions.
 
 ## Window behavior
 
@@ -404,7 +440,8 @@ Do not build these before the first boss proves a need:
 - universal content editor,
 - hundreds of speculative mechanics,
 - alternate combat engine,
-- alternate drop engine.
+- alternate drop engine,
+- multi-level definition version-control/history system.
 
 BossLabs may later link/open specialist tools rather than duplicating them.
 
@@ -439,7 +476,9 @@ Exit: exact runtime owners and minimum extension points are identified.
 
 Implement the smallest reusable runtime needed for the first boss.
 
-Start with manually-defined content if necessary before introducing a file format or editor.
+Start with manually-defined content if necessary before introducing editor UI.
+
+The proven Phase 2 support may include definition registration, live replacement/rollback, persistent BossLabs definition storage, and discovery/inspection APIs because those directly support first-boss iteration without taking gameplay ownership.
 
 Exit: one boss can spawn and execute a minimal verified phase/attack loop without BossLabs UI ownership of combat.
 
@@ -449,16 +488,17 @@ Add the external BossLabs window using the Client Console visual/lifecycle rules
 
 Initial UI should remain small:
 
-- boss selector/new definition entry,
+- one-field NPC search/selector,
 - Identity,
 - Stats,
 - Attacks,
 - Phases,
-- Testing.
+- Testing,
+- Apply Live / Save & Apply / Undo Last Apply controls.
 
 Mechanics/Arena/Drops may begin as narrow sections/placeholders only when the first boss actually reaches them.
 
-Exit: BossLabs opens safely, resizes without clipping, respects focus/threading, and can edit/view the first proven definition fields.
+Exit: BossLabs opens safely, resizes without clipping, respects focus/threading, can edit/view the first proven definition fields, and can publish through the approved server-side APIs.
 
 ### Phase 4 - first boss complete vertical slice
 
@@ -494,12 +534,15 @@ Possible later additions:
 - The Client Console authority explicitly allows boss/encounter tooling as an external specialist window.
 - The Client Console requires dark theme, responsive/no-cutoff layout, safe focus/threading behavior, lazy/heavy-work discipline, and validated workspace behavior.
 - The project constitution identifies one complete custom boss as the first major content milestone.
+- Matrix3 combat dispatch and BossLabs runtime extension points are identified and implemented without replacing `NPCCombat` ownership.
+- Matrix3 cache/NPC definition boundaries support automatic NPC ID/name discovery and read-only existing-boss inspection.
+- BossLabs V1 storage uses a dedicated versioned binary store under `data/bosslabs` and does not modify existing NPC packed data.
+- BossLabs live publishing supports explicit Apply Live, one-level rollback, Save & Apply ordering, and startup reload of saved definitions.
 
-### HYPOTHESIS / not yet scanned
+### HYPOTHESIS / not yet runtime-verified
 
-- Exact Matrix3 classes that should own reusable boss definitions/phases/actions.
-- Whether BossLabs definitions should be JSON or another existing Matrix3-compatible format.
-- Exact NPC/drop/spawn integration points for the first boss.
-- Exact client-to-server development bridge for live BossLabs testing actions.
+- Exact first custom NPC id/model/animations/GFX/projectiles for Volcanic Warden.
+- Exact client-to-server development bridge used by the external BossLabs window for live apply/save/spawn/reset/force-phase requests.
+- Whether the first encounter should use the existing BossInstance path; inspect it only if the first boss actually needs instancing.
 
-These items must remain unverified until Phase 1 traces the smallest relevant Matrix3 runtime path.
+These items remain unverified until the next narrow runtime/content slices establish them.
