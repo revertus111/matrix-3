@@ -19,7 +19,7 @@ public final class Cache {
 
 	public static void init() throws IOException {
 		ReferenceTable.NEW_PROTOCOL = true;
-		STORE = new Store(Settings.CACHE_PATH);
+		STORE = new Store("C:/Users/rever/Desktop/Matrix3/830_cache/");
 	}
 
 
