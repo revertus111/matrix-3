@@ -9,6 +9,7 @@ verified-static
 - Missing normal custom scripts fall back to Matrix3's existing Default combat script.
 - The normal script cache is startup/static, so it is not sufficient by itself for BossLabs definitions that may later be registered/reloaded while the server is running.
 - Phase 2 therefore adds one narrow BossLabs delegation check inside the existing CombatScriptsHandler. This is not a second dispatcher: registered BossLabs NPC ids delegate to BossCombatScript, while every unregistered NPC continues through the unchanged Matrix3 cached-script/default path.
+- CombatScriptsHandler now exposes read-only resolved-script/default inspection methods using the same internal resolution path as live combat so BossLabs does not duplicate script-discovery semantics.
 
 2. NPC combat execution
 - Server/src/main/java/com/rs/game/npc/combat/NPCCombat.java owns target validation, clipping/range checks, movement/follow behavior, combat delay, and dispatch into CombatScriptsHandler.specialAttack().
@@ -17,15 +18,18 @@ verified-static
 - BossCombatScript reuses those same CombatScript/World helpers and does not bypass NPCCombat target/range/timing ownership.
 
 3. NPC definitions/stats
-- Server/src/main/java/com/rs/game/npc/combat/NPCCombatDefinitions.java defines MELEE/RANGE/MAGE and owns cache-backed hitpoints, attack/death animation data, projectile/GFX references, respawn delay, aggression, XP, and poison flags.
-- Server/src/main/java/com/rs/game/npc/NPC.java derives attack style, attack speed, max hit, size, combat level/name, and several immunities/behavior flags from existing Matrix3/cache authorities.
+- Server/src/main/java/com/rs/cache/loaders/NPCDefinitions.java owns cache-backed NPC id/name/model/size/combat-level/client-script data.
+- Server/src/main/java/com/rs/game/npc/combat/NPCCombatDefinitions.java owns hitpoints, attack/defence/death animation data, projectile/GFX references, respawn delay, aggression, XP, and poison flags.
+- Server/src/main/java/com/rs/utils/NPCCombatDefinitionsL.java is the current combat-definition loader/authority used for inspection without spawning a temporary NPC.
+- Server/src/main/java/com/rs/utils/Utils.java already provides getNPCDefinitionsSize() using cache index 18 with the correct 128-file archive layout.
+- NPC attack speed can be read from the same cache client-script key used by NPC.getAttackSpeed(), falling back to 4 when absent.
 
 4. NPC lifecycle/spawning
 - NPC construction initializes Matrix3 combat state, adds the NPC to World, updates its region, and loads map regions.
 - NPC.processNPC()/NPCCombat own normal target/combat processing.
 - NPC.sendDeath() owns death animation timing, XP, drop invocation, reset/finish, and respawn scheduling.
 - Spawned NPCs can be marked so normal respawn is not scheduled after death.
-- BossLabs does not change NPC.java or NPCCombat.java for the runtime adapter.
+- BossLabs does not change NPC.java or NPCCombat.java for the runtime adapter or NPC search/inspection foundation.
 
 5. Drops
 - NPC.drop() resolves loot through NPCDrops.getDrops(id), existing drop-rate/lootshare handling, Drops.generateDrops(), and NPC.sendDrop().
@@ -41,9 +45,21 @@ verified-static
 - Attack animation/GFX/projectile/max-hit/combat-delay fields may use BossAttackDefinition.USE_NPC_DEFAULT (-1) to inherit the existing NPC/cache value where supported.
 - No BossLabs NPC id is registered by default in this slice. Existing live NPC behavior is therefore unchanged until first-boss content explicitly registers an id.
 
+7. Unified NPC search / existing-boss inspection
+- com.rs.game.npc.bosslabs.BossNpcSearchService provides one query path rather than separate id/name modes.
+- All-digit input is treated as an NPC id and resolved directly through cache index 18; it does not build the full name index.
+- Non-numeric input performs case-insensitive name matching across valid NPC definition files within Utils.getNPCDefinitionsSize().
+- Name indexing is lazy/reused and supports explicit invalidation for future cache/import changes. The future Swing caller must build/refresh it away from the EDT.
+- Search ranking is exact name first, prefix second, substring third; duplicate-name NPC ids remain separate results.
+- com.rs.game.npc.bosslabs.BossNpcInspection auto-populates verified NPC/cache/combat fields plus combat source, resolved script class, and current BossLabs definition.
+- Inspection is read-only and does not spawn NPCs, modify registrations, apply hits, mutate drops, or change world state.
+- Existing hand-written Java bosses can be inspected and identified but are not automatically claimed as converted BossLabs phases/mechanics.
+- docs/bosslabs/NPC_SEARCH.md records the detailed no-dropdown search/editor contract.
+
 Phase 2 status
 - Reusable runtime adapter: implemented, verified-static.
 - Dynamic definition registration seam: implemented, verified-static.
+- Unified NPC search/inspection backend: implemented, verified-static.
 - First concrete boss registration: intentionally not added because the Volcanic Warden NPC id/assets have not been verified.
 - Minimal live Phase 1 loop: not yet VERIFIED; requires a confirmed first-boss NPC id/assets plus runtime testing.
 
@@ -52,9 +68,10 @@ Still HYPOTHESIS / intentionally unresolved
 - Exact developer command/client-to-server bridge BossLabs will use for live spawn/reset/force-phase actions.
 - Whether persisted BossLabs definitions should use JSON or another existing Matrix3 content format.
 - Whether the first encounter should use the existing BossInstance path; inspect it only if the first boss actually needs instancing.
+- Exact client-side/server bridge used by the eventual BossLabs external window to request NPC search/inspection results.
 
 Next implementation slice
 - Confirm/select the first boss NPC identity/assets without hijacking an existing custom-combat NPC.
 - Add one manually-defined Volcanic Warden registration with Phase 1 melee + fire projectile attacks.
 - Spawn/test it through the authoritative Matrix3 development path and promote the phase/attack loop from verified-static to VERIFIED only after runtime evidence.
-- Do not add editor persistence or the external Swing window until that minimal runtime loop is proven.
+- Keep the BossLabs external Swing window in Phase 3 per BOSSLABS.md; when added, use the implemented one-field NPC search/inspection backend and build name indexes away from the EDT.
