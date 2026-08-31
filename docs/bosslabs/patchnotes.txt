@@ -22,3 +22,9 @@
 - Name search now uses Matrix3's verified Utils.getNPCDefinitionsSize()/cache index-18 boundary, builds the valid-NPC name index lazily once, and supports explicit invalidation after future cache/import changes.
 - Refactored CombatScriptsHandler script lookup into one shared resolver and added read-only resolved-script/default inspection methods so BossLabs does not duplicate combat-script discovery semantics.
 - Added docs/bosslabs/NPC_SEARCH.md locking the no-mode-dropdown search workflow, existing-boss auto-population behavior, combat-source display, and no-fake-conversion rule for hand-written Java bosses.
+- Extended BossDefinitionRegistry with explicit atomic live replacement and one-level rollback, including restoration to the normal Matrix3 script/default path when the first BossLabs apply is undone.
+- Added BossDefinitionPublisher as the stable Apply Live / Save & Apply / Undo Last Apply / Apply Saved API for future BossLabs tooling.
+- Added BossDefinitionStore with a versioned BossLabs-owned binary store at data/bosslabs/definitions.bld; existing Matrix3 NPC combat/drop/spawn/examine files are not modified.
+- Save & Apply now persists the complete immutable definition successfully before publishing that same instance to the live registry; persistence failure leaves the current live definition untouched.
+- CombatScriptsHandler.init() now loads persisted BossLabs definitions before combat-script use so saved bosses survive server restart without changing NPCCombat ownership.
+- Added docs/bosslabs/LIVE_EDITING.md and updated BOSSLABS.md to lock DRAFT/LIVE/SAVED state separation, explicit apply behavior, one-level rollback, no per-keystroke publishing, and controlled-respawn rules for future instance-owned fields.
