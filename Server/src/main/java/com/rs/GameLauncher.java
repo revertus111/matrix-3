@@ -65,6 +65,7 @@ public class GameLauncher {
 	 * Delay in seconds when delayed shutdown will start.
 	 */
 	public static volatile int delayedShutdownDelay;
+	private static boolean embeddedLoginServer;
 
 	public static void main(String[] args) throws Exception {
 		if (args.length < 5) {
@@ -82,6 +83,19 @@ public class GameLauncher {
 			Settings.CX_HAMMERSHIELD_ENABLED = Boolean.parseBoolean(args[4]);
 		}
 		Settings.init();
+
+		if (!Settings.HOSTED) {
+			Logger.log("Launcher", "Starting local login core...");
+			try {
+				LoginLauncher.main(new String[] { Boolean.toString(Settings.DEBUG), Boolean.toString(Settings.HOSTED) });
+				embeddedLoginServer = true;
+			} catch (Throwable e) {
+				Logger.handle(e);
+				Logger.log("Launcher", "Failed starting local login core. Shutting down...");
+				System.exit(1);
+				return;
+			}
+		}
 		
 		
 		long currentTime = Utils.currentTimeMillis();
@@ -263,6 +277,11 @@ public class GameLauncher {
 		Logger.log("Launcher", "Saving files...");
 		saveFiles();
 
+		if (embeddedLoginServer) {
+			Logger.log("Launcher", "Shutting down local login core...");
+			LoginLauncher.emergencyShutdown(0);
+		}
+
 		Logger.log("Launcher", "Done...");
 
 	}
@@ -352,7 +371,6 @@ public class GameLauncher {
 				for(int regionId : MapBuilder.FORCE_LOAD_REGIONS)
 				    if(regionId == region.getRegionId())
 					continue skip;
-				region.unloadMap();
 			    }*/
 		}
 		for (Index index : Cache.STORE.getIndexes())
