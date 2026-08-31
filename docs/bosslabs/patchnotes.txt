@@ -12,3 +12,8 @@
 - Added inactive Java 8 BossLabs content foundations: BossAttackDefinition, BossPhaseDefinition, and BossDefinition.
 - Added validation for attack styles/overrides and non-overlapping health phase ranges while keeping spawning, damage, targeting, drops, and world mutation out of the definitions.
 - Added docs/bosslabs/runtime-scan.txt with verified-static findings, unresolved hypotheses, and the next narrow runtime slice.
+- Added BossDefinitionRegistry as a thread-safe NPC-id to immutable BossDefinition mapping for future runtime/tool registration.
+- Added BossCombatScript to resolve registered boss health phases/attacks and execute them through existing Matrix3 CombatScript damage/projectile/animation/GFX paths.
+- Added one narrow CombatScriptsHandler delegation check for registered BossLabs NPC ids; unregistered NPCs retain the existing custom/default script path unchanged.
+- Corrected the runtime-scan conclusion that startup CombatScript keys alone were sufficient; dynamic BossLabs definitions require the explicit registration/delegation seam but still do not create a second combat dispatcher.
+- Left the registry empty until the first Volcanic Warden NPC id/assets are verified, preventing accidental takeover of an existing NPC combat script.
