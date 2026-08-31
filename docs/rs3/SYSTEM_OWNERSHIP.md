@@ -17,9 +17,10 @@ Do not add a competing implementation without explicitly changing this record.
 | Item/NPC/object/cache definitions | Revision-830 cache/data consumed by Matrix3 | Data authority does not imply engine ownership. |
 | Animations/models/GFX | Revision-830 cache/data consumed by Matrix3 | Custom additions should use a documented content pipeline. |
 | Interfaces | Matrix3 client/cache path | 718 interfaces are reference-only unless a specific port is approved. |
-| Local launcher bootstrap | Matrix3 `GameLauncher` + current embedded-login bootstrap | Hosted behavior remains separate. |
-| Owner Console | Custom Matrix3 tooling layer, implementation unverified | No identifiable implementation was found on GitHub `main` as of 2026-08-30. The local working copy must be checked for unpushed console work before creating one. |
-| Command browser UI | Custom Matrix3 tooling layer, implementation unverified | Do not add a second command UI until the local Owner Console state is verified. Existing server command implementation remains authority. |
+| Local launcher bootstrap | Matrix3 startup/bootstrap + Gradle-owned runGame path | Eclipse convenience launcher may hand startup to Gradle; it does not replace server/login ownership. |
+| Client Console shell/UI | Custom Matrix3 tooling layer | Planned authority defined by `docs/client-console/CLIENT_CONSOLE.md`; owns docking/navigation/UI only. |
+| Command browser UI | Client Console tooling layer | UI/search/structured arguments only. Existing Matrix3 server command and permission path remains behavioral authority. |
+| Owner console controls | Client Console tooling layer | Owner panel may expose actions but must not create separate rights, persistence, or gameplay implementations. |
 | Custom bosses/content | Custom content layer on Matrix3 | Primary product lane; should extend, not replace, stable core systems. |
 | 718 project implementations | Reference only | Ideas/UX/algorithms may be studied; never automatic authority. |
 

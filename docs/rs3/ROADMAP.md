@@ -10,37 +10,43 @@ The roadmap is deliberately stability-first. Completed foundation work is record
 - [x] Harden local player/account persistence by flushing completed writes.
 - [x] Start/stop the embedded local login core from the local `GameLauncher` path.
 - [x] Establish project constitution, system ownership, baseline, and permanent smoke-test documentation.
+- [x] Establish convenient Gradle-owned local startup through the Eclipse green-button bootstrap.
 
-## Owner Console verification status
+## Client Console direction
 
-As of 2026-08-30, no identifiable Owner Console implementation is present on GitHub `main`.
+No identifiable old Owner/Client Console implementation is present on GitHub `main`. The replacement direction is now defined by `docs/client-console/CLIENT_CONSOLE.md`.
 
-Targeted repository checks for `OwnerConsole`, `Owner Console`, related commit history, and an owner-tab Swing pattern did not find an implementation. The user believes another chat may already have created one locally, so **do not build a duplicate console until the local working copy is checked for unpushed changes/files**.
-
-If an existing local Owner Console is found, inspect only its direct files and wiring, then update this roadmap and `SYSTEM_OWNERSHIP.md` from evidence before adding features.
+The Matrix3 Client Console will use a cleaner RuneLite-style sidebar workflow rather than recreating the old 718 console wholesale. Matrix3 remains authoritative for gameplay and server behavior; the console is a developer UI layer.
 
 ## Next - development control
 
-1. **Verify existing/local Owner Console**
-   - Check the local working copy for unpushed Owner Console files or changes.
-   - If present, identify its entry point, top-level `Owner` tab, sub-tabs, and command wiring.
-   - Do not rewrite or duplicate working console code merely to match this roadmap.
+1. **Client Console V1 scan/design verification**
+   - Inspect the Matrix3 client frame/bootstrap and only the immediate layout dependencies needed to identify a safe docking hook.
+   - Inspect the minimum old 718 Client Console implementation needed for UI/workflow reference.
+   - Follow `docs/client-console/CLIENT_CONSOLE.md` as the design authority.
 
-2. **Owner Commands sub-tab**
-   - Only build this if the verified existing console does not already provide it.
-   - Discover the existing Matrix3 command authority.
-   - Present commands as clickable actions without duplicating command logic.
+2. **Client Console shell**
+   - Thin vertical icon rail plus one active docked panel.
+   - Clean open/close/select behavior.
+   - Do not bundle gameplay ownership into the shell.
 
-3. **Command execution bridge**
-   - Route UI actions through the same authoritative server command/permission path where practical.
-   - Add targeted tests for permission and execution behavior.
+3. **Client Console V1 panels**
+   - Owner.
+   - Commands.
+   - Player.
+   - Debug.
+   - Add each panel as its own testable vertical slice.
 
-4. **Persistence verification pass**
+4. **Command execution bridge**
+   - Route command UI actions through the authoritative Matrix3 command/permission path where practical.
+   - Do not duplicate command semantics in the client.
+
+5. **Persistence verification pass**
    - Verify position, inventory, equipment, bank, and relevant account state across relog/restart.
    - Fix only failures proven by the test pass.
 
-5. **Launcher/startup polish**
-   - Preserve the already-working embedded-login bootstrap.
+6. **Launcher/startup polish**
+   - Preserve the now-working Gradle-owned Eclipse/Windows startup path.
    - Improve user-facing startup only where needed; do not redesign the login architecture.
 
 ## Content pipeline
@@ -71,7 +77,7 @@ Only after this pipeline works cleanly should it be generalized into a reusable 
 
 - Reusable boss/content framework.
 - Additional bosses and areas.
-- Tool improvements driven by repeated content needs.
+- Client Console/tool improvements driven by repeated content needs.
 - Optional graphics/engine experiments after core/content priorities are healthy.
 
 ## Priority rule

@@ -1,0 +1,4 @@
+2026-08-31
+- Added the Matrix3 Client Console design authority.
+- Locked V1 to a RuneLite-style sidebar shell with Owner, Commands, Player, and Debug panels.
+- Defined strict ownership boundaries so the console remains a UI/tooling layer over authoritative Matrix3 systems.
