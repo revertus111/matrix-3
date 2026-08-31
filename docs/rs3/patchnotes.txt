@@ -1,0 +1,5 @@
+2026-08-30
+- Added Matrix3 project constitution and root AGENTS.md development rules.
+- Recorded protected Baseline 0 at commit e86851b95e1d2927d58463b67f600153b9166f6a.
+- Added permanent smoke-test and system-ownership authorities.
+- Added stability-first roadmap reflecting completed owner-rights, persistence, and launcher-bootstrap foundation work.
