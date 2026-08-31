@@ -1,22 +1,23 @@
 Matrix3 server startup test list
 
-1. From Windows Explorer, double-click Server\run_game.bat.
-   - Gradle wrapper starts from the Server directory.
-   - :runGame launches successfully.
+1. Windows Explorer path
+   - Open the real Server folder in Windows File Explorer.
+   - Double-click run_game.bat.
+   - A MATRIX3 - GAME SERVER console opens and Gradle :runGame starts successfully.
    - Local embedded login core starts as part of normal non-hosted GameLauncher startup.
    - No historical stack-map/verifier failure appears from bypassing the Gradle path.
 
-2. Close the game server, then double-click Server\run_login.bat by itself.
-   - :runLogin launches successfully as the standalone/debug login-server path.
-   - Do not leave standalone login running when starting normal local :runGame, because the normal game path starts its own embedded local login core.
+2. Eclipse green Run path
+   - Pull and refresh the Matrix3-Server project.
+   - Open Run Configurations -> Java Application.
+   - Select the shared configuration named Matrix3 Server.
+   - Run it once.
+   - com.rs.Matrix3Startup exits quickly after opening a separate MATRIX3 - GAME SERVER command window.
+   - Closing/stopping the tiny Eclipse launcher after it exits does not own or terminate the detached server console.
+   - The separate console continues Gradle :runGame normally.
+   - The normal green Run button can reuse Matrix3 Server from Run history afterward.
 
-3. Refresh the Matrix3-Server project in Eclipse.
-   - Shared launch configurations "Matrix3 Game - Gradle" and "Matrix3 Login - Gradle" are visible as External Tools Program configurations.
-   - Their working directory resolves as ${workspace_loc:/Matrix3-Server} without a "Cannot resolve expression" error.
-
-4. Run "Matrix3 Game - Gradle" once from Eclipse.
-   - Eclipse launches %COMSPEC% with Windows START and immediately detaches Server\run_game.bat into its own command window.
-   - The separate command window runs gradlew.bat runGame and remains open for the server lifetime.
-   - Eclipse returns control instead of remaining stuck on a long-running Buildship task/progress dialog.
-   - The configuration is available from the normal Run history/green Run button afterward.
-   - Do not use a raw Java Application configuration for com.rs.GameLauncher for normal development startup.
+3. Safety
+   - Do not use the raw Java Application configuration for com.rs.GameLauncher for normal development startup.
+   - Do not run run_login.bat separately during normal local :runGame startup because GameLauncher already starts the embedded local login core.
+   - Double-clicking run_game.bat inside Eclipse only opens the text editor; double-click execution is done from Windows File Explorer.
