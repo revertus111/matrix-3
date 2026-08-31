@@ -38,5 +38,6 @@ public abstract class Class572_Sub12_Sub17 extends Class572_Sub12 {
 				class572_sub13_sub1.method8421(421222932);
 			}
 		}
+		ClientConsoleBridge.flushQueuedCommands();
 	}
 }

@@ -1,4 +1,4 @@
-Matrix3 Client Console - shell + Owner runtime test list
+Matrix3 Client Console - shell + Owner + Commands runtime test list
 
 1. Start the client through the normal Matrix3 client launch path. Confirm the game still renders and reaches normal login/gameplay with the Client Console attached beside the game view.
 2. Confirm the shell is dark-themed, the M3 rail remains visible, the C button visibly indicates the open state, and the placeholder content scrolls vertically when space is limited.
@@ -19,3 +19,14 @@ Matrix3 Client Console - shell + Owner runtime test list
 17. Leave Owner selected, resize the console, close Matrix3 normally, and relaunch. Confirm Owner is restored as the active panel together with the saved valid window/console geometry. Repeat once with the console collapsed and confirm reopening returns to Owner.
 18. Click Reset Client Console Layout while Owner is selected. Confirm selection returns to the C shell panel, default geometry is restored, and the reset state survives a clean restart.
 19. Confirm the Owner panel contains no active gameplay/admin quick-action buttons in this slice and that normal server command permissions/behavior are unchanged.
+20. Click >_ on the rail. Confirm Commands is lazy-created, opens immediately, shows 304 total current command buttons, and remains scrollable at narrow/non-maximized window sizes without clipping the search/composer controls.
+21. Search for item, npc, bank, tele, gfx, and shutdown. Confirm filtering is immediate, case-insensitive, and the shown-count updates without visible game/render hitching.
+22. Change the category filter between All, Admin, Punishment, Moderator, Support, Spawn, and Player. Confirm only matching command buttons remain visible and no controls become unreachable.
+23. Select ::bank with no arguments and click Run Command. Confirm the command is queued by the console, sent on the Matrix3 client cycle, and the existing server command behavior opens the bank.
+24. Select ::item, enter 4151 1 in Arguments, confirm the preview reads ::item 4151 1, then run it. Confirm the normal server command path processes the item command and no client-side spawn logic exists in the panel.
+25. Select an argument command, edit its arguments repeatedly, and press Enter from the Arguments field. Confirm Enter uses the same queued command path as the Run Command button.
+26. While focused in Commands search/arguments fields, type W/A/S/D and other game hotkeys. Confirm the game does not also consume those keystrokes; clicking the game restores normal input.
+27. Select ::shutdown or another protected command and click Run Command once. Confirm it changes to Confirm Run and DOES NOT execute. Let five seconds expire and confirm another first click still does not execute. Do not perform the second confirmation unless intentionally testing the destructive command.
+28. Queue several safe commands quickly. Confirm the UI stays responsive and commands are drained on the client cycle rather than directly mutating the Matrix3 packet queue from the Swing event-dispatch thread.
+29. Leave Commands selected, close Matrix3 normally, and relaunch. Confirm Commands restores as the active panel with the previous valid console/window geometry.
+30. Verify normal typed ::commands still use the original server authority and that Client Console buttons do not bypass Matrix3 rights checks, command logging, or Commands.processCommand behavior.

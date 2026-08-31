@@ -16,3 +16,7 @@
 - Added reusable shell panel selection behavior: selecting another panel opens it, selecting the active panel again collapses the console, and panel-specific initialization failures are isolated to the panel host where practical.
 - Finished active-panel workspace persistence so the selected shell/Owner panel restores after restart and Reset Client Console Layout returns selection to the shell panel.
 - Kept the Owner slice read-only; no server command logic, permissions, gameplay behavior, or command execution path changed.
+- Added the lazy Commands panel with a >_ rail entry, search, category filtering, inline arguments/preview, and a scroll-safe button for each of the 304 unique command names currently exposed by Commands.java switch handlers.
+- Added a client-console command queue that hands Swing actions to the Matrix3 client cycle before building/sending the existing opcode-24 COMMANDS_PACKET with clientCommand=false; server Commands.processCommand remains authoritative for permissions and behavior.
+- Added inline double-confirm protection for destructive command buttons instead of modal confirmation dialogs.
+- Extended active-panel persistence and shell failure isolation to the Commands panel without changing server command implementations.
