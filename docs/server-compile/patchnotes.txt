@@ -2,3 +2,7 @@
 - Fixed Eclipse/Gradle parsing of legacy Matrix3 server source bytes by using Windows-1252 source encoding.
 - Added Eclipse file encoding overrides for Bank.java and ButtonHandler.java, where legacy 0xCE bytes were being treated as invalid UTF-8.
 - Added Gradle JavaCompile encoding so builds remain consistent on newer JDKs whose default charset is UTF-8.
+
+2026-08-31
+- Added project-specific Eclipse JDT settings to force Java 8 source, compliance, and bytecode target levels.
+- Keeps Eclipse clean/build output aligned with the Matrix3 Java 8 server target while investigating the ObjectHandler verifier failure.
