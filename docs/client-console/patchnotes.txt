@@ -2,3 +2,6 @@
 - Added the Matrix3 Client Console design authority.
 - Locked V1 to a RuneLite-style sidebar shell with Owner, Commands, Player, and Debug panels.
 - Defined strict ownership boundaries so the console remains a UI/tooling layer over authoritative Matrix3 systems.
+- Added hard responsive-layout/no-cutoff requirements; Client Console functionality may not depend on fullscreen/maximized mode.
+- Added permanent modern dark-theme requirements and centralized presentation/styling responsibilities instead of finished default Swing visuals.
+- Added resizable/customizable layout, validated layout persistence, DPI/display-scaling targets, multi-resolution acceptance checks, and safe reset/clamping behavior.
