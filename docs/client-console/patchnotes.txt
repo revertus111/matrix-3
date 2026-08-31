@@ -5,3 +5,6 @@
 - Added hard responsive-layout/no-cutoff requirements; Client Console functionality may not depend on fullscreen/maximized mode.
 - Added permanent modern dark-theme requirements and centralized presentation/styling responsibilities instead of finished default Swing visuals.
 - Added resizable/customizable layout, validated layout persistence, DPI/display-scaling targets, multi-resolution acceptance checks, and safe reset/clamping behavior.
+- Expanded persistence to restore complete valid client/console workspace geometry after clean restart, including client size/position/state, console width/open state, active panel, and meaningful split/collapse state.
+- Required one versioned Client Console preference authority with safe defaults, monitor-bound clamping, reset-layout behavior, and debounced/coalesced writes during resize.
+- Added smoothness requirements for lazy panel initialization, non-blocking thread ownership, resize-without-rebuild behavior, clean game/console focus handoff, minimum game-view protection, panel failure isolation, and restrained animation.
