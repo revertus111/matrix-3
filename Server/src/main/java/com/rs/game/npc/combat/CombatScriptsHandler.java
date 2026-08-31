@@ -7,6 +7,7 @@ import com.rs.game.Entity;
 import com.rs.game.npc.NPC;
 import com.rs.game.npc.bosslabs.BossCombatScript;
 import com.rs.game.npc.bosslabs.BossDefinitionRegistry;
+import com.rs.game.npc.bosslabs.BossDefinitionStore;
 import com.rs.utils.Logger;
 import com.rs.utils.Utils;
 
@@ -17,6 +18,7 @@ public class CombatScriptsHandler {
 
 	@SuppressWarnings("rawtypes")
 	public static final void init() {
+		BossDefinitionStore.init();
 		try {
 			Class[] classes = Utils.getClasses("com.rs.game.npc.combat.impl");
 			for (Class c : classes) {
