@@ -2,6 +2,7 @@ package com.rs.game.npc.combat;
 
 import java.util.HashMap;
 
+import com.rs.cache.loaders.NPCDefinitions;
 import com.rs.game.Entity;
 import com.rs.game.npc.NPC;
 import com.rs.game.npc.bosslabs.BossCombatScript;
@@ -37,12 +38,27 @@ public class CombatScriptsHandler {
 		if (BossDefinitionRegistry.isRegistered(npc.getId()))
 			return BossCombatScript.INSTANCE.attack(npc, target);
 
-		CombatScript script = cachedCombatScripts.get(npc.getId());
-		if (script == null) {
-			script = cachedCombatScripts.get(npc.getDefinitions().getName());
-			if (script == null)
-				script = DEFAULT_SCRIPT;
-		}
-		return script.attack(npc, target);
+		return resolveMatrix3Script(npc.getId(), npc.getDefinitions().getName()).attack(npc, target);
+	}
+
+	public static String getResolvedScriptClassName(int npcId) {
+		if (BossDefinitionRegistry.isRegistered(npcId))
+			return BossCombatScript.class.getName();
+		NPCDefinitions definitions = NPCDefinitions.getNPCDefinitions(npcId);
+		return resolveMatrix3Script(npcId, definitions.name).getClass().getName();
+	}
+
+	public static boolean isUsingDefaultScript(int npcId) {
+		if (BossDefinitionRegistry.isRegistered(npcId))
+			return false;
+		NPCDefinitions definitions = NPCDefinitions.getNPCDefinitions(npcId);
+		return resolveMatrix3Script(npcId, definitions.name) == DEFAULT_SCRIPT;
+	}
+
+	private static CombatScript resolveMatrix3Script(int npcId, String npcName) {
+		CombatScript script = cachedCombatScripts.get(npcId);
+		if (script == null && npcName != null)
+			script = cachedCombatScripts.get(npcName);
+		return script == null ? DEFAULT_SCRIPT : script;
 	}
 }
