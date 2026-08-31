@@ -4,6 +4,8 @@ import java.util.HashMap;
 
 import com.rs.game.Entity;
 import com.rs.game.npc.NPC;
+import com.rs.game.npc.bosslabs.BossCombatScript;
+import com.rs.game.npc.bosslabs.BossDefinitionRegistry;
 import com.rs.utils.Logger;
 import com.rs.utils.Utils;
 
@@ -32,6 +34,9 @@ public class CombatScriptsHandler {
 	}
 
 	public static int specialAttack(final NPC npc, final Entity target) {
+		if (BossDefinitionRegistry.isRegistered(npc.getId()))
+			return BossCombatScript.INSTANCE.attack(npc, target);
+
 		CombatScript script = cachedCombatScripts.get(npc.getId());
 		if (script == null) {
 			script = cachedCombatScripts.get(npc.getDefinitions().getName());
