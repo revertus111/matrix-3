@@ -1,4 +1,4 @@
-Matrix3 Client Console - Phase 2 shell runtime test list
+Matrix3 Client Console - shell + Owner runtime test list
 
 1. Start the client through the normal Matrix3 client launch path. Confirm the game still renders and reaches normal login/gameplay with the Client Console attached beside the game view.
 2. Confirm the shell is dark-themed, the M3 rail remains visible, the C button visibly indicates the open state, and the placeholder content scrolls vertically when space is limited.
@@ -11,4 +11,11 @@ Matrix3 Client Console - Phase 2 shell runtime test list
 9. Move the client to a second monitor, close normally, disconnect/disable that monitor, then relaunch. Confirm the saved window is clamped onto an available monitor rather than reopening off-screen.
 10. Click Reset Client Console Layout. Confirm the frame returns to a safe normal-state default, the console opens at its default width, and the new state persists on the next clean restart.
 11. Exercise rapid frame resizing and divider dragging for several seconds. Confirm there is no obvious disk-I/O hitching; preference writes are coalesced rather than issued for every drag event.
-12. Run the normal client smoke path after the shell test: login, move, interact with the world/interface, and close normally. Any Canvas/Swing flicker, z-order issue, stuck focus, or input leak is a Phase 2 blocker and should be reported as runtime evidence before adding Owner/Commands panels.
+12. Run the normal client smoke path after the shell test: login, move, interact with the world/interface, and close normally. Any Canvas/Swing flicker, z-order issue, stuck focus, or input leak is a shell blocker and should be reported as runtime evidence.
+13. Click O on the rail. Confirm the Owner panel is created/opened on demand and shows the local display name, decoded rights label, and current client-player state without changing gameplay/server state.
+14. Open Owner before logging in, then log in while leaving Owner visible. Confirm its read-only account/client-state values refresh without switching panels and without visible client hitching.
+15. With Owner active, click O again. Confirm the panel collapses to the narrow rail. Click O again and confirm Owner reopens immediately.
+16. Switch between C and O repeatedly. Confirm only the selected rail button is highlighted, panel switching is immediate, and the game renderer/input remains normal.
+17. Leave Owner selected, resize the console, close Matrix3 normally, and relaunch. Confirm Owner is restored as the active panel together with the saved valid window/console geometry. Repeat once with the console collapsed and confirm reopening returns to Owner.
+18. Click Reset Client Console Layout while Owner is selected. Confirm selection returns to the C shell panel, default geometry is restored, and the reset state survives a clean restart.
+19. Confirm the Owner panel contains no active gameplay/admin quick-action buttons in this slice and that normal server command permissions/behavior are unchanged.

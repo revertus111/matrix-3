@@ -62,6 +62,7 @@ public final class ConsolePreferences {
             }
 
             shell.setConsoleOpen(preferences.getBoolean(KEY_CONSOLE_OPEN, true));
+            shell.setActivePanelId(preferences.get(KEY_ACTIVE_PANEL, ClientConsoleShell.PANEL_SHELL));
             shell.setConsoleWidth(preferences.getInt(KEY_CONSOLE_WIDTH, ClientConsoleShell.DEFAULT_CONSOLE_WIDTH));
 
             Rectangle defaults = defaultBounds();
@@ -218,6 +219,7 @@ public final class ConsolePreferences {
 
     private void applyDefaults(JFrame frame, ClientConsoleShell shell) {
         shell.setConsoleOpen(true);
+        shell.setActivePanelId(ClientConsoleShell.PANEL_SHELL);
         shell.setConsoleWidth(ClientConsoleShell.DEFAULT_CONSOLE_WIDTH);
         Rectangle defaults = clampToAvailableScreens(defaultBounds());
         lastNormalBounds = new Rectangle(defaults);

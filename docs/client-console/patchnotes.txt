@@ -12,3 +12,7 @@
 - Added a permanent dark shell with a thin icon rail, scrollable placeholder content, collapse/reopen behavior, and a draggable width boundary that protects a 640px minimum game view.
 - Added one versioned Java Preferences workspace authority for window position/size/maximized state, console open state/width, and active-panel identity; resize writes are coalesced and invalid monitor geometry is clamped.
 - Added a reset-layout action and a dedicated focus-test field; game/console keyboard focus remains runtime acceptance rather than assumed behavior.
+- Added the first real Owner panel with a dedicated O rail button, lazy panel creation, read-only local display-name/rights/client-state visibility, and a small client bridge that keeps decompiled rights decoding out of UI code.
+- Added reusable shell panel selection behavior: selecting another panel opens it, selecting the active panel again collapses the console, and panel-specific initialization failures are isolated to the panel host where practical.
+- Finished active-panel workspace persistence so the selected shell/Owner panel restores after restart and Reset Client Console Layout returns selection to the shell panel.
+- Kept the Owner slice read-only; no server command logic, permissions, gameplay behavior, or command execution path changed.

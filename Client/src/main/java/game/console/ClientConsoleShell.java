@@ -13,6 +13,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -29,6 +30,9 @@ public final class ClientConsoleShell extends JPanel {
     public static final int MIN_GAME_WIDTH = 640;
     public static final int MIN_FRAME_HEIGHT = 640;
 
+    public static final String PANEL_SHELL = "shell";
+    public static final String PANEL_OWNER = "owner";
+
     private static final int RAIL_WIDTH = 48;
     private static final int DIVIDER_WIDTH = 5;
 
@@ -36,10 +40,15 @@ public final class ClientConsoleShell extends JPanel {
     private final JPanel panelHost = new JPanel(new BorderLayout());
     private final JPanel divider = new JPanel();
     private final JToggleButton consoleButton = new JToggleButton("C");
+    private final JToggleButton ownerButton = new JToggleButton("O");
     private final JButton resetLayoutButton = new JButton("Reset Client Console Layout");
+
+    private final JComponent shellPanel;
+    private JComponent ownerPanel;
 
     private boolean consoleOpen = true;
     private int expandedConsoleWidth = DEFAULT_CONSOLE_WIDTH;
+    private String activePanelId = PANEL_SHELL;
     private Runnable layoutChangedListener;
     private Runnable resetLayoutAction;
 
@@ -53,6 +62,7 @@ public final class ClientConsoleShell extends JPanel {
         gameHost.add(gameApplet, BorderLayout.CENTER);
         add(gameHost, BorderLayout.CENTER);
 
+        shellPanel = createPlaceholderPanel();
         configureDivider();
         configureDock();
         add(dockContainer, BorderLayout.EAST);
@@ -66,6 +76,7 @@ public final class ClientConsoleShell extends JPanel {
             }
         });
 
+        showActivePanel();
         applyConsoleState(false);
     }
 
@@ -85,7 +96,6 @@ public final class ClientConsoleShell extends JPanel {
 
         panelHost.setBackground(ConsoleTheme.PANEL);
         panelHost.setOpaque(true);
-        panelHost.add(createPlaceholderPanel(), BorderLayout.CENTER);
         dockBody.add(panelHost, BorderLayout.CENTER);
         dockContainer.add(dockBody, BorderLayout.CENTER);
     }
@@ -105,19 +115,26 @@ public final class ClientConsoleShell extends JPanel {
         brand.setMaximumSize(new Dimension(RAIL_WIDTH, 38));
         brand.setPreferredSize(new Dimension(RAIL_WIDTH, 38));
 
-        consoleButton.setToolTipText("Client Console - click again to collapse");
-        consoleButton.setAlignmentX(CENTER_ALIGNMENT);
-        consoleButton.setMaximumSize(new Dimension(RAIL_WIDTH, 44));
-        consoleButton.setPreferredSize(new Dimension(RAIL_WIDTH, 44));
-        ConsoleTheme.styleRailButton(consoleButton);
-        consoleButton.addActionListener(e -> setConsoleOpen(consoleButton.isSelected()));
+        configureRailButton(consoleButton, "Client Console", PANEL_SHELL);
+        configureRailButton(ownerButton, "Owner", PANEL_OWNER);
 
         rail.add(Box.createVerticalStrut(8));
         rail.add(brand);
         rail.add(Box.createVerticalStrut(8));
         rail.add(consoleButton);
+        rail.add(Box.createVerticalStrut(4));
+        rail.add(ownerButton);
         rail.add(Box.createVerticalGlue());
         return rail;
+    }
+
+    private void configureRailButton(JToggleButton button, String tooltip, String panelId) {
+        button.setToolTipText(tooltip + " - click active panel again to collapse");
+        button.setAlignmentX(CENTER_ALIGNMENT);
+        button.setMaximumSize(new Dimension(RAIL_WIDTH, 44));
+        button.setPreferredSize(new Dimension(RAIL_WIDTH, 44));
+        ConsoleTheme.styleRailButton(button);
+        button.addActionListener(e -> activatePanel(panelId));
     }
 
     private JScrollPane createPlaceholderPanel() {
@@ -142,9 +159,9 @@ public final class ClientConsoleShell extends JPanel {
         content.add(Box.createVerticalStrut(18));
         content.add(createInfoCard(
                 "Docking",
-                "Placeholder shell only.",
                 "Drag the left edge to resize.",
-                "Use C to collapse or reopen."));
+                "Use C for this shell panel.",
+                "Use O for the Owner panel."));
         content.add(Box.createVerticalStrut(12));
         content.add(createFocusCard());
         content.add(Box.createVerticalStrut(12));
@@ -210,7 +227,7 @@ public final class ClientConsoleShell extends JPanel {
         JPanel card = createInfoCard(
                 "Workspace",
                 "Window and console geometry persist.",
-                "Invalid monitor bounds are clamped.",
+                "Active panel identity persists.",
                 "Reset restores known-good defaults.");
 
         resetLayoutButton.setAlignmentX(LEFT_ALIGNMENT);
@@ -265,12 +282,68 @@ public final class ClientConsoleShell extends JPanel {
         divider.addMouseMotionListener(dragger);
     }
 
+    private void activatePanel(String panelId) {
+        String normalizedPanelId = normalizePanelId(panelId);
+        if (consoleOpen && normalizedPanelId.equals(activePanelId)) {
+            setConsoleOpen(false);
+            return;
+        }
+
+        activePanelId = normalizedPanelId;
+        showActivePanel();
+        if (!consoleOpen) {
+            consoleOpen = true;
+        }
+        applyConsoleState(true);
+    }
+
+    private void showActivePanel() {
+        panelHost.removeAll();
+        panelHost.add(getOrCreatePanel(activePanelId), BorderLayout.CENTER);
+        panelHost.revalidate();
+        panelHost.repaint();
+    }
+
+    private JComponent getOrCreatePanel(String panelId) {
+        if (PANEL_OWNER.equals(panelId)) {
+            if (ownerPanel == null) {
+                try {
+                    ownerPanel = new OwnerPanel();
+                } catch (RuntimeException ex) {
+                    ex.printStackTrace();
+                    ownerPanel = createPanelError("Owner panel failed to initialize.");
+                }
+            }
+            return ownerPanel;
+        }
+        return shellPanel;
+    }
+
+    private JComponent createPanelError(String message) {
+        JPanel error = new JPanel(new BorderLayout());
+        error.setBackground(ConsoleTheme.PANEL);
+        error.setBorder(ConsoleTheme.panelPadding(20, 18, 20, 18));
+
+        JLabel label = new JLabel("<html><b>Panel unavailable</b><br>" + message + "</html>");
+        label.setFont(ConsoleTheme.BODY_FONT);
+        label.setForeground(ConsoleTheme.TEXT);
+        error.add(label, BorderLayout.NORTH);
+        return error;
+    }
+
+    private String normalizePanelId(String panelId) {
+        return PANEL_OWNER.equals(panelId) ? PANEL_OWNER : PANEL_SHELL;
+    }
+
     public void setConsoleOpen(boolean open) {
         if (consoleOpen == open) {
-            consoleButton.setSelected(open);
+            updateRailSelection();
             return;
         }
         consoleOpen = open;
+        if (consoleOpen) {
+            showActivePanel();
+        }
         applyConsoleState(true);
     }
 
@@ -287,7 +360,15 @@ public final class ClientConsoleShell extends JPanel {
     }
 
     public String getActivePanelId() {
-        return "shell";
+        return activePanelId;
+    }
+
+    public void setActivePanelId(String panelId) {
+        activePanelId = normalizePanelId(panelId);
+        if (consoleOpen) {
+            showActivePanel();
+        }
+        updateRailSelection();
     }
 
     public void setLayoutChangedListener(Runnable listener) {
@@ -304,13 +385,18 @@ public final class ClientConsoleShell extends JPanel {
         divider.setCursor(consoleOpen
                 ? Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR)
                 : Cursor.getDefaultCursor());
-        consoleButton.setSelected(consoleOpen);
+        updateRailSelection();
         applyDockPreferredWidth();
         revalidate();
         repaint();
         if (notify) {
             notifyLayoutChanged();
         }
+    }
+
+    private void updateRailSelection() {
+        consoleButton.setSelected(consoleOpen && PANEL_SHELL.equals(activePanelId));
+        ownerButton.setSelected(consoleOpen && PANEL_OWNER.equals(activePanelId));
     }
 
     private void applyConsoleWidth(int requestedWidth, boolean notify) {
