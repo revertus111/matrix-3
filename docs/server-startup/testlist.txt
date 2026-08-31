@@ -10,9 +10,10 @@ Matrix3 server startup test list
    - :runLogin launches successfully as the standalone/debug login-server path.
    - Do not leave standalone login running when starting normal local :runGame, because the normal game path starts its own embedded local login core.
 
-3. Refresh the Server project in Eclipse.
+3. Refresh the Matrix3-Server project in Eclipse.
    - Shared run configuration "Matrix3 Game - Gradle" is visible under Run Configurations -> Gradle Task.
    - Shared run configuration "Matrix3 Login - Gradle" is visible under Run Configurations -> Gradle Task.
+   - Working Directory resolves as ${workspace_loc:/Matrix3-Server} without a "Cannot resolve expression" error.
 
 4. Run "Matrix3 Game - Gradle" once from Eclipse.
    - Eclipse executes the Gradle :runGame task using the wrapper-backed Buildship configuration.
