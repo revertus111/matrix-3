@@ -1,0 +1,8 @@
+2026-08-31
+- Added the BossLabs architecture authority under docs/bosslabs.
+- Defined BossLabs as an external specialist developer window governed by the Client Console UI/lifecycle contract.
+- Locked Matrix3 as the authoritative owner of combat, NPC lifecycle, world behavior, drops, persistence, and permissions.
+- Established first-boss-driven development using the Volcanic Warden concept as the initial vertical-slice specification.
+- Defined planned Identity, Stats, Attacks, Phases, Mechanics, Arena, Drops, and Testing responsibilities without pre-approving runtime class names or storage format.
+- Explicitly deferred giant node editing, general scripting, duplicate NPC/map/model/FX editors, and speculative mechanics until real encounter needs justify them.
+- Recorded verified-static architecture facts separately from unscanned runtime integration hypotheses.
