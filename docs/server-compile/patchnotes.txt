@@ -1,0 +1,4 @@
+2026-08-30
+- Fixed Eclipse/Gradle parsing of legacy Matrix3 server source bytes by using Windows-1252 source encoding.
+- Added Eclipse file encoding overrides for Bank.java and ButtonHandler.java, where legacy 0xCE bytes were being treated as invalid UTF-8.
+- Added Gradle JavaCompile encoding so builds remain consistent on newer JDKs whose default charset is UTF-8.
