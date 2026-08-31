@@ -1,0 +1,3 @@
+2026-08-30
+- Pointed Matrix3 server cache loading directly at C:/Users/rever/Desktop/Matrix3/830_cache/.
+- Kept the change isolated to the server cache initialization path.
