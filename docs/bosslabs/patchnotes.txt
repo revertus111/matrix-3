@@ -17,3 +17,8 @@
 - Added one narrow CombatScriptsHandler delegation check for registered BossLabs NPC ids; unregistered NPCs retain the existing custom/default script path unchanged.
 - Corrected the runtime-scan conclusion that startup CombatScript keys alone were sufficient; dynamic BossLabs definitions require the explicit registration/delegation seam but still do not create a second combat dispatcher.
 - Left the registry empty until the first Volcanic Warden NPC id/assets are verified, preventing accidental takeover of an existing NPC combat script.
+- Added BossNpcInspection as a read-only auto-population model for existing NPC/boss identity, cache/combat data, combat ownership, resolved script class, and current BossLabs definition.
+- Added BossNpcSearchService with one automatic query path: all-digit input resolves directly as NPC id, while text performs case-insensitive name search with exact/prefix/substring ranking.
+- Name search now uses Matrix3's verified Utils.getNPCDefinitionsSize()/cache index-18 boundary, builds the valid-NPC name index lazily once, and supports explicit invalidation after future cache/import changes.
+- Refactored CombatScriptsHandler script lookup into one shared resolver and added read-only resolved-script/default inspection methods so BossLabs does not duplicate combat-script discovery semantics.
+- Added docs/bosslabs/NPC_SEARCH.md locking the no-mode-dropdown search workflow, existing-boss auto-population behavior, combat-source display, and no-fake-conversion rule for hand-written Java bosses.
