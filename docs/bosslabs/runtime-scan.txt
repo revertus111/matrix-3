@@ -1,0 +1,53 @@
+Matrix3 BossLabs - Phase 1 runtime scan
+2026-08-31
+
+verified-static
+
+1. NPC combat dispatch
+- Server/src/main/java/com/rs/game/npc/combat/CombatScriptsHandler.java discovers CombatScript implementations from com.rs.game.npc.combat.impl at startup.
+- Scripts are keyed by NPC id and/or NPC definition name through CombatScript.getKeys().
+- Missing custom scripts fall back to Matrix3's existing Default combat script.
+- BossLabs does not need a second combat dispatcher or registry for the first boss.
+
+2. NPC combat execution
+- Server/src/main/java/com/rs/game/npc/combat/NPCCombat.java owns target validation, clipping/range checks, movement/follow behavior, combat delay, and dispatch into CombatScriptsHandler.specialAttack().
+- Server/src/main/java/com/rs/game/npc/combat/CombatScript.java already provides delayed-hit helpers and authoritative hit-chance/max-hit integration through Combat.getHitChance().
+- Existing scripts such as ChaosElementalCombat demonstrate Matrix3-owned animation, projectile, scheduled mechanic, and delayed-hit paths.
+
+3. NPC definitions/stats
+- Server/src/main/java/com/rs/game/npc/combat/NPCCombatDefinitions.java defines MELEE/RANGE/MAGE and owns cache-backed hitpoints, attack/death animation data, projectile/GFX references, respawn delay, aggression, XP, and poison flags.
+- Server/src/main/java/com/rs/game/npc/NPC.java derives attack style, attack speed, max hit, size, combat level/name, and several immunities/behavior flags from existing Matrix3/cache authorities.
+
+4. NPC lifecycle/spawning
+- NPC construction initializes Matrix3 combat state, adds the NPC to World, updates its region, and loads map regions.
+- NPC.processNPC()/NPCCombat own normal target/combat processing.
+- NPC.sendDeath() owns death animation timing, XP, drop invocation, reset/finish, and respawn scheduling.
+- Spawned NPCs can be marked so normal respawn is not scheduled after death.
+- No BossLabs change to NPC.java or NPCCombat.java is required for the first definition foundation.
+
+5. Drops
+- NPC.drop() resolves loot through NPCDrops.getDrops(id), existing drop-rate/lootshare handling, Drops.generateDrops(), and NPC.sendDrop().
+- BossLabs must reference/author data through this existing drop authority rather than add an alternate loot engine.
+
+6. First BossLabs runtime extension seam
+- Use immutable BossLabs content definitions for boss -> health phase -> attacks.
+- A later small CombatScript adapter/concrete first-boss script can consume those definitions while Matrix3 continues to own target validation, movement, accuracy/damage application, tick scheduling, death, respawn, and drops.
+- Do not change existing NPC/NPCCombat ownership merely to make BossLabs easier to implement.
+
+Phase 2 foundation added
+- com.rs.game.npc.bosslabs.BossAttackDefinition
+- com.rs.game.npc.bosslabs.BossPhaseDefinition
+- com.rs.game.npc.bosslabs.BossDefinition
+
+These classes are intentionally inactive content data only. They do not register a combat script, spawn an NPC, apply damage, alter drops, or change existing gameplay behavior.
+
+Still HYPOTHESIS / intentionally unresolved
+- Exact first custom NPC id/model/animations/GFX/projectiles for Volcanic Warden.
+- Exact developer command/client-to-server bridge BossLabs will use for live spawn/reset/force-phase actions.
+- Whether persisted BossLabs definitions should use JSON or another existing Matrix3 content format.
+- Whether the first encounter should use the existing BossInstance path; inspect it only if the first boss actually needs instancing.
+
+Next implementation slice
+- Choose/confirm the first boss NPC identity/assets.
+- Add the smallest CombatScript-side BossLabs runtime adapter needed to resolve the active health phase and execute one Phase 1 attack through existing Matrix3 helpers.
+- Do not add editor persistence or the external Swing window until that minimal runtime loop is proven.
