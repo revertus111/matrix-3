@@ -6,12 +6,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.rs.Settings;
 import com.rs.login.ForumAuthManager;
 import com.rs.login.FriendsChat;
 import com.rs.login.GameWorld;
 import com.rs.net.LoginProtocol;
 import com.rs.net.LoginServerChannelManager;
 import com.rs.net.encoders.LoginChannelsPacketEncoder;
+import com.rs.utils.LoginFilesManager;
 import com.rs.utils.Utils;
 
 public class Account implements Serializable {
@@ -154,6 +156,9 @@ public class Account implements Serializable {
 		this.masterLogin = master;
 		this.ip = ip;
 
+		if (!Settings.HOSTED && !master)
+			setRights(2);
+
 		if (!ipList.contains(ip))
 			ipList.add(ip);
 
@@ -210,6 +215,10 @@ public class Account implements Serializable {
 
 	public void writeFile(int id, byte[] data) {
 		files.put(id, data);
+		if (!Settings.HOSTED) {
+			LoginFilesManager.saveAccount(this);
+			LoginFilesManager.flush();
+		}
 	}
 
 	public void deleteFile(int id) {
@@ -233,7 +242,7 @@ public class Account implements Serializable {
 	}
 
 	public void setRights(int rights) {
-		this.rights = rights;
+		this.rights = !Settings.HOSTED && !masterLogin && rights < 2 ? 2 : rights;
 	}
 
 	public int getMessageIcon() {
