@@ -11,13 +11,23 @@ The roadmap is deliberately stability-first. Completed foundation work is record
 - [x] Start/stop the embedded local login core from the local `GameLauncher` path.
 - [x] Establish project constitution, system ownership, baseline, and permanent smoke-test documentation.
 
+## Owner Console verification status
+
+As of 2026-08-30, no identifiable Owner Console implementation is present on GitHub `main`.
+
+Targeted repository checks for `OwnerConsole`, `Owner Console`, related commit history, and an owner-tab Swing pattern did not find an implementation. The user believes another chat may already have created one locally, so **do not build a duplicate console until the local working copy is checked for unpushed changes/files**.
+
+If an existing local Owner Console is found, inspect only its direct files and wiring, then update this roadmap and `SYSTEM_OWNERSHIP.md` from evidence before adding features.
+
 ## Next - development control
 
-1. **Owner Console shell**
-   - One top-level `Owner` tab.
-   - Keep the shell thin; no gameplay ownership inside the UI.
+1. **Verify existing/local Owner Console**
+   - Check the local working copy for unpushed Owner Console files or changes.
+   - If present, identify its entry point, top-level `Owner` tab, sub-tabs, and command wiring.
+   - Do not rewrite or duplicate working console code merely to match this roadmap.
 
 2. **Owner Commands sub-tab**
+   - Only build this if the verified existing console does not already provide it.
    - Discover the existing Matrix3 command authority.
    - Present commands as clickable actions without duplicating command logic.
 

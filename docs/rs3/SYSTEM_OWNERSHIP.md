@@ -18,8 +18,8 @@ Do not add a competing implementation without explicitly changing this record.
 | Animations/models/GFX | Revision-830 cache/data consumed by Matrix3 | Custom additions should use a documented content pipeline. |
 | Interfaces | Matrix3 client/cache path | 718 interfaces are reference-only unless a specific port is approved. |
 | Local launcher bootstrap | Matrix3 `GameLauncher` + current embedded-login bootstrap | Hosted behavior remains separate. |
-| Owner Console | Custom Matrix3 tooling layer | Planned; must call documented Matrix3 APIs/commands. |
-| Command browser UI | Custom Matrix3 tooling layer | Planned; existing command implementation remains server authority. |
+| Owner Console | Custom Matrix3 tooling layer, implementation unverified | No identifiable implementation was found on GitHub `main` as of 2026-08-30. The local working copy must be checked for unpushed console work before creating one. |
+| Command browser UI | Custom Matrix3 tooling layer, implementation unverified | Do not add a second command UI until the local Owner Console state is verified. Existing server command implementation remains authority. |
 | Custom bosses/content | Custom content layer on Matrix3 | Primary product lane; should extend, not replace, stable core systems. |
 | 718 project implementations | Reference only | Ideas/UX/algorithms may be studied; never automatic authority. |
 
