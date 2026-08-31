@@ -10,12 +10,14 @@ verified-static
 - The normal script cache is startup/static, so it is not sufficient by itself for BossLabs definitions that may later be registered/reloaded while the server is running.
 - Phase 2 therefore adds one narrow BossLabs delegation check inside the existing CombatScriptsHandler. This is not a second dispatcher: registered BossLabs NPC ids delegate to BossCombatScript, while every unregistered NPC continues through the unchanged Matrix3 cached-script/default path.
 - CombatScriptsHandler now exposes read-only resolved-script/default inspection methods using the same internal resolution path as live combat so BossLabs does not duplicate script-discovery semantics.
+- CombatScriptsHandler.init() now loads persisted BossLabs definitions before discovering/using combat scripts; this keeps saved BossLabs content inside the existing startup combat path rather than adding a second launcher/runtime owner.
 
 2. NPC combat execution
 - Server/src/main/java/com/rs/game/npc/combat/NPCCombat.java owns target validation, clipping/range checks, movement/follow behavior, combat delay, and dispatch into CombatScriptsHandler.specialAttack().
 - Server/src/main/java/com/rs/game/npc/combat/CombatScript.java already provides delayed-hit helpers and authoritative hit-chance/max-hit integration through Combat.getHitChance().
 - Existing Default/ChaosElemental combat demonstrates Matrix3-owned animation, GFX, projectile, scheduled/delayed-hit paths.
 - BossCombatScript reuses those same CombatScript/World helpers and does not bypass NPCCombat target/range/timing ownership.
+- BossCombatScript resolves the registered BossDefinition at attack time, so replacing the registry entry makes definition-backed changes available to subsequent attack/phase resolution without recreating the combat dispatcher.
 
 3. NPC definitions/stats
 - Server/src/main/java/com/rs/cache/loaders/NPCDefinitions.java owns cache-backed NPC id/name/model/size/combat-level/client-script data.
@@ -29,7 +31,7 @@ verified-static
 - NPC.processNPC()/NPCCombat own normal target/combat processing.
 - NPC.sendDeath() owns death animation timing, XP, drop invocation, reset/finish, and respawn scheduling.
 - Spawned NPCs can be marked so normal respawn is not scheduled after death.
-- BossLabs does not change NPC.java or NPCCombat.java for the runtime adapter or NPC search/inspection foundation.
+- BossLabs does not change NPC.java or NPCCombat.java for the runtime adapter, NPC search/inspection, live publishing, or persistence foundation.
 
 5. Drops
 - NPC.drop() resolves loot through NPCDrops.getDrops(id), existing drop-rate/lootshare handling, Drops.generateDrops(), and NPC.sendDrop().
@@ -39,11 +41,12 @@ verified-static
 - com.rs.game.npc.bosslabs.BossAttackDefinition describes one combat style/presentation/tuning entry.
 - com.rs.game.npc.bosslabs.BossPhaseDefinition describes one health-percentage band and its allowed attacks.
 - com.rs.game.npc.bosslabs.BossDefinition describes one NPC-backed boss and resolves the active phase from current/max HP.
-- com.rs.game.npc.bosslabs.BossDefinitionRegistry is a small thread-safe NPC-id -> immutable BossDefinition mapping. It owns no gameplay behavior.
+- com.rs.game.npc.bosslabs.BossDefinitionRegistry is the live NPC-id -> immutable BossDefinition mapping. It owns no gameplay behavior.
+- BossDefinitionRegistry supports explicit live replacement and one-level rollback. Rollback can restore either the previous BossLabs definition or an unregistered state that returns the NPC to Matrix3 Java/default combat.
 - com.rs.game.npc.bosslabs.BossCombatScript is the Matrix3 CombatScript adapter for registered BossLabs definitions.
 - BossCombatScript resolves current health -> active phase -> one configured attack, then uses existing Matrix3 CombatScript helpers for hit chance/damage and existing World projectile timing.
 - Attack animation/GFX/projectile/max-hit/combat-delay fields may use BossAttackDefinition.USE_NPC_DEFAULT (-1) to inherit the existing NPC/cache value where supported.
-- No BossLabs NPC id is registered by default in this slice. Existing live NPC behavior is therefore unchanged until first-boss content explicitly registers an id.
+- No first-boss NPC id is hardcoded by default; takeover still requires an explicit BossLabs definition registration or saved definition.
 
 7. Unified NPC search / existing-boss inspection
 - com.rs.game.npc.bosslabs.BossNpcSearchService provides one query path rather than separate id/name modes.
@@ -56,22 +59,43 @@ verified-static
 - Existing hand-written Java bosses can be inspected and identified but are not automatically claimed as converted BossLabs phases/mechanics.
 - docs/bosslabs/NPC_SEARCH.md records the detailed no-dropdown search/editor contract.
 
+8. Storage convention scan
+- Matrix3 existing NPC content uses dedicated Server/data/npcs files with explicit Java loader/writer ownership, including unpacked/packed combat definitions, drops, examines, and spawns.
+- The first BossLabs hierarchy does not fit the existing flat NPC combat-definition record without distorting ownership or overloading that file.
+- BossLabs V1 therefore uses a separate versioned binary file at data/bosslabs/definitions.bld through BossDefinitionStore.
+- The file records only current BossDefinition -> BossPhaseDefinition -> BossAttackDefinition fields and carries an explicit magic/version header.
+- BossDefinitionStore writes a complete replacement temp file, flushes/syncs it, then moves it into place before updating the saved in-memory snapshot.
+- Existing Matrix3 data/npcs packed files are not rewritten by BossLabs persistence.
+- This removes the earlier JSON/storage-format hypothesis for V1; no JSON dependency/parser is introduced.
+
+9. Live editing / publish contract
+- com.rs.game.npc.bosslabs.BossDefinitionPublisher is the stable future-tool API for Apply Live, Save & Apply, Undo Last Apply, Apply Saved, and live/saved inspection.
+- Apply Live updates BossDefinitionRegistry only and performs no persistent write.
+- Save & Apply calls BossDefinitionStore.save() first and only then BossDefinitionRegistry.applyLive() with the exact same immutable definition instance.
+- Therefore a persistence exception prevents live publication by that operation and leaves the previous live definition untouched.
+- Apply Saved republishes the persisted definition without rewriting it.
+- Rollback is intentionally one level for V1 and is runtime-only; undoing a live apply does not rewrite the saved definition.
+- Definition-backed combat data can be picked up by later BossCombatScript attack/phase resolution. Future identity/cache/world-instance changes may require a controlled respawn rather than direct live mutation.
+- docs/bosslabs/LIVE_EDITING.md records the detailed DRAFT/LIVE/SAVED contract and UI/threading expectations.
+
 Phase 2 status
 - Reusable runtime adapter: implemented, verified-static.
 - Dynamic definition registration seam: implemented, verified-static.
 - Unified NPC search/inspection backend: implemented, verified-static.
+- Apply Live / one-level rollback runtime support: implemented, verified-static.
+- BossLabs persistent definition store and Save & Apply ordering: implemented, verified-static.
+- Startup reload of saved BossLabs definitions: implemented, verified-static.
 - First concrete boss registration: intentionally not added because the Volcanic Warden NPC id/assets have not been verified.
 - Minimal live Phase 1 loop: not yet VERIFIED; requires a confirmed first-boss NPC id/assets plus runtime testing.
 
 Still HYPOTHESIS / intentionally unresolved
 - Exact first custom NPC id/model/animations/GFX/projectiles for Volcanic Warden.
-- Exact developer command/client-to-server bridge BossLabs will use for live spawn/reset/force-phase actions.
-- Whether persisted BossLabs definitions should use JSON or another existing Matrix3 content format.
+- Exact developer command/client-to-server bridge BossLabs will use for live spawn/reset/force-phase/apply/save actions from the external window.
 - Whether the first encounter should use the existing BossInstance path; inspect it only if the first boss actually needs instancing.
-- Exact client-side/server bridge used by the eventual BossLabs external window to request NPC search/inspection results.
 
 Next implementation slice
+- Eclipse/Java 8 compile and targeted startup/combat checks for the new live/persistence foundation.
 - Confirm/select the first boss NPC identity/assets without hijacking an existing custom-combat NPC.
 - Add one manually-defined Volcanic Warden registration with Phase 1 melee + fire projectile attacks.
-- Spawn/test it through the authoritative Matrix3 development path and promote the phase/attack loop from verified-static to VERIFIED only after runtime evidence.
-- Keep the BossLabs external Swing window in Phase 3 per BOSSLABS.md; when added, use the implemented one-field NPC search/inspection backend and build name indexes away from the EDT.
+- Spawn/test it through the authoritative Matrix3 development path and promote the phase/attack loop plus live apply behavior from verified-static to VERIFIED only after runtime evidence.
+- Keep the BossLabs external Swing window in Phase 3 per BOSSLABS.md; when added, use the implemented one-field NPC search/inspection and BossDefinitionPublisher APIs and keep indexing/persistence off the EDT.
