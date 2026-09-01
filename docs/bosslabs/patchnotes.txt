@@ -43,3 +43,10 @@
 - First-time conversion of a Matrix3 Java/default NPC remains blocked until BossLabs attack/phase authoring exists; the tool does not publish an empty or fake conversion.
 - Kept encounter spawn/reset/force-phase/testing controls disabled because matching authoritative server testing APIs are not implemented yet.
 - Added window-close listener cleanup so the static BossLabs reply listener does not retain a disposed Swing panel.
+- Added a client-local BossLabsDraftDefinition model plus real Phases and Attacks editors for health ranges, melee/range/magic style, animation, GFX, projectile, max-hit override, and combat-delay override.
+- Existing BossLabs definitions now round-trip their complete phase/attack data through a bounded versioned development-wire payload and repopulate the editors on inspection.
+- First-time Matrix3 NPC conversion is now available only after the local draft contains a valid non-overlapping phase layout with at least one valid attack per phase.
+- Added an atomic Client Console command batch so multi-packet BossLabs publishes are queued all-or-nothing rather than leaving a partial client-side transaction.
+- Added a bounded begin/chunk/commit BossLabs publish transaction; no live or saved definition changes until the final commit reconstructs a complete immutable server BossDefinition.
+- Apply Live publishes the complete phase/attack draft through BossDefinitionPublisher; Save & Apply preserves the existing persistence-before-live ordering and slow-executor disk path.
+- Kept BossDefinitionStore format/version unchanged because the existing store already persists all attack and phase fields needed by this authoring slice.
