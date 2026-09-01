@@ -29,7 +29,7 @@ import com.rs.utils.Logger;
 public final class BossDefinitionStore {
 
 	private static final int MAGIC = 0x424C4431; // BLD1
-	private static final int VERSION = 2;
+	private static final int VERSION = 3;
 	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_DEFINITIONS = 10000;
 	private static final int MAX_PHASES = 1000;
@@ -150,8 +150,20 @@ public final class BossDefinitionStore {
 				List<BossTileOffset> pattern = new ArrayList<BossTileOffset>(tileCount);
 				for (int tileIndex = 0; tileIndex < tileCount; tileIndex++)
 					pattern.add(new BossTileOffset(input.readInt(), input.readInt()));
+
+				if (version == 2) {
+					attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+							maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern));
+					continue;
+				}
+
+				int hazardGraphicId = input.readInt();
+				int hazardDurationTicks = input.readInt();
+				int hazardTickInterval = input.readInt();
+				int hazardMaxHitOverride = input.readInt();
 				attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
-						maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern));
+						maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
+						hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride));
 			}
 			phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
 		}
@@ -221,6 +233,10 @@ public final class BossDefinitionStore {
 					output.writeInt(tile.getX());
 					output.writeInt(tile.getY());
 				}
+				output.writeInt(attack.getHazardGraphicId());
+				output.writeInt(attack.getHazardDurationTicks());
+				output.writeInt(attack.getHazardTickInterval());
+				output.writeInt(attack.getHazardMaxHitOverride());
 			}
 		}
 	}
