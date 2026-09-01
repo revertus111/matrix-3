@@ -139,3 +139,19 @@ Current telegraphed tile-attack checkpoint (supersedes items 99 and 104 only for
 116. Set a warning duration longer than the normal combat delay. Confirm BossCombatScript delays the boss's next attack until at least the patterned attack's warning/impact window has completed.
 117. Save & Apply a patterned attack, restart the server, re-inspect it, and confirm warning/impact values and every painted tile survive persistence exactly.
 118. Confirm this slice does not add persistent hazards, minions, alternate targeting, a second combat engine, or world lifecycle ownership; those remain separate future first-boss slices.
+
+Current lingering floor-hazard checkpoint (supersedes item 118 for persistent hazards and items 107/109/117 for store/wire version)
+119. Eclipse clean/build Client and Server with Java 8. Confirm BossAttackDefinition, BossCombatScript, BossDefinitionStore, BossLabsDefinitionWireCodec, BossLabsDraftDefinition, and BossLabsDefinitionEditor compile cleanly after the hazard fields/editor-scroll change.
+120. Start the server with known-good BossLabs v1 and v2 definition stores in controlled tests. Confirm both load successfully; v1 attacks remain plain, and v2 painted attacks retain their patterns with lingering hazards disabled.
+121. Save any BossLabs definition after this patch. Confirm definitions.bld is written as version 3, restart, and confirm existing plain/patterned attacks remain intact. Existing Matrix3 NPC combat/drop/spawn/examine data must remain untouched.
+122. Select a painted attack and configure Hazard GFX, Hazard duration, Hazard interval, and Hazard max hit. Confirm duration 0 disables the lingering hazard and the draft remains local until Apply Live/Save & Apply.
+123. Confirm a positive hazard duration with zero painted tiles cannot publish. Also reject hazard GFX below -1, duration below 0 or above 100, interval below 1 or above 50, interval greater than enabled duration, and hazard max hit below -1.
+124. Apply Live with a painted impact plus a lingering hazard. Confirm the normal warning/impact occurs first, then the exact snapshotted impact tiles remain the hazard area for the configured duration rather than following the player or boss.
+125. Stand on a lingering hazard tile and confirm damage occurs at the configured tick interval through the attack's existing melee/range/magic CombatScript accuracy/hit helpers using Hazard max hit (or NPC default when -1).
+126. Move off the hazard between damage ticks. Confirm later hazard ticks no longer damage that player; move another player onto the tile and confirm that player becomes eligible on subsequent ticks.
+127. Configure a hazard duration of 6 ticks and interval of 2. Confirm hazard damage checks occur every 2 ticks and stop after the configured duration without an extra late damage tick.
+128. Confirm the boss can continue selecting/performing later attacks while an earlier floor hazard remains active; the lingering floor does not artificially extend the boss's attack delay beyond the warning/impact window.
+129. Kill or finish the boss while its floor hazard is active. Confirm the scheduled hazard stops and does not apply further damage after the boss death/finish condition.
+130. Save & Apply a hazard attack, restart the server, and re-inspect it. Confirm Hazard GFX, duration, interval, max hit, and every painted tile survive the v3 store/wire round trip exactly.
+131. Resize BossLabs down to its practical minimum and open Attacks. Confirm the fixed phase/attack list remains usable and the expanded right-side attack/hazard/pattern editor scrolls vertically with no unreachable controls.
+132. Confirm this slice does not add minions, alternate/random targeting, a general mechanics scripting engine, or alternate world/combat ownership. Those remain separate first-boss slices.
