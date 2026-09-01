@@ -29,7 +29,7 @@ import com.rs.utils.Logger;
 public final class BossDefinitionStore {
 
 	private static final int MAGIC = 0x424C4431; // BLD1
-	private static final int VERSION = 3;
+	private static final int VERSION = 4;
 	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_DEFINITIONS = 10000;
 	private static final int MAX_PHASES = 1000;
@@ -62,11 +62,6 @@ public final class BossDefinitionStore {
 		}
 	}
 
-	/**
-	 * Persists one definition while preserving all other saved BossLabs entries.
-	 * The in-memory saved snapshot is updated only after the replacement file is
-	 * successfully written and moved into place.
-	 */
 	public static void save(BossDefinition definition) throws IOException {
 		if (definition == null)
 			throw new IllegalArgumentException("Boss definition must not be null.");
@@ -161,9 +156,19 @@ public final class BossDefinitionStore {
 				int hazardDurationTicks = input.readInt();
 				int hazardTickInterval = input.readInt();
 				int hazardMaxHitOverride = input.readInt();
+				if (version == 3) {
+					attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+							maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
+							hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride));
+					continue;
+				}
+
+				int targetMode = input.readInt();
+				int targetRange = input.readInt();
 				attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
 						maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
-						hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride));
+						hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride,
+						targetMode, targetRange));
 			}
 			phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
 		}
@@ -237,6 +242,8 @@ public final class BossDefinitionStore {
 				output.writeInt(attack.getHazardDurationTicks());
 				output.writeInt(attack.getHazardTickInterval());
 				output.writeInt(attack.getHazardMaxHitOverride());
+				output.writeInt(attack.getTargetMode());
+				output.writeInt(attack.getTargetRange());
 			}
 		}
 	}
