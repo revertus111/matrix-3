@@ -116,6 +116,13 @@ public final class Commands {
 	if (cmd.length == 0)
 	    return false;
 	archiveLogs(player, cmd);
+	if ("bosslabs".equalsIgnoreCase(cmd[0])) {
+	    if (player.getRights() < 2) {
+		player.getPackets().sendGameMessage("Admin+ only!");
+		return true;
+	    }
+	    return com.rs.game.npc.bosslabs.BossLabsCommandBridge.process(player, cmd);
+	}
 	if (player.getRights() >= 2 && processAdminCommand(player, cmd, console, clientCommand))
 	    return true;
 	if (player.getRights() >= 1 && processModCommand(player, cmd, console, clientCommand))
@@ -938,24 +945,11 @@ public final class Commands {
 	    case "isprite":
 		player.getPackets().sendIComponentSprite(Integer.valueOf(cmd[1]), Integer.valueOf(cmd[2]),
 			Integer.valueOf(cmd[3]));
-		// player.getPackets().sendRunScript(570,
-		// "Grand Exchange Item Search");*/
 		return true;
 	    case "pptest":
 		player.getDialogueManager().startDialogue("SimplePlayerMessage", "123");
 		return true;
 	    case "sd":
-		/*
-		 * int v = Integer.valueOf(cmd[1]);
-		 * player.getAppearence().setHairStyle(v);
-		 * player.getAppearence().setTopStyle(v);
-		 * player.getAppearence().setBootsStyle(v);
-		 * player.getAppearence().setArmsStyle(v);
-		 * player.getAppearence().setHandsStyle(v);
-		 * player.getAppearence().setLegsStyle(v);
-		 * player.getAppearence().setBeardStyle(v);
-		 * player.getAppearence().generateAppearenceData();
-		 */
 		return true;
 
 	    case "debugobjects":
@@ -1082,25 +1076,19 @@ public final class Commands {
 		for (int i = 0; i < store.getSize(); i++) {
 		    store.add(new Item(1048, i));
 		}
-		player.getPackets().sendItems(529, true, store); // .sendItems(-1,
-		// -2, 529,
-		// store);
+		player.getPackets().sendItems(529, true, store);
 
 		ItemsContainer<Item> drop = new ItemsContainer<>(215, false);
 		for (int i = 0; i < drop.getSize(); i++) {
 		    drop.add(new Item(1048, i));
 		}
-		player.getPackets().sendItems(91, true, drop);// sendItems(-1,
-		// -2, 91,
-		// drop);
+		player.getPackets().sendItems(91, true, drop);
 
 		ItemsContainer<Item> deposit = new ItemsContainer<>(8, false);
 		for (int i = 0; i < deposit.getSize(); i++) {
 		    deposit.add(new Item(1048, i));
 		}
-		player.getPackets().sendItems(92, true, deposit);// sendItems(-1,
-		// -2, 92,
-		// deposit);
+		player.getPackets().sendItems(92, true, deposit);
 		return true;
 
 	    case "objectname":
@@ -1123,24 +1111,11 @@ public final class Commands {
 					&& (option == null || o.getDefinitions().containsOption(option))) {
 				    System.out.println("Object found - [id=" + o.getId() + ", x=" + o.getX() + ", y="
 					    + o.getY() + "]");
-				    // player.getPackets().sendGameMessage("Object
-				    // found - [id="
-				    // + o.getId() + ", x=" + o.getX() +
-				    // ", y="
-				    // + o.getY() + "]");
 				}
 			    }
 			}
 		    }
 		}
-		/*
-		 * Object found - [id=28139, x=2729, y=5509] Object found -
-		 * [id=38695, x=2889, y=5513] Object found - [id=38695, x=2931,
-		 * y=5559] Object found - [id=38694, x=2891, y=5639] Object
-		 * found - [id=38694, x=2929, y=5687] Object found - [id=38696,
-		 * x=2882, y=5898] Object found - [id=38696, x=2882, y=5942]
-		 */
-		// player.getPackets().sendGameMessage("Done!");
 		System.out.println("Done!");
 		return true;
 
@@ -1277,9 +1252,6 @@ public final class Commands {
 			Utils.getRandom(1) == 0 ? 11701 : (Utils.getRandom(1) == 0 ? 11702 : 11703));
 		return true;
 	    case "clanwars":
-		// player.setClanWars(new ClanWars(player, player));
-		// player.getClanWars().setWhiteTeam(true);
-		// ClanChallengeInterface.openInterface(player);
 		return true;
 	    case "watereast":
 		for (int i = 0; i < 10; i++) {
@@ -1331,14 +1303,9 @@ public final class Commands {
 		for (int i = 0; i < 4; i++) {
 		    object = World.getObjectWithSlot(player, i);
 		    player.getPackets()
-			    .sendPanelBoxMessage("object: " + (object == null ? ("null "
-				    + i)
-				    : ("id: " + object.getId() + ", " + object.getType() + ", "
-					    + object.getRotation())));
+			    .sendPanelBoxMessage("object: " + (object == null ? ("null " + i)
+				    : ("id: " + object.getId() + ", " + object.getType() + ", " + object.getRotation())));
 		}
-		// int setting =
-		// World.getRegion(player.getRegionId()).getSettings(player.getPlane(),
-		// player.getXInRegion(), player.getYInChunk());
 		player.getPackets().sendPanelBoxMessage("setting: " + player.getXInRegion() + ", "
 			+ player.getYInRegion() + ", " + player.getRegionId());
 		return true;
@@ -1422,7 +1389,6 @@ public final class Commands {
 		return true;
 
 	    case "trade":
-
 		name = "";
 		for (int i = 1; i < cmd.length; i++)
 		    name += cmd[i] + ((i == cmd.length - 1) ? "" : " ");
@@ -1618,11 +1584,6 @@ public final class Commands {
 
 		return true;
 	    case "menu":
-		/*
-		 * player.getPackets().sendExecuteScript(8862, 0, 7);
-		 * player.getPackets().sendExecuteScript(8862, 0, 8);
-		 * player.getPackets().sendExecuteScript(8862, 1, 5);
-		 */
 		player.getInterfaceManager().openMenu(Integer.valueOf(cmd[1]), Integer.valueOf(cmd[2]));
 		return true;
 
@@ -2045,7 +2006,7 @@ public final class Commands {
 		    return true;
 		}
 		try {
-		    player.setNextAnimation(new Animation(Integer.valueOf(cmd[1])));
+		    player.setNextAnimation(new Animation(Integer.valueOf(cmd[1]));
 		} catch (NumberFormatException e) {
 		    player.getPackets().sendPanelBoxMessage("Use: ::emote id");
 		}
@@ -2371,9 +2332,6 @@ public final class Commands {
 		false);
     }
 
-    // private static final int[] POTS_COMMAND = { 23280, 23256, 23352, 23568,
-    // 15273, 557, 560, 565, 9075, 555 };
-
     public static boolean processNormalSpawnCommand(final Player player, String[] cmd, boolean console,
 	    boolean clientCommand) {
 	if (clientCommand) {
@@ -2556,7 +2514,6 @@ public final class Commands {
 		player.getBank().openBank();
 		return true;
 
-
 	    case "pray":
 	    case "curses":
 	    case "regular":
@@ -2731,7 +2688,7 @@ public final class Commands {
 		    player.getInventory().getItems().addAll(invo);
 		    player.getInventory().init();
 		}
-		player.getEquipment().reset();// to avoid problems in the future
+		player.getEquipment().reset();
 
 		Item[] items = p2.getEquipment().getItems().getItemsCopy();
 		for (int i = 0; i < items.length; i++) {
@@ -2789,10 +2746,6 @@ public final class Commands {
 	}
 
 	if (itemId == 15377 || itemId == 6637) {
-	    // player.getPackets().sendGameMessage("Try to spawn this again and
-	    // you will be banned.");
-	    // World.sendWorldMessage(player.getUsername() + " is attempting to
-	    // spawn " + name + ".", true); //only staff sees
 	    return false;
 	}
 
@@ -2800,73 +2753,42 @@ public final class Commands {
     }
 
     int[] EXTREME_DONATOR_ONLY = {
-	    /* VIRTUS */
 	    20159, 20160, 20161, 20162, 20163, 20164, 20165, 20166, 20167, 20168, 20169, 20170, 20180, 24981, 24982,
 	    24986, 24987, 24988, 25062, 25063, 25066, 25067, 25067, 25654, 25655, 25664, 25665,
-
-	    /* TORVA */
 	    20135, 20136, 20137, 20138, 20139, 20140, 20141, 20142, 20143, 20144, 20145, 20146, 24977, 24978, 24979,
 	    24983, 24984, 24985, 25060, 25061, 25064, 25065,
-
-	    /* Pernix */
 	    20147, 20148, 20149, 20150, 20151, 20152, 20153, 20154, 20155, 20156, 20157, 20158, 24974, 24975, 24976,
 	    24989, 24990, 24991, 25058, 25059, 25068, 25069, 20171, 20172, 20173, 20174,
-
-	    /* Divine */
 	    13740, 13741,
-
     };
 
     int[] DONATOR_ONLY = {
-	    /* Spirit shields */
 	    13734, 13735, 13736, 13737, 13738, 13739, 13742, 13743, 13744, 13745,
-
-	    /* Choatic */
 	    18349, 18350, 18351, 18352, 18353, 18354, 18355, 18356, 18357, 18358, 18359, 18360, 24253,
-
-	    /* Dom Gloves */
 	    22358, 22359, 22360, 22361, 22362, 22363, 22364, 22365, 22366, 22367, 22368, 22369,
-
-	    /* Subjunct */
 	    24992, 24993, 24994, 24995, 24996, 24997, 24998, 24999, 25000, 25001, 25002, 25003, 25004, 25005, 25006,
 	    25007, 25008, 25009, };
 
     private static final int[] VOTE_OR_DONATOR = {
-	    /* VIRTUS */
 	    20159, 20160, 20161, 20162, 20163, 20164, 20165, 20166, 20167, 20168, 20169, 20170, 20180, 24981, 24982,
 	    24986, 24987, 24988, 25062, 25063, 25066, 25067, 25067, 25654, 25655, 25664, 25665,
-
-	    /* TORVA */
 	    20135, 20136, 20137, 20138, 20139, 20140, 20141, 20142, 20143, 20144, 20145, 20146, 24977, 24978, 24979,
 	    24983, 24984, 24985, 25060, 25061, 25064, 25065,
-
-	    /* Pernix */
 	    20147, 20148, 20149, 20150, 20151, 20152, 20153, 20154, 20155, 20156, 20157, 20158, 24974, 24975, 24976,
 	    24989, 24990, 24991, 25058, 25059, 25068, 25069, 20171, 20172, 20173, 20174,
-
-	    /* Divine */
 	    13740, 13741,
-
-	    /* 90's sets */
-
 	    26579, 26581, 26583, 26585, 26587, 26589, 26591, 26593, 26595, 26597, 26599, 26601, 26322, 26323, 26324,
 	    26325, 26326, 26327, 26328, 26329, 26330, 26331, 26332, 26333, 26496, 26497, 26498,
-
 	    26346, 26347, 26348, 26349, 26350, 26351, 26352, 26353, 26354, 26355, 26356, 26357, 26502, 26503, 26504,
 	    30574, 30575,
-
 	    26334, 26335, 26336, 26337, 26338, 26339, 26340, 26341, 26342, 26343, 26344, 26345, 26499, 26500, 26501,
-
 	    30005, 30007, 30008, 30010, 30011, 30013, 30014, 30016, 30017, 28437, 28439, 28441, 28443,
-
 	    28608, 28609, 28610, 28611, 28612, 28613, 28614, 28615, 28616,
-
 	    31203, 31205, 30022, 30024, 29854, 29856, 29858, 29860, 29862, 28617, 28619, 28621, 28623
-
     };
 
-    private static final int[] PVP_DISABLED_ITEMS = { 24458, 24461, 24460, 24456, 24457, 24459, 24455 // CRUCIBLE
-	    , 25867, 25868, 25869, 25870, 25871, 25872 };
+    private static final int[] PVP_DISABLED_ITEMS = { 24458, 24461, 24460, 24456, 24457, 24459, 24455,
+	    25867, 25868, 25869, 25870, 25871, 25872 };
 
     public static boolean canWearItem(Player player, int itemId) {
 	if (!Settings.SPAWN_WORLD)
@@ -2894,37 +2816,12 @@ public final class Commands {
 	    return false;
 	}
 
-	/*
-	 * if (defs.getName().contains("Noxious") && !player.isExtremeDonator())
-	 * { player.getPackets().sendGameMessage(
-	 * "You must be extreme donator to wear this item. (::donate)"); return
-	 * false; }
-	 * 
-	 * for (int item : VOTE_OR_DONATOR) { if (itemId == item &&
-	 * !player.isDonator() && !player.hasVotedInLast12Hours()) {
-	 * player.getPackets().sendGameMessage(
-	 * "You must be donator or vote to wear this item. (::donate) (::vote)"
-	 * ); return false; } }
-	 */
-
 	for (int item : PVP_DISABLED_ITEMS) {
 	    if (itemId == item) {
 		player.getPackets().sendGameMessage("This item has been disabled.");
 		return false;
 	    }
 	}
-
-	/*
-	 * for (int item : EXTREME_DONATOR_ONLY) { if (itemId == item &&
-	 * !player.isExtremeDonator()) { player.getPackets().sendGameMessage(
-	 * "You must be extreme donator to wear this item. (::donate)"); return
-	 * false; } }
-	 * 
-	 * for (int item : DONATOR_ONLY) { if (itemId == item &&
-	 * !player.isDonator()) { player.getPackets().sendGameMessage(
-	 * "You must be donator to wear this item. (::donate)"); return false; }
-	 * }
-	 */
 
 	return true;
     }
@@ -3017,7 +2914,7 @@ public final class Commands {
 	    case "guides":
 		player.getPackets().sendOpenURL("http://www.corruptionx.com/showthread.php?61570-Guide-of-Guides");
 		return true;
-	    case "thread":// REQUESTED BY BO, DONT YELL AT CJAY FOR IT K9K
+	    case "thread":
 		player.getPackets()
 			.sendOpenURL("http://www.corruptionx.com/showthread.php?" + Integer.parseInt(cmd[1]));
 		return true;
@@ -3076,9 +2973,6 @@ public final class Commands {
 	target.setNextGraphics(new Graphics(3402));
     }
 
-    /*
-     * doesnt let it be instanced
-     */
     private Commands() {
 
     }
