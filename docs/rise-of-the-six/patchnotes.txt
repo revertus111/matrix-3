@@ -18,3 +18,5 @@
 - Replaced the initial rough Dharok max-hit interpolation with donor-backed 2,000/3,000/4,000/5,000/6,000/7,000 HP bands.
 - Switched Ahrim/Karil base attack assets to donor-backed projectile/animation values and set their 3,000 max-hit baseline; Guthan/Torag/Verac use the donor 3,500 melee baseline.
 - Changed Guthan's baseline life-steal roll from the provisional 1-in-3 to the documented 1-in-8 rate.
+- Changed private boss-instance creation for owner/admin accounts (`rights >= 2`) so Start immediately finishes the account's cached instance and creates a fresh session instead of reusing the remaining one-hour arena timer.
+- Normal-player boss-instance reuse/rejoin timing remains unchanged.

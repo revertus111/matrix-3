@@ -111,6 +111,18 @@ public class BossInstanceHandler {
 			try {
 				String key = player == null ? "" : player.getUsername();
 				BossInstance instance = findInstance(settings.getBoss(), key);
+
+				/*
+				 * Owner/admin development accounts must be able to start a clean boss
+				 * session immediately instead of being forced back into the cached
+				 * one-hour instance. Normal players keep Matrix3's original reuse/rejoin
+				 * behavior.
+				 */
+				if (instance != null && player != null && player.getRights() >= 2) {
+					instance.finish();
+					instance = null;
+				}
+
 				if (instance == null) {
 					if (player == null && !settings.getBoss().publicVersion) {
 						if (Settings.DEBUG)

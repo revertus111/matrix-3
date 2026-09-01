@@ -52,6 +52,8 @@ Cleanup / regression
 37. Leave/logout/teleport until the private instance becomes empty. Confirm RiseOfTheSixInstance finishes all six custom NPCs and destroys the copied map without leaked NPCs/tasks.
 38. Recreate a new RoTS instance after cleanup. Confirm all six brothers start fresh and no revive/special state carries over.
 39. Confirm practice mode still suppresses normal Matrix3 boss-instance drops; RoTS-specific chest/rewards are not implemented in this checkpoint and must not be fabricated.
+40. As an owner/admin (`rights >= 2`), start RoTS, leave/reopen setup, then choose Start again before the one-hour session expires. Confirm the old cached private instance is finished and a fresh RoTS instance is created immediately.
+41. Confirm a normal player still gets Matrix3's original cached private-instance reuse/rejoin behavior and is not granted the owner/admin fresh-start bypass.
 
 100% fidelity gates still pending
-40. Do not mark the encounter VERIFIED-complete until the real well/totem entrance, tunnel/pads, daily formations, side empowerment, Shadow Drag/Realm, all remaining brother specials/rotations, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow pass targeted runtime tests.
+42. Do not mark the encounter VERIFIED-complete until the real well/totem entrance, tunnel/pads, daily formations, side empowerment, Shadow Drag/Realm, all remaining brother specials/rotations, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow pass targeted runtime tests.
