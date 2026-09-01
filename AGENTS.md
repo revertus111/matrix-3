@@ -16,6 +16,23 @@ Read `docs/rs3/PROJECT.md` before changing code. Also read the relevant `docs/<s
 - Before AAA, inspect only the smallest likely file set and report findings, likely files, implementation, and important uncertainty.
 - After AAA, patch directly and keep the change minimal, isolated, and strictly limited to the requested task.
 
+## Repository scan discipline
+
+- Start with the smallest likely file set for the requested task.
+- Prefer known file paths, direct file reads, and exact-reference searches over broad repository searches.
+- Do not recursively scan, enumerate, or fetch the entire repository unless the task genuinely requires it.
+- Do not repeatedly search for the same class, method, file, symbol, or concept using slightly different queries.
+- If the first targeted search fails, use one narrow fallback. Do not continually broaden the search.
+- Do not inspect sibling systems, unrelated packages, adjacent tooling, or broad dependency trees unless current evidence shows they are required.
+- Stop scanning as soon as the implementation path is established.
+- Do not keep searching merely to increase confidence after enough evidence exists to make the requested change.
+- Do not repeatedly reread `AGENTS.md`, project documentation, branch state, or files already inspected unless they changed or a specific unread section is required.
+- Verify repository and branch state once at the beginning. Recheck only when a GitHub operation fails or there is evidence that repository state changed.
+- After `AAA`, patch the established files directly. Do not restart discovery or rescan the repository before making the approved change.
+- After patching, verify only the changed files and their immediate dependencies or relevant tests. Do not perform a full-repository review.
+- If a GitHub, search, or repository tool fails, make one reasonable targeted retry or fallback. If it still cannot be resolved, report the uncertainty instead of entering a repeated tool-call loop.
+- If broader investigation genuinely becomes necessary, state what new evidence requires expanding the scan before expanding it.
+
 ## Matrix3 architecture rules
 
 1. Matrix3 is the authoritative game architecture.
