@@ -73,6 +73,7 @@ public final class ClientConsoleBridge {
     }
 
     public static void flushQueuedCommands() {
+        ClientConsoleItemBridge.flushThumbnailRequests();
         if (!hasLocalPlayer()) {
             COMMAND_QUEUE.clear();
             return;
