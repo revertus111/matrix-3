@@ -67,6 +67,8 @@ public final class BossLabsDefinitionEditor {
             new JList<BossLabsDraftDefinition.Attack>(attackListModel);
     private final JTextField attackIdField = new JTextField();
     private final JComboBox<String> attackStyleBox = new JComboBox<String>(new String[] { "Melee", "Range", "Magic" });
+    private final JComboBox<String> targetModeBox = new JComboBox<String>(new String[] { "Current target", "Random nearby player" });
+    private final JTextField targetRangeField = new JTextField();
     private final JTextField animationField = new JTextField();
     private final JTextField graphicField = new JTextField();
     private final JTextField projectileField = new JTextField();
@@ -172,17 +174,14 @@ public final class BossLabsDefinitionEditor {
         attacksRoot.setBackground(ConsoleTheme.PANEL);
         attacksRoot.setBorder(ConsoleTheme.panelPadding(12, 12, 12, 12));
 
-        JPanel top = verticalHeading("Attacks", "Edit combat, telegraphed tiles, and optional lingering floor hazards. -1 uses NPC defaults where supported.");
+        JPanel top = verticalHeading("Attacks", "Edit combat, target selection, telegraphed tiles, and optional lingering floor hazards.");
 
         JPanel phaseChooser = new JPanel(new BorderLayout(8, 0));
         phaseChooser.setOpaque(false);
         JLabel phaseLabel = new JLabel("Phase");
         phaseLabel.setFont(ConsoleTheme.BODY_FONT);
         phaseLabel.setForeground(ConsoleTheme.MUTED_TEXT);
-        attackPhaseBox.setFont(ConsoleTheme.BODY_FONT);
-        attackPhaseBox.setForeground(ConsoleTheme.TEXT);
-        attackPhaseBox.setBackground(ConsoleTheme.INPUT);
-        attackPhaseBox.setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
+        styleCombo(attackPhaseBox);
         attackPhaseBox.addActionListener(e -> {
             if (!suppressSelectionEvents)
                 refreshAttackList(0);
@@ -216,7 +215,8 @@ public final class BossLabsDefinitionEditor {
         JPanel formCard = createCard();
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
-        styleField(attackIdField, "Stable attack id, for example ground_slam");
+        styleField(attackIdField, "Stable attack id, for example random_fireball");
+        styleField(targetRangeField, "Maximum range for alternate-player targeting, 1-32 tiles");
         styleField(animationField, "Animation id, or -1 for NPC default");
         styleField(graphicField, "NPC graphic id, or -1 for NPC default");
         styleField(projectileField, "Projectile id, or -1 for NPC default");
@@ -229,25 +229,26 @@ public final class BossLabsDefinitionEditor {
         styleField(hazardDurationField, "Hazard duration in ticks; 0 disables the lingering hazard");
         styleField(hazardIntervalField, "Damage interval in ticks, 1-50; must not exceed duration when enabled");
         styleField(hazardMaxHitField, "Maximum damage per hazard tick, or -1 for NPC default");
-        attackStyleBox.setFont(ConsoleTheme.BODY_FONT);
-        attackStyleBox.setForeground(ConsoleTheme.TEXT);
-        attackStyleBox.setBackground(ConsoleTheme.INPUT);
-        attackStyleBox.setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
+        styleCombo(attackStyleBox);
+        styleCombo(targetModeBox);
+        targetModeBox.setToolTipText("Random nearby player prefers someone other than the NPC's current combat target; solo fights fall back safely.");
 
         addFormRow(form, 0, "Attack ID", attackIdField);
         addFormRow(form, 1, "Style", attackStyleBox);
-        addFormRow(form, 2, "Animation", animationField);
-        addFormRow(form, 3, "NPC graphic", graphicField);
-        addFormRow(form, 4, "Projectile", projectileField);
-        addFormRow(form, 5, "Impact max hit", maxHitField);
-        addFormRow(form, 6, "Combat delay", combatDelayField);
-        addFormRow(form, 7, "Warning GFX", telegraphGraphicField);
-        addFormRow(form, 8, "Impact GFX", impactGraphicField);
-        addFormRow(form, 9, "Warning ticks", telegraphTicksField);
-        addFormRow(form, 10, "Hazard GFX", hazardGraphicField);
-        addFormRow(form, 11, "Hazard duration", hazardDurationField);
-        addFormRow(form, 12, "Hazard interval", hazardIntervalField);
-        addFormRow(form, 13, "Hazard max hit", hazardMaxHitField);
+        addFormRow(form, 2, "Target", targetModeBox);
+        addFormRow(form, 3, "Target range", targetRangeField);
+        addFormRow(form, 4, "Animation", animationField);
+        addFormRow(form, 5, "NPC graphic", graphicField);
+        addFormRow(form, 6, "Projectile", projectileField);
+        addFormRow(form, 7, "Impact max hit", maxHitField);
+        addFormRow(form, 8, "Combat delay", combatDelayField);
+        addFormRow(form, 9, "Warning GFX", telegraphGraphicField);
+        addFormRow(form, 10, "Impact GFX", impactGraphicField);
+        addFormRow(form, 11, "Warning ticks", telegraphTicksField);
+        addFormRow(form, 12, "Hazard GFX", hazardGraphicField);
+        addFormRow(form, 13, "Hazard duration", hazardDurationField);
+        addFormRow(form, 14, "Hazard interval", hazardIntervalField);
+        addFormRow(form, 15, "Hazard max hit", hazardMaxHitField);
 
         JButton update = new JButton("Update Attack");
         styleButton(update);
@@ -268,7 +269,7 @@ public final class BossLabsDefinitionEditor {
 
         JPanel patternCard = createCard();
         patternCard.setPreferredSize(new Dimension(500, 245));
-        JPanel patternHeading = verticalHeading("Tile pattern", "Origin 0,0 is the target's snapshotted tile. Left click toggles impact/hazard tiles; middle drag pans; wheel zooms.");
+        JPanel patternHeading = verticalHeading("Tile pattern", "Origin 0,0 is the resolved attack target's snapshotted tile. Left click toggles impact/hazard tiles; middle drag pans; wheel zooms.");
         patternCard.add(patternHeading, BorderLayout.NORTH);
         patternCard.add(tilePatternCanvas, BorderLayout.CENTER);
         patternCard.add(patternStatus, BorderLayout.SOUTH);
@@ -385,7 +386,7 @@ public final class BossLabsDefinitionEditor {
         int number = phase.getAttacks().size() + 1;
         phase.getAttacks().add(new BossLabsDraftDefinition.Attack("attack_" + number, 0, -1, -1, -1, -1, -1));
         refreshAttackList(phase.getAttacks().size() - 1);
-        attackStatus.setText("Attack added. NPC defaults are selected initially.");
+        attackStatus.setText("Attack added. Current target and NPC combat defaults are selected initially.");
         changed();
     }
 
@@ -407,6 +408,7 @@ public final class BossLabsDefinitionEditor {
             return;
         }
 
+        Integer targetRange = parseInteger(targetRangeField.getText());
         Integer animation = parseInteger(animationField.getText());
         Integer graphic = parseInteger(graphicField.getText());
         Integer projectile = parseInteger(projectileField.getText());
@@ -419,8 +421,8 @@ public final class BossLabsDefinitionEditor {
         Integer hazardDuration = parseInteger(hazardDurationField.getText());
         Integer hazardInterval = parseInteger(hazardIntervalField.getText());
         Integer hazardMaxHit = parseInteger(hazardMaxHitField.getText());
-        if (animation == null || graphic == null || projectile == null || maxHit == null || combatDelay == null
-                || telegraphGraphic == null || impactGraphic == null || telegraphTicks == null
+        if (targetRange == null || animation == null || graphic == null || projectile == null || maxHit == null
+                || combatDelay == null || telegraphGraphic == null || impactGraphic == null || telegraphTicks == null
                 || hazardGraphic == null || hazardDuration == null || hazardInterval == null || hazardMaxHit == null) {
             attackStatus.setText("Attack numeric fields must be whole numbers.");
             return;
@@ -433,6 +435,8 @@ public final class BossLabsDefinitionEditor {
 
         attack.setId(id);
         attack.setCombatStyle(attackStyleBox.getSelectedIndex());
+        attack.setTargetMode(targetModeBox.getSelectedIndex());
+        attack.setTargetRange(targetRange.intValue());
         attack.setAnimationId(animation.intValue());
         attack.setGraphicId(graphic.intValue());
         attack.setProjectileId(projectile.intValue());
@@ -474,6 +478,8 @@ public final class BossLabsDefinitionEditor {
         if (attack == null) {
             attackIdField.setText("");
             attackStyleBox.setSelectedIndex(0);
+            targetModeBox.setSelectedIndex(BossLabsDraftDefinition.TARGET_CURRENT);
+            targetRangeField.setText("14");
             animationField.setText("-1");
             graphicField.setText("-1");
             projectileField.setText("-1");
@@ -492,6 +498,8 @@ public final class BossLabsDefinitionEditor {
         }
         attackIdField.setText(attack.getId());
         attackStyleBox.setSelectedIndex(Math.max(0, Math.min(2, attack.getCombatStyle())));
+        targetModeBox.setSelectedIndex(Math.max(0, Math.min(1, attack.getTargetMode())));
+        targetRangeField.setText(Integer.toString(attack.getTargetRange()));
         animationField.setText(Integer.toString(attack.getAnimationId()));
         graphicField.setText(Integer.toString(attack.getGraphicId()));
         projectileField.setText(Integer.toString(attack.getProjectileId()));
@@ -505,7 +513,7 @@ public final class BossLabsDefinitionEditor {
         hazardIntervalField.setText(Integer.toString(attack.getHazardTickInterval()));
         hazardMaxHitField.setText(Integer.toString(attack.getHazardMaxHitOverride()));
         if (attack.getTilePattern().isEmpty()) {
-            patternStatus.setText("No tile pattern: this attack uses normal single-target combat.");
+            patternStatus.setText("No tile pattern: this attack uses normal single-target combat against its resolved target.");
         } else if (attack.getHazardDurationTicks() > 0) {
             patternStatus.setText(attack.getTilePattern().size() + " tile(s); hazard lasts "
                     + attack.getHazardDurationTicks() + " ticks and damages every "
@@ -564,6 +572,13 @@ public final class BossLabsDefinitionEditor {
         field.setToolTipText(tooltip);
         field.setPreferredSize(new Dimension(220, 34));
         ConsoleTheme.styleTextField(field);
+    }
+
+    private void styleCombo(JComboBox<?> combo) {
+        combo.setFont(ConsoleTheme.BODY_FONT);
+        combo.setForeground(ConsoleTheme.TEXT);
+        combo.setBackground(ConsoleTheme.INPUT);
+        combo.setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
     }
 
     private void styleButton(JButton button) {
@@ -721,7 +736,7 @@ public final class BossLabsDefinitionEditor {
             } else if (attack.getTilePattern().isEmpty()) {
                 patternStatus.setText("Pattern cleared; attack is single-target again.");
             } else {
-                patternStatus.setText(attack.getTilePattern().size() + " pattern tile(s) relative to the snapshotted target tile.");
+                patternStatus.setText(attack.getTilePattern().size() + " pattern tile(s) relative to the resolved target tile.");
             }
             changed();
             repaint();
