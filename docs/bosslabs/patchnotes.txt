@@ -50,3 +50,9 @@
 - Added a bounded begin/chunk/commit BossLabs publish transaction; no live or saved definition changes until the final commit reconstructs a complete immutable server BossDefinition.
 - Apply Live publishes the complete phase/attack draft through BossDefinitionPublisher; Save & Apply preserves the existing persistence-before-live ordering and slow-executor disk path.
 - Kept BossDefinitionStore format/version unchanged because the existing store already persists all attack and phase fields needed by this authoring slice.
+- Added the first reusable BossLabs mechanic: target-centered telegraphed tile-pattern attacks with configurable warning GFX, impact GFX, warning ticks, and up to 128 relative tiles within +/-16 of the snapshotted target tile.
+- Added a tile-pattern painter to the selected attack editor; left-click toggles pattern tiles while middle-drag/zoom preserve relative coordinates. The separate Arena / Tiles shell remains a later integration target rather than being rewritten in this runtime slice.
+- BossCombatScript now snapshots the target origin for patterned attacks, renders warning tiles through Matrix3 World graphics, delays through WorldTasksManager, then damages only players still occupying painted impact tiles through existing CombatScript hit/accuracy helpers.
+- Plain attacks with no painted tiles keep the previous single-target BossCombatScript path unchanged.
+- Upgraded the BossLabs definition wire payload to v2 and BossDefinitionStore to v2 for tile mechanic fields; both retain v1 read compatibility so existing BossLabs definitions load with empty tile patterns.
+- Save & Apply writes v2 only after successful validation/persistence and still preserves the existing persistence-before-live ordering.
