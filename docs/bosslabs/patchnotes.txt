@@ -61,3 +61,8 @@
 - Hazard damage continues through the existing CombatScript melee/range/magic accuracy/hit helpers and does not introduce a second damage or timer authority.
 - Upgraded BossLabs definition wire/storage to v3 for hazard fields while retaining v1 and v2 read compatibility; v2 patterned attacks load with hazards disabled until explicitly authored and saved.
 - Added hazard controls to the selected attack editor and made the right-side attack editor vertically scrollable so the expanded mechanic controls remain reachable at practical BossLabs window sizes.
+- Added per-attack target selection with Current target and Random nearby player modes plus a configurable 1-32 tile target range.
+- Random nearby player targeting prefers a valid nearby player other than NPCCombat's current target, falls back to the current target for solo/no-alternate cases, and never replaces NPCCombat's authoritative target state.
+- Resolved alternate targets feed the existing single-target projectile/hit path and the existing target-centered tile/telegraph/hazard path, so painted mechanics snapshot around the attack's resolved player without duplicating combat logic.
+- Upgraded BossLabs definition wire/storage to v4 for target mode/range while retaining v1-v3 read compatibility; older attacks load as Current target with the default 14-tile targeting range.
+- Added Target and Target range controls to the existing scrollable Attacks editor; target edits remain DRAFT-only until Apply Live or Save & Apply.
