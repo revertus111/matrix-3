@@ -53,22 +53,45 @@ public final class ClientConsoleBridge {
     }
 
     public static String queueConsoleCommand(String rawCommand) {
+        return queueConsoleCommands(new String[] { rawCommand });
+    }
+
+    /**
+     * Atomically validates and queues a small command transaction. Either every
+     * command is accepted or none are, which lets specialist tools such as
+     * BossLabs send multi-packet drafts without leaving a half-queued publish.
+     */
+    public static String queueConsoleCommands(String[] rawCommands) {
         if (!hasLocalPlayer()) {
             return "Log in before running a command.";
         }
-
-        String command = normalizeCommand(rawCommand);
-        if (command.length() == 0) {
-            return "Select a command before running it.";
+        if (rawCommands == null || rawCommands.length == 0) {
+            return "No commands were provided.";
         }
-        if (command.length() > MAX_COMMAND_LENGTH) {
-            return "Command is too long for Matrix3's command packet.";
-        }
-        if (COMMAND_QUEUE.size() >= MAX_QUEUED_COMMANDS) {
-            return "Command queue is full. Wait for the client to catch up.";
+        if (rawCommands.length > MAX_QUEUED_COMMANDS) {
+            return "Too many commands for one Client Console transaction.";
         }
 
-        COMMAND_QUEUE.offer(command);
+        String[] commands = new String[rawCommands.length];
+        for (int index = 0; index < rawCommands.length; index++) {
+            String command = normalizeCommand(rawCommands[index]);
+            if (command.length() == 0) {
+                return "A queued command is empty.";
+            }
+            if (command.length() > MAX_COMMAND_LENGTH) {
+                return "Command is too long for Matrix3's command packet.";
+            }
+            commands[index] = command;
+        }
+
+        synchronized (COMMAND_QUEUE) {
+            if (COMMAND_QUEUE.size() + commands.length > MAX_QUEUED_COMMANDS) {
+                return "Command queue is full. Wait for the client to catch up.";
+            }
+            for (String command : commands) {
+                COMMAND_QUEUE.offer(command);
+            }
+        }
         return null;
     }
 
