@@ -284,6 +284,20 @@ public final class ItemBrowserPanel extends JPanel {
             }
         });
         list.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e)) {
+                    return;
+                }
+                int index = list.locationToIndex(e.getPoint());
+                if (index < 0 || list.getCellBounds(index, index) == null
+                        || !list.getCellBounds(index, index).contains(e.getPoint())) {
+                    return;
+                }
+                list.setSelectedIndex(index);
+                spawn(model.getElementAt(index), 1, false);
+            }
+
             @Override public void mousePressed(MouseEvent e) { popup(e); }
             @Override public void mouseReleased(MouseEvent e) { popup(e); }
             private void popup(MouseEvent e) {
