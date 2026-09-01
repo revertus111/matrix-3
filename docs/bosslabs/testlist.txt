@@ -123,3 +123,19 @@ Current attack/phase authoring checkpoint (supersedes bridge item 79 and expands
 102. Attempt uploadbegin/uploadchunk/uploadcommit without admin rights. Confirm no BossLabs definition is reconstructed or published.
 103. First-time convert a safe Matrix3 NPC with Apply Live, then Undo Last Apply. Confirm the BossLabs registration is removed and the NPC returns to its original Matrix3 Java/default combat path.
 104. Confirm this authoring slice does not change BossDefinitionStore version/format, NPC spawn/death/pathing/drop ownership, or the still-disabled encounter testing controls.
+
+Current telegraphed tile-attack checkpoint (supersedes items 99 and 104 only for BossDefinitionStore format/version)
+105. Eclipse clean/build Client and Server with Java 8. Confirm BossTileOffset, BossAttackDefinition, BossCombatScript, BossDefinitionStore, BossLabsDefinitionWireCodec, BossLabsDraftDefinition, and BossLabsDefinitionEditor compile cleanly.
+106. Start with a known-good version-1 data/bosslabs/definitions.bld. Confirm the server loads it successfully, every legacy attack has an empty tile pattern, and normal single-target BossCombatScript behavior is unchanged.
+107. Save any BossLabs definition after this patch. Confirm definitions.bld is written as version 2, restart the server, and confirm the same boss still loads. Existing Matrix3 NPC combat/drop/spawn/examine files must remain untouched.
+108. Select an attack and paint a simple cross containing 0,0 plus its four cardinal neighbors. Confirm the DRAFT becomes modified, the attack list reports its tile count, and no live behavior changes before Apply Live/Save & Apply.
+109. Configure Warning GFX, Impact GFX, and Warning ticks on the painted attack. Apply Live and confirm the complete v2 definition round-trips back into the same attack fields and relative tile offsets when re-inspected.
+110. Runtime-test a painted attack while standing on a warned tile. Confirm warning graphics appear on the snapshotted target-centered pattern, then impact graphics appear and the player is damaged through the configured melee/range/magic CombatScript hit path.
+111. During the warning period, move from a painted tile to an unpainted tile. Confirm the impact remains at the original snapshotted world tiles and the moved player avoids the hit.
+112. With two players present, have one leave the warned pattern and another enter it before impact. Confirm only players occupying painted tiles at impact are eligible for damage and each eligible player receives at most one hit from that impact.
+113. Confirm an attack with zero painted tiles continues through the previous single-target BossCombatScript path, including existing projectile and NPC-default behavior.
+114. Configure invalid warning ticks (<0 or >50), warning/impact GFX below -1, more than 128 tiles, duplicate offsets, or offsets outside +/-16. Confirm the client draft cannot publish invalid data and the server BossAttackDefinition/BossTileOffset validation remains the final gate.
+115. Kill/finish the boss during a delayed tile warning. Confirm the scheduled impact does not damage players after the boss has died/finished.
+116. Set a warning duration longer than the normal combat delay. Confirm BossCombatScript delays the boss's next attack until at least the patterned attack's warning/impact window has completed.
+117. Save & Apply a patterned attack, restart the server, re-inspect it, and confirm warning/impact values and every painted tile survive persistence exactly.
+118. Confirm this slice does not add persistent hazards, minions, alternate targeting, a second combat engine, or world lifecycle ownership; those remain separate future first-boss slices.
