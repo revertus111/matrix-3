@@ -1,9 +1,0 @@
-In-game Settings acceptance
-
-- Log in and click the main game-screen Settings button; Settings opens.
-- From the ribbon/options menu, click Settings; Settings opens.
-- Open Game, Interface, Controls, Graphics, and Audio Settings and verify each subsection renders.
-- Close Settings, reopen it, and verify the last-used Settings subsection is restored.
-- While another ribbon/menu is open, click Settings and verify it switches to Settings.
-- Click the active Settings entry again and verify the normal menu toggle/close behavior remains.
-- Verify bank inventory examine still compiles/works with the sendExamineÎnventory identifier under Eclipse/Java 8.

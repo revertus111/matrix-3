@@ -131,7 +131,8 @@ public class ButtonHandler {
 		if (player.getInterfaceManager().isMenuOpen())
 		    player.getInterfaceManager().closeMenu();
 	    } else if (componentId == 21) { // open settings
-		player.getInterfaceManager().openMenu(8, player.getSubMenus()[8] + 1);
+		if (player.getInterfaceManager().isMenuOpen())
+		    player.getInterfaceManager().closeMenu();
 		player.getDialogueManager().finishConfirmDialogue();
 	    } else if (componentId == 42) { // logout button
 		player.getDialogueManager().sendLogoutDialogue();
@@ -468,7 +469,8 @@ public class ButtonHandler {
 	    else if (componentId == 11)
 		player.getInterfaceManager().openMenu(4, player.getSubMenus()[4] + 1);
 	    else if (componentId == 12) { // open settings
-		player.getInterfaceManager().openMenu(8, player.getSubMenus()[8] + 1);
+		if (player.getInterfaceManager().isMenuOpen())
+		    player.getInterfaceManager().closeMenu();
 	    } else if (componentId == 13)
 		player.getInterfaceManager().openExtras();
 	    else if (componentId == 14) {
@@ -1377,7 +1379,7 @@ public class ButtonHandler {
 		player.getBank().depositAllBob(true);
 	    else if (componentId == 128) {
 		if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET)
-		    player.getBank().sendExamine√énventory(slotId);
+		    player.getBank().sendExamineŒnventory(slotId);
 		else
 		    sendRemove(player, slotId, packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET);
 	    } else if (componentId == 305) {
@@ -1425,7 +1427,7 @@ public class ButtonHandler {
 		} else if (packetId == WorldPacketsDecoder.ACTION_BUTTON9_PACKET)
 		    player.getBank().depositItem(slotId, Integer.MAX_VALUE, true);
 		else if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET)
-		    player.getBank().sendExamine√énventory(slotId);
+		    player.getBank().sendExamineŒnventory(slotId);
 		else if (packetId == WorldPacketsDecoder.ACTION_BUTTON7_PACKET)
 		    player.getBank().sendWearInventory(slotId);
 	    }
