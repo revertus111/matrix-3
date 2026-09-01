@@ -56,3 +56,8 @@
 - Plain attacks with no painted tiles keep the previous single-target BossCombatScript path unchanged.
 - Upgraded the BossLabs definition wire payload to v2 and BossDefinitionStore to v2 for tile mechanic fields; both retain v1 read compatibility so existing BossLabs definitions load with empty tile patterns.
 - Save & Apply writes v2 only after successful validation/persistence and still preserves the existing persistence-before-live ordering.
+- Added optional lingering floor hazards to painted attacks with configurable hazard GFX, duration, tick interval, and per-tick max-hit override; duration 0 keeps the previous impact-only behavior.
+- BossCombatScript now keeps the snapshotted impact tiles active through Matrix3 WorldTasksManager, damages only players occupying those tiles on each configured hazard tick, and stops the hazard when its duration expires or the owning boss dies/finishes.
+- Hazard damage continues through the existing CombatScript melee/range/magic accuracy/hit helpers and does not introduce a second damage or timer authority.
+- Upgraded BossLabs definition wire/storage to v3 for hazard fields while retaining v1 and v2 read compatibility; v2 patterned attacks load with hazards disabled until explicitly authored and saved.
+- Added hazard controls to the selected attack editor and made the right-side attack editor vertically scrollable so the expanded mechanic controls remain reachable at practical BossLabs window sizes.
