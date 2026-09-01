@@ -7,7 +7,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Mutable client-only BossLabs DRAFT model.
@@ -17,9 +19,13 @@ import java.util.List;
  */
 public final class BossLabsDraftDefinition {
 
-    private static final int WIRE_VERSION = 1;
+    private static final int WIRE_VERSION = 2;
+    private static final int MIN_WIRE_VERSION = 1;
     private static final int MAX_PHASES = 64;
     private static final int MAX_ATTACKS_PER_PHASE = 256;
+    private static final int MAX_PATTERN_TILES = 128;
+    private static final int MAX_TILE_OFFSET = 16;
+    private static final int MAX_TELEGRAPH_TICKS = 50;
     private static final int MAX_WIRE_BYTES = 16384;
 
     private String id;
@@ -73,6 +79,21 @@ public final class BossLabsDraftDefinition {
                     return "Attack " + attack.id + " max hit must be -1 or greater.";
                 if (attack.combatDelayOverride < -1)
                     return "Attack " + attack.id + " combat delay must be -1 or greater.";
+                if (attack.telegraphGraphicId < -1 || attack.impactGraphicId < -1)
+                    return "Attack " + attack.id + " tile graphics must be -1 or greater.";
+                if (attack.telegraphTicks < 0 || attack.telegraphTicks > MAX_TELEGRAPH_TICKS)
+                    return "Attack " + attack.id + " warning ticks must be between 0 and " + MAX_TELEGRAPH_TICKS + ".";
+                if (attack.tilePattern.size() > MAX_PATTERN_TILES)
+                    return "Attack " + attack.id + " has too many pattern tiles.";
+                Set<TileOffset> unique = new HashSet<TileOffset>();
+                for (TileOffset tile : attack.tilePattern) {
+                    if (tile == null)
+                        return "Attack " + attack.id + " contains an invalid pattern tile.";
+                    if (Math.abs(tile.x) > MAX_TILE_OFFSET || Math.abs(tile.y) > MAX_TILE_OFFSET)
+                        return "Attack " + attack.id + " tile offsets must stay within +/-" + MAX_TILE_OFFSET + ".";
+                    if (!unique.add(tile))
+                        return "Attack " + attack.id + " contains duplicate pattern tiles.";
+                }
             }
         }
 
@@ -110,6 +131,14 @@ public final class BossLabsDraftDefinition {
                     output.writeInt(attack.projectileId);
                     output.writeInt(attack.maxHitOverride);
                     output.writeInt(attack.combatDelayOverride);
+                    output.writeInt(attack.telegraphGraphicId);
+                    output.writeInt(attack.impactGraphicId);
+                    output.writeInt(attack.telegraphTicks);
+                    output.writeInt(attack.tilePattern.size());
+                    for (TileOffset tile : attack.tilePattern) {
+                        output.writeInt(tile.x);
+                        output.writeInt(tile.y);
+                    }
                 }
             }
             output.flush();
@@ -137,7 +166,7 @@ public final class BossLabsDraftDefinition {
         try {
             DataInputStream input = new DataInputStream(new ByteArrayInputStream(data));
             int version = input.readInt();
-            if (version != WIRE_VERSION)
+            if (version < MIN_WIRE_VERSION || version > WIRE_VERSION)
                 throw new IllegalArgumentException("Unsupported BossLabs definition payload version: " + version);
 
             BossLabsDraftDefinition definition = new BossLabsDraftDefinition(input.readUTF(), input.readUTF(), input.readInt());
@@ -146,8 +175,28 @@ public final class BossLabsDraftDefinition {
                 Phase phase = new Phase(input.readUTF(), input.readInt(), input.readInt());
                 int attackCount = readCount(input.readInt(), MAX_ATTACKS_PER_PHASE, "attack");
                 for (int attackIndex = 0; attackIndex < attackCount; attackIndex++) {
-                    phase.attacks.add(new Attack(input.readUTF(), input.readInt(), input.readInt(), input.readInt(),
-                            input.readInt(), input.readInt(), input.readInt()));
+                    String attackId = input.readUTF();
+                    int combatStyle = input.readInt();
+                    int animationId = input.readInt();
+                    int graphicId = input.readInt();
+                    int projectileId = input.readInt();
+                    int maxHitOverride = input.readInt();
+                    int combatDelayOverride = input.readInt();
+                    if (version == 1) {
+                        phase.attacks.add(new Attack(attackId, combatStyle, animationId, graphicId,
+                                projectileId, maxHitOverride, combatDelayOverride));
+                        continue;
+                    }
+                    int telegraphGraphicId = input.readInt();
+                    int impactGraphicId = input.readInt();
+                    int telegraphTicks = input.readInt();
+                    int tileCount = readCount(input.readInt(), MAX_PATTERN_TILES, "pattern tile");
+                    Attack attack = new Attack(attackId, combatStyle, animationId, graphicId,
+                            projectileId, maxHitOverride, combatDelayOverride, telegraphGraphicId,
+                            impactGraphicId, telegraphTicks);
+                    for (int tileIndex = 0; tileIndex < tileCount; tileIndex++)
+                        attack.tilePattern.add(new TileOffset(input.readInt(), input.readInt()));
+                    phase.attacks.add(attack);
                 }
                 definition.phases.add(phase);
             }
@@ -204,9 +253,20 @@ public final class BossLabsDraftDefinition {
         private int projectileId;
         private int maxHitOverride;
         private int combatDelayOverride;
+        private int telegraphGraphicId;
+        private int impactGraphicId;
+        private int telegraphTicks;
+        private final List<TileOffset> tilePattern = new ArrayList<TileOffset>();
 
         public Attack(String id, int combatStyle, int animationId, int graphicId, int projectileId,
                 int maxHitOverride, int combatDelayOverride) {
+            this(id, combatStyle, animationId, graphicId, projectileId, maxHitOverride, combatDelayOverride,
+                    -1, -1, 0);
+        }
+
+        public Attack(String id, int combatStyle, int animationId, int graphicId, int projectileId,
+                int maxHitOverride, int combatDelayOverride, int telegraphGraphicId,
+                int impactGraphicId, int telegraphTicks) {
             this.id = safe(id);
             this.combatStyle = combatStyle;
             this.animationId = animationId;
@@ -214,6 +274,9 @@ public final class BossLabsDraftDefinition {
             this.projectileId = projectileId;
             this.maxHitOverride = maxHitOverride;
             this.combatDelayOverride = combatDelayOverride;
+            this.telegraphGraphicId = telegraphGraphicId;
+            this.impactGraphicId = impactGraphicId;
+            this.telegraphTicks = telegraphTicks;
         }
 
         public String getId() { return id; }
@@ -230,11 +293,47 @@ public final class BossLabsDraftDefinition {
         public void setMaxHitOverride(int value) { maxHitOverride = value; }
         public int getCombatDelayOverride() { return combatDelayOverride; }
         public void setCombatDelayOverride(int value) { combatDelayOverride = value; }
+        public int getTelegraphGraphicId() { return telegraphGraphicId; }
+        public void setTelegraphGraphicId(int value) { telegraphGraphicId = value; }
+        public int getImpactGraphicId() { return impactGraphicId; }
+        public void setImpactGraphicId(int value) { impactGraphicId = value; }
+        public int getTelegraphTicks() { return telegraphTicks; }
+        public void setTelegraphTicks(int value) { telegraphTicks = value; }
+        public List<TileOffset> getTilePattern() { return tilePattern; }
 
         @Override
         public String toString() {
             String label = id.trim().length() == 0 ? "Unnamed attack" : id;
-            return label + "  [" + styleName(combatStyle) + "]";
+            String area = tilePattern.isEmpty() ? "" : "  " + tilePattern.size() + " tiles";
+            return label + "  [" + styleName(combatStyle) + "]" + area;
+        }
+    }
+
+    public static final class TileOffset {
+        private final int x;
+        private final int y;
+
+        public TileOffset(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public int getX() { return x; }
+        public int getY() { return y; }
+
+        @Override
+        public int hashCode() {
+            return 31 * x + y;
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object)
+                return true;
+            if (!(object instanceof TileOffset))
+                return false;
+            TileOffset other = (TileOffset) object;
+            return x == other.x && y == other.y;
         }
     }
 
