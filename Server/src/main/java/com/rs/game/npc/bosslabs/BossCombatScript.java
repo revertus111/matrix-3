@@ -48,7 +48,35 @@ public final class BossCombatScript extends CombatScript {
 
 		List<BossAttackDefinition> attacks = phase.getAttacks();
 		BossAttackDefinition attack = attacks.get(Utils.random(attacks.size()));
-		return executeAttack(npc, target, attack);
+		Entity resolvedTarget = resolveAttackTarget(npc, target, attack);
+		if (resolvedTarget == null)
+			return npc.getAttackSpeed();
+		return executeAttack(npc, resolvedTarget, attack);
+	}
+
+	private Entity resolveAttackTarget(NPC npc, Entity currentTarget, BossAttackDefinition attack) {
+		if (!attack.usesRandomNearbyPlayerTarget())
+			return currentTarget;
+
+		List<Player> alternatePlayers = new ArrayList<Player>();
+		for (Player player : World.getPlayers()) {
+			if (!isEligibleRandomTarget(npc, player, attack.getTargetRange()))
+				continue;
+			if (player == currentTarget)
+				continue;
+			alternatePlayers.add(player);
+		}
+		if (!alternatePlayers.isEmpty())
+			return alternatePlayers.get(Utils.random(alternatePlayers.size()));
+
+		// Solo fights and encounters with no other eligible player retain the
+		// authoritative NPCCombat target instead of cancelling the attack.
+		return currentTarget;
+	}
+
+	private boolean isEligibleRandomTarget(NPC npc, Player player, int range) {
+		return player != null && player.hasStarted() && !player.hasFinished() && !player.isDead()
+				&& player.withinDistance(npc, range);
 	}
 
 	private int executeAttack(NPC npc, Entity target, BossAttackDefinition attack) {
