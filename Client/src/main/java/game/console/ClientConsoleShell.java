@@ -21,6 +21,8 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 
+import game.console.bosslabs.BossLabsWindow;
+
 public final class ClientConsoleShell extends JPanel {
 
     private static final long serialVersionUID = -7989293793942740080L;
@@ -172,6 +174,8 @@ public final class ClientConsoleShell extends JPanel {
         content.add(createFocusCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createWorkspaceCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createBossLabsCard());
         content.add(Box.createVerticalGlue());
 
         JScrollPane scrollPane = new JScrollPane(content);
@@ -246,6 +250,22 @@ public final class ClientConsoleShell extends JPanel {
         });
         card.add(Box.createVerticalStrut(10));
         card.add(resetLayoutButton);
+        return card;
+    }
+
+    private JPanel createBossLabsCard() {
+        JPanel card = createInfoCard(
+                "Boss development",
+                "BossLabs opens as a separate resizable developer window.",
+                "The current shell edits local draft state only; server publishing stays disabled until the verified bridge is added.");
+
+        JButton openButton = new JButton("Open BossLabs");
+        openButton.setAlignmentX(LEFT_ALIGNMENT);
+        openButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        ConsoleTheme.styleButton(openButton);
+        openButton.addActionListener(e -> BossLabsWindow.open());
+        card.add(Box.createVerticalStrut(10));
+        card.add(openButton);
         return card;
     }
 
