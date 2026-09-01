@@ -7,9 +7,14 @@
 - Added a dedicated RiseOfTheSixCombat Matrix3 CombatScript for the empowered ids with baseline melee/ranged/magic autos plus Dharok scaling, Guthan healing and Ahrim Strength drain.
 - Added admin-only BossLabs `rots` / `riseofthesix` launch actions that open the existing BossInstanceD setup flow; Commands.java was not modified.
 - Added docs/rise-of-the-six/README.md as the 100% fidelity tracker with VERIFIED / verified-static / HYPOTHESIS classifications.
-- Kept map rectangle/spawn coordinates explicitly HYPOTHESIS pending the first runtime arena test; known source portal/Shadow Realm points are recorded for verification.
-- Deferred the real well/totem gate, daily formations, brother specials, Shadow Realm transfer, chest/reward table, collapse tunnel, and unstable-energy stabilization until their exact runtime/assets are verified.
 - Corrected the initial provisional instance-map hypothesis after locating a direct RS3 RoTS donor implementation.
-- RoTS now copies source chunk 290,753 at Matrix3 MapInstance ratio 1x1, matching the donor's 8x8-chunk copy instead of the earlier oversized/offset rectangle.
-- Moved the instance entry source tile to donor offset +10,+1 on plane 1 and fixed test brother spawns into the donor's +6..+16 / +10 spawn band.
-- Kept exact formation/facing and active-cache walkability classified HYPOTHESIS until tested in this revision-830 runtime.
+- RoTS now copies source chunk 290,753 at Matrix3 MapInstance ratio 1x1, matching the donor's 8x8-chunk copy.
+- Moved the instance entry source tile to donor offset +10,+1 on plane 1 and fixed test brother spawns into the donor's source area.
+- User runtime test confirmed the copied RoTS arena renders, all six empowered brothers appear on valid terrain, Guthan resolves at level 650, and the brothers engage the player.
+- User runtime test also confirmed at least one subdued brother returns through the current revive path; simultaneous-six victory behavior still needs targeted runtime verification.
+- Added Dharok Greatest Axe first special slice using donor-backed `Give me everything!`, GFX 4406 and animation 21940; incoming damage is absorbed/stored during the charge and returned on Dharok's next outgoing hit.
+- Added Torag Whack first special slice using donor-backed animations 21933/21934/21935/21938 and the 2,500 incoming-damage teammate release threshold.
+- Added a temporary cleanup-safe Torag safety release after 18 ticks so solo testing cannot leave a player permanently locked; exact authentic termination behavior remains HYPOTHESIS.
+- Replaced the initial rough Dharok max-hit interpolation with donor-backed 2,000/3,000/4,000/5,000/6,000/7,000 HP bands.
+- Switched Ahrim/Karil base attack assets to donor-backed projectile/animation values and set their 3,000 max-hit baseline; Guthan/Torag/Verac use the donor 3,500 melee baseline.
+- Changed Guthan's baseline life-steal roll from the provisional 1-in-3 to the documented 1-in-8 rate.

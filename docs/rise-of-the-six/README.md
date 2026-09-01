@@ -12,6 +12,13 @@ This document is the encounter fidelity checklist. A mechanic is not considered 
 
 ## Current runtime checkpoint
 
+VERIFIED from 2026-09-01 user runtime test
+- The revision-830 cache contains the RoTS arena at the donor-backed source map; the copied arena renders correctly rather than voiding.
+- All six empowered brothers spawn visibly on valid arena terrain.
+- Empowered brother identity/model data resolves correctly; Guthan was runtime-confirmed as `Guthan the Infested (level 650)`.
+- Brothers acquire/attack the player in the copied arena.
+- At least one subdued brother returns through the current shadow-bond revival path.
+
 verified-static
 - Rise of the Six is a 1-4 player encounter; the original intended group size is four.
 - Empowered brothers use combat level 650 and 50,000 life points.
@@ -24,11 +31,14 @@ verified-static
 - Nocturne's RS3 RoTS implementation copies source chunk 290,753 as an 8x8-chunk map and starts the host at source offset +10,+1 on plane 1.
 - Matrix3 MapInstance ratio 1x1 copies exactly 8x8 chunks, matching that donor map shape.
 - Source coordinate 2328,6036,1 lies inside that copied map and is documented as a Shadow Realm location.
+- Dharok's donor Greatest Axe state uses `Give me everything!`, GFX 4406, animation 21940, absorbs incoming damage for roughly eleven seconds, then adds all stored damage to his next outgoing hit.
+- Torag's donor Whack state uses animations 21933 (Torag start), 21934 (victim pin), 21935 (hammering), and 21938 (victim release); 2,500 incoming damage while hammering breaks the victim free without damaging Torag.
+- Donor base combat values: Ahrim 3,000 max / projectile 559 / impact GFX 377 / 5 ticks; Karil 3,000 max / projectile 955 / animation 18232 / 7 ticks; Guthan/Torag/Verac 3,500 max; Dharok scales 2,000 through 7,000 by HP band.
 
-HYPOTHESIS pending first runtime map test
-- The active revision-830 cache contains the same RoTS map layout at source chunk 290,753 as the donor cache.
-- Fixed test spawn tiles 2326..2336,6034,1 are walkable; they deliberately stay inside the donor's original random +6..+16 / +10 spawn band.
-- Exact live-RS daily formation/facing and west/east side ownership still need runtime/map verification.
+HYPOTHESIS pending targeted runtime tests
+- Exact daily formation/facing and west/east side ownership still need runtime/map verification.
+- Exact RoTS special trigger rotations/frequency need replacement of donor random triggers once stronger rotation evidence is available.
+- Torag's temporary 18-tick safety release is a Matrix3 runtime guard for solo testing; authentic natural timeout/escape behavior still needs verification.
 - The temporary Matrix3 boss-instance exit/grave tile is deliberately a known Barrows surface tile until object 87997 and the real RoTS graveyard path are wired.
 
 ## Implemented now
@@ -38,15 +48,16 @@ HYPOTHESIS pending first runtime map test
 - Admin/developer launch through `bosslabs rots` or `bosslabs riseofthesix` without changing Commands.java.
 - Dedicated RoTS brother NPC class; normal BarrowsBrother remains untouched.
 - Dedicated CombatScript keys for all empowered/alternate RoTS NPC ids.
-- Basic magic/ranged/melee auto attacks through Matrix3 CombatScript.
-- Dharok missing-health damage scaling baseline.
-- Guthan life-steal baseline.
+- Donor-backed base max-hit bands and Ahrim/Karil projectile/animation assets through Matrix3 CombatScript.
+- Guthan life-steal baseline at the documented 1-in-8 roll.
 - Ahrim Strength-drain baseline using the documented 1-in-8 chance.
 - Shared defeat state: brothers become incapacitated rather than using normal NPC drop/respawn death.
 - Survivor heal of 5,000 HP after each brother is subdued.
 - 30-second revive generation reset after every new subdued brother.
 - Revive of every currently subdued brother at 25,000 HP when the timer expires.
 - Victory lockout when all six are subdued before the timer expires.
+- Dharok Greatest Axe first faithful slice: force-talk, charge GFX/animation, incoming damage absorption/storage, no autos during charge, and stored damage returned through his next hit.
+- Torag Whack first faithful slice: victim pin/lock, start/hammer/release animations, incoming teammate damage redirected into the 2,500 release threshold, and cleanup-safe victim unlock.
 - Instance cleanup finishes all custom RoTS NPCs when the encounter is destroyed.
 
 ## Required for 100% encounter fidelity
@@ -84,8 +95,8 @@ HYPOTHESIS pending first runtime map test
 ### Dharok
 - Hurricane.
 - Wall Slam.
-- Greatest Axe damage-storage/return mechanic.
-- Exact low-health scaling, animations, timings and messages.
+- Replace donor-random Greatest Axe trigger with the exact live/classic special rotation once verified.
+- Runtime-verify Greatest Axe timing/GFX/animation and returned-damage behavior.
 
 ### Guthan
 - Hurricane.
@@ -104,8 +115,8 @@ HYPOTHESIS pending first runtime map test
 - Correct adrenaline-drain set effect.
 - Hurricane.
 - Wall Slam.
-- Hammerhead/Whack player pin and teammate damage-release threshold.
-- Exact rotations, animations, timings and messages.
+- Replace donor-random Whack trigger and temporary solo safety timeout with the exact classic attack rotation/termination rules once verified.
+- Runtime-verify Whack's 2,500 teammate damage release and animations.
 
 ### Verac
 - Correct armour/prayer-ignoring set effect.

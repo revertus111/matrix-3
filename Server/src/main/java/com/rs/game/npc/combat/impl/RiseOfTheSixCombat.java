@@ -8,17 +8,15 @@ import com.rs.game.World;
 import com.rs.game.npc.NPC;
 import com.rs.game.npc.combat.CombatScript;
 import com.rs.game.npc.combat.NPCCombatDefinitions;
+import com.rs.game.npc.rots.RiseOfTheSixBrother;
 import com.rs.game.npc.rots.RiseOfTheSixBrother.Brother;
 import com.rs.game.player.Player;
 import com.rs.game.player.Skills;
 import com.rs.utils.Utils;
 
 /**
- * Base empowered-brother auto attacks for Rise of the Six.
- *
- * Encounter specials remain custom RoTS mechanics and are deliberately not
- * approximated here. This script only establishes the correct combat family
- * while Matrix3 NPCCombat remains the target/movement/delay authority.
+ * Empowered-brother auto attacks and first verified-static special hooks for
+ * Rise of the Six. Matrix3 NPCCombat remains the target/movement/delay owner.
  */
 public final class RiseOfTheSixCombat extends CombatScript {
 
@@ -30,6 +28,15 @@ public final class RiseOfTheSixCombat extends CombatScript {
 	@Override
 	public int attack(NPC npc, Entity target) {
 		Brother brother = Brother.forNpcId(npc.getId());
+		RiseOfTheSixBrother rotsBrother = npc instanceof RiseOfTheSixBrother ? (RiseOfTheSixBrother) npc : null;
+
+		if (rotsBrother != null) {
+			if (rotsBrother.isDharokCharging() || rotsBrother.isToragWhacking())
+				return 1;
+			if (brother == Brother.TORAG && rotsBrother.tryStartToragWhack(target))
+				return 7;
+		}
+
 		if (brother == Brother.AHRIM)
 			return mageAttack(npc, target);
 		if (brother == Brother.KARIL)
@@ -38,45 +45,55 @@ public final class RiseOfTheSixCombat extends CombatScript {
 	}
 
 	private int meleeAttack(NPC npc, Entity target, Brother brother) {
-		NPCCombatDefinitions defs = npc.getCombatDefinitions();
-		npc.setNextAnimation(new Animation(defs.getAttackEmote()));
-		int damage = getMaxHit(npc, NPCCombatDefinitions.MELEE, target);
+		npc.setNextAnimation(new Animation(npc.getCombatDefinitions().getAttackEmote()));
+		int maxHit = getMeleeMaxHit(npc, brother);
+		int damage = getMaxHit(npc, maxHit, NPCCombatDefinitions.MELEE, target);
 
-		if (brother == Brother.DHAROK && damage != 0 && npc.getMaxHitpoints() > 0) {
-			double missingHealth = 1.0 - ((double) npc.getHitpoints() / (double) npc.getMaxHitpoints());
-			damage += (int) (missingHealth * 3800.0);
-		}
-		else if (brother == Brother.GUTHAN && damage != 0 && Utils.random(3) == 0) {
+		if (brother == Brother.GUTHAN && damage != 0 && Utils.random(8) == 0) {
 			target.setNextGraphics(new Graphics(398));
 			npc.heal(damage);
 		}
 
 		delayHit(npc, 0, target, getMeleeHit(npc, damage));
-		return npc.getAttackSpeed();
+		return brother == Brother.VERAC ? npc.getAttackSpeed() : 7;
+	}
+
+	private int getMeleeMaxHit(NPC npc, Brother brother) {
+		if (brother != Brother.DHAROK)
+			return 3500;
+		int hp = npc.getHitpoints();
+		if (hp <= 5000)
+			return 7000;
+		if (hp <= 10000)
+			return 6000;
+		if (hp <= 20000)
+			return 5000;
+		if (hp <= 30000)
+			return 4000;
+		if (hp <= 40000)
+			return 3000;
+		return 2000;
 	}
 
 	private int mageAttack(NPC npc, Entity target) {
-		NPCCombatDefinitions defs = npc.getCombatDefinitions();
-		npc.setNextAnimation(new Animation(defs.getAttackEmote()));
-		int damage = getMaxHit(npc, NPCCombatDefinitions.MAGE, target);
+		npc.setNextAnimation(new Animation(npc.getId() == 18539 ? 21925 : 18288));
+		int damage = getMaxHit(npc, 3000, NPCCombatDefinitions.MAGE, target);
 		if (damage != 0 && target instanceof Player && Utils.random(8) == 0) {
-			target.setNextGraphics(new Graphics(400, 0, 100));
 			Player targetPlayer = (Player) target;
 			int currentLevel = targetPlayer.getSkills().getLevel(Skills.STRENGTH);
 			targetPlayer.getSkills().set(Skills.STRENGTH, currentLevel < 5 ? 0 : currentLevel - 5);
 		}
-		Projectile projectile = World.sendProjectileNew(target, npc, defs.getAttackProjectile(), 41, 16, 35, 2, 16, Utils.random(5));
-		npc.setNextGraphics(new Graphics(defs.getAttackGfx()));
-		delayHit(npc, Utils.projectileTimeToCycles(projectile.getEndTime()), target, getMagicHit(npc, damage));
-		return npc.getAttackSpeed();
+		Projectile projectile = World.sendProjectileNew(npc, target, 559, 41, 16, 35, 2, 16, Utils.random(5));
+		target.setNextGraphics(new Graphics(377));
+		delayHit(npc, Math.max(3, Utils.projectileTimeToCycles(projectile.getEndTime())), target, getMagicHit(npc, damage));
+		return 5;
 	}
 
 	private int rangeAttack(NPC npc, Entity target) {
-		NPCCombatDefinitions defs = npc.getCombatDefinitions();
-		npc.setNextAnimation(new Animation(defs.getAttackEmote()));
-		int damage = getMaxHit(npc, NPCCombatDefinitions.RANGE, target);
-		Projectile projectile = World.sendProjectileNew(npc, target, defs.getAttackProjectile(), 41, 16, 35, 3, Utils.random(5), 5);
-		delayHit(npc, Math.max(0, Utils.projectileTimeToCycles(projectile.getEndTime()) - 1), target, getRangeHit(npc, damage));
-		return npc.getAttackSpeed();
+		npc.setNextAnimation(new Animation(18232));
+		int damage = getMaxHit(npc, 3000, NPCCombatDefinitions.RANGE, target);
+		Projectile projectile = World.sendProjectileNew(npc, target, 955, 41, 16, 35, 3, Utils.random(5), 5);
+		delayHit(npc, Math.max(3, Utils.projectileTimeToCycles(projectile.getEndTime())), target, getRangeHit(npc, damage));
+		return 7;
 	}
 }
