@@ -81,3 +81,12 @@ First-boss runtime acceptance
 
 Framework acceptance after boss #1
 68. Create a second small boss/encounter using the proven reusable framework. Confirm it can reuse definitions/components without copying boss #1's encounter implementation wholesale.
+
+Current Phase 3 UI shell checkpoint
+69. Eclipse clean/build the Client with Java 8. Confirm ClientConsoleShell, BossLabsWindow, and BossLabsPanel compile without adding a second UI framework or changing the protected Java target.
+70. Open Client Console -> Open BossLabs. Confirm one external BossLabs window opens, repeated launcher clicks reuse/raise the existing window, and closing/reopening it creates a clean replacement window.
+71. Confirm the BossLabs shell exposes Identity, Stats, Attacks, Phases, Mechanics, Arena / Tiles, Drops, and Testing tabs and remains usable at the 900x620 minimum window size.
+72. Enter an all-digit NPC query and a text NPC query. Confirm the UI automatically classifies ID versus name without any mode selector and clearly states that no server lookup occurs until the dedicated bridge is connected.
+73. Edit Definition ID, Display name, or NPC ID. Confirm the DRAFT indicator changes to modified and no live/server action occurs.
+74. In Arena / Tiles, confirm mouse-wheel zoom changes tile size, middle-mouse drag pans without changing relative tile coordinates, hover reports the tile coordinate, and left-click selects/highlights a tile.
+75. Confirm Apply Live, Save & Apply, Undo Last Apply, Apply Saved, and encounter testing buttons are visibly present but disabled in this shell checkpoint so no fake/direct server mutation path is introduced before the bridge.
