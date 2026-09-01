@@ -17,9 +17,11 @@ import java.util.List;
  */
 public final class BossLabsDefinitionWireCodec {
 
-	private static final int VERSION = 1;
+	private static final int VERSION = 2;
+	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_PHASES = 64;
 	private static final int MAX_ATTACKS_PER_PHASE = 256;
+	private static final int MAX_PATTERN_TILES = 128;
 	private static final int MAX_WIRE_BYTES = 16384;
 
 	private BossLabsDefinitionWireCodec() {
@@ -49,6 +51,14 @@ public final class BossLabsDefinitionWireCodec {
 					output.writeInt(attack.getProjectileId());
 					output.writeInt(attack.getMaxHitOverride());
 					output.writeInt(attack.getCombatDelayOverride());
+					output.writeInt(attack.getTelegraphGraphicId());
+					output.writeInt(attack.getImpactGraphicId());
+					output.writeInt(attack.getTelegraphTicks());
+					output.writeInt(attack.getTilePattern().size());
+					for (BossTileOffset tile : attack.getTilePattern()) {
+						output.writeInt(tile.getX());
+						output.writeInt(tile.getY());
+					}
 				}
 			}
 			output.flush();
@@ -77,7 +87,7 @@ public final class BossLabsDefinitionWireCodec {
 		try {
 			DataInputStream input = new DataInputStream(new ByteArrayInputStream(data));
 			int version = input.readInt();
-			if (version != VERSION)
+			if (version < MIN_SUPPORTED_VERSION || version > VERSION)
 				throw new IllegalArgumentException("Unsupported BossLabs definition payload version: " + version);
 
 			String id = input.readUTF();
@@ -92,8 +102,28 @@ public final class BossLabsDefinitionWireCodec {
 				int attackCount = readCount(input.readInt(), MAX_ATTACKS_PER_PHASE, "attack");
 				List<BossAttackDefinition> attacks = new ArrayList<BossAttackDefinition>(attackCount);
 				for (int attackIndex = 0; attackIndex < attackCount; attackIndex++) {
-					attacks.add(new BossAttackDefinition(input.readUTF(), input.readInt(), input.readInt(), input.readInt(),
-							input.readInt(), input.readInt(), input.readInt()));
+					String attackId = input.readUTF();
+					int combatStyle = input.readInt();
+					int animationId = input.readInt();
+					int graphicId = input.readInt();
+					int projectileId = input.readInt();
+					int maxHitOverride = input.readInt();
+					int combatDelayOverride = input.readInt();
+					if (version == 1) {
+						attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+								maxHitOverride, combatDelayOverride));
+						continue;
+					}
+
+					int telegraphGraphicId = input.readInt();
+					int impactGraphicId = input.readInt();
+					int telegraphTicks = input.readInt();
+					int tileCount = readCount(input.readInt(), MAX_PATTERN_TILES, "pattern tile");
+					List<BossTileOffset> pattern = new ArrayList<BossTileOffset>(tileCount);
+					for (int tileIndex = 0; tileIndex < tileCount; tileIndex++)
+						pattern.add(new BossTileOffset(input.readInt(), input.readInt()));
+					attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+							maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern));
 				}
 				phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
 			}
