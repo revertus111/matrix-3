@@ -34,5 +34,10 @@ RUNTIME VALIDATION PENDING
 - Pass: the jaclib procedure error is gone and startup advances to jaggl/OpenGL initialization or successfully reaches Toolkit ID 1.
 - If it still fails, capture the first new native/OpenGL exception; do not add another speculative renderer change.
 
+2026-09-01 - Class567 native-cache loop syntax repair
+
+verified-static
+- Restored the missing closing brace for the native-cache byte comparison loop so Class567 compiles cleanly in Eclipse/Java 8 without changing the comparison behavior.
+
 Decision
 - Do not replace the built-in renderer or add LWJGL. Keep the known-good software bootstrap/fallback intact while repairing the existing Jagex OpenGL path.

@@ -53,6 +53,7 @@ public class Class567 implements Interface67 {
 					bool = false;
 					break;
 				}
+			}
 		} else
 			bool = false;
 		if (!bool) {
