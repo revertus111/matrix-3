@@ -90,3 +90,20 @@ Current Phase 3 UI shell checkpoint
 73. Edit Definition ID, Display name, or NPC ID. Confirm the DRAFT indicator changes to modified and no live/server action occurs.
 74. In Arena / Tiles, confirm mouse-wheel zoom changes tile size, middle-mouse drag pans without changing relative tile coordinates, hover reports the tile coordinate, and left-click selects/highlights a tile.
 75. Confirm Apply Live, Save & Apply, Undo Last Apply, Apply Saved, and encounter testing buttons are visibly present but disabled in this shell checkpoint so no fake/direct server mutation path is introduced before the bridge.
+
+Current client/server bridge checkpoint (supersedes Phase 3 items 72 and 75)
+76. Eclipse clean/build both Client and Server with Java 8. Confirm BossLabsClientBridge, BossLabsPacketBridge, BossLabsCommandBridge, BossLabsPanel, BossLabsWindow, Class118, and InputStream compile cleanly.
+77. Log in as owner/admin, open BossLabs, enter a valid numeric NPC id, and confirm the tool inspects that exact NPC without an ID/name mode control.
+78. Search by NPC name and confirm matching results arrive asynchronously, remain individually selectable by id, and selecting one auto-populates identity, Matrix3 stats, combat source, and combat script.
+79. Inspect a normal Matrix3 Java/default NPC. Confirm LIVE reports Matrix3, BossLabs definition id stays blank, and Apply Live / Save & Apply stay disabled rather than publishing a fake conversion.
+80. Inspect an existing registered/saved BossLabs NPC. Confirm definition id/display name auto-populate, LIVE/SAVED indicators match server state, and valid publish/rollback buttons enable according to saved/rollback availability.
+81. Edit Definition ID or Display name for an existing BossLabs NPC. Confirm only DRAFT becomes modified until Apply Live or Save & Apply is clicked.
+82. Click Apply Live for an existing BossLabs NPC. Confirm the server reports success, the next applicable BossCombatScript resolution uses the new identity-bearing definition with existing phases preserved, and no BossLabs disk write occurs.
+83. Click Save & Apply. Confirm persistence runs through the BossLabs store, then the saved/live state refreshes in the tool only after success.
+84. Create a rollback state with two live publishes, click Undo Last Apply, and confirm the prior live definition is restored and the Undo button disables once rollback is consumed.
+85. With a saved definition and a different unsaved live definition, click Apply Saved and confirm the persisted version becomes live without rewriting the store.
+86. Log in without admin rights and send/attempt a BossLabs bridge command. Confirm BossLabsCommandBridge performs no search/publish action and Matrix3 gameplay permissions remain authoritative.
+87. Confirm normal non-BossLabs command packet traffic, chat, NPC combat, and type-99 panel messages still behave normally; BossLabs only observes packet 24 and only consumes type-99 client text carrying the bosslabs| protocol prefix.
+88. Close BossLabs while logged in, reopen it, and confirm responses go only to the new panel instance with no disposed Swing listener retained.
+89. Confirm name-index search and Save & Apply do not freeze the game or Swing EDT while the server performs cache indexing or disk persistence.
+90. Confirm encounter testing buttons remain disabled because spawn/reset/force-phase server APIs are not part of this bridge checkpoint.
