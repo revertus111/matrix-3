@@ -28,3 +28,7 @@
 - Save & Apply now persists the complete immutable definition successfully before publishing that same instance to the live registry; persistence failure leaves the current live definition untouched.
 - CombatScriptsHandler.init() now loads persisted BossLabs definitions before combat-script use so saved bosses survive server restart without changing NPCCombat ownership.
 - Added docs/bosslabs/LIVE_EDITING.md and updated BOSSLABS.md to lock DRAFT/LIVE/SAVED state separation, explicit apply behavior, one-level rollback, no per-keystroke publishing, and controlled-respawn rules for future instance-owned fields.
+- Added the Phase 3 external BossLabs Swing window and an Open BossLabs launcher in the Client Console shell.
+- Added dark themed Identity, Stats, Attacks, Phases, Mechanics, Arena / Tiles, Drops, and Testing tabs with local DRAFT-state tracking.
+- Added the first draft-only Arena / Tile Composer canvas with mouse-wheel zoom, middle-mouse pan, hover coordinate preview, and left-click tile selection.
+- Kept NPC server search/inspection, Apply Live, Save & Apply, rollback, saved reapply, and encounter testing controls disabled until the dedicated client/server BossLabs bridge is verified and implemented; no fake direct server calls were added.
