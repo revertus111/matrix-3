@@ -9,32 +9,33 @@ Build / isolation
 Developer entry / map verification
 5. As owner/admin, send `::bosslabs rots` (or the equivalent command packet used by the Client Console). Confirm BossInstanceD opens for Rise of the Six.
 6. Start the custom encounter. Confirm a private MapInstance loads and the player enters without an exception/NPE.
-7. Runtime-verify the copied source rectangle chunk 286,732 size 2x3 contains the intended RoTS fight floor and Shadow Realm. If not, keep the current values classified HYPOTHESIS and correct only from observed coordinates.
-8. Confirm provisional player/brother tiles are walkable and separated three west / three east around the shadow portal. Record exact corrected source tiles after runtime verification.
-9. Confirm The Price is Wight plays in the instance if music track id 1208 is present in the active cache.
+7. Confirm Matrix3 copies source chunk 290,753 as one 8x8-chunk instance and the player lands at the transformed equivalent of source 2330,6025,1.
+8. Confirm source coordinate 2328,6036,1 maps inside the copied instance as expected for the documented Shadow Realm reference point.
+9. Confirm fixed test brother source tiles 2326,2328,2330,2332,2334,2336 at y=6034 plane 1 are walkable. If any are blocked, correct them only from runtime/map evidence and preserve HYPOTHESIS classification until then.
+10. Confirm The Price is Wight plays in the instance if music track id 1208 is present in the active cache.
 
 Brother identity / base combat
-10. Confirm the spawned primary NPC ids resolve as Ahrim 18538, Dharok 18540, Guthan 18541, Karil 18543, Torag 18544 and Verac 18545 with level 650 / 50,000 HP cache data.
-11. Confirm alternate ids 18539 (Ahrim) and 18542 (Guthan) resolve in cache for future Flight/spear-state mechanics.
-12. Confirm RiseOfTheSixCombat owns all eight empowered/alternate ids and Matrix3 NPCCombat still owns targeting, movement, attack delay and range.
-13. Confirm Ahrim uses magic autos/projectile timing, Karil uses ranged autos/projectile timing, and Dharok/Guthan/Torag/Verac use melee autos.
-14. Damage Dharok at multiple HP levels. Confirm his baseline auto damage scaling rises as HP falls and no integer-division jump occurs.
-15. Trigger Guthan's baseline heal and confirm it heals him without exceeding max HP.
-16. Trigger Ahrim's baseline Strength drain and confirm it occurs at the configured 1-in-8 roll and never drains below zero.
+11. Confirm the spawned primary NPC ids resolve as Ahrim 18538, Dharok 18540, Guthan 18541, Karil 18543, Torag 18544 and Verac 18545 with level 650 / 50,000 HP cache data.
+12. Confirm alternate ids 18539 (Ahrim) and 18542 (Guthan) resolve in cache for future Flight/spear-state mechanics.
+13. Confirm RiseOfTheSixCombat owns all eight empowered/alternate ids and Matrix3 NPCCombat still owns targeting, movement, attack delay and range.
+14. Confirm Ahrim uses magic autos/projectile timing, Karil uses ranged autos/projectile timing, and Dharok/Guthan/Torag/Verac use melee autos.
+15. Damage Dharok at multiple HP levels. Confirm his baseline auto damage scaling rises as HP falls and no integer-division jump occurs.
+16. Trigger Guthan's baseline heal and confirm it heals him without exceeding max HP.
+17. Trigger Ahrim's baseline Strength drain and confirm it occurs at the configured 1-in-8 roll and never drains below zero.
 
 Shadow bond / revive
-17. Damage several active brothers, then subdue one. Confirm that brother remains present but non-interactable instead of dropping/finishing/using normal NPC respawn.
-18. On that defeat, confirm every still-active brother heals exactly 5,000 HP capped at its maximum.
-19. Wait without another defeat. Confirm all currently subdued brothers return after approximately 30 seconds with exactly 25,000 HP.
-20. Subdue a brother, wait part of the timer, then subdue another. Confirm the first pending timer becomes stale and a new 30-second window starts from the latest defeat.
-21. Subdue multiple brothers within each reset window, let the final timer expire, and confirm all subdued brothers revive together at 25,000 HP.
-22. Subdue all six before the timer expires. Confirm the encounter enters completed state and no stale revival task restores any brother afterward.
-23. Confirm each new defeat sends the shadow-engulf message and a timer expiry sends the shadow-bond-restored message to players in the instance.
+18. Damage several active brothers, then subdue one. Confirm that brother remains present but non-interactable instead of dropping/finishing/using normal NPC respawn.
+19. On that defeat, confirm every still-active brother heals exactly 5,000 HP capped at its maximum.
+20. Wait without another defeat. Confirm all currently subdued brothers return after approximately 30 seconds with exactly 25,000 HP.
+21. Subdue a brother, wait part of the timer, then subdue another. Confirm the first pending timer becomes stale and a new 30-second window starts from the latest defeat.
+22. Subdue multiple brothers within each reset window, let the final timer expire, and confirm all subdued brothers revive together at 25,000 HP.
+23. Subdue all six before the timer expires. Confirm the encounter enters completed state and no stale revival task restores any brother afterward.
+24. Confirm each new defeat sends the shadow-engulf message and a timer expiry sends the shadow-bond-restored message to players in the instance.
 
 Cleanup / regression
-24. Leave/logout/teleport until the private instance becomes empty. Confirm RiseOfTheSixInstance finishes all six custom NPCs and destroys the copied map without leaked NPCs/tasks.
-25. Recreate a new RoTS instance after cleanup. Confirm all six brothers start fresh and no revive-generation state carries over.
-26. Confirm practice mode still suppresses normal Matrix3 boss-instance drops; RoTS-specific chest/rewards are not implemented in this checkpoint and must not be fabricated.
+25. Leave/logout/teleport until the private instance becomes empty. Confirm RiseOfTheSixInstance finishes all six custom NPCs and destroys the copied map without leaked NPCs/tasks.
+26. Recreate a new RoTS instance after cleanup. Confirm all six brothers start fresh and no revive-generation state carries over.
+27. Confirm practice mode still suppresses normal Matrix3 boss-instance drops; RoTS-specific chest/rewards are not implemented in this checkpoint and must not be fabricated.
 
 100% fidelity gates still pending
-27. Do not mark the encounter VERIFIED-complete until the real well/totem entrance, tunnel/pads, daily formations, side empowerment, Shadow Drag/Realm, all six complete special rotations, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow pass targeted runtime tests.
+28. Do not mark the encounter VERIFIED-complete until the real well/totem entrance, tunnel/pads, daily formations, side empowerment, Shadow Drag/Realm, all six complete special rotations, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow pass targeted runtime tests.

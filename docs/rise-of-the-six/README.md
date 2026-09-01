@@ -7,7 +7,7 @@ This document is the encounter fidelity checklist. A mechanic is not considered 
 ## Classification
 
 - VERIFIED: confirmed by runtime testing in this Matrix3 project.
-- verified-static: confirmed from Matrix3 source/cache structure or authoritative external encounter data, but not yet runtime-proven here.
+- verified-static: confirmed from Matrix3 source/cache structure or strong donor/authoritative encounter evidence, but not yet runtime-proven here.
 - HYPOTHESIS: implementation detail that still requires runtime evidence before it can be treated as correct.
 
 ## Current runtime checkpoint
@@ -21,11 +21,14 @@ verified-static
 - If the timer expires, all currently defeated brothers return with 25,000 life points.
 - The fight ends only when all six brothers are defeated at the same time.
 - Fight music is The Price is Wight, music-track id 1208.
-- Known source-map points include 2326,5910,0 for the battle shadow portal and 2328,6036,1 for the Shadow Realm.
+- Nocturne's RS3 RoTS implementation copies source chunk 290,753 as an 8x8-chunk map and starts the host at source offset +10,+1 on plane 1.
+- Matrix3 MapInstance ratio 1x1 copies exactly 8x8 chunks, matching that donor map shape.
+- Source coordinate 2328,6036,1 lies inside that copied map and is documented as a Shadow Realm location.
 
 HYPOTHESIS pending first runtime map test
-- The copied source rectangle beginning at chunk 286,732 with size 2x3 contains the complete staging/fight/Shadow Realm area required by the encounter.
-- The initial six provisional spawn tiles around the known shadow-portal coordinate land on the intended walkable west/east battle floors.
+- The active revision-830 cache contains the same RoTS map layout at source chunk 290,753 as the donor cache.
+- Fixed test spawn tiles 2326..2336,6034,1 are walkable; they deliberately stay inside the donor's original random +6..+16 / +10 spawn band.
+- Exact live-RS daily formation/facing and west/east side ownership still need runtime/map verification.
 - The temporary Matrix3 boss-instance exit/grave tile is deliberately a known Barrows surface tile until object 87997 and the real RoTS graveyard path are wired.
 
 ## Implemented now

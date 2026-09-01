@@ -3,7 +3,6 @@ package com.rs.game.map.bossInstance.impl;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.rs.game.WorldTile;
 import com.rs.game.map.bossInstance.BossInstance;
 import com.rs.game.map.bossInstance.BossInstanceHandler;
 import com.rs.game.map.bossInstance.InstanceSettings;
@@ -26,12 +25,11 @@ public class RiseOfTheSixInstance extends BossInstance {
 	private static final int SURVIVOR_HEAL = 5000;
 
 	/*
-	 * verified-static source points 2326,5910 (battle shadow portal) and
-	 * 2328,6036,1 (Shadow Realm) both fit inside this copied rectangle.
-	 * Exact arena/tunnel chunk boundaries remain a runtime verification item.
+	 * Nocturne's RS3 RoTS implementation copies this exact 8x8-chunk source map.
+	 * Matrix3 MapInstance expresses that as one 64x64 ratio cell.
 	 */
-	private static final int SOURCE_CHUNK_X = 286;
-	private static final int SOURCE_CHUNK_Y = 732;
+	private static final int SOURCE_CHUNK_X = 290;
+	private static final int SOURCE_CHUNK_Y = 753;
 
 	private List<RiseOfTheSixBrother> brothers;
 	private int reviveGeneration;
@@ -50,7 +48,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 
 	@Override
 	public int[] getMapSize() {
-		return new int[] { 2, 3 };
+		return new int[] { 1, 1 };
 	}
 
 	@Override
@@ -66,13 +64,17 @@ public class RiseOfTheSixInstance extends BossInstance {
 		fightComplete = false;
 		reviveGeneration++;
 
-		// One real RoTS formation: three brothers on each side of the portal.
-		spawnBrother(Brother.AHRIM, 2317, 5904, 0);
-		spawnBrother(Brother.GUTHAN, 2317, 5910, 0);
-		spawnBrother(Brother.VERAC, 2317, 5916, 0);
-		spawnBrother(Brother.KARIL, 2335, 5904, 0);
-		spawnBrother(Brother.TORAG, 2335, 5910, 0);
-		spawnBrother(Brother.DHAROK, 2335, 5916, 0);
+		/*
+		 * Donor code spawns all six on source offset y+10 with x randomized from
+		 * +6..+16. These fixed positions stay inside that donor-proven band while
+		 * making tests reproducible. Exact live-RS formation is still HYPOTHESIS.
+		 */
+		spawnBrother(Brother.AHRIM, 2326, 6034, 1);
+		spawnBrother(Brother.GUTHAN, 2328, 6034, 1);
+		spawnBrother(Brother.VERAC, 2330, 6034, 1);
+		spawnBrother(Brother.KARIL, 2332, 6034, 1);
+		spawnBrother(Brother.TORAG, 2334, 6034, 1);
+		spawnBrother(Brother.DHAROK, 2336, 6034, 1);
 	}
 
 	private void spawnBrother(Brother brother, int x, int y, int plane) {

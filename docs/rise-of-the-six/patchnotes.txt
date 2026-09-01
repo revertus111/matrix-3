@@ -9,3 +9,7 @@
 - Added docs/rise-of-the-six/README.md as the 100% fidelity tracker with VERIFIED / verified-static / HYPOTHESIS classifications.
 - Kept map rectangle/spawn coordinates explicitly HYPOTHESIS pending the first runtime arena test; known source portal/Shadow Realm points are recorded for verification.
 - Deferred the real well/totem gate, daily formations, brother specials, Shadow Realm transfer, chest/reward table, collapse tunnel, and unstable-energy stabilization until their exact runtime/assets are verified.
+- Corrected the initial provisional instance-map hypothesis after locating a direct RS3 RoTS donor implementation.
+- RoTS now copies source chunk 290,753 at Matrix3 MapInstance ratio 1x1, matching the donor's 8x8-chunk copy instead of the earlier oversized/offset rectangle.
+- Moved the instance entry source tile to donor offset +10,+1 on plane 1 and fixed test brother spawns into the donor's +6..+16 / +10 spawn band.
+- Kept exact formation/facing and active-cache walkability classified HYPOTHESIS until tested in this revision-830 runtime.
