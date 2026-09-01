@@ -17,7 +17,7 @@ import java.util.List;
  */
 public final class BossLabsDefinitionWireCodec {
 
-	private static final int VERSION = 3;
+	private static final int VERSION = 4;
 	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_PHASES = 64;
 	private static final int MAX_ATTACKS_PER_PHASE = 256;
@@ -63,6 +63,8 @@ public final class BossLabsDefinitionWireCodec {
 					output.writeInt(attack.getHazardDurationTicks());
 					output.writeInt(attack.getHazardTickInterval());
 					output.writeInt(attack.getHazardMaxHitOverride());
+					output.writeInt(attack.getTargetMode());
+					output.writeInt(attack.getTargetRange());
 				}
 			}
 			output.flush();
@@ -137,9 +139,19 @@ public final class BossLabsDefinitionWireCodec {
 					int hazardDurationTicks = input.readInt();
 					int hazardTickInterval = input.readInt();
 					int hazardMaxHitOverride = input.readInt();
+					if (version == 3) {
+						attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+								maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
+								hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride));
+						continue;
+					}
+
+					int targetMode = input.readInt();
+					int targetRange = input.readInt();
 					attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
 							maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
-							hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride));
+							hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride,
+							targetMode, targetRange));
 				}
 				phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
 			}
