@@ -21,6 +21,8 @@ public final class BossLabsWindow extends JFrame {
     private static final long serialVersionUID = 5631579546363869002L;
     private static BossLabsWindow instance;
 
+    private final BossLabsPanel bossLabsPanel;
+
     public static void open() {
         Runnable opener = new Runnable() {
             @Override
@@ -46,7 +48,8 @@ public final class BossLabsWindow extends JFrame {
         super("Matrix3 - BossLabs");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setBackground(ConsoleTheme.WINDOW);
-        setContentPane(new BossLabsPanel());
+        bossLabsPanel = new BossLabsPanel();
+        setContentPane(bossLabsPanel);
         setMinimumSize(new java.awt.Dimension(900, 620));
         setSize(1180, 780);
         setLocationRelativeTo(findVisibleOwner());
@@ -54,6 +57,7 @@ public final class BossLabsWindow extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
+                bossLabsPanel.disposeBridge();
                 if (instance == BossLabsWindow.this) {
                     instance = null;
                 }
