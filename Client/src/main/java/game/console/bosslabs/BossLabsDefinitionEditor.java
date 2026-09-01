@@ -1,11 +1,21 @@
 package game.console.bosslabs;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
+import java.awt.event.MouseWheelEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -21,6 +31,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 
 import game.console.ConsoleTheme;
 
@@ -28,6 +39,9 @@ import game.console.ConsoleTheme;
  * Client-local authoring controls for BossLabs phase and attack DRAFT data.
  */
 public final class BossLabsDefinitionEditor {
+
+    private static final int MAX_PATTERN_TILES = 128;
+    private static final int MAX_TILE_OFFSET = 16;
 
     private final Runnable changeListener;
 
@@ -58,8 +72,13 @@ public final class BossLabsDefinitionEditor {
     private final JTextField projectileField = new JTextField();
     private final JTextField maxHitField = new JTextField();
     private final JTextField combatDelayField = new JTextField();
+    private final JTextField telegraphGraphicField = new JTextField();
+    private final JTextField impactGraphicField = new JTextField();
+    private final JTextField telegraphTicksField = new JTextField();
     private final JButton addAttackButton = new JButton("Add Attack");
     private final JLabel attackStatus = createStatus("Select a phase before adding attacks.");
+    private final JLabel patternStatus = createStatus("Select an attack, then click tiles to build a target-centered pattern.");
+    private final TilePatternCanvas tilePatternCanvas = new TilePatternCanvas();
 
     private BossLabsDraftDefinition draft;
     private boolean suppressSelectionEvents;
@@ -85,6 +104,7 @@ public final class BossLabsDefinitionEditor {
     public void setDraft(BossLabsDraftDefinition draft) {
         this.draft = draft;
         refreshPhaseViews(0);
+        tilePatternCanvas.repaint();
     }
 
     private void buildPhasesPanel() {
@@ -148,7 +168,7 @@ public final class BossLabsDefinitionEditor {
         attacksRoot.setBackground(ConsoleTheme.PANEL);
         attacksRoot.setBorder(ConsoleTheme.panelPadding(12, 12, 12, 12));
 
-        JPanel top = verticalHeading("Attacks", "Edit the attacks available inside one phase. -1 uses the NPC default where supported.");
+        JPanel top = verticalHeading("Attacks", "Edit combat plus an optional target-centered telegraphed tile pattern. -1 uses NPC defaults where supported.");
 
         JPanel phaseChooser = new JPanel(new BorderLayout(8, 0));
         phaseChooser.setOpaque(false);
@@ -192,12 +212,15 @@ public final class BossLabsDefinitionEditor {
         JPanel formCard = createCard();
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
-        styleField(attackIdField, "Stable attack id, for example fire_projectile");
+        styleField(attackIdField, "Stable attack id, for example ground_slam");
         styleField(animationField, "Animation id, or -1 for NPC default");
-        styleField(graphicField, "Graphic id, or -1 for NPC default");
+        styleField(graphicField, "NPC graphic id, or -1 for NPC default");
         styleField(projectileField, "Projectile id, or -1 for NPC default");
         styleField(maxHitField, "Max hit override, or -1 for NPC default");
         styleField(combatDelayField, "Combat delay override, or -1 for NPC default");
+        styleField(telegraphGraphicField, "Ground warning graphic id, or -1 for none");
+        styleField(impactGraphicField, "Ground impact graphic id, or -1 for none");
+        styleField(telegraphTicksField, "Ticks between warning and impact, 0-50");
         attackStyleBox.setFont(ConsoleTheme.BODY_FONT);
         attackStyleBox.setForeground(ConsoleTheme.TEXT);
         attackStyleBox.setBackground(ConsoleTheme.INPUT);
@@ -206,10 +229,13 @@ public final class BossLabsDefinitionEditor {
         addFormRow(form, 0, "Attack ID", attackIdField);
         addFormRow(form, 1, "Style", attackStyleBox);
         addFormRow(form, 2, "Animation", animationField);
-        addFormRow(form, 3, "Graphic", graphicField);
+        addFormRow(form, 3, "NPC graphic", graphicField);
         addFormRow(form, 4, "Projectile", projectileField);
         addFormRow(form, 5, "Max hit", maxHitField);
         addFormRow(form, 6, "Combat delay", combatDelayField);
+        addFormRow(form, 7, "Warning GFX", telegraphGraphicField);
+        addFormRow(form, 8, "Impact GFX", impactGraphicField);
+        addFormRow(form, 9, "Warning ticks", telegraphTicksField);
 
         JButton update = new JButton("Update Attack");
         styleButton(update);
@@ -227,7 +253,19 @@ public final class BossLabsDefinitionEditor {
         body.add(Box.createVerticalStrut(8));
         body.add(attackStatus);
         formCard.add(body, BorderLayout.CENTER);
-        attacksRoot.add(formCard, BorderLayout.CENTER);
+
+        JPanel patternCard = createCard();
+        patternCard.setPreferredSize(new Dimension(500, 245));
+        JPanel patternHeading = verticalHeading("Tile pattern", "Origin 0,0 is the target's snapshotted tile. Left click toggles damage tiles; middle drag pans; wheel zooms.");
+        patternCard.add(patternHeading, BorderLayout.NORTH);
+        patternCard.add(tilePatternCanvas, BorderLayout.CENTER);
+        patternCard.add(patternStatus, BorderLayout.SOUTH);
+
+        JPanel editorColumn = new JPanel(new BorderLayout(10, 10));
+        editorColumn.setOpaque(false);
+        editorColumn.add(formCard, BorderLayout.CENTER);
+        editorColumn.add(patternCard, BorderLayout.SOUTH);
+        attacksRoot.add(editorColumn, BorderLayout.CENTER);
     }
 
     private void addPhase() {
@@ -356,8 +394,12 @@ public final class BossLabsDefinitionEditor {
         Integer projectile = parseInteger(projectileField.getText());
         Integer maxHit = parseInteger(maxHitField.getText());
         Integer combatDelay = parseInteger(combatDelayField.getText());
-        if (animation == null || graphic == null || projectile == null || maxHit == null || combatDelay == null) {
-            attackStatus.setText("Animation/GFX/projectile/max hit/combat delay must be whole numbers.");
+        Integer telegraphGraphic = parseInteger(telegraphGraphicField.getText());
+        Integer impactGraphic = parseInteger(impactGraphicField.getText());
+        Integer telegraphTicks = parseInteger(telegraphTicksField.getText());
+        if (animation == null || graphic == null || projectile == null || maxHit == null || combatDelay == null
+                || telegraphGraphic == null || impactGraphic == null || telegraphTicks == null) {
+            attackStatus.setText("Attack numeric fields must be whole numbers.");
             return;
         }
         String id = trim(attackIdField.getText());
@@ -373,6 +415,9 @@ public final class BossLabsDefinitionEditor {
         attack.setProjectileId(projectile.intValue());
         attack.setMaxHitOverride(maxHit.intValue());
         attack.setCombatDelayOverride(combatDelay.intValue());
+        attack.setTelegraphGraphicId(telegraphGraphic.intValue());
+        attack.setImpactGraphicId(impactGraphic.intValue());
+        attack.setTelegraphTicks(telegraphTicks.intValue());
         refreshAttackList(attackList.getSelectedIndex());
         attackStatus.setText("Attack updated in local draft.");
         changed();
@@ -407,6 +452,11 @@ public final class BossLabsDefinitionEditor {
             projectileField.setText("-1");
             maxHitField.setText("-1");
             combatDelayField.setText("-1");
+            telegraphGraphicField.setText("-1");
+            impactGraphicField.setText("-1");
+            telegraphTicksField.setText("0");
+            patternStatus.setText("Select an attack, then click tiles to build a target-centered pattern.");
+            tilePatternCanvas.repaint();
             return;
         }
         attackIdField.setText(attack.getId());
@@ -416,6 +466,13 @@ public final class BossLabsDefinitionEditor {
         projectileField.setText(Integer.toString(attack.getProjectileId()));
         maxHitField.setText(Integer.toString(attack.getMaxHitOverride()));
         combatDelayField.setText(Integer.toString(attack.getCombatDelayOverride()));
+        telegraphGraphicField.setText(Integer.toString(attack.getTelegraphGraphicId()));
+        impactGraphicField.setText(Integer.toString(attack.getImpactGraphicId()));
+        telegraphTicksField.setText(Integer.toString(attack.getTelegraphTicks()));
+        patternStatus.setText(attack.getTilePattern().isEmpty()
+                ? "No tile pattern: this attack uses normal single-target combat."
+                : attack.getTilePattern().size() + " pattern tile(s). Players can dodge by leaving them before impact.");
+        tilePatternCanvas.repaint();
     }
 
     private JPanel verticalHeading(String titleText, String subtitleText) {
@@ -512,7 +569,190 @@ public final class BossLabsDefinitionEditor {
     }
 
     private void changed() {
+        attackList.repaint();
         if (changeListener != null)
             changeListener.run();
+    }
+
+    private final class TilePatternCanvas extends JPanel {
+
+        private static final long serialVersionUID = -5092715298132887648L;
+        private static final int MIN_TILE_SIZE = 16;
+        private static final int MAX_TILE_SIZE = 64;
+
+        private int tileSize = 28;
+        private int panX;
+        private int panY;
+        private Point lastPanPoint;
+        private int hoverX = Integer.MIN_VALUE;
+        private int hoverY = Integer.MIN_VALUE;
+
+        private TilePatternCanvas() {
+            setBackground(ConsoleTheme.INPUT);
+            setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
+            setPreferredSize(new Dimension(480, 185));
+
+            MouseAdapter mouse = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent event) {
+                    if (SwingUtilities.isMiddleMouseButton(event))
+                        lastPanPoint = event.getPoint();
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent event) {
+                    if (SwingUtilities.isMiddleMouseButton(event))
+                        lastPanPoint = null;
+                }
+
+                @Override
+                public void mouseClicked(MouseEvent event) {
+                    if (!SwingUtilities.isLeftMouseButton(event))
+                        return;
+                    updateHover(event.getPoint());
+                    toggleHoveredTile();
+                }
+
+                @Override
+                public void mouseExited(MouseEvent event) {
+                    hoverX = Integer.MIN_VALUE;
+                    hoverY = Integer.MIN_VALUE;
+                    repaint();
+                }
+
+                @Override
+                public void mouseWheelMoved(MouseWheelEvent event) {
+                    int requested = tileSize - event.getWheelRotation() * 4;
+                    tileSize = Math.max(MIN_TILE_SIZE, Math.min(MAX_TILE_SIZE, requested));
+                    updateHover(event.getPoint());
+                    repaint();
+                }
+            };
+            addMouseListener(mouse);
+            addMouseWheelListener(mouse);
+            addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
+                public void mouseMoved(MouseEvent event) {
+                    updateHover(event.getPoint());
+                }
+
+                @Override
+                public void mouseDragged(MouseEvent event) {
+                    if (lastPanPoint == null)
+                        return;
+                    panX += event.getX() - lastPanPoint.x;
+                    panY += event.getY() - lastPanPoint.y;
+                    lastPanPoint = event.getPoint();
+                    updateHover(event.getPoint());
+                    repaint();
+                }
+            });
+        }
+
+        private BossLabsDraftDefinition.Attack selectedAttack() {
+            return attackList.getSelectedValue();
+        }
+
+        private void toggleHoveredTile() {
+            BossLabsDraftDefinition.Attack attack = selectedAttack();
+            if (attack == null) {
+                patternStatus.setText("Select an attack first.");
+                return;
+            }
+            if (Math.abs(hoverX) > MAX_TILE_OFFSET || Math.abs(hoverY) > MAX_TILE_OFFSET) {
+                patternStatus.setText("Pattern tiles must stay within +/-" + MAX_TILE_OFFSET + " of the target.");
+                return;
+            }
+
+            BossLabsDraftDefinition.TileOffset tile = new BossLabsDraftDefinition.TileOffset(hoverX, hoverY);
+            if (attack.getTilePattern().contains(tile)) {
+                attack.getTilePattern().remove(tile);
+            } else {
+                if (attack.getTilePattern().size() >= MAX_PATTERN_TILES) {
+                    patternStatus.setText("Pattern limit reached: " + MAX_PATTERN_TILES + " tiles.");
+                    return;
+                }
+                attack.getTilePattern().add(tile);
+            }
+            patternStatus.setText(attack.getTilePattern().isEmpty()
+                    ? "Pattern cleared; attack is single-target again."
+                    : attack.getTilePattern().size() + " pattern tile(s) relative to the snapshotted target tile.");
+            changed();
+            repaint();
+        }
+
+        private void updateHover(Point point) {
+            int originX = getWidth() / 2 + panX;
+            int originY = getHeight() / 2 + panY;
+            hoverX = floorDiv(point.x - originX, tileSize);
+            hoverY = floorDiv(point.y - originY, tileSize);
+            BossLabsDraftDefinition.Attack attack = selectedAttack();
+            if (attack != null)
+                patternStatus.setText("Hover " + hoverX + ", " + hoverY + " | " + attack.getTilePattern().size() + " painted tile(s)");
+            repaint();
+        }
+
+        private int floorDiv(int value, int divisor) {
+            int result = value / divisor;
+            if ((value ^ divisor) < 0 && result * divisor != value)
+                result--;
+            return result;
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            super.paintComponent(graphics);
+            Graphics2D g = (Graphics2D) graphics.create();
+            try {
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int originX = getWidth() / 2 + panX;
+                int originY = getHeight() / 2 + panY;
+                int startX = positiveModulo(originX, tileSize);
+                int startY = positiveModulo(originY, tileSize);
+
+                g.setColor(ConsoleTheme.BORDER);
+                for (int x = startX; x < getWidth(); x += tileSize)
+                    g.drawLine(x, 0, x, getHeight());
+                for (int y = startY; y < getHeight(); y += tileSize)
+                    g.drawLine(0, y, getWidth(), y);
+
+                BossLabsDraftDefinition.Attack attack = selectedAttack();
+                if (attack != null) {
+                    for (BossLabsDraftDefinition.TileOffset tile : attack.getTilePattern()) {
+                        int drawX = originX + tile.getX() * tileSize;
+                        int drawY = originY + tile.getY() * tileSize;
+                        g.setColor(new Color(ConsoleTheme.ACCENT.getRed(), ConsoleTheme.ACCENT.getGreen(),
+                                ConsoleTheme.ACCENT.getBlue(), 80));
+                        g.fillRect(drawX + 1, drawY + 1, Math.max(1, tileSize - 1), Math.max(1, tileSize - 1));
+                        g.setColor(ConsoleTheme.ACCENT);
+                        g.drawRect(drawX, drawY, tileSize, tileSize);
+                    }
+                }
+
+                g.setStroke(new BasicStroke(2.0f));
+                g.setColor(ConsoleTheme.ACCENT_DARK);
+                g.drawLine(originX, 0, originX, getHeight());
+                g.drawLine(0, originY, getWidth(), originY);
+
+                if (hoverX != Integer.MIN_VALUE) {
+                    int drawX = originX + hoverX * tileSize;
+                    int drawY = originY + hoverY * tileSize;
+                    g.setColor(ConsoleTheme.TEXT);
+                    g.setStroke(new BasicStroke(1.5f));
+                    g.drawRect(drawX, drawY, tileSize, tileSize);
+                }
+
+                g.setFont(ConsoleTheme.SMALL_FONT);
+                g.setColor(ConsoleTheme.MUTED_TEXT);
+                g.drawString("target 0,0", originX + 5, originY - 6);
+            } finally {
+                g.dispose();
+            }
+        }
+
+        private int positiveModulo(int value, int modulus) {
+            int result = value % modulus;
+            return result < 0 ? result + modulus : result;
+        }
     }
 }
