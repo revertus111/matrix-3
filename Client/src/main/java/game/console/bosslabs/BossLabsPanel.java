@@ -87,6 +87,8 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     private final JButton applySavedButton = new JButton("Apply Saved");
     private final JLabel publishStatus = new JLabel("Select an NPC to inspect its BossLabs state.");
 
+    private final BossLabsDefinitionEditor definitionEditor;
+
     private boolean suppressDraftEvents;
     private boolean draftDirty;
     private int selectedNpcId = -1;
@@ -98,6 +100,13 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         super(new BorderLayout());
         setBackground(ConsoleTheme.WINDOW);
         setBorder(ConsoleTheme.panelPadding(16, 16, 16, 16));
+
+        definitionEditor = new BossLabsDefinitionEditor(new Runnable() {
+            @Override
+            public void run() {
+                markDraftChanged();
+            }
+        });
 
         add(createTopArea(), BorderLayout.NORTH);
         add(createTabs(), BorderLayout.CENTER);
@@ -266,12 +275,8 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
 
         tabs.addTab("Identity", createIdentityTab());
         tabs.addTab("Stats", createStatsTab());
-        tabs.addTab("Attacks", createPlaceholderTab("Attacks",
-                "Existing BossLabs attack definitions remain server-owned in this slice.",
-                "Attack editing is the next content-authoring layer after the bridge/runtime identity flow is proven."));
-        tabs.addTab("Phases", createPlaceholderTab("Phases",
-                "Existing BossLabs phase definitions remain server-owned in this slice.",
-                "Draft identity changes never alter phases until an explicit publish action succeeds."));
+        tabs.addTab("Attacks", definitionEditor.getAttacksComponent());
+        tabs.addTab("Phases", definitionEditor.getPhasesComponent());
         tabs.addTab("Mechanics", createPlaceholderTab("Mechanics",
                 "Reusable encounter mechanics are added only when the first boss proves a need.",
                 "BossLabs will not grow a speculative general-purpose scripting engine."));
@@ -416,7 +421,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         content.add(Box.createVerticalStrut(10));
         content.add(createInfoCard(
                 "Testing API pending",
-                "Search, inspection and publishing now use the live BossLabs bridge.",
+                "Search, inspection and complete definition publishing use the live BossLabs bridge.",
                 "Spawn/reset/force-phase controls stay disabled until matching authoritative server APIs are implemented."));
         content.add(Box.createVerticalGlue());
         return scroll(content);
@@ -459,27 +464,26 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
 
     private void publish(boolean save) {
         Integer npcId = readNpcId();
-        String definitionId = definitionIdField.getText() == null ? "" : definitionIdField.getText().trim();
-        String displayName = displayNameField.getText() == null ? "" : displayNameField.getText().trim();
         if (npcId == null || npcId.intValue() != selectedNpcId) {
             publishStatus.setText("Reload the NPC before publishing after changing its NPC id.");
             return;
         }
-        if (!hasBossLabsDefinition) {
-            publishStatus.setText("This NPC is not authored in BossLabs yet. Add its first phase/attack definition before publishing.");
+
+        BossLabsDraftDefinition draft = definitionEditor.getDraft();
+        if (draft == null) {
+            publishStatus.setText("No BossLabs draft is loaded.");
             return;
         }
-        if (definitionId.length() == 0 || displayName.length() == 0) {
-            publishStatus.setText("Definition ID and display name are required.");
+        syncDraftIdentity(draft, npcId.intValue());
+        String validation = draft.validate();
+        if (validation != null) {
+            publishStatus.setText(validation);
             return;
         }
 
-        publishStatus.setText(save ? "Saving and applying BossLabs draft..." : "Applying BossLabs draft live...");
-        if (save) {
-            BossLabsClientBridge.requestSaveAndApply(npcId.intValue(), definitionId, displayName);
-        } else {
-            BossLabsClientBridge.requestApplyLive(npcId.intValue(), definitionId, displayName);
-        }
+        publishStatus.setForeground(ConsoleTheme.MUTED_TEXT);
+        publishStatus.setText(save ? "Saving and applying complete BossLabs draft..." : "Applying complete BossLabs draft live...");
+        BossLabsClientBridge.requestPublishDefinition(draft, save);
     }
 
     private void undoLastApply() {
@@ -507,14 +511,24 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         }
     }
 
+    private void syncDraftIdentity(BossLabsDraftDefinition draft, int npcId) {
+        draft.setId(definitionIdField.getText() == null ? "" : definitionIdField.getText().trim());
+        draft.setDisplayName(displayNameField.getText() == null ? "" : displayNameField.getText().trim());
+        draft.setNpcId(npcId);
+    }
+
     private void updatePublishButtons() {
         Integer draftNpcId = readNpcId();
         boolean sameNpc = selectedNpcId >= 0 && draftNpcId != null && draftNpcId.intValue() == selectedNpcId;
-        boolean identityReady = definitionIdField.getText() != null && definitionIdField.getText().trim().length() > 0
-                && displayNameField.getText() != null && displayNameField.getText().trim().length() > 0;
+        BossLabsDraftDefinition draft = definitionEditor == null ? null : definitionEditor.getDraft();
+        boolean validDraft = false;
+        if (sameNpc && draft != null) {
+            syncDraftIdentity(draft, draftNpcId.intValue());
+            validDraft = draft.validate() == null;
+        }
 
-        applyLiveButton.setEnabled(sameNpc && hasBossLabsDefinition && identityReady);
-        saveApplyButton.setEnabled(sameNpc && hasBossLabsDefinition && identityReady);
+        applyLiveButton.setEnabled(validDraft);
+        saveApplyButton.setEnabled(validDraft);
         undoButton.setEnabled(sameNpc && rollbackAvailable);
         applySavedButton.setEnabled(sameNpc && savedAvailable);
     }
@@ -650,6 +664,25 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         }
     }
 
+    private String defaultDefinitionId(String value) {
+        String source = value == null ? "" : value.trim().toLowerCase();
+        StringBuilder result = new StringBuilder();
+        boolean underscore = false;
+        for (int index = 0; index < source.length(); index++) {
+            char character = source.charAt(index);
+            if (Character.isLetterOrDigit(character)) {
+                result.append(character);
+                underscore = false;
+            } else if (!underscore && result.length() > 0) {
+                result.append('_');
+                underscore = true;
+            }
+        }
+        while (result.length() > 0 && result.charAt(result.length() - 1) == '_')
+            result.deleteCharAt(result.length() - 1);
+        return result.toString();
+    }
+
     private static JLabel createStateLabel(String text, Color background) {
         JLabel label = new JLabel(text, SwingConstants.CENTER);
         label.setFont(ConsoleTheme.SMALL_FONT);
@@ -697,11 +730,15 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     @Override
     public void onInspection(int requestId, final BossLabsClientBridge.Inspection inspection) {
         selectedNpcId = inspection.getNpcId();
+        final BossLabsDraftDefinition blankDraft = new BossLabsDraftDefinition("", inspection.getName(), inspection.getNpcId());
+        definitionEditor.setDraft(blankDraft);
+
         withSuppressedDraftEvents(new Runnable() {
             @Override
             public void run() {
                 npcIdField.setText(Integer.toString(inspection.getNpcId()));
                 displayNameField.setText(inspection.getName());
+                definitionIdField.setText("");
             }
         });
 
@@ -721,7 +758,8 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         combatSourceValue.setText(inspection.getCombatSource());
 
         searchStatus.setText("Loaded " + inspection.getName() + " [" + inspection.getNpcId() + "].");
-        publishStatus.setText("Inspection loaded. Waiting for ownership state...");
+        publishStatus.setText("Inspection loaded. Waiting for ownership/definition state...");
+        updatePublishButtons();
     }
 
     @Override
@@ -743,7 +781,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
                         displayNameField.setText(ownership.getDisplayName());
                     }
                 } else {
-                    definitionIdField.setText("");
+                    definitionIdField.setText(defaultDefinitionId(displayNameField.getText()));
                 }
             }
         });
@@ -756,13 +794,51 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         savedState.setText(ownership.isSaved() ? "SAVED: yes" : "SAVED: no");
         savedState.setBackground(ownership.isSaved() ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.CARD_HOVER);
 
+        if (ownership.isBossLabsDefinition()) {
+            publishStatus.setText("BossLabs ownership loaded. Loading complete phase/attack definition...");
+        } else {
+            BossLabsDraftDefinition draft = definitionEditor.getDraft();
+            if (draft != null)
+                syncDraftIdentity(draft, selectedNpcId);
+            setDraftClean();
+            publishStatus.setText("Matrix3 NPC ready for first-time BossLabs authoring. Add a phase and attack to enable Apply.");
+        }
+        updatePublishButtons();
+    }
+
+    @Override
+    public void onDefinitionLoaded(int requestId, final BossLabsDraftDefinition definition) {
+        if (definition == null || definition.getNpcId() != selectedNpcId)
+            return;
+        definitionEditor.setDraft(definition);
+        hasBossLabsDefinition = true;
+        withSuppressedDraftEvents(new Runnable() {
+            @Override
+            public void run() {
+                npcIdField.setText(Integer.toString(definition.getNpcId()));
+                definitionIdField.setText(definition.getId());
+                displayNameField.setText(definition.getDisplayName());
+            }
+        });
+        setDraftClean();
+        publishStatus.setForeground(ConsoleTheme.MUTED_TEXT);
+        publishStatus.setText("Complete BossLabs definition loaded. Phases and attacks are ready to edit.");
+        updatePublishButtons();
+    }
+
+    @Override
+    public void onDefinitionEmpty(int requestId, int npcId) {
+        if (npcId != selectedNpcId)
+            return;
+        BossLabsDraftDefinition draft = definitionEditor.getDraft();
+        if (draft == null) {
+            draft = new BossLabsDraftDefinition(defaultDefinitionId(displayNameField.getText()),
+                    displayNameField.getText(), npcId);
+            definitionEditor.setDraft(draft);
+        }
+        syncDraftIdentity(draft, npcId);
         setDraftClean();
         updatePublishButtons();
-        if (ownership.isBossLabsDefinition()) {
-            publishStatus.setText("BossLabs definition loaded. Edit the draft, then Apply Live or Save & Apply.");
-        } else {
-            publishStatus.setText("Matrix3 owns this NPC. First-time BossLabs phase/attack authoring is not implemented in this slice.");
-        }
     }
 
     @Override
@@ -773,6 +849,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         hasBossLabsDefinition = false;
         savedAvailable = false;
         rollbackAvailable = false;
+        definitionEditor.setDraft(null);
         searchStatus.setText("NPC " + npcId + " was not found.");
         publishStatus.setText("No NPC loaded.");
         updatePublishButtons();
