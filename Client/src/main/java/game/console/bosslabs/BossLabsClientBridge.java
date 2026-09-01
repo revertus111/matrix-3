@@ -2,6 +2,8 @@ package game.console.bosslabs;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.SwingUtilities;
@@ -10,12 +12,16 @@ import game.ClientConsoleBridge;
 
 /**
  * Client-side BossLabs transport adapter using Matrix3's existing console
- * command packet for requests and CLIENT_COMMAND packet for replies.
+ * command packet for requests and type-99 panel messages for replies.
  */
 public final class BossLabsClientBridge {
 
     private static final String RESPONSE_PREFIX = "bosslabs|";
+    private static final int PUBLISH_CHUNK_LENGTH = 180;
+    private static final int MAX_PUBLISH_CHUNKS = 28;
     private static final AtomicInteger REQUEST_SEQUENCE = new AtomicInteger(1);
+    private static final Map<Integer, DefinitionDownload> DEFINITION_DOWNLOADS =
+            new ConcurrentHashMap<Integer, DefinitionDownload>();
 
     private static volatile Listener listener;
 
@@ -30,6 +36,7 @@ public final class BossLabsClientBridge {
         if (listener == oldListener) {
             listener = null;
         }
+        DEFINITION_DOWNLOADS.clear();
     }
 
     public static int requestSearch(String query) {
@@ -44,6 +51,51 @@ public final class BossLabsClientBridge {
         return requestId;
     }
 
+    public static int requestPublishDefinition(BossLabsDraftDefinition definition, boolean save) {
+        int requestId = nextRequestId();
+        if (definition == null) {
+            dispatchFailure(requestId, "No BossLabs draft is loaded.");
+            return requestId;
+        }
+        String validation = definition.validate();
+        if (validation != null) {
+            dispatchFailure(requestId, validation);
+            return requestId;
+        }
+
+        String payload;
+        try {
+            payload = definition.toPayload();
+        } catch (RuntimeException e) {
+            dispatchFailure(requestId, e.getMessage() == null ? "Unable to encode BossLabs draft." : e.getMessage());
+            return requestId;
+        }
+
+        int chunkCount = (payload.length() + PUBLISH_CHUNK_LENGTH - 1) / PUBLISH_CHUNK_LENGTH;
+        if (chunkCount <= 0 || chunkCount > MAX_PUBLISH_CHUNKS) {
+            dispatchFailure(requestId, "BossLabs draft is too large for one publish transaction.");
+            return requestId;
+        }
+
+        String[] commands = new String[chunkCount + 2];
+        commands[0] = "bosslabs uploadbegin " + requestId + " " + (save ? 1 : 0) + " " + chunkCount;
+        for (int index = 0; index < chunkCount; index++) {
+            int start = index * PUBLISH_CHUNK_LENGTH;
+            int end = Math.min(payload.length(), start + PUBLISH_CHUNK_LENGTH);
+            commands[index + 1] = "bosslabs uploadchunk " + requestId + " " + index + " " + payload.substring(start, end);
+        }
+        commands[commands.length - 1] = "bosslabs uploadcommit " + requestId;
+
+        String error = ClientConsoleBridge.queueConsoleCommands(commands);
+        if (error != null)
+            dispatchFailure(requestId, "Publish request failed: " + error);
+        return requestId;
+    }
+
+    /**
+     * Legacy identity-only requests retained for compatibility with the prior
+     * bridge checkpoint. New editor publishing uses requestPublishDefinition().
+     */
     public static int requestApplyLive(int npcId, String definitionId, String displayName) {
         int requestId = nextRequestId();
         queue(requestId, "bosslabs apply " + requestId + " " + npcId + " " + encode(definitionId) + " "
@@ -70,11 +122,6 @@ public final class BossLabsClientBridge {
         return requestId;
     }
 
-    /**
-     * Consumes only BossLabs-prefixed server CLIENT_COMMAND payloads. Returning
-     * false preserves the original Matrix3 client-command parser unchanged for
-     * every other command.
-     */
     public static boolean handleServerCommand(String command) {
         if (command == null || !command.startsWith(RESPONSE_PREFIX)) {
             return false;
@@ -144,6 +191,45 @@ public final class BossLabsClientBridge {
                         target.onOwnership(requestId, ownership);
                     }
                 });
+            } else if ("definition-empty".equals(type) && parts.length >= 4) {
+                final int requestId = parseInt(parts[2]);
+                final int npcId = parseInt(parts[3]);
+                DEFINITION_DOWNLOADS.remove(Integer.valueOf(requestId));
+                dispatch(new ListenerCall() {
+                    @Override
+                    public void call(Listener target) {
+                        target.onDefinitionEmpty(requestId, npcId);
+                    }
+                });
+            } else if ("definition-begin".equals(type) && parts.length >= 5) {
+                int requestId = parseInt(parts[2]);
+                int npcId = parseInt(parts[3]);
+                int chunkCount = parseInt(parts[4]);
+                if (chunkCount <= 0 || chunkCount > 256)
+                    throw new IllegalArgumentException("Invalid BossLabs definition response chunk count.");
+                DEFINITION_DOWNLOADS.put(Integer.valueOf(requestId), new DefinitionDownload(npcId, chunkCount));
+            } else if ("definition-chunk".equals(type) && parts.length >= 6) {
+                int requestId = parseInt(parts[2]);
+                int npcId = parseInt(parts[3]);
+                int index = parseInt(parts[4]);
+                DefinitionDownload download = DEFINITION_DOWNLOADS.get(Integer.valueOf(requestId));
+                if (download != null && download.npcId == npcId)
+                    download.setChunk(index, parts[5]);
+            } else if ("definition-end".equals(type) && parts.length >= 4) {
+                final int requestId = parseInt(parts[2]);
+                final int npcId = parseInt(parts[3]);
+                DefinitionDownload download = DEFINITION_DOWNLOADS.remove(Integer.valueOf(requestId));
+                if (download == null || download.npcId != npcId)
+                    throw new IllegalArgumentException("BossLabs definition response is incomplete.");
+                final BossLabsDraftDefinition definition = BossLabsDraftDefinition.fromPayload(download.join());
+                if (definition.getNpcId() != npcId)
+                    throw new IllegalArgumentException("BossLabs definition response NPC id mismatch.");
+                dispatch(new ListenerCall() {
+                    @Override
+                    public void call(Listener target) {
+                        target.onDefinitionLoaded(requestId, definition);
+                    }
+                });
             } else if ("inspect-missing".equals(type) && parts.length >= 4) {
                 final int requestId = parseInt(parts[2]);
                 final int npcId = parseInt(parts[3]);
@@ -172,10 +258,12 @@ public final class BossLabsClientBridge {
 
     private static void queue(final int requestId, String command, String failureLabel) {
         String error = ClientConsoleBridge.queueConsoleCommand(command);
-        if (error == null) {
-            return;
-        }
-        final ActionResult result = new ActionResult(requestId, false, -1, failureLabel + ": " + error);
+        if (error != null)
+            dispatchFailure(requestId, failureLabel + ": " + error);
+    }
+
+    private static void dispatchFailure(final int requestId, String message) {
+        final ActionResult result = new ActionResult(requestId, false, -1, message);
         dispatch(new ListenerCall() {
             @Override
             public void call(Listener target) {
@@ -244,6 +332,8 @@ public final class BossLabsClientBridge {
         void onSearchError(int requestId, String message);
         void onInspection(int requestId, Inspection inspection);
         void onOwnership(int requestId, Ownership ownership);
+        void onDefinitionLoaded(int requestId, BossLabsDraftDefinition definition);
+        void onDefinitionEmpty(int requestId, int npcId);
         void onInspectionMissing(int requestId, int npcId);
         void onActionResult(ActionResult result);
     }
@@ -378,5 +468,31 @@ public final class BossLabsClientBridge {
         public boolean isSuccess() { return success; }
         public int getNpcId() { return npcId; }
         public String getMessage() { return message; }
+    }
+
+    private static final class DefinitionDownload {
+        private final int npcId;
+        private final String[] chunks;
+
+        private DefinitionDownload(int npcId, int chunkCount) {
+            this.npcId = npcId;
+            this.chunks = new String[chunkCount];
+        }
+
+        private void setChunk(int index, String value) {
+            if (index < 0 || index >= chunks.length)
+                throw new IllegalArgumentException("BossLabs definition response chunk index is invalid.");
+            chunks[index] = value;
+        }
+
+        private String join() {
+            StringBuilder builder = new StringBuilder();
+            for (String chunk : chunks) {
+                if (chunk == null)
+                    throw new IllegalArgumentException("BossLabs definition response is missing a chunk.");
+                builder.append(chunk);
+            }
+            return builder.toString();
+        }
     }
 }
