@@ -30,3 +30,4 @@
 - Bank spawning validates owner/admin rights, live player started/running/not-finished state, item definition validity, and positive quantities before calling Matrix3 Bank.addItem(...).
 - Added right-click favorite, category, preset membership, preset quantity, and removal actions.
 - Kept item definition indexing off the Swing event-dispatch thread and limited visible results/thumbnail work to avoid blocking normal client rendering.
+- Fixed Item Browser item-row interaction: a normal left-click now selects the clicked row and queues one copy to Inventory; right-click keeps the quantity/Bank/organization menu.
