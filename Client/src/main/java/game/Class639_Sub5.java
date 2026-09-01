@@ -17,6 +17,7 @@ public class Class639_Sub5 extends Class639 {
 	}
 
 	public Class161 method8898(Class106 class106, Class106 class106_0_, int i, int i_1_, int i_2_, int i_3_, boolean bool, boolean bool_4_, int i_5_, Class102 class102, Class474 class474, Class484 class484, short i_6_) {
+		ClientConsoleItemBridge.captureItemRenderContext(this, class106, class106_0_, i_2_, i_3_, bool, i_5_, class102, class474, class484);
 		return ((Class628) anInterface72_8286).method7479(class106, class106_0_, i, i_1_, i_2_, i_3_, bool, bool_4_, i_5_, class102, class474, class484, this, 1044255770);
 	}
 
@@ -79,6 +80,7 @@ public class Class639_Sub5 extends Class639 {
 
 	public Class639_Sub5(Class437 class437, Class435 class435, boolean bool, Interface18 interface18, Class248 class248, Class248 class248_9_) {
 		super(class437, class435, class248, JS5ConfigGroup.aClass220_2526, 64, new Class628_Sub1(class437, class435, bool, class248_9_, interface18));
+		ClientConsoleItemBridge.registerItemDefinitions(this);
 	}
 
 	public void method8904(int i) {
