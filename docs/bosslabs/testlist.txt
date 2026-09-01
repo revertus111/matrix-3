@@ -155,3 +155,19 @@ Current lingering floor-hazard checkpoint (supersedes item 118 for persistent ha
 130. Save & Apply a hazard attack, restart the server, and re-inspect it. Confirm Hazard GFX, duration, interval, max hit, and every painted tile survive the v3 store/wire round trip exactly.
 131. Resize BossLabs down to its practical minimum and open Attacks. Confirm the fixed phase/attack list remains usable and the expanded right-side attack/hazard/pattern editor scrolls vertically with no unreachable controls.
 132. Confirm this slice does not add minions, alternate/random targeting, a general mechanics scripting engine, or alternate world/combat ownership. Those remain separate first-boss slices.
+
+Current alternate-target checkpoint (supersedes item 132 for random targeting and items 121/130 for store/wire version)
+133. Eclipse clean/build Client and Server with Java 8. Confirm BossAttackDefinition, BossCombatScript, BossDefinitionStore, BossLabsDefinitionWireCodec, BossLabsDraftDefinition, and BossLabsDefinitionEditor compile cleanly after target mode/range fields are added.
+134. Start with known-good BossLabs v1, v2, and v3 stores in controlled tests. Confirm they still load and every older attack defaults to Current target with target range 14.
+135. In Attacks, confirm Target offers Current target and Random nearby player, Target range accepts 1-32, edits mark DRAFT modified, and nothing changes live before Apply Live/Save & Apply.
+136. Configure Current target and confirm single-target, painted telegraph, and lingering-hazard attacks behave exactly as before this slice.
+137. With two eligible players in range, make player A the NPCCombat target and configure an attack as Random nearby player. Confirm that attack prefers player B without replacing the NPC's authoritative combat target.
+138. With only player A eligible/in range, use the same Random nearby player attack and confirm it safely falls back to player A rather than cancelling, stalling, or selecting an invalid entity.
+139. Put a second player outside the configured Target range and confirm that player is not selected. Move them inside range and confirm they become eligible on a later random-target attack.
+140. Confirm dead, finished, not-started, or different-plane/out-of-range players are not eligible alternate targets.
+141. Configure a ranged/magic projectile attack as Random nearby player. Confirm its projectile and delayed hit are aimed at the resolved alternate player while NPCCombat continues tracking its original target.
+142. Configure a painted telegraphed attack as Random nearby player. Confirm tile origin 0,0 snapshots around the resolved alternate player's location, and any lingering hazard remains on those resulting world tiles rather than following either player.
+143. After a random-target attack completes, allow the boss to use a normal Current target attack. Confirm it immediately uses NPCCombat's original target, proving alternate resolution did not mutate target ownership.
+144. Reject target mode values outside the supported two modes and Target range below 1 or above 32. Confirm client validation blocks publish and BossAttackDefinition remains the final server validation gate.
+145. Save & Apply a random-target attack, restart the server, and re-inspect it. Confirm target mode/range, projectile/tile/hazard fields, and the rest of the definition survive the v4 store/wire round trip exactly.
+146. Confirm this slice does not add encounter participant registration, threat/aggro tables, minions, or a second targeting/combat engine; random targeting is a bounded per-attack selection layered over NPCCombat ownership.
