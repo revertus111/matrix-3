@@ -107,3 +107,19 @@ Current client/server bridge checkpoint (supersedes Phase 3 items 72 and 75)
 88. Close BossLabs while logged in, reopen it, and confirm responses go only to the new panel instance with no disposed Swing listener retained.
 89. Confirm name-index search and Save & Apply do not freeze the game or Swing EDT while the server performs cache indexing or disk persistence.
 90. Confirm encounter testing buttons remain disabled because spawn/reset/force-phase server APIs are not part of this bridge checkpoint.
+
+Current attack/phase authoring checkpoint (supersedes bridge item 79 and expands items 80-83)
+91. Eclipse clean/build Client and Server with Java 8. Confirm BossLabsDraftDefinition, BossLabsDefinitionEditor, BossLabsDefinitionWireCodec, BossLabsClientBridge, BossLabsCommandBridge, BossLabsPanel, and ClientConsoleBridge compile cleanly.
+92. Inspect a normal Matrix3 Java/default NPC. Confirm LIVE still reports Matrix3, the tool creates a local empty BossLabs draft with a generated definition id, and no combat ownership changes merely from inspection.
+93. In Phases click Add Phase, then in Attacks choose that phase and click Add Attack. Confirm the default 0-100 phase plus NPC-default melee attack produces a valid local draft and enables Apply Live / Save & Apply.
+94. Create two phases with overlapping HP ranges. Confirm the client draft remains local and Apply Live / Save & Apply stay disabled until the overlap is corrected.
+95. Test invalid phase percentages, blank phase/attack ids, unsupported style data, max-hit below -1, and combat-delay below -1. Confirm invalid drafts cannot be published and the server constructors remain the final validation gate.
+96. Create melee, range, and magic attacks with explicit animation/GFX/projectile/max-hit/delay values. Confirm the complete draft round-trips through the wire codec without field/style changes.
+97. Inspect an existing BossLabs NPC with multiple phases/attacks. Confirm the complete server definition repopulates the Phases and Attacks editors instead of only restoring identity fields.
+98. Change one attack in an existing or newly converted BossLabs definition and click Apply Live. Confirm the whole immutable definition replaces the live registration atomically and subsequent applicable BossCombatScript attacks use the new definition.
+99. Click Save & Apply on a multi-phase draft, restart the server, re-inspect the NPC, and confirm the same phase ranges and attack fields reload from the unchanged BossDefinitionStore format.
+100. Fill the Client Console queue enough that the complete BossLabs publish transaction cannot fit. Confirm queueConsoleCommands rejects the transaction before queuing any of its begin/chunk/commit commands.
+101. Send an intentionally incomplete, missing-chunk, malformed, or mismatched BossLabs upload transaction in a controlled test. Confirm no live/saved definition changes and the server reports the transaction failure.
+102. Attempt uploadbegin/uploadchunk/uploadcommit without admin rights. Confirm no BossLabs definition is reconstructed or published.
+103. First-time convert a safe Matrix3 NPC with Apply Live, then Undo Last Apply. Confirm the BossLabs registration is removed and the NPC returns to its original Matrix3 Java/default combat path.
+104. Confirm this authoring slice does not change BossDefinitionStore version/format, NPC spawn/death/pathing/drop ownership, or the still-disabled encounter testing controls.
