@@ -1,0 +1,9 @@
+OpenGL native-load acceptance
+
+- Use Eclipse with the Java 8 runtime normally used for Matrix3.
+- Fully close and restart the client before testing so native libraries are not already loaded in the JVM.
+- Select OpenGL in-game or run tk1.
+- Verify jaclib.dll no longer fails with "The specified procedure could not be found".
+- If OpenGL starts, run renderer and verify Toolkit ID 1 plus renderer/vendor/device/driver information.
+- If startup still fails, record the first new exception and whether it names jawt, jaclib, jaggl, or OpenGL.init.
+- Switch back to the normal software renderer and verify fallback still works.
