@@ -19,7 +19,10 @@ import java.util.Set;
  */
 public final class BossLabsDraftDefinition {
 
-    private static final int WIRE_VERSION = 3;
+    public static final int TARGET_CURRENT = 0;
+    public static final int TARGET_RANDOM_NEARBY_PLAYER = 1;
+
+    private static final int WIRE_VERSION = 4;
     private static final int MIN_WIRE_VERSION = 1;
     private static final int MAX_PHASES = 64;
     private static final int MAX_ATTACKS_PER_PHASE = 256;
@@ -28,6 +31,7 @@ public final class BossLabsDraftDefinition {
     private static final int MAX_TELEGRAPH_TICKS = 50;
     private static final int MAX_HAZARD_DURATION_TICKS = 100;
     private static final int MAX_HAZARD_TICK_INTERVAL = 50;
+    private static final int MAX_TARGET_RANGE = 32;
     private static final int MAX_WIRE_BYTES = 16384;
 
     private String id;
@@ -77,6 +81,10 @@ public final class BossLabsDraftDefinition {
                     return "Attack " + (attackIndex + 1) + " in " + phase.id + " needs an ID.";
                 if (attack.combatStyle < 0 || attack.combatStyle > 2)
                     return "Attack " + attack.id + " has an invalid combat style.";
+                if (attack.targetMode != TARGET_CURRENT && attack.targetMode != TARGET_RANDOM_NEARBY_PLAYER)
+                    return "Attack " + attack.id + " has an invalid target mode.";
+                if (attack.targetRange < 1 || attack.targetRange > MAX_TARGET_RANGE)
+                    return "Attack " + attack.id + " target range must be between 1 and " + MAX_TARGET_RANGE + ".";
                 if (attack.maxHitOverride < -1)
                     return "Attack " + attack.id + " max hit must be -1 or greater.";
                 if (attack.combatDelayOverride < -1)
@@ -157,6 +165,8 @@ public final class BossLabsDraftDefinition {
                     output.writeInt(attack.hazardDurationTicks);
                     output.writeInt(attack.hazardTickInterval);
                     output.writeInt(attack.hazardMaxHitOverride);
+                    output.writeInt(attack.targetMode);
+                    output.writeInt(attack.targetRange);
                 }
             }
             output.flush();
@@ -219,6 +229,10 @@ public final class BossLabsDraftDefinition {
                         attack.hazardDurationTicks = input.readInt();
                         attack.hazardTickInterval = input.readInt();
                         attack.hazardMaxHitOverride = input.readInt();
+                    }
+                    if (version >= 4) {
+                        attack.targetMode = input.readInt();
+                        attack.targetRange = input.readInt();
                     }
                     phase.attacks.add(attack);
                 }
@@ -285,6 +299,8 @@ public final class BossLabsDraftDefinition {
         private int hazardDurationTicks;
         private int hazardTickInterval = 1;
         private int hazardMaxHitOverride = -1;
+        private int targetMode = TARGET_CURRENT;
+        private int targetRange = 14;
 
         public Attack(String id, int combatStyle, int animationId, int graphicId, int projectileId,
                 int maxHitOverride, int combatDelayOverride) {
@@ -336,13 +352,18 @@ public final class BossLabsDraftDefinition {
         public void setHazardTickInterval(int value) { hazardTickInterval = value; }
         public int getHazardMaxHitOverride() { return hazardMaxHitOverride; }
         public void setHazardMaxHitOverride(int value) { hazardMaxHitOverride = value; }
+        public int getTargetMode() { return targetMode; }
+        public void setTargetMode(int value) { targetMode = value; }
+        public int getTargetRange() { return targetRange; }
+        public void setTargetRange(int value) { targetRange = value; }
 
         @Override
         public String toString() {
             String label = id.trim().length() == 0 ? "Unnamed attack" : id;
             String area = tilePattern.isEmpty() ? "" : "  " + tilePattern.size() + " tiles";
             String hazard = hazardDurationTicks > 0 ? "  hazard " + hazardDurationTicks + "t" : "";
-            return label + "  [" + styleName(combatStyle) + "]" + area + hazard;
+            String targeting = targetMode == TARGET_RANDOM_NEARBY_PLAYER ? "  random target" : "";
+            return label + "  [" + styleName(combatStyle) + "]" + area + hazard + targeting;
         }
     }
 
