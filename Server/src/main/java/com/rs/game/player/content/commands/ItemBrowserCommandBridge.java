@@ -16,6 +16,9 @@ public final class ItemBrowserCommandBridge {
         if (player == null) {
             return false;
         }
+        if (!player.hasStarted() || !player.isRunning() || player.hasFinished()) {
+            return true;
+        }
         if (player.getRights() < 2) {
             player.getPackets().sendGameMessage("Admin+ only!");
             return true;
