@@ -1,0 +1,4 @@
+2026-09-01
+- Fixed in-game Settings entry buttons (1477:21 and 1431:12) to open Settings menu 8 instead of only closing the current menu.
+- Reopens the player's last-used Settings subsection; first use defaults to Game settings.
+- Marked ButtonHandler.java as UTF-8 in Eclipse because the GitHub patch normalized its legacy identifier bytes; Bank.java remains Windows-1252.
