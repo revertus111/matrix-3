@@ -32,3 +32,14 @@
 - Added dark themed Identity, Stats, Attacks, Phases, Mechanics, Arena / Tiles, Drops, and Testing tabs with local DRAFT-state tracking.
 - Added the first draft-only Arena / Tile Composer canvas with mouse-wheel zoom, middle-mouse pan, hover coordinate preview, and left-click tile selection.
 - Kept NPC server search/inspection, Apply Live, Save & Apply, rollback, saved reapply, and encounter testing controls disabled until the dedicated client/server BossLabs bridge is verified and implemented; no fake direct server calls were added.
+
+2026-09-01
+- Added the BossLabs client/server development bridge over Matrix3's existing command packet and type-99 panel-message path; no socket, file polling, or alternate networking stack was introduced.
+- Added a narrow packet-24 observer that reads BossLabs-prefixed commands without consuming or rewriting Matrix3 packet data, leaving normal world packet framing and command processing intact.
+- Kept BossLabs server actions admin-only and delegated search/inspection/publishing to the existing BossNpcSearchService and BossDefinitionPublisher authorities.
+- Routed NPC name indexing/search and Save & Apply disk persistence through the existing slow executor rather than the packet/world or Swing EDT paths.
+- Connected the external BossLabs window to real automatic ID/name search, result selection, NPC inspection, combat-source/script display, and existing BossLabs definition auto-population.
+- Enabled Apply Live, Save & Apply, Undo Last Apply, and Apply Saved only when the inspected NPC/current BossLabs state makes each action valid.
+- First-time conversion of a Matrix3 Java/default NPC remains blocked until BossLabs attack/phase authoring exists; the tool does not publish an empty or fake conversion.
+- Kept encounter spawn/reset/force-phase/testing controls disabled because matching authoritative server testing APIs are not implemented yet.
+- Added window-close listener cleanup so the static BossLabs reply listener does not retain a disposed Swing panel.
