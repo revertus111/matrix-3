@@ -1,0 +1,14 @@
+2026-09-01 - OpenGL renderer baseline
+
+VERIFIED / verified-static
+- Toolkit id 1 maps Class106.method1888 -> Class172.method2709 -> Class106_Sub1.
+- Class106_Sub1 is the existing Jagex OpenGL renderer; it loads jaclib and jaggl, creates the OpenGL context on the game Canvas, and uses the existing OpenGL model/shader/FBO paths.
+- The existing developer command tk1 switches through the normal renderer transition to toolkit 1. On success it updates the preferred renderer to 1 and saves the preference.
+- The existing renderer command reports the active toolkit id plus renderer/vendor/device/driver information.
+- Class498 keeps the original renderer creation failure/fallback path intact.
+
+RUNTIME VALIDATION PENDING
+- Confirm jaggl native loading and driver compatibility on the current Windows runtime by switching with tk1 and checking renderer output.
+
+Decision
+- Do not replace the built-in renderer or add LWJGL. Keep the known-good software bootstrap/fallback untouched until the existing jaggl path is runtime-proven.
