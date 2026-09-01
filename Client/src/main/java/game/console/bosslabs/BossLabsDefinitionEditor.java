@@ -75,6 +75,10 @@ public final class BossLabsDefinitionEditor {
     private final JTextField telegraphGraphicField = new JTextField();
     private final JTextField impactGraphicField = new JTextField();
     private final JTextField telegraphTicksField = new JTextField();
+    private final JTextField hazardGraphicField = new JTextField();
+    private final JTextField hazardDurationField = new JTextField();
+    private final JTextField hazardIntervalField = new JTextField();
+    private final JTextField hazardMaxHitField = new JTextField();
     private final JButton addAttackButton = new JButton("Add Attack");
     private final JLabel attackStatus = createStatus("Select a phase before adding attacks.");
     private final JLabel patternStatus = createStatus("Select an attack, then click tiles to build a target-centered pattern.");
@@ -168,7 +172,7 @@ public final class BossLabsDefinitionEditor {
         attacksRoot.setBackground(ConsoleTheme.PANEL);
         attacksRoot.setBorder(ConsoleTheme.panelPadding(12, 12, 12, 12));
 
-        JPanel top = verticalHeading("Attacks", "Edit combat plus an optional target-centered telegraphed tile pattern. -1 uses NPC defaults where supported.");
+        JPanel top = verticalHeading("Attacks", "Edit combat, telegraphed tiles, and optional lingering floor hazards. -1 uses NPC defaults where supported.");
 
         JPanel phaseChooser = new JPanel(new BorderLayout(8, 0));
         phaseChooser.setOpaque(false);
@@ -216,11 +220,15 @@ public final class BossLabsDefinitionEditor {
         styleField(animationField, "Animation id, or -1 for NPC default");
         styleField(graphicField, "NPC graphic id, or -1 for NPC default");
         styleField(projectileField, "Projectile id, or -1 for NPC default");
-        styleField(maxHitField, "Max hit override, or -1 for NPC default");
+        styleField(maxHitField, "Impact max hit override, or -1 for NPC default");
         styleField(combatDelayField, "Combat delay override, or -1 for NPC default");
         styleField(telegraphGraphicField, "Ground warning graphic id, or -1 for none");
         styleField(impactGraphicField, "Ground impact graphic id, or -1 for none");
         styleField(telegraphTicksField, "Ticks between warning and impact, 0-50");
+        styleField(hazardGraphicField, "Lingering ground graphic id, or -1 for none");
+        styleField(hazardDurationField, "Hazard duration in ticks; 0 disables the lingering hazard");
+        styleField(hazardIntervalField, "Damage interval in ticks, 1-50; must not exceed duration when enabled");
+        styleField(hazardMaxHitField, "Maximum damage per hazard tick, or -1 for NPC default");
         attackStyleBox.setFont(ConsoleTheme.BODY_FONT);
         attackStyleBox.setForeground(ConsoleTheme.TEXT);
         attackStyleBox.setBackground(ConsoleTheme.INPUT);
@@ -231,11 +239,15 @@ public final class BossLabsDefinitionEditor {
         addFormRow(form, 2, "Animation", animationField);
         addFormRow(form, 3, "NPC graphic", graphicField);
         addFormRow(form, 4, "Projectile", projectileField);
-        addFormRow(form, 5, "Max hit", maxHitField);
+        addFormRow(form, 5, "Impact max hit", maxHitField);
         addFormRow(form, 6, "Combat delay", combatDelayField);
         addFormRow(form, 7, "Warning GFX", telegraphGraphicField);
         addFormRow(form, 8, "Impact GFX", impactGraphicField);
         addFormRow(form, 9, "Warning ticks", telegraphTicksField);
+        addFormRow(form, 10, "Hazard GFX", hazardGraphicField);
+        addFormRow(form, 11, "Hazard duration", hazardDurationField);
+        addFormRow(form, 12, "Hazard interval", hazardIntervalField);
+        addFormRow(form, 13, "Hazard max hit", hazardMaxHitField);
 
         JButton update = new JButton("Update Attack");
         styleButton(update);
@@ -256,7 +268,7 @@ public final class BossLabsDefinitionEditor {
 
         JPanel patternCard = createCard();
         patternCard.setPreferredSize(new Dimension(500, 245));
-        JPanel patternHeading = verticalHeading("Tile pattern", "Origin 0,0 is the target's snapshotted tile. Left click toggles damage tiles; middle drag pans; wheel zooms.");
+        JPanel patternHeading = verticalHeading("Tile pattern", "Origin 0,0 is the target's snapshotted tile. Left click toggles impact/hazard tiles; middle drag pans; wheel zooms.");
         patternCard.add(patternHeading, BorderLayout.NORTH);
         patternCard.add(tilePatternCanvas, BorderLayout.CENTER);
         patternCard.add(patternStatus, BorderLayout.SOUTH);
@@ -265,7 +277,13 @@ public final class BossLabsDefinitionEditor {
         editorColumn.setOpaque(false);
         editorColumn.add(formCard, BorderLayout.CENTER);
         editorColumn.add(patternCard, BorderLayout.SOUTH);
-        attacksRoot.add(editorColumn, BorderLayout.CENTER);
+
+        JScrollPane editorScroll = new JScrollPane(editorColumn);
+        editorScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        editorScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        editorScroll.setBorder(BorderFactory.createEmptyBorder());
+        ConsoleTheme.styleScrollPane(editorScroll);
+        attacksRoot.add(editorScroll, BorderLayout.CENTER);
     }
 
     private void addPhase() {
@@ -397,8 +415,13 @@ public final class BossLabsDefinitionEditor {
         Integer telegraphGraphic = parseInteger(telegraphGraphicField.getText());
         Integer impactGraphic = parseInteger(impactGraphicField.getText());
         Integer telegraphTicks = parseInteger(telegraphTicksField.getText());
+        Integer hazardGraphic = parseInteger(hazardGraphicField.getText());
+        Integer hazardDuration = parseInteger(hazardDurationField.getText());
+        Integer hazardInterval = parseInteger(hazardIntervalField.getText());
+        Integer hazardMaxHit = parseInteger(hazardMaxHitField.getText());
         if (animation == null || graphic == null || projectile == null || maxHit == null || combatDelay == null
-                || telegraphGraphic == null || impactGraphic == null || telegraphTicks == null) {
+                || telegraphGraphic == null || impactGraphic == null || telegraphTicks == null
+                || hazardGraphic == null || hazardDuration == null || hazardInterval == null || hazardMaxHit == null) {
             attackStatus.setText("Attack numeric fields must be whole numbers.");
             return;
         }
@@ -418,6 +441,10 @@ public final class BossLabsDefinitionEditor {
         attack.setTelegraphGraphicId(telegraphGraphic.intValue());
         attack.setImpactGraphicId(impactGraphic.intValue());
         attack.setTelegraphTicks(telegraphTicks.intValue());
+        attack.setHazardGraphicId(hazardGraphic.intValue());
+        attack.setHazardDurationTicks(hazardDuration.intValue());
+        attack.setHazardTickInterval(hazardInterval.intValue());
+        attack.setHazardMaxHitOverride(hazardMaxHit.intValue());
         refreshAttackList(attackList.getSelectedIndex());
         attackStatus.setText("Attack updated in local draft.");
         changed();
@@ -455,6 +482,10 @@ public final class BossLabsDefinitionEditor {
             telegraphGraphicField.setText("-1");
             impactGraphicField.setText("-1");
             telegraphTicksField.setText("0");
+            hazardGraphicField.setText("-1");
+            hazardDurationField.setText("0");
+            hazardIntervalField.setText("1");
+            hazardMaxHitField.setText("-1");
             patternStatus.setText("Select an attack, then click tiles to build a target-centered pattern.");
             tilePatternCanvas.repaint();
             return;
@@ -469,9 +500,20 @@ public final class BossLabsDefinitionEditor {
         telegraphGraphicField.setText(Integer.toString(attack.getTelegraphGraphicId()));
         impactGraphicField.setText(Integer.toString(attack.getImpactGraphicId()));
         telegraphTicksField.setText(Integer.toString(attack.getTelegraphTicks()));
-        patternStatus.setText(attack.getTilePattern().isEmpty()
-                ? "No tile pattern: this attack uses normal single-target combat."
-                : attack.getTilePattern().size() + " pattern tile(s). Players can dodge by leaving them before impact.");
+        hazardGraphicField.setText(Integer.toString(attack.getHazardGraphicId()));
+        hazardDurationField.setText(Integer.toString(attack.getHazardDurationTicks()));
+        hazardIntervalField.setText(Integer.toString(attack.getHazardTickInterval()));
+        hazardMaxHitField.setText(Integer.toString(attack.getHazardMaxHitOverride()));
+        if (attack.getTilePattern().isEmpty()) {
+            patternStatus.setText("No tile pattern: this attack uses normal single-target combat.");
+        } else if (attack.getHazardDurationTicks() > 0) {
+            patternStatus.setText(attack.getTilePattern().size() + " tile(s); hazard lasts "
+                    + attack.getHazardDurationTicks() + " ticks and damages every "
+                    + attack.getHazardTickInterval() + " tick(s).");
+        } else {
+            patternStatus.setText(attack.getTilePattern().size()
+                    + " pattern tile(s). Players can dodge by leaving them before impact.");
+        }
         tilePatternCanvas.repaint();
     }
 
@@ -674,9 +716,13 @@ public final class BossLabsDefinitionEditor {
                 }
                 attack.getTilePattern().add(tile);
             }
-            patternStatus.setText(attack.getTilePattern().isEmpty()
-                    ? "Pattern cleared; attack is single-target again."
-                    : attack.getTilePattern().size() + " pattern tile(s) relative to the snapshotted target tile.");
+            if (attack.getTilePattern().isEmpty() && attack.getHazardDurationTicks() > 0) {
+                patternStatus.setText("Pattern cleared. Disable the hazard or repaint at least one tile before publishing.");
+            } else if (attack.getTilePattern().isEmpty()) {
+                patternStatus.setText("Pattern cleared; attack is single-target again.");
+            } else {
+                patternStatus.setText(attack.getTilePattern().size() + " pattern tile(s) relative to the snapshotted target tile.");
+            }
             changed();
             repaint();
         }
