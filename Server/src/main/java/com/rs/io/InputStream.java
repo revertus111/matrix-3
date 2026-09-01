@@ -1,6 +1,7 @@
 package com.rs.io;
 
 import com.rs.game.player.Player;
+import com.rs.net.decoders.BossLabsPacketBridge;
 import com.rs.utils.StringUtilities;
 
 public final class InputStream extends Stream {
@@ -98,9 +99,10 @@ public final class InputStream extends Stream {
 
 	public int readPacket(Player player) {
 		int id = 0xff & readUnsignedByte() - player.getIsaacKeyPair().inKey().getNextValue();
-		if (id < 128)
-			return id;
-		return (id - 128 << 8) + (readUnsignedByte() - player.getIsaacKeyPair().inKey().getNextValue());
+		if (id >= 128)
+			id = (id - 128 << 8) + (readUnsignedByte() - player.getIsaacKeyPair().inKey().getNextValue());
+		BossLabsPacketBridge.inspect(id, player, buffer, offset, getRemaining());
+		return id;
 	}
 
 	public String readString() {
