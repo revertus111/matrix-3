@@ -29,10 +29,12 @@ import com.rs.utils.Logger;
 public final class BossDefinitionStore {
 
 	private static final int MAGIC = 0x424C4431; // BLD1
-	private static final int VERSION = 1;
+	private static final int VERSION = 2;
+	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_DEFINITIONS = 10000;
 	private static final int MAX_PHASES = 1000;
 	private static final int MAX_ATTACKS = 10000;
+	private static final int MAX_PATTERN_TILES = 128;
 
 	private static final File DIRECTORY = new File("data/bosslabs");
 	private static final File STORE_FILE = new File(DIRECTORY, "definitions.bld");
@@ -97,13 +99,13 @@ public final class BossDefinitionStore {
 			if (magic != MAGIC)
 				throw new IOException("Invalid BossLabs definition store header.");
 			int version = input.readInt();
-			if (version != VERSION)
+			if (version < MIN_SUPPORTED_VERSION || version > VERSION)
 				throw new IOException("Unsupported BossLabs definition store version: " + version);
 
 			int definitionCount = readCount(input, MAX_DEFINITIONS, "definition");
 			Map<Integer, BossDefinition> loaded = new LinkedHashMap<Integer, BossDefinition>();
 			for (int i = 0; i < definitionCount; i++) {
-				BossDefinition definition = readDefinition(input);
+				BossDefinition definition = readDefinition(input, version);
 				if (loaded.put(definition.getNpcId(), definition) != null)
 					throw new IOException("Duplicate BossLabs NPC id in definition store: " + definition.getNpcId());
 			}
@@ -115,7 +117,7 @@ public final class BossDefinitionStore {
 		}
 	}
 
-	private static BossDefinition readDefinition(DataInputStream input) throws IOException {
+	private static BossDefinition readDefinition(DataInputStream input, int version) throws IOException {
 		String id = input.readUTF();
 		String displayName = input.readUTF();
 		int npcId = input.readInt();
@@ -128,8 +130,28 @@ public final class BossDefinitionStore {
 			int attackCount = readCount(input, MAX_ATTACKS, "attack");
 			List<BossAttackDefinition> attacks = new ArrayList<BossAttackDefinition>(attackCount);
 			for (int attackIndex = 0; attackIndex < attackCount; attackIndex++) {
-				attacks.add(new BossAttackDefinition(input.readUTF(), input.readInt(), input.readInt(), input.readInt(),
-						input.readInt(), input.readInt(), input.readInt()));
+				String attackId = input.readUTF();
+				int combatStyle = input.readInt();
+				int animationId = input.readInt();
+				int graphicId = input.readInt();
+				int projectileId = input.readInt();
+				int maxHitOverride = input.readInt();
+				int combatDelayOverride = input.readInt();
+				if (version == 1) {
+					attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+							maxHitOverride, combatDelayOverride));
+					continue;
+				}
+
+				int telegraphGraphicId = input.readInt();
+				int impactGraphicId = input.readInt();
+				int telegraphTicks = input.readInt();
+				int tileCount = readCount(input, MAX_PATTERN_TILES, "pattern tile");
+				List<BossTileOffset> pattern = new ArrayList<BossTileOffset>(tileCount);
+				for (int tileIndex = 0; tileIndex < tileCount; tileIndex++)
+					pattern.add(new BossTileOffset(input.readInt(), input.readInt()));
+				attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+						maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern));
 			}
 			phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
 		}
@@ -191,6 +213,14 @@ public final class BossDefinitionStore {
 				output.writeInt(attack.getProjectileId());
 				output.writeInt(attack.getMaxHitOverride());
 				output.writeInt(attack.getCombatDelayOverride());
+				output.writeInt(attack.getTelegraphGraphicId());
+				output.writeInt(attack.getImpactGraphicId());
+				output.writeInt(attack.getTelegraphTicks());
+				output.writeInt(attack.getTilePattern().size());
+				for (BossTileOffset tile : attack.getTilePattern()) {
+					output.writeInt(tile.getX());
+					output.writeInt(tile.getY());
+				}
 			}
 		}
 	}
