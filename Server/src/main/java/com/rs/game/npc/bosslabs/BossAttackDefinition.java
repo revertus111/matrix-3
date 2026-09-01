@@ -18,6 +18,9 @@ import com.rs.game.npc.combat.NPCCombatDefinitions;
 public final class BossAttackDefinition {
 
 	public static final int USE_NPC_DEFAULT = -1;
+	public static final int TARGET_CURRENT = 0;
+	public static final int TARGET_RANDOM_NEARBY_PLAYER = 1;
+	public static final int MAX_TARGET_RANGE = 32;
 	public static final int MAX_PATTERN_TILES = 128;
 	public static final int MAX_TELEGRAPH_TICKS = 50;
 	public static final int MAX_HAZARD_DURATION_TICKS = 100;
@@ -38,6 +41,8 @@ public final class BossAttackDefinition {
 	private final int hazardDurationTicks;
 	private final int hazardTickInterval;
 	private final int hazardMaxHitOverride;
+	private final int targetMode;
+	private final int targetRange;
 
 	public BossAttackDefinition(String id, int combatStyle, int animationId, int graphicId, int projectileId,
 			int maxHitOverride, int combatDelayOverride) {
@@ -56,6 +61,16 @@ public final class BossAttackDefinition {
 			int maxHitOverride, int combatDelayOverride, int telegraphGraphicId, int impactGraphicId,
 			int telegraphTicks, List<BossTileOffset> tilePattern, int hazardGraphicId,
 			int hazardDurationTicks, int hazardTickInterval, int hazardMaxHitOverride) {
+		this(id, combatStyle, animationId, graphicId, projectileId, maxHitOverride, combatDelayOverride,
+				telegraphGraphicId, impactGraphicId, telegraphTicks, tilePattern, hazardGraphicId,
+				hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride, TARGET_CURRENT, 14);
+	}
+
+	public BossAttackDefinition(String id, int combatStyle, int animationId, int graphicId, int projectileId,
+			int maxHitOverride, int combatDelayOverride, int telegraphGraphicId, int impactGraphicId,
+			int telegraphTicks, List<BossTileOffset> tilePattern, int hazardGraphicId,
+			int hazardDurationTicks, int hazardTickInterval, int hazardMaxHitOverride,
+			int targetMode, int targetRange) {
 		if (id == null || id.trim().isEmpty())
 			throw new IllegalArgumentException("Boss attack id must not be blank.");
 		if (combatStyle != NPCCombatDefinitions.MELEE && combatStyle != NPCCombatDefinitions.RANGE
@@ -81,6 +96,10 @@ public final class BossAttackDefinition {
 			throw new IllegalArgumentException("hazardMaxHitOverride must be -1 or greater.");
 		if (hazardDurationTicks > 0 && hazardTickInterval > hazardDurationTicks)
 			throw new IllegalArgumentException("hazardTickInterval must not exceed hazardDurationTicks when a hazard is enabled.");
+		if (targetMode != TARGET_CURRENT && targetMode != TARGET_RANDOM_NEARBY_PLAYER)
+			throw new IllegalArgumentException("Unsupported BossLabs target mode: " + targetMode);
+		if (targetRange < 1 || targetRange > MAX_TARGET_RANGE)
+			throw new IllegalArgumentException("targetRange must be between 1 and " + MAX_TARGET_RANGE + ".");
 
 		List<BossTileOffset> safePattern = tilePattern == null
 				? Collections.<BossTileOffset>emptyList() : tilePattern;
@@ -111,6 +130,8 @@ public final class BossAttackDefinition {
 		this.hazardDurationTicks = hazardDurationTicks;
 		this.hazardTickInterval = hazardTickInterval;
 		this.hazardMaxHitOverride = hazardMaxHitOverride;
+		this.targetMode = targetMode;
+		this.targetRange = targetRange;
 	}
 
 	public String getId() {
@@ -191,5 +212,17 @@ public final class BossAttackDefinition {
 
 	public boolean hasLingeringHazard() {
 		return hazardDurationTicks > 0 && !tilePattern.isEmpty();
+	}
+
+	public int getTargetMode() {
+		return targetMode;
+	}
+
+	public int getTargetRange() {
+		return targetRange;
+	}
+
+	public boolean usesRandomNearbyPlayerTarget() {
+		return targetMode == TARGET_RANDOM_NEARBY_PLAYER;
 	}
 }
