@@ -10,7 +10,7 @@ import com.rs.game.player.Player;
 
 /**
  * Server-side BossLabs developer bridge carried over Matrix3's existing command
- * packet and CLIENT_COMMAND reply packet.
+ * packet and panel-message reply packet.
  *
  * Requests are admitted only through the existing command/rights authority.
  * This bridge delegates content lookup/publishing to BossLabs owners and never
@@ -219,7 +219,9 @@ public final class BossLabsCommandBridge {
 	private static void send(Player player, String response) {
 		if (player == null || player.hasFinished())
 			return;
-		player.getPackets().sendClientConsoleCommand(response);
+		// Type 99 already has a dedicated small client console-message path. The
+		// BossLabs prefix is consumed before normal console rendering.
+		player.getPackets().sendMessage(99, response, null);
 	}
 
 	private static int readRequestId(String[] cmd, int index) {
