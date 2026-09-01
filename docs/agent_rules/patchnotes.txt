@@ -1,0 +1,3 @@
+2026-08-31
+- Added explicit repository scan/search discipline to AGENTS.md.
+- Prevents repeated broad searches, redundant rereads, and repository/tool loops once the implementation path is established.
