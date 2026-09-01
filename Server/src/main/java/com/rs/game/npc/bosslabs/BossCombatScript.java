@@ -124,21 +124,72 @@ public final class BossCombatScript extends CombatScript {
 		}
 
 		for (Player player : World.getPlayers()) {
-			if (player == null || !player.hasStarted() || player.hasFinished() || player.isDead())
+			if (!isEligiblePatternPlayer(player, tiles))
 				continue;
-			if (!occupiesPatternTile(player, tiles))
-				continue;
-
-			int attackStyle = attack.getCombatStyle();
-			int configuredMaxHit = attack.usesNpcMaxHit() ? npc.getMaxHit(attackStyle) : attack.getMaxHitOverride();
-			int damage = getMaxHit(npc, configuredMaxHit, attackStyle, player);
-			if (attackStyle == NPCCombatDefinitions.MELEE)
-				delayHit(npc, 0, player, getMeleeHit(npc, damage));
-			else if (attackStyle == NPCCombatDefinitions.RANGE)
-				delayHit(npc, 0, player, getRangeHit(npc, damage));
-			else
-				delayHit(npc, 0, player, getMagicHit(npc, damage));
+			applyPatternHit(npc, attack, player, attack.getMaxHitOverride(), attack.usesNpcMaxHit());
 		}
+
+		if (attack.hasLingeringHazard())
+			startLingeringHazard(npc, attack, tiles);
+	}
+
+	private void startLingeringHazard(final NPC npc, final BossAttackDefinition attack, final List<WorldTile> tiles) {
+		if (attack.getHazardGraphicId() != -1) {
+			for (WorldTile tile : tiles)
+				World.sendGraphics(npc, new Graphics(attack.getHazardGraphicId()), tile);
+		}
+
+		final int duration = attack.getHazardDurationTicks();
+		final int interval = attack.getHazardTickInterval();
+		WorldTasksManager.schedule(new WorldTask() {
+			private int elapsedTicks;
+
+			@Override
+			public void run() {
+				if (npc.hasFinished() || npc.isDead()) {
+					stop();
+					return;
+				}
+
+				elapsedTicks += interval;
+				if (elapsedTicks > duration) {
+					stop();
+					return;
+				}
+
+				if (attack.getHazardGraphicId() != -1) {
+					for (WorldTile tile : tiles)
+						World.sendGraphics(npc, new Graphics(attack.getHazardGraphicId()), tile);
+				}
+
+				for (Player player : World.getPlayers()) {
+					if (!isEligiblePatternPlayer(player, tiles))
+						continue;
+					applyPatternHit(npc, attack, player, attack.getHazardMaxHitOverride(), attack.usesNpcHazardMaxHit());
+				}
+
+				if (elapsedTicks >= duration)
+					stop();
+			}
+		}, interval - 1, interval - 1);
+	}
+
+	private boolean isEligiblePatternPlayer(Player player, List<WorldTile> tiles) {
+		return player != null && player.hasStarted() && !player.hasFinished() && !player.isDead()
+				&& occupiesPatternTile(player, tiles);
+	}
+
+	private void applyPatternHit(NPC npc, BossAttackDefinition attack, Player player,
+			int maxHitOverride, boolean useNpcMaxHit) {
+		int attackStyle = attack.getCombatStyle();
+		int configuredMaxHit = useNpcMaxHit ? npc.getMaxHit(attackStyle) : maxHitOverride;
+		int damage = getMaxHit(npc, configuredMaxHit, attackStyle, player);
+		if (attackStyle == NPCCombatDefinitions.MELEE)
+			delayHit(npc, 0, player, getMeleeHit(npc, damage));
+		else if (attackStyle == NPCCombatDefinitions.RANGE)
+			delayHit(npc, 0, player, getRangeHit(npc, damage));
+		else
+			delayHit(npc, 0, player, getMagicHit(npc, damage));
 	}
 
 	private boolean occupiesPatternTile(Player player, List<WorldTile> tiles) {
