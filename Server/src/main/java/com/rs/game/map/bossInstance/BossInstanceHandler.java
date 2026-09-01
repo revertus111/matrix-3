@@ -13,6 +13,7 @@ import com.rs.game.map.bossInstance.impl.ExiledKalphiteQueenInstance;
 import com.rs.game.map.bossInstance.impl.KalphiteKingInstance;
 import com.rs.game.map.bossInstance.impl.KalphiteQueenInstance;
 import com.rs.game.map.bossInstance.impl.KingBlackDragonInstance;
+import com.rs.game.map.bossInstance.impl.RiseOfTheSixInstance;
 import com.rs.game.map.bossInstance.impl.VoragoInstance;
 import com.rs.game.player.Player;
 import com.rs.utils.Logger;
@@ -31,6 +32,7 @@ public class BossInstanceHandler {
 		, Corporeal_Beast(CorporealBeastInstance.class, 300000, 200, false, true, new WorldTile(2970, 4384, 2), new WorldTile(2974, 4384, 2), null, "CorporealBeastInstanceController", 617)
 		, Kalphite_King(KalphiteKingInstance.class, 0, 200, false, false, new WorldTile(2971, 1656, 0), new WorldTile(2974, 1746, 0), null, "KalphiteKingInstanceController", 1140)
 		, Vorago(VoragoInstance.class, 1000000, 50, true, true, new WorldTile(2972, 3431, 0), new WorldTile(3043, 6100, 0), new WorldTile(3072, 6176, 0), "VoragoInstanceController", 1155)
+		, Rise_of_the_Six(RiseOfTheSixInstance.class, 0, 4, false, false, new WorldTile(3564, 3287, 0), new WorldTile(2326, 5898, 0), new WorldTile(3564, 3287, 0), "BossInstanceController", 1208)
 
 		;
 		private final Map<String, BossInstance> cachedInstances = Collections.synchronizedMap(new HashMap<String, BossInstance>());

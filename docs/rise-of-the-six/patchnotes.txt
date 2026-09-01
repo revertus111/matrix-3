@@ -1,0 +1,11 @@
+2026-09-01
+- Added the first native Matrix3 Rise of the Six runtime checkpoint.
+- Registered Rise_of_the_Six in BossInstanceHandler as a private four-player boss instance using The Price is Wight music id 1208.
+- Added a dedicated RiseOfTheSixInstance encounter owner and RiseOfTheSixBrother NPC type; normal Barrows and BarrowsBrother were left unchanged.
+- Added verified empowered brother ids including Ahrim/Guthan alternate-state ids instead of assuming a sequential id range.
+- Added shared RoTS shadow-bond behavior: 5,000 HP survivor heal, 30-second timer reset after each new defeat, 25,000 HP mass revival, and victory when all six are simultaneously subdued.
+- Added a dedicated RiseOfTheSixCombat Matrix3 CombatScript for the empowered ids with baseline melee/ranged/magic autos plus Dharok scaling, Guthan healing and Ahrim Strength drain.
+- Added admin-only BossLabs `rots` / `riseofthesix` launch actions that open the existing BossInstanceD setup flow; Commands.java was not modified.
+- Added docs/rise-of-the-six/README.md as the 100% fidelity tracker with VERIFIED / verified-static / HYPOTHESIS classifications.
+- Kept map rectangle/spawn coordinates explicitly HYPOTHESIS pending the first runtime arena test; known source portal/Shadow Realm points are recorded for verification.
+- Deferred the real well/totem gate, daily formations, brother specials, Shadow Realm transfer, chest/reward table, collapse tunnel, and unstable-energy stabilization until their exact runtime/assets are verified.

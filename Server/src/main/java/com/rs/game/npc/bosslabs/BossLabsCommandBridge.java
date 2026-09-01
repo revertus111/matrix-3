@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import com.rs.executor.GameExecutorManager;
+import com.rs.game.map.bossInstance.BossInstanceHandler;
+import com.rs.game.map.bossInstance.BossInstanceHandler.Boss;
 import com.rs.game.player.Player;
 
 /**
@@ -78,6 +80,10 @@ public final class BossLabsCommandBridge {
 			}
 			if ("applysaved".equals(action)) {
 				processApplySaved(player, cmd);
+				return true;
+			}
+			if ("rots".equals(action) || "riseofthesix".equals(action)) {
+				processRiseOfTheSix(player, cmd);
 				return true;
 			}
 			sendAction(player, readRequestId(cmd, 2), false, -1, "Unknown BossLabs action: " + action);
@@ -271,6 +277,12 @@ public final class BossLabsCommandBridge {
 		sendAction(player, requestId, applied, npcId,
 				applied ? "Re-applied the saved BossLabs definition." : "No saved BossLabs definition exists for this NPC.");
 		sendInspection(player, requestId, npcId);
+	}
+
+	private static void processRiseOfTheSix(Player player, String[] cmd) {
+		int requestId = readRequestId(cmd, 2);
+		BossInstanceHandler.enterInstance(player, Boss.Rise_of_the_Six);
+		sendAction(player, requestId, true, -1, "Opened the Rise of the Six encounter setup.");
 	}
 
 	private static void sendSearchResult(Player player, int requestId, BossNpcInspection inspection) {
