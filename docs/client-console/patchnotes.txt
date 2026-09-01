@@ -20,3 +20,13 @@
 - Added a client-console command queue that hands Swing actions to the Matrix3 client cycle before building/sending the existing opcode-24 COMMANDS_PACKET with clientCommand=false; server Commands.processCommand remains authoritative for permissions and behavior.
 - Added inline double-confirm protection for destructive command buttons instead of modal confirmation dialogs.
 - Extended active-panel persistence and shell failure isolation to the Commands panel without changing server command implementations.
+
+2026-09-01
+- Added the lazy Client Console Item Browser behind the I rail button with automatic ID/name search over Matrix3 item definitions.
+- Added real Matrix3-rendered item thumbnails through a bounded client-cycle render queue so Swing never renders cache models directly.
+- Added persistent favorites, multi-category membership, custom categories, presets, and per-preset saved quantities through the Client Console preference store.
+- Added Inventory spawn quantities 1/5/10/X and preset spawning through the existing Client Console queue and normal Matrix3 ::item command authority.
+- Added right-click Bank spawn quantities 1/5/10/X and preset bank spawning through the isolated ItemBrowser packet/server bridge; Commands.java remains untouched.
+- Bank spawning validates owner/admin rights, live player started/running/not-finished state, item definition validity, and positive quantities before calling Matrix3 Bank.addItem(...).
+- Added right-click favorite, category, preset membership, preset quantity, and removal actions.
+- Kept item definition indexing off the Swing event-dispatch thread and limited visible results/thumbnail work to avoid blocking normal client rendering.
