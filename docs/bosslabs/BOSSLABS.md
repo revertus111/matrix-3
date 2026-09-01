@@ -119,7 +119,7 @@ Initial sections:
 3. Attacks
 4. Phases
 5. Mechanics
-6. Arena
+6. Arena / Tiles
 7. Drops
 8. Testing
 
@@ -272,9 +272,9 @@ A general-purpose scripting language or large node editor is explicitly not requ
 
 ## Arena
 
-V1 arena support should describe encounter boundaries and named positions, not become a map editor.
+BossLabs arena support should remain encounter-focused rather than becoming a general world/map editor.
 
-Candidate values:
+Candidate base values:
 
 - southwest boundary,
 - northeast boundary,
@@ -285,6 +285,96 @@ Candidate values:
 - named hazard/mechanic positions.
 
 A future in-game coordinate capture bridge may be added when repeated manual coordinate entry becomes a real development pain point.
+
+### Arena / Tile Composer
+
+BossLabs should support a focused tile-based arena/mechanic editor inspired by the old ForgeLabs ability tile editor. The canvas represents tiles relative to the encounter or selected origin and exists specifically for boss attacks, hazards, healing zones, triggers, and other encounter mechanics.
+
+This tile composer is **not** a general RuneScape map editor. It edits encounter mechanic definitions that are consumed by the Boss/Encounter runtime, which must continue routing authoritative damage, healing, statuses, NPC/world changes, and combat behavior through Matrix3 owners.
+
+Canvas interaction direction:
+
+- show a clear tile grid centered on a useful encounter origin such as the boss or arena anchor,
+- mouse-wheel zoom increases/decreases visible tile size so detailed editing can use physically larger tiles,
+- middle-mouse drag pans the canvas,
+- hover shows a concise preview of the tile's configured effects,
+- click selects a tile for detailed editing,
+- click-drag may paint/select multiple tiles for repeated patterns,
+- selected tiles must remain visually distinguishable from configured but unselected tiles,
+- zoom/pan must not change the underlying encounter coordinates or pattern data.
+
+A configured tile may contain one or more encounter effects. Candidate effect types, added only as the first bosses prove a need, include:
+
+- direct damage zone,
+- persistent ground hazard such as poison, fire, lava, smoke, or another verified status/effect,
+- player healing zone,
+- boss healing zone,
+- boss attack target/impact tile,
+- telegraph/warning tile before an attack lands,
+- delayed impact followed by a lingering ground effect,
+- boss/player movement, jump, dash, or teleport destination where safely supported,
+- minion/object/effect spawn position,
+- mechanic/phase trigger when an eligible entity enters or occupies the tile.
+
+One tile may combine multiple effects when that is useful. For example, a poison-cloud tile may own a visual/graphic reference, periodic damage, poison application, duration, target rules, and tick interval as one encounter definition rather than forcing separate hard-coded coordinate logic.
+
+### Reusable tile patterns
+
+Tile layouts should be reusable named patterns rather than requiring every boss attack to hard-code every world coordinate.
+
+Examples include:
+
+```text
+Poison Cross
+
+    X
+    X
+X X B X X
+    X
+    X
+```
+
+or a ring, cone, line, checkerboard, safe-zone layout, meteor cluster, or other encounter shape proven useful by real boss content.
+
+An attack should be able to reference a pattern plus an origin and mechanic data. Later reusable transforms may include:
+
+- rotate,
+- mirror,
+- relative offset,
+- boss-facing orientation,
+- target-centered origin,
+- arena-anchor origin.
+
+This allows the same geometry to become different mechanics such as a fire cross, poison cross, healing cross, or lightning cross without duplicating the pattern itself.
+
+### Tile timing / preview
+
+The tile composer should eventually support a visual tick timeline for mechanics with staged behavior.
+
+Example:
+
+```text
+Tick 0-2: warning/telegraph tiles
+Tick 3:   impact/damage
+Tick 3-15: poison cloud remains
+Tick 15:  ground effect expires
+```
+
+Preview mode may animate or step through the configured tiles so the developer can inspect telegraphs, impacts, persistent zones, and cleanup timing before or while testing the live encounter.
+
+The editor preview is descriptive/testing UI only. It must not become a second timing/combat authority.
+
+### Tile live editing
+
+Tile/pattern edits must follow the existing BossLabs `DRAFT -> LIVE -> SAVED` contract:
+
+- editing tiles modifies draft encounter data,
+- `Apply Live` publishes the complete validated definition without writing to disk,
+- `Save & Apply` persists and publishes the exact same validated definition,
+- tile edits must not publish every mouse movement or keystroke,
+- live runtime behavior must continue through the Boss/Encounter runtime and Matrix3 world/combat authorities.
+
+The first implementation should include only the tile behaviors required by the current boss. Pattern transforms, richer timeline tooling, and advanced composition should be added as actual encounters prove their value.
 
 ## Drops
 
@@ -432,7 +522,7 @@ Do not build these before the first boss proves a need:
 
 - giant node editor,
 - full NPC editor,
-- full map editor,
+- full world/map editor outside the encounter-scoped Arena / Tile Composer,
 - model editor,
 - animation editor,
 - particle/FX editor duplication,
@@ -521,7 +611,7 @@ Possible later additions:
 - model/NPC preview,
 - animation/GFX/projectile lookup/preview,
 - in-game coordinate capture,
-- visual attack timeline,
+- richer visual attack/tile timeline tooling,
 - stronger validation/error reporting,
 - drag/drop mechanic composition,
 - node graph only if linear trigger/action editing becomes a verified limitation.
