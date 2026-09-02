@@ -250,9 +250,9 @@ public final class ControlerManager implements Serializable {
     }
 
     public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packetId) {
-	if (controler == null || !inited)
-	    return true;
-	return controler.processButtonClick(interfaceId, componentId, slotId, slotId2, packetId);
+	if (controler != null && inited && !controler.processButtonClick(interfaceId, componentId, slotId, slotId2, packetId))
+	    return false;
+	return !PresetManager.processButtonClick(player, interfaceId, componentId, slotId, slotId2, packetId);
     }
 
     public boolean processNPCClick1(NPC npc) {

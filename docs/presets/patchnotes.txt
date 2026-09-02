@@ -1,0 +1,6 @@
+2026-09-02
+- Added persistent server-side backing for Gear > Presets normal slots 1-10.
+- Preset row interaction now exposes save, load, overwrite, and clear actions without modifying Commands.java.
+- Loading requires an open bank, validates controller/equipment restrictions, and moves real bank/carried item quantities instead of spawning copies.
+- Presets persist per player in data/presets using a versioned file format.
+- Beast of Burden/quick-preset controls remain isolated pending runtime component mapping.
