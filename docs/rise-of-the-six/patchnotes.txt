@@ -36,3 +36,12 @@
 - Added a shared Throw interaction model so future implementation does not invent a universal per-NPC throw mechanic or blindly trust donor pairings.
 - Added the intended Guthan Impale spear-ownership lifecycle, including alternate NPC id 18542, spear-absent combat state, repeated bleed pressure, return-to-Guthan retrieval, retrieval damage evidence, and mandatory cleanup cases.
 - Clarified that exact Throw pairings, Guthan victim-selection priority, Impale timings/damage values, Deathcopter throw interception, and related animations remain fidelity verification items rather than assumed facts.
+- Corrected runtime Verac sequencing so ordinary Hurricane no longer appears in his normal implemented rotation; shared forced Hurricane is preserved only for the post-revival melee rule.
+- Added Guthan Impale runtime: prefers a non-primary eligible player, falls back to the primary target, uses projectile 4411, transforms to spearless NPC 18542, applies animations/GFX from the donor evidence, and deals repeated 400-500 hard-typeless bleed damage.
+- Added adjacent-to-Guthan spear retrieval using animation 21947, restoration to NPC 18541, and a 1,000 hard-typeless retrieval hit.
+- Guthan continues normal Matrix3 melee combat while spearless through NPC 18542's cache attack animation and cannot start another special until the spear returns.
+- Added generation-token cleanup so stale Impale projectile/bleed/retrieval tasks cannot survive subdual, instance destruction, victim loss, or a new encounter.
+- Added the documented Torag Whack -> Guthan spear-return interaction when Torag begins pummelling the currently impaled victim.
+- Added encounter-owned verified-static Throw pairing matrix: Guthan/Torag -> Ahrim/Karil/Verac, Verac -> Ahrim/Karil; Dharok is not treated as a Throw brother.
+- Actual Throw launches remain intentionally disabled until west/east side ownership exists, preventing invented cross-portal interactions.
+- Rewrote the RoTS fidelity README to distinguish implemented Impale/Throw coordination from remaining same-side, animation, timing, defensive-ability and Shadow Realm HYPOTHESIS items.
