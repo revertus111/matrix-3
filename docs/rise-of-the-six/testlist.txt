@@ -70,7 +70,7 @@ Wall Slam
 
 Guthan - Impale
 53. Fight Guthan through specials. Confirm the normal implemented rotation can cycle Hurricane -> Impale, with no Guthan Wall Slam.
-54. With two or more players, keep Player A as Guthan's primary target and Player B eligible in the instance. Trigger Impale and confirm Guthan prefers a non-primary player when available.
+54. With two or more players, keep Player A as Guthan's primary target and Player B eligible. Confirm the current selector still prefers a non-primary player; exact same-side filtering is a follow-up consumer of the new side API and is not yet VERIFIED-complete.
 55. Solo/no-secondary test: confirm Impale falls back to Guthan's primary target rather than failing permanently.
 56. Confirm the primary target receives `Guthan prepares to throw his spear!` and the selected victim receives `Guthan throws his spear at you!`.
 57. Confirm projectile 4411 is sent and Guthan transforms from 18541 to spearless 18542 while the spear is away.
@@ -83,27 +83,38 @@ Guthan - Impale
 64. Subdue Guthan while a spear is out. Confirm he restores to primary id/state and the bleed/projectile/retrieval generation becomes stale.
 65. Leave/destroy/restart the instance during an active Impale. Confirm no bleed or transformation leaks into the new encounter.
 66. Multi-player interaction: Impale Player B, then have Torag begin Whack on Player B. Confirm Guthan's spear returns automatically when the pummel starts.
-67. Side-rule warning: current encounter lacks west/east ownership. Do not mark Impale target selection VERIFIED-complete until same-side selection is implemented and tested.
-68. Do not mark defensive-ability clearing/cooldown behavior VERIFIED; it is not implemented in this checkpoint.
+67. Do not mark defensive-ability clearing/cooldown behavior VERIFIED; it is not implemented in this checkpoint.
+
+Daily formation / side ownership
+68. Confirm the encounter resolves one of the documented twenty rotations from UTC date using 2025-06-11 as rotation 11 (West Ahrim/Torag/Guthan, East Karil/Dharok/Verac).
+69. On 2026-09-02 specifically, confirm the computed rotation is 19: WEST Karil/Torag/Dharok and EAST Ahrim/Guthan/Verac. If testing on another date, advance the twenty-day cycle from the anchor instead of expecting rotation 19.
+70. Confirm every fresh instance contains exactly three WEST-owned and three EAST-owned brothers and every brother appears exactly once.
+71. Confirm the active lineup is stable for every instance created on the same UTC date; restarting only the server/instance must not randomize it.
+72. Confirm the rotation advances by one slot after the UTC date changes and wraps from rotation 20 back to rotation 1.
+73. Confirm current WEST brothers occupy the three already-proven source X slots 2326/2328/2330 and EAST brothers occupy 2332/2334/2336 on source Y 6034 plane 1 after transformation into the instance.
+74. Confirm all six remain on valid walkable arena terrain after daily lineup shuffling; report any brother placed behind collision or on the wrong visual side.
+75. Treat exact north/middle/south ordering and facing as HYPOTHESIS. The current slot split intentionally prioritizes previously runtime-proven terrain.
+76. Move a player across the current transformed midpoint corresponding to source X 2331 and confirm the side helper changes WEST/EAST classification as expected. Report if the visible portal/barrier does not line up with this midpoint so the bounds can be corrected from runtime evidence.
 
 Shared Throw coordinator
-69. Static/code acceptance: verified Throw matrix is Guthan/Torag -> Ahrim/Karil/Verac and Verac -> Ahrim/Karil; Dharok must return false for all Throw targets.
-70. Confirm the coordinator ignores subdued/finished/self targets and can locate an active eligible target on the same plane.
-71. Confirm **actual Throw launches do not randomly fire yet**. This is intentional until west/east side ownership exists; a live cross-portal Throw in this checkpoint is a regression.
-72. When side ownership is later added, extend these tests for same-side eligibility, Surge/throw flight, landing damage, cleanup and Deathcopter interception.
+77. Static/code acceptance: verified Throw matrix is Guthan/Torag -> Ahrim/Karil/Verac and Verac -> Ahrim/Karil; Dharok must return false for all Throw targets.
+78. Confirm the coordinator rejects subdued/finished/self targets and now also rejects otherwise-valid brothers owned by the opposite active side.
+79. Confirm `findVerifiedThrowTarget` can return an active eligible brother only when that brother is on the same daily side as the thrower.
+80. Confirm **actual Throw launches still do not randomly fire yet**. This is intentional until exact Throw launch/flight/landing assets, timing and damage are established; any live Throw in this checkpoint is a regression.
+81. Later Throw runtime tests must cover reservation, Surge/run-up, flight/landing, AoE impact, cleanup and Verac Deathcopter interception.
 
 Implemented special sequencing
-73. Fresh Dharok/Torag: first implemented special may begin from a random slot after current 3-5 auto gate; thereafter confirm Hurricane -> unique -> Wall Slam order.
-74. Guthan: confirm current implemented cycle uses Hurricane and Impale with normal autos between specials and pauses special progression while the spear is away.
-75. Verac: confirm current normal implemented subset is Wall Slam only until Soulspot/Deathcopter are added; post-revival forced Hurricane is the only Hurricane exception.
-76. Confirm no melee special begins immediately back-to-back; 3-5 auto spacing remains HYPOTHESIS.
+82. Fresh Dharok/Torag: first implemented special may begin from a random slot after current 3-5 auto gate; thereafter confirm Hurricane -> unique -> Wall Slam order.
+83. Guthan: confirm current implemented cycle uses Hurricane and Impale with normal autos between specials and pauses special progression while the spear is away.
+84. Verac: confirm current normal implemented subset is Wall Slam only until Soulspot/Deathcopter are added; post-revival forced Hurricane is the only Hurricane exception.
+85. Confirm no melee special begins immediately back-to-back; 3-5 auto spacing remains HYPOTHESIS.
 
 Cleanup / regression
-77. Leave/logout/teleport until the private instance becomes empty. Confirm all six custom NPCs finish and copied map cleanup remains normal.
-78. Recreate RoTS. Confirm all brother HP, revive, Whack, charge, Hurricane, Wall Slam and Impale state starts clean.
-79. Confirm practice mode still does not fabricate RoTS chest/reward behavior.
-80. Owner/admin: start RoTS, leave/reopen setup and Start again before the hour expires; confirm a fresh instance is created.
-81. Confirm normal players retain original cached private-instance reuse/rejoin behavior.
+86. Leave/logout/teleport until the private instance becomes empty. Confirm all six custom NPCs finish and copied map cleanup remains normal.
+87. Recreate RoTS. Confirm all brother HP, revive, Whack, charge, Hurricane, Wall Slam, Impale and active daily rotation state starts clean.
+88. Confirm practice mode still does not fabricate RoTS chest/reward behavior.
+89. Owner/admin: start RoTS, leave/reopen setup and Start again before the hour expires; confirm a fresh instance is created while preserving the same day's daily formation.
+90. Confirm normal players retain original cached private-instance reuse/rejoin behavior.
 
 100% fidelity gate
-82. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, daily formations, side ownership/empowerment, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
+91. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, side empowerment/crossing, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
