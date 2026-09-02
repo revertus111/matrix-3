@@ -79,8 +79,9 @@ public final class BossCombatScript extends CombatScript {
 		synchronized (state) {
 			if (state.definition != definition || state.phase != phase) {
 				transitionPhase(npc, state, definition, phase);
-				if (npc.hasFinished() || npc.isDead())
-					return null;
+				// Reserve this normal NPC attack opportunity for the transition so
+				// entry/exit animation and graphics are not overwritten immediately.
+				return null;
 			}
 
 			List<BossAttackDefinition> ready = new ArrayList<BossAttackDefinition>();
