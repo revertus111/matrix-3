@@ -3,81 +3,107 @@ Matrix3 Rise of the Six - runtime acceptance list
 Build / isolation
 1. Eclipse clean/build Server with Java 8. Confirm RiseOfTheSixInstance, RiseOfTheSixBrother and RiseOfTheSixCombat compile without Java 9+ APIs.
 2. Confirm normal Barrows still enters, spawns and rewards exactly as before; RoTS must not use or mutate BarrowsBrother.
-3. Confirm KBD/KQ/DKS/Corp/KK/Vorago instance creation still works after adding the Rise_of_the_Six enum entry.
+3. Confirm KBD/KQ/DKS/Corp/KK/Vorago instance creation still works after the Rise_of_the_Six registration.
 4. Confirm a non-admin BossLabs bridge request cannot launch RoTS; existing bridge rights checks remain authoritative.
 
 Developer entry / map verification
-5. As owner/admin, send `::bosslabs rots` (or the equivalent command packet used by the Client Console). Confirm BossInstanceD opens for Rise of the Six.
+5. As owner/admin, send `::bosslabs rots` and confirm BossInstanceD opens for Rise of the Six.
 6. Start the custom encounter. Confirm a private MapInstance loads and the player enters without an exception/NPE.
-7. VERIFIED 2026-09-01: the donor-backed copied RoTS arena renders in the revision-830 runtime rather than loading void/black terrain.
-8. VERIFIED 2026-09-01: all six empowered brothers appear on valid visible arena terrain and can engage the player.
-9. VERIFIED 2026-09-01: Guthan resolves as `Guthan the Infested (level 650)` with the empowered model/name data.
-10. Confirm The Price is Wight plays in the instance if music track id 1208 is present in the active cache.
+7. VERIFIED 2026-09-01: donor-backed copied RoTS arena renders rather than loading void/black terrain.
+8. VERIFIED 2026-09-01: all six empowered brothers appear on valid visible terrain and can engage the player.
+9. VERIFIED 2026-09-01: Guthan resolves as `Guthan the Infested (level 650)`.
+10. Confirm The Price is Wight plays if music track 1208 is present in the active cache.
 
 Brother identity / base combat
-11. Confirm the spawned primary NPC ids resolve as Ahrim 18538, Dharok 18540, Guthan 18541, Karil 18543, Torag 18544 and Verac 18545 with 50,000 HP cache data.
-12. Confirm alternate ids 18539 (Ahrim) and 18542 (Guthan) resolve in cache for future Flight/spear-state mechanics.
-13. Confirm RiseOfTheSixCombat owns all eight empowered/alternate ids and Matrix3 NPCCombat still owns targeting, movement, attack delay and range outside active RoTS specials.
-14. Confirm Ahrim uses animation 18288 (21925 alternate), projectile 559, impact GFX 377 and a 3,000 max-hit baseline; confirm Karil uses animation 18232, projectile 955 and a 3,000 max-hit baseline.
-15. Damage Dharok across >40k, 30-40k, 20-30k, 10-20k, 5-10k and <=5k HP bands; confirm max-hit ceilings progress 2k/3k/4k/5k/6k/7k.
-16. Trigger Guthan's baseline heal and confirm the 1-in-8 proc heals him by damage dealt without exceeding max HP.
-17. Trigger Ahrim's baseline Strength drain and confirm the 1-in-8 roll never drains below zero.
+11. Confirm primary ids: Ahrim 18538, Dharok 18540, Guthan 18541, Karil 18543, Torag 18544, Verac 18545, all at 50,000 HP.
+12. Confirm alternate ids 18539 (Ahrim) and 18542 (Guthan) resolve in cache.
+13. Confirm RiseOfTheSixCombat owns all eight empowered/alternate ids and Matrix3 NPCCombat remains the normal targeting/movement/attack-delay owner outside explicit RoTS specials.
+14. Confirm Ahrim uses animation 18288 (21925 alternate), projectile 559, impact GFX 377 and 3,000 max-hit baseline.
+15. Confirm Karil uses animation 18232, projectile 955 and 3,000 max-hit baseline.
+16. Damage Dharok across >40k, 30-40k, 20-30k, 10-20k, 5-10k and <=5k HP; confirm 2k/3k/4k/5k/6k/7k max-hit bands.
+17. Trigger Guthan's 1-in-8 life-steal and confirm healing equals damage dealt without exceeding max HP.
+18. Trigger Ahrim's 1-in-8 Strength drain and confirm Strength does not drop below zero.
 
 Shadow bond / revive
-18. Damage several active brothers, then subdue one. Confirm that brother remains present but non-interactable instead of dropping/finishing/using normal NPC respawn.
-19. On that defeat, confirm every still-active brother heals exactly 5,000 HP capped at its maximum.
-20. VERIFIED-PARTIAL 2026-09-01: user observed a defeated brother return. Re-test and confirm the return is approximately 30 seconds later with exactly 25,000 HP rather than a normal NPC disappear/respawn cycle.
-21. Subdue a brother, wait part of the timer, then subdue another. Confirm the first pending timer becomes stale and a new 30-second window starts from the latest defeat.
-22. Subdue multiple brothers within each reset window, let the final timer expire, and confirm all subdued brothers revive together at 25,000 HP.
-23. Subdue all six before the timer expires. Confirm the encounter enters completed state and no stale revival task restores any brother afterward.
-24. Confirm each new defeat sends the shadow-engulf message and a timer expiry sends the shadow-bond-restored message to players in the instance.
+19. Subdue one brother. Confirm it remains present/non-interactable rather than using normal NPC drop/respawn lifecycle.
+20. Confirm each still-active brother heals exactly 5,000 HP, capped at max.
+21. VERIFIED-PARTIAL 2026-09-01: a defeated brother was observed returning. Re-test for approximately 30 seconds and exactly 25,000 HP.
+22. Subdue a second brother before the first timer expires. Confirm the old pending generation becomes stale and a new 30-second window begins.
+23. Let the final timer expire with multiple subdued brothers. Confirm all currently subdued brothers return together at 25,000 HP.
+24. Subdue all six before timeout. Confirm completed state and no stale revival task restores them.
+25. Confirm defeat and revival messages are sent only to players in the instance.
 
 Dharok - Greatest Axe
-25. Fight Dharok until `Give me everything!` triggers. Confirm he stops normal auto-attacking during the charge.
-26. Confirm GFX 4406 and animation 21940 play at the start of the charged state.
-27. Damage Dharok during the charge. Confirm hits display/resolve as zero against his HP while their damage is accumulated internally.
-28. Stop attacking and wait roughly eleven seconds. Confirm Dharok exits the charge and can attack normally again.
-29. Confirm Dharok's first successful normal outgoing hit after the charge adds the full stored damage exactly once; the following hit must return to normal damage.
-30. Kill/finish/reset the encounter around a charge and confirm no stored-damage, follow-lock or charge state leaks into a revived/new Dharok.
+26. Fight Dharok until `Give me everything!` triggers; confirm normal autos pause.
+27. Confirm GFX 4406 and animation 21940 play.
+28. Damage Dharok during charge; confirm HP damage is zero while damage is accumulated internally.
+29. Wait roughly eleven seconds; confirm he exits charge and attacks again.
+30. Confirm his first normal outgoing hit adds stored damage exactly once.
+31. Kill/reset/finish during charge and confirm no stored damage or follow state leaks.
 
 Torag - Whack
-31. Fight Torag until Whack triggers. Confirm Torag animation 21933 and victim animation 21934 play and the victim becomes action-locked.
-32. Confirm Torag repeatedly uses hammering animation 21935 while Whack remains active and pauses normal auto-attacks.
-33. With a second player, deal less than 2,500 damage to Torag during Whack. Confirm that damage is redirected into the release counter and Torag HP does not fall from those hits.
-34. Cross 2,500 accumulated incoming damage. Confirm the victim unlocks immediately and plays release animation 21938.
-35. Solo safety test: if no teammate breaks Whack, confirm the temporary safety release unlocks the player after about eleven seconds instead of leaving the account permanently locked.
-36. Leave/die/destroy the instance during Whack and confirm the victim is unlocked and no repeating hammer task remains effective afterward.
+32. Trigger Whack and confirm Torag 21933 / victim 21934 plus victim lock.
+33. Confirm repeated hammering animation 21935 while Whack owns Torag and normal autos pause.
+34. With a second player, deal less than 2,500 damage during Whack; confirm Torag HP does not fall from those redirected hits.
+35. Cross 2,500 accumulated incoming damage; confirm immediate release and victim animation 21938.
+36. Solo safety test: confirm temporary safety release prevents a permanent lock.
+37. Leave/die/destroy instance during Whack and confirm no stale lock/hammer task remains.
 
 Hurricane
-37. Fight each melee brother (Dharok, Guthan, Torag and Verac) through several normal autos until Hurricane starts; confirm Ahrim and Karil never enter this shared melee special.
-38. During Hurricane, keep moving. Confirm the brother pursues the selected target at walking speed rather than running and normal auto-attacks are suppressed until the special ends.
-39. Stay adjacent to the brother for the whole Hurricane. Confirm ten rapid hard-typeless damage pulses occur and the current implementation ramps from 250 on the first pulse to 2,500 on the tenth.
-40. Put a second player adjacent to the spinning brother. Confirm nearby players are damaged too; move outside the current one-tile radius and confirm later pulses no longer hit.
-41. Confirm the current visual is the brother's normal attack emote while the exact empowered Hurricane spin animation/GFX remains HYPOTHESIS; do not mark the visual VERIFIED-complete yet.
-42. Subdue and allow a melee brother to revive. Confirm its next special is Hurricane before its other implemented special slots.
-43. Kill/finish/reset during Hurricane and confirm walking/running state, follow flags, queued movement and the scheduled pulse task no longer affect the replacement/revived encounter.
+38. On a fresh encounter, confirm ordinary Hurricane can occur for Dharok, Guthan and Torag after the current 3-5 auto gate.
+39. Confirm **Verac does not use ordinary Hurricane in his normal rotation**. If Verac spins normally before revival, report it as a regression.
+40. During Hurricane, keep moving; confirm the brother follows at walking speed and normal autos are suppressed.
+41. Stay adjacent; confirm ten rapid hard-typeless pulses with the current 250 -> 2,500 ramp.
+42. Put another player adjacent; confirm nearby-player splash works and leaving the current one-tile radius avoids later pulses.
+43. Confirm the current visual is still the normal attack emote; exact spin animation/GFX remain HYPOTHESIS.
+44. Subdue and allow each melee brother, including Verac, to revive. Confirm its **next** special is forced Hurricane before returning to its normal implemented rotation.
+45. Reset/kill/finish during Hurricane and confirm movement/follow/pulse state does not leak.
 
 Wall Slam
-44. Confirm only Dharok, Torag and Verac perform Wall Slam. Guthan must not Wall Slam.
-45. When Wall Slam starts, note the tile you occupy, then immediately move away. Confirm the special keeps the original captured location rather than following your new tile for the impact.
-46. Confirm the brother runs away toward a reachable arena collision edge using normal Matrix3 pathing, then turns/rushes back toward the captured tile; report any rock/wall selection that looks wrong so exact wall anchors can replace the HYPOTHESIS edge scan from runtime evidence.
-47. Stand inside the 5x5 area centered on the captured tile at impact and confirm a hard-typeless hit from 500 through 3,000 can occur.
-48. Move at least three tiles away from the captured tile before impact and confirm Wall Slam misses you even if the brother subsequently paths close to your new location.
-49. With multiple players, confirm every eligible player standing in the captured 5x5 impact area can be hit independently.
-50. Confirm the current impact uses the brother's normal attack emote as a temporary visual; exact wall-run/fling/slam animation/GFX remain HYPOTHESIS.
-51. Kill/finish/reset during Wall Slam and confirm run state, follow flags, queued paths and the impact task do not leak into the revived/new encounter.
+46. Confirm only Dharok, Torag and Verac perform Wall Slam. Guthan must not Wall Slam.
+47. Move away immediately after Wall Slam starts; confirm impact keeps the original captured tile.
+48. Confirm the brother runs toward a reachable collision edge and returns toward the captured location; report obviously wrong rock/wall selection.
+49. Stand inside the 5x5 captured impact area; confirm current hard-typeless damage range is 500-3,000.
+50. Move at least three tiles from the captured tile; confirm the impact misses even if the brother later paths near the new location.
+51. With multiple players, confirm each eligible player in the 5x5 area can be hit.
+52. Reset/kill/finish during Wall Slam and confirm run/follow/path/impact state does not leak.
+
+Guthan - Impale
+53. Fight Guthan through specials. Confirm the normal implemented rotation can cycle Hurricane -> Impale, with no Guthan Wall Slam.
+54. With two or more players, keep Player A as Guthan's primary target and Player B eligible in the instance. Trigger Impale and confirm Guthan prefers a non-primary player when available.
+55. Solo/no-secondary test: confirm Impale falls back to Guthan's primary target rather than failing permanently.
+56. Confirm the primary target receives `Guthan prepares to throw his spear!` and the selected victim receives `Guthan throws his spear at you!`.
+57. Confirm projectile 4411 is sent and Guthan transforms from 18541 to spearless 18542 while the spear is away.
+58. Confirm the victim receives animation 21945 on impact and bleed visuals 4411/4407 during the active bleed.
+59. Stay away from Guthan and confirm repeated hard-typeless bleed hits are each 400-500.
+60. While the spear is away, confirm Guthan resumes ordinary melee attacks using the 18542 cache attack presentation and does not start Hurricane/Impale/other specials.
+61. Move adjacent to Guthan. Confirm bleed stops, retrieval begins, Guthan uses animation 21947, transforms back to 18541, and the victim receives the retrieval animation/brief movement lock.
+62. Confirm retrieval deals exactly 1,000 hard-typeless damage once and normal Guthan special cadence can resume afterward.
+63. Kill the impaled victim before retrieval. Confirm the spear automatically returns to Guthan and no bleed task continues on the dead/removed player.
+64. Subdue Guthan while a spear is out. Confirm he restores to primary id/state and the bleed/projectile/retrieval generation becomes stale.
+65. Leave/destroy/restart the instance during an active Impale. Confirm no bleed or transformation leaks into the new encounter.
+66. Multi-player interaction: Impale Player B, then have Torag begin Whack on Player B. Confirm Guthan's spear returns automatically when the pummel starts.
+67. Side-rule warning: current encounter lacks west/east ownership. Do not mark Impale target selection VERIFIED-complete until same-side selection is implemented and tested.
+68. Do not mark defensive-ability clearing/cooldown behavior VERIFIED; it is not implemented in this checkpoint.
+
+Shared Throw coordinator
+69. Static/code acceptance: verified Throw matrix is Guthan/Torag -> Ahrim/Karil/Verac and Verac -> Ahrim/Karil; Dharok must return false for all Throw targets.
+70. Confirm the coordinator ignores subdued/finished/self targets and can locate an active eligible target on the same plane.
+71. Confirm **actual Throw launches do not randomly fire yet**. This is intentional until west/east side ownership exists; a live cross-portal Throw in this checkpoint is a regression.
+72. When side ownership is later added, extend these tests for same-side eligibility, Surge/throw flight, landing damage, cleanup and Deathcopter interception.
 
 Implemented special sequencing
-52. On a fresh Dharok/Torag, confirm the first implemented special can begin from a random slot after the current 3-5 auto gate; after that, verify the implemented order cycles Hurricane -> unique special -> Wall Slam with normal autos between them.
-53. Confirm no melee special begins back-to-back immediately after another special; current 3-5 auto spacing is HYPOTHESIS and should be tuned only from stronger classic/runtime evidence.
-54. For Guthan/Verac, verify only the currently implemented subset fires; do not treat their rotation as complete until their unique specials are added.
+73. Fresh Dharok/Torag: first implemented special may begin from a random slot after current 3-5 auto gate; thereafter confirm Hurricane -> unique -> Wall Slam order.
+74. Guthan: confirm current implemented cycle uses Hurricane and Impale with normal autos between specials and pauses special progression while the spear is away.
+75. Verac: confirm current normal implemented subset is Wall Slam only until Soulspot/Deathcopter are added; post-revival forced Hurricane is the only Hurricane exception.
+76. Confirm no melee special begins immediately back-to-back; 3-5 auto spacing remains HYPOTHESIS.
 
 Cleanup / regression
-55. Leave/logout/teleport until the private instance becomes empty. Confirm RiseOfTheSixInstance finishes all six custom NPCs and destroys the copied map without leaked NPCs/tasks.
-56. Recreate a new RoTS instance after cleanup. Confirm all six brothers start fresh and no revive/special state carries over.
-57. Confirm practice mode still suppresses normal Matrix3 boss-instance drops; RoTS-specific chest/rewards are not implemented in this checkpoint and must not be fabricated.
-58. As an owner/admin (`rights >= 2`), start RoTS, leave/reopen setup, then choose Start again before the one-hour session expires. Confirm the old cached private instance is finished and a fresh RoTS instance is created immediately.
-59. Confirm a normal player still gets Matrix3's original cached private-instance reuse/rejoin behavior and is not granted the owner/admin fresh-start bypass.
+77. Leave/logout/teleport until the private instance becomes empty. Confirm all six custom NPCs finish and copied map cleanup remains normal.
+78. Recreate RoTS. Confirm all brother HP, revive, Whack, charge, Hurricane, Wall Slam and Impale state starts clean.
+79. Confirm practice mode still does not fabricate RoTS chest/reward behavior.
+80. Owner/admin: start RoTS, leave/reopen setup and Start again before the hour expires; confirm a fresh instance is created.
+81. Confirm normal players retain original cached private-instance reuse/rejoin behavior.
 
-100% fidelity gates still pending
-60. Do not mark the encounter VERIFIED-complete until the real well/totem entrance, tunnel/pads, daily formations, side empowerment, Shadow Drag/Realm, remaining brother specials/rotations, exact shared-special visuals/pathing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow pass targeted runtime tests.
+100% fidelity gate
+82. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, daily formations, side ownership/empowerment, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
