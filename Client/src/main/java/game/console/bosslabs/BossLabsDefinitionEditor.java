@@ -9,6 +9,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.RenderingHints;
@@ -44,6 +45,8 @@ public final class BossLabsDefinitionEditor {
     private static final int MAX_TILE_OFFSET = 16;
     private static final String[] TILE_EFFECT_NAMES = {
             "Damage players", "Heal players", "Damage boss", "Heal boss" };
+    private static final String[] PHASE_ACTION_NAMES = {
+            "Play animation", "Play graphic", "Heal boss" };
 
     private final Runnable changeListener;
 
@@ -58,6 +61,17 @@ public final class BossLabsDefinitionEditor {
     private final JTextField phaseMinField = new JTextField();
     private final JTextField phaseMaxField = new JTextField();
     private final JLabel phaseStatus = createStatus("Add a phase to begin authoring combat.");
+    private final DefaultListModel<BossLabsDraftDefinition.PhaseAction> entryActionListModel =
+            new DefaultListModel<BossLabsDraftDefinition.PhaseAction>();
+    private final JList<BossLabsDraftDefinition.PhaseAction> entryActionList =
+            new JList<BossLabsDraftDefinition.PhaseAction>(entryActionListModel);
+    private final DefaultListModel<BossLabsDraftDefinition.PhaseAction> exitActionListModel =
+            new DefaultListModel<BossLabsDraftDefinition.PhaseAction>();
+    private final JList<BossLabsDraftDefinition.PhaseAction> exitActionList =
+            new JList<BossLabsDraftDefinition.PhaseAction>(exitActionListModel);
+    private final JComboBox<String> phaseActionTypeBox = new JComboBox<String>(PHASE_ACTION_NAMES);
+    private final JTextField phaseActionValueField = new JTextField();
+    private final JLabel phaseActionStatus = createStatus("Phase actions run once when a phase is entered or exited.");
 
     private final DefaultComboBoxModel<BossLabsDraftDefinition.Phase> attackPhaseModel =
             new DefaultComboBoxModel<BossLabsDraftDefinition.Phase>();
@@ -125,7 +139,7 @@ public final class BossLabsDefinitionEditor {
         phasesRoot.setBackground(ConsoleTheme.PANEL);
         phasesRoot.setBorder(ConsoleTheme.panelPadding(12, 12, 12, 12));
 
-        JPanel heading = verticalHeading("Phases", "Health-range phases. Each phase must contain at least one attack.");
+        JPanel heading = verticalHeading("Phases", "Health-range phases with ordered on-enter/on-exit actions and attack pools.");
         phasesRoot.add(heading, BorderLayout.NORTH);
 
         phaseList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -175,7 +189,96 @@ public final class BossLabsDefinitionEditor {
         body.add(Box.createVerticalStrut(8));
         body.add(phaseStatus);
         formCard.add(body, BorderLayout.CENTER);
-        phasesRoot.add(formCard, BorderLayout.CENTER);
+
+        JPanel actionCard = createPhaseActionsCard();
+        JPanel editorColumn = new JPanel();
+        editorColumn.setLayout(new BoxLayout(editorColumn, BoxLayout.Y_AXIS));
+        editorColumn.setOpaque(false);
+        formCard.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        actionCard.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        editorColumn.add(formCard);
+        editorColumn.add(Box.createVerticalStrut(10));
+        editorColumn.add(actionCard);
+
+        JScrollPane editorScroll = new JScrollPane(editorColumn);
+        editorScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        editorScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        editorScroll.setBorder(BorderFactory.createEmptyBorder());
+        ConsoleTheme.styleScrollPane(editorScroll);
+        phasesRoot.add(editorScroll, BorderLayout.CENTER);
+    }
+
+    private JPanel createPhaseActionsCard() {
+        JPanel card = createCard();
+        JPanel heading = verticalHeading("Phase actions",
+                "Actions run in list order. Exit actions run before the next phase's entry actions.");
+        card.add(heading, BorderLayout.NORTH);
+
+        styleList(entryActionList);
+        styleList(exitActionList);
+        entryActionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        exitActionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        JPanel lists = new JPanel(new GridLayout(1, 2, 8, 0));
+        lists.setOpaque(false);
+        lists.add(createPhaseActionList("On Enter", entryActionList));
+        lists.add(createPhaseActionList("On Exit", exitActionList));
+
+        JPanel controls = new JPanel(new GridBagLayout());
+        controls.setOpaque(false);
+        styleCombo(phaseActionTypeBox);
+        styleField(phaseActionValueField, "Animation/GFX id, or fixed boss-heal amount");
+        addFormRow(controls, 0, "Action", phaseActionTypeBox);
+        addFormRow(controls, 1, "Value", phaseActionValueField);
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        buttons.setOpaque(false);
+        JButton addEnter = new JButton("Add On Enter");
+        JButton addExit = new JButton("Add On Exit");
+        JButton removeEnter = new JButton("Remove Enter");
+        JButton removeExit = new JButton("Remove Exit");
+        styleButton(addEnter);
+        styleButton(addExit);
+        styleButton(removeEnter);
+        styleButton(removeExit);
+        addEnter.addActionListener(e -> addPhaseAction(true));
+        addExit.addActionListener(e -> addPhaseAction(false));
+        removeEnter.addActionListener(e -> removePhaseAction(true));
+        removeExit.addActionListener(e -> removePhaseAction(false));
+        buttons.add(addEnter);
+        buttons.add(addExit);
+        buttons.add(removeEnter);
+        buttons.add(removeExit);
+
+        JPanel south = new JPanel();
+        south.setLayout(new BoxLayout(south, BoxLayout.Y_AXIS));
+        south.setOpaque(false);
+        controls.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        buttons.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        phaseActionStatus.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        south.add(controls);
+        south.add(Box.createVerticalStrut(8));
+        south.add(buttons);
+        south.add(Box.createVerticalStrut(6));
+        south.add(phaseActionStatus);
+
+        card.add(lists, BorderLayout.CENTER);
+        card.add(south, BorderLayout.SOUTH);
+        return card;
+    }
+
+    private JPanel createPhaseActionList(String titleText, JList<BossLabsDraftDefinition.PhaseAction> list) {
+        JPanel panel = new JPanel(new BorderLayout(4, 4));
+        panel.setOpaque(false);
+        JLabel title = new JLabel(titleText);
+        title.setFont(ConsoleTheme.BODY_FONT);
+        title.setForeground(ConsoleTheme.MUTED_TEXT);
+        panel.add(title, BorderLayout.NORTH);
+        JScrollPane scroll = new JScrollPane(list);
+        scroll.setPreferredSize(new Dimension(220, 120));
+        ConsoleTheme.styleScrollPane(scroll);
+        panel.add(scroll, BorderLayout.CENTER);
+        return panel;
     }
 
     private void buildAttacksPanel() {
@@ -315,7 +418,7 @@ public final class BossLabsDefinitionEditor {
         BossLabsDraftDefinition.Phase phase = new BossLabsDraftDefinition.Phase("phase_" + number, 0, 100);
         draft.getPhases().add(phase);
         refreshPhaseViews(draft.getPhases().size() - 1);
-        phaseStatus.setText("Phase added. Set its HP range, then add at least one attack.");
+        phaseStatus.setText("Phase added. Set its HP range, optional transition actions, then add at least one attack.");
         changed();
     }
 
@@ -360,11 +463,65 @@ public final class BossLabsDefinitionEditor {
             phaseIdField.setText("");
             phaseMinField.setText("");
             phaseMaxField.setText("");
+            refreshPhaseActionLists();
             return;
         }
         phaseIdField.setText(phase.getId());
         phaseMinField.setText(Integer.toString(phase.getMinimumHealthPercent()));
         phaseMaxField.setText(Integer.toString(phase.getMaximumHealthPercent()));
+        refreshPhaseActionLists();
+    }
+
+    private void refreshPhaseActionLists() {
+        entryActionListModel.clear();
+        exitActionListModel.clear();
+        BossLabsDraftDefinition.Phase phase = phaseList.getSelectedValue();
+        if (phase == null)
+            return;
+        for (BossLabsDraftDefinition.PhaseAction action : phase.getEntryActions())
+            entryActionListModel.addElement(action);
+        for (BossLabsDraftDefinition.PhaseAction action : phase.getExitActions())
+            exitActionListModel.addElement(action);
+    }
+
+    private void addPhaseAction(boolean entry) {
+        BossLabsDraftDefinition.Phase phase = phaseList.getSelectedValue();
+        if (phase == null) {
+            phaseActionStatus.setText("Select a phase first.");
+            return;
+        }
+        Integer value = parseInteger(phaseActionValueField.getText());
+        if (value == null) {
+            phaseActionStatus.setText("Phase action value must be a whole number.");
+            return;
+        }
+        BossLabsDraftDefinition.PhaseAction action = new BossLabsDraftDefinition.PhaseAction(
+                phaseActionTypeBox.getSelectedIndex(), value.intValue());
+        if (entry)
+            phase.getEntryActions().add(action);
+        else
+            phase.getExitActions().add(action);
+        refreshPhaseViews(phaseList.getSelectedIndex());
+        phaseActionStatus.setText((entry ? "On-enter" : "On-exit") + " action added at the end of the ordered list.");
+        changed();
+    }
+
+    private void removePhaseAction(boolean entry) {
+        BossLabsDraftDefinition.Phase phase = phaseList.getSelectedValue();
+        if (phase == null)
+            return;
+        int index = entry ? entryActionList.getSelectedIndex() : exitActionList.getSelectedIndex();
+        if (index < 0) {
+            phaseActionStatus.setText("Select an " + (entry ? "on-enter" : "on-exit") + " action first.");
+            return;
+        }
+        if (entry)
+            phase.getEntryActions().remove(index);
+        else
+            phase.getExitActions().remove(index);
+        refreshPhaseViews(phaseList.getSelectedIndex());
+        phaseActionStatus.setText((entry ? "On-enter" : "On-exit") + " action removed from local draft.");
+        changed();
     }
 
     private void refreshPhaseViews(int preferredIndex) {
@@ -682,6 +839,7 @@ public final class BossLabsDefinitionEditor {
     }
 
     private void changed() {
+        phaseList.repaint();
         attackList.repaint();
         if (changeListener != null)
             changeListener.run();
