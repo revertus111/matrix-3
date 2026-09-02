@@ -17,7 +17,7 @@ import java.util.List;
  */
 public final class BossLabsDefinitionWireCodec {
 
-	private static final int VERSION = 4;
+	private static final int VERSION = 5;
 	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_PHASES = 64;
 	private static final int MAX_ATTACKS_PER_PHASE = 256;
@@ -65,6 +65,9 @@ public final class BossLabsDefinitionWireCodec {
 					output.writeInt(attack.getHazardMaxHitOverride());
 					output.writeInt(attack.getTargetMode());
 					output.writeInt(attack.getTargetRange());
+					output.writeInt(attack.getRotationWeight());
+					output.writeInt(attack.getCooldownAttacks());
+					output.writeBoolean(attack.isImmediateRepeatAllowed());
 				}
 			}
 			output.flush();
@@ -148,10 +151,21 @@ public final class BossLabsDefinitionWireCodec {
 
 					int targetMode = input.readInt();
 					int targetRange = input.readInt();
+					if (version == 4) {
+						attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+								maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
+								hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride,
+								targetMode, targetRange));
+						continue;
+					}
+
+					int rotationWeight = input.readInt();
+					int cooldownAttacks = input.readInt();
+					boolean allowImmediateRepeat = input.readBoolean();
 					attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
 							maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
 							hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride,
-							targetMode, targetRange));
+							targetMode, targetRange, rotationWeight, cooldownAttacks, allowImmediateRepeat));
 				}
 				phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
 			}
