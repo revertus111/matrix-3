@@ -25,6 +25,8 @@ public final class BossAttackDefinition {
 	public static final int MAX_TELEGRAPH_TICKS = 50;
 	public static final int MAX_HAZARD_DURATION_TICKS = 100;
 	public static final int MAX_HAZARD_TICK_INTERVAL = 50;
+	public static final int MAX_ROTATION_WEIGHT = 1000;
+	public static final int MAX_COOLDOWN_ATTACKS = 100;
 
 	private final String id;
 	private final int combatStyle;
@@ -43,6 +45,9 @@ public final class BossAttackDefinition {
 	private final int hazardMaxHitOverride;
 	private final int targetMode;
 	private final int targetRange;
+	private final int rotationWeight;
+	private final int cooldownAttacks;
+	private final boolean allowImmediateRepeat;
 
 	public BossAttackDefinition(String id, int combatStyle, int animationId, int graphicId, int projectileId,
 			int maxHitOverride, int combatDelayOverride) {
@@ -71,6 +76,18 @@ public final class BossAttackDefinition {
 			int telegraphTicks, List<BossTileOffset> tilePattern, int hazardGraphicId,
 			int hazardDurationTicks, int hazardTickInterval, int hazardMaxHitOverride,
 			int targetMode, int targetRange) {
+		this(id, combatStyle, animationId, graphicId, projectileId, maxHitOverride, combatDelayOverride,
+				telegraphGraphicId, impactGraphicId, telegraphTicks, tilePattern, hazardGraphicId,
+				hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride, targetMode, targetRange,
+				1, 0, true);
+	}
+
+	public BossAttackDefinition(String id, int combatStyle, int animationId, int graphicId, int projectileId,
+			int maxHitOverride, int combatDelayOverride, int telegraphGraphicId, int impactGraphicId,
+			int telegraphTicks, List<BossTileOffset> tilePattern, int hazardGraphicId,
+			int hazardDurationTicks, int hazardTickInterval, int hazardMaxHitOverride,
+			int targetMode, int targetRange, int rotationWeight, int cooldownAttacks,
+			boolean allowImmediateRepeat) {
 		if (id == null || id.trim().isEmpty())
 			throw new IllegalArgumentException("Boss attack id must not be blank.");
 		if (combatStyle != NPCCombatDefinitions.MELEE && combatStyle != NPCCombatDefinitions.RANGE
@@ -100,6 +117,10 @@ public final class BossAttackDefinition {
 			throw new IllegalArgumentException("Unsupported BossLabs target mode: " + targetMode);
 		if (targetRange < 1 || targetRange > MAX_TARGET_RANGE)
 			throw new IllegalArgumentException("targetRange must be between 1 and " + MAX_TARGET_RANGE + ".");
+		if (rotationWeight < 1 || rotationWeight > MAX_ROTATION_WEIGHT)
+			throw new IllegalArgumentException("rotationWeight must be between 1 and " + MAX_ROTATION_WEIGHT + ".");
+		if (cooldownAttacks < 0 || cooldownAttacks > MAX_COOLDOWN_ATTACKS)
+			throw new IllegalArgumentException("cooldownAttacks must be between 0 and " + MAX_COOLDOWN_ATTACKS + ".");
 
 		List<BossTileOffset> safePattern = tilePattern == null
 				? Collections.<BossTileOffset>emptyList() : tilePattern;
@@ -132,6 +153,9 @@ public final class BossAttackDefinition {
 		this.hazardMaxHitOverride = hazardMaxHitOverride;
 		this.targetMode = targetMode;
 		this.targetRange = targetRange;
+		this.rotationWeight = rotationWeight;
+		this.cooldownAttacks = cooldownAttacks;
+		this.allowImmediateRepeat = allowImmediateRepeat;
 	}
 
 	public String getId() {
@@ -224,5 +248,17 @@ public final class BossAttackDefinition {
 
 	public boolean usesRandomNearbyPlayerTarget() {
 		return targetMode == TARGET_RANDOM_NEARBY_PLAYER;
+	}
+
+	public int getRotationWeight() {
+		return rotationWeight;
+	}
+
+	public int getCooldownAttacks() {
+		return cooldownAttacks;
+	}
+
+	public boolean isImmediateRepeatAllowed() {
+		return allowImmediateRepeat;
 	}
 }
