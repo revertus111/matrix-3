@@ -73,3 +73,10 @@
 - Rotation state is isolated per NPC instance with weak references and resets on phase changes or live definition replacement, while Matrix3 NPCCombat remains authoritative for actual combat scheduling and target ownership.
 - Upgraded BossLabs definition wire/storage to v5 for rotation fields while retaining v1-v4 read compatibility; older attacks load as weight 1, cooldown 0, immediate repeat allowed.
 - Added Weight, Cooldown turns, and Repeat rule controls to the existing scrollable Attacks editor; all rotation edits remain DRAFT-only until Apply Live or Save & Apply.
+- Added reusable painted tile effect types for both impact and lingering hazards: damage players, heal players, damage boss, and heal boss.
+- Player-damage tile effects continue through Matrix3 CombatScript accuracy/max-hit/hit helpers; healing uses Entity.heal(), while boss damage uses Matrix3's Hit queue with a self source so the NPC death path remains non-null without inventing player damage credit.
+- Player effects require player occupancy on a painted tile; boss effects require the boss footprint to overlap at least one painted tile, including multi-tile NPC footprints.
+- Impact amount / max hit and Hazard amount / max hit now act as combat max-hit values for Damage players and fixed effect amounts for healing/boss effects; -1 resolves through the NPC's existing style max hit.
+- Upgraded BossLabs definition wire/storage to v6 for impact/hazard tile effect types while retaining v1-v5 read compatibility; older definitions default both effect types to Damage players and preserve prior behavior.
+- Added Impact effect and Hazard effect controls to the existing scrollable Attacks editor with the same four reusable tile actions.
+- Kept this slice bounded to reusable tile mechanics; phase entry/exit actions, minions, encounter context, and a general scripting engine remain separate future slices.
