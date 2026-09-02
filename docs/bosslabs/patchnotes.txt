@@ -66,3 +66,10 @@
 - Resolved alternate targets feed the existing single-target projectile/hit path and the existing target-centered tile/telegraph/hazard path, so painted mechanics snapshot around the attack's resolved player without duplicating combat logic.
 - Upgraded BossLabs definition wire/storage to v4 for target mode/range while retaining v1-v3 read compatibility; older attacks load as Current target with the default 14-tile targeting range.
 - Added Target and Target range controls to the existing scrollable Attacks editor; target edits remain DRAFT-only until Apply Live or Save & Apply.
+
+2026-09-02
+- Added weighted attack rotation fields: relative weight, cooldown turns, and a best-effort immediate-repeat rule on each BossAttackDefinition.
+- BossCombatScript now selects only ready attacks, rolls by configured weight, prefers another ready attack when repeat prevention is enabled, and waits one normal attack cycle when every attack is cooling down rather than violating cooldowns.
+- Rotation state is isolated per NPC instance with weak references and resets on phase changes or live definition replacement, while Matrix3 NPCCombat remains authoritative for actual combat scheduling and target ownership.
+- Upgraded BossLabs definition wire/storage to v5 for rotation fields while retaining v1-v4 read compatibility; older attacks load as weight 1, cooldown 0, immediate repeat allowed.
+- Added Weight, Cooldown turns, and Repeat rule controls to the existing scrollable Attacks editor; all rotation edits remain DRAFT-only until Apply Live or Save & Apply.
