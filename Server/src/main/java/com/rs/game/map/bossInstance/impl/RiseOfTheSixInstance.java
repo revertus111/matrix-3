@@ -15,8 +15,9 @@ import com.rs.game.tasks.WorldTasksManager;
 /**
  * Native Matrix3 instance owner for The Barrows: Rise of the Six.
  *
- * This class owns only encounter-wide state. NPC targeting, movement and damage
- * continue through Matrix3 NPCCombat/CombatScript.
+ * This class owns encounter-wide and cross-brother state. NPC targeting,
+ * movement and damage continue through Matrix3 NPCCombat/CombatScript except
+ * while an explicit RoTS special owns them.
  */
 public class RiseOfTheSixInstance extends BossInstance {
 
@@ -107,9 +108,69 @@ public class RiseOfTheSixInstance extends BossInstance {
 							return;
 						reviveSubduedBrothers();
 					}
-				}
 			}, REVIVE_DELAY_TICKS);
 		}
+	}
+
+	/**
+	 * Cross-brother callback used by the documented Guthan/Torag interaction:
+	 * an impaled victim being pummeled by Torag automatically returns Guthan's
+	 * spear.
+	 */
+	public void onToragWhackStarted(Player victim) {
+		if (victim == null || brothers == null)
+			return;
+		for (RiseOfTheSixBrother brother : brothers) {
+			if (brother != null && !brother.hasFinished())
+				brother.onPlayerPummeled(victim);
+		}
+	}
+
+	/**
+	 * verified-static Throw pairing matrix from the RoTS Beasts descriptions.
+	 *
+	 * Guthan/Torag may throw Ahrim, Karil or Verac. Verac may throw Ahrim or
+	 * Karil. Dharok is not listed as a Throw brother. This method intentionally
+	 * does not apply side ownership yet because west/east formation state is not
+	 * implemented in the current encounter checkpoint.
+	 */
+	public boolean isVerifiedThrowPair(RiseOfTheSixBrother thrower, RiseOfTheSixBrother target) {
+		if (thrower == null || target == null || thrower == target || thrower.isSubdued()
+				|| target.isSubdued() || thrower.hasFinished() || target.hasFinished())
+			return false;
+
+		Brother from = thrower.getBrother();
+		Brother to = target.getBrother();
+		if (from == Brother.GUTHAN || from == Brother.TORAG)
+			return to == Brother.AHRIM || to == Brother.KARIL || to == Brother.VERAC;
+		if (from == Brother.VERAC)
+			return to == Brother.AHRIM || to == Brother.KARIL;
+		return false;
+	}
+
+	/**
+	 * Returns the nearest currently active brother from the verified Throw matrix.
+	 * The actual Throw attack is intentionally not activated until arena side
+	 * ownership is implemented, so this is a coordination foundation rather than
+	 * an invented cross-portal mechanic.
+	 */
+	public RiseOfTheSixBrother findVerifiedThrowTarget(RiseOfTheSixBrother thrower) {
+		if (thrower == null || brothers == null)
+			return null;
+
+		RiseOfTheSixBrother nearest = null;
+		int nearestDistance = Integer.MAX_VALUE;
+		for (RiseOfTheSixBrother target : brothers) {
+			if (!isVerifiedThrowPair(thrower, target) || target.getPlane() != thrower.getPlane())
+				continue;
+			int distance = Math.max(Math.abs(target.getX() - thrower.getX()),
+					Math.abs(target.getY() - thrower.getY()));
+			if (distance < nearestDistance) {
+				nearestDistance = distance;
+				nearest = target;
+			}
+		}
+		return nearest;
 	}
 
 	private void healActiveBrothers() {
