@@ -1,7 +1,12 @@
 package com.rs.game.npc.bosslabs;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 import com.rs.game.Animation;
 import com.rs.game.Entity;
@@ -28,6 +33,9 @@ public final class BossCombatScript extends CombatScript {
 
 	public static final BossCombatScript INSTANCE = new BossCombatScript();
 
+	private static final Map<NPC, RotationState> ROTATION_STATES =
+			Collections.synchronizedMap(new WeakHashMap<NPC, RotationState>());
+
 	private BossCombatScript() {
 	}
 
@@ -46,12 +54,86 @@ public final class BossCombatScript extends CombatScript {
 		if (phase == null)
 			return npc.getAttackSpeed();
 
-		List<BossAttackDefinition> attacks = phase.getAttacks();
-		BossAttackDefinition attack = attacks.get(Utils.random(attacks.size()));
+		BossAttackDefinition attack = selectAttack(npc, definition, phase);
+		if (attack == null)
+			return npc.getAttackSpeed();
+
 		Entity resolvedTarget = resolveAttackTarget(npc, target, attack);
 		if (resolvedTarget == null)
 			return npc.getAttackSpeed();
 		return executeAttack(npc, resolvedTarget, attack);
+	}
+
+	private BossAttackDefinition selectAttack(NPC npc, BossDefinition definition, BossPhaseDefinition phase) {
+		RotationState state;
+		synchronized (ROTATION_STATES) {
+			state = ROTATION_STATES.get(npc);
+			if (state == null) {
+				state = new RotationState(definition, phase);
+				ROTATION_STATES.put(npc, state);
+			}
+		}
+
+		synchronized (state) {
+			if (state.definition != definition || state.phase != phase)
+				state.reset(definition, phase);
+
+			List<BossAttackDefinition> ready = new ArrayList<BossAttackDefinition>();
+			for (BossAttackDefinition attack : phase.getAttacks()) {
+				Integer remaining = state.cooldowns.get(attack);
+				if (remaining == null || remaining.intValue() <= 0)
+					ready.add(attack);
+			}
+
+			if (ready.isEmpty()) {
+				advanceCooldowns(state);
+				return null;
+			}
+
+			List<BossAttackDefinition> candidates = ready;
+			if (ready.size() > 1 && state.lastAttack != null && !state.lastAttack.isImmediateRepeatAllowed()) {
+				List<BossAttackDefinition> alternatives = new ArrayList<BossAttackDefinition>(ready.size() - 1);
+				for (BossAttackDefinition attack : ready) {
+					if (attack != state.lastAttack)
+						alternatives.add(attack);
+				}
+				if (!alternatives.isEmpty())
+					candidates = alternatives;
+			}
+
+			BossAttackDefinition selected = selectWeighted(candidates);
+			advanceCooldowns(state);
+			state.lastAttack = selected;
+			if (selected.getCooldownAttacks() > 0)
+				state.cooldowns.put(selected, Integer.valueOf(selected.getCooldownAttacks()));
+			return selected;
+		}
+	}
+
+	private BossAttackDefinition selectWeighted(List<BossAttackDefinition> attacks) {
+		int totalWeight = 0;
+		for (BossAttackDefinition attack : attacks)
+			totalWeight += attack.getRotationWeight();
+
+		int roll = Utils.random(totalWeight);
+		for (BossAttackDefinition attack : attacks) {
+			if (roll < attack.getRotationWeight())
+				return attack;
+			roll -= attack.getRotationWeight();
+		}
+		return attacks.get(attacks.size() - 1);
+	}
+
+	private void advanceCooldowns(RotationState state) {
+		Iterator<Map.Entry<BossAttackDefinition, Integer>> iterator = state.cooldowns.entrySet().iterator();
+		while (iterator.hasNext()) {
+			Map.Entry<BossAttackDefinition, Integer> entry = iterator.next();
+			int remaining = entry.getValue().intValue();
+			if (remaining <= 1)
+				iterator.remove();
+			else
+				entry.setValue(Integer.valueOf(remaining - 1));
+		}
 	}
 
 	private Entity resolveAttackTarget(NPC npc, Entity currentTarget, BossAttackDefinition attack) {
@@ -259,5 +341,24 @@ public final class BossCombatScript extends CombatScript {
 			npc.setNextGraphics(new Graphics(graphicId, 0, attackStyle == NPCCombatDefinitions.RANGE ? 100 : 0));
 		if (animationId != -1)
 			npc.setNextAnimation(new Animation(animationId));
+	}
+
+	private static final class RotationState {
+		private BossDefinition definition;
+		private BossPhaseDefinition phase;
+		private BossAttackDefinition lastAttack;
+		private final Map<BossAttackDefinition, Integer> cooldowns =
+				new HashMap<BossAttackDefinition, Integer>();
+
+		private RotationState(BossDefinition definition, BossPhaseDefinition phase) {
+			reset(definition, phase);
+		}
+
+		private void reset(BossDefinition definition, BossPhaseDefinition phase) {
+			this.definition = definition;
+			this.phase = phase;
+			lastAttack = null;
+			cooldowns.clear();
+		}
 	}
 }
