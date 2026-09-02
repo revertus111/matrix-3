@@ -22,7 +22,7 @@ public final class BossLabsDraftDefinition {
     public static final int TARGET_CURRENT = 0;
     public static final int TARGET_RANDOM_NEARBY_PLAYER = 1;
 
-    private static final int WIRE_VERSION = 4;
+    private static final int WIRE_VERSION = 5;
     private static final int MIN_WIRE_VERSION = 1;
     private static final int MAX_PHASES = 64;
     private static final int MAX_ATTACKS_PER_PHASE = 256;
@@ -32,6 +32,8 @@ public final class BossLabsDraftDefinition {
     private static final int MAX_HAZARD_DURATION_TICKS = 100;
     private static final int MAX_HAZARD_TICK_INTERVAL = 50;
     private static final int MAX_TARGET_RANGE = 32;
+    private static final int MAX_ROTATION_WEIGHT = 1000;
+    private static final int MAX_COOLDOWN_ATTACKS = 100;
     private static final int MAX_WIRE_BYTES = 16384;
 
     private String id;
@@ -85,6 +87,10 @@ public final class BossLabsDraftDefinition {
                     return "Attack " + attack.id + " has an invalid target mode.";
                 if (attack.targetRange < 1 || attack.targetRange > MAX_TARGET_RANGE)
                     return "Attack " + attack.id + " target range must be between 1 and " + MAX_TARGET_RANGE + ".";
+                if (attack.rotationWeight < 1 || attack.rotationWeight > MAX_ROTATION_WEIGHT)
+                    return "Attack " + attack.id + " weight must be between 1 and " + MAX_ROTATION_WEIGHT + ".";
+                if (attack.cooldownAttacks < 0 || attack.cooldownAttacks > MAX_COOLDOWN_ATTACKS)
+                    return "Attack " + attack.id + " cooldown turns must be between 0 and " + MAX_COOLDOWN_ATTACKS + ".";
                 if (attack.maxHitOverride < -1)
                     return "Attack " + attack.id + " max hit must be -1 or greater.";
                 if (attack.combatDelayOverride < -1)
@@ -167,6 +173,9 @@ public final class BossLabsDraftDefinition {
                     output.writeInt(attack.hazardMaxHitOverride);
                     output.writeInt(attack.targetMode);
                     output.writeInt(attack.targetRange);
+                    output.writeInt(attack.rotationWeight);
+                    output.writeInt(attack.cooldownAttacks);
+                    output.writeBoolean(attack.allowImmediateRepeat);
                 }
             }
             output.flush();
@@ -233,6 +242,11 @@ public final class BossLabsDraftDefinition {
                     if (version >= 4) {
                         attack.targetMode = input.readInt();
                         attack.targetRange = input.readInt();
+                    }
+                    if (version >= 5) {
+                        attack.rotationWeight = input.readInt();
+                        attack.cooldownAttacks = input.readInt();
+                        attack.allowImmediateRepeat = input.readBoolean();
                     }
                     phase.attacks.add(attack);
                 }
@@ -301,6 +315,9 @@ public final class BossLabsDraftDefinition {
         private int hazardMaxHitOverride = -1;
         private int targetMode = TARGET_CURRENT;
         private int targetRange = 14;
+        private int rotationWeight = 1;
+        private int cooldownAttacks;
+        private boolean allowImmediateRepeat = true;
 
         public Attack(String id, int combatStyle, int animationId, int graphicId, int projectileId,
                 int maxHitOverride, int combatDelayOverride) {
@@ -356,6 +373,12 @@ public final class BossLabsDraftDefinition {
         public void setTargetMode(int value) { targetMode = value; }
         public int getTargetRange() { return targetRange; }
         public void setTargetRange(int value) { targetRange = value; }
+        public int getRotationWeight() { return rotationWeight; }
+        public void setRotationWeight(int value) { rotationWeight = value; }
+        public int getCooldownAttacks() { return cooldownAttacks; }
+        public void setCooldownAttacks(int value) { cooldownAttacks = value; }
+        public boolean isImmediateRepeatAllowed() { return allowImmediateRepeat; }
+        public void setImmediateRepeatAllowed(boolean value) { allowImmediateRepeat = value; }
 
         @Override
         public String toString() {
@@ -363,7 +386,9 @@ public final class BossLabsDraftDefinition {
             String area = tilePattern.isEmpty() ? "" : "  " + tilePattern.size() + " tiles";
             String hazard = hazardDurationTicks > 0 ? "  hazard " + hazardDurationTicks + "t" : "";
             String targeting = targetMode == TARGET_RANDOM_NEARBY_PLAYER ? "  random target" : "";
-            return label + "  [" + styleName(combatStyle) + "]" + area + hazard + targeting;
+            String rotation = "  w" + rotationWeight + (cooldownAttacks > 0 ? " cd" + cooldownAttacks : "")
+                    + (allowImmediateRepeat ? "" : " no-repeat");
+            return label + "  [" + styleName(combatStyle) + "]" + area + hazard + targeting + rotation;
         }
     }
 
