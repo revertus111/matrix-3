@@ -82,7 +82,7 @@
 - Kept this slice bounded to reusable tile mechanics; phase entry/exit actions, minions, encounter context, and a general scripting engine remain separate future slices.
 - Added ordered phase On Enter / On Exit actions with Play animation, Play graphic, and Heal boss as the first bounded action catalog.
 - BossCombatScript now detects initial phase activation, health-based phase changes, and live definition replacement per NPC instance; old-phase exit actions run before new-phase entry actions and rotation state resets at the transition.
-- Phase transitions reserve one normal NPC attack opportunity so authored transition animation/GFX are not immediately overwritten by an attack presentation in the same combat cycle.
+- Phase transitions with authored entry/exit actions reserve one normal NPC attack opportunity so transition animation/GFX are not immediately overwritten; empty legacy action lists preserve the previous attack timing with no added pause.
 - Upgraded BossLabs definition wire/storage to v7 for phase action lists while retaining v1-v6 read compatibility; older phases load with empty entry/exit action lists.
 - Added ordered On Enter / On Exit action lists and add/remove authoring controls to the scrollable Phases editor; actions remain DRAFT-only until Apply Live or Save & Apply.
 - Phase action healing routes through Matrix3 Entity.heal(); animation/GFX route through normal NPC presentation state. No phase scripting engine, minion lifecycle, teleport, or encounter participant authority was added.
