@@ -29,7 +29,7 @@ import com.rs.utils.Logger;
 public final class BossDefinitionStore {
 
 	private static final int MAGIC = 0x424C4431; // BLD1
-	private static final int VERSION = 5;
+	private static final int VERSION = 6;
 	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_DEFINITIONS = 10000;
 	private static final int MAX_PHASES = 1000;
@@ -176,10 +176,21 @@ public final class BossDefinitionStore {
 				int rotationWeight = input.readInt();
 				int cooldownAttacks = input.readInt();
 				boolean allowImmediateRepeat = input.readBoolean();
+				if (version == 5) {
+					attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+							maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
+							hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride,
+							targetMode, targetRange, rotationWeight, cooldownAttacks, allowImmediateRepeat));
+					continue;
+				}
+
+				int impactTileEffectType = input.readInt();
+				int hazardTileEffectType = input.readInt();
 				attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
 						maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
 						hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride,
-						targetMode, targetRange, rotationWeight, cooldownAttacks, allowImmediateRepeat));
+						targetMode, targetRange, rotationWeight, cooldownAttacks, allowImmediateRepeat,
+						impactTileEffectType, hazardTileEffectType));
 			}
 			phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
 		}
@@ -258,6 +269,8 @@ public final class BossDefinitionStore {
 				output.writeInt(attack.getRotationWeight());
 				output.writeInt(attack.getCooldownAttacks());
 				output.writeBoolean(attack.isImmediateRepeatAllowed());
+				output.writeInt(attack.getImpactTileEffectType());
+				output.writeInt(attack.getHazardTileEffectType());
 			}
 		}
 	}
