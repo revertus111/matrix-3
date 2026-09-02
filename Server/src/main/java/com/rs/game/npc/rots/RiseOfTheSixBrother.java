@@ -6,6 +6,7 @@ import com.rs.game.ForceTalk;
 import com.rs.game.Graphics;
 import com.rs.game.Hit;
 import com.rs.game.Hit.HitLook;
+import com.rs.game.Projectile;
 import com.rs.game.World;
 import com.rs.game.WorldTile;
 import com.rs.game.map.bossInstance.impl.RiseOfTheSixInstance;
@@ -31,6 +32,17 @@ public final class RiseOfTheSixBrother extends NPC {
 	private static final int HURRICANE_RADIUS = 1;
 	private static final int WALL_SLAM_RADIUS = 2;
 	private static final int WALL_SCAN_DISTANCE = 12;
+
+	private static final int GUTHAN_SPEAR_PROJECTILE = 4411;
+	private static final int GUTHAN_SPEAR_THROW_ANIMATION = 21944;
+	private static final int GUTHAN_IMPALED_ANIMATION = 21945;
+	private static final int GUTHAN_SPEAR_RETRIEVE_ANIMATION = 21947;
+	private static final int GUTHAN_BLEED_GFX = 4411;
+	private static final int GUTHAN_BLEED_SECONDARY_GFX = 4407;
+	private static final int GUTHAN_BLEED_MIN_DAMAGE = 400;
+	private static final int GUTHAN_BLEED_MAX_DAMAGE = 500;
+	private static final int GUTHAN_RETRIEVE_DAMAGE = 1000;
+	private static final int GUTHAN_RETRIEVE_RANGE = 1;
 
 	public static enum Brother {
 		AHRIM("Ahrim the Blighted", 18538, 18539),
@@ -89,6 +101,14 @@ public final class RiseOfTheSixBrother extends NPC {
 	private transient WorldTile wallSlamCapturedTile;
 	private boolean movementSpecialPreviousRun;
 
+	private boolean guthanImpaleLaunching;
+	private boolean guthanSpearAway;
+	private boolean guthanRetrievingSpear;
+	private int guthanImpaleGeneration;
+	private transient Player guthanImpaleVictim;
+	private transient Player guthanPrimaryTarget;
+
+	private boolean forceReviveHurricane;
 	private int meleeAutosUntilSpecial;
 	private int meleeSpecialIndex;
 
@@ -125,8 +145,17 @@ public final class RiseOfTheSixBrother extends NPC {
 		return wallSlamming;
 	}
 
+	public boolean isGuthanSpearAway() {
+		return brother == Brother.GUTHAN && guthanSpearAway;
+	}
+
+	public Player getGuthanImpaleVictim() {
+		return guthanImpaleVictim;
+	}
+
 	public boolean isSpecialActive() {
-		return dharokCharging || toragWhacking || hurricaning || wallSlamming;
+		return dharokCharging || toragWhacking || hurricaning || wallSlamming
+				|| guthanImpaleLaunching || guthanRetrievingSpear;
 	}
 
 	public boolean isMeleeBrother() {
@@ -137,23 +166,34 @@ public final class RiseOfTheSixBrother extends NPC {
 	public void noteNormalMeleeAttack() {
 		if (!isMeleeBrother() || subdued || isSpecialActive())
 			return;
+		if (brother == Brother.GUTHAN && guthanSpearAway)
+			return;
 		if (meleeAutosUntilSpecial > 0)
 			meleeAutosUntilSpecial--;
 	}
 
 	/**
-	 * Starts the next currently implemented melee special.
-	 *
-	 * Dharok and Torag have all three slots represented:
-	 * Hurricane -> unique special -> Wall Slam.
-	 * Guthan and Verac still have incomplete rotations until their remaining
-	 * brother-specific specials are implemented.
+	 * Starts the next currently implemented melee special. Verac deliberately
+	 * does not receive ordinary Hurricane; the only path that can force Verac
+	 * into Hurricane is the shared post-revival melee rule.
 	 */
 	public boolean tryStartMeleeSpecial(Entity target) {
 		if (!isMeleeBrother() || subdued || hasFinished() || isSpecialActive()
 				|| instance == null || instance.isFightComplete() || meleeAutosUntilSpecial > 0
 				|| !(target instanceof Player))
 			return false;
+		if (brother == Brother.GUTHAN && guthanSpearAway)
+			return false;
+
+		if (forceReviveHurricane) {
+			boolean started = startHurricane(target);
+			if (started) {
+				forceReviveHurricane = false;
+				meleeAutosUntilSpecial = 3 + Utils.random(3);
+				meleeSpecialIndex = getImplementedMeleeSpecialCount() > 1 ? 1 : 0;
+			}
+			return started;
+		}
 
 		int specialCount = getImplementedMeleeSpecialCount();
 		if (specialCount <= 0)
@@ -174,10 +214,10 @@ public final class RiseOfTheSixBrother extends NPC {
 					: index == 1 ? startToragWhack(target) : startWallSlam(target);
 			break;
 		case GUTHAN:
-			started = startHurricane(target);
+			started = index == 0 ? startHurricane(target) : startGuthanImpale(target);
 			break;
 		case VERAC:
-			started = index == 0 ? startHurricane(target) : startWallSlam(target);
+			started = startWallSlam(target);
 			break;
 		default:
 			started = false;
@@ -187,9 +227,8 @@ public final class RiseOfTheSixBrother extends NPC {
 		if (started) {
 			meleeSpecialIndex = (index + 1) % specialCount;
 			/*
-			 * The exact number of normal autos between RoTS specials is not yet
-			 * source-verified in this cache. Keep a short 3-5 auto gate so specials
-			 * do not chain back-to-back while the real rotation timing is verified.
+			 * Exact normal-auto spacing is still HYPOTHESIS. This short gate prevents
+			 * specials from chaining while classic cadence is being verified.
 			 */
 			meleeAutosUntilSpecial = 3 + Utils.random(3);
 		}
@@ -199,9 +238,9 @@ public final class RiseOfTheSixBrother extends NPC {
 	private int getImplementedMeleeSpecialCount() {
 		if (brother == Brother.DHAROK || brother == Brother.TORAG)
 			return 3;
-		if (brother == Brother.VERAC)
-			return 2;
 		if (brother == Brother.GUTHAN)
+			return 2;
+		if (brother == Brother.VERAC)
 			return 1;
 		return 0;
 	}
@@ -209,8 +248,9 @@ public final class RiseOfTheSixBrother extends NPC {
 	private void resetMeleeSpecialRotation(boolean forceHurricane) {
 		if (!isMeleeBrother())
 			return;
+		forceReviveHurricane = forceHurricane;
 		meleeAutosUntilSpecial = forceHurricane ? 0 : 3 + Utils.random(3);
-		meleeSpecialIndex = forceHurricane ? 0 : -1;
+		meleeSpecialIndex = -1;
 	}
 
 	@Override
@@ -266,7 +306,6 @@ public final class RiseOfTheSixBrother extends NPC {
 			}
 		}, 2);
 
-		// Donor behavior holds the charge for about eleven seconds total.
 		WorldTasksManager.schedule(new WorldTask() {
 			@Override
 			public void run() {
@@ -288,6 +327,9 @@ public final class RiseOfTheSixBrother extends NPC {
 		final Player victim = (Player) target;
 		if (!isValidSpecialTarget(victim))
 			return false;
+
+		if (instance != null)
+			instance.onToragWhackStarted(victim);
 
 		toragWhacking = true;
 		toragReleaseDamage = 0;
@@ -322,11 +364,6 @@ public final class RiseOfTheSixBrother extends NPC {
 			}
 		}, 4, 1);
 
-		/*
-		 * Safety release prevents a solo runtime test from being permanently
-		 * locked. The authentic teammate damage release remains authoritative;
-		 * exact natural timeout behavior is still a fidelity verification item.
-		 */
 		WorldTasksManager.schedule(new WorldTask() {
 			@Override
 			public void run() {
@@ -335,6 +372,197 @@ public final class RiseOfTheSixBrother extends NPC {
 			}
 		}, 18);
 		return true;
+	}
+
+	private boolean startGuthanImpale(Entity target) {
+		if (brother != Brother.GUTHAN || guthanSpearAway || isSpecialActive()
+				|| subdued || hasFinished() || !(target instanceof Player))
+			return false;
+
+		final Player primaryTarget = (Player) target;
+		if (!isValidSpecialTarget(primaryTarget))
+			return false;
+
+		final Player victim = selectGuthanImpaleVictim(primaryTarget);
+		if (victim == null)
+			return false;
+
+		guthanImpaleLaunching = true;
+		guthanSpearAway = true;
+		guthanRetrievingSpear = false;
+		guthanPrimaryTarget = primaryTarget;
+		guthanImpaleVictim = victim;
+		final int generation = ++guthanImpaleGeneration;
+
+		resetWalkSteps();
+		setCantFollowUnderCombat(true);
+		setForceFollowClose(false);
+		setNextFaceEntity(victim);
+		setNextAnimation(new Animation(GUTHAN_SPEAR_THROW_ANIMATION));
+
+		primaryTarget.getPackets().sendGameMessage("Guthan prepares to throw his spear!");
+		victim.getPackets().sendGameMessage("Guthan throws his spear at you!");
+
+		Projectile projectile = World.sendProjectileNew(this, victim, GUTHAN_SPEAR_PROJECTILE,
+				41, 25, 20, 1, 15, Utils.random(5));
+		setNextNPCTransformation(Brother.GUTHAN.getAlternateNpcId());
+		int impactDelay = Math.max(1, Utils.projectileTimeToCycles(projectile.getEndTime()));
+
+		WorldTasksManager.schedule(new WorldTask() {
+			@Override
+			public void run() {
+				if (!isCurrentGuthanImpale(victim, generation))
+					return;
+				if (!isValidImpaleVictim(victim)) {
+					clearGuthanImpale(false);
+					return;
+				}
+
+				guthanImpaleLaunching = false;
+				setCantFollowUnderCombat(false);
+				setForceFollowClose(true);
+				victim.lock(3);
+				victim.setNextAnimation(new Animation(GUTHAN_IMPALED_ANIMATION));
+				if (isValidSpecialTarget(primaryTarget))
+					setTarget(primaryTarget);
+				startGuthanBleedTask(victim, generation);
+			}
+		}, impactDelay);
+		return true;
+	}
+
+	private Player selectGuthanImpaleVictim(Player primaryTarget) {
+		if (instance == null)
+			return null;
+
+		Player selected = null;
+		int eligibleCount = 0;
+		for (Player player : instance.getPlayers()) {
+			if (player == null || player == primaryTarget || !isValidSpecialTarget(player)
+					|| player.getPlane() != getPlane())
+				continue;
+			eligibleCount++;
+			if (Utils.random(eligibleCount) == 0)
+				selected = player;
+		}
+
+		/*
+		 * Classic behavior prefers a non-primary player on Guthan's side. Side
+		 * ownership is not implemented yet; when no secondary victim exists the
+		 * documented fallback is to throw the spear at his current target.
+		 */
+		return selected != null ? selected : primaryTarget;
+	}
+
+	private void startGuthanBleedTask(final Player victim, final int generation) {
+		WorldTasksManager.schedule(new WorldTask() {
+			@Override
+			public void run() {
+				if (!isCurrentGuthanImpale(victim, generation)) {
+					stop();
+					return;
+				}
+				if (!isValidImpaleVictim(victim)) {
+					clearGuthanImpale(false);
+					stop();
+					return;
+				}
+				if (isWithinGuthanRetrieveRange(victim)) {
+					startGuthanSpearRetrieval(victim, generation);
+					stop();
+					return;
+				}
+
+				victim.setNextGraphics(new Graphics(GUTHAN_BLEED_GFX, 1, 120, 0, true));
+				victim.setNextGraphics(new Graphics(GUTHAN_BLEED_SECONDARY_GFX, 1, 100, 0, true));
+				int damage = GUTHAN_BLEED_MIN_DAMAGE
+						+ Utils.random(GUTHAN_BLEED_MAX_DAMAGE - GUTHAN_BLEED_MIN_DAMAGE + 1);
+				victim.applyHit(new Hit(RiseOfTheSixBrother.this, damage, HitLook.REGULAR_DAMAGE));
+			}
+		}, 1, 1);
+	}
+
+	private void startGuthanSpearRetrieval(final Player victim, final int generation) {
+		if (!isCurrentGuthanImpale(victim, generation) || guthanRetrievingSpear)
+			return;
+
+		guthanRetrievingSpear = true;
+		guthanImpaleLaunching = false;
+		resetWalkSteps();
+		setCantInteract(true);
+		setCantFollowUnderCombat(true);
+		setForceFollowClose(false);
+		setNextFaceEntity(victim);
+		victim.lock(4);
+
+		WorldTasksManager.schedule(new WorldTask() {
+			@Override
+			public void run() {
+				if (!isCurrentGuthanImpale(victim, generation))
+					return;
+				if (!isValidImpaleVictim(victim)) {
+					clearGuthanImpale(false);
+					return;
+				}
+				setNextAnimation(new Animation(GUTHAN_SPEAR_RETRIEVE_ANIMATION));
+				setNextNPCTransformation(Brother.GUTHAN.getNpcId());
+				victim.setNextAnimation(new Animation(GUTHAN_IMPALED_ANIMATION));
+			}
+		}, 1);
+
+		WorldTasksManager.schedule(new WorldTask() {
+			@Override
+			public void run() {
+				if (!isCurrentGuthanImpale(victim, generation))
+					return;
+				if (isValidImpaleVictim(victim))
+					victim.applyHit(new Hit(RiseOfTheSixBrother.this,
+							GUTHAN_RETRIEVE_DAMAGE, HitLook.REGULAR_DAMAGE));
+				clearGuthanImpale(true);
+			}
+		}, 2);
+	}
+
+	private boolean isWithinGuthanRetrieveRange(Player victim) {
+		return victim != null && victim.getPlane() == getPlane()
+				&& Math.abs(victim.getX() - getX()) <= GUTHAN_RETRIEVE_RANGE
+				&& Math.abs(victim.getY() - getY()) <= GUTHAN_RETRIEVE_RANGE;
+	}
+
+	private boolean isCurrentGuthanImpale(Player victim, int generation) {
+		return brother == Brother.GUTHAN && guthanSpearAway
+				&& guthanImpaleVictim == victim && guthanImpaleGeneration == generation
+				&& !subdued && !hasFinished();
+	}
+
+	private boolean isValidImpaleVictim(Player victim) {
+		return isValidSpecialTarget(victim) && victim.getPlane() == getPlane();
+	}
+
+	/**
+	 * Torag pummelling an impaled victim is a documented automatic spear-return
+	 * condition. The instance calls this hook when Whack begins.
+	 */
+	public void onPlayerPummeled(Player victim) {
+		if (brother == Brother.GUTHAN && guthanSpearAway && guthanImpaleVictim == victim)
+			clearGuthanImpale(true);
+	}
+
+	private void clearGuthanImpale(boolean retargetPrimary) {
+		Player primary = guthanPrimaryTarget;
+		guthanImpaleGeneration++;
+		guthanImpaleLaunching = false;
+		guthanSpearAway = false;
+		guthanRetrievingSpear = false;
+		guthanImpaleVictim = null;
+		guthanPrimaryTarget = null;
+		if (brother == Brother.GUTHAN && getId() != Brother.GUTHAN.getNpcId())
+			setNextNPCTransformation(Brother.GUTHAN.getNpcId());
+		setCantInteract(false);
+		setCantFollowUnderCombat(false);
+		setForceFollowClose(true);
+		if (retargetPrimary && isValidSpecialTarget(primary))
+			setTarget(primary);
 	}
 
 	private boolean startHurricane(Entity target) {
@@ -353,13 +581,6 @@ public final class RiseOfTheSixBrother extends NPC {
 		resetWalkSteps();
 		setCantFollowUnderCombat(true);
 		setForceFollowClose(false);
-
-		/*
-		 * Shared Hurricane behavior is verified-static, but the exact empowered
-		 * brother spin animation id is not yet established in this cache. Reuse
-		 * the brother's normal attack emote as a temporary visual rather than
-		 * inventing an animation id.
-		 */
 		setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
 
 		WorldTasksManager.schedule(new WorldTask() {
@@ -439,11 +660,6 @@ public final class RiseOfTheSixBrother extends NPC {
 			calcFollow(wallTile, true);
 		}
 
-		/*
-		 * The captured-tile 5x5 impact is verified-static. Exact wall anchors,
-		 * run-up animation and fling animation are still HYPOTHESIS, so Matrix3
-		 * pathing drives the run-to-edge / rush-back sequence without fake ids.
-		 */
 		WorldTasksManager.schedule(new WorldTask() {
 			private int tick;
 
@@ -523,11 +739,6 @@ public final class RiseOfTheSixBrother extends NPC {
 			return bestBlocked;
 		if (bestOpen != null && bestOpenDistance > 0)
 			return bestOpen;
-
-		/*
-		 * Extremely defensive fallback: remain on the current tile rather than
-		 * forcing an unclipped teleport if the copied arena gives no route.
-		 */
 		return new WorldTile(this);
 	}
 
@@ -590,6 +801,8 @@ public final class RiseOfTheSixBrother extends NPC {
 	}
 
 	private void resetSpecialState() {
+		forceReviveHurricane = false;
+
 		boolean wasDharokCharging = dharokCharging;
 		dharokCharging = false;
 		dharokStoredDamage = 0;
@@ -600,6 +813,10 @@ public final class RiseOfTheSixBrother extends NPC {
 
 		if (toragWhacking || toragVictim != null)
 			releaseToragVictim(false);
+
+		if (brother == Brother.GUTHAN && (guthanSpearAway || guthanImpaleLaunching
+				|| guthanRetrievingSpear || getId() == Brother.GUTHAN.getAlternateNpcId()))
+			clearGuthanImpale(false);
 
 		if (hurricaning || wallSlamming) {
 			hurricaning = false;
