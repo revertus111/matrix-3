@@ -25,10 +25,15 @@ public final class BossLabsDraftDefinition {
     public static final int TILE_EFFECT_HEAL_PLAYERS = 1;
     public static final int TILE_EFFECT_DAMAGE_BOSS = 2;
     public static final int TILE_EFFECT_HEAL_BOSS = 3;
+    public static final int PHASE_ACTION_PLAY_ANIMATION = 0;
+    public static final int PHASE_ACTION_PLAY_GRAPHIC = 1;
+    public static final int PHASE_ACTION_HEAL_BOSS = 2;
 
-    private static final int WIRE_VERSION = 6;
+    private static final int WIRE_VERSION = 7;
     private static final int MIN_WIRE_VERSION = 1;
     private static final int MAX_PHASES = 64;
+    private static final int MAX_PHASE_ACTIONS = 32;
+    private static final int MAX_PHASE_HEAL_AMOUNT = 1000000;
     private static final int MAX_ATTACKS_PER_PHASE = 256;
     private static final int MAX_PATTERN_TILES = 128;
     private static final int MAX_TILE_OFFSET = 16;
@@ -78,6 +83,12 @@ public final class BossLabsDraftDefinition {
                 return "Phase " + phase.id + " HP range must stay between 0 and 100.";
             if (phase.minimumHealthPercent > phase.maximumHealthPercent)
                 return "Phase " + phase.id + " minimum HP cannot exceed maximum HP.";
+            String phaseActionError = validatePhaseActions(phase.id, "entry", phase.entryActions);
+            if (phaseActionError != null)
+                return phaseActionError;
+            phaseActionError = validatePhaseActions(phase.id, "exit", phase.exitActions);
+            if (phaseActionError != null)
+                return phaseActionError;
             if (phase.attacks.isEmpty())
                 return "Phase " + phase.id + " needs at least one attack.";
 
@@ -147,6 +158,23 @@ public final class BossLabsDraftDefinition {
         return null;
     }
 
+    private String validatePhaseActions(String phaseId, String label, List<PhaseAction> actions) {
+        if (actions.size() > MAX_PHASE_ACTIONS)
+            return "Phase " + phaseId + " has too many " + label + " actions.";
+        for (PhaseAction action : actions) {
+            if (action == null || !isValidPhaseActionType(action.type))
+                return "Phase " + phaseId + " has an invalid " + label + " action.";
+            if ((action.type == PHASE_ACTION_PLAY_ANIMATION || action.type == PHASE_ACTION_PLAY_GRAPHIC)
+                    && action.value < 0)
+                return "Phase " + phaseId + " " + label + " animation/graphic IDs must be zero or greater.";
+            if (action.type == PHASE_ACTION_HEAL_BOSS
+                    && (action.value < 1 || action.value > MAX_PHASE_HEAL_AMOUNT))
+                return "Phase " + phaseId + " " + label + " heal must be between 1 and "
+                        + MAX_PHASE_HEAL_AMOUNT + ".";
+        }
+        return null;
+    }
+
     public String toPayload() {
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -160,6 +188,8 @@ public final class BossLabsDraftDefinition {
                 output.writeUTF(phase.id);
                 output.writeInt(phase.minimumHealthPercent);
                 output.writeInt(phase.maximumHealthPercent);
+                writePhaseActions(output, phase.entryActions);
+                writePhaseActions(output, phase.exitActions);
                 output.writeInt(phase.attacks.size());
                 for (Attack attack : phase.attacks) {
                     output.writeUTF(attack.id);
@@ -222,6 +252,10 @@ public final class BossLabsDraftDefinition {
             int phaseCount = readCount(input.readInt(), MAX_PHASES, "phase");
             for (int phaseIndex = 0; phaseIndex < phaseCount; phaseIndex++) {
                 Phase phase = new Phase(input.readUTF(), input.readInt(), input.readInt());
+                if (version >= 7) {
+                    readPhaseActions(input, phase.entryActions, "entry action");
+                    readPhaseActions(input, phase.exitActions, "exit action");
+                }
                 int attackCount = readCount(input.readInt(), MAX_ATTACKS_PER_PHASE, "attack");
                 for (int attackIndex = 0; attackIndex < attackCount; attackIndex++) {
                     String attackId = input.readUTF();
@@ -276,6 +310,21 @@ public final class BossLabsDraftDefinition {
         }
     }
 
+    private static void writePhaseActions(DataOutputStream output, List<PhaseAction> actions) throws IOException {
+        output.writeInt(actions.size());
+        for (PhaseAction action : actions) {
+            output.writeInt(action.type);
+            output.writeInt(action.value);
+        }
+    }
+
+    private static void readPhaseActions(DataInputStream input, List<PhaseAction> actions, String label)
+            throws IOException {
+        int count = readCount(input.readInt(), MAX_PHASE_ACTIONS, label);
+        for (int actionIndex = 0; actionIndex < count; actionIndex++)
+            actions.add(new PhaseAction(input.readInt(), input.readInt()));
+    }
+
     private static int readCount(int value, int maximum, String label) {
         if (value < 0 || value > maximum)
             throw new IllegalArgumentException("Invalid BossLabs " + label + " count: " + value);
@@ -286,6 +335,10 @@ public final class BossLabsDraftDefinition {
         return value >= TILE_EFFECT_DAMAGE_PLAYERS && value <= TILE_EFFECT_HEAL_BOSS;
     }
 
+    private static boolean isValidPhaseActionType(int value) {
+        return value >= PHASE_ACTION_PLAY_ANIMATION && value <= PHASE_ACTION_HEAL_BOSS;
+    }
+
     private static String safe(String value) {
         return value == null ? "" : value;
     }
@@ -294,6 +347,8 @@ public final class BossLabsDraftDefinition {
         private String id;
         private int minimumHealthPercent;
         private int maximumHealthPercent;
+        private final List<PhaseAction> entryActions = new ArrayList<PhaseAction>();
+        private final List<PhaseAction> exitActions = new ArrayList<PhaseAction>();
         private final List<Attack> attacks = new ArrayList<Attack>();
 
         public Phase(String id, int minimumHealthPercent, int maximumHealthPercent) {
@@ -308,12 +363,36 @@ public final class BossLabsDraftDefinition {
         public void setMinimumHealthPercent(int value) { minimumHealthPercent = value; }
         public int getMaximumHealthPercent() { return maximumHealthPercent; }
         public void setMaximumHealthPercent(int value) { maximumHealthPercent = value; }
+        public List<PhaseAction> getEntryActions() { return entryActions; }
+        public List<PhaseAction> getExitActions() { return exitActions; }
         public List<Attack> getAttacks() { return attacks; }
 
         @Override
         public String toString() {
             String label = id.trim().length() == 0 ? "Unnamed phase" : id;
-            return label + "  [" + minimumHealthPercent + "-" + maximumHealthPercent + "%]";
+            String actions = entryActions.isEmpty() && exitActions.isEmpty() ? ""
+                    : "  enter:" + entryActions.size() + " exit:" + exitActions.size();
+            return label + "  [" + minimumHealthPercent + "-" + maximumHealthPercent + "%]" + actions;
+        }
+    }
+
+    public static final class PhaseAction {
+        private int type;
+        private int value;
+
+        public PhaseAction(int type, int value) {
+            this.type = type;
+            this.value = value;
+        }
+
+        public int getType() { return type; }
+        public void setType(int value) { type = value; }
+        public int getValue() { return value; }
+        public void setValue(int value) { this.value = value; }
+
+        @Override
+        public String toString() {
+            return phaseActionName(type) + "  " + value;
         }
     }
 
@@ -448,6 +527,13 @@ public final class BossLabsDraftDefinition {
             TileOffset other = (TileOffset) object;
             return x == other.x && y == other.y;
         }
+    }
+
+    public static String phaseActionName(int actionType) {
+        if (actionType == PHASE_ACTION_PLAY_ANIMATION) return "Play animation";
+        if (actionType == PHASE_ACTION_PLAY_GRAPHIC) return "Play graphic";
+        if (actionType == PHASE_ACTION_HEAL_BOSS) return "Heal boss";
+        return "Unknown";
     }
 
     public static String tileEffectName(int effectType) {
