@@ -45,3 +45,10 @@
 - Added encounter-owned verified-static Throw pairing matrix: Guthan/Torag -> Ahrim/Karil/Verac, Verac -> Ahrim/Karil; Dharok is not treated as a Throw brother.
 - Actual Throw launches remain intentionally disabled until west/east side ownership exists, preventing invented cross-portal interactions.
 - Rewrote the RoTS fidelity README to distinguish implemented Impale/Throw coordination from remaining same-side, animation, timing, defensive-ability and Shadow Realm HYPOTHESIS items.
+- Added the full twenty-day RoTS brother rotation table to the encounter owner, anchored to the documented 2025-06-11 West Ahrim/Torag/Guthan vs East Karil/Dharok/Verac lineup.
+- Daily rotation now advances by UTC date so server host timezone does not change the RuneScape day boundary.
+- Added explicit WEST/EAST brother ownership and public side-query helpers for future arena mechanics.
+- Reused the six runtime-proven brother spawn tiles as three west and three east slots instead of introducing unverified arena coordinates; exact north/middle/south placement remains HYPOTHESIS.
+- Added temporary player side classification at the transformed midpoint between those proven slot groups.
+- Verified Throw pairing now rejects brothers on opposite active sides, and the Throw target finder returns only same-side eligible brothers.
+- Actual Throw flight/landing remains intentionally dormant until exact animation/trajectory/timing/damage evidence is established.
