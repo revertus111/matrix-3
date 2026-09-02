@@ -17,7 +17,7 @@ import java.util.List;
  */
 public final class BossLabsDefinitionWireCodec {
 
-	private static final int VERSION = 5;
+	private static final int VERSION = 6;
 	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_PHASES = 64;
 	private static final int MAX_ATTACKS_PER_PHASE = 256;
@@ -68,6 +68,8 @@ public final class BossLabsDefinitionWireCodec {
 					output.writeInt(attack.getRotationWeight());
 					output.writeInt(attack.getCooldownAttacks());
 					output.writeBoolean(attack.isImmediateRepeatAllowed());
+					output.writeInt(attack.getImpactTileEffectType());
+					output.writeInt(attack.getHazardTileEffectType());
 				}
 			}
 			output.flush();
@@ -162,10 +164,21 @@ public final class BossLabsDefinitionWireCodec {
 					int rotationWeight = input.readInt();
 					int cooldownAttacks = input.readInt();
 					boolean allowImmediateRepeat = input.readBoolean();
+					if (version == 5) {
+						attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
+								maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
+								hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride,
+								targetMode, targetRange, rotationWeight, cooldownAttacks, allowImmediateRepeat));
+						continue;
+					}
+
+					int impactTileEffectType = input.readInt();
+					int hazardTileEffectType = input.readInt();
 					attacks.add(new BossAttackDefinition(attackId, combatStyle, animationId, graphicId, projectileId,
 							maxHitOverride, combatDelayOverride, telegraphGraphicId, impactGraphicId, telegraphTicks, pattern,
 							hazardGraphicId, hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride,
-							targetMode, targetRange, rotationWeight, cooldownAttacks, allowImmediateRepeat));
+							targetMode, targetRange, rotationWeight, cooldownAttacks, allowImmediateRepeat,
+							impactTileEffectType, hazardTileEffectType));
 				}
 				phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
 			}
