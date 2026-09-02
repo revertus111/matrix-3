@@ -11,6 +11,8 @@ import java.util.WeakHashMap;
 import com.rs.game.Animation;
 import com.rs.game.Entity;
 import com.rs.game.Graphics;
+import com.rs.game.Hit;
+import com.rs.game.Hit.HitLook;
 import com.rs.game.World;
 import com.rs.game.WorldTile;
 import com.rs.game.npc.NPC;
@@ -233,11 +235,8 @@ public final class BossCombatScript extends CombatScript {
 				World.sendGraphics(npc, new Graphics(attack.getImpactGraphicId()), tile);
 		}
 
-		for (Player player : World.getPlayers()) {
-			if (!isEligiblePatternPlayer(player, tiles))
-				continue;
-			applyPatternHit(npc, attack, player, attack.getMaxHitOverride(), attack.usesNpcMaxHit());
-		}
+		applyTileEffect(npc, attack, tiles, attack.getImpactTileEffectType(),
+				attack.getMaxHitOverride(), attack.usesNpcMaxHit());
 
 		if (attack.hasLingeringHazard())
 			startLingeringHazard(npc, attack, tiles);
@@ -272,16 +271,54 @@ public final class BossCombatScript extends CombatScript {
 						World.sendGraphics(npc, new Graphics(attack.getHazardGraphicId()), tile);
 				}
 
-				for (Player player : World.getPlayers()) {
-					if (!isEligiblePatternPlayer(player, tiles))
-						continue;
-					applyPatternHit(npc, attack, player, attack.getHazardMaxHitOverride(), attack.usesNpcHazardMaxHit());
-				}
+				applyTileEffect(npc, attack, tiles, attack.getHazardTileEffectType(),
+						attack.getHazardMaxHitOverride(), attack.usesNpcHazardMaxHit());
 
 				if (elapsedTicks >= duration)
 					stop();
 			}
 		}, interval - 1, interval - 1);
+	}
+
+	private void applyTileEffect(NPC npc, BossAttackDefinition attack, List<WorldTile> tiles,
+			int effectType, int amountOverride, boolean useNpcMaxHit) {
+		if (effectType == BossAttackDefinition.TILE_EFFECT_DAMAGE_PLAYERS) {
+			for (Player player : World.getPlayers()) {
+				if (!isEligiblePatternPlayer(player, tiles))
+					continue;
+				applyPatternHit(npc, attack, player, amountOverride, useNpcMaxHit);
+			}
+			return;
+		}
+
+		int amount = resolveTileEffectAmount(npc, attack, amountOverride, useNpcMaxHit);
+		if (amount <= 0)
+			return;
+
+		if (effectType == BossAttackDefinition.TILE_EFFECT_HEAL_PLAYERS) {
+			for (Player player : World.getPlayers()) {
+				if (!isEligiblePatternPlayer(player, tiles))
+					continue;
+				player.heal(amount, 0, 0, true);
+			}
+			return;
+		}
+
+		if (!occupiesPatternTile(npc, tiles))
+			return;
+
+		if (effectType == BossAttackDefinition.TILE_EFFECT_DAMAGE_BOSS) {
+			// Self-sourced environmental damage keeps Matrix3's hit/death pipeline
+			// non-null without adding artificial player damage ownership.
+			npc.applyHit(new Hit(npc, amount, HitLook.REGULAR_DAMAGE));
+		} else if (effectType == BossAttackDefinition.TILE_EFFECT_HEAL_BOSS) {
+			npc.heal(amount, 0, 0, true);
+		}
+	}
+
+	private int resolveTileEffectAmount(NPC npc, BossAttackDefinition attack,
+			int amountOverride, boolean useNpcMaxHit) {
+		return Math.max(0, useNpcMaxHit ? npc.getMaxHit(attack.getCombatStyle()) : amountOverride);
 	}
 
 	private boolean isEligiblePatternPlayer(Player player, List<WorldTile> tiles) {
@@ -302,9 +339,12 @@ public final class BossCombatScript extends CombatScript {
 			delayHit(npc, 0, player, getMagicHit(npc, damage));
 	}
 
-	private boolean occupiesPatternTile(Player player, List<WorldTile> tiles) {
+	private boolean occupiesPatternTile(Entity entity, List<WorldTile> tiles) {
 		for (WorldTile tile : tiles) {
-			if (player.matches(tile))
+			if (entity.getPlane() != tile.getPlane())
+				continue;
+			if (Utils.isOnRange(entity.getX(), entity.getY(), entity.getSize(),
+					tile.getX(), tile.getY(), 1, 0))
 				return true;
 		}
 		return false;
