@@ -56,6 +56,10 @@ public final class BossCombatScript extends CombatScript {
 		if (phase == null)
 			return npc.getAttackSpeed();
 
+		BossEncounterContext encounter = BossEncounterRuntime.getOrCreate(npc);
+		if (target instanceof Player)
+			encounter.registerParticipant((Player) target);
+
 		BossAttackDefinition attack = selectAttack(npc, definition, phase);
 		if (attack == null)
 			return npc.getAttackSpeed();
@@ -63,7 +67,9 @@ public final class BossCombatScript extends CombatScript {
 		Entity resolvedTarget = resolveAttackTarget(npc, target, attack);
 		if (resolvedTarget == null)
 			return npc.getAttackSpeed();
-		return executeAttack(npc, resolvedTarget, attack);
+		if (resolvedTarget instanceof Player)
+			encounter.registerParticipant((Player) resolvedTarget);
+		return executeAttack(npc, resolvedTarget, attack, encounter);
 	}
 
 	private BossAttackDefinition selectAttack(NPC npc, BossDefinition definition, BossPhaseDefinition phase) {
@@ -192,9 +198,9 @@ public final class BossCombatScript extends CombatScript {
 				&& player.withinDistance(npc, range);
 	}
 
-	private int executeAttack(NPC npc, Entity target, BossAttackDefinition attack) {
+	private int executeAttack(NPC npc, Entity target, BossAttackDefinition attack, BossEncounterContext encounter) {
 		if (attack.hasTilePattern())
-			return executeTileAttack(npc, target, attack);
+			return executeTileAttack(npc, target, attack, encounter);
 		return executeSingleTargetAttack(npc, target, attack);
 	}
 
@@ -226,7 +232,8 @@ public final class BossCombatScript extends CombatScript {
 		return resolveCombatDelay(npc, attack);
 	}
 
-	private int executeTileAttack(final NPC npc, Entity target, final BossAttackDefinition attack) {
+	private int executeTileAttack(final NPC npc, Entity target, final BossAttackDefinition attack,
+			final BossEncounterContext encounter) {
 		NPCCombatDefinitions defs = npc.getCombatDefinitions();
 		int animationId = resolveAnimation(defs, attack);
 		int graphicId = resolveGraphic(defs, attack);
@@ -243,35 +250,44 @@ public final class BossCombatScript extends CombatScript {
 		}
 
 		if (attack.getTelegraphTicks() == 0) {
-			impactTileAttack(npc, attack, tiles);
+			impactTileAttack(npc, attack, tiles, encounter);
 		} else {
-			WorldTasksManager.schedule(new WorldTask() {
+			final long generation = encounter.getGeneration();
+			WorldTask impactTask = new WorldTask() {
 				@Override
 				public void run() {
-					if (npc.hasFinished() || npc.isDead())
+					encounter.untrackTask(this);
+					if (!encounter.isGenerationActive(generation) || npc.hasFinished() || npc.isDead()) {
+						stop();
 						return;
-					impactTileAttack(npc, attack, tiles);
+					}
+					impactTileAttack(npc, attack, tiles, encounter);
+					stop();
 				}
-			}, Math.max(0, attack.getTelegraphTicks() - 1));
+			};
+			encounter.trackTask(impactTask);
+			WorldTasksManager.schedule(impactTask, Math.max(0, attack.getTelegraphTicks() - 1));
 		}
 
 		return Math.max(resolveCombatDelay(npc, attack), attack.getTelegraphTicks() + 1);
 	}
 
-	private void impactTileAttack(NPC npc, BossAttackDefinition attack, List<WorldTile> tiles) {
+	private void impactTileAttack(NPC npc, BossAttackDefinition attack, List<WorldTile> tiles,
+			BossEncounterContext encounter) {
 		if (attack.getImpactGraphicId() != -1) {
 			for (WorldTile tile : tiles)
 				World.sendGraphics(npc, new Graphics(attack.getImpactGraphicId()), tile);
 		}
 
 		applyTileEffect(npc, attack, tiles, attack.getImpactTileEffectType(),
-				attack.getMaxHitOverride(), attack.usesNpcMaxHit());
+				attack.getMaxHitOverride(), attack.usesNpcMaxHit(), encounter);
 
 		if (attack.hasLingeringHazard())
-			startLingeringHazard(npc, attack, tiles);
+			startLingeringHazard(npc, attack, tiles, encounter);
 	}
 
-	private void startLingeringHazard(final NPC npc, final BossAttackDefinition attack, final List<WorldTile> tiles) {
+	private void startLingeringHazard(final NPC npc, final BossAttackDefinition attack,
+			final List<WorldTile> tiles, final BossEncounterContext encounter) {
 		if (attack.getHazardGraphicId() != -1) {
 			for (WorldTile tile : tiles)
 				World.sendGraphics(npc, new Graphics(attack.getHazardGraphicId()), tile);
@@ -279,18 +295,21 @@ public final class BossCombatScript extends CombatScript {
 
 		final int duration = attack.getHazardDurationTicks();
 		final int interval = attack.getHazardTickInterval();
-		WorldTasksManager.schedule(new WorldTask() {
+		final long generation = encounter.getGeneration();
+		WorldTask hazardTask = new WorldTask() {
 			private int elapsedTicks;
 
 			@Override
 			public void run() {
-				if (npc.hasFinished() || npc.isDead()) {
+				if (!encounter.isGenerationActive(generation) || npc.hasFinished() || npc.isDead()) {
+					encounter.untrackTask(this);
 					stop();
 					return;
 				}
 
 				elapsedTicks += interval;
 				if (elapsedTicks > duration) {
+					encounter.untrackTask(this);
 					stop();
 					return;
 				}
@@ -301,20 +320,25 @@ public final class BossCombatScript extends CombatScript {
 				}
 
 				applyTileEffect(npc, attack, tiles, attack.getHazardTileEffectType(),
-						attack.getHazardMaxHitOverride(), attack.usesNpcHazardMaxHit());
+						attack.getHazardMaxHitOverride(), attack.usesNpcHazardMaxHit(), encounter);
 
-				if (elapsedTicks >= duration)
+				if (elapsedTicks >= duration) {
+					encounter.untrackTask(this);
 					stop();
+				}
 			}
-		}, interval - 1, interval - 1);
+		};
+		encounter.trackTask(hazardTask);
+		WorldTasksManager.schedule(hazardTask, interval - 1, interval - 1);
 	}
 
 	private void applyTileEffect(NPC npc, BossAttackDefinition attack, List<WorldTile> tiles,
-			int effectType, int amountOverride, boolean useNpcMaxHit) {
+			int effectType, int amountOverride, boolean useNpcMaxHit, BossEncounterContext encounter) {
 		if (effectType == BossAttackDefinition.TILE_EFFECT_DAMAGE_PLAYERS) {
 			for (Player player : World.getPlayers()) {
 				if (!isEligiblePatternPlayer(player, tiles))
 					continue;
+				encounter.registerParticipant(player);
 				applyPatternHit(npc, attack, player, amountOverride, useNpcMaxHit);
 			}
 			return;
@@ -328,6 +352,7 @@ public final class BossCombatScript extends CombatScript {
 			for (Player player : World.getPlayers()) {
 				if (!isEligiblePatternPlayer(player, tiles))
 					continue;
+				encounter.registerParticipant(player);
 				player.heal(amount, 0, 0, true);
 			}
 			return;
@@ -378,7 +403,7 @@ public final class BossCombatScript extends CombatScript {
 	}
 
 	private List<WorldTile> resolvePatternTiles(WorldTile origin, List<BossTileOffset> pattern) {
-		List<WorldTile> tiles = new ArrayList<WorldTile>(pattern.size());
+		List<WorldTile> tiles = new ArrayList<BossTileOffset>(pattern.size());
 		for (BossTileOffset offset : pattern)
 			tiles.add(origin.transform(offset.getX(), offset.getY(), 0));
 		return tiles;
