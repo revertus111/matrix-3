@@ -30,3 +30,9 @@
 - Added cleanup restoration for movement-special state and Dharok charge follow state so death/revive/instance destruction cannot leave stale movement flags.
 - Corrected the fidelity checklist: Guthan has Hurricane but is not a Wall Slam brother; Wall Slam is assigned to Dharok, Torag and Verac.
 - Exact Hurricane spin animation/GFX, exact Hurricane radius/damage distribution, exact Wall Slam wall anchors/run-up animations, and the current 3-5 auto spacing remain HYPOTHESIS pending runtime/cache evidence.
+- Expanded the RoTS README with one brother-by-brother toolkit map covering Dharok, Torag, Guthan, Verac, Ahrim and Karil.
+- Documented the fidelity evidence ladder: RuneScape encounter behavior evidence -> Matrix-family donor asset candidates -> revision-830 cache verification -> Matrix3 runtime verification.
+- Documented the known current mismatch that Verac should not use ordinary Hurricane in his normal rotation; his normal tracking/spinning mechanic is Deathcopter, while forced Hurricane remains part of shared post-revival melee behavior.
+- Added a shared Throw interaction model so future implementation does not invent a universal per-NPC throw mechanic or blindly trust donor pairings.
+- Added the intended Guthan Impale spear-ownership lifecycle, including alternate NPC id 18542, spear-absent combat state, repeated bleed pressure, return-to-Guthan retrieval, retrieval damage evidence, and mandatory cleanup cases.
+- Clarified that exact Throw pairings, Guthan victim-selection priority, Impale timings/damage values, Deathcopter throw interception, and related animations remain fidelity verification items rather than assumed facts.
