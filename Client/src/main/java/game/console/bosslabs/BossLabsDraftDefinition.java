@@ -21,8 +21,12 @@ public final class BossLabsDraftDefinition {
 
     public static final int TARGET_CURRENT = 0;
     public static final int TARGET_RANDOM_NEARBY_PLAYER = 1;
+    public static final int TILE_EFFECT_DAMAGE_PLAYERS = 0;
+    public static final int TILE_EFFECT_HEAL_PLAYERS = 1;
+    public static final int TILE_EFFECT_DAMAGE_BOSS = 2;
+    public static final int TILE_EFFECT_HEAL_BOSS = 3;
 
-    private static final int WIRE_VERSION = 5;
+    private static final int WIRE_VERSION = 6;
     private static final int MIN_WIRE_VERSION = 1;
     private static final int MAX_PHASES = 64;
     private static final int MAX_ATTACKS_PER_PHASE = 256;
@@ -91,8 +95,12 @@ public final class BossLabsDraftDefinition {
                     return "Attack " + attack.id + " weight must be between 1 and " + MAX_ROTATION_WEIGHT + ".";
                 if (attack.cooldownAttacks < 0 || attack.cooldownAttacks > MAX_COOLDOWN_ATTACKS)
                     return "Attack " + attack.id + " cooldown turns must be between 0 and " + MAX_COOLDOWN_ATTACKS + ".";
+                if (!isValidTileEffectType(attack.impactTileEffectType))
+                    return "Attack " + attack.id + " has an invalid impact tile effect.";
+                if (!isValidTileEffectType(attack.hazardTileEffectType))
+                    return "Attack " + attack.id + " has an invalid hazard tile effect.";
                 if (attack.maxHitOverride < -1)
-                    return "Attack " + attack.id + " max hit must be -1 or greater.";
+                    return "Attack " + attack.id + " impact amount/max hit must be -1 or greater.";
                 if (attack.combatDelayOverride < -1)
                     return "Attack " + attack.id + " combat delay must be -1 or greater.";
                 if (attack.telegraphGraphicId < -1 || attack.impactGraphicId < -1)
@@ -106,7 +114,7 @@ public final class BossLabsDraftDefinition {
                 if (attack.hazardTickInterval < 1 || attack.hazardTickInterval > MAX_HAZARD_TICK_INTERVAL)
                     return "Attack " + attack.id + " hazard interval must be between 1 and " + MAX_HAZARD_TICK_INTERVAL + " ticks.";
                 if (attack.hazardMaxHitOverride < -1)
-                    return "Attack " + attack.id + " hazard max hit must be -1 or greater.";
+                    return "Attack " + attack.id + " hazard amount/max hit must be -1 or greater.";
                 if (attack.hazardDurationTicks > 0 && attack.hazardTickInterval > attack.hazardDurationTicks)
                     return "Attack " + attack.id + " hazard interval cannot exceed its duration.";
                 if (attack.tilePattern.size() > MAX_PATTERN_TILES)
@@ -122,6 +130,8 @@ public final class BossLabsDraftDefinition {
                 }
                 if (attack.hazardDurationTicks > 0 && attack.tilePattern.isEmpty())
                     return "Attack " + attack.id + " needs painted tiles before a lingering hazard can be enabled.";
+                if (attack.impactTileEffectType != TILE_EFFECT_DAMAGE_PLAYERS && attack.tilePattern.isEmpty())
+                    return "Attack " + attack.id + " needs painted tiles before a non-default impact tile effect can be enabled.";
             }
         }
 
@@ -176,6 +186,8 @@ public final class BossLabsDraftDefinition {
                     output.writeInt(attack.rotationWeight);
                     output.writeInt(attack.cooldownAttacks);
                     output.writeBoolean(attack.allowImmediateRepeat);
+                    output.writeInt(attack.impactTileEffectType);
+                    output.writeInt(attack.hazardTileEffectType);
                 }
             }
             output.flush();
@@ -248,6 +260,10 @@ public final class BossLabsDraftDefinition {
                         attack.cooldownAttacks = input.readInt();
                         attack.allowImmediateRepeat = input.readBoolean();
                     }
+                    if (version >= 6) {
+                        attack.impactTileEffectType = input.readInt();
+                        attack.hazardTileEffectType = input.readInt();
+                    }
                     phase.attacks.add(attack);
                 }
                 definition.phases.add(phase);
@@ -264,6 +280,10 @@ public final class BossLabsDraftDefinition {
         if (value < 0 || value > maximum)
             throw new IllegalArgumentException("Invalid BossLabs " + label + " count: " + value);
         return value;
+    }
+
+    private static boolean isValidTileEffectType(int value) {
+        return value >= TILE_EFFECT_DAMAGE_PLAYERS && value <= TILE_EFFECT_HEAL_BOSS;
     }
 
     private static String safe(String value) {
@@ -318,6 +338,8 @@ public final class BossLabsDraftDefinition {
         private int rotationWeight = 1;
         private int cooldownAttacks;
         private boolean allowImmediateRepeat = true;
+        private int impactTileEffectType = TILE_EFFECT_DAMAGE_PLAYERS;
+        private int hazardTileEffectType = TILE_EFFECT_DAMAGE_PLAYERS;
 
         public Attack(String id, int combatStyle, int animationId, int graphicId, int projectileId,
                 int maxHitOverride, int combatDelayOverride) {
@@ -379,6 +401,10 @@ public final class BossLabsDraftDefinition {
         public void setCooldownAttacks(int value) { cooldownAttacks = value; }
         public boolean isImmediateRepeatAllowed() { return allowImmediateRepeat; }
         public void setImmediateRepeatAllowed(boolean value) { allowImmediateRepeat = value; }
+        public int getImpactTileEffectType() { return impactTileEffectType; }
+        public void setImpactTileEffectType(int value) { impactTileEffectType = value; }
+        public int getHazardTileEffectType() { return hazardTileEffectType; }
+        public void setHazardTileEffectType(int value) { hazardTileEffectType = value; }
 
         @Override
         public String toString() {
@@ -388,7 +414,11 @@ public final class BossLabsDraftDefinition {
             String targeting = targetMode == TARGET_RANDOM_NEARBY_PLAYER ? "  random target" : "";
             String rotation = "  w" + rotationWeight + (cooldownAttacks > 0 ? " cd" + cooldownAttacks : "")
                     + (allowImmediateRepeat ? "" : " no-repeat");
-            return label + "  [" + styleName(combatStyle) + "]" + area + hazard + targeting + rotation;
+            String effects = impactTileEffectType == TILE_EFFECT_DAMAGE_PLAYERS ? ""
+                    : "  impact:" + tileEffectName(impactTileEffectType);
+            if (hazardDurationTicks > 0 && hazardTileEffectType != TILE_EFFECT_DAMAGE_PLAYERS)
+                effects += "  hazard:" + tileEffectName(hazardTileEffectType);
+            return label + "  [" + styleName(combatStyle) + "]" + area + hazard + targeting + rotation + effects;
         }
     }
 
@@ -418,6 +448,14 @@ public final class BossLabsDraftDefinition {
             TileOffset other = (TileOffset) object;
             return x == other.x && y == other.y;
         }
+    }
+
+    public static String tileEffectName(int effectType) {
+        if (effectType == TILE_EFFECT_DAMAGE_PLAYERS) return "Damage players";
+        if (effectType == TILE_EFFECT_HEAL_PLAYERS) return "Heal players";
+        if (effectType == TILE_EFFECT_DAMAGE_BOSS) return "Damage boss";
+        if (effectType == TILE_EFFECT_HEAL_BOSS) return "Heal boss";
+        return "Unknown";
     }
 
     public static String styleName(int style) {
