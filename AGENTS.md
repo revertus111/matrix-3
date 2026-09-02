@@ -62,6 +62,7 @@ Read `docs/rs3/PROJECT.md` before changing code. Also read the relevant `docs/<s
 - Add/update a subject test list when runtime behavior changes.
 - Run or request the relevant portion of `docs/rs3/SMOKE_TEST.md` after meaningful core changes. Cache/loading, object, networking, persistence, or broad engine changes require the full smoke test unless clearly unnecessary.
 - `docs/rs3/BASELINE.md` is the known-good reference point. Do not silently redefine it after regressions.
+- After every completed patch, include a concise status update in the chat showing the current subject/project progression. For phased tools or features, include an Area/Status table using `✅ Complete`, `🟡 Foundation`, `🔵 In Progress`, `⚠️ Needs runtime verification`, and `❌ Not started` where applicable. Keep the status aligned with the repository's actual implementation state.
 
 ## Priority discipline
 
