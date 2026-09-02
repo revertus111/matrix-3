@@ -78,10 +78,13 @@ public final class BossCombatScript extends CombatScript {
 
 		synchronized (state) {
 			if (state.definition != definition || state.phase != phase) {
+				boolean hasTransitionActions = (state.phase != null && !state.phase.getExitActions().isEmpty())
+						|| !phase.getEntryActions().isEmpty();
 				transitionPhase(npc, state, definition, phase);
-				// Reserve this normal NPC attack opportunity for the transition so
-				// entry/exit animation and graphics are not overwritten immediately.
-				return null;
+				// Only authored transition presentation consumes an attack opportunity.
+				// Empty legacy phase action lists preserve the previous combat timing.
+				if (hasTransitionActions)
+					return null;
 			}
 
 			List<BossAttackDefinition> ready = new ArrayList<BossAttackDefinition>();
