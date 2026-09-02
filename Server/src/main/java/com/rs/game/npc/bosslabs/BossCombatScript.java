@@ -71,14 +71,17 @@ public final class BossCombatScript extends CombatScript {
 		synchronized (ROTATION_STATES) {
 			state = ROTATION_STATES.get(npc);
 			if (state == null) {
-				state = new RotationState(definition, phase);
+				state = new RotationState();
 				ROTATION_STATES.put(npc, state);
 			}
 		}
 
 		synchronized (state) {
-			if (state.definition != definition || state.phase != phase)
-				state.reset(definition, phase);
+			if (state.definition != definition || state.phase != phase) {
+				transitionPhase(npc, state, definition, phase);
+				if (npc.hasFinished() || npc.isDead())
+					return null;
+			}
 
 			List<BossAttackDefinition> ready = new ArrayList<BossAttackDefinition>();
 			for (BossAttackDefinition attack : phase.getAttacks()) {
@@ -109,6 +112,30 @@ public final class BossCombatScript extends CombatScript {
 			if (selected.getCooldownAttacks() > 0)
 				state.cooldowns.put(selected, Integer.valueOf(selected.getCooldownAttacks()));
 			return selected;
+		}
+	}
+
+	private void transitionPhase(NPC npc, RotationState state, BossDefinition definition, BossPhaseDefinition phase) {
+		BossPhaseDefinition previousPhase = state.phase;
+		if (previousPhase != null)
+			executePhaseActions(npc, previousPhase.getExitActions());
+
+		state.reset(definition, phase);
+		if (!npc.hasFinished() && !npc.isDead())
+			executePhaseActions(npc, phase.getEntryActions());
+	}
+
+	private void executePhaseActions(NPC npc, List<BossPhaseActionDefinition> actions) {
+		for (BossPhaseActionDefinition action : actions) {
+			if (npc.hasFinished() || npc.isDead())
+				return;
+			if (action.getType() == BossPhaseActionDefinition.PLAY_ANIMATION) {
+				npc.setNextAnimation(new Animation(action.getValue()));
+			} else if (action.getType() == BossPhaseActionDefinition.PLAY_GRAPHIC) {
+				npc.setNextGraphics(new Graphics(action.getValue()));
+			} else if (action.getType() == BossPhaseActionDefinition.HEAL_BOSS) {
+				npc.heal(action.getValue(), 0, 0, true);
+			}
 		}
 	}
 
@@ -153,8 +180,6 @@ public final class BossCombatScript extends CombatScript {
 		if (!alternatePlayers.isEmpty())
 			return alternatePlayers.get(Utils.random(alternatePlayers.size()));
 
-		// Solo fights and encounters with no other eligible player retain the
-		// authoritative NPCCombat target instead of cancelling the attack.
 		return currentTarget;
 	}
 
@@ -308,8 +333,6 @@ public final class BossCombatScript extends CombatScript {
 			return;
 
 		if (effectType == BossAttackDefinition.TILE_EFFECT_DAMAGE_BOSS) {
-			// Self-sourced environmental damage keeps Matrix3's hit/death pipeline
-			// non-null without adding artificial player damage ownership.
 			npc.applyHit(new Hit(npc, amount, HitLook.REGULAR_DAMAGE));
 		} else if (effectType == BossAttackDefinition.TILE_EFFECT_HEAL_BOSS) {
 			npc.heal(amount, 0, 0, true);
@@ -389,10 +412,6 @@ public final class BossCombatScript extends CombatScript {
 		private BossAttackDefinition lastAttack;
 		private final Map<BossAttackDefinition, Integer> cooldowns =
 				new HashMap<BossAttackDefinition, Integer>();
-
-		private RotationState(BossDefinition definition, BossPhaseDefinition phase) {
-			reset(definition, phase);
-		}
 
 		private void reset(BossDefinition definition, BossPhaseDefinition phase) {
 			this.definition = definition;
