@@ -17,9 +17,10 @@ import java.util.List;
  */
 public final class BossLabsDefinitionWireCodec {
 
-	private static final int VERSION = 6;
+	private static final int VERSION = 7;
 	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_PHASES = 64;
+	private static final int MAX_PHASE_ACTIONS = 32;
 	private static final int MAX_ATTACKS_PER_PHASE = 256;
 	private static final int MAX_PATTERN_TILES = 128;
 	private static final int MAX_WIRE_BYTES = 16384;
@@ -42,6 +43,8 @@ public final class BossLabsDefinitionWireCodec {
 				output.writeUTF(phase.getId());
 				output.writeInt(phase.getMinimumHealthPercent());
 				output.writeInt(phase.getMaximumHealthPercent());
+				writePhaseActions(output, phase.getEntryActions());
+				writePhaseActions(output, phase.getExitActions());
 				output.writeInt(phase.getAttacks().size());
 				for (BossAttackDefinition attack : phase.getAttacks()) {
 					output.writeUTF(attack.getId());
@@ -110,6 +113,12 @@ public final class BossLabsDefinitionWireCodec {
 				String phaseId = input.readUTF();
 				int minimumHealthPercent = input.readInt();
 				int maximumHealthPercent = input.readInt();
+				List<BossPhaseActionDefinition> entryActions = new ArrayList<BossPhaseActionDefinition>();
+				List<BossPhaseActionDefinition> exitActions = new ArrayList<BossPhaseActionDefinition>();
+				if (version >= 7) {
+					readPhaseActions(input, entryActions, "entry action");
+					readPhaseActions(input, exitActions, "exit action");
+				}
 				int attackCount = readCount(input.readInt(), MAX_ATTACKS_PER_PHASE, "attack");
 				List<BossAttackDefinition> attacks = new ArrayList<BossAttackDefinition>(attackCount);
 				for (int attackIndex = 0; attackIndex < attackCount; attackIndex++) {
@@ -180,7 +189,8 @@ public final class BossLabsDefinitionWireCodec {
 							targetMode, targetRange, rotationWeight, cooldownAttacks, allowImmediateRepeat,
 							impactTileEffectType, hazardTileEffectType));
 				}
-				phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent, attacks));
+				phases.add(new BossPhaseDefinition(phaseId, minimumHealthPercent, maximumHealthPercent,
+						entryActions, exitActions, attacks));
 			}
 			if (input.available() != 0)
 				throw new IllegalArgumentException("BossLabs definition payload has trailing data.");
@@ -188,6 +198,22 @@ public final class BossLabsDefinitionWireCodec {
 		} catch (IOException e) {
 			throw new IllegalArgumentException("BossLabs definition payload ended unexpectedly.", e);
 		}
+	}
+
+	private static void writePhaseActions(DataOutputStream output, List<BossPhaseActionDefinition> actions)
+			throws IOException {
+		output.writeInt(actions.size());
+		for (BossPhaseActionDefinition action : actions) {
+			output.writeInt(action.getType());
+			output.writeInt(action.getValue());
+		}
+	}
+
+	private static void readPhaseActions(DataInputStream input, List<BossPhaseActionDefinition> actions,
+			String label) throws IOException {
+		int count = readCount(input.readInt(), MAX_PHASE_ACTIONS, label);
+		for (int actionIndex = 0; actionIndex < count; actionIndex++)
+			actions.add(new BossPhaseActionDefinition(input.readInt(), input.readInt()));
 	}
 
 	private static int readCount(int value, int maximum, String label) {
