@@ -54,8 +54,9 @@ public class Class567 implements Interface67 {
 					break;
 				}
 			}
-		} else
+		} else {
 			bool = false;
+		}
 		if (!bool) {
 			try {
 				FileOutputStream fileoutputstream = new FileOutputStream(file);

@@ -1,0 +1,3 @@
+2026-09-02
+- Normalized the decompiled Class567 byte-comparison branch with explicit braces to eliminate the malformed local `elseNNB`/duplicate-`bool` Eclipse parser state after restore/pull.
+- No client runtime behavior changed; this is a Java 8/Eclipse compile-source repair only.
