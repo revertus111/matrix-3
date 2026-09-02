@@ -20,6 +20,10 @@ public final class BossAttackDefinition {
 	public static final int USE_NPC_DEFAULT = -1;
 	public static final int TARGET_CURRENT = 0;
 	public static final int TARGET_RANDOM_NEARBY_PLAYER = 1;
+	public static final int TILE_EFFECT_DAMAGE_PLAYERS = 0;
+	public static final int TILE_EFFECT_HEAL_PLAYERS = 1;
+	public static final int TILE_EFFECT_DAMAGE_BOSS = 2;
+	public static final int TILE_EFFECT_HEAL_BOSS = 3;
 	public static final int MAX_TARGET_RANGE = 32;
 	public static final int MAX_PATTERN_TILES = 128;
 	public static final int MAX_TELEGRAPH_TICKS = 50;
@@ -48,6 +52,8 @@ public final class BossAttackDefinition {
 	private final int rotationWeight;
 	private final int cooldownAttacks;
 	private final boolean allowImmediateRepeat;
+	private final int impactTileEffectType;
+	private final int hazardTileEffectType;
 
 	public BossAttackDefinition(String id, int combatStyle, int animationId, int graphicId, int projectileId,
 			int maxHitOverride, int combatDelayOverride) {
@@ -88,6 +94,19 @@ public final class BossAttackDefinition {
 			int hazardDurationTicks, int hazardTickInterval, int hazardMaxHitOverride,
 			int targetMode, int targetRange, int rotationWeight, int cooldownAttacks,
 			boolean allowImmediateRepeat) {
+		this(id, combatStyle, animationId, graphicId, projectileId, maxHitOverride, combatDelayOverride,
+				telegraphGraphicId, impactGraphicId, telegraphTicks, tilePattern, hazardGraphicId,
+				hazardDurationTicks, hazardTickInterval, hazardMaxHitOverride, targetMode, targetRange,
+				rotationWeight, cooldownAttacks, allowImmediateRepeat,
+				TILE_EFFECT_DAMAGE_PLAYERS, TILE_EFFECT_DAMAGE_PLAYERS);
+	}
+
+	public BossAttackDefinition(String id, int combatStyle, int animationId, int graphicId, int projectileId,
+			int maxHitOverride, int combatDelayOverride, int telegraphGraphicId, int impactGraphicId,
+			int telegraphTicks, List<BossTileOffset> tilePattern, int hazardGraphicId,
+			int hazardDurationTicks, int hazardTickInterval, int hazardMaxHitOverride,
+			int targetMode, int targetRange, int rotationWeight, int cooldownAttacks,
+			boolean allowImmediateRepeat, int impactTileEffectType, int hazardTileEffectType) {
 		if (id == null || id.trim().isEmpty())
 			throw new IllegalArgumentException("Boss attack id must not be blank.");
 		if (combatStyle != NPCCombatDefinitions.MELEE && combatStyle != NPCCombatDefinitions.RANGE
@@ -121,6 +140,8 @@ public final class BossAttackDefinition {
 			throw new IllegalArgumentException("rotationWeight must be between 1 and " + MAX_ROTATION_WEIGHT + ".");
 		if (cooldownAttacks < 0 || cooldownAttacks > MAX_COOLDOWN_ATTACKS)
 			throw new IllegalArgumentException("cooldownAttacks must be between 0 and " + MAX_COOLDOWN_ATTACKS + ".");
+		validateTileEffectType(impactTileEffectType, "impactTileEffectType");
+		validateTileEffectType(hazardTileEffectType, "hazardTileEffectType");
 
 		List<BossTileOffset> safePattern = tilePattern == null
 				? Collections.<BossTileOffset>emptyList() : tilePattern;
@@ -135,6 +156,8 @@ public final class BossAttackDefinition {
 		}
 		if (hazardDurationTicks > 0 && safePattern.isEmpty())
 			throw new IllegalArgumentException("Lingering hazards require at least one tile pattern offset.");
+		if (impactTileEffectType != TILE_EFFECT_DAMAGE_PLAYERS && safePattern.isEmpty())
+			throw new IllegalArgumentException("Non-default impact tile effects require at least one tile pattern offset.");
 
 		this.id = id;
 		this.combatStyle = combatStyle;
@@ -156,6 +179,13 @@ public final class BossAttackDefinition {
 		this.rotationWeight = rotationWeight;
 		this.cooldownAttacks = cooldownAttacks;
 		this.allowImmediateRepeat = allowImmediateRepeat;
+		this.impactTileEffectType = impactTileEffectType;
+		this.hazardTileEffectType = hazardTileEffectType;
+	}
+
+	private static void validateTileEffectType(int effectType, String label) {
+		if (effectType < TILE_EFFECT_DAMAGE_PLAYERS || effectType > TILE_EFFECT_HEAL_BOSS)
+			throw new IllegalArgumentException("Unsupported BossLabs " + label + ": " + effectType);
 	}
 
 	public String getId() {
@@ -260,5 +290,13 @@ public final class BossAttackDefinition {
 
 	public boolean isImmediateRepeatAllowed() {
 		return allowImmediateRepeat;
+	}
+
+	public int getImpactTileEffectType() {
+		return impactTileEffectType;
+	}
+
+	public int getHazardTileEffectType() {
+		return hazardTileEffectType;
 	}
 }
