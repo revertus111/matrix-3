@@ -69,6 +69,10 @@ public final class BossLabsDefinitionEditor {
     private final JComboBox<String> attackStyleBox = new JComboBox<String>(new String[] { "Melee", "Range", "Magic" });
     private final JComboBox<String> targetModeBox = new JComboBox<String>(new String[] { "Current target", "Random nearby player" });
     private final JTextField targetRangeField = new JTextField();
+    private final JTextField rotationWeightField = new JTextField();
+    private final JTextField cooldownAttacksField = new JTextField();
+    private final JComboBox<String> repeatModeBox = new JComboBox<String>(new String[] {
+            "Allow immediate repeat", "Prefer another ready attack" });
     private final JTextField animationField = new JTextField();
     private final JTextField graphicField = new JTextField();
     private final JTextField projectileField = new JTextField();
@@ -174,7 +178,7 @@ public final class BossLabsDefinitionEditor {
         attacksRoot.setBackground(ConsoleTheme.PANEL);
         attacksRoot.setBorder(ConsoleTheme.panelPadding(12, 12, 12, 12));
 
-        JPanel top = verticalHeading("Attacks", "Edit combat, target selection, telegraphed tiles, and optional lingering floor hazards.");
+        JPanel top = verticalHeading("Attacks", "Edit weighted rotation, targeting, telegraphed tiles, and optional lingering floor hazards.");
 
         JPanel phaseChooser = new JPanel(new BorderLayout(8, 0));
         phaseChooser.setOpaque(false);
@@ -217,6 +221,8 @@ public final class BossLabsDefinitionEditor {
         form.setOpaque(false);
         styleField(attackIdField, "Stable attack id, for example random_fireball");
         styleField(targetRangeField, "Maximum range for alternate-player targeting, 1-32 tiles");
+        styleField(rotationWeightField, "Relative weighted-selection chance, 1-1000. Equal weights reproduce the old uniform selection.");
+        styleField(cooldownAttacksField, "Future attack opportunities this attack must sit out after use, 0-100.");
         styleField(animationField, "Animation id, or -1 for NPC default");
         styleField(graphicField, "NPC graphic id, or -1 for NPC default");
         styleField(projectileField, "Projectile id, or -1 for NPC default");
@@ -231,24 +237,29 @@ public final class BossLabsDefinitionEditor {
         styleField(hazardMaxHitField, "Maximum damage per hazard tick, or -1 for NPC default");
         styleCombo(attackStyleBox);
         styleCombo(targetModeBox);
+        styleCombo(repeatModeBox);
         targetModeBox.setToolTipText("Random nearby player prefers someone other than the NPC's current combat target; solo fights fall back safely.");
+        repeatModeBox.setToolTipText("Prefer another ready attack blocks an immediate repeat only when another non-cooldown attack is available.");
 
         addFormRow(form, 0, "Attack ID", attackIdField);
         addFormRow(form, 1, "Style", attackStyleBox);
         addFormRow(form, 2, "Target", targetModeBox);
         addFormRow(form, 3, "Target range", targetRangeField);
-        addFormRow(form, 4, "Animation", animationField);
-        addFormRow(form, 5, "NPC graphic", graphicField);
-        addFormRow(form, 6, "Projectile", projectileField);
-        addFormRow(form, 7, "Impact max hit", maxHitField);
-        addFormRow(form, 8, "Combat delay", combatDelayField);
-        addFormRow(form, 9, "Warning GFX", telegraphGraphicField);
-        addFormRow(form, 10, "Impact GFX", impactGraphicField);
-        addFormRow(form, 11, "Warning ticks", telegraphTicksField);
-        addFormRow(form, 12, "Hazard GFX", hazardGraphicField);
-        addFormRow(form, 13, "Hazard duration", hazardDurationField);
-        addFormRow(form, 14, "Hazard interval", hazardIntervalField);
-        addFormRow(form, 15, "Hazard max hit", hazardMaxHitField);
+        addFormRow(form, 4, "Weight", rotationWeightField);
+        addFormRow(form, 5, "Cooldown turns", cooldownAttacksField);
+        addFormRow(form, 6, "Repeat rule", repeatModeBox);
+        addFormRow(form, 7, "Animation", animationField);
+        addFormRow(form, 8, "NPC graphic", graphicField);
+        addFormRow(form, 9, "Projectile", projectileField);
+        addFormRow(form, 10, "Impact max hit", maxHitField);
+        addFormRow(form, 11, "Combat delay", combatDelayField);
+        addFormRow(form, 12, "Warning GFX", telegraphGraphicField);
+        addFormRow(form, 13, "Impact GFX", impactGraphicField);
+        addFormRow(form, 14, "Warning ticks", telegraphTicksField);
+        addFormRow(form, 15, "Hazard GFX", hazardGraphicField);
+        addFormRow(form, 16, "Hazard duration", hazardDurationField);
+        addFormRow(form, 17, "Hazard interval", hazardIntervalField);
+        addFormRow(form, 18, "Hazard max hit", hazardMaxHitField);
 
         JButton update = new JButton("Update Attack");
         styleButton(update);
@@ -386,7 +397,7 @@ public final class BossLabsDefinitionEditor {
         int number = phase.getAttacks().size() + 1;
         phase.getAttacks().add(new BossLabsDraftDefinition.Attack("attack_" + number, 0, -1, -1, -1, -1, -1));
         refreshAttackList(phase.getAttacks().size() - 1);
-        attackStatus.setText("Attack added. Current target and NPC combat defaults are selected initially.");
+        attackStatus.setText("Attack added. Equal weight, no cooldown, immediate repeats, and NPC combat defaults are selected initially.");
         changed();
     }
 
@@ -409,6 +420,8 @@ public final class BossLabsDefinitionEditor {
         }
 
         Integer targetRange = parseInteger(targetRangeField.getText());
+        Integer rotationWeight = parseInteger(rotationWeightField.getText());
+        Integer cooldownAttacks = parseInteger(cooldownAttacksField.getText());
         Integer animation = parseInteger(animationField.getText());
         Integer graphic = parseInteger(graphicField.getText());
         Integer projectile = parseInteger(projectileField.getText());
@@ -421,8 +434,9 @@ public final class BossLabsDefinitionEditor {
         Integer hazardDuration = parseInteger(hazardDurationField.getText());
         Integer hazardInterval = parseInteger(hazardIntervalField.getText());
         Integer hazardMaxHit = parseInteger(hazardMaxHitField.getText());
-        if (targetRange == null || animation == null || graphic == null || projectile == null || maxHit == null
-                || combatDelay == null || telegraphGraphic == null || impactGraphic == null || telegraphTicks == null
+        if (targetRange == null || rotationWeight == null || cooldownAttacks == null || animation == null
+                || graphic == null || projectile == null || maxHit == null || combatDelay == null
+                || telegraphGraphic == null || impactGraphic == null || telegraphTicks == null
                 || hazardGraphic == null || hazardDuration == null || hazardInterval == null || hazardMaxHit == null) {
             attackStatus.setText("Attack numeric fields must be whole numbers.");
             return;
@@ -437,6 +451,9 @@ public final class BossLabsDefinitionEditor {
         attack.setCombatStyle(attackStyleBox.getSelectedIndex());
         attack.setTargetMode(targetModeBox.getSelectedIndex());
         attack.setTargetRange(targetRange.intValue());
+        attack.setRotationWeight(rotationWeight.intValue());
+        attack.setCooldownAttacks(cooldownAttacks.intValue());
+        attack.setImmediateRepeatAllowed(repeatModeBox.getSelectedIndex() == 0);
         attack.setAnimationId(animation.intValue());
         attack.setGraphicId(graphic.intValue());
         attack.setProjectileId(projectile.intValue());
@@ -480,6 +497,9 @@ public final class BossLabsDefinitionEditor {
             attackStyleBox.setSelectedIndex(0);
             targetModeBox.setSelectedIndex(BossLabsDraftDefinition.TARGET_CURRENT);
             targetRangeField.setText("14");
+            rotationWeightField.setText("1");
+            cooldownAttacksField.setText("0");
+            repeatModeBox.setSelectedIndex(0);
             animationField.setText("-1");
             graphicField.setText("-1");
             projectileField.setText("-1");
@@ -500,6 +520,9 @@ public final class BossLabsDefinitionEditor {
         attackStyleBox.setSelectedIndex(Math.max(0, Math.min(2, attack.getCombatStyle())));
         targetModeBox.setSelectedIndex(Math.max(0, Math.min(1, attack.getTargetMode())));
         targetRangeField.setText(Integer.toString(attack.getTargetRange()));
+        rotationWeightField.setText(Integer.toString(attack.getRotationWeight()));
+        cooldownAttacksField.setText(Integer.toString(attack.getCooldownAttacks()));
+        repeatModeBox.setSelectedIndex(attack.isImmediateRepeatAllowed() ? 0 : 1);
         animationField.setText(Integer.toString(attack.getAnimationId()));
         graphicField.setText(Integer.toString(attack.getGraphicId()));
         projectileField.setText(Integer.toString(attack.getProjectileId()));
