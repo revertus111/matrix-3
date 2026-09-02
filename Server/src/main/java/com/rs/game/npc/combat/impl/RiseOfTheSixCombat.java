@@ -15,8 +15,9 @@ import com.rs.game.player.Skills;
 import com.rs.utils.Utils;
 
 /**
- * Empowered-brother auto attacks and first verified-static special hooks for
- * Rise of the Six. Matrix3 NPCCombat remains the target/movement/delay owner.
+ * Empowered-brother auto attacks and verified-static special hooks for Rise of
+ * the Six. Matrix3 NPCCombat remains the target/movement/delay owner outside
+ * active RoTS special states.
  */
 public final class RiseOfTheSixCombat extends CombatScript {
 
@@ -31,17 +32,21 @@ public final class RiseOfTheSixCombat extends CombatScript {
 		RiseOfTheSixBrother rotsBrother = npc instanceof RiseOfTheSixBrother ? (RiseOfTheSixBrother) npc : null;
 
 		if (rotsBrother != null) {
-			if (rotsBrother.isDharokCharging() || rotsBrother.isToragWhacking())
+			if (rotsBrother.isSpecialActive())
 				return 1;
-			if (brother == Brother.TORAG && rotsBrother.tryStartToragWhack(target))
-				return 7;
+			if (rotsBrother.isMeleeBrother() && rotsBrother.tryStartMeleeSpecial(target))
+				return 1;
 		}
 
 		if (brother == Brother.AHRIM)
 			return mageAttack(npc, target);
 		if (brother == Brother.KARIL)
 			return rangeAttack(npc, target);
-		return meleeAttack(npc, target, brother);
+
+		int delay = meleeAttack(npc, target, brother);
+		if (rotsBrother != null)
+			rotsBrother.noteNormalMeleeAttack();
+		return delay;
 	}
 
 	private int meleeAttack(NPC npc, Entity target, Brother brother) {

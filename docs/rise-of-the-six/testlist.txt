@@ -17,7 +17,7 @@ Developer entry / map verification
 Brother identity / base combat
 11. Confirm the spawned primary NPC ids resolve as Ahrim 18538, Dharok 18540, Guthan 18541, Karil 18543, Torag 18544 and Verac 18545 with 50,000 HP cache data.
 12. Confirm alternate ids 18539 (Ahrim) and 18542 (Guthan) resolve in cache for future Flight/spear-state mechanics.
-13. Confirm RiseOfTheSixCombat owns all eight empowered/alternate ids and Matrix3 NPCCombat still owns targeting, movement, attack delay and range.
+13. Confirm RiseOfTheSixCombat owns all eight empowered/alternate ids and Matrix3 NPCCombat still owns targeting, movement, attack delay and range outside active RoTS specials.
 14. Confirm Ahrim uses animation 18288 (21925 alternate), projectile 559, impact GFX 377 and a 3,000 max-hit baseline; confirm Karil uses animation 18232, projectile 955 and a 3,000 max-hit baseline.
 15. Damage Dharok across >40k, 30-40k, 20-30k, 10-20k, 5-10k and <=5k HP bands; confirm max-hit ceilings progress 2k/3k/4k/5k/6k/7k.
 16. Trigger Guthan's baseline heal and confirm the 1-in-8 proc heals him by damage dealt without exceeding max HP.
@@ -37,8 +37,8 @@ Dharok - Greatest Axe
 26. Confirm GFX 4406 and animation 21940 play at the start of the charged state.
 27. Damage Dharok during the charge. Confirm hits display/resolve as zero against his HP while their damage is accumulated internally.
 28. Stop attacking and wait roughly eleven seconds. Confirm Dharok exits the charge and can attack normally again.
-29. Confirm Dharok's first successful outgoing hit after the charge adds the full stored damage exactly once; the following hit must return to normal damage.
-30. Kill/finish/reset the encounter around a charge and confirm no stored-damage or charge state leaks into a revived/new Dharok.
+29. Confirm Dharok's first successful normal outgoing hit after the charge adds the full stored damage exactly once; the following hit must return to normal damage.
+30. Kill/finish/reset the encounter around a charge and confirm no stored-damage, follow-lock or charge state leaks into a revived/new Dharok.
 
 Torag - Whack
 31. Fight Torag until Whack triggers. Confirm Torag animation 21933 and victim animation 21934 play and the victim becomes action-locked.
@@ -48,12 +48,36 @@ Torag - Whack
 35. Solo safety test: if no teammate breaks Whack, confirm the temporary safety release unlocks the player after about eleven seconds instead of leaving the account permanently locked.
 36. Leave/die/destroy the instance during Whack and confirm the victim is unlocked and no repeating hammer task remains effective afterward.
 
+Hurricane
+37. Fight each melee brother (Dharok, Guthan, Torag and Verac) through several normal autos until Hurricane starts; confirm Ahrim and Karil never enter this shared melee special.
+38. During Hurricane, keep moving. Confirm the brother pursues the selected target at walking speed rather than running and normal auto-attacks are suppressed until the special ends.
+39. Stay adjacent to the brother for the whole Hurricane. Confirm ten rapid hard-typeless damage pulses occur and the current implementation ramps from 250 on the first pulse to 2,500 on the tenth.
+40. Put a second player adjacent to the spinning brother. Confirm nearby players are damaged too; move outside the current one-tile radius and confirm later pulses no longer hit.
+41. Confirm the current visual is the brother's normal attack emote while the exact empowered Hurricane spin animation/GFX remains HYPOTHESIS; do not mark the visual VERIFIED-complete yet.
+42. Subdue and allow a melee brother to revive. Confirm its next special is Hurricane before its other implemented special slots.
+43. Kill/finish/reset during Hurricane and confirm walking/running state, follow flags, queued movement and the scheduled pulse task no longer affect the replacement/revived encounter.
+
+Wall Slam
+44. Confirm only Dharok, Torag and Verac perform Wall Slam. Guthan must not Wall Slam.
+45. When Wall Slam starts, note the tile you occupy, then immediately move away. Confirm the special keeps the original captured location rather than following your new tile for the impact.
+46. Confirm the brother runs away toward a reachable arena collision edge using normal Matrix3 pathing, then turns/rushes back toward the captured tile; report any rock/wall selection that looks wrong so exact wall anchors can replace the HYPOTHESIS edge scan from runtime evidence.
+47. Stand inside the 5x5 area centered on the captured tile at impact and confirm a hard-typeless hit from 500 through 3,000 can occur.
+48. Move at least three tiles away from the captured tile before impact and confirm Wall Slam misses you even if the brother subsequently paths close to your new location.
+49. With multiple players, confirm every eligible player standing in the captured 5x5 impact area can be hit independently.
+50. Confirm the current impact uses the brother's normal attack emote as a temporary visual; exact wall-run/fling/slam animation/GFX remain HYPOTHESIS.
+51. Kill/finish/reset during Wall Slam and confirm run state, follow flags, queued paths and the impact task do not leak into the revived/new encounter.
+
+Implemented special sequencing
+52. On a fresh Dharok/Torag, confirm the first implemented special can begin from a random slot after the current 3-5 auto gate; after that, verify the implemented order cycles Hurricane -> unique special -> Wall Slam with normal autos between them.
+53. Confirm no melee special begins back-to-back immediately after another special; current 3-5 auto spacing is HYPOTHESIS and should be tuned only from stronger classic/runtime evidence.
+54. For Guthan/Verac, verify only the currently implemented subset fires; do not treat their rotation as complete until their unique specials are added.
+
 Cleanup / regression
-37. Leave/logout/teleport until the private instance becomes empty. Confirm RiseOfTheSixInstance finishes all six custom NPCs and destroys the copied map without leaked NPCs/tasks.
-38. Recreate a new RoTS instance after cleanup. Confirm all six brothers start fresh and no revive/special state carries over.
-39. Confirm practice mode still suppresses normal Matrix3 boss-instance drops; RoTS-specific chest/rewards are not implemented in this checkpoint and must not be fabricated.
-40. As an owner/admin (`rights >= 2`), start RoTS, leave/reopen setup, then choose Start again before the one-hour session expires. Confirm the old cached private instance is finished and a fresh RoTS instance is created immediately.
-41. Confirm a normal player still gets Matrix3's original cached private-instance reuse/rejoin behavior and is not granted the owner/admin fresh-start bypass.
+55. Leave/logout/teleport until the private instance becomes empty. Confirm RiseOfTheSixInstance finishes all six custom NPCs and destroys the copied map without leaked NPCs/tasks.
+56. Recreate a new RoTS instance after cleanup. Confirm all six brothers start fresh and no revive/special state carries over.
+57. Confirm practice mode still suppresses normal Matrix3 boss-instance drops; RoTS-specific chest/rewards are not implemented in this checkpoint and must not be fabricated.
+58. As an owner/admin (`rights >= 2`), start RoTS, leave/reopen setup, then choose Start again before the one-hour session expires. Confirm the old cached private instance is finished and a fresh RoTS instance is created immediately.
+59. Confirm a normal player still gets Matrix3's original cached private-instance reuse/rejoin behavior and is not granted the owner/admin fresh-start bypass.
 
 100% fidelity gates still pending
-42. Do not mark the encounter VERIFIED-complete until the real well/totem entrance, tunnel/pads, daily formations, side empowerment, Shadow Drag/Realm, all remaining brother specials/rotations, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow pass targeted runtime tests.
+60. Do not mark the encounter VERIFIED-complete until the real well/totem entrance, tunnel/pads, daily formations, side empowerment, Shadow Drag/Realm, remaining brother specials/rotations, exact shared-special visuals/pathing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow pass targeted runtime tests.

@@ -20,3 +20,13 @@
 - Changed Guthan's baseline life-steal roll from the provisional 1-in-3 to the documented 1-in-8 rate.
 - Changed private boss-instance creation for owner/admin accounts (`rights >= 2`) so Start immediately finishes the account's cached instance and creates a fresh session instead of reusing the remaining one-hour arena timer.
 - Normal-player boss-instance reuse/rejoin timing remains unchanged.
+
+2026-09-02
+- Added shared Hurricane runtime for Dharok, Guthan, Torag and Verac: walking-speed target pursuit, ten escalating hard-typeless pulses, nearby-player splash damage and normal-auto suppression while active.
+- Added Wall Slam runtime for Dharok, Torag and Verac: capture the target's start tile, run toward a Matrix3 collision edge, rush back, then resolve a 5x5 hard-typeless impact capped at 3,000.
+- Added implemented-special sequencing so Dharok/Torag can cycle Hurricane -> unique special -> Wall Slam after the initial random implemented special; Guthan/Verac use only their currently available shared-special subset.
+- Revived melee brothers now force Hurricane as their next special.
+- Removed donor-random triggering from Dharok Greatest Axe and Torag Whack so the shared melee special scheduler owns when those specials begin.
+- Added cleanup restoration for movement-special state and Dharok charge follow state so death/revive/instance destruction cannot leave stale movement flags.
+- Corrected the fidelity checklist: Guthan has Hurricane but is not a Wall Slam brother; Wall Slam is assigned to Dharok, Torag and Verac.
+- Exact Hurricane spin animation/GFX, exact Hurricane radius/damage distribution, exact Wall Slam wall anchors/run-up animations, and the current 3-5 auto spacing remain HYPOTHESIS pending runtime/cache evidence.

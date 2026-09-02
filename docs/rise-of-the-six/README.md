@@ -34,10 +34,18 @@ verified-static
 - Dharok's donor Greatest Axe state uses `Give me everything!`, GFX 4406, animation 21940, absorbs incoming damage for roughly eleven seconds, then adds all stored damage to his next outgoing hit.
 - Torag's donor Whack state uses animations 21933 (Torag start), 21934 (victim pin), 21935 (hammering), and 21938 (victim release); 2,500 incoming damage while hammering breaks the victim free without damaging Torag.
 - Donor base combat values: Ahrim 3,000 max / projectile 559 / impact GFX 377 / 5 ticks; Karil 3,000 max / projectile 955 / animation 18232 / 7 ticks; Guthan/Torag/Verac 3,500 max; Dharok scales 2,000 through 7,000 by HP band.
+- Hurricane is a shared melee-brother special: the brother tracks the target while spinning at walking speed for ten damage pulses, damaging nearby players with escalating hard-typeless hits that can reach roughly 2,500.
+- Wall Slam belongs to Dharok, Torag and Verac: the brother runs to a nearby wall, then attacks the location captured when the special began; the impact covers a 5x5 area and can deal roughly 3,000 hard-typeless damage.
+- For Dharok and Torag, the classic shared rotation is Hurricane -> brother-specific special -> Wall Slam after the initial special selection, with normal auto-attacks separating specials.
+- A revived melee brother should force Hurricane as its next special.
 
 HYPOTHESIS pending targeted runtime tests
 - Exact daily formation/facing and west/east side ownership still need runtime/map verification.
-- Exact RoTS special trigger rotations/frequency need replacement of donor random triggers once stronger rotation evidence is available.
+- Current 3-5 normal-auto gate between implemented melee specials is a temporary timing approximation until exact classic attack-count timing is established.
+- Hurricane currently uses a one-tile Chebyshev damage radius and a deterministic 250-to-2,500 pulse ramp; exact empowered-brother radius/damage distribution still needs runtime/source evidence.
+- Exact Hurricane spin animation/GFX are not yet established in the active cache. The implementation deliberately reuses the brother's normal attack emote as a temporary visual instead of inventing an animation id.
+- Wall Slam's captured 5x5 impact and 3,000 cap are verified-static, but exact arena wall anchors, run-up/fling animation ids and damage distribution remain HYPOTHESIS. The current implementation discovers a reachable collision edge with Matrix3 pathing instead of hardcoding unverified wall coordinates.
+- Guthan and Verac still have incomplete special rotations until Impale/Throw and Soulspot/Deathcopter/Throw are implemented.
 - Torag's temporary 18-tick safety release is a Matrix3 runtime guard for solo testing; authentic natural timeout/escape behavior still needs verification.
 - The temporary Matrix3 boss-instance exit/grave tile is deliberately a known Barrows surface tile until object 87997 and the real RoTS graveyard path are wired.
 
@@ -56,8 +64,12 @@ HYPOTHESIS pending targeted runtime tests
 - 30-second revive generation reset after every new subdued brother.
 - Revive of every currently subdued brother at 25,000 HP when the timer expires.
 - Victory lockout when all six are subdued before the timer expires.
-- Dharok Greatest Axe first faithful slice: force-talk, charge GFX/animation, incoming damage absorption/storage, no autos during charge, and stored damage returned through his next hit.
+- Dharok Greatest Axe first faithful slice: force-talk, charge GFX/animation, incoming damage absorption/storage, no autos during charge, and stored damage returned through his next normal hit.
 - Torag Whack first faithful slice: victim pin/lock, start/hammer/release animations, incoming teammate damage redirected into the 2,500 release threshold, and cleanup-safe victim unlock.
+- Shared Hurricane runtime: ten escalating hard-typeless pulses, nearby-player damage, active target pursuit at walking speed, normal-auto lockout while spinning, and cleanup-safe target restoration.
+- Wall Slam runtime for Dharok/Torag/Verac: captures the target's starting tile, uses Matrix3 collision/pathing to run toward an arena edge and rush back, then resolves a 5x5 hard-typeless impact around the captured tile.
+- Dharok/Torag now cycle through all three currently implemented rotation slots; Guthan/Verac use only the shared specials currently implemented for them.
+- Revived melee brothers force Hurricane as their next special.
 - Instance cleanup finishes all custom RoTS NPCs when the encounter is destroyed.
 
 ## Required for 100% encounter fidelity
@@ -82,7 +94,11 @@ HYPOTHESIS pending targeted runtime tests
 - Move the full team into/out of the Shadow Realm correctly.
 - Apply Shadow Realm accuracy/damage changes.
 - Add the visible 30-second incapacitation/revival progress presentation.
-- Make revived melee brothers force Hurricane as their next attack.
+
+### Shared melee fidelity
+- Runtime-verify Hurricane pursuit, pulse timing/range/damage and replace the temporary normal-attack visual with the exact spin animation/GFX once established.
+- Runtime-verify Wall Slam's collision-edge selection, run-away/rush-back timing and 5x5 impact; replace path approximations with exact arena wall anchors/animations only when evidence establishes them.
+- Replace the temporary 3-5 auto gate with the exact classic special cadence once verified.
 
 ### Ahrim
 - Blood-spell self healing.
@@ -93,14 +109,9 @@ HYPOTHESIS pending targeted runtime tests
 - Exact attack/special rotation, animations, graphics, projectiles, timings and messages.
 
 ### Dharok
-- Hurricane.
-- Wall Slam.
-- Replace donor-random Greatest Axe trigger with the exact live/classic special rotation once verified.
 - Runtime-verify Greatest Axe timing/GFX/animation and returned-damage behavior.
 
 ### Guthan
-- Hurricane.
-- Wall Slam.
 - Throw/Impale spear state using the alternate NPC id.
 - Bleed until the victim returns near Guthan.
 - Exact healing/set-effect behavior, animations, timings and messages.
@@ -113,15 +124,12 @@ HYPOTHESIS pending targeted runtime tests
 
 ### Torag
 - Correct adrenaline-drain set effect.
-- Hurricane.
-- Wall Slam.
-- Replace donor-random Whack trigger and temporary solo safety timeout with the exact classic attack rotation/termination rules once verified.
+- Replace the temporary solo Whack safety timeout with the exact classic termination rules once verified.
 - Runtime-verify Whack's 2,500 teammate damage release and animations.
 
 ### Verac
 - Correct armour/prayer-ignoring set effect.
-- Hurricane and Deathcopter.
-- Wall Slam.
+- Deathcopter.
 - Soulspot/prayer-drain mechanic.
 - Throw behavior.
 - Exact rotations, animations, graphics, timings and messages.
