@@ -9,12 +9,24 @@ import java.util.List;
  */
 public final class BossPhaseDefinition {
 
+	public static final int MAX_PHASE_ACTIONS = 32;
+
 	private final String id;
 	private final int minimumHealthPercent;
 	private final int maximumHealthPercent;
+	private final List<BossPhaseActionDefinition> entryActions;
+	private final List<BossPhaseActionDefinition> exitActions;
 	private final List<BossAttackDefinition> attacks;
 
 	public BossPhaseDefinition(String id, int minimumHealthPercent, int maximumHealthPercent,
+			List<BossAttackDefinition> attacks) {
+		this(id, minimumHealthPercent, maximumHealthPercent,
+				Collections.<BossPhaseActionDefinition>emptyList(),
+				Collections.<BossPhaseActionDefinition>emptyList(), attacks);
+	}
+
+	public BossPhaseDefinition(String id, int minimumHealthPercent, int maximumHealthPercent,
+			List<BossPhaseActionDefinition> entryActions, List<BossPhaseActionDefinition> exitActions,
 			List<BossAttackDefinition> attacks) {
 		if (id == null || id.trim().isEmpty())
 			throw new IllegalArgumentException("Boss phase id must not be blank.");
@@ -31,10 +43,26 @@ public final class BossPhaseDefinition {
 				throw new IllegalArgumentException("Boss phase attacks must not contain null entries.");
 		}
 
+		List<BossPhaseActionDefinition> safeEntryActions = validateActions(entryActions, "entry");
+		List<BossPhaseActionDefinition> safeExitActions = validateActions(exitActions, "exit");
 		this.id = id;
 		this.minimumHealthPercent = minimumHealthPercent;
 		this.maximumHealthPercent = maximumHealthPercent;
+		this.entryActions = Collections.unmodifiableList(safeEntryActions);
+		this.exitActions = Collections.unmodifiableList(safeExitActions);
 		this.attacks = Collections.unmodifiableList(new ArrayList<BossAttackDefinition>(attacks));
+	}
+
+	private List<BossPhaseActionDefinition> validateActions(List<BossPhaseActionDefinition> actions, String label) {
+		List<BossPhaseActionDefinition> safe = actions == null
+				? Collections.<BossPhaseActionDefinition>emptyList() : actions;
+		if (safe.size() > MAX_PHASE_ACTIONS)
+			throw new IllegalArgumentException("Boss phase " + label + " actions exceed " + MAX_PHASE_ACTIONS + ".");
+		for (BossPhaseActionDefinition action : safe) {
+			if (action == null)
+				throw new IllegalArgumentException("Boss phase " + label + " actions must not contain null entries.");
+		}
+		return new ArrayList<BossPhaseActionDefinition>(safe);
 	}
 
 	public String getId() {
@@ -47,6 +75,14 @@ public final class BossPhaseDefinition {
 
 	public int getMaximumHealthPercent() {
 		return maximumHealthPercent;
+	}
+
+	public List<BossPhaseActionDefinition> getEntryActions() {
+		return entryActions;
+	}
+
+	public List<BossPhaseActionDefinition> getExitActions() {
+		return exitActions;
 	}
 
 	public List<BossAttackDefinition> getAttacks() {
