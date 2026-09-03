@@ -883,7 +883,7 @@ public class InterfaceManager {
 			else if (subMenu == 3) { //challenges
 				setMenuInterface(0, 1343);
 				setMenuInterface(1, 1056);
-				//Runscripts: [4507, 22, 88014911, 88014879]
+				//Runscripts: [4507, 22, 88014911, 88014900, 88014879]
 			}
 			else if (subMenu == 4) { //minigames
 				setMenuInterface(0, 1344);
@@ -921,7 +921,7 @@ public class InterfaceManager {
 				setMenuInterface(3, 1441);
 				player.getFriendsIgnores().unlockFriendsIgnore(true);
 				player.getPackets().sendIComponentSettings(982, 7, 0, 19, 2); //chat color
-				ClansManager.unlockClanBanList(player, false);
+				ClansManager.unlockClanBanList(player, true);
 			}
 			else if (subMenu == 4) { //grouping system
 				setMenuInterface(0, 1524);
