@@ -1,3 +1,11 @@
+2026-09-03 - Dev Mode Tile Editor foundation
+- Added owner-only `Dev > Edit Tile` beside the existing tile Spawn action.
+- Added a dark Tile Editor window targeted from the exact live world tile right-click.
+- Tile Editor shows world X/Y/plane, region ID/region-local coordinates, and world chunk/chunk-local coordinates.
+- Added direct access from Tile Editor into the existing Spawn Browser for the same selected tile plus a copy-coordinate action.
+- Terrain height, overlays/underlays, movement clipping, and projectile clipping remain intentionally non-editable until Matrix3 mutation paths are verified.
+- Did not add speculative NPC/object thumbnail rendering; no existing safe off-screen Matrix3 model preview helper was found in the targeted renderer/tool path.
+
 2026-09-03 - Dev Mode searchable Spawn Browser
 - Added lazy NPC/object/item search by exact ID or name inside the tile Spawn Browser.
 - Added a narrow client definition bridge that observes Matrix3's normal Class639 decode path instead of duplicating cache parsing.
