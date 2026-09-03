@@ -122,6 +122,49 @@ public final class BossLabsClientBridge {
         return requestId;
     }
 
+    public static int requestTestingSpawn(int npcId) {
+        return requestTesting("spawn", npcId, null, null);
+    }
+
+    public static int requestTestingReset(int npcId) {
+        return requestTesting("reset", npcId, null, null);
+    }
+
+    public static int requestTestingSetHealth(int npcId, int percent) {
+        int requestId = nextRequestId();
+        queue(requestId, "bosslabs testing " + requestId + " sethp " + npcId + " " + percent,
+                "Set Boss HP request failed");
+        return requestId;
+    }
+
+    public static int requestTestingForcePhase(int npcId, String phaseId) {
+        return requestTesting("forcephase", npcId, phaseId, null);
+    }
+
+    public static int requestTestingForceAttack(int npcId, String phaseId, String attackId) {
+        return requestTesting("forceattack", npcId, phaseId, attackId);
+    }
+
+    public static int requestTestingClearHazards(int npcId) {
+        return requestTesting("clearhazards", npcId, null, null);
+    }
+
+    public static int requestTestingClearMinions(int npcId) {
+        return requestTesting("clearminions", npcId, null, null);
+    }
+
+    private static int requestTesting(String operation, int npcId, String firstText, String secondText) {
+        int requestId = nextRequestId();
+        StringBuilder command = new StringBuilder("bosslabs testing ").append(requestId).append(' ')
+                .append(operation).append(' ').append(npcId);
+        if (firstText != null)
+            command.append(' ').append(encode(firstText));
+        if (secondText != null)
+            command.append(' ').append(encode(secondText));
+        queue(requestId, command.toString(), "BossLabs testing request failed");
+        return requestId;
+    }
+
     public static boolean handleServerCommand(String command) {
         if (command == null || !command.startsWith(RESPONSE_PREFIX)) {
             return false;
