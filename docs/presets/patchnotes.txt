@@ -8,11 +8,22 @@
 - Mapper output is de-duplicated by click tuple and is also appended to `Server/data/logs/presets/preset-map.txt`; mapper logging adds no game-chat diagnostics.
 - Runtime mapping confirmed preset row 1 components 184/193/201/217/225/231/232 and row 2 components 233/242/250/266/274/280/281; every matching control is separated by a 49-component row stride and uses packet 103 with both slot fields at 65535.
 - Selector opens that row's actions, floppy saves that row, green arrow loads that row, and trash clears that row directly.
-- Cog/settings now persists independent Backpack, Worn equipment, and Beast of Burden load toggles per saved preset; at least one container must remain enabled.
-- Right-side radio controls now persist Quick Preset 1 and Quick Preset 2 assignments; clearing an assigned preset clears its quick assignment.
-- Preset persistence format advanced to version 2 while retaining version-1 read compatibility; v2 stores container toggles, captured Beast of Burden contents, and both quick assignments.
-- Beast of Burden integration uses Matrix3's existing Familiar/BeastOfBurden ownership and includes enabled BoB contents in normal preset bank accounting and rollback.
-- Disabled preset containers remain untouched and are excluded from carried-item accounting during load.
+- Cog/settings initially persisted independent Backpack, Worn equipment, and Beast of Burden load toggles per saved preset.
+- Right-side radio controls persist Quick Preset 1 and Quick Preset 2 assignments; clearing an assigned preset clears its quick assignment.
+- Preset persistence format advanced to version 2 while retaining version-1 read compatibility.
 - Rows 3-10 currently extrapolate the VERIFIED row 1/2 +49 component stride and remain HYPOTHESIS until mapper output confirms them at runtime.
 - The top Currently Equipped Quick 1/2 load arrows and dedicated bottom Beast of Burden row remain unmapped; their component IDs must be runtime-captured before wiring behavior.
-- Preset-only layout now mounts 579/627/577 instead of 579/577/627, matching the Nocturne reference so the wider Backpack preview occupies the middle host slot. This clipping fix remains HYPOTHESIS until runtime verification; global interface scaling was not changed.
+- Preset-only layout now mounts 579/627/577 instead of 579/577/627 so the wider Backpack preview occupies the middle host slot. Runtime screenshot verification confirmed this fixes the clipping without global interface scaling changes.
+
+2026-09-03
+- Research target pinned to the late-2014/revision-830 preset era rather than modern RuneScape preset behavior.
+- Normal preset save behavior now asks for Backpack, Worn equipment, or Backpack + Worn; the floppy no longer blindly snapshots every container.
+- Cog/settings now controls only whether the dedicated Beast of Burden preset is loaded alongside that normal preset; the association defaults Off.
+- Reworked persistence to version 3 with one profile-level dedicated Beast of Burden preset instead of one BoB snapshot per normal preset.
+- Version-1 and version-2 preset files remain readable. Version-2 migration accepts one unambiguous non-empty legacy BoB snapshot as the dedicated preset; conflicting legacy snapshots disable BoB association instead of guessing.
+- Added backend entry points for dedicated Beast of Burden save/load and Quick Preset 1/2 load. Native top-arrow and bottom-row component IDs still require runtime mapping before those controls are connected.
+- Beast of Burden preset loading now validates against the existing Matrix3 familiar ownership, current familiar capacity, essence-only restrictions, tradeability restrictions, excluded item 4049, and the existing 50,000-value rule.
+- `BeastOfBurden.canStoreItem(...)` is now the shared storage-rule authority used by both manual familiar storage and preset validation.
+- Preset bank movement keeps the existing validated/rollback transaction rather than intentionally reproducing historical bank-full failure bugs.
+- Restored `Server/data/logs/presets/preset-map.txt` append output, which had been accidentally dropped from the v2 PresetManager rewrite while the documentation still claimed it existed.
+- Preset-name varps 4339/4340/4341, CSVars 3838/3840/3842, and runscript 9916 remain reverse-engineering leads only; no unverified native-state values were enabled in this patch.
