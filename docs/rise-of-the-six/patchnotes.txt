@@ -60,3 +60,5 @@
 - Side-hop relocation safely clears active RoTS special state without losing a pending post-revival forced Hurricane flag.
 - Fight completion and instance destruction invalidate pending side-hop generations so stale relocation tasks cannot fire afterward.
 - Exact empowered landing spacing, transition animation, Karil Shadow Dash blocking, and the second-barrier blocker remain HYPOTHESIS/pending rather than being guessed.
+- Fixed runtime-confirmed subdued-brother invisibility by representing incapacitation with `subdued=true` plus a visible 1-HP NPC shell instead of leaving the NPC at true zero HP.
+- Delayed hits that land after subdual are now forced to zero damage so they cannot knock the visible shell back to zero and hide the brother again; the existing death/down emote remains the temporary kneeling presentation pending exact animation verification.
