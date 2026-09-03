@@ -1,4 +1,4 @@
-Matrix3 Client Console - shell + Owner + Commands + Item Browser + Settings runtime test list
+Matrix3 Client Console - shell + Owner + Commands + Player + Item Browser + Settings runtime test list
 
 1. Start the client through the normal Matrix3 client launch path. Confirm the game still renders and reaches normal login/gameplay with the Client Console attached beside the game view.
 2. Confirm the shell is dark-themed, the M3 rail remains visible, the C button visibly indicates the open state, and the placeholder content scrolls vertically when space is limited.
@@ -83,3 +83,10 @@ Matrix3 Client Console - shell + Owner + Commands + Item Browser + Settings runt
 81. On Windows, confirm the launcher prints `[CacheEditor] Server project:` pointing at Matrix3/Server and `[CacheEditor] Gradle wrapper:` pointing at Matrix3/Server/gradlew.bat before Gradle starts. Confirm the command uses the Server wrapper with `-p Matrix3/Server`, so Gradle cannot fall back to Matrix3-Client even when the client working directory is Client.
 82. With Item Browser in All mode and the search field empty, confirm the visible result model remains capped at 160 entries and the game/client stays responsive while browsing and scrolling.
 83. Type a broad partial item name that matches more than 160 definitions. Confirm the list does not rebuild on each keystroke, waits about 1.25 seconds after typing stops, then shows every matching definition in ascending item-ID order. Clear the search and confirm the empty browser returns to the 160-result cap after the same debounce.
+84. Click P on the rail before login. Confirm Player is lazy-created, becomes the active panel, shows waiting placeholders for world state, and does not send a command or mutate gameplay.
+85. Log in while leaving P visible. Confirm Display name, Rights, Client state, Tile, Plane, and Region populate automatically without switching panels.
+86. Walk several tiles with P visible. Confirm Tile updates to the live world X/Y and Region remains stable until crossing a 64x64 region boundary; Plane should match the actual player plane.
+87. Teleport across a region boundary using an existing normal Matrix3 path. Confirm the Player panel updates world tile and region ID/X/Y without requiring the panel to be recreated.
+88. Switch away from P, move in game, then return to P. Confirm values refresh immediately on reopen and no background Player-panel refresh causes visible client/render hitching while the panel is hidden.
+89. Leave P selected, close Matrix3 normally, and relaunch. Confirm Player restores as the active panel through the existing Client Console workspace preference path.
+90. Rapidly switch C/O/>_/P/I/S while moving in game. Confirm only the selected rail button is highlighted, Player remains read-only, and normal renderer/input/Commands/Item Browser behavior remains unchanged.
