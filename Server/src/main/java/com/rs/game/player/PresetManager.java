@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.rs.Settings;
 import com.rs.game.item.Item;
+import com.rs.game.npc.familiar.impl.BeastOfBurden;
 import com.rs.game.player.content.ItemConstants;
 import com.rs.game.player.dialogues.Dialogue;
 import com.rs.utils.Logger;
@@ -29,14 +30,15 @@ import com.rs.utils.Logger;
  *
  * The cache already supplies interfaces 579/577/627, but Matrix3 never
  * completed the server-side preset storage/load path. This class deliberately
- * owns only the preset data and item transaction; the normal Bank, Inventory
- * and Equipment classes remain authoritative for those containers.
+ * owns only the preset data and item transaction; the normal Bank, Inventory,
+ * Equipment and BeastOfBurden classes remain authoritative for those
+ * containers.
  */
 public final class PresetManager {
 
     private static final int PRESET_INTERFACE = 579;
     private static final int PRESET_COUNT = 10;
-    private static final int FILE_VERSION = 1;
+    private static final int FILE_VERSION = 2;
 
     // Runtime map: row 1 starts at component 184 and row 2 starts at 233.
     // Their matching controls are exactly 49 components apart. Rows 3-10 use
@@ -102,16 +104,23 @@ public final class PresetManager {
             loadPreset(player, presetIndex);
             return true;
         }
+        if (actionOffset == PRESET_SETTINGS_OFFSET) {
+            openPresetSettings(player, presetIndex);
+            return true;
+        }
         if (actionOffset == PRESET_DELETE_OFFSET) {
             clearPreset(player, presetIndex);
             return true;
         }
-
-        // Settings and the two right-side circles are identified by component
-        // position, but their native semantics are not verified yet. Consume
-        // them without inventing behavior while the mapper remains enabled.
-        return actionOffset == PRESET_SETTINGS_OFFSET || actionOffset == PRESET_RIGHT_OPTION_ONE_OFFSET
-                || actionOffset == PRESET_RIGHT_OPTION_TWO_OFFSET;
+        if (actionOffset == PRESET_RIGHT_OPTION_ONE_OFFSET) {
+            assignQuickPreset(player, presetIndex, 1);
+            return true;
+        }
+        if (actionOffset == PRESET_RIGHT_OPTION_TWO_OFFSET) {
+            assignQuickPreset(player, presetIndex, 2);
+            return true;
+        }
+        return false;
     }
 
     private static boolean isMappedPresetAction(int actionOffset) {
@@ -138,7 +147,7 @@ public final class PresetManager {
             public void start() {
                 if (saved)
                     sendOptionsDialogue("Preset " + (presetIndex + 1), "Overwrite with current setup", "Load preset",
-                            "Clear preset", "Cancel");
+                            "Settings", "Clear preset", "Cancel");
                 else
                     sendOptionsDialogue("Preset " + (presetIndex + 1), "Save current setup", "Cancel");
             }
@@ -156,7 +165,11 @@ public final class PresetManager {
                     savePreset(player, presetIndex);
                 else if (componentId == OPTION_2)
                     loadPreset(player, presetIndex);
-                else if (componentId == OPTION_3)
+                else if (componentId == OPTION_3) {
+                    end();
+                    openPresetSettings(player, presetIndex);
+                    return;
+                } else if (componentId == OPTION_4)
                     clearPreset(player, presetIndex);
                 end();
             }
@@ -167,6 +180,100 @@ public final class PresetManager {
         });
     }
 
+    private static void openPresetSettings(final Player player, final int presetIndex) {
+        final Preset preset = getProfile(player).presets[presetIndex];
+        if (preset == null) {
+            player.getPackets().sendGameMessage("Save this preset before changing its settings.");
+            return;
+        }
+
+        player.getDialogueManager().startDialogue(new Dialogue() {
+
+            @Override
+            public void start() {
+                showSettings();
+            }
+
+            private void showSettings() {
+                sendOptionsDialogue("Preset " + (presetIndex + 1) + " settings",
+                        "Backpack: " + onOff(preset.loadInventory),
+                        "Worn equipment: " + onOff(preset.loadEquipment),
+                        "Beast of Burden: " + onOff(preset.loadBob), "Done");
+            }
+
+            @Override
+            public void run(int interfaceId, int componentId) {
+                if (componentId == OPTION_4) {
+                    end();
+                    return;
+                }
+
+                boolean oldInventory = preset.loadInventory;
+                boolean oldEquipment = preset.loadEquipment;
+                boolean oldBob = preset.loadBob;
+                if (componentId == OPTION_1)
+                    preset.loadInventory = !preset.loadInventory;
+                else if (componentId == OPTION_2)
+                    preset.loadEquipment = !preset.loadEquipment;
+                else if (componentId == OPTION_3)
+                    preset.loadBob = !preset.loadBob;
+                else {
+                    end();
+                    return;
+                }
+
+                if (!preset.loadInventory && !preset.loadEquipment && !preset.loadBob) {
+                    preset.loadInventory = oldInventory;
+                    preset.loadEquipment = oldEquipment;
+                    preset.loadBob = oldBob;
+                    player.getPackets().sendGameMessage("A preset must load at least one container.");
+                    showSettings();
+                    return;
+                }
+
+                if (!saveProfile(player, getProfile(player))) {
+                    preset.loadInventory = oldInventory;
+                    preset.loadEquipment = oldEquipment;
+                    preset.loadBob = oldBob;
+                    player.getPackets().sendGameMessage("The preset settings could not be saved.");
+                }
+                showSettings();
+            }
+
+            @Override
+            public void finish() {
+            }
+        });
+    }
+
+    private static String onOff(boolean enabled) {
+        return enabled ? "On" : "Off";
+    }
+
+    private static void assignQuickPreset(Player player, int presetIndex, int quickSlot) {
+        PresetProfile profile = getProfile(player);
+        if (profile.presets[presetIndex] == null) {
+            player.getPackets().sendGameMessage("Save this preset before assigning it as a quick preset.");
+            return;
+        }
+
+        int previous = quickSlot == 1 ? profile.quickPresetOne : profile.quickPresetTwo;
+        if (quickSlot == 1)
+            profile.quickPresetOne = presetIndex;
+        else
+            profile.quickPresetTwo = presetIndex;
+
+        if (!saveProfile(player, profile)) {
+            if (quickSlot == 1)
+                profile.quickPresetOne = previous;
+            else
+                profile.quickPresetTwo = previous;
+            player.getPackets().sendGameMessage("The quick preset assignment could not be saved.");
+            return;
+        }
+        player.getPackets().sendGameMessage("Preset " + (presetIndex + 1) + " assigned to Quick Preset " + quickSlot + ".");
+    }
+
     private static void savePreset(Player player, int presetIndex) {
         PresetProfile profile = getProfile(player);
         Preset previous = profile.presets[presetIndex];
@@ -174,6 +281,12 @@ public final class PresetManager {
         preset.name = "Preset " + (presetIndex + 1);
         preset.inventory = copyItems(player.getInventory().getItems().getItemsCopy());
         preset.equipment = copyItems(player.getEquipment().getItems().getItemsCopy());
+        preset.bob = copyCurrentBob(player);
+        if (previous != null) {
+            preset.loadInventory = previous.loadInventory;
+            preset.loadEquipment = previous.loadEquipment;
+            preset.loadBob = previous.loadBob;
+        }
         profile.presets[presetIndex] = preset;
 
         if (!saveProfile(player, profile)) {
@@ -187,9 +300,18 @@ public final class PresetManager {
     private static void clearPreset(Player player, int presetIndex) {
         PresetProfile profile = getProfile(player);
         Preset previous = profile.presets[presetIndex];
+        int oldQuickOne = profile.quickPresetOne;
+        int oldQuickTwo = profile.quickPresetTwo;
         profile.presets[presetIndex] = null;
+        if (profile.quickPresetOne == presetIndex)
+            profile.quickPresetOne = -1;
+        if (profile.quickPresetTwo == presetIndex)
+            profile.quickPresetTwo = -1;
+
         if (!saveProfile(player, profile)) {
             profile.presets[presetIndex] = previous;
+            profile.quickPresetOne = oldQuickOne;
+            profile.quickPresetTwo = oldQuickTwo;
             player.getPackets().sendGameMessage("The preset could not be cleared.");
             return;
         }
@@ -210,23 +332,42 @@ public final class PresetManager {
             player.getPackets().sendGameMessage("You can't load a preset while in combat.");
             return;
         }
-
-        int inventorySize = player.getInventory().getItems().getSize();
-        int equipmentSize = player.getEquipment().getItems().getSize();
-        Item[] desiredInventory = normalizeItems(preset.inventory, inventorySize);
-        Item[] desiredEquipment = normalizeItems(preset.equipment, equipmentSize);
-        if (desiredInventory == null || desiredEquipment == null) {
-            player.getPackets().sendGameMessage("This preset no longer fits the current inventory/equipment layout.");
+        if (!preset.loadInventory && !preset.loadEquipment && !preset.loadBob) {
+            player.getPackets().sendGameMessage("That preset has no enabled containers.");
             return;
         }
 
-        if (!validateContainerRules(player, desiredInventory, desiredEquipment))
-            return;
-
+        int inventorySize = player.getInventory().getItems().getSize();
+        int equipmentSize = player.getEquipment().getItems().getSize();
         Item[] currentInventory = copyItems(player.getInventory().getItems().getItemsCopy());
         Item[] currentEquipment = copyItems(player.getEquipment().getItems().getItemsCopy());
-        Map<Integer, Long> carried = countItems(currentInventory, currentEquipment);
-        Map<Integer, Long> desired = countItems(desiredInventory, desiredEquipment);
+        Item[] desiredInventory = preset.loadInventory ? normalizeItems(preset.inventory, inventorySize) : currentInventory;
+        Item[] desiredEquipment = preset.loadEquipment ? normalizeItems(preset.equipment, equipmentSize) : currentEquipment;
+
+        BeastOfBurden bob = preset.loadBob ? getActiveBob(player) : null;
+        Item[] currentBob = null;
+        Item[] desiredBob = null;
+        if (preset.loadBob) {
+            if (bob == null) {
+                player.getPackets().sendGameMessage("Summon a Beast of Burden before loading this preset.");
+                return;
+            }
+            currentBob = copyItems(bob.getBeastItems().getItemsCopy());
+            desiredBob = normalizeItems(preset.bob, bob.getBeastItems().getSize());
+        }
+
+        if (desiredInventory == null || desiredEquipment == null || (preset.loadBob && desiredBob == null)) {
+            player.getPackets().sendGameMessage("This preset no longer fits the current container layout.");
+            return;
+        }
+
+        if (!validateContainerRules(player, desiredInventory, desiredEquipment, preset.loadInventory, preset.loadEquipment))
+            return;
+
+        Map<Integer, Long> carried = countItems(preset.loadInventory ? currentInventory : null,
+                preset.loadEquipment ? currentEquipment : null, preset.loadBob ? currentBob : null);
+        Map<Integer, Long> desired = countItems(preset.loadInventory ? desiredInventory : null,
+                preset.loadEquipment ? desiredEquipment : null, preset.loadBob ? desiredBob : null);
         Map<Integer, Long> bankBefore = countItems(player.getBank().generateContainer());
         Set<Integer> affected = new HashSet<Integer>();
         affected.addAll(carried.keySet());
@@ -259,8 +400,6 @@ public final class PresetManager {
         }
 
         try {
-            // Remove bank deficits first. This makes room before carried surplus is deposited,
-            // so a full bank can still perform a valid one-for-one preset swap.
             for (Integer itemId : affected) {
                 long carriedAmount = amount(carried, itemId.intValue());
                 long desiredAmount = amount(desired, itemId.intValue());
@@ -277,55 +416,82 @@ public final class PresetManager {
                     throw new IllegalStateException("Bank rejected validated preset deposit for item " + itemId);
             }
 
-            Item currentAura = player.getEquipment().getItem(Equipment.SLOT_AURA);
-            if (currentAura != null)
-                player.getAuraManager().removeAura();
+            if (preset.loadEquipment) {
+                Item currentAura = player.getEquipment().getItem(Equipment.SLOT_AURA);
+                if (currentAura != null)
+                    player.getAuraManager().removeAura();
+                player.getEquipment().getItems().reset();
+                setItems(player.getEquipment().getItems(), desiredEquipment);
+            }
 
-            player.getInventory().getItems().reset();
-            player.getEquipment().getItems().reset();
-            setItems(player.getInventory().getItems(), desiredInventory);
-            setItems(player.getEquipment().getItems(), desiredEquipment);
+            if (preset.loadInventory) {
+                player.getInventory().getItems().reset();
+                setItems(player.getInventory().getItems(), desiredInventory);
+            }
+
+            if (preset.loadBob) {
+                bob.getBeastItems().reset();
+                setItems(bob.getBeastItems(), desiredBob);
+                bob.sendInterItems();
+            }
+
             refreshAfterLoad(player);
             player.getPackets().sendGameMessage("Preset " + (presetIndex + 1) + " loaded.");
         } catch (Throwable e) {
             restoreBank(player, bankBefore, affected);
-            restoreCarried(player, currentInventory, currentEquipment);
+            restoreCarried(player, currentInventory, currentEquipment, currentBob, preset.loadInventory,
+                    preset.loadEquipment, preset.loadBob, bob);
             refreshAfterLoad(player);
             Logger.handle(e);
             player.getPackets().sendGameMessage("Preset load failed; your items were restored.");
         }
     }
 
-    private static boolean validateContainerRules(Player player, Item[] desiredInventory, Item[] desiredEquipment) {
-        for (Item item : player.getInventory().getItems().getItems()) {
-            if (item != null && !player.getControlerManager().canDeleteInventoryItem(item.getId(), item.getAmount())) {
-                player.getPackets().sendGameMessage("You can't change your inventory here.");
-                return false;
+    private static boolean validateContainerRules(Player player, Item[] desiredInventory, Item[] desiredEquipment,
+            boolean loadInventory, boolean loadEquipment) {
+        if (loadInventory) {
+            for (Item item : player.getInventory().getItems().getItems()) {
+                if (item != null && !player.getControlerManager().canDeleteInventoryItem(item.getId(), item.getAmount())) {
+                    player.getPackets().sendGameMessage("You can't change your inventory here.");
+                    return false;
+                }
+            }
+            for (Item item : desiredInventory) {
+                if (item != null && !player.getControlerManager().canAddInventoryItem(item.getId(), item.getAmount())) {
+                    player.getPackets().sendGameMessage("You can't load that inventory here.");
+                    return false;
+                }
             }
         }
-        for (Item item : desiredInventory) {
-            if (item != null && !player.getControlerManager().canAddInventoryItem(item.getId(), item.getAmount())) {
-                player.getPackets().sendGameMessage("You can't load that inventory here.");
-                return false;
+
+        if (loadEquipment) {
+            for (int slot = 0; slot < player.getEquipment().getItems().getSize(); slot++) {
+                Item current = player.getEquipment().getItem(slot);
+                if (current != null && !player.getControlerManager().canRemoveEquip(slot, current.getId())) {
+                    player.getPackets().sendGameMessage("You can't remove your current equipment here.");
+                    return false;
+                }
             }
-        }
-        for (int slot = 0; slot < player.getEquipment().getItems().getSize(); slot++) {
-            Item current = player.getEquipment().getItem(slot);
-            if (current != null && !player.getControlerManager().canRemoveEquip(slot, current.getId())) {
-                player.getPackets().sendGameMessage("You can't remove your current equipment here.");
-                return false;
-            }
-        }
-        for (int slot = 0; slot < desiredEquipment.length; slot++) {
-            Item item = desiredEquipment[slot];
-            if (item == null)
-                continue;
-            if (!ItemConstants.canWear(item, player) || !player.getControlerManager().canEquip(slot, item.getId())) {
-                player.getPackets().sendGameMessage("You no longer meet the requirements for part of this preset.");
-                return false;
+            for (int slot = 0; slot < desiredEquipment.length; slot++) {
+                Item item = desiredEquipment[slot];
+                if (item == null)
+                    continue;
+                if (!ItemConstants.canWear(item, player) || !player.getControlerManager().canEquip(slot, item.getId())) {
+                    player.getPackets().sendGameMessage("You no longer meet the requirements for part of this preset.");
+                    return false;
+                }
             }
         }
         return true;
+    }
+
+    private static BeastOfBurden getActiveBob(Player player) {
+        return player.getFamiliar() == null ? null : player.getFamiliar().getBob();
+    }
+
+    private static Item[] copyCurrentBob(Player player) {
+        BeastOfBurden bob = getActiveBob(player);
+        return bob == null ? new Item[0] : copyItems(bob.getBeastItems().getItemsCopy());
     }
 
     private static void refreshAfterLoad(Player player) {
@@ -339,11 +505,21 @@ public final class PresetManager {
         player.getBank().refreshTotalSize();
     }
 
-    private static void restoreCarried(Player player, Item[] inventory, Item[] equipment) {
-        player.getInventory().getItems().reset();
-        player.getEquipment().getItems().reset();
-        setItems(player.getInventory().getItems(), inventory);
-        setItems(player.getEquipment().getItems(), equipment);
+    private static void restoreCarried(Player player, Item[] inventory, Item[] equipment, Item[] bobItems,
+            boolean restoreInventory, boolean restoreEquipment, boolean restoreBob, BeastOfBurden bob) {
+        if (restoreInventory) {
+            player.getInventory().getItems().reset();
+            setItems(player.getInventory().getItems(), inventory);
+        }
+        if (restoreEquipment) {
+            player.getEquipment().getItems().reset();
+            setItems(player.getEquipment().getItems(), equipment);
+        }
+        if (restoreBob && bob != null) {
+            bob.getBeastItems().reset();
+            setItems(bob.getBeastItems(), bobItems);
+            bob.sendInterItems();
+        }
     }
 
     private static void restoreBank(Player player, Map<Integer, Long> bankBefore, Set<Integer> affected) {
@@ -361,6 +537,8 @@ public final class PresetManager {
     }
 
     private static void setItems(com.rs.game.item.ItemsContainer<Item> container, Item[] items) {
+        if (items == null)
+            return;
         int count = Math.min(container.getSize(), items.length);
         for (int slot = 0; slot < count; slot++) {
             Item item = items[slot];
@@ -437,7 +615,7 @@ public final class PresetManager {
             return new PresetProfile();
         try (DataInputStream input = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
             int version = input.readInt();
-            if (version != FILE_VERSION)
+            if (version < 1 || version > FILE_VERSION)
                 throw new IOException("Unsupported preset file version " + version);
             int count = input.readInt();
             if (count < 0 || count > PRESET_COUNT)
@@ -450,13 +628,27 @@ public final class PresetManager {
                 preset.name = input.readUTF();
                 preset.inventory = readItems(input);
                 preset.equipment = readItems(input);
+                if (version >= 2) {
+                    preset.loadInventory = input.readBoolean();
+                    preset.loadEquipment = input.readBoolean();
+                    preset.loadBob = input.readBoolean();
+                    preset.bob = readItems(input);
+                }
                 profile.presets[slot] = preset;
+            }
+            if (version >= 2) {
+                profile.quickPresetOne = sanitizeQuickPreset(input.readInt());
+                profile.quickPresetTwo = sanitizeQuickPreset(input.readInt());
             }
             return profile;
         } catch (Throwable e) {
             Logger.log(PresetManager.class, "Unable to read preset file " + file.getPath() + ": " + e.getMessage());
             return new PresetProfile();
         }
+    }
+
+    private static int sanitizeQuickPreset(int presetIndex) {
+        return presetIndex >= 0 && presetIndex < PRESET_COUNT ? presetIndex : -1;
     }
 
     private static boolean saveProfile(Player player, PresetProfile profile) {
@@ -476,7 +668,13 @@ public final class PresetManager {
                     output.writeUTF(preset.name == null ? "Preset " + (slot + 1) : preset.name);
                     writeItems(output, preset.inventory);
                     writeItems(output, preset.equipment);
+                    output.writeBoolean(preset.loadInventory);
+                    output.writeBoolean(preset.loadEquipment);
+                    output.writeBoolean(preset.loadBob);
+                    writeItems(output, preset.bob);
                 }
+                output.writeInt(profile.quickPresetOne);
+                output.writeInt(profile.quickPresetTwo);
             }
             Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
             return true;
@@ -520,11 +718,17 @@ public final class PresetManager {
 
     private static final class PresetProfile {
         private final Preset[] presets = new Preset[PRESET_COUNT];
+        private int quickPresetOne = -1;
+        private int quickPresetTwo = -1;
     }
 
     private static final class Preset {
         private String name;
         private Item[] inventory;
         private Item[] equipment;
+        private Item[] bob;
+        private boolean loadInventory = true;
+        private boolean loadEquipment = true;
+        private boolean loadBob;
     }
 }
