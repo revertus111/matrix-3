@@ -1,0 +1,29 @@
+Rise of the Six animation research
+
+Record only cache/runtime-supported mappings.
+
+Normal/render animations
+- Dharok: UNKNOWN
+- Ahrim: UNKNOWN
+- Karil: UNKNOWN
+- Torag: UNKNOWN
+- Guthan: UNKNOWN
+- Verac: UNKNOWN
+
+Special animations
+- Hurricane / Whirlwind: UNKNOWN
+- Dharok Greatest Axe: UNKNOWN
+- Torag special: UNKNOWN
+- Guthan Impale: UNKNOWN
+- Verac special: UNKNOWN
+- Ahrim specials: UNKNOWN
+- Karil specials: UNKNOWN
+
+For each candidate record:
+- animation ID
+- frame count
+- total cache duration
+- right/left hand item overrides
+- handled sounds when relevant
+- evidence label
+- runtime confirmation notes
