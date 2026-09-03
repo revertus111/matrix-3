@@ -1,0 +1,10 @@
+Matrix3 36-slot inventory runtime test list
+
+1. Log in with an existing character whose serialized inventory was created before this patch. Confirm all existing items remain in the same slot positions and no item is lost or duplicated.
+2. Use Item Browser or another safe owner spawn path to fill inventory slots beyond the original slot 28. Confirm the server accepts up to 36 occupied slots before reporting a full inventory.
+3. Open and resize the NIS inventory interface 1473:34. Confirm slots 29-36 are visible and usable. If only 28 visual slots render, record that runtime result and treat client component hardcoding as the next targeted slice rather than changing unrelated interface code.
+4. In slots 29-36, test selection, examine, item switching/reordering, dropping/deleting where safe, and normal inventory interactions. Confirm the server and client agree on the extra slot indexes.
+5. Bank/deposit and withdraw items involving the extra inventory slots. Confirm no slot truncation, packet error, or item loss occurs.
+6. Log out normally with items stored in slots 29-36, restart the server/client as appropriate, and log back in. Confirm the extra-slot contents persist exactly.
+7. Fill all 36 slots and attempt to add another non-stackable item. Confirm the normal full-inventory handling occurs only after all 36 slots are occupied.
+8. Run the normal Matrix3 inventory/bank/preset smoke path after the expansion and confirm existing 28-slot-era content does not assume or corrupt the old final slot index.
