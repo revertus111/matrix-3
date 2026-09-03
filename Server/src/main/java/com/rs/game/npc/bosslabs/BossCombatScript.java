@@ -72,6 +72,51 @@ public final class BossCombatScript extends CombatScript {
 		return executeAttack(npc, resolvedTarget, attack, encounter);
 	}
 
+	/**
+	 * Developer-only BossLabs testing hook. It executes one authored attack
+	 * through the exact normal attack implementation without modifying weighted
+	 * rotation/cooldown state or NPCCombat's authoritative target.
+	 */
+	int executeAttackForTesting(NPC npc, Entity currentTarget, String phaseId, String attackId) {
+		if (npc == null || npc.hasFinished() || npc.isDead())
+			throw new IllegalArgumentException("The BossLabs test boss is not active.");
+		if (currentTarget == null || currentTarget.hasFinished() || currentTarget.isDead())
+			throw new IllegalArgumentException("The BossLabs test boss has no valid target.");
+		BossDefinition definition = BossDefinitionRegistry.get(npc.getId());
+		if (definition == null)
+			throw new IllegalArgumentException("The test NPC no longer has a live BossLabs definition.");
+
+		BossPhaseDefinition selectedPhase = null;
+		for (BossPhaseDefinition phase : definition.getPhases()) {
+			if (phase.getId().equalsIgnoreCase(phaseId)) {
+				selectedPhase = phase;
+				break;
+			}
+		}
+		if (selectedPhase == null)
+			throw new IllegalArgumentException("Unknown BossLabs phase id: " + phaseId);
+
+		BossAttackDefinition selectedAttack = null;
+		for (BossAttackDefinition attack : selectedPhase.getAttacks()) {
+			if (attack.getId().equalsIgnoreCase(attackId)) {
+				selectedAttack = attack;
+				break;
+			}
+		}
+		if (selectedAttack == null)
+			throw new IllegalArgumentException("Unknown attack id in phase " + selectedPhase.getId() + ": " + attackId);
+
+		BossEncounterContext encounter = BossEncounterRuntime.getOrCreate(npc);
+		if (currentTarget instanceof Player)
+			encounter.registerParticipant((Player) currentTarget);
+		Entity resolvedTarget = resolveAttackTarget(npc, currentTarget, selectedAttack);
+		if (resolvedTarget == null)
+			throw new IllegalArgumentException("The selected attack could not resolve a valid target.");
+		if (resolvedTarget instanceof Player)
+			encounter.registerParticipant((Player) resolvedTarget);
+		return executeAttack(npc, resolvedTarget, selectedAttack, encounter);
+	}
+
 	private BossAttackDefinition selectAttack(NPC npc, BossDefinition definition, BossPhaseDefinition phase,
 			BossEncounterContext encounter) {
 		RotationState state;
