@@ -62,8 +62,28 @@ Read `docs/rs3/PROJECT.md` before changing code. Also read the relevant `docs/<s
 - Add/update a subject test list when runtime behavior changes.
 - Run or request the relevant portion of `docs/rs3/SMOKE_TEST.md` after meaningful core changes. Cache/loading, object, networking, persistence, or broad engine changes require the full smoke test unless clearly unnecessary.
 - `docs/rs3/BASELINE.md` is the known-good reference point. Do not silently redefine it after regressions.
-- After every completed patch, include a concise status update in the chat showing the current subject/project progression. For phased tools or features, include an Area/Status table using `✅ Complete`, `🟡 Foundation`, `🔵 In Progress`, `⚠️ Needs runtime verification`, and `❌ Not started` where applicable. Keep the status aligned with the repository's actual implementation state.
-- The status update is part of the required post-patch response, not optional commentary. It should reflect what the patch just changed and what remains next.
+
+## Goal-anchored status updates
+
+Status updates are a navigation aid for the user's original/main goal, not a changelog for the latest subtask.
+
+- Every status update in chat, including every required post-patch status, must stay anchored to the original/main goal of the active project or workstream.
+- Keep a stable set of top-level milestone rows for that main goal. Reuse those same rows across updates instead of replacing the table with whatever small feature, bug, tool, animation, or research task was just touched.
+- A subtask belongs in the main table only when it is itself one of the established top-level milestones. Otherwise summarize it separately as `Just completed:` or `Current focus:`.
+- The table must show enough of the remaining main path that the user can return after a side track and immediately see what the real next step is.
+- If work temporarily moves to a side task, keep the main-goal table unchanged and mention the side task separately. Do not let tooling or incidental fixes become the apparent project goal.
+- End status updates with `Next main step:` using the next meaningful milestone or checkpoint from the original plan, not merely the next convenient subtask.
+- Only change the status anchor or stable milestone rows when the user explicitly changes the main goal, starts a separate workstream, or approves a revised main roadmap.
+- Do not invent percentage-complete estimates unless they are grounded in an explicit checklist or measurable scope.
+- Use `✅ Complete`, `🟡 Foundation`, `🔵 In Progress`, `⚠️ Needs runtime verification` (or a concise audit note when the area has not yet been inspected), and `❌ Not started` where applicable.
+
+Required post-patch status shape:
+
+1. `Main goal:` the original/main objective.
+2. `Just completed:` the patch or subtask that changed.
+3. A concise Area/Status table for the stable main-goal milestones.
+4. `Next main step:` the next meaningful checkpoint that advances the original goal.
+5. Optional blocker/runtime-verification note only when it materially affects that next step.
 
 ## Priority discipline
 
