@@ -3,7 +3,9 @@ package game;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -28,7 +30,8 @@ public final class CustomItemActionConfig {
 
     private static boolean loaded;
     private static Class639_Sub5 lastDefinitions;
-    private static final Set<Integer> appliedItems = new HashSet<Integer>();
+    private static final Map<Integer, ItemDefinitions> appliedDefinitions =
+            new HashMap<Integer, ItemDefinitions>();
 
     private CustomItemActionConfig() {
     }
@@ -43,28 +46,23 @@ public final class CustomItemActionConfig {
             return;
         if (definitions != lastDefinitions) {
             lastDefinitions = definitions;
-            appliedItems.clear();
+            appliedDefinitions.clear();
         }
 
         for (Integer itemIdValue : ITEM_IDS) {
             int itemId = itemIdValue.intValue();
-            if (appliedItems.contains(itemIdValue))
+            if (itemId < 0 || itemId >= definitions.method45())
                 continue;
-            if (itemId < 0 || itemId >= definitions.method45()) {
-                appliedItems.add(itemIdValue);
-                continue;
-            }
             try {
                 ItemDefinitions definition = (ItemDefinitions) definitions.getDefinition(itemId, 0);
-                if (definition == null)
+                if (definition == null || appliedDefinitions.get(itemIdValue) == definition)
                     continue;
                 applyInventoryOptions(definition, itemId);
                 applyEquipmentOptions(definition, itemId);
-                appliedItems.add(itemIdValue);
+                appliedDefinitions.put(itemIdValue, definition);
             } catch (RuntimeException ex) {
                 System.err.println("Custom item action config failed for item " + itemId);
                 ex.printStackTrace();
-                appliedItems.add(itemIdValue);
             }
         }
     }
