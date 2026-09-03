@@ -70,3 +70,7 @@
 - GFX correlation now aggregates decode failures, prints at most the first five examples, and explicitly marks zero-match results as incomplete whenever decoding failed instead of presenting them as evidence.
 - Extended focused/Deep Scan animation coverage through 21947, including the runtime-confirmed 21941 shared melee spin and current Guthan 21944/21945/21947 mappings.
 - Corrected the Owner dump label for NPCs 18546-18551 to body-only/inactive verified-static definitions that are runtime-invisible as the current subdued presentation; their authentic role remains HYPOTHESIS.
+- Added the lazy P/Player V1 panel with read-only display name, rights, client state, world tile, plane, and region visibility.
+- Player world position is derived from the live local-player scene transform plus Matrix3's current scene base; plane uses the same local-player field already used by Dev Mode world actions.
+- Player region display is derived from the resolved world tile using Matrix3/RuneScape 64x64 region boundaries and includes both region ID and region X/Y.
+- Player panel refresh runs only while the panel is showing and performs no server command, packet send, gameplay mutation, or persistence write.
