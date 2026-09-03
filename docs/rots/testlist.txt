@@ -1,25 +1,47 @@
-RoTS cache research test list
+RoTS cache/parity test list
 
+Tooling / cache research
 [ ] Eclipse/Java 8 clean build succeeds for Client and Server after RoTS tooling changes.
 [ ] Existing `com.rs.tools.RotsCacheScanner` remains read-only and can still run when a standalone server-cache dump is specifically useful.
 [ ] Open Client Console -> Owner after login/loading. Confirm RoTS cache research reaches Ready once NPC and animation definition loaders are available.
 [ ] Click Scan RoTS and confirm work completes without modifying cache files or gameplay state.
-[ ] Confirm the game renderer and Owner panel remain responsive while the scan runs off the Swing event-dispatch thread.
+[ ] Confirm the game renderer and Owner panel remain responsive while scans run off the Swing event-dispatch thread.
 [ ] Confirm output contains NPC definitions 18538 through 18551 with names/models/renderEmote/transforms/options/known client-script params.
 [ ] Confirm NPC 18539 is labeled VERIFIED Ahrim flying state.
 [ ] Confirm NPC 18542 is labeled VERIFIED Guthan spearless / Impale state.
-[ ] Confirm NPCs 18546-18551 remain labeled HYPOTHESIS subdued/downed states until runtime behavior proves the mapping.
-[ ] Confirm animation scan includes populated definitions from 17960-18040 and 21920-21940, including animation ID, frame count, total duration, frame durations/IDs, hand overrides, priority, and handled sounds.
-[ ] Click Copy All and confirm the entire dump, including off-screen text, is copied to the clipboard in one operation.
-[ ] Click Clear and confirm only research output/status clears; cache/game state remains unchanged.
-[ ] Runtime-spawn/subdue 18546-18551 before upgrading any subdued/downed-state mapping to VERIFIED.
-[ ] Use animation candidates from the copied dump for targeted runtime playback before mapping Hurricane, Greatest Axe, Impale throw/retrieve, Torag, Verac, Karil, or other Ahrim special animations.
-[ ] After normal login/loading, confirm Deep Scan becomes ready once animation and render-set definitions are live; GFX definitions should bootstrap read-only when Deep Scan starts.
-[ ] Click Deep Scan in a fresh session before triggering any visible GFX and confirm the output reports the GFX loader ready rather than waiting for a prior runtime GFX instantiation.
-[ ] Click Deep Scan and confirm the game/Owner UI remains responsive while the worker resolves render sets and scans GFX definitions.
-[ ] Confirm Deep Scan contains render sets 2687, 2689, 2690, 2982, and 2987 with raw opcode animation references plus opcode-52 animation/weight arrays where present.
-[ ] Confirm targeted animation classification includes 18025, 18026, 21903, 21931, and 21922-21940 candidates without assigning a mechanic name.
-[ ] Confirm each targeted candidate reports whether it is referenced by one of the known RoTS render sets.
-[ ] Confirm GFX correlation prints only definitions whose animation matches the targeted/render-set animation set or whose model matches a known RoTS NPC model.
-[ ] Resize Owner down to the narrowest supported console width and confirm Account values, Scan RoTS, Deep Scan, Copy All, Clear, output area, and wrapped note all remain visible without right-side clipping.
-[ ] Copy the completed Deep Scan with Copy All and use runtime playback/video comparison before promoting any candidate from HYPOTHESIS to VERIFIED.
+[ ] Confirm Deep Scan starts in a fresh session without requiring a visible GFX to have already loaded.
+[ ] Confirm Deep Scan contains render sets 2687, 2689, 2690, 2982, and 2987 with raw opcode animation references.
+[ ] Confirm targeted candidate output reports render-set membership and GFX correlation without inventing mechanic names.
+[ ] Click Copy All and confirm the entire dump, including off-screen text, is copied in one operation.
+[ ] Resize Owner down to the narrowest supported console width and confirm Account values, Scan RoTS, Deep Scan, Copy All, Clear, output area, and wrapped note remain visible.
+
+Current encounter foundation
+[ ] Start a RoTS instance and confirm all six `RiseOfTheSixBrother` NPCs spawn in the active daily 3/3 west/east rotation.
+[ ] Confirm brothers use the current side classification and do not target/interact across invalid encounter state boundaries.
+[ ] Subdue one brother and confirm it remains visible at 1 HP, becomes non-interactable, and does not execute ordinary NPC death removal.
+[ ] Confirm survivor brothers heal by the current 5,000 implementation amount when one brother is subdued.
+[ ] Confirm the custom revive bar advances across the current 50-tick revive window.
+[ ] Allow the revive timer to finish and confirm subdued brothers revive at the current 25,000 HP implementation value using animation 21914.
+[ ] Subdue all six before revival and confirm `All six brothers are subdued. The shadow bond has been broken.` appears and revival is cancelled.
+[ ] Confirm cache definitions 18546-18551 are NOT reintroduced into the live subdued path while they remain runtime-invisible in the current revision-830 client/cache.
+
+Current brother mechanics
+[ ] Torag Whack/Pummel: verify current 21933 opening, 21934 victim, 21935 pummel, and 21938 release sequence against runtime/video evidence before classifying it as authentic 1:1.
+[ ] Guthan Impale: verify current 21944 throw, 21945 impaled-victim, 21947 retrieval, NPC 18541<->18542 transformation, projectile/GFX 4411, secondary bleed GFX 4407, damage cadence, retrieval range, and Torag interaction.
+[ ] Dharok Greatest Axe: verify current animation 21940 and stored-damage behavior; keep donor GFX 4406 rejected unless new runtime evidence contradicts the bad visual result.
+[ ] Hurricane: current implementation is an approximation using the normal melee attack emote plus facing rotation; identify and runtime-verify the authentic animation before replacing it.
+[ ] Wall Slam: current implementation uses normal attack emotes for movement phases; verify authentic animation, pathing, AoE radius, damage, and timing before parity changes.
+[ ] Ahrim: verify normal ground/flying autos, then implement/test authentic special rotation separately.
+[ ] Karil: verify normal ranged autos, then implement/test authentic special rotation separately, including Shadow Dash-related behavior.
+[ ] Verac: verify current Wall Slam/forced-revive-Hurricane behavior against authentic special rotation evidence.
+
+Encounter parity still requiring focused tests
+[ ] Measure/verify normal attack cadence for all six brothers; do not assume current CombatScript return values equal cache attack-speed params without tracing NPCCombat scheduling.
+[ ] Verify exact west/east arena bounds and portal/barrier behavior.
+[ ] Verify empty-side empowerment warning delay, hop delay, blockers, GFX 4413, and authentic landing positions.
+[ ] Implement/test Brother Throw only after exact flight/landing assets and timing are established; current pairing matrix alone is not full mechanic parity.
+[ ] Audit/test escape/tunnel/reward flow when combat-mechanic parity reaches that phase.
+
+Next research checkpoint
+[ ] Run the current Deep Scan and use the known implementation mappings (21914, 21925, 21933-21935, 21938, 21940, 21944, 21945, 21947) to eliminate already-accounted-for animations from unknown-special candidates.
+[ ] Prioritize authentic Hurricane / Whirlwind animation identification and runtime playback before the next RoTS combat patch.
