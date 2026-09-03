@@ -43,3 +43,9 @@
 - Added ClientConsoleRotsBridge and narrow definition-factory registration hooks so Owner can inspect live Matrix3 NPC/animation definitions without a standalone Java main or server command path.
 - RoTS scanning runs on a daemon worker thread and only returns completed text to Swing, avoiding full cache research work on the event-dispatch thread.
 - The focused dump covers NPCs 18538-18551 plus animation neighborhoods 17960-18040 and 21920-21940, including models, render emotes, known params, frame durations/IDs, hand overrides, and handled-sound data.
+
+2026-09-03
+- Added a separate Owner `Deep Scan` action for focused RoTS render/BAS and GFX correlation while preserving the existing normal RoTS scan.
+- Deep Scan resolves known RoTS render sets into raw cache opcode animation references and marks targeted animation candidates by render-set membership without assigning unverified mechanic semantics.
+- Added a narrow GraphicsDefinition loader registration hook and read-only GFX scan for explicit candidate-animation or known RoTS-model matches.
+- Deep Scan remains daemon-worker based; Copy All/Clear continue to operate on the complete generated text without gameplay/server mutation.
