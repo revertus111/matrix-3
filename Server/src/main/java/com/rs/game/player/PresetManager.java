@@ -2,11 +2,13 @@ package com.rs.game.player;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,21 +30,18 @@ import com.rs.utils.Logger;
 /**
  * Server-side backing for the existing Gear -> Presets interface.
  *
- * The cache already supplies interfaces 579/577/627, but Matrix3 never
- * completed the server-side preset storage/load path. This class deliberately
- * owns only the preset data and item transaction; the normal Bank, Inventory,
- * Equipment and BeastOfBurden classes remain authoritative for those
- * containers.
+ * The cache supplies interfaces 579/627/577. Matrix3 remains authoritative for
+ * the Bank, Inventory, Equipment and BeastOfBurden containers; this class only
+ * owns preset metadata and the validated transaction that applies it.
  */
 public final class PresetManager {
 
     private static final int PRESET_INTERFACE = 579;
     private static final int PRESET_COUNT = 10;
-    private static final int FILE_VERSION = 2;
+    private static final int FILE_VERSION = 3;
 
-    // Runtime map: row 1 starts at component 184 and row 2 starts at 233.
-    // Their matching controls are exactly 49 components apart. Rows 3-10 use
-    // that stride as a HYPOTHESIS until the retained mapper confirms them.
+    // VERIFIED at runtime for rows 1 and 2. Rows 3-10 still use the observed
+    // +49 stride as a HYPOTHESIS until their mapper output is captured.
     private static final int PRESET_ROW_FIRST_COMPONENT = 184;
     private static final int PRESET_ROW_COMPONENT_STRIDE = 49;
     private static final int PRESET_SELECTOR_OFFSET = 0;
@@ -54,16 +53,21 @@ public final class PresetManager {
     private static final int PRESET_RIGHT_OPTION_TWO_OFFSET = 48;
 
     private static final File SAVE_DIRECTORY = new File("data/presets");
-    private static final ConcurrentHashMap<String, PresetProfile> PROFILES = new ConcurrentHashMap<String, PresetProfile>();
-    private static final ConcurrentHashMap<String, Integer> SELECTED_PRESETS = new ConcurrentHashMap<String, Integer>();
-    private static final ConcurrentHashMap<String, Boolean> NATIVE_CLICK_SIGNATURES = new ConcurrentHashMap<String, Boolean>();
+    private static final File NATIVE_CLICK_LOG = new File("data/logs/presets/preset-map.txt");
+
+    private static final ConcurrentHashMap<String, PresetProfile> PROFILES =
+            new ConcurrentHashMap<String, PresetProfile>();
+    private static final ConcurrentHashMap<String, Integer> SELECTED_PRESETS =
+            new ConcurrentHashMap<String, Integer>();
+    private static final ConcurrentHashMap<String, Boolean> NATIVE_CLICK_SIGNATURES =
+            new ConcurrentHashMap<String, Boolean>();
 
     private PresetManager() {
     }
 
     /**
-     * @return true when this click belongs to the preset interface and was
-     *         consumed here.
+     * @return true when this click belongs to the mapped portion of the preset
+     *         interface and was consumed here.
      */
     public static boolean processButtonClick(final Player player, int interfaceId, int componentId, int slotId,
             int slotId2, int packetId) {
@@ -97,7 +101,7 @@ public final class PresetManager {
             return true;
         }
         if (actionOffset == PRESET_SAVE_OFFSET) {
-            savePreset(player, presetIndex);
+            openSavePresetDialogue(player, presetIndex);
             return true;
         }
         if (actionOffset == PRESET_LOAD_OFFSET) {
@@ -134,8 +138,26 @@ public final class PresetManager {
         String signature = componentId + ":" + slotId + ":" + slotId2 + ":" + packetId;
         if (NATIVE_CLICK_SIGNATURES.putIfAbsent(signature, Boolean.TRUE) != null)
             return;
-        Logger.log(PresetManager.class, "[PRESET-MAP] player=" + player.getUsername() + ", component=" + componentId
-                + ", slot=" + slotId + ", slot2=" + slotId2 + ", packet=" + packetId);
+
+        String line = "[PRESET-MAP] player=" + player.getUsername() + ", component=" + componentId + ", slot=" + slotId
+                + ", slot2=" + slotId2 + ", packet=" + packetId;
+        Logger.log(PresetManager.class, line);
+
+        try {
+            File parent = NATIVE_CLICK_LOG.getParentFile();
+            if (parent != null)
+                Files.createDirectories(parent.toPath());
+            BufferedWriter writer = new BufferedWriter(new FileWriter(NATIVE_CLICK_LOG, true));
+            try {
+                writer.write(line);
+                writer.newLine();
+            } finally {
+                writer.close();
+            }
+        } catch (Throwable e) {
+            if (Settings.DEBUG)
+                Logger.log(PresetManager.class, "Unable to append preset mapper log: " + e.getMessage());
+        }
     }
 
     private static void openPresetActions(final Player player, final int presetIndex) {
@@ -146,8 +168,8 @@ public final class PresetManager {
             @Override
             public void start() {
                 if (saved)
-                    sendOptionsDialogue("Preset " + (presetIndex + 1), "Overwrite with current setup", "Load preset",
-                            "Settings", "Clear preset", "Cancel");
+                    sendOptionsDialogue("Preset " + (presetIndex + 1), "Save current setup", "Load preset", "Settings",
+                            "Clear preset", "Cancel");
                 else
                     sendOptionsDialogue("Preset " + (presetIndex + 1), "Save current setup", "Cancel");
             }
@@ -155,15 +177,20 @@ public final class PresetManager {
             @Override
             public void run(int interfaceId, int componentId) {
                 if (!saved) {
-                    if (componentId == OPTION_1)
-                        savePreset(player, presetIndex);
+                    if (componentId == OPTION_1) {
+                        end();
+                        openSavePresetDialogue(player, presetIndex);
+                        return;
+                    }
                     end();
                     return;
                 }
 
-                if (componentId == OPTION_1)
-                    savePreset(player, presetIndex);
-                else if (componentId == OPTION_2)
+                if (componentId == OPTION_1) {
+                    end();
+                    openSavePresetDialogue(player, presetIndex);
+                    return;
+                } else if (componentId == OPTION_2)
                     loadPreset(player, presetIndex);
                 else if (componentId == OPTION_3) {
                     end();
@@ -180,6 +207,40 @@ public final class PresetManager {
         });
     }
 
+    /**
+     * Late-2014 RS3 save semantics: the player chooses Backpack, Worn, or Both
+     * when saving. BoB contents are not owned by a normal preset.
+     */
+    private static void openSavePresetDialogue(final Player player, final int presetIndex) {
+        player.getDialogueManager().startDialogue(new Dialogue() {
+
+            @Override
+            public void start() {
+                sendOptionsDialogue("Save Preset " + (presetIndex + 1), "Backpack", "Worn equipment",
+                        "Backpack + Worn", "Cancel");
+            }
+
+            @Override
+            public void run(int interfaceId, int componentId) {
+                if (componentId == OPTION_1)
+                    savePreset(player, presetIndex, true, false);
+                else if (componentId == OPTION_2)
+                    savePreset(player, presetIndex, false, true);
+                else if (componentId == OPTION_3)
+                    savePreset(player, presetIndex, true, true);
+                end();
+            }
+
+            @Override
+            public void finish() {
+            }
+        });
+    }
+
+    /**
+     * In the target late-2014 preset model the cog controls whether the single
+     * dedicated Beast of Burden preset is loaded alongside this normal preset.
+     */
     private static void openPresetSettings(final Player player, final int presetIndex) {
         final Preset preset = getProfile(player).presets[presetIndex];
         if (preset == null) {
@@ -196,45 +257,24 @@ public final class PresetManager {
 
             private void showSettings() {
                 sendOptionsDialogue("Preset " + (presetIndex + 1) + " settings",
-                        "Backpack: " + onOff(preset.loadInventory),
-                        "Worn equipment: " + onOff(preset.loadEquipment),
-                        "Beast of Burden: " + onOff(preset.loadBob), "Done");
+                        "Load Beast of Burden: " + (preset.loadBob ? "On" : "Off"), "Done");
             }
 
             @Override
             public void run(int interfaceId, int componentId) {
-                if (componentId == OPTION_4) {
+                if (componentId == OPTION_2) {
+                    end();
+                    return;
+                }
+                if (componentId != OPTION_1) {
                     end();
                     return;
                 }
 
-                boolean oldInventory = preset.loadInventory;
-                boolean oldEquipment = preset.loadEquipment;
-                boolean oldBob = preset.loadBob;
-                if (componentId == OPTION_1)
-                    preset.loadInventory = !preset.loadInventory;
-                else if (componentId == OPTION_2)
-                    preset.loadEquipment = !preset.loadEquipment;
-                else if (componentId == OPTION_3)
-                    preset.loadBob = !preset.loadBob;
-                else {
-                    end();
-                    return;
-                }
-
-                if (!preset.loadInventory && !preset.loadEquipment && !preset.loadBob) {
-                    preset.loadInventory = oldInventory;
-                    preset.loadEquipment = oldEquipment;
-                    preset.loadBob = oldBob;
-                    player.getPackets().sendGameMessage("A preset must load at least one container.");
-                    showSettings();
-                    return;
-                }
-
+                boolean old = preset.loadBob;
+                preset.loadBob = !preset.loadBob;
                 if (!saveProfile(player, getProfile(player))) {
-                    preset.loadInventory = oldInventory;
-                    preset.loadEquipment = oldEquipment;
-                    preset.loadBob = oldBob;
+                    preset.loadBob = old;
                     player.getPackets().sendGameMessage("The preset settings could not be saved.");
                 }
                 showSettings();
@@ -244,10 +284,6 @@ public final class PresetManager {
             public void finish() {
             }
         });
-    }
-
-    private static String onOff(boolean enabled) {
-        return enabled ? "On" : "Off";
     }
 
     private static void assignQuickPreset(Player player, int presetIndex, int quickSlot) {
@@ -274,19 +310,26 @@ public final class PresetManager {
         player.getPackets().sendGameMessage("Preset " + (presetIndex + 1) + " assigned to Quick Preset " + quickSlot + ".");
     }
 
-    private static void savePreset(Player player, int presetIndex) {
+    public static void loadQuickPreset(Player player, int quickSlot) {
+        PresetProfile profile = getProfile(player);
+        int presetIndex = quickSlot == 1 ? profile.quickPresetOne : quickSlot == 2 ? profile.quickPresetTwo : -1;
+        if (presetIndex < 0 || presetIndex >= PRESET_COUNT || profile.presets[presetIndex] == null) {
+            player.getPackets().sendGameMessage("Quick Preset " + quickSlot + " has not been assigned.");
+            return;
+        }
+        loadPreset(player, presetIndex);
+    }
+
+    private static void savePreset(Player player, int presetIndex, boolean saveInventory, boolean saveEquipment) {
         PresetProfile profile = getProfile(player);
         Preset previous = profile.presets[presetIndex];
         Preset preset = new Preset();
-        preset.name = "Preset " + (presetIndex + 1);
-        preset.inventory = copyItems(player.getInventory().getItems().getItemsCopy());
-        preset.equipment = copyItems(player.getEquipment().getItems().getItemsCopy());
-        preset.bob = copyCurrentBob(player);
-        if (previous != null) {
-            preset.loadInventory = previous.loadInventory;
-            preset.loadEquipment = previous.loadEquipment;
-            preset.loadBob = previous.loadBob;
-        }
+        preset.name = previous == null || previous.name == null ? "Preset " + (presetIndex + 1) : previous.name;
+        preset.loadInventory = saveInventory;
+        preset.loadEquipment = saveEquipment;
+        preset.loadBob = previous != null && previous.loadBob;
+        preset.inventory = saveInventory ? copyItems(player.getInventory().getItems().getItemsCopy()) : new Item[0];
+        preset.equipment = saveEquipment ? copyItems(player.getEquipment().getItems().getItemsCopy()) : new Item[0];
         profile.presets[presetIndex] = preset;
 
         if (!saveProfile(player, profile)) {
@@ -318,12 +361,52 @@ public final class PresetManager {
         player.getPackets().sendGameMessage("Preset " + (presetIndex + 1) + " cleared.");
     }
 
+    public static void saveBeastOfBurdenPreset(Player player) {
+        BeastOfBurden bob = getActiveBob(player);
+        if (bob == null) {
+            player.getPackets().sendGameMessage("Summon a Beast of Burden before saving its preset.");
+            return;
+        }
+
+        PresetProfile profile = getProfile(player);
+        Item[] previous = profile.bobPreset;
+        boolean previousSaved = profile.bobPresetSaved;
+        profile.bobPreset = copyItems(bob.getBeastItems().getItemsCopy());
+        profile.bobPresetSaved = true;
+        if (!saveProfile(player, profile)) {
+            profile.bobPreset = previous;
+            profile.bobPresetSaved = previousSaved;
+            player.getPackets().sendGameMessage("The Beast of Burden preset could not be saved.");
+            return;
+        }
+        player.getPackets().sendGameMessage("Beast of Burden preset saved.");
+    }
+
+    public static void loadBeastOfBurdenPreset(Player player) {
+        PresetProfile profile = getProfile(player);
+        if (!profile.bobPresetSaved) {
+            player.getPackets().sendGameMessage("No Beast of Burden preset has been saved.");
+            return;
+        }
+        Preset bobOnly = new Preset();
+        bobOnly.name = "Beast of Burden";
+        bobOnly.loadInventory = false;
+        bobOnly.loadEquipment = false;
+        bobOnly.loadBob = true;
+        loadContainers(player, bobOnly, profile, "Beast of Burden preset");
+    }
+
     private static void loadPreset(Player player, int presetIndex) {
-        Preset preset = getProfile(player).presets[presetIndex];
+        PresetProfile profile = getProfile(player);
+        Preset preset = profile.presets[presetIndex];
         if (preset == null) {
             player.getPackets().sendGameMessage("That preset is empty.");
             return;
         }
+        loadContainers(player, preset, profile, "Preset " + (presetIndex + 1));
+    }
+
+    private static void loadContainers(Player player, Preset preset, PresetProfile profile, String displayName) {
         if (!player.getInterfaceManager().containsBankInterface()) {
             player.getPackets().sendGameMessage("Open your bank before loading a preset.");
             return;
@@ -333,7 +416,7 @@ public final class PresetManager {
             return;
         }
         if (!preset.loadInventory && !preset.loadEquipment && !preset.loadBob) {
-            player.getPackets().sendGameMessage("That preset has no enabled containers.");
+            player.getPackets().sendGameMessage("That preset has no saved containers.");
             return;
         }
 
@@ -348,15 +431,25 @@ public final class PresetManager {
         Item[] currentBob = null;
         Item[] desiredBob = null;
         if (preset.loadBob) {
+            if (!profile.bobPresetSaved) {
+                player.getPackets().sendGameMessage("No Beast of Burden preset has been saved.");
+                return;
+            }
             if (bob == null) {
                 player.getPackets().sendGameMessage("Summon a Beast of Burden before loading this preset.");
                 return;
             }
             currentBob = copyItems(bob.getBeastItems().getItemsCopy());
-            desiredBob = normalizeItems(preset.bob, bob.getBeastItems().getSize());
+            desiredBob = normalizeItems(profile.bobPreset, bob.getBeastItems().getSize());
+            if (desiredBob == null) {
+                player.getPackets().sendGameMessage("Your current Beast of Burden is too small for the saved preset.");
+                return;
+            }
+            if (!validateBobRules(player, bob, desiredBob))
+                return;
         }
 
-        if (desiredInventory == null || desiredEquipment == null || (preset.loadBob && desiredBob == null)) {
+        if (desiredInventory == null || desiredEquipment == null) {
             player.getPackets().sendGameMessage("This preset no longer fits the current container layout.");
             return;
         }
@@ -400,6 +493,8 @@ public final class PresetManager {
         }
 
         try {
+            // Preserve Matrix3's safer transaction ordering while matching the
+            // old RS3 user-facing preset behavior.
             for (Integer itemId : affected) {
                 long carriedAmount = amount(carried, itemId.intValue());
                 long desiredAmount = amount(desired, itemId.intValue());
@@ -436,7 +531,7 @@ public final class PresetManager {
             }
 
             refreshAfterLoad(player);
-            player.getPackets().sendGameMessage("Preset " + (presetIndex + 1) + " loaded.");
+            player.getPackets().sendGameMessage(displayName + " loaded.");
         } catch (Throwable e) {
             restoreBank(player, bankBefore, affected);
             restoreCarried(player, currentInventory, currentEquipment, currentBob, preset.loadInventory,
@@ -485,13 +580,18 @@ public final class PresetManager {
         return true;
     }
 
-    private static BeastOfBurden getActiveBob(Player player) {
-        return player.getFamiliar() == null ? null : player.getFamiliar().getBob();
+    private static boolean validateBobRules(Player player, BeastOfBurden bob, Item[] desiredBob) {
+        for (Item item : desiredBob) {
+            if (item != null && !bob.canStoreItem(item)) {
+                player.getPackets().sendGameMessage("Your Beast of Burden cannot store part of this preset.");
+                return false;
+            }
+        }
+        return true;
     }
 
-    private static Item[] copyCurrentBob(Player player) {
-        BeastOfBurden bob = getActiveBob(player);
-        return bob == null ? new Item[0] : copyItems(bob.getBeastItems().getItemsCopy());
+    private static BeastOfBurden getActiveBob(Player player) {
+        return player.getFamiliar() == null ? null : player.getFamiliar().getBob();
     }
 
     private static void refreshAfterLoad(Player player) {
@@ -599,6 +699,30 @@ public final class PresetManager {
         return copy;
     }
 
+    private static boolean hasAnyItem(Item[] items) {
+        if (items == null)
+            return false;
+        for (Item item : items)
+            if (item != null)
+                return true;
+        return false;
+    }
+
+    private static boolean sameItems(Item[] a, Item[] b) {
+        int max = Math.max(a == null ? 0 : a.length, b == null ? 0 : b.length);
+        for (int slot = 0; slot < max; slot++) {
+            Item first = a != null && slot < a.length ? a[slot] : null;
+            Item second = b != null && slot < b.length ? b[slot] : null;
+            if (first == null && second == null)
+                continue;
+            if (first == null || second == null)
+                return false;
+            if (first.getId() != second.getId() || first.getAmount() != second.getAmount())
+                return false;
+        }
+        return true;
+    }
+
     private static PresetProfile getProfile(Player player) {
         String key = getPlayerKey(player);
         PresetProfile profile = PROFILES.get(key);
@@ -613,33 +737,73 @@ public final class PresetManager {
         File file = new File(SAVE_DIRECTORY, key + ".dat");
         if (!file.exists())
             return new PresetProfile();
+
         try (DataInputStream input = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
             int version = input.readInt();
             if (version < 1 || version > FILE_VERSION)
                 throw new IOException("Unsupported preset file version " + version);
+
             int count = input.readInt();
             if (count < 0 || count > PRESET_COUNT)
                 throw new IOException("Invalid preset count " + count);
+
             PresetProfile profile = new PresetProfile();
+            Item[] legacyBobCandidate = null;
+            boolean legacyBobSeen = false;
+            boolean legacyBobAmbiguous = false;
+
             for (int slot = 0; slot < count; slot++) {
                 if (!input.readBoolean())
                     continue;
+
                 Preset preset = new Preset();
                 preset.name = input.readUTF();
                 preset.inventory = readItems(input);
                 preset.equipment = readItems(input);
+
                 if (version >= 2) {
                     preset.loadInventory = input.readBoolean();
                     preset.loadEquipment = input.readBoolean();
                     preset.loadBob = input.readBoolean();
-                    preset.bob = readItems(input);
+                    if (version == 2) {
+                        Item[] legacyBob = readItems(input);
+                        if (hasAnyItem(legacyBob)) {
+                            if (!legacyBobSeen) {
+                                legacyBobCandidate = copyItems(legacyBob);
+                                legacyBobSeen = true;
+                            } else if (!sameItems(legacyBobCandidate, legacyBob)) {
+                                legacyBobAmbiguous = true;
+                            }
+                        }
+                    }
                 }
                 profile.presets[slot] = preset;
             }
+
             if (version >= 2) {
                 profile.quickPresetOne = sanitizeQuickPreset(input.readInt());
                 profile.quickPresetTwo = sanitizeQuickPreset(input.readInt());
             }
+
+            if (version >= 3) {
+                profile.bobPresetSaved = input.readBoolean();
+                profile.bobPreset = profile.bobPresetSaved ? readItems(input) : null;
+            } else if (version == 2) {
+                if (legacyBobSeen && !legacyBobAmbiguous) {
+                    profile.bobPreset = legacyBobCandidate;
+                    profile.bobPresetSaved = true;
+                } else {
+                    for (Preset preset : profile.presets)
+                        if (preset != null)
+                            preset.loadBob = false;
+                    if (legacyBobAmbiguous)
+                        Logger.log(PresetManager.class,
+                                "Legacy preset file " + file.getPath()
+                                        + " contained multiple different per-preset BoB snapshots; "
+                                        + "BoB association was disabled during v3 migration.");
+                }
+            }
+
             return profile;
         } catch (Throwable e) {
             Logger.log(PresetManager.class, "Unable to read preset file " + file.getPath() + ": " + e.getMessage());
@@ -657,25 +821,32 @@ public final class PresetManager {
             Files.createDirectories(SAVE_DIRECTORY.toPath());
             File file = new File(SAVE_DIRECTORY, key + ".dat");
             File temp = new File(SAVE_DIRECTORY, key + ".dat.tmp");
+
             try (DataOutputStream output = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(temp)))) {
                 output.writeInt(FILE_VERSION);
                 output.writeInt(PRESET_COUNT);
+
                 for (int slot = 0; slot < PRESET_COUNT; slot++) {
                     Preset preset = profile.presets[slot];
                     output.writeBoolean(preset != null);
                     if (preset == null)
                         continue;
+
                     output.writeUTF(preset.name == null ? "Preset " + (slot + 1) : preset.name);
                     writeItems(output, preset.inventory);
                     writeItems(output, preset.equipment);
                     output.writeBoolean(preset.loadInventory);
                     output.writeBoolean(preset.loadEquipment);
                     output.writeBoolean(preset.loadBob);
-                    writeItems(output, preset.bob);
                 }
+
                 output.writeInt(profile.quickPresetOne);
                 output.writeInt(profile.quickPresetTwo);
+                output.writeBoolean(profile.bobPresetSaved);
+                if (profile.bobPresetSaved)
+                    writeItems(output, profile.bobPreset);
             }
+
             Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
             return true;
         } catch (Throwable e) {
@@ -704,10 +875,9 @@ public final class PresetManager {
         if (length < 0 || length > 128)
             throw new IOException("Invalid preset container length " + length);
         Item[] items = new Item[length];
-        for (int slot = 0; slot < length; slot++) {
+        for (int slot = 0; slot < length; slot++)
             if (input.readBoolean())
                 items[slot] = new Item(input.readInt(), input.readInt());
-        }
         return items;
     }
 
@@ -720,13 +890,14 @@ public final class PresetManager {
         private final Preset[] presets = new Preset[PRESET_COUNT];
         private int quickPresetOne = -1;
         private int quickPresetTwo = -1;
+        private Item[] bobPreset;
+        private boolean bobPresetSaved;
     }
 
     private static final class Preset {
         private String name;
         private Item[] inventory;
         private Item[] equipment;
-        private Item[] bob;
         private boolean loadInventory = true;
         private boolean loadEquipment = true;
         private boolean loadBob;
