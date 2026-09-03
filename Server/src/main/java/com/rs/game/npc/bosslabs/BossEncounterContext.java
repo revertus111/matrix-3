@@ -4,6 +4,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -20,9 +21,12 @@ import com.rs.game.tasks.WorldTask;
  */
 public final class BossEncounterContext {
 
+	public static final int MAX_OWNED_NPCS = 32;
+
 	private final WeakReference<NPC> bossReference;
 	private final Set<Player> participants = Collections.newSetFromMap(new WeakHashMap<Player, Boolean>());
 	private final Set<WorldTask> ownedTasks = Collections.newSetFromMap(new IdentityHashMap<WorldTask, Boolean>());
+	private final Set<NPC> ownedNpcs = Collections.newSetFromMap(new IdentityHashMap<NPC, Boolean>());
 
 	private long generation = 1L;
 	private boolean active = true;
@@ -68,6 +72,11 @@ public final class BossEncounterContext {
 		return ownedTasks.size();
 	}
 
+	public synchronized int getOwnedNpcCount() {
+		pruneFinishedOwnedNpcs();
+		return ownedNpcs.size();
+	}
+
 	synchronized void trackTask(WorldTask task) {
 		if (!active || task == null)
 			return;
@@ -79,30 +88,42 @@ public final class BossEncounterContext {
 			ownedTasks.remove(task);
 	}
 
+	synchronized boolean trackOwnedNpc(NPC npc) {
+		if (!active || npc == null)
+			return false;
+		pruneFinishedOwnedNpcs();
+		if (ownedNpcs.size() >= MAX_OWNED_NPCS)
+			return false;
+		ownedNpcs.add(npc);
+		return true;
+	}
+
 	synchronized void setLifecycleTask(WorldTask task) {
 		lifecycleTask = task;
 	}
 
 	/**
-	 * Invalidates BossLabs-owned delayed runtime work while preserving the
-	 * observed participant set for the still-live encounter instance.
+	 * Invalidates BossLabs-owned delayed runtime work and detaches encounter
+	 * minions for world-thread cleanup while preserving observed participants.
 	 */
-	synchronized void resetTransientRuntime() {
+	synchronized List<NPC> resetTransientRuntime() {
 		if (!active)
-			return;
+			return Collections.emptyList();
 		generation++;
 		for (WorldTask task : ownedTasks)
 			task.stop();
 		ownedTasks.clear();
+		return detachOwnedNpcs();
 	}
 
 	/**
 	 * Final cleanup for an encounter instance that is no longer BossLabs-owned
-	 * or whose NPC has died/finished.
+	 * or whose NPC has died/finished. Returned NPCs must be finished through the
+	 * Matrix3 world path by BossEncounterRuntime.
 	 */
-	synchronized void finish() {
+	synchronized List<NPC> finish() {
 		if (!active)
-			return;
+			return Collections.emptyList();
 		active = false;
 		generation++;
 		for (WorldTask task : ownedTasks)
@@ -112,5 +133,22 @@ public final class BossEncounterContext {
 		if (lifecycleTask != null)
 			lifecycleTask.stop();
 		lifecycleTask = null;
+		return detachOwnedNpcs();
+	}
+
+	private void pruneFinishedOwnedNpcs() {
+		Iterator<NPC> iterator = ownedNpcs.iterator();
+		while (iterator.hasNext()) {
+			NPC npc = iterator.next();
+			if (npc == null || npc.hasFinished())
+				iterator.remove();
+		}
+	}
+
+	private List<NPC> detachOwnedNpcs() {
+		pruneFinishedOwnedNpcs();
+		List<NPC> detached = new ArrayList<NPC>(ownedNpcs);
+		ownedNpcs.clear();
+		return detached;
 	}
 }
