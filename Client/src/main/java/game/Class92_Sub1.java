@@ -35,6 +35,7 @@ public class Class92_Sub1 extends Class92 {
 
 	Class92_Sub1(Interface18 interface18, Class248 class248, Class248 class248_1_) {
 		super(interface18, class248, class248_1_);
+		ClientConsoleRotsBridge.registerAnimationDefinitions(interface18);
 	}
 
 	public Class method467() {
