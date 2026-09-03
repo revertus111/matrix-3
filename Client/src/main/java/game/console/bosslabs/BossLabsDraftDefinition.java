@@ -28,12 +28,15 @@ public final class BossLabsDraftDefinition {
     public static final int PHASE_ACTION_PLAY_ANIMATION = 0;
     public static final int PHASE_ACTION_PLAY_GRAPHIC = 1;
     public static final int PHASE_ACTION_HEAL_BOSS = 2;
+    public static final int PHASE_ACTION_SPAWN_MINIONS = 3;
 
-    private static final int WIRE_VERSION = 7;
+    private static final int WIRE_VERSION = 8;
     private static final int MIN_WIRE_VERSION = 1;
     private static final int MAX_PHASES = 64;
     private static final int MAX_PHASE_ACTIONS = 32;
     private static final int MAX_PHASE_HEAL_AMOUNT = 1000000;
+    private static final int MAX_PHASE_MINION_COUNT = 8;
+    private static final int MAX_PHASE_MINION_RADIUS = 8;
     private static final int MAX_ATTACKS_PER_PHASE = 256;
     private static final int MAX_PATTERN_TILES = 128;
     private static final int MAX_TILE_OFFSET = 16;
@@ -171,6 +174,18 @@ public final class BossLabsDraftDefinition {
                     && (action.value < 1 || action.value > MAX_PHASE_HEAL_AMOUNT))
                 return "Phase " + phaseId + " " + label + " heal must be between 1 and "
                         + MAX_PHASE_HEAL_AMOUNT + ".";
+            if (action.type == PHASE_ACTION_SPAWN_MINIONS) {
+                if (action.value < 0)
+                    return "Phase " + phaseId + " " + label + " minion NPC ID must be zero or greater.";
+                if (action.quantity < 1 || action.quantity > MAX_PHASE_MINION_COUNT)
+                    return "Phase " + phaseId + " " + label + " minion amount must be between 1 and "
+                            + MAX_PHASE_MINION_COUNT + ".";
+                if (action.radius < 1 || action.radius > MAX_PHASE_MINION_RADIUS)
+                    return "Phase " + phaseId + " " + label + " minion radius must be between 1 and "
+                            + MAX_PHASE_MINION_RADIUS + ".";
+            } else if (action.quantity != 1 || action.radius != 1) {
+                return "Phase " + phaseId + " " + label + " non-minion actions must use quantity/radius 1.";
+            }
         }
         return null;
     }
@@ -253,8 +268,8 @@ public final class BossLabsDraftDefinition {
             for (int phaseIndex = 0; phaseIndex < phaseCount; phaseIndex++) {
                 Phase phase = new Phase(input.readUTF(), input.readInt(), input.readInt());
                 if (version >= 7) {
-                    readPhaseActions(input, phase.entryActions, "entry action");
-                    readPhaseActions(input, phase.exitActions, "exit action");
+                    readPhaseActions(input, phase.entryActions, "entry action", version);
+                    readPhaseActions(input, phase.exitActions, "exit action", version);
                 }
                 int attackCount = readCount(input.readInt(), MAX_ATTACKS_PER_PHASE, "attack");
                 for (int attackIndex = 0; attackIndex < attackCount; attackIndex++) {
@@ -315,14 +330,21 @@ public final class BossLabsDraftDefinition {
         for (PhaseAction action : actions) {
             output.writeInt(action.type);
             output.writeInt(action.value);
+            output.writeInt(action.quantity);
+            output.writeInt(action.radius);
         }
     }
 
-    private static void readPhaseActions(DataInputStream input, List<PhaseAction> actions, String label)
+    private static void readPhaseActions(DataInputStream input, List<PhaseAction> actions, String label, int version)
             throws IOException {
         int count = readCount(input.readInt(), MAX_PHASE_ACTIONS, label);
-        for (int actionIndex = 0; actionIndex < count; actionIndex++)
-            actions.add(new PhaseAction(input.readInt(), input.readInt()));
+        for (int actionIndex = 0; actionIndex < count; actionIndex++) {
+            int type = input.readInt();
+            int value = input.readInt();
+            int quantity = version >= 8 ? input.readInt() : 1;
+            int radius = version >= 8 ? input.readInt() : 1;
+            actions.add(new PhaseAction(type, value, quantity, radius));
+        }
     }
 
     private static int readCount(int value, int maximum, String label) {
@@ -336,7 +358,7 @@ public final class BossLabsDraftDefinition {
     }
 
     private static boolean isValidPhaseActionType(int value) {
-        return value >= PHASE_ACTION_PLAY_ANIMATION && value <= PHASE_ACTION_HEAL_BOSS;
+        return value >= PHASE_ACTION_PLAY_ANIMATION && value <= PHASE_ACTION_SPAWN_MINIONS;
     }
 
     private static String safe(String value) {
@@ -379,19 +401,33 @@ public final class BossLabsDraftDefinition {
     public static final class PhaseAction {
         private int type;
         private int value;
+        private int quantity = 1;
+        private int radius = 1;
 
         public PhaseAction(int type, int value) {
+            this(type, value, 1, 1);
+        }
+
+        public PhaseAction(int type, int value, int quantity, int radius) {
             this.type = type;
             this.value = value;
+            this.quantity = quantity;
+            this.radius = radius;
         }
 
         public int getType() { return type; }
         public void setType(int value) { type = value; }
         public int getValue() { return value; }
         public void setValue(int value) { this.value = value; }
+        public int getQuantity() { return quantity; }
+        public void setQuantity(int value) { quantity = value; }
+        public int getRadius() { return radius; }
+        public void setRadius(int value) { radius = value; }
 
         @Override
         public String toString() {
+            if (type == PHASE_ACTION_SPAWN_MINIONS)
+                return phaseActionName(type) + "  NPC " + value + " x" + quantity + " r" + radius;
             return phaseActionName(type) + "  " + value;
         }
     }
@@ -533,6 +569,7 @@ public final class BossLabsDraftDefinition {
         if (actionType == PHASE_ACTION_PLAY_ANIMATION) return "Play animation";
         if (actionType == PHASE_ACTION_PLAY_GRAPHIC) return "Play graphic";
         if (actionType == PHASE_ACTION_HEAL_BOSS) return "Heal boss";
+        if (actionType == PHASE_ACTION_SPAWN_MINIONS) return "Spawn minions";
         return "Unknown";
     }
 
