@@ -56,6 +56,7 @@ public class Class592 {
 			i = -1 != i ? i : -646491435 * client.anInt8751;
 			Class572_Sub12_Sub10 class572_sub12_sub10 = new Class572_Sub12_Sub10(string, string_0_, i, i_1_, i_2_, l, i_3_, i_4_, bool, bool_5_, l_6_, bool_7_);
 			Class412.method5075(class572_sub12_sub10, 722976984);
+			DevModeBridge.mirrorTileSpawnEntry(i_1_, i_3_, i_4_);
 		}
 	}
 
