@@ -27,27 +27,39 @@ These are verified-static mappings from the current RoTS source. They identify w
 - 21945 - current Guthan impaled-victim animation.
 - 21947 - current Guthan spear-retrieval animation.
 
+Runtime-tested special candidate
+- 21941 - VERIFIED runtime visual: when played on Dharok, the model performs a sustained spinning motion.
+- Authentic mechanic assignment for 21941 remains HYPOTHESIS pending cross-brother playback and footage comparison.
+- Strong Hurricane/Spinning Attack candidate because period RoTS documentation describes a shared Spinning Attack for all four melee brothers (Dharok, Guthan, Torag, Verac).
+- Do not promote 21941 to VERIFIED Hurricane until it is tested on Guthan/Torag/Verac and visually compared against authentic RoTS footage.
+
+Documentary reference
+- Tip.It `Rise of the Six Guide (ROTS)` documents a shared `Spinning Attack` under `All Melee brothers`, then explicitly lists that attack for Torag, Guthan, Verac, and Dharok.
+- The same guide describes Verac's separate `Helicopter` move as flipping into the air and spinning the flail like a helicopter blade; keep that separate from the shared spin when identifying animations.
+- Reference: https://forum.tip.it/topic/326100-rise-of-the-six-guide-rots/
+
 Other current normal-attack mappings
 - 18288 - current ground-Ahrim magic attack animation.
 - 18232 - current Karil ranged attack animation.
 - Melee brothers otherwise use their NPC combat-definition attack emote for normal melee autos.
 
 Known approximations / unresolved animation parity
-- Hurricane / Whirlwind: UNKNOWN authentic animation. Current implementation replays the normal melee attack emote while rotating facing each pulse.
+- Hurricane / Spinning Attack: current implementation replays the normal melee attack emote while rotating facing each pulse. Animation 21941 is now the highest-priority candidate for replacing that approximation, but is not yet VERIFIED as Hurricane.
 - Wall Slam: UNKNOWN authentic animation. Current implementation uses the normal melee attack emote for launch/landing phases.
 - Dharok Greatest Axe: current implementation uses 21940; authentic animation/timing still needs runtime/video verification.
 - Torag Whack/Pummel: current implementation uses 21933/21934/21935/21938; exact timing/authenticity still needs runtime/video verification.
 - Guthan Impale: current implementation uses 21944/21945/21947; exact timing/authenticity still needs runtime/video verification.
 - Authentic subdued/kneeling animation: UNKNOWN.
-- Verac authentic special animation(s): UNKNOWN.
+- Verac authentic special animation(s): UNKNOWN; keep the shared spin separate from the guide-described Helicopter move.
 - Ahrim authentic specials beyond the VERIFIED flying state: UNKNOWN.
 - Karil authentic specials: UNKNOWN.
 
 Focused research strategy
 - Owner Console -> Deep Scan resolves render sets 2687, 2689, 2690, 2982, and 2987 into raw BAS/cache animation references.
+- The previous targeted Deep Scan stopped at 21940, so 21941 was not included in that dump; future targeted research should include the known 21941-21947 RoTS-special neighborhood.
+- Test 21941 on Guthan, Torag, and Verac before spending more time on unrelated 2192x candidates.
 - Use the current implementation mappings above to remove already-accounted-for animations from unknown-special candidate lists.
 - Numeric proximity alone is not evidence that an animation belongs to RoTS.
-- Prioritize authentic Hurricane identification next because it is shared by multiple melee brothers and is currently an explicit approximation.
 
 For each new candidate record:
 - animation ID
@@ -59,4 +71,4 @@ For each new candidate record:
 - linked GFX definitions when statically available
 - current implementation usage, if any
 - evidence label
-- runtime/video confirmation notes
+- runtime confirmation notes
