@@ -1,9 +1,7 @@
 2026-09-03
-- Expanded Matrix3 inventory authority from 28 to 36 slots.
-- Added load-time migration for existing serialized inventories smaller than 36 slots; existing slot positions are copied unchanged and larger containers are never shrunk.
-- Extended inventory component settings to the live container size instead of hard-coding slot 27 as the final usable slot.
-- Kept client interface hardcoding out of the initial slice pending runtime evidence: the item update protocol already transmits the container length.
-- Runtime verification confirmed slots 29-36 exist and function but stock NIS only renders the original 28 visual slots.
-- Added a narrow client runtime layout override for inventory components 1473:34 and 1474:15 without modifying cache data.
-- The override decodes the component raw-height field and supports both likely representations: an exact seven-row inventory grid is changed to nine rows, while pixel-sized container geometry is extended by two 36px row pitches; unexpected small values are left untouched.
-- The override is applied from the normal logged-in client cycle and tracks component object identity so an unloaded/reloaded interface group can be patched again exactly once.
+- Expanded Matrix3 inventory authority from 28 to 36 slots for an initial runtime experiment.
+- Runtime verification confirmed slots 29-36 existed and functioned server-side but stock NIS only rendered the original 28 visual slots.
+- Retired the 36-slot normal-inventory experiment in favor of dedicated wearable backpack storage.
+- Restored normal inventory authority to 28 slots and removed the client 1473/1474 visual-expansion override.
+- Added transactional load-time migration for temporary 36-slot saves: items from slots 29-36 move into the player's backpack before the inventory is reduced to 28 slots.
+- If overflow cannot fit in the backpack, the larger serialized container is preserved rather than discarding items.
