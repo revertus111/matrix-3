@@ -43,6 +43,7 @@ public final class PresetManager {
     private static final File SAVE_DIRECTORY = new File("data/presets");
     private static final ConcurrentHashMap<String, PresetProfile> PROFILES = new ConcurrentHashMap<String, PresetProfile>();
     private static final ConcurrentHashMap<String, Integer> SELECTED_PRESETS = new ConcurrentHashMap<String, Integer>();
+    private static final ConcurrentHashMap<String, Boolean> NATIVE_CLICK_SIGNATURES = new ConcurrentHashMap<String, Boolean>();
 
     private PresetManager() {
     }
@@ -55,6 +56,8 @@ public final class PresetManager {
             int slotId2, int packetId) {
         if (interfaceId != PRESET_INTERFACE)
             return false;
+
+        recordNativeClick(player, componentId, slotId, slotId2, packetId);
 
         String key = getPlayerKey(player);
         int clickedSlot = resolvePresetSlot(slotId, slotId2);
@@ -90,6 +93,14 @@ public final class PresetManager {
                     + ", slot=" + slotId + ", slot2=" + slotId2 + ", packet=" + packetId);
         openPresetActions(player, presetIndex);
         return true;
+    }
+
+    private static void recordNativeClick(Player player, int componentId, int slotId, int slotId2, int packetId) {
+        String signature = componentId + ":" + slotId + ":" + slotId2 + ":" + packetId;
+        if (NATIVE_CLICK_SIGNATURES.putIfAbsent(signature, Boolean.TRUE) != null)
+            return;
+        Logger.log(PresetManager.class, "[PRESET-MAP] player=" + player.getUsername() + ", component=" + componentId
+                + ", slot=" + slotId + ", slot2=" + slotId2 + ", packet=" + packetId);
     }
 
     private static int resolvePresetSlot(int slotId, int slotId2) {
