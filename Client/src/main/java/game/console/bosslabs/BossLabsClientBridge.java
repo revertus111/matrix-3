@@ -2,7 +2,9 @@ package game.console.bosslabs;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -22,8 +24,11 @@ public final class BossLabsClientBridge {
     private static final AtomicInteger REQUEST_SEQUENCE = new AtomicInteger(1);
     private static final Map<Integer, DefinitionDownload> DEFINITION_DOWNLOADS =
             new ConcurrentHashMap<Integer, DefinitionDownload>();
+    private static final Set<Integer> TESTING_REQUESTS =
+            Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 
     private static volatile Listener listener;
+    private static volatile TestingListener testingListener;
 
     private BossLabsClientBridge() {
     }
@@ -37,6 +42,16 @@ public final class BossLabsClientBridge {
             listener = null;
         }
         DEFINITION_DOWNLOADS.clear();
+    }
+
+    public static void setTestingListener(TestingListener newListener) {
+        testingListener = newListener;
+    }
+
+    public static void clearTestingListener(TestingListener oldListener) {
+        if (testingListener == oldListener)
+            testingListener = null;
+        TESTING_REQUESTS.clear();
     }
 
     public static int requestSearch(String query) {
@@ -132,6 +147,7 @@ public final class BossLabsClientBridge {
 
     public static int requestTestingSetHealth(int npcId, int percent) {
         int requestId = nextRequestId();
+        TESTING_REQUESTS.add(Integer.valueOf(requestId));
         queue(requestId, "bosslabs testing " + requestId + " sethp " + npcId + " " + percent,
                 "Set Boss HP request failed");
         return requestId;
@@ -155,6 +171,7 @@ public final class BossLabsClientBridge {
 
     private static int requestTesting(String operation, int npcId, String firstText, String secondText) {
         int requestId = nextRequestId();
+        TESTING_REQUESTS.add(Integer.valueOf(requestId));
         StringBuilder command = new StringBuilder("bosslabs testing ").append(requestId).append(' ')
                 .append(operation).append(' ').append(npcId);
         if (firstText != null)
@@ -224,6 +241,7 @@ public final class BossLabsClientBridge {
                         target.onInspection(requestId, inspection);
                     }
                 });
+                dispatchTestingSelection(inspection.getNpcId(), false);
             } else if ("ownership".equals(type) && parts.length >= 10) {
                 final int requestId = parseInt(parts[2]);
                 final Ownership ownership = new Ownership(parseInt(parts[3]), decode(parts[4]), parseBoolean(parts[5]),
@@ -234,6 +252,7 @@ public final class BossLabsClientBridge {
                         target.onOwnership(requestId, ownership);
                     }
                 });
+                dispatchTestingSelection(ownership.getNpcId(), ownership.isBossLabsDefinition());
             } else if ("definition-empty".equals(type) && parts.length >= 4) {
                 final int requestId = parseInt(parts[2]);
                 final int npcId = parseInt(parts[3]);
@@ -244,6 +263,7 @@ public final class BossLabsClientBridge {
                         target.onDefinitionEmpty(requestId, npcId);
                     }
                 });
+                dispatchTestingSelection(npcId, false);
             } else if ("definition-begin".equals(type) && parts.length >= 5) {
                 int requestId = parseInt(parts[2]);
                 int npcId = parseInt(parts[3]);
@@ -273,6 +293,7 @@ public final class BossLabsClientBridge {
                         target.onDefinitionLoaded(requestId, definition);
                     }
                 });
+                dispatchTestingSelection(npcId, true);
             } else if ("inspect-missing".equals(type) && parts.length >= 4) {
                 final int requestId = parseInt(parts[2]);
                 final int npcId = parseInt(parts[3]);
@@ -282,15 +303,20 @@ public final class BossLabsClientBridge {
                         target.onInspectionMissing(requestId, npcId);
                     }
                 });
+                dispatchTestingCleared();
             } else if ("action".equals(type) && parts.length >= 6) {
                 final ActionResult result = new ActionResult(parseInt(parts[2]), parseBoolean(parts[3]),
                         parseInt(parts[4]), decode(parts[5]));
-                dispatch(new ListenerCall() {
-                    @Override
-                    public void call(Listener target) {
-                        target.onActionResult(result);
-                    }
-                });
+                if (TESTING_REQUESTS.remove(Integer.valueOf(result.getRequestId()))) {
+                    dispatchTestingAction(result);
+                } else {
+                    dispatch(new ListenerCall() {
+                        @Override
+                        public void call(Listener target) {
+                            target.onActionResult(result);
+                        }
+                    });
+                }
             }
         } catch (RuntimeException ex) {
             System.err.println("BossLabs failed to decode server response: " + command);
@@ -307,6 +333,10 @@ public final class BossLabsClientBridge {
 
     private static void dispatchFailure(final int requestId, String message) {
         final ActionResult result = new ActionResult(requestId, false, -1, message);
+        if (TESTING_REQUESTS.remove(Integer.valueOf(requestId))) {
+            dispatchTestingAction(result);
+            return;
+        }
         dispatch(new ListenerCall() {
             @Override
             public void call(Listener target) {
@@ -357,6 +387,51 @@ public final class BossLabsClientBridge {
                 }
             }
         };
+        dispatchOnEdt(runnable);
+    }
+
+    private static void dispatchTestingSelection(final int npcId, final boolean liveBossLabs) {
+        dispatchTesting(new TestingListenerCall() {
+            @Override
+            public void call(TestingListener target) {
+                target.onTestingSelection(npcId, liveBossLabs);
+            }
+        });
+    }
+
+    private static void dispatchTestingCleared() {
+        dispatchTesting(new TestingListenerCall() {
+            @Override
+            public void call(TestingListener target) {
+                target.onTestingSelectionCleared();
+            }
+        });
+    }
+
+    private static void dispatchTestingAction(final ActionResult result) {
+        dispatchTesting(new TestingListenerCall() {
+            @Override
+            public void call(TestingListener target) {
+                target.onTestingActionResult(result);
+            }
+        });
+    }
+
+    private static void dispatchTesting(final TestingListenerCall call) {
+        if (call == null || testingListener == null)
+            return;
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                TestingListener target = testingListener;
+                if (target != null)
+                    call.call(target);
+            }
+        };
+        dispatchOnEdt(runnable);
+    }
+
+    private static void dispatchOnEdt(Runnable runnable) {
         if (SwingUtilities.isEventDispatchThread()) {
             runnable.run();
         } else {
@@ -366,6 +441,10 @@ public final class BossLabsClientBridge {
 
     private interface ListenerCall {
         void call(Listener target);
+    }
+
+    private interface TestingListenerCall {
+        void call(TestingListener target);
     }
 
     public interface Listener {
@@ -379,6 +458,12 @@ public final class BossLabsClientBridge {
         void onDefinitionEmpty(int requestId, int npcId);
         void onInspectionMissing(int requestId, int npcId);
         void onActionResult(ActionResult result);
+    }
+
+    public interface TestingListener {
+        void onTestingSelection(int npcId, boolean liveBossLabsDefinition);
+        void onTestingSelectionCleared();
+        void onTestingActionResult(ActionResult result);
     }
 
     public static final class SearchResult {
