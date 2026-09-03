@@ -1,0 +1,14 @@
+Matrix3 main-game keep-items death runtime test list
+
+1. Fill several normal inventory slots with distinct stackable and non-stackable items, equip gear in multiple slots, then die outside the Wilderness. Confirm every inventory item and every equipped item is still present after respawn with the same amounts and no duplicates.
+2. Equip Rambler's backpack 21445 with items stored inside it, die, respawn, and confirm both the backpack item and its player-owned contents remain available exactly as before death.
+3. On the death/respawn interface, confirm normal inventory/equipment are not presented as items that will be lost and protect/unprotect interactions do not move item-protection state while the main-game keep-all policy is active.
+4. Select at least two different respawn locations through interface 18 across separate deaths and confirm respawn-location selection still works.
+5. Die while skulled and while Protect Item prayer is active. Confirm skull/protection state does not cause any inventory or equipment loss in the main game.
+6. Die with a full 28-slot inventory. Confirm all 28 slots survive and no item is pushed to the ground or gravestone.
+7. Die with stack quantities greater than one and degradable/charged equipment. Confirm amounts and equipped items are retained; record any charge/degrade behavior separately rather than treating it as item loss.
+8. Die in the Wilderness. Confirm the existing main-game Wilderness path still retains inventory/equipment and no new ground-item drop behavior was introduced by this patch.
+9. Confirm no gravestone is created from the player's normal inventory/equipment during a main-game death.
+10. Relog after a death and confirm the retained inventory, equipment, and backpack contents persist correctly.
+11. Run the normal Matrix3 inventory, equipment, bank, backpack, login persistence, combat, teleport, and death/respawn smoke paths after this change.
+12. Future Hardcore acceptance: when Hardcore mode is implemented, change only the DeathPolicy decision first, then verify the existing drop pipeline receives inventory/equipment while backpack contents remain player-owned and persistent.
