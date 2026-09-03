@@ -1,6 +1,7 @@
 package game.console;
 
 import game.ClientConsoleBridge;
+import game.DevModeBridge;
 
 import java.awt.Dimension;
 import java.awt.event.HierarchyEvent;
@@ -16,11 +17,13 @@ import javax.swing.JToggleButton;
 import javax.swing.Timer;
 
 /**
- * Client Console controls for the Matrix3 combat/interface mode split.
+ * Client Console controls for the Matrix3 combat/interface mode split and
+ * session-scoped Dev Mode tooling.
  *
- * The selected combination is stored by ConsolePreferences so the console can
- * restore it on a later login. Server-side Matrix3 state remains authoritative
- * once the queued commands are processed.
+ * The selected combat/interface combination is stored by ConsolePreferences so
+ * the console can restore it on a later login. Dev Mode intentionally defaults
+ * OFF on each client launch. Server-side Matrix3 state remains authoritative
+ * once queued commands are processed.
  */
 public final class SettingsPanel extends JScrollPane {
 
@@ -28,7 +31,9 @@ public final class SettingsPanel extends JScrollPane {
 
     private final JToggleButton legacyCombatButton = new JToggleButton();
     private final JToggleButton legacyInterfaceButton = new JToggleButton();
+    private final JToggleButton devModeButton = new JToggleButton();
     private final JLabel status = new JLabel("Choose a mode combination, then apply it while logged in.");
+    private final JLabel devModeStatus = new JLabel("Dev Mode is OFF for this client session.");
 
     private boolean hasSavedCombination;
     private boolean appliedWhileShowing;
@@ -45,7 +50,7 @@ public final class SettingsPanel extends JScrollPane {
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Combat / interface split");
+        JLabel subtitle = new JLabel("Combat / interface split + developer tools");
         subtitle.setFont(ConsoleTheme.SMALL_FONT);
         subtitle.setForeground(ConsoleTheme.ACCENT);
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
@@ -57,11 +62,17 @@ public final class SettingsPanel extends JScrollPane {
         configureToggle(legacyInterfaceButton, false);
         updateToggleLabels();
 
+        devModeButton.setSelected(DevModeBridge.isEnabled());
+        configureDevModeToggle();
+        updateDevModeLabel();
+
         content.add(title);
         content.add(Box.createVerticalStrut(4));
         content.add(subtitle);
         content.add(Box.createVerticalStrut(18));
         content.add(createModeCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createDevModeCard());
         content.add(Box.createVerticalGlue());
 
         setViewportView(content);
@@ -129,6 +140,39 @@ public final class SettingsPanel extends JScrollPane {
         return card;
     }
 
+    private JPanel createDevModeCard() {
+        JPanel card = createCard("Dev Mode");
+
+        JLabel description = new JLabel("<html><div style='width:240px'>Adds owner-only developer actions to the live game world. "
+                + "Phase 1 adds tile spawning without replacing normal Matrix3 right-click options.</div></html>");
+        description.setFont(ConsoleTheme.SMALL_FONT);
+        description.setForeground(ConsoleTheme.MUTED_TEXT);
+        description.setAlignmentX(LEFT_ALIGNMENT);
+
+        devModeButton.setAlignmentX(LEFT_ALIGNMENT);
+        devModeButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        devModeStatus.setFont(ConsoleTheme.SMALL_FONT);
+        devModeStatus.setForeground(ConsoleTheme.ACCENT);
+        devModeStatus.setAlignmentX(LEFT_ALIGNMENT);
+
+        JLabel note = new JLabel("<html><div style='width:240px'>Dev Mode is intentionally session-only and starts OFF after every client launch. "
+                + "Live spawns are not source-data saves.</div></html>");
+        note.setFont(ConsoleTheme.SMALL_FONT);
+        note.setForeground(ConsoleTheme.MUTED_TEXT);
+        note.setAlignmentX(LEFT_ALIGNMENT);
+
+        card.add(Box.createVerticalStrut(9));
+        card.add(description);
+        card.add(Box.createVerticalStrut(12));
+        card.add(devModeButton);
+        card.add(Box.createVerticalStrut(10));
+        card.add(devModeStatus);
+        card.add(Box.createVerticalStrut(10));
+        card.add(note);
+        return card;
+    }
+
     private JPanel createCard(String titleText) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
@@ -155,6 +199,21 @@ public final class SettingsPanel extends JScrollPane {
         });
     }
 
+    private void configureDevModeToggle() {
+        ConsoleTheme.styleButton(devModeButton);
+        devModeButton.addActionListener(e -> {
+            DevModeBridge.setEnabled(devModeButton.isSelected());
+            updateDevModeLabel();
+            if (devModeButton.isSelected() && ClientConsoleBridge.getRights() < 2) {
+                devModeStatus.setText("Dev Mode is ON locally, but tile tools appear only for an Admin+ session.");
+            } else if (devModeButton.isSelected()) {
+                devModeStatus.setText("Dev Mode is ON. Right-click a world tile for Dev > Spawn...");
+            } else {
+                devModeStatus.setText("Dev Mode is OFF for this client session.");
+            }
+        });
+    }
+
     private void updateToggleLabels() {
         legacyCombatButton.setText(legacyCombatButton.isSelected()
                 ? "Legacy combat: ON"
@@ -162,6 +221,12 @@ public final class SettingsPanel extends JScrollPane {
         legacyInterfaceButton.setText(legacyInterfaceButton.isSelected()
                 ? "Legacy interface: ON"
                 : "Legacy interface: OFF (NIS)");
+    }
+
+    private void updateDevModeLabel() {
+        devModeButton.setText(devModeButton.isSelected()
+                ? "Dev Mode: ON"
+                : "Dev Mode: OFF");
     }
 
     private void savePreferences() {
