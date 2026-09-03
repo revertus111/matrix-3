@@ -1,0 +1,21 @@
+Rise of the Six GFX / spot-animation research
+
+No GFX IDs are classified yet.
+
+Track candidates for:
+- Hurricane / Whirlwind visuals
+- Greatest Axe visuals
+- Impale / spear visuals
+- Torag special visuals
+- Verac special visuals
+- Ahrim fire/shadow visuals
+- Karil lightning/bomb/dash visuals
+- portals / shadow realm effects
+- encounter/environment effects
+
+For each entry record:
+- GFX ID
+- linked model/animation IDs if statically available
+- mechanic hypothesis
+- evidence label
+- runtime/video confirmation notes
