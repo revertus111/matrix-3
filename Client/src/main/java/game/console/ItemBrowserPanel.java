@@ -604,8 +604,7 @@ public final class ItemBrowserPanel extends JPanel {
             Collections.sort(matches, new Comparator<ItemEntry>() {
                 @Override
                 public int compare(ItemEntry left, ItemEntry right) {
-                    int result = left.name.compareToIgnoreCase(right.name);
-                    return result != 0 ? result : left.id - right.id;
+                    return Integer.compare(left.id, right.id);
                 }
             });
         }
