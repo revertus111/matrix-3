@@ -14,6 +14,7 @@ import com.rs.game.map.bossInstance.BossInstanceHandler;
 import com.rs.game.map.bossInstance.InstanceSettings;
 import com.rs.game.npc.rots.RiseOfTheSixBrother;
 import com.rs.game.npc.rots.RiseOfTheSixBrother.Brother;
+import com.rs.game.npc.rots.RiseOfTheSixDebugLog;
 import com.rs.game.npc.rots.RiseOfTheSixReviveBar;
 import com.rs.game.player.Player;
 import com.rs.game.tasks.WorldTask;
@@ -178,6 +179,9 @@ public class RiseOfTheSixInstance extends BossInstance {
 
 		activeRotationIndex = resolveDailyRotationIndex();
 		activeRotation = ROTATIONS[activeRotationIndex];
+		RiseOfTheSixDebugLog.attach(this);
+		RiseOfTheSixDebugLog.event(this, "INSTANCE_LOAD", "rotation=" + getActiveRotationNumber()
+				+ " formation={" + getActiveRotationDescription() + "}");
 		initializeBrotherSides();
 		spawnSide(activeRotation.west, WEST_SPAWN_X);
 		spawnSide(activeRotation.east, EAST_SPAWN_X);
@@ -209,6 +213,9 @@ public class RiseOfTheSixInstance extends BossInstance {
 	private void spawnBrother(Brother brother, int x, int y, int plane) {
 		RiseOfTheSixBrother npc = new RiseOfTheSixBrother(brother, getTile(x, y, plane), this);
 		brothers.add(npc);
+		RiseOfTheSixDebugLog.event(this, "BROTHER_SPAWN", "brother=" + brother
+				+ " id=" + npc.getId() + " tile=" + npc.getX() + "," + npc.getY() + "," + npc.getPlane()
+				+ " side=" + getBrotherSide(brother) + " hp=" + npc.getHitpoints());
 	}
 
 	public int getActiveRotationNumber() {
@@ -365,6 +372,9 @@ public class RiseOfTheSixInstance extends BossInstance {
 		sideHopPending = true;
 		sideHopFrom = emptySide;
 		sideHopTo = occupiedSide;
+		RiseOfTheSixDebugLog.event(this, "SIDE_HOP_WARNING", "generation=" + generation
+				+ " empty=" + emptySide + " occupied=" + occupiedSide
+				+ " hopDelayTicks=" + EMPTY_SIDE_HOP_DELAY_TICKS);
 		broadcast("As there is no one on the other side of the portal, it empowers the Barrows Brothers to destroy everyone!");
 
 		WorldTasksManager.schedule(new WorldTask() {
@@ -373,6 +383,8 @@ public class RiseOfTheSixInstance extends BossInstance {
 				if (generation != sideHopGeneration || isFinished() || fightComplete)
 					return;
 				if (!canCompleteSideEmpowerment(emptySide, occupiedSide)) {
+					RiseOfTheSixDebugLog.event(RiseOfTheSixInstance.this, "SIDE_HOP_CANCEL",
+							"generation=" + generation + " empty=" + emptySide + " occupied=" + occupiedSide);
 					sideHopPending = false;
 					sideHopFrom = null;
 					sideHopTo = null;
@@ -403,6 +415,10 @@ public class RiseOfTheSixInstance extends BossInstance {
 			 */
 			WorldTile destination = getTile(occupiedSlots[slot % occupiedSlots.length],
 					BROTHER_SPAWN_Y, BROTHER_SPAWN_PLANE);
+			RiseOfTheSixDebugLog.event(this, "SIDE_HOP_MOVE", "brother=" + brother.getBrother()
+					+ " from=" + brother.getX() + "," + brother.getY() + "," + brother.getPlane()
+					+ " to=" + destination.getX() + "," + destination.getY() + "," + destination.getPlane()
+					+ " gfx=4413");
 			brother.moveForSideEmpowerment(destination);
 			currentBrotherSides.put(brother.getBrother(), occupiedSide);
 			slot++;
@@ -410,11 +426,15 @@ public class RiseOfTheSixInstance extends BossInstance {
 		if (slot > 0) {
 			sideHopComplete = true;
 			sideHopPending = false;
+			RiseOfTheSixDebugLog.event(this, "SIDE_HOP_COMPLETE", "from=" + emptySide + " to=" + occupiedSide
+					+ " movedBrothers=" + slot);
 		}
 		else {
 			sideHopPending = false;
 			sideHopFrom = null;
 			sideHopTo = null;
+			RiseOfTheSixDebugLog.event(this, "SIDE_HOP_EMPTY", "from=" + emptySide + " to=" + occupiedSide
+					+ " movedBrothers=0");
 		}
 	}
 
@@ -439,6 +459,9 @@ public class RiseOfTheSixInstance extends BossInstance {
 			if (fightComplete || subduedBrother == null)
 				return;
 
+			RiseOfTheSixDebugLog.event(this, "BROTHER_SUBDUED", "brother=" + subduedBrother.getBrother()
+					+ " id=" + subduedBrother.getId() + " hp=" + subduedBrother.getHitpoints()
+					+ " subduedCount=" + getSubduedCount());
 			/*
 			 * Runtime verification on revision 830 showed donor inactive ids
 			 * 18546-18551 render as invisible models in this client/cache. Keep the
@@ -455,11 +478,14 @@ public class RiseOfTheSixInstance extends BossInstance {
 				sideHopGeneration++;
 				sideHopPending = false;
 				clearReviveBars();
+				RiseOfTheSixDebugLog.event(this, "FIGHT_COMPLETE", "allSixSubdued=true reviveGeneration=" + reviveGeneration);
 				broadcast("All six brothers are subdued. The shadow bond has been broken.");
 				return;
 			}
 
 			final int generation = ++reviveGeneration;
+			RiseOfTheSixDebugLog.event(this, "REVIVE_TIMER_START", "generation=" + generation
+					+ " delayTicks=" + REVIVE_DELAY_TICKS + " reviveHp=" + REVIVE_HITPOINTS);
 			startReviveBarTask(generation);
 			WorldTasksManager.schedule(new WorldTask() {
 				@Override
@@ -489,6 +515,8 @@ public class RiseOfTheSixInstance extends BossInstance {
 				int percentage = Math.min(REVIVE_BAR_MAX,
 						(elapsedTicks * REVIVE_BAR_MAX) / REVIVE_DELAY_TICKS);
 				queueReviveBars(percentage);
+				RiseOfTheSixDebugLog.event(RiseOfTheSixInstance.this, "REVIVE_PROGRESS",
+						"generation=" + generation + " elapsedTicks=" + elapsedTicks + " bar=" + percentage + "/" + REVIVE_BAR_MAX);
 				if (elapsedTicks >= REVIVE_DELAY_TICKS)
 					stop();
 			}
@@ -527,6 +555,8 @@ public class RiseOfTheSixInstance extends BossInstance {
 	public void onToragWhackStarted(Player victim) {
 		if (victim == null || brothers == null)
 			return;
+		RiseOfTheSixDebugLog.event(this, "TORAG_WHACK_CALLBACK", "victim=" + victim.getDisplayName()
+				+ " tile=" + victim.getX() + "," + victim.getY() + "," + victim.getPlane());
 		for (RiseOfTheSixBrother brother : brothers) {
 			if (brother != null && !brother.hasFinished())
 				brother.onPlayerPummeled(victim);
@@ -580,7 +610,10 @@ public class RiseOfTheSixInstance extends BossInstance {
 		for (RiseOfTheSixBrother brother : brothers) {
 			if (brother == null || brother.isSubdued() || brother.hasFinished())
 				continue;
+			int before = brother.getHitpoints();
 			brother.heal(SURVIVOR_HEAL);
+			RiseOfTheSixDebugLog.event(this, "SURVIVOR_HEAL", "brother=" + brother.getBrother()
+					+ " requested=" + SURVIVOR_HEAL + " hpBefore=" + before + " hpAfter=" + brother.getHitpoints());
 		}
 	}
 
@@ -593,6 +626,9 @@ public class RiseOfTheSixInstance extends BossInstance {
 			brother.revive(REVIVE_HITPOINTS);
 			brother.setNextNPCTransformation(brother.getBrother().getNpcId());
 			brother.setNextAnimation(new Animation(REVIVE_ANIMATION));
+			RiseOfTheSixDebugLog.event(this, "BROTHER_REVIVE", "brother=" + brother.getBrother()
+					+ " id=" + brother.getId() + " hp=" + brother.getHitpoints()
+					+ " animation=" + REVIVE_ANIMATION + " forceNextHurricane=" + brother.isMeleeBrother());
 			revived = true;
 		}
 		if (revived)
@@ -619,6 +655,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 	}
 
 	private void broadcast(String message) {
+		RiseOfTheSixDebugLog.event(this, "BROADCAST", "message=" + message);
 		for (Player player : getPlayers()) {
 			if (player != null && !player.hasFinished())
 				player.getPackets().sendGameMessage(message);
@@ -630,6 +667,8 @@ public class RiseOfTheSixInstance extends BossInstance {
 		synchronized (BossInstanceHandler.LOCK) {
 			if (isFinished())
 				return;
+			RiseOfTheSixDebugLog.event(this, "INSTANCE_FINISH", "fightComplete=" + fightComplete
+					+ " subdued=" + getSubduedCount() + " brothers=" + (brothers == null ? 0 : brothers.size()));
 			reviveGeneration++;
 			sideHopGeneration++;
 			activeRotation = null;
@@ -647,6 +686,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 				}
 				brothers.clear();
 			}
+			RiseOfTheSixDebugLog.close(this, "instance-finish");
 			super.finish();
 		}
 	}
