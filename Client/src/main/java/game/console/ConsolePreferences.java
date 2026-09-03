@@ -37,6 +37,13 @@ public final class ConsolePreferences {
     private static final String KEY_CONSOLE_WIDTH = "console.width";
     private static final String KEY_ACTIVE_PANEL = "console.activePanel";
 
+    private static final String KEY_MODE_CONFIGURED = "configured";
+    private static final String KEY_LEGACY_COMBAT = "legacyCombat";
+    private static final String KEY_LEGACY_INTERFACE = "legacyInterface";
+
+    private static final Preferences MODE_PREFERENCES =
+            Preferences.userNodeForPackage(ConsolePreferences.class).node("modes");
+
     private final Preferences preferences = Preferences.userNodeForPackage(ConsolePreferences.class).node("workspace");
     private final ScheduledExecutorService saver = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
         @Override
@@ -52,6 +59,30 @@ public final class ConsolePreferences {
     private Snapshot pendingSnapshot;
     private Rectangle lastNormalBounds;
     private boolean restoring;
+
+    static boolean hasModeSelection() {
+        return MODE_PREFERENCES.getBoolean(KEY_MODE_CONFIGURED, false);
+    }
+
+    static boolean isLegacyCombatSelected() {
+        return MODE_PREFERENCES.getBoolean(KEY_LEGACY_COMBAT, false);
+    }
+
+    static boolean isLegacyInterfaceSelected() {
+        return MODE_PREFERENCES.getBoolean(KEY_LEGACY_INTERFACE, false);
+    }
+
+    static void saveModeSelection(boolean legacyCombat, boolean legacyInterface) {
+        try {
+            MODE_PREFERENCES.putBoolean(KEY_MODE_CONFIGURED, true);
+            MODE_PREFERENCES.putBoolean(KEY_LEGACY_COMBAT, legacyCombat);
+            MODE_PREFERENCES.putBoolean(KEY_LEGACY_INTERFACE, legacyInterface);
+            MODE_PREFERENCES.flush();
+        } catch (BackingStoreException | RuntimeException ex) {
+            System.err.println("Unable to save Client Console mode preferences.");
+            ex.printStackTrace();
+        }
+    }
 
     public void restore(JFrame frame, ClientConsoleShell shell) {
         restoring = true;
