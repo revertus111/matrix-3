@@ -55,18 +55,18 @@ Hurricane
 40. During Hurricane, keep moving; confirm the brother follows at walking speed and normal autos are suppressed.
 41. Stay adjacent; confirm ten rapid hard-typeless pulses with the current 250 -> 2,500 ramp.
 42. Put another player adjacent; confirm nearby-player splash works and leaving the current one-tile radius avoids later pulses.
-43. Confirm the current visual is still the normal attack emote; exact spin animation/GFX remain HYPOTHESIS.
+43. Confirm Hurricane visibly cycles the brother's facing through four directions while tracking. The current model still replays its normal attack emote; exact Jagex spin animation/GFX remain HYPOTHESIS.
 44. Subdue and allow each melee brother, including Verac, to revive. Confirm its **next** special is forced Hurricane before returning to its normal implemented rotation.
 45. Reset/kill/finish during Hurricane and confirm movement/follow/pulse state does not leak.
 
 Wall Slam
 46. Confirm only Dharok, Torag and Verac perform Wall Slam. Guthan must not Wall Slam.
 47. Move away immediately after Wall Slam starts; confirm impact keeps the original captured tile.
-48. Confirm the brother runs toward a reachable collision edge and returns toward the captured location; report obviously wrong rock/wall selection.
+48. Confirm the brother selects the nearest reachable blocked cardinal wall, runs to it, then uses visible Matrix3 ForceMovement back to the captured location; report wrong wall selection or a missing return leap.
 49. Stand inside the 5x5 captured impact area; confirm current hard-typeless damage range is 500-3,000.
 50. Move at least three tiles from the captured tile; confirm the impact misses even if the brother later paths near the new location.
 51. With multiple players, confirm each eligible player in the 5x5 area can be hit.
-52. Reset/kill/finish during Wall Slam and confirm run/follow/path/impact state does not leak.
+52. Reset/kill/finish during Wall Slam and confirm run/follow/path/ForceMovement/impact state does not leak or produce a stale landing.
 
 Guthan - Impale
 53. Fight Guthan through specials. Confirm the normal implemented rotation can cycle Hurricane -> Impale, with no Guthan Wall Slam.
