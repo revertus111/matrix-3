@@ -1,13 +1,16 @@
 Matrix3 custom item action runtime test list
 
-1. Pull current `main`, restart both Client and Server from the normal Eclipse/Java 8 workflow, and confirm the Server prints a `CustomItemActions` line showing that it loaded the canonical `Server/data/items/custom-item-actions.properties` file and reports the configured action count.
+1. Pull current `main`, restart both Client and Server from the normal Eclipse/Java 8 workflow, and confirm the Server prints a `CustomItemActions` line showing that it loaded the canonical `Server/data/items/custom-item-actions.properties` file and reports 5 configured actions.
 2. Right-click Rambler's backpack 21445 in the normal NIS inventory. Confirm `Open` appears from configured Inventory Option 4 while existing Wear/Use/Drop/Examine behavior remains available.
-3. Click inventory `Open`. Confirm the player-owned backpack interface opens without requiring 21445 to be equipped, and Store/Withdraw behavior still works. This specifically retests the prior runtime failure where the client label appeared but the server action did nothing.
+3. Click inventory `Open`. Confirm the player-owned backpack interface opens without requiring 21445 to be equipped, and Store/Withdraw behavior still works.
 4. Equip 21445 and right-click it in the equipment interface. Confirm configured Equipment Option 1 displays `Open` and opens the same player-owned backpack storage.
-5. Open the normal bank with 21445 in the bank inventory pane. Record the current stock `Deposit / Wear / Examine` menu as bank-inventory-pane client/CS2 evidence. `Empty to bank` is intentionally not enabled until its per-item menu label can be presented correctly.
-6. Put 21445 in the bank item container and right-click it. Confirm no stock bank option has been silently repurposed into a different hidden action. Bank item-container `Open` still needs runtime verification against the client presentation path.
-7. Right-click ordinary, unconfigured items in inventory, equipment, and bank. Confirm their stock Matrix3 options and behavior are unchanged.
-8. Close/reopen interfaces and invalidate/reload item definitions where practical. Confirm configured inventory/equipment labels are reapplied to a newly decoded ItemDefinitions object without duplicating or corrupting options.
-9. Temporarily add a second harmless test item entry to the properties file in a local test copy. Confirm the generic registry recognizes its configured option without adding an item-id hardcode to ControlerManager.
-10. Keep the `EMPTY_TO_BANK` bank-menu config entry disabled until a verified per-item bank inventory/menu label hook exists. Confirm clicking any stock bank option on 21445 does NOT empty backpack contents in this build.
-11. Run the backpack smoke path: persistence, real familiar BoB isolation, death persistence, and main-game keep-all death behavior remain unchanged.
+5. Put 21445 in the inventory, open the normal bank, and right-click it in bank inventory pane 762:7. Confirm the configured menu now contains `Open` and `Empty to bank` in addition to Matrix3's normal Deposit/Wear/Examine actions. Any stock deposit quantity variants Matrix3 normally presents must keep their original labels and behavior.
+6. Click bank-inventory-pane `Open`. Confirm it opens the same player-owned backpack storage while validating the physical backpack from the clicked inventory slot.
+7. Put several items in backpack storage, return to the bank inventory pane, and click `Empty to bank`. Confirm only backpack contents move into the bank, the physical 21445 stays in inventory, and successfully banked quantities are removed from backpack storage.
+8. Repeat `Empty to bank` with insufficient bank space. Confirm the existing partial/full-bank handling remains intact and no successfully unbanked quantity is deleted.
+9. From 762:7, confirm Wear still equips the physical backpack, Examine still examines it, Deposit/Deposit-5/Deposit-10/Deposit-X/Deposit-All keep their stock behavior, and none of those stock labels secretly execute a custom action.
+10. Put 21445 in the main bank item container and right-click it. Confirm the existing configured Bank Option 7 `Open` path still opens the same player-owned backpack storage and does not affect the new `bank_inventory` context.
+11. Right-click ordinary, unconfigured items in inventory, equipment, the bank inventory pane, and the bank item container. Confirm their stock Matrix3 options and behavior are unchanged and no custom menu entries are added.
+12. Close/reopen the bank repeatedly. Confirm `Open` and `Empty to bank` do not duplicate across menu rebuilds and remain item-specific.
+13. Temporarily add a second harmless test item with `bank_inventory` entries to a local copy of the properties file. Confirm the client/server recognize it from config without adding another item-ID hardcode.
+14. Run the backpack smoke path: logout/login persistence, real familiar BoB isolation, death persistence, and main-game keep-all death behavior remain unchanged.
