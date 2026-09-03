@@ -96,6 +96,25 @@ public class BeastOfBurden implements Serializable {
 		refreshItems(itemsBefore);
 	}
 
+	/**
+	 * Shared Matrix3 Beast of Burden storage rule.
+	 *
+	 * The 50,000 value limit is the rule already used by this Matrix3 revision
+	 * and matches the late-2014 preset era. Preset loading calls this same rule
+	 * instead of maintaining a second list of familiar restrictions.
+	 */
+	public boolean canStoreItem(Item item) {
+		if (item == null || canDepositOnly || familiar == null)
+			return false;
+		if (!ItemConstants.isTradeable(item) && item.getId() != 23194)
+			return false;
+		if (item.getId() == 4049)
+			return false;
+		if (familiar.canStoreEssOnly() && item.getId() != 1436 && item.getId() != 7936)
+			return false;
+		return (long) item.getDefinitions().getValue() * (long) item.getAmount() <= 50000L;
+	}
+
 	public void addItem(int slot, int amount) {
 		Item item = player.getInventory().getItem(slot);
 		if (item == null)
@@ -103,7 +122,7 @@ public class BeastOfBurden implements Serializable {
 		if (canDepositOnly) {
 			player.getPackets().sendGameMessage("You cannot store items in this familiar.");
 			return;
-		} else if (!ItemConstants.isTradeable(item) && item.getId() != 23194 || item.getId() == 4049 || (familiar.canStoreEssOnly() && item.getId() != 1436 && item.getId() != 7936) || (item.getDefinitions().getValue() * item.getAmount()) > 50000) {
+		} else if (!canStoreItem(item)) {
 			player.getPackets().sendGameMessage("You cannot store this item.");
 			return;
 		}
