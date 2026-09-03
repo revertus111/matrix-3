@@ -1,3 +1,11 @@
+2026-09-03 - Dev Mode searchable Spawn Browser
+- Added lazy NPC/object/item search by exact ID or name inside the tile Spawn Browser.
+- Added a narrow client definition bridge that observes Matrix3's normal Class639 decode path instead of duplicating cache parsing.
+- NPC/object name indexes build off-thread only after a text search starts; direct numeric ID lookup does not require a full index.
+- Reused the existing Client Console item thumbnail renderer for real item previews in Dev Spawn.
+- NPC/object model thumbnails remain a separate render-bridge task; this slice shows verified cache names/IDs without inventing visual previews.
+- Existing runtime spawn commands and Matrix3 world placement authority were left unchanged.
+
 2026-09-03 - Dev Mode tile right-click hook correction
 - Corrected the normal Matrix3 world-tile menu source from action 60 to action 23.
 - VERIFIED: action 23 is the normal scene-tile movement path carrying clicked local X/Y into Class319.method4094; action 60 is the staff/admin teleport-debug path.
