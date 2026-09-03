@@ -9,9 +9,13 @@ Tooling / cache research
 [ ] Confirm output contains NPC definitions 18538 through 18551 with names/models/renderEmote/transforms/options/known client-script params.
 [ ] Confirm NPC 18539 is labeled VERIFIED Ahrim flying state.
 [ ] Confirm NPC 18542 is labeled VERIFIED Guthan spearless / Impale state.
-[ ] Confirm Deep Scan starts in a fresh session without requiring a visible GFX to have already loaded.
+[ ] Confirm NPCs 18546-18551 are labeled verified-static body-only/inactive definitions that are runtime-invisible as the current subdued presentation; keep their authentic role HYPOTHESIS.
+[ ] Start a fresh client session without first forcing a visible GFX. Confirm Matrix3's authentic live GFX `Class639` loader registers through the `Class452_Sub1` factory and Deep Scan reaches `GFX loader: ready` without constructing a substitute loader from the render-set archive.
 [ ] Confirm Deep Scan contains render sets 2687, 2689, 2690, 2982, and 2987 with raw opcode animation references.
+[ ] Confirm focused/Deep Scan animation coverage extends through 21947, including 21941 and current Guthan 21944/21945/21947 mappings.
 [ ] Confirm targeted candidate output reports render-set membership and GFX correlation without inventing mechanic names.
+[ ] Confirm GFX correlation no longer floods hundreds of per-definition exceptions. If decode failures remain, confirm the dump reports one total failure count plus at most five examples.
+[ ] If any GFX definitions fail to decode and there are zero matches, confirm the dump explicitly marks correlation incomplete and does NOT treat zero matches as evidence.
 [ ] Click Copy All and confirm the entire dump, including off-screen text, is copied in one operation.
 [ ] Resize Owner down to the narrowest supported console width and confirm Account values, Scan RoTS, Deep Scan, Copy All, Clear, output area, and wrapped note remain visible.
 
@@ -28,7 +32,9 @@ Current encounter foundation
 Current brother mechanics
 [ ] Torag Whack/Pummel: verify current 21933 opening, 21934 victim, 21935 pummel, and 21938 release sequence against runtime/video evidence before classifying it as authentic 1:1.
 [ ] Guthan Impale: verify current 21944 throw, 21945 impaled-victim, 21947 retrieval, NPC 18541<->18542 transformation, projectile/GFX 4411, secondary bleed GFX 4407, damage cadence, retrieval range, and Torag interaction.
-[ ] Dharok Greatest Axe: verify current animation 21940 and stored-damage behavior; keep donor GFX 4406 rejected unless new runtime evidence contradicts the bad visual result.
+[ ] Dharok Greatest Axe: visually runtime-test current animation 21940 and record its physical motion/end behavior before changing its loop or charge timing.
+[ ] Dharok Greatest Axe: run the repaired Deep Scan, copy the GFX correlation output, and use cache/runtime evidence to identify candidates for the documented blue-lightning/axe-energy presentation; keep donor GFX 4406 rejected unless new evidence contradicts its bad runtime visual.
+[ ] Dharok Greatest Axe: verify the stored-damage/no-HP-loss charge behavior and final stored-damage delivery separately from animation/GFX fidelity before calling the mechanic 1:1.
 [x] Hurricane / Spinning Attack: animation 21941 produces the corresponding sustained weapon-spin presentation on Dharok, Guthan, Torag, and Verac in runtime playback.
 [ ] Hurricane / Spinning Attack: in a live RoTS encounter, confirm Hurricane starts animation 21941 once and the spin continues naturally rather than restarting/freezing during the 10 damage pulses.
 [ ] Hurricane / Spinning Attack: confirm the brother tracks the target while walking and that removing the old fake facing rotation does not cause orientation/pathing regressions.
@@ -48,6 +54,8 @@ Encounter parity still requiring focused tests
 [ ] Audit/test escape/tunnel/reward flow when combat-mechanic parity reaches that phase.
 
 Next research checkpoint
+[ ] Eclipse/Java 8 clean-build the Client, launch a fresh session, and run Owner -> Deep Scan before intentionally triggering a visible GFX.
+[ ] Copy the repaired Deep Scan output and inspect GFX matches/failure summary for Dharok Greatest Axe candidates.
+[ ] Runtime-test animation 21940 on Dharok and record the physical motion plus approximate visible duration/end transition; do not blindly loop or retime it first.
 [ ] Runtime-test the integrated 21941 Hurricane in the actual encounter before changing damage, pulse count, or movement cadence.
-[ ] If the spin duration ends early or gets interrupted while tracking, capture the exact visual timing before changing animation restart behavior.
-[ ] Expand targeted animation research through 21947 when needed because known RoTS/current-implementation mappings extend beyond the old 21940 cutoff.
+[ ] After Greatest Axe evidence is collected, continue finishing the melee-brother-specials milestone rather than returning to broad cache/tool research.
