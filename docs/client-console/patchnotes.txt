@@ -6,7 +6,7 @@
 - Added permanent modern dark-theme requirements and centralized presentation/styling responsibilities instead of finished default Swing visuals.
 - Added resizable/customizable layout, validated layout persistence, DPI/display-scaling targets, multi-resolution acceptance checks, and safe reset/clamping behavior.
 - Expanded persistence to restore complete valid client/console workspace geometry after clean restart, including client size/position/state, console width/open state, active panel, and meaningful split/collapse state.
-- Required one versioned Client Console preference authority with safe defaults, monitor-bound clamping, reset-layout behavior, and debounced/coalesced writes during resize.
+- Required one versioned Java Preferences workspace authority with safe defaults, monitor-bound clamping, reset-layout behavior, and debounced/coalesced writes during resize.
 - Added smoothness requirements for lazy panel initialization, non-blocking thread ownership, resize-without-rebuild behavior, clean game/console focus handoff, minimum game-view protection, panel failure isolation, and restrained animation.
 - Implemented the Phase 2 frame-level Client Console shell around the existing RS3Applet without changing Matrix3 renderer/canvas ownership.
 - Added a permanent dark shell with a thin icon rail, scrollable placeholder content, collapse/reopen behavior, and a draggable width boundary that protects a 640px minimum game view.
@@ -49,3 +49,5 @@
 - Deep Scan resolves known RoTS render sets into raw cache opcode animation references and marks targeted animation candidates by render-set membership without assigning unverified mechanic semantics.
 - Added a narrow GraphicsDefinition loader registration hook and read-only GFX scan for explicit candidate-animation or known RoTS-model matches.
 - Deep Scan remains daemon-worker based; Copy All/Clear continue to operate on the complete generated text without gameplay/server mutation.
+- Fixed Owner content clipping by making the scroll content track viewport width and wrapping long informational text instead of widening the panel off-screen.
+- Added a read-only RoTS GFX bootstrap that builds the spot-animation definition loader from the already-live config archive before Deep Scan, removing the dependency on a prior runtime GFX instantiation.
