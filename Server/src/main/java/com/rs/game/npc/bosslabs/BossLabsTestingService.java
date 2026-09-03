@@ -10,6 +10,8 @@ import com.rs.game.World;
 import com.rs.game.WorldTile;
 import com.rs.game.npc.NPC;
 import com.rs.game.player.Player;
+import com.rs.game.tasks.WorldTask;
+import com.rs.game.tasks.WorldTasksManager;
 import com.rs.utils.Utils;
 
 /**
@@ -31,6 +33,8 @@ public final class BossLabsTestingService {
 
 	private static final Map<Player, NPC> TEST_BOSSES =
 			Collections.synchronizedMap(new WeakHashMap<Player, NPC>());
+	private static final Map<Player, WorldTask> TEST_WATCHERS =
+			Collections.synchronizedMap(new WeakHashMap<Player, WorldTask>());
 
 	private BossLabsTestingService() {
 	}
@@ -49,6 +53,7 @@ public final class BossLabsTestingService {
 			throw new IllegalArgumentException("Matrix3 could not spawn the selected BossLabs NPC.");
 
 		TEST_BOSSES.put(player, boss);
+		startSessionWatch(player, boss);
 		BossEncounterContext encounter = BossEncounterRuntime.getOrCreate(boss);
 		encounter.registerParticipant(player);
 		boss.setTarget(player);
@@ -126,7 +131,7 @@ public final class BossLabsTestingService {
 		requirePlayer(player);
 		NPC boss = TEST_BOSSES.get(player);
 		if (boss == null || boss.hasFinished() || boss.isDead()) {
-			TEST_BOSSES.remove(player);
+			clearSessionReference(player, boss);
 			throw new IllegalArgumentException("Spawn this BossLabs boss from the Testing tab first.");
 		}
 		if (boss.getId() != npcId)
@@ -151,7 +156,60 @@ public final class BossLabsTestingService {
 		throw new IllegalArgumentException("Unknown BossLabs phase id: " + wanted);
 	}
 
+	private static void startSessionWatch(final Player player, final NPC boss) {
+		WorldTask previous = TEST_WATCHERS.remove(player);
+		if (previous != null)
+			previous.stop();
+
+		WorldTask watcher = new WorldTask() {
+			@Override
+			public void run() {
+				NPC current = TEST_BOSSES.get(player);
+				if (current != boss) {
+					removeWatcher(player, this);
+					stop();
+					return;
+				}
+				if (boss.hasFinished() || boss.isDead()) {
+					TEST_BOSSES.remove(player);
+					removeWatcher(player, this);
+					BossEncounterRuntime.finishEncounter(boss);
+					stop();
+					return;
+				}
+				if (player.hasFinished()) {
+					TEST_BOSSES.remove(player);
+					removeWatcher(player, this);
+					BossEncounterRuntime.finishEncounter(boss);
+					if (!boss.hasFinished())
+						boss.finish();
+					stop();
+				}
+			}
+		};
+		TEST_WATCHERS.put(player, watcher);
+		WorldTasksManager.schedule(watcher, 0, 0);
+	}
+
+	private static void removeWatcher(Player player, WorldTask expected) {
+		WorldTask current = TEST_WATCHERS.get(player);
+		if (current == expected)
+			TEST_WATCHERS.remove(player);
+	}
+
+	private static void clearSessionReference(Player player, NPC boss) {
+		NPC current = TEST_BOSSES.get(player);
+		if (current == boss)
+			TEST_BOSSES.remove(player);
+		WorldTask watcher = TEST_WATCHERS.remove(player);
+		if (watcher != null)
+			watcher.stop();
+	}
+
 	private static void removeCurrentTestBoss(Player player) {
+		WorldTask watcher = TEST_WATCHERS.remove(player);
+		if (watcher != null)
+			watcher.stop();
 		NPC existing = TEST_BOSSES.remove(player);
 		if (existing == null)
 			return;
