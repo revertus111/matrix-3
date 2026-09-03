@@ -315,7 +315,11 @@ public final class RiseOfTheSixBrother extends NPC {
 			public void run() {
 				if (!dharokCharging || subdued || hasFinished())
 					return;
-				setNextGraphics(new Graphics(4406, 0, 0, 5, true));
+				/*
+				 * Donor GFX 4406 is runtime-rejected in this revision-830 cache: it renders
+				 * as a huge cyan lightning/sphere effect. Keep the donor-backed charge
+				 * animation/state while the correct 830 Greatest Axe visual is identified.
+				 */
 				setNextAnimation(new Animation(21940));
 			}
 		}, 2);
