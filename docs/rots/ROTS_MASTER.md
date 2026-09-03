@@ -62,6 +62,16 @@ Do not replace these with a second RoTS controller. Improve the existing impleme
 - NPC 18542 = VERIFIED spearless Guthan state used by current Impale.
 - NPCs 18546-18551 are body-only/null-name cache definitions, but current revision-830 runtime testing found these inactive definitions render invisibly. The current encounter therefore deliberately keeps the active brother model visible at 1 HP while logically subdued. Their authentic intended cache role remains unproven.
 - The current RoTS combat-family models render with Santa hats in this revision-830 cache/runtime.
+- Animation 21941 = VERIFIED runtime visual on Dharok: sustained spinning motion. Authentic Hurricane/Spinning Attack assignment remains a strong HYPOTHESIS until cross-brother/footage confirmation.
+
+## Documentary evidence now guiding the spin search
+
+A period RoTS guide documents a shared `Spinning Attack` for all melee brothers and lists it for Torag, Guthan, Verac, and Dharok. The same guide separately describes Verac's `Helicopter` move, so those two visuals must not be conflated during animation identification.
+
+Reference:
+- https://forum.tip.it/topic/326100-rise-of-the-six-guide-rots/
+
+This documentary evidence does not by itself prove animation 21941, but it gives a concrete visual/mechanic target for runtime comparison.
 
 ## Current research strategy
 
@@ -107,7 +117,7 @@ Use `timings/` for measured attack cadence, animation duration, special windups,
 
 ## Current highest-value gaps
 
-1. Authentic Hurricane / Whirlwind animation and timing.
+1. Confirm whether animation 21941 is the authentic shared Hurricane / Spinning Attack animation.
 2. Authentic subdued/kneeling presentation while preserving the working logical subdue/revive system.
 3. Greatest Axe visual/timing verification.
 4. Normal attack cadence verification for all six brothers.
@@ -119,4 +129,15 @@ Use `timings/` for measured attack cadence, animation duration, special windups,
 
 ## Next checkpoint
 
-Use the now-known current implementation animation mappings to eliminate already-accounted-for IDs from the Deep Scan candidate set, then identify the authentic Hurricane animation first. Hurricane is shared by multiple melee brothers and is currently an explicit visual/animation approximation, making it the highest-leverage next 1:1 combat fix.
+Do not continue broad random animation testing yet.
+
+First test animation 21941 on:
+
+1. Dharok - already VERIFIED as a sustained spin visual.
+2. Guthan.
+3. Torag.
+4. Verac.
+
+If 21941 produces the appropriate weapon-spin presentation across the four melee brothers, compare that runtime result directly against authentic RoTS footage/documentary behavior. Only then promote 21941 from strong HYPOTHESIS to VERIFIED Hurricane/Spinning Attack and patch the existing Hurricane implementation to replace the current normal-attack-emote approximation.
+
+After the animation is proven, separately verify Hurricane timing/damage/movement before calling the mechanic 1:1.
