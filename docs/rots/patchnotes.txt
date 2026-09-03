@@ -1,0 +1,5 @@
+2026-09-02
+- Added read-only `RotsCacheScanner` for revision-830 RoTS asset discovery.
+- Scanner finds all six brother name variants and dumps NPC/model/render-animation metadata.
+- Added model-fingerprint correlation to identify likely normal variants related to observed Santa-hat models.
+- Added initial RoTS 1:1 reverse-engineering documentation structure.
