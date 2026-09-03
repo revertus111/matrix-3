@@ -1,0 +1,9 @@
+2026-09-03
+- Added standalone Java 8 RS3 CacheEditor foundation under com.rs.tools.cacheeditor.
+- Reused Matrix3's existing Alex FileStore instead of introducing a second cache engine.
+- Added cache-directory selection and a shared cache session for editor panels.
+- Added raw index/archive/file loading, hex preview, raw export, and confirmed raw replacement.
+- Raw replacement backs up the previous file bytes under cache-editor-backups before writing.
+- Added lazy background item ID/name search and a read-only item definition inspector using Matrix3 ItemDefinitions.
+- Added disabled navigation placeholders for NPCs, objects, models, GFX, animations, sprites, and interfaces so later editors share the same cache session.
+- Item definition writes are intentionally not enabled yet; a round-trip-safe definition encoder is required before structured saves are allowed.

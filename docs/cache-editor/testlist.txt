@@ -1,0 +1,14 @@
+RS3 CacheEditor foundation test list
+
+[ ] In Eclipse with Java 8, run com.rs.tools.cacheeditor.CacheEditorLauncher as a Java Application.
+[ ] Select the revision-830 cache directory and confirm the editor opens without starting the game server.
+[ ] Raw Cache: load a known index/archive/file and confirm the byte count and hex preview populate.
+[ ] Raw Cache: export a loaded file and confirm the exported bytes match the loaded file length.
+[ ] Raw Cache: on a disposable cache copy, replace a raw file and confirm a backup is created under cache-editor-backups before the write.
+[ ] Raw Cache: reopen the replaced file and confirm the new bytes are readable.
+[ ] Items: search a known item by numeric ID and confirm its decoded fields populate.
+[ ] Items: search a known item by name and confirm the background index completes without freezing the UI.
+[ ] Items: confirm name search results select and display the expected item definition fields.
+[ ] Confirm definitions that fail to decode are counted as skipped instead of crashing the editor.
+[ ] Confirm NPC/Object/Model/GFX/Animation/Sprite/Interface tabs remain disabled in this foundation slice.
+[ ] Do not use raw replacement against the live server cache until the disposable-copy write/backup test passes.
