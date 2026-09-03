@@ -30,21 +30,23 @@ public final class RawCachePanel extends JPanel {
 	private byte[] currentData;
 
 	public RawCachePanel(CacheSession session) {
-		super(new BorderLayout(6, 6));
+		super(new BorderLayout(8, 8));
 		this.session = session;
-		setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+		setBackground(CacheEditorTheme.PANEL);
+		setBorder(CacheEditorTheme.panelPadding(12, 12, 12, 12));
 
-		JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		controls.add(new JLabel("Index"));
-		controls.add(indexField);
-		controls.add(new JLabel("Archive"));
-		controls.add(archiveField);
-		controls.add(new JLabel("File"));
-		controls.add(fileField);
+		JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+		controls.setBackground(CacheEditorTheme.PANEL);
+		addField(controls, "Index", indexField);
+		addField(controls, "Archive", archiveField);
+		addField(controls, "File", fileField);
 
 		JButton load = new JButton("Load");
 		JButton export = new JButton("Export Raw");
 		JButton replace = new JButton("Replace Raw");
+		CacheEditorTheme.styleButton(load);
+		CacheEditorTheme.styleButton(export);
+		CacheEditorTheme.styleButton(replace);
 		controls.add(load);
 		controls.add(export);
 		controls.add(replace);
@@ -52,14 +54,30 @@ public final class RawCachePanel extends JPanel {
 
 		preview.setEditable(false);
 		preview.setFont(new java.awt.Font(java.awt.Font.MONOSPACED, java.awt.Font.PLAIN, 12));
-		add(new JScrollPane(preview), BorderLayout.CENTER);
+		preview.setLineWrap(false);
+		CacheEditorTheme.styleTextArea(preview);
+		JScrollPane previewScroll = new JScrollPane(preview);
+		CacheEditorTheme.styleScrollPane(previewScroll);
+		add(previewScroll, BorderLayout.CENTER);
 
 		status.setText("Ready. Indexes: " + session.getIndexCount());
+		status.setFont(CacheEditorTheme.SMALL_FONT);
+		status.setForeground(CacheEditorTheme.ACCENT);
+		status.setBorder(BorderFactory.createEmptyBorder(2, 2, 0, 2));
 		add(status, BorderLayout.SOUTH);
 
 		load.addActionListener(e -> loadSelected());
 		export.addActionListener(e -> exportCurrent());
 		replace.addActionListener(e -> replaceSelected());
+	}
+
+	private void addField(JPanel controls, String text, JTextField field) {
+		JLabel label = new JLabel(text);
+		label.setFont(CacheEditorTheme.SMALL_FONT);
+		label.setForeground(CacheEditorTheme.MUTED_TEXT);
+		controls.add(label);
+		CacheEditorTheme.styleTextField(field);
+		controls.add(field);
 	}
 
 	private void loadSelected() {
