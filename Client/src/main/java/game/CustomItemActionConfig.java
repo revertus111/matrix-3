@@ -18,12 +18,8 @@ import java.util.Set;
  */
 public final class CustomItemActionConfig {
 
-    private static final String CONFIG_PATH = "data/items/custom-item-actions.properties";
-    private static final String[] CONFIG_PATHS = {
-            CONFIG_PATH,
-            "../" + CONFIG_PATH,
-            "../../" + CONFIG_PATH
-    };
+    private static final String CONFIG_PATH = "Server/data/items/custom-item-actions.properties";
+    private static final String SERVER_RELATIVE_CONFIG_PATH = "data/items/custom-item-actions.properties";
 
     private static final Properties PROPERTIES = new Properties();
     private static final Set<Integer> ITEM_IDS = new HashSet<Integer>();
@@ -148,10 +144,14 @@ public final class CustomItemActionConfig {
     }
 
     private static File findConfig() {
-        for (String path : CONFIG_PATHS) {
-            File file = new File(path);
-            if (file.isFile())
-                return file;
+        File directory = new File(System.getProperty("user.dir", "."));
+        for (int depth = 0; directory != null && depth < 6; depth++, directory = directory.getParentFile()) {
+            File repoCandidate = new File(directory, CONFIG_PATH);
+            if (repoCandidate.isFile())
+                return repoCandidate;
+            File serverCandidate = new File(directory, SERVER_RELATIVE_CONFIG_PATH);
+            if (serverCandidate.isFile())
+                return serverCandidate;
         }
         return null;
     }
