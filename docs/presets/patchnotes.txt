@@ -4,3 +4,5 @@
 - Loading requires an open bank, validates controller/equipment restrictions, and moves real bank/carried item quantities instead of spawning copies.
 - Presets persist per player in data/presets using a versioned file format.
 - Beast of Burden/quick-preset controls remain isolated pending runtime component mapping.
+- Fixed native preset click routing to resolve the preset row from either Matrix3 button slot field instead of assuming slotId always carries the row.
+- Unmapped interface 579 controls no longer get globally swallowed with repeated "Select a preset row first" messages; a previously selected row is retained for its action controls.

@@ -1,15 +1,16 @@
 Gear Presets runtime test list
 
 1. Clean/refresh the Server project in Eclipse with Java 8 and confirm it compiles.
-2. Open Gear > Presets and click preset rows 1-10; confirm the preset action dialogue opens.
-3. Save a preset with both worn equipment and backpack items, including stack quantities.
-4. Change the carried setup, click Load with no bank open, and confirm loading is rejected without item changes.
-5. Open a bank, return to Gear > Presets, load the saved preset, and confirm worn/backpack slot contents and quantities match the saved setup.
-6. Verify the displaced setup moves into the bank and required preset items are removed from the bank with no duplicate or missing quantities.
-7. Test a nearly/full bank where a one-for-one preset swap should still fit.
-8. Test a missing required bank item and insufficient final bank space; both must reject before changing items.
-9. Save, logout/restart the server, login, and confirm the preset remains available through the same preset slot.
-10. Clear a saved preset and confirm it no longer loads after restart.
-11. Test while a controller restricts inventory/equipment changes and confirm the preset load is rejected.
-12. Click the Beast of Burden row and confirm it reports that BoB presets are not enabled yet.
-13. If a native preset icon does not resolve to the selected row, enable DEBUG and capture the PresetManager component/slot/slot2/packet log for that click before extending the mapping.
+2. Open Gear > Presets and click preset rows 1-10; confirm the preset action dialogue opens instead of repeating "Select a preset row first."
+3. Click a row action icon after selecting that preset row and confirm it continues to target the selected preset rather than another row.
+4. Save a preset with both worn equipment and backpack items, including stack quantities.
+5. Change the carried setup, click Load with no bank open, and confirm loading is rejected without item changes.
+6. Open a bank, return to Gear > Presets, load the saved preset, and confirm worn/backpack slot contents and quantities match the saved setup.
+7. Verify the displaced setup moves into the bank and required preset items are removed from the bank with no duplicate or missing quantities.
+8. Test a nearly/full bank where a one-for-one preset swap should still fit.
+9. Test a missing required bank item and insufficient final bank space; both must reject before changing items.
+10. Save, logout/restart the server, login, and confirm the preset remains available through the same preset slot.
+11. Clear a saved preset and confirm it no longer loads after restart.
+12. Test while a controller restricts inventory/equipment changes and confirm the preset load is rejected.
+13. Click the Beast of Burden row and confirm it reports that BoB presets are not enabled yet when the cache supplies row 11 in either slot field.
+14. Click unrelated/native controls on interface 579 before selecting a preset and confirm they are not spammed with the old selection warning.

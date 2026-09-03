@@ -57,14 +57,16 @@ public final class PresetManager {
             return false;
 
         String key = getPlayerKey(player);
+        int clickedSlot = resolvePresetSlot(slotId, slotId2);
         int presetIndex = -1;
-        if (slotId >= 1 && slotId <= PRESET_COUNT) {
-            presetIndex = slotId - 1;
+
+        if (clickedSlot >= 1 && clickedSlot <= PRESET_COUNT) {
+            presetIndex = clickedSlot - 1;
             SELECTED_PRESETS.put(key, presetIndex);
-        } else if (slotId == CURRENTLY_EQUIPPED_SLOT) {
+        } else if (clickedSlot == CURRENTLY_EQUIPPED_SLOT) {
             player.getPackets().sendGameMessage("Choose one of preset slots 1-10 to save or load a setup.");
             return true;
-        } else if (slotId == BOB_SLOT) {
+        } else if (clickedSlot == BOB_SLOT) {
             player.getPackets().sendGameMessage("The Beast of Burden preset is not enabled yet.");
             return true;
         } else {
@@ -77,8 +79,10 @@ public final class PresetManager {
             if (Settings.DEBUG)
                 Logger.log(PresetManager.class, "Unmapped preset click: component=" + componentId + ", slot=" + slotId
                         + ", slot2=" + slotId2 + ", packet=" + packetId);
-            player.getPackets().sendGameMessage("Select a preset row first.");
-            return true;
+            // Do not swallow every native preset-interface control. Matrix3's
+            // interface packet carries two slot fields, and controls that do not
+            // identify a preset row should be allowed to fall through normally.
+            return false;
         }
 
         if (Settings.DEBUG)
@@ -86,6 +90,18 @@ public final class PresetManager {
                     + ", slot=" + slotId + ", slot2=" + slotId2 + ", packet=" + packetId);
         openPresetActions(player, presetIndex);
         return true;
+    }
+
+    private static int resolvePresetSlot(int slotId, int slotId2) {
+        if (isPresetListSlot(slotId))
+            return slotId;
+        if (isPresetListSlot(slotId2))
+            return slotId2;
+        return -1;
+    }
+
+    private static boolean isPresetListSlot(int slot) {
+        return slot >= CURRENTLY_EQUIPPED_SLOT && slot <= BOB_SLOT;
     }
 
     private static void openPresetActions(final Player player, final int presetIndex) {
