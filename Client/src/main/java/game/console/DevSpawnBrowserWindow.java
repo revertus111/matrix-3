@@ -4,6 +4,7 @@ import game.ClientConsoleBridge;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 
@@ -83,11 +84,11 @@ public final class DevSpawnBrowserWindow {
         JLabel title = new JLabel("DEV SPAWN");
         title.setFont(ConsoleTheme.TITLE_FONT);
         title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         targetLabel.setFont(ConsoleTheme.SMALL_FONT);
         targetLabel.setForeground(ConsoleTheme.ACCENT);
-        targetLabel.setAlignmentX(LEFT_ALIGNMENT);
+        targetLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         header.add(title);
         header.add(Box.createVerticalStrut(4));
@@ -212,12 +213,12 @@ public final class DevSpawnBrowserWindow {
         JLabel title = new JLabel(titleText);
         title.setFont(ConsoleTheme.SECTION_FONT);
         title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel description = new JLabel("<html><div style='width:330px'>" + descriptionText + "</div></html>");
         description.setFont(ConsoleTheme.SMALL_FONT);
         description.setForeground(ConsoleTheme.MUTED_TEXT);
-        description.setAlignmentX(LEFT_ALIGNMENT);
+        description.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         card.add(title);
         card.add(Box.createVerticalStrut(5));
@@ -230,10 +231,10 @@ public final class DevSpawnBrowserWindow {
         JLabel label = new JLabel(labelText, SwingConstants.LEFT);
         label.setFont(ConsoleTheme.SMALL_FONT);
         label.setForeground(ConsoleTheme.MUTED_TEXT);
-        label.setAlignmentX(LEFT_ALIGNMENT);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        field.setAlignmentX(LEFT_ALIGNMENT);
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
         ConsoleTheme.styleTextField(field);
 
         card.add(label);
@@ -243,7 +244,7 @@ public final class DevSpawnBrowserWindow {
 
     private JButton createSpawnButton(String text, final Runnable action) {
         JButton button = new JButton(text);
-        button.setAlignmentX(LEFT_ALIGNMENT);
+        button.setAlignmentX(Component.LEFT_ALIGNMENT);
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         ConsoleTheme.styleButton(button);
         button.addActionListener(e -> action.run());
