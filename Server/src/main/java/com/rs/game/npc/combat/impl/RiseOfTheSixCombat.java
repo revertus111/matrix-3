@@ -10,6 +10,7 @@ import com.rs.game.npc.combat.CombatScript;
 import com.rs.game.npc.combat.NPCCombatDefinitions;
 import com.rs.game.npc.rots.RiseOfTheSixBrother;
 import com.rs.game.npc.rots.RiseOfTheSixBrother.Brother;
+import com.rs.game.npc.rots.RiseOfTheSixDebugLog;
 import com.rs.game.player.Player;
 import com.rs.game.player.Skills;
 import com.rs.utils.Utils;
@@ -32,35 +33,48 @@ public final class RiseOfTheSixCombat extends CombatScript {
 		RiseOfTheSixBrother rotsBrother = npc instanceof RiseOfTheSixBrother ? (RiseOfTheSixBrother) npc : null;
 
 		if (rotsBrother != null) {
-			if (rotsBrother.isSpecialActive())
+			RiseOfTheSixDebugLog.attach(rotsBrother);
+			if (rotsBrother.isSpecialActive()) {
+				RiseOfTheSixDebugLog.logCombatWait(rotsBrother, target);
 				return 1;
-			if (rotsBrother.isMeleeBrother() && rotsBrother.tryStartMeleeSpecial(target))
+			}
+			if (rotsBrother.isMeleeBrother() && rotsBrother.tryStartMeleeSpecial(target)) {
+				RiseOfTheSixDebugLog.logSpecialDispatch(rotsBrother, target);
 				return 1;
+			}
 		}
 
 		if (brother == Brother.AHRIM)
-			return mageAttack(npc, target);
+			return mageAttack(npc, target, rotsBrother);
 		if (brother == Brother.KARIL)
-			return rangeAttack(npc, target);
+			return rangeAttack(npc, target, rotsBrother);
 
-		int delay = meleeAttack(npc, target, brother);
+		int delay = meleeAttack(npc, target, brother, rotsBrother);
 		if (rotsBrother != null)
 			rotsBrother.noteNormalMeleeAttack();
 		return delay;
 	}
 
-	private int meleeAttack(NPC npc, Entity target, Brother brother) {
-		npc.setNextAnimation(new Animation(npc.getCombatDefinitions().getAttackEmote()));
+	private int meleeAttack(NPC npc, Entity target, Brother brother, RiseOfTheSixBrother rotsBrother) {
+		int animation = npc.getCombatDefinitions().getAttackEmote();
+		npc.setNextAnimation(new Animation(animation));
 		int maxHit = getMeleeMaxHit(npc, brother);
 		int damage = getMaxHit(npc, maxHit, NPCCombatDefinitions.MELEE, target);
+		int healed = 0;
 
 		if (brother == Brother.GUTHAN && damage != 0 && Utils.random(8) == 0) {
 			target.setNextGraphics(new Graphics(398));
 			npc.heal(damage);
+			healed = damage;
 		}
 
 		delayHit(npc, 0, target, getMeleeHit(npc, damage));
-		return brother == Brother.VERAC ? npc.getAttackSpeed() : 7;
+		int returnDelay = brother == Brother.VERAC ? npc.getAttackSpeed() : 7;
+		if (rotsBrother != null)
+			RiseOfTheSixDebugLog.logNormalAttack(rotsBrother, target, "MELEE", animation, -1,
+					healed > 0 ? 398 : -1, maxHit, damage, 0, returnDelay,
+					healed > 0 ? "guthanHeal=" + healed : "");
+		return returnDelay;
 	}
 
 	private int getMeleeMaxHit(NPC npc, Brother brother) {
@@ -80,25 +94,38 @@ public final class RiseOfTheSixCombat extends CombatScript {
 		return 2000;
 	}
 
-	private int mageAttack(NPC npc, Entity target) {
-		npc.setNextAnimation(new Animation(npc.getId() == 18539 ? 21925 : 18288));
+	private int mageAttack(NPC npc, Entity target, RiseOfTheSixBrother rotsBrother) {
+		int animation = npc.getId() == 18539 ? 21925 : 18288;
+		npc.setNextAnimation(new Animation(animation));
 		int damage = getMaxHit(npc, 3000, NPCCombatDefinitions.MAGE, target);
+		String extra = "";
 		if (damage != 0 && target instanceof Player && Utils.random(8) == 0) {
 			Player targetPlayer = (Player) target;
 			int currentLevel = targetPlayer.getSkills().getLevel(Skills.STRENGTH);
-			targetPlayer.getSkills().set(Skills.STRENGTH, currentLevel < 5 ? 0 : currentLevel - 5);
+			int newLevel = currentLevel < 5 ? 0 : currentLevel - 5;
+			targetPlayer.getSkills().set(Skills.STRENGTH, newLevel);
+			extra = "strengthDrain=" + currentLevel + "->" + newLevel;
 		}
 		Projectile projectile = World.sendProjectileNew(npc, target, 559, 41, 16, 35, 2, 16, Utils.random(5));
 		target.setNextGraphics(new Graphics(377));
-		delayHit(npc, Math.max(3, Utils.projectileTimeToCycles(projectile.getEndTime())), target, getMagicHit(npc, damage));
+		int hitDelay = Math.max(3, Utils.projectileTimeToCycles(projectile.getEndTime()));
+		delayHit(npc, hitDelay, target, getMagicHit(npc, damage));
+		if (rotsBrother != null)
+			RiseOfTheSixDebugLog.logNormalAttack(rotsBrother, target, "MAGE", animation, 559, 377,
+					3000, damage, hitDelay, 5, extra);
 		return 5;
 	}
 
-	private int rangeAttack(NPC npc, Entity target) {
-		npc.setNextAnimation(new Animation(18232));
+	private int rangeAttack(NPC npc, Entity target, RiseOfTheSixBrother rotsBrother) {
+		int animation = 18232;
+		npc.setNextAnimation(new Animation(animation));
 		int damage = getMaxHit(npc, 3000, NPCCombatDefinitions.RANGE, target);
 		Projectile projectile = World.sendProjectileNew(npc, target, 955, 41, 16, 35, 3, Utils.random(5), 5);
-		delayHit(npc, Math.max(3, Utils.projectileTimeToCycles(projectile.getEndTime())), target, getRangeHit(npc, damage));
+		int hitDelay = Math.max(3, Utils.projectileTimeToCycles(projectile.getEndTime()));
+		delayHit(npc, hitDelay, target, getRangeHit(npc, damage));
+		if (rotsBrother != null)
+			RiseOfTheSixDebugLog.logNormalAttack(rotsBrother, target, "RANGE", animation, 955, -1,
+					3000, damage, hitDelay, 7, "");
 		return 7;
 	}
 }
