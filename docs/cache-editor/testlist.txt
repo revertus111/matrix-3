@@ -12,3 +12,6 @@ RS3 CacheEditor foundation test list
 [ ] Confirm definitions that fail to decode are counted as skipped instead of crashing the editor.
 [ ] Confirm NPC/Object/Model/GFX/Animation/Sprite/Interface tabs remain disabled in this foundation slice.
 [ ] Do not use raw replacement against the live server cache until the disposable-copy write/backup test passes.
+[ ] From the normal Client Console shell, click Open RS3 CacheEditor and confirm the editor starts in a separate process with its cache-directory chooser.
+[ ] While CacheEditor is open, click Open RS3 CacheEditor again and confirm a second editor process is not started.
+[ ] Close CacheEditor, click Open RS3 CacheEditor again, and confirm it can be launched again without restarting the Matrix3 client.
