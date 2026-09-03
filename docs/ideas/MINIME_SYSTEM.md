@@ -4,9 +4,11 @@
 
 IDEA / DESIGN PLAN ONLY — not an approved implementation task yet.
 
-This document captures the intended gameplay identity, progression rules, control model, balancing direction, and possible implementation phases for a MiniMe system in Matrix3.
+This document captures the intended gameplay identity, progression rules, automation model, control model, balancing direction, retention loop, anti-abuse philosophy, and implementation acceptance checklist for a MiniMe system in Matrix3.
 
-The central idea is not to build a separate traditional RTS game mode. The stronger direction is to make multi-character control part of normal RuneScape gameplay.
+The central idea is **not** to build a separate traditional RTS game mode.
+
+The stronger direction is to make multi-character control part of normal RuneScape gameplay and potentially one of the server's defining features.
 
 ## Core Pitch
 
@@ -20,14 +22,15 @@ Each MiniMe is a real playable character under the same owner profile:
 - its own inventory
 - its own XP and progression
 - its own combat role/build
+- its own name/identity
 - direct player control when desired
-- autonomous orders when the player is controlling someone else
+- autonomous orders while the player controls someone else
 
 The Main remains the primary character. MiniMes expand what the player can do without replacing normal RuneScape progression.
 
 The result should feel like:
 
-**RuneScape progression + squad management + optional RTS-style control.**
+**RuneScape progression + squad management + intentional automation + optional RTS-style control.**
 
 It should not feel like a conventional RTS with base construction, unit factories, resource buildings, or disposable troops.
 
@@ -47,6 +50,12 @@ MiniMe #5  -> smithing or another support task
 At any moment the player can stop managing the group, take direct control of one character, and play normal RuneScape with that character.
 
 The appeal is that the player is not merely commanding bots. They are building their own RuneScape squad over time.
+
+A core player story should eventually be possible:
+
+> "I finally maxed my first MiniMe. Time to finish the rest."
+
+That is an intentional long-term retention loop, not an accidental side effect.
 
 ## Main Character
 
@@ -81,15 +90,16 @@ Current direction:
 - MiniMes use normal player equipment/models where possible.
 - They are visually scaled smaller than the Main so they are instantly recognizable.
 - A starting target could be approximately 70-80% of normal player visual scale, subject to runtime testing.
-- Visual scale should not automatically imply smaller collision/pathing rules. Gameplay size should remain Matrix3-safe unless a later verified design requires otherwise.
+- Visual scale should not automatically imply smaller collision/pathing rules.
+- Gameplay size should remain Matrix3-safe unless a later verified design requires otherwise.
 
 The visual difference should make a Main followed by several equipped MiniMes immediately recognizable as a signature server feature.
+
+A fully geared Main walking around with five smaller, separately trained characters should be a visual flex in itself.
 
 ### Independent Progression
 
 MiniMes do **not** inherit the Main's levels.
-
-Example:
 
 If the Main has 99 Mining, a newly unlocked MiniMe does not receive 99 Mining. The MiniMe begins from its own starting progression and must train Mining itself.
 
@@ -102,7 +112,7 @@ That applies to:
 - equipment requirements
 - content requirements when character-specific progression makes sense
 
-The point is to raise and develop the MiniMe, not buy an instant maxed worker.
+The point is to raise and develop each MiniMe, not buy an instant maxed worker.
 
 ## Ownership Model
 
@@ -131,7 +141,7 @@ The exact Matrix3-native representation must be determined by a targeted source 
 
 The player should be able to move naturally between normal RuneScape control and group command control.
 
-### 1. Direct Control
+### Direct Control
 
 The player takes direct control of one character.
 
@@ -153,7 +163,7 @@ Possible action name:
 
 **Take Control**
 
-### 2. Command / RTS Control
+### Command / RTS Control
 
 The existing free-camera direction, currently accessed by `Ctrl + \``, could later provide the presentation layer for multi-character command control.
 
@@ -175,7 +185,7 @@ Potential controls:
 
 The command camera should enhance RuneScape rather than replace its normal interface.
 
-### 3. Quick Character Switching
+### Quick Character Switching
 
 The player should have a fast way to switch direct control between owned characters without navigating a cumbersome menu.
 
@@ -185,7 +195,7 @@ Possible future UX:
 [Main] [M1] [M2] [M3] [M4] [M5]
 ```
 
-Each slot could eventually show useful information such as:
+Each slot could eventually show:
 
 - health
 - current task
@@ -193,8 +203,34 @@ Each slot could eventually show useful information such as:
 - inventory warning/full state
 - current skill/action
 - distance/status
+- total level or progression marker
 
-Exact UI belongs to a later implementation design.
+Exact UI belongs to later implementation design.
+
+## Intentional Automation
+
+MiniMe automation is not a loophole to reluctantly tolerate. It is part of the feature.
+
+The server is intentionally giving players a controlled form of automation that people commonly try to create through multilogging, macros, or bot clients.
+
+The design goal is:
+
+> **Build the useful automation into the game, make it fun, and keep it inside server-owned rules.**
+
+Examples of intended behavior:
+
+- send a MiniMe mining while directly playing the Main
+- leave another MiniMe chopping trees
+- have another fishing supplies
+- assign a combat-capable MiniMe to a supported PvM activity
+- switch direct control to any of them at any time
+- command several characters together when desired
+
+A MiniMe performing an officially supported autonomous action is **not abuse**. It is using the system as designed.
+
+Do not add captchas, random interruptions, artificial misclicks, or other anti-bot friction to punish players for using official MiniMe automation.
+
+The fun should come from deciding how to use the roster efficiently, not fighting the interface.
 
 ## Autonomous Tasks
 
@@ -217,7 +253,7 @@ The gameplay fantasy is:
 
 > "Send this MiniMe mining while I continue progressing my Main."
 
-However, autonomy must remain bounded by game rules. MiniMes should not become unrestricted scriptable macro clients.
+Autonomy must still remain bounded by server-owned game rules. MiniMes should not become unrestricted programmable macro clients.
 
 ## Resource Gathering
 
@@ -246,7 +282,7 @@ Open design question:
 - character-specific banks,
 - or a hybrid model.
 
-A shared owner bank is currently attractive because it keeps the player's roster feeling like one progression profile and avoids needless item-transfer friction. This must be checked against economy, persistence, and content assumptions before becoming a final rule.
+A shared owner bank is currently attractive because it keeps the roster feeling like one progression profile and avoids needless item-transfer friction. This must be checked against economy, persistence, and content assumptions before becoming a final rule.
 
 Direct item transfer between the Main and MiniMes should be designed intentionally rather than accidentally relying on player trading.
 
@@ -258,8 +294,6 @@ The first MiniMe should be obtainable relatively early.
 
 Later slots should represent increasing progression milestones.
 
-Conceptual pacing:
-
 | Slot | Intended Pace |
 | --- | --- |
 | MiniMe #1 | Early / accessible introduction |
@@ -269,6 +303,8 @@ Conceptual pacing:
 | MiniMe #5 | Long-term account goal |
 
 Exact costs must be balanced from actual game rates rather than guessed in advance.
+
+The player should get enough access early to understand why MiniMes are special, then have meaningful reasons to keep playing to expand the roster.
 
 ## MiniMe Unlock Currency
 
@@ -299,6 +335,45 @@ Potential sources:
 - selected daily/weekly objectives if those systems fit the final server
 
 The system should reward broad progression while keeping MiniMe access understandable.
+
+## Long-Term Progression / Retention Loop
+
+MiniMes intentionally multiply meaningful progression without simply multiplying forced grind.
+
+A player can progress several characters in parallel, but each still has its own goals.
+
+Possible long-term progression loop:
+
+```text
+Main -> established/maxed
+MiniMe #1 -> maxed
+MiniMe #2 -> progressing
+MiniMe #3 -> specialist build
+MiniMe #4 -> newly unlocked
+MiniMe #5 -> locked
+```
+
+Potential roster completion tracking:
+
+```text
+MiniMe #1 - Maxed
+MiniMe #2 - Maxed
+MiniMe #3 - 2471 total
+MiniMe #4 - 1822 total
+MiniMe #5 - Locked
+```
+
+Possible future achievements/titles can celebrate the roster without making them mandatory:
+
+- first MiniMe unlocked
+- first MiniMe maxed
+- multiple maxed MiniMes
+- full five-MiniMe roster
+- all MiniMes maxed
+- specialist skill milestones
+- squad PvM milestones
+
+The player should feel attachment to specific MiniMes because they personally trained, geared, named, and developed them.
 
 ## No Traditional RTS Base Building Requirement
 
@@ -367,9 +442,27 @@ Possible strongly reduced categories:
 
 This lets MiniMes remain useful for PvM progression and supplies without turning five characters into an uncontrolled rare-item printer.
 
-## Main-vs-MiniMe Reward Identity
+## Balance the Output, Not the Fun
 
-The reward model should intentionally give the Main a reason to matter.
+A major design rule is:
+
+> **Do not make MiniMes miserable to use just because parallel progression is powerful.**
+
+If a player has earned five MiniMes, seeing all five working should feel powerful and rewarding.
+
+Control economy-sensitive outputs where necessary instead of constantly weakening the core fantasy.
+
+Examples:
+
+- rare PvM multipliers
+- content-specific squad caps
+- reward classifications
+- encounter-specific eligibility
+- account-level reward limits only where proven necessary
+
+Avoid arbitrary restrictions that make the signature feature feel fake.
+
+## Main-vs-MiniMe Reward Identity
 
 ### Main strengths
 
@@ -418,7 +511,7 @@ Open questions for later design:
 - Can a dead MiniMe be revived by the Main in certain content?
 - What happens if the directly controlled character dies while other MiniMes remain alive?
 - Can control immediately transfer to another owned character?
-- What happens to autonomous tasks when the Main/logged owner disconnects?
+- What happens to autonomous tasks when the owner disconnects?
 
 Default safe direction: no unattended online progression after the owner leaves the game unless a future feature explicitly permits it.
 
@@ -435,9 +528,71 @@ Initial design direction:
 
 Offline progression would be a separate feature requiring separate balance approval.
 
-## Anti-Abuse Direction
+## Mischief / "Getting Away With It" Player Feel
 
-The system should prevent MiniMes from becoming an in-game automation API that can be exploited as a general bot scripting platform.
+A useful part of the intended server identity is allowing players to feel clever, cheeky, or slightly outside the normal RuneScape rules.
+
+Historically, part of the attraction of private servers has been discovering unusual efficiencies, hidden interactions, loophole-feeling mechanics, and things that feel more permissive than the official game.
+
+MiniMes can intentionally preserve that feeling.
+
+The design can encourage:
+
+- discovering efficient MiniMe task combinations
+- finding surprisingly strong but legitimate squad strategies
+- sharing hidden-feeling optimizations
+- unusual progression routes
+- playful achievements/messages around "unauthorized" workers or multilogging-style behavior
+- systems that feel permissive without actually bypassing server authority
+
+The important boundary is that published enforcement should still be understandable and consistent. The game can make players feel mischievous without requiring arbitrary punishment or misleading players about actions that are intentionally supported.
+
+## Anti-Abuse Philosophy
+
+MiniMes create an intentional, server-owned form of bot-like automation.
+
+That changes what anti-bot enforcement should care about.
+
+### Allowed by design
+
+- official MiniMe autonomous skilling
+- official MiniMe combat orders
+- official follow/move/gather commands
+- managing several MiniMes simultaneously
+- optimizing the roster aggressively
+- leaving supported tasks running while directly controlling another owned character
+
+### Still outside the MiniMe system
+
+Potentially disallowed external behavior can remain separate from the feature:
+
+- external bot clients
+- packet automation
+- arbitrary macro/script engines that bypass supported commands
+- attempts to exceed active MiniMe limits
+- automation that bypasses game requirements
+- client modifications used to create actions the server did not authorize
+
+### Highest enforcement priority
+
+The server should pick its battles.
+
+The highest priority is behavior that harms the shared game or other players:
+
+- dupes
+- server nulling/crashing
+- save corruption
+- destructive packet abuse
+- economy-breaking item generation
+- bypassing reward restrictions
+- interference with other players
+- exploits that threaten world stability
+
+A harmless player squeezing efficiency out of intended MiniMe mechanics is a different category from a player capable of ruining the world for everyone.
+
+The system should be designed so these distinctions are technically visible where practical.
+
+## Server Validation Rules
 
 Likely principles:
 
@@ -446,7 +601,7 @@ Likely principles:
 - normal skill/content requirements
 - normal movement/clipping constraints
 - bounded targeting/action ranges
-- no arbitrary user scripting
+- no arbitrary MiniMe scripting API
 - no packet/client duplication requirement
 - no hidden action path that bypasses Matrix3 content authority
 
@@ -485,7 +640,7 @@ Owner: PlayerName
 
 or another cleaner visual indicator.
 
-We should avoid excessive overhead text if five MiniMes are following many players in a crowded area.
+Avoid excessive overhead text if five MiniMes are following many players in a crowded area.
 
 ## Naming / Customization
 
@@ -499,6 +654,7 @@ Future customization possibilities:
 - saved combat/skilling presets
 - formation position
 - behavior preference
+- roster portraits/status
 
 A MiniMe should feel like a character the player raised, not a generic worker slot.
 
@@ -531,7 +687,7 @@ Possible later additions:
 - focus target
 - disengage
 
-These are later tactical improvements, not requirements for the first playable slice.
+These are tactical improvements, not requirements for proving the core system.
 
 ## Potential PvP Direction
 
@@ -559,151 +715,76 @@ A player could truthfully describe the server as:
 
 > "RuneScape, except you build and control your own squad of characters while every character still trains normally."
 
+Another simple pitch is:
+
+> **Build your own RuneScape squad. Train them, gear them, command them, or take control of any one yourself.**
+
 That is immediately understandable and visually marketable.
 
 A full-sized Main walking through the world with several separately geared small MiniMes could become a recognizable visual identity for the project.
 
-## Suggested First Playable Slice
+## Development Workflow — One Feature, Not Ten Approval Phases
 
-Do **not** start by implementing all five MiniMes, RTS selection boxes, boss logic, every skill, formations, and custom currency at once.
+Do not treat MiniMes as a chain of separate "Phase 1 / Phase 2 / Phase 3" projects requiring repeated approval every time one checkpoint is reached.
 
-A safe first proof should be extremely small.
+When implementation is actually approved, define the MiniMe implementation scope clearly and treat it as **one system task**.
 
-### Phase 0 — Architecture Scan
+A future `SAP AAA` for that defined task may cover the approved MiniMe build checklist as a whole.
 
-Before code:
+The checklist still exists for stability, testing, and rollback discipline. It is **not** intended to create repetitive approval overhead.
 
-- identify Matrix3 player persistence authority
-- identify active player/world entity ownership
-- identify player update/render path relevant to another player-like entity
-- identify existing free-camera ownership
-- identify safest character switching boundary
-- inspect the old 718 bot system only for lessons after Matrix3 ownership is established
+Implementation should still use narrow commits/checkpoints where needed so regressions remain traceable, but development should continue through the approved checklist until the defined task is complete or new evidence requires stopping.
 
-Output should classify findings as VERIFIED / verified-static / HYPOTHESIS.
+## Implementation Checklist
 
-### Phase 1 — One MiniMe Exists
+Before implementation, perform the smallest Matrix3 architecture scan necessary to establish ownership and classify findings as VERIFIED / verified-static / HYPOTHESIS.
 
-Goal:
+Then work through the system checklist as one approved feature:
 
-One owner can activate one persisted MiniMe.
+- [ ] identify player persistence authority
+- [ ] identify active world entity ownership
+- [ ] identify player update/render requirements for a player-equipped MiniMe
+- [ ] identify free-camera ownership
+- [ ] identify safest direct-control switching boundary
+- [ ] inspect old 718 bot/player-agent code only after Matrix3 ownership is established
+- [ ] persist one MiniMe under an owner profile
+- [ ] spawn/despawn one MiniMe safely
+- [ ] render MiniMe with intended smaller visual scale if safe
+- [ ] preserve independent identity/stats/inventory/equipment
+- [ ] switch direct control Main -> MiniMe -> Main cleanly
+- [ ] verify save/relog stability
+- [ ] support one autonomous skill as the first vertical proof
+- [ ] verify Main remains directly playable during MiniMe work
+- [ ] add basic move/follow/stop/task commands
+- [ ] connect command/free-camera presentation if verified appropriate
+- [ ] add fast roster/direct-control switching UX
+- [ ] add MiniMe unlock progression/currency
+- [ ] add naming/basic customization
+- [ ] support one normal combat path
+- [ ] verify damage/loot attribution
+- [ ] add configurable economy-sensitive MiniMe drop penalties
+- [ ] expand supported skilling actions
+- [ ] expand supported combat/content actions
+- [ ] increase from one to multiple active MiniMes
+- [ ] performance-test multi-MiniMe update load
+- [ ] validate target cap of five active MiniMes
+- [ ] add roster progression/completion tracking
+- [ ] add anti-abuse visibility around bypass attempts
+- [ ] verify disconnect/despawn/persistence behavior
+- [ ] run relevant Matrix3 smoke tests before considering the core system stable
 
-Minimum proof:
+Additional tactical features such as formations, squad bosses, specialized PvP, and advanced command UX can be added when the working MiniMe system gives them a real content need.
 
-- one MiniMe record under owner profile
-- MiniMe appears in world
-- smaller visual model if safe
-- persisted position/basic identity
-- no autonomous skilling yet
-- no RTS controls yet
+## Non-Goals for the Core Build
 
-### Phase 2 — Direct Control Switching
+The MiniMe system does not need to become all of these things at once:
 
-Goal:
-
-Player can switch between Main and one MiniMe.
-
-Prove:
-
-- direct movement
-- inventory ownership
-- equipment ownership
-- stat ownership
-- clean switch back to Main
-- save/relog stability
-
-This phase is crucial. If direct control cannot be made cleanly Matrix3-native, stop and redesign before adding automation.
-
-### Phase 3 — One Autonomous Skill
-
-Use one skill as the vertical proof, likely Mining or Woodcutting.
-
-Goal:
-
-- command MiniMe to perform one valid skilling action
-- MiniMe uses its own level/tool/inventory
-- MiniMe gains its own XP
-- Main remains directly playable at the same time
-
-Do not add every skill until this loop is proven.
-
-### Phase 4 — Basic Command View
-
-Add:
-
-- select MiniMe
-- move command
-- gather command for the proven skill
-- follow
-- stop
-- Take Control
-
-Reuse the existing free-camera direction only if it is confirmed to be a clean foundation.
-
-### Phase 5 — Roster and Unlock Progression
-
-Add:
-
-- MiniMe roster UI
-- unlock currency
-- first additional slot progression
-- naming/customization basics
-
-Only after the character/control loop is proven should slot economy be finalized.
-
-### Phase 6 — Combat Proof
-
-Add one simple supported combat path.
-
-Prove:
-
-- autonomous attack order
-- own stats/equipment
-- normal clipping/movement
-- normal damage ownership
-- loot attribution
-- Main + MiniMe simultaneous combat without corrupting normal combat state
-
-### Phase 7 — Rare-Drop Protection
-
-Add a configurable reward classification / multiplier mechanism for economy-sensitive MiniMe drops.
-
-Do not hardcode blanket x10 logic into every drop path if a cleaner Matrix3-owned reward boundary exists.
-
-### Phase 8 — Expand Skills / Commands
-
-Add additional skills and higher-level command UX only after the first complete vertical loops are stable.
-
-### Phase 9 — Multi-MiniMe Squad
-
-Increase from one MiniMe to multiple active MiniMes.
-
-Test performance and update load before committing to the target cap of five.
-
-### Phase 10 — Tactical / Custom Content
-
-Only after normal gameplay works:
-
-- formations
-- multi-position encounters
-- squad bosses
-- MiniMe-specific activities
-- optional squad PvP
-- advanced automation rules
-
-## Non-Goals for the Initial Implementation
-
-The first implementation should **not** attempt to provide:
-
-- five active MiniMes immediately
-- every RuneScape skill
-- every boss
-- custom base building
+- custom RTS base building
 - offline 24/7 resource farming
-- arbitrary automation scripting
-- complete StarCraft/Halo Wars controls
-- squad PvP
-- complex formations
+- arbitrary user automation scripting
+- complete StarCraft/Halo Wars control parity
+- unrestricted squad PvP
+- complex formations before basic control works
 - replacement of Matrix3 player/combat/skilling engines
 
 ## Important Open Questions
@@ -723,6 +804,8 @@ These should be answered only when implementation planning begins:
 11. Which skills are safe for autonomous repeat actions and which require direct interaction?
 12. What is the final MiniMe unlock currency and acquisition curve?
 13. Should all five unlocked MiniMes always be activatable, or can content enforce smaller squad caps?
+14. Which progression is owner-wide versus character-specific?
+15. What data should be logged to distinguish official MiniMe automation from bypass/exploit behavior?
 
 ## Design Rules to Preserve
 
@@ -733,17 +816,22 @@ These should be answered only when implementation planning begins:
 5. **The first MiniMe should be obtainable early enough for players to experience the feature.**
 6. **MiniMes are characters, not disposable troops.**
 7. **Direct control must remain available.**
-8. **Autonomy must use server-validated game actions, not unrestricted scripting.**
-9. **No offline farming by default.**
-10. **Matrix3 remains the gameplay authority.**
-11. **The 718 bot system is reference material only.**
-12. **Build one vertical slice at a time.**
-13. **Do not let the feature force broad rewrites of working Matrix3 systems without evidence.**
+8. **Official MiniMe automation is intentional gameplay.**
+9. **Autonomy uses server-validated game actions, not unrestricted scripting.**
+10. **Balance economy-sensitive outputs instead of nerfing the fun out of MiniMes.**
+11. **No offline farming by default.**
+12. **Let players discover strong efficiencies and feel clever without allowing destructive server abuse.**
+13. **Prioritize preventing dupes, nulls/crashes, corruption, and economy-breaking bypasses over policing harmless intended efficiency.**
+14. **Matrix3 remains the gameplay authority.**
+15. **The 718 bot system is reference material only.**
+16. **Treat implementation as one defined MiniMe feature with an acceptance checklist, not repetitive approval phases.**
+17. **Use narrow implementation checkpoints/commits for stability without turning them into separate projects.**
+18. **Do not let the feature force broad rewrites of working Matrix3 systems without evidence.**
 
 ## Current Working Summary
 
 The intended server experience is:
 
-> Start with one normal Main. Progress through RuneScape normally. Unlock MiniMes through gameplay. Each MiniMe begins and progresses as its own character. Train them, gear them, name them, assign them work, directly control any one of them, or use a command/free-camera view to manage several at once. MiniMes can skill and fight in parallel while the player actively plays another owned character. The Main retains normal valuable PvM drop rates, while MiniMes receive strong rarity penalties on economy-sensitive uniques so parallel progression does not destroy the item economy.
+> Start with one normal Main. Progress through RuneScape normally. Unlock MiniMes through gameplay. Each MiniMe begins and progresses as its own character. Train them, gear them, name them, assign them work, directly control any one of them, or use a command/free-camera view to manage several at once. Official MiniMe automation is a supported part of normal gameplay: one MiniMe can mine, another can chop, another can fish or fight, while the player directly controls another owned character. The Main retains normal valuable PvM drop rates, while MiniMes receive strong rarity penalties on economy-sensitive uniques so parallel progression does not destroy the item economy. Players are encouraged to optimize and feel clever with the system, while destructive exploits such as dupes, crashes, save corruption, and reward bypasses remain hard boundaries.
 
 If implemented cleanly, the MiniMe system should be treated as a potential core identity feature of the server rather than a disposable side minigame.
