@@ -75,3 +75,7 @@ Matrix3 Client Console - shell + Owner + Commands + Item Browser + Settings runt
 73. Save a non-default combat/interface combination, close Matrix3 normally, relaunch, log in, and open S. Confirm both toggle selections persist locally and the saved pair is queued once the logged-in player is available.
 74. Attempt to apply Settings before login and with a non-admin account. Confirm the UI keeps the local selection but no unauthorized server mode change occurs; owner/admin live-player validation remains authoritative.
 75. After Settings tests, switch C/O/>_/I/S repeatedly, run one safe command and one Item Browser Inventory spawn, and confirm no Client Console panel or normal Commands.java path regressed.
+76. Open the C shell and confirm a Cache development card with an Open RS3 CacheEditor button is visible and remains reachable without maximizing the client.
+77. Click Open RS3 CacheEditor from a normal Eclipse/Java 8 client launch. Confirm the Client remains responsive while a separate CacheEditor process starts and presents its normal cache-directory chooser.
+78. With CacheEditor still open, click Open RS3 CacheEditor again. Confirm the shell reports that CacheEditor is already running and no duplicate editor process is started.
+79. Close CacheEditor and click Open RS3 CacheEditor again. Confirm it relaunches successfully, and verify Commands, Item Browser, Settings, BossLabs, normal gameplay input, and server state are unaffected by the external tool process.
