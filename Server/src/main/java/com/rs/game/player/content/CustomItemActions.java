@@ -54,8 +54,6 @@ public final class CustomItemActions {
         Item item = getClickedItem(player, context, slotId);
         if (item == null)
             return false;
-        if (slotId2 != 65535 && slotId2 >= 0 && slotId2 != item.getId())
-            return false;
 
         ActionEntry entry = ACTIONS.get(key(item.getId(), context, option));
         if (entry == null)
