@@ -40,3 +40,10 @@ task runLogin(type: JavaExec) {
     applicationName = "LoginLauncher"
     main = "com.rs.LoginLauncher"
 }
+
+task runCacheEditor(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    applicationName = "CacheEditor"
+    main = "com.rs.tools.cacheeditor.CacheEditorLauncher"
+    jvmArgs = ['-Xms128m', '-Xmx1024m']
+}
