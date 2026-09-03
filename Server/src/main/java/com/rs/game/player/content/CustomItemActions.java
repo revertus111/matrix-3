@@ -54,6 +54,8 @@ public final class CustomItemActions {
         ActionEntry entry = ACTIONS.get(key(item.getId(), context, option));
         if (entry == null)
             return false;
+        if ("STOCK".equals(entry.action))
+            return false;
 
         String handler = HANDLERS.get(Integer.valueOf(item.getId()));
         if (handler == null)
