@@ -35,6 +35,7 @@ public final class OwnerPanel extends JScrollPane {
     private final JLabel rotsStatus = new JLabel("Waiting for definition loaders...");
     private final JTextArea rotsOutput = new JTextArea();
     private final JButton rotsScanButton = new JButton("Scan RoTS");
+    private final JButton rotsDeepScanButton = new JButton("Deep Scan");
     private final AtomicBoolean rotsScanning = new AtomicBoolean();
 
     private final Timer refreshTimer = new Timer(REFRESH_DELAY_MS, e -> refresh());
@@ -139,24 +140,27 @@ public final class OwnerPanel extends JScrollPane {
         JButton copyButton = new JButton("Copy All");
         JButton clearButton = new JButton("Clear");
         ConsoleTheme.styleButton(rotsScanButton);
+        ConsoleTheme.styleButton(rotsDeepScanButton);
         ConsoleTheme.styleButton(copyButton);
         ConsoleTheme.styleButton(clearButton);
-        rotsScanButton.addActionListener(e -> runRotsScan());
+        rotsScanButton.addActionListener(e -> runRotsScan(false));
+        rotsDeepScanButton.addActionListener(e -> runRotsScan(true));
         copyButton.addActionListener(e -> copyRotsOutput());
         clearButton.addActionListener(e -> {
             rotsOutput.setText("");
             rotsStatus.setText(ClientConsoleRotsBridge.getReadinessLabel());
         });
 
-        JPanel buttons = new JPanel(new GridLayout(1, 3, 6, 0));
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 6, 6));
         buttons.setBackground(ConsoleTheme.CARD);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 74));
         buttons.add(rotsScanButton);
+        buttons.add(rotsDeepScanButton);
         buttons.add(copyButton);
         buttons.add(clearButton);
 
-        JLabel note = new JLabel("<html>Read-only cache evidence. Scan runs off the Swing thread; Copy All sends the complete dump to the clipboard.</html>");
+        JLabel note = new JLabel("<html>Read-only cache evidence. Both scans run off the Swing thread; Deep Scan correlates render sets and GFX without naming mechanics.</html>");
         note.setFont(ConsoleTheme.SMALL_FONT);
         note.setForeground(ConsoleTheme.MUTED_TEXT);
         note.setAlignmentX(LEFT_ALIGNMENT);
@@ -172,23 +176,28 @@ public final class OwnerPanel extends JScrollPane {
         return card;
     }
 
-    private void runRotsScan() {
+    private void runRotsScan(final boolean deep) {
         if (!rotsScanning.compareAndSet(false, true)) {
             return;
         }
 
         rotsScanButton.setEnabled(false);
-        rotsStatus.setText("Scanning RoTS cache definitions...");
+        rotsDeepScanButton.setEnabled(false);
+        rotsStatus.setText(deep ? "Deep-scanning RoTS render/GFX relationships..." : "Scanning RoTS cache definitions...");
 
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 String result;
                 try {
-                    result = ClientConsoleRotsBridge.buildResearchDump();
+                    result = deep
+                            ? ClientConsoleRotsBridge.buildDeepResearchDump()
+                            : ClientConsoleRotsBridge.buildResearchDump();
                 } catch (Throwable ex) {
-                    result = "=== RISE OF THE SIX CLIENT CACHE RESEARCH ===\n"
-                            + "Scan failed: " + ex.getClass().getSimpleName() + ": " + ex.getMessage() + "\n";
+                    result = deep
+                            ? "=== RISE OF THE SIX DEEP CACHE RESEARCH ===\n"
+                            : "=== RISE OF THE SIX CLIENT CACHE RESEARCH ===\n";
+                    result += "Scan failed: " + ex.getClass().getSimpleName() + ": " + ex.getMessage() + "\n";
                 }
 
                 final String completed = result;
@@ -197,15 +206,22 @@ public final class OwnerPanel extends JScrollPane {
                     public void run() {
                         rotsOutput.setText(completed);
                         rotsOutput.setCaretPosition(0);
-                        rotsStatus.setText(ClientConsoleRotsBridge.isReady()
-                                ? "Scan complete · ready to Copy All"
-                                : ClientConsoleRotsBridge.getReadinessLabel());
+                        if (deep) {
+                            rotsStatus.setText(ClientConsoleRotsBridge.isDeepReady()
+                                    ? "Deep Scan complete · ready to Copy All"
+                                    : ClientConsoleRotsBridge.getDeepReadinessLabel());
+                        } else {
+                            rotsStatus.setText(ClientConsoleRotsBridge.isReady()
+                                    ? "Scan complete · ready to Copy All"
+                                    : ClientConsoleRotsBridge.getReadinessLabel());
+                        }
                         rotsScanButton.setEnabled(true);
+                        rotsDeepScanButton.setEnabled(true);
                         rotsScanning.set(false);
                     }
                 });
             }
-        }, "Matrix3-RoTS-Cache-Research");
+        }, deep ? "Matrix3-RoTS-Deep-Cache-Research" : "Matrix3-RoTS-Cache-Research");
         thread.setDaemon(true);
         thread.start();
     }
