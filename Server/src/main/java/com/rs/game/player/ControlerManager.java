@@ -10,10 +10,10 @@ import com.rs.game.WorldTile;
 import com.rs.game.item.FloorItem;
 import com.rs.game.item.Item;
 import com.rs.game.npc.NPC;
+import com.rs.game.player.content.CustomItemActions;
 import com.rs.game.player.content.Drinkables.Drink;
 import com.rs.game.player.controllers.ControlerHandler;
 import com.rs.game.player.controllers.Controller;
-import com.rs.net.decoders.WorldPacketsDecoder;
 import com.rs.utils.Logger;
 
 public final class ControlerManager implements Serializable {
@@ -252,17 +252,10 @@ public final class ControlerManager implements Serializable {
 
     public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packetId) {
 	Backpack backpack = player.getInventory().getBackpack();
-	if (backpack != null) {
-	    if (backpack.processButtonClick(interfaceId, componentId, slotId, packetId))
-		return false;
-	    boolean equipmentContainer = (interfaceId == 1462 && componentId == 14)
-		    || (interfaceId == 1464 && componentId == 15);
-	    if (equipmentContainer && slotId == Equipment.SLOT_CAPE && slotId2 == Backpack.ITEM_ID
-		    && packetId == WorldPacketsDecoder.ACTION_BUTTON2_PACKET) {
-		backpack.open();
-		return false;
-	    }
-	}
+	if (backpack != null && backpack.processButtonClick(interfaceId, componentId, slotId, packetId))
+	    return false;
+	if (CustomItemActions.processButtonClick(player, interfaceId, componentId, slotId, slotId2, packetId))
+	    return false;
 	if (controler != null && inited && !controler.processButtonClick(interfaceId, componentId, slotId, slotId2, packetId))
 	    return false;
 	return !PresetManager.processButtonClick(player, interfaceId, componentId, slotId, slotId2, packetId);
