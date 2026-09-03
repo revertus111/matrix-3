@@ -7,3 +7,5 @@
 - Added lazy background item ID/name search and a read-only item definition inspector using Matrix3 ItemDefinitions.
 - Added disabled navigation placeholders for NPCs, objects, models, GFX, animations, sprites, and interfaces so later editors share the same cache session.
 - Item definition writes are intentionally not enabled yet; a round-trip-safe definition encoder is required before structured saves are allowed.
+- Added the Server runCacheEditor JavaExec task so the standalone CacheEditor can be launched with the correct Server/FileStore runtime classpath.
+- Added Client Console launch support through a separate CacheEditor process; the Client does not compile against Server CacheEditor/FileStore classes.
