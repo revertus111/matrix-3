@@ -56,17 +56,13 @@ public final class BossEncounterRuntime {
 	}
 
 	/**
-	 * Publish operations may run away from the world thread. Queue runtime
-	 * invalidation through Matrix3's WorldTasksManager so task/context mutation
-	 * happens on the normal world-task path.
+	 * Publish operations may run away from the world thread. Context state is
+	 * synchronized and deliberately invalidated immediately so already-queued
+	 * BossLabs tasks cannot perform one stale impact/tick before the next world
+	 * cycle. No Matrix3 world entity mutation is performed here.
 	 */
-	public static void requestDefinitionRefresh(final int npcId) {
-		WorldTasksManager.schedule(new WorldTask() {
-			@Override
-			public void run() {
-				refreshNpcId(npcId);
-			}
-		});
+	public static void requestDefinitionRefresh(int npcId) {
+		refreshNpcId(npcId);
 	}
 
 	private static void refreshNpcId(int npcId) {
