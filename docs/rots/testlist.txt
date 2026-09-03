@@ -29,9 +29,11 @@ Current brother mechanics
 [ ] Torag Whack/Pummel: verify current 21933 opening, 21934 victim, 21935 pummel, and 21938 release sequence against runtime/video evidence before classifying it as authentic 1:1.
 [ ] Guthan Impale: verify current 21944 throw, 21945 impaled-victim, 21947 retrieval, NPC 18541<->18542 transformation, projectile/GFX 4411, secondary bleed GFX 4407, damage cadence, retrieval range, and Torag interaction.
 [ ] Dharok Greatest Axe: verify current animation 21940 and stored-damage behavior; keep donor GFX 4406 rejected unless new runtime evidence contradicts the bad visual result.
-[ ] Hurricane / Spinning Attack: 21941 is VERIFIED to produce a sustained spin visual on Dharok; test the same animation on Guthan, Torag, and Verac before assigning the authentic mechanic name.
-[ ] Hurricane / Spinning Attack: compare 21941 cross-brother playback against authentic RoTS footage and period guide behavior; only promote to VERIFIED Hurricane if the shared melee spin matches.
-[ ] Hurricane / Spinning Attack: after animation identity is proven, separately verify movement/tracking, pulse count, damage ramp, AoE, cooldown/rotation, and post-revive behavior before calling the mechanic 1:1.
+[x] Hurricane / Spinning Attack: animation 21941 produces the corresponding sustained weapon-spin presentation on Dharok, Guthan, Torag, and Verac in runtime playback.
+[ ] Hurricane / Spinning Attack: in a live RoTS encounter, confirm Hurricane starts animation 21941 once and the spin continues naturally rather than restarting/freezing during the 10 damage pulses.
+[ ] Hurricane / Spinning Attack: confirm the brother tracks the target while walking and that removing the old fake facing rotation does not cause orientation/pathing regressions.
+[ ] Hurricane / Spinning Attack: verify current 10-pulse damage ramp/AoE against authentic RoTS footage/documentary timing before calling the mechanic 1:1.
+[ ] Hurricane / Spinning Attack: confirm forced post-revive Hurricane still uses 21941 and returns to normal combat cleanly when the sequence ends.
 [ ] Keep Verac's guide-described `Helicopter` move separate from the shared Spinning Attack when identifying animations.
 [ ] Wall Slam: current implementation uses normal attack emotes for movement phases; verify authentic animation, pathing, AoE radius, damage, and timing before parity changes.
 [ ] Ahrim: verify normal ground/flying autos, then implement/test authentic special rotation separately.
@@ -46,7 +48,6 @@ Encounter parity still requiring focused tests
 [ ] Audit/test escape/tunnel/reward flow when combat-mechanic parity reaches that phase.
 
 Next research checkpoint
-[ ] Stop broad random 2192x testing until 21941 is resolved.
-[ ] Play 21941 on Guthan, Torag, and Verac and record only the physical motion/weapon presentation.
-[ ] If all four melee brothers show the expected shared spin, compare against authentic RoTS footage and then patch the existing Hurricane animation in a separate AAA-approved gameplay slice.
-[ ] Expand targeted animation research through 21947 when needed because known RoTS/current-implementation mappings now extend beyond the old 21940 cutoff.
+[ ] Runtime-test the integrated 21941 Hurricane in the actual encounter before changing damage, pulse count, or movement cadence.
+[ ] If the spin duration ends early or gets interrupted while tracking, capture the exact visual timing before changing animation restart behavior.
+[ ] Expand targeted animation research through 21947 when needed because known RoTS/current-implementation mappings extend beyond the old 21940 cutoff.
