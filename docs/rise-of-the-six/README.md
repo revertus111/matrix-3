@@ -42,16 +42,17 @@ Still requiring targeted runtime verification:
 
 - exact 30-second mass revival timing / simultaneous-six victory
 - every current special and cleanup path
-- Guthan Impale behavior
-- new daily west/east formation ownership and physical side split
+- Guthan Impale behavior including new same-side selection
+- daily west/east formation ownership and physical side split
+- empty-side empowerment warning / hop timing / landing presentation
 
 ## Brother toolkit map
 
 | Brother | Classic toolkit to reproduce | Wall Slam? | Current state |
 | --- | --- | --- | --- |
 | Dharok | Hurricane -> Greatest Axe -> Wall Slam | Yes | All three mechanically present; exact shared visuals/timing still need runtime fidelity work. |
-| Torag | Hurricane -> Whack -> Wall Slam + conditional Throw | Yes | Core three mechanically present; Throw pairing is now side-gated but flight/landing execution is still pending exact assets. |
-| Guthan | Hurricane -> Impale + conditional Throw | No | Hurricane + Impale mechanically present; Throw pairing is now side-gated but execution remains pending. |
+| Torag | Hurricane -> Whack -> Wall Slam + conditional Throw | Yes | Core three mechanically present; Throw pairing is side-gated but flight/landing execution is still pending exact assets. |
+| Guthan | Hurricane -> Impale + conditional Throw | No | Hurricane + Impale mechanically present; Impale now uses same-side victim filtering. |
 | Verac | Soulspot, Deathcopter, Wall Slam + conditional Throw | Yes | Normal Hurricane mismatch fixed; Wall Slam present; Soulspot/Deathcopter/Throw execution pending. |
 | Ahrim | Turret of Fire, Shadow Pits, Flight | No | Base combat only. |
 | Karil | Lightning Conductor, Bombard, Portal Dash | No | Base combat only. |
@@ -69,6 +70,10 @@ Still requiring targeted runtime verification:
 - Nocturne's RoTS donor copies source chunk 290,753 as an 8x8-chunk map; Matrix3's 1x1 MapInstance ratio matches that shape.
 - RuneScape uses a repeating twenty-day west/east brother formation cycle.
 - A dated RuneScape formation record for 2025-06-11 is West Ahrim/Torag/Guthan and East Karil/Dharok/Verac; this is rotation 11 in the documented twenty-rotation sequence and is the Matrix3 UTC cycle anchor.
+- If one arena side has no players while the opposite side is occupied, the empty-side brothers eventually cross over to assist the occupied side.
+- The empowerment warning occurs at about 24 seconds of a continuously empty side, and the incoming brothers become available on the occupied side at about 27 seconds.
+- The empty-side hop cannot occur while any brother is incapacitated.
+- Karil Shadow Dash and players hugging the second barrier are additional live blockers; those systems are not implemented in the current checkpoint yet.
 
 ## Implemented now
 
@@ -82,25 +87,51 @@ Still requiring targeted runtime verification:
 
 ### Daily formation / side ownership
 
-The encounter now has an explicit west/east formation authority instead of treating all six brothers as one undifferentiated group.
+The encounter has an explicit west/east formation authority instead of treating all six brothers as one undifferentiated group.
 
 - All twenty documented brother rotations are encoded in `RiseOfTheSixInstance`.
 - Rotation advances by UTC calendar day using 2025-06-11 rotation 11 as the dated anchor.
 - Each loaded encounter records one active rotation and assigns exactly three brothers WEST and three EAST.
 - The six already runtime-proven spawn tiles are deliberately reused as two groups of three: source X 2326/2328/2330 for WEST and 2332/2334/2336 for EAST, all on source Y 6034 plane 1.
 - Source X 2331 is the temporary Matrix3 side-classification midpoint for player-position queries.
-- `getBrotherSide`, `getPlayerSide`, `isPlayerOnBrotherSide`, and `areBrothersOnSameSide` now provide one encounter-owned side API for future mechanics.
-- The verified Throw pairing matrix now rejects otherwise-valid targets that are on the opposite active side.
+- `getBrotherSide`, `getPlayerSide`, `isPlayerOnBrotherSide`, and `areBrothersOnSameSide` provide one encounter-owned side API.
+- Runtime brother-side ownership can change after an empowerment hop; it is no longer permanently inferred only from the day's starting rotation.
+- The verified Throw pairing matrix rejects otherwise-valid targets on the opposite current side.
 - `findVerifiedThrowTarget` therefore returns only active same-side candidates.
 
 **Important fidelity boundary:** the daily lineup ownership is evidence-backed, but the exact final north/middle/south physical brother tiles and exact Jagex arena side bounds are not yet runtime-verified. The current implementation intentionally preserves known-good terrain instead of moving the fight onto guessed coordinates.
 
-For the current project date 2026-09-02, the anchored twenty-day cycle resolves to rotation 19:
+Static date anchors for testing the cycle:
 
-- WEST: Karil, Torag, Dharok
-- EAST: Ahrim, Guthan, Verac
+- 2025-06-11 UTC -> rotation 11: WEST Ahrim/Torag/Guthan, EAST Karil/Dharok/Verac
+- 2026-09-02 UTC -> rotation 19: WEST Karil/Torag/Dharok, EAST Ahrim/Guthan/Verac
+- 2026-09-03 UTC -> rotation 20: WEST Karil/Dharok/Verac, EAST Ahrim/Torag/Guthan
 
-This date-specific expectation is a useful runtime acceptance check, not a permanent hardcoded lineup.
+These are test anchors, not permanently hardcoded lineups.
+
+### Empty-side empowerment / side hop
+
+The encounter now owns the first Matrix3-native side-collapse behavior.
+
+Behavior implemented:
+
+1. A repeating encounter task counts only active instance players on WEST and EAST using the current side classifier.
+2. If both sides have players, or neither side has an active player, the empty-side counter is reset.
+3. If exactly one side remains empty continuously, the counter begins for that empty side.
+4. Any incapacitated brother resets/suppresses the empty-side counter, matching the live requirement that all six must be standing before the hop can occur.
+5. At roughly 24 seconds (40 Matrix3 ticks), the instance broadcasts: `As there is no one on the other side of the portal, it empowers the Barrows Brothers to destroy everyone!`
+6. Roughly 3 seconds later (5 ticks), the hop is allowed only if the same side is still empty, the opposite side is occupied, and no brother is incapacitated.
+7. The three active brothers owned by the empty side have their RoTS special state safely cleared, use donor-backed transition GFX 4413, relocate onto the occupied half, and have their current side ownership changed to the occupied side.
+8. The hop is one-time for the encounter. After it succeeds, all six brothers are owned by the occupied side for same-side coordination such as future Throw behavior.
+9. Fight completion / instance destruction invalidates the side-hop generation so a stale delayed relocation cannot fire afterward.
+
+Current landing implementation deliberately reuses the three already runtime-proven occupied-side tiles. This can stack an incoming brother with a resident brother. Live RuneScape places the incoming trio slightly away from the resident starting positions, so **exact empowered landing tiles are still HYPOTHESIS** and must be replaced only when map/video/runtime evidence establishes them.
+
+Known blockers still pending:
+
+- Karil Shadow Dash must prevent/delay the side hop once Shadow Dash exists.
+- The second-barrier player-position blocker cannot be reproduced accurately until the real barrier/portal sub-areas are mapped.
+- Exact transition animation and exact landing spacing still need cache/video/runtime verification. GFX 4413 is donor-backed, not yet runtime-VERIFIED here.
 
 ### Shadow bond
 
@@ -108,7 +139,7 @@ This date-specific expectation is a useful runtime acceptance check, not a perma
 - surviving brothers heal 5,000 HP after each subdual
 - new subdual resets the pending revival generation
 - subdued brothers revive at 25,000 HP when the revival task wins
-- all-six-subdued state cancels further revival
+- all-six-subdued state cancels further revival and any pending side-hop task
 
 ### Base combat
 
@@ -198,9 +229,11 @@ Classic behavior:
 
 ### Current Matrix3 implementation
 
-- Impale is now the second normal Guthan special after Hurricane in the implemented rotation.
-- The target selector currently prefers another eligible instance player instead of Guthan's primary target; solo/no-secondary fallback uses the primary target.
-- West/east ownership now exists at encounter level, but the current Impale selector still needs a small follow-up to consume the side API before same-side victim selection can be marked complete.
+- Impale is the second normal Guthan special after Hurricane in the implemented rotation.
+- The target selector now prefers another eligible **same-side** instance player instead of Guthan's primary target.
+- Opposite-side players are rejected from the secondary Impale candidate pool.
+- If there is no secondary same-side victim, Guthan can fall back to his primary target only when that primary target is also on Guthan's current side; a cross-side primary target causes Impale to wait rather than fire through the portal.
+- After empty-side empowerment moves Guthan to the occupied side, the selector automatically consumes Guthan's updated current side ownership.
 - Guthan sends projectile 4411 and transforms to alternate NPC 18542 while the spear is away.
 - The victim receives animation 21945 and repeated 400-500 hard-typeless bleed ticks with GFX 4411/4407.
 - Guthan resumes ordinary melee combat while spearless; the alternate NPC's cache attack animation 18224 is therefore used naturally by Matrix3 combat.
@@ -212,7 +245,7 @@ Classic behavior:
 
 Still HYPOTHESIS / pending runtime:
 
-- exact same-side Impale victim filtering against the new side API
+- runtime confirmation that the temporary player side midpoint matches the visible portal well enough for Impale selection
 - exact throw/retrieval tick timing
 - whether donor animation 21944 is visually the exact launch animation in this cache
 - exact defensive-ability clearing/cooldown behavior applied by each bleed tick
@@ -229,13 +262,13 @@ Throw is a cross-brother encounter interaction, not a generic NPC attack.
 - Verac -> Ahrim, Karil
 - Dharok is not listed as a Throw brother in the Beasts descriptions used for this fidelity target.
 
-The encounter instance owns this matrix and now applies active daily side ownership before returning an eligible Throw target.
+The encounter instance owns this matrix and applies **current** side ownership, including side ownership changed by an empty-side empowerment hop, before returning an eligible Throw target.
 
 ### Important current boundary
 
 **Actual Throw launches are intentionally not active yet.**
 
-Side ownership is now authoritative enough to reject cross-side pairing, but the exact brother Throw launch/flight/landing animation, projectile/trajectory, timing and impact damage are not yet established strongly enough to activate the attack without guessing.
+Side ownership is authoritative enough to reject cross-side pairing and to merge all six onto one side after empowerment, but the exact brother Throw launch/flight/landing animation, projectile/trajectory, timing and impact damage are not established strongly enough to activate the attack without guessing.
 
 The shared coordinator should continue to own:
 
@@ -253,6 +286,9 @@ Do not implement Throw separately in each brother's CombatScript.
 
 - exact physical north/middle/south brother spawn coordinates/facing inside each daily side
 - exact player west/east sub-area bounds beyond the current source-X midpoint classification
+- exact empowered-side landing coordinates/spacing and transition animation
+- Karil Shadow Dash blocker for empowerment hop
+- exact second-barrier sub-area blocker for empowerment hop
 - exact special cadence / number of autos between specials; current gate is 3-5 autos
 - exact Hurricane visuals/radius/damage distribution
 - exact Wall Slam anchors/animations/path timing
@@ -274,12 +310,14 @@ Do not implement Throw separately in each brother's CombatScript.
 
 ### Formation / arena
 
-- runtime-verify the twenty-day UTC formation cycle against the current RuneScape rotation expectation
+- runtime-verify the twenty-day UTC formation cycle against the expected rotation
 - runtime-verify the current three-west/three-east known-good tile split
 - replace temporary within-side slot coordinates with exact classic north/middle/south positions only when evidence establishes them
 - verify exact brother facing
-- central barrier/portal rules
-- empty-side empowerment / side-hop rules
+- map the real central barrier / second-barrier sub-areas
+- runtime-verify the new ~24s warning / ~27s empty-side empowerment hop
+- replace stacked occupied-side arrival slots with exact live landing positions once established
+- add Karil Shadow Dash and second-barrier blockers to the empowerment gate when those systems exist
 - prevent late joins after combat begins
 
 ### Shared shadow mechanics
@@ -313,7 +351,7 @@ Do not implement Throw separately in each brother's CombatScript.
 ### Guthan
 
 - runtime-verify full Impale lifecycle from this checkpoint
-- consume the new side API in Impale target selection and runtime-verify same-side preference
+- runtime-verify same-side target preference against the visible arena split
 - implement defensive-ability clearing/cooldown behavior if target-era evidence confirms it
 - activate verified Throw interactions after exact Throw assets are established
 - exact healing/resistance/set-effect behavior
@@ -357,5 +395,6 @@ Do not implement Throw separately in each brother's CombatScript.
 
 - Do not modify normal Barrows or `BarrowsBrother` to make RoTS work.
 - Do not create a second combat engine/timer/world/NPC lifecycle inside BossLabs.
+- Do not invent exact side-hop landing coordinates before map/runtime evidence establishes them.
 - Do not activate guessed Throw flight/landing behavior merely because side ownership now exists.
 - Do not mark HYPOTHESIS behavior VERIFIED without runtime evidence.
