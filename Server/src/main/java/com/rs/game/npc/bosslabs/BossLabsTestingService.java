@@ -41,7 +41,6 @@ public final class BossLabsTestingService {
 
 	public static String spawnBoss(Player player, int npcId) {
 		requirePlayer(player);
-		requireLiveDefinition(npcId);
 		removeCurrentTestBoss(player);
 
 		WorldTile tile = findSpawnTile(player, npcId);
@@ -50,14 +49,18 @@ public final class BossLabsTestingService {
 
 		NPC boss = World.spawnNPC(npcId, tile, -1, true, true);
 		if (boss == null)
-			throw new IllegalArgumentException("Matrix3 could not spawn the selected BossLabs NPC.");
+			throw new IllegalArgumentException("Matrix3 could not spawn the selected NPC.");
 
+		boolean bossLabsOwned = BossDefinitionRegistry.isRegistered(npcId);
 		TEST_BOSSES.put(player, boss);
-		startSessionWatch(player, boss);
-		BossEncounterContext encounter = BossEncounterRuntime.getOrCreate(boss);
-		encounter.registerParticipant(player);
+		startSessionWatch(player, boss, bossLabsOwned);
+		if (bossLabsOwned) {
+			BossEncounterContext encounter = BossEncounterRuntime.getOrCreate(boss);
+			encounter.registerParticipant(player);
+		}
 		boss.setTarget(player);
-		return "Spawned BossLabs test boss " + boss.getName() + " [" + npcId + "] near you.";
+		return "Spawned test NPC " + boss.getName() + " [" + npcId + "] near you."
+				+ (bossLabsOwned ? " BossLabs encounter controls are available." : " Using Matrix3 combat ownership.");
 	}
 
 	public static String resetEncounter(Player player, int npcId) {
@@ -72,7 +75,7 @@ public final class BossLabsTestingService {
 		int hitpoints = Math.max(1, (int) ((maximum * (long) percent) / 100L));
 		boss.setHitpoints(hitpoints);
 		int actualPercent = (int) ((hitpoints * 100L) / maximum);
-		return "Set test boss HP to " + hitpoints + "/" + maximum + " (" + actualPercent + "%).";
+		return "Set test NPC HP to " + hitpoints + "/" + maximum + " (" + actualPercent + "%).";
 	}
 
 	public static String forcePhase(Player player, int npcId, String phaseId) {
@@ -96,6 +99,7 @@ public final class BossLabsTestingService {
 
 	public static String triggerAttack(Player player, int npcId, String phaseId, String attackId) {
 		NPC boss = requireTestBoss(player, npcId);
+		requireLiveDefinition(npcId);
 		Entity target = boss.getCombat().getTarget();
 		if (target == null || target.hasFinished() || target.isDead())
 			target = player;
@@ -106,6 +110,7 @@ public final class BossLabsTestingService {
 
 	public static String clearHazards(Player player, int npcId) {
 		NPC boss = requireTestBoss(player, npcId);
+		requireLiveDefinition(npcId);
 		int count = BossEncounterRuntime.clearOwnedTasks(boss);
 		return "Cleared " + count + " BossLabs delayed tile task" + (count == 1 ? "" : "s")
 				+ " (hazards/pending telegraphs).";
@@ -113,6 +118,7 @@ public final class BossLabsTestingService {
 
 	public static String clearMinions(Player player, int npcId) {
 		NPC boss = requireTestBoss(player, npcId);
+		requireLiveDefinition(npcId);
 		int count = BossEncounterRuntime.clearOwnedNpcs(boss);
 		return "Cleared " + count + " encounter-owned minion" + (count == 1 ? "" : "s") + ".";
 	}
@@ -120,7 +126,7 @@ public final class BossLabsTestingService {
 	private static BossDefinition requireLiveDefinition(int npcId) {
 		BossDefinition definition = BossDefinitionRegistry.get(npcId);
 		if (definition == null)
-			throw new IllegalArgumentException("Apply a live BossLabs definition before using encounter testing controls.");
+			throw new IllegalArgumentException("Apply a live BossLabs definition before using this BossLabs-only testing control.");
 		return definition;
 	}
 
@@ -129,11 +135,10 @@ public final class BossLabsTestingService {
 		NPC boss = TEST_BOSSES.get(player);
 		if (boss == null || boss.hasFinished() || boss.isDead()) {
 			clearSessionReference(player, boss);
-			throw new IllegalArgumentException("Spawn this BossLabs boss from the Testing tab first.");
+			throw new IllegalArgumentException("Spawn this NPC from the Testing tab first.");
 		}
 		if (boss.getId() != npcId)
-			throw new IllegalArgumentException("The active test boss belongs to a different selected NPC. Spawn this boss first.");
-		requireLiveDefinition(npcId);
+			throw new IllegalArgumentException("The active test NPC belongs to a different selected NPC. Spawn this NPC first.");
 		return boss;
 	}
 
@@ -153,7 +158,7 @@ public final class BossLabsTestingService {
 		throw new IllegalArgumentException("Unknown BossLabs phase id: " + wanted);
 	}
 
-	private static void startSessionWatch(final Player player, final NPC boss) {
+	private static void startSessionWatch(final Player player, final NPC boss, final boolean requireBossLabsRegistration) {
 		WorldTask previous = TEST_WATCHERS.remove(player);
 		if (previous != null)
 			previous.stop();
@@ -174,7 +179,8 @@ public final class BossLabsTestingService {
 					stop();
 					return;
 				}
-				if (player.hasFinished() || !BossDefinitionRegistry.isRegistered(boss.getId())) {
+				if (player.hasFinished()
+						|| (requireBossLabsRegistration && !BossDefinitionRegistry.isRegistered(boss.getId()))) {
 					TEST_BOSSES.remove(player);
 					removeWatcher(player, this);
 					BossEncounterRuntime.finishEncounter(boss);
@@ -219,6 +225,8 @@ public final class BossLabsTestingService {
 		if (npcId < 0 || npcId >= Utils.getNPCDefinitionsSize())
 			return null;
 		NPCDefinitions definitions = NPCDefinitions.getNPCDefinitions(npcId);
+		if (definitions == null)
+			return null;
 		int bossSize = Math.max(1, definitions.size);
 		int playerSize = Math.max(1, player.getSize());
 		int gap = 1;
