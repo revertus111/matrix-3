@@ -2,7 +2,6 @@ package game.console.bosslabs;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -27,7 +26,7 @@ import game.console.ConsoleTheme;
  * The server owns the exact test-spawned boss instance. This panel only sends
  * explicit admin testing requests through the existing BossLabs bridge.
  */
-public final class BossLabsTestingPanel extends JPanel {
+public final class BossLabsTestingPanel extends JPanel implements BossLabsClientBridge.TestingListener {
 
     private static final long serialVersionUID = 4906224790438247976L;
 
@@ -55,6 +54,21 @@ public final class BossLabsTestingPanel extends JPanel {
         add(buildScrollContent(), BorderLayout.CENTER);
         installActions();
         updateEnabledState();
+    }
+
+    @Override
+    public void onTestingSelection(int npcId, boolean liveBossLabs) {
+        setSelection(npcId, liveBossLabs);
+    }
+
+    @Override
+    public void onTestingSelectionCleared() {
+        clearSelection();
+    }
+
+    @Override
+    public void onTestingActionResult(BossLabsClientBridge.ActionResult result) {
+        handleActionResult(result);
     }
 
     public void setSelection(int npcId, boolean liveBossLabs) {
