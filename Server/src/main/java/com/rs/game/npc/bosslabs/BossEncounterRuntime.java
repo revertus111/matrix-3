@@ -66,6 +66,43 @@ public final class BossEncounterRuntime {
 	}
 
 	/**
+	 * Developer testing hook: invalidate BossLabs-owned delayed tile work only.
+	 * Must be called from Matrix3's world-task path when world state is involved.
+	 */
+	public static int clearOwnedTasks(NPC boss) {
+		BossEncounterContext context = get(boss);
+		return context == null ? 0 : context.clearOwnedTasks();
+	}
+
+	/**
+	 * Developer testing hook: finish only minions owned by this encounter.
+	 */
+	public static int clearOwnedNpcs(NPC boss) {
+		BossEncounterContext context = get(boss);
+		if (context == null)
+			return 0;
+		List<NPC> npcs = context.detachOwnedNpcsForCleanup();
+		int count = npcs.size();
+		finishOwnedNpcs(npcs);
+		return count;
+	}
+
+	/**
+	 * Tears down BossLabs runtime state for one exact NPC instance. NPC lifecycle
+	 * itself remains owned by NPC.finish()/Matrix3 and is not performed here.
+	 */
+	public static void finishEncounter(NPC boss) {
+		if (boss == null)
+			return;
+		BossEncounterContext context;
+		synchronized (CONTEXTS) {
+			context = CONTEXTS.remove(boss);
+		}
+		if (context != null)
+			finishOwnedNpcs(context.finish());
+	}
+
+	/**
 	 * Spawns up to the requested number of encounter-owned minions through
 	 * Matrix3's existing World.spawnNPC path. Blocked ring slots are skipped.
 	 */
