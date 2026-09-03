@@ -121,7 +121,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 	};
 
 	private List<RiseOfTheSixBrother> brothers;
-	private final EnumMap<Brother, ArenaSide> currentBrotherSides = new EnumMap<Brother, ArenaSide>(Brother.class);
+	private EnumMap<Brother, ArenaSide> currentBrotherSides;
 	private int reviveGeneration;
 	private boolean fightComplete;
 	private Rotation activeRotation;
@@ -136,6 +136,8 @@ public class RiseOfTheSixInstance extends BossInstance {
 		super(owner, settings);
 		if (brothers == null)
 			brothers = new CopyOnWriteArrayList<RiseOfTheSixBrother>();
+		if (currentBrotherSides == null)
+			currentBrotherSides = new EnumMap<Brother, ArenaSide>(Brother.class);
 	}
 
 	@Override
@@ -158,7 +160,10 @@ public class RiseOfTheSixInstance extends BossInstance {
 		if (brothers == null)
 			brothers = new CopyOnWriteArrayList<RiseOfTheSixBrother>();
 		brothers.clear();
-		currentBrotherSides.clear();
+		if (currentBrotherSides == null)
+			currentBrotherSides = new EnumMap<Brother, ArenaSide>(Brother.class);
+		else
+			currentBrotherSides.clear();
 		fightComplete = false;
 		reviveGeneration++;
 		sideHopGeneration++;
@@ -229,7 +234,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 	public ArenaSide getBrotherSide(Brother brother) {
 		if (brother == null)
 			return null;
-		ArenaSide current = currentBrotherSides.get(brother);
+		ArenaSide current = currentBrotherSides == null ? null : currentBrotherSides.get(brother);
 		if (current != null)
 			return current;
 		if (activeRotation == null)
@@ -568,7 +573,8 @@ public class RiseOfTheSixInstance extends BossInstance {
 			reviveGeneration++;
 			sideHopGeneration++;
 			activeRotation = null;
-			currentBrotherSides.clear();
+			if (currentBrotherSides != null)
+				currentBrotherSides.clear();
 			sideHopPending = false;
 			sideHopComplete = false;
 			sideHopFrom = null;
