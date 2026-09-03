@@ -32,6 +32,7 @@ public class Class639 implements Interface18 {
 			is = MapSize.method1543(((Class639) this).aClass248_8285, ((Class639) this).aClass220_8283, i, 599434869);
 		}
 		Interface17 interface17 = anInterface72_8286.method458(i, this, 135196642);
+		DevDefinitionBridge.observeDefinitionLoader(this, interface17);
 		if (null != is)
 			interface17.method109(new RSByteBuffer(is), -1458298931);
 		interface17.method104((byte) 47);
@@ -190,7 +191,7 @@ public class Class639 implements Interface18 {
 			}
 		}
 		Class298.aClass102_3481.method1611("831 1", (1960824389 * Class269.anInt2861 - 25), 330, -1, -16777216, 672942825);
-		class106.method1715(0, 0, 1960824389 * Class269.anInt2861, 350);
+		class106.method1715(0, 0, Class269.anInt2861 * 1960824389, 350);
 		class106.method1722(0, 350 - Class253.anInt2734 * 977079579, Class269.anInt2861 * 1960824389, -1, (byte) 83);
 		Class1.aClass102_16.method1620(new StringBuilder().append("--> ").append(Class185.method2835(Class190.aString2235, (byte) 7)).toString(), 10, 350 - -2086019023 * Class318.aClass284_3875.anInt3413 - 1, -1, -16777216, 637974063);
 		if (Class408.aBool4780) {
