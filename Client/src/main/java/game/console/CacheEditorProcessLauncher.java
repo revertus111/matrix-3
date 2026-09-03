@@ -76,6 +76,13 @@ final class CacheEditorProcessLauncher {
         if (directory == null || !directory.isDirectory() || !new File(directory, "build.gradle").isFile()) {
             return false;
         }
+        File launcher = new File(directory,
+                "src" + File.separator + "main" + File.separator + "java" + File.separator + "com" + File.separator
+                        + "rs" + File.separator + "tools" + File.separator + "cacheeditor" + File.separator
+                        + "CacheEditorLauncher.java");
+        if (!launcher.isFile()) {
+            return false;
+        }
         return isWindows() ? new File(directory, "gradlew.bat").isFile() : new File(directory, "gradlew").isFile();
     }
 
