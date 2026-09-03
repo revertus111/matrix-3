@@ -1,7 +1,7 @@
 Matrix3 Rise of the Six - runtime acceptance list
 
 Build / isolation
-1. Eclipse clean/build Server with Java 8. Confirm RiseOfTheSixInstance, RiseOfTheSixBrother and RiseOfTheSixCombat compile without Java 9+ APIs.
+1. Eclipse clean/build Server with Java 8. Confirm RiseOfTheSixInstance, RiseOfTheSixBrother, RiseOfTheSixReviveBar and RiseOfTheSixCombat compile without Java 9+ APIs.
 2. Confirm normal Barrows still enters, spawns and rewards exactly as before; RoTS must not use or mutate BarrowsBrother.
 3. Confirm KBD/KQ/DKS/Corp/KK/Vorago instance creation still works after the Rise_of_the_Six registration.
 4. Confirm a non-admin BossLabs bridge request cannot launch RoTS; existing bridge rights checks remain authoritative.
@@ -139,9 +139,19 @@ Cleanup / regression
 110. Owner/admin: start RoTS, leave/reopen setup and Start again before the hour expires; confirm a fresh instance is created while preserving the same UTC day's starting formation.
 111. Confirm normal players retain original cached private-instance reuse/rejoin behavior.
 
-Subdued presentation regression
-112. Subdue any brother and confirm the NPC remains visibly present and non-interactable at the same arena tile instead of disappearing when the lethal hit resolves. The current checkpoint holds the shell at 1 HP and plays the NPC's existing death/down emote; verify whether that emote visually produces the expected kneeling pose.
-113. Queue delayed damage/projectiles before subdual so hits land after the brother is already subdued. Confirm those late hits are reduced to 0, the brother remains visible, and the revive timer still restores the same NPC to 25,000 HP rather than creating a replacement spawn.
+Subdued presentation / revival bar
+112. Subdue any brother and confirm the NPC remains visibly present and non-interactable at the same arena tile instead of disappearing when the lethal hit resolves.
+113. Queue delayed damage/projectiles before subdual so hits land after the brother is already subdued. Confirm those late hits are reduced to 0 and cannot hide the brother.
+114. Confirm the dedicated downed transforms resolve correctly in the active revision-830 client: Ahrim 18546, Dharok 18547, Guthan 18548, Karil 18549, Torag 18550, Verac 18551.
+115. After transformation, confirm the dedicated downed form remains in the expected incapacitated/kneeling presentation for the whole revive window rather than returning to an active standing pose.
+116. Confirm a donor-backed type-5 revival bar appears over the subdued brother immediately and the ordinary logical 1/50,000 HP bar is not used as the downed presentation.
+117. Let the timer run without another kill. Confirm the type-5 bar progresses smoothly from empty toward full across the same approximately 30-second / 50-tick revival window. Record the actual client colors/style rather than assuming them from donor behavior.
+118. Partially fill one brother's revival bar, then subdue a second brother. Confirm both downed brothers immediately reset to empty together and then progress in sync from the new shared generation.
+119. With three or more subdued brothers, confirm every visible type-5 bar remains synchronized and a later additional subdual resets every existing downed bar again.
+120. Spam projectiles around the lethal hit. Confirm queued late hits never replace the type-5 bar with a normal HP bar and never drop the 1-HP logical shell to true zero.
+121. Let the shared timer expire. Confirm every currently subdued brother clears the type-5 bar, plays donor-backed animation 21914, transforms back to its active primary NPC id, and returns at exactly 25,000 HP.
+122. Subdue all six before timeout. Confirm the completion state clears/stops revival-bar updates and none of the dedicated downed forms transforms back afterward.
+123. Destroy/restart the instance while one or more revival bars are active. Confirm no stale bar generation or transformation leaks into the new encounter.
 
 100% fidelity gate
-114. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, exact side-hop landing/barrier blockers, exact persistent kneeling presentation, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
+124. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, exact side-hop landing/barrier blockers, runtime-verified persistent downed/revival presentation, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
