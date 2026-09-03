@@ -11,7 +11,6 @@ import com.rs.game.World;
 import com.rs.game.WorldTile;
 import com.rs.game.map.bossInstance.impl.RiseOfTheSixInstance;
 import com.rs.game.npc.NPC;
-import com.rs.game.npc.combat.NPCCombatDefinitions;
 import com.rs.game.player.Player;
 import com.rs.game.tasks.WorldTask;
 import com.rs.game.tasks.WorldTasksManager;
@@ -642,6 +641,7 @@ public final class RiseOfTheSixBrother extends NPC {
 				if (pulse >= HURRICANE_PULSES) {
 					endHurricane(victim, true);
 					stop();
+					return;
 				}
 			}
 		}, 0, 0);
@@ -874,18 +874,17 @@ public final class RiseOfTheSixBrother extends NPC {
 
 		resetSpecialState();
 		subdued = true;
-		NPCCombatDefinitions defs = getCombatDefinitions();
 		resetWalkSteps();
 		getCombat().removeTarget();
 		/*
-		 * Matrix3/client hides a true zero-HP NPC. RoTS needs the incapacitated
-		 * brother to remain visible in the arena, so encounter defeat is represented
-		 * by subdued=true while the NPC shell is held at one HP. All RoTS defeat,
-		 * revival and completion logic already keys from subdued rather than isDead().
+		 * Runtime video confirmed that Matrix3's generic NPC death emote eventually
+		 * hides the rendered brother even while the RoTS 1-HP shell and type-5
+		 * revival bar remain alive. RoTS subdual therefore deliberately avoids the
+		 * normal death animation. Until the authentic revision-830 kneeling pose is
+		 * established, the active model stays visible/frozen and non-interactable.
 		 */
 		setHitpoints(SUBDUED_VISIBLE_HITPOINTS);
 		setCantInteract(true);
-		setNextAnimation(new Animation(defs.getDeathEmote()));
 		giveXP();
 		instance.onBrotherSubdued(this);
 	}
