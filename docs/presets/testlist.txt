@@ -14,6 +14,7 @@ Gear Presets runtime test list
 12. Test while a controller restricts inventory/equipment changes and confirm the preset load is rejected.
 13. Click the Beast of Burden row and confirm it reports that BoB presets are not enabled yet when the cache supplies row 11 in either slot field.
 14. Click unrelated/native controls on interface 579 before selecting a preset and confirm they are not spammed with the old selection warning.
-15. Restart the server, open Gear > Presets, and click each distinct row/icon/control once. Capture every `[PRESET-MAP]` console line with component, slot, slot2, and packet values.
-16. Click the same control repeatedly and confirm an identical click tuple is logged only once per server run.
-17. Confirm the mapper itself adds no new game-chat messages. During this diagnostic step, unmapped native preset controls may still have no gameplay action until their component map is wired.
+15. Restart the server, open Gear > Presets, and click each distinct row/icon/control once. Capture every `[PRESET-MAP]` line with component, slot, slot2, and packet values.
+16. Confirm the same `[PRESET-MAP]` lines are appended to `Server/data/logs/presets/preset-map.txt` when the BAT launches the server from the Server working directory.
+17. Click the same control repeatedly and confirm an identical click tuple is logged only once per server run.
+18. Confirm the mapper itself adds no new game-chat messages. During this diagnostic step, unmapped native preset controls may still have no gameplay action until their component map is wired.
