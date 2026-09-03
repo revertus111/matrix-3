@@ -85,6 +85,8 @@ public final class Inventory implements Serializable {
     }
 
     public void reset() {
+	// Normal-inventory reset only. Backpack storage is player-owned persistent
+	// state and intentionally survives death and any normal inventory clear.
 	items.reset();
 	init(); // as all slots reseted better just send all again
     }
@@ -155,7 +157,7 @@ public final class Inventory implements Serializable {
     }
 
     public boolean containsItemToolBelt(int id, int amount) {
-	return containsItem(id, amount) || player.getToolbelt().containsItem(id);
+	return containsItem(id, amount) || player.getToolbelt().containsItem(id, amount);
     }
 
     public boolean addItem(Item item) {
