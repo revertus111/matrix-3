@@ -2,6 +2,7 @@ package game.console;
 
 import game.ClientConsoleBridge;
 import game.DevModeBridge;
+import game.QolSettings;
 
 import java.awt.Dimension;
 import java.awt.event.HierarchyEvent;
@@ -17,13 +18,14 @@ import javax.swing.JToggleButton;
 import javax.swing.Timer;
 
 /**
- * Client Console controls for the Matrix3 combat/interface mode split and
- * session-scoped Dev Mode tooling.
+ * Client Console controls for the Matrix3 combat/interface mode split,
+ * quality-of-life preferences, and session-scoped Dev Mode tooling.
  *
  * The selected combat/interface combination is stored by ConsolePreferences so
- * the console can restore it on a later login. Dev Mode intentionally defaults
- * OFF on each client launch. Server-side Matrix3 state remains authoritative
- * once queued commands are processed.
+ * the console can restore it on a later login. QOL preferences are stored by
+ * QolSettings. Dev Mode intentionally defaults OFF on each client launch.
+ * Server-side Matrix3 state remains authoritative once queued commands are
+ * processed.
  */
 public final class SettingsPanel extends JScrollPane {
 
@@ -31,6 +33,7 @@ public final class SettingsPanel extends JScrollPane {
 
     private final JToggleButton legacyCombatButton = new JToggleButton();
     private final JToggleButton legacyInterfaceButton = new JToggleButton();
+    private final JToggleButton shiftClickDropButton = new JToggleButton();
     private final JToggleButton devModeButton = new JToggleButton();
     private final JLabel status = new JLabel("Choose a mode combination, then apply it while logged in.");
     private final JLabel devModeStatus = new JLabel("Dev Mode is OFF for this client session.");
@@ -50,7 +53,7 @@ public final class SettingsPanel extends JScrollPane {
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Combat / interface split + developer tools");
+        JLabel subtitle = new JLabel("Game modes + quality of life + developer tools");
         subtitle.setFont(ConsoleTheme.SMALL_FONT);
         subtitle.setForeground(ConsoleTheme.ACCENT);
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
@@ -62,6 +65,10 @@ public final class SettingsPanel extends JScrollPane {
         configureToggle(legacyInterfaceButton, false);
         updateToggleLabels();
 
+        shiftClickDropButton.setSelected(QolSettings.isShiftClickDropEnabled());
+        configureShiftClickDropToggle();
+        updateShiftClickDropLabel();
+
         devModeButton.setSelected(DevModeBridge.isEnabled());
         configureDevModeToggle();
         updateDevModeLabel();
@@ -71,6 +78,8 @@ public final class SettingsPanel extends JScrollPane {
         content.add(subtitle);
         content.add(Box.createVerticalStrut(18));
         content.add(createModeCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createQolCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createDevModeCard());
         content.add(Box.createVerticalGlue());
@@ -140,6 +149,32 @@ public final class SettingsPanel extends JScrollPane {
         return card;
     }
 
+    private JPanel createQolCard() {
+        JPanel card = createCard("Quality of life");
+
+        JLabel section = new JLabel("Inventory");
+        section.setFont(ConsoleTheme.SMALL_FONT);
+        section.setForeground(ConsoleTheme.ACCENT);
+        section.setAlignmentX(LEFT_ALIGNMENT);
+
+        JLabel description = new JLabel("<html><div style='width:240px'>Shift-click Drop changes only the left-click choice while Shift is held. "
+                + "The normal Matrix3 right-click menu and item action handling stay intact.</div></html>");
+        description.setFont(ConsoleTheme.SMALL_FONT);
+        description.setForeground(ConsoleTheme.MUTED_TEXT);
+        description.setAlignmentX(LEFT_ALIGNMENT);
+
+        shiftClickDropButton.setAlignmentX(LEFT_ALIGNMENT);
+        shiftClickDropButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        card.add(Box.createVerticalStrut(9));
+        card.add(section);
+        card.add(Box.createVerticalStrut(7));
+        card.add(description);
+        card.add(Box.createVerticalStrut(12));
+        card.add(shiftClickDropButton);
+        return card;
+    }
+
     private JPanel createDevModeCard() {
         JPanel card = createCard("Dev Mode");
 
@@ -199,6 +234,14 @@ public final class SettingsPanel extends JScrollPane {
         });
     }
 
+    private void configureShiftClickDropToggle() {
+        ConsoleTheme.styleButton(shiftClickDropButton);
+        shiftClickDropButton.addActionListener(e -> {
+            QolSettings.setShiftClickDropEnabled(shiftClickDropButton.isSelected());
+            updateShiftClickDropLabel();
+        });
+    }
+
     private void configureDevModeToggle() {
         ConsoleTheme.styleButton(devModeButton);
         devModeButton.addActionListener(e -> {
@@ -221,6 +264,12 @@ public final class SettingsPanel extends JScrollPane {
         legacyInterfaceButton.setText(legacyInterfaceButton.isSelected()
                 ? "Legacy interface: ON"
                 : "Legacy interface: OFF (NIS)");
+    }
+
+    private void updateShiftClickDropLabel() {
+        shiftClickDropButton.setText(shiftClickDropButton.isSelected()
+                ? "Shift-click Drop: ON"
+                : "Shift-click Drop: OFF");
     }
 
     private void updateDevModeLabel() {
