@@ -86,3 +86,9 @@
 - Upgraded BossLabs definition wire/storage to v7 for phase action lists while retaining v1-v6 read compatibility; older phases load with empty entry/exit action lists.
 - Added ordered On Enter / On Exit action lists and add/remove authoring controls to the scrollable Phases editor; actions remain DRAFT-only until Apply Live or Save & Apply.
 - Phase action healing routes through Matrix3 Entity.heal(); animation/GFX route through normal NPC presentation state. No phase scripting engine, minion lifecycle, teleport, or encounter participant authority was added.
+- Added BossEncounterContext/BossEncounterRuntime as runtime-only per-NPC encounter state with weak boss/player ownership, observed participant tracking, owned WorldTask tracking, and generation-based invalidation.
+- BossCombatScript now registers actual attack/effect recipients as observed participants and routes delayed tile impacts plus lingering hazards through the encounter generation so stale BossLabs tasks can be invalidated safely.
+- Apply Live, Save & Apply, Undo Last Apply, and Apply Saved now invalidate existing BossLabs transient tasks for matching live NPC instances without changing saved definition data or the v7 store/wire format.
+- A lightweight Matrix3 WorldTasksManager lifecycle watcher finishes encounter contexts when the boss dies, finishes, or loses BossLabs registration; final cleanup clears participant/task state while leaving NPC lifecycle ownership in Matrix3.
+- Participant tracking is observational only in this slice: random nearby targeting still uses its existing eligibility rules and is not restricted to the encounter participant set yet.
+- Existing phase changes do not clear prior hazards solely because a phase changed; definition replacement/death/finish cleanup is added without silently changing phase-crossing hazard semantics.
