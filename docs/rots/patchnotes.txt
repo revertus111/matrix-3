@@ -23,4 +23,8 @@
 - Corrected 18546-18551 documentation: these remain body-only/inactive cache definitions with unproven authentic role, and current revision-830 runtime testing found them invisible when used as subdued models; the live encounter intentionally keeps active brother models visible at 1 HP instead.
 - Recorded current implementation animation mappings including revive 21914, flying Ahrim auto 21925, Torag 21933/21934/21935/21938, Dharok charge 21940, and Guthan 21944/21945/21947.
 - Recorded current Guthan/side-hop GFX mappings and kept donor Dharok GFX 4406 explicitly runtime-rejected for Greatest Axe in this cache.
-- Refocused the next parity checkpoint on authentic Hurricane/Whirlwind identification before broader new mechanic work.
+- Refocused the parity workflow around authentic source/video evidence instead of assigning mechanic names from animation appearance alone.
+- Recorded animation 21941 as VERIFIED runtime visual evidence of a sustained Dharok spin while keeping its Hurricane/Spinning Attack assignment as a strong HYPOTHESIS.
+- Added period RoTS documentary evidence that all four melee brothers use a shared Spinning Attack and that Verac's Helicopter is a separate move, preventing those animations from being conflated.
+- Changed the immediate parity checkpoint to cross-test 21941 on Guthan, Torag, and Verac before any Hurricane gameplay patch.
+- Noted that targeted animation research should extend through at least 21947 because known RoTS/current-implementation special mappings now continue beyond the previous 21940 cutoff.
