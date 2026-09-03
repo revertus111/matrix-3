@@ -1,0 +1,17 @@
+BossLabs Arena / Tiles workspace acceptance
+
+1. Eclipse clean/build the Client with Java 8. Confirm BossLabsArenaPanel and the narrow BossLabsPanel draft-access seam compile cleanly.
+2. Load a BossLabs draft with at least two phases and multiple attacks. Open Arena / Tiles and confirm the Phase and Attack selectors populate from the same draft used by Attacks/Phases.
+3. Switch between phases and attacks in Arena / Tiles. Confirm the canvas and summary always reflect the selected attack's existing tile offsets, impact effect, hazard effect, and hazard timing.
+4. Paint tiles with left click. Confirm existing painted tiles toggle off, empty tiles toggle on, DRAFT changes to modified, and offsets outside +/-16 are rejected.
+5. Right-click a painted tile. Confirm it erases without adding an empty tile. Middle-drag must pan without changing offsets and mouse wheel must zoom around the cursor.
+6. Click Center View after panning/zooming. Confirm target 0,0 returns to the center and zoom resets without changing any authored tiles.
+7. Apply Cross, H Line, V Line, Square, and Ring at representative radii including 0, 1, 2, and 16 where valid. Confirm each replaces the selected pattern and remains hand-editable afterward.
+8. Attempt a preset that would exceed 128 tiles, such as filled Square radius 6. Confirm the request is rejected before the current pattern is changed.
+9. Paint a custom pattern, click Copy Pattern, switch to a different attack or phase, and click Paste Pattern. Confirm the destination receives a deep copy of the geometry and later edits do not mutate the source attack.
+10. Clear a pattern on an attack with no hazard/non-default tile requirement. Confirm the attack returns to its normal no-pattern behavior. Clear a pattern while a hazard or non-default impact effect still requires tiles and confirm normal draft validation prevents publish until corrected.
+11. Edit a pattern in Arena / Tiles, then switch to Attacks. Confirm the Attacks view reflects the same underlying attack object/tile count and no second draft copy exists.
+12. Edit a pattern in Attacks, then switch back to Arena / Tiles or press Refresh. Confirm the arena workspace reloads the current draft geometry rather than stale cached offsets.
+13. Save & Apply an arena-edited attack, restart/reinspect, and confirm every explicit tile offset reloads exactly through the existing v8 wire/store path.
+14. Apply Live without saving, then trigger the edited attack through Testing. Confirm runtime uses the same target-relative pattern semantics already owned by BossCombatScript.
+15. Confirm this slice does not change BossDefinitionStore/BossLabsDefinitionWireCodec v8, BossCombatScript, World/NPC core, Commands.java, packet framing, targeting semantics, or introduce fixed-world arena anchors/zone persistence. The Arena / Tiles tab is a large authoring view over existing persisted attack patterns only.
