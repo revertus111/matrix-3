@@ -157,7 +157,7 @@ public final class Inventory implements Serializable {
     }
 
     public boolean containsItemToolBelt(int id, int amount) {
-	return containsItem(id, amount) || player.getToolbelt().containsItem(id, amount);
+	return containsItem(id, amount) || player.getToolbelt().containsItem(id);
     }
 
     public boolean addItem(Item item) {
