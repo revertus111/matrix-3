@@ -1,13 +1,10 @@
-Matrix3 36-slot inventory runtime test list
+Matrix3 28-slot inventory restoration runtime test list
 
-1. Log in with an existing character whose serialized inventory was created before this patch. Confirm all existing items remain in the same slot positions and no item is lost or duplicated.
-2. Use Item Browser or another safe owner spawn path to fill inventory slots beyond the original slot 28. Confirm the server accepts up to 36 occupied slots before reporting a full inventory.
-3. Open and resize the NIS inventory interface 1473:34. Confirm the client now exposes two additional visual rows for a 4x9 / 36-slot grid rather than stopping at the original 4x7 / 28-slot layout.
-4. Confirm rows 8-9 are not clipped by the NIS parent at normal usable inventory-window sizes. Resize the inventory narrower/taller and confirm the extra rows remain reachable without corrupting nearby NIS layout.
-5. In slots 29-36, test selection, examine, item switching/reordering, dropping/deleting where safe, and normal inventory interactions. Confirm the server and client agree on the extra slot indexes.
-6. Open any flow that uses alternate inventory interface 1474:15 and confirm its extra slots also remain visible/reachable rather than truncating at slot 28.
-7. Bank/deposit and withdraw items involving the extra inventory slots. Confirm no slot truncation, packet error, or item loss occurs.
-8. Log out normally with items stored in slots 29-36, restart the server/client as appropriate, and log back in. Confirm the extra-slot contents persist exactly and the visual grid still shows all 36 slots after interface reload.
-9. Fill all 36 slots and attempt to add another non-stackable item. Confirm the normal full-inventory handling occurs only after all 36 slots are occupied.
-10. Close/reopen or otherwise unload/reload the inventory interface where practical. Confirm the runtime layout override is not applied twice to the same component and is correctly reapplied once if a new component instance is loaded.
-11. Run the normal Matrix3 inventory/bank/preset smoke path after the expansion and confirm existing 28-slot-era content does not assume or corrupt the old final slot index.
+1. Log in on a fresh/new character and confirm the normal inventory has exactly 28 usable slots and the stock NIS 4x7 layout is unchanged.
+2. Fill all 28 slots with non-stackable items and attempt to add another. Confirm normal full-inventory handling occurs at 28 slots.
+3. On a character saved during the temporary 36-slot build, place known items in slots 29-36 before updating. After the first login on this patch, confirm slots 1-28 are unchanged and every former slot 29-36 item appears in the persistent backpack with no loss or duplication.
+4. Log out after the migration and log back in. Confirm the inventory remains 28 slots and the migrated backpack contents remain intact rather than migrating again.
+5. Bank/deposit/withdraw items through the normal inventory and confirm ordinary 28-slot Matrix3 behavior is unchanged.
+6. Confirm the client no longer applies InventoryInterfacePatch to interfaces 1473:34 or 1474:15 and no extra blank/expanded inventory rows appear after interface reload or resize.
+7. Run the normal Matrix3 inventory/bank/preset smoke path and confirm existing content once again sees the original 28-slot normal inventory authority.
+8. Safety case: if a legacy larger inventory cannot be migrated because backpack capacity is already exhausted, confirm the serialized larger container is retained rather than silently deleting overflow items; report this state before continuing gameplay because only the standard 28 slots are intentionally unlocked.
