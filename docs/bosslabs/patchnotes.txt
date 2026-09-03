@@ -104,3 +104,5 @@
 - Clear Hazards invalidates BossLabs-owned delayed tile work (including pending telegraphed impacts) but does not cancel Matrix3 single-target CombatScript.delayHit queues; Clear Minions finish-removes only encounter-owned minions. BossDefinition store/wire remains v8.
 - Testing now enables Spawn Boss Here, Reset Encounter, and Set Boss HP % for any valid inspected Matrix3 NPC; Force Phase, Trigger Attack, Clear Hazards, and Clear Minions remain gated to live BossLabs definitions.
 - Plain Matrix3 test NPCs use their existing Matrix3 combat ownership without creating a BossEncounterContext, while test-session cleanup still owns the exact spawned copy; BossLabs-spawned test copies continue to clean up if their live registration is removed.
+- Added radius-driven attack tile pattern presets for Cross, horizontal line, vertical line, filled square, and ring plus Clear; applying a preset replaces the selected attack's painted offsets and remains fully hand-editable afterward.
+- Pattern presets enforce the existing +/-16 offset and 128-tile limits before mutating the local DRAFT; no server combat, definition wire/storage, or v8 persistence format changed.
