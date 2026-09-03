@@ -60,7 +60,7 @@ public final class BossCombatScript extends CombatScript {
 		if (target instanceof Player)
 			encounter.registerParticipant((Player) target);
 
-		BossAttackDefinition attack = selectAttack(npc, definition, phase);
+		BossAttackDefinition attack = selectAttack(npc, definition, phase, encounter);
 		if (attack == null)
 			return npc.getAttackSpeed();
 
@@ -72,7 +72,8 @@ public final class BossCombatScript extends CombatScript {
 		return executeAttack(npc, resolvedTarget, attack, encounter);
 	}
 
-	private BossAttackDefinition selectAttack(NPC npc, BossDefinition definition, BossPhaseDefinition phase) {
+	private BossAttackDefinition selectAttack(NPC npc, BossDefinition definition, BossPhaseDefinition phase,
+			BossEncounterContext encounter) {
 		RotationState state;
 		synchronized (ROTATION_STATES) {
 			state = ROTATION_STATES.get(npc);
@@ -86,7 +87,7 @@ public final class BossCombatScript extends CombatScript {
 			if (state.definition != definition || state.phase != phase) {
 				boolean hasTransitionActions = (state.phase != null && !state.phase.getExitActions().isEmpty())
 						|| !phase.getEntryActions().isEmpty();
-				transitionPhase(npc, state, definition, phase);
+				transitionPhase(npc, state, definition, phase, encounter);
 				// Only authored transition presentation consumes an attack opportunity.
 				// Empty legacy phase action lists preserve the previous combat timing.
 				if (hasTransitionActions)
@@ -125,17 +126,19 @@ public final class BossCombatScript extends CombatScript {
 		}
 	}
 
-	private void transitionPhase(NPC npc, RotationState state, BossDefinition definition, BossPhaseDefinition phase) {
+	private void transitionPhase(NPC npc, RotationState state, BossDefinition definition, BossPhaseDefinition phase,
+			BossEncounterContext encounter) {
 		BossPhaseDefinition previousPhase = state.phase;
 		if (previousPhase != null)
-			executePhaseActions(npc, previousPhase.getExitActions());
+			executePhaseActions(npc, previousPhase.getExitActions(), encounter);
 
 		state.reset(definition, phase);
 		if (!npc.hasFinished() && !npc.isDead())
-			executePhaseActions(npc, phase.getEntryActions());
+			executePhaseActions(npc, phase.getEntryActions(), encounter);
 	}
 
-	private void executePhaseActions(NPC npc, List<BossPhaseActionDefinition> actions) {
+	private void executePhaseActions(NPC npc, List<BossPhaseActionDefinition> actions,
+			BossEncounterContext encounter) {
 		for (BossPhaseActionDefinition action : actions) {
 			if (npc.hasFinished() || npc.isDead())
 				return;
@@ -145,6 +148,8 @@ public final class BossCombatScript extends CombatScript {
 				npc.setNextGraphics(new Graphics(action.getValue()));
 			} else if (action.getType() == BossPhaseActionDefinition.HEAL_BOSS) {
 				npc.heal(action.getValue(), 0, 0, true);
+			} else if (action.getType() == BossPhaseActionDefinition.SPAWN_MINIONS) {
+				BossEncounterRuntime.spawnMinions(encounter, action.getValue(), action.getQuantity(), action.getRadius());
 			}
 		}
 	}
