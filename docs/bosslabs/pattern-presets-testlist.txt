@@ -1,0 +1,13 @@
+Matrix3 BossLabs - attack tile pattern preset acceptance
+
+1. Eclipse clean/build the Client with Java 8. Confirm BossLabsDefinitionEditor compiles with no Server changes required.
+2. Select an authored attack, leave Pattern Radius at 2, and click Cross. Confirm the local DRAFT receives 9 unique tiles centered on 0,0 and no live/server change occurs before Apply Live or Save & Apply.
+3. With radius 2, confirm H Line and V Line each create 5 tiles through 0,0, Filled Square creates 25 tiles, and Ring creates the 16-tile perimeter while leaving its interior unpainted.
+4. Set radius 0 and apply each preset. Confirm each produces exactly the target tile 0,0 without duplicate offsets or validation errors.
+5. Hand-paint extra/remove tiles after applying a preset. Confirm normal left-click editing, middle-drag panning, and mouse-wheel zoom continue to work and the preset result is not treated as a locked shape.
+6. Paint a custom pattern, then apply a preset. Confirm the preset replaces the prior pattern rather than merging with it. Click Clear and confirm the selected attack returns to an empty pattern.
+7. With an enabled hazard or a non-default impact tile effect, click Clear. Confirm the existing pattern-status validation warns that at least one painted tile is required before publishing; no validation rule is bypassed by the preset controls.
+8. Enter a non-integer radius, a negative radius, or a radius above 16. Confirm the pattern remains unchanged and the status explains the valid 0-16 range.
+9. Set Filled Square radius to 6. Confirm the 169-tile preset is rejected before mutating the draft because it exceeds the existing 128-tile limit. Confirm Ring radius 16 is accepted at exactly 128 tiles.
+10. Apply Live and Save & Apply after authoring a valid preset pattern. Re-inspect/restart in controlled tests and confirm the explicit tile offsets round-trip through the existing v8 definition wire/store exactly; no new pattern-preset metadata is persisted.
+11. Confirm this slice changes no Server code, BossLabsDefinitionWireCodec, BossDefinitionStore, Commands.java, packet framing, combat selection, hazard timing, targeting, minion behavior, or Matrix3 world ownership.
