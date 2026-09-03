@@ -1,20 +1,23 @@
 Matrix3 Rambler's backpack runtime test list
 
 1. Spawn item 21445 (Rambler's backpack) through the existing owner Item Browser path and equip it. Confirm it occupies the cape/back equipment slot and its worn model renders correctly. If it cannot be worn, record that as cache/equip-definition runtime evidence before changing unrelated equipment code.
-2. With 21445 equipped, use the equipment interface's secondary action on the backpack. Confirm interfaces 671 and 665 open as the backpack storage view. Owner fallback test: `::itembrowser backpack open` must open the same view only while the backpack is equipped.
-3. Unequip 21445 and run `::itembrowser backpack open`. Confirm the server refuses access with the equip-the-backpack message.
-4. Store one normal item, then Store-5, Store-10, and Store-All where quantities permit. Confirm the inventory decreases by exactly the amount added to backpack container key 531.
-5. Withdraw one item, then Withdraw-5, Withdraw-10, and Withdraw-All. Confirm the backpack decreases by exactly the amount returned to inventory and partial transfers stop safely when inventory space is limited.
-6. Fill the 30 backpack slots with non-stackable items. Confirm another non-stackable store request is refused without deleting or duplicating the source item. Confirm a stackable item can still merge into an existing backpack stack when no free slot remains.
-7. Attempt to store item 21445 inside its own backpack. Confirm it is rejected and remains outside the backpack.
-8. Use Take All with enough inventory space and confirm all backpack contents move to inventory. Repeat with limited inventory space and confirm only accepted items/amounts move, with no duplication.
-9. Close and reopen the backpack repeatedly. Confirm stale clicks do not route to backpack storage after interfaces 671/665 are closed.
-10. Summon a real Beast of Burden and use its normal storage before and after testing the backpack. Confirm familiar BoB still uses container key 530 and its existing behavior is unchanged; backpack uses key 531 and does not require or replace a familiar.
-11. Store items in the backpack, log out normally, restart/relog, re-equip 21445, and reopen it. Confirm all backpack contents persist exactly.
-12. Run the migration test in docs/inventory/testlist.txt for a temporary 36-slot save and confirm former inventory slots 29-36 move once into the backpack without item loss or duplication.
-13. Put identifiable items in the backpack, then die through the current normal death path. After respawn, recover/equip 21445 if necessary and reopen the backpack. Confirm every stored backpack item and amount is unchanged even though normal inventory/equipment death handling ran.
-14. Exercise a death path where the physical 21445 backpack item itself is lost/dropped. Confirm backpack contents remain attached to the character, are inaccessible while no Rambler's backpack is equipped, and become available again after the same player recovers or equips another 21445.
-15. If another player can obtain the dropped physical 21445, confirm they do not receive the dead player's backpack contents; opening 21445 continues to address the receiving player's own Backpack container.
-16. When Main-game keep-inventory/gear death rules are added, verify inventory, equipment, physical backpack, and backpack contents all remain with the player after death.
-17. When Hardcore drop-on-death rules are added, verify normal inventory/equipment and physical 21445 follow Hardcore drop policy while the player's Backpack contents remain untouched and become accessible again only after that player equips a Rambler's backpack.
-18. Run the normal Matrix3 equipment, inventory, bank, familiar/BoB, death, and login persistence smoke paths after backpack testing.
+2. With 21445 equipped, right-click it in the equipment interface. Confirm configured `Open` appears and opens interfaces 671/665. Owner fallback test: `::itembrowser backpack open` must still open the same view only while the backpack is equipped.
+3. Put 21445 in the normal NIS inventory and right-click it. Confirm configured `Open` appears without replacing normal Wear/Use/Drop/Examine actions, and clicking Open accesses the same player-owned Backpack storage without requiring equipment.
+4. Put 21445 in the bank and right-click it. Confirm the configured bank wearable-item action presents as `Open` and opens Backpack without withdrawing the physical item. If the client still displays `Wear`, record that as bank-menu client/CS2 evidence; do not enable Empty-to-bank yet.
+5. Unequip 21445, remove every copy from inventory/bank, and run `::itembrowser backpack open`. Confirm the owner fallback refuses access with the equip-the-backpack message.
+6. Store one normal item, then Store-5, Store-10, and Store-All where quantities permit. Confirm the inventory decreases by exactly the amount added to backpack container key 531.
+7. Withdraw one item, then Withdraw-5, Withdraw-10, and Withdraw-All. Confirm the backpack decreases by exactly the amount returned to inventory and partial transfers stop safely when inventory space is limited.
+8. Fill the 30 backpack slots with non-stackable items. Confirm another non-stackable store request is refused without deleting or duplicating the source item. Confirm a stackable item can still merge into an existing backpack stack when no free slot remains.
+9. Attempt to store item 21445 inside its own backpack. Confirm it is rejected and remains outside the backpack.
+10. Use Take All with enough inventory space and confirm all backpack contents move to inventory. Repeat with limited inventory space and confirm only accepted items/amounts move, with no duplication.
+11. Close and reopen the backpack repeatedly. Confirm stale clicks do not route to backpack storage after interfaces 671/665 are closed.
+12. Summon a real Beast of Burden and use its normal storage before and after testing the backpack. Confirm familiar BoB still uses container key 530 and its existing behavior is unchanged; backpack uses key 531 and does not require or replace a familiar.
+13. Store items in the backpack, log out normally, restart/relog, regain access through inventory/equipment/bank 21445, and confirm all backpack contents persist exactly.
+14. Run the migration test in docs/inventory/testlist.txt for a temporary 36-slot save and confirm former inventory slots 29-36 move once into the backpack without item loss or duplication.
+15. Put identifiable items in the backpack, then die through the current normal death path. After respawn, reopen the backpack from any valid 21445 access location. Confirm every stored backpack item and amount is unchanged.
+16. Exercise a future Hardcore-style death path where the physical 21445 backpack item itself is lost/dropped. Confirm backpack contents remain attached to the character and become available again only when that same player obtains a Rambler's backpack again.
+17. If another player can obtain a dropped physical 21445, confirm they do not receive the dead player's backpack contents; their 21445 continues to address their own Backpack container.
+18. Main-game death: verify inventory, equipment, physical backpack, and backpack contents all remain with the player after death.
+19. Keep `item.21445.bank.6=EMPTY_TO_BANK|Empty to bank` commented in the shared config until the client bank menu can show that label for item 21445 only. Confirm the current stock Withdraw-All-but-one option retains its normal behavior and does not empty Backpack.
+20. After the bank-only label hook is implemented, enable the config entry and test Empty-to-bank with an empty bank, nearly-full bank, stack merges, and a completely full bank. Confirm only successfully banked quantities leave Backpack and 21445 itself never moves.
+21. Run the normal Matrix3 equipment, inventory, bank, familiar/BoB, death, and login persistence smoke paths after backpack testing.
