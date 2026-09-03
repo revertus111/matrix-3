@@ -8,6 +8,47 @@ This is no longer a from-scratch NPC-discovery task. A substantial RoTS encounte
 
 The cache is authoritative for available revision-830 assets. It does not by itself prove the gameplay meaning of an animation, GFX, model, projectile, object, sound, timing, or mechanic.
 
+## Main-goal status plan
+
+The permanent status anchor for this workstream is:
+
+**100% / 1:1 2014-era Rise of the Six.**
+
+Status updates in chat must keep the following top-level rows stable so they act as a roadmap back to the original goal after any side task. Small animation, GFX, tooling, cache-research, bug-fix, or one-mechanic patches are reported separately as `Just completed:` and do not replace this table.
+
+| Main RoTS milestone | Current status | Meaning |
+| --- | --- | --- |
+| Encounter / arena foundation | 🟡 Foundation | Six-brother instance, daily rotation, side ownership, spawn/fight foundation exist; exact arena/side fidelity remains incomplete. |
+| Shadow bond / subdue / revive / all-six completion | 🔵 In Progress | Core logical system works in runtime, but exact original presentation/timing still needs parity work. |
+| Normal combat and attack cadence | 🟡 Foundation | Normal attacks exist for all brothers; exact 2014 cadence/timing still needs verification. |
+| Melee brother specials | 🔵 In Progress | Dharok, Guthan, Torag, and Verac have substantial special foundations; Hurricane now uses 21941, while remaining specials still need 1:1 verification/completion. |
+| Ahrim special rotation | ❌ Not started | Normal magic and flying state exist, but authentic special rotation is not implemented. |
+| Karil special rotation | ❌ Not started | Normal ranged combat exists, but authentic special rotation/Shadow Dash behavior is not implemented. |
+| Shared side/team mechanics | 🟡 Foundation | Empty-side empowerment foundation and Brother Throw pairing logic exist; exact movement/assets and Throw execution remain incomplete. |
+| Portal / barriers / shadow-realm / arena transitions | 🟡 Foundation | Some side ownership/boundary behavior exists, but exact encounter transition and barrier parity is incomplete. |
+| Completion / escape / rewards / cleanup | ⚠️ Needs focused audit | Do not assume absent or complete until the existing flow is audited directly. |
+| Final 1:1 parity and full-fight regression pass | ❌ Not started | Full encounter timing, visuals, mechanics, edge cases, and completion flow must be verified together after the major systems are finished. |
+| **100% / 1:1 Rise of the Six** | 🔵 **In Progress** | This is the permanent overall goal. |
+
+### Roadmap order
+
+Use this order to prevent side work from becoming the project:
+
+1. Keep the existing encounter/bond foundation stable while fixing only evidence-backed parity gaps.
+2. Lock down normal combat cadence and finish the melee-brother special set already furthest along.
+3. Implement and verify Ahrim's authentic special rotation.
+4. Implement and verify Karil's authentic special rotation.
+5. Finish shared side/team mechanics, especially empowerment behavior and Brother Throw execution.
+6. Finish portal/barrier/shadow-realm/arena-transition fidelity.
+7. Audit and finish completion, escape, rewards, and cleanup.
+8. Run the final full-fight 1:1 regression/parity pass.
+
+At any point, a necessary side task may temporarily interrupt this order, but the status table and `Next main step:` must continue to point back to this roadmap.
+
+### Current next main step
+
+Runtime-verify the newly integrated 21941 Hurricane in the live encounter, then continue finishing the **melee brother specials** milestone rather than returning to broad animation/tool research.
+
 ## Evidence labels
 
 - `VERIFIED` - confirmed in runtime.
