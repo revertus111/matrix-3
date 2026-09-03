@@ -1,6 +1,12 @@
 Rise of the Six GFX / spot-animation research
 
-No GFX IDs are classified yet.
+No GFX IDs are classified to mechanics yet.
+
+Owner Console Deep Scan
+- Reads Matrix3 GraphicsDefinition entries through the live GFX definition loader.
+- Correlates GFX whose explicit animation ID matches a targeted RoTS/render-set animation reference.
+- Also reports GFX whose model ID directly matches a currently known RoTS NPC model.
+- Correlation is verified-static evidence of a cache relationship only; it does not prove which RoTS mechanic uses that GFX.
 
 Track candidates for:
 - Hurricane / Whirlwind visuals
