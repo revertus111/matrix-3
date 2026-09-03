@@ -1,12 +1,19 @@
 package com.rs.game.player.content.commands;
 
 import com.rs.cache.loaders.ItemDefinitions;
+import com.rs.cache.loaders.NPCDefinitions;
+import com.rs.cache.loaders.ObjectDefinitions;
+import com.rs.game.World;
+import com.rs.game.WorldObject;
+import com.rs.game.WorldTile;
+import com.rs.game.item.Item;
+import com.rs.game.npc.NPC;
 import com.rs.game.player.CombatDefinitions;
 import com.rs.game.player.Player;
 
 /**
- * Owner-only server authority bridge for Client Console Item Browser and
- * development settings actions.
+ * Owner-only server authority bridge for Client Console Item Browser,
+ * development settings, and Dev Mode live placement actions.
  */
 public final class ItemBrowserCommandBridge {
 
@@ -31,6 +38,9 @@ public final class ItemBrowserCommandBridge {
         }
         if (cmd != null && cmd.length >= 2 && "settings".equalsIgnoreCase(cmd[1])) {
             return processSettings(player, cmd);
+        }
+        if (cmd != null && cmd.length >= 2 && "devspawn".equalsIgnoreCase(cmd[1])) {
+            return processDevSpawn(player, cmd);
         }
         if (cmd == null || cmd.length < 4) {
             player.getPackets().sendGameMessage(
@@ -83,6 +93,125 @@ public final class ItemBrowserCommandBridge {
                     : "Unable to add that item to your inventory (inventory may be full or restricted)." );
         }
         return true;
+    }
+
+    private static boolean processDevSpawn(Player player, String[] cmd) {
+        if (cmd.length < 6) {
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser devspawn <npc|object|item> <id> <x> <y> <plane> [type rotation|amount]");
+            return true;
+        }
+
+        final String kind = cmd[2].toLowerCase();
+        final int id;
+        final int x;
+        final int y;
+        final int plane;
+        try {
+            id = Integer.parseInt(cmd[3]);
+            x = Integer.parseInt(cmd[4]);
+            y = Integer.parseInt(cmd[5]);
+            plane = Integer.parseInt(cmd[6]);
+        } catch (NumberFormatException ex) {
+            player.getPackets().sendGameMessage("Dev spawn id and tile coordinates must be whole numbers.");
+            return true;
+        } catch (ArrayIndexOutOfBoundsException ex) {
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser devspawn <npc|object|item> <id> <x> <y> <plane> [type rotation|amount]");
+            return true;
+        }
+
+        if (id < 0 || x < 0 || x > 16383 || y < 0 || y > 16383 || plane < 0 || plane > 3) {
+            player.getPackets().sendGameMessage("Dev spawn id/tile is outside the supported Matrix3 world range.");
+            return true;
+        }
+
+        WorldTile tile = new WorldTile(x, y, plane);
+
+        if ("npc".equals(kind)) {
+            NPCDefinitions definition = NPCDefinitions.getNPCDefinitions(id);
+            if (definition == null || (definition.modelIds.length == 0 && !hasName(definition.name))) {
+                player.getPackets().sendGameMessage("Unable to spawn unknown NPC id " + id + ".");
+                return true;
+            }
+            NPC npc = World.spawnNPC(id, tile, -1, true, true);
+            if (npc == null) {
+                player.getPackets().sendGameMessage("Matrix3 could not spawn NPC id " + id + " on that tile.");
+                return true;
+            }
+            player.getPackets().sendGameMessage("Dev Mode spawned NPC " + displayName(definition.name, id)
+                    + " at " + x + ", " + y + ", " + plane + ".");
+            return true;
+        }
+
+        if ("object".equals(kind)) {
+            if (cmd.length < 9) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser devspawn object <id> <x> <y> <plane> <type> <rotation>");
+                return true;
+            }
+            final int type;
+            final int rotation;
+            try {
+                type = Integer.parseInt(cmd[7]);
+                rotation = Integer.parseInt(cmd[8]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Object type and rotation must be whole numbers.");
+                return true;
+            }
+            if (type < 0 || type > 22 || rotation < 0 || rotation > 3) {
+                player.getPackets().sendGameMessage("Object type must be 0-22 and rotation must be 0-3.");
+                return true;
+            }
+            ObjectDefinitions definition = ObjectDefinitions.getObjectDefinitions(id);
+            if (definition == null || (definition.modelIds == null && !hasName(definition.name))) {
+                player.getPackets().sendGameMessage("Unable to spawn unknown object id " + id + ".");
+                return true;
+            }
+            World.spawnObject(new WorldObject(id, type, rotation, tile));
+            player.getPackets().sendGameMessage("Dev Mode spawned object " + displayName(definition.name, id)
+                    + " at " + x + ", " + y + ", " + plane + ".");
+            return true;
+        }
+
+        if ("item".equals(kind)) {
+            if (cmd.length < 8) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser devspawn item <id> <x> <y> <plane> <amount>");
+                return true;
+            }
+            final int amount;
+            try {
+                amount = Integer.parseInt(cmd[7]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Ground item amount must be a whole number.");
+                return true;
+            }
+            if (amount <= 0) {
+                player.getPackets().sendGameMessage("Ground item amount must be greater than zero.");
+                return true;
+            }
+            ItemDefinitions definition = ItemDefinitions.getItemDefinitions(id);
+            if (definition == null || !definition.isLoaded() || !hasName(definition.name)) {
+                player.getPackets().sendGameMessage("Unable to spawn unknown item id " + id + ".");
+                return true;
+            }
+            World.addGroundItem(new Item(id, amount), tile, player, true, 180);
+            player.getPackets().sendGameMessage("Dev Mode spawned " + amount + " x " + definition.name
+                    + " at " + x + ", " + y + ", " + plane + ".");
+            return true;
+        }
+
+        player.getPackets().sendGameMessage("Dev spawn type must be npc, object, or item.");
+        return true;
+    }
+
+    private static boolean hasName(String name) {
+        return name != null && name.trim().length() > 0 && !"null".equalsIgnoreCase(name.trim());
+    }
+
+    private static String displayName(String name, int id) {
+        return hasName(name) ? name + " (" + id + ")" : "id " + id;
     }
 
     private static boolean processSettings(Player player, String[] cmd) {
