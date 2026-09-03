@@ -96,6 +96,8 @@ public class Class639 implements Interface18 {
 		anInterface72_8286 = interface72;
 		anInt8284 = Class241.method3324(((Class639) this).aClass248_8285, ((Class639) this).aClass220_8283, 2141346985) * -183956823;
 		((Class639) this).aClass127_8282 = new Class127(i);
+		if (interface72 instanceof Class452_Sub1)
+			ClientConsoleRotsBridge.registerGraphicsDefinitions(this);
 	}
 
 	public void method7575() {
