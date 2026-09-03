@@ -68,7 +68,7 @@ public final class CustomItemActions {
             if (backpack == null)
                 return true;
             if ("OPEN".equals(action)) {
-                if (context == Context.INVENTORY)
+                if (context == Context.INVENTORY || context == Context.BANK_INVENTORY)
                     backpack.openFromInventory(slotId, itemId);
                 else if (context == Context.EQUIPMENT)
                     backpack.openFromEquipment(slotId, itemId);
@@ -76,8 +76,13 @@ public final class CustomItemActions {
                     backpack.openFromBank(slotId, itemId);
                 return true;
             }
-            if ("EMPTY_TO_BANK".equals(action) && context == Context.BANK) {
-                backpack.emptyToBankFromBank(slotId, itemId);
+            if ("EMPTY_TO_BANK".equals(action)) {
+                if (context == Context.BANK)
+                    backpack.emptyToBankFromBank(slotId, itemId);
+                else if (context == Context.BANK_INVENTORY)
+                    backpack.emptyToBank();
+                else
+                    player.getPackets().sendGameMessage("This custom item action is not available here.");
                 return true;
             }
         }
@@ -88,7 +93,7 @@ public final class CustomItemActions {
     private static Item getClickedItem(Player player, Context context, int slotId) {
         if (slotId < 0)
             return null;
-        if (context == Context.INVENTORY)
+        if (context == Context.INVENTORY || context == Context.BANK_INVENTORY)
             return player.getInventory().getItem(slotId);
         if (context == Context.EQUIPMENT)
             return player.getEquipment().getItem(slotId);
@@ -106,6 +111,8 @@ public final class CustomItemActions {
         if ((interfaceId == 1462 && componentId == 14)
                 || (interfaceId == 1464 && componentId == 15))
             return Context.EQUIPMENT;
+        if (interfaceId == 762 && componentId == 7)
+            return Context.BANK_INVENTORY;
         if (interfaceId == 762 && componentId == 215)
             return Context.BANK;
         return null;
@@ -135,6 +142,8 @@ public final class CustomItemActions {
         if (packetId == WorldPacketsDecoder.ACTION_BUTTON6_PACKET) return 6;
         if (packetId == WorldPacketsDecoder.ACTION_BUTTON7_PACKET) return 7;
         if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET) return 8;
+        if (packetId == WorldPacketsDecoder.ACTION_BUTTON9_PACKET) return 9;
+        if (packetId == WorldPacketsDecoder.ACTION_BUTTON10_PACKET) return 10;
         return -1;
     }
 
@@ -237,7 +246,7 @@ public final class CustomItemActions {
     }
 
     private static enum Context {
-        INVENTORY, EQUIPMENT, BANK;
+        INVENTORY, EQUIPMENT, BANK, BANK_INVENTORY;
 
         private static Context forName(String value) {
             if (value == null)
