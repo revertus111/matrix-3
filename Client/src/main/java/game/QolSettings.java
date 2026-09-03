@@ -14,15 +14,17 @@ public final class QolSettings {
 
     private static final String KEY_SHIFT_CLICK_DROP = "shiftClickDrop";
     private static final Preferences PREFS = Preferences.userNodeForPackage(QolSettings.class).node("qol");
+    private static volatile boolean shiftClickDropEnabled = PREFS.getBoolean(KEY_SHIFT_CLICK_DROP, false);
 
     private QolSettings() {
     }
 
     public static boolean isShiftClickDropEnabled() {
-        return PREFS.getBoolean(KEY_SHIFT_CLICK_DROP, false);
+        return shiftClickDropEnabled;
     }
 
     public static void setShiftClickDropEnabled(boolean enabled) {
+        shiftClickDropEnabled = enabled;
         try {
             PREFS.putBoolean(KEY_SHIFT_CLICK_DROP, enabled);
             PREFS.flush();
@@ -37,7 +39,7 @@ public final class QolSettings {
      * normal Matrix3 menu selection should remain unchanged.
      */
     static Class572_Sub12_Sub10 resolveShiftClickDropEntry(Class675 entries) {
-        if (!isShiftClickDropEnabled() || !isShiftHeld() || entries == null)
+        if (!shiftClickDropEnabled || !isShiftHeld() || entries == null)
             return null;
 
         String dropLabel = Class279.aClass279_2964.method3758(Class594.aClass435_7823, 16711935);
