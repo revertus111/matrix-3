@@ -15,4 +15,4 @@
 - Disabled preset containers remain untouched and are excluded from carried-item accounting during load.
 - Rows 3-10 currently extrapolate the VERIFIED row 1/2 +49 component stride and remain HYPOTHESIS until mapper output confirms them at runtime.
 - The top Currently Equipped Quick 1/2 load arrows and dedicated bottom Beast of Burden row remain unmapped; their component IDs must be runtime-captured before wiring behavior.
-- Preset clipping investigation found Matrix3 mounts 579/577/627 while the Nocturne reference mounts 579/627/577. Swapping Backpack/Worn host order is the current clipping HYPOTHESIS and requires runtime verification rather than changing global interface scaling.
+- Preset-only layout now mounts 579/627/577 instead of 579/577/627, matching the Nocturne reference so the wider Backpack preview occupies the middle host slot. This clipping fix remains HYPOTHESIS until runtime verification; global interface scaling was not changed.
