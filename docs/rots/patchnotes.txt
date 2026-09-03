@@ -9,3 +9,9 @@
 - Recorded NPC 18542 as VERIFIED Guthan spearless/Impale state from runtime testing.
 - Kept NPCs 18546-18551 as HYPOTHESIS subdued/downed states pending runtime confirmation.
 - Recorded that the currently identified RoTS combat-family models render with Santa hats in this revision-830 cache/runtime.
+
+2026-09-03
+- Added Owner Console RoTS Deep Scan for focused BAS/render-set and GFX correlation without assigning unverified mechanic names.
+- Deep Scan resolves render sets 2687, 2689, 2690, 2982, and 2987 into raw cache opcode animation references and classifies targeted animation candidates by render-set membership.
+- Added read-only GFX-definition correlation against targeted/render-set animation IDs and known RoTS NPC model IDs.
+- Kept all Deep Scan work off the Swing event-dispatch thread and reused the existing Copy All workflow.
