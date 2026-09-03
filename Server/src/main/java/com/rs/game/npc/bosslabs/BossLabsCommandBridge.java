@@ -12,6 +12,8 @@ import com.rs.executor.GameExecutorManager;
 import com.rs.game.map.bossInstance.BossInstanceHandler;
 import com.rs.game.map.bossInstance.BossInstanceHandler.Boss;
 import com.rs.game.player.Player;
+import com.rs.game.tasks.WorldTask;
+import com.rs.game.tasks.WorldTasksManager;
 
 /**
  * Server-side BossLabs developer bridge carried over Matrix3's existing command
@@ -80,6 +82,10 @@ public final class BossLabsCommandBridge {
 			}
 			if ("applysaved".equals(action)) {
 				processApplySaved(player, cmd);
+				return true;
+			}
+			if ("testing".equals(action)) {
+				processTesting(player, cmd);
 				return true;
 			}
 			if ("rots".equals(action) || "riseofthesix".equals(action)) {
@@ -277,6 +283,63 @@ public final class BossLabsCommandBridge {
 		sendAction(player, requestId, applied, npcId,
 				applied ? "Re-applied the saved BossLabs definition." : "No saved BossLabs definition exists for this NPC.");
 		sendInspection(player, requestId, npcId);
+	}
+
+	private static void processTesting(final Player player, final String[] cmd) {
+		if (cmd.length < 5) {
+			sendAction(player, readRequestId(cmd, 2), false, -1,
+					"Testing requires a request id, operation, and BossLabs NPC id.");
+			return;
+		}
+		final int requestId = parseInt(cmd[2], "request id");
+		final String operation = cmd[3].toLowerCase();
+		final int npcId = parseInt(cmd[4], "NPC id");
+		if (!isTestingOperation(operation)) {
+			sendAction(player, requestId, false, npcId, "Unknown BossLabs testing operation: " + operation);
+			return;
+		}
+
+		WorldTasksManager.schedule(new WorldTask() {
+			@Override
+			public void run() {
+				try {
+					String message;
+					if ("spawn".equals(operation)) {
+						message = BossLabsTestingService.spawnBoss(player, npcId);
+					} else if ("reset".equals(operation)) {
+						message = BossLabsTestingService.resetEncounter(player, npcId);
+					} else if ("sethp".equals(operation)) {
+						if (cmd.length < 6)
+							throw new IllegalArgumentException("Set HP requires a percent.");
+						message = BossLabsTestingService.setHealthPercent(player, npcId,
+								parseInt(cmd[5], "health percent"));
+					} else if ("forcephase".equals(operation)) {
+						if (cmd.length < 6)
+							throw new IllegalArgumentException("Force Phase requires a phase id.");
+						message = BossLabsTestingService.forcePhase(player, npcId, decode(cmd[5]));
+					} else if ("forceattack".equals(operation)) {
+						if (cmd.length < 7)
+							throw new IllegalArgumentException("Force Attack requires phase and attack ids.");
+						message = BossLabsTestingService.triggerAttack(player, npcId, decode(cmd[5]), decode(cmd[6]));
+					} else if ("clearhazards".equals(operation)) {
+						message = BossLabsTestingService.clearHazards(player, npcId);
+					} else {
+						message = BossLabsTestingService.clearMinions(player, npcId);
+					}
+					sendAction(player, requestId, true, npcId, message);
+				} catch (RuntimeException e) {
+					sendAction(player, requestId, false, npcId, safeMessage(e));
+				} finally {
+					stop();
+				}
+			}
+		});
+	}
+
+	private static boolean isTestingOperation(String operation) {
+		return "spawn".equals(operation) || "reset".equals(operation) || "sethp".equals(operation)
+				|| "forcephase".equals(operation) || "forceattack".equals(operation)
+				|| "clearhazards".equals(operation) || "clearminions".equals(operation);
 	}
 
 	private static void processRiseOfTheSix(Player player, String[] cmd) {
