@@ -403,7 +403,7 @@ public final class BossCombatScript extends CombatScript {
 	}
 
 	private List<WorldTile> resolvePatternTiles(WorldTile origin, List<BossTileOffset> pattern) {
-		List<WorldTile> tiles = new ArrayList<BossTileOffset>(pattern.size());
+		List<WorldTile> tiles = new ArrayList<WorldTile>(pattern.size());
 		for (BossTileOffset offset : pattern)
 			tiles.add(origin.transform(offset.getX(), offset.getY(), 0));
 		return tiles;
