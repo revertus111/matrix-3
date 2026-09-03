@@ -1,0 +1,16 @@
+2026-09-03 - DirectX compatibility fallback
+
+verified-static
+- Matrix3 already contains the original Jagex DirectX renderer at toolkit id 3: Class106.method1888 -> Class322.method4116 -> Class106_Sub3_Sub1.
+- The DirectX renderer loads the existing jagdx native bridge and creates its device against the game Canvas; no replacement renderer or new graphics library was added.
+- Class665_Sub30 already prefers toolkit 3 on Windows by default.
+- Changed Class498 renderer-failure recovery so a failed toolkit 3 initialization retries toolkit 1 (the working OpenGL renderer) before the existing software fallback can take over.
+- Existing OpenGL and software renderer implementations are unchanged.
+
+RUNTIME VALIDATION PENDING
+- Start a clean Windows client and test toolkit 3 directly.
+- Confirm successful DirectX startup reports toolkit id 3 and renders the normal game scene.
+- Force or reproduce a toolkit 3 initialization failure and confirm recovery reaches toolkit id 1; if OpenGL also fails, confirm the existing software renderer still starts.
+
+Note
+- The Java source verifies the existing jagdx/IDirect3D backend, but this patch does not claim or introduce DirectX 11 specifically. Exact native Direct3D generation should be classified from the jagdx binary/runtime before labeling it DX9/DX11.
