@@ -17,9 +17,10 @@ public final class Inventory implements Serializable {
 
     private static final long serialVersionUID = 8842800123753277093L;
 
-    public static final int INVENTORY_SIZE = 36;
+    public static final int INVENTORY_SIZE = 28;
 
     private ItemsContainer<Item> items;
+    private Backpack backpack;
 
     private transient Player player;
     private transient double inventoryWeight;
@@ -28,25 +29,42 @@ public final class Inventory implements Serializable {
 
     public Inventory() {
 	items = new ItemsContainer<Item>(INVENTORY_SIZE, false);
+	backpack = new Backpack();
     }
 
     public void setPlayer(Player player) {
 	this.player = player;
-	ensureInventorySize();
+	if (backpack == null)
+	    backpack = new Backpack();
+	backpack.setPlayer(player);
+	normalizeInventorySize();
     }
 
-    private void ensureInventorySize() {
+    private void normalizeInventorySize() {
 	if (items == null) {
 	    items = new ItemsContainer<Item>(INVENTORY_SIZE, false);
 	    return;
 	}
-	if (items.getSize() >= INVENTORY_SIZE)
+	if (items.getSize() == INVENTORY_SIZE)
 	    return;
-	ItemsContainer<Item> oldItems = items;
-	ItemsContainer<Item> expandedItems = new ItemsContainer<Item>(INVENTORY_SIZE, false);
-	for (int slot = 0; slot < oldItems.getSize(); slot++)
-	    expandedItems.set(slot, oldItems.get(slot));
-	items = expandedItems;
+	if (items.getSize() < INVENTORY_SIZE) {
+	    ItemsContainer<Item> expanded = new ItemsContainer<Item>(INVENTORY_SIZE, false);
+	    for (int slot = 0; slot < items.getSize(); slot++)
+		expanded.set(slot, items.get(slot));
+	    items = expanded;
+	    return;
+	}
+
+	Item[] overflow = new Item[items.getSize() - INVENTORY_SIZE];
+	for (int slot = INVENTORY_SIZE; slot < items.getSize(); slot++)
+	    overflow[slot - INVENTORY_SIZE] = items.get(slot);
+	if (!backpack.migrateOverflow(overflow))
+	    return; // preserve the larger legacy container rather than risk item loss
+
+	ItemsContainer<Item> restored = new ItemsContainer<Item>(INVENTORY_SIZE, false);
+	for (int slot = 0; slot < INVENTORY_SIZE; slot++)
+	    restored.set(slot, items.get(slot));
+	items = restored;
     }
 
     public void init() {
@@ -59,7 +77,7 @@ public final class Inventory implements Serializable {
 	    player.getPackets().sendIComponentSettings(menu ? INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE,
 		    menu ? 15 : 34, -1, -1, 2097152);
 	    player.getPackets().sendIComponentSettings(menu ? INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE,
-		    menu ? 15 : 34, 0, items.getSize() - 1, 15302030);
+		    menu ? 15 : 34, 0, INVENTORY_SIZE - 1, 15302030);
 	    // player.getPackets().sendIComponentSettings(menu ?
 	    // INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE, menu ? 15 : 34, 0,
 	    // 27, 1536);
@@ -223,6 +241,10 @@ public final class Inventory implements Serializable {
 
     public ItemsContainer<Item> getItems() {
 	return items;
+    }
+
+    public Backpack getBackpack() {
+	return backpack;
     }
 
     public boolean hasFreeSlots() {
