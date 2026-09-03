@@ -28,3 +28,8 @@
 - Added period RoTS documentary evidence that all four melee brothers use a shared Spinning Attack and that Verac's Helicopter is a separate move, preventing those animations from being conflated.
 - Changed the immediate parity checkpoint to cross-test 21941 on Guthan, Torag, and Verac before any Hurricane gameplay patch.
 - Noted that targeted animation research should extend through at least 21947 because known RoTS/current-implementation special mappings now continue beyond the previous 21940 cutoff.
+- Runtime cross-testing confirmed animation 21941 produces the sustained shared weapon-spin presentation on Dharok, Guthan, Torag, and Verac.
+- Updated `RiseOfTheSixBrother` Hurricane to use animation 21941 instead of replaying each brother's normal attack emote.
+- Removed the fake per-pulse cardinal facing rotation from Hurricane; the verified spin animation now owns the visual rotation while the existing 10-pulse tracking/damage mechanic remains unchanged.
+- Starts 21941 once at Hurricane entry instead of restarting it every damage pulse, preserving the sequence for runtime duration verification.
+- Updated RoTS master status, animation evidence, and runtime test checklist around the integrated 21941 Hurricane slice.
