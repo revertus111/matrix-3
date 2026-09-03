@@ -5,7 +5,8 @@ import com.rs.game.player.CombatDefinitions;
 import com.rs.game.player.Player;
 
 /**
- * Owner-only server authority bridge for Client Console Item Browser actions.
+ * Owner-only server authority bridge for Client Console Item Browser and
+ * development settings actions.
  */
 public final class ItemBrowserCommandBridge {
 
@@ -135,14 +136,25 @@ public final class ItemBrowserCommandBridge {
         }
         int effectiveCombatMode = player.getCombatDefinitions().getCombatMode();
         player.switchLegacyMode();
-        player.getCombatDefinitions().setCombatMode(effectiveCombatMode);
+        setCombatMode(player, effectiveCombatMode);
     }
 
     private static void setCombatMode(Player player, int mode) {
-        player.getCombatDefinitions().setCombatMode(mode);
-        player.getCombatDefinitions().setDefaultAbilityMenu();
-        player.getCombatDefinitions().refreshShowCombatModeIcon();
-        player.getCombatDefinitions().refreshAllowAbilityQueueing();
+        CombatDefinitions definitions = player.getCombatDefinitions();
+        definitions.setCombatMode(mode);
+
+        boolean legacyCombat = mode == CombatDefinitions.LEGACY_COMBAT_MODE;
+        definitions.setMagicAbilityMenu(legacyCombat ? 0 : 1);
+        if (legacyCombat) {
+            // These two CombatDefinitions refreshers normally key off the original
+            // coupled Player.legacyMode flag. Reproduce their legacy-combat state
+            // explicitly while that master flag is intentionally false for NIS.
+            player.getVarsManager().sendVarBit(21686, 0);
+            player.getVarsManager().sendVarBit(21684, 1);
+        } else {
+            definitions.refreshShowCombatModeIcon();
+            definitions.refreshAllowAbilityQueueing();
+        }
     }
 
     /**
