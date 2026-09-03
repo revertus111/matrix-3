@@ -6,11 +6,11 @@ package game;
 
 public class Class92_Sub1 extends Class92 {
 	public Interface17 method460(int i, Interface18 interface18) {
-		return new AnimationDefinition(i, this);
+		return createDefinition(i, interface18);
 	}
 
 	public Interface17 method458(int i, Interface18 interface18, int i_0_) {
-		return new AnimationDefinition(i, this);
+		return createDefinition(i, interface18);
 	}
 
 	public Class method459(int i) {
@@ -18,24 +18,23 @@ public class Class92_Sub1 extends Class92 {
 	}
 
 	public Interface17 method464(int i, Interface18 interface18) {
-		return new AnimationDefinition(i, this);
+		return createDefinition(i, interface18);
 	}
 
 	public Interface17 method465(int i, Interface18 interface18) {
-		return new AnimationDefinition(i, this);
+		return createDefinition(i, interface18);
 	}
 
 	public Interface17 method462(int i, Interface18 interface18) {
-		return new AnimationDefinition(i, this);
+		return createDefinition(i, interface18);
 	}
 
 	public Interface17 method463(int i, Interface18 interface18) {
-		return new AnimationDefinition(i, this);
+		return createDefinition(i, interface18);
 	}
 
 	Class92_Sub1(Interface18 interface18, Class248 class248, Class248 class248_1_) {
 		super(interface18, class248, class248_1_);
-		ClientConsoleRotsBridge.registerAnimationDefinitions(interface18);
 	}
 
 	public Class method467() {
@@ -48,5 +47,10 @@ public class Class92_Sub1 extends Class92 {
 
 	public Class method466() {
 		return AnimationDefinition.class;
+	}
+
+	private AnimationDefinition createDefinition(int id, Interface18 definitions) {
+		ClientConsoleRotsBridge.registerAnimationDefinitions(definitions);
+		return new AnimationDefinition(id, this);
 	}
 }
