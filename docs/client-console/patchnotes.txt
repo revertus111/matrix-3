@@ -39,3 +39,7 @@
 - Moved Client Console command/thumbnail queue draining onto Class514.method6093(...), a callsite directly invoked by the logged-in client loop, and removed the earlier unverified Class572_Sub12_Sub17 hook so queued Item Browser and Commands actions have a live client-cycle sender.
 - Changed Item Browser result interaction so single left-click only selects an item; spawning now requires the Inventory/Bank quantity controls, right-click spawn actions, preset actions, or a double left-click quick-spawn of one item to Inventory.
 - Changed Item Browser non-preset result ordering from alphabetical name order to ascending item ID so the normal browse/search list runs from the lowest usable ID, including ID 0 when defined, upward.
+- Added a read-only RoTS cache-research card to Owner with Scan RoTS, Copy All, and Clear controls plus a scrollable monospaced output box.
+- Added ClientConsoleRotsBridge and narrow definition-factory registration hooks so Owner can inspect live Matrix3 NPC/animation definitions without a standalone Java main or server command path.
+- RoTS scanning runs on a daemon worker thread and only returns completed text to Swing, avoiding full cache research work on the event-dispatch thread.
+- The focused dump covers NPCs 18538-18551 plus animation neighborhoods 17960-18040 and 21920-21940, including models, render emotes, known params, frame durations/IDs, hand overrides, and handled-sound data.
