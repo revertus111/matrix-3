@@ -1,27 +1,36 @@
 Rise of the Six GFX / spot-animation research
 
-No GFX IDs are classified to mechanics yet.
+Record cache/runtime/source-supported mappings only. Current implementation usage is not automatically authentic RuneScape parity.
+
+Current implementation mappings
+- 4411 - current Guthan spear projectile ID in `RiseOfTheSixBrother` - verified-static current implementation mapping.
+- 4411 - current Guthan bleed GFX - verified-static current implementation mapping.
+- 4407 - current secondary Guthan bleed GFX - verified-static current implementation mapping.
+- 4413 - current empty-side empowerment/hop GFX - verified-static current implementation mapping; exact live hop visual/spacing remains unverified.
+- 4406 - donor-backed Dharok Greatest Axe candidate that was runtime-rejected in this revision-830 cache because it rendered as an incorrect huge cyan lightning/sphere effect. Do not reuse it as the Greatest Axe visual without new evidence.
 
 Owner Console Deep Scan
-- Reads Matrix3 GraphicsDefinition entries through the live GFX definition loader.
+- Reads Matrix3 GraphicsDefinition entries through the live/read-only GFX definition path.
 - Correlates GFX whose explicit animation ID matches a targeted RoTS/render-set animation reference.
 - Also reports GFX whose model ID directly matches a currently known RoTS NPC model.
 - Correlation is verified-static evidence of a cache relationship only; it does not prove which RoTS mechanic uses that GFX.
 
-Track candidates for:
-- Hurricane / Whirlwind visuals
-- Greatest Axe visuals
-- Impale / spear visuals
-- Torag special visuals
-- Verac special visuals
-- Ahrim fire/shadow visuals
-- Karil lightning/bomb/dash visuals
-- portals / shadow realm effects
-- encounter/environment effects
+Highest-priority unresolved GFX/visuals
+- Hurricane / Whirlwind visuals.
+- Greatest Axe correct revision-830 visual.
+- Authentic subdued/kneeling presentation if it requires GFX in addition to animation.
+- Wall Slam visual sequence.
+- Verac special visuals.
+- Ahrim fire/shadow visuals.
+- Karil lightning/bomb/dash visuals.
+- Brother Throw flight/landing visuals.
+- portals / shadow realm effects.
+- encounter/environment effects.
 
 For each entry record:
 - GFX ID
 - linked model/animation IDs if statically available
+- current implementation usage, if any
 - mechanic hypothesis
 - evidence label
 - runtime/video confirmation notes
