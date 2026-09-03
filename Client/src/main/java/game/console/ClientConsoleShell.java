@@ -8,6 +8,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -187,6 +188,8 @@ public final class ClientConsoleShell extends JPanel {
         content.add(Box.createVerticalStrut(12));
         content.add(createWorkspaceCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createCacheEditorCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createBossLabsCard());
         content.add(Box.createVerticalGlue());
 
@@ -262,6 +265,38 @@ public final class ClientConsoleShell extends JPanel {
         });
         card.add(Box.createVerticalStrut(10));
         card.add(resetLayoutButton);
+        return card;
+    }
+
+    private JPanel createCacheEditorCard() {
+        JPanel card = createInfoCard(
+                "Cache development",
+                "Open the server-side RS3 CacheEditor without coupling Client code to Server classes.",
+                "The editor runs in its own process and keeps its normal cache-directory picker.");
+
+        final JLabel launchStatus = new JLabel("Ready");
+        launchStatus.setFont(ConsoleTheme.SMALL_FONT);
+        launchStatus.setForeground(ConsoleTheme.MUTED_TEXT);
+        launchStatus.setAlignmentX(LEFT_ALIGNMENT);
+
+        JButton openButton = new JButton("Open RS3 CacheEditor");
+        openButton.setAlignmentX(LEFT_ALIGNMENT);
+        openButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        ConsoleTheme.styleButton(openButton);
+        openButton.addActionListener(e -> {
+            try {
+                launchStatus.setText(CacheEditorProcessLauncher.open()
+                        ? "CacheEditor launch requested."
+                        : "CacheEditor is already running.");
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                launchStatus.setText("CacheEditor launch failed; see client console output.");
+            }
+        });
+        card.add(Box.createVerticalStrut(10));
+        card.add(openButton);
+        card.add(Box.createVerticalStrut(8));
+        card.add(launchStatus);
         return card;
     }
 
