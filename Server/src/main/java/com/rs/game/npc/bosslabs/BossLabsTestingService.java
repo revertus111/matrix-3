@@ -61,9 +61,6 @@ public final class BossLabsTestingService {
 	}
 
 	public static String resetEncounter(Player player, int npcId) {
-		requirePlayer(player);
-		requireLiveDefinition(npcId);
-		removeCurrentTestBoss(player);
 		return spawnBoss(player, npcId).replace("Spawned", "Reset and spawned");
 	}
 
@@ -177,7 +174,7 @@ public final class BossLabsTestingService {
 					stop();
 					return;
 				}
-				if (player.hasFinished()) {
+				if (player.hasFinished() || !BossDefinitionRegistry.isRegistered(boss.getId())) {
 					TEST_BOSSES.remove(player);
 					removeWatcher(player, this);
 					BossEncounterRuntime.finishEncounter(boss);
