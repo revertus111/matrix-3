@@ -5,8 +5,6 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -43,8 +41,6 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     private final JButton clearHazardsButton = new JButton("Clear Hazards");
     private final JButton clearMinionsButton = new JButton("Clear Minions");
 
-    private final Set<Integer> pendingRequests = new HashSet<Integer>();
-
     private int selectedNpcId = -1;
     private boolean liveBossLabsDefinition;
 
@@ -74,7 +70,6 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     public void setSelection(int npcId, boolean liveBossLabs) {
         selectedNpcId = npcId;
         liveBossLabsDefinition = liveBossLabs && npcId >= 0;
-        pendingRequests.clear();
         status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText(liveBossLabsDefinition
                 ? "Ready. Spawn a controlled test copy of this BossLabs boss near your player."
@@ -85,14 +80,15 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     public void clearSelection() {
         selectedNpcId = -1;
         liveBossLabsDefinition = false;
-        pendingRequests.clear();
         status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText("Select a live BossLabs definition to enable encounter testing.");
         updateEnabledState();
     }
 
     public boolean handleActionResult(BossLabsClientBridge.ActionResult result) {
-        if (result == null || !pendingRequests.remove(Integer.valueOf(result.getRequestId())))
+        if (result == null)
+            return false;
+        if (result.getNpcId() >= 0 && selectedNpcId >= 0 && result.getNpcId() != selectedNpcId)
             return false;
         status.setForeground(result.isSuccess() ? ConsoleTheme.ACCENT : ConsoleTheme.MUTED_TEXT);
         status.setText(result.getMessage());
@@ -217,7 +213,6 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     }
 
     private void send(int requestId, String message) {
-        pendingRequests.add(Integer.valueOf(requestId));
         status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText(message);
     }
