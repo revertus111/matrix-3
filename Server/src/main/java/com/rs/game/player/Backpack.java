@@ -30,6 +30,7 @@ public final class Backpack implements Serializable {
 
     private transient Player player;
     private transient boolean open;
+    private transient int accessItemId = -1;
 
     public Backpack() {
         items = new ItemsContainer<Item>(CAPACITY, false);
@@ -39,6 +40,7 @@ public final class Backpack implements Serializable {
         this.player = player;
         ensureCapacity();
         open = false;
+        accessItemId = -1;
     }
 
     private void ensureCapacity() {
@@ -61,6 +63,10 @@ public final class Backpack implements Serializable {
         return cape != null && cape.getId() == ITEM_ID;
     }
 
+    /**
+     * Owner-console fallback kept intentionally equipment-only. Normal contextual
+     * access is validated by openFromInventory/openFromEquipment/openFromBank.
+     */
     public void open() {
         if (player == null)
             return;
@@ -68,14 +74,47 @@ public final class Backpack implements Serializable {
             player.getPackets().sendGameMessage("Equip the Rambler's backpack before opening it.");
             return;
         }
+        openInternal(ITEM_ID);
+    }
+
+    public void openFromInventory(int slotId, int itemId) {
+        if (player == null)
+            return;
+        Item item = player.getInventory().getItem(slotId);
+        if (item == null || item.getId() != itemId)
+            return;
+        openInternal(itemId);
+    }
+
+    public void openFromEquipment(int slotId, int itemId) {
+        if (player == null)
+            return;
+        Item item = player.getEquipment().getItem(slotId);
+        if (item == null || item.getId() != itemId)
+            return;
+        openInternal(itemId);
+    }
+
+    public void openFromBank(int fakeSlot, int itemId) {
+        if (player == null)
+            return;
+        Item item = player.getBank().getItem(player.getBank().getRealSlot(fakeSlot));
+        if (item == null || item.getId() != itemId)
+            return;
+        openInternal(itemId);
+    }
+
+    private void openInternal(int itemId) {
         player.stopAll();
         player.getInterfaceManager().sendCentralInterface(STORAGE_INTERFACE);
         player.getInterfaceManager().sendInventoryInterface(INVENTORY_INTERFACE);
+        accessItemId = itemId;
         open = true;
         player.setCloseInterfacesEvent(new Runnable() {
             @Override
             public void run() {
                 open = false;
+                accessItemId = -1;
             }
         });
         sendItems();
@@ -83,9 +122,22 @@ public final class Backpack implements Serializable {
     }
 
     public boolean isOpen() {
-        return open && player != null && isEquipped()
+        return open && player != null && hasAccessItem(accessItemId)
                 && player.getInterfaceManager().containsInterface(STORAGE_INTERFACE)
                 && player.getInterfaceManager().containsInterface(INVENTORY_INTERFACE);
+    }
+
+    private boolean hasAccessItem(int itemId) {
+        if (player == null || itemId < 0)
+            return false;
+        if (player.getInventory().containsOneItem(itemId))
+            return true;
+        for (int slot = 0; slot < player.getEquipment().getItems().getSize(); slot++) {
+            Item item = player.getEquipment().getItem(slot);
+            if (item != null && item.getId() == itemId)
+                return true;
+        }
+        return player.getBank().containsItem(itemId);
     }
 
     public boolean processButtonClick(int interfaceId, int componentId, int slotId, int packetId) {
@@ -219,6 +271,59 @@ public final class Backpack implements Serializable {
         }
         items.shift();
         sendItems();
+    }
+
+    public void emptyToBankFromBank(int fakeSlot, int itemId) {
+        if (player == null)
+            return;
+        Item accessItem = player.getBank().getItem(player.getBank().getRealSlot(fakeSlot));
+        if (accessItem == null || accessItem.getId() != itemId)
+            return;
+        emptyToBank();
+    }
+
+    /**
+     * Moves only successfully banked quantities out of player-owned Backpack
+     * storage. The physical access item remains wherever it already is.
+     */
+    public void emptyToBank() {
+        if (player == null)
+            return;
+        boolean movedAnything = false;
+        boolean full = false;
+        for (int slot = 0; slot < items.getSize(); slot++) {
+            Item item = items.get(slot);
+            if (item == null)
+                continue;
+            int before = getBankAmount(item.getId());
+            player.getBank().addItem(item.getId(), item.getAmount(), true);
+            int after = getBankAmount(item.getId());
+            int moved = after - before;
+            if (moved <= 0) {
+                full = true;
+                break;
+            }
+            movedAnything = true;
+            if (moved >= item.getAmount())
+                items.set(slot, null);
+            else {
+                items.set(slot, new Item(item.getId(), item.getAmount() - moved));
+                full = true;
+                break;
+            }
+        }
+        items.shift();
+        if (open)
+            sendItems();
+        if (full)
+            player.getPackets().sendGameMessage("Your bank does not have enough space for all backpack items.");
+        else if (movedAnything)
+            player.getPackets().sendGameMessage("You empty your backpack into your bank.");
+    }
+
+    private int getBankAmount(int itemId) {
+        Item item = player.getBank().getItem(itemId);
+        return item == null ? 0 : item.getAmount();
     }
 
     /**
