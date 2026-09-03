@@ -139,5 +139,9 @@ Cleanup / regression
 110. Owner/admin: start RoTS, leave/reopen setup and Start again before the hour expires; confirm a fresh instance is created while preserving the same UTC day's starting formation.
 111. Confirm normal players retain original cached private-instance reuse/rejoin behavior.
 
+Subdued presentation regression
+112. Subdue any brother and confirm the NPC remains visibly present and non-interactable at the same arena tile instead of disappearing when the lethal hit resolves. The current checkpoint holds the shell at 1 HP and plays the NPC's existing death/down emote; verify whether that emote visually produces the expected kneeling pose.
+113. Queue delayed damage/projectiles before subdual so hits land after the brother is already subdued. Confirm those late hits are reduced to 0, the brother remains visible, and the revive timer still restores the same NPC to 25,000 HP rather than creating a replacement spawn.
+
 100% fidelity gate
-112. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, exact side-hop landing/barrier blockers, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
+114. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, exact side-hop landing/barrier blockers, exact persistent kneeling presentation, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
