@@ -1,36 +1,55 @@
 Rise of the Six animation research
 
-Record only cache/runtime-supported mappings.
+Record cache/runtime/source-supported mappings only. Distinguish current implementation usage from authentic RuneScape parity.
 
 Known render/state clues
 - Ahrim 18538 renderEmote: 2687 - verified-static.
-- Ahrim 18539 flying renderEmote: 2987 - VERIFIED state association; its stand/walk/run all resolve to animation 21931 in the server cache scan.
+- Ahrim 18539 flying renderEmote: 2987 - VERIFIED state association; stand/walk/run resolve to animation 21931 in the cache scan.
 - Dharok 18540 renderEmote: 2689 - verified-static.
 - Guthan 18541 renderEmote: 2690 - verified-static.
 - Guthan 18542 spearless renderEmote: 2687 - VERIFIED state association.
 - Karil 18543 renderEmote: 2687 - verified-static.
 - Torag 18544 renderEmote: 2689 - verified-static.
 - Verac 18545 renderEmote: 2689 - verified-static.
-- NPCs 18546-18551 use renderEmote 2982 - HYPOTHESIS subdued/downed render set until runtime-confirmed.
+- NPCs 18546-18551 use renderEmote 2982 - verified-static cache relation only. Their authentic intended role remains HYPOTHESIS and current runtime use as subdued models is rejected because they render invisibly.
 
-Focused animation neighborhoods
-- 17960-18040: scan as the primary RoTS-era animation neighborhood around the brothers' render/state data.
-- 21920-21940: scan around animation 21931, which is associated with VERIFIED flying Ahrim state.
-- Owner Console -> RoTS cache research dumps populated definitions in both ranges with frame durations, frame IDs, total cache duration, priority, hand-item overrides, and handled-sound data.
-- Owner Console -> Deep Scan resolves render sets 2687, 2689, 2690, 2982, and 2987 into raw BAS/cache opcode animation references.
-- Deep Scan classifies targeted candidates by whether a known RoTS render set references them; this is intended to separate locomotion/render-state animations from stronger special-mechanic candidates.
-- Numeric proximity alone is not evidence that an animation belongs to RoTS; mechanic names remain UNKNOWN until runtime/video evidence confirms them.
+Current implementation animation mappings
+These are verified-static mappings from the current RoTS source. They identify what our implementation currently does; they are not automatically authentic 1:1 RuneScape mappings.
 
-Special animations still requiring runtime identification
-- Hurricane / Whirlwind: UNKNOWN.
-- Dharok Greatest Axe: UNKNOWN.
-- Torag special: UNKNOWN.
-- Guthan Impale throw/retrieve animations: UNKNOWN; NPC 18542 spearless state itself is VERIFIED.
-- Verac special: UNKNOWN.
-- Ahrim special animations beyond flying state 21931: UNKNOWN.
-- Karil specials: UNKNOWN.
+- 21914 - current brother revival animation in `RiseOfTheSixInstance`.
+- 21925 - current flying-Ahrim normal magic attack animation.
+- 21933 - current Torag Whack/Pummel opening animation.
+- 21934 - current Torag victim/grab animation.
+- 21935 - current Torag repeated pummel animation.
+- 21938 - current Torag victim release/recovery animation.
+- 21940 - current Dharok Greatest Axe/charge animation.
+- 21944 - current Guthan spear-throw animation.
+- 21945 - current Guthan impaled-victim animation.
+- 21947 - current Guthan spear-retrieval animation.
 
-For each candidate record:
+Other current normal-attack mappings
+- 18288 - current ground-Ahrim magic attack animation.
+- 18232 - current Karil ranged attack animation.
+- Melee brothers otherwise use their NPC combat-definition attack emote for normal melee autos.
+
+Known approximations / unresolved animation parity
+- Hurricane / Whirlwind: UNKNOWN authentic animation. Current implementation replays the normal melee attack emote while rotating facing each pulse.
+- Wall Slam: UNKNOWN authentic animation. Current implementation uses the normal melee attack emote for launch/landing phases.
+- Dharok Greatest Axe: current implementation uses 21940; authentic animation/timing still needs runtime/video verification.
+- Torag Whack/Pummel: current implementation uses 21933/21934/21935/21938; exact timing/authenticity still needs runtime/video verification.
+- Guthan Impale: current implementation uses 21944/21945/21947; exact timing/authenticity still needs runtime/video verification.
+- Authentic subdued/kneeling animation: UNKNOWN.
+- Verac authentic special animation(s): UNKNOWN.
+- Ahrim authentic specials beyond the VERIFIED flying state: UNKNOWN.
+- Karil authentic specials: UNKNOWN.
+
+Focused research strategy
+- Owner Console -> Deep Scan resolves render sets 2687, 2689, 2690, 2982, and 2987 into raw BAS/cache animation references.
+- Use the current implementation mappings above to remove already-accounted-for animations from unknown-special candidate lists.
+- Numeric proximity alone is not evidence that an animation belongs to RoTS.
+- Prioritize authentic Hurricane identification next because it is shared by multiple melee brothers and is currently an explicit approximation.
+
+For each new candidate record:
 - animation ID
 - frame count
 - total cache duration
@@ -38,5 +57,6 @@ For each candidate record:
 - handled sounds when relevant
 - known render-set membership
 - linked GFX definitions when statically available
+- current implementation usage, if any
 - evidence label
-- runtime confirmation notes
+- runtime/video confirmation notes
