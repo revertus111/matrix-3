@@ -4,7 +4,6 @@ import game.ClientConsoleBridge;
 
 import java.awt.Dimension;
 import java.awt.event.HierarchyEvent;
-import java.util.prefs.Preferences;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -19,24 +18,19 @@ import javax.swing.Timer;
 /**
  * Client Console controls for the Matrix3 combat/interface mode split.
  *
- * The selected combination is stored locally so the console can restore it on a
- * later login. Server-side Matrix3 state remains authoritative once the queued
- * commands are processed.
+ * The selected combination is stored by ConsolePreferences so the console can
+ * restore it on a later login. Server-side Matrix3 state remains authoritative
+ * once the queued commands are processed.
  */
 public final class SettingsPanel extends JScrollPane {
 
     private static final long serialVersionUID = 2136284824815349007L;
 
-    private static final String KEY_LEGACY_COMBAT = "legacyCombat";
-    private static final String KEY_LEGACY_INTERFACE = "legacyInterface";
-
-    private static final Preferences PREFS =
-            Preferences.userNodeForPackage(SettingsPanel.class).node("mode-settings");
-
     private final JToggleButton legacyCombatButton = new JToggleButton();
     private final JToggleButton legacyInterfaceButton = new JToggleButton();
-    private final JLabel status = new JLabel("Saved locally. Log in to apply the selected combination.");
+    private final JLabel status = new JLabel("Choose a mode combination, then apply it while logged in.");
 
+    private boolean hasSavedCombination;
     private boolean appliedWhileShowing;
     private final Timer loginApplyTimer = new Timer(750, e -> refreshLoginApplyState());
 
@@ -56,8 +50,9 @@ public final class SettingsPanel extends JScrollPane {
         subtitle.setForeground(ConsoleTheme.ACCENT);
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
 
-        legacyCombatButton.setSelected(PREFS.getBoolean(KEY_LEGACY_COMBAT, false));
-        legacyInterfaceButton.setSelected(PREFS.getBoolean(KEY_LEGACY_INTERFACE, false));
+        hasSavedCombination = ConsolePreferences.hasModeSelection();
+        legacyCombatButton.setSelected(ConsolePreferences.isLegacyCombatSelected());
+        legacyInterfaceButton.setSelected(ConsolePreferences.isLegacyInterfaceSelected());
         configureToggle(legacyCombatButton, true);
         configureToggle(legacyInterfaceButton, false);
         updateToggleLabels();
@@ -92,8 +87,8 @@ public final class SettingsPanel extends JScrollPane {
     private JPanel createModeCard() {
         JPanel card = createCard("Game modes");
 
-        JLabel description = new JLabel("<html>Combat and interface mode are independent here.<br>"
-                + "For Legacy combat with the modern NIS interface: turn Legacy combat ON and Legacy interface OFF.</html>");
+        JLabel description = new JLabel("<html><div style='width:240px'>Combat and interface mode are independent here.<br>"
+                + "For Legacy combat with the modern NIS interface: turn Legacy combat ON and Legacy interface OFF.</div></html>");
         description.setFont(ConsoleTheme.SMALL_FONT);
         description.setForeground(ConsoleTheme.MUTED_TEXT);
         description.setAlignmentX(LEFT_ALIGNMENT);
@@ -113,8 +108,8 @@ public final class SettingsPanel extends JScrollPane {
         status.setForeground(ConsoleTheme.ACCENT);
         status.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel note = new JLabel("<html>The in-game Legacy Mode checkbox is still Matrix3's original combined switch. "
-                + "Applying these controls normalizes that combined state and restores the split selection.</html>");
+        JLabel note = new JLabel("<html><div style='width:240px'>The in-game Legacy Mode checkbox is still Matrix3's original combined switch. "
+                + "Applying these controls normalizes that combined state and restores the split selection.</div></html>");
         note.setFont(ConsoleTheme.SMALL_FONT);
         note.setForeground(ConsoleTheme.MUTED_TEXT);
         note.setAlignmentX(LEFT_ALIGNMENT);
@@ -170,8 +165,10 @@ public final class SettingsPanel extends JScrollPane {
     }
 
     private void savePreferences() {
-        PREFS.putBoolean(KEY_LEGACY_COMBAT, legacyCombatButton.isSelected());
-        PREFS.putBoolean(KEY_LEGACY_INTERFACE, legacyInterfaceButton.isSelected());
+        ConsolePreferences.saveModeSelection(
+                legacyCombatButton.isSelected(),
+                legacyInterfaceButton.isSelected());
+        hasSavedCombination = true;
     }
 
     private String combatCommand() {
@@ -219,6 +216,10 @@ public final class SettingsPanel extends JScrollPane {
     }
 
     private void refreshLoginApplyState() {
+        if (!hasSavedCombination) {
+            status.setText("Choose a mode combination, then apply it while logged in.");
+            return;
+        }
         if (!ClientConsoleBridge.hasLocalPlayer()) {
             appliedWhileShowing = false;
             status.setText("Waiting for login. The selected combination is saved locally.");
