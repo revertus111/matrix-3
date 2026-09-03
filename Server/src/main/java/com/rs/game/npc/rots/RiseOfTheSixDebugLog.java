@@ -229,7 +229,7 @@ public final class RiseOfTheSixDebugLog {
 				tick++;
 				snapshot();
 			}
-		}, 0, 1);
+		}, 0, 0);
 	}
 
 	private void snapshot() {
