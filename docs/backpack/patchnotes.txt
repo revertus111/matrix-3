@@ -3,10 +3,13 @@
 - Backpack capacity is 30 slots and uses its own item container key 531; familiar BeastOfBurden container key 530 and familiar ownership remain unchanged.
 - Reused the proven BoB interfaces 671/665 for storage/inventory presentation without creating a fake familiar.
 - Added Store/Store-5/Store-10/Store-All and Withdraw/Withdraw-5/Withdraw-10/Withdraw-All handling plus Take All.
-- Backpack contents persist with the player even while unequipped, but the storage interface only operates while item 21445 is equipped in the cape/back slot.
-- Added equipment-interface secondary-action routing to open the backpack and an owner-only `::itembrowser backpack open` test bridge; Commands.java remains untouched.
+- Initial slice required 21445 to be equipped; contextual access is now config-driven and validates the clicked 21445 from inventory, equipment, or bank before opening the same player-owned Backpack container.
+- Kept owner fallback `::itembrowser backpack open` equipment-only for a predictable debug path; Commands.java remains untouched.
 - Prevented storing item 21445 inside its own backpack and kept transfer checks transactional around available inventory/backpack space.
 - Item 21445 cache wear-slot/model behavior still requires runtime verification; the server does not rewrite its cache definition in this slice.
 - Locked in the death-persistence invariant: Backpack contents are character-owned persistent storage, are not enumerated by the normal inventory/equipment death-drop lists, and are intentionally not cleared by `Inventory.reset()`.
-- The physical Rambler's backpack item may still be kept or dropped according to the active game-mode death policy; losing the item only removes access until the player equips another/recovered backpack, while the stored contents remain attached to that player.
-- Main-game keep-all versus Hardcore drop-on-death policy is intentionally left for the separate game-mode death-rules slice; this patch only guarantees Backpack contents survive either policy.
+- The physical Rambler's backpack item may still be kept or dropped according to the active game-mode death policy; losing the item only removes access until the player has a Rambler's backpack again, while the stored contents remain attached to that player.
+- Added transactional `emptyToBank` behavior that moves only quantities successfully accepted by Bank and never moves the physical access item.
+- Rambler's backpack context actions are now defined by `data/items/custom-item-actions.properties` rather than item-id checks in the generic click router.
+- Inventory Option 4 and Equipment Option 1 are configured as `Open`; Bank Option 7 is configured as `Open` pending runtime confirmation that the bank client presents the per-item equipped-option label.
+- `EMPTY_TO_BANK` server behavior is implemented but its bank option remains disabled in config until a verified per-item bank-menu label hook exists; no stock bank label is silently repurposed.
