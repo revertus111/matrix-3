@@ -439,7 +439,8 @@ public final class RiseOfTheSixBrother extends NPC {
 		int eligibleCount = 0;
 		for (Player player : instance.getPlayers()) {
 			if (player == null || player == primaryTarget || !isValidSpecialTarget(player)
-					|| player.getPlane() != getPlane())
+					|| player.getPlane() != getPlane()
+					|| !instance.isPlayerOnBrotherSide(player, this))
 				continue;
 			eligibleCount++;
 			if (Utils.random(eligibleCount) == 0)
@@ -447,11 +448,14 @@ public final class RiseOfTheSixBrother extends NPC {
 		}
 
 		/*
-		 * Classic behavior prefers a non-primary player on Guthan's side. Side
-		 * ownership is not implemented yet; when no secondary victim exists the
-		 * documented fallback is to throw the spear at his current target.
+		 * Classic behavior prefers a non-primary player on Guthan's current side.
+		 * If none exists, his current target is only valid when it is also on the
+		 * same side. This prevents the temporary midpoint model from creating a
+		 * cross-portal Impale while portal collision is still being completed.
 		 */
-		return selected != null ? selected : primaryTarget;
+		if (selected != null)
+			return selected;
+		return instance.isPlayerOnBrotherSide(primaryTarget, this) ? primaryTarget : null;
 	}
 
 	private void startGuthanBleedTask(final Player victim, final int generation) {
@@ -546,6 +550,27 @@ public final class RiseOfTheSixBrother extends NPC {
 	public void onPlayerPummeled(Player victim) {
 		if (brother == Brother.GUTHAN && guthanSpearAway && guthanImpaleVictim == victim)
 			clearGuthanImpale(true);
+	}
+
+	/**
+	 * Clears brother-owned special state and relocates this active brother as part
+	 * of the encounter-owned empty-side empowerment hop. GFX 4413 is donor-backed
+	 * for the RoTS transition; exact live hop animation/landing spacing is still a
+	 * runtime fidelity item.
+	 */
+	public void moveForSideEmpowerment(WorldTile destination) {
+		if (destination == null || subdued || hasFinished())
+			return;
+		boolean preserveReviveHurricane = forceReviveHurricane;
+		resetSpecialState();
+		forceReviveHurricane = preserveReviveHurricane;
+		resetWalkSteps();
+		getCombat().removeTarget();
+		setNextGraphics(new Graphics(4413));
+		setNextWorldTile(new WorldTile(destination));
+		setCantInteract(false);
+		setForceAgressive(true);
+		setForceFollowClose(true);
 	}
 
 	private void clearGuthanImpale(boolean retargetPrimary) {
