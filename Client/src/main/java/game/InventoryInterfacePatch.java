@@ -5,7 +5,7 @@ package game;
  *
  * Runtime evidence confirms the server/client container accepts slots 29-36,
  * while the stock NIS inventory components still expose only the original
- * seven visual rows. Keep the cache definitions untouched and extend only the
+ * 28 visual slots. Keep the cache definitions untouched and extend only the
  * two known inventory components after their interface groups are loaded.
  */
 public final class InventoryInterfacePatch {
@@ -15,11 +15,12 @@ public final class InventoryInterfacePatch {
     private static final int INVENTORY_MENU_INTERFACE = 1474;
     private static final int INVENTORY_MENU_COMPONENT = 15;
 
-    /* Two additional 36px row pitches: 4 x 7 -> 4 x 9 (36 slots). */
-    private static final int EXTRA_GRID_HEIGHT = 72;
+    private static final int EXTRA_GRID_ROWS = 2;
+    private static final int EXTRA_PIXEL_HEIGHT = 72;
 
-    /* InterfaceDefinitions.method1100 stores raw height using this encoder. */
+    /* InterfaceDefinitions.method1100 raw-height encoder and its modular inverse. */
     private static final int RAW_HEIGHT_ENCODER = 200498991;
+    private static final int RAW_HEIGHT_DECODER = 1647331279;
 
     private static InterfaceDefinitions patchedInventoryComponent;
     private static InterfaceDefinitions patchedMenuInventoryComponent;
@@ -66,7 +67,21 @@ public final class InventoryInterfacePatch {
             return alreadyPatched;
         }
 
-        component.anInt761 += EXTRA_GRID_HEIGHT * RAW_HEIGHT_ENCODER;
+        int rawHeight = component.anInt761 * RAW_HEIGHT_DECODER;
+        if (rawHeight <= 0) {
+            return alreadyPatched;
+        }
+
+        /*
+         * Type-2 style inventory grids use the generic raw-height field as a row
+         * count (normally 7). Pixel-sized NIS containers use the same field as
+         * geometry. Support both representations without touching unrelated
+         * component fields.
+         */
+        int expandedHeight = rawHeight <= 16
+                ? rawHeight + EXTRA_GRID_ROWS
+                : rawHeight + EXTRA_PIXEL_HEIGHT;
+        component.anInt761 = expandedHeight * RAW_HEIGHT_ENCODER;
         return component;
     }
 }
