@@ -19,6 +19,28 @@ Tooling / cache research
 [ ] Click Copy All and confirm the entire dump, including off-screen text, is copied in one operation.
 [ ] Resize Owner down to the narrowest supported console width and confirm Account values, Scan RoTS, Deep Scan, Copy All, Clear, output area, and wrapped note remain visible.
 
+Fight Recorder runtime
+[ ] Eclipse/Java 8 clean-build the Server with `RiseOfTheSixDebugLog` present and confirm normal non-RoTS login/gameplay is unchanged.
+[ ] Start a fresh RoTS instance. Confirm exactly one new `data/logs/rots/rots_<timestamp>_<instance>.log` file is created for that instance before combat starts.
+[ ] Confirm each player currently in the instance receives one in-game `RoTS Fight Recorder: data/logs/rots/...` path message and is not spammed with the path every tick.
+[ ] Confirm the first log events include `RECORDER START`, `INSTANCE_LOAD`, the active rotation/formation, and six `BROTHER_SPAWN` entries with IDs, tiles, sides, and HP.
+[ ] Let the fight run for at least 20 ticks. Confirm each tick contains `SNAPSHOT_INSTANCE`, one `SNAPSHOT_PLAYER` per current player, and one `SNAPSHOT_BROTHER` per current brother without any visible combat/render hitch.
+[ ] Confirm brother snapshots include current NPC ID, HP, tile, side, combat target, subdued flag, current special name, Dharok stored damage, Torag rescue damage/victim, Hurricane target, Wall Slam captured tile, Guthan spear/victim state, forced-revive Hurricane flag, autos-until-special, and special index.
+[ ] Move across the current side split and leave/re-enter where practical. Confirm `PLAYER_ENTER`, `PLAYER_LEAVE`, and `PLAYER_SIDE_CHANGE` entries agree with the per-tick snapshots.
+[ ] Take damage and damage brothers. Confirm `PLAYER_HP_CHANGE` and `BROTHER_HP_CHANGE` lines agree with the surrounding snapshots.
+[ ] Observe normal melee, Ahrim magic, and Karil ranged attacks. Confirm `NORMAL_ATTACK` records style, animation, projectile/GFX where applicable, max hit, rolled damage, hit delay, and return delay; confirm Guthan heal/Ahrim Strength-drain extras appear only when those procs actually trigger.
+[ ] Trigger Dharok Greatest Axe. Confirm the log records `GREATEST_AXE_START`, animation 21940, each `GREATEST_AXE_ABSORB` incoming amount and running stored total, `GREATEST_AXE_CHARGE_END`, and the later `GREATEST_AXE_RELEASE` base/stored/final damage.
+[ ] Trigger Torag Whack/Pummel. Confirm the log records the selected victim, 21933/21934 opening, repeated 21935 pummels, every rescue-damage contribution, release reason/accumulated damage, and victim animation 21938.
+[ ] Trigger Guthan Impale. Confirm the log records primary/victim selection, animation 21944, projectile 4411, 18541->18542 transform, impact/victim animation 21945, each bleed with GFX 4411/4407 and damage, retrieval animation 21947, 18542->18541 transform, 1000 retrieval hit, and Torag-pummel auto-return when exercised.
+[ ] Trigger Hurricane. Confirm one `HURRICANE_START` records animation 21941 and ten `HURRICANE_PULSE` lines are produced; nearby victims should generate matching `HURRICANE_HIT` entries and the sequence should end with `HURRICANE_END`.
+[ ] Trigger Wall Slam. Confirm start/captured target tile/chosen wall tile, launch animation/force-movement destination, impact, each AoE hit, timeout/path-failure if encountered, and clean end are all logged.
+[ ] Subdue brothers and allow a revival. Confirm `SUBDUE_TRIGGER`, `SUBDUED`, `BROTHER_SUBDUED`, survivor-heal entries, `REVIVE_TIMER_START`, per-tick `REVIVE_PROGRESS`, `REVIVE_BEGIN/STATE`, `BROTHER_REVIVE`, animation 21914, and the encounter broadcast text appear in order.
+[ ] Subdue all six before revival and confirm `FIGHT_COMPLETE` plus the shadow-bond completion broadcast appear and no later brother revival occurs for that generation.
+[ ] Exercise empty-side empowerment where practical. Confirm warning/cancel/individual move/GFX 4413/completion state is visible in events and snapshots.
+[ ] Finish/leave the instance. Confirm `INSTANCE_FINISH`, brother-finish entries, and `RECORDER END` are queued, the writer drains asynchronously, and the log remains readable after the instance is gone.
+[ ] Under a normal test fight, confirm no `DROPPED_LINES` entry appears. If one does appear, keep the file and report the count; combat must remain responsive rather than waiting for disk I/O.
+[ ] Upload the generated RoTS `.log` for parity debugging instead of manually describing the entire fight; use timestamps/ticks plus event/snapshot ordering as runtime evidence.
+
 Current encounter foundation
 [ ] Start a RoTS instance and confirm all six `RiseOfTheSixBrother` NPCs spawn in the active daily 3/3 west/east rotation.
 [ ] Confirm brothers use the current side classification and do not target/interact across invalid encounter state boundaries.
@@ -54,8 +76,9 @@ Encounter parity still requiring focused tests
 [ ] Audit/test escape/tunnel/reward flow when combat-mechanic parity reaches that phase.
 
 Next research checkpoint
-[ ] Eclipse/Java 8 clean-build the Client, launch a fresh session, and run Owner -> Deep Scan before intentionally triggering a visible GFX.
+[ ] Eclipse/Java 8 clean-build the Client and Server, launch a fresh session, and run Owner -> Deep Scan before intentionally triggering a visible GFX.
 [ ] Copy the repaired Deep Scan output and inspect GFX matches/failure summary for Dharok Greatest Axe candidates.
+[ ] Run at least one live RoTS fight with the Fight Recorder enabled and upload the generated log so Hurricane/Greatest Axe/runtime cadence can be measured from event ordering instead of memory.
 [ ] Runtime-test animation 21940 on Dharok and record the physical motion plus approximate visible duration/end transition; do not blindly loop or retime it first.
 [ ] Runtime-test the integrated 21941 Hurricane in the actual encounter before changing damage, pulse count, or movement cadence.
 [ ] After Greatest Axe evidence is collected, continue finishing the melee-brother-specials milestone rather than returning to broad cache/tool research.
