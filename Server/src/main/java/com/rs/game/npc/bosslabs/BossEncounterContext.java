@@ -108,16 +108,37 @@ public final class BossEncounterContext {
 	}
 
 	/**
+	 * Invalidates only BossLabs-owned delayed tile work. This deliberately does
+	 * not detach minions and does not own Matrix3 CombatScript.delayHit queues.
+	 */
+	synchronized int clearOwnedTasks() {
+		if (!active)
+			return 0;
+		generation++;
+		int count = ownedTasks.size();
+		for (WorldTask task : ownedTasks)
+			task.stop();
+		ownedTasks.clear();
+		return count;
+	}
+
+	/**
+	 * Detaches only encounter-owned NPCs for world-thread cleanup.
+	 */
+	synchronized List<NPC> detachOwnedNpcsForCleanup() {
+		if (!active)
+			return Collections.emptyList();
+		return detachOwnedNpcs();
+	}
+
+	/**
 	 * Invalidates BossLabs-owned delayed runtime work and detaches encounter
 	 * minions for world-thread cleanup while preserving observed participants.
 	 */
 	synchronized List<NPC> resetTransientRuntime() {
 		if (!active)
 			return Collections.emptyList();
-		generation++;
-		for (WorldTask task : ownedTasks)
-			task.stop();
-		ownedTasks.clear();
+		clearOwnedTasks();
 		return detachOwnedNpcs();
 	}
 
