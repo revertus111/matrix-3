@@ -16,6 +16,7 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
@@ -23,9 +24,11 @@ import javax.swing.WindowConstants;
 
 /**
  * Dark themed Dev Mode placement window opened from an in-game tile target.
- * Phase 1 intentionally uses direct IDs. Search indexes and rendered thumbnails
- * can be layered onto these same cards without changing the server placement
- * contract.
+ *
+ * Definition search is lazy and cache-backed: typing text starts background name
+ * indexing; numeric searches resolve a direct id immediately. Item thumbnails
+ * reuse the existing Client Console renderer. NPC/object model thumbnails remain
+ * a separate render-bridge task and are not guessed here.
  */
 public final class DevSpawnBrowserWindow {
 
@@ -43,6 +46,36 @@ public final class DevSpawnBrowserWindow {
     private final JTextField objectRotationField = new JTextField("0");
     private final JTextField itemIdField = new JTextField();
     private final JTextField itemAmountField = new JTextField("1");
+
+    private final DevSpawnSearchPanel npcSearch = new DevSpawnSearchPanel(
+            DevSpawnSearchPanel.NPC,
+            new DevSpawnSearchPanel.SelectionListener() {
+                @Override
+                public void selected(int id, String name) {
+                    npcIdField.setText(Integer.toString(id));
+                    statusLabel.setText("Selected NPC: " + name + " (" + id + ").");
+                }
+            });
+
+    private final DevSpawnSearchPanel objectSearch = new DevSpawnSearchPanel(
+            DevSpawnSearchPanel.OBJECT,
+            new DevSpawnSearchPanel.SelectionListener() {
+                @Override
+                public void selected(int id, String name) {
+                    objectIdField.setText(Integer.toString(id));
+                    statusLabel.setText("Selected object: " + name + " (" + id + ").");
+                }
+            });
+
+    private final DevSpawnSearchPanel itemSearch = new DevSpawnSearchPanel(
+            DevSpawnSearchPanel.ITEM,
+            new DevSpawnSearchPanel.SelectionListener() {
+                @Override
+                public void selected(int id, String name) {
+                    itemIdField.setText(Integer.toString(id));
+                    statusLabel.setText("Selected item: " + name + " (" + id + ").");
+                }
+            });
 
     private int targetX;
     private int targetY;
@@ -68,8 +101,8 @@ public final class DevSpawnBrowserWindow {
         frame = new JFrame("Matrix3 Dev Mode - Spawn Browser");
         frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
         frame.setContentPane(instance.root);
-        frame.setMinimumSize(new Dimension(430, 430));
-        frame.setSize(new Dimension(500, 500));
+        frame.setMinimumSize(new Dimension(650, 640));
+        frame.setSize(new Dimension(790, 760));
         frame.setLocationByPlatform(true);
     }
 
@@ -99,15 +132,23 @@ public final class DevSpawnBrowserWindow {
         root.add(header, BorderLayout.NORTH);
 
         cards.setBackground(ConsoleTheme.PANEL);
-        cards.add(createNpcCard(), "npc");
-        cards.add(createObjectCard(), "object");
-        cards.add(createItemCard(), "item");
+        cards.add(wrapCard(createNpcCard()), "npc");
+        cards.add(wrapCard(createObjectCard()), "object");
+        cards.add(wrapCard(createItemCard()), "item");
         root.add(cards, BorderLayout.CENTER);
 
         statusLabel.setFont(ConsoleTheme.SMALL_FONT);
         statusLabel.setForeground(ConsoleTheme.MUTED_TEXT);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
         root.add(statusLabel, BorderLayout.SOUTH);
+    }
+
+    private JScrollPane wrapCard(JPanel card) {
+        JScrollPane pane = new JScrollPane(card);
+        pane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        pane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        ConsoleTheme.styleScrollPane(pane);
+        return pane;
     }
 
     private JPanel createTypeBar() {
@@ -141,8 +182,11 @@ public final class DevSpawnBrowserWindow {
     }
 
     private JPanel createNpcCard() {
-        JPanel card = createCard("Spawn NPC", "Spawn a runtime NPC on the exact tile selected in game.");
-        addField(card, "NPC ID", npcIdField);
+        JPanel card = createCard("Spawn NPC", "Search by NPC name or ID, then spawn it on the exact tile selected in game.");
+        npcSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(npcSearch);
+        card.add(Box.createVerticalStrut(14));
+        addField(card, "Selected NPC ID", npcIdField);
         card.add(Box.createVerticalStrut(14));
         card.add(createSpawnButton("Spawn NPC", new Runnable() {
             @Override
@@ -158,8 +202,11 @@ public final class DevSpawnBrowserWindow {
     }
 
     private JPanel createObjectCard() {
-        JPanel card = createCard("Spawn Object", "Place a runtime Matrix3 world object with an explicit type and rotation.");
-        addField(card, "Object ID", objectIdField);
+        JPanel card = createCard("Spawn Object", "Search by object name or ID, then place it with an explicit type and rotation.");
+        objectSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(objectSearch);
+        card.add(Box.createVerticalStrut(14));
+        addField(card, "Selected Object ID", objectIdField);
         card.add(Box.createVerticalStrut(9));
         addField(card, "Type (0-22)", objectTypeField);
         card.add(Box.createVerticalStrut(9));
@@ -182,8 +229,11 @@ public final class DevSpawnBrowserWindow {
     }
 
     private JPanel createItemCard() {
-        JPanel card = createCard("Spawn Ground Item", "Spawn an owner-visible temporary ground item on the selected tile.");
-        addField(card, "Item ID", itemIdField);
+        JPanel card = createCard("Spawn Ground Item", "Search by item name or ID. Item results reuse the real Item Browser thumbnail renderer.");
+        itemSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(itemSearch);
+        card.add(Box.createVerticalStrut(14));
+        addField(card, "Selected Item ID", itemIdField);
         card.add(Box.createVerticalStrut(9));
         addField(card, "Amount", itemAmountField);
         card.add(Box.createVerticalStrut(14));
@@ -215,7 +265,7 @@ public final class DevSpawnBrowserWindow {
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel description = new JLabel("<html><div style='width:330px'>" + descriptionText + "</div></html>");
+        JLabel description = new JLabel("<html><div style='width:560px'>" + descriptionText + "</div></html>");
         description.setFont(ConsoleTheme.SMALL_FONT);
         description.setForeground(ConsoleTheme.MUTED_TEXT);
         description.setAlignmentX(Component.LEFT_ALIGNMENT);
