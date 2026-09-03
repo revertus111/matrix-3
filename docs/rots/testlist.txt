@@ -1,12 +1,16 @@
-RoTS cache scanner test list
+RoTS cache research test list
 
-[ ] Eclipse/Java 8 clean build succeeds.
-[ ] Run `com.rs.tools.RotsCacheScanner` as a Java Application.
-[ ] Cache initializes from the configured revision-830 cache path.
-[ ] Scanner completes without modifying cache files.
-[ ] Output contains candidate NPC definitions for all six brother names.
-[ ] Candidate output includes model IDs and renderEmote IDs.
-[ ] Render animation output includes stand/walk/run IDs and animation duration metadata.
-[ ] `relatedByModels` output identifies strong shared-model NPC variants.
-[ ] Inspect Santa-hat candidates and verify whether a normal RoTS variant appears among top shared-model matches.
-[ ] Runtime-spawn promising candidate IDs before marking any RoTS identity `VERIFIED`.
+[ ] Eclipse/Java 8 clean build succeeds for Client and Server after RoTS tooling changes.
+[ ] Existing `com.rs.tools.RotsCacheScanner` remains read-only and can still run when a standalone server-cache dump is specifically useful.
+[ ] Open Client Console -> Owner after login/loading. Confirm RoTS cache research reaches Ready once NPC and animation definition loaders are available.
+[ ] Click Scan RoTS and confirm work completes without modifying cache files or gameplay state.
+[ ] Confirm the game renderer and Owner panel remain responsive while the scan runs off the Swing event-dispatch thread.
+[ ] Confirm output contains NPC definitions 18538 through 18551 with names/models/renderEmote/transforms/options/known client-script params.
+[ ] Confirm NPC 18539 is labeled VERIFIED Ahrim flying state.
+[ ] Confirm NPC 18542 is labeled VERIFIED Guthan spearless / Impale state.
+[ ] Confirm NPCs 18546-18551 remain labeled HYPOTHESIS subdued/downed states until runtime behavior proves the mapping.
+[ ] Confirm animation scan includes populated definitions from 17960-18040 and 21920-21940, including animation ID, frame count, total duration, frame durations/IDs, hand overrides, priority, and handled sounds.
+[ ] Click Copy All and confirm the entire dump, including off-screen text, is copied to the clipboard in one operation.
+[ ] Click Clear and confirm only research output/status clears; cache/game state remains unchanged.
+[ ] Runtime-spawn/subdue 18546-18551 before upgrading any subdued/downed-state mapping to VERIFIED.
+[ ] Use animation candidates from the copied dump for targeted runtime playback before mapping Hurricane, Greatest Axe, Impale throw/retrieve, Torag, Verac, Karil, or other Ahrim special animations.
