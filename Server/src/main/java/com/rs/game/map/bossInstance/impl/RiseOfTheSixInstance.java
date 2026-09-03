@@ -7,12 +7,14 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.rs.game.Animation;
 import com.rs.game.WorldTile;
 import com.rs.game.map.bossInstance.BossInstance;
 import com.rs.game.map.bossInstance.BossInstanceHandler;
 import com.rs.game.map.bossInstance.InstanceSettings;
 import com.rs.game.npc.rots.RiseOfTheSixBrother;
 import com.rs.game.npc.rots.RiseOfTheSixBrother.Brother;
+import com.rs.game.npc.rots.RiseOfTheSixReviveBar;
 import com.rs.game.player.Player;
 import com.rs.game.tasks.WorldTask;
 import com.rs.game.tasks.WorldTasksManager;
@@ -44,6 +46,8 @@ public class RiseOfTheSixInstance extends BossInstance {
 
 	private static final int REVIVE_DELAY_TICKS = 50;
 	private static final int REVIVE_HITPOINTS = 25000;
+	private static final int REVIVE_BAR_MAX = 255;
+	private static final int REVIVE_ANIMATION = 21914;
 	private static final int SURVIVOR_HEAL = 5000;
 	private static final int EMPTY_SIDE_WARNING_TICKS = 40; // about 24 seconds
 	private static final int EMPTY_SIDE_HOP_DELAY_TICKS = 5; // about 3 seconds
@@ -435,6 +439,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 			if (fightComplete || subduedBrother == null)
 				return;
 
+			prepareSubduedPresentation(subduedBrother);
 			broadcast("As you defeat " + subduedBrother.getBrother().getDisplayName()
 					+ ", the shadow engulfs the remaining wights!");
 			healActiveBrothers();
@@ -444,11 +449,13 @@ public class RiseOfTheSixInstance extends BossInstance {
 				reviveGeneration++;
 				sideHopGeneration++;
 				sideHopPending = false;
+				clearReviveBars();
 				broadcast("All six brothers are subdued. The shadow bond has been broken.");
 				return;
 			}
 
 			final int generation = ++reviveGeneration;
+			startReviveBarTask(generation);
 			WorldTasksManager.schedule(new WorldTask() {
 				@Override
 				public void run() {
@@ -459,6 +466,78 @@ public class RiseOfTheSixInstance extends BossInstance {
 					}
 				}
 			}, REVIVE_DELAY_TICKS);
+		}
+	}
+
+	private void prepareSubduedPresentation(RiseOfTheSixBrother subduedBrother) {
+		int subduedNpcId = getSubduedNpcId(subduedBrother.getBrother());
+		if (subduedNpcId >= 0)
+			subduedBrother.setNextNPCTransformation(subduedNpcId);
+	}
+
+	private int getSubduedNpcId(Brother brother) {
+		if (brother == null)
+			return -1;
+		switch (brother) {
+		case AHRIM:
+			return 18546;
+		case DHAROK:
+			return 18547;
+		case GUTHAN:
+			return 18548;
+		case KARIL:
+			return 18549;
+		case TORAG:
+			return 18550;
+		case VERAC:
+			return 18551;
+		default:
+			return -1;
+		}
+	}
+
+	private void startReviveBarTask(final int generation) {
+		queueReviveBars(0);
+		WorldTasksManager.schedule(new WorldTask() {
+			private int elapsedTicks;
+
+			@Override
+			public void run() {
+				if (fightComplete || generation != reviveGeneration || isFinished()) {
+					stop();
+					return;
+				}
+				elapsedTicks++;
+				int percentage = Math.min(REVIVE_BAR_MAX,
+						(elapsedTicks * REVIVE_BAR_MAX) / REVIVE_DELAY_TICKS);
+				queueReviveBars(percentage);
+				if (elapsedTicks >= REVIVE_DELAY_TICKS)
+					stop();
+			}
+		}, 1, 1);
+	}
+
+	private void queueReviveBars(int percentage) {
+		if (brothers == null)
+			return;
+		for (RiseOfTheSixBrother brother : brothers) {
+			if (brother == null || !brother.isSubdued() || brother.hasFinished())
+				continue;
+			/*
+			 * Clearing first deliberately replaces the ordinary 1/50000 HP bar that
+			 * Matrix3 would otherwise add for the hit that caused incapacitation.
+			 */
+			brother.getNextHitBars().clear();
+			brother.getNextHitBars().add(new RiseOfTheSixReviveBar(percentage));
+		}
+	}
+
+	private void clearReviveBars() {
+		if (brothers == null)
+			return;
+		for (RiseOfTheSixBrother brother : brothers) {
+			if (brother != null)
+				brother.getNextHitBars().clear();
 		}
 	}
 
@@ -532,7 +611,10 @@ public class RiseOfTheSixInstance extends BossInstance {
 		for (RiseOfTheSixBrother brother : brothers) {
 			if (brother == null || !brother.isSubdued() || brother.hasFinished())
 				continue;
+			brother.getNextHitBars().clear();
 			brother.revive(REVIVE_HITPOINTS);
+			brother.setNextNPCTransformation(brother.getBrother().getNpcId());
+			brother.setNextAnimation(new Animation(REVIVE_ANIMATION));
 			revived = true;
 		}
 		if (revived)
@@ -579,6 +661,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 			sideHopComplete = false;
 			sideHopFrom = null;
 			sideHopTo = null;
+			clearReviveBars();
 			if (brothers != null) {
 				for (RiseOfTheSixBrother brother : brothers) {
 					if (brother != null && !brother.hasFinished())
