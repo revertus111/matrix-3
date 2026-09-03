@@ -46,7 +46,7 @@ public final class BossLabsDefinitionEditor {
     private static final String[] TILE_EFFECT_NAMES = {
             "Damage players", "Heal players", "Damage boss", "Heal boss" };
     private static final String[] PHASE_ACTION_NAMES = {
-            "Play animation", "Play graphic", "Heal boss" };
+            "Play animation", "Play graphic", "Heal boss", "Spawn minions" };
 
     private final Runnable changeListener;
 
@@ -227,7 +227,8 @@ public final class BossLabsDefinitionEditor {
         JPanel controls = new JPanel(new GridBagLayout());
         controls.setOpaque(false);
         styleCombo(phaseActionTypeBox);
-        styleField(phaseActionValueField, "Animation/GFX id, or fixed boss-heal amount");
+        styleField(phaseActionValueField,
+                "Animation/GFX id, fixed boss-heal amount, or Spawn minions as NPC_ID,AMOUNT,RADIUS (example 1282,4,2)");
         addFormRow(controls, 0, "Action", phaseActionTypeBox);
         addFormRow(controls, 1, "Value", phaseActionValueField);
 
@@ -490,13 +491,32 @@ public final class BossLabsDefinitionEditor {
             phaseActionStatus.setText("Select a phase first.");
             return;
         }
-        Integer value = parseInteger(phaseActionValueField.getText());
-        if (value == null) {
-            phaseActionStatus.setText("Phase action value must be a whole number.");
-            return;
+
+        int type = phaseActionTypeBox.getSelectedIndex();
+        BossLabsDraftDefinition.PhaseAction action;
+        if (type == BossLabsDraftDefinition.PHASE_ACTION_SPAWN_MINIONS) {
+            String[] parts = trim(phaseActionValueField.getText()).split(",");
+            if (parts.length != 3) {
+                phaseActionStatus.setText("Spawn minions value must be NPC_ID,AMOUNT,RADIUS (example 1282,4,2).");
+                return;
+            }
+            Integer npcId = parseInteger(parts[0]);
+            Integer amount = parseInteger(parts[1]);
+            Integer radius = parseInteger(parts[2]);
+            if (npcId == null || amount == null || radius == null) {
+                phaseActionStatus.setText("Spawn minions NPC ID, amount, and radius must be whole numbers.");
+                return;
+            }
+            action = new BossLabsDraftDefinition.PhaseAction(type, npcId.intValue(), amount.intValue(), radius.intValue());
+        } else {
+            Integer value = parseInteger(phaseActionValueField.getText());
+            if (value == null) {
+                phaseActionStatus.setText("Phase action value must be a whole number.");
+                return;
+            }
+            action = new BossLabsDraftDefinition.PhaseAction(type, value.intValue());
         }
-        BossLabsDraftDefinition.PhaseAction action = new BossLabsDraftDefinition.PhaseAction(
-                phaseActionTypeBox.getSelectedIndex(), value.intValue());
+
         if (entry)
             phase.getEntryActions().add(action);
         else
