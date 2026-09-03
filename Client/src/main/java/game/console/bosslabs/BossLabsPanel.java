@@ -122,6 +122,15 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         BossLabsClientBridge.clearListener(this);
     }
 
+    BossLabsDraftDefinition getArenaDraft() {
+        return definitionEditor.getDraft();
+    }
+
+    void arenaDraftChanged() {
+        markDraftChanged();
+        definitionEditor.getAttacksComponent().repaint();
+    }
+
     private JComponent createTopArea() {
         JPanel top = new JPanel();
         top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
@@ -280,7 +289,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         tabs.addTab("Mechanics", createPlaceholderTab("Mechanics",
                 "Reusable encounter mechanics are added only when the first boss proves a need.",
                 "BossLabs will not grow a speculative general-purpose scripting engine."));
-        tabs.addTab("Arena / Tiles", createArenaTab());
+        tabs.addTab("Arena / Tiles", new BossLabsArenaPanel(this));
         tabs.addTab("Drops", createPlaceholderTab("Drops",
                 "Drop editing will route through Matrix3's existing drop authority when that authoring slice is implemented.",
                 "BossLabs does not own a second drop engine."));
