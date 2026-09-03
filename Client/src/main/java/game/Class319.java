@@ -87,6 +87,8 @@ public class Class319 implements Interface52 {
 			long l = (-6760453999157901937L * ((Class572_Sub12_Sub10) class572_sub12_sub10).aLong11395);
 			if (i_8_ >= 2000)
 				i_8_ -= 2000;
+			if (DevModeBridge.handleMenuAction(i_8_, i_6_, i_7_))
+				return;
 			Class497 class497 = client.aClass613_8605.method7280((byte) -102);
 			if (16 == i_8_) {
 				client.anInt8706 = i * 253386063;
