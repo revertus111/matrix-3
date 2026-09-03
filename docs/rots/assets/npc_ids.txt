@@ -1,0 +1,29 @@
+Rise of the Six NPC IDs
+
+All IDs are UNKNOWN until scanner/runtime evidence is recorded.
+
+Dharok
+- RoTS normal variant: UNKNOWN
+- Santa-hat/seasonal variant: HYPOTHESIS
+
+Ahrim
+- RoTS normal variant: UNKNOWN
+- Santa-hat/seasonal variant: HYPOTHESIS
+
+Karil
+- RoTS normal variant: UNKNOWN
+- Santa-hat/seasonal variant: HYPOTHESIS
+
+Torag
+- RoTS normal variant: UNKNOWN
+- Santa-hat/seasonal variant: HYPOTHESIS
+
+Guthan
+- RoTS normal variant: UNKNOWN
+- Santa-hat/seasonal variant: HYPOTHESIS
+
+Verac
+- RoTS normal variant: UNKNOWN
+- Santa-hat/seasonal variant: HYPOTHESIS
+
+Use `RotsCacheScanner` output to record candidate IDs, model fingerprints, renderEmote IDs, and shared-model correlations. Promote identity to VERIFIED only after runtime appearance confirms it.
