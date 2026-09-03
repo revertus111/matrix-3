@@ -52,3 +52,11 @@
 - Added temporary player side classification at the transformed midpoint between those proven slot groups.
 - Verified Throw pairing now rejects brothers on opposite active sides, and the Throw target finder returns only same-side eligible brothers.
 - Actual Throw flight/landing remains intentionally dormant until exact animation/trajectory/timing/damage evidence is established.
+- Guthan Impale target selection now consumes current encounter side ownership: secondary victims must be on Guthan's side, and primary-target fallback is blocked if the primary target is on the opposite side.
+- Added empty-side empowerment monitoring. A continuously empty side warns after about 40 Matrix3 ticks (~24 seconds), then attempts the brother hop 5 ticks (~3 seconds) later.
+- Empty-side empowerment is reset/blocked while any brother is incapacitated and is cancelled if the side is repopulated before the delayed hop resolves.
+- Added the live empowerment message and donor-backed transition GFX 4413 for the three incoming brothers.
+- Incoming brothers relocate to the occupied side and their current encounter side ownership is updated, so later same-side coordination uses the post-hop state instead of the starting rotation.
+- Side-hop relocation safely clears active RoTS special state without losing a pending post-revival forced Hurricane flag.
+- Fight completion and instance destruction invalidate pending side-hop generations so stale relocation tasks cannot fire afterward.
+- Exact empowered landing spacing, transition animation, Karil Shadow Dash blocking, and the second-barrier blocker remain HYPOTHESIS/pending rather than being guessed.
