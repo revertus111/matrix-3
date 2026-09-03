@@ -631,22 +631,23 @@ public class RiseOfTheSixInstance extends BossInstance {
 			if (isFinished())
 				return;
 			reviveGeneration++;
-		sideHopGeneration++;
-		activeRotation = null;
-		if (currentBrotherSides != null)
-			currentBrotherSides.clear();
-		sideHopPending = false;
-		sideHopComplete = false;
-		sideHopFrom = null;
-		sideHopTo = null;
-		clearReviveBars();
-		if (brothers != null) {
-			for (RiseOfTheSixBrother brother : brothers) {
-				if (brother != null && !brother.hasFinished())
-					brother.finish();
+			sideHopGeneration++;
+			activeRotation = null;
+			if (currentBrotherSides != null)
+				currentBrotherSides.clear();
+			sideHopPending = false;
+			sideHopComplete = false;
+			sideHopFrom = null;
+			sideHopTo = null;
+			clearReviveBars();
+			if (brothers != null) {
+				for (RiseOfTheSixBrother brother : brothers) {
+					if (brother != null && !brother.hasFinished())
+						brother.finish();
+				}
+				brothers.clear();
 			}
-			brothers.clear();
+			super.finish();
 		}
-		super.finish();
 	}
 }
