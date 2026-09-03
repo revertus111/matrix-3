@@ -1,0 +1,10 @@
+Shift-click Drop
+
+1. Open Client Console > Settings and confirm Quality of life > Inventory contains Shift-click Drop.
+2. With Shift-click Drop OFF, verify Shift + left-click behaves exactly like the normal left-click action.
+3. Turn Shift-click Drop ON and Shift + left-click a droppable inventory item; verify the item uses its normal Drop action.
+4. With the setting ON, left-click without Shift must keep the normal primary item action.
+5. With the setting ON, right-click menu entries and ordering must remain unchanged.
+6. Verify an item without the normal option-5 Drop entry does not get redirected to another action.
+7. Restart the client and confirm the Shift-click Drop preference restores.
+8. Eclipse clean/build the Client with Java 8 and verify no compile errors.
