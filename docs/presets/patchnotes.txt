@@ -3,14 +3,16 @@
 - Preset row interaction now exposes save, load, overwrite, and clear actions without modifying Commands.java.
 - Loading requires an open bank, validates controller/equipment restrictions, and moves real bank/carried item quantities instead of spawning copies.
 - Presets persist per player in data/presets using a versioned file format.
-- Beast of Burden/quick-preset controls remain isolated pending runtime component mapping.
-- Fixed native preset click routing to resolve the preset row from either Matrix3 button slot field instead of assuming slotId always carries the row.
-- Unmapped interface 579 controls no longer get globally swallowed with repeated "Select a preset row first" messages; a previously selected row is retained for its action controls.
+- Fixed native preset click routing to resolve the preset row from componentId instead of slotId/slotId2.
 - Added a temporary unique native-click mapper for interface 579; `[PRESET-MAP]` console lines record component/slot/slot2/packet even when Settings.DEBUG is disabled.
-- Mapper output is de-duplicated by click tuple and does not add game-chat diagnostics; use the captured map to replace the remaining guessed native button routing.
-- `[PRESET-MAP]` output is now also appended to `Server/data/logs/presets/preset-map.txt` when the server runs from the Server working directory, while console output remains unchanged.
-- Preset map file logging creates its directory on demand and is isolated so a log-write failure does not alter preset click handling.
+- Mapper output is de-duplicated by click tuple and is also appended to `Server/data/logs/presets/preset-map.txt`; mapper logging adds no game-chat diagnostics.
 - Runtime mapping confirmed preset row 1 components 184/193/201/217/225/231/232 and row 2 components 233/242/250/266/274/280/281; every matching control is separated by a 49-component row stride and uses packet 103 with both slot fields at 65535.
-- Replaced the failed slotId/slotId2 row guess with component-based routing: selector opens that row's actions, floppy saves that row, green arrow loads that row, and trash clears that row directly.
-- Gear/settings and the two right-side circle controls are identified and consumed but intentionally have no invented behavior yet.
-- Rows 3-10 currently extrapolate the verified row 1/2 +49 component stride and remain HYPOTHESIS until the retained mapper confirms them at runtime.
+- Selector opens that row's actions, floppy saves that row, green arrow loads that row, and trash clears that row directly.
+- Cog/settings now persists independent Backpack, Worn equipment, and Beast of Burden load toggles per saved preset; at least one container must remain enabled.
+- Right-side radio controls now persist Quick Preset 1 and Quick Preset 2 assignments; clearing an assigned preset clears its quick assignment.
+- Preset persistence format advanced to version 2 while retaining version-1 read compatibility; v2 stores container toggles, captured Beast of Burden contents, and both quick assignments.
+- Beast of Burden integration uses Matrix3's existing Familiar/BeastOfBurden ownership and includes enabled BoB contents in normal preset bank accounting and rollback.
+- Disabled preset containers remain untouched and are excluded from carried-item accounting during load.
+- Rows 3-10 currently extrapolate the VERIFIED row 1/2 +49 component stride and remain HYPOTHESIS until mapper output confirms them at runtime.
+- The top Currently Equipped Quick 1/2 load arrows and dedicated bottom Beast of Burden row remain unmapped; their component IDs must be runtime-captured before wiring behavior.
+- Preset clipping investigation found Matrix3 mounts 579/577/627 while the Nocturne reference mounts 579/627/577. Swapping Backpack/Worn host order is the current clipping HYPOTHESIS and requires runtime verification rather than changing global interface scaling.
