@@ -41,6 +41,8 @@ VERIFIED from user runtime testing:
 Still requiring targeted runtime verification:
 
 - exact 30-second mass revival timing / simultaneous-six victory
+- dedicated incapacitated brother forms 18546-18551 and persistent kneeling presentation
+- type-5 shared revival bar appearance, fill direction/colors, reset behavior, and removal on revival
 - every current special and cleanup path
 - Guthan Impale behavior including new same-side selection
 - daily west/east formation ownership and physical side split
@@ -62,6 +64,9 @@ Still requiring targeted runtime verification:
 - Rise of the Six supports 1-4 players; classic intended group size is four.
 - Empowered brothers are level 650 with 50,000 life points.
 - Empowered NPC ids: Ahrim 18538/18539, Dharok 18540, Guthan 18541/18542, Karil 18543, Torag 18544, Verac 18545.
+- Donor-backed dedicated incapacitated forms are Ahrim 18546, Dharok 18547, Guthan 18548, Karil 18549, Torag 18550, Verac 18551.
+- The donor uses client hitbar type 5 specifically as the RoTS incapacitation/revival bar while those downed NPC forms are active.
+- The donor uses animation 21914 when a downed brother returns to its active NPC form at 25,000 life points.
 - Defeating a brother heals each active brother by 5,000 life points.
 - Shared shadow-bond revive timer is 30 seconds and resets whenever another brother is defeated.
 - If that timer expires, currently defeated brothers return at 25,000 life points.
@@ -133,13 +138,30 @@ Known blockers still pending:
 - The second-barrier player-position blocker cannot be reproduced accurately until the real barrier/portal sub-areas are mapped.
 - Exact transition animation and exact landing spacing still need cache/video/runtime verification. GFX 4413 is donor-backed, not yet runtime-VERIFIED here.
 
-### Shadow bond
+### Shadow bond / incapacitation presentation
 
-- brothers become incapacitated instead of using normal NPC drop/respawn death
+Encounter state:
+
+- brothers become logically `subdued` instead of using normal NPC drop/respawn death
+- Matrix3 keeps the subdued NPC shell at 1 HP so the client does not remove it as a true zero-HP NPC
+- delayed hits already in flight are reduced to zero after subdual so they cannot hide the 1-HP shell
 - surviving brothers heal 5,000 HP after each subdual
 - new subdual resets the pending revival generation
 - subdued brothers revive at 25,000 HP when the revival task wins
 - all-six-subdued state cancels further revival and any pending side-hop task
+
+Current visual implementation:
+
+- each newly subdued brother transforms into its donor-backed dedicated incapacitated form: Ahrim 18546, Dharok 18547, Guthan 18548, Karil 18549, Torag 18550, Verac 18551
+- those dedicated NPC forms are intended to own the persistent downed/kneeling presentation rather than leaving an active brother model standing after its death animation ends
+- every subdued brother receives a `RiseOfTheSixReviveBar`, using donor-backed client hitbar type 5
+- the shared bar progresses from 0 to 255 over the same 50 Matrix3 ticks used by the ~30-second revival generation
+- when another brother is subdued, the old bar generation becomes stale and **all currently subdued brothers immediately reset to an empty bar together**
+- the revive bar is inserted before Matrix3 can fall back to its ordinary entity HP bar, preventing the temporary logical 1/50,000 HP shell from becoming the intended downed UI
+- on revival, the special bar is cleared, the brother returns to its active primary NPC id, animation 21914 is played, and the existing revival path restores 25,000 HP
+- all-six completion and instance cleanup clear the pending revival bars/tasks rather than allowing stale visual updates
+
+**Fidelity boundary:** NPC ids 18546-18551, hitbar type 5 and revival animation 21914 are verified-static donor evidence. Their exact revision-830 visual result in this Matrix3 client—including the persistent kneeling pose and exact bar colors/style—must be runtime-confirmed before being promoted to VERIFIED.
 
 ### Base combat
 
@@ -284,6 +306,8 @@ Do not implement Throw separately in each brother's CombatScript.
 
 ## HYPOTHESIS items still pending
 
+- exact revision-830 rendering/idle pose of downed NPC forms 18546-18551 until runtime-tested
+- exact client colors/style of type-5 RoTS revival bar until runtime-tested
 - exact physical north/middle/south brother spawn coordinates/facing inside each daily side
 - exact player west/east sub-area bounds beyond the current source-X midpoint classification
 - exact empowered-side landing coordinates/spacing and transition animation
@@ -322,10 +346,12 @@ Do not implement Throw separately in each brother's CombatScript.
 
 ### Shared shadow mechanics
 
+- runtime-verify dedicated downed forms 18546-18551 remain visible/kneeling through the whole incapacitation window
+- runtime-verify type-5 revive bars fill/reset together and disappear on revival/completion
+- runtime-verify revival animation 21914 and 25,000 HP return
 - Shadow Drag selection/thresholds
 - full-team Shadow Realm move in/out
 - Shadow Realm accuracy/damage changes
-- visible 30-second incapacitation/revival presentation
 
 ### Shared melee fidelity
 
