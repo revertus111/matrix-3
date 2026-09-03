@@ -42,7 +42,7 @@
 - Enabled Apply Live, Save & Apply, Undo Last Apply, and Apply Saved only when the inspected NPC/current BossLabs state makes each action valid.
 - First-time conversion of a Matrix3 Java/default NPC remains blocked until BossLabs attack/phase authoring exists; the tool does not publish an empty or fake conversion.
 - Kept encounter spawn/reset/force-phase/testing controls disabled because matching authoritative server testing APIs are not implemented yet.
-- Added window-close listener cleanup so the static BossLabs reply listener does not retain a disposed Swing listener retained.
+- Added window-close listener cleanup so the static BossLabs reply listener does not retain a disposed Swing panel.
 - Added a client-local BossLabsDraftDefinition model plus real Phases and Attacks editors for health ranges, melee/range/magic style, animation, GFX, projectile, max-hit override, and combat-delay override.
 - Existing BossLabs definitions now round-trip their complete phase/attack data through a bounded versioned development-wire payload and repopulate the editors on inspection.
 - First-time Matrix3 NPC conversion is now available only after the local draft contains a valid non-overlapping phase layout with at least one valid attack per phase.
