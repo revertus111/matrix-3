@@ -46,11 +46,10 @@ public final class Backpack implements Serializable {
             items = new ItemsContainer<Item>(CAPACITY, false);
             return;
         }
-        if (items.getSize() == CAPACITY)
+        if (items.getSize() >= CAPACITY)
             return;
         ItemsContainer<Item> resized = new ItemsContainer<Item>(CAPACITY, false);
-        int copySize = Math.min(items.getSize(), CAPACITY);
-        for (int slot = 0; slot < copySize; slot++)
+        for (int slot = 0; slot < items.getSize(); slot++)
             resized.set(slot, items.get(slot));
         items = resized;
     }
@@ -84,7 +83,7 @@ public final class Backpack implements Serializable {
     }
 
     public boolean isOpen() {
-        return open && player != null
+        return open && player != null && isEquipped()
                 && player.getInterfaceManager().containsInterface(STORAGE_INTERFACE)
                 && player.getInterfaceManager().containsInterface(INVENTORY_INTERFACE);
     }
@@ -138,9 +137,25 @@ public final class Backpack implements Serializable {
         }
 
         int availableAmount = player.getInventory().getItems().getNumberOf(source);
-        Item moving = new Item(source.getId(), Math.min(amount, availableAmount));
-        if (amount == Integer.MAX_VALUE)
-            moving.setAmount(availableAmount);
+        Item moving = new Item(source.getId(), amount == Integer.MAX_VALUE
+                ? availableAmount : Math.min(amount, availableAmount));
+        if (!player.getControlerManager().canDeleteInventoryItem(moving.getId(), moving.getAmount()))
+            return;
+
+        int freeSpace = items.getFreeSlots();
+        if (!moving.getDefinitions().isStackable() && !moving.getDefinitions().isNoted()) {
+            if (freeSpace == 0) {
+                player.getPackets().sendGameMessage("Not enough space in your backpack.");
+                return;
+            }
+            if (moving.getAmount() > freeSpace) {
+                moving.setAmount(freeSpace);
+                player.getPackets().sendGameMessage("Not enough space in your backpack.");
+            }
+        } else if (freeSpace == 0 && !items.containsOne(moving)) {
+            player.getPackets().sendGameMessage("Not enough space in your backpack.");
+            return;
+        }
 
         Item[] before = items.getItemsCopy();
         if (!items.add(moving)) {
@@ -159,9 +174,23 @@ public final class Backpack implements Serializable {
             return;
 
         int availableAmount = items.getNumberOf(source);
-        Item moving = new Item(source.getId(), Math.min(amount, availableAmount));
-        if (amount == Integer.MAX_VALUE)
-            moving.setAmount(availableAmount);
+        Item moving = new Item(source.getId(), amount == Integer.MAX_VALUE
+                ? availableAmount : Math.min(amount, availableAmount));
+
+        int freeSpace = player.getInventory().getFreeSlots();
+        if (!moving.getDefinitions().isStackable() && !moving.getDefinitions().isNoted()) {
+            if (freeSpace == 0) {
+                player.getPackets().sendGameMessage("Not enough space in your inventory.");
+                return;
+            }
+            if (moving.getAmount() > freeSpace) {
+                moving.setAmount(freeSpace);
+                player.getPackets().sendGameMessage("Not enough space in your inventory.");
+            }
+        } else if (freeSpace == 0 && !player.getInventory().containsItem(moving.getId(), 1)) {
+            player.getPackets().sendGameMessage("Not enough space in your inventory.");
+            return;
+        }
 
         if (!player.getInventory().addItem(moving))
             return;
@@ -179,8 +208,13 @@ public final class Backpack implements Serializable {
             Item item = items.get(slot);
             if (item == null)
                 continue;
-            if (!player.getInventory().addItem(new Item(item.getId(), item.getAmount())))
+            int beforeAmount = player.getInventory().getAmountOf(item.getId());
+            if (!player.getInventory().addItem(new Item(item.getId(), item.getAmount()))) {
+                int added = player.getInventory().getAmountOf(item.getId()) - beforeAmount;
+                if (added > 0)
+                    items.remove(slot, new Item(item.getId(), added));
                 break;
+            }
             items.set(slot, null);
         }
         items.shift();
