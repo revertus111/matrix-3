@@ -9,4 +9,10 @@
 - Handler/action identifiers are stable data values (`BACKPACK`, `OPEN`, `EMPTY_TO_BANK`); Java method names are intentionally not stored in config.
 - Rambler's backpack 21445 is the first configured item: Inventory Option 4 = Open, Equipment Option 1 = Open, Bank Option 7 = Open.
 - Runtime evidence from the first test showed the client displayed `Open` while the server action did nothing; the split config location was corrected before changing Matrix3's normal inventory packet owner.
-- `EMPTY_TO_BANK` server behavior exists but its bank-inventory-pane label remains disabled until the narrow per-item bank menu presentation hook is verified; stock bank option text is not silently repurposed.
+- Added a distinct `bank_inventory` context for interface 762 component 7 so bank inventory actions do not collide with the main bank item-container context.
+- verified-static: 762:7 keeps stock options 1-5 for deposit amounts, option 7 Wear, option 8 Examine, and option 9 Deposit-All; native option 6 and option 10 are available without repurposing a stock action.
+- Client bank-inventory presentation now reads configured `bank_inventory` entries and adds only missing native option slots for the clicked configured item. Existing stock labels/actions are left untouched.
+- The client resolves the clicked item from Matrix3's dynamic interface child metadata; no Rambler item ID is hardcoded into the bank-menu hook.
+- Server routing now recognizes `bank_inventory` options 1-10. Configured Open validates the physical item from the player's inventory slot, while Empty to bank uses the existing player-owned backpack storage transfer.
+- Rambler's current data config uses Bank Inventory Option 6 = Open and Option 10 = Empty to bank. The existing Bank Option 7 = Open remains for the main bank item container.
+- Backpack contents remain player-owned persistent storage; this patch does not move storage ownership onto the physical item or change death persistence.
