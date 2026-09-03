@@ -33,3 +33,5 @@
 - Removed the fake per-pulse cardinal facing rotation from Hurricane; the verified spin animation now owns the visual rotation while the existing 10-pulse tracking/damage mechanic remains unchanged.
 - Starts 21941 once at Hurricane entry instead of restarting it every damage pulse, preserving the sequence for runtime duration verification.
 - Updated RoTS master status, animation evidence, and runtime test checklist around the integrated 21941 Hurricane slice.
+- Added a stable main-goal status roadmap to `ROTS_MASTER.md` anchored to 100% / 1:1 Rise of the Six, so future status updates keep the original encounter goal visible instead of being replaced by the latest subtask.
+- Updated the repository-wide `AGENTS.md` status rule so every chat/post-patch status remains anchored to the original/main project goal, reports the latest subtask separately, and ends with the next meaningful main-roadmap step.
