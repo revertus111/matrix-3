@@ -18,6 +18,7 @@ public final class CacheEditorLauncher {
 	}
 
 	public static void main(final String[] args) {
+		CacheEditorTheme.install();
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
@@ -49,7 +50,11 @@ public final class CacheEditorLauncher {
 		final JFrame loading = new JFrame("RS3 CacheEditor");
 		loading.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		loading.setLayout(new BorderLayout());
-		loading.add(new JLabel("Opening cache: " + directory.getAbsolutePath(), SwingConstants.CENTER), BorderLayout.CENTER);
+		loading.getContentPane().setBackground(CacheEditorTheme.WINDOW);
+		JLabel loadingLabel = new JLabel("Opening cache: " + directory.getAbsolutePath(), SwingConstants.CENTER);
+		loadingLabel.setFont(CacheEditorTheme.BODY_FONT);
+		loadingLabel.setForeground(CacheEditorTheme.TEXT);
+		loading.add(loadingLabel, BorderLayout.CENTER);
 		loading.setPreferredSize(new Dimension(620, 110));
 		loading.pack();
 		loading.setLocationRelativeTo(null);
