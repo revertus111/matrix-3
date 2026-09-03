@@ -7,9 +7,21 @@ Matrix3 Dev Mode - targeted runtime test list
 [ ] Disable Dev Mode and confirm the Dev entry no longer appears on newly built tile menus.
 [ ] Re-enable Dev Mode, choose `Dev > Spawn...`, and confirm the dark Spawn Browser opens with the exact selected world X/Y/plane shown.
 [ ] Confirm normal Walk Here still works when Dev Mode is ON.
-[ ] NPC: enter a known NPC ID, spawn it, and confirm it appears on the selected tile using normal Matrix3 NPC behavior.
-[ ] Object: enter a known object ID, type, and rotation; confirm it appears on the selected tile with the requested orientation.
-[ ] Ground item: enter a known item ID and amount; confirm the owner can see the temporary item on the selected tile.
+
+Spawn Browser search
+[ ] NPC: type an exact NPC ID and confirm the matching cache name appears without waiting for full name indexing.
+[ ] NPC: search a partial NPC name and confirm lazy indexing begins off the Swing UI thread and matching IDs populate as indexing progresses.
+[ ] Object: type an exact object ID and confirm the matching cache name appears.
+[ ] Object: search a partial object name and confirm lazy indexing populates matching object IDs without freezing the client/console UI.
+[ ] Item: search by exact ID and partial name; confirm results match the existing Item Browser definitions.
+[ ] Item: select a result and confirm a real item thumbnail loads when the Item Browser render context is ready.
+[ ] NPC/object result cards must show cache-backed names/IDs only; do not mistake the N/O placeholder for a real model thumbnail.
+[ ] Select a search result and confirm its ID is copied into the existing spawn field while manual ID editing still works.
+
+Placement
+[ ] NPC: choose a known NPC result/ID, spawn it, and confirm it appears on the selected tile using normal Matrix3 NPC behavior.
+[ ] Object: choose a known object result/ID, type, and rotation; confirm it appears on the selected tile with the requested orientation.
+[ ] Ground item: choose a known item result/ID and amount; confirm the owner can see the temporary item on the selected tile.
 [ ] Enter invalid/unknown IDs and malformed values; confirm they are rejected without server/client exceptions.
 [ ] Confirm an account below Admin rights cannot use the server Dev spawn bridge and does not receive the client tile Dev entry.
 [ ] Restart the client and confirm Dev Mode returns to OFF.
@@ -18,4 +30,5 @@ Matrix3 Dev Mode - targeted runtime test list
 Regression checks
 [ ] Right-click NPCs, objects, ground items, and normal tiles; confirm their existing Matrix3 menu options are unchanged.
 [ ] Walk several tiles and interact with normal objects after using Dev Spawn.
+[ ] Use the normal Client Console Item Browser after Dev Spawn search and confirm its item indexing/thumbnails still work.
 [ ] Spawn then restart the server; confirm this Phase 1 runtime placement is not mistaken for persistent source/map data.
