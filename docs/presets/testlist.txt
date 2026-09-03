@@ -1,20 +1,22 @@
 Gear Presets runtime test list
 
 1. Clean/refresh the Server project in Eclipse with Java 8 and confirm it compiles.
-2. Open Gear > Presets and click preset row 1 selector (component 184); confirm the preset action dialogue opens for preset 1.
-3. On preset row 1, click the floppy/save icon (193), green-arrow/load icon (201), and trash/delete icon (225); confirm each action targets preset 1 specifically.
-4. Repeat the same controls on preset row 2 using components 233/242/250/274 and confirm they target preset 2 specifically.
-5. Verify row 1 and row 2 mapper output still reports packet 103 with slot=65535 and slot2=65535, proving componentId is the row/action discriminator for these runtime-confirmed rows.
-6. Click the gear/settings control and both right-side circles for rows 1 and 2; confirm they are consumed without triggering save/load/delete or new game-chat diagnostics.
-7. Click at least one matching control on rows 3 and 10 and inspect `Server/data/logs/presets/preset-map.txt`; confirm their component IDs continue the +49 row stride before treating rows 3-10 as VERIFIED.
-8. Save a preset with both worn equipment and backpack items, including stack quantities.
-9. Change the carried setup, click Load with no bank open, and confirm loading is rejected without item changes.
-10. Open a bank, return to Gear > Presets, load the saved preset, and confirm worn/backpack slot contents and quantities match the saved setup.
-11. Verify the displaced setup moves into the bank and required preset items are removed from the bank with no duplicate or missing quantities.
-12. Test a nearly/full bank where a one-for-one preset swap should still fit.
-13. Test a missing required bank item and insufficient final bank space; both must reject before changing items.
-14. Save, logout/restart the server, login, and confirm the preset remains available through the same preset slot.
-15. Clear a saved preset and confirm it no longer loads after restart.
-16. Test while a controller restricts inventory/equipment changes and confirm the preset load is rejected.
-17. Click Beast of Burden and other unmapped preset controls and confirm they do not route into one of the ten normal presets.
-18. Confirm `[PRESET-MAP]` output remains de-duplicated per click tuple, still appears in the BAT console, and is appended to `Server/data/logs/presets/preset-map.txt`.
+2. Open Gear > Presets and confirm existing row save/load/delete behavior still works for preset rows 1 and 2.
+3. Click at least one matching control on rows 3 and 10 and inspect `Server/data/logs/presets/preset-map.txt`; confirm their component IDs continue the +49 row stride before treating rows 3-10 as VERIFIED.
+4. Save a preset with both worn equipment and backpack items, including stack quantities.
+5. Click that row's cog and toggle Backpack Off; load the preset and confirm current backpack contents remain untouched while enabled containers change.
+6. Toggle Worn equipment Off; load the preset and confirm current equipment remains untouched while enabled containers change.
+7. Confirm the cog refuses a state where Backpack, Worn equipment, and Beast of Burden are all Off.
+8. Restart the server and confirm per-preset Backpack/Worn/BoB settings persist.
+9. Click right radio 1 and right radio 2 on saved rows; confirm the game reports assignment to Quick Preset 1/2 and the assignments persist across restart.
+10. Clear a preset assigned to Quick 1 or Quick 2 and confirm the corresponding persisted assignment is cleared.
+11. Enable Beast of Burden on a preset saved without an active BoB; with no active BoB, confirm load rejects cleanly without changing bank/inventory/equipment.
+12. With a real Beast of Burden active, save a preset containing BoB items, change its contents, then load and confirm the enabled BoB contents restore exactly and the familiar interface refreshes.
+13. Verify enabled Backpack/Worn/BoB containers and the bank conserve exact item quantities with no duplicate or missing items.
+14. Test a nearly/full bank where a one-for-one preset swap should still fit.
+15. Test a missing required bank item and insufficient final bank space; both must reject before changing items.
+16. Test while a controller restricts inventory/equipment changes and confirm enabled restricted containers cause the preset load to reject.
+17. Save/logout/restart/login and confirm version-2 preset data, container settings, and quick assignments remain available. Existing version-1 preset files should still load with Backpack/Worn enabled and BoB disabled.
+18. Click the top Currently Equipped Quick 1 arrow and Quick 2 arrow once each, then click every control on the dedicated bottom Beast of Burden row once; send the resulting new `[PRESET-MAP]` lines so those native controls can be wired without guessing.
+19. Confirm `[PRESET-MAP]` output remains de-duplicated per click tuple, appears in the BAT console, and appends to `Server/data/logs/presets/preset-map.txt`.
+20. After the preset-only host-order clipping patch, reopen Gear > Presets and confirm the Backpack and Worn panels both render fully. If clipping remains, treat the host-order theory as disproven and do not change global interface scaling.
