@@ -16,7 +16,10 @@ Known render/state clues
 Focused animation neighborhoods
 - 17960-18040: scan as the primary RoTS-era animation neighborhood around the brothers' render/state data.
 - 21920-21940: scan around animation 21931, which is associated with VERIFIED flying Ahrim state.
-- Owner Console -> RoTS cache research now dumps populated definitions in both ranges with frame durations, frame IDs, total cache duration, priority, hand-item overrides, and handled-sound data.
+- Owner Console -> RoTS cache research dumps populated definitions in both ranges with frame durations, frame IDs, total cache duration, priority, hand-item overrides, and handled-sound data.
+- Owner Console -> Deep Scan resolves render sets 2687, 2689, 2690, 2982, and 2987 into raw BAS/cache opcode animation references.
+- Deep Scan classifies targeted candidates by whether a known RoTS render set references them; this is intended to separate locomotion/render-state animations from stronger special-mechanic candidates.
+- Numeric proximity alone is not evidence that an animation belongs to RoTS; mechanic names remain UNKNOWN until runtime/video evidence confirms them.
 
 Special animations still requiring runtime identification
 - Hurricane / Whirlwind: UNKNOWN.
@@ -33,5 +36,7 @@ For each candidate record:
 - total cache duration
 - right/left hand item overrides
 - handled sounds when relevant
+- known render-set membership
+- linked GFX definitions when statically available
 - evidence label
 - runtime confirmation notes
