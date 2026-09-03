@@ -3,3 +3,9 @@
 - Scanner finds all six brother name variants and dumps NPC/model/render-animation metadata.
 - Added model-fingerprint correlation to identify likely normal variants related to observed Santa-hat models.
 - Added initial RoTS 1:1 reverse-engineering documentation structure.
+- Added Owner Console RoTS cache research output so future focused scans no longer require running a standalone Java main.
+- Added one-click Copy All and Clear controls around a scrollable read-only dump; scanning is off the Swing event-dispatch thread.
+- Recorded NPC 18539 as VERIFIED Ahrim flying state from runtime testing.
+- Recorded NPC 18542 as VERIFIED Guthan spearless/Impale state from runtime testing.
+- Kept NPCs 18546-18551 as HYPOTHESIS subdued/downed states pending runtime confirmation.
+- Recorded that the currently identified RoTS combat-family models render with Santa hats in this revision-830 cache/runtime.
