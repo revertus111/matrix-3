@@ -63,3 +63,4 @@
 - Fixed CacheEditor project detection so the Client Gradle project cannot be mistaken for the Server; a candidate must contain the actual Server-side CacheEditorLauncher source before `runCacheEditor` is invoked.
 - Hardened CacheEditor launch by invoking the absolute Server Gradle wrapper and passing `-p <Server>` explicitly; launch diagnostics now print the resolved Server project and wrapper paths before Gradle starts.
 - Kept the default Item Browser result list capped at 160 rows for normal browsing, but non-empty ID/name searches now populate every matching definition while thumbnail rendering remains bounded/lazy.
+- Added a 1.25-second Item Browser search debounce so partial one/two-letter input does not rebuild the full matching result model on every keystroke; indexing refreshes continue using the last applied query until typing pauses.
