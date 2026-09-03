@@ -9,3 +9,4 @@
 - Item definition writes are intentionally not enabled yet; a round-trip-safe definition encoder is required before structured saves are allowed.
 - Added the Server runCacheEditor JavaExec task so the standalone CacheEditor can be launched with the correct Server/FileStore runtime classpath.
 - Added Client Console launch support through a separate CacheEditor process; the Client does not compile against Server CacheEditor/FileStore classes.
+- Changed runCacheEditor to pass the Matrix3 root ../830_cache directory automatically, so Client Console launches no longer require manually browsing to the normal revision-830 cache. The existing chooser remains the fallback if that directory is unavailable.
