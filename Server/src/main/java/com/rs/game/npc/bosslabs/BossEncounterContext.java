@@ -77,6 +77,11 @@ public final class BossEncounterContext {
 		return ownedNpcs.size();
 	}
 
+	public synchronized List<NPC> getOwnedNpcsSnapshot() {
+		pruneFinishedOwnedNpcs();
+		return Collections.unmodifiableList(new ArrayList<NPC>(ownedNpcs));
+	}
+
 	synchronized void trackTask(WorldTask task) {
 		if (!active || task == null)
 			return;
