@@ -24,11 +24,17 @@ public final class ItemBrowserCommandBridge {
             player.getPackets().sendGameMessage("Admin+ only!");
             return true;
         }
+        if (cmd != null && cmd.length >= 3 && "backpack".equalsIgnoreCase(cmd[1])
+                && "open".equalsIgnoreCase(cmd[2])) {
+            player.getInventory().getBackpack().open();
+            return true;
+        }
         if (cmd != null && cmd.length >= 2 && "settings".equalsIgnoreCase(cmd[1])) {
             return processSettings(player, cmd);
         }
         if (cmd == null || cmd.length < 4) {
-            player.getPackets().sendGameMessage("Use: ::itembrowser <inventory|bank> <itemId> <amount>");
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser <inventory|bank> <itemId> <amount> or ::itembrowser backpack open");
             return true;
         }
 
@@ -38,7 +44,8 @@ public final class ItemBrowserCommandBridge {
         } else if ("bank".equalsIgnoreCase(cmd[1])) {
             bank = true;
         } else {
-            player.getPackets().sendGameMessage("Use: ::itembrowser <inventory|bank> <itemId> <amount>");
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser <inventory|bank> <itemId> <amount> or ::itembrowser backpack open");
             return true;
         }
 
