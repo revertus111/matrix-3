@@ -1,0 +1,5 @@
+2026-09-03
+- Expanded Matrix3 inventory authority from 28 to 36 slots.
+- Added load-time migration for existing serialized inventories smaller than 36 slots; existing slot positions are copied unchanged and larger containers are never shrunk.
+- Extended inventory component settings to the live container size instead of hard-coding slot 27 as the final usable slot.
+- Kept client interface hardcoding out of this slice pending runtime evidence: the item update protocol already transmits the container length, so first verify whether resizable NIS interface 1473:34 renders all 36 slots automatically.
