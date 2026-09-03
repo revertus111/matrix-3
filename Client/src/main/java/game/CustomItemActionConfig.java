@@ -14,8 +14,8 @@ import java.util.Set;
  *
  * The server remains authoritative for what an option actually does. This class
  * only applies configured item/inventory labels and equipped-item option params
- * to already-decoded Matrix3 ItemDefinitions, plus configured missing option
- * entries for the bank inventory pane.
+ * to already-decoded Matrix3 ItemDefinitions, plus configured option entries for
+ * the bank inventory pane.
  */
 public final class CustomItemActionConfig {
 
@@ -26,6 +26,7 @@ public final class CustomItemActionConfig {
     private static final int INTERFACE_OPTION_OPCODE = 57;
     private static final int INTERFACE_OPTION_SECONDARY_OPCODE = 1007;
     private static final int MAX_INTERFACE_OPTIONS = 10;
+    private static final String EXPLICIT_MENU_MODE = "EXPLICIT";
 
     private static final Properties PROPERTIES = new Properties();
     private static final Set<Integer> ITEM_IDS = new HashSet<Integer>();
@@ -89,9 +90,10 @@ public final class CustomItemActionConfig {
     }
 
     /**
-     * Adds only configured bank-inventory-pane option slots that are not already
-     * present in Matrix3's stock menu. Existing Deposit/Wear/Examine labels are
-     * never renamed or repurposed.
+     * Adds configured bank-inventory-pane option slots. When an item explicitly
+     * opts into EXPLICIT menu mode, stock option slots not listed in config are
+     * removed from that clicked item's menu only. Listed STOCK actions keep their
+     * original Matrix3 packets/handlers.
      */
     private static void applyBankInventoryMenuActions() {
         if (ITEM_IDS.isEmpty() || Class25.aBool165 || Class25.aClass675_174 == null)
@@ -102,34 +104,49 @@ public final class CustomItemActionConfig {
         Class675 entries = Class25.aClass675_174;
 
         for (Class572 node = entries.aClass572_8547.aClass572_6433;
-                node != entries.aClass572_8547;
-                node = node.aClass572_6433) {
+                node != entries.aClass572_8547;) {
+            Class572 next = node.aClass572_6433;
             Class572_Sub12_Sub10 menuEntry = (Class572_Sub12_Sub10) node;
             int opcode = menuEntry.anInt11402 * -44467871;
             if (opcode >= 2000)
                 opcode -= 2000;
-            if (opcode != INTERFACE_OPTION_OPCODE && opcode != INTERFACE_OPTION_SECONDARY_OPCODE)
+            if (opcode != INTERFACE_OPTION_OPCODE && opcode != INTERFACE_OPTION_SECONDARY_OPCODE) {
+                node = next;
                 continue;
+            }
 
             int widgetHash = menuEntry.anInt11392 * 200110927;
-            if (widgetHash != BANK_INVENTORY_INTERFACE_HASH)
+            if (widgetHash != BANK_INVENTORY_INTERFACE_HASH) {
+                node = next;
                 continue;
+            }
 
             int child = menuEntry.anInt11397 * 740323685;
             InterfaceDefinitions component = Class530.method6338(widgetHash, child, -582563422);
-            if (component == null)
+            if (component == null) {
+                node = next;
                 continue;
+            }
 
             int itemId = component.nvmtheindexisotherone * 411192987;
-            if (!hasBankInventoryEntries(itemId))
+            if (!hasBankInventoryEntries(itemId)) {
+                node = next;
                 continue;
+            }
 
             Integer targetKey = Integer.valueOf(child);
             if (!targets.containsKey(targetKey))
                 targets.put(targetKey, new BankMenuTarget(itemId, menuEntry));
 
             int option = (int) (menuEntry.aLong11395 * -6760453999157901937L);
-            existingOptions.add(bankMenuKey(child, option));
+            if (isExplicitBankInventoryMenu(itemId)
+                    && getEntry(itemId, "bank_inventory", option) == null) {
+                menuEntry.method6794((byte) -64);
+                Class25.anInt172 -= -1390326489;
+            } else {
+                existingOptions.add(bankMenuKey(child, option));
+            }
+            node = next;
         }
 
         for (BankMenuTarget target : targets.values()) {
@@ -144,6 +161,11 @@ public final class CustomItemActionConfig {
                 existingOptions.add(bankMenuKey(child, option));
             }
         }
+    }
+
+    private static boolean isExplicitBankInventoryMenu(int itemId) {
+        String mode = PROPERTIES.getProperty("item." + itemId + ".bank_inventory.mode");
+        return mode != null && EXPLICIT_MENU_MODE.equals(mode.trim().toUpperCase());
     }
 
     private static boolean hasBankInventoryEntries(int itemId) {
