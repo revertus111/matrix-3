@@ -17,6 +17,8 @@ public final class Inventory implements Serializable {
 
     private static final long serialVersionUID = 8842800123753277093L;
 
+    public static final int INVENTORY_SIZE = 36;
+
     private ItemsContainer<Item> items;
 
     private transient Player player;
@@ -25,11 +27,26 @@ public final class Inventory implements Serializable {
     public static final int INVENTORY_INTERFACE = 1473, INVENTORY_INTERFACE_2 = 1474;
 
     public Inventory() {
-	items = new ItemsContainer<Item>(28, false);
+	items = new ItemsContainer<Item>(INVENTORY_SIZE, false);
     }
 
     public void setPlayer(Player player) {
 	this.player = player;
+	ensureInventorySize();
+    }
+
+    private void ensureInventorySize() {
+	if (items == null) {
+	    items = new ItemsContainer<Item>(INVENTORY_SIZE, false);
+	    return;
+	}
+	if (items.getSize() >= INVENTORY_SIZE)
+	    return;
+	ItemsContainer<Item> oldItems = items;
+	ItemsContainer<Item> expandedItems = new ItemsContainer<Item>(INVENTORY_SIZE, false);
+	for (int slot = 0; slot < oldItems.getSize(); slot++)
+	    expandedItems.set(slot, oldItems.get(slot));
+	items = expandedItems;
     }
 
     public void init() {
@@ -42,7 +59,7 @@ public final class Inventory implements Serializable {
 	    player.getPackets().sendIComponentSettings(menu ? INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE,
 		    menu ? 15 : 34, -1, -1, 2097152);
 	    player.getPackets().sendIComponentSettings(menu ? INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE,
-		    menu ? 15 : 34, 0, 27, 15302030);
+		    menu ? 15 : 34, 0, items.getSize() - 1, 15302030);
 	    // player.getPackets().sendIComponentSettings(menu ?
 	    // INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE, menu ? 15 : 34, 0,
 	    // 27, 1536);
@@ -265,8 +282,9 @@ public final class Inventory implements Serializable {
 
     public boolean containsOneItem(int... itemIds) {
 	for (int itemId : itemIds) {
-	    if (items.containsOne(new Item(itemId, 1)))
+	    if (items.containsOne(new Item(itemId, 1))) {
 		return true;
+	    }
 	}
 	return false;
     }
