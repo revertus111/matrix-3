@@ -52,6 +52,49 @@ public final class ClientConsoleBridge {
         return hasLocalPlayer() ? "Player loaded" : "Waiting for login";
     }
 
+    public static String getWorldPositionLabel() {
+        PlayerLocation location = getPlayerLocation();
+        return location == null ? "Waiting for player" : location.worldX + ", " + location.worldY;
+    }
+
+    public static String getPlaneLabel() {
+        PlayerLocation location = getPlayerLocation();
+        return location == null ? "-" : Integer.toString(location.plane);
+    }
+
+    public static String getRegionLabel() {
+        PlayerLocation location = getPlayerLocation();
+        if (location == null) {
+            return "-";
+        }
+        return location.regionId + " (" + location.regionX + ", " + location.regionY + ")";
+    }
+
+    private static PlayerLocation getPlayerLocation() {
+        Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
+        if (player == null || client.aClass613_8605 == null || player.method5394() == null) {
+            return null;
+        }
+
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
+        Class240 scenePosition = player.method5394().aClass240_2647;
+        if (sceneBase == null || scenePosition == null) {
+            return null;
+        }
+
+        // Matrix3 scene coordinates use 512 units per tile. DevModeBridge already
+        // uses the same scene base and player plane ownership for world actions.
+        int localX = ((int) scenePosition.aFloat2653) >> 9;
+        int localY = ((int) scenePosition.aFloat2657) >> 9;
+        int worldX = sceneBase.localX * -2109597897 + localX;
+        int worldY = sceneBase.localY * 417324155 + localY;
+        int plane = player.aByte9009 & 0xff;
+        int regionX = worldX >> 6;
+        int regionY = worldY >> 6;
+        int regionId = (regionX << 8) | regionY;
+        return new PlayerLocation(worldX, worldY, plane, regionX, regionY, regionId);
+    }
+
     public static String queueConsoleCommand(String rawCommand) {
         return queueConsoleCommands(new String[] { rawCommand });
     }
@@ -146,5 +189,23 @@ public final class ClientConsoleBridge {
                 -1997224533);
 
         client.aClass195_8589.method2929(packet, (byte) -35);
+    }
+
+    private static final class PlayerLocation {
+        private final int worldX;
+        private final int worldY;
+        private final int plane;
+        private final int regionX;
+        private final int regionY;
+        private final int regionId;
+
+        private PlayerLocation(int worldX, int worldY, int plane, int regionX, int regionY, int regionId) {
+            this.worldX = worldX;
+            this.worldY = worldY;
+            this.plane = plane;
+            this.regionX = regionX;
+            this.regionY = regionY;
+            this.regionId = regionId;
+        }
     }
 }
