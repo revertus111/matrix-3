@@ -1,0 +1,12 @@
+RoTS cache scanner test list
+
+[ ] Eclipse/Java 8 clean build succeeds.
+[ ] Run `com.rs.tools.RotsCacheScanner` as a Java Application.
+[ ] Cache initializes from the configured revision-830 cache path.
+[ ] Scanner completes without modifying cache files.
+[ ] Output contains candidate NPC definitions for all six brother names.
+[ ] Candidate output includes model IDs and renderEmote IDs.
+[ ] Render animation output includes stand/walk/run IDs and animation duration metadata.
+[ ] `relatedByModels` output identifies strong shared-model NPC variants.
+[ ] Inspect Santa-hat candidates and verify whether a normal RoTS variant appears among top shared-model matches.
+[ ] Runtime-spawn promising candidate IDs before marking any RoTS identity `VERIFIED`.
