@@ -15,15 +15,25 @@ public final class CacheEditorFrame extends JFrame {
 	public CacheEditorFrame(CacheSession session) {
 		super("RS3 CacheEditor");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-		setSize(1180, 760);
+		setSize(1220, 780);
 		setLocationRelativeTo(null);
 		setLayout(new BorderLayout());
+		getContentPane().setBackground(CacheEditorTheme.WINDOW);
 
-		JLabel path = new JLabel("  Cache: " + session.getCacheDirectory().getAbsolutePath());
-		path.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-		add(path, BorderLayout.NORTH);
+		JPanel header = new JPanel(new BorderLayout());
+		header.setBackground(CacheEditorTheme.WINDOW);
+		header.setBorder(CacheEditorTheme.panelPadding(10, 14, 8, 14));
+		JLabel path = new JLabel("CACHE  " + session.getCacheDirectory().getAbsolutePath());
+		path.setFont(CacheEditorTheme.SMALL_FONT);
+		path.setForeground(CacheEditorTheme.MUTED_TEXT);
+		header.add(path, BorderLayout.WEST);
+		add(header, BorderLayout.NORTH);
 
 		JTabbedPane tabs = new JTabbedPane();
+		tabs.setBackground(CacheEditorTheme.WINDOW);
+		tabs.setForeground(CacheEditorTheme.TEXT);
+		tabs.setFont(CacheEditorTheme.BODY_FONT);
+		tabs.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
 		tabs.addTab("Raw Cache", new RawCachePanel(session));
 		tabs.addTab("Items", new ItemBrowserPanel(session));
 		addPlaceholder(tabs, "NPCs");
@@ -38,8 +48,12 @@ public final class CacheEditorFrame extends JFrame {
 
 	private static void addPlaceholder(JTabbedPane tabs, String name) {
 		JPanel panel = new JPanel(new BorderLayout());
-		panel.add(new JLabel(name + " editor will use the shared cache session in a later slice.", JLabel.CENTER),
-				BorderLayout.CENTER);
+		panel.setBackground(CacheEditorTheme.PANEL);
+		panel.setBorder(CacheEditorTheme.panelPadding(24, 24, 24, 24));
+		JLabel label = new JLabel(name + " editor will use the shared cache session in a later slice.", JLabel.CENTER);
+		label.setFont(CacheEditorTheme.BODY_FONT);
+		label.setForeground(CacheEditorTheme.MUTED_TEXT);
+		panel.add(label, BorderLayout.CENTER);
 		tabs.addTab(name, panel);
 		tabs.setEnabledAt(tabs.getTabCount() - 1, false);
 	}
