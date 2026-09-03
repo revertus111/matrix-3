@@ -40,3 +40,11 @@
 - Extended focused animation research through 21947 and corrected the live research label for the runtime-invisible 18546-18551 body-only/inactive definitions.
 - GFX correlation now summarizes decode failures and refuses to treat a zero-match result as evidence when any definitions failed to decode.
 - No RoTS server combat behavior changed in this GFX-research unblock; Greatest Axe animation 21940, timing, and missing blue-energy visual remain pending runtime/cache evidence.
+- Added `RiseOfTheSixDebugLog`, a development-only per-instance RoTS Fight Recorder writing unique logs under `data/logs/rots/`.
+- Recorder disk I/O is isolated to a bounded-queue daemon writer; the world/combat thread only builds log strings and performs non-blocking queue offers.
+- Recorder starts from `RiseOfTheSixInstance.loadMapInstance()` before brother spawning and records the active daily rotation, all six spawn events, broadcasts, side-hop state/movement, survivor heals, subdue/all-six completion, revive timer/progress/revival, Torag cross-brother callback, and instance cleanup.
+- Added one full runtime snapshot per world-task tick for the instance, every current player, and every brother, including tiles, HP, side ownership, current target, subdued/special state, and RoTS-owned internal special counters/victims used for debugging.
+- Added automatic player enter/leave/side-change and player/brother HP-change events so logs can be reconstructed without relying only on raw snapshots.
+- `RiseOfTheSixCombat` now records every RoTS normal melee/magic/ranged attack with animation/projectile/GFX, max hit, rolled damage, hit delay, return delay, Guthan heal proc, and Ahrim Strength drain when triggered.
+- Brother-owned special logging now records Dharok Greatest Axe start/21940/absorbed damage/stored release, Torag Whack/Pummel/rescue/release, Guthan Impale projectile/transformation/bleeds/retrieval/auto-return, Hurricane 21941 start/pulses/hits/end, Wall Slam phases/hits, special resets, subdue/revive, and brother finish.
+- Fight Recorder lines include elapsed milliseconds plus a recorder tick incremented once per scheduled world tick; queue overflow is fail-soft and reported as a dropped-line count instead of blocking combat.
