@@ -45,5 +45,6 @@ task runCacheEditor(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     applicationName = "CacheEditor"
     main = "com.rs.tools.cacheeditor.CacheEditorLauncher"
+    args = [file('../830_cache').absolutePath]
     jvmArgs = ['-Xms128m', '-Xmx1024m']
 }
