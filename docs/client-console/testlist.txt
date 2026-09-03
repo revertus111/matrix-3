@@ -1,4 +1,4 @@
-Matrix3 Client Console - shell + Owner + Commands + Item Browser runtime test list
+Matrix3 Client Console - shell + Owner + Commands + Item Browser + Settings runtime test list
 
 1. Start the client through the normal Matrix3 client launch path. Confirm the game still renders and reaches normal login/gameplay with the Client Console attached beside the game view.
 2. Confirm the shell is dark-themed, the M3 rail remains visible, the C button visibly indicates the open state, and the placeholder content scrolls vertically when space is limited.
@@ -67,3 +67,11 @@ Matrix3 Client Console - shell + Owner + Commands + Item Browser runtime test li
 65. Resize Owner from a wide console to the narrowest supported console width. Confirm Account values, all four RoTS buttons, output box, and informational text remain inside the visible viewport with no right-side clipping.
 66. Confirm the Quick actions and RoTS informational text wrap within their cards instead of increasing the Owner panel's preferred width.
 67. Start a fresh client session without first triggering any visible GFX. Click Deep Scan and confirm it no longer reports `GFX loader: NOT READY`; the read-only bootstrap should create the GFX definition loader from the already-live config archive before scanning.
+68. Click S on the rail. Confirm Settings is lazy-created, remains usable at the narrowest supported console width, and exposes independent Legacy combat and Legacy interface toggles plus Apply saved combination.
+69. Set Legacy combat ON and Legacy interface OFF, then Apply. Confirm the server reports Legacy combat and NIS separately, the modern resizable NIS interface remains active/editable, and combat uses Legacy behavior/special attack rather than EoC abilities.
+70. Set Legacy combat OFF and Legacy interface ON, then Apply. Confirm EoC manual combat remains selected while the known Legacy interface/gameframe restrictions are applied. Record any interface element that does not match the original Legacy UI because this combination is verified-static only until runtime confirmation.
+71. Test both matched combinations: ON/ON should produce Legacy combat plus Legacy interface state; OFF/OFF should produce EoC manual combat plus NIS. Confirm changing one toggle does not silently change the other selection.
+72. Enable Matrix3's original in-game Legacy Mode checkbox, then return to Client Console Settings and Apply Legacy combat ON / Legacy interface OFF. Confirm the split control normalizes the original combined master state and returns to Legacy combat with NIS.
+73. Save a non-default combat/interface combination, close Matrix3 normally, relaunch, log in, and open S. Confirm both toggle selections persist locally and the saved pair is queued once the logged-in player is available.
+74. Attempt to apply Settings before login and with a non-admin account. Confirm the UI keeps the local selection but no unauthorized server mode change occurs; owner/admin live-player validation remains authoritative.
+75. After Settings tests, switch C/O/>_/I/S repeatedly, run one safe command and one Item Browser Inventory spawn, and confirm no Client Console panel or normal Commands.java path regressed.
