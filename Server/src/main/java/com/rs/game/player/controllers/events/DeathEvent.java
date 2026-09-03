@@ -15,6 +15,7 @@ import com.rs.game.map.MapBuilder;
 import com.rs.game.npc.others.GraveStone;
 import com.rs.game.player.InterfaceManager;
 import com.rs.game.player.Player;
+import com.rs.game.player.content.DeathPolicy;
 import com.rs.game.player.content.Magic;
 import com.rs.game.player.controllers.Controller;
 import com.rs.game.tasks.WorldTask;
@@ -102,6 +103,7 @@ public class DeathEvent extends Controller {
 	private Stages stage;
 	private Integer[][] slots;
 	private int currentHub;
+	private boolean keepInventoryAndEquipment;
 
 	@Override
 	public void start() {
@@ -242,10 +244,10 @@ public class DeathEvent extends Controller {
 	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packetId) {
 		if (interfaceId == 18) {
 			if (componentId == 9) {
-				if (packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
+				if (!keepInventoryAndEquipment && packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
 					unprotect(slotId);
 			} else if (componentId == 17) {
-				if (packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
+				if (!keepInventoryAndEquipment && packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
 					protect(slotId2);
 			} else if (componentId == 45) {
 				//slotid - 1
@@ -259,7 +261,13 @@ public class DeathEvent extends Controller {
 	}
 
 	public void getReadyToRespawn() {
-		slots = GraveStone.getItemSlotsKeptOnDeath(player, false, hadSkull(), player.getPrayer().isProtectingItem());
+		keepInventoryAndEquipment = DeathPolicy.keepsInventoryAndEquipment(player);
+		if (keepInventoryAndEquipment) {
+			slots = new Integer[][] { new Integer[0], new Integer[0], new Integer[0], new Integer[0] };
+			player.getPackets().sendGameMessage("You keep your inventory and equipment when you die in the main game.");
+		} else {
+			slots = GraveStone.getItemSlotsKeptOnDeath(player, false, hadSkull(), player.getPrayer().isProtectingItem());
+		}
 		player.getInterfaceManager().sendCentralInterface(18);
 		if (slots[0].length > 0) {
 			player.getVarsManager().sendVarBitOld(9227, slots[0].length);
@@ -272,15 +280,20 @@ public class DeathEvent extends Controller {
 		player.getVarsManager().sendVarOld(105, -1);
 		player.getVarsManager().sendVarBitOld(9231, currentHub = getCurrentHub(getDeathTile()));
 		player.getPackets().sendUnlockIComponentOptionSlots(18, 9, 0, slots[0].length, 0);
-		player.getPackets().sendUnlockIComponentOptionSlots(18, 17, 0, 100, 0);
+		player.getPackets().sendUnlockIComponentOptionSlots(18, 17, 0, keepInventoryAndEquipment ? 0 : 100, 0);
 		player.getPackets().sendUnlockIComponentOptionSlots(18, 45, 0, RESPAWN_LOCATIONS.length, 0);
 		player.setCloseInterfacesEvent(new Runnable() {
 
 			@Override
 			public void run() {
 				WorldTile respawnTile = currentHub >= 256 ? RESPAWN_LOCATIONS[currentHub - 256] : HUBS[currentHub];
-				synchronized (slots) {
-					player.sendItemsOnDeath(null, getDeathTile(), respawnTile, false, slots, true);
+				if (!keepInventoryAndEquipment) {
+					synchronized (slots) {
+						player.sendItemsOnDeath(null, getDeathTile(), respawnTile, false, slots, true);
+					}
+				} else {
+					player.getInventory().refresh();
+					player.getEquipment().refresh(null);
 				}
 				player.setHitpoints(player.getMaxHitpoints());
 				player.setCloseInterfacesEvent(null);
