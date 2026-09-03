@@ -2,11 +2,13 @@ package game.console;
 
 import game.ClientConsoleBridge;
 import game.ClientConsoleRotsBridge;
+import game.ClientConsoleRotsGfxBootstrap;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.HierarchyEvent;
@@ -19,7 +21,9 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.Scrollable;
 import javax.swing.JTextArea;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
@@ -41,10 +45,11 @@ public final class OwnerPanel extends JScrollPane {
     private final Timer refreshTimer = new Timer(REFRESH_DELAY_MS, e -> refresh());
 
     public OwnerPanel() {
-        JPanel content = new JPanel();
+        ViewportWidthPanel content = new ViewportWidthPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBackground(ConsoleTheme.PANEL);
         content.setBorder(ConsoleTheme.panelPadding(20, 18, 20, 18));
+        content.setMinimumSize(new Dimension(0, 0));
 
         JLabel title = new JLabel("OWNER");
         title.setFont(ConsoleTheme.TITLE_FONT);
@@ -102,11 +107,8 @@ public final class OwnerPanel extends JScrollPane {
     private JPanel createActionsCard() {
         JPanel card = createCard("Quick actions");
 
-        JLabel message = new JLabel("<html>Read-only for this slice.<br>"
-                + "Command-backed Owner actions come next so Matrix3 remains authoritative.</html>");
-        message.setFont(ConsoleTheme.SMALL_FONT);
-        message.setForeground(ConsoleTheme.MUTED_TEXT);
-        message.setAlignmentX(LEFT_ALIGNMENT);
+        JTextArea message = createWrappedText(
+                "Read-only for this slice. Command-backed Owner actions come next so Matrix3 remains authoritative.", 2);
         card.add(Box.createVerticalStrut(9));
         card.add(message);
         return card;
@@ -160,10 +162,9 @@ public final class OwnerPanel extends JScrollPane {
         buttons.add(copyButton);
         buttons.add(clearButton);
 
-        JLabel note = new JLabel("<html>Read-only cache evidence. Both scans run off the Swing thread; Deep Scan correlates render sets and GFX without naming mechanics.</html>");
-        note.setFont(ConsoleTheme.SMALL_FONT);
-        note.setForeground(ConsoleTheme.MUTED_TEXT);
-        note.setAlignmentX(LEFT_ALIGNMENT);
+        JTextArea note = createWrappedText(
+                "Read-only cache evidence. Both scans run off the Swing thread; Deep Scan correlates render sets and GFX without naming mechanics.",
+                3);
 
         card.add(Box.createVerticalStrut(8));
         card.add(rotsStatus);
@@ -190,6 +191,9 @@ public final class OwnerPanel extends JScrollPane {
             public void run() {
                 String result;
                 try {
+                    if (deep) {
+                        ClientConsoleRotsGfxBootstrap.ensureReady();
+                    }
                     result = deep
                             ? ClientConsoleRotsBridge.buildDeepResearchDump()
                             : ClientConsoleRotsBridge.buildResearchDump();
@@ -248,6 +252,7 @@ public final class OwnerPanel extends JScrollPane {
                 BorderFactory.createLineBorder(ConsoleTheme.BORDER),
                 ConsoleTheme.panelPadding(14, 14, 14, 14)));
         card.setAlignmentX(LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         JLabel title = new JLabel(titleText);
         title.setFont(ConsoleTheme.SECTION_FONT);
@@ -273,6 +278,21 @@ public final class OwnerPanel extends JScrollPane {
         return row;
     }
 
+    private JTextArea createWrappedText(String text, int rows) {
+        JTextArea area = new JTextArea(text, rows, 1);
+        area.setEditable(false);
+        area.setOpaque(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setFocusable(false);
+        area.setFont(ConsoleTheme.SMALL_FONT);
+        area.setForeground(ConsoleTheme.MUTED_TEXT);
+        area.setBorder(null);
+        area.setAlignmentX(LEFT_ALIGNMENT);
+        area.setMaximumSize(new Dimension(Integer.MAX_VALUE, area.getPreferredSize().height));
+        return area;
+    }
+
     private static JLabel createValueLabel() {
         JLabel label = new JLabel();
         label.setFont(ConsoleTheme.BODY_FONT);
@@ -286,6 +306,36 @@ public final class OwnerPanel extends JScrollPane {
         playerStateValue.setText(ClientConsoleBridge.getPlayerStateLabel());
         if (!rotsScanning.get() && rotsOutput.getText().length() == 0) {
             rotsStatus.setText(ClientConsoleRotsBridge.getReadinessLabel());
+        }
+    }
+
+    private static final class ViewportWidthPanel extends JPanel implements Scrollable {
+        private static final long serialVersionUID = 7995041916861782179L;
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 16;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            int extent = orientation == SwingConstants.VERTICAL ? visibleRect.height : visibleRect.width;
+            return Math.max(16, extent - 16);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
         }
     }
 }
