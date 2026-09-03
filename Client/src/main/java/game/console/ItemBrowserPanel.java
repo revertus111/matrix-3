@@ -41,6 +41,7 @@ import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -51,6 +52,7 @@ public final class ItemBrowserPanel extends JPanel {
 
     private static final long serialVersionUID = 6358356620719959796L;
     private static final int MAX_VISIBLE_RESULTS = 160;
+    private static final int SEARCH_DEBOUNCE_MS = 1250;
     private static final String ALL = "all";
     private static final String FAVORITES = "favorites";
     private static final String CATEGORIES = "categories";
@@ -65,6 +67,7 @@ public final class ItemBrowserPanel extends JPanel {
     private final AtomicBoolean indexing = new AtomicBoolean();
 
     private final JTextField search = new JTextField();
+    private final Timer searchDebounce = new Timer(SEARCH_DEBOUNCE_MS, e -> applySearchQuery());
     private final JLabel status = new JLabel("Waiting for item definitions...");
     private final JLabel selectedName = new JLabel("Select an item");
     private final JLabel selectedIcon = new JLabel("·", SwingConstants.CENTER);
@@ -86,11 +89,13 @@ public final class ItemBrowserPanel extends JPanel {
     private String mode = ALL;
     private String selectedCategory;
     private String selectedPreset;
+    private String appliedSearchQuery = "";
 
     public ItemBrowserPanel() {
         super(new BorderLayout());
         setBackground(ConsoleTheme.PANEL);
         setOpaque(true);
+        searchDebounce.setRepeats(false);
 
         List<String> savedCategories = store.getCategories();
         if (!savedCategories.isEmpty()) {
@@ -274,9 +279,9 @@ public final class ItemBrowserPanel extends JPanel {
 
     private void installListeners() {
         search.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { refreshResults(); }
-            @Override public void removeUpdate(DocumentEvent e) { refreshResults(); }
-            @Override public void changedUpdate(DocumentEvent e) { refreshResults(); }
+            @Override public void insertUpdate(DocumentEvent e) { scheduleSearchRefresh(); }
+            @Override public void removeUpdate(DocumentEvent e) { scheduleSearchRefresh(); }
+            @Override public void changedUpdate(DocumentEvent e) { scheduleSearchRefresh(); }
         });
         list.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -317,6 +322,16 @@ public final class ItemBrowserPanel extends JPanel {
                 }
             }
         });
+    }
+
+    private void scheduleSearchRefresh() {
+        searchDebounce.restart();
+    }
+
+    private void applySearchQuery() {
+        String value = search.getText();
+        appliedSearchQuery = value == null ? "" : value.trim().toLowerCase(Locale.ENGLISH);
+        refreshResults();
     }
 
     private JPopupMenu itemPopup(ItemEntry entry) {
@@ -562,7 +577,7 @@ public final class ItemBrowserPanel extends JPanel {
             SwingUtilities.invokeLater(() -> refreshResults());
             return;
         }
-        String query = search.getText() == null ? "" : search.getText().trim().toLowerCase(Locale.ENGLISH);
+        String query = appliedSearchQuery;
         int resultLimit = query.length() == 0 ? MAX_VISIBLE_RESULTS : Integer.MAX_VALUE;
         List<ItemEntry> matches = new ArrayList<ItemEntry>();
         int matchCount = 0;
