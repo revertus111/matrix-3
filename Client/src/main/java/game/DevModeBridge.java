@@ -15,7 +15,7 @@ import game.console.DevSpawnBrowserWindow;
 public final class DevModeBridge {
 
     public static final int TILE_SPAWN_MENU_ACTION = 1500;
-    private static final int MATRIX3_TILE_ACTION = 60;
+    private static final int MATRIX3_TILE_ACTION = 23;
 
     private static volatile boolean enabled;
 
@@ -31,9 +31,10 @@ public final class DevModeBridge {
     }
 
     /**
-     * verified-static: action 60 is Matrix3's scene-tile movement action. Its
-     * menu entry carries the same local X/Y later converted to world coordinates
-     * by Class319.method4094.
+     * VERIFIED: action 23 is Matrix3's normal scene-tile movement action. Its
+     * menu entry carries the local X/Y later converted to world coordinates by
+     * Class319.method4094. Action 60 is the staff/admin teleport-debug path and
+     * must not be used as the ordinary tile-menu source.
      */
     static void mirrorTileSpawnEntry(int sourceAction, int localX, int localY) {
         int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
