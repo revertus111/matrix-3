@@ -35,7 +35,7 @@ Shadow bond / revive
 
 Dharok - Greatest Axe
 26. Fight Dharok until `Give me everything!` triggers; confirm normal autos pause.
-27. Confirm GFX 4406 and animation 21940 play.
+27. VERIFIED-REJECTED 2026-09-03: GFX 4406 renders as an oversized cyan lightning/sphere in the active revision-830 cache. Confirm it no longer appears; animation 21940 and the charge state remain active while the correct visual is unresolved.
 28. Damage Dharok during charge; confirm HP damage is zero while damage is accumulated internally.
 29. Wait roughly eleven seconds; confirm he exits charge and attacks again.
 30. Confirm his first normal outgoing hit adds stored damage exactly once.
@@ -153,6 +153,7 @@ Subdued presentation / revival bar
 122. Let the shared timer expire. Confirm every currently subdued brother clears the type-5 bar, plays donor-backed animation 21914, resolves to its active primary NPC id, and returns at exactly 25,000 HP.
 123. Subdue all six before timeout. Confirm the completion state clears/stops revival-bar updates and none of the subdued brothers revives afterward.
 124. Destroy/restart the instance while one or more revival bars are active. Confirm no stale bar generation or presentation state leaks into the new encounter.
+125. While a brother is subdued, repeatedly click the client-visible `Attack` option. Confirm Matrix3 rejects new interaction/combat against the `cantInteract` brother and no nonzero hit can damage the logical 1-HP shell. The menu option itself may remain visible until the correct revision-830 downed NPC definition/pose is established.
 
 100% fidelity gate
-125. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, exact side-hop landing/barrier blockers, runtime-verified persistent downed/revival presentation, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
+126. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, exact side-hop landing/barrier blockers, runtime-verified persistent downed/revival presentation, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
