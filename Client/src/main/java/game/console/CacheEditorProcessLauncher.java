@@ -19,16 +19,23 @@ final class CacheEditorProcessLauncher {
         }
 
         File serverDirectory = findServerDirectory();
+        File wrapper = new File(serverDirectory, isWindows() ? "gradlew.bat" : "gradlew").getAbsoluteFile();
         List<String> command = new ArrayList<String>();
         if (isWindows()) {
             command.add("cmd.exe");
             command.add("/c");
-            command.add("gradlew.bat");
+            command.add("call");
+            command.add(wrapper.getAbsolutePath());
         } else {
-            command.add("./gradlew");
+            command.add(wrapper.getAbsolutePath());
         }
+        command.add("-p");
+        command.add(serverDirectory.getAbsolutePath());
         command.add("--no-daemon");
         command.add("runCacheEditor");
+
+        System.out.println("[CacheEditor] Server project: " + serverDirectory.getAbsolutePath());
+        System.out.println("[CacheEditor] Gradle wrapper: " + wrapper.getAbsolutePath());
 
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(serverDirectory);
