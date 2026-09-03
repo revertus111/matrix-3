@@ -262,29 +262,34 @@ public final class RiseOfTheSixBrother extends NPC {
 		if (hit == null)
 			return;
 
-		/*
-		 * RoTS incapacitation is logical rather than a normal zero-HP NPC death.
-		 * Keep delayed hits that were already queued before subdual from dropping
-		 * the visible 1-HP shell back to zero and making the NPC disappear.
-		 */
+		int incomingDamage = Math.max(0, hit.getDamage());
 		if (subdued) {
+			RiseOfTheSixDebugLog.event(this, "INCOMING_HIT_SUPPRESSED",
+					"damage=" + incomingDamage + " reason=subdued");
 			hit.setDamage(0);
 			return;
 		}
 
 		if (brother == Brother.DHAROK && dharokCharging) {
-			dharokStoredDamage += Math.max(0, hit.getDamage());
+			dharokStoredDamage += incomingDamage;
+			RiseOfTheSixDebugLog.event(this, "GREATEST_AXE_ABSORB",
+					"incoming=" + incomingDamage + " storedTotal=" + dharokStoredDamage + " hp=" + getHitpoints());
 			hit.setDamage(0);
 			return;
 		}
 		if (brother == Brother.TORAG && toragWhacking) {
-			toragReleaseDamage += Math.max(0, hit.getDamage());
+			toragReleaseDamage += incomingDamage;
+			RiseOfTheSixDebugLog.event(this, "TORAG_RESCUE_DAMAGE",
+					"incoming=" + incomingDamage + " accumulated=" + toragReleaseDamage
+							+ " threshold=" + TORAG_RELEASE_DAMAGE);
 			hit.setDamage(0);
 			if (toragReleaseDamage >= TORAG_RELEASE_DAMAGE)
 				releaseToragVictim(true);
 			return;
 		}
 
+		RiseOfTheSixDebugLog.event(this, "INCOMING_HIT",
+				"damage=" + incomingDamage + " hpBefore=" + getHitpoints());
 		super.handleIngoingHit(hit);
 	}
 
@@ -293,8 +298,12 @@ public final class RiseOfTheSixBrother extends NPC {
 		if (hit == null)
 			return null;
 		if (brother == Brother.DHAROK && !isSpecialActive() && dharokStoredDamage > 0) {
-			hit.setDamage(hit.getDamage() + dharokStoredDamage);
+			int stored = dharokStoredDamage;
+			int baseDamage = hit.getDamage();
+			hit.setDamage(baseDamage + stored);
 			dharokStoredDamage = 0;
+			RiseOfTheSixDebugLog.event(this, "GREATEST_AXE_RELEASE",
+					"baseDamage=" + baseDamage + " storedDamage=" + stored + " finalDamage=" + hit.getDamage());
 		}
 		return hit;
 	}
@@ -309,18 +318,17 @@ public final class RiseOfTheSixBrother extends NPC {
 		setCantFollowUnderCombat(true);
 		setForceFollowClose(false);
 		setNextForceTalk(new ForceTalk("Give me everything!"));
+		RiseOfTheSixDebugLog.event(this, "GREATEST_AXE_START",
+				"forceTalk=Give me everything! animationDelayTicks=2 chargeEndTicks=18");
 
 		WorldTasksManager.schedule(new WorldTask() {
 			@Override
 			public void run() {
 				if (!dharokCharging || subdued || hasFinished())
 					return;
-				/*
-				 * Donor GFX 4406 is runtime-rejected in this revision-830 cache: it renders
-				 * as a huge cyan lightning/sphere effect. Keep the donor-backed charge
-				 * animation/state while the correct 830 Greatest Axe visual is identified.
-				 */
 				setNextAnimation(new Animation(21940));
+				RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "ANIMATION",
+						"mechanic=GREATEST_AXE id=21940");
 			}
 		}, 2);
 
@@ -332,6 +340,8 @@ public final class RiseOfTheSixBrother extends NPC {
 				dharokCharging = false;
 				setCantFollowUnderCombat(false);
 				setForceFollowClose(true);
+				RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "GREATEST_AXE_CHARGE_END",
+						"storedDamage=" + dharokStoredDamage);
 			}
 		}, 18);
 		return true;
@@ -356,6 +366,8 @@ public final class RiseOfTheSixBrother extends NPC {
 		setCantFollowUnderCombat(true);
 		setForceFollowClose(false);
 		victim.lock();
+		RiseOfTheSixDebugLog.event(this, "TORAG_WHACK_START",
+				"victim=" + victim.getDisplayName() + " openingDelayTicks=2 timeoutTicks=18");
 
 		WorldTasksManager.schedule(new WorldTask() {
 			@Override
@@ -366,6 +378,8 @@ public final class RiseOfTheSixBrother extends NPC {
 				}
 				setNextAnimation(new Animation(21933));
 				victim.setNextAnimation(new Animation(21934));
+				RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "TORAG_WHACK_OPEN",
+						"toragAnimation=21933 victimAnimation=21934 victim=" + victim.getDisplayName());
 			}
 		}, 2);
 
@@ -379,14 +393,20 @@ public final class RiseOfTheSixBrother extends NPC {
 				}
 				setNextFaceEntity(victim);
 				setNextAnimation(new Animation(21935));
+				RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "TORAG_PUMMEL",
+						"animation=21935 victim=" + victim.getDisplayName()
+								+ " rescueDamage=" + toragReleaseDamage + "/" + TORAG_RELEASE_DAMAGE);
 			}
 		}, 4, 1);
 
 		WorldTasksManager.schedule(new WorldTask() {
 			@Override
 			public void run() {
-				if (toragWhacking && toragVictim == victim)
+				if (toragWhacking && toragVictim == victim) {
+					RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "TORAG_WHACK_TIMEOUT",
+							"victim=" + victim.getDisplayName());
 					releaseToragVictim(false);
+				}
 			}
 		}, 18);
 		return true;
@@ -425,6 +445,12 @@ public final class RiseOfTheSixBrother extends NPC {
 				41, 25, 20, 1, 15, Utils.random(5));
 		setNextNPCTransformation(Brother.GUTHAN.getAlternateNpcId());
 		int impactDelay = Math.max(1, Utils.projectileTimeToCycles(projectile.getEndTime()));
+		RiseOfTheSixDebugLog.event(this, "GUTHAN_IMPALE_START",
+				"primary=" + primaryTarget.getDisplayName() + " victim=" + victim.getDisplayName()
+						+ " animation=" + GUTHAN_SPEAR_THROW_ANIMATION
+						+ " projectile=" + GUTHAN_SPEAR_PROJECTILE
+						+ " transform=" + Brother.GUTHAN.getNpcId() + "->" + Brother.GUTHAN.getAlternateNpcId()
+						+ " impactDelay=" + impactDelay);
 
 		WorldTasksManager.schedule(new WorldTask() {
 			@Override
@@ -443,6 +469,9 @@ public final class RiseOfTheSixBrother extends NPC {
 				victim.setNextAnimation(new Animation(GUTHAN_IMPALED_ANIMATION));
 				if (isValidSpecialTarget(primaryTarget))
 					setTarget(primaryTarget);
+				RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "GUTHAN_IMPALE_IMPACT",
+						"victim=" + victim.getDisplayName() + " victimAnimation=" + GUTHAN_IMPALED_ANIMATION
+								+ " retarget=" + primaryTarget.getDisplayName());
 				startGuthanBleedTask(victim, generation);
 			}
 		}, impactDelay);
@@ -465,12 +494,6 @@ public final class RiseOfTheSixBrother extends NPC {
 				selected = player;
 		}
 
-		/*
-		 * Classic behavior prefers a non-primary player on Guthan's current side.
-		 * If none exists, his current target is only valid when it is also on the
-		 * same side. This prevents the temporary midpoint model from creating a
-		 * cross-portal Impale while portal collision is still being completed.
-		 */
 		if (selected != null)
 			return selected;
 		return instance.isPlayerOnBrotherSide(primaryTarget, this) ? primaryTarget : null;
@@ -500,6 +523,9 @@ public final class RiseOfTheSixBrother extends NPC {
 				int damage = GUTHAN_BLEED_MIN_DAMAGE
 						+ Utils.random(GUTHAN_BLEED_MAX_DAMAGE - GUTHAN_BLEED_MIN_DAMAGE + 1);
 				victim.applyHit(new Hit(RiseOfTheSixBrother.this, damage, HitLook.REGULAR_DAMAGE));
+				RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "GUTHAN_BLEED",
+						"victim=" + victim.getDisplayName() + " damage=" + damage
+								+ " gfx=" + GUTHAN_BLEED_GFX + "," + GUTHAN_BLEED_SECONDARY_GFX);
 			}
 		}, 1, 1);
 	}
@@ -516,6 +542,8 @@ public final class RiseOfTheSixBrother extends NPC {
 		setForceFollowClose(false);
 		setNextFaceEntity(victim);
 		victim.lock(4);
+		RiseOfTheSixDebugLog.event(this, "GUTHAN_RETRIEVE_START",
+				"victim=" + victim.getDisplayName() + " range=" + GUTHAN_RETRIEVE_RANGE);
 
 		WorldTasksManager.schedule(new WorldTask() {
 			@Override
@@ -529,6 +557,10 @@ public final class RiseOfTheSixBrother extends NPC {
 				setNextAnimation(new Animation(GUTHAN_SPEAR_RETRIEVE_ANIMATION));
 				setNextNPCTransformation(Brother.GUTHAN.getNpcId());
 				victim.setNextAnimation(new Animation(GUTHAN_IMPALED_ANIMATION));
+				RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "GUTHAN_RETRIEVE_ANIMATION",
+						"animation=" + GUTHAN_SPEAR_RETRIEVE_ANIMATION
+								+ " transform=" + Brother.GUTHAN.getAlternateNpcId() + "->" + Brother.GUTHAN.getNpcId()
+								+ " victimAnimation=" + GUTHAN_IMPALED_ANIMATION);
 			}
 		}, 1);
 
@@ -537,9 +569,12 @@ public final class RiseOfTheSixBrother extends NPC {
 			public void run() {
 				if (!isCurrentGuthanImpale(victim, generation))
 					return;
-				if (isValidImpaleVictim(victim))
+				if (isValidImpaleVictim(victim)) {
 					victim.applyHit(new Hit(RiseOfTheSixBrother.this,
 							GUTHAN_RETRIEVE_DAMAGE, HitLook.REGULAR_DAMAGE));
+					RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "GUTHAN_RETRIEVE_HIT",
+							"victim=" + victim.getDisplayName() + " damage=" + GUTHAN_RETRIEVE_DAMAGE);
+				}
 				clearGuthanImpale(true);
 			}
 		}, 2);
@@ -561,21 +596,14 @@ public final class RiseOfTheSixBrother extends NPC {
 		return isValidSpecialTarget(victim) && victim.getPlane() == getPlane();
 	}
 
-	/**
-	 * Torag pummelling an impaled victim is a documented automatic spear-return
-	 * condition. The instance calls this hook when Whack begins.
-	 */
 	public void onPlayerPummeled(Player victim) {
-		if (brother == Brother.GUTHAN && guthanSpearAway && guthanImpaleVictim == victim)
+		if (brother == Brother.GUTHAN && guthanSpearAway && guthanImpaleVictim == victim) {
+			RiseOfTheSixDebugLog.event(this, "GUTHAN_AUTO_RETURN",
+					"reason=torag-pummel victim=" + (victim == null ? "null" : victim.getDisplayName()));
 			clearGuthanImpale(true);
+		}
 	}
 
-	/**
-	 * Clears brother-owned special state and relocates this active brother as part
-	 * of the encounter-owned empty-side empowerment hop. GFX 4413 is donor-backed
-	 * for the RoTS transition; exact live hop animation/landing spacing is still a
-	 * runtime fidelity item.
-	 */
 	public void moveForSideEmpowerment(WorldTile destination) {
 		if (destination == null || subdued || hasFinished())
 			return;
@@ -589,10 +617,17 @@ public final class RiseOfTheSixBrother extends NPC {
 		setCantInteract(false);
 		setForceAgressive(true);
 		setForceFollowClose(true);
+		RiseOfTheSixDebugLog.event(this, "SIDE_EMPOWERMENT_MOVE",
+				"gfx=4413 destination=" + destination.getX() + "," + destination.getY() + "," + destination.getPlane());
 	}
 
 	private void clearGuthanImpale(boolean retargetPrimary) {
 		Player primary = guthanPrimaryTarget;
+		Player victim = guthanImpaleVictim;
+		RiseOfTheSixDebugLog.event(this, "GUTHAN_IMPALE_CLEAR",
+				"retargetPrimary=" + retargetPrimary
+						+ " primary=" + (primary == null ? "null" : primary.getDisplayName())
+						+ " victim=" + (victim == null ? "null" : victim.getDisplayName()));
 		guthanImpaleGeneration++;
 		guthanImpaleLaunching = false;
 		guthanSpearAway = false;
@@ -625,13 +660,11 @@ public final class RiseOfTheSixBrother extends NPC {
 		setCantFollowUnderCombat(true);
 		setForceFollowClose(false);
 		setNextFaceEntity(victim);
-		/*
-		 * Animation 21941 is runtime-confirmed to produce the shared sustained
-		 * weapon-spin presentation on Dharok, Guthan, Torag, and Verac. Start it
-		 * once here so the sequence can play naturally instead of being reset on
-		 * every damage pulse.
-		 */
 		setNextAnimation(new Animation(HURRICANE_ANIMATION));
+		RiseOfTheSixDebugLog.event(this, "HURRICANE_START",
+				"target=" + victim.getDisplayName() + " animation=" + HURRICANE_ANIMATION
+						+ " pulses=" + HURRICANE_PULSES + " radius=" + HURRICANE_RADIUS
+						+ " previousRun=" + movementSpecialPreviousRun);
 
 		WorldTasksManager.schedule(new WorldTask() {
 			private int pulse;
@@ -648,6 +681,9 @@ public final class RiseOfTheSixBrother extends NPC {
 				calcFollow(victim, true);
 
 				int damage = Math.min(2500, 250 * (pulse + 1));
+				RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "HURRICANE_PULSE",
+						"pulse=" + (pulse + 1) + "/" + HURRICANE_PULSES + " damage=" + damage
+								+ " target=" + victim.getDisplayName());
 				hitHurricanePlayers(damage);
 				pulse++;
 
@@ -670,6 +706,9 @@ public final class RiseOfTheSixBrother extends NPC {
 			if (Math.abs(player.getX() - getX()) > HURRICANE_RADIUS
 					|| Math.abs(player.getY() - getY()) > HURRICANE_RADIUS)
 				continue;
+			RiseOfTheSixDebugLog.event(this, "HURRICANE_HIT",
+					"player=" + player.getDisplayName() + " damage=" + damage
+							+ " playerTile=" + player.getX() + "," + player.getY() + "," + player.getPlane());
 			player.applyHit(new Hit(this, damage, HitLook.REGULAR_DAMAGE));
 		}
 	}
@@ -677,6 +716,8 @@ public final class RiseOfTheSixBrother extends NPC {
 	private void endHurricane(Player victim, boolean retarget) {
 		if (!hurricaning && hurricaneTarget == null)
 			return;
+		RiseOfTheSixDebugLog.event(this, "HURRICANE_END",
+				"retarget=" + retarget + " victim=" + (victim == null ? "null" : victim.getDisplayName()));
 		hurricaning = false;
 		hurricaneTarget = null;
 		restoreMovementSpecialState();
@@ -708,7 +749,12 @@ public final class RiseOfTheSixBrother extends NPC {
 		setCantFollowUnderCombat(true);
 		setForceFollowClose(false);
 		setNextFaceWorldTile(wallTile);
+		RiseOfTheSixDebugLog.event(this, "WALL_SLAM_START",
+				"victim=" + victim.getDisplayName()
+						+ " capturedTile=" + capturedTile.getX() + "," + capturedTile.getY() + "," + capturedTile.getPlane()
+						+ " wallTile=" + wallTile.getX() + "," + wallTile.getY() + "," + wallTile.getPlane());
 		if (!isAtTile(wallTile) && !calcFollow(wallTile, true)) {
+			RiseOfTheSixDebugLog.event(this, "WALL_SLAM_PATH_FAIL", "wallTile unreachable");
 			endWallSlam(victim, false);
 			return false;
 		}
@@ -730,9 +776,13 @@ public final class RiseOfTheSixBrother extends NPC {
 					if (isAtTile(wallTile)) {
 						resetWalkSteps();
 						setNextFaceWorldTile(capturedTile);
-						setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
+						int attackAnimation = getCombatDefinitions().getAttackEmote();
+						setNextAnimation(new Animation(attackAnimation));
 						setNextForceMovement(new ForceMovement(new WorldTile(capturedTile),
 								WALL_SLAM_LEAP_TICKS, getForceMovementDirection(capturedTile)));
+						RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "WALL_SLAM_LAUNCH",
+								"animation=" + attackAnimation + " leapTicks=" + WALL_SLAM_LEAP_TICKS
+										+ " destination=" + capturedTile.getX() + "," + capturedTile.getY() + "," + capturedTile.getPlane());
 						launched = true;
 						tick = 0;
 						return;
@@ -742,6 +792,8 @@ public final class RiseOfTheSixBrother extends NPC {
 						calcFollow(wallTile, true);
 					tick++;
 					if (tick >= WALL_SLAM_APPROACH_TICKS) {
+						RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "WALL_SLAM_APPROACH_TIMEOUT",
+								"ticks=" + tick);
 						endWallSlam(victim, true);
 						stop();
 					}
@@ -751,7 +803,11 @@ public final class RiseOfTheSixBrother extends NPC {
 				tick++;
 				if (tick >= WALL_SLAM_LEAP_TICKS) {
 					setNextWorldTile(new WorldTile(capturedTile));
-					setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
+					int attackAnimation = getCombatDefinitions().getAttackEmote();
+					setNextAnimation(new Animation(attackAnimation));
+					RiseOfTheSixDebugLog.event(RiseOfTheSixBrother.this, "WALL_SLAM_IMPACT",
+							"animation=" + attackAnimation + " center=" + capturedTile.getX() + ","
+									+ capturedTile.getY() + "," + capturedTile.getPlane());
 					hitWallSlamPlayers(capturedTile);
 					endWallSlam(victim, true);
 					stop();
@@ -824,6 +880,8 @@ public final class RiseOfTheSixBrother extends NPC {
 					|| Math.abs(player.getY() - capturedTile.getY()) > WALL_SLAM_RADIUS)
 				continue;
 			int damage = 500 + Utils.random(2501);
+			RiseOfTheSixDebugLog.event(this, "WALL_SLAM_HIT",
+					"player=" + player.getDisplayName() + " damage=" + damage + " radius=" + WALL_SLAM_RADIUS);
 			player.applyHit(new Hit(this, damage, HitLook.REGULAR_DAMAGE));
 		}
 	}
@@ -831,6 +889,8 @@ public final class RiseOfTheSixBrother extends NPC {
 	private void endWallSlam(Player victim, boolean retarget) {
 		if (!wallSlamming && wallSlamCapturedTile == null)
 			return;
+		RiseOfTheSixDebugLog.event(this, "WALL_SLAM_END",
+				"retarget=" + retarget + " victim=" + (victim == null ? "null" : victim.getDisplayName()));
 		wallSlamming = false;
 		wallSlamCapturedTile = null;
 		restoreMovementSpecialState();
@@ -857,11 +917,16 @@ public final class RiseOfTheSixBrother extends NPC {
 
 	private void releaseToragVictim(boolean brokenByDamage) {
 		Player victim = toragVictim;
+		int accumulated = toragReleaseDamage;
 		toragVictim = null;
 		toragWhacking = false;
 		toragReleaseDamage = 0;
 		setCantFollowUnderCombat(false);
 		setForceFollowClose(true);
+		RiseOfTheSixDebugLog.event(this, "TORAG_RELEASE",
+				"victim=" + (victim == null ? "null" : victim.getDisplayName())
+						+ " brokenByDamage=" + brokenByDamage + " accumulatedRescueDamage=" + accumulated
+						+ " victimAnimation=21938");
 		if (victim != null && !victim.hasFinished()) {
 			victim.unlock();
 			victim.setNextAnimation(new Animation(21938));
@@ -873,6 +938,12 @@ public final class RiseOfTheSixBrother extends NPC {
 	}
 
 	private void resetSpecialState() {
+		if (isSpecialActive() || forceReviveHurricane || dharokStoredDamage > 0 || guthanSpearAway)
+			RiseOfTheSixDebugLog.event(this, "SPECIAL_STATE_RESET",
+					"dharokCharging=" + dharokCharging + " stored=" + dharokStoredDamage
+							+ " toragWhacking=" + toragWhacking + " hurricaning=" + hurricaning
+							+ " wallSlamming=" + wallSlamming + " guthanSpearAway=" + guthanSpearAway
+							+ " forceReviveHurricane=" + forceReviveHurricane);
 		forceReviveHurricane = false;
 
 		boolean wasDharokCharging = dharokCharging;
@@ -908,36 +979,38 @@ public final class RiseOfTheSixBrother extends NPC {
 		if (subdued || hasFinished() || instance == null || instance.isFightComplete())
 			return;
 
+		RiseOfTheSixDebugLog.event(this, "SUBDUE_TRIGGER",
+				"hpBefore=" + getHitpoints() + " source=" + (source == null ? "null" : source.getClass().getSimpleName()));
 		resetSpecialState();
 		subdued = true;
 		resetWalkSteps();
 		getCombat().removeTarget();
-		/*
-		 * Runtime video confirmed that Matrix3's generic NPC death emote eventually
-		 * hides the rendered brother even while the RoTS 1-HP shell and type-5
-		 * revival bar remain alive. RoTS subdual therefore deliberately avoids the
-		 * normal death animation. Until the authentic revision-830 kneeling pose is
-		 * established, the active model stays visible/frozen and non-interactable.
-		 */
 		setHitpoints(SUBDUED_VISIBLE_HITPOINTS);
 		setCantInteract(true);
 		giveXP();
+		RiseOfTheSixDebugLog.event(this, "SUBDUED",
+				"hp=" + getHitpoints() + " cantInteract=true visibleShell=true");
 		instance.onBrotherSubdued(this);
 	}
 
 	public void revive(int hitpoints) {
 		if (!subdued || hasFinished())
 			return;
+		RiseOfTheSixDebugLog.event(this, "REVIVE_BEGIN", "requestedHp=" + hitpoints);
 		resetSpecialState();
 		reset();
 		setHitpoints(Math.min(getMaxHitpoints(), Math.max(1, hitpoints)));
 		setCantInteract(false);
 		subdued = false;
 		resetMeleeSpecialRotation(true);
+		RiseOfTheSixDebugLog.event(this, "REVIVE_STATE",
+				"hp=" + getHitpoints() + " forceReviveHurricane=" + isMeleeBrother());
 	}
 
 	@Override
 	public void finish() {
+		RiseOfTheSixDebugLog.event(this, "BROTHER_FINISH",
+				"id=" + getId() + " hp=" + getHitpoints() + " subdued=" + subdued);
 		resetSpecialState();
 		super.finish();
 	}
