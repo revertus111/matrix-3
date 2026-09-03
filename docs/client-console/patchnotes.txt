@@ -37,3 +37,4 @@
 - ItemBrowserCommandBridge now accepts inventory or bank destinations, applies the same rights/live-player/item/amount validation once, then calls Matrix3 Inventory.addItem(...) or Bank.addItem(...) and reports explicit success/failure in game.
 - Preset Inventory spawning now uses the same ItemBrowser inventory bridge as single-item and quantity-button spawning.
 - Moved Client Console command/thumbnail queue draining onto Class514.method6093(...), a callsite directly invoked by the logged-in client loop, and removed the earlier unverified Class572_Sub12_Sub17 hook so queued Item Browser and Commands actions have a live client-cycle sender.
+- Changed Item Browser result interaction so single left-click only selects an item; spawning now requires the Inventory/Bank quantity controls, right-click spawn actions, preset actions, or a double left-click quick-spawn of one item to Inventory.
