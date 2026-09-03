@@ -57,3 +57,6 @@
 - Legacy combat + NIS is represented directly as Legacy combat ON / Legacy interface OFF; the opposite and matched combinations are also selectable for runtime verification.
 - Saved Client Console mode selections use local Java Preferences and are queued automatically when the Settings panel becomes visible after login; the server still validates owner/admin and live-player state.
 - The original in-game Legacy Mode checkbox remains the existing coupled Matrix3 control; applying the Client Console split settings re-normalizes that combined state before applying the selected pair.
+- Added a Cache development card to the C shell with an Open RS3 CacheEditor button.
+- CacheEditor launches as a separate Server-side process through the existing Gradle wrapper/task, avoiding a Client-to-Server compile dependency.
+- Duplicate launch requests are suppressed while the CacheEditor child process remains alive, and the launcher resolves the Server project relative to the normal Client runtime/project location.
