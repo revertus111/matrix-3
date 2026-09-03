@@ -83,6 +83,12 @@ public final class RiseOfTheSixDebugLog {
 			RiseOfTheSixDebugLog existing = ACTIVE.get(instance);
 			if (existing != null && !existing.closing)
 				return existing;
+			/*
+			 * Delayed special/world tasks can outlive instance cleanup by a tick. Once
+			 * BossInstance is finished, never create a second file for that dead fight.
+			 */
+			if (instance.isFinished())
+				return null;
 			RiseOfTheSixDebugLog created = new RiseOfTheSixDebugLog(instance);
 			ACTIVE.put(instance, created);
 			return created;
