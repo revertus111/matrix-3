@@ -36,6 +36,7 @@ public final class ClientConsoleShell extends JPanel {
     public static final String PANEL_OWNER = "owner";
     public static final String PANEL_COMMANDS = "commands";
     public static final String PANEL_ITEMS = "items";
+    public static final String PANEL_SETTINGS = "settings";
 
     private static final int RAIL_WIDTH = 48;
     private static final int DIVIDER_WIDTH = 5;
@@ -47,12 +48,14 @@ public final class ClientConsoleShell extends JPanel {
     private final JToggleButton ownerButton = new JToggleButton("O");
     private final JToggleButton commandsButton = new JToggleButton(">_");
     private final JToggleButton itemButton = new JToggleButton("I");
+    private final JToggleButton settingsButton = new JToggleButton("S");
     private final JButton resetLayoutButton = new JButton("Reset Client Console Layout");
 
     private final JComponent shellPanel;
     private JComponent ownerPanel;
     private JComponent commandsPanel;
     private JComponent itemBrowserPanel;
+    private JComponent settingsPanel;
 
     private boolean consoleOpen = true;
     private int expandedConsoleWidth = DEFAULT_CONSOLE_WIDTH;
@@ -127,6 +130,7 @@ public final class ClientConsoleShell extends JPanel {
         configureRailButton(ownerButton, "Owner", PANEL_OWNER);
         configureRailButton(commandsButton, "Commands", PANEL_COMMANDS);
         configureRailButton(itemButton, "Item Browser", PANEL_ITEMS);
+        configureRailButton(settingsButton, "Settings", PANEL_SETTINGS);
 
         rail.add(Box.createVerticalStrut(8));
         rail.add(brand);
@@ -138,6 +142,8 @@ public final class ClientConsoleShell extends JPanel {
         rail.add(commandsButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(itemButton);
+        rail.add(Box.createVerticalStrut(4));
+        rail.add(settingsButton);
         rail.add(Box.createVerticalGlue());
         return rail;
     }
@@ -175,7 +181,7 @@ public final class ClientConsoleShell extends JPanel {
                 "Docking",
                 "Drag the left edge to resize.",
                 "Use C for this shell panel.",
-                "Use O for Owner, >_ for Commands, and I for Items."));
+                "Use O for Owner, >_ for Commands, I for Items, and S for Settings."));
         content.add(Box.createVerticalStrut(12));
         content.add(createFocusCard());
         content.add(Box.createVerticalStrut(12));
@@ -370,6 +376,17 @@ public final class ClientConsoleShell extends JPanel {
             }
             return itemBrowserPanel;
         }
+        if (PANEL_SETTINGS.equals(panelId)) {
+            if (settingsPanel == null) {
+                try {
+                    settingsPanel = new SettingsPanel();
+                } catch (RuntimeException ex) {
+                    ex.printStackTrace();
+                    settingsPanel = createPanelError("Settings panel failed to initialize.");
+                }
+            }
+            return settingsPanel;
+        }
         return shellPanel;
     }
 
@@ -394,6 +411,9 @@ public final class ClientConsoleShell extends JPanel {
         }
         if (PANEL_ITEMS.equals(panelId)) {
             return PANEL_ITEMS;
+        }
+        if (PANEL_SETTINGS.equals(panelId)) {
+            return PANEL_SETTINGS;
         }
         return PANEL_SHELL;
     }
@@ -462,6 +482,7 @@ public final class ClientConsoleShell extends JPanel {
         ownerButton.setSelected(consoleOpen && PANEL_OWNER.equals(activePanelId));
         commandsButton.setSelected(consoleOpen && PANEL_COMMANDS.equals(activePanelId));
         itemButton.setSelected(consoleOpen && PANEL_ITEMS.equals(activePanelId));
+        settingsButton.setSelected(consoleOpen && PANEL_SETTINGS.equals(activePanelId));
     }
 
     private void applyConsoleWidth(int requestedWidth, boolean notify) {
