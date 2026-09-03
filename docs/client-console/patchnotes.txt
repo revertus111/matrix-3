@@ -60,3 +60,4 @@
 - Added a Cache development card to the C shell with an Open RS3 CacheEditor button.
 - CacheEditor launches as a separate Server-side process through the existing Gradle wrapper/task, avoiding a Client-to-Server compile dependency.
 - Duplicate launch requests are suppressed while the CacheEditor child process remains alive, and the launcher resolves the Server project relative to the normal Client runtime/project location.
+- Fixed CacheEditor project detection so the Client Gradle project cannot be mistaken for the Server; a candidate must contain the actual Server-side CacheEditorLauncher source before `runCacheEditor` is invoked.
