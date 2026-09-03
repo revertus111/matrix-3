@@ -47,7 +47,7 @@ At any point, a necessary side task may temporarily interrupt this order, but th
 
 ### Current next main step
 
-Runtime-verify the newly integrated 21941 Hurricane in the live encounter, then continue finishing the **melee brother specials** milestone rather than returning to broad animation/tool research.
+Run the live encounter with the RoTS Fight Recorder, verify the integrated 21941 Hurricane and Dharok Greatest Axe behavior from the generated runtime log, then continue finishing the **melee brother specials** milestone rather than returning to broad animation/tool research.
 
 ## Evidence labels
 
@@ -121,17 +121,30 @@ This evidence supports using 21941 for the shared Hurricane/Spinning Attack pres
 3. Use source-known RoTS animation/GFX/projectile IDs to narrow cache research rather than scanning broad numeric neighborhoods blindly.
 4. Use Owner Console -> RoTS Deep Scan to correlate BAS/render-set and GFX data for targeted candidates.
 5. Runtime/video-test the short candidate list before changing gameplay.
-6. Patch one mechanic at a time and keep Matrix3 combat/instance ownership intact.
-7. Record exact timing only after measurement or authoritative evidence.
+6. Use the RoTS Fight Recorder for live encounter tests so event ordering, target changes, damage, special state, and timing can be read from one uploaded log instead of reconstructed from memory.
+7. Patch one mechanic at a time and keep Matrix3 combat/instance ownership intact.
+8. Record exact timing only after measurement or authoritative evidence.
 
 ## Research tools
 
-Primary workflow:
+Primary cache workflow:
 
 - Client Console -> Owner -> RoTS cache research
 - `Scan RoTS` for focused NPC/animation definition evidence.
 - `Deep Scan` for render-set/BAS and GFX correlation.
 - `Copy All` to move the complete research dump into analysis without rerunning standalone tools.
+
+Runtime Fight Recorder:
+
+- `Server/src/main/java/com/rs/game/npc/rots/RiseOfTheSixDebugLog.java`
+- Starts automatically when a RoTS instance loads.
+- Creates one unique file per instance under `data/logs/rots/`.
+- Uses a bounded in-memory queue and daemon writer so combat/world tasks never wait on disk writes.
+- Records elapsed milliseconds plus one recorder tick per scheduled world tick.
+- Records full instance/player/brother snapshots every tick plus explicit encounter, normal-attack, and brother-special events.
+- Includes RoTS-owned special state needed for debugging: Dharok stored damage, Torag rescue damage/victim, Hurricane/Wall Slam state, Guthan spear/victim/retrieval state, special rotation gates/index, side ownership, HP, targets, and tiles.
+- Players are shown the generated relative log path once per fight. Upload that `.log` when runtime behavior is difficult to describe.
+- If the bounded queue ever overflows, combat remains non-blocking and the writer records `DROPPED_LINES` at shutdown; treat a nonzero count as a recorder-capacity issue, not gameplay evidence.
 
 Optional fallback:
 
@@ -170,15 +183,18 @@ Use `timings/` for measured attack cadence, animation duration, special windups,
 
 ## Next checkpoint
 
-Run the patched Hurricane in the actual RoTS encounter before changing any more Hurricane mechanics.
+Run one live RoTS encounter with the Fight Recorder active before changing more Hurricane/Greatest Axe mechanics.
 
-Confirm:
+Confirm from runtime plus the generated log:
 
 1. 21941 begins when Hurricane starts and is not visibly restarted/frozen by the 10 damage pulses.
 2. Dharok, Guthan, and Torag continue tracking the target at walking speed during the spin.
 3. Forced post-revive Hurricane still uses the same 21941 presentation and returns cleanly to normal combat.
-4. The current damage ramp/AoE feels mechanically intact after the visual change.
+4. Greatest Axe records its exact charge start, animation 21940, every absorbed hit/stored total, charge end, and later stored-damage release.
+5. Normal attack event spacing can be measured directly from log ticks instead of inferred from CombatScript return values alone.
 
-If the animation ends before the 10-pulse Hurricane finishes, record the exact visible timing first. Do not blindly restart 21941 every pulse; adjust animation cadence only from runtime evidence.
+Also run the repaired Owner -> Deep Scan and preserve its GFX correlation output for Greatest Axe visual research.
 
-After Hurricane's integrated runtime behavior is stable, move to the next highest-value fidelity gap rather than returning to broad animation scanning.
+If Hurricane's animation ends before the 10-pulse mechanic finishes, use the recorder ticks plus video/runtime observation to measure the mismatch first. Do not blindly restart 21941 every pulse.
+
+After this evidence is collected, continue the melee-brother-specials milestone rather than returning to broad animation or tool expansion.
