@@ -49,10 +49,10 @@ Do not replace these with a second RoTS controller. Improve the existing impleme
 
 ### Brother mechanics
 
-- Dharok: Hurricane shell, Greatest Axe/charge shell, and Wall Slam shell exist. Greatest Axe visual/timing and Hurricane/Wall Slam authenticity remain incomplete.
-- Torag: Hurricane shell, Whack/Pummel flow, and Wall Slam shell exist. Current Torag animation mapping is documented in `assets/animations.txt`; exact 1:1 timing still needs runtime comparison.
-- Guthan: Hurricane shell plus a substantial Impale implementation exists, including armed/spearless NPC transformation, projectile, bleed, victim state, retrieval, and Torag interaction. Exact damage/timing/visual parity still needs verification.
-- Verac: current melee special path is Wall Slam, with forced post-revive Hurricane behavior available through the shared melee system. Authentic special parity remains incomplete.
+- Dharok: Hurricane now uses animation 21941, while Greatest Axe/charge and Wall Slam shells exist. Greatest Axe visual/timing and Wall Slam authenticity remain incomplete.
+- Torag: Hurricane now uses animation 21941; Whack/Pummel flow and Wall Slam shell exist. Current Torag animation mapping is documented in `assets/animations.txt`; exact 1:1 timing still needs runtime comparison.
+- Guthan: Hurricane now uses animation 21941 plus a substantial Impale implementation exists, including armed/spearless NPC transformation, projectile, bleed, victim state, retrieval, and Torag interaction. Exact damage/timing/visual parity still needs verification.
+- Verac: animation 21941 is runtime-confirmed to produce his shared melee spin presentation. Current ordinary special path is still Wall Slam, with forced post-revive Hurricane behavior available through the shared melee system; authentic full special rotation remains incomplete.
 - Ahrim: normal magic combat exists; flying NPC state 18539 is VERIFIED, but the authentic Ahrim special rotation is not yet implemented.
 - Karil: normal ranged combat exists; authentic Karil special rotation, including Shadow Dash-related behavior, is not yet implemented.
 
@@ -62,16 +62,16 @@ Do not replace these with a second RoTS controller. Improve the existing impleme
 - NPC 18542 = VERIFIED spearless Guthan state used by current Impale.
 - NPCs 18546-18551 are body-only/null-name cache definitions, but current revision-830 runtime testing found these inactive definitions render invisibly. The current encounter therefore deliberately keeps the active brother model visible at 1 HP while logically subdued. Their authentic intended cache role remains unproven.
 - The current RoTS combat-family models render with Santa hats in this revision-830 cache/runtime.
-- Animation 21941 = VERIFIED runtime visual on Dharok: sustained spinning motion. Authentic Hurricane/Spinning Attack assignment remains a strong HYPOTHESIS until cross-brother/footage confirmation.
+- Animation 21941 = VERIFIED runtime shared spin visual across Dharok, Guthan, Torag, and Verac. The live Hurricane implementation now uses 21941 instead of the old normal-attack-emote/manual-facing approximation.
 
-## Documentary evidence now guiding the spin search
+## Documentary evidence guiding the shared spin
 
 A period RoTS guide documents a shared `Spinning Attack` for all melee brothers and lists it for Torag, Guthan, Verac, and Dharok. The same guide separately describes Verac's `Helicopter` move, so those two visuals must not be conflated during animation identification.
 
 Reference:
 - https://forum.tip.it/topic/326100-rise-of-the-six-guide-rots/
 
-This documentary evidence does not by itself prove animation 21941, but it gives a concrete visual/mechanic target for runtime comparison.
+This evidence supports using 21941 for the shared Hurricane/Spinning Attack presentation. Exact original sequence duration, pulse alignment, movement cadence, and damage timing still require direct encounter/video comparison before Hurricane is considered fully 1:1.
 
 ## Current research strategy
 
@@ -117,7 +117,7 @@ Use `timings/` for measured attack cadence, animation duration, special windups,
 
 ## Current highest-value gaps
 
-1. Confirm whether animation 21941 is the authentic shared Hurricane / Spinning Attack animation.
+1. Runtime-verify the integrated 21941 Hurricane inside the live encounter: spin duration, walking/tracking, pulse alignment, and clean return to combat.
 2. Authentic subdued/kneeling presentation while preserving the working logical subdue/revive system.
 3. Greatest Axe visual/timing verification.
 4. Normal attack cadence verification for all six brothers.
@@ -129,15 +129,15 @@ Use `timings/` for measured attack cadence, animation duration, special windups,
 
 ## Next checkpoint
 
-Do not continue broad random animation testing yet.
+Run the patched Hurricane in the actual RoTS encounter before changing any more Hurricane mechanics.
 
-First test animation 21941 on:
+Confirm:
 
-1. Dharok - already VERIFIED as a sustained spin visual.
-2. Guthan.
-3. Torag.
-4. Verac.
+1. 21941 begins when Hurricane starts and is not visibly restarted/frozen by the 10 damage pulses.
+2. Dharok, Guthan, and Torag continue tracking the target at walking speed during the spin.
+3. Forced post-revive Hurricane still uses the same 21941 presentation and returns cleanly to normal combat.
+4. The current damage ramp/AoE feels mechanically intact after the visual change.
 
-If 21941 produces the appropriate weapon-spin presentation across the four melee brothers, compare that runtime result directly against authentic RoTS footage/documentary behavior. Only then promote 21941 from strong HYPOTHESIS to VERIFIED Hurricane/Spinning Attack and patch the existing Hurricane implementation to replace the current normal-attack-emote approximation.
+If the animation ends before the 10-pulse Hurricane finishes, record the exact visible timing first. Do not blindly restart 21941 every pulse; adjust animation cadence only from runtime evidence.
 
-After the animation is proven, separately verify Hurricane timing/damage/movement before calling the mechanic 1:1.
+After Hurricane's integrated runtime behavior is stable, move to the next highest-value fidelity gap rather than returning to broad animation scanning.
