@@ -53,6 +53,8 @@ public class Class592 {
 
 	static void method7012(String string, String string_0_, int i, int i_1_, int i_2_, long l, int i_3_, int i_4_, boolean bool, boolean bool_5_, long l_6_, boolean bool_7_, int i_8_) {
 		if (!Class25.aBool165 && 357782167 * Class25.anInt172 < 504) {
+			if (CustomItemActionConfig.shouldSuppressBankInventoryMenuEntry(i_1_, l, i_3_, i_4_))
+				return;
 			i = -1 != i ? i : -646491435 * client.anInt8751;
 			Class572_Sub12_Sub10 class572_sub12_sub10 = new Class572_Sub12_Sub10(string, string_0_, i, i_1_, i_2_, l, i_3_, i_4_, bool, bool_5_, l_6_, bool_7_);
 			Class412.method5075(class572_sub12_sub10, 722976984);
