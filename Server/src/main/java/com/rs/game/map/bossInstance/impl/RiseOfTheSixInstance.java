@@ -437,6 +437,9 @@ public class RiseOfTheSixInstance extends BossInstance {
 			if (getSubduedCount() == Brother.values().length) {
 				fightComplete = true;
 				reviveGeneration++;
+				sideHopGeneration++;
+				sideHopPending = false;
+				broadcast("All six brothers are subdued. The shadow bond has been broken.");
 				return;
 			}
 
@@ -566,10 +569,10 @@ public class RiseOfTheSixInstance extends BossInstance {
 			sideHopGeneration++;
 			activeRotation = null;
 			currentBrotherSides.clear();
-		sideHopPending = false;
-		sideHopComplete = false;
-		sideHopFrom = null;
-		sideHopTo = null;
+			sideHopPending = false;
+			sideHopComplete = false;
+			sideHopFrom = null;
+			sideHopTo = null;
 			if (brothers != null) {
 				for (RiseOfTheSixBrother brother : brothers) {
 					if (brother != null && !brother.hasFinished())
