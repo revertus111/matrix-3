@@ -19,6 +19,7 @@ public final class BossDefinitionPublisher {
 	 */
 	public static void applyLive(BossDefinition definition) {
 		BossDefinitionRegistry.applyLive(definition);
+		BossEncounterRuntime.requestDefinitionRefresh(definition.getNpcId());
 	}
 
 	/**
@@ -28,6 +29,7 @@ public final class BossDefinitionPublisher {
 	public static void saveAndApply(BossDefinition definition) throws IOException {
 		BossDefinitionStore.save(definition);
 		BossDefinitionRegistry.applyLive(definition);
+		BossEncounterRuntime.requestDefinitionRefresh(definition.getNpcId());
 	}
 
 	/**
@@ -38,6 +40,7 @@ public final class BossDefinitionPublisher {
 		if (!BossDefinitionRegistry.hasRollback(npcId))
 			return false;
 		BossDefinitionRegistry.rollbackLastApply(npcId);
+		BossEncounterRuntime.requestDefinitionRefresh(npcId);
 		return true;
 	}
 
@@ -49,6 +52,7 @@ public final class BossDefinitionPublisher {
 		if (saved == null)
 			return false;
 		BossDefinitionRegistry.applyLive(saved);
+		BossEncounterRuntime.requestDefinitionRefresh(npcId);
 		return true;
 	}
 
