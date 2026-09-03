@@ -77,3 +77,8 @@
 - Fixed a missing closing brace in `RiseOfTheSixInstance.finish()` introduced during the inactive-transform rollback; this was the single Eclipse compile error shown at the end of the class.
 - User runtime video then isolated the remaining render failure: the brother remains logically present at 1 HP with its hover/nameplate and type-5 bar, but the generic Matrix3 death emote (836 for the current empowered definitions) hides the model when that animation completes.
 - RoTS subdual no longer plays the generic NPC death emote. Until the authentic revision-830 kneeling presentation is established, subdued brothers deliberately remain as visible, frozen/non-interactable empowered models underneath the verified type-5 revival bar.
+- Runtime report showed the shared Hurricane/Wall Slam slice was mechanically difficult to see: Hurricane only replayed the normal attack emote and Wall Slam's collision scan selected the farthest blocked edge.
+- Hurricane now cycles the brother's facing through four directions each pulse while retaining walking-speed target tracking and the existing ten-pulse damage ramp, giving the active special an explicit visible spin proxy. The exact revision-830 Hurricane animation/GFX remains HYPOTHESIS.
+- Corrected Wall Slam to choose the nearest blocked cardinal wall within the existing scan range instead of the farthest wall/open fallback.
+- Wall Slam now runs to that wall and uses Matrix3 native ForceMovement to fling the brother back to the target's captured start tile before resolving the existing 5x5, 500-3,000 hard-typeless impact.
+- If no wall is found or the approach cannot complete, Wall Slam now ends cleanly instead of fabricating a distant open-path slam; exact run-up/wall-climb/launch animations remain HYPOTHESIS.
