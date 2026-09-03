@@ -1,0 +1,9 @@
+2026-09-03
+- Added DeathPolicy as the single item-retention decision point for player death.
+- Main-game policy now keeps the full normal inventory and all equipped gear on death.
+- DeathEvent no longer sends main-game inventory/equipment through the gravestone/drop pipeline; it refreshes the existing containers and proceeds with respawn.
+- Main-game death interface is given empty keep/drop slot sets so it does not present normal items as at-risk, while respawn-location selection remains available.
+- Protect/unprotect item interactions are disabled while the keep-all main-game policy is active.
+- Existing Wilderness behavior already retained inventory/equipment because its sendItemsOnDeath call is disabled; this patch does not redesign Wilderness combat or future Hardcore drops.
+- Backpack storage remains independent player-owned persistent state and is unchanged by this patch.
+- Future Hardcore mode should branch DeathPolicy once an explicit player game-mode state exists instead of duplicating death rules in controllers.
