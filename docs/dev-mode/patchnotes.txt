@@ -1,3 +1,8 @@
+2026-09-03 - Dev Mode tile right-click hook correction
+- Corrected the normal Matrix3 world-tile menu source from action 60 to action 23.
+- VERIFIED: action 23 is the normal scene-tile movement path carrying clicked local X/Y into Class319.method4094; action 60 is the staff/admin teleport-debug path.
+- Kept the existing Dev Mode menu injection and Spawn Browser dispatch unchanged; no server placement behavior changed.
+
 2026-09-03 - Dev Mode Phase 1 foundation
 - Added a session-only Dev Mode toggle to Client Console Settings; defaults OFF on client launch.
 - Mirrored Matrix3's existing scene-tile movement menu coordinates into an owner-only `Dev > Spawn...` action without replacing normal menu behavior.
