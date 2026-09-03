@@ -14,38 +14,36 @@ The roadmap is deliberately stability-first. Completed foundation work is record
 
 ## Client Console direction
 
-No identifiable old Owner/Client Console implementation is present on GitHub `main`. The replacement direction is now defined by `docs/client-console/CLIENT_CONSOLE.md`.
+The replacement direction is defined by `docs/client-console/CLIENT_CONSOLE.md`.
 
-The Matrix3 Client Console will use a cleaner RuneLite-style sidebar workflow rather than recreating the old 718 console wholesale. Matrix3 remains authoritative for gameplay and server behavior; the console is a developer UI layer.
+The Matrix3 Client Console uses a cleaner RuneLite-style sidebar workflow rather than recreating the old 718 console wholesale. Matrix3 remains authoritative for gameplay and server behavior; the console is a developer UI layer.
 
-## Next - development control
+## Current - development control
 
-1. **Client Console V1 scan/design verification**
-   - Inspect the Matrix3 client frame/bootstrap and only the immediate layout dependencies needed to identify a safe docking hook.
-   - Inspect the minimum old 718 Client Console implementation needed for UI/workflow reference.
-   - Follow `docs/client-console/CLIENT_CONSOLE.md` as the design authority.
+1. **Client Console V1 scan/design verification** - [x] Complete
+   - Matrix3 client frame/bootstrap docking ownership was established without replacing renderer/canvas ownership.
+   - `docs/client-console/CLIENT_CONSOLE.md` remains the design authority.
 
-2. **Client Console shell**
+2. **Client Console shell** - [x] Complete
    - Thin vertical icon rail plus one active docked panel.
-   - Clean open/close/select behavior.
-   - Do not bundle gameplay ownership into the shell.
+   - Open/close/select behavior, resize protection, dark theme, workspace persistence, and lazy panel hosting are implemented.
 
 3. **Client Console V1 panels**
-   - Owner.
-   - Commands.
-   - Player.
-   - Debug.
-   - Add each panel as its own testable vertical slice.
+   - [x] Owner.
+   - [x] Commands.
+   - [x] Player.
+   - [ ] Debug.
+   - Additional specialist panels/tools may exist when driven by active content needs; they do not replace the unfinished V1 Debug slice.
 
-4. **Command execution bridge**
-   - Route command UI actions through the authoritative Matrix3 command/permission path where practical.
-   - Do not duplicate command semantics in the client.
+4. **Command execution bridge** - [x] Complete
+   - Client Console command actions route through the existing Matrix3 command packet/permission authority.
+   - Specialist tools may use isolated narrow bridges when explicitly required, without moving gameplay ownership into the console.
 
-5. **Persistence verification pass**
+5. **Persistence verification pass** - [ ] Pending
    - Verify position, inventory, equipment, bank, and relevant account state across relog/restart.
    - Fix only failures proven by the test pass.
 
-6. **Launcher/startup polish**
+6. **Launcher/startup polish** - [ ] As needed
    - Preserve the now-working Gradle-owned Eclipse/Windows startup path.
    - Improve user-facing startup only where needed; do not redesign the login architecture.
 
