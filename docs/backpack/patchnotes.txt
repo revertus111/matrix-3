@@ -7,3 +7,6 @@
 - Added equipment-interface secondary-action routing to open the backpack and an owner-only `::itembrowser backpack open` test bridge; Commands.java remains untouched.
 - Prevented storing item 21445 inside its own backpack and kept transfer checks transactional around available inventory/backpack space.
 - Item 21445 cache wear-slot/model behavior still requires runtime verification; the server does not rewrite its cache definition in this slice.
+- Locked in the death-persistence invariant: Backpack contents are character-owned persistent storage, are not enumerated by the normal inventory/equipment death-drop lists, and are intentionally not cleared by `Inventory.reset()`.
+- The physical Rambler's backpack item may still be kept or dropped according to the active game-mode death policy; losing the item only removes access until the player equips another/recovered backpack, while the stored contents remain attached to that player.
+- Main-game keep-all versus Hardcore drop-on-death policy is intentionally left for the separate game-mode death-rules slice; this patch only guarantees Backpack contents survive either policy.
