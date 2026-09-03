@@ -1,29 +1,33 @@
 Rise of the Six NPC IDs
 
-All IDs are UNKNOWN until scanner/runtime evidence is recorded.
+Evidence labels follow AGENTS.md: VERIFIED = runtime-confirmed, verified-static = cache/source-confirmed without runtime behavior confirmation, HYPOTHESIS = plausible but not proven.
 
-Dharok
-- RoTS normal variant: UNKNOWN
-- Santa-hat/seasonal variant: HYPOTHESIS
+RoTS combat-family definitions
+- 18538 - Ahrim the Blighted - verified-static RoTS combat-family definition; current runtime model appearance includes Santa hat.
+- 18540 - Dharok the Wretched - verified-static RoTS combat-family definition; current runtime model appearance includes Santa hat.
+- 18541 - Guthan the Infested - verified-static armed/combat-family definition; current runtime model appearance includes Santa hat.
+- 18543 - Karil the Tainted - verified-static RoTS combat-family definition; current runtime model appearance includes Santa hat.
+- 18544 - Torag the Corrupted - verified-static RoTS combat-family definition; current runtime model appearance includes Santa hat.
+- 18545 - Verac the Defiled - verified-static RoTS combat-family definition; current runtime model appearance includes Santa hat.
 
-Ahrim
-- RoTS normal variant: UNKNOWN
-- Santa-hat/seasonal variant: HYPOTHESIS
+Special/state definitions
+- 18539 - Ahrim the Blighted - VERIFIED flying Ahrim state.
+- 18542 - Guthan the Infested - VERIFIED spearless Guthan state used by the Impale sequence.
+- 18546 - null/Ahrim body-model state - HYPOTHESIS subdued/downed Ahrim.
+- 18547 - null/Dharok body-model state - HYPOTHESIS subdued/downed Dharok.
+- 18548 - null/Guthan body-model state - HYPOTHESIS subdued/downed Guthan.
+- 18549 - null/Karil body-model state - HYPOTHESIS subdued/downed Karil.
+- 18550 - null/Torag body-model state - HYPOTHESIS subdued/downed Torag.
+- 18551 - null/Verac body-model state - HYPOTHESIS subdued/downed Verac.
 
-Karil
-- RoTS normal variant: UNKNOWN
-- Santa-hat/seasonal variant: HYPOTHESIS
+Observed model fingerprints
+- Ahrim 18538/18539: [91490, 91521].
+- Dharok 18540: [91497, 91500].
+- Guthan 18541: [91494, 91531].
+- Guthan 18542 spearless: [91494].
+- Karil 18543: [91491, 91511].
+- Torag 18544: [91492, 91513].
+- Verac 18545: [91496, 91506].
+- 18546-18551 each retain only the first/body model from their corresponding combat-family definition.
 
-Torag
-- RoTS normal variant: UNKNOWN
-- Santa-hat/seasonal variant: HYPOTHESIS
-
-Guthan
-- RoTS normal variant: UNKNOWN
-- Santa-hat/seasonal variant: HYPOTHESIS
-
-Verac
-- RoTS normal variant: UNKNOWN
-- Santa-hat/seasonal variant: HYPOTHESIS
-
-Use `RotsCacheScanner` output to record candidate IDs, model fingerprints, renderEmote IDs, and shared-model correlations. Promote identity to VERIFIED only after runtime appearance confirms it.
+Use the Owner Console RoTS cache-research card for focused dumps. Promote 18546-18551 only after runtime subdue/spawn behavior confirms their role.
