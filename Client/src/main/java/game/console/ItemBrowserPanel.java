@@ -295,7 +295,9 @@ public final class ItemBrowserPanel extends JPanel {
                     return;
                 }
                 list.setSelectedIndex(index);
-                spawn(model.getElementAt(index), 1, false);
+                if (e.getClickCount() >= 2) {
+                    spawn(model.getElementAt(index), 1, false);
+                }
             }
 
             @Override public void mousePressed(MouseEvent e) { popup(e); }
