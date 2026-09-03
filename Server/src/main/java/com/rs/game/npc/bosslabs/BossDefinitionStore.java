@@ -29,7 +29,7 @@ import com.rs.utils.Logger;
 public final class BossDefinitionStore {
 
 	private static final int MAGIC = 0x424C4431; // BLD1
-	private static final int VERSION = 7;
+	private static final int VERSION = 8;
 	private static final int MIN_SUPPORTED_VERSION = 1;
 	private static final int MAX_DEFINITIONS = 10000;
 	private static final int MAX_PHASES = 1000;
@@ -126,8 +126,8 @@ public final class BossDefinitionStore {
 			List<BossPhaseActionDefinition> entryActions = new ArrayList<BossPhaseActionDefinition>();
 			List<BossPhaseActionDefinition> exitActions = new ArrayList<BossPhaseActionDefinition>();
 			if (version >= 7) {
-				readPhaseActions(input, entryActions, "entry action");
-				readPhaseActions(input, exitActions, "exit action");
+				readPhaseActions(input, entryActions, "entry action", version);
+				readPhaseActions(input, exitActions, "exit action", version);
 			}
 			int attackCount = readCount(input, MAX_ATTACKS, "attack");
 			List<BossAttackDefinition> attacks = new ArrayList<BossAttackDefinition>(attackCount);
@@ -206,10 +206,15 @@ public final class BossDefinitionStore {
 	}
 
 	private static void readPhaseActions(DataInputStream input, List<BossPhaseActionDefinition> actions,
-			String label) throws IOException {
+			String label, int version) throws IOException {
 		int count = readCount(input, MAX_PHASE_ACTIONS, label);
-		for (int actionIndex = 0; actionIndex < count; actionIndex++)
-			actions.add(new BossPhaseActionDefinition(input.readInt(), input.readInt()));
+		for (int actionIndex = 0; actionIndex < count; actionIndex++) {
+			int type = input.readInt();
+			int value = input.readInt();
+			int quantity = version >= 8 ? input.readInt() : 1;
+			int radius = version >= 8 ? input.readInt() : 1;
+			actions.add(new BossPhaseActionDefinition(type, value, quantity, radius));
+		}
 	}
 
 	private static int readCount(DataInputStream input, int maximum, String label) throws IOException {
@@ -298,6 +303,8 @@ public final class BossDefinitionStore {
 		for (BossPhaseActionDefinition action : actions) {
 			output.writeInt(action.getType());
 			output.writeInt(action.getValue());
+			output.writeInt(action.getQuantity());
+			output.writeInt(action.getRadius());
 		}
 	}
 }
