@@ -132,6 +132,9 @@ public class Class25 {
 				Class88.aClass572_Sub12_Sub10_1224 = null;
 				Class580.aClass572_Sub12_Sub10_7702 = null;
 			}
+			Class572_Sub12_Sub10 shiftClickDropEntry = QolSettings.resolveShiftClickDropEntry(aClass675_174);
+			if (shiftClickDropEntry != null)
+				Class572_Sub16_Sub12.aClass572_Sub12_Sub10_11311 = shiftClickDropEntry;
 			Class572_Sub13 class572_sub13 = (Class572_Sub13) client.aClass675_8745.method7932((byte) 50);
 			int i;
 			int i_0_;
