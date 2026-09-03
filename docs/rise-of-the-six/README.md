@@ -37,14 +37,18 @@ VERIFIED from user runtime testing:
 - All six empowered brothers spawn visibly on valid arena terrain and engage the player.
 - Guthan resolves as `Guthan the Infested (level 650)`.
 - At least one subdued brother has been observed returning through the current shadow-bond revival path.
+- Client hitbar type 5 renders as the RoTS orange/blue revival bar over a subdued brother.
+- The donor inactive-id path 18546-18551 is not usable for visible downed brothers in this active revision-830 client; those transformations render the body invisible.
+- Generic empowered-brother death emote 836 is not usable for RoTS subdual; the body disappears after the animation completes even though the 1-HP shell remains server-side.
+- Donor Dharok Greatest Axe GFX 4406 is not the correct visual in this active revision-830 cache; it renders as an oversized cyan lightning/sphere effect.
 
 Still requiring targeted runtime verification:
 
 - exact 30-second mass revival timing / simultaneous-six victory
-- dedicated incapacitated brother forms 18546-18551 and persistent kneeling presentation
-- type-5 shared revival bar appearance, fill direction/colors, reset behavior, and removal on revival
+- authentic persistent kneeling/downed presentation for this revision-830 client
+- type-5 shared revival bar reset behavior and removal on revival/completion
 - every current special and cleanup path
-- Guthan Impale behavior including new same-side selection
+- Guthan Impale behavior including same-side selection
 - daily west/east formation ownership and physical side split
 - empty-side empowerment warning / hop timing / landing presentation
 
@@ -52,9 +56,9 @@ Still requiring targeted runtime verification:
 
 | Brother | Classic toolkit to reproduce | Wall Slam? | Current state |
 | --- | --- | --- | --- |
-| Dharok | Hurricane -> Greatest Axe -> Wall Slam | Yes | All three mechanically present; exact shared visuals/timing still need runtime fidelity work. |
+| Dharok | Hurricane -> Greatest Axe -> Wall Slam | Yes | All three mechanically present; Greatest Axe GFX 4406 is runtime-rejected and exact shared visuals/timing still need fidelity work. |
 | Torag | Hurricane -> Whack -> Wall Slam + conditional Throw | Yes | Core three mechanically present; Throw pairing is side-gated but flight/landing execution is still pending exact assets. |
-| Guthan | Hurricane -> Impale + conditional Throw | No | Hurricane + Impale mechanically present; Impale now uses same-side victim filtering. |
+| Guthan | Hurricane -> Impale + conditional Throw | No | Hurricane + Impale mechanically present; Impale uses same-side victim filtering. |
 | Verac | Soulspot, Deathcopter, Wall Slam + conditional Throw | Yes | Normal Hurricane mismatch fixed; Wall Slam present; Soulspot/Deathcopter/Throw execution pending. |
 | Ahrim | Turret of Fire, Shadow Pits, Flight | No | Base combat only. |
 | Karil | Lightning Conductor, Bombard, Portal Dash | No | Base combat only. |
@@ -64,8 +68,8 @@ Still requiring targeted runtime verification:
 - Rise of the Six supports 1-4 players; classic intended group size is four.
 - Empowered brothers are level 650 with 50,000 life points.
 - Empowered NPC ids: Ahrim 18538/18539, Dharok 18540, Guthan 18541/18542, Karil 18543, Torag 18544, Verac 18545.
-- Donor-backed dedicated incapacitated forms are Ahrim 18546, Dharok 18547, Guthan 18548, Karil 18549, Torag 18550, Verac 18551.
-- The donor uses client hitbar type 5 specifically as the RoTS incapacitation/revival bar while those downed NPC forms are active.
+- Donor-backed dedicated incapacitated form candidates are Ahrim 18546, Dharok 18547, Guthan 18548, Karil 18549, Torag 18550, Verac 18551; runtime has rejected using them directly in this active 830 client because they render invisible.
+- The donor uses client hitbar type 5 specifically as the RoTS incapacitation/revival bar; this bar type is runtime-VERIFIED in the current client.
 - The donor uses animation 21914 when a downed brother returns to its active NPC form at 25,000 life points.
 - Defeating a brother heals each active brother by 5,000 life points.
 - Shared shadow-bond revive timer is 30 seconds and resets whenever another brother is defeated.
@@ -144,7 +148,8 @@ Encounter state:
 
 - brothers become logically `subdued` instead of using normal NPC drop/respawn death
 - Matrix3 keeps the subdued NPC shell at 1 HP so the client does not remove it as a true zero-HP NPC
-- delayed hits already in flight are reduced to zero after subdual so they cannot hide the 1-HP shell
+- `setCantInteract(true)` is applied on subdual; Matrix3 NPC click handling and `PlayerCombatNew` both reject `cantInteract` NPCs server-side
+- delayed hits already in flight are reduced to zero after subdual so they cannot hide or damage the 1-HP shell
 - surviving brothers heal 5,000 HP after each subdual
 - new subdual resets the pending revival generation
 - subdued brothers revive at 25,000 HP when the revival task wins
@@ -152,16 +157,17 @@ Encounter state:
 
 Current visual implementation:
 
-- each newly subdued brother transforms into its donor-backed dedicated incapacitated form: Ahrim 18546, Dharok 18547, Guthan 18548, Karil 18549, Torag 18550, Verac 18551
-- those dedicated NPC forms are intended to own the persistent downed/kneeling presentation rather than leaving an active brother model standing after its death animation ends
-- every subdued brother receives a `RiseOfTheSixReviveBar`, using donor-backed client hitbar type 5
+- subdued brothers currently retain the proven empowered model rather than transforming to donor inactive ids 18546-18551, because those ids were runtime-confirmed to render invisible in this revision-830 client
+- generic NPC death emote 836 is deliberately not played because runtime video confirmed that it hides the model when it completes
+- the temporary presentation is therefore a visible/frozen, non-interactable empowered model while the authentic revision-830 kneeling/downed pose is still being identified
+- every subdued brother receives a `RiseOfTheSixReviveBar`, using runtime-VERIFIED client hitbar type 5
 - the shared bar progresses from 0 to 255 over the same 50 Matrix3 ticks used by the ~30-second revival generation
 - when another brother is subdued, the old bar generation becomes stale and **all currently subdued brothers immediately reset to an empty bar together**
 - the revive bar is inserted before Matrix3 can fall back to its ordinary entity HP bar, preventing the temporary logical 1/50,000 HP shell from becoming the intended downed UI
-- on revival, the special bar is cleared, the brother returns to its active primary NPC id, animation 21914 is played, and the existing revival path restores 25,000 HP
+- on revival, the special bar is cleared, animation 21914 is played, and the existing revival path restores 25,000 HP
 - all-six completion and instance cleanup clear the pending revival bars/tasks rather than allowing stale visual updates
 
-**Fidelity boundary:** NPC ids 18546-18551, hitbar type 5 and revival animation 21914 are verified-static donor evidence. Their exact revision-830 visual result in this Matrix3 client—including the persistent kneeling pose and exact bar colors/style—must be runtime-confirmed before being promoted to VERIFIED.
+**Important client boundary:** the active empowered NPC definition still contains the client-side `Attack` menu option, so the tooltip can remain visible while a brother is subdued. Matrix3 rejects the click/combat server-side through `isCantInteract()`, and queued hits are zeroed. The tooltip itself should only be removed by establishing the correct visible revision-830 downed definition/presentation rather than changing global NPC menus.
 
 ### Base combat
 
@@ -174,16 +180,15 @@ Current visual implementation:
 
 ### Dharok - Greatest Axe
 
-Donor-backed first faithful slice:
+Current mechanically faithful slice:
 
 - `Give me everything!`
-- GFX 4406
 - animation 21940
 - absorbs/stores incoming damage during the charge
 - normal autos pause during the charge
 - stored damage is added once to Dharok's next normal outgoing hit
 
-Exact timing/visual behavior still requires runtime verification.
+**Runtime rejection:** donor GFX 4406 is disabled in this project because the active revision-830 cache renders it as an oversized cyan lightning/sphere effect. The correct Greatest Axe graphics asset remains HYPOTHESIS/pending evidence.
 
 ### Torag - Whack
 
@@ -206,7 +211,8 @@ Current Matrix3 mechanical implementation:
 - ten escalating hard-typeless pulses
 - nearby players can also be hit
 - normal autos are suppressed while Hurricane owns the brother
-- exact spin animation/GFX and final damage/radius distribution remain HYPOTHESIS
+- current visual proxy cycles the brother's facing through north/east/south/west each pulse so the running mechanic is visible
+- the active model still replays its normal attack emote; exact Jagex spin animation/GFX and final damage/radius distribution remain HYPOTHESIS
 
 **Verac correction:** ordinary Hurricane has been removed from Verac's normal implemented rotation. Verac can still be forced into Hurricane through the shared post-revival melee rule. This matches the documented rare post-revival Verac spin behavior rather than treating Hurricane as one of his normal specials.
 
@@ -215,12 +221,14 @@ Current Matrix3 mechanical implementation:
 Current Matrix3 mechanical implementation for Dharok, Torag and Verac:
 
 - captures the target's tile when the special begins
-- runs toward a reachable arena collision edge
-- rushes back toward the captured location
+- finds the nearest reachable blocked cardinal wall rather than the farthest arena edge
+- runs toward that wall
+- uses Matrix3 `ForceMovement` to fling back toward the captured location
 - resolves a 5x5 hard-typeless impact around the captured tile
 - current damage range 500-3,000
+- aborts cleanly if no valid wall/approach can be established
 
-Exact wall anchors, run-up/fling animations, impact animation/GFX and final damage distribution remain HYPOTHESIS.
+Exact wall anchors, wall-climb/run-up animation, return-fling animation, impact animation/GFX and final damage distribution remain HYPOTHESIS.
 
 ## Guthan Impale
 
@@ -252,7 +260,7 @@ Classic behavior:
 ### Current Matrix3 implementation
 
 - Impale is the second normal Guthan special after Hurricane in the implemented rotation.
-- The target selector now prefers another eligible **same-side** instance player instead of Guthan's primary target.
+- The target selector prefers another eligible **same-side** instance player instead of Guthan's primary target.
 - Opposite-side players are rejected from the secondary Impale candidate pool.
 - If there is no secondary same-side victim, Guthan can fall back to his primary target only when that primary target is also on Guthan's current side; a cross-side primary target causes Impale to wait rather than fire through the portal.
 - After empty-side empowerment moves Guthan to the occupied side, the selector automatically consumes Guthan's updated current side ownership.
@@ -306,16 +314,17 @@ Do not implement Throw separately in each brother's CombatScript.
 
 ## HYPOTHESIS items still pending
 
-- exact revision-830 rendering/idle pose of downed NPC forms 18546-18551 until runtime-tested
-- exact client colors/style of type-5 RoTS revival bar until runtime-tested
+- authentic revision-830 kneeling/downed NPC presentation that remains visible and removes the active Attack menu option
+- exact revival animation 21914 visual result in this client
 - exact physical north/middle/south brother spawn coordinates/facing inside each daily side
 - exact player west/east sub-area bounds beyond the current source-X midpoint classification
 - exact empowered-side landing coordinates/spacing and transition animation
 - Karil Shadow Dash blocker for empowerment hop
 - exact second-barrier sub-area blocker for empowerment hop
 - exact special cadence / number of autos between specials; current gate is 3-5 autos
-- exact Hurricane visuals/radius/damage distribution
+- exact Hurricane animation/GFX/radius/damage distribution
 - exact Wall Slam anchors/animations/path timing
+- correct Greatest Axe graphics asset replacing runtime-rejected donor GFX 4406
 - Torag authentic Whack natural termination behavior
 - exact Throw launch/flight/landing assets/timing/damage
 - exact Shadow Realm interaction for every special
@@ -346,7 +355,8 @@ Do not implement Throw separately in each brother's CombatScript.
 
 ### Shared shadow mechanics
 
-- runtime-verify dedicated downed forms 18546-18551 remain visible/kneeling through the whole incapacitation window
+- replace the temporary visible/frozen active-model subdual presentation with the authentic revision-830 kneeling/downed state once established
+- ensure the final downed presentation removes the client-side Attack option without changing global NPC menus
 - runtime-verify type-5 revive bars fill/reset together and disappear on revival/completion
 - runtime-verify revival animation 21914 and 25,000 HP return
 - Shadow Drag selection/thresholds
@@ -372,6 +382,7 @@ Do not implement Throw separately in each brother's CombatScript.
 ### Dharok
 
 - runtime-verify Greatest Axe charge and returned damage
+- identify the correct Greatest Axe graphics asset; donor GFX 4406 is runtime-rejected
 - runtime-verify Hurricane/Wall Slam fidelity
 
 ### Guthan
@@ -423,4 +434,5 @@ Do not implement Throw separately in each brother's CombatScript.
 - Do not create a second combat engine/timer/world/NPC lifecycle inside BossLabs.
 - Do not invent exact side-hop landing coordinates before map/runtime evidence establishes them.
 - Do not activate guessed Throw flight/landing behavior merely because side ownership now exists.
+- Do not globally alter NPC Attack menus just to hide the subdued RoTS tooltip; solve it through the correct downed presentation.
 - Do not mark HYPOTHESIS behavior VERIFIED without runtime evidence.
