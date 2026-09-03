@@ -48,3 +48,4 @@
 - `RiseOfTheSixCombat` now records every RoTS normal melee/magic/ranged attack with animation/projectile/GFX, max hit, rolled damage, hit delay, return delay, Guthan heal proc, and Ahrim Strength drain when triggered.
 - Brother-owned special logging now records Dharok Greatest Axe start/21940/absorbed damage/stored release, Torag Whack/Pummel/rescue/release, Guthan Impale projectile/transformation/bleeds/retrieval/auto-return, Hurricane 21941 start/pulses/hits/end, Wall Slam phases/hits, special resets, subdue/revive, and brother finish.
 - Fight Recorder lines include elapsed milliseconds plus a recorder tick incremented once per scheduled world tick; queue overflow is fail-soft and reported as a dropped-line count instead of blocking combat.
+- Verification hardened recorder attachment so delayed RoTS tasks cannot create a second log after an instance has already finished; one encounter remains one recorder file.
