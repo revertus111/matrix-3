@@ -1,0 +1,12 @@
+Matrix3 custom item action runtime test list
+
+1. Start Client and Server from the normal Eclipse/Java 8 workflow. Confirm neither side reports that `data/items/custom-item-actions.properties` is missing.
+2. Right-click Rambler's backpack 21445 in the normal NIS inventory. Confirm `Open` appears from configured Inventory Option 4 while existing Wear/Use/Drop/Examine behavior remains available.
+3. Click inventory `Open`. Confirm the player-owned backpack interface opens without requiring 21445 to be equipped, and Store/Withdraw behavior still works.
+4. Equip 21445 and right-click it in the equipment interface. Confirm configured Equipment Option 1 displays `Open` and opens the same player-owned backpack storage.
+5. Put 21445 in the bank and right-click it. Confirm the bank's wearable-item action is presented as `Open` for this configured item and opens backpack storage without withdrawing 21445. If the client still labels this stock action as Wear, record that as bank-menu client/CS2 evidence; do not enable Empty-to-bank yet.
+6. Right-click ordinary, unconfigured items in inventory, equipment, and bank. Confirm their stock Matrix3 options and behavior are unchanged.
+7. Close/reopen interfaces and invalidate/reload item definitions where practical. Confirm configured inventory/equipment labels are reapplied to a newly decoded ItemDefinitions object without duplicating or corrupting options.
+8. Temporarily add a second harmless test item entry to the properties file in a local test copy. Confirm the generic registry recognizes its configured option without adding an item-id hardcode to ControlerManager.
+9. Keep `item.21445.bank.6=EMPTY_TO_BANK|Empty to bank` commented until a verified per-item bank-label hook exists. Confirm clicking stock Withdraw-All-but-one on 21445 does NOT empty backpack contents in this build.
+10. Run the backpack smoke path: persistence, real familiar BoB isolation, death persistence, and main-game keep-all death behavior remain unchanged.
