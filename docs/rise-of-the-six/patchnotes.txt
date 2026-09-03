@@ -71,3 +71,6 @@
 - Revived brothers clear the special bar, transform back to their active primary NPC id, play donor-backed revival animation 21914, and retain the existing 25,000-HP restore behavior.
 - All-six completion and instance cleanup clear pending revival bars/generations so stale visual updates cannot survive the fight.
 - Downed NPC ids, type-5 bar and animation 21914 remain verified-static until the revision-830 Matrix3 client confirms the exact kneeling pose and bar colors/style at runtime.
+- VERIFIED from user screenshots/video: the donor-backed type-5 RoTS revival bar renders in this client with the orange/blue presentation and remains attached to the subdued NPC tile.
+- Runtime rejected the donor inactive transformation path for this revision-830 client: transforming subdued brothers to 18546-18551 produced invisible brother models while their revival bars remained visible.
+- Removed the failed 18546-18551 subdued transformation from runtime. Subdued brothers now keep the proven empowered model plus the existing death/down emote and type-5 countdown until the exact revision-830 persistent kneeling presentation is established.
