@@ -10,3 +10,6 @@
 - Added the Server runCacheEditor JavaExec task so the standalone CacheEditor can be launched with the correct Server/FileStore runtime classpath.
 - Added Client Console launch support through a separate CacheEditor process; the Client does not compile against Server CacheEditor/FileStore classes.
 - Changed runCacheEditor to pass the Matrix3 root ../830_cache directory automatically, so Client Console launches no longer require manually browsing to the normal revision-830 cache. The existing chooser remains the fallback if that directory is unavailable.
+- Added a shared CacheEditor dark theme based on the Client Console palette and applied it to startup, shell, tabs, Raw Cache, dialogs, inputs, lists, and scroll panes.
+- Reworked the Items tab to follow the Client Console Item Browser workflow: automatic debounced ID/name search, background indexing on open, taller two-line result rows, a selected-item summary card, and grouped read-only definition cards instead of one large field/value table.
+- Kept cache decoding and write ownership unchanged; this slice is presentation/search UX only and structured item editing remains disabled.
