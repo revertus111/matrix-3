@@ -11,8 +11,11 @@
 - Runtime evidence from the first test showed the client displayed `Open` while the server action did nothing; the split config location was corrected before changing Matrix3's normal inventory packet owner.
 - Added a distinct `bank_inventory` context for interface 762 component 7 so bank inventory actions do not collide with the main bank item-container context.
 - verified-static: 762:7 keeps stock options 1-5 for deposit amounts, option 7 Wear, option 8 Examine, and option 9 Deposit-All; native option 6 and option 10 are available without repurposing a stock action.
-- Client bank-inventory presentation now reads configured `bank_inventory` entries and adds only missing native option slots for the clicked configured item. Existing stock labels/actions are left untouched.
+- Client bank-inventory presentation reads configured `bank_inventory` entries and adds missing native option slots for the clicked configured item.
 - The client resolves the clicked item from Matrix3's dynamic interface child metadata; no Rambler item ID is hardcoded into the bank-menu hook.
-- Server routing now recognizes `bank_inventory` options 1-10. Configured Open validates the physical item from the player's inventory slot, while Empty to bank uses the existing player-owned backpack storage transfer.
-- Rambler's current data config uses Bank Inventory Option 6 = Open and Option 10 = Empty to bank. The existing Bank Option 7 = Open remains for the main bank item container.
+- Server routing recognizes `bank_inventory` options 1-10. Configured Open validates the physical item from the player's inventory slot, while Empty to bank uses the existing player-owned backpack storage transfer.
+- Added optional `bank_inventory.mode=EXPLICIT`. In explicit mode, a configured item's bank-inventory menu becomes an allowlist and unlisted stock option slots are hidden for that item only.
+- Added stable `STOCK` action entries. These are presentation allowlist entries that deliberately return control to Matrix3's original ButtonHandler instead of replacing Deposit/Wear/Examine behavior.
+- Rambler's explicit bank-inventory menu now allows only native slots 1, 6, 7, 8, and 10: Deposit, Open, Wear, Examine, and Empty to bank. Deposit-5, Deposit-10, Deposit-X/last amount, and Deposit-All are hidden only for the configured backpack item.
+- The exact visual ordering of those five entries remains runtime verification because Matrix3's decompiled menu sorter groups interface option opcodes internally.
 - Backpack contents remain player-owned persistent storage; this patch does not move storage ownership onto the physical item or change death persistence.
