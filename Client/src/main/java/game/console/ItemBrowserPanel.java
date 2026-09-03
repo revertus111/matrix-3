@@ -753,9 +753,7 @@ public final class ItemBrowserPanel extends JPanel {
         if (entry == null || amount <= 0) {
             return;
         }
-        String command = bank
-                ? "itembrowser bank " + entry.id + " " + amount
-                : "item " + entry.id + " " + amount;
+        String command = "itembrowser " + (bank ? "bank" : "inventory") + " " + entry.id + " " + amount;
         String error = ClientConsoleBridge.queueConsoleCommand(command);
         status.setText(error == null
                 ? (bank ? "Bank" : "Inventory") + " spawn queued: " + entry.name + " ×" + amount
@@ -774,9 +772,8 @@ public final class ItemBrowserPanel extends JPanel {
         }
         int queued = 0;
         for (Map.Entry<Integer, Integer> value : values.entrySet()) {
-            String command = bank
-                    ? "itembrowser bank " + value.getKey() + " " + value.getValue()
-                    : "item " + value.getKey() + " " + value.getValue();
+            String command = "itembrowser " + (bank ? "bank" : "inventory") + " "
+                    + value.getKey() + " " + value.getValue();
             String error = ClientConsoleBridge.queueConsoleCommand(command);
             if (error != null) {
                 status.setText("Queued " + queued + " preset items. " + error);
