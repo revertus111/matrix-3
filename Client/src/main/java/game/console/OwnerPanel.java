@@ -1,17 +1,26 @@
 package game.console;
 
 import game.ClientConsoleBridge;
+import game.ClientConsoleRotsBridge;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.HierarchyEvent;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 public final class OwnerPanel extends JScrollPane {
@@ -22,6 +31,11 @@ public final class OwnerPanel extends JScrollPane {
     private final JLabel displayNameValue = createValueLabel();
     private final JLabel rightsValue = createValueLabel();
     private final JLabel playerStateValue = createValueLabel();
+
+    private final JLabel rotsStatus = new JLabel("Waiting for definition loaders...");
+    private final JTextArea rotsOutput = new JTextArea();
+    private final JButton rotsScanButton = new JButton("Scan RoTS");
+    private final AtomicBoolean rotsScanning = new AtomicBoolean();
 
     private final Timer refreshTimer = new Timer(REFRESH_DELAY_MS, e -> refresh());
 
@@ -48,6 +62,8 @@ public final class OwnerPanel extends JScrollPane {
         content.add(createAccountCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createActionsCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createRotsResearchCard());
         content.add(Box.createVerticalGlue());
 
         setViewportView(content);
@@ -95,6 +111,119 @@ public final class OwnerPanel extends JScrollPane {
         return card;
     }
 
+    private JPanel createRotsResearchCard() {
+        JPanel card = createCard("RoTS cache research");
+
+        rotsStatus.setFont(ConsoleTheme.SMALL_FONT);
+        rotsStatus.setForeground(ConsoleTheme.ACCENT);
+        rotsStatus.setAlignmentX(LEFT_ALIGNMENT);
+
+        rotsOutput.setEditable(false);
+        rotsOutput.setLineWrap(false);
+        rotsOutput.setWrapStyleWord(false);
+        rotsOutput.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        rotsOutput.setForeground(ConsoleTheme.TEXT);
+        rotsOutput.setBackground(ConsoleTheme.PANEL);
+        rotsOutput.setCaretColor(ConsoleTheme.TEXT);
+        rotsOutput.setBorder(ConsoleTheme.panelPadding(8, 8, 8, 8));
+
+        JScrollPane outputScroll = new JScrollPane(rotsOutput);
+        outputScroll.setAlignmentX(LEFT_ALIGNMENT);
+        outputScroll.setPreferredSize(new Dimension(320, 290));
+        outputScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 340));
+        outputScroll.setHorizontalScrollBarPolicy(HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        outputScroll.setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_AS_NEEDED);
+        ConsoleTheme.styleScrollPane(outputScroll);
+        outputScroll.setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
+
+        JButton copyButton = new JButton("Copy All");
+        JButton clearButton = new JButton("Clear");
+        ConsoleTheme.styleButton(rotsScanButton);
+        ConsoleTheme.styleButton(copyButton);
+        ConsoleTheme.styleButton(clearButton);
+        rotsScanButton.addActionListener(e -> runRotsScan());
+        copyButton.addActionListener(e -> copyRotsOutput());
+        clearButton.addActionListener(e -> {
+            rotsOutput.setText("");
+            rotsStatus.setText(ClientConsoleRotsBridge.getReadinessLabel());
+        });
+
+        JPanel buttons = new JPanel(new GridLayout(1, 3, 6, 0));
+        buttons.setBackground(ConsoleTheme.CARD);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        buttons.add(rotsScanButton);
+        buttons.add(copyButton);
+        buttons.add(clearButton);
+
+        JLabel note = new JLabel("<html>Read-only cache evidence. Scan runs off the Swing thread; Copy All sends the complete dump to the clipboard.</html>");
+        note.setFont(ConsoleTheme.SMALL_FONT);
+        note.setForeground(ConsoleTheme.MUTED_TEXT);
+        note.setAlignmentX(LEFT_ALIGNMENT);
+
+        card.add(Box.createVerticalStrut(8));
+        card.add(rotsStatus);
+        card.add(Box.createVerticalStrut(8));
+        card.add(buttons);
+        card.add(Box.createVerticalStrut(8));
+        card.add(outputScroll);
+        card.add(Box.createVerticalStrut(7));
+        card.add(note);
+        return card;
+    }
+
+    private void runRotsScan() {
+        if (!rotsScanning.compareAndSet(false, true)) {
+            return;
+        }
+
+        rotsScanButton.setEnabled(false);
+        rotsStatus.setText("Scanning RoTS cache definitions...");
+
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String result;
+                try {
+                    result = ClientConsoleRotsBridge.buildResearchDump();
+                } catch (Throwable ex) {
+                    result = "=== RISE OF THE SIX CLIENT CACHE RESEARCH ===\n"
+                            + "Scan failed: " + ex.getClass().getSimpleName() + ": " + ex.getMessage() + "\n";
+                }
+
+                final String completed = result;
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        rotsOutput.setText(completed);
+                        rotsOutput.setCaretPosition(0);
+                        rotsStatus.setText(ClientConsoleRotsBridge.isReady()
+                                ? "Scan complete · ready to Copy All"
+                                : ClientConsoleRotsBridge.getReadinessLabel());
+                        rotsScanButton.setEnabled(true);
+                        rotsScanning.set(false);
+                    }
+                });
+            }
+        }, "Matrix3-RoTS-Cache-Research");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void copyRotsOutput() {
+        String text = rotsOutput.getText();
+        if (text == null || text.length() == 0) {
+            rotsStatus.setText("Nothing to copy yet.");
+            return;
+        }
+        try {
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
+            rotsStatus.setText("Copied complete RoTS dump to clipboard.");
+        } catch (IllegalStateException ex) {
+            rotsStatus.setText("Clipboard is busy. Try Copy All again.");
+        }
+    }
+
     private JPanel createCard(String titleText) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
@@ -139,5 +268,8 @@ public final class OwnerPanel extends JScrollPane {
         displayNameValue.setText(ClientConsoleBridge.getDisplayName());
         rightsValue.setText(ClientConsoleBridge.getRightsLabel());
         playerStateValue.setText(ClientConsoleBridge.getPlayerStateLabel());
+        if (!rotsScanning.get() && rotsOutput.getText().length() == 0) {
+            rotsStatus.setText(ClientConsoleRotsBridge.getReadinessLabel());
+        }
     }
 }
