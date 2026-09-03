@@ -23,15 +23,16 @@ These are verified-static mappings from the current RoTS source. They identify w
 - 21935 - current Torag repeated pummel animation.
 - 21938 - current Torag victim release/recovery animation.
 - 21940 - current Dharok Greatest Axe/charge animation.
+- 21941 - current shared melee Hurricane/Spinning Attack animation in `RiseOfTheSixBrother`; runtime playback produces the sustained weapon-spin presentation on Dharok, Guthan, Torag, and Verac.
 - 21944 - current Guthan spear-throw animation.
 - 21945 - current Guthan impaled-victim animation.
 - 21947 - current Guthan spear-retrieval animation.
 
-Runtime-tested special candidate
-- 21941 - VERIFIED runtime visual: when played on Dharok, the model performs a sustained spinning motion.
-- Authentic mechanic assignment for 21941 remains HYPOTHESIS pending cross-brother playback and footage comparison.
-- Strong Hurricane/Spinning Attack candidate because period RoTS documentation describes a shared Spinning Attack for all four melee brothers (Dharok, Guthan, Torag, Verac).
-- Do not promote 21941 to VERIFIED Hurricane until it is tested on Guthan/Torag/Verac and visually compared against authentic RoTS footage.
+Runtime-confirmed shared spin
+- 21941 - VERIFIED runtime visual across all four melee RoTS brothers: Dharok, Guthan, Torag, and Verac each perform the corresponding sustained weapon-spin presentation.
+- `RiseOfTheSixBrother` now starts 21941 once when Hurricane begins instead of replaying the normal attack emote and manually rotating NPC facing every pulse.
+- Period RoTS documentation describes a shared `Spinning Attack` for all four melee brothers, making 21941 the current Hurricane/Spinning Attack implementation mapping.
+- Exact original-RuneScape sequence duration, pulse alignment, movement cadence, and damage timing still require encounter/video comparison before the full mechanic is called 1:1.
 
 Documentary reference
 - Tip.It `Rise of the Six Guide (ROTS)` documents a shared `Spinning Attack` under `All Melee brothers`, then explicitly lists that attack for Torag, Guthan, Verac, and Dharok.
@@ -44,7 +45,7 @@ Other current normal-attack mappings
 - Melee brothers otherwise use their NPC combat-definition attack emote for normal melee autos.
 
 Known approximations / unresolved animation parity
-- Hurricane / Spinning Attack: current implementation replays the normal melee attack emote while rotating facing each pulse. Animation 21941 is now the highest-priority candidate for replacing that approximation, but is not yet VERIFIED as Hurricane.
+- Hurricane / Spinning Attack: animation 21941 is now integrated and runtime-confirmed as the shared cross-brother spin visual. Exact original timing/damage/movement parity still needs live encounter comparison.
 - Wall Slam: UNKNOWN authentic animation. Current implementation uses the normal melee attack emote for launch/landing phases.
 - Dharok Greatest Axe: current implementation uses 21940; authentic animation/timing still needs runtime/video verification.
 - Torag Whack/Pummel: current implementation uses 21933/21934/21935/21938; exact timing/authenticity still needs runtime/video verification.
@@ -56,8 +57,7 @@ Known approximations / unresolved animation parity
 
 Focused research strategy
 - Owner Console -> Deep Scan resolves render sets 2687, 2689, 2690, 2982, and 2987 into raw BAS/cache animation references.
-- The previous targeted Deep Scan stopped at 21940, so 21941 was not included in that dump; future targeted research should include the known 21941-21947 RoTS-special neighborhood.
-- Test 21941 on Guthan, Torag, and Verac before spending more time on unrelated 2192x candidates.
+- The previous targeted Deep Scan stopped at 21940, so future targeted research should include the known 21941-21947 RoTS-special neighborhood when those assets need cache metadata.
 - Use the current implementation mappings above to remove already-accounted-for animations from unknown-special candidate lists.
 - Numeric proximity alone is not evidence that an animation belongs to RoTS.
 
