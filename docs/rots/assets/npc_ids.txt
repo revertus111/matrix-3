@@ -10,15 +10,22 @@ RoTS combat-family definitions
 - 18544 - Torag the Corrupted - verified-static RoTS combat-family definition; current runtime model appearance includes Santa hat.
 - 18545 - Verac the Defiled - verified-static RoTS combat-family definition; current runtime model appearance includes Santa hat.
 
-Special/state definitions
+Verified alternate combat states
 - 18539 - Ahrim the Blighted - VERIFIED flying Ahrim state.
-- 18542 - Guthan the Infested - VERIFIED spearless Guthan state used by the Impale sequence.
-- 18546 - null/Ahrim body-model state - HYPOTHESIS subdued/downed Ahrim.
-- 18547 - null/Dharok body-model state - HYPOTHESIS subdued/downed Dharok.
-- 18548 - null/Guthan body-model state - HYPOTHESIS subdued/downed Guthan.
-- 18549 - null/Karil body-model state - HYPOTHESIS subdued/downed Karil.
-- 18550 - null/Torag body-model state - HYPOTHESIS subdued/downed Torag.
-- 18551 - null/Verac body-model state - HYPOTHESIS subdued/downed Verac.
+- 18542 - Guthan the Infested - VERIFIED spearless Guthan state used by the current Impale sequence.
+
+Inactive/body-only definitions
+- 18546 - null/Ahrim body-model definition - verified-static body-only definition; authentic intended gameplay role remains HYPOTHESIS.
+- 18547 - null/Dharok body-model definition - verified-static body-only definition; authentic intended gameplay role remains HYPOTHESIS.
+- 18548 - null/Guthan body-model definition - verified-static body-only definition; authentic intended gameplay role remains HYPOTHESIS.
+- 18549 - null/Karil body-model definition - verified-static body-only definition; authentic intended gameplay role remains HYPOTHESIS.
+- 18550 - null/Torag body-model definition - verified-static body-only definition; authentic intended gameplay role remains HYPOTHESIS.
+- 18551 - null/Verac body-model definition - verified-static body-only definition; authentic intended gameplay role remains HYPOTHESIS.
+
+Runtime compatibility finding
+- VERIFIED for the current revision-830 client/cache runtime: the 18546-18551 inactive/body-only definitions render invisibly when used as the subdued presentation.
+- Current `RiseOfTheSixInstance` deliberately does NOT transform subdued brothers to 18546-18551. It keeps the active brother model visible at 1 HP while logical subdue/revive state is owned server-side.
+- Do not reintroduce 18546-18551 into the live subdue path unless new runtime evidence shows a compatible/authentic use.
 
 Observed model fingerprints
 - Ahrim 18538/18539: [91490, 91521].
@@ -30,4 +37,4 @@ Observed model fingerprints
 - Verac 18545: [91496, 91506].
 - 18546-18551 each retain only the first/body model from their corresponding combat-family definition.
 
-Use the Owner Console RoTS cache-research card for focused dumps. Promote 18546-18551 only after runtime subdue/spawn behavior confirms their role.
+Use Owner Console -> RoTS cache research for focused definition evidence. Treat authentic subdued/kneeling presentation as an animation/state parity problem unless future runtime evidence establishes a usable inactive definition.
