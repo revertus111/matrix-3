@@ -3,6 +3,7 @@ package com.rs.game.map.bossInstance.impl;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -44,6 +45,8 @@ public class RiseOfTheSixInstance extends BossInstance {
 	private static final int REVIVE_DELAY_TICKS = 50;
 	private static final int REVIVE_HITPOINTS = 25000;
 	private static final int SURVIVOR_HEAL = 5000;
+	private static final int EMPTY_SIDE_WARNING_TICKS = 40; // about 24 seconds
+	private static final int EMPTY_SIDE_HOP_DELAY_TICKS = 5; // about 3 seconds
 
 	/*
 	 * Nocturne's RS3 RoTS implementation copies this exact 8x8-chunk source map.
@@ -118,10 +121,16 @@ public class RiseOfTheSixInstance extends BossInstance {
 	};
 
 	private List<RiseOfTheSixBrother> brothers;
+	private final EnumMap<Brother, ArenaSide> currentBrotherSides = new EnumMap<Brother, ArenaSide>(Brother.class);
 	private int reviveGeneration;
 	private boolean fightComplete;
 	private Rotation activeRotation;
 	private int activeRotationIndex;
+	private int sideHopGeneration;
+	private boolean sideHopPending;
+	private boolean sideHopComplete;
+	private ArenaSide sideHopFrom;
+	private ArenaSide sideHopTo;
 
 	public RiseOfTheSixInstance(Player owner, InstanceSettings settings) {
 		super(owner, settings);
@@ -149,13 +158,21 @@ public class RiseOfTheSixInstance extends BossInstance {
 		if (brothers == null)
 			brothers = new CopyOnWriteArrayList<RiseOfTheSixBrother>();
 		brothers.clear();
+		currentBrotherSides.clear();
 		fightComplete = false;
 		reviveGeneration++;
+		sideHopGeneration++;
+		sideHopPending = false;
+		sideHopComplete = false;
+		sideHopFrom = null;
+		sideHopTo = null;
 
 		activeRotationIndex = resolveDailyRotationIndex();
 		activeRotation = ROTATIONS[activeRotationIndex];
+		initializeBrotherSides();
 		spawnSide(activeRotation.west, WEST_SPAWN_X);
 		spawnSide(activeRotation.east, EAST_SPAWN_X);
+		startSideEmpowermentMonitor();
 	}
 
 	private int resolveDailyRotationIndex() {
@@ -166,6 +183,13 @@ public class RiseOfTheSixInstance extends BossInstance {
 		if (index < 0)
 			index += ROTATIONS.length;
 		return index;
+	}
+
+	private void initializeBrotherSides() {
+		for (Brother brother : activeRotation.west)
+			currentBrotherSides.put(brother, ArenaSide.WEST);
+		for (Brother brother : activeRotation.east)
+			currentBrotherSides.put(brother, ArenaSide.EAST);
 	}
 
 	private void spawnSide(Brother[] side, int[] xSlots) {
@@ -203,7 +227,12 @@ public class RiseOfTheSixInstance extends BossInstance {
 	}
 
 	public ArenaSide getBrotherSide(Brother brother) {
-		if (activeRotation == null || brother == null)
+		if (brother == null)
+			return null;
+		ArenaSide current = currentBrotherSides.get(brother);
+		if (current != null)
+			return current;
+		if (activeRotation == null)
 			return null;
 		if (contains(activeRotation.west, brother))
 			return ArenaSide.WEST;
@@ -246,6 +275,156 @@ public class RiseOfTheSixInstance extends BossInstance {
 		return firstSide != null && firstSide == secondSide;
 	}
 
+	private int getActivePlayerCount(ArenaSide side) {
+		int count = 0;
+		for (Player player : getPlayers()) {
+			if (player == null || player.hasFinished() || player.isDead() || !isPlayerInside(player))
+				continue;
+			if (getPlayerSide(player) == side)
+				count++;
+		}
+		return count;
+	}
+
+	private ArenaSide getEmptySideWithOccupiedOpposite() {
+		int westPlayers = getActivePlayerCount(ArenaSide.WEST);
+		int eastPlayers = getActivePlayerCount(ArenaSide.EAST);
+		if (westPlayers == 0 && eastPlayers > 0)
+			return ArenaSide.WEST;
+		if (eastPlayers == 0 && westPlayers > 0)
+			return ArenaSide.EAST;
+		return null;
+	}
+
+	private ArenaSide opposite(ArenaSide side) {
+		return side == ArenaSide.WEST ? ArenaSide.EAST : ArenaSide.WEST;
+	}
+
+	private void startSideEmpowermentMonitor() {
+		final int generation = sideHopGeneration;
+		WorldTasksManager.schedule(new WorldTask() {
+			private ArenaSide observedEmptySide;
+			private int emptyTicks;
+
+			@Override
+			public void run() {
+				if (generation != sideHopGeneration || isFinished() || fightComplete || sideHopComplete) {
+					stop();
+					return;
+				}
+				if (sideHopPending)
+					return;
+
+				/*
+				 * Live RoTS blocks the hop while any brother is incapacitated. Karil
+				 * Shadow Dash and the second-barrier edge case are also blockers, but
+				 * those systems do not exist in this checkpoint and remain explicit
+				 * follow-up gates rather than invented approximations.
+				 */
+				if (getSubduedCount() != 0) {
+					observedEmptySide = null;
+					emptyTicks = 0;
+					return;
+				}
+
+				ArenaSide emptySide = getEmptySideWithOccupiedOpposite();
+				if (emptySide == null) {
+					observedEmptySide = null;
+					emptyTicks = 0;
+					return;
+				}
+				if (observedEmptySide != emptySide) {
+					observedEmptySide = emptySide;
+					emptyTicks = 1;
+					return;
+				}
+
+				emptyTicks++;
+				if (emptyTicks >= EMPTY_SIDE_WARNING_TICKS) {
+					beginSideEmpowerment(emptySide, opposite(emptySide), generation);
+					observedEmptySide = null;
+					emptyTicks = 0;
+				}
+			}
+		}, 1, 1);
+	}
+
+	private void beginSideEmpowerment(final ArenaSide emptySide, final ArenaSide occupiedSide,
+			final int generation) {
+		if (sideHopPending || sideHopComplete || emptySide == null || occupiedSide == null)
+			return;
+		sideHopPending = true;
+		sideHopFrom = emptySide;
+		sideHopTo = occupiedSide;
+		broadcast("As there is no one on the other side of the portal, it empowers the Barrows Brothers to destroy everyone!");
+
+		WorldTasksManager.schedule(new WorldTask() {
+			@Override
+			public void run() {
+				if (generation != sideHopGeneration || isFinished() || fightComplete)
+					return;
+				if (!canCompleteSideEmpowerment(emptySide, occupiedSide)) {
+					sideHopPending = false;
+					sideHopFrom = null;
+					sideHopTo = null;
+					return;
+				}
+				completeSideEmpowerment(emptySide, occupiedSide);
+			}
+		}, EMPTY_SIDE_HOP_DELAY_TICKS);
+	}
+
+	private boolean canCompleteSideEmpowerment(ArenaSide emptySide, ArenaSide occupiedSide) {
+		return getSubduedCount() == 0 && getActivePlayerCount(emptySide) == 0
+				&& getActivePlayerCount(occupiedSide) > 0;
+	}
+
+	private void completeSideEmpowerment(ArenaSide emptySide, ArenaSide occupiedSide) {
+		int[] occupiedSlots = occupiedSide == ArenaSide.WEST ? WEST_SPAWN_X : EAST_SPAWN_X;
+		int slot = 0;
+		for (RiseOfTheSixBrother brother : brothers) {
+			if (brother == null || brother.hasFinished() || brother.isSubdued()
+					|| getBrotherSide(brother) != emptySide)
+				continue;
+			/*
+			 * Reuse the already runtime-proven occupied-side slots. Incoming brothers
+			 * may temporarily stack with the resident trio; exact "slightly away"
+			 * live landing tiles are still HYPOTHESIS and should replace these only
+			 * after map/runtime evidence establishes them.
+			 */
+			WorldTile destination = getTile(occupiedSlots[slot % occupiedSlots.length],
+					BROTHER_SPAWN_Y, BROTHER_SPAWN_PLANE);
+			brother.moveForSideEmpowerment(destination);
+			currentBrotherSides.put(brother.getBrother(), occupiedSide);
+			slot++;
+		}
+		if (slot > 0) {
+			sideHopComplete = true;
+			sideHopPending = false;
+		}
+		else {
+			sideHopPending = false;
+			sideHopFrom = null;
+			sideHopTo = null;
+		}
+	}
+
+	public boolean isSideHopPending() {
+		return sideHopPending;
+	}
+
+	public boolean isSideHopComplete() {
+		return sideHopComplete;
+	}
+
+	public ArenaSide getSideHopFrom() {
+		return sideHopFrom;
+	}
+
+	public ArenaSide getSideHopTo() {
+		return sideHopTo;
+	}
+
 	public void onBrotherSubdued(RiseOfTheSixBrother subduedBrother) {
 		synchronized (BossInstanceHandler.LOCK) {
 			if (fightComplete || subduedBrother == null)
@@ -258,7 +437,6 @@ public class RiseOfTheSixInstance extends BossInstance {
 			if (getSubduedCount() == Brother.values().length) {
 				fightComplete = true;
 				reviveGeneration++;
-				broadcast("All six brothers are subdued. The shadow bond has been broken.");
 				return;
 			}
 
@@ -385,7 +563,13 @@ public class RiseOfTheSixInstance extends BossInstance {
 			if (isFinished())
 				return;
 			reviveGeneration++;
+			sideHopGeneration++;
 			activeRotation = null;
+			currentBrotherSides.clear();
+		sideHopPending = false;
+		sideHopComplete = false;
+		sideHopFrom = null;
+		sideHopTo = null;
 			if (brothers != null) {
 				for (RiseOfTheSixBrother brother : brothers) {
 					if (brother != null && !brother.hasFinished())
