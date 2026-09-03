@@ -1,0 +1,7 @@
+2026-09-03 - Dev Mode Phase 1 foundation
+- Added a session-only Dev Mode toggle to Client Console Settings; defaults OFF on client launch.
+- Mirrored Matrix3's existing scene-tile movement menu coordinates into an owner-only `Dev > Spawn...` action without replacing normal menu behavior.
+- Added a dark Dev Spawn window with NPC, object, and ground-item runtime placement by ID on the selected tile.
+- Added owner-only server validation/placement through the existing Item Browser command bridge and native World.spawnNPC, World.spawnObject, and World.addGroundItem APIs.
+- Live placements are runtime edits only; persistent save/edit workflows remain future Dev Mode phases.
+- Name search and NPC/object/item thumbnail browsing remain the next spawn-browser slice.
