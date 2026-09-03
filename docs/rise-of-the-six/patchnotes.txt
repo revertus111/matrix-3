@@ -82,3 +82,7 @@
 - Corrected Wall Slam to choose the nearest blocked cardinal wall within the existing scan range instead of the farthest wall/open fallback.
 - Wall Slam now runs to that wall and uses Matrix3 native ForceMovement to fling the brother back to the target's captured start tile before resolving the existing 5x5, 500-3,000 hard-typeless impact.
 - If no wall is found or the approach cannot complete, Wall Slam now ends cleanly instead of fabricating a distant open-path slam; exact run-up/wall-climb/launch animations remain HYPOTHESIS.
+- Runtime screenshot rejected donor GFX 4406 for Dharok Greatest Axe in the active revision-830 cache: it renders as an oversized cyan lightning/sphere effect rather than the intended RoTS presentation.
+- Removed GFX 4406 from live Greatest Axe while preserving `Give me everything!`, animation 21940, charge timing, incoming-damage absorption/storage and the stored-damage return hit.
+- Confirmed Matrix3 already rejects `cantInteract` NPCs in both NPC click handling and `PlayerCombatNew`; the visible `Attack` option on a subdued brother is therefore a client/cache NPC-definition presentation issue, not permission to damage the 1-HP shell.
+- Keep queued/delayed hits on subdued brothers forced to zero; do not alter global NPC menus while the correct visible revision-830 downed definition/pose remains unresolved.
