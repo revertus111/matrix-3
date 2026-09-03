@@ -1,0 +1,15 @@
+Matrix3 Rambler's backpack runtime test list
+
+1. Spawn item 21445 (Rambler's backpack) through the existing owner Item Browser path and equip it. Confirm it occupies the cape/back equipment slot and its worn model renders correctly. If it cannot be worn, record that as cache/equip-definition runtime evidence before changing unrelated equipment code.
+2. With 21445 equipped, use the equipment interface's secondary action on the backpack. Confirm interfaces 671 and 665 open as the backpack storage view. Owner fallback test: `::itembrowser backpack open` must open the same view only while the backpack is equipped.
+3. Unequip 21445 and run `::itembrowser backpack open`. Confirm the server refuses access with the equip-the-backpack message.
+4. Store one normal item, then Store-5, Store-10, and Store-All where quantities permit. Confirm the inventory decreases by exactly the amount added to backpack container key 531.
+5. Withdraw one item, then Withdraw-5, Withdraw-10, and Withdraw-All. Confirm the backpack decreases by exactly the amount returned to inventory and partial transfers stop safely when inventory space is limited.
+6. Fill the 30 backpack slots with non-stackable items. Confirm another non-stackable store request is refused without deleting or duplicating the source item. Confirm a stackable item can still merge into an existing backpack stack when no free slot remains.
+7. Attempt to store item 21445 inside its own backpack. Confirm it is rejected and remains outside the backpack.
+8. Use Take All with enough inventory space and confirm all backpack contents move to inventory. Repeat with limited inventory space and confirm only accepted items/amounts move, with no duplication.
+9. Close and reopen the backpack repeatedly. Confirm stale clicks do not route to backpack storage after interfaces 671/665 are closed.
+10. Summon a real Beast of Burden and use its normal storage before and after testing the backpack. Confirm familiar BoB still uses container key 530 and its existing behavior is unchanged; backpack uses key 531 and does not require or replace a familiar.
+11. Store items in the backpack, log out normally, restart/relog, re-equip 21445, and reopen it. Confirm all backpack contents persist exactly.
+12. Run the migration test in docs/inventory/testlist.txt for a temporary 36-slot save and confirm former inventory slots 29-36 move once into the backpack without item loss or duplication.
+13. Run the normal Matrix3 equipment, inventory, bank, familiar/BoB, and login persistence smoke paths after backpack testing.
