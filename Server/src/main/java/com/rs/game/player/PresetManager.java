@@ -36,9 +36,20 @@ public final class PresetManager {
 
     private static final int PRESET_INTERFACE = 579;
     private static final int PRESET_COUNT = 10;
-    private static final int CURRENTLY_EQUIPPED_SLOT = 0;
-    private static final int BOB_SLOT = 11;
     private static final int FILE_VERSION = 1;
+
+    // Runtime map: row 1 starts at component 184 and row 2 starts at 233.
+    // Their matching controls are exactly 49 components apart. Rows 3-10 use
+    // that stride as a HYPOTHESIS until the retained mapper confirms them.
+    private static final int PRESET_ROW_FIRST_COMPONENT = 184;
+    private static final int PRESET_ROW_COMPONENT_STRIDE = 49;
+    private static final int PRESET_SELECTOR_OFFSET = 0;
+    private static final int PRESET_SAVE_OFFSET = 9;
+    private static final int PRESET_LOAD_OFFSET = 17;
+    private static final int PRESET_SETTINGS_OFFSET = 33;
+    private static final int PRESET_DELETE_OFFSET = 41;
+    private static final int PRESET_RIGHT_OPTION_ONE_OFFSET = 47;
+    private static final int PRESET_RIGHT_OPTION_TWO_OFFSET = 48;
 
     private static final File SAVE_DIRECTORY = new File("data/presets");
     private static final ConcurrentHashMap<String, PresetProfile> PROFILES = new ConcurrentHashMap<String, PresetProfile>();
@@ -59,40 +70,55 @@ public final class PresetManager {
 
         recordNativeClick(player, componentId, slotId, slotId2, packetId);
 
-        String key = getPlayerKey(player);
-        int clickedSlot = resolvePresetSlot(slotId, slotId2);
-        int presetIndex = -1;
+        int componentDelta = componentId - PRESET_ROW_FIRST_COMPONENT;
+        if (componentDelta < 0)
+            return false;
 
-        if (clickedSlot >= 1 && clickedSlot <= PRESET_COUNT) {
-            presetIndex = clickedSlot - 1;
-            SELECTED_PRESETS.put(key, presetIndex);
-        } else if (clickedSlot == CURRENTLY_EQUIPPED_SLOT) {
-            player.getPackets().sendGameMessage("Choose one of preset slots 1-10 to save or load a setup.");
-            return true;
-        } else if (clickedSlot == BOB_SLOT) {
-            player.getPackets().sendGameMessage("The Beast of Burden preset is not enabled yet.");
-            return true;
-        } else {
-            Integer selected = SELECTED_PRESETS.get(key);
-            if (selected != null)
-                presetIndex = selected.intValue();
-        }
-
-        if (presetIndex < 0 || presetIndex >= PRESET_COUNT) {
+        int presetIndex = componentDelta / PRESET_ROW_COMPONENT_STRIDE;
+        int actionOffset = componentDelta % PRESET_ROW_COMPONENT_STRIDE;
+        if (presetIndex < 0 || presetIndex >= PRESET_COUNT || !isMappedPresetAction(actionOffset)) {
             if (Settings.DEBUG)
                 Logger.log(PresetManager.class, "Unmapped preset click: component=" + componentId + ", slot=" + slotId
                         + ", slot2=" + slotId2 + ", packet=" + packetId);
-            // Do not swallow every native preset-interface control. Matrix3's
-            // interface packet carries two slot fields, and controls that do not
-            // identify a preset row should be allowed to fall through normally.
             return false;
         }
 
+        SELECTED_PRESETS.put(getPlayerKey(player), presetIndex);
+
         if (Settings.DEBUG)
-            Logger.log(PresetManager.class, "Preset click: preset=" + (presetIndex + 1) + ", component=" + componentId
-                    + ", slot=" + slotId + ", slot2=" + slotId2 + ", packet=" + packetId);
-        openPresetActions(player, presetIndex);
-        return true;
+            Logger.log(PresetManager.class, "Preset click: preset=" + (presetIndex + 1) + ", actionOffset="
+                    + actionOffset + ", component=" + componentId + ", slot=" + slotId + ", slot2=" + slotId2
+                    + ", packet=" + packetId);
+
+        if (actionOffset == PRESET_SELECTOR_OFFSET) {
+            openPresetActions(player, presetIndex);
+            return true;
+        }
+        if (actionOffset == PRESET_SAVE_OFFSET) {
+            savePreset(player, presetIndex);
+            return true;
+        }
+        if (actionOffset == PRESET_LOAD_OFFSET) {
+            loadPreset(player, presetIndex);
+            return true;
+        }
+        if (actionOffset == PRESET_DELETE_OFFSET) {
+            clearPreset(player, presetIndex);
+            return true;
+        }
+
+        // Settings and the two right-side circles are identified by component
+        // position, but their native semantics are not verified yet. Consume
+        // them without inventing behavior while the mapper remains enabled.
+        return actionOffset == PRESET_SETTINGS_OFFSET || actionOffset == PRESET_RIGHT_OPTION_ONE_OFFSET
+                || actionOffset == PRESET_RIGHT_OPTION_TWO_OFFSET;
+    }
+
+    private static boolean isMappedPresetAction(int actionOffset) {
+        return actionOffset == PRESET_SELECTOR_OFFSET || actionOffset == PRESET_SAVE_OFFSET
+                || actionOffset == PRESET_LOAD_OFFSET || actionOffset == PRESET_SETTINGS_OFFSET
+                || actionOffset == PRESET_DELETE_OFFSET || actionOffset == PRESET_RIGHT_OPTION_ONE_OFFSET
+                || actionOffset == PRESET_RIGHT_OPTION_TWO_OFFSET;
     }
 
     private static void recordNativeClick(Player player, int componentId, int slotId, int slotId2, int packetId) {
@@ -101,18 +127,6 @@ public final class PresetManager {
             return;
         Logger.log(PresetManager.class, "[PRESET-MAP] player=" + player.getUsername() + ", component=" + componentId
                 + ", slot=" + slotId + ", slot2=" + slotId2 + ", packet=" + packetId);
-    }
-
-    private static int resolvePresetSlot(int slotId, int slotId2) {
-        if (isPresetListSlot(slotId))
-            return slotId;
-        if (isPresetListSlot(slotId2))
-            return slotId2;
-        return -1;
-    }
-
-    private static boolean isPresetListSlot(int slot) {
-        return slot >= CURRENTLY_EQUIPPED_SLOT && slot <= BOB_SLOT;
     }
 
     private static void openPresetActions(final Player player, final int presetIndex) {
