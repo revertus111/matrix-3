@@ -1,0 +1,3 @@
+2026-09-03
+- Added persistent client-side Shift-click Drop setting to the Client Console Settings panel.
+- Shift-click selects the existing option-5 Drop menu entry after Matrix3 menu sorting; normal right-click entries and packet handling remain unchanged.
