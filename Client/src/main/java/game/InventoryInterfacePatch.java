@@ -15,7 +15,8 @@ public final class InventoryInterfacePatch {
     private static final int INVENTORY_MENU_INTERFACE = 1474;
     private static final int INVENTORY_MENU_COMPONENT = 15;
 
-    private static final int EXTRA_GRID_ROWS = 2;
+    private static final int ORIGINAL_GRID_ROWS = 7;
+    private static final int EXPANDED_GRID_ROWS = 9;
     private static final int EXTRA_PIXEL_HEIGHT = 72;
 
     /* InterfaceDefinitions.method1100 raw-height encoder and its modular inverse. */
@@ -68,19 +69,15 @@ public final class InventoryInterfacePatch {
         }
 
         int rawHeight = component.anInt761 * RAW_HEIGHT_DECODER;
-        if (rawHeight <= 0) {
+        final int expandedHeight;
+        if (rawHeight == ORIGINAL_GRID_ROWS) {
+            expandedHeight = EXPANDED_GRID_ROWS;
+        } else if (rawHeight > 16) {
+            expandedHeight = rawHeight + EXTRA_PIXEL_HEIGHT;
+        } else {
             return alreadyPatched;
         }
 
-        /*
-         * Type-2 style inventory grids use the generic raw-height field as a row
-         * count (normally 7). Pixel-sized NIS containers use the same field as
-         * geometry. Support both representations without touching unrelated
-         * component fields.
-         */
-        int expandedHeight = rawHeight <= 16
-                ? rawHeight + EXTRA_GRID_ROWS
-                : rawHeight + EXTRA_PIXEL_HEIGHT;
         component.anInt761 = expandedHeight * RAW_HEIGHT_ENCODER;
         return component;
     }
