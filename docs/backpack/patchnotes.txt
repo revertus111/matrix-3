@@ -1,0 +1,9 @@
+2026-09-03
+- Added persistent player-owned Backpack storage using Rambler's backpack item 21445 as the access/equipment item.
+- Backpack capacity is 30 slots and uses its own item container key 531; familiar BeastOfBurden container key 530 and familiar ownership remain unchanged.
+- Reused the proven BoB interfaces 671/665 for storage/inventory presentation without creating a fake familiar.
+- Added Store/Store-5/Store-10/Store-All and Withdraw/Withdraw-5/Withdraw-10/Withdraw-All handling plus Take All.
+- Backpack contents persist with the player even while unequipped, but the storage interface only operates while item 21445 is equipped in the cape/back slot.
+- Added equipment-interface secondary-action routing to open the backpack and an owner-only `::itembrowser backpack open` test bridge; Commands.java remains untouched.
+- Prevented storing item 21445 inside its own backpack and kept transfer checks transactional around available inventory/backpack space.
+- Item 21445 cache wear-slot/model behavior still requires runtime verification; the server does not rewrite its cache definition in this slice.
