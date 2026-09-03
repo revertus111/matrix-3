@@ -79,3 +79,4 @@ Matrix3 Client Console - shell + Owner + Commands + Item Browser + Settings runt
 77. Click Open RS3 CacheEditor from a normal Eclipse/Java 8 client launch. Confirm the Client remains responsive while a separate CacheEditor process starts and presents its normal cache-directory chooser.
 78. With CacheEditor still open, click Open RS3 CacheEditor again. Confirm the shell reports that CacheEditor is already running and no duplicate editor process is started.
 79. Close CacheEditor and click Open RS3 CacheEditor again. Confirm it relaunches successfully, and verify Commands, Item Browser, Settings, BossLabs, normal gameplay input, and server state are unaffected by the external tool process.
+80. Launch the Client with its working directory set to Matrix3/Client, then click Open RS3 CacheEditor. Confirm Gradle reports root project Matrix3-Server and runs runCacheEditor; Matrix3-Client must never be selected as the CacheEditor launch project.
