@@ -1,0 +1,11 @@
+DirectX compatibility acceptance
+
+- Use Eclipse with the normal Matrix3 Java 8 runtime.
+- Fully close and restart the client before native-renderer testing.
+- On Windows, request toolkit 3 through the normal renderer/toolkit selection path.
+- Verify the client reaches the game scene with toolkit id 3 active and normal models, textures, UI, particles, and resizing behavior.
+- Run the existing renderer diagnostic and record renderer/vendor/device/driver information when toolkit 3 succeeds.
+- Verify switching back to toolkit 1 still starts the known-good OpenGL renderer unchanged.
+- Failure-chain test: make toolkit 3 unavailable or reproduce a real toolkit 3 initialization failure; verify the client retries toolkit 1 instead of immediately retrying toolkit 3.
+- If toolkit 1 also fails, verify the existing toolkit 0 software renderer remains the final fallback and the client still launches.
+- Restart after each native-renderer failure test so loaded DLL state does not hide startup problems.
