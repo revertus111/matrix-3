@@ -36,6 +36,7 @@ public final class ClientConsoleShell extends JPanel {
     public static final String PANEL_SHELL = "shell";
     public static final String PANEL_OWNER = "owner";
     public static final String PANEL_COMMANDS = "commands";
+    public static final String PANEL_PLAYER = "player";
     public static final String PANEL_ITEMS = "items";
     public static final String PANEL_SETTINGS = "settings";
 
@@ -48,6 +49,7 @@ public final class ClientConsoleShell extends JPanel {
     private final JToggleButton consoleButton = new JToggleButton("C");
     private final JToggleButton ownerButton = new JToggleButton("O");
     private final JToggleButton commandsButton = new JToggleButton(">_");
+    private final JToggleButton playerButton = new JToggleButton("P");
     private final JToggleButton itemButton = new JToggleButton("I");
     private final JToggleButton settingsButton = new JToggleButton("S");
     private final JButton resetLayoutButton = new JButton("Reset Client Console Layout");
@@ -55,6 +57,7 @@ public final class ClientConsoleShell extends JPanel {
     private final JComponent shellPanel;
     private JComponent ownerPanel;
     private JComponent commandsPanel;
+    private JComponent playerPanel;
     private JComponent itemBrowserPanel;
     private JComponent settingsPanel;
 
@@ -130,6 +133,7 @@ public final class ClientConsoleShell extends JPanel {
         configureRailButton(consoleButton, "Client Console", PANEL_SHELL);
         configureRailButton(ownerButton, "Owner", PANEL_OWNER);
         configureRailButton(commandsButton, "Commands", PANEL_COMMANDS);
+        configureRailButton(playerButton, "Player", PANEL_PLAYER);
         configureRailButton(itemButton, "Item Browser", PANEL_ITEMS);
         configureRailButton(settingsButton, "Settings", PANEL_SETTINGS);
 
@@ -141,6 +145,8 @@ public final class ClientConsoleShell extends JPanel {
         rail.add(ownerButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(commandsButton);
+        rail.add(Box.createVerticalStrut(4));
+        rail.add(playerButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(itemButton);
         rail.add(Box.createVerticalStrut(4));
@@ -182,7 +188,7 @@ public final class ClientConsoleShell extends JPanel {
                 "Docking",
                 "Drag the left edge to resize.",
                 "Use C for this shell panel.",
-                "Use O for Owner, >_ for Commands, I for Items, and S for Settings."));
+                "Use O for Owner, >_ for Commands, P for Player, I for Items, and S for Settings."));
         content.add(Box.createVerticalStrut(12));
         content.add(createFocusCard());
         content.add(Box.createVerticalStrut(12));
@@ -400,6 +406,17 @@ public final class ClientConsoleShell extends JPanel {
             }
             return commandsPanel;
         }
+        if (PANEL_PLAYER.equals(panelId)) {
+            if (playerPanel == null) {
+                try {
+                    playerPanel = new PlayerPanel();
+                } catch (RuntimeException ex) {
+                    ex.printStackTrace();
+                    playerPanel = createPanelError("Player panel failed to initialize.");
+                }
+            }
+            return playerPanel;
+        }
         if (PANEL_ITEMS.equals(panelId)) {
             if (itemBrowserPanel == null) {
                 try {
@@ -443,6 +460,9 @@ public final class ClientConsoleShell extends JPanel {
         }
         if (PANEL_COMMANDS.equals(panelId)) {
             return PANEL_COMMANDS;
+        }
+        if (PANEL_PLAYER.equals(panelId)) {
+            return PANEL_PLAYER;
         }
         if (PANEL_ITEMS.equals(panelId)) {
             return PANEL_ITEMS;
@@ -516,6 +536,7 @@ public final class ClientConsoleShell extends JPanel {
         consoleButton.setSelected(consoleOpen && PANEL_SHELL.equals(activePanelId));
         ownerButton.setSelected(consoleOpen && PANEL_OWNER.equals(activePanelId));
         commandsButton.setSelected(consoleOpen && PANEL_COMMANDS.equals(activePanelId));
+        playerButton.setSelected(consoleOpen && PANEL_PLAYER.equals(activePanelId));
         itemButton.setSelected(consoleOpen && PANEL_ITEMS.equals(activePanelId));
         settingsButton.setSelected(consoleOpen && PANEL_SETTINGS.equals(activePanelId));
     }
