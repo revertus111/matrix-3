@@ -563,6 +563,7 @@ public final class ItemBrowserPanel extends JPanel {
             return;
         }
         String query = search.getText() == null ? "" : search.getText().trim().toLowerCase(Locale.ENGLISH);
+        int resultLimit = query.length() == 0 ? MAX_VISIBLE_RESULTS : Integer.MAX_VALUE;
         List<ItemEntry> matches = new ArrayList<ItemEntry>();
         int matchCount = 0;
 
@@ -572,7 +573,7 @@ public final class ItemBrowserPanel extends JPanel {
                     ItemEntry entry = getOrLoad(presetItem.getKey().intValue());
                     if (entry != null && matches(entry, query)) {
                         matchCount++;
-                        if (matches.size() < MAX_VISIBLE_RESULTS) {
+                        if (matches.size() < resultLimit) {
                             matches.add(new ItemEntry(entry.id, entry.name, presetItem.getValue().intValue()));
                         }
                     }
@@ -596,7 +597,7 @@ public final class ItemBrowserPanel extends JPanel {
             for (ItemEntry entry : snapshot) {
                 if (inScope(entry.id) && matches(entry, query)) {
                     matchCount++;
-                    if (matches.size() < MAX_VISIBLE_RESULTS) {
+                    if (matches.size() < resultLimit) {
                         matches.add(entry);
                     }
                 }
@@ -623,8 +624,8 @@ public final class ItemBrowserPanel extends JPanel {
             list.setSelectedIndex(restore);
         }
 
-        String shown = matchCount > MAX_VISIBLE_RESULTS
-                ? " · showing first " + MAX_VISIBLE_RESULTS + " of " + matchCount
+        String shown = matchCount > resultLimit
+                ? " · showing first " + resultLimit + " of " + matchCount
                 : " · " + matchCount + " shown";
         if (total > 0 && scanned < total) {
             status.setText("Indexing " + scanned + " / " + total + shown);
