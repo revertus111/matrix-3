@@ -90,10 +90,36 @@ public final class CustomItemActionConfig {
     }
 
     /**
-     * Adds configured bank-inventory-pane option slots. When an item explicitly
-     * opts into EXPLICIT menu mode, stock option slots not listed in config are
-     * removed from that clicked item's menu only. Listed STOCK actions keep their
-     * original Matrix3 packets/handlers.
+     * Called from Matrix3's existing menu-entry constructor before an entry is
+     * grouped/inserted. Explicit configured bank-inventory menus suppress only
+     * unlisted stock option slots for the clicked configured item.
+     */
+    static boolean shouldSuppressBankInventoryMenuEntry(int opcode, long optionValue,
+            int child, int widgetHash) {
+        ensureLoaded();
+        int normalizedOpcode = opcode >= 2000 ? opcode - 2000 : opcode;
+        if (normalizedOpcode != INTERFACE_OPTION_OPCODE
+                && normalizedOpcode != INTERFACE_OPTION_SECONDARY_OPCODE)
+            return false;
+        if (widgetHash != BANK_INVENTORY_INTERFACE_HASH)
+            return false;
+
+        InterfaceDefinitions component = Class530.method6338(widgetHash, child, -582563422);
+        if (component == null)
+            return false;
+
+        int itemId = component.nvmtheindexisotherone * 411192987;
+        if (!isExplicitBankInventoryMenu(itemId))
+            return false;
+
+        int option = (int) optionValue;
+        return option >= 1 && option <= MAX_INTERFACE_OPTIONS
+                && getEntry(itemId, "bank_inventory", option) == null;
+    }
+
+    /**
+     * Adds configured bank-inventory-pane option slots that Matrix3 did not
+     * create natively. Existing configured STOCK slots remain untouched.
      */
     private static void applyBankInventoryMenuActions() {
         if (ITEM_IDS.isEmpty() || Class25.aBool165 || Class25.aClass675_174 == null)
@@ -104,49 +130,34 @@ public final class CustomItemActionConfig {
         Class675 entries = Class25.aClass675_174;
 
         for (Class572 node = entries.aClass572_8547.aClass572_6433;
-                node != entries.aClass572_8547;) {
-            Class572 next = node.aClass572_6433;
+                node != entries.aClass572_8547;
+                node = node.aClass572_6433) {
             Class572_Sub12_Sub10 menuEntry = (Class572_Sub12_Sub10) node;
             int opcode = menuEntry.anInt11402 * -44467871;
             if (opcode >= 2000)
                 opcode -= 2000;
-            if (opcode != INTERFACE_OPTION_OPCODE && opcode != INTERFACE_OPTION_SECONDARY_OPCODE) {
-                node = next;
+            if (opcode != INTERFACE_OPTION_OPCODE && opcode != INTERFACE_OPTION_SECONDARY_OPCODE)
                 continue;
-            }
 
             int widgetHash = menuEntry.anInt11392 * 200110927;
-            if (widgetHash != BANK_INVENTORY_INTERFACE_HASH) {
-                node = next;
+            if (widgetHash != BANK_INVENTORY_INTERFACE_HASH)
                 continue;
-            }
 
             int child = menuEntry.anInt11397 * 740323685;
             InterfaceDefinitions component = Class530.method6338(widgetHash, child, -582563422);
-            if (component == null) {
-                node = next;
+            if (component == null)
                 continue;
-            }
 
             int itemId = component.nvmtheindexisotherone * 411192987;
-            if (!hasBankInventoryEntries(itemId)) {
-                node = next;
+            if (!hasBankInventoryEntries(itemId))
                 continue;
-            }
 
             Integer targetKey = Integer.valueOf(child);
             if (!targets.containsKey(targetKey))
                 targets.put(targetKey, new BankMenuTarget(itemId, menuEntry));
 
             int option = (int) (menuEntry.aLong11395 * -6760453999157901937L);
-            if (isExplicitBankInventoryMenu(itemId)
-                    && getEntry(itemId, "bank_inventory", option) == null) {
-                menuEntry.method6794((byte) -64);
-                Class25.anInt172 -= -1390326489;
-            } else {
-                existingOptions.add(bankMenuKey(child, option));
-            }
-            node = next;
+            existingOptions.add(bankMenuKey(child, option));
         }
 
         for (BankMenuTarget target : targets.values()) {
