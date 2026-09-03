@@ -58,3 +58,9 @@ Matrix3 Client Console - shell + Owner + Commands + Item Browser runtime test li
 56. Confirm the dump labels NPC 18539 as VERIFIED Ahrim flying, NPC 18542 as VERIFIED Guthan spearless/Impale, and NPCs 18546-18551 only as HYPOTHESIS subdued/downed states.
 57. Click Copy All and paste into a plain text editor. Confirm the complete dump is copied in one operation, including text outside the visible scroll area. Click Clear and confirm only the research text/status resets; no game/cache state changes.
 58. While a RoTS scan runs, move/interact in game and resize/switch Client Console panels. Confirm no visible render hitch, cache mutation, server command, or gameplay state change occurs.
+59. Confirm the Owner RoTS research card now shows Scan RoTS, Deep Scan, Copy All, and Clear without clipping at normal supported console widths.
+60. After normal login/loading, click Deep Scan. Confirm both scan buttons disable until completion and the game/Swing UI remains responsive during render-set/GFX scanning.
+61. Confirm the Deep Scan output resolves render sets 2687, 2689, 2690, 2982, and 2987 into raw BAS/cache opcode animation references and reports opcode-52 arrays where present.
+62. Confirm targeted animation classification includes 18025, 18026, 21903, 21931, and 21922-21940 and reports renderSetReference=YES/NO without assigning boss-mechanic names.
+63. Confirm the GFX correlation section prints only explicit targeted/render-animation matches or direct known-RoTS-model matches, then use Copy All to capture the entire Deep Scan output.
+64. Run the normal Scan RoTS immediately after Deep Scan and confirm the original focused scan still works unchanged; no gameplay/server command path should execute during either scan.
