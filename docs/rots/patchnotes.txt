@@ -7,7 +7,7 @@
 - Added one-click Copy All and Clear controls around a scrollable read-only dump; scanning is off the Swing event-dispatch thread.
 - Recorded NPC 18539 as VERIFIED Ahrim flying state from runtime testing.
 - Recorded NPC 18542 as VERIFIED Guthan spearless/Impale state from runtime testing.
-- Kept NPCs 18546-18551 as HYPOTHESIS subdued/downed states pending runtime confirmation.
+- Initially tracked NPCs 18546-18551 as HYPOTHESIS subdued/downed states pending runtime confirmation.
 - Recorded that the currently identified RoTS combat-family models render with Santa hats in this revision-830 cache/runtime.
 
 2026-09-03
@@ -17,3 +17,10 @@
 - Kept all Deep Scan work off the Swing event-dispatch thread and reused the existing Copy All workflow.
 - Added a read-only GFX bootstrap using the live Matrix3 config archive and spot-animation config group before Deep Scan, so GFX correlation no longer depends on a visible GFX having already loaded at runtime.
 - Fixed Owner research-card width tracking/wrapping so Deep Scan controls and copied-output workflow remain reachable at narrow supported console widths.
+- Audited the current Matrix3-native RoTS implementation and reconciled RoTS documentation with the actual encounter owners and implemented mechanics.
+- Updated `ROTS_MASTER.md` from the old from-scratch discovery plan to the current 1:1 parity workflow around `RiseOfTheSixInstance`, `RiseOfTheSixBrother`, and `RiseOfTheSixCombat`.
+- Recorded the implemented encounter foundation: daily 20-rotation side assignment, logical subdue, survivor healing, revive timer/bar, all-six completion, empty-side empowerment foundation, and dormant Brother Throw execution.
+- Corrected 18546-18551 documentation: these remain body-only/inactive cache definitions with unproven authentic role, and current revision-830 runtime testing found them invisible when used as subdued models; the live encounter intentionally keeps active brother models visible at 1 HP instead.
+- Recorded current implementation animation mappings including revive 21914, flying Ahrim auto 21925, Torag 21933/21934/21935/21938, Dharok charge 21940, and Guthan 21944/21945/21947.
+- Recorded current Guthan/side-hop GFX mappings and kept donor Dharok GFX 4406 explicitly runtime-rejected for Greatest Axe in this cache.
+- Refocused the next parity checkpoint on authentic Hurricane/Whirlwind identification before broader new mechanic work.
