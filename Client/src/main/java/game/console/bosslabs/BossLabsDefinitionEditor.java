@@ -43,6 +43,11 @@ public final class BossLabsDefinitionEditor {
 
     private static final int MAX_PATTERN_TILES = 128;
     private static final int MAX_TILE_OFFSET = 16;
+    private static final int PATTERN_CROSS = 0;
+    private static final int PATTERN_HORIZONTAL_LINE = 1;
+    private static final int PATTERN_VERTICAL_LINE = 2;
+    private static final int PATTERN_FILLED_SQUARE = 3;
+    private static final int PATTERN_RING = 4;
     private static final String[] TILE_EFFECT_NAMES = {
             "Damage players", "Heal players", "Damage boss", "Heal boss" };
     private static final String[] PHASE_ACTION_NAMES = {
@@ -103,6 +108,7 @@ public final class BossLabsDefinitionEditor {
     private final JTextField hazardDurationField = new JTextField();
     private final JTextField hazardIntervalField = new JTextField();
     private final JTextField hazardMaxHitField = new JTextField();
+    private final JTextField patternRadiusField = new JTextField("2");
     private final JButton addAttackButton = new JButton("Add Attack");
     private final JLabel attackStatus = createStatus("Select a phase before adding attacks.");
     private final JLabel patternStatus = createStatus("Select an attack, then click tiles to build a target-centered pattern.");
@@ -393,10 +399,15 @@ public final class BossLabsDefinitionEditor {
         formCard.add(body, BorderLayout.CENTER);
 
         JPanel patternCard = createCard();
-        patternCard.setPreferredSize(new Dimension(500, 245));
-        JPanel patternHeading = verticalHeading("Tile pattern", "Origin 0,0 is the resolved attack target's snapshotted tile. Left click toggles effect tiles; middle drag pans; wheel zooms.");
+        patternCard.setPreferredSize(new Dimension(500, 285));
+        JPanel patternHeading = verticalHeading("Tile pattern", "Origin 0,0 is the resolved attack target's snapshotted tile. Presets replace the painted pattern; left click can fine-tune afterward.");
         patternCard.add(patternHeading, BorderLayout.NORTH);
-        patternCard.add(tilePatternCanvas, BorderLayout.CENTER);
+
+        JPanel patternBody = new JPanel(new BorderLayout(6, 6));
+        patternBody.setOpaque(false);
+        patternBody.add(createPatternPresetToolbar(), BorderLayout.NORTH);
+        patternBody.add(tilePatternCanvas, BorderLayout.CENTER);
+        patternCard.add(patternBody, BorderLayout.CENTER);
         patternCard.add(patternStatus, BorderLayout.SOUTH);
 
         JPanel editorColumn = new JPanel(new BorderLayout(10, 10));
@@ -410,6 +421,53 @@ public final class BossLabsDefinitionEditor {
         editorScroll.setBorder(BorderFactory.createEmptyBorder());
         ConsoleTheme.styleScrollPane(editorScroll);
         attacksRoot.add(editorScroll, BorderLayout.CENTER);
+    }
+
+    private JPanel createPatternPresetToolbar() {
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        toolbar.setOpaque(false);
+
+        JLabel radiusLabel = new JLabel("Radius");
+        radiusLabel.setFont(ConsoleTheme.SMALL_FONT);
+        radiusLabel.setForeground(ConsoleTheme.MUTED_TEXT);
+        patternRadiusField.setPreferredSize(new Dimension(48, 28));
+        patternRadiusField.setToolTipText("Pattern radius from 0 to 16 tiles. Oversized presets are rejected before changing the draft.");
+        ConsoleTheme.styleTextField(patternRadiusField);
+
+        JButton cross = new JButton("Cross");
+        JButton horizontal = new JButton("H Line");
+        JButton vertical = new JButton("V Line");
+        JButton square = new JButton("Square");
+        JButton ring = new JButton("Ring");
+        JButton clear = new JButton("Clear");
+        styleButton(cross);
+        styleButton(horizontal);
+        styleButton(vertical);
+        styleButton(square);
+        styleButton(ring);
+        styleButton(clear);
+        cross.setToolTipText("Replace the current pattern with a plus-shaped cross.");
+        horizontal.setToolTipText("Replace the current pattern with a horizontal line through target 0,0.");
+        vertical.setToolTipText("Replace the current pattern with a vertical line through target 0,0.");
+        square.setToolTipText("Replace the current pattern with a filled square centered on target 0,0.");
+        ring.setToolTipText("Replace the current pattern with a square perimeter ring; the center remains safe for radius above 0.");
+        clear.setToolTipText("Clear every painted tile and return the attack to its normal no-pattern behavior when valid.");
+        cross.addActionListener(e -> applyPatternPreset(PATTERN_CROSS, "Cross"));
+        horizontal.addActionListener(e -> applyPatternPreset(PATTERN_HORIZONTAL_LINE, "Horizontal line"));
+        vertical.addActionListener(e -> applyPatternPreset(PATTERN_VERTICAL_LINE, "Vertical line"));
+        square.addActionListener(e -> applyPatternPreset(PATTERN_FILLED_SQUARE, "Filled square"));
+        ring.addActionListener(e -> applyPatternPreset(PATTERN_RING, "Ring"));
+        clear.addActionListener(e -> clearPattern());
+
+        toolbar.add(radiusLabel);
+        toolbar.add(patternRadiusField);
+        toolbar.add(cross);
+        toolbar.add(horizontal);
+        toolbar.add(vertical);
+        toolbar.add(square);
+        toolbar.add(ring);
+        toolbar.add(clear);
+        return toolbar;
     }
 
     private void addPhase() {
@@ -729,6 +787,105 @@ public final class BossLabsDefinitionEditor {
         hazardIntervalField.setText(Integer.toString(attack.getHazardTickInterval()));
         hazardMaxHitField.setText(Integer.toString(attack.getHazardMaxHitOverride()));
         updatePatternStatus(attack);
+        tilePatternCanvas.repaint();
+    }
+
+    private void applyPatternPreset(int preset, String label) {
+        BossLabsDraftDefinition.Attack attack = attackList.getSelectedValue();
+        if (attack == null) {
+            patternStatus.setText("Select an attack before applying a pattern preset.");
+            return;
+        }
+        Integer radiusValue = parseInteger(patternRadiusField.getText());
+        if (radiusValue == null) {
+            patternStatus.setText("Pattern radius must be a whole number from 0 to " + MAX_TILE_OFFSET + ".");
+            return;
+        }
+        int radius = radiusValue.intValue();
+        if (radius < 0 || radius > MAX_TILE_OFFSET) {
+            patternStatus.setText("Pattern radius must stay between 0 and " + MAX_TILE_OFFSET + ".");
+            return;
+        }
+
+        int expectedTiles = expectedPresetTileCount(preset, radius);
+        if (expectedTiles < 0) {
+            patternStatus.setText("Unsupported BossLabs pattern preset.");
+            return;
+        }
+        if (expectedTiles > MAX_PATTERN_TILES) {
+            patternStatus.setText(label + " radius " + radius + " would create " + expectedTiles
+                    + " tiles; reduce the radius to stay within the " + MAX_PATTERN_TILES + "-tile limit.");
+            return;
+        }
+
+        attack.getTilePattern().clear();
+        if (preset == PATTERN_CROSS) {
+            for (int offset = -radius; offset <= radius; offset++) {
+                addPatternTile(attack, offset, 0);
+                addPatternTile(attack, 0, offset);
+            }
+        } else if (preset == PATTERN_HORIZONTAL_LINE) {
+            for (int x = -radius; x <= radius; x++)
+                addPatternTile(attack, x, 0);
+        } else if (preset == PATTERN_VERTICAL_LINE) {
+            for (int y = -radius; y <= radius; y++)
+                addPatternTile(attack, 0, y);
+        } else if (preset == PATTERN_FILLED_SQUARE) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int y = -radius; y <= radius; y++)
+                    addPatternTile(attack, x, y);
+            }
+        } else if (preset == PATTERN_RING) {
+            if (radius == 0) {
+                addPatternTile(attack, 0, 0);
+            } else {
+                for (int x = -radius; x <= radius; x++) {
+                    addPatternTile(attack, x, -radius);
+                    addPatternTile(attack, x, radius);
+                }
+                for (int y = -radius + 1; y <= radius - 1; y++) {
+                    addPatternTile(attack, -radius, y);
+                    addPatternTile(attack, radius, y);
+                }
+            }
+        }
+
+        updatePatternStatus(attack);
+        patternStatus.setText(label + " radius " + radius + " applied: "
+                + attack.getTilePattern().size() + " tile(s). Left click to fine-tune.");
+        changed();
+        tilePatternCanvas.repaint();
+    }
+
+    private int expectedPresetTileCount(int preset, int radius) {
+        if (preset == PATTERN_CROSS)
+            return radius * 4 + 1;
+        if (preset == PATTERN_HORIZONTAL_LINE || preset == PATTERN_VERTICAL_LINE)
+            return radius * 2 + 1;
+        if (preset == PATTERN_FILLED_SQUARE) {
+            int width = radius * 2 + 1;
+            return width * width;
+        }
+        if (preset == PATTERN_RING)
+            return radius == 0 ? 1 : radius * 8;
+        return -1;
+    }
+
+    private void addPatternTile(BossLabsDraftDefinition.Attack attack, int x, int y) {
+        BossLabsDraftDefinition.TileOffset tile = new BossLabsDraftDefinition.TileOffset(x, y);
+        if (!attack.getTilePattern().contains(tile))
+            attack.getTilePattern().add(tile);
+    }
+
+    private void clearPattern() {
+        BossLabsDraftDefinition.Attack attack = attackList.getSelectedValue();
+        if (attack == null) {
+            patternStatus.setText("Select an attack before clearing its pattern.");
+            return;
+        }
+        attack.getTilePattern().clear();
+        updatePatternStatus(attack);
+        changed();
         tilePatternCanvas.repaint();
     }
 
