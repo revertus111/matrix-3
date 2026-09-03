@@ -2,6 +2,7 @@ package com.rs.game.npc.rots;
 
 import com.rs.game.Animation;
 import com.rs.game.Entity;
+import com.rs.game.ForceMovement;
 import com.rs.game.ForceTalk;
 import com.rs.game.Graphics;
 import com.rs.game.Hit;
@@ -30,8 +31,11 @@ public final class RiseOfTheSixBrother extends NPC {
 	private static final int TORAG_RELEASE_DAMAGE = 2500;
 	private static final int HURRICANE_PULSES = 10;
 	private static final int HURRICANE_RADIUS = 1;
+	private static final int HURRICANE_FACE_DISTANCE = 2;
 	private static final int WALL_SLAM_RADIUS = 2;
 	private static final int WALL_SCAN_DISTANCE = 12;
+	private static final int WALL_SLAM_APPROACH_TICKS = 7;
+	private static final int WALL_SLAM_LEAP_TICKS = 2;
 
 	private static final int GUTHAN_SPEAR_PROJECTILE = 4411;
 	private static final int GUTHAN_SPEAR_THROW_ANIMATION = 21944;
@@ -616,6 +620,7 @@ public final class RiseOfTheSixBrother extends NPC {
 		resetWalkSteps();
 		setCantFollowUnderCombat(true);
 		setForceFollowClose(false);
+		faceHurricaneSpin(0);
 		setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
 
 		WorldTasksManager.schedule(new WorldTask() {
@@ -631,7 +636,12 @@ public final class RiseOfTheSixBrother extends NPC {
 
 				resetWalkSteps();
 				calcFollow(victim, true);
-				setNextFaceEntity(victim);
+				/*
+				 * Exact RoTS Hurricane sequence id is still unverified in the active 830
+				 * cache. Rotate the NPC's facing every pulse so the special is visibly a
+				 * tracking spin instead of silently replaying a normal forward auto.
+				 */
+				faceHurricaneSpin(pulse);
 				setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
 
 				int damage = Math.min(2500, 250 * (pulse + 1));
@@ -646,6 +656,21 @@ public final class RiseOfTheSixBrother extends NPC {
 			}
 		}, 0, 0);
 		return true;
+	}
+
+	private void faceHurricaneSpin(int pulse) {
+		int step = pulse & 3;
+		int dx = 0;
+		int dy = 0;
+		if (step == 0)
+			dy = HURRICANE_FACE_DISTANCE;
+		else if (step == 1)
+			dx = HURRICANE_FACE_DISTANCE;
+		else if (step == 2)
+			dy = -HURRICANE_FACE_DISTANCE;
+		else
+			dx = -HURRICANE_FACE_DISTANCE;
+		setNextFaceWorldTile(new WorldTile(getX() + dx, getY() + dy, getPlane()));
 	}
 
 	private void hitHurricanePlayers(int damage) {
@@ -667,8 +692,10 @@ public final class RiseOfTheSixBrother extends NPC {
 		hurricaning = false;
 		hurricaneTarget = null;
 		restoreMovementSpecialState();
-		if (retarget && isValidSpecialTarget(victim))
+		if (retarget && isValidSpecialTarget(victim)) {
+			setNextFaceEntity(victim);
 			setTarget(victim);
+		}
 	}
 
 	private boolean startWallSlam(Entity target) {
@@ -682,6 +709,8 @@ public final class RiseOfTheSixBrother extends NPC {
 
 		final WorldTile capturedTile = new WorldTile(victim);
 		final WorldTile wallTile = findWallApproachTile();
+		if (wallTile == null)
+			return false;
 
 		wallSlamming = true;
 		wallSlamCapturedTile = capturedTile;
@@ -690,14 +719,15 @@ public final class RiseOfTheSixBrother extends NPC {
 		resetWalkSteps();
 		setCantFollowUnderCombat(true);
 		setForceFollowClose(false);
-
-		if (wallTile != null) {
-			setNextFaceWorldTile(wallTile);
-			calcFollow(wallTile, true);
+		setNextFaceWorldTile(wallTile);
+		if (!isAtTile(wallTile) && !calcFollow(wallTile, true)) {
+			endWallSlam(victim, false);
+			return false;
 		}
 
 		WorldTasksManager.schedule(new WorldTask() {
 			private int tick;
+			private boolean launched;
 
 			@Override
 			public void run() {
@@ -708,20 +738,36 @@ public final class RiseOfTheSixBrother extends NPC {
 					return;
 				}
 
-				if (tick == 5) {
-					resetWalkSteps();
-					setNextFaceWorldTile(capturedTile);
-					calcFollow(capturedTile, true);
+				if (!launched) {
+					if (isAtTile(wallTile)) {
+						resetWalkSteps();
+						setNextFaceWorldTile(capturedTile);
+						setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
+						setNextForceMovement(new ForceMovement(new WorldTile(capturedTile),
+								WALL_SLAM_LEAP_TICKS, getForceMovementDirection(capturedTile)));
+						launched = true;
+						tick = 0;
+						return;
+					}
+
+					if (!hasWalkSteps())
+						calcFollow(wallTile, true);
+					tick++;
+					if (tick >= WALL_SLAM_APPROACH_TICKS) {
+						endWallSlam(victim, true);
+						stop();
+					}
+					return;
 				}
-				else if (tick >= 10) {
-					setNextFaceWorldTile(capturedTile);
+
+				tick++;
+				if (tick >= WALL_SLAM_LEAP_TICKS) {
+					setNextWorldTile(new WorldTile(capturedTile));
 					setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
 					hitWallSlamPlayers(capturedTile);
 					endWallSlam(victim, true);
 					stop();
-					return;
 				}
-				tick++;
 			}
 		}, 0, 0);
 		return true;
@@ -729,6 +775,19 @@ public final class RiseOfTheSixBrother extends NPC {
 
 	private boolean canWallSlam() {
 		return brother == Brother.DHAROK || brother == Brother.TORAG || brother == Brother.VERAC;
+	}
+
+	private boolean isAtTile(WorldTile tile) {
+		return tile != null && getPlane() == tile.getPlane()
+				&& getX() == tile.getX() && getY() == tile.getY();
+	}
+
+	private int getForceMovementDirection(WorldTile destination) {
+		int dx = destination.getX() - getX();
+		int dy = destination.getY() - getY();
+		if (Math.abs(dx) > Math.abs(dy))
+			return dx >= 0 ? ForceMovement.EAST : ForceMovement.WEST;
+		return dy >= 0 ? ForceMovement.NORTH : ForceMovement.SOUTH;
 	}
 
 	private WorldTile findWallApproachTile() {
@@ -739,10 +798,8 @@ public final class RiseOfTheSixBrother extends NPC {
 				{ 0, -1 }
 		};
 
-		WorldTile bestBlocked = null;
-		int bestBlockedDistance = -1;
-		WorldTile bestOpen = null;
-		int bestOpenDistance = -1;
+		WorldTile nearestBlocked = null;
+		int nearestBlockedDistance = Integer.MAX_VALUE;
 
 		for (int[] direction : directions) {
 			int dx = direction[0];
@@ -759,23 +816,14 @@ public final class RiseOfTheSixBrother extends NPC {
 				moved++;
 			}
 
-			if (moved > bestOpenDistance) {
-				bestOpenDistance = moved;
-				bestOpen = new WorldTile(x, y, getPlane());
-			}
-
 			boolean blockedAhead = !World.checkWalkStep(getPlane(), x, y, moveDirection, getSize());
-			if (blockedAhead && moved >= 3 && moved > bestBlockedDistance) {
-				bestBlockedDistance = moved;
-				bestBlocked = new WorldTile(x, y, getPlane());
+			if (blockedAhead && moved < nearestBlockedDistance) {
+				nearestBlockedDistance = moved;
+				nearestBlocked = new WorldTile(x, y, getPlane());
 			}
 		}
 
-		if (bestBlocked != null)
-			return bestBlocked;
-		if (bestOpen != null && bestOpenDistance > 0)
-			return bestOpen;
-		return new WorldTile(this);
+		return nearestBlocked;
 	}
 
 	private void hitWallSlamPlayers(WorldTile capturedTile) {
