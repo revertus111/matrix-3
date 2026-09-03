@@ -10,3 +10,7 @@
 - Mapper output is de-duplicated by click tuple and does not add game-chat diagnostics; use the captured map to replace the remaining guessed native button routing.
 - `[PRESET-MAP]` output is now also appended to `Server/data/logs/presets/preset-map.txt` when the server runs from the Server working directory, while console output remains unchanged.
 - Preset map file logging creates its directory on demand and is isolated so a log-write failure does not alter preset click handling.
+- Runtime mapping confirmed preset row 1 components 184/193/201/217/225/231/232 and row 2 components 233/242/250/266/274/280/281; every matching control is separated by a 49-component row stride and uses packet 103 with both slot fields at 65535.
+- Replaced the failed slotId/slotId2 row guess with component-based routing: selector opens that row's actions, floppy saves that row, green arrow loads that row, and trash clears that row directly.
+- Gear/settings and the two right-side circle controls are identified and consumed but intentionally have no invented behavior yet.
+- Rows 3-10 currently extrapolate the verified row 1/2 +49 component stride and remain HYPOTHESIS until the retained mapper confirms them at runtime.
