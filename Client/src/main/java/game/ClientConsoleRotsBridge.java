@@ -27,7 +27,8 @@ public final class ClientConsoleRotsBridge {
     private static final int[] ROTS_CANDIDATE_ANIMATIONS = {
             18025, 18026, 21903, 21931,
             21922, 21923, 21924, 21925, 21926, 21927, 21928, 21929, 21930,
-            21932, 21933, 21934, 21935, 21936, 21937, 21938, 21939, 21940
+            21932, 21933, 21934, 21935, 21936, 21937, 21938, 21939, 21940,
+            21941, 21942, 21943, 21944, 21945, 21946, 21947
     };
 
     private static final int[] NPC_PARAM_KEYS = {
@@ -135,8 +136,8 @@ public final class ClientConsoleRotsBridge {
         out.append("\n=== ROTS ANIMATION NEIGHBORHOOD 17960-18040 ===\n");
         appendAnimationRange(out, animationLoader, 17960, 18040);
 
-        out.append("\n=== ROTS ALTERNATE ANIMATION NEIGHBORHOOD 21920-21940 ===\n");
-        appendAnimationRange(out, animationLoader, 21920, 21940);
+        out.append("\n=== ROTS ALTERNATE ANIMATION NEIGHBORHOOD 21920-21947 ===\n");
+        appendAnimationRange(out, animationLoader, 21920, 21947);
 
         return out.toString();
     }
@@ -244,7 +245,7 @@ public final class ClientConsoleRotsBridge {
         case 18549:
         case 18550:
         case 18551:
-            return "HYPOTHESIS - subdued/downed brother state";
+            return "verified-static - body-only/inactive definition; runtime-invisible as subdued presentation; authentic role HYPOTHESIS";
         default:
             return "verified-static - RoTS combat-family definition; runtime seasonal/Santa model observed";
         }
@@ -370,6 +371,8 @@ public final class ClientConsoleRotsBridge {
     private static void appendGraphicsCorrelations(StringBuilder out, Interface18 loader,
             Set<Integer> interestingAnimations) {
         int matches = 0;
+        int failures = 0;
+        StringBuilder failureExamples = new StringBuilder();
         int count = loader.method45();
         for (int gfxId = 0; gfxId < count; gfxId++) {
             try {
@@ -399,14 +402,27 @@ public final class ClientConsoleRotsBridge {
                 }
                 out.append('\n');
             } catch (RuntimeException ex) {
-                out.append("GFX ").append(gfxId).append("=<read failed: ")
-                        .append(ex.getClass().getSimpleName()).append(">\n");
+                failures++;
+                if (failures <= 5) {
+                    failureExamples.append("GFX ").append(gfxId).append("=<read failed: ")
+                            .append(ex.getClass().getSimpleName()).append(">\n");
+                }
             }
         }
-        if (matches == 0) {
-            out.append("<no GFX definitions directly reference the targeted/render-set animations or known RoTS NPC models>\n");
-        } else {
+
+        if (matches > 0) {
             out.append("\nGFX matches=").append(matches).append('\n');
+        }
+        if (failures > 0) {
+            out.append("GFX decode failures=").append(failures).append('\n');
+            out.append("First decode failures:\n").append(failureExamples);
+        }
+        if (matches == 0) {
+            if (failures == 0) {
+                out.append("<no GFX definitions directly reference the targeted/render-set animations or known RoTS NPC models>\n");
+            } else {
+                out.append("<GFX correlation incomplete because definition decoding failed; do not treat zero matches as evidence>\n");
+            }
         }
     }
 
