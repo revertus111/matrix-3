@@ -42,7 +42,7 @@
 - Enabled Apply Live, Save & Apply, Undo Last Apply, and Apply Saved only when the inspected NPC/current BossLabs state makes each action valid.
 - First-time conversion of a Matrix3 Java/default NPC remains blocked until BossLabs attack/phase authoring exists; the tool does not publish an empty or fake conversion.
 - Kept encounter spawn/reset/force-phase/testing controls disabled because matching authoritative server testing APIs are not implemented yet.
-- Added window-close listener cleanup so the static BossLabs reply listener does not retain a disposed Swing panel.
+- Added window-close listener cleanup so the static BossLabs reply listener does not retain a disposed Swing listener retained.
 - Added a client-local BossLabsDraftDefinition model plus real Phases and Attacks editors for health ranges, melee/range/magic style, animation, GFX, projectile, max-hit override, and combat-delay override.
 - Existing BossLabs definitions now round-trip their complete phase/attack data through a bounded versioned development-wire payload and repopulate the editors on inspection.
 - First-time Matrix3 NPC conversion is now available only after the local draft contains a valid non-overlapping phase layout with at least one valid attack per phase.
@@ -92,3 +92,8 @@
 - A lightweight Matrix3 WorldTasksManager lifecycle watcher finishes encounter contexts when the boss dies, finishes, or loses BossLabs registration; final cleanup clears participant/task state while leaving NPC lifecycle ownership in Matrix3.
 - Participant tracking is observational only in this slice: random nearby targeting still uses its existing eligibility rules and is not restricted to the encounter participant set yet.
 - Existing phase changes do not clear prior hazards solely because a phase changed; definition replacement/death/finish cleanup is added without silently changing phase-crossing hazard semantics.
+- Added Spawn minions as an ordered phase action with NPC id, amount 1-8, and radius 1-8; the Phases editor accepts the compact NPC_ID,AMOUNT,RADIUS value format.
+- Minions spawn through Matrix3 World.spawnNPC(..., spawned=true) on deterministic free ring slots around the boss, inherit the boss's valid current target, and retain their normal Matrix3 NPC subclass/combat behavior.
+- BossEncounterContext now owns up to 32 live summoned NPCs per boss instance; boss death/finish/unregister and live-definition replacement detach and finish those minions through the Matrix3 world-task path.
+- Upgraded BossLabs definition wire/storage to v8 for phase-action quantity/radius while retaining v1-v7 read compatibility; v7 phase actions load with quantity/radius defaults of 1/1.
+- Nested BossLabs NPC summons are intentionally blocked in this first slice to prevent recursive encounter spawning; player-killed summoned NPCs still use Matrix3's normal XP/drop behavior, while cleanup finish() removals create no drops.
