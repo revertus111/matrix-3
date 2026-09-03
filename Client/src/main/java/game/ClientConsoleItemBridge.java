@@ -32,6 +32,10 @@ public final class ClientConsoleItemBridge {
         }
     }
 
+    static Class639_Sub5 getRegisteredItemDefinitions() {
+        return itemDefinitions;
+    }
+
     static void captureItemRenderContext(
             Class639_Sub5 definitions,
             Class106 primaryRenderer,
