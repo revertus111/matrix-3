@@ -101,7 +101,7 @@ public final class BossEncounterRuntime {
 					stop();
 					return;
 				}
-				if (boss.hasFinished() || boss.isDead()) {
+				if (boss.hasFinished() || boss.isDead() || !BossDefinitionRegistry.isRegistered(boss.getId())) {
 					finish(boss);
 					stop();
 				}
