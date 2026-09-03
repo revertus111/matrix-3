@@ -1,0 +1,39 @@
+Rise of the Six special timing research
+
+All timings are UNKNOWN until measured or otherwise directly established.
+
+Track per mechanic:
+- trigger/rotation position
+- windup ticks
+- animation start
+- movement start/end
+- projectile/GFX start
+- impact/hitsplat tick
+- lock duration
+- recovery duration
+- next normal attack eligibility
+- next special eligibility
+- interrupt/death behavior
+
+Dharok
+- Hurricane / Whirlwind: UNKNOWN
+- Greatest Axe: UNKNOWN
+
+Torag
+- Hurricane / Whirlwind: UNKNOWN
+- unique special: UNKNOWN
+
+Guthan
+- Hurricane / Whirlwind: UNKNOWN
+- Impale: UNKNOWN
+
+Verac
+- specials: UNKNOWN
+
+Ahrim
+- specials: UNKNOWN
+
+Karil
+- specials: UNKNOWN
+
+Cache animation duration is useful evidence for visual timing but does not by itself prove server attack cadence or mechanic timing.
