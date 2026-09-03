@@ -2,11 +2,21 @@ Matrix3 Dev Mode - targeted runtime test list
 
 [ ] Start the client and confirm Dev Mode is OFF by default.
 [ ] Open Client Console > Settings, enable Dev Mode, and confirm the toggle reports ON.
-[ ] With an Admin+ account, right-click an ordinary world tile and confirm exactly one `Dev > Spawn...` entry appears in addition to normal Matrix3 options.
-[ ] Verify ordinary tile right-click now reaches the action-23 scene movement path; the Dev entry must not depend on the action-60 staff/admin teleport-debug path.
-[ ] Disable Dev Mode and confirm the Dev entry no longer appears on newly built tile menus.
+[ ] With an Admin+ account, right-click an ordinary world tile and confirm exactly one `Dev > Spawn...` and one `Dev > Edit Tile` entry appear in addition to normal Matrix3 options.
+[ ] Verify ordinary tile right-click reaches the action-23 scene movement path; Dev entries must not depend on the action-60 staff/admin teleport-debug path.
+[ ] Disable Dev Mode and confirm both Dev entries disappear on newly built tile menus.
 [ ] Re-enable Dev Mode, choose `Dev > Spawn...`, and confirm the dark Spawn Browser opens with the exact selected world X/Y/plane shown.
 [ ] Confirm normal Walk Here still works when Dev Mode is ON.
+
+Tile Editor
+[ ] Choose `Dev > Edit Tile` and confirm the dark Tile Editor opens for the exact tile that was right-clicked.
+[ ] Confirm world X/Y and plane match the selected tile.
+[ ] Confirm Region ID is `(worldX >> 6 << 8) | (worldY >> 6)` and region-local X/Y are each 0-63.
+[ ] Confirm world chunk X/Y are `worldX >> 3` / `worldY >> 3` and chunk-local X/Y are each 0-7.
+[ ] Click `Open Spawn Browser for this tile` and confirm Dev Spawn opens with the same X/Y/plane target.
+[ ] Click `Copy tile coordinates` and confirm the clipboard receives `x, y, plane` without affecting the client.
+[ ] Right-click a second tile while the Tile Editor is open and confirm reopening `Dev > Edit Tile` retargets the same window instead of creating duplicates.
+[ ] Confirm Terrain / clipping is informational only; no height, overlay, underlay, movement clipping, or projectile clipping mutation is performed by this slice.
 
 Spawn Browser search
 [ ] NPC: type an exact NPC ID and confirm the matching cache name appears without waiting for full name indexing.
@@ -23,12 +33,12 @@ Placement
 [ ] Object: choose a known object result/ID, type, and rotation; confirm it appears on the selected tile with the requested orientation.
 [ ] Ground item: choose a known item result/ID and amount; confirm the owner can see the temporary item on the selected tile.
 [ ] Enter invalid/unknown IDs and malformed values; confirm they are rejected without server/client exceptions.
-[ ] Confirm an account below Admin rights cannot use the server Dev spawn bridge and does not receive the client tile Dev entry.
+[ ] Confirm an account below Admin rights cannot use the server Dev spawn bridge and does not receive either client tile Dev entry.
 [ ] Restart the client and confirm Dev Mode returns to OFF.
 [ ] Eclipse/Java 8: clean/build Client and Server and confirm no compilation errors.
 
 Regression checks
 [ ] Right-click NPCs, objects, ground items, and normal tiles; confirm their existing Matrix3 menu options are unchanged.
-[ ] Walk several tiles and interact with normal objects after using Dev Spawn.
+[ ] Walk several tiles and interact with normal objects after using Dev Spawn/Tile Editor.
 [ ] Use the normal Client Console Item Browser after Dev Spawn search and confirm its item indexing/thumbnails still work.
-[ ] Spawn then restart the server; confirm this Phase 1 runtime placement is not mistaken for persistent source/map data.
+[ ] Spawn then restart the server; confirm runtime placement is not mistaken for persistent source/map data.
