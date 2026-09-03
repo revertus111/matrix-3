@@ -2,22 +2,30 @@ Rise of the Six animation research
 
 Record only cache/runtime-supported mappings.
 
-Normal/render animations
-- Dharok: UNKNOWN
-- Ahrim: UNKNOWN
-- Karil: UNKNOWN
-- Torag: UNKNOWN
-- Guthan: UNKNOWN
-- Verac: UNKNOWN
+Known render/state clues
+- Ahrim 18538 renderEmote: 2687 - verified-static.
+- Ahrim 18539 flying renderEmote: 2987 - VERIFIED state association; its stand/walk/run all resolve to animation 21931 in the server cache scan.
+- Dharok 18540 renderEmote: 2689 - verified-static.
+- Guthan 18541 renderEmote: 2690 - verified-static.
+- Guthan 18542 spearless renderEmote: 2687 - VERIFIED state association.
+- Karil 18543 renderEmote: 2687 - verified-static.
+- Torag 18544 renderEmote: 2689 - verified-static.
+- Verac 18545 renderEmote: 2689 - verified-static.
+- NPCs 18546-18551 use renderEmote 2982 - HYPOTHESIS subdued/downed render set until runtime-confirmed.
 
-Special animations
-- Hurricane / Whirlwind: UNKNOWN
-- Dharok Greatest Axe: UNKNOWN
-- Torag special: UNKNOWN
-- Guthan Impale: UNKNOWN
-- Verac special: UNKNOWN
-- Ahrim specials: UNKNOWN
-- Karil specials: UNKNOWN
+Focused animation neighborhoods
+- 17960-18040: scan as the primary RoTS-era animation neighborhood around the brothers' render/state data.
+- 21920-21940: scan around animation 21931, which is associated with VERIFIED flying Ahrim state.
+- Owner Console -> RoTS cache research now dumps populated definitions in both ranges with frame durations, frame IDs, total cache duration, priority, hand-item overrides, and handled-sound data.
+
+Special animations still requiring runtime identification
+- Hurricane / Whirlwind: UNKNOWN.
+- Dharok Greatest Axe: UNKNOWN.
+- Torag special: UNKNOWN.
+- Guthan Impale throw/retrieve animations: UNKNOWN; NPC 18542 spearless state itself is VERIFIED.
+- Verac special: UNKNOWN.
+- Ahrim special animations beyond flying state 21931: UNKNOWN.
+- Karil specials: UNKNOWN.
 
 For each candidate record:
 - animation ID
