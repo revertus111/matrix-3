@@ -20,13 +20,14 @@ import com.rs.utils.Utils;
 /**
  * Empowered Barrows brother used only by the Rise of the Six encounter.
  *
- * Standard BarrowsBrother is intentionally not reused because RoTS brothers are
- * incapacitated at zero HP and can be restored by the shared shadow bond.
+ * Standard BarrowsBrother is intentionally not reused because RoTS brothers use
+ * a logical subdued state and can be restored by the shared shadow bond.
  */
 public final class RiseOfTheSixBrother extends NPC {
 
 	private static final long serialVersionUID = 1L;
 
+	private static final int SUBDUED_VISIBLE_HITPOINTS = 1;
 	private static final int TORAG_RELEASE_DAMAGE = 2500;
 	private static final int HURRICANE_PULSES = 10;
 	private static final int HURRICANE_RADIUS = 1;
@@ -257,6 +258,16 @@ public final class RiseOfTheSixBrother extends NPC {
 	public void handleIngoingHit(Hit hit) {
 		if (hit == null)
 			return;
+
+		/*
+		 * RoTS incapacitation is logical rather than a normal zero-HP NPC death.
+		 * Keep delayed hits that were already queued before subdual from dropping
+		 * the visible 1-HP shell back to zero and making the NPC disappear.
+		 */
+		if (subdued) {
+			hit.setDamage(0);
+			return;
+		}
 
 		if (brother == Brother.DHAROK && dharokCharging) {
 			dharokStoredDamage += Math.max(0, hit.getDamage());
@@ -866,8 +877,13 @@ public final class RiseOfTheSixBrother extends NPC {
 		NPCCombatDefinitions defs = getCombatDefinitions();
 		resetWalkSteps();
 		getCombat().removeTarget();
-		if (!isDead())
-			setHitpoints(0);
+		/*
+		 * Matrix3/client hides a true zero-HP NPC. RoTS needs the incapacitated
+		 * brother to remain visible in the arena, so encounter defeat is represented
+		 * by subdued=true while the NPC shell is held at one HP. All RoTS defeat,
+		 * revival and completion logic already keys from subdued rather than isDead().
+		 */
+		setHitpoints(SUBDUED_VISIBLE_HITPOINTS);
 		setCantInteract(true);
 		setNextAnimation(new Animation(defs.getDeathEmote()));
 		giveXP();
