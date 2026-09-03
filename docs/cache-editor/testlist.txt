@@ -16,3 +16,11 @@ RS3 CacheEditor foundation test list
 [ ] Temporarily rename/remove the Matrix3 root 830_cache directory and confirm CacheEditor reports the supplied path is invalid and falls back to the directory chooser instead of failing silently.
 [ ] While CacheEditor is open, click Open RS3 CacheEditor again and confirm a second editor process is not started.
 [ ] Close CacheEditor, click Open RS3 CacheEditor again, and confirm it can be launched again without restarting the Matrix3 client.
+[ ] Confirm CacheEditor startup/loading, main shell, tab area, Raw Cache controls/preview, Items tab, dialogs, lists, and text inputs use the dark palette with readable light text and no large default-white content areas.
+[ ] Open Items and confirm item indexing starts automatically in the background while the UI remains responsive.
+[ ] Type a partial item name without pressing Enter or clicking a Search button. Confirm results refresh automatically after the short debounce and each row shows the item name plus its ID in a taller Item Browser-style row.
+[ ] Type an exact numeric item ID while background indexing is still running where practical. Confirm the exact definition can load directly without waiting for the complete name index.
+[ ] Clear the Items search after indexing completes. Confirm the first usable cache items are shown in ascending ID order up to the visible-result cap and the result count/status remain readable.
+[ ] Select several item results and confirm the right side shows a selected-item summary followed by grouped Summary, Models, Equipment, Options, Appearance, Variants, and Client Script Params cards rather than the old field/value JTable.
+[ ] Resize CacheEditor narrower and wider. Confirm the detail pane tracks viewport width, long values stay reachable through vertical scrolling, and the result/detail split remains usable without horizontal clipping.
+[ ] Confirm this UI pass does not enable structured item writes or alter existing Raw Cache read/export/replace behavior.
