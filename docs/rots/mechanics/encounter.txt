@@ -2,16 +2,27 @@ Rise of the Six encounter research
 
 Status labels: VERIFIED / verified-static / HYPOTHESIS
 
-Encounter controller
-- Instance creation: UNKNOWN
-- Team/side split: UNKNOWN
-- Brother selection: UNKNOWN
-- East/west ownership: UNKNOWN
-- Barrier/side transitions: UNKNOWN
-- Brother incapacitation/death bond: UNKNOWN
-- Revival behavior: UNKNOWN
-- Fight completion: UNKNOWN
-- Escape/tunnel sequence: UNKNOWN
-- Failure/death cleanup: UNKNOWN
+Current encounter owner
+- `RiseOfTheSixInstance` is the Matrix3-native encounter-wide owner - verified-static.
+- `RiseOfTheSixBrother` owns brother logical state and current melee-special state - verified-static.
+- `RiseOfTheSixCombat` owns normal empowered-brother attacks and special dispatch - verified-static.
 
-Brother mechanic files will be split out once the first verified asset/timing mappings are established.
+Encounter controller
+- Instance creation/map owner: verified-static - native `RiseOfTheSixInstance` exists and owns a 64x64 instance based on source chunk 290,753.
+- Team/side split: verified-static - players are classified WEST/EAST from the current arena midpoint model; exact classic sub-area bounds remain unverified.
+- Brother selection: verified-static - all six brothers spawn each encounter.
+- East/west ownership: verified-static - a 20-day daily rotation table assigns three brothers to each side.
+- Barrier/side transitions: IN PROGRESS - empty-side empowerment/hop foundation exists; exact portal/barrier rules, landing positions, and all blockers are not complete.
+- Brother incapacitation/death bond: VERIFIED in runtime - brothers enter a logical subdued state instead of normal death and survivor-heal/fight messages execute.
+- Survivor heal: verified-static - active brothers heal 5,000 when one is subdued.
+- Revival behavior: verified-static/current implementation - 50-tick revive countdown, custom revive bar, revive at 25,000 HP, animation 21914.
+- Fight completion: VERIFIED in runtime - all six subdued breaks the shadow bond and suppresses revival.
+- Empty-side empowerment: verified-static/current implementation - warning after roughly 24 seconds of one side being empty, followed by a delayed brother hop; exact fidelity remains incomplete.
+- Brother Throw pairing: verified-static - same-side eligibility matrix exists; actual Throw movement/flight remains intentionally dormant.
+- Escape/tunnel/reward sequence: UNKNOWN from the focused audit; inspect only when encounter completion work reaches this phase.
+- Failure/death cleanup: verified-static foundation through BossInstance finish/cleanup; full gameplay failure behavior still needs targeted runtime testing.
+
+Subdued presentation note
+- Current revision-830 runtime testing found cache definitions 18546-18551 render invisibly.
+- The working encounter therefore keeps each active brother model visible at 1 HP and non-interactable while logically subdued.
+- Authentic kneeling/downed presentation remains a visual parity task; do not replace the working logical subdue system just to use 18546-18551.
