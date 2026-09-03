@@ -1,0 +1,20 @@
+Matrix3 Dev Mode - targeted runtime test list
+
+[ ] Start the client and confirm Dev Mode is OFF by default.
+[ ] Open Client Console > Settings, enable Dev Mode, and confirm the toggle reports ON.
+[ ] With an Admin+ account, right-click an ordinary world tile and confirm exactly one `Dev > Spawn...` entry appears in addition to normal Matrix3 options.
+[ ] Disable Dev Mode and confirm the Dev entry no longer appears on newly built tile menus.
+[ ] Re-enable Dev Mode, choose `Dev > Spawn...`, and confirm the dark Spawn Browser opens with the exact selected world X/Y/plane shown.
+[ ] Confirm normal Walk Here still works when Dev Mode is ON.
+[ ] NPC: enter a known NPC ID, spawn it, and confirm it appears on the selected tile using normal Matrix3 NPC behavior.
+[ ] Object: enter a known object ID, type, and rotation; confirm it appears on the selected tile with the requested orientation.
+[ ] Ground item: enter a known item ID and amount; confirm the owner can see the temporary item on the selected tile.
+[ ] Enter invalid/unknown IDs and malformed values; confirm they are rejected without server/client exceptions.
+[ ] Confirm an account below Admin rights cannot use the server Dev spawn bridge and does not receive the client tile Dev entry.
+[ ] Restart the client and confirm Dev Mode returns to OFF.
+[ ] Eclipse/Java 8: clean/build Client and Server and confirm no compilation errors.
+
+Regression checks
+[ ] Right-click NPCs, objects, ground items, and normal tiles; confirm their existing Matrix3 menu options are unchanged.
+[ ] Walk several tiles and interact with normal objects after using Dev Spawn.
+[ ] Spawn then restart the server; confirm this Phase 1 runtime placement is not mistaken for persistent source/map data.
