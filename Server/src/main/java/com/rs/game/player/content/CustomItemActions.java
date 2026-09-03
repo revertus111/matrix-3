@@ -23,12 +23,8 @@ import com.rs.utils.Logger;
  */
 public final class CustomItemActions {
 
-    private static final String CONFIG_PATH = "data/items/custom-item-actions.properties";
-    private static final String[] CONFIG_PATHS = {
-            CONFIG_PATH,
-            "../" + CONFIG_PATH,
-            "../../" + CONFIG_PATH
-    };
+    private static final String CONFIG_PATH = "Server/data/items/custom-item-actions.properties";
+    private static final String SERVER_RELATIVE_CONFIG_PATH = "data/items/custom-item-actions.properties";
 
     private static final Map<String, ActionEntry> ACTIONS = new HashMap<String, ActionEntry>();
     private static final Map<Integer, String> HANDLERS = new HashMap<Integer, String>();
@@ -157,6 +153,7 @@ public final class CustomItemActions {
             input = new FileInputStream(file);
             properties.load(input);
             parse(properties);
+            Logger.log("CustomItemActions", "Loaded " + ACTIONS.size() + " custom action(s) from " + file.getPath());
         } catch (IOException e) {
             Logger.handle(e);
         } finally {
@@ -212,10 +209,14 @@ public final class CustomItemActions {
     }
 
     private static File findConfig() {
-        for (String path : CONFIG_PATHS) {
-            File file = new File(path);
-            if (file.isFile())
-                return file;
+        File directory = new File(System.getProperty("user.dir", "."));
+        for (int depth = 0; directory != null && depth < 6; depth++, directory = directory.getParentFile()) {
+            File repoCandidate = new File(directory, CONFIG_PATH);
+            if (repoCandidate.isFile())
+                return repoCandidate;
+            File serverCandidate = new File(directory, SERVER_RELATIVE_CONFIG_PATH);
+            if (serverCandidate.isFile())
+                return serverCandidate;
         }
         return null;
     }
