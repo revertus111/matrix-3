@@ -1,0 +1,17 @@
+Rise of the Six encounter research
+
+Status labels: VERIFIED / verified-static / HYPOTHESIS
+
+Encounter controller
+- Instance creation: UNKNOWN
+- Team/side split: UNKNOWN
+- Brother selection: UNKNOWN
+- East/west ownership: UNKNOWN
+- Barrier/side transitions: UNKNOWN
+- Brother incapacitation/death bond: UNKNOWN
+- Revival behavior: UNKNOWN
+- Fight completion: UNKNOWN
+- Escape/tunnel sequence: UNKNOWN
+- Failure/death cleanup: UNKNOWN
+
+Brother mechanic files will be split out once the first verified asset/timing mappings are established.
