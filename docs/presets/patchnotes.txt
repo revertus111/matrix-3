@@ -8,3 +8,5 @@
 - Unmapped interface 579 controls no longer get globally swallowed with repeated "Select a preset row first" messages; a previously selected row is retained for its action controls.
 - Added a temporary unique native-click mapper for interface 579; `[PRESET-MAP]` console lines record component/slot/slot2/packet even when Settings.DEBUG is disabled.
 - Mapper output is de-duplicated by click tuple and does not add game-chat diagnostics; use the captured map to replace the remaining guessed native button routing.
+- `[PRESET-MAP]` output is now also appended to `Server/data/logs/presets/preset-map.txt` when the server runs from the Server working directory, while console output remains unchanged.
+- Preset map file logging creates its directory on demand and is isolated so a log-write failure does not alter preset click handling.
