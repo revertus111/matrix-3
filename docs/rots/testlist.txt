@@ -14,10 +14,12 @@ RoTS cache research test list
 [ ] Click Clear and confirm only research output/status clears; cache/game state remains unchanged.
 [ ] Runtime-spawn/subdue 18546-18551 before upgrading any subdued/downed-state mapping to VERIFIED.
 [ ] Use animation candidates from the copied dump for targeted runtime playback before mapping Hurricane, Greatest Axe, Impale throw/retrieve, Torag, Verac, Karil, or other Ahrim special animations.
-[ ] After normal login/loading, confirm Deep Scan becomes ready once animation, GFX, and render-set definitions are live.
+[ ] After normal login/loading, confirm Deep Scan becomes ready once animation and render-set definitions are live; GFX definitions should bootstrap read-only when Deep Scan starts.
+[ ] Click Deep Scan in a fresh session before triggering any visible GFX and confirm the output reports the GFX loader ready rather than waiting for a prior runtime GFX instantiation.
 [ ] Click Deep Scan and confirm the game/Owner UI remains responsive while the worker resolves render sets and scans GFX definitions.
 [ ] Confirm Deep Scan contains render sets 2687, 2689, 2690, 2982, and 2987 with raw opcode animation references plus opcode-52 animation/weight arrays where present.
 [ ] Confirm targeted animation classification includes 18025, 18026, 21903, 21931, and 21922-21940 candidates without assigning a mechanic name.
 [ ] Confirm each targeted candidate reports whether it is referenced by one of the known RoTS render sets.
 [ ] Confirm GFX correlation prints only definitions whose animation matches the targeted/render-set animation set or whose model matches a known RoTS NPC model.
+[ ] Resize Owner down to the narrowest supported console width and confirm Account values, Scan RoTS, Deep Scan, Copy All, Clear, output area, and wrapped note all remain visible without right-side clipping.
 [ ] Copy the completed Deep Scan with Copy All and use runtime playback/video comparison before promoting any candidate from HYPOTHESIS to VERIFIED.
