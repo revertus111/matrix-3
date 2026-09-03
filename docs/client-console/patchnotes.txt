@@ -64,3 +64,9 @@
 - Hardened CacheEditor launch by invoking the absolute Server Gradle wrapper and passing `-p <Server>` explicitly; launch diagnostics now print the resolved Server project and wrapper paths before Gradle starts.
 - Kept the default Item Browser result list capped at 160 rows for normal browsing, but non-empty ID/name searches now populate every matching definition while thumbnail rendering remains bounded/lazy.
 - Added a 1.25-second Item Browser search debounce so partial one/two-letter input does not rebuild the full matching result model on every keystroke; indexing refreshes continue using the last applied query until typing pauses.
+- Corrected the RoTS Deep Scan GFX loader path: the previous bootstrap incorrectly fabricated a spot-animation loader from the render-set loader archive, which could produce a believable count followed by widespread definition decode failures.
+- The authentic Matrix3 `Class639` GFX loader now registers itself with the RoTS research bridge when constructed with `Class452_Sub1`; Deep Scan no longer guesses or substitutes a config archive.
+- Simplified `ClientConsoleRotsGfxBootstrap` to readiness-only behavior so it cannot construct a mismatched loader.
+- GFX correlation now aggregates decode failures, prints at most the first five examples, and explicitly marks zero-match results as incomplete whenever decoding failed instead of presenting them as evidence.
+- Extended focused/Deep Scan animation coverage through 21947, including the runtime-confirmed 21941 shared melee spin and current Guthan 21944/21945/21947 mappings.
+- Corrected the Owner dump label for NPCs 18546-18551 to body-only/inactive verified-static definitions that are runtime-invisible as the current subdued presentation; their authentic role remains HYPOTHESIS.
