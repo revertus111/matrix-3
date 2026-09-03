@@ -64,3 +64,6 @@ Matrix3 Client Console - shell + Owner + Commands + Item Browser runtime test li
 62. Confirm targeted animation classification includes 18025, 18026, 21903, 21931, and 21922-21940 and reports renderSetReference=YES/NO without assigning boss-mechanic names.
 63. Confirm the GFX correlation section prints only explicit targeted/render-animation matches or direct known-RoTS-model matches, then use Copy All to capture the entire Deep Scan output.
 64. Run the normal Scan RoTS immediately after Deep Scan and confirm the original focused scan still works unchanged; no gameplay/server command path should execute during either scan.
+65. Resize Owner from a wide console to the narrowest supported console width. Confirm Account values, all four RoTS buttons, output box, and informational text remain inside the visible viewport with no right-side clipping.
+66. Confirm the Quick actions and RoTS informational text wrap within their cards instead of increasing the Owner panel's preferred width.
+67. Start a fresh client session without first triggering any visible GFX. Click Deep Scan and confirm it no longer reports `GFX loader: NOT READY`; the read-only bootstrap should create the GFX definition loader from the already-live config archive before scanning.
