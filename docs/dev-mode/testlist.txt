@@ -3,6 +3,7 @@ Matrix3 Dev Mode - targeted runtime test list
 [ ] Start the client and confirm Dev Mode is OFF by default.
 [ ] Open Client Console > Settings, enable Dev Mode, and confirm the toggle reports ON.
 [ ] With an Admin+ account, right-click an ordinary world tile and confirm exactly one `Dev > Spawn...` entry appears in addition to normal Matrix3 options.
+[ ] Verify ordinary tile right-click now reaches the action-23 scene movement path; the Dev entry must not depend on the action-60 staff/admin teleport-debug path.
 [ ] Disable Dev Mode and confirm the Dev entry no longer appears on newly built tile menus.
 [ ] Re-enable Dev Mode, choose `Dev > Spawn...`, and confirm the dark Spawn Browser opens with the exact selected world X/Y/plane shown.
 [ ] Confirm normal Walk Here still works when Dev Mode is ON.
