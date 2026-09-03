@@ -1,8 +1,12 @@
 2026-09-03
-- Added shared `data/items/custom-item-actions.properties` as the data authority for custom item context actions.
+- Added shared custom item action data authority for configurable item context actions.
+- Moved the canonical config to `Server/data/items/custom-item-actions.properties`, matching Matrix3's existing server data layout.
+- Client and Server now walk parent directories to resolve the same canonical config from normal Eclipse launch working directories; the duplicate repo-root `data/items/custom-item-actions.properties` was removed.
+- Server now logs the resolved config path and number of loaded custom actions on first use so presentation-only success cannot hide a server config loading failure.
 - Added server `CustomItemActions` registry with config-driven inventory/equipment/bank option routing; unconfigured items fall through to normal Matrix3 handlers unchanged.
 - Added client `CustomItemActionConfig` presentation hook that applies configured inventory option labels and equipped-item option params to decoded item definitions without editing cache data.
 - Option numbers are 1-based in config so a future editor can expose Option 1..N directly.
 - Handler/action identifiers are stable data values (`BACKPACK`, `OPEN`, `EMPTY_TO_BANK`); Java method names are intentionally not stored in config.
 - Rambler's backpack 21445 is the first configured item: Inventory Option 4 = Open, Equipment Option 1 = Open, Bank Option 7 = Open.
-- `EMPTY_TO_BANK` server behavior exists but its bank config entry remains commented out until a per-item client bank-menu label hook is verified; stock bank option text is not silently repurposed.
+- Runtime evidence from the first test showed the client displayed `Open` while the server action did nothing; the split config location was corrected before changing Matrix3's normal inventory packet owner.
+- `EMPTY_TO_BANK` server behavior exists but its bank-inventory-pane label remains disabled until the narrow per-item bank menu presentation hook is verified; stock bank option text is not silently repurposed.
