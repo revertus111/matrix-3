@@ -5,5 +5,5 @@
 - Kept client interface hardcoding out of the initial slice pending runtime evidence: the item update protocol already transmits the container length.
 - Runtime verification confirmed slots 29-36 exist and function but stock NIS only renders the original 28 visual slots.
 - Added a narrow client runtime layout override for inventory components 1473:34 and 1474:15 without modifying cache data.
-- The override decodes the component raw-height field and supports both known representations: small inventory-grid row counts are extended by two rows (7 -> 9), while pixel-sized container geometry is extended by two 36px row pitches.
+- The override decodes the component raw-height field and supports both likely representations: an exact seven-row inventory grid is changed to nine rows, while pixel-sized container geometry is extended by two 36px row pitches; unexpected small values are left untouched.
 - The override is applied from the normal logged-in client cycle and tracks component object identity so an unloaded/reloaded interface group can be patched again exactly once.
