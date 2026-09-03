@@ -439,7 +439,12 @@ public class RiseOfTheSixInstance extends BossInstance {
 			if (fightComplete || subduedBrother == null)
 				return;
 
-			prepareSubduedPresentation(subduedBrother);
+			/*
+			 * Runtime verification on revision 830 showed donor inactive ids
+			 * 18546-18551 render as invisible models in this client/cache. Keep the
+			 * proven empowered model visible while the logical subdued state owns the
+			 * NPC, and let the encounter-specific type-5 bar provide the countdown.
+			 */
 			broadcast("As you defeat " + subduedBrother.getBrother().getDisplayName()
 					+ ", the shadow engulfs the remaining wights!");
 			healActiveBrothers();
@@ -466,33 +471,6 @@ public class RiseOfTheSixInstance extends BossInstance {
 					}
 				}
 			}, REVIVE_DELAY_TICKS);
-		}
-	}
-
-	private void prepareSubduedPresentation(RiseOfTheSixBrother subduedBrother) {
-		int subduedNpcId = getSubduedNpcId(subduedBrother.getBrother());
-		if (subduedNpcId >= 0)
-			subduedBrother.setNextNPCTransformation(subduedNpcId);
-	}
-
-	private int getSubduedNpcId(Brother brother) {
-		if (brother == null)
-			return -1;
-		switch (brother) {
-		case AHRIM:
-			return 18546;
-		case DHAROK:
-			return 18547;
-		case GUTHAN:
-			return 18548;
-		case KARIL:
-			return 18549;
-		case TORAG:
-			return 18550;
-		case VERAC:
-			return 18551;
-		default:
-			return -1;
 		}
 	}
 
@@ -653,23 +631,22 @@ public class RiseOfTheSixInstance extends BossInstance {
 			if (isFinished())
 				return;
 			reviveGeneration++;
-			sideHopGeneration++;
-			activeRotation = null;
-			if (currentBrotherSides != null)
-				currentBrotherSides.clear();
-			sideHopPending = false;
-			sideHopComplete = false;
-			sideHopFrom = null;
-			sideHopTo = null;
-			clearReviveBars();
-			if (brothers != null) {
-				for (RiseOfTheSixBrother brother : brothers) {
-					if (brother != null && !brother.hasFinished())
-						brother.finish();
-				}
-				brothers.clear();
+		sideHopGeneration++;
+		activeRotation = null;
+		if (currentBrotherSides != null)
+			currentBrotherSides.clear();
+		sideHopPending = false;
+		sideHopComplete = false;
+		sideHopFrom = null;
+		sideHopTo = null;
+		clearReviveBars();
+		if (brothers != null) {
+			for (RiseOfTheSixBrother brother : brothers) {
+				if (brother != null && !brother.hasFinished())
+					brother.finish();
 			}
-			super.finish();
+			brothers.clear();
 		}
+		super.finish();
 	}
 }
