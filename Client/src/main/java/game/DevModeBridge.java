@@ -3,6 +3,7 @@ package game;
 import javax.swing.SwingUtilities;
 
 import game.console.DevSpawnBrowserWindow;
+import game.console.DevTileEditorWindow;
 
 /**
  * Client-side Dev Mode state and the narrow bridge between Matrix3's existing
@@ -15,6 +16,7 @@ import game.console.DevSpawnBrowserWindow;
 public final class DevModeBridge {
 
     public static final int TILE_SPAWN_MENU_ACTION = 1500;
+    public static final int TILE_EDIT_MENU_ACTION = 1501;
     private static final int MATRIX3_TILE_ACTION = 23;
 
     private static volatile boolean enabled;
@@ -41,32 +43,20 @@ public final class DevModeBridge {
         if (!enabled || normalizedAction != MATRIX3_TILE_ACTION || !isOwnerSession()) {
             return;
         }
-        if (Class25.aBool165 || 357782167 * Class25.anInt172 >= 504 || hasTileSpawnEntry()) {
+        if (Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
             return;
         }
 
-        Class572_Sub12_Sub10 entry = new Class572_Sub12_Sub10(
-                "Dev > Spawn...",
-                "",
-                -646491435 * client.anInt8751,
-                TILE_SPAWN_MENU_ACTION,
-                -1,
-                0L,
-                localX,
-                localY,
-                true,
-                false,
-                0L,
-                true);
-        Class412.method5075(entry, 722976984);
+        addTileEntry("Dev > Edit Tile", TILE_EDIT_MENU_ACTION, localX, localY);
+        addTileEntry("Dev > Spawn...", TILE_SPAWN_MENU_ACTION, localX, localY);
     }
 
     /**
-     * Handles only the custom Dev Mode action and leaves every normal Matrix3
-     * menu action untouched.
+     * Handles only custom Dev Mode actions and leaves every normal Matrix3 menu
+     * action untouched.
      */
     static boolean handleMenuAction(int action, int localX, int localY) {
-        if (action != TILE_SPAWN_MENU_ACTION) {
+        if (action != TILE_SPAWN_MENU_ACTION && action != TILE_EDIT_MENU_ACTION) {
             return false;
         }
         if (!enabled || !isOwnerSession() || client.aClass613_8605 == null
@@ -82,21 +72,46 @@ public final class DevModeBridge {
         final int worldX = sceneBase.localX * -2109597897 + localX;
         final int worldY = sceneBase.localY * 417324155 + localY;
         final int plane = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff;
+        final boolean editTile = action == TILE_EDIT_MENU_ACTION;
 
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                DevSpawnBrowserWindow.open(worldX, worldY, plane);
+                if (editTile) {
+                    DevTileEditorWindow.open(worldX, worldY, plane);
+                } else {
+                    DevSpawnBrowserWindow.open(worldX, worldY, plane);
+                }
             }
         });
         return true;
+    }
+
+    private static void addTileEntry(String text, int action, int localX, int localY) {
+        if (hasDevAction(action) || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
+            return;
+        }
+        Class572_Sub12_Sub10 entry = new Class572_Sub12_Sub10(
+                text,
+                "",
+                -646491435 * client.anInt8751,
+                action,
+                -1,
+                0L,
+                localX,
+                localY,
+                true,
+                false,
+                0L,
+                true);
+        Class412.method5075(entry, 722976984);
     }
 
     private static boolean isOwnerSession() {
         return ClientConsoleBridge.hasLocalPlayer() && ClientConsoleBridge.getRights() >= 2;
     }
 
-    private static boolean hasTileSpawnEntry() {
+    private static boolean hasDevAction(int targetAction) {
         for (Class572_Sub12_Sub10 entry = (Class572_Sub12_Sub10) Class25.aClass675_174.method7932((byte) 50);
                 entry != null;
                 entry = (Class572_Sub12_Sub10) Class25.aClass675_174.method7926(1709126908)) {
@@ -104,7 +119,7 @@ public final class DevModeBridge {
             if (action >= 2000) {
                 action -= 2000;
             }
-            if (action == TILE_SPAWN_MENU_ACTION) {
+            if (action == targetAction) {
                 return true;
             }
         }
