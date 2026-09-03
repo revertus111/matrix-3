@@ -144,14 +144,15 @@ Subdued presentation / revival bar
 113. Queue delayed damage/projectiles before subdual so hits land after the brother is already subdued. Confirm those late hits are reduced to 0 and cannot hide the brother.
 114. VERIFIED 2026-09-03 from screenshots/video: the donor-backed type-5 revival bar renders in the active client with an orange/blue presentation at the subdued NPC tile.
 115. REJECTED 2026-09-03 for this revision-830 runtime: the donor inactive transformation path using 18546-18551 produced invisible brother models while their type-5 bars remained visible. Do not re-enable these transforms without new cache/runtime evidence.
-116. After the visibility fix, confirm a subdued brother keeps its proven empowered model visible, remains non-interactable and uses the existing death/down emote. Exact persistent kneeling presentation remains HYPOTHESIS rather than a guessed looping animation.
-117. Let the timer run without another kill. Confirm the type-5 bar progresses smoothly from empty toward full across the same approximately 30-second / 50-tick revival window.
-118. Partially fill one brother's revival bar, then subdue a second brother. Confirm both downed brothers immediately reset to empty together and then progress in sync from the new shared generation.
-119. With three or more subdued brothers, confirm every visible type-5 bar remains synchronized and a later additional subdual resets every existing downed bar again.
-120. Spam projectiles around the lethal hit. Confirm queued late hits never replace the type-5 bar with a normal HP bar and never drop the 1-HP logical shell to true zero.
-121. Let the shared timer expire. Confirm every currently subdued brother clears the type-5 bar, plays donor-backed animation 21914, resolves to its active primary NPC id, and returns at exactly 25,000 HP.
-122. Subdue all six before timeout. Confirm the completion state clears/stops revival-bar updates and none of the subdued brothers revives afterward.
-123. Destroy/restart the instance while one or more revival bars are active. Confirm no stale bar generation or presentation state leaks into the new encounter.
+116. VERIFIED 2026-09-03 from the follow-up video: with the active model retained, the brother remains logically present at 1 HP with hover/nameplate and type-5 bar, but generic death emote 836 hides the model after the animation completes. Do not use the generic NPC death emote for RoTS subdual.
+117. After the current fix, confirm the subdued brother remains physically visible for the entire revive window as a frozen/non-interactable empowered model beneath the type-5 bar. Exact persistent kneeling presentation remains HYPOTHESIS and must not be guessed.
+118. Let the timer run without another kill. Confirm the type-5 bar progresses smoothly from empty toward full across the same approximately 30-second / 50-tick revival window.
+119. Partially fill one brother's revival bar, then subdue a second brother. Confirm both downed brothers immediately reset to empty together and then progress in sync from the new shared generation.
+120. With three or more subdued brothers, confirm every visible type-5 bar remains synchronized and a later additional subdual resets every existing downed bar again.
+121. Spam projectiles around the lethal hit. Confirm queued late hits never replace the type-5 bar with a normal HP bar and never drop the 1-HP logical shell to true zero.
+122. Let the shared timer expire. Confirm every currently subdued brother clears the type-5 bar, plays donor-backed animation 21914, resolves to its active primary NPC id, and returns at exactly 25,000 HP.
+123. Subdue all six before timeout. Confirm the completion state clears/stops revival-bar updates and none of the subdued brothers revives afterward.
+124. Destroy/restart the instance while one or more revival bars are active. Confirm no stale bar generation or presentation state leaks into the new encounter.
 
 100% fidelity gate
-124. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, exact side-hop landing/barrier blockers, runtime-verified persistent downed/revival presentation, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
+125. Do not mark RoTS VERIFIED-complete until real well/totem entry, tunnel/pads, exact formation slot/facing, exact side-hop landing/barrier blockers, runtime-verified persistent downed/revival presentation, Shadow Drag/Realm, remaining Ahrim/Karil/Verac/Throw mechanics, exact shared-special visuals/timing, reward chest, collapse/escape and unstable-to-stable Malevolent energy flow all pass targeted runtime tests.
