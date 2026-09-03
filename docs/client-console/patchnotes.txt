@@ -31,3 +31,8 @@
 - Added right-click favorite, category, preset membership, preset quantity, and removal actions.
 - Kept item definition indexing off the Swing event-dispatch thread and limited visible results/thumbnail work to avoid blocking normal client rendering.
 - Fixed Item Browser item-row interaction: a normal left-click now selects the clicked row and queues one copy to Inventory; right-click keeps the quantity/Bank/organization menu.
+
+2026-09-02
+- Rerouted Item Browser Inventory spawning from the generic ::item command handoff to the isolated ItemBrowser bridge, matching the already-isolated Bank path while leaving Commands.java untouched.
+- ItemBrowserCommandBridge now accepts inventory or bank destinations, applies the same rights/live-player/item/amount validation once, then calls Matrix3 Inventory.addItem(...) or Bank.addItem(...) and reports explicit success/failure in game.
+- Preset Inventory spawning now uses the same ItemBrowser inventory bridge as single-item and quantity-button spawning.
