@@ -29,9 +29,9 @@ public final class RiseOfTheSixBrother extends NPC {
 
 	private static final int SUBDUED_VISIBLE_HITPOINTS = 1;
 	private static final int TORAG_RELEASE_DAMAGE = 2500;
+	private static final int HURRICANE_ANIMATION = 21941;
 	private static final int HURRICANE_PULSES = 10;
 	private static final int HURRICANE_RADIUS = 1;
-	private static final int HURRICANE_FACE_DISTANCE = 2;
 	private static final int WALL_SLAM_RADIUS = 2;
 	private static final int WALL_SCAN_DISTANCE = 12;
 	private static final int WALL_SLAM_APPROACH_TICKS = 7;
@@ -624,8 +624,14 @@ public final class RiseOfTheSixBrother extends NPC {
 		resetWalkSteps();
 		setCantFollowUnderCombat(true);
 		setForceFollowClose(false);
-		faceHurricaneSpin(0);
-		setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
+		setNextFaceEntity(victim);
+		/*
+		 * Animation 21941 is runtime-confirmed to produce the shared sustained
+		 * weapon-spin presentation on Dharok, Guthan, Torag, and Verac. Start it
+		 * once here so the sequence can play naturally instead of being reset on
+		 * every damage pulse.
+		 */
+		setNextAnimation(new Animation(HURRICANE_ANIMATION));
 
 		WorldTasksManager.schedule(new WorldTask() {
 			private int pulse;
@@ -640,13 +646,6 @@ public final class RiseOfTheSixBrother extends NPC {
 
 				resetWalkSteps();
 				calcFollow(victim, true);
-				/*
-				 * Exact RoTS Hurricane sequence id is still unverified in the active 830
-				 * cache. Rotate the NPC's facing every pulse so the special is visibly a
-				 * tracking spin instead of silently replaying a normal forward auto.
-				 */
-				faceHurricaneSpin(pulse);
-				setNextAnimation(new Animation(getCombatDefinitions().getAttackEmote()));
 
 				int damage = Math.min(2500, 250 * (pulse + 1));
 				hitHurricanePlayers(damage);
@@ -660,21 +659,6 @@ public final class RiseOfTheSixBrother extends NPC {
 			}
 		}, 0, 0);
 		return true;
-	}
-
-	private void faceHurricaneSpin(int pulse) {
-		int step = pulse & 3;
-		int dx = 0;
-		int dy = 0;
-		if (step == 0)
-			dy = HURRICANE_FACE_DISTANCE;
-		else if (step == 1)
-			dx = HURRICANE_FACE_DISTANCE;
-		else if (step == 2)
-			dy = -HURRICANE_FACE_DISTANCE;
-		else
-			dx = -HURRICANE_FACE_DISTANCE;
-		setNextFaceWorldTile(new WorldTile(getX() + dx, getY() + dy, getPlane()));
 	}
 
 	private void hitHurricanePlayers(int damage) {
