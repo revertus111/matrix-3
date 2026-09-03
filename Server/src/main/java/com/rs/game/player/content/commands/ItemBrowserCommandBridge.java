@@ -4,8 +4,7 @@ import com.rs.cache.loaders.ItemDefinitions;
 import com.rs.game.player.Player;
 
 /**
- * Owner-only server authority bridge for Client Console Item Browser actions
- * that cannot be expressed by an existing Matrix3 command.
+ * Owner-only server authority bridge for Client Console Item Browser actions.
  */
 public final class ItemBrowserCommandBridge {
 
@@ -23,12 +22,18 @@ public final class ItemBrowserCommandBridge {
             player.getPackets().sendGameMessage("Admin+ only!");
             return true;
         }
-        if (cmd == null || cmd.length < 2 || !"bank".equalsIgnoreCase(cmd[1])) {
-            player.getPackets().sendGameMessage("Use: ::itembrowser bank <itemId> <amount>");
+        if (cmd == null || cmd.length < 4) {
+            player.getPackets().sendGameMessage("Use: ::itembrowser <inventory|bank> <itemId> <amount>");
             return true;
         }
-        if (cmd.length < 4) {
-            player.getPackets().sendGameMessage("Use: ::itembrowser bank <itemId> <amount>");
+
+        final boolean bank;
+        if ("inventory".equalsIgnoreCase(cmd[1])) {
+            bank = false;
+        } else if ("bank".equalsIgnoreCase(cmd[1])) {
+            bank = true;
+        } else {
+            player.getPackets().sendGameMessage("Use: ::itembrowser <inventory|bank> <itemId> <amount>");
             return true;
         }
 
@@ -54,11 +59,16 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
-        boolean added = player.getBank().addItem(itemId, amount, true);
+        boolean added = bank
+                ? player.getBank().addItem(itemId, amount, true)
+                : player.getInventory().addItem(itemId, amount);
         if (added) {
-            player.getPackets().sendGameMessage("Spawned " + amount + " x " + definition.name + " to your bank.");
+            player.getPackets().sendGameMessage("Spawned " + amount + " x " + definition.name
+                    + (bank ? " to your bank." : " to your inventory."));
         } else {
-            player.getPackets().sendGameMessage("Unable to add that item to your bank (bank may be full).");
+            player.getPackets().sendGameMessage(bank
+                    ? "Unable to add that item to your bank (bank may be full)."
+                    : "Unable to add that item to your inventory (inventory may be full or restricted)." );
         }
         return true;
     }
