@@ -168,17 +168,25 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     }
 
     private void installActions() {
-        spawnButton.addActionListener(e -> send(BossLabsClientBridge.requestTestingSpawn(selectedNpcId),
-                "Spawning controlled BossLabs test boss..."));
-        resetButton.addActionListener(e -> send(BossLabsClientBridge.requestTestingReset(selectedNpcId),
-                "Resetting controlled BossLabs test encounter..."));
+        spawnButton.addActionListener(e -> {
+            setPendingStatus("Spawning controlled BossLabs test boss...");
+            BossLabsClientBridge.requestTestingSpawn(selectedNpcId);
+        });
+        resetButton.addActionListener(e -> {
+            setPendingStatus("Resetting controlled BossLabs test encounter...");
+            BossLabsClientBridge.requestTestingReset(selectedNpcId);
+        });
         setHealthButton.addActionListener(e -> setHealth());
         forcePhaseButton.addActionListener(e -> forcePhase());
         forceAttackButton.addActionListener(e -> forceAttack());
-        clearHazardsButton.addActionListener(e -> send(BossLabsClientBridge.requestTestingClearHazards(selectedNpcId),
-                "Clearing BossLabs delayed tile work..."));
-        clearMinionsButton.addActionListener(e -> send(BossLabsClientBridge.requestTestingClearMinions(selectedNpcId),
-                "Clearing encounter-owned minions..."));
+        clearHazardsButton.addActionListener(e -> {
+            setPendingStatus("Clearing BossLabs delayed tile work...");
+            BossLabsClientBridge.requestTestingClearHazards(selectedNpcId);
+        });
+        clearMinionsButton.addActionListener(e -> {
+            setPendingStatus("Clearing encounter-owned minions...");
+            BossLabsClientBridge.requestTestingClearMinions(selectedNpcId);
+        });
     }
 
     private void setHealth() {
@@ -187,8 +195,8 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
             setLocalError("Boss HP percent must be a whole number between 1 and 100.");
             return;
         }
-        send(BossLabsClientBridge.requestTestingSetHealth(selectedNpcId, percent.intValue()),
-                "Setting controlled test boss HP...");
+        setPendingStatus("Setting controlled test boss HP...");
+        BossLabsClientBridge.requestTestingSetHealth(selectedNpcId, percent.intValue());
     }
 
     private void forcePhase() {
@@ -197,8 +205,8 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
             setLocalError("Enter a Phase ID first.");
             return;
         }
-        send(BossLabsClientBridge.requestTestingForcePhase(selectedNpcId, phaseId),
-                "Forcing test boss HP into phase " + phaseId + "...");
+        setPendingStatus("Forcing test boss HP into phase " + phaseId + "...");
+        BossLabsClientBridge.requestTestingForcePhase(selectedNpcId, phaseId);
     }
 
     private void forceAttack() {
@@ -208,11 +216,11 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
             setLocalError("Enter both Phase ID and Attack ID first.");
             return;
         }
-        send(BossLabsClientBridge.requestTestingForceAttack(selectedNpcId, phaseId, attackId),
-                "Triggering attack " + attackId + " from phase " + phaseId + "...");
+        setPendingStatus("Triggering attack " + attackId + " from phase " + phaseId + "...");
+        BossLabsClientBridge.requestTestingForceAttack(selectedNpcId, phaseId, attackId);
     }
 
-    private void send(int requestId, String message) {
+    private void setPendingStatus(String message) {
         status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText(message);
     }
