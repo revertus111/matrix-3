@@ -1,6 +1,7 @@
 package com.rs.utils;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Calendar;
@@ -9,6 +10,7 @@ import com.rs.Settings;
 
 public final class Logger {
 
+	private static final File PRESET_MAP_LOG = new File("data/logs/presets/preset-map.txt");
 	private static BufferedWriter globallogs;
 
 	static {
@@ -50,6 +52,31 @@ public final class Logger {
 	public static void log(String className, Object message) {
 		String text = "[" + className + "]" + " " + message.toString();
 		System.out.println(text);
+		if (text.contains("[PRESET-MAP]"))
+			writePresetMapLog(text);
+	}
+
+	private static synchronized void writePresetMapLog(String text) {
+		BufferedWriter writer = null;
+		try {
+			File parent = PRESET_MAP_LOG.getParentFile();
+			if (parent != null && !parent.exists())
+				parent.mkdirs();
+			writer = new BufferedWriter(new FileWriter(PRESET_MAP_LOG, true));
+			writer.write(text);
+			writer.newLine();
+			writer.flush();
+		} catch (IOException e) {
+			System.err.println("Unable to write preset mapper log: " + e.getMessage());
+		} finally {
+			if (writer != null) {
+				try {
+					writer.close();
+				} catch (IOException e) {
+					System.err.println("Unable to close preset mapper log: " + e.getMessage());
+				}
+			}
+		}
 	}
 
 }
