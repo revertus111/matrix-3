@@ -362,7 +362,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 					emptyTicks = 0;
 				}
 			}
-		}, 1, 1);
+		}, 1, 0);
 	}
 
 	private void beginSideEmpowerment(final ArenaSide emptySide, final ArenaSide occupiedSide,
@@ -520,7 +520,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 				if (elapsedTicks >= REVIVE_DELAY_TICKS)
 					stop();
 			}
-		}, 1, 1);
+		}, 1, 0);
 	}
 
 	private void queueReviveBars(int percentage) {
@@ -642,7 +642,6 @@ public class RiseOfTheSixInstance extends BossInstance {
 		for (RiseOfTheSixBrother brother : brothers) {
 			if (brother != null && brother.isSubdued())
 				count++;
-		}
 		return count;
 	}
 
