@@ -40,35 +40,72 @@ public final class CustomItemActions {
         ensureLoaded();
 
         Context context = getContext(interfaceId, componentId);
-        if (context == null)
-            return false;
+        int option = context == null ? -1 : getOption(context, packetId);
+        Item item = context == null ? null : getClickedItem(player, context, slotId);
+        int resolvedItemId = item == null ? -1 : item.getId();
+        boolean relevant = isConfiguredItem(resolvedItemId) || isConfiguredItem(slotId2);
 
-        int option = getOption(context, packetId);
-        if (option == -1)
-            return false;
+        if (relevant) {
+            CustomItemActionTrace.log("CLICK interface=" + interfaceId + " component=" + componentId
+                    + " slot=" + slotId + " slotId2=" + slotId2 + " packet=" + packetId
+                    + " context=" + (context == null ? "none" : context.name()) + " option=" + option
+                    + " resolvedItem=" + resolvedItemId);
+        }
 
-        Item item = getClickedItem(player, context, slotId);
-        if (item == null)
+        if (context == null) {
+            if (relevant)
+                CustomItemActionTrace.log("RESULT fallthrough reason=no-context");
             return false;
+        }
+        if (option == -1) {
+            if (relevant)
+                CustomItemActionTrace.log("RESULT fallthrough reason=unmapped-packet context=" + context.name()
+                        + " packet=" + packetId);
+            return false;
+        }
+        if (item == null) {
+            if (relevant)
+                CustomItemActionTrace.log("RESULT fallthrough reason=no-item context=" + context.name()
+                        + " slot=" + slotId + " slotId2=" + slotId2);
+            return false;
+        }
 
         ActionEntry entry = ACTIONS.get(key(item.getId(), context, option));
-        if (entry == null)
+        if (entry == null) {
+            if (relevant)
+                CustomItemActionTrace.log("RESULT fallthrough reason=no-configured-action item=" + item.getId()
+                        + " context=" + context.name() + " option=" + option);
             return false;
-        if ("STOCK".equals(entry.action))
+        }
+        if ("STOCK".equals(entry.action)) {
+            CustomItemActionTrace.log("RESULT fallthrough reason=stock item=" + item.getId()
+                    + " context=" + context.name() + " option=" + option + " label=" + entry.label);
             return false;
+        }
 
         String handler = HANDLERS.get(Integer.valueOf(item.getId()));
-        if (handler == null)
+        if (handler == null) {
+            CustomItemActionTrace.log("RESULT fallthrough reason=no-handler item=" + item.getId()
+                    + " context=" + context.name() + " option=" + option + " action=" + entry.action);
             return false;
-        return execute(player, handler, entry.action, context, slotId, item.getId());
+        }
+
+        CustomItemActionTrace.log("DISPATCH item=" + item.getId() + " context=" + context.name()
+                + " option=" + option + " action=" + entry.action + " handler=" + handler);
+        boolean consumed = execute(player, handler, entry.action, context, slotId, item.getId());
+        CustomItemActionTrace.log("RESULT consumed=" + consumed + " item=" + item.getId()
+                + " context=" + context.name() + " option=" + option + " action=" + entry.action);
+        return consumed;
     }
 
     private static boolean execute(Player player, String handler, String action,
             Context context, int slotId, int itemId) {
         if ("BACKPACK".equals(handler)) {
             Backpack backpack = player.getInventory().getBackpack();
-            if (backpack == null)
+            if (backpack == null) {
+                CustomItemActionTrace.log("EXECUTE backpack-missing item=" + itemId + " action=" + action);
                 return true;
+            }
             if ("OPEN".equals(action)) {
                 if (context == Context.INVENTORY || context == Context.BANK_INVENTORY)
                     backpack.openFromInventory(slotId, itemId);
@@ -76,6 +113,8 @@ public final class CustomItemActions {
                     backpack.openFromEquipment(slotId, itemId);
                 else if (context == Context.BANK)
                     backpack.openFromBank(slotId, itemId);
+                CustomItemActionTrace.log("EXECUTE backpack-open item=" + itemId + " context=" + context.name()
+                        + " slot=" + slotId + " openAfter=" + backpack.isOpen());
                 return true;
             }
             if ("EMPTY_TO_BANK".equals(action)) {
@@ -85,9 +124,13 @@ public final class CustomItemActions {
                     backpack.emptyToBank();
                 else
                     player.getPackets().sendGameMessage("This custom item action is not available here.");
+                CustomItemActionTrace.log("EXECUTE backpack-empty-to-bank item=" + itemId
+                        + " context=" + context.name() + " slot=" + slotId);
                 return true;
             }
         }
+        CustomItemActionTrace.log("EXECUTE unsupported handler=" + handler + " action=" + action
+                + " item=" + itemId + " context=" + context.name());
         player.getPackets().sendGameMessage("This custom item action is not available yet.");
         return true;
     }
@@ -149,6 +192,10 @@ public final class CustomItemActions {
         return -1;
     }
 
+    private static boolean isConfiguredItem(int itemId) {
+        return itemId >= 0 && HANDLERS.containsKey(Integer.valueOf(itemId));
+    }
+
     private static synchronized void ensureLoaded() {
         if (loaded)
             return;
@@ -157,6 +204,8 @@ public final class CustomItemActions {
         File file = findConfig();
         if (file == null) {
             Logger.log("CustomItemActions", "No " + CONFIG_PATH + " found; custom item actions disabled.");
+            CustomItemActionTrace.log("CONFIG missing expected=" + CONFIG_PATH + " userDir="
+                    + System.getProperty("user.dir", "."));
             return;
         }
         FileInputStream input = null;
@@ -165,8 +214,12 @@ public final class CustomItemActions {
             properties.load(input);
             parse(properties);
             Logger.log("CustomItemActions", "Loaded " + ACTIONS.size() + " custom action(s) from " + file.getPath());
+            CustomItemActionTrace.log("CONFIG loaded path=" + file.getPath() + " actions=" + ACTIONS.size()
+                    + " handlers=" + HANDLERS.size());
         } catch (IOException e) {
             Logger.handle(e);
+            CustomItemActionTrace.log("CONFIG read-failed path=" + file.getPath() + " error="
+                    + e.getClass().getSimpleName() + ":" + String.valueOf(e.getMessage()));
         } finally {
             if (input != null) {
                 try {
@@ -238,7 +291,6 @@ public final class CustomItemActions {
 
     private static final class ActionEntry {
         private final String action;
-        @SuppressWarnings("unused")
         private final String label;
 
         private ActionEntry(String action, String label) {
