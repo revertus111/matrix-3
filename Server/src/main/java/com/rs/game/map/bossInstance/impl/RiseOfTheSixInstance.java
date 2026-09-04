@@ -642,6 +642,7 @@ public class RiseOfTheSixInstance extends BossInstance {
 		for (RiseOfTheSixBrother brother : brothers) {
 			if (brother != null && brother.isSubdued())
 				count++;
+		}
 		return count;
 	}
 
