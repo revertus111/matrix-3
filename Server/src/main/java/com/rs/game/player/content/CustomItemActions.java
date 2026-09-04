@@ -33,6 +33,24 @@ public final class CustomItemActions {
     private CustomItemActions() {
     }
 
+    /**
+     * Records the raw item-context button before Backpack/controller ownership can
+     * consume it. This is diagnostic only and never changes the routing result.
+     */
+    public static void tracePipelineEntry(Player player, int interfaceId, int componentId,
+            int slotId, int slotId2, int packetId) {
+        if (player == null)
+            return;
+        ensureLoaded();
+        Context context = getContext(interfaceId, componentId);
+        if (context == null && !isConfiguredItem(slotId2))
+            return;
+        CustomItemActionTrace.log("PIPELINE interface=" + interfaceId + " component=" + componentId
+                + " slot=" + slotId + " slotId2=" + slotId2 + " packet=" + packetId
+                + " context=" + (context == null ? "none" : context.name())
+                + " configuredSlotId2=" + isConfiguredItem(slotId2));
+    }
+
     public static boolean processButtonClick(Player player, int interfaceId, int componentId,
             int slotId, int slotId2, int packetId) {
         if (player == null)
