@@ -1,0 +1,35 @@
+RoTS recorder-found runtime correctness test list
+
+Build / regression
+[ ] Pull current `main` and Eclipse/Java 8 clean-build the Server with no compile errors.
+[ ] Start ordinary non-RoTS gameplay and confirm normal NPC natural HP restoration still works; the regeneration suppression must remain RoTS/subdued-only.
+
+Revive bar cadence
+[ ] Start a fresh RoTS instance with the Fight Recorder enabled.
+[ ] Subdue one brother and keep the encounter alive until revival.
+[ ] Confirm `REVIVE_PROGRESS` advances once per recorder/world-task tick rather than every other tick.
+[ ] Confirm the active generation reaches `bar=255/255` at the end of the 50-step revive window, with no half-full revival around 127/255.
+[ ] Confirm the expired generation stops producing `REVIVE_PROGRESS` after revival or after a newer subdue increments `reviveGeneration`.
+[ ] Confirm the revived brother still returns at the current 25,000 HP implementation value and uses animation 21914.
+
+Subdued 1-HP shell
+[ ] Subdue a brother and leave it down for at least 60 seconds when practical.
+[ ] Confirm every `SNAPSHOT_BROTHER` for that brother remains `hp=1/50000` while `subdued=true`.
+[ ] Confirm there are no periodic +1 `BROTHER_HP_CHANGE` events while subdued.
+[ ] Confirm incoming delayed hits are still suppressed and do not remove the visible 1-HP shell.
+[ ] Allow revival and confirm normal HP behavior resumes once `subdued=false`.
+
+Empty-side warning cadence
+[ ] Start a fresh instance with all brothers active and keep all players on only one side.
+[ ] Do not subdue any brother during the first warning window.
+[ ] Confirm `SIDE_HOP_WARNING` occurs after about 40 recorder ticks (~24 seconds at the observed ~600 ms cadence), not ~48 seconds.
+[ ] Confirm the warning uses the actually empty side and occupied opposite side from the snapshots.
+[ ] Keep the condition valid through the current hop delay and confirm `SIDE_HOP_MOVE` / `SIDE_HOP_COMPLETE` are produced; if the condition changes first, confirm `SIDE_HOP_CANCEL` instead.
+
+Recorder handoff
+[ ] Finish or leave the instance normally and confirm `INSTANCE_FINISH` and `RECORDER END` are written and the queue drains without `DROPPED_LINES`.
+[ ] Upload the new `.log` and use it to promote the corresponding rows in `docs/rots/updated.md` from `PATCHED - VERIFY` to `VERIFIED FIXED` only when the runtime evidence proves them.
+
+Next issue after these three pass
+[ ] Trace and patch RoTS-specific same-side targeting so East-side brothers cannot acquire/keep a West-side player (and vice versa) without changing generic Matrix3 NPC targeting.
+[ ] After side targeting is fixed, run Guthan on the player's side and exercise the full Impale sequence.
