@@ -113,13 +113,13 @@ public final class CustomItemActionConfig {
             return false;
 
         InterfaceDefinitions component = Class530.method6338(widgetHash, child, -582563422);
-        if (component == null) {
-            CustomItemActionTrace.log("BANK_NATIVE widget=762:7 child=" + child
-                    + " optionRaw=" + optionValue + " component=null");
+        if (component == null)
             return false;
-        }
 
         int itemId = component.nvmtheindexisotherone * 411192987;
+        if (!ITEM_IDS.contains(Integer.valueOf(itemId)))
+            return false;
+
         int option = (int) optionValue;
         boolean explicit = isExplicitBankInventoryMenu(itemId);
         ActionEntry configured = option >= 1 && option <= MAX_INTERFACE_OPTIONS
@@ -127,8 +127,8 @@ public final class CustomItemActionConfig {
         boolean suppress = explicit && option >= 1 && option <= MAX_INTERFACE_OPTIONS && configured == null;
 
         CustomItemActionTrace.log("BANK_NATIVE widget=762:7 child=" + child + " item=" + itemId
-                + " option=" + option + " configuredItem=" + ITEM_IDS.contains(Integer.valueOf(itemId))
-                + " explicit=" + explicit + " configured=" + describe(configured) + " suppress=" + suppress);
+                + " option=" + option + " explicit=" + explicit
+                + " configured=" + describe(configured) + " suppress=" + suppress);
         return suppress;
     }
 
