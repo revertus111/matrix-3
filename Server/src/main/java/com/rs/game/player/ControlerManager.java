@@ -251,6 +251,7 @@ public final class ControlerManager implements Serializable {
     }
 
     public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packetId) {
+	CustomItemActions.tracePipelineEntry(player, interfaceId, componentId, slotId, slotId2, packetId);
 	Backpack backpack = player.getInventory().getBackpack();
 	if (backpack != null && backpack.processButtonClick(interfaceId, componentId, slotId, packetId))
 	    return false;
