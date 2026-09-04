@@ -1,0 +1,10 @@
+Combat Framework foundation test list
+
+1. Eclipse / Java 8 clean build succeeds with no new compile errors.
+2. Start the server and confirm a normal player using the default STANDARD profile can attack NPCs normally.
+3. Confirm STANDARD player-vs-player combat still uses the same Matrix3 hit-chance behavior as before this patch.
+4. In a debugger or controlled dev harness, set a player to POE_STYLE and setAccuracyMultiplier(player, 1.25D); confirm the resulting player-originated hit chance is 25% above Matrix3's native calculated value.
+5. Switch the same player back to STANDARD and confirm the stored runtime multiplier no longer changes hit chance.
+6. Set the multiplier back to 1.0D or call clearRuntimeState(player); confirm neutral behavior returns.
+7. Verify setAccuracyMultiplier rejects zero, negative, NaN, and infinite values.
+8. Confirm NPC-originated attacks are unchanged; this first slice only hooks player-originated hit chance.

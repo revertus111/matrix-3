@@ -1,0 +1,7 @@
+2026-09-04
+- Added the Combat Framework runtime profile/feature foundation without replacing Matrix3 combat ownership.
+- Added STANDARD, POE_STYLE, and RTS profiles; only POE_STYLE currently enables the implemented ACCURACY_MODIFIERS capability.
+- Added per-player runtime accuracy multipliers with neutral 1.0 defaults and explicit validation.
+- Routed player-originated hit chance through CombatFramework only after Matrix3 completes its native accuracy/defence calculation.
+- STANDARD remains a strict passthrough, so existing combat behavior is unchanged by default.
+- Deferred player-save persistence, damage modifiers, projectiles, status effects, crit extensions, and NPC/boss framework hooks until their owning features are implemented.
