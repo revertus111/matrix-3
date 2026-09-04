@@ -133,6 +133,16 @@ public final class RiseOfTheSixBrother extends NPC {
 		return subdued;
 	}
 
+	@Override
+	public boolean restoreHitPoints() {
+		if (subdued) {
+			if (getHitpoints() != SUBDUED_VISIBLE_HITPOINTS)
+				setHitpoints(SUBDUED_VISIBLE_HITPOINTS);
+			return false;
+		}
+		return super.restoreHitPoints();
+	}
+
 	public boolean isDharokCharging() {
 		return dharokCharging;
 	}
