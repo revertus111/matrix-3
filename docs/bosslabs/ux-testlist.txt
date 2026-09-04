@@ -1,0 +1,92 @@
+Matrix3 BossLabs - creator UX acceptance list
+
+Purpose
+- This checklist supplements docs/bosslabs/testlist.txt.
+- The existing runtime testlist remains the authority for combat/runtime regression checks.
+- This file verifies the BossLabs V2 creator workflow defined in BOSSLABS.md.
+
+Core creator rules
+1. Confirm a competent RSPS developer unfamiliar with BossLabs can identify how to select a boss, add a phase, add an attack, test an attack, apply live changes, and save without external instructions.
+2. Confirm normal boss creation does not require knowledge of BossDefinition, wire/store versions, command protocol, Java class names, or registry internals.
+3. Confirm BossLabs never requires the creator to retype a phase, attack, NPC, item, pattern, or other value that is already selected/known by the tool.
+4. Confirm raw IDs remain available as power-user shortcuts without being the only normal workflow where searchable selection can be provided safely.
+5. Confirm advanced technical information is available when useful but does not dominate the default creator UI.
+
+Boss selection / overview
+6. Confirm one NPC search field accepts both numeric IDs and names with no ID/name mode control.
+7. Select an NPC and confirm all verified known identity/combat information auto-populates without duplicate entry.
+8. Confirm the normal overview emphasizes creator-facing information; resolved script/internal ownership details belong in Advanced/Developer Details when possible.
+9. Confirm DRAFT, LIVE, and SAVED state are immediately understandable and visually distinct.
+
+Phases
+10. Confirm phases are presented by meaningful name/order and HP range rather than requiring creators to work primarily with internal Phase IDs.
+11. Add a phase and confirm BossLabs creates/manages any required stable internal identifier automatically.
+12. Confirm phase HP overlap/gap problems are shown against the exact affected phases with plain-language correction guidance.
+13. Confirm the selected phase exposes direct actions to add attacks and phase actions.
+14. Confirm `Test / Enter Selected Phase` uses the current selected phase internally and never asks the creator to type its Phase ID again.
+15. Confirm phase lists/cards make attack count and important transition behavior visible without opening every control.
+
+Attacks
+16. Confirm a new basic attack starts from safe valid defaults and can be tested without filling a long mandatory form.
+17. Confirm the attack list/card shows a useful summary such as name, style, targeting, weight/cooldown, and mechanic badges where relevant.
+18. Confirm common/basic fields are easy to reach while rotation, FX, area pattern, lingering effects, and advanced settings are grouped/collapsible or conditionally shown.
+19. Confirm enabling a mechanic reveals only settings relevant to that mechanic rather than permanently adding more always-visible rows.
+20. Confirm internal Attack IDs are generated/managed by BossLabs during normal creation and are not required for everyday editing/testing.
+21. Confirm `Test Selected Attack` invokes the selected attack through the authoritative testing path without manual Phase ID/Attack ID entry.
+22. Confirm duplicate/copy workflows, when implemented, preserve intended settings and generate/maintain safe stable identifiers automatically.
+
+Assets
+23. Confirm animation/GFX/projectile controls accept direct numeric IDs for experienced developers.
+24. When search/browse support exists, confirm the same controls also allow finding assets without memorizing IDs.
+25. Confirm asset preview/search work does not run expensive cache work on the Swing EDT or game/render thread.
+26. Confirm BossLabs links/opens specialist animation/model/FX tools instead of duplicating their full editors.
+
+Attack Pattern
+27. Confirm Attack Pattern is presented separately from Arena Layout so creators understand that pattern tiles are relative mechanic geometry, not fixed world-arena coordinates.
+28. Confirm paint/erase, zoom, pan, hover, presets, and copy/paste manipulate the same DRAFT pattern data used by runtime publishing.
+29. Confirm changing zoom/pan never changes persisted pattern coordinates.
+30. Confirm selected attack context carries into the pattern editor without re-selecting/retyping an Attack ID.
+31. Confirm pattern validation identifies oversized/out-of-range patterns before publish and does not partially mutate LIVE state.
+
+Arena Layout
+32. When Arena Layout is implemented, confirm it edits encounter world/anchor information such as bounds, boss spawn, player entry, mechanic anchors, and named spawn positions rather than reusing attack-pattern semantics incorrectly.
+33. Confirm Arena Layout remains encounter-scoped and does not become a general RuneScape map editor.
+34. Confirm shared canvas technology does not merge Arena Layout data ownership with relative Attack Pattern data.
+
+Drops
+35. When the drop editor is implemented, confirm it uses Matrix3's existing drop authority rather than a second drop engine.
+36. Confirm item selection supports name/ID lookup where a stable shared item-browser path exists.
+37. Confirm rarity/chance/weight presentation matches Matrix3's real drop semantics and is understandable without reading the backing file format.
+
+Testing / iteration
+38. Confirm Spawn Boss Here, Reset Encounter, Set HP, Clear Hazards, and Clear Minions remain easy to identify and affect only the exact controlled test NPC/session authorized by the server.
+39. Confirm phase/attack context testing never depends on manually entered internal IDs in the normal UI.
+40. Confirm testing status evolves toward creator-useful runtime visibility: current phase, HP, target, last attack, active hazards, and owned minions where authoritative reads exist.
+41. Confirm applying a DRAFT live, testing it, changing it again, and reapplying is a short repeatable workflow with no restart required for definition-backed changes.
+42. Confirm Save & Apply still persists before publishing and failure cannot silently replace the current live definition.
+43. Confirm Undo Last Apply and Apply Saved remain clear recovery actions.
+
+Validation / feedback
+44. Confirm validation messages name the exact phase/attack/mechanic and explain the correction in plain language when the cause is known.
+45. Confirm invalid DRAFT changes cannot partially publish.
+46. Confirm common validation does not rely on repeated modal dialogs.
+47. Confirm disabled actions explain why they are unavailable when the reason is not obvious.
+
+Window / presentation
+48. Confirm BossLabs is intentionally dark themed and does not expose unfinished default Swing presentation.
+49. Test practical non-maximized sizes and confirm no important creator action becomes unreachable; use reflow, scroll, collapse, or split resizing as needed.
+50. Test Windows 100%, 125%, and 150% display scaling for readable text and reachable controls.
+51. Confirm typing in BossLabs fields does not also trigger Matrix3 movement/hotkeys, and returning focus to the game restores normal input.
+52. Confirm closing/reopening BossLabs leaves no stale response/testing listeners attached to disposed panels.
+53. Confirm final panel composition uses direct ownership rather than permanent title-string/component-tree replacement hacks when the V2 shell is implemented.
+
+First-boss proof
+54. Build the first complete boss through the creator-facing BossLabs workflow rather than bypassing normal UI for routine phases/attacks/mechanics.
+55. Confirm the boss can be iterated through DRAFT -> Apply Live -> test -> adjust -> Save & Apply without requiring source edits for behavior already supported by BossLabs.
+56. Confirm the first boss proves projectile, AoE, hazard, alternate targeting, phases, minions, cleanup, persistence, testing, and drops through Matrix3 authorities.
+57. Record every repeated creator pain point encountered while building boss #1; improve only the high-value repeated friction before speculative new tooling.
+58. Build a second smaller boss and confirm the normal workflow is reusable without copying boss #1 implementation wholesale.
+
+Professional usability gate
+59. Hand BossLabs to another competent RSPS developer with no implementation briefing. Confirm they can complete a small boss-edit/test task without asking what internal IDs, wire/storage versions, or framework classes mean.
+60. If they cannot, treat that workflow as a UX defect unless the task is genuinely Advanced/custom-Java work.
