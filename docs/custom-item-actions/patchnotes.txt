@@ -26,3 +26,4 @@
 - verified-static: custom actions are invoked from `ControlerManager.processButtonClick(...)` after the open Backpack storage-interface handler and before normal controller/preset routing; they are not called directly from `ButtonHandler`.
 - Added a pre-Backpack pipeline trace call so a raw item click can still be seen even if Backpack interface ownership consumes it before `CustomItemActions.processButtonClick(...)`.
 - The runtime log path resolves back to repository `Server/data/logs` from normal Client/Server Eclipse working directories; `Server/.gitignore` already excludes `data/logs/`.
+- Tightened the trace so detailed CLIENT bank-menu and SERVER pipeline output is emitted only for items present in the custom-item-action config, avoiding normal inventory/bank click spam.
