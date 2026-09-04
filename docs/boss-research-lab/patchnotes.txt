@@ -1,0 +1,6 @@
+2026-09-03
+- Added Boss Research Lab planning document.
+- Defined RoTS as the first preset while keeping the tool generic for future bosses.
+- Scoped v1 around fast NPC transformation/spawning, animation/GFX/projectile testing, persistent evidence, related-asset candidates, candidate classification, and lightweight test sequences.
+- Explicitly separated research ownership from BossLabs combat authoring, map editing, drop editing, FX Labs, and generic cache editing.
+- Defined the 10-minute-session workflow and v1 stop condition so tool work remains driven by RoTS research needs.
