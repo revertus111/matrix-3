@@ -1,129 +1,208 @@
-# Rise of the Six - 1:1 Reconstruction
+# Rise of the Six - Revision 830 1:1 Reconstruction
 
 ## Goal
 
-Bring the existing Matrix3-native Rise of the Six implementation as close as possible to the original RuneScape encounter using revision-830 cache data plus runtime/video/documentary evidence.
+Reconstruct The Barrows: Rise of the Six as closely as possible to the **revision-830 late-2014 RuneScape encounter** using revision-830 cache data plus period/runtime/video/documentary evidence.
 
-This is no longer a from-scratch NPC-discovery task. A substantial RoTS encounter foundation already exists in the repository and is the implementation we are refining toward 100% / 1:1 parity.
+The current Matrix3-native RoTS implementation is a useful gameplay foundation, but it is **not** the authenticity authority. Existing behavior must be kept, corrected, or replaced only after comparison against the reconstruction specification.
 
-The cache is authoritative for available revision-830 assets. It does not by itself prove the gameplay meaning of an animation, GFX, model, projectile, object, sound, timing, or mechanic.
+The revision-830 cache is authoritative for what assets and map data are available. It does not by itself prove the gameplay meaning of an animation, GFX, model, projectile, object, sound, coordinate, timing, or mechanic.
+
+## Core reconstruction rule
+
+**Research/specification first. Implementation second.**
+
+Do not continue adding or polishing specials while basic encounter facts are still uncertain.
+
+Before a mechanic is treated as final, establish as much of the following as evidence allows:
+
+- arena/map/plane and relevant coordinates,
+- legal targets and side ownership,
+- trigger conditions,
+- normal attacks before/after the mechanic,
+- animation,
+- GFX/projectile,
+- movement/pathing,
+- damage/effects,
+- AoE/range,
+- timing/duration,
+- recovery/return-to-combat behavior,
+- multiplayer interaction,
+- evidence source and confidence label.
+
+Unknown values stay unknown. Do not fill gaps with donor behavior merely to make the encounter look complete.
+
+## Evidence hierarchy
+
+Prefer evidence in this order:
+
+1. **Revision-830 cache/runtime evidence** - map data, definitions, assets and behavior directly verified in this project.
+2. **Jagex / contemporary RuneScape evidence** - official material and period encounter behavior.
+3. **Period late-2014 guides/videos** - especially material matching the revision-830 era.
+4. **Later RuneScape documentation** - useful when the mechanic is known not to have changed.
+5. **RSPS donor implementations** - leads/reference only; never authenticity proof by themselves.
+
+Evidence labels:
+
+- `VERIFIED` - confirmed at runtime.
+- `verified-static` - directly established from source/cache/data without runtime confirmation.
+- `HYPOTHESIS` - plausible interpretation that still needs proof.
+
+Never promote a cache correlation, donor implementation, current Matrix3 behavior, or visual resemblance to authentic `VERIFIED` behavior without evidence.
 
 ## Main-goal status plan
 
-The permanent status anchor for this workstream is:
+Permanent status anchor:
 
-**100% / 1:1 2014-era Rise of the Six.**
-
-Status updates in chat must keep the following top-level rows stable so they act as a roadmap back to the original goal after any side task. Small animation, GFX, tooling, cache-research, bug-fix, or one-mechanic patches are reported separately as `Just completed:` and do not replace this table.
+**100% / 1:1 revision-830 late-2014 Rise of the Six.**
 
 | Main RoTS milestone | Current status | Meaning |
 | --- | --- | --- |
-| Encounter / arena foundation | 🟡 Foundation | Six-brother instance, daily rotation, side ownership, spawn/fight foundation exist; exact arena/side fidelity remains incomplete. |
-| Shadow bond / subdue / revive / all-six completion | 🔵 In Progress | Core logical system works in runtime, but exact original presentation/timing still needs parity work. |
-| Normal combat and attack cadence | 🟡 Foundation | Normal attacks exist for all brothers; exact 2014 cadence/timing still needs verification. |
-| Melee brother specials | 🔵 In Progress | Dharok, Guthan, Torag, and Verac have substantial special foundations; Hurricane now uses 21941, while remaining specials still need 1:1 verification/completion. |
-| Ahrim special rotation | ❌ Not started | Normal magic and flying state exist, but authentic special rotation is not implemented. |
-| Karil special rotation | ❌ Not started | Normal ranged combat exists, but authentic special rotation/Shadow Dash behavior is not implemented. |
-| Shared side/team mechanics | 🟡 Foundation | Empty-side empowerment foundation and Brother Throw pairing logic exist; exact movement/assets and Throw execution remain incomplete. |
-| Portal / barriers / shadow-realm / arena transitions | 🟡 Foundation | Some side ownership/boundary behavior exists, but exact encounter transition and barrier parity is incomplete. |
-| Completion / escape / rewards / cleanup | ⚠️ Needs focused audit | Do not assume absent or complete until the existing flow is audited directly. |
-| Final 1:1 parity and full-fight regression pass | ❌ Not started | Full encounter timing, visuals, mechanics, edge cases, and completion flow must be verified together after the major systems are finished. |
-| **100% / 1:1 Rise of the Six** | 🔵 **In Progress** | This is the permanent overall goal. |
+| Evidence/specification pack | 🔵 In Progress | Build the authoritative encounter specification before further broad implementation. |
+| Correct main arena / map / spawn geometry | ⚠️ Needs verification | Current copied map and spawn layout are not trusted as authentic. Correct revision-830 arena must be proven first. |
+| Encounter / side foundation | 🟡 Foundation | Instance, rotation and logical side state exist, but exact arena bounds, target rules and transitions depend on the correct map/spec. |
+| Shadow bond / subdue / revive / all-six completion | 🔵 In Progress | Core logical flow works in runtime; exact late-2014 presentation/timing still requires parity evidence. |
+| Normal combat and attack cadence | 🟡 Foundation | Normal attacks exist for all six; authentic animations, hit timing and cadence still need a full evidence pass. |
+| Melee brother specials | 🔵 In Progress | Substantial prototypes exist, but rotations/assets/timing must be checked against the specification before being treated as authentic. |
+| Ahrim special rotation | ❌ Not started | Normal magic/flying foundations exist; authentic late-2014 rotation is not implemented. |
+| Karil special rotation | ❌ Not started | Normal ranged combat exists; authentic late-2014 special rotation is not implemented. |
+| Shared side/team mechanics | 🟡 Foundation | Some empowerment/Throw foundations exist; authentic cross-brother and side behavior is incomplete. |
+| Portal / barriers / Shadow Realm / arena transitions | ⚠️ Needs verification | Correct maps, planes, objects, boundaries and transition behavior must be proven before implementation is trusted. |
+| Completion / chest / escape / rewards / cleanup | ⚠️ Needs focused audit | Full late-2014 end-of-fight flow still requires specification and implementation audit. |
+| Final 1:1 parity and full-fight regression | ❌ Not started | Run only after all major encounter systems are evidence-backed and implemented. |
+| **100% / 1:1 Rise of the Six** | 🔵 **In Progress** | Permanent overall goal. |
 
-### Roadmap order
+## Roadmap order
 
-Use this order to prevent side work from becoming the project:
+Use this order unless new evidence proves a prerequisite must move earlier:
 
-1. Keep the existing encounter/bond foundation stable while fixing only evidence-backed parity gaps.
-2. Lock down normal combat cadence and finish the melee-brother special set already furthest along.
-3. Implement and verify Ahrim's authentic special rotation.
-4. Implement and verify Karil's authentic special rotation.
-5. Finish shared side/team mechanics, especially empowerment behavior and Brother Throw execution.
-6. Finish portal/barrier/shadow-realm/arena-transition fidelity.
-7. Audit and finish completion, escape, rewards, and cleanup.
-8. Run the final full-fight 1:1 regression/parity pass.
+1. Build the revision-830 RoTS evidence/specification pack.
+2. Prove the correct main combat arena, planes, spawn geometry, split, ledges, portal/chasm, barriers and related map objects directly against revision-830 data/runtime.
+3. Prove entrance/tunnel, Shadow Realm and escape areas as distinct encounter locations where applicable.
+4. Define exact side ownership, legal targeting/damage and cross-side mechanics on the verified arena.
+5. Lock down all six normal attacks: animation, projectile/GFX, damage rules, attack speed and hit delay.
+6. Define the authentic special-rotation controller and normal-auto spacing.
+7. Finish brothers one at a time against the specification: Dharok -> Torag -> Guthan -> Verac -> Ahrim -> Karil.
+8. Finish shared/team mechanics: empowerment, Brother Throw, ledge interactions and side transfers.
+9. Finish Shadow Realm / portal / barrier / arena-transition fidelity.
+10. Audit and finish completion, chest, escape, rewards and cleanup.
+11. Run the final full-fight recorder/parity regression pass.
 
-At any point, a necessary side task may temporarily interrupt this order, but the status table and `Next main step:` must continue to point back to this roadmap.
+Do not return to broad animation/GFX hunting unless a specific evidence gap requires it.
 
-### Current next main step
+## Current highest-priority finding: arena is not trusted
 
-Run the live encounter with the RoTS Fight Recorder, verify the integrated 21941 Hurricane and Dharok Greatest Axe behavior from the generated runtime log, then continue finishing the **melee brother specials** milestone rather than returning to broad animation/tool research.
+The current implementation copies the source map beginning from Matrix3 source ratio/chunk values corresponding to the area around `2320,6024`, then places the six brothers across one horizontal row near `2326-2336,6034`.
 
-## Evidence labels
+This is **current implementation geometry only**, not authenticated RoTS geometry.
 
-- `VERIFIED` - confirmed in runtime.
-- `verified-static` - directly established from source/cache data but not runtime-confirmed as authentic RuneScape behavior.
-- `HYPOTHESIS` - plausible interpretation that still needs proof.
+External historical coordinate evidence identifies `2328,6036,1` as **Shadow Realm**. Because that coordinate lies inside the currently copied source area, the current map being the Shadow Realm rather than the main two-sided combat arena is a **strong HYPOTHESIS** that must be proven against revision-830 map/runtime data before any map change.
 
-Never promote a cache correlation or current implementation choice to authentic `VERIFIED` behavior without runtime/video confirmation.
+A historical RoTS coordinate around `3358,9433` is a **candidate lead only** for the main combat arena. Do not patch to it until revision-830 data/runtime confirms the correct region, plane, structure and two-sided geometry.
+
+### Map verification requirements
+
+Before changing the encounter map constants, establish:
+
+- correct main combat arena region/chunks,
+- correct plane(s),
+- two combat sides and exact playable bounds,
+- central portal/chasm geometry,
+- Ahrim/Karil ledges or pillar positions,
+- brother spawn slots,
+- player entry/start positions,
+- barriers/collision/crossing points,
+- pressure plates/entrance elements if applicable to this build,
+- Shadow Realm region as a separate map/location if confirmed,
+- post-kill chest/escape tunnel region and transitions.
+
+Do not implement a side-isolation fix around approximate X-coordinate splitting if the underlying arena is still unverified.
 
 ## Current implementation authority
 
-RoTS is currently owned by the existing Matrix3 gameplay/content classes:
+RoTS gameplay remains owned by the existing Matrix3 classes:
 
 - `Server/src/main/java/com/rs/game/map/bossInstance/impl/RiseOfTheSixInstance.java`
-  - encounter-wide state, daily west/east rotation, subdue/revive bond, survivor healing, fight completion, side ownership, and empty-side empowerment.
+  - encounter-wide state, daily rotation, logical side ownership, subdue/revive bond, survivor healing, completion and current empowerment foundation.
 - `Server/src/main/java/com/rs/game/npc/rots/RiseOfTheSixBrother.java`
-  - brother logical state plus current melee-special implementations.
+  - brother logical state and current special prototypes.
 - `Server/src/main/java/com/rs/game/npc/combat/impl/RiseOfTheSixCombat.java`
-  - normal empowered-brother attacks and special dispatch.
+  - current normal attacks and special dispatch.
 - `Server/src/main/java/com/rs/game/npc/rots/RiseOfTheSixReviveBar.java`
-  - encounter revive-progress hit bar.
+  - revive-progress hit bar.
 
-Do not replace these with a second RoTS controller. Improve the existing implementation in small verified slices.
+Do not replace these with a second RoTS controller. Once the specification is strong enough, improve the existing implementation in small verified slices.
 
-## Current parity status
+## Current implementation status
 
 ### Encounter foundation
 
 - Six empowered brothers: implemented.
-- 20-day west/east brother rotation: implemented.
-- Side ownership/player-side classification: implemented, but exact arena split/bounds still need runtime verification.
+- 20-day west/east brother rotation: implemented; authenticity still belongs to the evidence/spec pass.
+- Current side ownership/player-side classification: implemented but based on approximate current map geometry.
 - Logical subdue instead of ordinary NPC death: working in runtime.
 - Survivor heal on brother subdue: implemented at 5,000.
-- Revive countdown: implemented at 50 server ticks.
+- Revive countdown: implemented at 50 server task ticks; recorded runtime is approximately 30 seconds, but authentic build timing remains an evidence item.
 - Revive hitpoints: implemented at 25,000.
-- Custom revive bar: implemented.
+- Custom revive bar: implemented and runtime-synchronized with current revival logic.
 - All-six-subdued fight-complete state: working in runtime.
-- Empty-side warning/hop: implemented foundation; exact classic landing positions/assets and blockers are incomplete.
-- Brother Throw eligibility/pairing rules: implemented; actual Throw flight/landing mechanic remains dormant.
+- Empty-side warning/hop: prototype foundation exists; authentic geometry, landing positions, blockers and timing remain unproven.
+- Brother Throw eligibility/pairing rules: prototype exists; authentic execution is incomplete.
 
 ### Brother mechanics
 
-- Dharok: Hurricane now uses animation 21941, while Greatest Axe/charge and Wall Slam shells exist. Greatest Axe visual/timing and Wall Slam authenticity remain incomplete.
-- Torag: Hurricane now uses animation 21941; Whack/Pummel flow and Wall Slam shell exist. Current Torag animation mapping is documented in `assets/animations.txt`; exact 1:1 timing still needs runtime comparison.
-- Guthan: Hurricane now uses animation 21941 plus a substantial Impale implementation exists, including armed/spearless NPC transformation, projectile, bleed, victim state, retrieval, and Torag interaction. Exact damage/timing/visual parity still needs verification.
-- Verac: animation 21941 is runtime-confirmed to produce his shared melee spin presentation. Current ordinary special path is still Wall Slam, with forced post-revive Hurricane behavior available through the shared melee system; authentic full special rotation remains incomplete.
-- Ahrim: normal magic combat exists; flying NPC state 18539 is VERIFIED, but the authentic Ahrim special rotation is not yet implemented.
-- Karil: normal ranged combat exists; authentic Karil special rotation, including Shadow Dash-related behavior, is not yet implemented.
+Treat these as **current prototypes/evidence**, not completed authenticity claims:
 
-## Important runtime findings
+- Dharok: 21941 shared spin/Hurricane presentation, Greatest Axe storage/release prototype and Wall Slam prototype exist.
+- Torag: 21941 shared spin, Whack/Pummel prototype and Wall Slam prototype exist.
+- Guthan: 21941 shared spin plus substantial Impale throw/spearless/retrieve prototype exists.
+- Verac: 21941 shared spin runtime visual is known; authentic full special rotation remains incomplete.
+- Ahrim: normal magic exists; flying NPC state `18539` is `VERIFIED`; authentic special rotation remains unimplemented.
+- Karil: normal ranged exists; authentic special rotation remains unimplemented.
 
-- NPC 18539 = VERIFIED flying Ahrim state.
-- NPC 18542 = VERIFIED spearless Guthan state used by current Impale.
-- NPCs 18546-18551 are body-only/null-name cache definitions, but current revision-830 runtime testing found these inactive definitions render invisibly. The current encounter therefore deliberately keeps the active brother model visible at 1 HP while logically subdued. Their authentic intended cache role remains unproven.
-- The current RoTS combat-family models render with Santa hats in this revision-830 cache/runtime.
-- Animation 21941 = VERIFIED runtime shared spin visual across Dharok, Guthan, Torag, and Verac. The live Hurricane implementation now uses 21941 instead of the old normal-attack-emote/manual-facing approximation.
+## Working runtime evidence already established
 
-## Documentary evidence guiding the shared spin
+Preserve these findings while the broader reconstruction is redone:
 
-A period RoTS guide documents a shared `Spinning Attack` for all melee brothers and lists it for Torag, Guthan, Verac, and Dharok. The same guide separately describes Verac's `Helicopter` move, so those two visuals must not be conflated during animation identification.
+- Fight Recorder produces useful per-tick/event telemetry.
+- Revive bar cadence now matches the active revive generation in current Matrix3 scheduling.
+- Current logical subdued shells remain exactly 1 HP without global NPC-regeneration changes.
+- Empty-side warning now executes at the intended current every-task-tick cadence.
+- NPC `18539` is `VERIFIED` as the flying Ahrim state in current runtime.
+- NPC `18542` is `VERIFIED` as the spearless Guthan state used by the current Impale implementation.
+- NPCs `18546-18551` are body-only/null-name cache definitions and render invisibly in current revision-830 runtime testing; authentic purpose remains unproven.
+- Current RoTS combat-family models render with Santa hats in this revision-830 cache/runtime.
+- Animation `21941` is `VERIFIED` to produce the sustained shared spin presentation across Dharok, Guthan, Torag and Verac.
+- Current Greatest Axe stored-damage release executes functionally.
+- Current Torag Whack/Pummel flow executes functionally.
+- Current Guthan single-player Impale throw/impact/retrieve flow executes functionally.
+- Current Wall Slam prototype executes hit and miss cases.
+- Current logical subdue/revive/all-six-completion flow executes.
 
-Reference:
-- https://forum.tip.it/topic/326100-rise-of-the-six-guide-rots/
+These prove current code behavior. They do **not** automatically prove late-2014 authenticity.
 
-This evidence supports using 21941 for the shared Hurricane/Spinning Attack presentation. Exact original sequence duration, pulse alignment, movement cadence, and damage timing still require direct encounter/video comparison before Hurricane is considered fully 1:1.
+## Known current runtime defects / uncertainties
 
-## Current research strategy
+- West/east combat isolation is not enforced in the current approximate arena: wrong-side brothers can target/follow/attack a player and player damage can land on wrong-side brothers.
+- Because the main arena itself is now unverified, do not patch permanent side gating until correct map geometry and side rules are specified.
+- Guthan Impale bleed cadence and multiplayer victim selection still need authentic evidence/runtime exercise.
+- Greatest Axe animation duration, charge timing and missing visual remain unresolved.
+- Post-revive melee special sequencing remains unverified.
+- Current one-shot task delays describe Matrix3 scheduler behavior, not automatically authentic RuneScape timings.
+- Current normal attack delays and special spacing are prototypes and require replacement or confirmation from evidence.
 
-1. Audit the existing RoTS implementation before adding anything new.
-2. Separate mechanics that already exist from mechanics that are approximated or missing.
-3. Use source-known RoTS animation/GFX/projectile IDs to narrow cache research rather than scanning broad numeric neighborhoods blindly.
-4. Use Owner Console -> RoTS Deep Scan to correlate BAS/render-set and GFX data for targeted candidates.
-5. Runtime/video-test the short candidate list before changing gameplay.
-6. Use the RoTS Fight Recorder for live encounter tests so event ordering, target changes, damage, special state, and timing can be read from one uploaded log instead of reconstructed from memory.
-7. Patch one mechanic at a time and keep Matrix3 combat/instance ownership intact.
-8. Record exact timing only after measurement or authoritative evidence.
+## Research workflow
+
+For each encounter area/mechanic:
+
+1. State the exact question being answered.
+2. Gather the smallest relevant cache/runtime/period evidence set.
+3. Record the evidence and classify it.
+4. Write the expected revision-830 behavior as a compact specification.
+5. Compare the current Matrix3 implementation against that specification.
+6. Classify implementation pieces as `KEEP`, `FIX`, `REPLACE`, or `MISSING`.
+7. Patch only after the behavior is evidence-backed enough to justify implementation.
+8. Verify with Fight Recorder/runtime and update the subject evidence.
 
 ## Research tools
 
@@ -131,70 +210,50 @@ Primary cache workflow:
 
 - Client Console -> Owner -> RoTS cache research
 - `Scan RoTS` for focused NPC/animation definition evidence.
-- `Deep Scan` for render-set/BAS and GFX correlation.
-- `Copy All` to move the complete research dump into analysis without rerunning standalone tools.
+- `Deep Scan` for targeted render-set/BAS/GFX correlation.
+- `Copy All` to preserve research output.
 
 Runtime Fight Recorder:
 
 - `Server/src/main/java/com/rs/game/npc/rots/RiseOfTheSixDebugLog.java`
-- Starts automatically when a RoTS instance loads.
-- Creates one unique file per instance under `data/logs/rots/`.
-- Uses a bounded in-memory queue and daemon writer so combat/world tasks never wait on disk writes.
-- Records elapsed milliseconds plus one recorder tick per scheduled world tick.
-- Records full instance/player/brother snapshots every tick plus explicit encounter, normal-attack, and brother-special events.
-- Includes RoTS-owned special state needed for debugging: Dharok stored damage, Torag rescue damage/victim, Hurricane/Wall Slam state, Guthan spear/victim/retrieval state, special rotation gates/index, side ownership, HP, targets, and tiles.
-- Players are shown the generated relative log path once per fight. Upload that `.log` when runtime behavior is difficult to describe.
-- If the bounded queue ever overflows, combat remains non-blocking and the writer records `DROPPED_LINES` at shutdown; treat a nonzero count as a recorder-capacity issue, not gameplay evidence.
+- Creates one unique file per RoTS instance under `data/logs/rots/`.
+- Records recorder ticks, elapsed milliseconds, players, brother states, targets, sides, HP, special state, normal attacks and mechanic events.
+- Use it to verify implementation behavior after the specification says what should happen.
 
 Optional fallback:
 
 - `Server/src/main/java/com/rs/tools/RotsCacheScanner.java`
-- Keep it read-only and use it only when a standalone server-cache dump is specifically useful.
+- Read-only; use only when a focused standalone cache dump is actually needed.
 
 ## Documentation areas
 
 ### Encounter
 
-Track arena setup, side ownership, rotation, subdue/revive bond, side transitions, completion, escape, and cleanup in `mechanics/encounter.txt`.
+Use `mechanics/encounter.txt` for verified/spec evidence concerning arena setup, side ownership, rotation, subdue/revive, side transitions, completion, escape and cleanup.
 
 ### Brothers
 
-Create brother-specific mechanic files when a mechanic has enough verified/static evidence to justify its own focused record. Do not create empty files just to mirror the six brothers.
+Create/update brother-specific mechanic evidence only when enough evidence exists to justify the claim. Do not create empty documentation merely for symmetry.
 
 ### Assets
 
-Use `assets/` for cache/source/runtime-supported IDs and evidence. Clearly distinguish a current implementation mapping from an authentic RuneScape mapping that has been runtime-verified.
+Use `assets/` for cache/runtime-supported IDs. Clearly distinguish current implementation mappings from authentic revision-830 mappings.
 
 ### Timings
 
-Use `timings/` for measured attack cadence, animation duration, special windups, hit timing, cooldowns, revive timing, and other encounter timers.
+Use `timings/` only for measured/documented attack cadence, animation duration, special windups, hit timing, cooldowns, revive timing and encounter timers. Never store guessed timing as fact.
 
-## Current highest-value gaps
+## Current next main step
 
-1. Runtime-verify the integrated 21941 Hurricane inside the live encounter: spin duration, walking/tracking, pulse alignment, and clean return to combat.
-2. Authentic subdued/kneeling presentation while preserving the working logical subdue/revive system.
-3. Greatest Axe visual/timing verification.
-4. Normal attack cadence verification for all six brothers.
-5. Ahrim special rotation.
-6. Karil special rotation.
-7. Brother Throw execution/assets/timing.
-8. Exact portal/barrier/shadow-realm and arena transition behavior.
-9. Completion escape/reward flow if still absent after focused audit.
+**Verify the correct revision-830 RoTS map/arena before changing more combat behavior.**
 
-## Next checkpoint
+Required output of that research step:
 
-Run one live RoTS encounter with the Fight Recorder active before changing more Hurricane/Greatest Axe mechanics.
+1. Identify the main two-sided combat arena region/chunks and plane.
+2. Confirm whether the currently copied `2320,6024` area is the Shadow Realm or another RoTS sub-area.
+3. Validate or reject the `3358,9433` main-arena lead against revision-830 data/runtime.
+4. Record exact combat-side geometry, central structures, ledges, brother spawn slots and entry points.
+5. Identify the related Shadow Realm and escape/tunnel regions separately.
+6. Only then update the encounter map implementation and proceed to exact side rules.
 
-Confirm from runtime plus the generated log:
-
-1. 21941 begins when Hurricane starts and is not visibly restarted/frozen by the 10 damage pulses.
-2. Dharok, Guthan, and Torag continue tracking the target at walking speed during the spin.
-3. Forced post-revive Hurricane still uses the same 21941 presentation and returns cleanly to normal combat.
-4. Greatest Axe records its exact charge start, animation 21940, every absorbed hit/stored total, charge end, and later stored-damage release.
-5. Normal attack event spacing can be measured directly from log ticks instead of inferred from CombatScript return values alone.
-
-Also run the repaired Owner -> Deep Scan and preserve its GFX correlation output for Greatest Axe visual research.
-
-If Hurricane's animation ends before the 10-pulse mechanic finishes, use the recorder ticks plus video/runtime observation to measure the mismatch first. Do not blindly restart 21941 every pulse.
-
-After this evidence is collected, continue the melee-brother-specials milestone rather than returning to broad animation or tool expansion.
+Until that is complete, do not spend implementation time polishing Hurricane, Greatest Axe, Guthan, Ahrim or Karil.
