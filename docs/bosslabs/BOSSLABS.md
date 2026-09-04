@@ -2,461 +2,585 @@
 
 ## Purpose
 
-BossLabs is the Matrix3 developer tool for building, configuring, testing, and iterating custom boss encounters.
+BossLabs is the Matrix3 content-creation tool for building, testing, and iterating custom boss encounters.
 
-Its first job is not to become a general-purpose NPC editor or a giant visual scripting system. Its first job is to help produce one complete custom Matrix3 boss end-to-end, then turn the proven needs of that boss into a reusable encounter framework.
+Its success is measured by how quickly a competent RSPS developer can open it, understand it, and create useful content without needing the BossLabs source code, implementation vocabulary, or another developer beside them.
 
-BossLabs is a **developer tool**. Matrix3 remains authoritative for NPC lifecycle, combat, movement, pathing, world state, permissions, persistence, drops, and all other gameplay behavior.
+BossLabs must be powerful, but normal boss creation must feel simple.
+
+The target is not "an editor for BossDefinition fields." The target is a professional encounter-authoring workflow.
+
+A developer with limited time should be able to:
+
+1. find/select an NPC,
+2. create or inspect the boss,
+3. define phases,
+4. add attacks and mechanics,
+5. visually author attack patterns,
+6. configure drops,
+7. spawn and test the encounter,
+8. iterate live,
+9. save the finished content,
+
+without manually managing internal identifiers or understanding BossLabs transport/storage/runtime implementation.
 
 ## Authorities
 
-BossLabs must follow:
+BossLabs remains subordinate to:
 
 - `AGENTS.md`
 - `docs/rs3/PROJECT.md`
 - `docs/client-console/CLIENT_CONSOLE.md`
+- `docs/bosslabs/LIVE_EDITING.md`
+- `docs/bosslabs/NPC_SEARCH.md`
 
-The Client Console visual/lifecycle contract applies to BossLabs where relevant, including:
+Matrix3 remains authoritative for NPC lifecycle, combat, movement, pathing, world state, permissions, persistence, drops, and other gameplay behavior.
 
-- permanent intentional dark presentation,
-- no default unfinished Swing appearance,
-- responsive layouts with no cut-off controls,
-- usable non-maximized window sizes,
-- DPI/display-scaling tolerance,
-- safe minimum sizes,
-- validated/restorable window geometry,
-- quiet/coalesced preference writes,
-- correct Swing/game-thread ownership,
-- clean keyboard/mouse focus handoff,
-- lazy or deferred expensive work,
-- failure isolation where practical.
-
-## Ownership rule
-
-BossLabs must never become a second boss/combat engine.
+BossLabs is a content-authoring and testing layer over those authorities. It must never become a second combat engine, NPC engine, drop engine, scheduler, or world implementation.
 
 Conceptually:
 
 ```text
-BossLabs UI
-   |
-   v
+BossLabs creator UI
+        |
+        v
 Boss/Encounter Content API
-   |
-   v
-Matrix3 NPC + Combat + World Authorities
+        |
+        v
+BossLabs definitions/runtime adapters
+        |
+        v
+Matrix3 NPC + Combat + World + Drop authorities
 ```
 
-BossLabs may create/edit boss content definitions and invoke documented testing/development bridges. It must not duplicate authoritative combat calculations, NPC pathing, drops, command permissions, persistence, or world lifecycle inside the client tool.
+## Primary product rule
 
-No system ownership changes are introduced by the initial BossLabs project.
+**Custom content is the product. BossLabs exists to make custom content faster and easier to create.**
 
-## Tool placement
+Do not expand BossLabs merely because another control, mechanic, tab, or abstraction could be added.
 
-Boss/encounter tooling is a specialist tool and should be implemented as an **external developer window**, not forced into the narrow Client Console sidebar.
+The first complete custom boss remains the specification for the reusable encounter framework.
 
-The Client Console may later provide a small `Open BossLabs` launcher action once BossLabs has a runnable shell.
+When real content work exposes repeated friction, improve the workflow. When real content needs a mechanic, add the smallest reusable mechanic that solves it.
 
-BossLabs should reuse/shared-call Client Console presentation primitives where practical instead of inventing an unrelated visual system.
+## Creator-first UX laws
 
-## First-boss rule
+These are mandatory design rules.
 
-The first complete custom boss is the BossLabs specification.
+### 1. Never require information BossLabs already knows
 
-Do not attempt to predict every mechanic every future boss may need.
-
-The first boss should intentionally require enough variety to prove the reusable framework:
-
-- multiple combat styles,
-- projectile attack,
-- area attack,
-- phase transitions,
-- environmental hazard,
-- alternate/random targeting,
-- minion spawn,
-- timed mechanic,
-- enrage/final phase,
-- death/cleanup,
-- drops,
-- targeted developer testing controls.
-
-A working boss is more important than a feature-complete editor.
-
-## Proposed first boss
-
-Working concept: **Volcanic Warden**.
-
-This name and exact content are not permanent authority; the encounter exists to define the first vertical slice.
-
-### Phase 1
-
-- Basic melee attack.
-- Fire projectile attack.
-
-### Phase 2
-
-- Ground-slam area attack.
-- Burning-floor hazard.
-- Random-target fireball.
-
-### Phase 3
-
-- Enrage behavior.
-- Minion wave.
-- Meteor attack.
-- Faster attack cadence.
-
-The first boss should force BossLabs/runtime work to solve phases, projectiles, AoE, hazards, minions, targeting, timers, transitions, cleanup, and drops without building unrelated systems.
-
-## BossLabs V1 layout
-
-BossLabs is expected to use tabs/sections rather than one wall of controls.
-
-Initial sections:
-
-1. Identity
-2. Stats
-3. Attacks
-4. Phases
-5. Mechanics
-6. Arena / Tiles
-7. Drops
-8. Testing
-
-The exact Swing class/layout structure is not pre-approved here. It must be chosen from the smallest structure that follows the Client Console UI contract.
-
-## Identity
-
-Candidate fields:
-
-- boss name,
-- NPC ID,
-- combat level where applicable,
-- size,
-- maximum hitpoints,
-- spawn position,
-- plane,
-- respawn time,
-- aggression range,
-- leash range,
-- examine text where supported,
-- idle/walk/death animation references where supported.
-
-Only expose fields that are verified to have a stable Matrix3 owner/path.
-
-NPC selection/search behavior is refined by `docs/bosslabs/NPC_SEARCH.md`:
-
-- one search field,
-- numeric input means NPC id,
-- text input means NPC name search,
-- no ID/name mode dropdown,
-- existing NPC/boss data and current combat ownership auto-populate from Matrix3 authorities.
-
-## Stats
-
-Candidate editable/viewable values include:
-
-- hitpoints,
-- attack,
-- strength,
-- defence,
-- magic,
-- ranged,
-- style-specific defence values where Matrix3 supports them,
-- attack speed,
-- attack distance,
-- maximum hit,
-- damage cap,
-- poison/stun/bind/freeze or similar immunities where supported.
-
-Do not invent stat semantics that Matrix3 does not actually use.
-
-## Attack definitions
-
-Boss attacks should become reusable content definitions rather than one giant boss-specific combat class where practical.
-
-Candidate attack data:
-
-- stable attack identifier/name,
-- combat style,
-- animation,
-- graphic,
-- projectile,
-- attack range,
-- cooldown/tick cadence,
-- target selection,
-- minimum/maximum damage or references to authoritative damage behavior,
-- accuracy behavior where supported,
-- phase/condition requirements,
-- attached mechanic/action list.
-
-Complex attacks may still require custom Java behavior. BossLabs must never prevent a boss from extending into custom Java when a definition is not expressive enough.
-
-## Phases
-
-A boss may have ordered phase definitions such as:
-
-```text
-Phase 1: 100% -> 70%
-Phase 2:  70% -> 30%
-Phase 3:  30% -> 0%
-```
-
-Candidate phase data:
-
-- entry condition,
-- exit/transition condition,
-- attacks enabled during phase,
-- on-enter actions,
-- on-exit actions,
-- attack-speed/cadence modifiers where supported,
-- damage/defence modifiers where supported,
-- mechanic activation/deactivation,
-- phase message/animation/graphic hooks.
-
-Phase transition ownership belongs to the boss/encounter runtime, not the Swing UI.
-
-## Mechanics and actions
-
-Reusable mechanics should be added because the first boss needs them.
-
-Candidate actions:
-
-- spawn NPC,
-- spawn/remove object where safe,
-- launch projectile,
-- play graphic,
-- play animation,
-- apply damage through the authoritative combat/damage path,
-- apply verified status effect,
-- teleport player,
-- teleport boss,
-- knockback,
-- pull player,
-- heal boss,
-- enable/disable shield state,
-- create/remove hazard,
-- send encounter message,
-- change boss form where supported.
-
-Do not implement this entire list up front.
-
-## Trigger model
-
-A later reusable trigger model should remain intentionally small:
-
-```text
-WHEN / EVERY
-  -> conditions
-  -> actions
-```
+If BossLabs already owns or can derive a value, relationship, selection, or identifier, the creator must not be required to manually re-enter it.
 
 Examples:
 
-```text
-WHEN boss HP <= 50%
-DO spawn minions
-```
+- Testing a selected attack must not require typing its Attack ID again.
+- Entering a selected phase must not require typing its Phase ID again.
+- Selecting an NPC must populate known identity/stats/combat information automatically.
+- Selecting an attack inside a phase must preserve the phase relationship automatically.
+- Selecting a minion from an NPC browser must fill the NPC id internally.
+- Choosing a saved pattern must carry its geometry without retyping offsets.
+
+Manual raw entry may remain as a power-user shortcut where useful, but it must not be the normal workflow when BossLabs can make the selection itself.
+
+### 2. Normal creation must not require BossLabs implementation knowledge
+
+A creator should need RuneScape/boss-design knowledge, not knowledge of:
+
+- `BossDefinition`,
+- registry ownership,
+- wire versions,
+- storage versions,
+- internal phase IDs,
+- internal attack IDs,
+- command bridge protocol,
+- Java class names,
+- serialization details.
+
+Technical information may be available under Advanced/Developer details, but it must not dominate normal authoring.
+
+### 3. Prefer selection and direct manipulation over memorization
+
+Use:
+
+- searchable selectors,
+- cards,
+- lists,
+- visual patterns,
+- previews,
+- context-aware buttons,
+- sensible defaults,
+
+instead of requiring creators to remember IDs, formats, or relationships.
+
+### 4. Show complexity only when it is needed
+
+A basic melee attack should look basic.
+
+Do not present every possible attack/mechanic field at once.
+
+Use progressive disclosure: common settings first; advanced or mechanic-specific settings appear only when enabled or expanded.
+
+### 5. Every common action should be obvious
+
+A first-time user should be able to identify how to:
+
+- select a boss,
+- add a phase,
+- add an attack,
+- test the selected attack,
+- apply changes live,
+- save changes,
+- reset a test encounter,
+
+without reading external documentation.
+
+Tooltips and inline help should explain unusual concepts, not compensate for confusing layout.
+
+## First-time-user acceptance standard
+
+BossLabs should be designed so a competent RSPS developer unfamiliar with BossLabs can perform the normal creation loop with minimal onboarding.
+
+A useful target workflow is:
 
 ```text
-EVERY 20 ticks
-DO use Meteor
+Open BossLabs
+  -> Search NPC
+  -> Select/Create Boss
+  -> Add Phase
+  -> Add Attack
+  -> Configure attack
+  -> Test Selected Attack
+  -> Adjust
+  -> Apply Live
+  -> Save & Apply
 ```
+
+If this path feels like editing a configuration file through Swing controls, the UI needs improvement.
+
+## Visual direction
+
+BossLabs is an external specialist developer window using the Client Console visual system.
+
+It must use:
+
+- permanent intentional dark theme,
+- clean modern hierarchy,
+- clear selected/hover/focus/disabled states,
+- consistent spacing and typography,
+- cards/groups rather than undifferentiated control walls,
+- responsive layouts,
+- scroll/reflow/collapse instead of clipping,
+- practical non-maximized sizes,
+- 100%/125%/150% DPI tolerance,
+- clean focus handoff to/from the game.
+
+Default/unfinished Swing presentation is not acceptable as final BossLabs UI.
+
+## Target BossLabs workspace
+
+The preferred high-level navigation is creator-oriented:
 
 ```text
-WHEN player enters active hazard
-DO apply hazard effect
+BOSSLABS
+
+Boss: [ Search NPC by name or ID... ]
+
+Overview | Combat | Phases | Attacks | Arena | Drops | Testing
 ```
 
-A general-purpose scripting language or large node editor is explicitly not required for the first boss.
+Exact labels may evolve from runtime use, but navigation should describe creator tasks rather than implementation classes.
 
-## Arena
-
-BossLabs arena support should remain encounter-focused rather than becoming a general world/map editor.
-
-Candidate base values:
-
-- southwest boundary,
-- northeast boundary,
-- plane,
-- boss spawn,
-- player entry/exit,
-- named minion spawns,
-- named hazard/mechanic positions.
-
-A future in-game coordinate capture bridge may be added when repeated manual coordinate entry becomes a real development pain point.
-
-### Arena / Tile Composer
-
-BossLabs should support a focused tile-based arena/mechanic editor inspired by the old ForgeLabs ability tile editor. The canvas represents tiles relative to the encounter or selected origin and exists specifically for boss attacks, hazards, healing zones, triggers, and other encounter mechanics.
-
-This tile composer is **not** a general RuneScape map editor. It edits encounter mechanic definitions that are consumed by the Boss/Encounter runtime, which must continue routing authoritative damage, healing, statuses, NPC/world changes, and combat behavior through Matrix3 owners.
-
-Canvas interaction direction:
-
-- show a clear tile grid centered on a useful encounter origin such as the boss or arena anchor,
-- mouse-wheel zoom increases/decreases visible tile size so detailed editing can use physically larger tiles,
-- middle-mouse drag pans the canvas,
-- hover shows a concise preview of the tile's configured effects,
-- click selects a tile for detailed editing,
-- click-drag may paint/select multiple tiles for repeated patterns,
-- selected tiles must remain visually distinguishable from configured but unselected tiles,
-- zoom/pan must not change the underlying encounter coordinates or pattern data.
-
-A configured tile may contain one or more encounter effects. Candidate effect types, added only as the first bosses prove a need, include:
-
-- direct damage zone,
-- persistent ground hazard such as poison, fire, lava, smoke, or another verified status/effect,
-- player healing zone,
-- boss healing zone,
-- boss attack target/impact tile,
-- telegraph/warning tile before an attack lands,
-- delayed impact followed by a lingering ground effect,
-- boss/player movement, jump, dash, or teleport destination where safely supported,
-- minion/object/effect spawn position,
-- mechanic/phase trigger when an eligible entity enters or occupies the tile.
-
-One tile may combine multiple effects when that is useful. For example, a poison-cloud tile may own a visual/graphic reference, periodic damage, poison application, duration, target rules, and tick interval as one encounter definition rather than forcing separate hard-coded coordinate logic.
-
-### Reusable tile patterns
-
-Tile layouts should be reusable named patterns rather than requiring every boss attack to hard-code every world coordinate.
-
-Examples include:
-
-```text
-Poison Cross
-
-    X
-    X
-X X B X X
-    X
-    X
-```
-
-or a ring, cone, line, checkerboard, safe-zone layout, meteor cluster, or other encounter shape proven useful by real boss content.
-
-An attack should be able to reference a pattern plus an origin and mechanic data. Later reusable transforms may include:
-
-- rotate,
-- mirror,
-- relative offset,
-- boss-facing orientation,
-- target-centered origin,
-- arena-anchor origin.
-
-This allows the same geometry to become different mechanics such as a fire cross, poison cross, healing cross, or lightning cross without duplicating the pattern itself.
-
-### Tile timing / preview
-
-The tile composer should eventually support a visual tick timeline for mechanics with staged behavior.
+A permanent header/status area should make the current boss and authoring state obvious.
 
 Example:
 
 ```text
-Tick 0-2: warning/telegraph tiles
-Tick 3:   impact/damage
-Tick 3-15: poison cloud remains
-Tick 15:  ground effect expires
+Kerapac
+NPC 19464
+
+DRAFT: Modified   LIVE: Applied   SAVED: Older
+
+[Apply Live] [Save & Apply] [Undo] [Apply Saved]
 ```
 
-Preview mode may animate or step through the configured tiles so the developer can inspect telegraphs, impacts, persistent zones, and cleanup timing before or while testing the live encounter.
+The creator should never wonder whether the screen represents draft-only, currently-live, or persisted content.
 
-The editor preview is descriptive/testing UI only. It must not become a second timing/combat authority.
+## Boss selection and overview
 
-### Tile live editing
+Use one search field governed by `NPC_SEARCH.md`:
 
-Tile/pattern edits must follow the existing BossLabs `DRAFT -> LIVE -> SAVED` contract:
+- all digits -> NPC id,
+- text -> NPC name,
+- no ID/name mode dropdown.
 
-- editing tiles modifies draft encounter data,
-- `Apply Live` publishes the complete validated definition without writing to disk,
-- `Save & Apply` persists and publishes the exact same validated definition,
-- tile edits must not publish every mouse movement or keystroke,
-- live runtime behavior must continue through the Boss/Encounter runtime and Matrix3 world/combat authorities.
+Selecting an NPC must automatically populate all verified information BossLabs can safely inspect.
 
-The first implementation should include only the tile behaviors required by the current boss. Pattern transforms, richer timeline tooling, and advanced composition should be added as actual encounters prove their value.
+The normal Overview should emphasize useful content information:
+
+- name,
+- NPC id,
+- combat level,
+- size,
+- hitpoints,
+- current combat ownership,
+- whether a BossLabs definition exists,
+- phase count,
+- attack count,
+- drop configuration status,
+- test readiness.
+
+Implementation details such as resolved Java script class may remain available under an Advanced/Developer Details section.
+
+## Internal IDs
+
+BossLabs may continue using stable internal definition/phase/attack identifiers for storage/runtime references.
+
+Normal creators should not have to manage them manually.
+
+Preferred behavior:
+
+- creator names attack `Meteor Strike`,
+- BossLabs generates/maintains a stable internal identifier such as `meteor_strike`,
+- creator renaming rules preserve references safely,
+- internal ID can be inspected/overridden only in Advanced mode when genuinely needed.
+
+The same principle applies to phases and other reusable content objects.
+
+Internal identifiers are implementation necessities, not primary UX.
+
+## Safe defaults
+
+New content should begin valid whenever possible.
+
+Example new attack defaults:
+
+```text
+New Attack
+Style: Melee
+Target: Current target
+Damage: NPC default
+Animation: NPC default
+Weight: 1
+Cooldown: none
+Immediate repeat: allowed
+Special mechanics: none
+```
+
+The creator should be able to create and test a simple attack without filling a long list of mandatory fields.
+
+Defaults must be visible and predictable; never silently invent dangerous gameplay behavior.
+
+## Combat / stats
+
+BossLabs should expose editable combat/stat values only when a stable Matrix3 owner/path has been verified.
+
+Useful values may include:
+
+- hitpoints,
+- attack/strength/defence,
+- magic/ranged,
+- style-specific defence where applicable,
+- attack speed,
+- attack distance,
+- default max hit,
+- aggression range,
+- supported immunities,
+- damage caps where Matrix3 supports them.
+
+Read-only Matrix3 values should be visually distinguishable from BossLabs-owned editable overrides.
+
+Do not present technical cache/combat fields as editable merely because they can be read.
+
+## Phases
+
+Phases should be presented visually and by boss-design meaning, not as raw ID/range rows.
+
+Preferred presentation:
+
+```text
+PHASE 1
+100% ---------------- 70%
+2 attacks
+
+PHASE 2
+70% ----------------- 30%
+3 attacks | 1 transition action
+
+PHASE 3
+30% ------------------ 0%
+2 attacks | Enraged
+```
+
+Normal phase editing should focus on:
+
+- display name,
+- HP range/threshold,
+- attacks available in the phase,
+- On Enter actions,
+- On Exit actions,
+- proven phase modifiers/mechanics.
+
+BossLabs should prevent/clearly flag gaps or overlaps that the runtime does not support.
+
+A selected phase should provide context-aware actions such as:
+
+- `+ Add Attack`,
+- `+ Add On Enter Action`,
+- `+ Add On Exit Action`,
+- `Test / Enter This Phase`.
+
+Testing the selected phase must never require retyping its internal ID.
+
+## Attacks
+
+Attack authoring is a central BossLabs workflow and must not become a giant form.
+
+Each attack should be represented as a readable card/list entry.
+
+Example:
+
+```text
+Meteor Strike
+Magic | AoE | Weight 2 | Cooldown 3
+```
+
+Selecting the attack opens grouped/collapsible editing sections.
+
+### Basic
+
+Always-visible/common fields:
+
+- display name,
+- combat style,
+- target mode,
+- damage/max-hit behavior,
+- range when relevant,
+- combat delay/attack cadence when overridden.
+
+### Rotation
+
+Show when expanded or when non-default:
+
+- weight,
+- cooldown turns,
+- immediate-repeat rule.
+
+### Animation & FX
+
+- animation,
+- NPC graphic,
+- projectile,
+- warning graphic,
+- impact graphic.
+
+### Area / Pattern
+
+Only show when an area mechanic is enabled:
+
+- origin mode,
+- telegraph duration,
+- tile-pattern summary,
+- `Edit Pattern` action.
+
+### Lingering effect
+
+Only show when enabled:
+
+- effect type,
+- GFX,
+- duration,
+- interval,
+- amount/max-hit.
+
+### Additional mechanics
+
+Future mechanic-specific sections appear only when those mechanics are enabled.
+
+Do not solve future extensibility by adding another permanent row to the attack form for every mechanic.
+
+## Mechanics model
+
+Prefer a bounded mechanic catalog over raw implementation fields.
+
+Conceptual workflow:
+
+```text
++ Add Mechanic
+
+Damage Area
+Ground Hazard
+Spawn Minions
+Heal Boss
+Heal Players
+Random Target
+Projectile
+...only mechanics actually supported/proven...
+```
+
+Choosing a mechanic reveals only settings required by that mechanic.
+
+Reusable mechanics should compose cleanly when the runtime supports the combination.
+
+BossLabs must not become a general-purpose scripting language or giant node editor merely to appear flexible.
+
+Complex encounter behavior that does not fit the proven definition model must retain a custom-Java escape hatch.
+
+## Asset selection and preview
+
+Raw RuneScape IDs remain important and must remain usable.
+
+However, raw ID entry should be the power-user shortcut, not the only practical workflow.
+
+Where the existing cache/client architecture safely permits it, asset controls should evolve toward:
+
+```text
+Animation
+[ Search / ID... ] [Preview]
+
+Graphic
+[ Search / ID... ] [Preview]
+
+Projectile
+[ Search / ID... ] [Preview]
+```
+
+Desired behavior:
+
+- accept direct numeric ID immediately,
+- search/browse when the creator does not know the ID,
+- show enough identity/preview information to avoid repeated trial-and-error,
+- link/open existing specialist tools rather than duplicating full AnimLab/FX/model editors inside BossLabs.
+
+Do not add expensive cache scans to the Swing EDT.
+
+## Attack Pattern Editor
+
+The existing relative tile-pattern system remains valuable and should be preserved.
+
+Attack Pattern authoring is distinct from Arena Layout authoring.
+
+Attack Pattern describes **which tiles a mechanic affects relative to an origin**.
+
+Supported/proven concepts include:
+
+- target-centered origin,
+- direct paint/erase,
+- mouse-wheel zoom,
+- middle-mouse pan,
+- hover coordinates,
+- cross,
+- horizontal line,
+- vertical line,
+- filled square,
+- ring,
+- copy/paste pattern,
+- warning/impact/hazard stages.
+
+Future transforms such as rotate/mirror/facing orientation should be added only when real content needs them.
+
+The pattern editor should eventually support concise staged/timeline preview:
+
+```text
+Ticks 0-2  Warning
+Tick 3     Impact
+Ticks 3-15 Fire floor
+```
+
+Preview is descriptive/testing UI only; Matrix3/BossLabs runtime remains timing authority.
+
+## Arena Layout
+
+Arena Layout describes **where encounter things exist in the world/encounter space**.
+
+It must not be confused with the attack-pattern editor.
+
+Potential proven arena content includes:
+
+- arena bounds,
+- boss spawn,
+- player entry/exit,
+- named mechanic anchors,
+- minion spawn locations,
+- safe zones,
+- environmental hazard regions,
+- object/mechanic spawn anchors.
+
+Arena support remains encounter-focused. It is not a general RuneScape map editor.
+
+The Arena and Attack Pattern tools may share grid/canvas technology, zoom/pan behavior, selection styling, and pattern helpers without merging their data semantics.
 
 ## Drops
 
-BossLabs should edit/reference boss-specific drop configuration through Matrix3's existing drop authority when a stable integration path is verified.
+Drops should become a creator-friendly editor over Matrix3's existing drop authority after the exact integration path is verified.
 
-Do not create a second independent drop engine.
-
-Candidate presentation:
+Preferred presentation should match Matrix3's real semantics while remaining understandable:
 
 - guaranteed,
 - common,
 - uncommon,
 - rare,
 - very rare,
-- pet/special entries,
-- amount ranges,
-- chance/weight representation matching Matrix3's actual drop system.
+- pet/special where supported,
+- quantity ranges,
+- chance/weight.
 
-## Testing controls
+Item selection should use name/ID search rather than requiring item IDs from memory when a shared item browser can provide the selection.
 
-Testing is a first-class BossLabs responsibility because fast iteration is the reason for the tool.
+BossLabs must not create a second drop engine.
 
-Candidate development actions:
+## Testing is a first-class workflow
 
-- spawn boss,
-- teleport to boss,
-- reset encounter,
-- set boss HP to common thresholds,
-- force phase,
-- force attack,
-- kill boss,
-- clear minions,
-- clear hazards,
-- inspect current phase/target/HP,
-- inspect last attack,
-- inspect active mechanics/timers.
+Fast testing is one of the main reasons BossLabs exists.
 
-All state-changing actions must route through safe Matrix3 server/client development paths. BossLabs must not directly mutate authoritative gameplay state merely because the UI can see it.
+Testing must be context-aware.
 
-## Definition/runtime separation
+### Global encounter controls
 
-Preferred responsibility model:
+Useful controls include:
 
-```text
-BossLabs
-   -> edits definitions
+- Spawn Boss Here,
+- Reset Encounter,
+- Set Boss HP %,
+- Clear Hazards,
+- Clear Minions,
+- later Kill Boss/Teleport when an authoritative safe path is justified.
 
-BossDefinition
-BossAttackDefinition
-BossPhaseDefinition
-BossTrigger/Condition/Action definitions
-   -> consumed by
+### Context actions
 
-Boss/Encounter runtime
-   -> calls
-
-Matrix3 combat/NPC/world/drop authorities
-```
-
-This is a conceptual responsibility model. The current V1 implementation uses `BossDefinition`, `BossPhaseDefinition`, `BossAttackDefinition`, `BossDefinitionRegistry`, and `BossCombatScript` for the proven portion of that model.
-
-## Storage direction
-
-The storage scan verified Matrix3's existing convention of dedicated `data/...` content locations with explicit Java loader/writer ownership, including NPC combat/drop/examine data.
-
-BossLabs V1 therefore uses its own versioned binary definition store:
+When a phase is selected:
 
 ```text
-Server/data/bosslabs/definitions.bld
+[Test / Enter Selected Phase]
 ```
 
-`BossDefinitionStore` owns only BossLabs definition serialization. It must not replace or rewrite Matrix3's existing NPC combat-definition, spawn, examine, or drop files.
+When an attack is selected:
 
-Saved BossLabs definitions load into `BossDefinitionRegistry` during combat-script initialization before live NPC combat uses them.
+```text
+[Test Selected Attack]
+```
 
-Do not add JSON or another parser/dependency merely for convenience unless a later content need justifies a deliberate storage migration.
+The selected phase/attack is passed internally. The creator does not type exact internal IDs that BossLabs already has.
 
-## Live editing and publishing
+### Encounter debugger/status
 
-The detailed contract is `docs/bosslabs/LIVE_EDITING.md`.
+Testing should evolve toward useful runtime visibility such as:
 
-BossLabs must distinguish three states:
+```text
+Boss HP: 43%
+Current Phase: Phase 2
+Current Target: PlayerName
+Last Attack: Meteor Strike
+Active Hazards: 8 tiles
+Owned Minions: 3
+```
+
+Only expose values that can be read safely from authoritative runtime state.
+
+Testing mutations remain admin-only and must continue targeting the exact per-admin controlled test NPC instance rather than arbitrary world NPCs.
+
+## DRAFT / LIVE / SAVED
+
+The existing live-editing architecture is retained.
 
 ```text
 DRAFT
@@ -464,175 +588,314 @@ LIVE
 SAVED
 ```
 
-- Draft edits remain local to the future tool until explicitly applied.
-- `Apply Live` publishes one complete immutable definition through `BossDefinitionPublisher` without writing to disk.
-- `Save & Apply` persists first; only a successful save publishes that exact definition live.
-- `Undo Last Apply` restores the immediately previous live registration state, including restoring normal Matrix3 Java/default combat when the NPC was not previously BossLabs-owned.
-- `Apply Saved` may republish the last persisted definition without rewriting it.
-- Do not publish every keystroke.
-- Definition-backed combat changes may take effect on subsequent attack/phase resolution without recreating the NPC.
-- Identity/cache/world-instance changes may require an explicit controlled respawn rather than unsafe live mutation.
+- Editing modifies DRAFT only.
+- `Apply Live` publishes a complete validated immutable definition without disk persistence.
+- `Save & Apply` persists successfully first, then publishes that exact definition.
+- `Undo Last Apply` restores the prior live registration state.
+- `Apply Saved` restores the persisted definition without rewriting it.
+- Do not publish every mouse movement or keystroke.
+
+The UI must explain these states visually in plain language.
+
+The underlying implementation details remain governed by `LIVE_EDITING.md`.
+
+## Validation and error design
+
+Validation should prevent mistakes without making normal creation annoying.
+
+Requirements:
+
+- validate as locally/early as practical,
+- preserve server-side constructors/runtime as final validation authority,
+- identify the exact bad phase/attack/mechanic,
+- explain the fix in plain language,
+- never fail with only a generic "invalid definition" message when a specific cause is known,
+- avoid modal-dialog spam for common validation,
+- keep invalid edits in DRAFT rather than partially publishing them.
+
+Example:
+
+```text
+Phase 2 overlaps Phase 1 at 70% HP.
+Change one boundary before applying.
+```
+
+is preferable to:
+
+```text
+Invalid phase range.
+```
+
+## Advanced mode
+
+BossLabs should support power users without forcing power-user complexity on everyone.
+
+An `Advanced` or `Developer Details` area may expose verified technical information such as:
+
+- internal definition ID,
+- internal phase/attack IDs,
+- Matrix3 combat source,
+- resolved script class,
+- raw animation/GFX/projectile values,
+- unusual override controls,
+- debugging/ownership information.
+
+Advanced mode must not become a dumping ground for fields that should have a proper normal UX.
+
+## Search, shortcuts, and repeated work
+
+Common repeated work should become faster over time.
+
+High-value creator conveniences include:
+
+- duplicate attack,
+- duplicate phase,
+- copy/paste attack pattern,
+- reusable named patterns,
+- recently-used assets,
+- searchable NPC/item/asset selectors,
+- context-aware test buttons,
+- keyboard shortcuts only where discoverable and safe.
+
+Add these when real use shows they remove repeated effort.
 
 ## Custom Java escape hatch
 
-BossLabs must support the principle:
+BossLabs definitions should handle common and medium-complexity encounter behavior cleanly.
+
+For behavior that does not fit without twisting the framework:
 
 ```text
-Common/medium boss behavior
-   -> reusable definitions/framework
+Reusable/common behavior
+    -> BossLabs definitions/runtime
 
-Encounter-specific mechanic that does not fit cleanly
-   -> small custom Java extension
+Encounter-specific unusual behavior
+    -> small custom Java extension
 ```
 
-Do not make the editor/framework so rigid that custom encounters become harder to implement.
+Do not make BossLabs so rigid that a unique boss becomes harder to implement.
 
-## Threading and focus
+A custom Java extension should integrate with the same encounter/runtime ownership rules rather than creating hidden alternate combat systems.
 
-BossLabs must follow the Client Console lifecycle contract:
+## Threading and responsiveness
 
-- Swing mutations on the Swing event-dispatch thread.
-- Slow file/content loading off the EDT.
-- Game/server state changes through established Matrix3 owner threads/bridges.
-- No heavy cache or world scans on UI/game threads.
-- BossLabs text fields must not leak W/A/S/D or other developer typing into game movement/hotkeys.
-- Returning focus to the game must restore normal game input cleanly.
-- Boss definition persistence must not block the Swing EDT.
+BossLabs follows the Client Console lifecycle contract.
 
-The exact client/server development bridge must be verified before the external window invokes runtime actions.
+- Swing mutation on the EDT.
+- Slow cache/index/file work off the EDT.
+- Server/world mutations through established Matrix3 owner threads/bridges.
+- No file polling or alternate sockets.
+- No heavy scans on render/game/packet threads.
+- Text editing must not leak W/A/S/D/hotkeys into game controls.
+- Returning focus to the game must restore normal input.
+- Window/panel failures should remain isolated where practical.
 
-## Window behavior
+## Window behavior and persistence
 
-BossLabs should be a resizable external window with:
+BossLabs must be usable without maximizing the window.
 
-- intentional dark styling consistent with the Client Console,
-- scroll/reflow rather than clipped controls,
+Required behavior:
+
 - practical minimum size,
-- safe geometry restore/clamping,
-- DPI tolerance,
-- no requirement for maximized/fullscreen mode,
-- clean close/reopen behavior,
-- no continuous disk writes while dragging/resizing.
+- scroll/reflow/collapse rather than clipped controls,
+- resizable work areas where useful,
+- safe geometry restore/clamping when persistence is added,
+- no continuous preference writes while dragging/resizing,
+- clean close/reopen lifecycle,
+- no stale listeners retained by disposed windows.
 
-A standalone BossLabs preference file should not be added casually. Prefer the Client Console's shared/versioned settings authority if it can safely own external-tool geometry, or extend that authority deliberately when the implementation scan reaches persistence.
+Prefer the Client Console's versioned preference authority rather than ad-hoc BossLabs settings files when that authority is extended for external tools.
 
-## V1 exclusions
+## UI implementation quality
 
-Do not build these before the first boss proves a need:
+Swing is an implementation toolkit, not the design.
+
+Avoid:
+
+- giant vertical forms,
+- technical IDs as the primary labels,
+- duplicate entry of already-selected values,
+- tabs full of placeholder prose in the finished workflow,
+- default-looking Swing controls,
+- title-string/component-tree hacks as permanent panel composition,
+- requiring exact internal identifiers for normal test actions,
+- hundreds of always-visible fields,
+- modal confirmation for ordinary editing.
+
+Prefer:
+
+- direct panel composition,
+- reusable presentation components,
+- attack/phase cards,
+- collapsible sections,
+- context actions,
+- shared search selectors,
+- responsive split panes/canvases,
+- concise inline status/error feedback.
+
+## Existing runtime foundation to preserve
+
+The current BossLabs runtime work provides valuable foundations that the UX redesign should reuse rather than rewrite without evidence:
+
+- Matrix3 CombatScript delegation for registered BossLabs NPC IDs,
+- immutable BossDefinition/BossPhaseDefinition/BossAttackDefinition content,
+- BossDefinitionRegistry live replacement/rollback,
+- versioned BossDefinitionStore,
+- BossDefinitionPublisher,
+- DRAFT/LIVE/SAVED publishing,
+- complete phase/attack wire round-tripping,
+- weighted rotation/cooldowns/repeat behavior,
+- current/random-nearby targeting,
+- projectile/direct attacks,
+- telegraphed relative tile attacks,
+- lingering hazards,
+- damage/heal player/boss tile effects,
+- phase On Enter/On Exit actions,
+- encounter runtime context and stale-task invalidation,
+- encounter-owned minions,
+- exact per-admin controlled test NPCs,
+- basic encounter testing operations,
+- reusable tile-pattern presets and large pattern workspace.
+
+The redesign should simplify how creators use these capabilities, not duplicate or replace their runtime ownership.
+
+## Current known UX debt
+
+The existing implementation proves the runtime/tool bridge, but it is not the target finished creator experience.
+
+Known redesign targets include:
+
+- attack editing is currently too form-heavy,
+- phase/attack internal IDs are too visible/important to normal workflows,
+- Testing currently requires manual Phase ID / Attack ID entry,
+- the Arena / Tiles workspace currently represents attack-relative pattern editing more than true arena layout,
+- placeholder/temporary tab composition should be replaced by direct final panel ownership,
+- raw asset IDs lack a friendly browse/search/preview workflow,
+- Drops and richer combat/stat authoring are incomplete,
+- runtime testing visibility is limited compared with the desired encounter debugger.
+
+These are UX/product gaps, not justification to rewrite working Matrix3/BossLabs runtime architecture.
+
+## First complete boss rule
+
+The next major BossLabs proof remains one complete custom boss.
+
+Working first-boss concept: **Volcanic Warden**.
+
+It should intentionally exercise enough proven functionality to validate the workflow:
+
+### Phase 1
+
+- basic melee,
+- projectile attack.
+
+### Phase 2
+
+- ground-slam area attack,
+- burning-floor hazard,
+- alternate/random-target attack.
+
+### Phase 3
+
+- enrage/faster cadence,
+- minion wave,
+- meteor/area attack.
+
+The encounter must also prove:
+
+- phase transitions,
+- cleanup,
+- live iteration,
+- persistence,
+- targeted testing,
+- drops through Matrix3 authority.
+
+BossLabs UX improvements should be judged by whether they make building and tuning this boss faster and clearer.
+
+## V2 implementation sequence
+
+### V2.0 - creator UX authority
+
+- Rewrite BossLabs around creator-first workflow.
+- Lock the no-retyping-known-values rule.
+- Lock progressive disclosure instead of giant forms.
+- Separate Attack Pattern from Arena Layout concepts.
+- Make context-aware testing a requirement.
+
+Exit: this document is the authority before major UI restructuring.
+
+### V2.1 - shell and composition cleanup
+
+- Make the window/panel hierarchy directly compose real panels.
+- Remove temporary placeholder-replacement patterns when touched by the redesign.
+- Establish creator-oriented navigation/header/state presentation.
+- Preserve existing bridge/runtime behavior.
+
+Exit: clean modern BossLabs shell with no functionality regression.
+
+### V2.2 - phases and attacks workflow
+
+- Replace manual/internal-ID-first phase/attack UX with creator names and internally managed stable IDs.
+- Introduce phase/attack cards/lists.
+- Group attack settings with progressive disclosure.
+- Provide safe valid defaults.
+- Add context-aware `Test Selected Attack` and `Enter Selected Phase` workflow through existing authoritative testing paths.
+
+Exit: a new developer can create, tune, and test a multi-phase boss without memorizing BossLabs internals.
+
+### V2.3 - asset workflow
+
+- Add shared direct-ID + search/browse selection where practical.
+- Add previews/links to specialist tools where architecture safely supports them.
+- Do not duplicate AnimLab/FX/model tooling.
+
+Exit: common asset iteration no longer requires constantly leaving BossLabs to look up forgotten IDs.
+
+### V2.4 - arena and drops
+
+- Keep relative Attack Pattern authoring as its own workspace.
+- Add true encounter Arena Layout only when the first boss requires world anchors/bounds.
+- Integrate creator-friendly drops through Matrix3's verified drop authority.
+
+Exit: the first boss can be authored end-to-end from encounter geometry through rewards.
+
+### V2.5 - first boss completion
+
+Build, test, kill, reset, save/reload, and tune the complete first boss.
+
+Exit: BossLabs has proven the complete content pipeline rather than merely accumulating editor features.
+
+### V2.6 - second-boss proof
+
+Build a second smaller boss with the same framework.
+
+Exit: reusable parts are proven reusable; encounter-specific behavior remains isolated.
+
+## Explicit exclusions until proven necessary
+
+Do not build these merely for completeness:
 
 - giant node editor,
-- full NPC editor,
-- full world/map editor outside the encounter-scoped Arena / Tile Composer,
-- model editor,
-- animation editor,
-- particle/FX editor duplication,
 - general-purpose scripting language,
-- universal content editor,
+- full NPC editor,
+- general world/map editor,
+- duplicate model editor,
+- duplicate animation editor,
+- duplicate FX/particle editor,
 - hundreds of speculative mechanics,
 - alternate combat engine,
 - alternate drop engine,
-- multi-level definition version-control/history system.
+- alternate scheduler,
+- complicated multi-level content version-control system.
 
-BossLabs may later link/open specialist tools rather than duplicating them.
+BossLabs may link/open specialist tools instead of copying them.
 
-## Implementation sequence
+## Professional usability question
 
-### Phase 0 - authority and architecture
+Before accepting a BossLabs UI feature, ask:
 
-- Create `docs/bosslabs/` authority.
-- Lock BossLabs to Matrix3 ownership and the Client Console UI/lifecycle contract.
-- Define first-boss-driven scope.
+> Could another competent RSPS developer understand and use this correctly on an off day without me explaining the implementation?
 
-Exit: the project has one written BossLabs direction before code is added.
+If the answer is no, either the workflow needs to be simplified or the complexity belongs behind Advanced mode.
 
-### Phase 1 - Matrix3 boss/runtime scan
-
-Inspect only the Matrix3 files directly owning:
-
-- NPC combat behavior,
-- NPC definitions/stats needed by the first boss,
-- NPC spawning/lifecycle,
-- drops,
-- existing boss/custom-NPC examples if directly relevant,
-- safe developer command/bridge paths needed for testing.
-
-Classify findings as `VERIFIED`, `verified-static`, or `HYPOTHESIS`.
-
-Do not inspect the old 718 project unless a specific BossLabs workflow question needs reference material.
-
-Exit: exact runtime owners and minimum extension points are identified.
-
-### Phase 2 - first boss runtime foundation
-
-Implement the smallest reusable runtime needed for the first boss.
-
-Start with manually-defined content if necessary before introducing editor UI.
-
-The proven Phase 2 support may include definition registration, live replacement/rollback, persistent BossLabs definition storage, and discovery/inspection APIs because those directly support first-boss iteration without taking gameplay ownership.
-
-Exit: one boss can spawn and execute a minimal verified phase/attack loop without BossLabs UI ownership of combat.
-
-### Phase 3 - BossLabs external shell
-
-Add the external BossLabs window using the Client Console visual/lifecycle rules.
-
-Initial UI should remain small:
-
-- one-field NPC search/selector,
-- Identity,
-- Stats,
-- Attacks,
-- Phases,
-- Testing,
-- Apply Live / Save & Apply / Undo Last Apply controls.
-
-Mechanics/Arena/Drops may begin as narrow sections/placeholders only when the first boss actually reaches them.
-
-Exit: BossLabs opens safely, resizes without clipping, respects focus/threading, can edit/view the first proven definition fields, and can publish through the approved server-side APIs.
-
-### Phase 4 - first boss complete vertical slice
-
-Drive BossLabs/runtime development from the Volcanic Warden encounter requirements.
-
-Add only the reusable mechanics needed to finish that encounter.
-
-Exit: the full boss can be configured, spawned, fought, reset, phase-tested, killed, cleaned up, and rewarded through Matrix3-owned systems.
-
-### Phase 5 - framework generalization
-
-After boss #1 is runtime-tested, identify which behavior is truly reusable and extract only those parts into stable definitions/components.
-
-Exit: boss #2 can reuse the framework without copying boss #1's encounter class.
-
-### Phase 6 - polish driven by actual use
-
-Possible later additions:
-
-- model/NPC preview,
-- animation/GFX/projectile lookup/preview,
-- in-game coordinate capture,
-- richer visual attack/tile timeline tooling,
-- stronger validation/error reporting,
-- drag/drop mechanic composition,
-- node graph only if linear trigger/action editing becomes a verified limitation.
-
-## Current classification
-
-### verified-static
-
-- Matrix3 project rules require tooling to remain subordinate to Matrix3 gameplay/core ownership.
-- The Client Console authority explicitly allows boss/encounter tooling as an external specialist window.
-- The Client Console requires dark theme, responsive/no-cutoff layout, safe focus/threading behavior, lazy/heavy-work discipline, and validated workspace behavior.
-- The project constitution identifies one complete custom boss as the first major content milestone.
-- Matrix3 combat dispatch and BossLabs runtime extension points are identified and implemented without replacing `NPCCombat` ownership.
-- Matrix3 cache/NPC definition boundaries support automatic NPC ID/name discovery and read-only existing-boss inspection.
-- BossLabs V1 storage uses a dedicated versioned binary store under `data/bosslabs` and does not modify existing NPC packed data.
-- BossLabs live publishing supports explicit Apply Live, one-level rollback, Save & Apply ordering, and startup reload of saved definitions.
-
-### HYPOTHESIS / not yet runtime-verified
-
-- Exact first custom NPC id/model/animations/GFX/projectiles for Volcanic Warden.
-- Exact client-to-server development bridge used by the external BossLabs window for live apply/save/spawn/reset/force-phase requests.
-- Whether the first encounter should use the existing BossInstance path; inspect it only if the first boss actually needs instancing.
-
-These items remain unverified until the next narrow runtime/content slices establish them.
+That is the BossLabs quality bar.
