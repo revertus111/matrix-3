@@ -4,7 +4,7 @@
 
 The Matrix3 Client Console is the primary in-client developer control surface for Matrix3. It should keep the convenience of the old 718 Client Console while being cleaner, easier to navigate, and much more deliberate about system ownership.
 
-The visual direction is a RuneLite-style developer sidebar: a narrow vertical icon rail attached to the client with one active tool panel beside it. This is a layout/workflow reference only; do not copy RuneLite code or architecture blindly.
+The visual direction is a RuneLite-style developer sidebar: a narrow vertical icon rail attached to the client with one active tool panel beside it. This is a layout/workflow reference only; do not copy RuneLite code, assets, or architecture blindly.
 
 The console is a **developer tool**, not a second game engine. It must call existing Matrix3 client/server APIs, commands, and content systems instead of quietly becoming an alternate owner of gameplay behavior.
 
@@ -29,6 +29,8 @@ The console is a **developer tool**, not a second game engine. It must call exis
 17. Client Console UI state should use one small versioned preferences/settings authority rather than separate ad-hoc settings files per panel.
 18. Resizing the console must not rebuild/reload unrelated client systems, interfaces, or rendering state. It should feel continuous and immediate.
 19. Modern presentation should favor immediate response and restrained transitions; animation must never make common console actions feel delayed or interfere with rendering/input.
+20. The rail must use real, consistent icons in finished UI. Single-letter placeholders such as `C`, `O`, `P`, `I`, and `S` are acceptable only during implementation, not as the long-term presentation.
+21. Do not rewrite the working shell architecture merely for visual polish. V2 should improve presentation and workflow on top of the established shell/theme/preferences/panel boundaries.
 
 ## Target layout
 
@@ -37,12 +39,12 @@ The console is a **developer tool**, not a second game engine. It must call exis
 | Matrix 3                                              |
 |                                                       |
 |                                      +----+----------+|
-|                                      | O  |          ||
-|                                      | >_ |          ||
-|              GAME VIEW               | P  |  ACTIVE  ||
-|                                      | W  |  PANEL   ||
-|                                      | D  |          ||
-|                                      | T  |          ||
+|                                      | [] |          ||
+|                                      | [] |          ||
+|              GAME VIEW               | [] |  ACTIVE  ||
+|                                      | [] |  PANEL   ||
+|                                      | [] |          ||
+|                                      | [] |          ||
 |                                      +----+----------+|
 +-------------------------------------------------------+
 ```
@@ -52,9 +54,11 @@ The icon rail lives on the side of the client. Selecting an icon opens its panel
 ## Interaction goals
 
 - Thin vertical icon rail.
+- Real recognizable icons instead of permanent text-letter buttons.
 - One active panel at a time.
-- Selected icon is visually obvious.
-- Tooltips on icons.
+- Selected icon is visually obvious through a consistent selected treatment/indicator.
+- Tooltips on every rail icon.
+- Consistent hover, pressed, disabled, and selected states.
 - Scrollable panel content.
 - Consistent spacing, controls, and section headers.
 - Resizable panel width.
@@ -64,6 +68,7 @@ The icon rail lives on the side of the client. Selecting an icon opens its panel
 - Graceful reflow/collapse/scrolling when horizontal or vertical space becomes limited.
 - Important actions remain reachable at every supported client size.
 - Resizing and panel switching should feel immediate and should not trigger unrelated client reload/rebuild work.
+- Keyboard-heavy workflows should be possible where they materially save development time.
 
 ## UI/UX contract
 
@@ -130,11 +135,15 @@ The intended presentation is closer to modern developer tooling such as RuneLite
 - Consistent typography and hierarchy.
 - Consistent spacing/padding tokens.
 - Clean monochrome/simple icons where practical.
+- Rail icons should normally render at a consistent roughly 20-24px visual size inside the existing rail hit target.
+- Icons should remain legible at 100%, 125%, and 150% display scaling and should not rely on Unicode glyph availability.
+- Use original/project-owned or appropriately licensed icon assets; do not copy RuneLite's icon assets merely to imitate its appearance.
 - Rounded or otherwise modernized controls where practical without destabilizing the client.
 
 ### Explicitly avoid
 
 - Default Swing/Metal-looking buttons as finished UI.
+- Permanent single-letter rail buttons as finished navigation.
 - Beveled/1990s Java borders.
 - Random per-panel fonts/colors.
 - Giant walls of controls with no visual grouping.
@@ -237,6 +246,16 @@ The console should feel like part of the client, not a separate utility fighting
 
 The exact thread bridge must be chosen from verified Matrix3 client architecture during the implementation scan.
 
+### Search responsiveness
+
+Search should feel responsive without rebuilding expensive result models for every keystroke.
+
+- Item Browser's current V2 target debounce is **500ms**.
+- 500ms is the default safety/performance compromise for the existing item-definition browser unless runtime profiling gives evidence for a different value.
+- A substantially longer pause such as the current 1.25-second behavior should not be accepted as finished UX merely because it is safe.
+- Cheap local command filtering should remain effectively immediate where it does not create measurable UI/game hitching.
+- Debounce expensive model/index/thumbnail work, not basic text feedback such as the visible query/status indicator.
+
 ### Lazy panel initialization
 
 The shell should start quickly and should not initialize every current/future developer tool during client startup.
@@ -287,76 +306,90 @@ Client Console
       -> typography
       -> spacing
       -> shared controls
+      -> icon treatment
   -> shell
       -> sidebar
       -> panel host
       -> layout state
       -> preference authority
   -> panels
+      -> dashboard
       -> owner
       -> commands
       -> player
-      -> debug
+      -> items
+      -> settings
 ```
 
 This is a responsibility model, not a requirement to create empty packages/classes. Use the smallest file structure that keeps shared theme/layout behavior centralized and prevents each panel from inventing its own UI conventions.
 
 ## V1 scope
 
-V1 deliberately stays small:
+V1 deliberately stayed small:
 
 1. **Sidebar shell**
 2. **Owner panel**
 3. **Commands panel**
 4. **Player panel**
-5. **Debug panel**
+5. **Debug/diagnostic foundation**
 
-Do not add World, Combat, NPC, Item, Model, FX, Boss, or other specialist panels until an actual content task needs them.
+Specialist panels/tools should still be added only when an actual content task needs them.
 
 ## Panel responsibilities
+
+### Dashboard / Client Console home
+
+The shell/home panel should mature from implementation scaffolding into a useful developer dashboard.
+
+V2 direction:
+
+- Matrix3/client identity and current high-level state.
+- Logged-in account/rights summary where already safely available.
+- Server/player running-state indicator where a stable bridge already exists.
+- Renderer/status information such as the active renderer when safely available.
+- Current world position/region summary where already exposed by the Player bridge.
+- Quick launch buttons for high-value specialist tools such as BossLabs and CacheEditor.
+- Small pinned/recent-tools area only if it can reuse the existing preference authority without becoming a workspace framework.
+- Small status/error indicators when they help the developer understand whether a tool/bridge is ready.
+
+The old permanent `Shell foundation` language and focus-test field are implementation scaffolding. Once focus behavior is runtime-proven, they should not occupy primary dashboard space. Keep focus testing in the test list/diagnostics rather than as permanent home-page content.
 
 ### Owner
 
 Owner-only quick actions and development controls.
 
-Suggested first groups:
+Suggested groups:
 
 - Account/rights summary.
 - Quick actions such as heal/restore/teleport where an existing authoritative action already exists.
 - Save-related actions where Matrix3 exposes a safe existing path.
-- Small developer toggles that do not belong in another panel.
+- Small owner/developer toggles that do not belong in another panel.
 
 The Owner panel must not implement its own permission or save systems.
 
+Boss-specific/cache-research tooling should not accumulate in Owner long-term. The existing RoTS scan/deep-scan controls are useful research scaffolding, but their durable home should be the dedicated BossLabs/NPC/boss-research workflow once that replacement is ready. Remove/move the Owner copy only after the dedicated tool provides equivalent or better access; do not break the current research workflow during migration.
+
 ### Commands
 
-A searchable, clickable front end to the existing Matrix3 command authority.
+A searchable front end to the existing Matrix3 command authority.
 
-Desired workflow:
+The current button catalog remains valid functionality, but V2 should bias toward a command-palette workflow for speed:
 
 ```text
-Search commands...
+Search commands... [ tele ]
 
-Favorites
-  tele
-  item
-  npc
-
-Player
-  item
-  bank
-  heal
-
-World
-  tele
-  coords
-
-Admin
-  kick
-  mute
+> ::tele
+  ::teleto
+  ::teletome
 ```
 
-Selecting a command may expose structured arguments, for example:
+Desired keyboard flow where practical:
+
+```text
+Type query -> Up/Down -> Enter to select -> type arguments -> Enter to execute
+```
+
+Structured arguments may still be exposed when useful, for example:
 
 ```text
 item
@@ -373,13 +406,15 @@ Rules:
 - Prefer routing execution through the same authoritative server command/permission path.
 - Command metadata/search/favorites are UI concerns; command behavior remains server-owned.
 - Only expose commands proven safe/appropriate for the current rights level.
-- Search/header/action areas should remain reachable while long command lists scroll independently where practical.
+- Search/header/action areas should remain reachable while long command results scroll independently where practical.
+- Keep dangerous-command confirmation behavior even if presentation changes.
+- Prefer fast search/keyboard selection over forcing the user to scroll hundreds of command buttons.
 
 ### Player
 
 Fast developer visibility into the local player.
 
-Potential V1 data:
+Potential data:
 
 - Username/display name.
 - Rights level.
@@ -387,9 +422,27 @@ Potential V1 data:
 - Region information if already available through a stable client path.
 - Basic state useful for debugging.
 
-This panel should start read-only unless a real development need justifies an action.
+This panel should remain read-only unless a real development need justifies an action.
 
-### Debug
+### Item Browser
+
+The Item Browser is a strong reference for the intended Client Console workflow: searchable definitions, real previews, persistent organization, context actions, and authoritative client/server bridges.
+
+Keep:
+
+- automatic ID/name search without a mode dropdown,
+- real Matrix3-rendered thumbnails,
+- favorites,
+- custom multi-membership categories,
+- presets with saved quantities,
+- Inventory/Bank quantity actions,
+- right-click organization/spawn actions,
+- lazy/bounded thumbnail work,
+- persisted organization state.
+
+V2 search target: **500ms debounce** for the current expensive item-result refresh path unless runtime evidence supports a better value.
+
+### Debug / diagnostics
 
 Small diagnostic controls and identifiers that help current development.
 
@@ -397,10 +450,46 @@ Potential examples:
 
 - Coordinate display.
 - NPC/object/interface identifiers where Matrix3 already exposes the needed data.
+- Focus/input test controls that should no longer occupy the main dashboard after validation.
 - Focused debug toggles.
 - Recent diagnostic state useful for active work.
 
-Do not turn V1 Debug into a packet sniffer, full cache editor, or giant logging framework.
+Do not turn diagnostics into a packet sniffer, full cache editor, or giant logging framework.
+
+## V2 polish direction
+
+V2 is a **polish pass over the established architecture**, not a Client Console rewrite.
+
+Priority order:
+
+1. **Real icon rail**
+   - Replace `C`, `O`, `>_`, `P`, `I`, `S` placeholders with consistent recognizable icons.
+   - Keep tooltips and make selected/hover state obvious.
+   - Use one shared icon treatment rather than styling each panel independently.
+
+2. **Real dashboard**
+   - Replace `Shell foundation`/permanent focus-test scaffolding with useful live development status and high-value tool launchers.
+
+3. **Item Browser responsiveness**
+   - Change the intended debounce from 1.25 seconds to **500ms** and runtime-check broad searches for hitching.
+
+4. **Command palette workflow**
+   - Preserve the authoritative command bridge and destructive-command safeguards.
+   - Improve search-first navigation and keyboard operation instead of presenting 300+ commands primarily as a long button wall.
+
+5. **Owner cleanup**
+   - Keep Owner focused on account/rights/admin/development controls.
+   - Migrate RoTS/boss-specific research into the dedicated boss/NPC research workflow when that workflow is ready.
+
+6. **Shared visual components**
+   - Standardize panel title/subtitle treatment, cards, search fields, action buttons, result rows, context menus, status labels/chips, and empty/loading/error states through `ConsoleTheme` or equally small shared helpers.
+   - Do not create a giant custom UI framework merely for visual consistency.
+
+7. **High-value workflow polish**
+   - Add small pinned/recent-tool conveniences and readiness/status indicators only where they measurably reduce repeated developer clicks.
+   - Keep the shell fast and avoid turning it into a general plugin/workspace platform unless real future usage proves that abstraction is needed.
+
+V2 exit condition: the existing Client Console should **look and feel intentionally designed**, while preserving the current working shell, preference authority, lazy panel creation, client-thread bridges, permissions, and Matrix3 ownership boundaries.
 
 ## Architecture target
 
@@ -410,15 +499,18 @@ Conceptually:
 Client
   -> ClientConsole
       -> ConsoleSidebar
+      -> Dashboard
       -> OwnerPanel
       -> CommandsPanel
       -> PlayerPanel
-      -> DebugPanel
+      -> ItemBrowserPanel
+      -> SettingsPanel
+      -> ExternalToolLaunchers
 ```
 
-The exact class names and hooks must be chosen only after scanning the Matrix3 client frame/bootstrap and the minimum relevant old 718 Client Console references.
+Preferred panel registration/descriptor concept may eventually include panel identity, icon, title, order, and lazy creation, but this is not approval to build a plugin framework merely for V2 polish.
 
-Preferred panel contract concept:
+A minimal conceptual contract remains:
 
 ```java
 interface ConsolePanel {
@@ -526,7 +618,7 @@ Exit: an empty/placeholder panel can dock, resize, scroll/reflow, collapse, rest
 
 ### Phase 3 - V1 panels
 
-Add Owner, Commands, Player, and Debug one at a time as separate vertical slices.
+Add Owner, Commands, Player, and focused diagnostics one at a time as separate vertical slices.
 
 Each panel must have its own exit criteria and targeted runtime test, including non-maximized/resized behavior, focus/input behavior, lazy initialization, and failure handling where relevant.
 
@@ -541,7 +633,21 @@ Only after V1 behavior is stable:
 
 Core dark-theme, resize, no-cutoff, workspace restore, thread/focus safety, lazy loading, and basic persistence requirements are not Phase 4 polish; they belong in the shell foundation.
 
-## Out of scope for V1
+### Phase 5 - V2 polish
+
+Implement the `V2 polish direction` above in small vertical slices.
+
+Recommended first slice:
+
+1. real icon rail,
+2. 500ms Item Browser debounce,
+3. dashboard cleanup,
+4. command-palette refinement,
+5. Owner research-tool migration only after the dedicated replacement exists.
+
+Do not bundle these into one risky rewrite. Preserve the known-good shell and verify each slice independently.
+
+## Out of scope for V1/V2 polish
 
 - Porting the old 718 Client Console wholesale.
 - Rebuilding ForgeLabs.
@@ -550,22 +656,29 @@ Core dark-theme, resize, no-cutoff, workspace restore, thread/focus safety, lazy
 - Refactoring unrelated client frame/rendering code.
 - Large combat/cache/network changes.
 - Building a general-purpose UI designer or workspace system.
+- Building a plugin framework solely because the console now has several panels.
 - Adding animation for its own sake.
 
-## V1 success criteria
+## V1/V2 success criteria
 
-V1 is successful when:
+The Client Console is successful when:
 
 - the console docks cleanly beside the game view,
 - the sidebar can open/close and switch panels reliably,
-- Owner/Commands/Player/Debug are separated and understandable,
+- the rail uses recognizable, consistent real icons rather than permanent letter placeholders,
+- Owner/Commands/Player/Items/Settings/diagnostics remain separated and understandable,
+- the home panel behaves as a useful dashboard rather than permanent implementation scaffolding,
 - command UI routes through authoritative Matrix3 behavior rather than duplicating it,
+- Commands supports a fast search-first workflow appropriate for hundreds of entries,
+- Item Browser search uses the 500ms target without causing a visible game/client hitch,
+- boss-specific research has a deliberate dedicated home instead of accumulating indefinitely in Owner,
 - the normal client remains usable with the console closed,
 - the console does not disturb login, rendering, input, resizing, or normal gameplay,
 - adding a future panel does not require rewriting the shell,
 - no required Client Console control depends on fullscreen/maximized mode to remain reachable,
 - controls remain accessible through responsive layout, scrolling, collapsing, or resizing at supported window sizes,
 - the dark theme is consistently applied rather than falling back to default Swing presentation,
+- shared visual components make panels feel like one product rather than unrelated Swing utilities,
 - resizing and splitter movement do not create permanently hidden/unreachable UI,
 - resizing does not repeatedly reload/rebuild unrelated game/interface/render state,
 - the game viewport retains a usable minimum size while the console is resized,
@@ -582,4 +695,4 @@ V1 is successful when:
 
 ## Priority reminder
 
-The Client Console exists to make content development faster. Once V1 provides the controls needed for active work, return to content rather than continuously expanding the tool.
+The Client Console exists to make content development faster. V2 polish should make existing workflows faster and cleaner, not become an excuse for endless tool-building. Once the console feels deliberate and the active content workflow is supported, return to content.
