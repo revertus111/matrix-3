@@ -67,6 +67,8 @@ public final class CustomItemActionConfig {
             } catch (RuntimeException ex) {
                 System.err.println("Custom item action config failed for item " + itemId);
                 ex.printStackTrace();
+                CustomItemActionTrace.log("CONFIG apply-failed item=" + itemId + " error="
+                        + ex.getClass().getSimpleName() + ":" + String.valueOf(ex.getMessage()));
             }
         }
     }
@@ -76,16 +78,22 @@ public final class CustomItemActionConfig {
             return;
         for (int option = 1; option <= 5; option++) {
             ActionEntry entry = getEntry(itemId, "inventory", option);
-            if (entry != null)
+            if (entry != null) {
                 definition.aStringArray8145[option - 1] = entry.label;
+                CustomItemActionTrace.log("APPLY context=inventory item=" + itemId + " option=" + option
+                        + " action=" + entry.action + " label=" + entry.label);
+            }
         }
     }
 
     private static void applyEquipmentOptions(ItemDefinitions definition, int itemId) {
         for (int option = 1; option <= 4; option++) {
             ActionEntry entry = getEntry(itemId, "equipment", option);
-            if (entry != null)
+            if (entry != null) {
                 setStringParam(definition, 527 + option, entry.label);
+                CustomItemActionTrace.log("APPLY context=equipment item=" + itemId + " option=" + option
+                        + " action=" + entry.action + " label=" + entry.label);
+            }
         }
     }
 
@@ -105,16 +113,23 @@ public final class CustomItemActionConfig {
             return false;
 
         InterfaceDefinitions component = Class530.method6338(widgetHash, child, -582563422);
-        if (component == null)
+        if (component == null) {
+            CustomItemActionTrace.log("BANK_NATIVE widget=762:7 child=" + child
+                    + " optionRaw=" + optionValue + " component=null");
             return false;
+        }
 
         int itemId = component.nvmtheindexisotherone * 411192987;
-        if (!isExplicitBankInventoryMenu(itemId))
-            return false;
-
         int option = (int) optionValue;
-        return option >= 1 && option <= MAX_INTERFACE_OPTIONS
-                && getEntry(itemId, "bank_inventory", option) == null;
+        boolean explicit = isExplicitBankInventoryMenu(itemId);
+        ActionEntry configured = option >= 1 && option <= MAX_INTERFACE_OPTIONS
+                ? getEntry(itemId, "bank_inventory", option) : null;
+        boolean suppress = explicit && option >= 1 && option <= MAX_INTERFACE_OPTIONS && configured == null;
+
+        CustomItemActionTrace.log("BANK_NATIVE widget=762:7 child=" + child + " item=" + itemId
+                + " option=" + option + " configuredItem=" + ITEM_IDS.contains(Integer.valueOf(itemId))
+                + " explicit=" + explicit + " configured=" + describe(configured) + " suppress=" + suppress);
+        return suppress;
     }
 
     /**
@@ -166,9 +181,12 @@ public final class CustomItemActionConfig {
                 ActionEntry configured = getEntry(target.itemId, "bank_inventory", option);
                 if (configured == null || existingOptions.contains(bankMenuKey(child, option)))
                     continue;
-                if (357782167 * Class25.anInt172 >= 504)
+                if (357782167 * Class25.anInt172 >= 504) {
+                    CustomItemActionTrace.log("BANK_ADD aborted reason=menu-capacity item=" + target.itemId
+                            + " child=" + child + " option=" + option + " configured=" + describe(configured));
                     return;
-                addBankInventoryEntry(target.anchor, option, configured.label);
+                }
+                addBankInventoryEntry(target.itemId, target.anchor, option, configured);
                 existingOptions.add(bankMenuKey(child, option));
             }
         }
@@ -191,13 +209,14 @@ public final class CustomItemActionConfig {
         return child + ":" + option;
     }
 
-    private static void addBankInventoryEntry(Class572_Sub12_Sub10 anchor, int option, String label) {
+    private static void addBankInventoryEntry(int itemId, Class572_Sub12_Sub10 anchor,
+            int option, ActionEntry configured) {
         int child = anchor.anInt11397 * 740323685;
         int widgetHash = anchor.anInt11392 * 200110927;
         int opcode = option <= 5 ? INTERFACE_OPTION_OPCODE : INTERFACE_OPTION_SECONDARY_OPCODE;
 
         Class572_Sub12_Sub10 menuEntry = new Class572_Sub12_Sub10(
-                label,
+                configured.label,
                 anchor.aString11391,
                 client.anInt8751 * -646491435,
                 opcode,
@@ -222,6 +241,8 @@ public final class CustomItemActionConfig {
         menuEntry.aBool11401 = anchor.aBool11401;
         menuEntry.aString11403 = anchor.aString11403;
         Class412.method5075(menuEntry, 722976984);
+        CustomItemActionTrace.log("BANK_ADD widget=762:7 child=" + child + " item=" + itemId
+                + " option=" + option + " action=" + configured.action + " label=" + configured.label);
     }
 
     private static void setStringParam(ItemDefinitions definition, int paramId, String value) {
@@ -248,6 +269,10 @@ public final class CustomItemActionConfig {
         return new ActionEntry(action, label);
     }
 
+    private static String describe(ActionEntry entry) {
+        return entry == null ? "none" : entry.action + "|" + entry.label;
+    }
+
     private static synchronized void ensureLoaded() {
         if (loaded)
             return;
@@ -255,6 +280,8 @@ public final class CustomItemActionConfig {
         File file = findConfig();
         if (file == null) {
             System.err.println("Custom item actions: " + CONFIG_PATH + " was not found.");
+            CustomItemActionTrace.log("CONFIG missing expected=" + CONFIG_PATH + " userDir="
+                    + System.getProperty("user.dir", "."));
             return;
         }
         FileInputStream input = null;
@@ -273,8 +300,11 @@ public final class CustomItemActionConfig {
                     // Ignore malformed item ids and leave normal cache behavior intact.
                 }
             }
+            CustomItemActionTrace.log("CONFIG loaded path=" + file.getPath() + " itemIds=" + ITEM_IDS.size());
         } catch (IOException e) {
             e.printStackTrace();
+            CustomItemActionTrace.log("CONFIG read-failed path=" + file.getPath() + " error="
+                    + e.getClass().getSimpleName() + ":" + String.valueOf(e.getMessage()));
         } finally {
             if (input != null) {
                 try {
@@ -310,7 +340,6 @@ public final class CustomItemActionConfig {
     }
 
     private static final class ActionEntry {
-        @SuppressWarnings("unused")
         private final String action;
         private final String label;
 
