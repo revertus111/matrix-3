@@ -54,16 +54,14 @@ final class CustomItemActionTrace {
     }
 
     private static File resolveLogFile() {
-        File directory = new File(System.getProperty("user.dir", "."));
+        File start = new File(System.getProperty("user.dir", "."));
+        File directory = start;
         for (int depth = 0; directory != null && depth < 6; depth++, directory = directory.getParentFile()) {
             File repoServer = new File(directory, "Server");
             if (repoServer.isDirectory())
                 return new File(directory, REPO_RELATIVE_LOG);
-            File serverData = new File(directory, "data");
-            if (serverData.isDirectory())
-                return new File(directory, SERVER_RELATIVE_LOG);
         }
-        return new File(SERVER_RELATIVE_LOG);
+        return new File(start, SERVER_RELATIVE_LOG);
     }
 
     private static String timestamp() {
