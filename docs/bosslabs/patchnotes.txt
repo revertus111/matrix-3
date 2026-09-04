@@ -108,3 +108,10 @@
 - Pattern presets enforce the existing +/-16 offset and 128-tile limits before mutating the local DRAFT; no server combat, definition wire/storage, or v8 persistence format changed.
 - Replaced the Arena / Tiles shell with a large draft-backed attack tile workspace offering phase/attack selection, direct paint/erase, zoom/pan, radius presets, Center View, and Copy Pattern/Paste Pattern reuse across attacks and phases.
 - Arena edits mutate the same BossLabsDraftDefinition attack offsets used by the Attacks tab, immediately mark DRAFT modified, retain existing +/-16/128-tile validation, and persist through the unchanged v8 Apply Live/Save & Apply path; no fixed-world arena engine or second tile runtime was added.
+
+2026-09-03
+- Rewrote BOSSLABS.md around a creator-first content-authoring standard while preserving the existing Matrix3/BossLabs runtime ownership model.
+- Locked two core UX rules: creators never retype values BossLabs already knows, and normal boss creation must not require BossLabs implementation knowledge.
+- Defined progressive-disclosure phase/attack authoring, creator-facing names with internally managed stable IDs, context-aware testing, safe defaults, Advanced/Developer Details separation, and direct panel composition as V2 requirements.
+- Formally separated relative Attack Pattern authoring from future fixed encounter Arena Layout semantics.
+- Added docs/bosslabs/ux-testlist.txt with creator-workflow, usability, testing, validation, presentation, and first-boss acceptance gates while retaining the existing runtime testlist unchanged.
