@@ -1,3 +1,9 @@
+2026-09-03 - Dev Mode creation-studio design expansion
+- Reframed Dev Mode as the main live-world Matrix3 creation environment instead of a collection of generic admin/cache panels.
+- Added the planned World/Scene, contextual Inspector, universal browser, and History concepts plus Select/Move/Rotate/Spawn/Paint/Erase/Inspect tool modes.
+- Added continuous/persistent placement workflows, inventory/equipment/bank Dev item coverage, full NPC stat/HP/drop editing direction, visual drop editing, tile gameplay-zone painting, contextual asset relationships, live-vs-saved comparison, workspaces, and command-palette concepts.
+- Moved cache-facing work under contextual Assets and revised the roadmap around the already-working NPC/object/item spawn and Tile Editor foundation.
+
 2026-09-03 - Dev Mode Tile Editor foundation
 - Added owner-only `Dev > Edit Tile` beside the existing tile Spawn action.
 - Added a dark Tile Editor window targeted from the exact live world tile right-click.
