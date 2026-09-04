@@ -22,6 +22,9 @@ Source fight log:
 - Recorder cadence was approximately one entry tick every 600 ms.
 - All-six completion occurred around recorder tick 316.
 
+Focused acceptance checklist for recorder-found fixes:
+- `docs/rots/runtime-fixes-testlist.txt`
+
 ## Immediate runtime-correctness issues
 
 | Issue | Status | Evidence / implementation note | Next verification |
@@ -39,6 +42,7 @@ Source fight log:
 | Greatest Axe charge-state timing and animation duration do not line up | NEEDS EVIDENCE | Recorded charge state lasted about 11.4s from start while animation 21940 is ~4.8s from cache data; animation started after the current delayed schedule. Functional stored-damage release worked. | Runtime/video compare the 21940 motion and identify whether animation should repeat, start earlier, or be paired with a separate visual. Do not guess-loop yet. |
 | Greatest Axe documented blue-lightning/axe-energy visual is missing | NEEDS EVIDENCE | Donor GFX 4406 is runtime-rejected. Deep Scan GFX loader path was repaired but candidate identification still needs runtime/cache evidence. | Run repaired Deep Scan and test only evidence-supported candidate GFX. |
 | Post-revive melee brothers can begin Hurricanes close together | NEEDS EVIDENCE | Recorder showed multiple melee brothers entering forced post-revive Hurricane in a short window. | Compare against authentic 2014 behavior before changing shared revive-special sequencing. |
+| One-shot WorldTask delays need mechanic-by-mechanic timing verification | NEEDS EVIDENCE | Matrix3 delay counters execute after their countdown reaches zero on a later process pass; the first recorder log exposed this clearly in Greatest Axe. This does not prove every current delay is wrong, but comments such as ~3s must not be trusted without runtime timing. | Measure actual Wall Slam, side-hop, Torag, Guthan, Greatest Axe and revive event timing from recorder logs before changing their one-shot delay values. |
 | Torag can emit a cleanup `TORAG_RELEASE victim=null` recorder line after the real release | OPEN - LOW PRIORITY | Scheduled cleanup can observe an already-cleared victim. Gameplay did not show a second real release. | Clean recorder/event noise only after higher-value encounter issues are fixed. |
 | Fight Recorder normal close/drain path still needs explicit runtime acceptance | OPEN TEST | First uploaded file ended without proving `INSTANCE_FINISH` + `RECORDER END` because the instance was not normally closed before capture ended. | Leave/finish one instance normally and confirm queued lines drain with no second recorder file and no `DROPPED_LINES`. |
 
@@ -88,5 +92,6 @@ Before continuing RoTS runtime fixes, read:
 - `docs/rots/updated.md`
 - `docs/rots/patchnotes.txt`
 - `docs/rots/testlist.txt`
+- `docs/rots/runtime-fixes-testlist.txt`
 
 Update this file whenever a Fight Recorder log discovers a new persistent issue, an issue is patched, or a later runtime test promotes `PATCHED - VERIFY` to `VERIFIED FIXED`.
