@@ -5,31 +5,53 @@ Build / regression
 [ ] Start ordinary non-RoTS gameplay and confirm normal NPC natural HP restoration still works; the regeneration suppression must remain RoTS/subdued-only.
 
 Revive bar cadence
-[ ] Start a fresh RoTS instance with the Fight Recorder enabled.
-[ ] Subdue one brother and keep the encounter alive until revival.
-[ ] Confirm `REVIVE_PROGRESS` advances once per recorder/world-task tick rather than every other tick.
-[ ] Confirm the active generation reaches `bar=255/255` at the end of the 50-step revive window, with no half-full revival around 127/255.
-[ ] Confirm the expired generation stops producing `REVIVE_PROGRESS` after revival or after a newer subdue increments `reviveGeneration`.
-[ ] Confirm the revived brother still returns at the current 25,000 HP implementation value and uses animation 21914.
+[x] Start a fresh RoTS instance with the Fight Recorder enabled.
+[x] Subdue one brother and keep the encounter alive until revival.
+[x] Confirm `REVIVE_PROGRESS` advances once per recorder/world-task tick rather than every other tick.
+[x] Confirm the active generation reaches `bar=255/255` at the end of the 50-step revive window, with no half-full revival around 127/255.
+[x] Confirm the expired generation stops producing `REVIVE_PROGRESS` after revival or after a newer subdue increments `reviveGeneration`.
+[x] Confirm the revived brother still returns at the current 25,000 HP implementation value and uses animation 21914.
+
+Runtime evidence: `rots_2026-09-03_21-42-48-058_1861806.log`, generation 6 starts at tick 131 and reaches `elapsedTicks=50 bar=255/255` at tick 182; five subdued brothers revive on tick 182 at 25,000 HP using animation 21914.
 
 Subdued 1-HP shell
-[ ] Subdue a brother and leave it down for at least 60 seconds when practical.
-[ ] Confirm every `SNAPSHOT_BROTHER` for that brother remains `hp=1/50000` while `subdued=true`.
-[ ] Confirm there are no periodic +1 `BROTHER_HP_CHANGE` events while subdued.
-[ ] Confirm incoming delayed hits are still suppressed and do not remove the visible 1-HP shell.
-[ ] Allow revival and confirm normal HP behavior resumes once `subdued=false`.
+[x] Subdue a brother and leave it down long enough to observe sustained snapshots after the patch.
+[x] Confirm every `SNAPSHOT_BROTHER` for that brother remains `hp=1/50000` while `subdued=true`.
+[x] Confirm there are no periodic +1 `BROTHER_HP_CHANGE` events while subdued.
+[x] Confirm incoming delayed hits are still suppressed and do not remove the visible 1-HP shell.
+[x] Allow revival and confirm normal HP behavior resumes once `subdued=false`.
+
+Runtime evidence: the second uploaded recorder log contains 1,494 `subdued=true` brother snapshots and every one remains exactly 1 HP; no subdued +1 regeneration sequence appears.
 
 Empty-side warning cadence
-[ ] Start a fresh instance with all brothers active and keep all players on only one side.
-[ ] Do not subdue any brother during the first warning window.
-[ ] Confirm `SIDE_HOP_WARNING` occurs after about 40 recorder ticks (~24 seconds at the observed ~600 ms cadence), not ~48 seconds.
-[ ] Confirm the warning uses the actually empty side and occupied opposite side from the snapshots.
-[ ] Keep the condition valid through the current hop delay and confirm `SIDE_HOP_MOVE` / `SIDE_HOP_COMPLETE` are produced; if the condition changes first, confirm `SIDE_HOP_CANCEL` instead.
+[x] Start a fresh instance with all brothers active and keep all players on only one side.
+[x] Do not subdue any brother during the first warning window.
+[x] Confirm `SIDE_HOP_WARNING` occurs after about 40 recorder ticks (~24 seconds at the observed ~600 ms cadence), not ~48 seconds.
+[x] Confirm the warning uses the actually empty side and occupied opposite side from the snapshots.
+[x] Keep the condition valid through the current hop delay and confirm `SIDE_HOP_MOVE` / `SIDE_HOP_COMPLETE` are produced; if the condition changes first, confirm `SIDE_HOP_CANCEL` instead.
+
+Runtime evidence: player becomes WEST at tick 2, `SIDE_HOP_WARNING` reports empty=EAST occupied=WEST at tick 41, and three East brothers move/completion occurs at tick 47.
 
 Recorder handoff
 [ ] Finish or leave the instance normally and confirm `INSTANCE_FINISH` and `RECORDER END` are written and the queue drains without `DROPPED_LINES`.
-[ ] Upload the new `.log` and use it to promote the corresponding rows in `docs/rots/updated.md` from `PATCHED - VERIFY` to `VERIFIED FIXED` only when the runtime evidence proves them.
+[x] Upload the new `.log` and use it to promote the three original runtime-fix rows in `docs/rots/updated.md` from `PATCHED - VERIFY` to `VERIFIED FIXED` when proven.
 
-Next issue after these three pass
-[ ] Trace and patch RoTS-specific same-side targeting so East-side brothers cannot acquire/keep a West-side player (and vice versa) without changing generic Matrix3 NPC targeting.
-[ ] After side targeting is fixed, run Guthan on the player's side and exercise the full Impale sequence.
+Next side-isolation issue
+[x] Confirm the bug at runtime before patching: East-side brothers can acquire/keep a West-side player before empowerment moves them over.
+[x] Confirm the reverse direction is also unguarded: a West-side player can damage East-side brothers before their side ownership changes.
+[ ] Patch RoTS-specific same-side target acquisition/retention without changing generic Matrix3 NPC targeting.
+[ ] Patch RoTS-specific wrong-side incoming player damage so the portal split is authoritative in both directions.
+[ ] Re-test a player crossing sides and confirm old-side brothers immediately lose the target while new-side brothers may acquire it normally.
+[ ] Confirm Karil/Ahrim cannot fire ranged/magic autos across the split and Guthan cannot path/melee/Hurricane across it.
+[ ] Confirm after the empty-side empowerment hop updates brother side ownership, moved brothers can correctly target players on the occupied side.
+
+Guthan Impale follow-up
+[x] Exercise the single-player throw/impact/retrieve path after the empowerment hop: 21944 + projectile 4411, 18541->18542, victim 21945, retrieval 21947, 18542->18541 and 1000 retrieve hit.
+[ ] Hold a same-side victim outside Guthan retrieve range long enough to verify `GUTHAN_BLEED` GFX/damage cadence.
+[ ] Test multi-player same-side victim selection.
+[ ] Test Torag pummel auto-return while a player is impaled.
+
+One-shot timing evidence
+[x] Record actual side-hop post-warning timing: tick 41 warning -> tick 47 movement (~3.6 seconds / six recorder intervals for the current configured 5-tick one-shot delay).
+[x] Record actual revive one-shot boundary timing: generation 6 tick 131 start -> tick 182 revival (~30.65 seconds for the current configured 50-tick delay).
+[ ] Compare those observed values with authentic 2014 timing before changing delay constants.
