@@ -1,0 +1,7 @@
+Boss Research Lab planning acceptance
+
+- Confirm PLAN.md keeps Boss Research Lab scoped to research/verification only.
+- Confirm RoTS is the first preset while the architecture remains boss-generic.
+- Confirm v1 covers NPC selection/transform, animation/GFX/projectile testing, evidence labels, persistent findings, candidate queues, related-asset scanning, and lightweight test sequences.
+- Confirm BossLabs, Fight Recorder, AnimLab, FX Labs, map editing, drops, and combat scripting retain separate ownership.
+- Confirm v1 stop condition prioritizes using the tool on RoTS before adding broader features.
