@@ -20,3 +20,9 @@
 - Rambler's explicit bank-inventory menu now allows only native slots 1, 6, 7, 8, and 10: Deposit, Open, Wear, Examine, and Empty to bank. Deposit-5, Deposit-10, Deposit-X/last amount, and Deposit-All are hidden only for the configured backpack item.
 - The exact visual ordering of those five entries remains runtime verification because Matrix3's decompiled menu sorter groups interface option opcodes internally.
 - Backpack contents remain player-owned persistent storage; this patch does not move storage ownership onto the physical item or change death persistence.
+- Added a persistent targeted trace at `Server/data/logs/custom-item-actions-debug.txt`; both Client and Server append timestamped lines to the same ignored runtime log.
+- Client trace records config loading, inventory/equipment label application, 762:7 native bank-menu option detection/suppression, and configured bank-menu entry insertion.
+- Server trace records the raw item-context pipeline entry, resolved context/packet option/item, STOCK/no-match fallthrough reasons, configured dispatch, Backpack execution, and whether the action was consumed.
+- verified-static: custom actions are invoked from `ControlerManager.processButtonClick(...)` after the open Backpack storage-interface handler and before normal controller/preset routing; they are not called directly from `ButtonHandler`.
+- Added a pre-Backpack pipeline trace call so a raw item click can still be seen even if Backpack interface ownership consumes it before `CustomItemActions.processButtonClick(...)`.
+- The runtime log path resolves back to repository `Server/data/logs` from normal Client/Server Eclipse working directories; `Server/.gitignore` already excludes `data/logs/`.
