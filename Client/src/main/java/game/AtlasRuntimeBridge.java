@@ -8,7 +8,8 @@ import game.atlas.AtlasTraceRecorder;
  */
 public final class AtlasRuntimeBridge {
 
-    private static final String KEYBOARD_SOURCE = "METHOD:game/Class549_Sub1#method8081(ICII)V";
+    private static final String KEYBOARD_SOURCE = "METHOD:game/AtlasKeyboardObserver#dispatch(Ljava/awt/AWTEvent;)V";
+    private static final String KEYBOARD_OWNER = "METHOD:game/Class549_Sub1#method8081(ICII)V";
     private static final String MENU_ACTION_SOURCE = "METHOD:game/Class319#method4094(Lgame/Class572_Sub12_Sub10;IIB)V";
     private static final String OUTGOING_PACKET_SOURCE = "METHOD:game/Class195#method2929(Lgame/Class572_Sub25;B)V";
     private static final String INCOMING_PACKET_SOURCE = "METHOD:game/PacketsDecoder#method3031(Lgame/Class195;B)Z";
@@ -22,6 +23,7 @@ public final class AtlasRuntimeBridge {
             return;
         }
         AtlasTraceRecorder.ensureRuntimeControl();
+        AtlasKeyboardObserver.ensureInstalled();
     }
 
     public static void observeDefinitionLoad(int definitionId, Object loader, Object definition) {
@@ -39,6 +41,7 @@ public final class AtlasRuntimeBridge {
             return;
         }
         AtlasTraceRecorder.record("input", "keyboard", KEYBOARD_SOURCE,
+                "ownerSymbol", KEYBOARD_OWNER,
                 "action", Integer.toString(action),
                 "keyCode", Integer.toString(normalizedKeyCode),
                 "charCode", Integer.toString((int) typedCharacter));
@@ -85,6 +88,7 @@ public final class AtlasRuntimeBridge {
 
     private static boolean ready() {
         AtlasTraceRecorder.ensureRuntimeControl();
+        AtlasKeyboardObserver.ensureInstalled();
         return AtlasTraceRecorder.isActive();
     }
 
