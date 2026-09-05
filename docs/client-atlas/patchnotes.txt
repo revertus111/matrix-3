@@ -19,3 +19,10 @@
 - Added standalone dark `ClientAtlasControl` Swing UI with automatic Client/class-root discovery, current/stale status, scan, search, export, workspace access, and background tasks.
 - Added one-click `Run Phase 1 Check` to scan, validate symbol/relationship coverage, verify Atlas exclusion/current fingerprint, exercise exact class/member query, and write a compact verification export.
 - `ClientAtlasMain` with no program arguments now opens the control UI; explicit CLI commands remain available for automation.
+- Runtime-confirmed the standalone UI Phase 1 automated check passes and UI search/export successfully produced `CLASS:game/Class1` with a current fingerprint and 15 immediate relationships.
+- Closed Phase 1 and activated Phase 2 structural relationship work.
+- Added Atlas schema v2: relationship records now carry `sourcePath`, nullable `sourceLine`, nullable `opcode`, `occurrenceCount`, and optional `detail`.
+- Added distinct `DYNAMIC_CALL` relationship type so future `invokedynamic` evidence cannot be mislabeled as a proven direct call.
+- Split symbol location into `compiledPath` and `sourcePath`; declaration scanning resolves Java source files from original internal owners while preserving compiled class paths.
+- Existing EXTENDS/IMPLEMENTS/DECLARES records now persist source-path evidence with occurrence count 1; line/opcode evidence remains reserved for method-body scanning.
+- Bumped Atlas workspace schema to 2 and treat older schema indexes as stale so query/export requires an explicit rebuild instead of silently reusing incompatible generated data.
