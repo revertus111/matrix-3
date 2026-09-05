@@ -49,6 +49,10 @@ public final class BossLabsArenaPanel extends JPanel {
     private static final int PRESET_VERTICAL_LINE = 2;
     private static final int PRESET_FILLED_SQUARE = 3;
     private static final int PRESET_RING = 4;
+    private static final int TRANSFORM_ROTATE_LEFT = 0;
+    private static final int TRANSFORM_ROTATE_RIGHT = 1;
+    private static final int TRANSFORM_MIRROR_X = 2;
+    private static final int TRANSFORM_MIRROR_Y = 3;
 
     private final BossLabsPanel owner;
     private final DefaultComboBoxModel<BossLabsDraftDefinition.Phase> phaseModel =
@@ -61,11 +65,16 @@ public final class BossLabsArenaPanel extends JPanel {
             new JComboBox<BossLabsDraftDefinition.Attack>(attackModel);
     private final JTextField radiusField = new JTextField("2");
     private final JLabel summaryLabel = new JLabel("Select a BossLabs draft with a phase and attack.");
-    private final JLabel statusLabel = new JLabel("Arena workspace edits the selected attack's persisted relative tile pattern.");
+    private final JLabel geometryLabel = new JLabel("Geometry: no attack selected.");
+    private final JLabel timingLabel = new JLabel("Timing: no attack selected.");
+    private final JLabel statusLabel = new JLabel("Attack Pattern edits the selected attack's persisted relative tile pattern.");
     private final TileCanvas canvas = new TileCanvas();
     private final List<BossLabsDraftDefinition.TileOffset> patternClipboard =
             new ArrayList<BossLabsDraftDefinition.TileOffset>();
+    private final List<BossLabsDraftDefinition.TileOffset> undoPattern =
+            new ArrayList<BossLabsDraftDefinition.TileOffset>();
 
+    private BossLabsDraftDefinition.Attack undoAttack;
     private boolean suppressSelectionEvents;
 
     public BossLabsArenaPanel(BossLabsPanel owner) {
@@ -103,12 +112,12 @@ public final class BossLabsArenaPanel extends JPanel {
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         header.setOpaque(false);
 
-        JLabel title = new JLabel("Arena / Tile Workspace");
+        JLabel title = new JLabel("Attack Pattern Workspace");
         title.setFont(ConsoleTheme.SECTION_FONT);
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel description = new JLabel("Large authoring view for real BossLabs attack patterns. Origin 0,0 is the resolved attack target; fixed world-arena anchoring is not invented here.");
+        JLabel description = new JLabel("Author real BossLabs attack geometry. Origin 0,0 is the resolved attack target; fixed world-arena layout stays separate.");
         description.setFont(ConsoleTheme.SMALL_FONT);
         description.setForeground(ConsoleTheme.MUTED_TEXT);
         description.setAlignmentX(LEFT_ALIGNMENT);
@@ -143,55 +152,102 @@ public final class BossLabsArenaPanel extends JPanel {
     }
 
     private JPanel createTools() {
-        JPanel tools = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        JPanel tools = new JPanel();
+        tools.setLayout(new BoxLayout(tools, BoxLayout.Y_AXIS));
         tools.setOpaque(false);
 
+        JPanel presets = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        presets.setOpaque(false);
         JLabel radiusLabel = smallLabel("Radius");
         radiusField.setPreferredSize(new Dimension(48, 28));
         radiusField.setToolTipText("Preset radius from 0 to 16 tiles. Oversized presets are rejected before replacing the current pattern.");
         ConsoleTheme.styleTextField(radiusField);
-
         JButton cross = button("Cross");
         JButton horizontal = button("H Line");
         JButton vertical = button("V Line");
         JButton square = button("Square");
         JButton ring = button("Ring");
         JButton clear = button("Clear");
-        JButton copy = button("Copy Pattern");
-        JButton paste = button("Paste Pattern");
-        JButton center = button("Center View");
-
         cross.addActionListener(e -> applyPreset(PRESET_CROSS, "Cross"));
         horizontal.addActionListener(e -> applyPreset(PRESET_HORIZONTAL_LINE, "Horizontal line"));
         vertical.addActionListener(e -> applyPreset(PRESET_VERTICAL_LINE, "Vertical line"));
         square.addActionListener(e -> applyPreset(PRESET_FILLED_SQUARE, "Filled square"));
         ring.addActionListener(e -> applyPreset(PRESET_RING, "Ring"));
         clear.addActionListener(e -> clearPattern());
+        cross.setToolTipText("Replace the selected pattern with a plus-shaped cross.");
+        horizontal.setToolTipText("Replace the selected pattern with a horizontal line.");
+        vertical.setToolTipText("Replace the selected pattern with a vertical line.");
+        square.setToolTipText("Replace the selected pattern with a filled square.");
+        ring.setToolTipText("Replace the selected pattern with a square perimeter ring.");
+        clear.setToolTipText("Clear all painted tiles from the selected attack.");
+        presets.add(radiusLabel);
+        presets.add(radiusField);
+        presets.add(cross);
+        presets.add(horizontal);
+        presets.add(vertical);
+        presets.add(square);
+        presets.add(ring);
+        presets.add(clear);
+
+        JPanel transforms = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        transforms.setOpaque(false);
+        JButton undo = button("Undo Pattern");
+        JButton rotateLeft = button("Rotate Left");
+        JButton rotateRight = button("Rotate Right");
+        JButton mirrorX = button("Mirror X");
+        JButton mirrorY = button("Mirror Y");
+        JButton nudgeLeft = button("Nudge Left");
+        JButton nudgeRight = button("Nudge Right");
+        JButton nudgeUp = button("Nudge Up");
+        JButton nudgeDown = button("Nudge Down");
+        undo.addActionListener(e -> undoPattern());
+        rotateLeft.addActionListener(e -> transformPattern(TRANSFORM_ROTATE_LEFT, "Rotated pattern left"));
+        rotateRight.addActionListener(e -> transformPattern(TRANSFORM_ROTATE_RIGHT, "Rotated pattern right"));
+        mirrorX.addActionListener(e -> transformPattern(TRANSFORM_MIRROR_X, "Mirrored pattern across X"));
+        mirrorY.addActionListener(e -> transformPattern(TRANSFORM_MIRROR_Y, "Mirrored pattern across Y"));
+        nudgeLeft.addActionListener(e -> nudgePattern(-1, 0, "Nudged pattern left"));
+        nudgeRight.addActionListener(e -> nudgePattern(1, 0, "Nudged pattern right"));
+        nudgeUp.addActionListener(e -> nudgePattern(0, 1, "Nudged pattern up"));
+        nudgeDown.addActionListener(e -> nudgePattern(0, -1, "Nudged pattern down"));
+        undo.setToolTipText("Restore the pattern state from immediately before the last paint stroke, preset, paste, transform, nudge, or clear action.");
+        rotateLeft.setToolTipText("Rotate every painted offset 90 degrees counter-clockwise around target 0,0.");
+        rotateRight.setToolTipText("Rotate every painted offset 90 degrees clockwise around target 0,0.");
+        mirrorX.setToolTipText("Flip the pattern left/right around target 0,0.");
+        mirrorY.setToolTipText("Flip the pattern up/down around target 0,0.");
+        nudgeLeft.setToolTipText("Shift the entire pattern one tile left if all offsets remain within +/-16.");
+        nudgeRight.setToolTipText("Shift the entire pattern one tile right if all offsets remain within +/-16.");
+        nudgeUp.setToolTipText("Shift the entire pattern one tile up if all offsets remain within +/-16.");
+        nudgeDown.setToolTipText("Shift the entire pattern one tile down if all offsets remain within +/-16.");
+        transforms.add(undo);
+        transforms.add(rotateLeft);
+        transforms.add(rotateRight);
+        transforms.add(mirrorX);
+        transforms.add(mirrorY);
+        transforms.add(nudgeLeft);
+        transforms.add(nudgeRight);
+        transforms.add(nudgeUp);
+        transforms.add(nudgeDown);
+
+        JPanel workflow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        workflow.setOpaque(false);
+        JButton copy = button("Copy Pattern");
+        JButton paste = button("Paste Pattern");
+        JButton center = button("Center View");
         copy.addActionListener(e -> copyPattern());
         paste.addActionListener(e -> pastePattern());
         center.addActionListener(e -> canvas.centerView());
-
-        cross.setToolTipText("Replace the selected attack pattern with a plus-shaped cross.");
-        horizontal.setToolTipText("Replace the selected attack pattern with a horizontal line.");
-        vertical.setToolTipText("Replace the selected attack pattern with a vertical line.");
-        square.setToolTipText("Replace the selected attack pattern with a filled square.");
-        ring.setToolTipText("Replace the selected attack pattern with a square perimeter ring.");
-        clear.setToolTipText("Clear all painted tiles from the selected attack.");
-        copy.setToolTipText("Copy the selected attack's tile geometry for reuse on another attack or phase.");
+        copy.setToolTipText("Copy the selected attack's geometry for reuse on another attack or phase.");
         paste.setToolTipText("Replace the selected attack's pattern with the copied geometry.");
         center.setToolTipText("Reset pan and zoom so target 0,0 is centered again.");
+        workflow.add(copy);
+        workflow.add(paste);
+        workflow.add(center);
 
-        tools.add(radiusLabel);
-        tools.add(radiusField);
-        tools.add(cross);
-        tools.add(horizontal);
-        tools.add(vertical);
-        tools.add(square);
-        tools.add(ring);
-        tools.add(clear);
-        tools.add(copy);
-        tools.add(paste);
-        tools.add(center);
+        tools.add(presets);
+        tools.add(Box.createVerticalStrut(5));
+        tools.add(transforms);
+        tools.add(Box.createVerticalStrut(5));
+        tools.add(workflow);
         return tools;
     }
 
@@ -206,11 +262,21 @@ public final class BossLabsArenaPanel extends JPanel {
         summaryLabel.setFont(ConsoleTheme.SMALL_FONT);
         summaryLabel.setForeground(ConsoleTheme.TEXT);
         summaryLabel.setAlignmentX(LEFT_ALIGNMENT);
+        geometryLabel.setFont(ConsoleTheme.SMALL_FONT);
+        geometryLabel.setForeground(ConsoleTheme.MUTED_TEXT);
+        geometryLabel.setAlignmentX(LEFT_ALIGNMENT);
+        timingLabel.setFont(ConsoleTheme.SMALL_FONT);
+        timingLabel.setForeground(ConsoleTheme.MUTED_TEXT);
+        timingLabel.setAlignmentX(LEFT_ALIGNMENT);
         statusLabel.setFont(ConsoleTheme.SMALL_FONT);
-        statusLabel.setForeground(ConsoleTheme.MUTED_TEXT);
+        statusLabel.setForeground(ConsoleTheme.ACCENT);
         statusLabel.setAlignmentX(LEFT_ALIGNMENT);
 
         footer.add(summaryLabel);
+        footer.add(Box.createVerticalStrut(3));
+        footer.add(geometryLabel);
+        footer.add(Box.createVerticalStrut(3));
+        footer.add(timingLabel);
         footer.add(Box.createVerticalStrut(4));
         footer.add(statusLabel);
         return footer;
@@ -314,16 +380,53 @@ public final class BossLabsArenaPanel extends JPanel {
         BossLabsDraftDefinition.Phase phase = selectedPhase();
         BossLabsDraftDefinition.Attack attack = selectedAttack();
         if (phase == null || attack == null) {
-            summaryLabel.setText("Add/select a phase and attack in BossLabs before authoring arena tiles.");
+            summaryLabel.setText("Add/select a phase and attack before authoring attack geometry.");
+            geometryLabel.setText("Geometry: no attack selected.");
+            timingLabel.setText("Timing: no attack selected.");
             return;
         }
-        String text = phase.getId() + " / " + attack.getId() + " | " + attack.getTilePattern().size()
-                + " tile(s) | impact: " + BossLabsDraftDefinition.tileEffectName(attack.getImpactTileEffectType());
-        if (attack.getHazardDurationTicks() > 0) {
-            text += " | hazard: " + BossLabsDraftDefinition.tileEffectName(attack.getHazardTileEffectType())
-                    + " " + attack.getHazardDurationTicks() + "t/" + attack.getHazardTickInterval() + "t";
+
+        summaryLabel.setText(creatorLabel(phase.getId()) + " / " + creatorLabel(attack.getId()) + "  •  "
+                + BossLabsDraftDefinition.styleName(attack.getCombatStyle()) + "  •  impact: "
+                + BossLabsDraftDefinition.tileEffectName(attack.getImpactTileEffectType()));
+        updateGeometrySummary(attack);
+        updateTimingSummary(attack);
+    }
+
+    private void updateGeometrySummary(BossLabsDraftDefinition.Attack attack) {
+        if (attack.getTilePattern().isEmpty()) {
+            geometryLabel.setText("Geometry: no painted tiles - this attack currently uses normal single-target behavior.");
+            return;
         }
-        summaryLabel.setText(text);
+        int minX = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        boolean includesOrigin = false;
+        for (BossLabsDraftDefinition.TileOffset tile : attack.getTilePattern()) {
+            minX = Math.min(minX, tile.getX());
+            maxX = Math.max(maxX, tile.getX());
+            minY = Math.min(minY, tile.getY());
+            maxY = Math.max(maxY, tile.getY());
+            includesOrigin |= tile.getX() == 0 && tile.getY() == 0;
+        }
+        geometryLabel.setText("Geometry: " + attack.getTilePattern().size() + " tile(s)  •  X " + minX + ".." + maxX
+                + "  •  Y " + minY + ".." + maxY + "  •  target 0,0 "
+                + (includesOrigin ? "affected" : "safe"));
+    }
+
+    private void updateTimingSummary(BossLabsDraftDefinition.Attack attack) {
+        StringBuilder text = new StringBuilder("Timing: ");
+        if (attack.getTelegraphTicks() > 0)
+            text.append("warning delay ").append(attack.getTelegraphTicks()).append("t  →  ");
+        text.append("impact");
+        if (attack.getHazardDurationTicks() > 0) {
+            text.append("  →  ground effect ").append(attack.getHazardDurationTicks()).append("t every ")
+                    .append(attack.getHazardTickInterval()).append("t");
+        } else {
+            text.append("  •  no lingering ground effect");
+        }
+        timingLabel.setText(text.toString());
     }
 
     private void applyPreset(int preset, String label) {
@@ -347,6 +450,7 @@ public final class BossLabsArenaPanel extends JPanel {
             return;
         }
 
+        rememberUndo(attack);
         attack.getTilePattern().clear();
         if (preset == PRESET_CROSS) {
             for (int offset = -radius; offset <= radius; offset++) {
@@ -378,7 +482,7 @@ public final class BossLabsArenaPanel extends JPanel {
                 }
             }
         }
-        draftChanged(label + " radius " + radius + " applied to " + attack.getId() + ".");
+        draftChanged(label + " radius " + radius + " applied to " + creatorLabel(attack.getId()) + ".");
     }
 
     private int expectedPresetTileCount(int preset, int radius) {
@@ -399,6 +503,11 @@ public final class BossLabsArenaPanel extends JPanel {
         BossLabsDraftDefinition.Attack attack = requireAttack();
         if (attack == null)
             return;
+        if (attack.getTilePattern().isEmpty()) {
+            setStatus("The selected attack pattern is already empty.");
+            return;
+        }
+        rememberUndo(attack);
         attack.getTilePattern().clear();
         draftChanged("Cleared the selected attack pattern.");
     }
@@ -410,7 +519,7 @@ public final class BossLabsArenaPanel extends JPanel {
         patternClipboard.clear();
         for (BossLabsDraftDefinition.TileOffset tile : attack.getTilePattern())
             patternClipboard.add(new BossLabsDraftDefinition.TileOffset(tile.getX(), tile.getY()));
-        setStatus("Copied " + patternClipboard.size() + " tile(s) from " + attack.getId()
+        setStatus("Copied " + patternClipboard.size() + " tile(s) from " + creatorLabel(attack.getId())
                 + ". Select another attack and Paste Pattern to reuse the geometry.");
     }
 
@@ -432,10 +541,108 @@ public final class BossLabsArenaPanel extends JPanel {
                 return;
             }
         }
+        rememberUndo(attack);
         attack.getTilePattern().clear();
         for (BossLabsDraftDefinition.TileOffset tile : patternClipboard)
             attack.getTilePattern().add(new BossLabsDraftDefinition.TileOffset(tile.getX(), tile.getY()));
-        draftChanged("Pasted " + patternClipboard.size() + " tile(s) into " + attack.getId() + ".");
+        draftChanged("Pasted " + patternClipboard.size() + " tile(s) into " + creatorLabel(attack.getId()) + ".");
+    }
+
+    private void rememberUndo(BossLabsDraftDefinition.Attack attack) {
+        undoPattern.clear();
+        if (attack != null) {
+            for (BossLabsDraftDefinition.TileOffset tile : attack.getTilePattern())
+                undoPattern.add(new BossLabsDraftDefinition.TileOffset(tile.getX(), tile.getY()));
+        }
+        undoAttack = attack;
+    }
+
+    private void undoPattern() {
+        BossLabsDraftDefinition.Attack attack = requireAttack();
+        if (attack == null)
+            return;
+        if (undoAttack != attack) {
+            setStatus("No previous pattern state is available for this attack.");
+            return;
+        }
+        attack.getTilePattern().clear();
+        for (BossLabsDraftDefinition.TileOffset tile : undoPattern)
+            attack.getTilePattern().add(new BossLabsDraftDefinition.TileOffset(tile.getX(), tile.getY()));
+        undoPattern.clear();
+        undoAttack = null;
+        draftChanged("Restored the previous pattern state.");
+    }
+
+    private void transformPattern(int transform, String label) {
+        BossLabsDraftDefinition.Attack attack = requireAttack();
+        if (attack == null)
+            return;
+        if (attack.getTilePattern().isEmpty()) {
+            setStatus("Paint or paste a pattern before transforming it.");
+            return;
+        }
+
+        List<BossLabsDraftDefinition.TileOffset> transformed = new ArrayList<BossLabsDraftDefinition.TileOffset>();
+        for (BossLabsDraftDefinition.TileOffset tile : attack.getTilePattern()) {
+            int x = tile.getX();
+            int y = tile.getY();
+            int nextX;
+            int nextY;
+            if (transform == TRANSFORM_ROTATE_LEFT) {
+                nextX = -y;
+                nextY = x;
+            } else if (transform == TRANSFORM_ROTATE_RIGHT) {
+                nextX = y;
+                nextY = -x;
+            } else if (transform == TRANSFORM_MIRROR_X) {
+                nextX = -x;
+                nextY = y;
+            } else if (transform == TRANSFORM_MIRROR_Y) {
+                nextX = x;
+                nextY = -y;
+            } else {
+                setStatus("Unsupported pattern transform.");
+                return;
+            }
+            BossLabsDraftDefinition.TileOffset next = new BossLabsDraftDefinition.TileOffset(nextX, nextY);
+            if (!transformed.contains(next))
+                transformed.add(next);
+        }
+
+        rememberUndo(attack);
+        replacePattern(attack, transformed);
+        draftChanged(label + ".");
+    }
+
+    private void nudgePattern(int deltaX, int deltaY, String label) {
+        BossLabsDraftDefinition.Attack attack = requireAttack();
+        if (attack == null)
+            return;
+        if (attack.getTilePattern().isEmpty()) {
+            setStatus("Paint or paste a pattern before nudging it.");
+            return;
+        }
+
+        List<BossLabsDraftDefinition.TileOffset> shifted = new ArrayList<BossLabsDraftDefinition.TileOffset>();
+        for (BossLabsDraftDefinition.TileOffset tile : attack.getTilePattern()) {
+            int x = tile.getX() + deltaX;
+            int y = tile.getY() + deltaY;
+            if (Math.abs(x) > MAX_TILE_OFFSET || Math.abs(y) > MAX_TILE_OFFSET) {
+                setStatus("Nudge rejected: at least one tile would move outside +/-" + MAX_TILE_OFFSET + ".");
+                return;
+            }
+            shifted.add(new BossLabsDraftDefinition.TileOffset(x, y));
+        }
+
+        rememberUndo(attack);
+        replacePattern(attack, shifted);
+        draftChanged(label + ".");
+    }
+
+    private void replacePattern(BossLabsDraftDefinition.Attack attack,
+            List<BossLabsDraftDefinition.TileOffset> replacement) {
+        attack.getTilePattern().clear();
+        attack.getTilePattern().addAll(replacement);
     }
 
     private BossLabsDraftDefinition.Attack requireAttack() {
@@ -470,6 +677,26 @@ public final class BossLabsArenaPanel extends JPanel {
         }
     }
 
+    private String creatorLabel(String id) {
+        String value = id == null ? "" : id.trim().replace('_', ' ').replace('-', ' ');
+        if (value.length() == 0)
+            return "Unnamed";
+        StringBuilder result = new StringBuilder(value.length());
+        boolean capitalize = true;
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (Character.isWhitespace(character)) {
+                if (result.length() > 0 && result.charAt(result.length() - 1) != ' ')
+                    result.append(' ');
+                capitalize = true;
+            } else {
+                result.append(capitalize ? Character.toUpperCase(character) : character);
+                capitalize = false;
+            }
+        }
+        return result.toString();
+    }
+
     private final class TileCanvas extends JPanel {
 
         private static final long serialVersionUID = 2677977998358423860L;
@@ -482,6 +709,8 @@ public final class BossLabsArenaPanel extends JPanel {
         private Point lastPanPoint;
         private int hoverX = Integer.MIN_VALUE;
         private int hoverY = Integer.MIN_VALUE;
+        private int paintButton = MouseEvent.NOBUTTON;
+        private boolean strokeChanged;
 
         private TileCanvas() {
             setBackground(ConsoleTheme.INPUT);
@@ -492,23 +721,33 @@ public final class BossLabsArenaPanel extends JPanel {
             MouseAdapter mouse = new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent event) {
-                    if (SwingUtilities.isMiddleMouseButton(event))
+                    if (SwingUtilities.isMiddleMouseButton(event)) {
                         lastPanPoint = event.getPoint();
+                        return;
+                    }
+                    if (!SwingUtilities.isLeftMouseButton(event) && !SwingUtilities.isRightMouseButton(event))
+                        return;
+                    updateHover(event.getPoint());
+                    BossLabsDraftDefinition.Attack attack = requireAttack();
+                    if (attack == null)
+                        return;
+                    rememberUndo(attack);
+                    paintButton = event.getButton();
+                    strokeChanged = false;
+                    paintHoveredTile(paintButton == MouseEvent.BUTTON3);
+                    requestFocusInWindow();
                 }
 
                 @Override
                 public void mouseReleased(MouseEvent event) {
-                    if (SwingUtilities.isMiddleMouseButton(event))
+                    if (SwingUtilities.isMiddleMouseButton(event)) {
                         lastPanPoint = null;
-                }
-
-                @Override
-                public void mouseClicked(MouseEvent event) {
-                    if (!SwingUtilities.isLeftMouseButton(event) && !SwingUtilities.isRightMouseButton(event))
                         return;
-                    updateHover(event.getPoint());
-                    editHoveredTile(SwingUtilities.isRightMouseButton(event));
-                    requestFocusInWindow();
+                    }
+                    if (paintButton != MouseEvent.NOBUTTON) {
+                        finishPaintStroke();
+                        paintButton = MouseEvent.NOBUTTON;
+                    }
                 }
 
                 @Override
@@ -533,18 +772,23 @@ public final class BossLabsArenaPanel extends JPanel {
 
                 @Override
                 public void mouseDragged(MouseEvent event) {
-                    if (lastPanPoint == null)
+                    if (lastPanPoint != null) {
+                        panX += event.getX() - lastPanPoint.x;
+                        panY += event.getY() - lastPanPoint.y;
+                        lastPanPoint = event.getPoint();
+                        updateHover(event.getPoint());
+                        repaint();
                         return;
-                    panX += event.getX() - lastPanPoint.x;
-                    panY += event.getY() - lastPanPoint.y;
-                    lastPanPoint = event.getPoint();
+                    }
+                    if (paintButton == MouseEvent.NOBUTTON)
+                        return;
                     updateHover(event.getPoint());
-                    repaint();
+                    paintHoveredTile(paintButton == MouseEvent.BUTTON3);
                 }
             });
         }
 
-        private void editHoveredTile(boolean eraseOnly) {
+        private void paintHoveredTile(boolean erase) {
             BossLabsDraftDefinition.Attack attack = requireAttack();
             if (attack == null)
                 return;
@@ -555,20 +799,34 @@ public final class BossLabsArenaPanel extends JPanel {
 
             BossLabsDraftDefinition.TileOffset tile = new BossLabsDraftDefinition.TileOffset(hoverX, hoverY);
             boolean contains = attack.getTilePattern().contains(tile);
-            if (eraseOnly) {
+            if (erase) {
                 if (!contains)
                     return;
                 attack.getTilePattern().remove(tile);
-            } else if (contains) {
-                attack.getTilePattern().remove(tile);
             } else {
+                if (contains)
+                    return;
                 if (attack.getTilePattern().size() >= MAX_PATTERN_TILES) {
                     setStatus("Pattern limit reached: " + MAX_PATTERN_TILES + " tiles.");
                     return;
                 }
                 attack.getTilePattern().add(tile);
             }
-            draftChanged((eraseOnly ? "Erased" : "Toggled") + " tile " + hoverX + ", " + hoverY + ".");
+            strokeChanged = true;
+            updateSummary();
+            setStatus((erase ? "Erasing" : "Painting") + " tile " + hoverX + ", " + hoverY
+                    + "  •  release mouse to commit this stroke.");
+            repaint();
+        }
+
+        private void finishPaintStroke() {
+            if (!strokeChanged)
+                return;
+            strokeChanged = false;
+            owner.arenaDraftChanged();
+            updateSummary();
+            setStatus("Pattern paint stroke committed. Undo Pattern restores the previous stroke state.");
+            repaint();
         }
 
         private void centerView() {
@@ -604,8 +862,8 @@ public final class BossLabsArenaPanel extends JPanel {
             hoverY = floorDiv(point.y - originY, tileSize);
             BossLabsDraftDefinition.Attack attack = selectedAttack();
             if (attack != null) {
-                setStatus("Hover " + hoverX + ", " + hoverY + " | " + attack.getTilePattern().size()
-                        + " painted tile(s) | left toggles | right erases | middle pans | wheel zooms");
+                setStatus("Hover " + hoverX + ", " + hoverY + "  •  " + attack.getTilePattern().size()
+                        + " painted  •  left paint  •  right erase  •  middle pan  •  wheel zoom");
             }
             repaint();
         }
