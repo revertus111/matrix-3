@@ -97,6 +97,8 @@ Client/.client-atlas/
     relationships.jsonl
     evidence.jsonl
     phase1-check.json
+    phase2-structural-check.txt
+    phase2-structural-query.json
     exports/
     traces/
 ```
@@ -124,12 +126,11 @@ Rules:
 - Fingerprint: `41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26`.
 - Persisted metadata reopened with `Current fingerprint: true`.
 - Standalone Client Atlas Control opened successfully.
-- One-click `Run Phase 1 Check` ended with `PHASE 1 AUTOMATED CHECK: PASS`.
-- UI search worked for `Class1`.
-- UI export worked for `CLASS:game/Class1`.
-- The verified Phase-1 export reported a current index, 15 immediate relationships, no truncation, the `EXTENDS java/lang/Object` edge, fields, constructor, and methods owned by `Class1`.
+- One-click Phase 1 check passed.
+- UI search/export worked for `CLASS:game/Class1`.
+- The verified Phase-1 export reported 15 immediate relationships with no truncation.
 
-Phase 1 is therefore **DONE**.
+Phase 1 is **DONE**.
 
 ## verified-static
 
@@ -139,26 +140,36 @@ Phase 1 is therefore **DONE**.
 - `AtlasWorkspace` owns local persistence/schema/current checks.
 - `AtlasScanner` owns bytecode scanning.
 - `AtlasQueryEngine` owns exact query/export.
-- `ClientAtlasControl` is only a human control surface over those APIs.
-- Phase 2 schema v2/source-locator implementation is complete.
-- Phase 2 method-body call/field scanning is complete.
-- Phase 2 type-reference and typed-constant scanning is complete.
-- Local schema-v2 rebuild/relationship/size verification is intentionally consolidated into 2A.4 to minimize user PC time.
+- `ClientAtlasControl` is a human control surface over Atlas APIs.
+- Schema v2/source-locator implementation is complete.
+- Method-body call/field scanning is complete.
+- Type-reference and typed-constant scanning is complete.
+- `AtlasStructuralVerifier` now owns the consolidated Bundle 2A verification/measurement pass.
+- The standalone UI and CLI both call the same verifier rather than duplicating gate logic.
 
 ## UNKNOWN / measurement needed
 
-- Exact schema-v2 relationship count and generated JSONL sizes.
-- Actual scan/query timings on the user's machine.
-- Completeness of source line/debug data.
-- Whether meaningful `invokedynamic` usage exists in this client.
-- Whether a database is ever needed after measured Phase 2 data.
-- Safest high-level runtime hooks for Phase 3.
+These are exactly what 2A.4 will measure locally:
+
+- Schema-v2 relationship count.
+- Generated `symbols.jsonl` / `relationships.jsonl` sizes.
+- Actual scan time on the user's machine.
+- Exact-query time on the user's machine.
+- Amount of usable source-line/opcode evidence.
+- Whether this compiled client contains meaningful `invokedynamic` sites.
+- Whether measured data ever justifies a database or different graph caps.
 
 # Schema v2
 
 `AtlasWorkspace.SCHEMA_VERSION = 2`.
 
-Old schema-v1 generated data is treated as non-current and must be rebuilt. Evidence/traces are preserved.
+Old schema-v1 generated data is non-current and requires rebuild. Atlas Control reports this as:
+
+```text
+REBUILD REQUIRED (schema 1 -> 2)
+```
+
+Evidence/traces are preserved.
 
 ## Symbol record
 
@@ -222,45 +233,43 @@ ClassReader.SKIP_FRAMES
 
 This keeps code and debug-line information while avoiding frame processing.
 
-Direct call targets use exact stable IDs:
+Direct call targets:
 
 ```text
 METHOD:<owner>#<name><descriptor>
 CONSTRUCTOR:<owner>#<init><descriptor>
 ```
 
-Field access targets use exact stable IDs:
+Field access targets:
 
 ```text
 FIELD:<owner>#<name><descriptor>
 ```
 
-`invokedynamic` uses `DYNAMIC_CALL` with dynamic name/descriptor + bootstrap owner/name/descriptor. Bootstrap tag/interface facts remain in `detail`.
+`invokedynamic` uses `DYNAMIC_CALL` with dynamic name/descriptor plus bootstrap owner/name/descriptor. Bootstrap tag/interface facts stay in `detail`.
 
 ## Type references
 
-Type references use neutral factual targets:
+Neutral factual target:
 
 ```text
 TYPE:<internal-jvm-name>
 ```
 
-This avoids guessing whether the target should semantically be treated as a class, interface, definition type, domain object, etc.
-
 `REFERENCES_TYPE` is collected from:
 
 - field descriptors
-- method argument/return descriptors
+- method arguments/return descriptors
 - declared exceptions
 - class/field/method generic signatures
-- generic inner-class signatures using exact `$` JVM names
+- generic inner-class signatures with exact `$` JVM names
 - `NEW`, `CHECKCAST`, `INSTANCEOF`, `ANEWARRAY`, `MULTIANEWARRAY`
 - method/field instruction owners and object descriptors
 - LDC `Type` values
 - bootstrap `Handle` owners/descriptors
 - `ConstantDynamic` descriptors/bootstrap structures
 
-Object arrays resolve to their object element type. Primitive-only descriptors do not create fake object references.
+Object arrays resolve to object element type. Primitive-only descriptors do not create fake object references.
 
 ## Constants
 
@@ -274,24 +283,55 @@ double:1.0
 string:Attack
 ```
 
-Captured from:
+Captured from field constant values, LDC, ICONST/BIPUSH/SIPUSH/LCONST/FCONST/DCONST, and reliable bootstrap literal arguments.
 
-- classfile/static field constant values when present
-- LDC literal values
-- `ICONST_*`
-- `BIPUSH` / `SIPUSH`
-- `LCONST_*`
-- `FCONST_*`
-- `DCONST_*`
-- reliable bootstrap literal arguments
+`Type`, `Handle`, and `ConstantDynamic` values feed structural references instead of being flattened into misleading string constants. Ordinary `IINC` remains ignored.
 
-`Type`, `Handle`, and `ConstantDynamic` values feed structural references instead of being flattened into misleading string constants. Ordinary `IINC` remains intentionally ignored.
+# 2A.4 consolidated verifier
+
+`AtlasStructuralVerifier` performs the Bundle 2A gate in one pass.
+
+It automatically:
+
+1. Captures pre-scan schema/current state plus evidence/trace size state.
+2. Rebuilds generated Atlas data using the current scanner.
+3. Requires schema 2 + current fingerprint.
+4. Requires relationship growth above the Phase 1 structural-only baseline.
+5. Verifies symbol location fields and Class1 source/compiled paths where available.
+6. Verifies schema-v2 relationship field shape.
+7. Requires generated `CALLS`, `READS_FIELD`, `WRITES_FIELD`, `REFERENCES_TYPE`, and `CONSTANT` families.
+8. Requires zero automatic `LITERAL_ID` promotions.
+9. Exercises an internal incoming `CALLS` exact-query path.
+10. Re-runs exact class query + compact export regression.
+11. Requires evidence/trace files to remain unchanged across rebuild.
+12. Counts every relationship type.
+13. Records source-line/opcode/aggregation counts.
+14. Records class/symbol/relationship totals, JSONL byte sizes, scan time, and query time.
+15. Writes `.client-atlas/phase2-structural-check.txt`.
+
+Non-failing evidence notes:
+
+- `DYNAMIC_CALL` may be zero when the client contains no invokedynamic sites.
+- Source-line count may be zero if compiled debug line data is unavailable.
+- Aggregated-occurrence count may be zero if no naturally repeated same-method edge occurs.
+
+Human workflow:
+
+```text
+Run ClientAtlasMain with no args -> Run Phase 2 Check
+```
+
+Automation workflow:
+
+```text
+ClientAtlasMain verify-structural
+```
 
 # Search/index direction
 
-Do not add SQLite before measurement.
+Do not add SQLite before 2A.4 measurements.
 
-Likely Phase 2 in-memory maps after Bundle 2A verifies:
+Planned Phase 2 in-memory maps after Bundle 2A passes:
 
 - symbol ID -> symbol
 - owner/name -> candidates
@@ -299,7 +339,7 @@ Likely Phase 2 in-memory maps after Bundle 2A verifies:
 - incoming relationships
 - typed constant -> referencing symbols
 
-Later friendly searches:
+Friendly searches later:
 
 ```text
 Class387
@@ -337,7 +377,7 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 - [x] **1A.3 Bytecode scanner MVP**.
 - [x] **1A.4 Basic query/export CLI**.
 - [x] **1A.5 Standalone Client Atlas Control**.
-- [x] **Phase 1 local verification gate** - Eclipse/Java 8 scan/status/control/check/search/export passed.
+- [x] **Phase 1 local verification gate**.
 
 ## Phase 2 - Static Relationship and Investigation Map
 
@@ -348,14 +388,14 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 **Status: NEEDS TEST**
 
 - [x] **2A.0 Targeted relationship architecture discovery**.
-- [x] **2A.1 Relationship schema v2 + source locator** - schema bump, typed source/occurrence fields, compiled/source path separation, dynamic-call type, old-schema stale guard.
-- [x] **2A.2 Calls + field access scanner** - `CALLS`, `DYNAMIC_CALL`, `READS_FIELD`, `WRITES_FIELD`, line/opcode evidence, per-method aggregation.
-- [x] **2A.3 Type references + constants** - descriptors/signatures/exceptions/type instructions/bootstrap structures + typed constants; no automatic semantic IDs.
-- [ ] **2A.4 Structural verification + size metrics** - rebuild schema v2 once, verify known relationships/source/type/constant evidence, measure counts/files/timing, and tune only from measured evidence. **NEXT.**
+- [x] **2A.1 Relationship schema v2 + source locator**.
+- [x] **2A.2 Calls + field access scanner**.
+- [x] **2A.3 Type references + constants**.
+- [ ] **2A.4 Structural verification + size metrics** - one-click verifier/UI/CLI harness implemented; local `PHASE 2 STRUCTURAL CHECK: PASS` + measured report still required.
 
 ### Bundle 2B - Investigation search
 
-**Status: PLANNED**
+**Status: PLANNED - GATED ON 2A.4 PASS**
 
 - [ ] **2B.1 In-memory investigation index**.
 - [ ] **2B.2 Ranked/friendly search**.
@@ -405,23 +445,18 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 # Testing
 
-## 2A.4 consolidated structural verification
-
-Do one local session rather than testing 2A.1/2A.2/2A.3 separately:
+## Current shortest 2A.4 local session
 
 1. `git pull origin main`.
 2. Eclipse/Java 8 clean/build Client.
-3. Open `game.atlas.ClientAtlasMain` with no arguments.
-4. Confirm old schema-v1 index is non-current before rebuild if it still exists.
-5. Click **Scan / Rebuild Index** once.
-6. Confirm schema version 2/current.
-7. Verify source-path + relationship record shape.
-8. Verify one known `CALLS`, `READS_FIELD`, `WRITES_FIELD`, `REFERENCES_TYPE`, and typed `CONSTANT` relationship.
-9. Confirm numeric constants remain generic and no automatic `LITERAL_ID`/domain semantics appear.
-10. Record class/symbol/relationship counts, generated file sizes, approximate scan time, and one exact query timing if practical.
-11. Re-run exact search/export regression.
+3. Run `game.atlas.ClientAtlasMain` with no program arguments.
+4. Click **Run Phase 2 Check** once.
+5. Confirm output contains `PHASE 2 STRUCTURAL CHECK: PASS`.
+6. Send/copy `.client-atlas/phase2-structural-check.txt`.
 
-See `docs/client-atlas/testlist.txt` for the detailed checks.
+No manual JSONL inspection is required for the normal gate.
+
+See `docs/client-atlas/testlist.txt` for every automated assertion.
 
 # Carryover / blockers
 
@@ -434,13 +469,13 @@ See `docs/client-atlas/testlist.txt` for the detailed checks.
 ## BLOCKERS
 
 - No implementation blocker.
-- Bundle 2A is now waiting only on the consolidated 2A.4 local verification/measurement gate.
+- Bundle 2A is waiting only on the one-click 2A.4 local PASS/report.
 
 # Resume Here
 
-**Last completed:**
+**Last completed implementation:**
 
-- Phase 2 / Bundle 2A / **2A.3 Type references + constants** implementation.
+- Phase 2 / Bundle 2A / **2A.4 verification harness implementation**.
 
 **Current phase:**
 
@@ -448,24 +483,23 @@ See `docs/client-atlas/testlist.txt` for the detailed checks.
 
 **Active bundle:**
 
-- **Bundle 2A - Structural relationships**
+- **Bundle 2A - Structural relationships / NEEDS TEST**
 
 **Current/next checklist item:**
 
-- **2A.4 Structural verification + size metrics**.
+- **2A.4 local structural verification + size metrics PASS**.
 
 **Current implementation state:**
 
-- Schema version is 2.
-- Symbols separate `compiledPath` / `sourcePath`.
-- Relationships carry source path, nullable line/opcode, occurrence count, and detail.
-- Direct calls/dynamic calls/field reads/field writes are indexed from method bodies.
-- Repeated same-method edges aggregate occurrence counts.
-- Type references cover descriptors, exceptions, signatures, type instructions, instruction owners/descriptors, LDC types, handles, and constant-dynamic structures.
-- Type targets remain neutral `TYPE:<internal-name>` facts.
-- Typed constants cover field constants, bytecode literal instructions, LDC literals, and reliable bootstrap literals.
-- Numeric constants never auto-promote to `LITERAL_ID` or domain semantics.
-- Old schema data is treated as non-current; one rebuild migrates generated data while preserving evidence/traces.
+- Schema version 2 implemented.
+- Symbols separate compiled/source paths.
+- Relationship records carry source/line/opcode/count/detail.
+- CALLS/DYNAMIC_CALL/read/write scanning implemented.
+- Type references + typed constants implemented.
+- No automatic literal/domain-ID semantics.
+- One-click structural verifier is implemented in `AtlasStructuralVerifier` and exposed by Client Atlas Control.
+- CLI automation uses the same verifier through `verify-structural`.
+- The verifier rebuilds the index itself; the user does not need to click Scan separately.
 
 **Files already inspected/changed for this phase:**
 
@@ -474,7 +508,9 @@ See `docs/client-atlas/testlist.txt` for the detailed checks.
 - `Client/src/main/java/game/atlas/AtlasWorkspace.java`
 - `Client/src/main/java/game/atlas/AtlasScanner.java`
 - `Client/src/main/java/game/atlas/AtlasQueryEngine.java`
+- `Client/src/main/java/game/atlas/AtlasStructuralVerifier.java`
 - `Client/src/main/java/game/atlas/ClientAtlasControl.java`
+- `Client/src/main/java/game/atlas/ClientAtlasMain.java`
 - `docs/client-atlas/PROJECT.md`
 - `docs/client-atlas/patchnotes.txt`
 - `docs/client-atlas/testlist.txt`
@@ -490,12 +526,13 @@ See `docs/client-atlas/testlist.txt` for the detailed checks.
 
 **Pending verification:**
 
-- Consolidated schema-v2 structural scan + relationship evidence + size/timing measurements.
+- Pull/build once and click **Run Phase 2 Check**.
+- Persist the actual schema-v2 counts/sizes/timings from the generated report.
 
-**Next implementation after Bundle 2A passes:**
+**Next implementation after gate passes:**
 
 - **2B.1 In-memory investigation index**.
 
 # Next recommended work
 
-**2A.4 Structural verification + size metrics.** This is the one consolidated local test session for all Phase 2 structural scanner work completed so far.
+**Run the one-click 2A.4 structural gate.** If the report ends in PASS, close Bundle 2A and begin **2B.1** without another structural discovery cycle.
