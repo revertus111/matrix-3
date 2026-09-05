@@ -14,26 +14,35 @@ Phase 1 - runtime verified
 [x] Export reported schema 1, current fingerprint, 15 immediate relationships, and no truncation before the Phase 2 schema bump.
 
 Phase 2 / 2A.1 schema-v2 checks - batch with structural scanner verification
-[ ] Clean/build Client after pulling schema v2.
+[ ] Clean/build Client after pulling Phase 2 scanner work.
 [ ] Open Client Atlas Control and confirm the old schema-v1 generated index reports non-current/stale until rebuilt.
 [ ] Click `Scan / Rebuild Index` and confirm metadata becomes schema version 2/current.
 [ ] Confirm a symbol JSONL record contains separate `compiledPath` and `sourcePath` fields.
 [ ] Confirm a normal `game/Class1` symbol resolves `compiledPath` to its `.class` and `sourcePath` to its real `src/main/java/...java` file.
 [ ] Confirm a relationship JSONL record contains `sourcePath`, `sourceLine`, `opcode`, `occurrenceCount`, and `detail`.
-[ ] Confirm Phase-1 structural DECLARES/EXTENDS/IMPLEMENTS records use `occurrenceCount:1` with null line/opcode.
+[ ] Confirm DECLARES/EXTENDS/IMPLEMENTS records use `occurrenceCount:1` with null line/opcode.
 [ ] Confirm exact query/export still works after the schema-v2 rebuild.
 [ ] Confirm evidence/traces remain preserved across the generated-index rebuild.
 
-Phase 2 / upcoming 2A.2-2A.4 checks
-[ ] Known outgoing `CALLS` edge and corresponding incoming/called-by path.
-[ ] Known `GETFIELD`/`GETSTATIC` -> `READS_FIELD` edge.
-[ ] Known `PUTFIELD`/`PUTSTATIC` -> `WRITES_FIELD` edge.
-[ ] Repeated same-method edges aggregate occurrence count instead of flooding JSONL.
-[ ] Source line/opcode evidence is present where bytecode/debug data supports it.
-[ ] `invokedynamic`, if present, uses `DYNAMIC_CALL` rather than `CALLS`.
+Phase 2 / 2A.2 calls + field-access scanner - implementation complete, batch runtime verification
+[ ] Confirm rebuilt relationship count increases above the Phase 1 structural-only baseline where method-body edges exist.
+[ ] Find one known method invocation and confirm an exact `CALLS` edge targets `METHOD:<owner>#<name><descriptor>` or `CONSTRUCTOR:<owner>#<init><descriptor>`.
+[ ] Query the called symbol and confirm the same relationship is discoverable as an incoming immediate relationship.
+[ ] Find one GETFIELD/GETSTATIC instruction and confirm `READS_FIELD` targets the exact stable field ID.
+[ ] Find one PUTFIELD/PUTSTATIC instruction and confirm `WRITES_FIELD` targets the exact stable field ID.
+[ ] Confirm method-body relationship records carry the Java `sourcePath` when resolvable.
+[ ] Confirm `sourceLine` is positive where compiled line-number debug data exists.
+[ ] Confirm opcode matches the observed method/field instruction when one opcode is consistent across aggregated occurrences.
+[ ] Confirm repeated same-method/type/target edges emit one record with `occurrenceCount > 1` instead of duplicate JSONL rows.
+[ ] If the same aggregated edge is reached by different opcodes, confirm its stored `opcode` is null rather than misleading.
+[ ] If `invokedynamic` exists in the client, confirm it emits `DYNAMIC_CALL` rather than `CALLS` and records bootstrap identity/details.
+
+Phase 2 / upcoming 2A.3-2A.4 checks
 [ ] Type references remain structural facts without semantic renaming.
 [ ] Typed constants do not become interface/animation/opcode/etc. IDs without evidence.
+[ ] Verify descriptor/type-instruction/bootstrap structural references after 2A.3.
 [ ] Measure generated relationship count/file size/query time before changing persistence or graph caps.
+[ ] Re-run exact search/export regression after the full 2A structural bundle is ready.
 
 Carryover regression checks
 [ ] On a natural future client source change + rebuild, confirm query/export refuses the stale index until rebuilt.
