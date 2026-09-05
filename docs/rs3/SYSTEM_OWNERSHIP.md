@@ -21,6 +21,7 @@ Do not add a competing implementation without explicitly changing this record.
 | Client Console shell/UI | Custom Matrix3 tooling layer | Planned authority defined by `docs/client-console/CLIENT_CONSOLE.md`; owns docking/navigation/UI only. |
 | Command browser UI | Client Console tooling layer | UI/search/structured arguments only. Existing Matrix3 server command and permission path remains behavioral authority. |
 | Owner console controls | Client Console tooling layer | Owner panel may expose actions but must not create separate rights, persistence, or gameplay implementations. |
+| Rambler's backpack storage | `Inventory` / `Backpack` content layer on Matrix3 | `Inventory` owns serialized Backpack state; Matrix3 persistence and Bank remain authoritative. `CustomItemActions` routes context actions only. See `docs/backpack/PROJECT.md`. |
 | Custom bosses/content | Custom content layer on Matrix3 | Primary product lane; should extend, not replace, stable core systems. |
 | 718 project implementations | Reference only | Ideas/UX/algorithms may be studied; never automatic authority. |
 
