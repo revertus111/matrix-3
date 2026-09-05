@@ -50,7 +50,19 @@ Bundle 2A result
 [x] Measurements support retaining JSONL persistence; no SQLite/native database is currently justified.
 
 Bundle 2B - investigation search
-[ ] 2B.1 In-memory investigation index.
+[x] 2B.1 In-memory investigation index implementation.
+    [x] Load only current schema-v2 generated JSONL; do not scan or create a second persistence owner.
+    [x] Validate schema/fingerprint before and after load.
+    [x] Verify loaded symbol/relationship counts match metadata.
+    [x] Exact symbol ID map.
+    [x] Normalized owner/name candidate maps while preserving original IDs/names in entries.
+    [x] Outgoing relationship map.
+    [x] Incoming relationship map.
+    [x] Typed CONSTANT referrer map.
+    [x] Preserve sourcePath/sourceLine/opcode/occurrenceCount/detail in relationship entries.
+    [x] Canonicalize repeated loaded strings to control memory use.
+    [ ] LOCAL/BATCHED WITH 2B.2: load verified 33742/325826 dataset and record build time/memory behavior.
+    [ ] LOCAL/BATCHED WITH 2B.2: verify `Class1` candidate/exact symbol lookup, incoming/outgoing lookup, and one typed constant referrer path.
 [ ] 2B.2 Ranked/friendly search.
 [ ] 2B.3 Relationship queries + bounded neighborhoods.
 [ ] 2B.4 Assistant-oriented export.
@@ -63,4 +75,5 @@ Carryover regression checks
 
 Gate rule
 - Bundle 2A is complete; do not request another structural scan/test without new contradictory evidence.
-- Next valid implementation target is 2B.1.
+- 2B.1 implementation is complete; its local load/performance checks are deliberately bundled with 2B.2 so there is no standalone user test session.
+- Next valid implementation target is 2B.2 ranked/friendly search.
