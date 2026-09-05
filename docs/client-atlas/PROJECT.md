@@ -6,6 +6,21 @@ Build a persistent, searchable reverse-engineering map of the obfuscated **718+ 
 
 Client Atlas is primarily an engineering/research index for fast machine-assisted investigation. Human UI consumes the same Atlas engine/data; it is not a second source of truth.
 
+## Canonical Main-Goal Status
+
+This is the authoritative user-facing Client Atlas status table across chats. Copy these rows, order, and statuses exactly in normal status updates; do not rebuild them from the active phase/bundle/checklist.
+
+| Main-goal area | Status |
+| --- | --- |
+| Static client knowledge foundation | ✅ Complete |
+| Static relationship mapping | ✅ Complete |
+| Fast investigation/search | 🔵 In Progress |
+| Runtime evidence/tracing | ❌ Not started |
+| Client Console Atlas browser | ❌ Not started |
+| Advanced correlation/knowledge | ❌ Not started |
+
+A local checklist/test state does not automatically alter this table. For example, a search subtask waiting on runtime verification is reported under current focus/testing while `Fast investigation/search` remains `🔵 In Progress`. Change this table only when the top-level milestone itself changes state or the user approves a revised roadmap.
+
 ## Scope
 
 ### In scope
@@ -568,6 +583,7 @@ Future Bundle 2B verification should focus on the new export/correlation behavio
 - `AtlasSearchEngine` exact/friendly/ranked ambiguity behavior is runtime-verified.
 - `AtlasRelationshipQueryEngine` call/read/write/type/constant/neighborhood behavior is runtime-verified.
 - Standalone Atlas Control Search / Investigate surface is runtime-verified through the consolidated check.
+- The `Canonical Main-Goal Status` table above is the authority for cross-chat user-facing status rows; execution/checklist state below it must not rewrite those rows implicitly.
 
 **Files/systems already inspected or changed for Phase 2:**
 
