@@ -36,6 +36,7 @@ import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
 import game.atlas.AtlasAssistantExportEngine.ExportResult;
+import game.atlas.AtlasDomainCorrelationEngine.DomainCorrelationResult;
 import game.atlas.AtlasQueryEngine.QueryResult;
 import game.atlas.AtlasRelationshipQueryEngine.RelationshipQueryResult;
 import game.atlas.AtlasScanner.ScanResult;
@@ -146,7 +147,7 @@ public final class ClientAtlasControl {
         JPanel searchPanel = new JPanel(new BorderLayout(8, 0));
         searchPanel.setBorder(BorderFactory.createTitledBorder("Search / Investigate"));
         queryField = new JTextField(DEFAULT_QUERY);
-        queryField.setToolTipText("Examples: Class387 | Class387.method4844 | calls <symbol> | constant 762");
+        queryField.setToolTipText("Examples: Class387 | calls <symbol> | constant 762 | interface 762 | 762:7");
         JButton searchButton = taskButton("Search", new Runnable() {
             @Override
             public void run() {
@@ -170,8 +171,10 @@ public final class ClientAtlasControl {
                 + "Friendly search: Class387 | Class387.method4844 | method4844\n"
                 + "Relationships: calls | called-by | reads | written-by | references | constant\n"
                 + "Neighborhood: neighbors <symbol> depth=1 or depth=2\n"
+                + "Domain candidates: interface 762 | component 7 | 762:7 | animation 1234 | model 5678\n"
+                + "Domain results stay UNKNOWN until evidence proves their meaning.\n"
                 + "Export Assistant JSON packages the last successful search/command.\n"
-                + "Use Run Search Check for the one-click Bundle 2B local gate.\n");
+                + "Use Run Search Check for the consolidated Bundle 2B local gate.\n");
 
         JScrollPane scrollPane = new JScrollPane(outputArea);
         scrollPane.setBorder(BorderFactory.createTitledBorder("Output"));
@@ -245,7 +248,7 @@ public final class ClientAtlasControl {
     }
 
     private void runInvestigationCheck() {
-        runBackground("Running the consolidated investigation/search/export check...", new BackgroundTask() {
+        runBackground("Running the consolidated investigation/search/export/domain check...", new BackgroundTask() {
             private AtlasInvestigationVerifier.VerificationResult result;
 
             @Override
@@ -349,7 +352,7 @@ public final class ClientAtlasControl {
     private void runSearch() {
         final String raw = queryField.getText() == null ? "" : queryField.getText().trim();
         if (raw.length() == 0) {
-            showError("Enter a symbol search or relationship command.");
+            showError("Enter a symbol, relationship, or domain query.");
             return;
         }
 
@@ -359,12 +362,19 @@ public final class ClientAtlasControl {
             @Override
             public String execute() throws Exception {
                 AtlasInvestigationIndex index = currentInvestigationIndex();
+                AtlasDomainCorrelationEngine domainEngine = new AtlasDomainCorrelationEngine(index);
                 AtlasRelationshipQueryEngine relationshipEngine = new AtlasRelationshipQueryEngine(index);
                 StringBuilder output = new StringBuilder(2048);
                 output.append("Index: ").append(index.getSymbolCount()).append(" symbols / ")
                         .append(index.getRelationshipCount()).append(" relationships")
                         .append(" | load ").append(formatMillis(index.getLoadNanos())).append(" ms\n\n");
 
+                if (domainEngine.isDomainQuery(raw)) {
+                    DomainCorrelationResult result = domainEngine.query(raw);
+                    output.append(result.toDisplayText());
+                    exportRequest = raw;
+                    return output.toString();
+                }
                 if (relationshipEngine.isRelationshipCommand(raw)) {
                     RelationshipQueryResult result = relationshipEngine.query(raw);
                     output.append(result.toDisplayText());
@@ -413,7 +423,7 @@ public final class ClientAtlasControl {
 
     private void exportLastResult() {
         if (lastAssistantRequest == null) {
-            showError("Run a search or relationship command successfully first.");
+            showError("Run a search, relationship command, or domain query successfully first.");
             return;
         }
 
@@ -428,6 +438,7 @@ public final class ClientAtlasControl {
                 Path output = engine.writeExport(result, exportDirectory.resolve(fileName));
                 return "Assistant export written:\n" + output + "\n"
                         + "Resolved: " + result.isResolved() + "\n"
+                        + "Semantic status: " + (result.getSemanticStatus() == null ? "n/a" : result.getSemanticStatus()) + "\n"
                         + "Relevant symbols: " + result.getRelevantSymbolCount()
                         + (result.isSymbolsTruncated() ? " (output capped)" : "") + "\n"
                         + "Relationships: " + result.getTotalRelationshipMatches()
