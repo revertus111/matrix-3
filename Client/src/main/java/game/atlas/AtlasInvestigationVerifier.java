@@ -86,13 +86,13 @@ public final class AtlasInvestigationVerifier {
 
         Samples samples = findRelationshipSamples(index);
         require(samples.call != null && index.getSymbol(samples.call.getTarget()) != null,
-                "no internal CALLS sample was available");
+                "no bounded internal CALLS sample was available");
         require(samples.read != null && index.getSymbol(samples.read.getTarget()) != null,
-                "no internal READS_FIELD sample was available");
+                "no bounded internal READS_FIELD sample was available");
         require(samples.write != null && index.getSymbol(samples.write.getTarget()) != null,
-                "no internal WRITES_FIELD sample was available");
-        require(samples.type != null, "no REFERENCES_TYPE sample was available");
-        require(samples.constant != null, "no CONSTANT sample was available");
+                "no bounded internal WRITES_FIELD sample was available");
+        require(samples.type != null, "no bounded REFERENCES_TYPE sample was available");
+        require(samples.constant != null, "no bounded CONSTANT sample was available");
 
         RelationshipQueryResult calls = relationships.query("calls " + samples.call.getFromId());
         require(contains(calls.getRelationships(), samples.call), "calls query missed its known edge");
@@ -166,17 +166,23 @@ public final class AtlasInvestigationVerifier {
         for (SymbolEntry symbol : index.getSymbols()) {
             for (RelationshipEntry edge : index.outgoing(symbol.getId())) {
                 if (edge.getType() == RelationshipType.CALLS && samples.call == null
-                        && index.getSymbol(edge.getTarget()) != null) {
+                        && index.getSymbol(edge.getTarget()) != null
+                        && typeCountWithinCap(index.outgoing(edge.getFromId()), RelationshipType.CALLS)
+                        && typeCountWithinCap(index.incoming(edge.getTarget()), RelationshipType.CALLS)) {
                     samples.call = edge;
                 } else if (edge.getType() == RelationshipType.READS_FIELD && samples.read == null
-                        && index.getSymbol(edge.getTarget()) != null) {
+                        && index.getSymbol(edge.getTarget()) != null
+                        && typeCountWithinCap(index.incoming(edge.getTarget()), RelationshipType.READS_FIELD)) {
                     samples.read = edge;
                 } else if (edge.getType() == RelationshipType.WRITES_FIELD && samples.write == null
-                        && index.getSymbol(edge.getTarget()) != null) {
+                        && index.getSymbol(edge.getTarget()) != null
+                        && typeCountWithinCap(index.incoming(edge.getTarget()), RelationshipType.WRITES_FIELD)) {
                     samples.write = edge;
-                } else if (edge.getType() == RelationshipType.REFERENCES_TYPE && samples.type == null) {
+                } else if (edge.getType() == RelationshipType.REFERENCES_TYPE && samples.type == null
+                        && typeCountWithinCap(index.incoming(edge.getTarget()), RelationshipType.REFERENCES_TYPE)) {
                     samples.type = edge;
-                } else if (edge.getType() == RelationshipType.CONSTANT && samples.constant == null) {
+                } else if (edge.getType() == RelationshipType.CONSTANT && samples.constant == null
+                        && index.constantReferrers(edge.getTarget()).size() <= AtlasRelationshipQueryEngine.MAX_EDGES) {
                     samples.constant = edge;
                 }
             }
@@ -185,6 +191,19 @@ public final class AtlasInvestigationVerifier {
             }
         }
         return samples;
+    }
+
+    private static boolean typeCountWithinCap(List<RelationshipEntry> entries, RelationshipType type) {
+        int count = 0;
+        for (RelationshipEntry entry : entries) {
+            if (entry.getType() == type) {
+                count++;
+                if (count > AtlasRelationshipQueryEngine.MAX_EDGES) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private static boolean contains(List<RelationshipEntry> relationships, RelationshipEntry expected) {
