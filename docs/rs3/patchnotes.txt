@@ -5,3 +5,8 @@
 - Added stability-first roadmap reflecting completed owner-rights, persistence, and launcher-bootstrap foundation work.
 - Verified current GitHub main has no identifiable Owner Console implementation; roadmap now requires checking the local working copy for unpushed console work before creating or duplicating one.
 - Marked Owner Console and command-browser ownership as implementation-unverified until local evidence is checked.
+
+2026-09-05
+- Tightened AGENTS.md by consolidating overlapping workflow, scan, documentation, and priority rules without changing project behavior.
+- Added phase/checklist discipline so persistent workstreams resume from the active phase, first valid unfinished checklist item, and saved Resume Here state.
+- Added an explicit mismatch stop rule when chat state and the authoritative workstream checklist disagree.
