@@ -1,130 +1,84 @@
 Client Atlas test list
 
 Phase 1 - runtime verified
-[x] Eclipse/Java 8 compiles/runs Atlas after Gradle -> Refresh Gradle Project resolves ASM.
-[x] Scanner completed against compiled Matrix3 Client classes.
-[x] VERIFIED: 1221 class files / 33742 symbols / 34053 Phase-1 relationships.
-[x] Metadata reopened without rebuild and `Current fingerprint: true`.
-[x] VERIFIED fingerprint: 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
-[x] Standalone Client Atlas Control opened through no-argument ClientAtlasMain.
-[x] Phase 1 automated check passed.
-[x] UI exact Class1 search/export passed.
+[x] Java 8 / Eclipse Atlas build and ASM dependency path verified.
+[x] 1221 class files / 33742 symbols / 34053 initial relationships.
+[x] Metadata reopened current with verified fingerprint.
+[x] Standalone Atlas Control opened.
+[x] Phase 1 one-click check passed.
+[x] Exact Class1 UI search/export passed.
 
 Phase 2 / Bundle 2A - runtime verified
-[x] Schema-v2 index rebuilt/current locally.
-[x] Structural verifier completed.
-[x] Output confirmed `PHASE 2 STRUCTURAL CHECK: PASS`.
-[x] VERIFIED: schema version 2.
-[x] VERIFIED: 1221 class files / 33742 symbols / 325826 relationships.
-[x] VERIFIED scan time: 1282.0 ms.
-[x] VERIFIED exact query: `CLASS:game/Class1`.
-[x] VERIFIED exact-query time: 362.0 ms.
-[x] VERIFIED `symbols.jsonl`: 8,980,282 bytes (~8.5 MiB).
-[x] VERIFIED `relationships.jsonl`: 78,016,586 bytes (~74.4 MiB).
-[x] Bundle 2A is DONE; current UI label is `Run Structural Check`.
+[x] Schema v2 index rebuilt/current.
+[x] `PHASE 2 STRUCTURAL CHECK: PASS`.
+[x] 1221 classes / 33742 symbols / 325826 relationships.
+[x] Structural CALLS / field read-write / type / typed-constant coverage passed.
+[x] Zero automatic LITERAL_ID promotion.
+[x] Exact-query/export regression passed.
+[x] Bundle 2A DONE.
 
-Bundle 2B - investigation search implementation/runtime verified through 2B.3
-[x] 2B.1 In-memory investigation index implementation.
-    [x] Current schema-v2 JSONL load; no second persistence owner.
-    [x] Schema/fingerprint guards before/after load.
-    [x] Loaded counts match metadata.
-    [x] Exact symbol + normalized owner/name maps.
-    [x] Outgoing/incoming relationship maps + typed CONSTANT referrers.
-    [x] SourcePath/sourceLine/opcode/occurrenceCount/detail preserved.
-    [x] Repeated strings canonicalized during load.
-[x] 2B.2 Ranked/friendly search implementation.
-    [x] Canonical IDs remain authoritative.
-    [x] Exact class path/simple name/owner-member shorthand resolution.
-    [x] Optional method descriptor for exact overload selection.
-    [x] Ambiguous exact-name/overload searches return candidates instead of guessing.
-    [x] Deterministic prefix/contains fallback capped at 50.
-    [x] Fuzzy/partial results never auto-resolve.
-    [x] CLI `search "<query-or-command>"` path.
-[x] 2B.3 Relationship queries + bounded neighborhoods implementation.
-    [x] `calls <symbol>` / `called-by <symbol>`.
-    [x] `reads <field-or-symbol>` / `written-by <field>`.
-    [x] `references <TYPE:... or class>`.
-    [x] `constant <raw-or-typed literal>` without domain-ID guessing.
-    [x] Class-level calls/reads expand through declared methods.
-    [x] Normal relationship cap = 500 edges.
-    [x] `neighbors <symbol> depth=1|2`.
-    [x] Neighborhood caps = 100 nodes / 500 edges with truncation state.
-    [x] Standalone Search / Investigate uses shared APIs.
-    [x] Enter key executes search.
-    [x] Investigation index cached only for the current generated snapshot.
-    [x] `Run Search Check` + CLI `verify-search`.
+Phase 2 / Bundle 2B - runtime verified
+[x] 2B.1 in-memory investigation index.
+[x] 2B.2 ranked/friendly search.
+[x] 2B.3 relationship queries + bounded neighborhoods.
+[x] Initial `PHASE 2 INVESTIGATION CHECK: PASS` through 2B.3.
+[x] 33742 symbols / 325826 relationships.
+[x] ~946.649 ms index load / ~181.5 MiB approximate memory delta.
+[x] Exact/friendly Class1 resolution.
+[x] Ambiguous `<init>` remained unresolved.
+[x] Fuzzy `Clas` remained bounded to 50 displayed candidates.
+[x] CALLS / CALLED_BY / READS_FIELD / WRITES_FIELD / REFERENCES_TYPE / CONSTANT passed.
+[x] Depth-2 neighborhood stayed within 100-node / 500-edge caps.
 
-Bundle 2B consolidated runtime gate - VERIFIED 2026-09-05 through 2B.3
-[x] `Run Search Check` completed against the existing current index without rescanning.
-[x] Output confirmed `PHASE 2 INVESTIGATION CHECK: PASS`.
-[x] VERIFIED: 33742 symbols / 325826 relationships.
-[x] VERIFIED investigation-index load time: 946.649 ms.
-[x] VERIFIED approximate used-memory delta: 181.5 MiB.
-[x] VERIFIED exact `Class1` -> `CLASS:game/Class1`.
-[x] VERIFIED friendly `Class1` -> `CLASS:game/Class1`.
-[x] VERIFIED Class1 member shorthand resolution.
-[x] VERIFIED ambiguous `<init>` remained unresolved with 1294 candidates.
-[x] VERIFIED fuzzy `Clas` reported 29421 matches and displayed only 50.
-[x] VERIFIED exact search time: 0.588 ms.
-[x] VERIFIED friendly search time: 0.416 ms.
-[x] VERIFIED CALLS direction.
-[x] VERIFIED CALLED_BY direction.
-[x] VERIFIED READS_FIELD direction.
-[x] VERIFIED WRITES_FIELD direction.
-[x] VERIFIED REFERENCES_TYPE lookup.
-[x] VERIFIED typed CONSTANT lookup.
-[x] VERIFIED depth-2 neighborhood: 28 nodes / 40 relationships, within 100/500 caps.
-[x] 2B.1-2B.3 local verification gate PASS.
+2B.4 assistant export
+[x] Bounded assistant export v2 implemented.
+[x] Plain resolved search includes bounded context.
+[x] Relationship command export implemented.
+[x] Ambiguous searches do not traverse as resolved.
+[x] Schema/fingerprint/source/cap/truncation metadata preserved.
+[x] CLI assistant-json / assistant-export implemented.
+[x] Standalone Export Assistant JSON implemented.
+[x] Atomic verification export included in Run Search Check.
 
-Bundle 2B / 2B.4 - assistant-oriented export implementation
-[x] `AtlasAssistantExportEngine` uses the already-current in-memory investigation index; no rescan or second persistence owner.
-[x] Plain resolved searches automatically package bounded depth-1 relationship context.
-[x] Relationship commands package their filtered result directly.
-[x] Ambiguous/fuzzy searches preserve candidates and do not traverse as if resolved.
-[x] Package includes schema version, client fingerprint, generated timestamp, scan root, index counts, and current-snapshot marker.
-[x] Symbol records preserve exact IDs/kinds/owners/descriptors plus compiled/source paths and access flags.
-[x] Relationship records preserve type/target/sourcePath/sourceLine/opcode/occurrenceCount/detail.
-[x] Assistant caps: 50 candidates / 200 relationships / 250 relevant symbols with explicit truncation state.
-[x] CLI `assistant-json "<query-or-command>"` prints machine JSON without human-output parsing.
-[x] CLI `assistant-export "<query-or-command>" <file>` writes the same package atomically.
-[x] Standalone `Export Assistant JSON` exports the last successful friendly search, relationship command, or domain query.
-[x] Resolved UI search no longer performs an extra streaming exact-query pass just to prepare export.
-[x] Existing `Run Search Check` / `verify-search` includes 2B.4 export assertions and writes `phase2-assistant-export-check.json`.
-[x] Implementation is verified-static.
+2B.5 safe initial domain correlation
+[x] Domain-hint candidate engine implemented over typed CONSTANT facts only.
+[x] `interface 762`, `component 7`, `animation 1234`, `model 5678`, etc. recognized.
+[x] `762:7` uses same-symbol constant co-occurrence.
+[x] Candidate cap = 50 symbols / relationship cap = 200.
+[x] Semantic status always remains UNKNOWN from query hints alone.
+[x] `LITERAL_ID promoted: false` preserved.
+[x] No generated domain meaning is written from a query hint.
+[x] Domain queries integrated into UI, CLI search, and assistant export v2.
 
-Bundle 2B / 2B.5 - safe initial domain correlation implementation
-[x] Added `AtlasDomainCorrelationEngine` over existing typed CONSTANT relationships only.
-[x] Domain syntax recognized: `interface 762`, `component 7`, `animation 1234`, `model 5678`, and other whitelisted domains.
-[x] Bare `762:7` uses `interface-component` request type and same-symbol constant co-occurrence.
-[x] Single-value domain queries search normalized typed constants (`int/long`, decimal types, or string) without changing scanner data.
-[x] Domain results are bounded to 50 candidate symbols / 200 relationships.
-[x] Every domain result explicitly reports semantic status `UNKNOWN`.
-[x] Every domain result explicitly reports `LITERAL_ID promoted: false`.
-[x] No generated `LITERAL_ID` record is written and no domain meaning is persisted from query hints.
-[x] Standalone Search / Investigate handles domain queries through the shared engine.
-[x] CLI `search` handles domain queries through the shared engine.
-[x] Assistant export format v2 includes requested domain/value, semantic status, correlation basis, and no-promotion state.
-[x] Assistant domain packages remain unresolved even when structural candidates exist.
-[x] `Run Search Check` / `verify-search` now verifies numeric domain matching, pair co-occurrence, caps, UNKNOWN semantics, no promotion, and assistant domain export.
-[x] Implementation is verified-static.
+Final Bundle 2B combined local gate - VERIFIED 2026-09-05
+[x] Updated `Run Search Check` executed after 2B.4 + 2B.5 implementation.
+[x] User reported `PHASE 2 INVESTIGATION CHECK: PASS`.
+[x] Successful execution confirms Java 8/Eclipse compilation of the updated verifier path.
+[x] Assistant export assertions passed.
+[x] Domain correlation assertions passed.
+[x] UNKNOWN semantic-state guard passed.
+[x] No automatic LITERAL_ID promotion assertion passed.
+[x] Assistant-domain UNKNOWN/no-promotion assertion passed.
+[x] Verification export write assertion passed.
+[x] Bundle 2B DONE.
+[x] Phase 2 DONE.
 
-Final Bundle 2B local verification gate - NEEDS TEST
-[ ] Eclipse/Java 8 clean/build succeeds after pulling the combined 2B.4/2B.5 implementation.
-[ ] Open Client Atlas Control and click `Run Search Check` once; no structural rescan should occur.
-[ ] Output ends with `PHASE 2 INVESTIGATION CHECK: PASS`.
-[ ] Report includes `Domain correlation checks` and `Assistant export checks`.
-[ ] Report includes PASS lines confirming domain candidates remain UNKNOWN and no automatic `LITERAL_ID` promotion occurs.
-[ ] `.client-atlas/phase2-assistant-export-check.json` exists and is non-empty.
-[ ] Optional quick UI check: `interface 762`, `762:7`, or `animation 1234` displays candidate output with `Semantic status: UNKNOWN`.
+Phase 3 / Bundle 3A - ACTIVE
+[ ] 3A.0 targeted runtime-tracing architecture discovery.
+[ ] 3A.1 start/stop/name/save trace lifecycle with bounded storage/buffers.
+[ ] 3A.2 menu/input hooks.
+[ ] 3A.3 packet metadata hooks.
+[ ] 3A.4 interface/component hooks.
+[ ] 3A.5 definition/cache/model/animation/GFX hooks.
+[ ] 3A.6 correlate runtime events back to Atlas symbols.
+[ ] Bundle 3A controlled runtime trace gate.
 
 Carryover regression checks
-[ ] On a natural future client source change + rebuild boundary, confirm stale generated data is refused until rebuilt.
-[ ] If a streaming exact query owns more than 200 immediate relationships, confirm output stays capped while full count/truncation remains accurate.
-[ ] Confirm normal `game.RS3Applet` launch ownership/configuration remains unchanged after meaningful Atlas changes.
+[ ] On a natural client source-change/rebuild boundary, confirm stale generated data is refused until rebuilt.
+[ ] If a streaming exact query owns >200 immediate relationships, confirm capped output preserves full count/truncation state.
+[ ] Confirm normal `game.RS3Applet` ownership remains unchanged after a meaningful future Atlas runtime-instrumentation patch.
 
 Gate rule
-- Bundle 2A is complete; do not request another structural scan/test without new contradictory evidence.
-- 2B.1-2B.3 implementation and consolidated runtime verification are complete.
-- 2B.4 and 2B.5 implementations are verified-static.
-- Do not request a separate 2B.4 test; one final `Run Search Check` verifies both new pieces together.
-- Phase 2 closes only after that final combined gate passes.
+- Do not request another Phase 2 structural/search gate without contradictory evidence or a relevant Phase 2 change.
+- Current execution target is Phase 3 / Bundle 3A / 3A.0.
+- Runtime tracing must remain targeted, bounded, switchable, and failure-isolated.
