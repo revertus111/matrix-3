@@ -37,6 +37,7 @@ Use this registry to answer:
 | --- | --- | --- | --- |
 | Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 and Phase 2 Bundle 2A are runtime-verified. Bundle 2B search/investigation through 2B.3 is also runtime-verified on 33742 symbols / 325826 relationships (`PHASE 2 INVESTIGATION CHECK: PASS`). 2B.4 Assistant-oriented export is the next execution target. |
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
+| Rambler's Backpack | `docs/backpack/PROJECT.md` | NEEDS TEST | Player-owned storage and contextual/bank integration are implemented statically. Phase 3 Bundle 3.1 consolidated runtime verification is the next execution target. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
 ## Shared discovery / navigation references
