@@ -78,6 +78,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     private final JLabel publishStatus = new JLabel("Select an NPC to begin.");
 
     private final BossLabsTestingPanel testingPanel = new BossLabsTestingPanel();
+    private final BossLabsDropPanel dropsPanel = new BossLabsDropPanel();
     private final BossLabsDefinitionEditor definitionEditor;
 
     private boolean suppressDraftEvents;
@@ -117,6 +118,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     }
 
     void disposeBridge() {
+        dropsPanel.disposeBridge();
         BossLabsClientBridge.clearTestingListener(testingPanel);
         BossLabsClientBridge.clearListener(this);
     }
@@ -257,6 +259,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     private void inspectNpc(int npcId) {
         selectedNpcId = npcId;
         testingPanel.clearSelection();
+        dropsPanel.clearSelection();
         searchStatus.setText("Loading NPC " + npcId + "...");
         publishStatus.setText("Loading boss data...");
         updatePublishButtons();
@@ -286,9 +289,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         tabs.addTab("Arena", createPlaceholderTab("Arena Layout",
                 "Fixed encounter bounds, boss spawn, player entry, mechanic anchors, and named world positions belong here.",
                 "Attack Pattern is relative attack geometry; Arena Layout will remain separate."));
-        tabs.addTab("Drops", createPlaceholderTab("Drops",
-                "Boss drops will edit Matrix3's existing drop authority through a creator-facing item workflow.",
-                "BossLabs will not create a second drop engine."));
+        tabs.addTab("Drops", dropsPanel);
         tabs.addTab("Testing", testingPanel);
         tabs.addTab("Advanced", createAdvancedTab());
         return tabs;
@@ -658,6 +659,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     @Override
     public void onInspection(int requestId, final BossLabsClientBridge.Inspection inspection) {
         selectedNpcId = inspection.getNpcId();
+        dropsPanel.loadNpc(inspection.getNpcId(), inspection.getName());
         final BossLabsDraftDefinition blankDraft = new BossLabsDraftDefinition("", inspection.getName(), inspection.getNpcId());
         definitionEditor.setDraft(blankDraft);
 
@@ -773,6 +775,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         rollbackAvailable = false;
         definitionEditor.setDraft(null);
         testingPanel.clearSelection();
+        dropsPanel.clearSelection();
         searchStatus.setText("NPC " + npcId + " was not found.");
         publishStatus.setText("No boss loaded.");
         updatePublishButtons();
