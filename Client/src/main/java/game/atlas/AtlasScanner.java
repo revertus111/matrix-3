@@ -31,7 +31,7 @@ import game.atlas.AtlasSchema.SymbolKind;
 import game.atlas.AtlasSchema.SymbolRecord;
 
 /**
- * Offline declaration scanner for the Phase 1 Client Atlas symbol catalog.
+ * Offline declaration scanner for the Client Atlas symbol catalog.
  */
 public final class AtlasScanner {
 
@@ -64,7 +64,7 @@ public final class AtlasScanner {
                         StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
             ScanCounters counters = new ScanCounters(symbols, relationships);
             for (Path classFile : classFiles) {
-                scanClass(normalizedRoot, classFile, counters);
+                scanClass(workspace.getClientRoot(), normalizedRoot, classFile, counters);
             }
             symbolCount = counters.symbolCount;
             relationshipCount = counters.relationshipCount;
@@ -96,33 +96,36 @@ public final class AtlasScanner {
         return new ScanResult(classFiles.size(), symbolCount, relationshipCount, fingerprintAfter);
     }
 
-    private static void scanClass(Path classRoot, Path classFile, ScanCounters counters) throws IOException {
-        final String sourcePath = AtlasFingerprint.normalizedRelativePath(classRoot, classFile);
+    private static void scanClass(final Path clientRoot, Path classRoot, Path classFile,
+            ScanCounters counters) throws IOException {
+        final String compiledPath = AtlasFingerprint.normalizedRelativePath(classRoot, classFile);
         try (InputStream input = new BufferedInputStream(Files.newInputStream(classFile))) {
             ClassReader reader = new ClassReader(input);
             try {
                 reader.accept(new ClassVisitor(Opcodes.ASM9) {
                     private String owner;
                     private String ownerId;
+                    private String sourcePath;
 
                     @Override
                     public void visit(int version, int access, String name, String signature,
                             String superName, String[] interfaces) {
                         owner = name;
+                        sourcePath = resolveJavaSourcePath(clientRoot, name);
                         SymbolKind kind = classKind(access);
                         SymbolRecord classRecord = new SymbolRecord(kind, name, name,
-                                "L" + name + ";", signature, sourcePath, access);
+                                "L" + name + ";", signature, compiledPath, sourcePath, access);
                         ownerId = classRecord.getId();
                         counters.writeSymbol(classRecord);
 
                         if (superName != null) {
-                            counters.writeRelationship(new RelationshipRecord(ownerId,
-                                    RelationshipType.EXTENDS, superName, null));
+                            counters.writeRelationship(structuralRelationship(ownerId,
+                                    RelationshipType.EXTENDS, superName, sourcePath));
                         }
                         if (interfaces != null) {
                             for (String interfaceName : interfaces) {
-                                counters.writeRelationship(new RelationshipRecord(ownerId,
-                                        RelationshipType.IMPLEMENTS, interfaceName, null));
+                                counters.writeRelationship(structuralRelationship(ownerId,
+                                        RelationshipType.IMPLEMENTS, interfaceName, sourcePath));
                             }
                         }
                     }
@@ -131,10 +134,10 @@ public final class AtlasScanner {
                     public FieldVisitor visitField(int access, String name, String descriptor,
                             String signature, Object value) {
                         SymbolRecord record = new SymbolRecord(SymbolKind.FIELD, owner, name,
-                                descriptor, signature, sourcePath, access);
+                                descriptor, signature, compiledPath, sourcePath, access);
                         counters.writeSymbol(record);
-                        counters.writeRelationship(new RelationshipRecord(ownerId,
-                                RelationshipType.DECLARES, record.getId(), null));
+                        counters.writeRelationship(structuralRelationship(ownerId,
+                                RelationshipType.DECLARES, record.getId(), sourcePath));
                         return null;
                     }
 
@@ -143,10 +146,10 @@ public final class AtlasScanner {
                             String signature, String[] exceptions) {
                         SymbolKind kind = "<init>".equals(name) ? SymbolKind.CONSTRUCTOR : SymbolKind.METHOD;
                         SymbolRecord record = new SymbolRecord(kind, owner, name,
-                                descriptor, signature, sourcePath, access);
+                                descriptor, signature, compiledPath, sourcePath, access);
                         counters.writeSymbol(record);
-                        counters.writeRelationship(new RelationshipRecord(ownerId,
-                                RelationshipType.DECLARES, record.getId(), null));
+                        counters.writeRelationship(structuralRelationship(ownerId,
+                                RelationshipType.DECLARES, record.getId(), sourcePath));
                         return null;
                     }
                 }, READER_FLAGS);
@@ -154,6 +157,27 @@ public final class AtlasScanner {
                 throw ex.getCause();
             }
         }
+    }
+
+    private static RelationshipRecord structuralRelationship(String fromId, RelationshipType type,
+            String target, String sourcePath) {
+        return new RelationshipRecord(fromId, type, target, sourcePath, null, null, 1, null);
+    }
+
+    private static String resolveJavaSourcePath(Path clientRoot, String internalName) {
+        if (clientRoot == null || internalName == null || internalName.length() == 0) {
+            return null;
+        }
+        String topLevelName = internalName;
+        int innerIndex = topLevelName.indexOf('$');
+        if (innerIndex >= 0) {
+            topLevelName = topLevelName.substring(0, innerIndex);
+        }
+        Path sourceFile = clientRoot.resolve("src/main/java").resolve(topLevelName + ".java").normalize();
+        if (!Files.isRegularFile(sourceFile)) {
+            return null;
+        }
+        return clientRoot.relativize(sourceFile).toString().replace('\\', '/');
     }
 
     private static SymbolKind classKind(int access) {
