@@ -28,21 +28,32 @@ Large ideas should be managed as persistent workstreams instead of a chain of is
 
 Use the hierarchy:
 
-**Idea -> Bundle -> Patch**
+**Idea -> Phase -> Bundle -> Patch/Checklist**
 
 - An **Idea** is the full feature/workstream goal, such as a boss encounter, developer tool, combat framework, game mode, or class system.
-- A **Bundle** groups related implementation/research tasks that share dependencies, ownership, files, implementation sequence, or runtime testing.
-- A **Patch** is the smallest logical, independently understandable/revertible change inside a bundle.
+- A **Phase** is an ordered milestone that advances the workstream toward the finished goal. Later phases should not be entered while earlier required phase work remains incomplete unless a dependency or explicit priority change requires it.
+- A **Bundle** groups related implementation/research tasks inside a phase that share dependencies, ownership, files, implementation sequence, or runtime testing.
+- A **Patch/Checklist item** is a concrete implementation, discovery, documentation, or verification step inside a bundle. Checklist state is the execution map used to determine what happens next.
 
-The assistant is responsible for decomposing the idea, identifying dependencies, separating discovery from implementation, choosing patch order, grouping safe bundles, tracking blockers/carryover, and maintaining the next recommended step. The user should not need to manually project-manage patch ordering.
+The assistant is responsible for decomposing the idea into phases, identifying dependencies, separating discovery from implementation, choosing bundle/patch order, tracking checklist state, preserving blockers/carryover, and maintaining the next recommended step. The user should not need to manually project-manage patch ordering.
 
 Each persistent workstream should have one authoritative `docs/<subject>/PROJECT.md`. Use `WORKSTREAMS.md` as the lightweight registry and `WORKSTREAM_TEMPLATE.md` as the standard structure when creating or normalizing a workstream.
 
 Do not create duplicate roadmap/backlog/status documents when the workstream project file can hold the information cleanly.
 
+## Phase and checklist execution
+
+Each active workstream must identify the current phase, active bundle, checklist state, and `Resume Here` position.
+
+Completed checklist items must not be repeated. Later phases must not be entered early unless a dependency requires it or the user explicitly changes priority.
+
+When work resumes, continue from the first valid unfinished checklist item in the active phase/bundle unless `Resume Here` identifies a more precise next action.
+
+When work stops, update the authoritative workstream document so another chat can determine the exact current phase, bundle, completed items, pending verification, blockers, and next action without rediscovery.
+
 ## Bundle approval and execution
 
-A clearly defined bundle may be approved with one `AAA`. Once approved, the assistant may execute the listed related patches without requesting another AAA between them unless the scope materially changes.
+A clearly defined bundle may be approved with one `AAA`. Once approved, the assistant may execute the listed related patches/checklist items without requesting another AAA between them unless the scope materially changes.
 
 A blocked patch must not automatically stall the rest of an approved bundle. Mark it `CARRYOVER` or `BLOCKED`, preserve enough technical context to resume later, and continue with safe independent approved work.
 
@@ -55,8 +66,9 @@ Persistent workstreams must preserve a concise `Resume Here` state when work sto
 That state should include:
 
 - last completed checkpoint,
-- current bundle/state,
-- next action,
+- current phase,
+- active bundle,
+- current/next checklist item,
 - relevant files/systems already inspected,
 - areas that should not be rescanned without new evidence,
 - blockers,
@@ -141,6 +153,8 @@ Every code change requires `docs/<subject>/patchnotes.txt`.
 Runtime-affecting subjects should also maintain a concise test list. When a change alters ownership or project status, update the relevant RS3 authority document in this folder.
 
 Persistent workstream roadmap/status/carryover information belongs in that workstream's authoritative `PROJECT.md` rather than scattered one-off notes.
+
+When phase, bundle, checklist, backlog, carryover, or resume state changes, update the authoritative workstream `PROJECT.md` before ending the session.
 
 ## Tooling discipline
 
