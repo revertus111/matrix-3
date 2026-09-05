@@ -45,3 +45,9 @@
 - Phase 2 structural verification writes `.client-atlas/phase2-structural-check.txt` plus a compact query regression export for easy reporting.
 - Fixed the Phase 2 verifier report newline separator so `AtlasStructuralVerifier` compiles cleanly instead of producing Eclipse `Invalid character constant`.
 - Fixed Phase 2 JSONL encoding for obfuscated/malformed client strings by escaping all UTF-16 surrogate code units as deterministic `\\uXXXX` JSON sequences instead of letting the UTF-8 writer fail with `Input length = 1`.
+- Added `AtlasInvestigationIndex` as the Phase 2B in-memory acceleration layer over current schema-v2 JSONL; scanner/JSONL ownership is unchanged.
+- Investigation index validates schema/fingerprint before and after load, verifies loaded symbol/relationship totals against metadata, and refuses stale/inconsistent generated data.
+- Added immutable lookup maps for exact symbol ID, normalized owner/name candidates, outgoing relationships, incoming relationships, and typed-constant referrers.
+- Added compact parsed symbol/relationship entries preserving source path, source line, opcode, occurrence count, and detail for later bounded investigation queries.
+- Added a temporary string canonicalization pool while loading the ~325k relationship dataset to reduce duplicate String memory without introducing a database or persistent secondary index.
+- 2B.1 local load/memory verification is intentionally batched with 2B.2 friendly-search verification so the user does not need a standalone runtime session for a non-user-facing loader.
