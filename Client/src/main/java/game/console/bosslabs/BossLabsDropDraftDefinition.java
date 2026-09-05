@@ -7,9 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /** Mutable client-local DRAFT for one Matrix3 NPC drop-table override. */
 public final class BossLabsDropDraftDefinition {
@@ -57,16 +55,12 @@ public final class BossLabsDropDraftDefinition {
             return "Drop NPC id must be zero or greater.";
         if (entries.size() > MAX_ENTRIES)
             return "Drop table exceeds " + MAX_ENTRIES + " entries.";
-        Set<String> unique = new HashSet<String>();
         for (Entry entry : entries) {
             if (entry == null)
                 return "Drop table contains an empty entry.";
             String error = entry.validate();
             if (error != null)
                 return error;
-            String key = entry.getRarity() + ":" + entry.getItemId();
-            if (!unique.add(key))
-                return "Item " + entry.getItemId() + " appears twice in " + rarityName(entry.getRarity()) + ".";
         }
         return null;
     }
