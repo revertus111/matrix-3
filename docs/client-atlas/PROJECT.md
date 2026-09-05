@@ -25,9 +25,9 @@ Checklist/phase state below is the execution map. Do not derive replacement mile
 
 - Atlas is tooling, not gameplay/client authority.
 - Existing client runtime/cache/network/render/interface/input/definition systems remain authoritative.
-- Atlas owns generated metadata, indexes, search/correlation APIs, exports, future trace records, aliases, and evidence records.
+- Atlas owns generated metadata, indexes, search/correlation APIs, exports, trace records, aliases, and evidence records.
 - Original obfuscated class/field/method names remain primary IDs.
-- Runtime instrumentation must be explicit, bounded, switchable, and targeted.
+- Runtime instrumentation must be explicit, bounded, switchable, targeted, and failure-isolated.
 - Human UI calls shared Atlas APIs rather than duplicating scanner/query logic.
 - JSONL remains persistence authority until measurements justify another store.
 
@@ -60,13 +60,7 @@ Client/build/classes/java/main/
 
 Atlas excludes `game/atlas/**` from fingerprinting/scanning.
 
-Dependency:
-
-```text
-org.ow2.asm:asm:9.7.1
-```
-
-Java/Eclipse target remains Java 8. The prior missing-ASM Eclipse issue was resolved by **Gradle -> Refresh Gradle Project**.
+Java/Eclipse target remains Java 8. ASM dependency remains `org.ow2.asm:asm:9.7.1`.
 
 ## Persistence
 
@@ -90,8 +84,9 @@ Rules:
 - `.client-atlas/` is Git-ignored and survives normal build cleaning.
 - Scans replace generated symbols/relationships but preserve evidence/traces.
 - Schema/fingerprint mismatch makes generated data non-current.
-- Scanner publishes through temporary files and checks fingerprint before/after scan.
+- Scanner checks fingerprint before/after scan.
 - Query/export refuses stale generated data.
+- `AtlasWorkspace.tracesDirectory()` is the trace storage authority for Phase 3.
 - SQLite/native persistence remains deferred.
 
 # Evidence
@@ -106,39 +101,19 @@ Rules:
 - Fingerprint: `41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26`.
 - Persisted metadata reopened current.
 - Standalone Client Atlas Control opened successfully.
-- Phase 1 one-click check passed.
-- Exact `CLASS:game/Class1` UI search/export passed.
+- Phase 1 one-click check and exact Class1 UI search/export passed.
 
 Phase 1 is **DONE**.
 
-### Phase 2 / Bundle 2A - Structural relationships - 2026-09-05
+### Phase 2 - Static Relationship and Investigation Map - 2026-09-05
 
-Runtime gate:
+Structural gate:
 
 ```text
 PHASE 2 STRUCTURAL CHECK: PASS
 ```
 
-Verified dataset:
-
-- Schema: **2**.
-- Classes: **1221**.
-- Symbols: **33742**.
-- Relationships: **325826**.
-- Full structural scan: **~1.28 s**.
-- `symbols.jsonl`: **~8.5 MiB**.
-- `relationships.jsonl`: **~74.4 MiB**.
-- Exact query regression passed.
-- Generated `CALLS`, `READS_FIELD`, `WRITES_FIELD`, `REFERENCES_TYPE`, and typed `CONSTANT` coverage passed.
-- No automatic `LITERAL_ID` promotion.
-
-Decision: keep JSONL + in-memory investigation index; current size/performance does not justify SQLite/native persistence.
-
-Bundle 2A is **DONE**.
-
-### Phase 2 / Bundle 2B - Investigation/search - 2026-09-05
-
-Initial runtime gate through 2B.3:
+Investigation gate, including final 2B.4 assistant-export and 2B.5 safe-domain assertions:
 
 ```text
 PHASE 2 INVESTIGATION CHECK: PASS
@@ -146,41 +121,28 @@ PHASE 2 INVESTIGATION CHECK: PASS
 
 Verified baseline:
 
-- **33742** symbols / **325826** relationships.
-- Investigation-index load: **~946.649 ms**.
-- Approx used-memory delta: **~181.5 MiB**.
-- Exact Class1 search: **~0.588 ms**.
-- Friendly Class1 search: **~0.416 ms**.
-- Ambiguous `<init>` stayed unresolved with **1294** candidates.
-- Fuzzy `Clas` found **29421**, displayed cap **50**.
-- `CALLS`, `CALLED_BY`, `READS_FIELD`, `WRITES_FIELD`, `REFERENCES_TYPE`, typed `CONSTANT` passed.
-- Depth-2 neighborhood stayed bounded at **28 nodes / 40 relationships** under **100/500** caps.
+- Schema **2**.
+- **1221** classes.
+- **33742** symbols.
+- **325826** relationships.
+- Full structural scan **~1.28 s**.
+- `symbols.jsonl` **~8.5 MiB**.
+- `relationships.jsonl` **~74.4 MiB**.
+- Investigation-index load **~946.649 ms**.
+- Approx load memory delta **~181.5 MiB**.
+- Exact search **~0.588 ms** / friendly search **~0.416 ms**.
+- Depth-2 verifier neighborhood **28 nodes / 40 relationships** under **100/500** caps.
+- CALLS/CALLED_BY/read/write/type/constant directions passed.
+- Ambiguous and fuzzy search safety passed.
+- Assistant export metadata/source/caps/atomic output passed.
+- Safe domain correlation and `762:7` same-symbol co-occurrence passed.
+- Domain semantics remained `UNKNOWN`; zero automatic `LITERAL_ID` promotion.
 
-Final combined 2B.4 + 2B.5 local gate was then run after the assistant-export/domain-correlation patches. The user reported:
-
-```text
-PHASE 2 INVESTIGATION CHECK: PASS
-```
-
-That final PASS runtime-confirms the updated verifier assertions for:
-
-- assistant export metadata/source locations/caps,
-- resolved search context,
-- relationship-command export,
-- ambiguous search remaining unresolved,
-- atomic assistant verification export,
-- numeric domain candidate lookup,
-- `762:7` same-symbol constant co-occurrence,
-- bounded domain candidate/relationship output,
-- domain semantics remaining `UNKNOWN`,
-- zero automatic `LITERAL_ID` promotion,
-- assistant-domain export preserving UNKNOWN/no-promotion state.
-
-Therefore **2B.4 and 2B.5 are runtime-verified and Phase 2 is DONE**.
+Phase 2 is **DONE**.
 
 ## verified-static ownership facts
 
-- `AtlasWorkspace` owns workspace/schema/current checks.
+- `AtlasWorkspace` owns workspace/schema/current checks and `.client-atlas/traces/`.
 - `AtlasFingerprint` owns client-build fingerprinting and excludes Atlas classes.
 - `AtlasScanner` owns static bytecode scanning.
 - `AtlasQueryEngine` owns exact streaming query/export.
@@ -190,48 +152,8 @@ Therefore **2B.4 and 2B.5 are runtime-verified and Phase 2 is DONE**.
 - `AtlasRelationshipQueryEngine` owns bounded relationship/neighborhood queries.
 - `AtlasAssistantExportEngine` owns bounded machine-readable investigation packages.
 - `AtlasDomainCorrelationEngine` owns safe domain-hint candidate correlation over typed constants only.
-- `AtlasInvestigationVerifier` owns the consolidated Bundle 2B gate and does not rescan classes.
+- `AtlasInvestigationVerifier` owns the consolidated Bundle 2B gate.
 - `ClientAtlasControl` is the standalone human control surface over shared Atlas APIs.
-
-# Static evidence model
-
-## Symbol record
-
-```text
-id
-kind
-owner
-name
-descriptor
-signature
-compiledPath
-sourcePath
-access
-```
-
-## Relationship record
-
-```text
-fromId
-type
-target
-sourcePath
-sourceLine
-opcode
-occurrenceCount
-detail
-```
-
-Structural relationship meanings:
-
-- direct invocation -> `CALLS`
-- invokedynamic -> `DYNAMIC_CALL`
-- GETFIELD/GETSTATIC -> `READS_FIELD`
-- PUTFIELD/PUTSTATIC -> `WRITES_FIELD`
-- reliable JVM type evidence -> `REFERENCES_TYPE`
-- raw literal -> typed `CONSTANT`
-
-Raw constants never become interface/animation/model/opcode/etc. IDs merely because a domain query used that label.
 
 # Phase 2 completed capabilities
 
@@ -275,7 +197,7 @@ Resolved plain searches include bounded depth-1 context. Ambiguous searches do n
 
 ## Safe domain correlation
 
-Supported examples include:
+Examples:
 
 ```text
 interface 762
@@ -286,15 +208,135 @@ model 5678
 packet NPC_OP1
 ```
 
-Rules:
+Requested domains are hints only. Results remain `UNKNOWN` and never promote `LITERAL_ID` merely from a query label.
 
-- requested domain is a search hint only,
-- single values search normalized typed constants,
-- `762:7` uses same-source-symbol constant co-occurrence,
-- candidate output caps at **50 symbols / 200 relationships**,
-- result semantic status is `UNKNOWN`,
-- `LITERAL_ID promoted: false`,
-- queries do not write domain semantics into generated data.
+# Phase 3 runtime tracing architecture
+
+## 3A.0 Targeted runtime-tracing architecture discovery - verified-static
+
+Purpose: establish the smallest safe runtime observation seams before adding instrumentation. No runtime source was changed in 3A.0.
+
+### Core ownership decision
+
+Future runtime hooks use a **one-way `game.AtlasRuntimeBridge` seam** into a single recorder under `game.atlas`.
+
+Why:
+
+- several useful packet/runtime fields are package-private in `game`,
+- the bridge can extract only neutral primitive metadata while runtime classes retain ownership,
+- Atlas does not need reflection or broad access to obfuscated internals,
+- each later hook can remain a tiny call site,
+- trace calls can early-return immediately while tracing is disabled.
+
+Planned ownership:
+
+```text
+obfuscated/runtime client class
+    -> game.AtlasRuntimeBridge
+        -> game.atlas.AtlasTraceRecorder
+            -> bounded in-memory session
+                -> atomic save to .client-atlas/traces/
+```
+
+`DevDefinitionBridge` remains separate developer-tool ownership. Atlas should use the same narrow-observer pattern rather than hijacking DevDefinitionBridge state.
+
+### Trace-session safety contract
+
+3A.1 and all later hooks must follow these rules:
+
+- tracing is opt-in and inactive by default,
+- inactive hook cost is a fast early return,
+- no disk I/O on packet/input/interface/definition hot paths,
+- event storage is bounded and exposes overflow/dropped-event count,
+- trace failures must never alter or interrupt normal client behavior,
+- do not record packet payload byte arrays by default,
+- do not record credentials, arbitrary chat/text payloads, arbitrary object dumps, or stack traces by default,
+- store compact neutral fields only,
+- stop freezes a session; saving may perform disk I/O after the hot path,
+- original obfuscated names and Atlas stable IDs remain correlation authority.
+
+A trace event should stay compact: monotonic sequence, timestamp, category/event type, optional source Atlas symbol ID, optional thread metadata, and a small ordered set of primitive/string fields.
+
+### Hook map
+
+#### Input - verified-static
+
+`Class549_Sub1.method8081(int,char,int,int)` is the central normalized keyboard/focus event queue point.
+
+`keyPressed`, `keyReleased`, `keyTyped`, and focus loss flow into this method before events are queued. This is the preferred keyboard hook for **3A.2** rather than instrumenting the base game loop.
+
+**UNKNOWN:** the final high-level mouse/menu action dispatcher was not established within the narrow 3A.0 inspection. Resolve that specific dispatcher during 3A.2; do not guess or broaden the current scan. This does not block 3A.1 lifecycle work.
+
+#### Outgoing packets - verified-static
+
+`Class195.method2929(Class572_Sub25,byte)` is the central outgoing packet enqueue point before network flush.
+
+The queued node carries an `OutgoingPacket` and encoded length. The future package bridge can expose neutral fields such as packet/opcode ID, declared packet length, and encoded/enqueued length without copying packet payload bytes.
+
+Do not instrument the repeated flush methods when the enqueue point already represents the logical send event.
+
+#### Incoming packets - verified-static
+
+`MaterialInformation.method1605(...)` delegates into `PacketsDecoder.method3031(Class195,byte)`.
+
+`PacketsDecoder.method3031` resolves `Class195.currentPacket`, handles variable packet length, receives bytes, and then dispatches named packet cases. `IncomingPacket` exposes public `id` and `length` fields.
+
+The preferred **3A.3** hook is after packet identity/final length are known and before per-packet handling. Record metadata only, not payload bytes.
+
+#### Interface/component activity - verified-static
+
+The incoming decoder already exposes high-value named interface events including:
+
+- `ROOT_INTERFACE`
+- `SET_INTERFACE`
+- `CLOSE_INTERFACE`
+- `MOVE_INTERFACE`
+- `HIDE_INTERFACE_COMPONENT`
+- `INTERFACE_SETTINGS`
+- `ANIMATION_ON_INTERFACE`
+- `SET_NPC_INTERFACE`
+- `SET_PLAYER_INTERFACE`
+- `SET_OBJECT_INTERFACE`
+- model/item/NPC-on-component events where present.
+
+`Class512.method6083(...)` is a generic/lazy InterfaceDefinitions lookup and is too hot/noisy to serve as the blanket interface activity hook.
+
+For **3A.4**, use the packet metadata stream first; add tiny calls inside only named interface branches when component-specific values are needed.
+
+#### Definition/cache activity - verified-static
+
+`Class639.getDefinition(...)` checks its cache. On a miss, `Class639.method7568(int,...)` loads/decode/finalizes the definition.
+
+`method7568` already calls:
+
+```text
+DevDefinitionBridge.observeDefinitionLoader(this, interface17)
+```
+
+This proves a narrow observer seam already works at the cache-miss definition boundary. For **3A.5**, a separate Atlas bridge call beside that observer is the preferred generic definition-load hook.
+
+Record compact facts such as definition ID, concrete definition/loader category, and cache-miss/load event. Do not serialize entire definitions.
+
+`Class639_Sub15` is a verified Class639-backed NPC definition loader path. Model/animation/GFX categories that are not Class639-backed should receive their own targeted loader hook only when 3A.5 reaches them; do not assume all asset types share this loader.
+
+### Files inspected for 3A.0
+
+- `Client/src/main/java/game/Class195.java`
+- `Client/src/main/java/game/Class572_Sub25.java`
+- `Client/src/main/java/game/OutgoingPacket.java`
+- `Client/src/main/java/game/IncomingPacket.java`
+- `Client/src/main/java/game/PacketsDecoder.java`
+- `Client/src/main/java/game/MaterialInformation.java`
+- `Client/src/main/java/game/Class549.java`
+- `Client/src/main/java/game/Class549_Sub1.java`
+- `Client/src/main/java/game/Class584.java`
+- `Client/src/main/java/game/Class512.java`
+- `Client/src/main/java/game/Class639.java`
+- `Client/src/main/java/game/Class639_Sub15.java`
+- `Client/src/main/java/game/DevDefinitionBridge.java`
+- `Client/src/main/java/game/atlas/AtlasWorkspace.java`
+
+Do not re-scan these ownership paths in 3A.1 unless implementation reveals contradictory evidence.
 
 # Development plan
 
@@ -304,33 +346,17 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 **Status: DONE**
 
-- [x] 1A.1 Targeted implementation discovery.
-- [x] 1A.2 Schema + persistence skeleton.
-- [x] 1A.3 Bytecode scanner MVP.
-- [x] 1A.4 Basic query/export CLI.
-- [x] 1A.5 Standalone Atlas Control.
-- [x] Phase 1 runtime gate.
+- [x] Foundation discovery/schema/scanner/query/control/runtime gate.
 
 ## Phase 2 - Static Relationship and Investigation Map
 
 **Status: DONE**
 
-### Bundle 2A - Structural relationships - DONE
-
-- [x] Relationship schema/source locators.
-- [x] Calls + field access scanning.
-- [x] Type references + constants.
-- [x] Structural verification + size metrics.
-
-### Bundle 2B - Investigation search - DONE
-
-- [x] 2B.1 In-memory investigation index.
-- [x] 2B.2 Ranked/friendly search.
-- [x] 2B.3 Relationship queries + bounded neighborhoods.
-- [x] 2B.1-2B.3 runtime gate.
-- [x] 2B.4 Assistant-oriented export.
-- [x] 2B.5 Safe initial domain correlation.
-- [x] Final combined Bundle 2B runtime gate.
+- [x] Structural relationships and runtime gate.
+- [x] Investigation index/search/relationship neighborhoods.
+- [x] Assistant export.
+- [x] Safe initial domain correlation.
+- [x] Final combined runtime gate.
 
 ## Phase 3 - Runtime Evidence and Knowledge
 
@@ -340,8 +366,8 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 **Status: ACTIVE**
 
-- [ ] **3A.0 Targeted runtime-tracing architecture discovery** - identify the smallest safe existing menu/input/network/interface/definition hooks and trace storage path before instrumentation.
-- [ ] **3A.1 Trace-session lifecycle** - start/stop/name/save, bounded buffers, failure isolation.
+- [x] **3A.0 Targeted runtime-tracing architecture discovery** - verified-static; architecture/hook map above.
+- [ ] **3A.1 Trace-session lifecycle** - start/stop/name/save, bounded buffers, atomic trace persistence, status/snapshot API, failure isolation.
 - [ ] **3A.2 Menu/input hooks**.
 - [ ] **3A.3 Packet metadata hooks**.
 - [ ] **3A.4 Interface/component hooks**.
@@ -381,29 +407,29 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 # Testing
 
 - Phase 1: runtime-verified.
-- Phase 2A: runtime-verified.
-- Phase 2B final combined gate: runtime-verified by user-reported PASS on 2026-09-05.
-- Do **not** request another Phase 2 search/structural gate without contradictory evidence or a relevant Phase 2 implementation change.
-- Phase 3 tracing tests must be short, explicit, and action-scoped; no broad always-on trace test.
+- Phase 2: runtime-verified.
+- 3A.0 is static architecture discovery only; **no local runtime test is required**.
+- Do not request another Phase 2 structural/search gate without contradictory evidence or a relevant Phase 2 implementation change.
+- Phase 3 runtime tests must be short, explicit, action-scoped, and consolidated after useful implementation slices.
 
 # Carryover / blockers
 
 ## CARRYOVER
 
-- On a natural future client source change + rebuild boundary, confirm cached/streaming queries refuse stale generated data until rebuilt.
+- Resolve the exact high-level menu/mouse action dispatcher during 3A.2; current status `UNKNOWN`.
+- On a natural client source change + rebuild boundary, confirm cached/streaming queries refuse stale generated data until rebuilt.
 - Verify >200 streaming exact-query truncation when a naturally suitable symbol appears.
-- Destructive schema-mismatch simulation remains unnecessary for normal gates; static guards exist.
 - Advanced automatic correlation remains usage-driven backlog.
 
 ## BLOCKERS
 
-- None.
+- None for 3A.1.
 
 # Resume Here
 
 **Last completed checkpoint:**
 
-- **Phase 2 / Bundle 2B final combined runtime gate - PASS. Phase 2 DONE.**
+- **Phase 3 / Bundle 3A / 3A.0 Targeted runtime-tracing architecture discovery - DONE / verified-static.**
 
 **Current phase:**
 
@@ -415,7 +441,17 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 **Current/next checklist item:**
 
-- **3A.0 Targeted runtime-tracing architecture discovery.**
+- **3A.1 Trace-session lifecycle.**
+
+**3A.1 established implementation direction:**
+
+- Create a single process-wide recorder under `game.atlas`.
+- Create/use a one-way `game.AtlasRuntimeBridge` seam for later obfuscated runtime hooks.
+- Implement start / stop / name / status-or-snapshot / save lifecycle.
+- Use a bounded in-memory event buffer with explicit dropped-event count.
+- Save atomically under `AtlasWorkspace.tracesDirectory()`.
+- Keep recorder inactive by default and failure-isolated.
+- Do not add input/packet/interface/definition hook calls yet unless required by the lifecycle itself; those remain their ordered checklist slices.
 
 **Verified dataset baseline:**
 
@@ -427,26 +463,20 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 - ~1.28 s full structural scan
 - ~946.649 ms investigation-index load
 - ~181.5 MiB approximate load memory delta
-- ~0.588 ms exact symbol search
-- ~0.416 ms friendly symbol search
-- depth-2 verifier neighborhood: 28 nodes / 40 relationships
 
 **Do not re-scan/re-discover without new evidence:**
 
 - broad `game` source tree,
 - unrelated server/gameplay systems,
 - Phase 2 scanner/search architecture,
+- the 3A.0 packet/input/interface/definition ownership paths listed above,
 - Client Console internals before Phase 4.
-
-**Phase 3 discovery boundary:**
-
-Inspect only the smallest existing client paths needed to establish reusable runtime hooks for menu/input, packets, interfaces, and high-value definition/cache activity. Do not instrument broadly until 3A.0 establishes ownership and safety.
 
 **Pending runtime verification:**
 
-- None from Phase 2.
-- Phase 3 verification begins only after a 3A implementation slice exists.
+- None for 3A.0.
+- Runtime verification begins after a useful tracing implementation slice exists; consolidate rather than testing every hook separately.
 
 # Next recommended work
 
-**3A.0 Targeted runtime-tracing architecture discovery.**
+**3A.1 Trace-session lifecycle.**
