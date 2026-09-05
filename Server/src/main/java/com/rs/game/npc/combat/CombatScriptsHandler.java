@@ -8,6 +8,7 @@ import com.rs.game.npc.NPC;
 import com.rs.game.npc.bosslabs.BossCombatScript;
 import com.rs.game.npc.bosslabs.BossDefinitionRegistry;
 import com.rs.game.npc.bosslabs.BossDefinitionStore;
+import com.rs.game.npc.bosslabs.BossLabsDropStore;
 import com.rs.utils.Logger;
 import com.rs.utils.Utils;
 
@@ -18,6 +19,9 @@ public class CombatScriptsHandler {
 
 	@SuppressWarnings("rawtypes")
 	public static final void init() {
+		// GameLauncher loads Matrix3 packed NPC drops before this point. Apply
+		// saved BossLabs overrides now so the packed table remains the baseline.
+		BossLabsDropStore.init();
 		BossDefinitionStore.init();
 		try {
 			Class[] classes = Utils.getClasses("com.rs.game.npc.combat.impl");
