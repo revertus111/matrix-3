@@ -45,6 +45,15 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 - After completing work, update the authoritative checklist/phase state so another chat can immediately determine where the workstream stands.
 - If chat discussion and the saved workstream checklist disagree, stop before patching and identify the mismatch rather than guessing which state is correct.
 
+## Phase completion gates
+
+- A phase may be marked `DONE` only when all required checklist items for that phase are complete and any mandatory runtime verification has passed.
+- If required runtime verification is still pending, keep the phase in `NEEDS TEST` or equivalent rather than marking it complete.
+- Deferred verification must be explicitly recorded with the reason, affected checklist item(s), and what must be tested later.
+- Do not advance to the next phase merely because implementation work is finished if the current phase still has required verification or unresolved blockers.
+- A blocked or deferred item may allow later independent work only when the workstream explicitly records that it does not invalidate the phase gate or create a dependency risk.
+- When a phase closes, update the authoritative `PROJECT.md` with the completed gate state and set the next phase/bundle/checklist item as the new execution target.
+
 ## User-time optimization
 
 - Treat the user's PC/runtime testing time as scarce.
