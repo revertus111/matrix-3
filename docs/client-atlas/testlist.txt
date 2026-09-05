@@ -3,53 +3,58 @@ Client Atlas test list
 Phase 1 - runtime verified
 [x] Eclipse/Java 8 compiles/runs Atlas after Gradle -> Refresh Gradle Project resolves ASM.
 [x] Scanner completed against compiled Matrix3 Client classes.
-[x] VERIFIED: 1221 class files / 33742 symbols / 34053 relationships.
+[x] VERIFIED: 1221 class files / 33742 symbols / 34053 Phase-1 relationships.
 [x] Metadata reopened without rebuild and `Current fingerprint: true`.
 [x] VERIFIED fingerprint: 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
 [x] Standalone Client Atlas Control opened through no-argument ClientAtlasMain.
 [x] Phase 1 automated check passed.
 [x] UI exact Class1 search/export passed.
 
-Phase 2 / Bundle 2A - one-click 2A.4 gate
-[ ] `git pull origin main`.
-[ ] Eclipse/Java 8 clean/build Client.
-[ ] Run `game.atlas.ClientAtlasMain` with NO program arguments.
-[ ] Before the check, old schema-v1 metadata should show `REBUILD REQUIRED` if it still exists locally.
-[ ] Click `Run Phase 2 Check` ONCE.
-[ ] Confirm output contains `PHASE 2 STRUCTURAL CHECK: PASS`.
-[ ] Send/copy the generated report from `.client-atlas/phase2-structural-check.txt`.
+Phase 2 / Bundle 2A - runtime verified
+[x] Schema-v2 index rebuilt/current locally.
+[x] `Run Phase 2 Check` completed.
+[x] Output confirmed `PHASE 2 STRUCTURAL CHECK: PASS`.
+[x] VERIFIED: schema version 2.
+[x] VERIFIED: 1221 class files / 33742 symbols / 325826 relationships.
+[x] VERIFIED scan time: 1282.0 ms.
+[x] VERIFIED exact query: `CLASS:game/Class1`.
+[x] VERIFIED exact-query time: 362.0 ms.
+[x] VERIFIED `symbols.jsonl`: 8,980,282 bytes (~8.5 MiB).
+[x] VERIFIED `relationships.jsonl`: 78,016,586 bytes (~74.4 MiB).
 
-`Run Phase 2 Check` automatically performs these 2A.1-2A.4 checks:
-[auto] Rebuild generated Atlas data using schema version 2.
-[auto] Require current fingerprint after rebuild.
-[auto] Require class/symbol counts > 0 and relationship count above the Phase 1 structural-only baseline (34053).
-[auto] Verify symbol records expose `compiledPath` + `sourcePath`.
-[auto] Verify Class1 path resolution when Class1 is present.
-[auto] Verify relationship schema fields: sourcePath/sourceLine/opcode/occurrenceCount/detail.
-[auto] Verify DECLARES/EXTENDS/IMPLEMENTS structural records keep occurrenceCount=1 with null line/opcode.
-[auto] Require generated CALLS relationships.
-[auto] Require generated READS_FIELD relationships.
-[auto] Require generated WRITES_FIELD relationships.
-[auto] Require generated REFERENCES_TYPE relationships.
-[auto] Require generated typed CONSTANT relationships.
-[auto] Require zero automatic LITERAL_ID relationships.
-[auto] Select an internal CALLS target and exercise the incoming exact-query path.
-[auto] Re-run an exact class query and compact export against schema 2/current data.
-[auto] Verify evidence.jsonl size is unchanged by the generated-index rebuild.
-[auto] Verify trace file count/bytes are unchanged by the generated-index rebuild.
-[auto] Record class/symbol/relationship counts.
-[auto] Count each relationship type.
-[auto] Record how many relationships have source-line evidence and opcode evidence.
-[auto] Record how many aggregated relationships have occurrenceCount > 1.
-[auto] Record symbols.jsonl and relationships.jsonl file sizes.
-[auto] Record scan time and one exact-query time.
-[auto] Write `.client-atlas/phase2-structural-check.txt`.
-[auto] Write `.client-atlas/phase2-structural-query.json`.
+`Run Phase 2 Check` automated assertions - passed as one consolidated gate
+[x] Rebuild generated Atlas data using schema version 2.
+[x] Require current fingerprint after rebuild.
+[x] Require class/symbol counts > 0 and relationship count above Phase-1 structural baseline.
+[x] Verify symbol records expose `compiledPath` + `sourcePath`.
+[x] Verify Class1 path resolution when Class1 is present.
+[x] Verify relationship schema fields: sourcePath/sourceLine/opcode/occurrenceCount/detail.
+[x] Verify DECLARES/EXTENDS/IMPLEMENTS structural records retain valid structural evidence shape.
+[x] Require generated CALLS relationships.
+[x] Require generated READS_FIELD relationships.
+[x] Require generated WRITES_FIELD relationships.
+[x] Require generated REFERENCES_TYPE relationships.
+[x] Require generated typed CONSTANT relationships.
+[x] Require zero automatic LITERAL_ID relationships.
+[x] Exercise an internal incoming CALLS exact-query path.
+[x] Re-run exact class query and compact export against schema 2/current data.
+[x] Verify evidence.jsonl is unchanged by generated-index rebuild.
+[x] Verify trace state is unchanged by generated-index rebuild.
+[x] Record class/symbol/relationship counts and relationship-family metrics.
+[x] Record source-line/opcode/aggregation evidence metrics without manufacturing missing evidence.
+[x] Record generated file sizes, scan time, and exact-query time.
+[x] Write `.client-atlas/phase2-structural-check.txt` and `.client-atlas/phase2-structural-query.json`.
 
-Non-failing evidence notes reported by the verifier
-[info] DYNAMIC_CALL may legitimately be zero if this compiled client contains no invokedynamic sites.
-[info] Positive sourceLine may be zero if the compiled client lacks line-number debug data; report instead of inventing source evidence.
-[info] occurrenceCount > 1 may be zero only if no naturally repeated same-method relationship occurs; report instead of manufacturing a test case.
+Bundle 2A result
+[x] Phase 2 Bundle 2A structural relationship gate is DONE.
+[x] Measurements support retaining JSONL persistence; no SQLite/native database is currently justified.
+
+Bundle 2B - investigation search
+[ ] 2B.1 In-memory investigation index.
+[ ] 2B.2 Ranked/friendly search.
+[ ] 2B.3 Relationship queries + bounded neighborhoods.
+[ ] 2B.4 Assistant-oriented export.
+[ ] 2B.5 Safe initial domain correlation.
 
 Carryover regression checks
 [ ] On a natural future client source change + rebuild, confirm query/export refuses the stale index until rebuilt.
@@ -57,5 +62,5 @@ Carryover regression checks
 [ ] Confirm normal `game.RS3Applet` launch ownership/configuration remains unchanged after meaningful Atlas changes.
 
 Gate rule
-- Bundle 2A remains NEEDS TEST until the one-click Phase 2 structural report passes locally.
-- Do not begin 2B.1 implementation until this gate passes or the authoritative PROJECT.md explicitly changes priority.
+- Bundle 2A is complete; do not request another structural scan/test without new contradictory evidence.
+- Next valid implementation target is 2B.1.
