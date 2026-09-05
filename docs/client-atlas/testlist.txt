@@ -23,15 +23,15 @@ Phase 2 / Bundle 2A - runtime verified
 [x] VERIFIED `relationships.jsonl`: 78,016,586 bytes (~74.4 MiB).
 [x] Bundle 2A is DONE; current UI label is `Run Structural Check`.
 
-Bundle 2B - investigation search implementation
+Bundle 2B - investigation search implementation/runtime verified through 2B.3
 [x] 2B.1 In-memory investigation index implementation.
-    [x] Load only current schema-v2 generated JSONL; do not scan or create a second persistence owner.
-    [x] Validate schema/fingerprint before and after load.
-    [x] Verify loaded symbol/relationship counts match metadata.
-    [x] Exact symbol ID + normalized owner/name candidate maps.
+    [x] Current schema-v2 JSONL load; no second persistence owner.
+    [x] Schema/fingerprint guards before/after load.
+    [x] Loaded counts match metadata.
+    [x] Exact symbol + normalized owner/name maps.
     [x] Outgoing/incoming relationship maps + typed CONSTANT referrers.
-    [x] Preserve sourcePath/sourceLine/opcode/occurrenceCount/detail.
-    [x] Canonicalize repeated loaded strings to control memory use.
+    [x] SourcePath/sourceLine/opcode/occurrenceCount/detail preserved.
+    [x] Repeated strings canonicalized during load.
 [x] 2B.2 Ranked/friendly search implementation.
     [x] Canonical IDs remain authoritative.
     [x] Exact class path/simple name/owner-member shorthand resolution.
@@ -41,51 +41,43 @@ Bundle 2B - investigation search implementation
     [x] Fuzzy/partial results never auto-resolve.
     [x] CLI `search "<query-or-command>"` path.
 [x] 2B.3 Relationship queries + bounded neighborhoods implementation.
-    [x] `calls <symbol>` and `called-by <symbol>`.
-    [x] `reads <field-or-symbol>` and `written-by <field>`.
+    [x] `calls <symbol>` / `called-by <symbol>`.
+    [x] `reads <field-or-symbol>` / `written-by <field>`.
     [x] `references <TYPE:... or class>`.
-    [x] `constant <raw-or-typed literal>` with numeric normalization but no domain-ID guessing.
+    [x] `constant <raw-or-typed literal>` without domain-ID guessing.
     [x] Class-level calls/reads expand through declared methods.
     [x] Normal relationship cap = 500 edges.
     [x] `neighbors <symbol> depth=1|2`.
-    [x] Neighborhood caps = 100 nodes / 500 edges with explicit truncation state.
-    [x] Standalone Search / Investigate box uses shared index/search/relationship APIs.
+    [x] Neighborhood caps = 100 nodes / 500 edges with truncation state.
+    [x] Standalone Search / Investigate uses shared APIs.
     [x] Enter key executes search.
-    [x] Investigation index cached only for the current generated snapshot and invalidated on stale/rebuild paths.
-    [x] Old `Run Phase 2 Check` UI wording renamed to `Run Structural Check`.
-    [x] Added one-click `Run Search Check` + CLI `verify-search`.
-    [x] Search verifier writes `.client-atlas/phase2-investigation-check.txt` without rescanning.
+    [x] Investigation index cached only for the current generated snapshot.
+    [x] `Run Search Check` + CLI `verify-search`.
 
-Bundle 2B - current one-click local gate
-[ ] `git pull origin main`.
-[ ] Eclipse/Java 8 clean/build Client.
-[ ] Run `game.atlas.ClientAtlasMain` with NO program arguments.
-[ ] Confirm existing Atlas status is CURRENT; do NOT click Scan/Rebuild first.
-[ ] Click `Run Search Check` ONCE.
-[ ] Confirm output contains `PHASE 2 INVESTIGATION CHECK: PASS`.
-[ ] Send/copy `.client-atlas/phase2-investigation-check.txt`.
-
-`Run Search Check` automatically verifies
-[auto] Current schema/fingerprint and no structural rescan.
-[auto] In-memory counts match persisted metadata.
-[auto] Record investigation-index load time + approximate used-memory delta.
-[auto] Exact canonical `CLASS:game/Class1` resolution.
-[auto] Friendly `Class1` resolves to the same class.
-[auto] Owner/member shorthand + descriptor resolves a known Class1 method.
-[auto] Ambiguous exact-name search returns multiple candidates and stays unresolved.
-[auto] Fuzzy/prefix search returns ranked bounded candidates and stays unresolved.
-[auto] Internal CALLS edge through `calls`.
-[auto] Same CALLS edge through `called-by`.
-[auto] Known READS_FIELD edge through `reads <field>`.
-[auto] Known WRITES_FIELD edge through `written-by <field>`.
-[auto] Known REFERENCES_TYPE edge.
-[auto] Known typed CONSTANT edge.
-[auto] Depth-2 neighborhood never exceeds 100 nodes / 500 edges.
-[auto] Write `.client-atlas/phase2-investigation-check.txt`.
+Bundle 2B consolidated runtime gate - VERIFIED 2026-09-05
+[x] `Run Search Check` completed against the existing current index without rescanning.
+[x] Output confirmed `PHASE 2 INVESTIGATION CHECK: PASS`.
+[x] VERIFIED: 33742 symbols / 325826 relationships.
+[x] VERIFIED investigation-index load time: 946.649 ms.
+[x] VERIFIED approximate used-memory delta: 181.5 MiB.
+[x] VERIFIED exact `Class1` -> `CLASS:game/Class1`.
+[x] VERIFIED friendly `Class1` -> `CLASS:game/Class1`.
+[x] VERIFIED Class1 member shorthand resolution.
+[x] VERIFIED ambiguous `<init>` remained unresolved with 1294 candidates.
+[x] VERIFIED fuzzy `Clas` reported 29421 matches and displayed only 50.
+[x] VERIFIED exact search time: 0.588 ms.
+[x] VERIFIED friendly search time: 0.416 ms.
+[x] VERIFIED CALLS direction.
+[x] VERIFIED CALLED_BY direction.
+[x] VERIFIED READS_FIELD direction.
+[x] VERIFIED WRITES_FIELD direction.
+[x] VERIFIED REFERENCES_TYPE lookup.
+[x] VERIFIED typed CONSTANT lookup.
+[x] VERIFIED depth-2 neighborhood: 28 nodes / 40 relationships, within 100/500 caps.
+[x] 2B local verification gate PASS.
 
 Remaining Bundle 2B
-[ ] 2B local verification gate PASS.
-[ ] 2B.4 Assistant-oriented export - gated on Bundle 2B PASS.
+[ ] 2B.4 Assistant-oriented export - current execution target.
 [ ] 2B.5 Safe initial domain correlation.
 
 Carryover regression checks
@@ -95,5 +87,5 @@ Carryover regression checks
 
 Gate rule
 - Bundle 2A is complete; do not request another structural scan/test without new contradictory evidence.
-- 2B.1-2B.3 implementation is complete.
-- Do not begin 2B.4 until `PHASE 2 INVESTIGATION CHECK: PASS` is confirmed locally or PROJECT.md explicitly changes the gate.
+- 2B.1-2B.3 implementation and consolidated runtime verification are complete.
+- Next valid implementation target is 2B.4 Assistant-oriented export.
