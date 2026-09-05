@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.util.Locale;
 
 import game.atlas.AtlasQueryEngine.QueryResult;
+import game.atlas.AtlasRelationshipQueryEngine.RelationshipQueryResult;
 import game.atlas.AtlasScanner.ScanResult;
 import game.atlas.AtlasSchema.Metadata;
 import game.atlas.AtlasSearchEngine.SearchResult;
@@ -80,14 +81,20 @@ public final class ClientAtlasMain {
         }
 
         if ("search".equals(command)) {
-            requireArgument(args, 1, "search requires a symbol name, shorthand, or Atlas id");
+            requireArgument(args, 1, "search requires a symbol query or relationship command");
             Path classRoot = classRoot(workspace, args, 2);
             AtlasInvestigationIndex index = AtlasInvestigationIndex.load(workspace, classRoot);
-            SearchResult result = new AtlasSearchEngine(index).search(args[1]);
+            AtlasRelationshipQueryEngine relationships = new AtlasRelationshipQueryEngine(index);
             System.out.println("Investigation index: " + index.getSymbolCount() + " symbols / "
                     + index.getRelationshipCount() + " relationships");
             System.out.println("Index load time: " + formatMillis(index.getLoadNanos()) + " ms");
-            System.out.println(result.toDisplayText());
+            if (relationships.isRelationshipCommand(args[1])) {
+                RelationshipQueryResult result = relationships.query(args[1]);
+                System.out.println(result.toDisplayText());
+            } else {
+                SearchResult result = new AtlasSearchEngine(index).search(args[1]);
+                System.out.println(result.toDisplayText());
+            }
             return;
         }
 
@@ -148,7 +155,10 @@ public final class ClientAtlasMain {
         System.out.println("  verify-structural [classes-dir]                 Rebuild + run Phase 2 structural checks/metrics");
         System.out.println("  status [classes-dir]                            Show persisted metadata and stale/current fingerprint state");
         System.out.println("  init [classes-dir]                              Create/reset metadata for the compiled client class directory");
-        System.out.println("  search \"<friendly-query>\" [classes-dir]        Rank/resolve symbols without guessing ambiguous overloads");
+        System.out.println("  search \"<query-or-command>\" [classes-dir]       Friendly symbol search or relationship investigation");
+        System.out.println("     examples: Class387 | Class387.method4844 | calls Class387.method4844");
+        System.out.println("               called-by <symbol> | reads <symbol/field> | written-by <field>");
+        System.out.println("               references <type/class> | constant 762 | neighbors <symbol> depth=2");
         System.out.println("  query \"<atlas-symbol-id>\" [classes-dir]        Print one exact symbol and immediate relationships as compact JSON");
         System.out.println("  export \"<atlas-symbol-id>\" <file> [classes-dir] Write the same compact JSON result to a file");
         System.out.println("  help                                            Show this help");
