@@ -15,7 +15,7 @@ final class AtlasJson {
     }
 
     static String symbol(SymbolRecord record) {
-        StringBuilder builder = new StringBuilder(256);
+        StringBuilder builder = new StringBuilder(288);
         builder.append('{');
         appendStringField(builder, "id", record.getId(), true);
         appendStringField(builder, "kind", record.getKind().name(), false);
@@ -23,6 +23,7 @@ final class AtlasJson {
         appendStringField(builder, "name", record.getName(), false);
         appendStringField(builder, "descriptor", record.getDescriptor(), false);
         appendStringField(builder, "signature", record.getSignature(), false);
+        appendStringField(builder, "compiledPath", record.getCompiledPath(), false);
         appendStringField(builder, "sourcePath", record.getSourcePath(), false);
         appendNumberField(builder, "access", record.getAccess());
         builder.append('}');
@@ -30,11 +31,15 @@ final class AtlasJson {
     }
 
     static String relationship(RelationshipRecord record) {
-        StringBuilder builder = new StringBuilder(192);
+        StringBuilder builder = new StringBuilder(256);
         builder.append('{');
         appendStringField(builder, "fromId", record.getFromId(), true);
         appendStringField(builder, "type", record.getType().name(), false);
         appendStringField(builder, "target", record.getTarget(), false);
+        appendStringField(builder, "sourcePath", record.getSourcePath(), false);
+        appendNullableNumberField(builder, "sourceLine", record.getSourceLine());
+        appendNullableNumberField(builder, "opcode", record.getOpcode());
+        appendNumberField(builder, "occurrenceCount", record.getOccurrenceCount());
         appendStringField(builder, "detail", record.getDetail(), false);
         builder.append('}');
         return builder.toString();
@@ -66,6 +71,17 @@ final class AtlasJson {
         builder.append(',');
         appendString(builder, name);
         builder.append(':').append(value);
+    }
+
+    private static void appendNullableNumberField(StringBuilder builder, String name, Integer value) {
+        builder.append(',');
+        appendString(builder, name);
+        builder.append(':');
+        if (value == null) {
+            builder.append("null");
+        } else {
+            builder.append(value.intValue());
+        }
     }
 
     private static void appendString(StringBuilder builder, String value) {
