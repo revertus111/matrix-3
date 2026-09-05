@@ -1,21 +1,12 @@
 package game.console.bosslabs;
 
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.Point;
-import java.awt.RenderingHints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
-import java.awt.event.MouseWheelEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -31,14 +22,13 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import game.console.ConsoleTheme;
 
 /**
- * BossLabs external encounter editor.
+ * BossLabs creator-facing encounter editor.
  *
  * DRAFT state remains client-local. Search, inspection and explicit publish
  * actions route through the BossLabs client/server bridge while Matrix3 remains
@@ -85,14 +75,14 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     private final JButton saveApplyButton = new JButton("Save & Apply");
     private final JButton undoButton = new JButton("Undo Last Apply");
     private final JButton applySavedButton = new JButton("Apply Saved");
-    private final JLabel publishStatus = new JLabel("Select an NPC to inspect its BossLabs state.");
+    private final JLabel publishStatus = new JLabel("Select an NPC to begin.");
 
+    private final BossLabsTestingPanel testingPanel = new BossLabsTestingPanel();
     private final BossLabsDefinitionEditor definitionEditor;
 
     private boolean suppressDraftEvents;
     private boolean draftDirty;
     private int selectedNpcId = -1;
-    private boolean hasBossLabsDefinition;
     private boolean savedAvailable;
     private boolean rollbackAvailable;
 
@@ -106,6 +96,13 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
             public void run() {
                 markDraftChanged();
             }
+        }, new BossLabsDefinitionEditor.SelectionListener() {
+            @Override
+            public void onSelectionChanged(BossLabsDraftDefinition.Phase phase, BossLabsDraftDefinition.Attack attack) {
+                testingPanel.setAuthoringSelection(
+                        phase == null ? "" : phase.getId(),
+                        attack == null ? "" : attack.getId());
+            }
         });
 
         add(createTopArea(), BorderLayout.NORTH);
@@ -116,9 +113,11 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         updateDraftState();
         updatePublishButtons();
         BossLabsClientBridge.setListener(this);
+        BossLabsClientBridge.setTestingListener(testingPanel);
     }
 
     void disposeBridge() {
+        BossLabsClientBridge.clearTestingListener(testingPanel);
         BossLabsClientBridge.clearListener(this);
     }
 
@@ -128,7 +127,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
 
     void arenaDraftChanged() {
         markDraftChanged();
-        definitionEditor.getAttacksComponent().repaint();
+        definitionEditor.refreshSelectedAttackSummary();
     }
 
     private JComponent createTopArea() {
@@ -150,7 +149,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Matrix3 encounter editor - connected development bridge");
+        JLabel subtitle = new JLabel("Boss encounter creator  •  build → test → apply → save");
         subtitle.setFont(ConsoleTheme.SMALL_FONT);
         subtitle.setForeground(ConsoleTheme.MUTED_TEXT);
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
@@ -186,17 +185,17 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
                 ConsoleTheme.panelPadding(10, 10, 10, 10)));
         wrapper.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel label = new JLabel("NPC / Boss");
+        JLabel label = new JLabel("Boss / NPC");
         label.setFont(ConsoleTheme.SECTION_FONT);
         label.setForeground(ConsoleTheme.TEXT);
         wrapper.add(label, BorderLayout.WEST);
 
-        npcSearchField.setToolTipText("Enter an NPC id or NPC name. No mode dropdown is used.");
+        npcSearchField.setToolTipText("Type an NPC id or NPC name. BossLabs detects which one you entered.");
         ConsoleTheme.styleTextField(npcSearchField);
         npcSearchField.addActionListener(e -> prepareSearch());
         wrapper.add(npcSearchField, BorderLayout.CENTER);
 
-        JButton searchButton = new JButton("Search");
+        JButton searchButton = new JButton("Load");
         ConsoleTheme.styleButton(searchButton);
         searchButton.addActionListener(e -> prepareSearch());
         wrapper.add(searchButton, BorderLayout.EAST);
@@ -214,13 +213,11 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         searchResults.setFont(ConsoleTheme.BODY_FONT);
         searchResults.setFixedCellHeight(28);
         searchResults.addListSelectionListener(e -> {
-            if (e.getValueIsAdjusting()) {
+            if (e.getValueIsAdjusting())
                 return;
-            }
             BossLabsClientBridge.SearchResult result = searchResults.getSelectedValue();
-            if (result != null) {
+            if (result != null)
                 inspectNpc(result.getNpcId());
-            }
         });
 
         searchResultsScroll = new JScrollPane(searchResults);
@@ -253,23 +250,23 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
             return;
         }
 
-        searchStatus.setText("Searching Matrix3 NPC definitions for \"" + query + "\"...");
+        searchStatus.setText("Searching NPC definitions for \"" + query + "\"...");
         BossLabsClientBridge.requestSearch(query);
     }
 
     private void inspectNpc(int npcId) {
         selectedNpcId = npcId;
-        searchStatus.setText("Inspecting NPC " + npcId + "...");
-        publishStatus.setText("Loading Matrix3/BossLabs ownership...");
+        testingPanel.clearSelection();
+        searchStatus.setText("Loading NPC " + npcId + "...");
+        publishStatus.setText("Loading boss data...");
         updatePublishButtons();
         BossLabsClientBridge.requestInspect(npcId);
     }
 
     private boolean isAllDigits(String value) {
         for (int index = 0; index < value.length(); index++) {
-            if (!Character.isDigit(value.charAt(index))) {
+            if (!Character.isDigit(value.charAt(index)))
                 return false;
-            }
         }
         return value.length() > 0;
     }
@@ -282,156 +279,78 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         tabs.setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
         tabs.setOpaque(true);
 
-        tabs.addTab("Identity", createIdentityTab());
-        tabs.addTab("Stats", createStatsTab());
-        tabs.addTab("Attacks", definitionEditor.getAttacksComponent());
+        tabs.addTab("Overview", createOverviewTab());
         tabs.addTab("Phases", definitionEditor.getPhasesComponent());
-        tabs.addTab("Mechanics", createPlaceholderTab("Mechanics",
-                "Reusable encounter mechanics are added only when the first boss proves a need.",
-                "BossLabs will not grow a speculative general-purpose scripting engine."));
-        tabs.addTab("Arena / Tiles", new BossLabsArenaPanel(this));
+        tabs.addTab("Attacks", definitionEditor.getAttacksComponent());
+        tabs.addTab("Attack Pattern", new BossLabsArenaPanel(this));
+        tabs.addTab("Arena", createPlaceholderTab("Arena Layout",
+                "Fixed encounter bounds, boss spawn, player entry, mechanic anchors, and named world positions belong here.",
+                "Attack Pattern is relative attack geometry; Arena Layout will remain separate."));
         tabs.addTab("Drops", createPlaceholderTab("Drops",
-                "Drop editing will route through Matrix3's existing drop authority when that authoring slice is implemented.",
-                "BossLabs does not own a second drop engine."));
-        tabs.addTab("Testing", createTestingTab());
+                "Boss drops will edit Matrix3's existing drop authority through a creator-facing item workflow.",
+                "BossLabs will not create a second drop engine."));
+        tabs.addTab("Testing", testingPanel);
+        tabs.addTab("Advanced", createAdvancedTab());
         return tabs;
     }
 
-    private JComponent createIdentityTab() {
+    private JComponent createOverviewTab() {
         JPanel content = createVerticalContent();
-        content.add(createSectionCard("Boss definition", createIdentityForm()));
+
+        JPanel identity = new JPanel(new GridBagLayout());
+        identity.setOpaque(false);
+        configureEditableField(displayNameField, "Creator-facing boss name");
+        addFormRow(identity, 0, "Boss name", displayNameField);
+        content.add(createSectionCard("Boss", identity));
         content.add(Box.createVerticalStrut(10));
-        content.add(createSectionCard("Combat ownership", createOwnershipForm()));
+
+        JPanel quickStats = new JPanel(new GridBagLayout());
+        quickStats.setOpaque(false);
+        addFormRow(quickStats, 0, "Combat level", combatLevelValue);
+        addFormRow(quickStats, 1, "Hitpoints", hitpointsValue);
+        addFormRow(quickStats, 2, "Attack speed", attackSpeedValue);
+        addFormRow(quickStats, 3, "Size", sizeValue);
+        content.add(createSectionCard("At a glance", quickStats));
+        content.add(Box.createVerticalStrut(10));
+        content.add(createInfoCard("Workflow",
+                "1. Add phases  •  2. Add attacks  •  3. Paint attack patterns when needed  •  4. Apply Live  •  5. Test  •  6. Save & Apply.",
+                "Internal IDs and bridge details are kept in Advanced so normal content work stays focused on the encounter."));
         content.add(Box.createVerticalGlue());
         return scroll(content);
     }
 
-    private JComponent createIdentityForm() {
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setOpaque(false);
-
-        configureEditableField(definitionIdField, "Stable BossLabs definition id, for example volcanic_warden");
-        configureEditableField(displayNameField, "BossLabs display name");
-        configureEditableField(npcIdField, "Matrix3 NPC id");
-
-        addFormRow(form, 0, "Definition ID", definitionIdField);
-        addFormRow(form, 1, "Display name", displayNameField);
-        addFormRow(form, 2, "NPC ID", npcIdField);
-        return form;
-    }
-
-    private JComponent createOwnershipForm() {
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setOpaque(false);
-        addFormRow(form, 0, "Combat script", combatScriptValue);
-        addFormRow(form, 1, "Ownership", ownershipValue);
-        return form;
-    }
-
-    private JComponent createStatsTab() {
+    private JComponent createAdvancedTab() {
         JPanel content = createVerticalContent();
+
+        JPanel identity = new JPanel(new GridBagLayout());
+        identity.setOpaque(false);
+        configureReadOnlyField(definitionIdField, "BossLabs internal definition ID");
+        configureReadOnlyField(npcIdField, "Matrix3 NPC ID loaded by the Boss/NPC selector");
+        addFormRow(identity, 0, "Definition ID", definitionIdField);
+        addFormRow(identity, 1, "NPC ID", npcIdField);
+        content.add(createSectionCard("Internal identity", identity));
+        content.add(Box.createVerticalStrut(10));
+
+        JPanel ownership = new JPanel(new GridBagLayout());
+        ownership.setOpaque(false);
+        addFormRow(ownership, 0, "Combat script", combatScriptValue);
+        addFormRow(ownership, 1, "Ownership", ownershipValue);
+        addFormRow(ownership, 2, "Combat source", combatSourceValue);
+        content.add(createSectionCard("Developer details", ownership));
+        content.add(Box.createVerticalStrut(10));
+
         JPanel values = new JPanel(new GridBagLayout());
         values.setOpaque(false);
-
-        addFormRow(values, 0, "Combat level", combatLevelValue);
-        addFormRow(values, 1, "Size", sizeValue);
-        addFormRow(values, 2, "Hitpoints", hitpointsValue);
-        addFormRow(values, 3, "Attack speed", attackSpeedValue);
-        addFormRow(values, 4, "Attack animation", attackAnimationValue);
-        addFormRow(values, 5, "Defence animation", defenceAnimationValue);
-        addFormRow(values, 6, "Death animation", deathAnimationValue);
-        addFormRow(values, 7, "Respawn delay", respawnDelayValue);
-        addFormRow(values, 8, "Attack graphic", attackGraphicValue);
-        addFormRow(values, 9, "Attack projectile", attackProjectileValue);
-        addFormRow(values, 10, "Aggressive", aggressiveValue);
-        addFormRow(values, 11, "Aggression range", aggressionRangeValue);
-        addFormRow(values, 12, "Poison immune", poisonImmuneValue);
-        addFormRow(values, 13, "Combat source", combatSourceValue);
-
-        content.add(createSectionCard("Matrix3 NPC inspection", values));
-        content.add(Box.createVerticalStrut(10));
-        content.add(createInfoCard(
-                "Authority",
-                "Inspection values are read-only here and come from Matrix3's existing NPC/combat definitions.",
-                "BossLabs only publishes fields it actually owns."));
-        content.add(Box.createVerticalGlue());
-        return scroll(content);
-    }
-
-    private JComponent createArenaTab() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBackground(ConsoleTheme.PANEL);
-        panel.setBorder(ConsoleTheme.panelPadding(12, 12, 12, 12));
-
-        JPanel heading = new JPanel();
-        heading.setLayout(new BoxLayout(heading, BoxLayout.Y_AXIS));
-        heading.setBackground(ConsoleTheme.PANEL);
-
-        JLabel title = new JLabel("Arena / Tile Composer");
-        title.setFont(ConsoleTheme.SECTION_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel instructions = new JLabel("Mouse wheel: zoom  |  Middle drag: pan  |  Left click: select tile  |  Hover: coordinate preview");
-        instructions.setFont(ConsoleTheme.SMALL_FONT);
-        instructions.setForeground(ConsoleTheme.MUTED_TEXT);
-        instructions.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel tileStatus = new JLabel("Hover a tile to preview its relative coordinate.");
-        tileStatus.setFont(ConsoleTheme.SMALL_FONT);
-        tileStatus.setForeground(ConsoleTheme.ACCENT);
-        tileStatus.setAlignmentX(LEFT_ALIGNMENT);
-
-        heading.add(title);
-        heading.add(Box.createVerticalStrut(4));
-        heading.add(instructions);
-        heading.add(Box.createVerticalStrut(4));
-        heading.add(tileStatus);
-        panel.add(heading, BorderLayout.NORTH);
-
-        TileCanvas canvas = new TileCanvas(tileStatus);
-        panel.add(canvas, BorderLayout.CENTER);
-
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setBackground(ConsoleTheme.CARD);
-        footer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ConsoleTheme.BORDER),
-                ConsoleTheme.panelPadding(8, 10, 8, 10)));
-        JLabel note = new JLabel("Canvas remains draft-only. Effect authoring/publishing is a later BossLabs slice.");
-        note.setFont(ConsoleTheme.SMALL_FONT);
-        note.setForeground(ConsoleTheme.MUTED_TEXT);
-        footer.add(note, BorderLayout.CENTER);
-        panel.add(footer, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JComponent createTestingTab() {
-        JPanel content = createVerticalContent();
-
-        JPanel buttons = new JPanel(new GridBagLayout());
-        buttons.setOpaque(false);
-        String[] names = { "Spawn Boss", "Teleport To Boss", "Reset Encounter", "Force Phase", "Force Attack", "Kill Boss", "Clear Hazards", "Clear Minions" };
-        for (int index = 0; index < names.length; index++) {
-            JButton button = new JButton(names[index]);
-            ConsoleTheme.styleButton(button);
-            button.setEnabled(false);
-            button.setToolTipText("BossLabs testing API is not implemented yet.");
-
-            GridBagConstraints constraints = new GridBagConstraints();
-            constraints.gridx = index % 2;
-            constraints.gridy = index / 2;
-            constraints.weightx = 1.0;
-            constraints.fill = GridBagConstraints.HORIZONTAL;
-            constraints.insets = new Insets(4, 4, 4, 4);
-            buttons.add(button, constraints);
-        }
-
-        content.add(createSectionCard("Encounter controls", buttons));
-        content.add(Box.createVerticalStrut(10));
-        content.add(createInfoCard(
-                "Testing API pending",
-                "Search, inspection and complete definition publishing use the live BossLabs bridge.",
-                "Spawn/reset/force-phase controls stay disabled until matching authoritative server APIs are implemented."));
+        addFormRow(values, 0, "Attack animation", attackAnimationValue);
+        addFormRow(values, 1, "Defence animation", defenceAnimationValue);
+        addFormRow(values, 2, "Death animation", deathAnimationValue);
+        addFormRow(values, 3, "Respawn delay", respawnDelayValue);
+        addFormRow(values, 4, "Attack graphic", attackGraphicValue);
+        addFormRow(values, 5, "Attack projectile", attackProjectileValue);
+        addFormRow(values, 6, "Aggressive", aggressiveValue);
+        addFormRow(values, 7, "Aggression range", aggressionRangeValue);
+        addFormRow(values, 8, "Poison immune", poisonImmuneValue);
+        content.add(createSectionCard("Matrix3 inspection", values));
         content.add(Box.createVerticalGlue());
         return scroll(content);
     }
@@ -474,13 +393,13 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     private void publish(boolean save) {
         Integer npcId = readNpcId();
         if (npcId == null || npcId.intValue() != selectedNpcId) {
-            publishStatus.setText("Reload the NPC before publishing after changing its NPC id.");
+            publishStatus.setText("Reload the boss before publishing.");
             return;
         }
 
         BossLabsDraftDefinition draft = definitionEditor.getDraft();
         if (draft == null) {
-            publishStatus.setText("No BossLabs draft is loaded.");
+            publishStatus.setText("No boss draft is loaded.");
             return;
         }
         syncDraftIdentity(draft, npcId.intValue());
@@ -491,23 +410,21 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         }
 
         publishStatus.setForeground(ConsoleTheme.MUTED_TEXT);
-        publishStatus.setText(save ? "Saving and applying complete BossLabs draft..." : "Applying complete BossLabs draft live...");
+        publishStatus.setText(save ? "Saving and applying boss..." : "Applying boss live for testing...");
         BossLabsClientBridge.requestPublishDefinition(draft, save);
     }
 
     private void undoLastApply() {
-        if (selectedNpcId < 0 || !rollbackAvailable) {
+        if (selectedNpcId < 0 || !rollbackAvailable)
             return;
-        }
-        publishStatus.setText("Restoring previous live BossLabs definition...");
+        publishStatus.setText("Restoring previous live boss definition...");
         BossLabsClientBridge.requestUndo(selectedNpcId);
     }
 
     private void applySaved() {
-        if (selectedNpcId < 0 || !savedAvailable) {
+        if (selectedNpcId < 0 || !savedAvailable)
             return;
-        }
-        publishStatus.setText("Applying saved BossLabs definition...");
+        publishStatus.setText("Restoring the saved boss definition to live...");
         BossLabsClientBridge.requestApplySaved(selectedNpcId);
     }
 
@@ -577,9 +494,8 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
             line.setForeground(ConsoleTheme.MUTED_TEXT);
             line.setAlignmentX(LEFT_ALIGNMENT);
             body.add(line);
-            if (index + 1 < lines.length) {
+            if (index + 1 < lines.length)
                 body.add(Box.createVerticalStrut(5));
-            }
         }
         return createSectionCard(titleText, body);
     }
@@ -600,6 +516,12 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         field.setToolTipText(tooltip);
         field.setPreferredSize(new Dimension(260, 36));
         ConsoleTheme.styleTextField(field);
+    }
+
+    private void configureReadOnlyField(JTextField field, String tooltip) {
+        configureEditableField(field, tooltip);
+        field.setEditable(false);
+        field.setFocusable(false);
     }
 
     private void addFormRow(JPanel panel, int row, String labelText, JComponent component) {
@@ -624,7 +546,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     }
 
     private void installDraftListeners() {
-        DocumentListener listener = new DocumentListener() {
+        displayNameField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 markDraftChanged();
@@ -639,16 +561,12 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
             public void changedUpdate(DocumentEvent e) {
                 markDraftChanged();
             }
-        };
-        definitionIdField.getDocument().addDocumentListener(listener);
-        displayNameField.getDocument().addDocumentListener(listener);
-        npcIdField.getDocument().addDocumentListener(listener);
+        });
     }
 
     private void markDraftChanged() {
-        if (suppressDraftEvents) {
+        if (suppressDraftEvents)
             return;
-        }
         draftDirty = true;
         updateDraftState();
         updatePublishButtons();
@@ -713,7 +631,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     public void onSearchStarted(int requestId) {
         searchResultsModel.clear();
         searchResultsScroll.setVisible(true);
-        searchStatus.setText("Searching Matrix3 NPC definitions...");
+        searchStatus.setText("Searching NPC definitions...");
         revalidate();
         repaint();
     }
@@ -726,7 +644,8 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     @Override
     public void onSearchFinished(int requestId, int count) {
         searchResultsScroll.setVisible(count > 0);
-        searchStatus.setText(count == 0 ? "No NPCs matched that name." : count + " NPC result" + (count == 1 ? "" : "s") + ". Select one to inspect.");
+        searchStatus.setText(count == 0 ? "No NPCs matched that name."
+                : count + " NPC result" + (count == 1 ? "" : "s") + ". Select one to load.");
         revalidate();
         repaint();
     }
@@ -767,17 +686,15 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         combatSourceValue.setText(inspection.getCombatSource());
 
         searchStatus.setText("Loaded " + inspection.getName() + " [" + inspection.getNpcId() + "].");
-        publishStatus.setText("Inspection loaded. Waiting for ownership/definition state...");
+        publishStatus.setText("Boss loaded. Checking live/saved state...");
         updatePublishButtons();
     }
 
     @Override
     public void onOwnership(int requestId, final BossLabsClientBridge.Ownership ownership) {
-        if (ownership.getNpcId() != selectedNpcId) {
+        if (ownership.getNpcId() != selectedNpcId)
             return;
-        }
 
-        hasBossLabsDefinition = ownership.isBossLabsDefinition();
         savedAvailable = ownership.isSaved();
         rollbackAvailable = ownership.isRollbackAvailable();
 
@@ -786,9 +703,8 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
             public void run() {
                 if (ownership.isBossLabsDefinition()) {
                     definitionIdField.setText(ownership.getDefinitionId());
-                    if (ownership.getDisplayName().length() > 0) {
+                    if (ownership.getDisplayName().length() > 0)
                         displayNameField.setText(ownership.getDisplayName());
-                    }
                 } else {
                     definitionIdField.setText(defaultDefinitionId(displayNameField.getText()));
                 }
@@ -804,13 +720,13 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         savedState.setBackground(ownership.isSaved() ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.CARD_HOVER);
 
         if (ownership.isBossLabsDefinition()) {
-            publishStatus.setText("BossLabs ownership loaded. Loading complete phase/attack definition...");
+            publishStatus.setText("Live BossLabs boss loaded. Loading phases and attacks...");
         } else {
             BossLabsDraftDefinition draft = definitionEditor.getDraft();
             if (draft != null)
                 syncDraftIdentity(draft, selectedNpcId);
             setDraftClean();
-            publishStatus.setText("Matrix3 NPC ready for first-time BossLabs authoring. Add a phase and attack to enable Apply.");
+            publishStatus.setText("Ready to author. Add a phase and attack, then Apply Live to test.");
         }
         updatePublishButtons();
     }
@@ -820,7 +736,6 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         if (definition == null || definition.getNpcId() != selectedNpcId)
             return;
         definitionEditor.setDraft(definition);
-        hasBossLabsDefinition = true;
         withSuppressedDraftEvents(new Runnable() {
             @Override
             public void run() {
@@ -831,7 +746,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         });
         setDraftClean();
         publishStatus.setForeground(ConsoleTheme.MUTED_TEXT);
-        publishStatus.setText("Complete BossLabs definition loaded. Phases and attacks are ready to edit.");
+        publishStatus.setText("Boss loaded. Edit, Apply Live, and test without restarting the server.");
         updatePublishButtons();
     }
 
@@ -852,15 +767,14 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
 
     @Override
     public void onInspectionMissing(int requestId, int npcId) {
-        if (npcId == selectedNpcId) {
+        if (npcId == selectedNpcId)
             selectedNpcId = -1;
-        }
-        hasBossLabsDefinition = false;
         savedAvailable = false;
         rollbackAvailable = false;
         definitionEditor.setDraft(null);
+        testingPanel.clearSelection();
         searchStatus.setText("NPC " + npcId + " was not found.");
-        publishStatus.setText("No NPC loaded.");
+        publishStatus.setText("No boss loaded.");
         updatePublishButtons();
     }
 
@@ -868,188 +782,5 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     public void onActionResult(BossLabsClientBridge.ActionResult result) {
         publishStatus.setText(result.getMessage());
         publishStatus.setForeground(result.isSuccess() ? ConsoleTheme.ACCENT : ConsoleTheme.MUTED_TEXT);
-    }
-
-    /**
-     * Draft-only encounter-relative tile canvas. It intentionally edits no
-     * combat/world state; this checkpoint proves zoom/pan/hover/selection
-     * interaction and relative tile visualization.
-     */
-    private static final class TileCanvas extends JPanel {
-
-        private static final long serialVersionUID = -3032546666474856889L;
-        private static final int MIN_TILE_SIZE = 14;
-        private static final int MAX_TILE_SIZE = 96;
-
-        private final JLabel statusLabel;
-        private int tileSize = 32;
-        private int panX;
-        private int panY;
-        private Point lastPanPoint;
-        private int hoverTileX = Integer.MIN_VALUE;
-        private int hoverTileY = Integer.MIN_VALUE;
-        private int selectedTileX = Integer.MIN_VALUE;
-        private int selectedTileY = Integer.MIN_VALUE;
-
-        private TileCanvas(JLabel statusLabel) {
-            this.statusLabel = statusLabel;
-            setBackground(ConsoleTheme.INPUT);
-            setOpaque(true);
-            setPreferredSize(new Dimension(700, 440));
-            setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
-            setFocusable(true);
-
-            MouseAdapter mouse = new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    if (SwingUtilities.isMiddleMouseButton(e)) {
-                        lastPanPoint = e.getPoint();
-                    }
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    if (SwingUtilities.isMiddleMouseButton(e)) {
-                        lastPanPoint = null;
-                    }
-                }
-
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (SwingUtilities.isLeftMouseButton(e)) {
-                        updateHover(e.getPoint());
-                        selectedTileX = hoverTileX;
-                        selectedTileY = hoverTileY;
-                        statusLabel.setText("Selected draft tile: " + selectedTileX + ", " + selectedTileY + " - no encounter effect assigned yet.");
-                        requestFocusInWindow();
-                        repaint();
-                    }
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    hoverTileX = Integer.MIN_VALUE;
-                    hoverTileY = Integer.MIN_VALUE;
-                    repaint();
-                }
-
-                @Override
-                public void mouseWheelMoved(MouseWheelEvent e) {
-                    zoomAt(e.getPoint(), e.getWheelRotation());
-                }
-            };
-            addMouseListener(mouse);
-            addMouseWheelListener(mouse);
-
-            addMouseMotionListener(new MouseMotionAdapter() {
-                @Override
-                public void mouseMoved(MouseEvent e) {
-                    updateHover(e.getPoint());
-                }
-
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                    if (lastPanPoint != null) {
-                        panX += e.getX() - lastPanPoint.x;
-                        panY += e.getY() - lastPanPoint.y;
-                        lastPanPoint = e.getPoint();
-                        updateHover(e.getPoint());
-                        repaint();
-                    }
-                }
-            });
-        }
-
-        private void zoomAt(Point point, int wheelRotation) {
-            int oldSize = tileSize;
-            int requested = oldSize - wheelRotation * 4;
-            int newSize = Math.max(MIN_TILE_SIZE, Math.min(MAX_TILE_SIZE, requested));
-            if (newSize == oldSize) {
-                return;
-            }
-
-            double originX = getWidth() / 2.0 + panX;
-            double originY = getHeight() / 2.0 + panY;
-            double worldX = (point.x - originX) / oldSize;
-            double worldY = (point.y - originY) / oldSize;
-
-            tileSize = newSize;
-            panX = (int) Math.round(point.x - worldX * tileSize - getWidth() / 2.0);
-            panY = (int) Math.round(point.y - worldY * tileSize - getHeight() / 2.0);
-            updateHover(point);
-            repaint();
-        }
-
-        private void updateHover(Point point) {
-            int originX = getWidth() / 2 + panX;
-            int originY = getHeight() / 2 + panY;
-            hoverTileX = floorDiv(point.x - originX, tileSize);
-            hoverTileY = floorDiv(point.y - originY, tileSize);
-            statusLabel.setText("Hover tile: " + hoverTileX + ", " + hoverTileY + "  |  zoom " + tileSize + " px/tile");
-            repaint();
-        }
-
-        private int floorDiv(int value, int divisor) {
-            int result = value / divisor;
-            if ((value ^ divisor) < 0 && result * divisor != value) {
-                result--;
-            }
-            return result;
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            super.paintComponent(graphics);
-            Graphics2D g = (Graphics2D) graphics.create();
-            try {
-                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int originX = getWidth() / 2 + panX;
-                int originY = getHeight() / 2 + panY;
-                int startX = positiveModulo(originX, tileSize);
-                int startY = positiveModulo(originY, tileSize);
-
-                g.setColor(ConsoleTheme.BORDER);
-                for (int x = startX; x < getWidth(); x += tileSize) {
-                    g.drawLine(x, 0, x, getHeight());
-                }
-                for (int y = startY; y < getHeight(); y += tileSize) {
-                    g.drawLine(0, y, getWidth(), y);
-                }
-
-                g.setStroke(new BasicStroke(2.0f));
-                g.setColor(ConsoleTheme.ACCENT_DARK);
-                g.drawLine(originX, 0, originX, getHeight());
-                g.drawLine(0, originY, getWidth(), originY);
-
-                if (selectedTileX != Integer.MIN_VALUE) {
-                    int selectedX = originX + selectedTileX * tileSize;
-                    int selectedY = originY + selectedTileY * tileSize;
-                    g.setColor(new Color(ConsoleTheme.ACCENT.getRed(), ConsoleTheme.ACCENT.getGreen(), ConsoleTheme.ACCENT.getBlue(), 70));
-                    g.fillRect(selectedX + 1, selectedY + 1, Math.max(1, tileSize - 1), Math.max(1, tileSize - 1));
-                    g.setColor(ConsoleTheme.ACCENT);
-                    g.drawRect(selectedX, selectedY, tileSize, tileSize);
-                }
-
-                if (hoverTileX != Integer.MIN_VALUE) {
-                    int hoverX = originX + hoverTileX * tileSize;
-                    int hoverY = originY + hoverTileY * tileSize;
-                    g.setColor(ConsoleTheme.TEXT);
-                    g.setStroke(new BasicStroke(1.5f));
-                    g.drawRect(hoverX, hoverY, tileSize, tileSize);
-                }
-
-                g.setFont(ConsoleTheme.SMALL_FONT);
-                g.setColor(ConsoleTheme.MUTED_TEXT);
-                g.drawString("0,0", originX + 5, originY - 6);
-            } finally {
-                g.dispose();
-            }
-        }
-
-        private int positiveModulo(int value, int modulus) {
-            int result = value % modulus;
-            return result < 0 ? result + modulus : result;
-        }
     }
 }
