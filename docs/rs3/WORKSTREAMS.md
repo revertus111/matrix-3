@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 passed locally; Phase 2 is active. 2A.1 schema v2/source locator and 2A.2 calls/field-access scanning are implemented; 2A.3 type references + constants is next. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | NEEDS TEST | Phase 1 is verified. Phase 2 Bundle 2A implementation through 2A.3 is complete; 2A.4 is the consolidated schema-v2 structural scan/relationship/size verification gate before investigation search starts. |
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
