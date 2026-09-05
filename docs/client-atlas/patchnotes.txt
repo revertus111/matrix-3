@@ -14,3 +14,8 @@
 - Query output now includes the exact symbol plus its immediate stored relationships as compact JSON, capped at 200 relationship records with an explicit truncation flag/count.
 - Added `ClientAtlasMain export` for atomic UTF-8 machine-readable investigation snapshots without adding another JSON/database dependency.
 - Kept ranked/fuzzy/shorthand search out of Phase 1; those remain Phase 2 investigation-search ownership.
+- Runtime-confirmed Eclipse/Java 8 scanner output: 1221 class files, 33742 symbols, 34053 relationships; persisted fingerprint reopened current.
+- Confirmed Eclipse ASM classpath issue was resolved by Gradle -> Refresh Gradle Project; no dependency workaround was required.
+- Added standalone dark `ClientAtlasControl` Swing UI with automatic Client/class-root discovery, current/stale status, scan, search, export, workspace access, and background tasks.
+- Added one-click `Run Phase 1 Check` to scan, validate symbol/relationship coverage, verify Atlas exclusion/current fingerprint, exercise exact class/member query, and write a compact verification export.
+- `ClientAtlasMain` with no program arguments now opens the control UI; explicit CLI commands remain available for automation.
