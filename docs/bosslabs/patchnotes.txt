@@ -129,3 +129,11 @@
 - Upgraded Attack Pattern authoring with drag-paint/right-drag erase, one-level pattern undo, rotate/mirror/nudge transforms, and multi-row toolbars while retaining the existing +/-16 and 128-tile limits.
 - Added Attack Pattern geometry/timing summaries for tile bounds, whether target 0,0 is affected or safe, warning delay, impact, and lingering-ground duration/interval.
 - Creator workflow feature-pack edits continue to mutate the existing BossLabs DRAFT and persist through the unchanged v8 store/wire path; no server combat, NPC/world, packet, drop, scheduler, or cleanup authority changed.
+- Added Matrix3-native BossLabs drop authoring without replacing the existing NPCDrops/Drops runtime: NPC death still reads NPCDrops and rolls through Drops.generateDrops().
+- Added an isolated version-1 BossLabs drop override store at data/bosslabs/drops.bld; data/npcs/packedDrops.d is never rewritten by BossLabs.
+- Saved BossLabs drop overrides re-apply after Matrix3 packed drop loading so the original packed table can be captured/restored as the live baseline.
+- Added live drop Apply, Save & Apply, one-level Undo, Apply Saved, Restore Matrix3, and Delete Saved Override flows; disk I/O stays on the slow executor and live NPCDrops mutation is scheduled through Matrix3 WorldTasksManager.
+- Added faithful readback of Matrix3 Rare/Very Rare gear-split entries so editing an existing table does not silently lose wearable rare drops.
+- Added a creator-facing Drops tab with item ID/name search through ClientConsoleItemBridge, rarity bucket selection, min/max quantities, rare-drop-table toggle, DRAFT/LIVE/SAVED indicators, and explicit publish/restore controls.
+- The editor exposes Matrix3's actual bucket semantics (Always, Common 90%, Uncommon 70%, Rare 0.6%, Very Rare 0.36%) rather than inventing unsupported per-item percentages.
+- Boss combat definitions remain definitions.bld/wire v8; drop content is independently persisted/rollbackable and does not change BossCombatScript, NPC death, XP, or loot-generation algorithms.
