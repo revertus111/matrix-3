@@ -36,6 +36,7 @@ public class Class639 implements Interface18 {
 		if (null != is)
 			interface17.method109(new RSByteBuffer(is), -1458298931);
 		interface17.method104((byte) 47);
+		AtlasRuntimeBridge.observeDefinitionLoad(i, this, interface17);
 		return interface17;
 	}
 
