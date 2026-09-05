@@ -8,21 +8,15 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.IOException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
-
-import game.console.bosslabs.BossLabsWindow;
 
 public final class ClientConsoleShell extends JPanel {
 
@@ -52,9 +46,8 @@ public final class ClientConsoleShell extends JPanel {
     private final JToggleButton playerButton = new JToggleButton(ConsoleIcons.player());
     private final JToggleButton itemButton = new JToggleButton(ConsoleIcons.items());
     private final JToggleButton settingsButton = new JToggleButton(ConsoleIcons.settings());
-    private final JButton resetLayoutButton = new JButton("Reset Client Console Layout");
 
-    private final JComponent shellPanel;
+    private final DashboardPanel shellPanel;
     private JComponent ownerPanel;
     private JComponent commandsPanel;
     private JComponent playerPanel;
@@ -65,7 +58,6 @@ public final class ClientConsoleShell extends JPanel {
     private int expandedConsoleWidth = DEFAULT_CONSOLE_WIDTH;
     private String activePanelId = PANEL_SHELL;
     private Runnable layoutChangedListener;
-    private Runnable resetLayoutAction;
 
     public ClientConsoleShell(Applet gameApplet) {
         super(new BorderLayout());
@@ -77,7 +69,7 @@ public final class ClientConsoleShell extends JPanel {
         gameHost.add(gameApplet, BorderLayout.CENTER);
         add(gameHost, BorderLayout.CENTER);
 
-        shellPanel = createPlaceholderPanel();
+        shellPanel = new DashboardPanel();
         configureDivider();
         configureDock();
         add(dockContainer, BorderLayout.EAST);
@@ -165,164 +157,6 @@ public final class ClientConsoleShell extends JPanel {
         button.setPreferredSize(new Dimension(RAIL_WIDTH, 44));
         ConsoleTheme.styleRailButton(button);
         button.addActionListener(e -> activatePanel(panelId));
-    }
-
-    private JScrollPane createPlaceholderPanel() {
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(ConsoleTheme.PANEL);
-        content.setBorder(ConsoleTheme.panelPadding(20, 18, 20, 18));
-
-        JLabel title = new JLabel("CLIENT CONSOLE");
-        title.setFont(ConsoleTheme.TITLE_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel status = new JLabel("Shell foundation");
-        status.setFont(ConsoleTheme.SMALL_FONT);
-        status.setForeground(ConsoleTheme.ACCENT);
-        status.setAlignmentX(LEFT_ALIGNMENT);
-
-        content.add(title);
-        content.add(Box.createVerticalStrut(4));
-        content.add(status);
-        content.add(Box.createVerticalStrut(18));
-        content.add(createInfoCard(
-                "Docking",
-                "Drag the left edge to resize.",
-                "Use the rail icons to switch tools.",
-                "Click the active icon again to collapse the console."));
-        content.add(Box.createVerticalStrut(12));
-        content.add(createFocusCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createWorkspaceCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createCacheEditorCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createBossLabsCard());
-        content.add(Box.createVerticalGlue());
-
-        JScrollPane scrollPane = new JScrollPane(content);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        ConsoleTheme.styleScrollPane(scrollPane);
-        return scrollPane;
-    }
-
-    private JPanel createInfoCard(String titleText, String... bodyLines) {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(ConsoleTheme.CARD);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ConsoleTheme.BORDER),
-                ConsoleTheme.panelPadding(14, 14, 14, 14)));
-        card.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel title = new JLabel(titleText);
-        title.setFont(ConsoleTheme.SECTION_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-        card.add(title);
-
-        if (bodyLines.length > 0) {
-            card.add(Box.createVerticalStrut(8));
-        }
-        for (int index = 0; index < bodyLines.length; index++) {
-            JLabel body = new JLabel(bodyLines[index]);
-            body.setFont(ConsoleTheme.SMALL_FONT);
-            body.setForeground(ConsoleTheme.MUTED_TEXT);
-            body.setAlignmentX(LEFT_ALIGNMENT);
-            card.add(body);
-            if (index + 1 < bodyLines.length) {
-                card.add(Box.createVerticalStrut(3));
-            }
-        }
-        return card;
-    }
-
-    private JPanel createFocusCard() {
-        JPanel card = createInfoCard(
-                "Focus test",
-                "Click the field and type movement keys.",
-                "Game input should stay inactive.",
-                "Click the game to return control.");
-
-        JTextField field = new JTextField();
-        field.setToolTipText("Type here to test console keyboard focus");
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        field.setAlignmentX(LEFT_ALIGNMENT);
-        ConsoleTheme.styleTextField(field);
-        card.add(Box.createVerticalStrut(10));
-        card.add(field);
-        return card;
-    }
-
-    private JPanel createWorkspaceCard() {
-        JPanel card = createInfoCard(
-                "Workspace",
-                "Window and console geometry persist.",
-                "Active panel identity persists.",
-                "Reset restores known-good defaults.");
-
-        resetLayoutButton.setAlignmentX(LEFT_ALIGNMENT);
-        resetLayoutButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        ConsoleTheme.styleButton(resetLayoutButton);
-        resetLayoutButton.addActionListener(e -> {
-            if (resetLayoutAction != null) {
-                resetLayoutAction.run();
-            }
-        });
-        card.add(Box.createVerticalStrut(10));
-        card.add(resetLayoutButton);
-        return card;
-    }
-
-    private JPanel createCacheEditorCard() {
-        JPanel card = createInfoCard(
-                "Cache development",
-                "Open the server-side RS3 CacheEditor without coupling Client code to Server classes.",
-                "The editor runs in its own process and keeps its normal cache-directory picker.");
-
-        final JLabel launchStatus = new JLabel("Ready");
-        launchStatus.setFont(ConsoleTheme.SMALL_FONT);
-        launchStatus.setForeground(ConsoleTheme.MUTED_TEXT);
-        launchStatus.setAlignmentX(LEFT_ALIGNMENT);
-
-        JButton openButton = new JButton("Open RS3 CacheEditor");
-        openButton.setAlignmentX(LEFT_ALIGNMENT);
-        openButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        ConsoleTheme.styleButton(openButton);
-        openButton.addActionListener(e -> {
-            try {
-                launchStatus.setText(CacheEditorProcessLauncher.open()
-                        ? "CacheEditor launch requested."
-                        : "CacheEditor is already running.");
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                launchStatus.setText("CacheEditor launch failed; see client console output.");
-            }
-        });
-        card.add(Box.createVerticalStrut(10));
-        card.add(openButton);
-        card.add(Box.createVerticalStrut(8));
-        card.add(launchStatus);
-        return card;
-    }
-
-    private JPanel createBossLabsCard() {
-        JPanel card = createInfoCard(
-                "Boss development",
-                "BossLabs opens as a separate resizable developer window.",
-                "The current shell edits local draft state only; server publishing stays disabled until the verified bridge is added.");
-
-        JButton openButton = new JButton("Open BossLabs");
-        openButton.setAlignmentX(LEFT_ALIGNMENT);
-        openButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        ConsoleTheme.styleButton(openButton);
-        openButton.addActionListener(e -> BossLabsWindow.open());
-        card.add(Box.createVerticalStrut(10));
-        card.add(openButton);
-        return card;
     }
 
     private void configureDivider() {
@@ -517,8 +351,7 @@ public final class ClientConsoleShell extends JPanel {
     }
 
     public void setResetLayoutAction(Runnable action) {
-        resetLayoutAction = action;
-        resetLayoutButton.setEnabled(action != null);
+        shellPanel.setResetLayoutAction(action);
     }
 
     private void applyConsoleState(boolean notify) {
