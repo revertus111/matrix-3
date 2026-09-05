@@ -56,6 +56,7 @@ public final class DevModeBridge {
      * action untouched.
      */
     static boolean handleMenuAction(int action, int localX, int localY) {
+        AtlasRuntimeBridge.observeMenuAction(action, localX, localY);
         if (action != TILE_SPAWN_MENU_ACTION && action != TILE_EDIT_MENU_ACTION) {
             return false;
         }
