@@ -29,6 +29,7 @@ public final class AtlasSchema {
         DECLARES,
         REFERENCES_TYPE,
         CALLS,
+        DYNAMIC_CALL,
         READS_FIELD,
         WRITES_FIELD,
         CONSTANT,
@@ -59,16 +60,23 @@ public final class AtlasSchema {
         private final String name;
         private final String descriptor;
         private final String signature;
+        private final String compiledPath;
         private final String sourcePath;
         private final int access;
 
         public SymbolRecord(SymbolKind kind, String owner, String name, String descriptor,
-                String signature, String sourcePath, int access) {
+                String signature, String compiledPath, int access) {
+            this(kind, owner, name, descriptor, signature, compiledPath, null, access);
+        }
+
+        public SymbolRecord(SymbolKind kind, String owner, String name, String descriptor,
+                String signature, String compiledPath, String sourcePath, int access) {
             this.kind = require(kind, "kind");
             this.owner = requireText(owner, "owner");
             this.name = requireText(name, "name");
             this.descriptor = descriptor == null ? "" : descriptor;
             this.signature = signature;
+            this.compiledPath = compiledPath;
             this.sourcePath = sourcePath;
             this.access = access;
             this.id = symbolId(kind, owner, name, this.descriptor);
@@ -98,6 +106,10 @@ public final class AtlasSchema {
             return signature;
         }
 
+        public String getCompiledPath() {
+            return compiledPath;
+        }
+
         public String getSourcePath() {
             return sourcePath;
         }
@@ -111,12 +123,35 @@ public final class AtlasSchema {
         private final String fromId;
         private final RelationshipType type;
         private final String target;
+        private final String sourcePath;
+        private final Integer sourceLine;
+        private final Integer opcode;
+        private final int occurrenceCount;
         private final String detail;
 
         public RelationshipRecord(String fromId, RelationshipType type, String target, String detail) {
+            this(fromId, type, target, null, null, null, 1, detail);
+        }
+
+        public RelationshipRecord(String fromId, RelationshipType type, String target,
+                String sourcePath, Integer sourceLine, Integer opcode, int occurrenceCount,
+                String detail) {
             this.fromId = requireText(fromId, "fromId");
             this.type = require(type, "type");
             this.target = requireText(target, "target");
+            if (sourceLine != null && sourceLine.intValue() <= 0) {
+                throw new IllegalArgumentException("sourceLine must be positive when present");
+            }
+            if (opcode != null && opcode.intValue() < 0) {
+                throw new IllegalArgumentException("opcode cannot be negative when present");
+            }
+            if (occurrenceCount <= 0) {
+                throw new IllegalArgumentException("occurrenceCount must be positive");
+            }
+            this.sourcePath = sourcePath;
+            this.sourceLine = sourceLine;
+            this.opcode = opcode;
+            this.occurrenceCount = occurrenceCount;
             this.detail = detail;
         }
 
@@ -130,6 +165,22 @@ public final class AtlasSchema {
 
         public String getTarget() {
             return target;
+        }
+
+        public String getSourcePath() {
+            return sourcePath;
+        }
+
+        public Integer getSourceLine() {
+            return sourceLine;
+        }
+
+        public Integer getOpcode() {
+            return opcode;
+        }
+
+        public int getOccurrenceCount() {
+            return occurrenceCount;
         }
 
         public String getDetail() {
