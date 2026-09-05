@@ -41,26 +41,52 @@ Phase 3 / Bundle 3A - ACTIVE
 [x] 3A.5 GFX cache-miss coverage confirmed through the Class639-backed graphics definition loader.
 [x] Direct `Class549_Sub1` rewrite attempt rejected/rolled back after diff audit exposed unrelated array churn.
 
-3A-Core explicit carryover - does not block correlation
+3A-Core explicit carryover - does not block gate
 [ ] Component-specific decoded payload values: add only if the initial interface packet stream proves insufficient.
 [ ] Exact animation loader hook: establish ownership before instrumentation.
 [ ] Exact model/cache loader hook: establish ownership before instrumentation.
 
-3A-Correlation + final gate - NEXT
-[ ] 3A.6 validate runtime source/owner IDs against the rebuilt current Atlas index.
-[ ] Add bounded trace investigation/assistant export as needed for practical correlation.
-[ ] One consolidated controlled runtime trace: keyboard/menu + packet/interface + definition/GFX evidence.
-[ ] Confirm stop fully disables event growth.
-[ ] Confirm saved fingerprint matches the rebuilt current index.
-[ ] Confirm dropped count is visible and a normal short trace stays below cap.
-[ ] Confirm normal `game.RS3Applet` ownership/startup remains unchanged.
+3A.6 correlation - implementation complete / NEEDS consolidated runtime validation
+[x] `AtlasTraceCorrelationEngine` added - verified-static.
+[x] Correlation loads through current-only `AtlasInvestigationIndex` and therefore refuses stale generated Atlas data.
+[x] Trace fingerprint is checked against the loaded current Atlas fingerprint.
+[x] Exact `sourceSymbol` and optional `ownerSymbol` IDs resolve through `index.getSymbol(...)`.
+[x] Correlation acceptance requires fingerprint match + event-count match + no unresolved source/owner IDs.
+[x] Unknown/mismatched fingerprint and unresolved IDs are explicit non-accepted statuses.
+[x] Trace read cap = 10000 events; assistant event export cap = 1000; unresolved-ID list cap = 100 each.
+[x] Correlation JSON includes category counts, dropped count, resolution totals, exact symbol metadata, safe event fields, and truncation state.
+[x] Atomic correlation export and `latest` trace selection implemented.
+[x] CLI `trace-correlate <trace|latest> [classes-dir]`.
+[x] CLI `trace-correlate-export <trace|latest> <file> [classes-dir]`.
+[ ] Prove 3A.6 against the rebuilt current index during the final Bundle 3A runtime gate.
+
+Bundle 3A consolidated runtime gate - NEXT / ONE SESSION
+[ ] Eclipse clean/build succeeds under Java 8.
+[ ] Before rebuilding Atlas, confirm the old Phase 2 generated index is reported stale for the newly compiled Phase 3 client.
+[ ] Rebuild Atlas once against the current compiled client.
+[ ] Client starts through normal `game.RS3Applet` / local launcher path and login succeeds.
+[ ] Start one named trace.
+[ ] Produce keyboard input evidence.
+[ ] Produce at least one high-level menu action event.
+[ ] Produce outgoing + incoming packet evidence.
+[ ] Produce at least one named interface packet event.
+[ ] Produce definition/cache evidence; GFX if naturally triggered.
+[ ] Stop + save the trace.
+[ ] Run `trace-correlate latest`.
+[ ] Correlation reports `status=CURRENT` and `correlationAccepted=true`.
+[ ] Saved trace fingerprint equals the rebuilt current Atlas fingerprint.
+[ ] All emitted source IDs resolve; all emitted owner IDs resolve.
+[ ] Header event count equals actual parsed event count.
+[ ] Dropped count is visible and a normal short trace remains below the 10000-event cap.
+[ ] After STOP, confirm event count no longer grows.
+[ ] Correlation output is bounded and does not create semantic evidence or `LITERAL_ID` promotion.
+[ ] Complete `docs/rs3/SMOKE_TEST.md` during the same launch because central packet enqueue/decode seams changed.
 
 Carryover regression checks
-[ ] On the natural Phase 3 rebuild boundary, confirm stale generated data is refused until rebuilt.
-[ ] If an exact streaming query owns >200 immediate relationships, confirm truncation state/count remains correct.
+[ ] If an exact streaming query owns >200 immediate relationships, confirm truncation state/count remains correct when naturally encountered.
 
 Gate rules
 - Do not request another Phase 2 gate without a relevant Phase 2 change or contradictory evidence.
 - Do not ask the user to runtime-test individual 3A.x hooks.
-- 3A-Core is implemented verified-static; runtime verification remains batched with 3A-Correlation and one short Bundle 3A gate.
+- 3A-Core + 3A.6 implementation is verified-static; one consolidated runtime gate decides Bundle 3A completion.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
