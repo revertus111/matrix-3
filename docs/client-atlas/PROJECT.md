@@ -36,17 +36,17 @@ Checklist state below is the execution map. Do not derive replacement milestone 
 - Depth-2 verifier neighborhood 28 nodes / 40 relationships.
 - Domain queries remain hints; semantic status stays `UNKNOWN` and never auto-promotes `LITERAL_ID`.
 
-Fingerprint from the last Phase 2 runtime-confirmed build:
+Last Phase 2 runtime-confirmed fingerprint:
 
 ```text
 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
 ```
 
-A natural client rebuild after Phase 3 runtime-source changes is expected to change the current fingerprint; stale Atlas data must be rebuilt before correlation is accepted as current.
+Phase 3 changes client runtime source, so the next natural rebuild is expected to produce a new fingerprint. Stale generated Atlas data must be rebuilt before runtime correlation is accepted as current.
 
 # Architecture / ownership
 
-- Existing client runtime/cache/network/interface/input/definition systems remain authoritative.
+- Existing Matrix3 client runtime/cache/network/interface/input/definition systems remain authoritative.
 - Atlas owns generated metadata, search/correlation APIs, exports, traces, aliases, and evidence records.
 - Original obfuscated identifiers remain primary IDs.
 - JSONL remains static persistence authority; no database is justified by current measurements.
@@ -55,19 +55,28 @@ A natural client rebuild after Phase 3 runtime-source changes is expected to cha
 - Normal client startup remains `game.RS3Applet`.
 - Java 8 / Eclipse remains the protected target.
 
-Current workspace:
+Runtime observation seam:
 
 ```text
-Client/.client-atlas/
-    metadata.properties
-    symbols.jsonl
-    relationships.jsonl
-    evidence.jsonl
-    trace-control.properties
-    trace-status.properties
-    exports/
-    traces/
+Matrix3 runtime / small existing bridge
+    -> game.AtlasRuntimeBridge
+        -> game.atlas.AtlasTraceRecorder
+            -> bounded memory session
+                -> atomic .client-atlas/traces/*.trace.jsonl
 ```
+
+Safety contract:
+
+- tracing OFF by default,
+- no event-path disk writes,
+- maximum 10000 stored events per session,
+- explicit dropped-event count after the cap,
+- no packet payload byte arrays,
+- no credentials,
+- no arbitrary chat/text strings,
+- no arbitrary object dumps or stack traces,
+- observation failures cannot interrupt normal client behavior,
+- saved traces carry the compiled-client fingerprint when available.
 
 # Completed static capabilities
 
@@ -86,142 +95,84 @@ Client/.client-atlas/
 - Ranked/friendly search with ambiguity safety.
 - Bounded relationship and depth-1/2 neighborhood queries.
 - Assistant export v2.
-- Safe domain correlation such as `interface 762`, `component 7`, `762:7`, `animation 1234`, `model 5678`.
+- Safe domain correlation such as `interface 762`, `component 7`, `762:7`, `animation 1234`, and `model 5678`.
 - Final combined runtime verification passed.
 
 # Phase 3 - Runtime Evidence and Knowledge
 
 **Status: ACTIVE**
 
-## Runtime tracing architecture - verified-static
+## Bundle 3A - Targeted runtime tracing
 
-Runtime hooks use one narrow seam:
+### 3A-Core - IMPLEMENTED / NEEDS CONSOLIDATED RUNTIME GATE
 
-```text
-obfuscated/runtime class
-    -> game.AtlasRuntimeBridge
-        -> game.atlas.AtlasTraceRecorder
-            -> bounded memory session
-                -> atomic .client-atlas/traces/*.trace.jsonl
-```
+The numbered responsibilities are internal checklist items, not separate user patch/test sessions.
 
-Safety contract:
-
-- tracing OFF by default,
-- inactive hooks return immediately,
-- no event-path disk writes,
-- maximum **10000** stored events per session,
-- explicit dropped-event counter after the cap,
-- no packet payload byte arrays,
-- no credentials,
-- no arbitrary chat/text capture,
-- no arbitrary object dumps or stack traces,
-- runtime trace failures cannot interrupt normal client behavior,
-- saved traces carry the current compiled-client fingerprint when available.
-
-## Verified hook ownership map
-
-### Keyboard/input
-
-Preferred normalized hook:
-
-```text
-game.Class549_Sub1.method8081(int,char,int,int)
-```
-
-`keyPressed`, `keyReleased`, `keyTyped`, and focus loss flow through it.
-
-**UNKNOWN:** exact final high-level mouse/menu action dispatcher. Resolve only that dispatcher during the bundled hook patch; do not broaden into another client scan.
-
-### Outgoing packets
-
-Preferred logical-send hook:
-
-```text
-game.Class195.method2929(Class572_Sub25,byte)
-```
-
-Record packet ID, declared length, encoded/enqueued length only. Do not hook repeated flush methods.
-
-### Incoming packets
-
-Preferred hook:
-
-```text
-game.PacketsDecoder.method3031(Class195,byte)
-```
-
-Record identity/final length after packet resolution and before named branch handling. No payload capture.
-
-### Interface activity
-
-Use incoming packet classification first, including known named interface/component packets such as `ROOT_INTERFACE`, `SET_INTERFACE`, `CLOSE_INTERFACE`, `MOVE_INTERFACE`, `HIDE_INTERFACE_COMPONENT`, `INTERFACE_SETTINGS`, model/item/NPC/player component packets, and related interface events.
-
-Do not blanket-hook `Class512.method6083(...)`; it is a generic/lazy definition lookup and would be noisy.
-
-### Definition/cache activity
-
-`Class639.method7568(...)` is the generic cache-miss decode path and already calls `DevDefinitionBridge.observeDefinitionLoader(...)`.
-
-The first live Atlas seam now rides beside that existing developer observer through `AtlasRuntimeBridge` without taking Dev Mode ownership.
-
-Model/animation/GFX loaders that are not `Class639`-backed must receive targeted hooks only when their real ownership is established.
-
-# Bundle 3A - Targeted runtime tracing
-
-## Execution optimization
-
-The numbered 3A.x entries are **internal checklist responsibilities, not separate user patch sessions**.
-
-For speed and limited PC time, execute them as:
-
-### 3A-Core - ACTIVE
-
-One compatible implementation bundle covering 3A.1 through the safe parts of 3A.5:
-
+- [x] **3A.0 Targeted architecture discovery - verified-static.**
 - [x] **3A.1 Trace-session lifecycle - implementation complete / verified-static.**
-  - bounded process-wide recorder,
-  - start / stop / name / save,
+  - process-wide bounded recorder,
+  - start / stop / named session / save,
   - dropped-event accounting,
-  - atomic JSONL trace save,
-  - current-build fingerprint on save,
-  - file-backed cross-process command/status protocol,
-  - fresh runtime heartbeat/stale-runtime detection,
-  - standalone dark trace-control UI,
-  - CLI trace control/status commands,
-  - failures isolated from client behavior.
-- [ ] **3A.2 Menu/input hooks - ACTIVE inside 3A-Core.**
-  - bridge API ready,
-  - normalized keyboard callsite still needs insertion,
-  - exact high-level menu/mouse dispatcher remains `UNKNOWN` and must be resolved narrowly.
-- [ ] **3A.3 Packet metadata hooks - ACTIVE inside 3A-Core.**
-  - outgoing/incoming bridge APIs and neutral packet decoding ready,
-  - final one-line callsites still need insertion.
-- [ ] **3A.4 Interface/component hooks - ACTIVE inside 3A-Core.**
-  - named incoming interface packet classifier is implemented in `AtlasRuntimeBridge`,
-  - incoming decoder callsite still needs insertion,
-  - component-specific branch hooks only if packet metadata proves insufficient.
-- [ ] **3A.5 Definition/cache/model/animation/GFX hooks - ACTIVE inside 3A-Core.**
-  - existing `DevDefinitionBridge` observer now starts the runtime control seam and can emit safe definition category events,
-  - direct ID-bearing `Class639.method7568(...)` callsite remains to be inserted,
-  - non-Class639 model/animation/GFX ownership remains targeted follow-up inside the same bundle.
+  - atomic JSONL trace persistence,
+  - fingerprint capture on save,
+  - cross-process file-backed trace commands/status,
+  - standalone dark trace-control UI + CLI.
+- [x] **3A.2 Menu/input coverage - safe Core implementation complete / verified-static.**
+  - high-level menu path resolved as `Class25.method728(...) -> Class319.method4094(...) -> DevModeBridge.handleMenuAction(...)`,
+  - menu trace uses the existing small Dev Mode seam before normal Matrix3 action handling,
+  - records normalized action/local coordinates only; no menu text,
+  - `AtlasKeyboardObserver` mirrors the verified `Class549_Sub1` key map/filter behavior without consuming events or rewriting the large decompiled input class,
+  - keyboard events carry the verified `Class549_Sub1.method8081(...)` owner symbol as a correlation hint.
+- [x] **3A.3 Packet metadata coverage - implementation complete / verified-static.**
+  - outgoing hook is `Class195.method2929(...)` after encoded/enqueued length is known,
+  - incoming hook is the small `MaterialInformation.method1605(...)` wrapper immediately after successful `PacketsDecoder.method3031(...)` processing,
+  - no packet payload capture.
+- [x] **3A.4 Initial interface activity coverage - implementation complete / verified-static.**
+  - named incoming interface/component packet classes are identified by `AtlasRuntimeBridge`,
+  - blanket `Class512.method6083(...)` instrumentation remains intentionally rejected,
+  - decoded component payload fields are CARRYOVER only if the initial packet stream proves insufficient.
+- [x] **3A.5 Safe definition/cache/GFX coverage - implementation complete / verified-static.**
+  - ID-bearing `Class639.method7568(...)` hook runs after decode/finalization,
+  - generic Class639 definition misses record definition ID + loader/definition class,
+  - GFX is confirmed Class639-backed when `Class452_Sub1` registers the graphics definition loader,
+  - exact model and animation loader hooks remain CARRYOVER until ownership is established; no guessed hook added.
 
-**Do not request a runtime launch after each bullet.** Finish all safe 3A-Core callsites first.
+### Hook audit
 
-### 3A-Correlation + Gate - PLANNED
+Decompiled runtime edits were accepted only when their diff was surgical:
+
+- `Class195.java`: +1 line / 0 deletions.
+- `MaterialInformation.java`: +2 lines / 0 deletions.
+- `Class639.java`: +1 line / 0 deletions.
+- A direct `Class549_Sub1` rewrite was rejected because audit exposed unrelated array-line churn; main was rolled back before the safe `AtlasKeyboardObserver` implementation was used.
+
+Resolved verified-static hook ownership:
+
+```text
+keyboard semantics owner: Class549_Sub1.method8081(int,char,int,int)
+menu dispatcher:          Class319.method4094(Class572_Sub12_Sub10,int,int,byte)
+outgoing enqueue:         Class195.method2929(Class572_Sub25,byte)
+incoming decoder owner:   PacketsDecoder.method3031(Class195,byte)
+incoming safe wrapper:    MaterialInformation.method1605(Class195,int)
+definition cache miss:    Class639.method7568(int,int)
+```
+
+### 3A-Correlation + Gate - NEXT
 
 - [ ] **3A.6 Correlate runtime events to Atlas symbols.**
-  - runtime bridge already attaches exact source Atlas IDs for known hook methods,
-  - validate those IDs against the rebuilt current index,
-  - add assistant-readable trace investigation/export as needed.
-- [ ] **Bundle 3A runtime gate.**
+  - validate event `sourceSymbol` / keyboard `ownerSymbol` against the rebuilt current index,
+  - add bounded trace investigation/assistant export only as needed,
+  - keep UNKNOWN semantics UNKNOWN unless evidence proves them.
+- [ ] **Bundle 3A consolidated runtime gate.**
   - one client start,
   - start one named trace,
-  - perform a few controlled input/interface/network/definition actions,
+  - perform a few controlled keyboard/menu/network/interface/definition actions,
   - stop + save,
-  - confirm event categories/source IDs/fingerprint/dropped count,
-  - confirm tracing fully disables,
-  - rebuild static Atlas once if the Phase 3 source changes made the saved Phase 2 index stale.
+  - confirm categories/source IDs/fingerprint/dropped count,
+  - confirm stop fully disables event growth,
+  - rebuild static Atlas once at this natural source-change boundary and confirm stale pre-rebuild data is refused.
+
+No per-hook runtime launches should be requested before this gate unless compilation specifically fails.
 
 ## Bundle 3B - Evidence/knowledge - PLANNED
 
@@ -246,32 +197,35 @@ One compatible implementation bundle covering 3A.1 through the safe parts of 3A.
 - [ ] Revision/fingerprint diffs.
 - [ ] Investigation report generation.
 
-# Current Phase 3 implementation
+# Current Phase 3 files
 
-Added in the 3A-Core foundation patch:
+Core tracing:
 
 ```text
 Client/src/main/java/game/AtlasRuntimeBridge.java
+Client/src/main/java/game/AtlasKeyboardObserver.java
 Client/src/main/java/game/atlas/AtlasTraceControl.java
 Client/src/main/java/game/atlas/AtlasTraceRecorder.java
 Client/src/main/java/game/atlas/ClientAtlasTraceControl.java
 ```
 
-Updated:
+Small/runtime seams:
 
 ```text
 Client/src/main/java/game/DevDefinitionBridge.java
+Client/src/main/java/game/DevModeBridge.java
+Client/src/main/java/game/Class195.java
+Client/src/main/java/game/MaterialInformation.java
+Client/src/main/java/game/Class639.java
 Client/src/main/java/game/atlas/ClientAtlasMain.java
 ```
-
-`AtlasRuntimeBridge` already exposes prepared neutral APIs for keyboard, outgoing packet, incoming packet/interface classification, and definition/cache observations. Those APIs intentionally exist before the remaining giant obfuscated callsites are touched so each future runtime edit is tiny and easy to audit.
 
 # Testing
 
 - Phase 1: runtime-verified.
 - Phase 2: runtime-verified.
-- 3A.0: verified-static discovery; no runtime test required.
-- 3A-Core foundation: **NEEDS TEST later, deliberately batched with the remaining Core hooks.**
+- 3A.0: verified-static discovery.
+- 3A-Core: **implementation complete / verified-static / runtime gate deferred intentionally.**
 - Do not request another Phase 2 gate unless contradictory evidence or a Phase 2 implementation change appears.
 - Do not test individual Phase 3 hooks separately unless one specifically fails compilation/runtime behavior.
 
@@ -279,23 +233,26 @@ Client/src/main/java/game/atlas/ClientAtlasMain.java
 
 ## CARRYOVER
 
-- Resolve the exact high-level menu/mouse dispatcher during the 3A-Core hook patch.
-- Insert the prepared one-line keyboard/outgoing/incoming/direct-definition hooks without broad rescanning.
-- Establish targeted non-Class639 model/animation/GFX ownership only if the generic definition seam does not cover the needed asset category.
-- On the natural post-hook rebuild boundary, confirm stale generated Atlas data is refused until rebuilt.
+- Component-specific decoded interface payload values only if the initial interface packet stream is insufficient.
+- Exact animation loader instrumentation after ownership is established.
+- Exact model/cache loader instrumentation after ownership is established.
+- On the natural Phase 3 rebuild boundary, confirm stale generated data is refused until rebuilt.
 - Verify >200 streaming exact-query truncation when a naturally suitable symbol appears.
+
+These carryover items do not block 3A.6 correlation or the initial consolidated runtime gate.
 
 ## BLOCKERS
 
-- No architectural blocker.
-- Avoid whole-file rewrites of giant decompiled runtime classes merely to insert one trace call; use the smallest surgical mutation path available.
+- None.
 
 # Resume Here
 
 **Last completed checkpoint:**
 
-- **Phase 3 / Bundle 3A / 3A-Core foundation implemented.**
-- **3A.1 implementation is complete / verified-static; runtime verification intentionally deferred to the consolidated Bundle 3A gate.**
+- **Phase 3 / Bundle 3A / 3A-Core runtime hooks implemented - verified-static.**
+- Menu dispatcher UNKNOWN is resolved.
+- Packet/interface and Class639/GFX Core hooks are inserted.
+- Risky direct keyboard source rewrite was rejected and replaced with the isolated normalized observer.
 
 **Current phase:**
 
@@ -303,26 +260,26 @@ Client/src/main/java/game/atlas/ClientAtlasMain.java
 
 **Active bundle:**
 
-- **3A-Core - ACTIVE**
+- **3A-Correlation + Gate / ACTIVE NEXT**
 
 **Current/next work:**
 
-- **3A-Core hook patch:** insert prepared bridge calls into the verified keyboard, outgoing packet, incoming packet, and direct definition-load callsites; narrowly resolve the menu/mouse dispatcher while touching input ownership.
-- Continue through all safe compatible 3A.2-3A.5 work under the already-approved SAP AAA instead of stopping after each numbered checklist item.
+- **3A.6 runtime-to-Atlas correlation.**
+- Validate event source/owner IDs against current Atlas records and add the smallest bounded trace-investigation/export layer needed for assistant use.
+- Do not ask the user to launch/test yet; keep the runtime verification consolidated into the final Bundle 3A gate.
 
 **Do not re-scan/re-discover without new evidence:**
 
 - broad `game` source tree,
 - Phase 1/2 scanner/search architecture,
-- verified 3A.0 keyboard/network/interface/definition ownership paths,
+- resolved 3A-Core keyboard/menu/network/interface/Class639 ownership paths,
 - unrelated server/gameplay systems,
 - Client Console internals before Phase 4.
 
 **Pending runtime verification:**
 
-- One consolidated Phase 3A runtime session after the Core hooks + correlation are ready.
-- No user runtime action is required for the current foundation patch yet.
+- Entire 3A-Core implementation plus 3A.6 correlation should be verified in one short controlled trace session.
 
 # Next recommended work
 
-**Finish the single 3A-Core hook patch, then do 3A-Correlation and one final Bundle 3A runtime gate.**
+**3A.6 runtime-to-Atlas correlation.**
