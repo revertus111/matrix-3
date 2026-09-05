@@ -87,20 +87,35 @@ Bundle 2B / 2B.4 - assistant-oriented export implementation
 [x] Assistant caps: 50 candidates / 200 relationships / 250 relevant symbols with explicit truncation state.
 [x] CLI `assistant-json "<query-or-command>"` prints machine JSON without human-output parsing.
 [x] CLI `assistant-export "<query-or-command>" <file>` writes the same package atomically.
-[x] Standalone `Export Assistant JSON` exports the last successful friendly search or relationship command.
+[x] Standalone `Export Assistant JSON` exports the last successful friendly search, relationship command, or domain query.
 [x] Resolved UI search no longer performs an extra streaming exact-query pass just to prepare export.
-[x] Existing `Run Search Check` / `verify-search` now includes 2B.4 export assertions and writes `phase2-assistant-export-check.json`.
+[x] Existing `Run Search Check` / `verify-search` includes 2B.4 export assertions and writes `phase2-assistant-export-check.json`.
+[x] Implementation is verified-static.
 
-2B.4 local verification gate - NEEDS TEST
-[ ] Eclipse/Java 8 clean/build succeeds after pulling 2B.4.
+Bundle 2B / 2B.5 - safe initial domain correlation implementation
+[x] Added `AtlasDomainCorrelationEngine` over existing typed CONSTANT relationships only.
+[x] Domain syntax recognized: `interface 762`, `component 7`, `animation 1234`, `model 5678`, and other whitelisted domains.
+[x] Bare `762:7` uses `interface-component` request type and same-symbol constant co-occurrence.
+[x] Single-value domain queries search normalized typed constants (`int/long`, decimal types, or string) without changing scanner data.
+[x] Domain results are bounded to 50 candidate symbols / 200 relationships.
+[x] Every domain result explicitly reports semantic status `UNKNOWN`.
+[x] Every domain result explicitly reports `LITERAL_ID promoted: false`.
+[x] No generated `LITERAL_ID` record is written and no domain meaning is persisted from query hints.
+[x] Standalone Search / Investigate handles domain queries through the shared engine.
+[x] CLI `search` handles domain queries through the shared engine.
+[x] Assistant export format v2 includes requested domain/value, semantic status, correlation basis, and no-promotion state.
+[x] Assistant domain packages remain unresolved even when structural candidates exist.
+[x] `Run Search Check` / `verify-search` now verifies numeric domain matching, pair co-occurrence, caps, UNKNOWN semantics, no promotion, and assistant domain export.
+[x] Implementation is verified-static.
+
+Final Bundle 2B local verification gate - NEEDS TEST
+[ ] Eclipse/Java 8 clean/build succeeds after pulling the combined 2B.4/2B.5 implementation.
 [ ] Open Client Atlas Control and click `Run Search Check` once; no structural rescan should occur.
-[ ] Output still ends with `PHASE 2 INVESTIGATION CHECK: PASS`.
-[ ] Report includes `Assistant export checks` and the three assistant PASS lines.
+[ ] Output ends with `PHASE 2 INVESTIGATION CHECK: PASS`.
+[ ] Report includes `Domain correlation checks` and `Assistant export checks`.
+[ ] Report includes PASS lines confirming domain candidates remain UNKNOWN and no automatic `LITERAL_ID` promotion occurs.
 [ ] `.client-atlas/phase2-assistant-export-check.json` exists and is non-empty.
-[ ] Optional quick UI check: search `Class1`, click `Export Assistant JSON`, confirm an `exports/assistant-Class1.json` file is written.
-
-Remaining Bundle 2B
-[ ] 2B.5 Safe initial domain correlation.
+[ ] Optional quick UI check: `interface 762`, `762:7`, or `animation 1234` displays candidate output with `Semantic status: UNKNOWN`.
 
 Carryover regression checks
 [ ] On a natural future client source change + rebuild boundary, confirm stale generated data is refused until rebuilt.
@@ -110,5 +125,6 @@ Carryover regression checks
 Gate rule
 - Bundle 2A is complete; do not request another structural scan/test without new contradictory evidence.
 - 2B.1-2B.3 implementation and consolidated runtime verification are complete.
-- 2B.4 implementation is verified-static; the next valid item is its one-click local verification gate.
-- Do not start 2B.5 until the 2B.4 gate passes or is explicitly deferred.
+- 2B.4 and 2B.5 implementations are verified-static.
+- Do not request a separate 2B.4 test; one final `Run Search Check` verifies both new pieces together.
+- Phase 2 closes only after that final combined gate passes.
