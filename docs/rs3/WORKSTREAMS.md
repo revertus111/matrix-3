@@ -36,6 +36,7 @@ Use this registry to answer:
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
 | Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 active; bytecode scanner MVP is implemented and exact query/export CLI is next. |
+| BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
 ## Shared discovery / navigation references
