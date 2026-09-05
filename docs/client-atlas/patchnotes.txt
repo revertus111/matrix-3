@@ -56,3 +56,11 @@
 - Added deterministic prefix/contains fallback ranking capped at 50 results; fuzzy/partial matches never auto-resolve even when only one candidate remains.
 - Added `ClientAtlasMain search "<friendly-query>"` so the assistant/developer automation path can search `Class387`, `Class387.method4844`, canonical IDs, and partial names while reporting index-load/search timing.
 - Standalone Atlas Control search-box integration is intentionally bundled with 2B.3 relationship commands so the UI search surface is rewritten once instead of twice.
+- Added `AtlasRelationshipQueryEngine` for `calls`, `called-by`, `reads`, `written-by`, `references`, typed/raw `constant`, and depth-1/2 neighborhood investigation over the in-memory Atlas index.
+- Class-level call/read queries expand through declared methods so class searches return useful bytecode relationships instead of empty class-record results.
+- Relationship output is capped at 500 edges; neighborhoods are capped at 100 nodes / 500 edges and report truncation instead of dumping unbounded graphs.
+- Added numeric constant normalization for raw integer/decimal searches while preserving typed constant authority and avoiding domain-ID guesses.
+- Integrated friendly search and relationship commands into the standalone Atlas Control search box, with Enter-to-search and cached current-snapshot investigation indexes.
+- Renamed the old `Run Phase 2 Check` UI action to `Run Structural Check` because it verifies Bundle 2A structural data, not all of Phase 2.
+- Added `AtlasInvestigationVerifier`, `Run Search Check`, and `ClientAtlasMain verify-search` for one-click Bundle 2B verification without rescanning compiled client classes.
+- Search verification covers current-index load/counts, exact/friendly/member resolution, ambiguity/fuzzy safety, call/read/write/type/constant directions, and depth-2 node/edge caps; report writes to `.client-atlas/phase2-investigation-check.txt`.
