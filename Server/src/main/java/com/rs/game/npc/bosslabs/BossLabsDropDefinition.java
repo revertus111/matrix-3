@@ -2,9 +2,7 @@ package com.rs.game.npc.bosslabs;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import com.rs.cache.loaders.ItemDefinitions;
 import com.rs.game.npc.Drop;
@@ -31,14 +29,9 @@ public final class BossLabsDropDefinition {
 		List<Entry> safe = entries == null ? Collections.<Entry>emptyList() : entries;
 		if (safe.size() > MAX_ENTRIES)
 			throw new IllegalArgumentException("BossLabs drop table exceeds " + MAX_ENTRIES + " entries.");
-		Set<String> unique = new HashSet<String>();
 		for (Entry entry : safe) {
 			if (entry == null)
 				throw new IllegalArgumentException("BossLabs drop table must not contain null entries.");
-			String key = entry.getRarity() + ":" + entry.getItemId();
-			if (!unique.add(key))
-				throw new IllegalArgumentException("BossLabs drop table contains the same item twice in "
-						+ rarityName(entry.getRarity()) + ": " + entry.getItemId());
 		}
 		this.npcId = npcId;
 		this.accessRareDropTable = accessRareDropTable;
