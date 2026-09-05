@@ -289,6 +289,7 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
 
         JLabel semantics = new JLabel("<html>Matrix3 rolls rarity buckets, not per-item percentages. "
                 + "Always drops every entry. Common/Uncommon pick from their successful bucket. "
+                + "Repeated entries are preserved because Matrix3 array slots affect selection weight; repeated Always entries drop repeatedly. "
                 + "Rare/Very Rare wearable items are automatically split into Matrix3's existing gear roll. "
                 + "Ring of Wealth and the rare drop table remain Matrix3-owned.</html>");
         semantics.setFont(ConsoleTheme.SMALL_FONT);
@@ -392,13 +393,6 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
                     new BossLabsDropDraftDefinition.Entry(rarityIndex, id, min, max);
 
             int selected = entryList.getSelectedIndex();
-            for (int index = 0; index < draft.getEntries().size(); index++) {
-                BossLabsDropDraftDefinition.Entry current = draft.getEntries().get(index);
-                if (index != selected && current.getRarity() == rarityIndex && current.getItemId() == id) {
-                    setError(info.getName() + " is already in " + BossLabsDropDraftDefinition.rarityName(rarityIndex) + ".");
-                    return;
-                }
-            }
             if (selected >= 0 && selected < draft.getEntries().size()) {
                 draft.getEntries().set(selected, next);
             } else {
