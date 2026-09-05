@@ -154,6 +154,32 @@ The verifier PASS means mandatory assertions succeeded for schema-v2 record shap
 
 Bundle 2A is **DONE**.
 
+### Phase 2 / Bundle 2B - 2026-09-05
+
+Local **Run Search Check** completed against the already-current schema-v2 index without rescanning:
+
+```text
+PHASE 2 INVESTIGATION CHECK: PASS
+```
+
+Runtime-confirmed measurements visible in the local report:
+
+- Symbols: **33742**.
+- Relationships: **325826**.
+- Investigation-index load time: **946.649 ms**.
+- Approximate used-memory delta: **181.5 MiB**.
+- Exact Class1 resolution: `CLASS:game/Class1`.
+- Friendly Class1 resolution: `CLASS:game/Class1`.
+- Member shorthand resolved a known `Class1.method470` method.
+- Ambiguous `<init>` search returned **1294 candidates** and remained unresolved.
+- Fuzzy `Clas` search reported **29421 matches**, capped to **50** displayed candidates.
+- Exact search time: **0.588 ms**.
+- Friendly search time: **0.416 ms**.
+- `CALLS`, `CALLED_BY`, `READS_FIELD`, `WRITES_FIELD`, `REFERENCES_TYPE`, and typed `CONSTANT` checks passed.
+- Depth-2 neighborhood stayed bounded at **28 nodes / 40 relationships**, below the **100 node / 500 edge** caps.
+
+This closes the consolidated 2B.1-2B.3 runtime gate. The in-memory index, ranked/friendly resolution, relationship directions, constant lookup, ambiguity handling, and bounded-neighborhood protections are now runtime-verified on the real dataset.
+
 ## verified-static
 
 - `Client/build.gradle` targets Java 8 and keeps `game.RS3Applet` as normal main.
@@ -431,13 +457,13 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 ### Bundle 2B - Investigation search
 
-**Status: NEEDS TEST**
+**Status: ACTIVE**
 
 - [x] **2B.1 In-memory investigation index implementation**.
 - [x] **2B.2 Ranked/friendly search implementation**.
 - [x] **2B.3 Relationship queries + bounded neighborhoods implementation** - includes standalone Search / Investigate integration and one-click Bundle 2B verification harness.
-- [ ] **2B local verification gate** - `PHASE 2 INVESTIGATION CHECK: PASS` required before 2B.4.
-- [ ] **2B.4 Assistant-oriented export** - gated on local investigation PASS.
+- [x] **2B local verification gate** - `PHASE 2 INVESTIGATION CHECK: PASS` runtime-confirmed; measurements recorded above.
+- [ ] **2B.4 Assistant-oriented export** - current execution target.
 - [ ] **2B.5 Safe initial domain correlation**.
 
 ## Phase 3 - Runtime Evidence and Knowledge
@@ -482,25 +508,9 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 # Testing
 
-Bundle 2A structural gate is complete. Do not request another structural rescan unless new evidence requires it.
+Bundle 2A structural gate and the consolidated 2B.1-2B.3 investigation gate are complete. Do not request another structural/search gate without new contradictory evidence or a relevant implementation change.
 
-## Current shortest Bundle 2B local session
-
-1. `git pull origin main`.
-2. Eclipse/Java 8 clean/build Client.
-3. Run `game.atlas.ClientAtlasMain` with no program arguments.
-4. Click **Run Search Check** once.
-5. Confirm output contains:
-
-```text
-PHASE 2 INVESTIGATION CHECK: PASS
-```
-
-6. Send/copy `.client-atlas/phase2-investigation-check.txt`.
-
-**Do not click Scan or Run Structural Check first.** The Bundle 2B verifier intentionally proves the current generated index can be loaded/searched without rescanning.
-
-The verifier automatically covers the 2B.1-2B.3 checks listed above. Manual relationship commands are optional smoke checks, not required for the normal gate.
+Future Bundle 2B verification should focus on the new export/correlation behavior added by 2B.4/2B.5 while reusing the existing current schema-v2 dataset where practical.
 
 # Carryover / blockers
 
@@ -513,14 +523,13 @@ The verifier automatically covers the 2B.1-2B.3 checks listed above. Manual rela
 
 ## BLOCKERS
 
-- No implementation blocker.
-- Bundle 2B is waiting only on the one-click local investigation/search PASS.
+- None for 2B.4.
 
 # Resume Here
 
-**Last completed implementation:**
+**Last completed checkpoint:**
 
-- Phase 2 / Bundle 2B / **2B.3 Relationship queries + bounded neighborhoods + consolidated search verifier**.
+- Phase 2 / Bundle 2B / **2B local investigation/search verification gate** - `PHASE 2 INVESTIGATION CHECK: PASS`.
 
 **Current phase:**
 
@@ -528,11 +537,11 @@ The verifier automatically covers the 2B.1-2B.3 checks listed above. Manual rela
 
 **Active bundle:**
 
-- **Bundle 2B - Investigation search / NEEDS TEST**
+- **Bundle 2B - Investigation search / ACTIVE**
 
 **Current/next checklist item:**
 
-- **Bundle 2B local investigation/search verification gate**.
+- **2B.4 Assistant-oriented export**.
 
 **Verified dataset baseline:**
 
@@ -542,7 +551,11 @@ The verifier automatically covers the 2B.1-2B.3 checks listed above. Manual rela
 - 8.5 MiB symbols JSONL
 - 74.4 MiB relationships JSONL
 - ~1.28 s full structural scan
-- ~362 ms streaming exact Class1 query
+- ~946.649 ms investigation-index load
+- ~181.5 MiB approximate used-memory delta during investigation-index load
+- ~0.588 ms exact symbol search
+- ~0.416 ms friendly symbol search
+- depth-2 verifier neighborhood: 28 nodes / 40 relationships
 
 **Current implementation state:**
 
@@ -551,11 +564,10 @@ The verifier automatically covers the 2B.1-2B.3 checks listed above. Manual rela
 - Type references + typed constants complete and verified.
 - No automatic literal/domain-ID semantics.
 - JSONL remains persistence authority; no database is justified.
-- `AtlasInvestigationIndex` loads current JSONL into immutable investigation maps.
-- `AtlasSearchEngine` handles exact/friendly/ranked candidate resolution safely.
-- `AtlasRelationshipQueryEngine` handles bounded calls/read/write/type/constant/neighborhood investigation.
-- Standalone Atlas Control exposes the shared Search / Investigate surface.
-- `AtlasInvestigationVerifier` exposes one-click/CLI Bundle 2B verification without rescanning.
+- `AtlasInvestigationIndex` is runtime-verified on the current 33742/325826 dataset.
+- `AtlasSearchEngine` exact/friendly/ranked ambiguity behavior is runtime-verified.
+- `AtlasRelationshipQueryEngine` call/read/write/type/constant/neighborhood behavior is runtime-verified.
+- Standalone Atlas Control Search / Investigate surface is runtime-verified through the consolidated check.
 
 **Files/systems already inspected or changed for Phase 2:**
 
@@ -586,13 +598,12 @@ The verifier automatically covers the 2B.1-2B.3 checks listed above. Manual rela
 
 **Pending verification:**
 
-- Pull/build once and click **Run Search Check**.
-- Persist the actual investigation-index load time/memory/search evidence from the generated report.
+- None for 2B.1-2B.3.
 
-**Next implementation after gate passes:**
+**Next implementation:**
 
-- **2B.4 Assistant-oriented export**.
+- Build **2B.4 Assistant-oriented export** so a future assistant investigation can request a compact, bounded, machine-readable package of resolved symbols, relevant relationships, source locations, fingerprint/schema metadata, and truncation state without parsing human UI output.
 
 # Next recommended work
 
-**Run the one-click Bundle 2B investigation/search gate.** If it reports PASS, close the gate and begin **2B.4 Assistant-oriented export**.
+**2B.4 Assistant-oriented export.**
