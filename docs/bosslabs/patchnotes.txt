@@ -137,3 +137,5 @@
 - Added a creator-facing Drops tab with item ID/name search through ClientConsoleItemBridge, rarity bucket selection, min/max quantities, rare-drop-table toggle, DRAFT/LIVE/SAVED indicators, and explicit publish/restore controls.
 - The editor exposes Matrix3's actual bucket semantics (Always, Common 90%, Uncommon 70%, Rare 0.6%, Very Rare 0.36%) rather than inventing unsupported per-item percentages.
 - Boss combat definitions remain definitions.bld/wire v8; drop content is independently persisted/rollbackable and does not change BossCombatScript, NPC death, XP, or loot-generation algorithms.
+- Corrected BossLabs drop authoring to preserve repeated item slots inside the same rarity bucket; Matrix3 selects rolled-bucket entries by array slot, so duplicates may intentionally weight selection, while repeated Always slots remain repeated guaranteed drops.
+- Normalized BossLabs into docs/bosslabs/PROJECT.md and registered it in docs/rs3/WORKSTREAMS.md; the current gate is one consolidated runtime verification session, V2.3 Asset Workflow is the next implementation phase after that gate, and true Arena Layout remains content-driven carryover.
