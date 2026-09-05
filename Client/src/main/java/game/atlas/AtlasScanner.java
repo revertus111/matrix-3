@@ -15,12 +15,16 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -31,12 +35,12 @@ import game.atlas.AtlasSchema.SymbolKind;
 import game.atlas.AtlasSchema.SymbolRecord;
 
 /**
- * Offline declaration scanner for the Client Atlas symbol catalog.
+ * Offline bytecode scanner for the Client Atlas symbol and relationship catalog.
  */
 public final class AtlasScanner {
 
     private static final String ATLAS_PREFIX = "game/atlas/";
-    private static final int READER_FLAGS = ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES;
+    private static final int READER_FLAGS = ClassReader.SKIP_FRAMES;
 
     private final AtlasWorkspace workspace;
 
@@ -97,7 +101,7 @@ public final class AtlasScanner {
     }
 
     private static void scanClass(final Path clientRoot, Path classRoot, Path classFile,
-            ScanCounters counters) throws IOException {
+            final ScanCounters counters) throws IOException {
         final String compiledPath = AtlasFingerprint.normalizedRelativePath(classRoot, classFile);
         try (InputStream input = new BufferedInputStream(Files.newInputStream(classFile))) {
             ClassReader reader = new ClassReader(input);
@@ -150,7 +154,8 @@ public final class AtlasScanner {
                         counters.writeSymbol(record);
                         counters.writeRelationship(structuralRelationship(ownerId,
                                 RelationshipType.DECLARES, record.getId(), sourcePath));
-                        return null;
+
+                        return new MethodRelationshipVisitor(record.getId(), sourcePath, counters);
                     }
                 }, READER_FLAGS);
             } catch (UncheckedIOException ex) {
@@ -232,6 +237,147 @@ public final class AtlasScanner {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException ex) {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private static String methodTarget(String owner, String name, String descriptor) {
+        SymbolKind kind = "<init>".equals(name) ? SymbolKind.CONSTRUCTOR : SymbolKind.METHOD;
+        return AtlasSchema.symbolId(kind, owner, name, descriptor);
+    }
+
+    private static String fieldTarget(String owner, String name, String descriptor) {
+        return AtlasSchema.symbolId(SymbolKind.FIELD, owner, name, descriptor);
+    }
+
+    private static String dynamicTarget(String name, String descriptor, Handle bootstrapMethodHandle) {
+        StringBuilder builder = new StringBuilder(128);
+        builder.append("DYNAMIC:").append(name).append(descriptor).append('@');
+        if (bootstrapMethodHandle == null) {
+            return builder.append("<no-bootstrap>").toString();
+        }
+        builder.append(bootstrapMethodHandle.getOwner()).append('#')
+                .append(bootstrapMethodHandle.getName()).append(bootstrapMethodHandle.getDesc());
+        return builder.toString();
+    }
+
+    private static String dynamicDetail(Handle bootstrapMethodHandle) {
+        if (bootstrapMethodHandle == null) {
+            return null;
+        }
+        return "bootstrapTag=" + bootstrapMethodHandle.getTag()
+                + ",bootstrapInterface=" + bootstrapMethodHandle.isInterface();
+    }
+
+    private static final class MethodRelationshipVisitor extends MethodVisitor {
+        private final MethodRelationshipAccumulator accumulator;
+        private int currentLine = -1;
+
+        private MethodRelationshipVisitor(String methodId, String sourcePath, ScanCounters counters) {
+            super(Opcodes.ASM9);
+            accumulator = new MethodRelationshipAccumulator(methodId, sourcePath, counters);
+        }
+
+        @Override
+        public void visitLineNumber(int line, Label start) {
+            currentLine = line;
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String descriptor,
+                boolean isInterface) {
+            accumulator.record(RelationshipType.CALLS, methodTarget(owner, name, descriptor),
+                    currentLine, opcode, null);
+        }
+
+        @Override
+        public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle,
+                Object... bootstrapMethodArguments) {
+            accumulator.record(RelationshipType.DYNAMIC_CALL,
+                    dynamicTarget(name, descriptor, bootstrapMethodHandle),
+                    currentLine, Opcodes.INVOKEDYNAMIC, dynamicDetail(bootstrapMethodHandle));
+        }
+
+        @Override
+        public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
+            RelationshipType type;
+            if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+                type = RelationshipType.READS_FIELD;
+            } else if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
+                type = RelationshipType.WRITES_FIELD;
+            } else {
+                return;
+            }
+            accumulator.record(type, fieldTarget(owner, name, descriptor), currentLine, opcode, null);
+        }
+
+        @Override
+        public void visitEnd() {
+            accumulator.flush();
+        }
+    }
+
+    private static final class MethodRelationshipAccumulator {
+        private final String fromId;
+        private final String sourcePath;
+        private final ScanCounters counters;
+        private final Map<String, MutableRelationship> relationships =
+                new LinkedHashMap<String, MutableRelationship>();
+
+        private MethodRelationshipAccumulator(String fromId, String sourcePath, ScanCounters counters) {
+            this.fromId = fromId;
+            this.sourcePath = sourcePath;
+            this.counters = counters;
+        }
+
+        private void record(RelationshipType type, String target, int sourceLine, int opcode, String detail) {
+            String key = type.name() + '\u0000' + target;
+            MutableRelationship relationship = relationships.get(key);
+            Integer lineValue = sourceLine > 0 ? Integer.valueOf(sourceLine) : null;
+            Integer opcodeValue = opcode >= 0 ? Integer.valueOf(opcode) : null;
+            if (relationship == null) {
+                relationships.put(key, new MutableRelationship(type, target, lineValue, opcodeValue, detail));
+                return;
+            }
+            relationship.increment(lineValue, opcodeValue, detail);
+        }
+
+        private void flush() {
+            for (MutableRelationship relationship : relationships.values()) {
+                counters.writeRelationship(new RelationshipRecord(fromId, relationship.type,
+                        relationship.target, sourcePath, relationship.sourceLine,
+                        relationship.opcode, relationship.occurrenceCount, relationship.detail));
+            }
+        }
+    }
+
+    private static final class MutableRelationship {
+        private final RelationshipType type;
+        private final String target;
+        private Integer sourceLine;
+        private Integer opcode;
+        private int occurrenceCount = 1;
+        private String detail;
+
+        private MutableRelationship(RelationshipType type, String target, Integer sourceLine,
+                Integer opcode, String detail) {
+            this.type = type;
+            this.target = target;
+            this.sourceLine = sourceLine;
+            this.opcode = opcode;
+            this.detail = detail;
+        }
+
+        private void increment(Integer line, Integer nextOpcode, String nextDetail) {
+            occurrenceCount++;
+            if (sourceLine == null && line != null) {
+                sourceLine = line;
+            }
+            if (opcode != null && (nextOpcode == null || !opcode.equals(nextOpcode))) {
+                opcode = null;
+            }
+            if (detail != null && (nextDetail == null || !detail.equals(nextDetail))) {
+                detail = null;
+            }
         }
     }
 
