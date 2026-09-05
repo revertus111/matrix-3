@@ -115,3 +115,13 @@
 - Defined progressive-disclosure phase/attack authoring, creator-facing names with internally managed stable IDs, context-aware testing, safe defaults, Advanced/Developer Details separation, and direct panel composition as V2 requirements.
 - Formally separated relative Attack Pattern authoring from future fixed encounter Arena Layout semantics.
 - Added docs/bosslabs/ux-testlist.txt with creator-workflow, usability, testing, validation, presentation, and first-boss acceptance gates while retaining the existing runtime testlist unchanged.
+
+2026-09-05
+- Installed the BossLabs V2.1 creator shell with Overview, Phases, Attacks, Attack Pattern, Arena, Drops, Testing, and Advanced navigation.
+- Removed the recursive Testing-tab title/component-tree replacement; BossLabsPanel now directly owns and registers the live testing panel lifecycle.
+- Reworked phase authoring around creator-facing names and HP ranges while generated internal Phase IDs remain read-only under Advanced/internal details.
+- Reworked attack authoring into a Basic default view plus collapsible Rotation, Animation & FX, Area / Telegraph, Lingering Ground Effect, and Advanced/internal sections.
+- Removed the duplicate inline attack tile painter so Attack Pattern remains the dedicated relative-geometry workspace.
+- Replaced manual Testing Phase ID/Attack ID fields with selected editor context and one-click Enter Selected Phase / Test Selected Attack actions over the existing authoritative bridge.
+- Split Spawn minions authoring into separate NPC ID, amount, and radius fields instead of compact NPC_ID,AMOUNT,RADIUS text syntax.
+- Preserved the existing BossLabs definition wire/store version, Matrix3 combat/world ownership, persistence ordering, bridge protocol, and server testing authorization semantics.
