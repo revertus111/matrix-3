@@ -10,3 +10,5 @@
 - Tightened AGENTS.md by consolidating overlapping workflow, scan, documentation, and priority rules without changing project behavior.
 - Added phase/checklist discipline so persistent workstreams resume from the active phase, first valid unfinished checklist item, and saved Resume Here state.
 - Added an explicit mismatch stop rule when chat state and the authoritative workstream checklist disagree.
+- Added phase completion gates so phases cannot be marked DONE while required checklist items, runtime verification, or unresolved blockers still prevent closure.
+- Required deferred verification and phase-gate exceptions to be explicitly recorded in the authoritative workstream PROJECT.md.
