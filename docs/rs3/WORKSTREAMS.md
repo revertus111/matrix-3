@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | NEEDS TEST | Phase 1 is verified. Phase 2 Bundle 2A structural implementation is complete and the one-click 2A.4 verifier is ready; local `PHASE 2 STRUCTURAL CHECK: PASS` + metrics report is the only gate before 2B.1 investigation search. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 and Phase 2 Bundle 2A are runtime-verified. Structural scan: 1221 classes / 33742 symbols / 325826 relationships, ~74.4 MiB relationship JSONL, ~1.28 s scan. Bundle 2B is active; 2B.1 in-memory investigation index is next. |
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
