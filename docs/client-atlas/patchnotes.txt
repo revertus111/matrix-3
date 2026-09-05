@@ -38,3 +38,8 @@
 - Constant targets preserve literal type (`int:`, `long:`, `float:`, `double:`, `string:`); raw numeric constants never auto-promote to `LITERAL_ID` or domain IDs.
 - `Type`, `Handle`, and `ConstantDynamic` values are treated structurally rather than flattened into misleading string constants.
 - Generic inner-class signatures now retain exact JVM inner-type references (`Outer$Inner`) in addition to outer type evidence.
+- Added `AtlasStructuralVerifier` for the 2A.4 consolidated gate: one run rebuilds schema v2, verifies structural relationship families, checks evidence/trace preservation, exercises incoming/exact query + export, and records scan/query timing plus generated JSONL sizes.
+- Added `Run Phase 2 Check` to Client Atlas Control so the full Bundle 2A verification no longer requires manual JSONL inspection.
+- Atlas Control now labels incompatible generated metadata as `REBUILD REQUIRED (schema old -> current)` instead of generic stale state.
+- Added `ClientAtlasMain verify-structural` as the automation/CLI front end to the same verifier; the UI and CLI do not duplicate verification logic.
+- Phase 2 structural verification writes `.client-atlas/phase2-structural-check.txt` plus a compact query regression export for easy reporting.
