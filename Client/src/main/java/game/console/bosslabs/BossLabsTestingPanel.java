@@ -29,20 +29,22 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     private static final long serialVersionUID = 4906224790438247976L;
 
     private final JTextField healthPercentField = new JTextField("50");
-    private final JTextField phaseIdField = new JTextField();
-    private final JTextField attackIdField = new JTextField();
-    private final JLabel status = new JLabel("Select an NPC to enable basic encounter testing.");
+    private final JLabel selectedPhaseValue = createValueLabel("No phase selected");
+    private final JLabel selectedAttackValue = createValueLabel("No attack selected");
+    private final JLabel status = new JLabel("Select an NPC to enable encounter testing.");
 
     private final JButton spawnButton = new JButton("Spawn Boss Here");
     private final JButton resetButton = new JButton("Reset Encounter");
     private final JButton setHealthButton = new JButton("Set Boss HP %");
-    private final JButton forcePhaseButton = new JButton("Force Phase");
-    private final JButton forceAttackButton = new JButton("Trigger Attack");
+    private final JButton forcePhaseButton = new JButton("Enter Selected Phase");
+    private final JButton forceAttackButton = new JButton("Test Selected Attack");
     private final JButton clearHazardsButton = new JButton("Clear Hazards");
     private final JButton clearMinionsButton = new JButton("Clear Minions");
 
     private int selectedNpcId = -1;
     private boolean liveBossLabsDefinition;
+    private String selectedPhaseId = "";
+    private String selectedAttackId = "";
 
     public BossLabsTestingPanel() {
         super(new BorderLayout());
@@ -72,8 +74,16 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         liveBossLabsDefinition = liveBossLabs && npcId >= 0;
         status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText(liveBossLabsDefinition
-                ? "Ready. Basic and BossLabs-specific testing controls are available for this live definition."
-                : "Ready for Matrix3 test spawn/reset/HP. Apply a live BossLabs definition to unlock phase, attack, hazard, and minion controls.");
+                ? "Ready. Select a phase or attack in the editor, then test it here without retyping IDs."
+                : "Ready for Matrix3 spawn/reset/HP. Apply a BossLabs definition live to test authored phases and attacks.");
+        updateEnabledState();
+    }
+
+    public void setAuthoringSelection(String phaseId, String attackId) {
+        selectedPhaseId = safe(phaseId);
+        selectedAttackId = safe(attackId);
+        selectedPhaseValue.setText(selectedPhaseId.length() == 0 ? "No phase selected" : creatorLabel(selectedPhaseId));
+        selectedAttackValue.setText(selectedAttackId.length() == 0 ? "No attack selected" : creatorLabel(selectedAttackId));
         updateEnabledState();
     }
 
@@ -81,7 +91,7 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         selectedNpcId = -1;
         liveBossLabsDefinition = false;
         status.setForeground(ConsoleTheme.MUTED_TEXT);
-        status.setText("Select an NPC to enable basic encounter testing.");
+        status.setText("Select an NPC to enable encounter testing.");
         updateEnabledState();
     }
 
@@ -119,11 +129,9 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
         styleField(healthPercentField, "1-100. Changes only the controlled test NPC HP.");
-        styleField(phaseIdField, "Exact BossLabs phase ID, for example phase_2");
-        styleField(attackIdField, "Exact attack ID inside the phase above");
         addFormRow(form, 0, "Boss HP %", healthPercentField);
-        addFormRow(form, 1, "Phase ID", phaseIdField);
-        addFormRow(form, 2, "Attack ID", attackIdField);
+        addFormRow(form, 1, "Selected phase", selectedPhaseValue);
+        addFormRow(form, 2, "Selected attack", selectedAttackValue);
 
         JPanel buttons = new JPanel(new GridBagLayout());
         buttons.setOpaque(false);
@@ -134,6 +142,9 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         addButton(buttons, forceAttackButton, 0, 2);
         addButton(buttons, clearHazardsButton, 1, 2);
         addButton(buttons, clearMinionsButton, 0, 3);
+
+        forcePhaseButton.setToolTipText("Uses the phase currently selected in BossLabs. Apply Live first if the draft selection is new or renamed.");
+        forceAttackButton.setToolTipText("Uses the attack currently selected in BossLabs. Apply Live first if the draft selection is new or renamed.");
 
         status.setFont(ConsoleTheme.SMALL_FONT);
         status.setForeground(ConsoleTheme.MUTED_TEXT);
@@ -158,12 +169,12 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
         body.setOpaque(false);
-        addInfoLine(body, "Spawn, Reset, and Set Boss HP work for any valid inspected Matrix3 NPC. Force Phase, Trigger Attack, Clear Hazards, and Clear Minions require a live BossLabs definition.");
+        addInfoLine(body, "Spawn, Reset, and Set Boss HP work for any valid inspected Matrix3 NPC. Selected-phase/attack testing, hazards, and minions require a live BossLabs definition.");
+        addInfoLine(body, "Phase and attack testing follow the current BossLabs editor selection. You should never need to copy an internal Phase ID or Attack ID into this tab.");
         addInfoLine(body, "Controls affect only the NPC copy spawned by your own Testing tab session; BossLabs never searches for an arbitrary world NPC by ID.");
-        addInfoLine(body, "Force Phase changes HP into the requested phase. Normal entry/exit actions run on the next normal BossLabs combat opportunity.");
-        addInfoLine(body, "Trigger Attack executes the selected authored attack immediately through the normal BossLabs attack path without changing weighted rotation/cooldown history.");
-        addInfoLine(body, "Clear Hazards invalidates BossLabs-owned delayed tile work, including a pending telegraphed impact. It does not own normal Matrix3 single-target delayed hits.");
-        addInfoLine(body, "Clear Minions finish-removes only NPCs owned by this exact test encounter. Cleanup removal does not create death drops.");
+        addInfoLine(body, "Enter Selected Phase changes HP into that phase. Normal entry/exit actions run on the next normal BossLabs combat opportunity.");
+        addInfoLine(body, "Test Selected Attack executes that authored attack immediately through the normal BossLabs attack path without changing weighted rotation/cooldown history.");
+        addInfoLine(body, "Clear Hazards invalidates BossLabs-owned delayed tile work. Clear Minions removes only NPCs owned by this exact test encounter.");
         card.add(body, BorderLayout.CENTER);
         return card;
     }
@@ -178,8 +189,8 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
             BossLabsClientBridge.requestTestingReset(selectedNpcId);
         });
         setHealthButton.addActionListener(e -> setHealth());
-        forcePhaseButton.addActionListener(e -> forcePhase());
-        forceAttackButton.addActionListener(e -> forceAttack());
+        forcePhaseButton.addActionListener(e -> forceSelectedPhase());
+        forceAttackButton.addActionListener(e -> forceSelectedAttack());
         clearHazardsButton.addActionListener(e -> {
             setPendingStatus("Clearing BossLabs delayed tile work...");
             BossLabsClientBridge.requestTestingClearHazards(selectedNpcId);
@@ -200,25 +211,22 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         BossLabsClientBridge.requestTestingSetHealth(selectedNpcId, percent.intValue());
     }
 
-    private void forcePhase() {
-        String phaseId = trim(phaseIdField.getText());
-        if (phaseId.length() == 0) {
-            setLocalError("Enter a Phase ID first.");
+    private void forceSelectedPhase() {
+        if (selectedPhaseId.length() == 0) {
+            setLocalError("Select a phase in BossLabs first.");
             return;
         }
-        setPendingStatus("Forcing test boss HP into phase " + phaseId + "...");
-        BossLabsClientBridge.requestTestingForcePhase(selectedNpcId, phaseId);
+        setPendingStatus("Entering selected phase " + creatorLabel(selectedPhaseId) + "...");
+        BossLabsClientBridge.requestTestingForcePhase(selectedNpcId, selectedPhaseId);
     }
 
-    private void forceAttack() {
-        String phaseId = trim(phaseIdField.getText());
-        String attackId = trim(attackIdField.getText());
-        if (phaseId.length() == 0 || attackId.length() == 0) {
-            setLocalError("Enter both Phase ID and Attack ID first.");
+    private void forceSelectedAttack() {
+        if (selectedPhaseId.length() == 0 || selectedAttackId.length() == 0) {
+            setLocalError("Select an attack in BossLabs first.");
             return;
         }
-        setPendingStatus("Triggering attack " + attackId + " from phase " + phaseId + "...");
-        BossLabsClientBridge.requestTestingForceAttack(selectedNpcId, phaseId, attackId);
+        setPendingStatus("Testing selected attack " + creatorLabel(selectedAttackId) + "...");
+        BossLabsClientBridge.requestTestingForceAttack(selectedNpcId, selectedPhaseId, selectedAttackId);
     }
 
     private void setPendingStatus(String message) {
@@ -237,8 +245,8 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         spawnButton.setEnabled(selected);
         resetButton.setEnabled(selected);
         setHealthButton.setEnabled(selected);
-        forcePhaseButton.setEnabled(bossLabsEnabled);
-        forceAttackButton.setEnabled(bossLabsEnabled);
+        forcePhaseButton.setEnabled(bossLabsEnabled && selectedPhaseId.length() > 0);
+        forceAttackButton.setEnabled(bossLabsEnabled && selectedPhaseId.length() > 0 && selectedAttackId.length() > 0);
         clearHazardsButton.setEnabled(bossLabsEnabled);
         clearMinionsButton.setEnabled(bossLabsEnabled);
     }
@@ -306,6 +314,13 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         panel.add(component, fieldConstraints);
     }
 
+    private static JLabel createValueLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(ConsoleTheme.BODY_FONT);
+        label.setForeground(ConsoleTheme.TEXT);
+        return label;
+    }
+
     private Integer parseInteger(String value) {
         try {
             return Integer.valueOf(trim(value));
@@ -314,8 +329,32 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         }
     }
 
+    private String creatorLabel(String id) {
+        String value = safe(id).trim().replace('_', ' ').replace('-', ' ');
+        if (value.length() == 0)
+            return "Unnamed";
+        StringBuilder result = new StringBuilder(value.length());
+        boolean capitalize = true;
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (Character.isWhitespace(character)) {
+                if (result.length() > 0 && result.charAt(result.length() - 1) != ' ')
+                    result.append(' ');
+                capitalize = true;
+            } else {
+                result.append(capitalize ? Character.toUpperCase(character) : character);
+                capitalize = false;
+            }
+        }
+        return result.toString();
+    }
+
     private String trim(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 
     private String escapeHtml(String value) {
