@@ -1,0 +1,22 @@
+Matrix3 Client Console V2 - deferred runtime acceptance list
+
+Run this list after a batch of V2 polish changes. It supersedes old home-page checks that refer to the removed Shell foundation/focus-test scaffold; the detailed legacy testlist.txt remains useful for deeper subsystem regressions.
+
+1. Start Matrix3 normally in Eclipse/Java 8. Confirm the game renders/logs in normally and the Client Console opens beside the game without Canvas/Swing flicker, focus loss, or input regression.
+2. Inspect the rail. Confirm Home, Owner, Commands, Player, Items, and Settings use recognizable centered icons; tooltips identify each icon; selected/hover/pressed states remain obvious; clicking the active icon still collapses the panel.
+3. Open Home before login. Confirm the MATRIX3 Developer dashboard shows waiting/read-only values rather than throwing errors or attempting gameplay/server mutation.
+4. Log in with Home visible. Confirm Display name, Rights, Client state, Tile, Plane, and Region populate automatically and refresh while the dashboard is visible.
+5. Walk several tiles and cross/teleport across a region boundary with Home visible. Confirm Tile/Plane/Region follow the same values as the Player panel and update without rebuilding the dashboard.
+6. Switch away from Home, move in game, then return. Confirm dashboard values refresh immediately and there is no visible background-refresh/render hitch while Home is hidden.
+7. Confirm the old `Shell foundation`, Docking instructions, and permanent Focus test field are gone from Home. Focus/input regression should instead be tested through real text fields such as Commands search/arguments and Item Browser search.
+8. Resize the console from its minimum practical width through a wide layout at 1280x720, 1600x900, 1920x1080, and ultrawide where available. Confirm Dashboard cards/buttons remain reachable with vertical scrolling and the game view still respects the existing minimum width.
+9. Test at 100%, 125%, and 150% Windows display scaling where available. Confirm icons, dashboard text, cards, and buttons remain readable without overlap or missing controls.
+10. From Dashboard, open BossLabs. Confirm it launches normally as the existing separate developer window and the Client Console remains responsive.
+11. From Dashboard, open RS3 CacheEditor. Confirm it uses the existing external Server-side launcher, reports launch status, suppresses duplicate launch requests while already running, and does not block the client.
+12. Use Reset Client Console Layout from Dashboard. Confirm the existing workspace authority resets window/console geometry, returns Home as appropriate, and the reset state survives a clean restart.
+13. Item Browser: type a broad partial name and stop typing. Confirm results refresh after about 500ms (not the previous 1.25 seconds), broad matches remain complete, empty browse remains capped at 160, and thumbnail/game rendering stays responsive.
+14. Run one safe Commands action, one Item Browser Inventory spawn, one Item Browser Bank spawn, and one Settings apply. Confirm all existing bridges/permissions remain authoritative and Commands.java behavior is unchanged.
+15. Rapidly switch Home/Owner/Commands/Player/Items/Settings while moving in game, resizing the console, and typing into console fields. Confirm no panel is rebuilt unnecessarily, focused console text fields do not leak movement/hotkeys into the game, and returning focus to the game restores normal controls.
+16. Cleanly close and relaunch Matrix3. Confirm window position/size/state, console open/collapsed state, console width, and active panel still restore correctly after the V2 dashboard/icon changes.
+
+Pass condition: V2 looks and feels more intentional without changing Matrix3 gameplay, renderer ownership, command authority, panel persistence, or client-thread ownership.
