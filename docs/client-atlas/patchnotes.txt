@@ -39,4 +39,5 @@ Phase 3 / 3A-Core bundled hooks
 - Added `AtlasKeyboardObserver` as a failure-isolated AWT observer that mirrors Matrix3's verified `Class549_Sub1` key normalization/filtering without consuming events or rewriting the large decompiled input class. Keyboard trace records include the verified Matrix3 owner symbol as an explicit correlation hint.
 - A direct attempted `Class549_Sub1` one-line rewrite was rejected because audit showed unrelated array-line churn; the branch was rolled back before using the safer observer implementation.
 - Exact model/animation loader instrumentation remains CARRYOVER until real ownership is established; no guessed asset hook was added.
+- Trace events now distinguish the literal hook `sourceSymbol` from the verified logical `ownerSymbol` for keyboard, menu, and incoming packet observations so later correlation does not blur evidence provenance.
 - All Core runtime hooks remain opt-in through the recorder, payload-minimal, bounded, and failure-isolated. Runtime verification remains deliberately consolidated with 3A-Correlation and the final Bundle 3A gate.
