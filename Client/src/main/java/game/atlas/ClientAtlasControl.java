@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -35,8 +36,10 @@ import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
 import game.atlas.AtlasQueryEngine.QueryResult;
+import game.atlas.AtlasRelationshipQueryEngine.RelationshipQueryResult;
 import game.atlas.AtlasScanner.ScanResult;
 import game.atlas.AtlasSchema.Metadata;
+import game.atlas.AtlasSearchEngine.SearchResult;
 import game.atlas.AtlasStructuralVerifier.VerificationResult;
 
 /**
@@ -62,6 +65,7 @@ public final class ClientAtlasControl {
     private JLabel fingerprintValue;
     private final List<JButton> taskButtons = new ArrayList<JButton>();
 
+    private AtlasInvestigationIndex investigationIndex;
     private QueryResult lastQueryResult;
     private String lastQueryId;
 
@@ -140,12 +144,18 @@ public final class ClientAtlasControl {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
 
         JPanel searchPanel = new JPanel(new BorderLayout(8, 0));
-        searchPanel.setBorder(BorderFactory.createTitledBorder("Search"));
+        searchPanel.setBorder(BorderFactory.createTitledBorder("Search / Investigate"));
         queryField = new JTextField(DEFAULT_QUERY);
-        queryField.setToolTipText("Class shorthand such as Class1, or an exact Atlas ID");
+        queryField.setToolTipText("Examples: Class387 | Class387.method4844 | calls <symbol> | constant 762");
         JButton searchButton = taskButton("Search", new Runnable() {
             @Override
             public void run() {
+                runSearch();
+            }
+        });
+        queryField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
                 runSearch();
             }
         });
@@ -157,8 +167,9 @@ public final class ClientAtlasControl {
         outputArea.setLineWrap(false);
         outputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         outputArea.setText("Client Atlas is ready.\n\n"
-                + "Use Run Phase 2 Check for the consolidated structural verification, "
-                + "or Search for an existing symbol.\n");
+                + "Friendly search: Class387 | Class387.method4844 | method4844\n"
+                + "Relationships: calls | called-by | reads | written-by | references | constant\n"
+                + "Neighborhood: neighbors <symbol> depth=1 or depth=2\n");
 
         JScrollPane scrollPane = new JScrollPane(outputArea);
         scrollPane.setBorder(BorderFactory.createTitledBorder("Output"));
@@ -171,7 +182,7 @@ public final class ClientAtlasControl {
     private JPanel buildActionPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
 
-        panel.add(taskButton("Run Phase 2 Check", new Runnable() {
+        panel.add(taskButton("Run Structural Check", new Runnable() {
             @Override
             public void run() {
                 runPhase2Check();
@@ -226,14 +237,14 @@ public final class ClientAtlasControl {
     }
 
     private void runPhase2Check() {
-        runBackground("Running the consolidated Phase 2 structural check...", new BackgroundTask() {
+        runBackground("Running the consolidated structural check...", new BackgroundTask() {
             private VerificationResult result;
 
             @Override
             public String execute() throws Exception {
+                invalidateInvestigationIndex();
                 result = new AtlasStructuralVerifier(workspace, classRoot).run();
-                lastQueryResult = null;
-                lastQueryId = null;
+                clearLastExportableQuery();
                 return result.getReport() + "\nReport: " + result.getReportPath();
             }
 
@@ -250,9 +261,9 @@ public final class ClientAtlasControl {
         runBackground("Scanning compiled client...", new BackgroundTask() {
             @Override
             public String execute() throws Exception {
+                invalidateInvestigationIndex();
                 ScanResult result = new AtlasScanner(workspace).scan(classRoot);
-                lastQueryResult = null;
-                lastQueryId = null;
+                clearLastExportableQuery();
                 return "Client Atlas scan complete.\n"
                         + "Class files: " + result.getClassFileCount() + "\n"
                         + "Symbols: " + result.getSymbolCount() + "\n"
@@ -275,14 +286,19 @@ public final class ClientAtlasControl {
             @Override
             public String execute() throws Exception {
                 if (!Files.isDirectory(classRoot)) {
+                    invalidateInvestigationIndex();
                     throw new IOException("Compiled classes do not exist yet: " + classRoot
                             + "\nBuild Matrix3-Client in Eclipse first.");
                 }
                 if (!Files.isRegularFile(workspace.metadataFile())) {
-                    return "No Atlas index exists yet. Click Run Phase 2 Check or Scan / Rebuild Index.";
+                    invalidateInvestigationIndex();
+                    return "No Atlas index exists yet. Click Run Structural Check or Scan / Rebuild Index.";
                 }
                 metadata = workspace.readMetadata();
                 current = workspace.isCurrent(classRoot);
+                if (metadata.getSchemaVersion() != AtlasWorkspace.SCHEMA_VERSION || !current) {
+                    invalidateInvestigationIndex();
+                }
                 if (metadata.getSchemaVersion() != AtlasWorkspace.SCHEMA_VERSION) {
                     return "Atlas status refreshed. Schema " + metadata.getSchemaVersion()
                             + " requires rebuild to schema " + AtlasWorkspace.SCHEMA_VERSION + ".";
@@ -302,39 +318,83 @@ public final class ClientAtlasControl {
     }
 
     private void runSearch() {
-        final String raw = queryField.getText();
-        final String queryId;
-        try {
-            queryId = normalizeQueryId(raw);
-        } catch (IllegalArgumentException ex) {
-            showError(ex.getMessage());
+        final String raw = queryField.getText() == null ? "" : queryField.getText().trim();
+        if (raw.length() == 0) {
+            showError("Enter a symbol search or relationship command.");
             return;
         }
 
-        runBackground("Searching " + queryId + "...", new BackgroundTask() {
-            private QueryResult result;
+        runBackground("Searching " + raw + "...", new BackgroundTask() {
+            private QueryResult exportableResult;
+            private String exportableId;
 
             @Override
             public String execute() throws Exception {
-                result = new AtlasQueryEngine(workspace).queryExact(queryId, classRoot);
-                return prettyJson(result.toJson());
+                AtlasInvestigationIndex index = currentInvestigationIndex();
+                AtlasRelationshipQueryEngine relationshipEngine = new AtlasRelationshipQueryEngine(index);
+                StringBuilder output = new StringBuilder(2048);
+                output.append("Index: ").append(index.getSymbolCount()).append(" symbols / ")
+                        .append(index.getRelationshipCount()).append(" relationships")
+                        .append(" | load ").append(formatMillis(index.getLoadNanos())).append(" ms\n\n");
+
+                if (relationshipEngine.isRelationshipCommand(raw)) {
+                    RelationshipQueryResult result = relationshipEngine.query(raw);
+                    output.append(result.toDisplayText());
+                    return output.toString();
+                }
+
+                SearchResult result = new AtlasSearchEngine(index).search(raw);
+                output.append(result.toDisplayText());
+                if (result.isResolved()) {
+                    exportableId = result.getResolvedSymbol().getId();
+                    exportableResult = new AtlasQueryEngine(workspace).queryExact(exportableId, classRoot);
+                }
+                return output.toString();
             }
 
             @Override
             public void complete() {
-                lastQueryResult = result;
-                lastQueryId = queryId;
+                lastQueryResult = exportableResult;
+                lastQueryId = exportableId;
             }
         });
     }
 
+    private AtlasInvestigationIndex currentInvestigationIndex() throws IOException {
+        if (investigationIndex != null) {
+            Metadata metadata = workspace.readMetadata();
+            Metadata cached = investigationIndex.getMetadata();
+            boolean sameSnapshot = metadata.getSchemaVersion() == AtlasWorkspace.SCHEMA_VERSION
+                    && metadata.getClientFingerprint().equals(cached.getClientFingerprint())
+                    && metadata.getGeneratedAtUtc().equals(cached.getGeneratedAtUtc())
+                    && metadata.getSymbolCount() == cached.getSymbolCount()
+                    && metadata.getRelationshipCount() == cached.getRelationshipCount();
+            if (sameSnapshot && workspace.isCurrent(classRoot)) {
+                return investigationIndex;
+            }
+            invalidateInvestigationIndex();
+        }
+        investigationIndex = AtlasInvestigationIndex.load(workspace, classRoot);
+        return investigationIndex;
+    }
+
+    private void invalidateInvestigationIndex() {
+        investigationIndex = null;
+    }
+
+    private void clearLastExportableQuery() {
+        lastQueryResult = null;
+        lastQueryId = null;
+    }
+
     private void exportLastResult() {
         if (lastQueryResult == null || lastQueryId == null) {
-            showError("Search for a symbol first. There is no result to export yet.");
+            showError("Run a friendly/exact symbol search that resolves to one symbol first. "
+                    + "Relationship-command export arrives in the assistant-export step.");
             return;
         }
 
-        runBackground("Exporting last result...", new BackgroundTask() {
+        runBackground("Exporting last resolved symbol...", new BackgroundTask() {
             @Override
             public String execute() throws Exception {
                 Path exportDirectory = workspace.getWorkspaceRoot().resolve("exports");
@@ -352,6 +412,7 @@ public final class ClientAtlasControl {
 
             @Override
             public String execute() throws Exception {
+                invalidateInvestigationIndex();
                 StringBuilder report = new StringBuilder(1024);
 
                 ScanResult scan = new AtlasScanner(workspace).scan(classRoot);
@@ -400,6 +461,7 @@ public final class ClientAtlasControl {
                         "compact export was not written");
                 report.append("PASS  Compact export: ").append(exportPath).append('\n');
                 report.append("\nPHASE 1 REGRESSION CHECK: PASS\n");
+                clearLastExportableQuery();
                 return report.toString();
             }
 
@@ -561,79 +623,12 @@ public final class ClientAtlasControl {
         JOptionPane.showMessageDialog(frame, message, WINDOW_TITLE, JOptionPane.ERROR_MESSAGE);
     }
 
-    private static String normalizeQueryId(String raw) {
-        if (raw == null || raw.trim().length() == 0) {
-            throw new IllegalArgumentException("Enter a class name or exact Atlas symbol ID.");
-        }
-        String value = raw.trim();
-        if (value.startsWith("CLASS:") || value.startsWith("INTERFACE:") || value.startsWith("ENUM:")
-                || value.startsWith("ANNOTATION:") || value.startsWith("FIELD:")
-                || value.startsWith("METHOD:") || value.startsWith("CONSTRUCTOR:")) {
-            return value;
-        }
-
-        if (value.startsWith("game.")) {
-            value = value.replace('.', '/');
-        }
-        if (value.startsWith("game/")) {
-            return "CLASS:" + value;
-        }
-        if (value.indexOf('/') < 0 && value.indexOf('#') < 0 && value.indexOf(':') < 0) {
-            return "CLASS:game/" + value;
-        }
-        return value;
-    }
-
     private static String safeFileName(String value) {
         return value.replaceAll("[^A-Za-z0-9._-]+", "_");
     }
 
-    private static String prettyJson(String json) {
-        StringBuilder out = new StringBuilder(json.length() + 128);
-        boolean inString = false;
-        boolean escaped = false;
-        int indent = 0;
-        for (int i = 0; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (inString) {
-                out.append(c);
-                if (escaped) {
-                    escaped = false;
-                } else if (c == '\\') {
-                    escaped = true;
-                } else if (c == '"') {
-                    inString = false;
-                }
-                continue;
-            }
-            if (c == '"') {
-                inString = true;
-                out.append(c);
-            } else if (c == '{' || c == '[') {
-                out.append(c).append('\n');
-                indent++;
-                appendIndent(out, indent);
-            } else if (c == '}' || c == ']') {
-                out.append('\n');
-                indent--;
-                appendIndent(out, indent);
-                out.append(c);
-            } else if (c == ',') {
-                out.append(c).append('\n');
-                appendIndent(out, indent);
-            } else if (c == ':') {
-                out.append(": ");
-            } else {
-                out.append(c);
-            }
-        }
-        return out.toString();
-    }
-
-    private static void appendIndent(StringBuilder builder, int indent) {
-        for (int i = 0; i < indent; i++) {
-            builder.append("  ");
-        }
+    private static String formatMillis(long nanos) {
+        return String.format(Locale.ROOT, "%.3f", Double.valueOf(nanos / 1000000.0D));
     }
 
     private static void require(boolean condition, String message) throws IOException {
