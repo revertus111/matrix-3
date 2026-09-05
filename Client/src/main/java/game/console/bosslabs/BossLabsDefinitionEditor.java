@@ -1,27 +1,19 @@
 package game.console.bosslabs;
 
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
-import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.Point;
-import java.awt.RenderingHints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
-import java.awt.event.MouseWheelEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -32,28 +24,26 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 
 import game.console.ConsoleTheme;
 
 /**
- * Client-local authoring controls for BossLabs phase and attack DRAFT data.
+ * Client-local creator-facing authoring controls for BossLabs phase and attack
+ * DRAFT data. Runtime ownership remains server-side.
  */
 public final class BossLabsDefinitionEditor {
 
-    private static final int MAX_PATTERN_TILES = 128;
-    private static final int MAX_TILE_OFFSET = 16;
-    private static final int PATTERN_CROSS = 0;
-    private static final int PATTERN_HORIZONTAL_LINE = 1;
-    private static final int PATTERN_VERTICAL_LINE = 2;
-    private static final int PATTERN_FILLED_SQUARE = 3;
-    private static final int PATTERN_RING = 4;
+    public interface SelectionListener {
+        void onSelectionChanged(BossLabsDraftDefinition.Phase phase, BossLabsDraftDefinition.Attack attack);
+    }
+
     private static final String[] TILE_EFFECT_NAMES = {
             "Damage players", "Heal players", "Damage boss", "Heal boss" };
     private static final String[] PHASE_ACTION_NAMES = {
             "Play animation", "Play graphic", "Heal boss", "Spawn minions" };
 
     private final Runnable changeListener;
+    private final SelectionListener selectionListener;
 
     private final JPanel phasesRoot = new JPanel(new BorderLayout(10, 10));
     private final JPanel attacksRoot = new JPanel(new BorderLayout(10, 10));
@@ -62,9 +52,10 @@ public final class BossLabsDefinitionEditor {
             new DefaultListModel<BossLabsDraftDefinition.Phase>();
     private final JList<BossLabsDraftDefinition.Phase> phaseList =
             new JList<BossLabsDraftDefinition.Phase>(phaseListModel);
-    private final JTextField phaseIdField = new JTextField();
+    private final JTextField phaseNameField = new JTextField();
     private final JTextField phaseMinField = new JTextField();
     private final JTextField phaseMaxField = new JTextField();
+    private final JTextField phaseIdField = new JTextField();
     private final JLabel phaseStatus = createStatus("Add a phase to begin authoring combat.");
     private final DefaultListModel<BossLabsDraftDefinition.PhaseAction> entryActionListModel =
             new DefaultListModel<BossLabsDraftDefinition.PhaseAction>();
@@ -76,7 +67,9 @@ public final class BossLabsDefinitionEditor {
             new JList<BossLabsDraftDefinition.PhaseAction>(exitActionListModel);
     private final JComboBox<String> phaseActionTypeBox = new JComboBox<String>(PHASE_ACTION_NAMES);
     private final JTextField phaseActionValueField = new JTextField();
-    private final JLabel phaseActionStatus = createStatus("Phase actions run once when a phase is entered or exited.");
+    private final JTextField phaseActionAmountField = new JTextField("1");
+    private final JTextField phaseActionRadiusField = new JTextField("1");
+    private final JLabel phaseActionStatus = createStatus("Transition actions are optional.");
 
     private final DefaultComboBoxModel<BossLabsDraftDefinition.Phase> attackPhaseModel =
             new DefaultComboBoxModel<BossLabsDraftDefinition.Phase>();
@@ -86,6 +79,7 @@ public final class BossLabsDefinitionEditor {
             new DefaultListModel<BossLabsDraftDefinition.Attack>();
     private final JList<BossLabsDraftDefinition.Attack> attackList =
             new JList<BossLabsDraftDefinition.Attack>(attackListModel);
+    private final JTextField attackNameField = new JTextField();
     private final JTextField attackIdField = new JTextField();
     private final JComboBox<String> attackStyleBox = new JComboBox<String>(new String[] { "Melee", "Range", "Magic" });
     private final JComboBox<String> targetModeBox = new JComboBox<String>(new String[] { "Current target", "Random nearby player" });
@@ -108,17 +102,17 @@ public final class BossLabsDefinitionEditor {
     private final JTextField hazardDurationField = new JTextField();
     private final JTextField hazardIntervalField = new JTextField();
     private final JTextField hazardMaxHitField = new JTextField();
-    private final JTextField patternRadiusField = new JTextField("2");
     private final JButton addAttackButton = new JButton("Add Attack");
     private final JLabel attackStatus = createStatus("Select a phase before adding attacks.");
-    private final JLabel patternStatus = createStatus("Select an attack, then click tiles to build a target-centered pattern.");
-    private final TilePatternCanvas tilePatternCanvas = new TilePatternCanvas();
+    private final JLabel attackPatternSummary = createStatus("No attack selected.");
 
     private BossLabsDraftDefinition draft;
     private boolean suppressSelectionEvents;
 
-    public BossLabsDefinitionEditor(Runnable changeListener) {
+    public BossLabsDefinitionEditor(Runnable changeListener, SelectionListener selectionListener) {
         this.changeListener = changeListener;
+        this.selectionListener = selectionListener;
+        installRenderers();
         buildPhasesPanel();
         buildAttacksPanel();
     }
@@ -138,27 +132,66 @@ public final class BossLabsDefinitionEditor {
     public void setDraft(BossLabsDraftDefinition draft) {
         this.draft = draft;
         refreshPhaseViews(0);
-        tilePatternCanvas.repaint();
+        refreshSelectedAttackSummary();
+    }
+
+    public void refreshSelectedAttackSummary() {
+        updateAttackPatternSummary(attackList.getSelectedValue());
+        attackList.repaint();
+        notifySelectionChanged();
+    }
+
+    private void installRenderers() {
+        DefaultListCellRenderer phaseRenderer = new DefaultListCellRenderer() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof BossLabsDraftDefinition.Phase)
+                    setText(phaseLabel((BossLabsDraftDefinition.Phase) value));
+                return this;
+            }
+        };
+        phaseList.setCellRenderer(phaseRenderer);
+        attackPhaseBox.setRenderer(phaseRenderer);
+
+        attackList.setCellRenderer(new DefaultListCellRenderer() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof BossLabsDraftDefinition.Attack)
+                    setText(attackLabel((BossLabsDraftDefinition.Attack) value));
+                return this;
+            }
+        });
     }
 
     private void buildPhasesPanel() {
         phasesRoot.setBackground(ConsoleTheme.PANEL);
         phasesRoot.setBorder(ConsoleTheme.panelPadding(12, 12, 12, 12));
-
-        JPanel heading = verticalHeading("Phases", "Health-range phases with ordered on-enter/on-exit actions and attack pools.");
-        phasesRoot.add(heading, BorderLayout.NORTH);
+        phasesRoot.add(verticalHeading("Phases",
+                "Define when the boss changes behavior. BossLabs manages internal keys from the names you use."), BorderLayout.NORTH);
 
         phaseList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         styleList(phaseList);
         phaseList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting() && !suppressSelectionEvents)
+            if (!e.getValueIsAdjusting() && !suppressSelectionEvents) {
+                syncAttackPhaseToPhaseList();
                 loadSelectedPhase();
+                refreshAttackList(0);
+                notifySelectionChanged();
+            }
         });
 
-        JPanel listCard = createListCard(phaseList, 235);
+        JPanel listCard = createListCard(phaseList, 260);
         JPanel listButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         listButtons.setOpaque(false);
-        JButton add = new JButton("Add Phase");
+        JButton add = new JButton("+ Add Phase");
         JButton remove = new JButton("Remove");
         styleButton(add);
         styleButton(remove);
@@ -169,42 +202,48 @@ public final class BossLabsDefinitionEditor {
         listCard.add(listButtons, BorderLayout.SOUTH);
         phasesRoot.add(listCard, BorderLayout.WEST);
 
-        JPanel formCard = createCard();
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setOpaque(false);
-        styleField(phaseIdField, "Stable phase id, for example phase_1");
-        styleField(phaseMinField, "Minimum HP percent, inclusive");
-        styleField(phaseMaxField, "Maximum HP percent, inclusive");
-        addFormRow(form, 0, "Phase ID", phaseIdField);
-        addFormRow(form, 1, "Min HP %", phaseMinField);
-        addFormRow(form, 2, "Max HP %", phaseMaxField);
-
-        JButton update = new JButton("Update Phase");
-        styleButton(update);
-        update.addActionListener(e -> updatePhase());
-
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setOpaque(false);
-        form.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        update.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        phaseStatus.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        body.add(form);
-        body.add(Box.createVerticalStrut(10));
-        body.add(update);
-        body.add(Box.createVerticalStrut(8));
-        body.add(phaseStatus);
-        formCard.add(body, BorderLayout.CENTER);
-
-        JPanel actionCard = createPhaseActionsCard();
         JPanel editorColumn = new JPanel();
         editorColumn.setLayout(new BoxLayout(editorColumn, BoxLayout.Y_AXIS));
         editorColumn.setOpaque(false);
-        formCard.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        actionCard.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        editorColumn.add(formCard);
+
+        JPanel setupCard = createCard();
+        setupCard.add(verticalHeading("Phase setup",
+                "Give the phase a useful name and HP range. The internal Phase ID is generated from the name."), BorderLayout.NORTH);
+        JPanel setupForm = new JPanel(new GridBagLayout());
+        setupForm.setOpaque(false);
+        styleField(phaseNameField, "Creator-facing phase name, for example Enrage or Minion Phase");
+        styleField(phaseMaxField, "Upper HP percentage for this phase, inclusive");
+        styleField(phaseMinField, "Lower HP percentage for this phase, inclusive");
+        addFormRow(setupForm, 0, "Phase name", phaseNameField);
+        addFormRow(setupForm, 1, "Starts at HP %", phaseMaxField);
+        addFormRow(setupForm, 2, "Ends at HP %", phaseMinField);
+
+        JButton update = new JButton("Save Phase");
+        JButton addAttack = new JButton("+ Add Attack to This Phase");
+        styleButton(update);
+        styleButton(addAttack);
+        update.addActionListener(e -> updatePhase());
+        addAttack.addActionListener(e -> addAttackToSelectedPhase());
+        JPanel setupButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        setupButtons.setOpaque(false);
+        setupButtons.add(update);
+        setupButtons.add(addAttack);
+
+        JPanel setupBody = new JPanel();
+        setupBody.setLayout(new BoxLayout(setupBody, BoxLayout.Y_AXIS));
+        setupBody.setOpaque(false);
+        setupBody.add(setupForm);
+        setupBody.add(Box.createVerticalStrut(8));
+        setupBody.add(setupButtons);
+        setupBody.add(Box.createVerticalStrut(6));
+        setupBody.add(phaseStatus);
+        setupCard.add(setupBody, BorderLayout.CENTER);
+
+        editorColumn.add(setupCard);
         editorColumn.add(Box.createVerticalStrut(10));
-        editorColumn.add(actionCard);
+        editorColumn.add(createCollapsibleSection("Transition actions", false, createPhaseActionsBody()));
+        editorColumn.add(Box.createVerticalStrut(10));
+        editorColumn.add(createCollapsibleSection("Advanced / internal", false, createPhaseAdvancedBody()));
 
         JScrollPane editorScroll = new JScrollPane(editorColumn);
         editorScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -214,11 +253,10 @@ public final class BossLabsDefinitionEditor {
         phasesRoot.add(editorScroll, BorderLayout.CENTER);
     }
 
-    private JPanel createPhaseActionsCard() {
-        JPanel card = createCard();
-        JPanel heading = verticalHeading("Phase actions",
-                "Actions run in list order. Exit actions run before the next phase's entry actions.");
-        card.add(heading, BorderLayout.NORTH);
+    private JComponent createPhaseActionsBody() {
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
 
         styleList(entryActionList);
         styleList(exitActionList);
@@ -233,15 +271,20 @@ public final class BossLabsDefinitionEditor {
         JPanel controls = new JPanel(new GridBagLayout());
         controls.setOpaque(false);
         styleCombo(phaseActionTypeBox);
-        styleField(phaseActionValueField,
-                "Animation/GFX id, fixed boss-heal amount, or Spawn minions as NPC_ID,AMOUNT,RADIUS (example 1282,4,2)");
+        styleField(phaseActionValueField, "Animation/GFX ID, heal amount, or minion NPC ID depending on the selected action");
+        styleField(phaseActionAmountField, "Minion amount, 1-8");
+        styleField(phaseActionRadiusField, "Minion spawn radius, 1-8 tiles");
         addFormRow(controls, 0, "Action", phaseActionTypeBox);
-        addFormRow(controls, 1, "Value", phaseActionValueField);
+        addFormRow(controls, 1, "Value / NPC ID", phaseActionValueField);
+        addFormRow(controls, 2, "Minion amount", phaseActionAmountField);
+        addFormRow(controls, 3, "Minion radius", phaseActionRadiusField);
+        phaseActionTypeBox.addActionListener(e -> updatePhaseActionInputs());
+        updatePhaseActionInputs();
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         buttons.setOpaque(false);
-        JButton addEnter = new JButton("Add On Enter");
-        JButton addExit = new JButton("Add On Exit");
+        JButton addEnter = new JButton("+ On Enter");
+        JButton addExit = new JButton("+ On Exit");
         JButton removeEnter = new JButton("Remove Enter");
         JButton removeExit = new JButton("Remove Exit");
         styleButton(addEnter);
@@ -257,21 +300,22 @@ public final class BossLabsDefinitionEditor {
         buttons.add(removeEnter);
         buttons.add(removeExit);
 
-        JPanel south = new JPanel();
-        south.setLayout(new BoxLayout(south, BoxLayout.Y_AXIS));
-        south.setOpaque(false);
-        controls.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        buttons.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        phaseActionStatus.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        south.add(controls);
-        south.add(Box.createVerticalStrut(8));
-        south.add(buttons);
-        south.add(Box.createVerticalStrut(6));
-        south.add(phaseActionStatus);
+        body.add(lists);
+        body.add(Box.createVerticalStrut(8));
+        body.add(controls);
+        body.add(Box.createVerticalStrut(8));
+        body.add(buttons);
+        body.add(Box.createVerticalStrut(6));
+        body.add(phaseActionStatus);
+        return body;
+    }
 
-        card.add(lists, BorderLayout.CENTER);
-        card.add(south, BorderLayout.SOUTH);
-        return card;
+    private JComponent createPhaseAdvancedBody() {
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        styleReadOnlyField(phaseIdField, "Generated BossLabs Phase ID used by persistence/testing internals");
+        addFormRow(form, 0, "Internal Phase ID", phaseIdField);
+        return form;
     }
 
     private JPanel createPhaseActionList(String titleText, JList<BossLabsDraftDefinition.PhaseAction> list) {
@@ -292,17 +336,21 @@ public final class BossLabsDefinitionEditor {
         attacksRoot.setBackground(ConsoleTheme.PANEL);
         attacksRoot.setBorder(ConsoleTheme.panelPadding(12, 12, 12, 12));
 
-        JPanel top = verticalHeading("Attacks", "Edit weighted rotation, targeting, reusable tile effects, telegraphs, and lingering hazards.");
-
+        JPanel top = verticalHeading("Attacks",
+                "Start with the basics. Rotation, FX, area behavior, hazards, and internal details stay out of the way until you need them.");
         JPanel phaseChooser = new JPanel(new BorderLayout(8, 0));
         phaseChooser.setOpaque(false);
-        JLabel phaseLabel = new JLabel("Phase");
+        JLabel phaseLabel = new JLabel("Editing phase");
         phaseLabel.setFont(ConsoleTheme.BODY_FONT);
         phaseLabel.setForeground(ConsoleTheme.MUTED_TEXT);
         styleCombo(attackPhaseBox);
         attackPhaseBox.addActionListener(e -> {
-            if (!suppressSelectionEvents)
+            if (!suppressSelectionEvents) {
+                syncPhaseListToAttackPhase();
+                loadSelectedPhase();
                 refreshAttackList(0);
+                notifySelectionChanged();
+            }
         });
         phaseChooser.add(phaseLabel, BorderLayout.WEST);
         phaseChooser.add(attackPhaseBox, BorderLayout.CENTER);
@@ -313,11 +361,13 @@ public final class BossLabsDefinitionEditor {
         attackList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         styleList(attackList);
         attackList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting() && !suppressSelectionEvents)
+            if (!e.getValueIsAdjusting() && !suppressSelectionEvents) {
                 loadSelectedAttack();
+                notifySelectionChanged();
+            }
         });
 
-        JPanel listCard = createListCard(attackList, 235);
+        JPanel listCard = createListCard(attackList, 285);
         JPanel listButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         listButtons.setOpaque(false);
         styleButton(addAttackButton);
@@ -330,90 +380,21 @@ public final class BossLabsDefinitionEditor {
         listCard.add(listButtons, BorderLayout.SOUTH);
         attacksRoot.add(listCard, BorderLayout.WEST);
 
-        JPanel formCard = createCard();
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setOpaque(false);
-        styleField(attackIdField, "Stable attack id, for example random_fireball");
-        styleField(targetRangeField, "Maximum range for alternate-player targeting, 1-32 tiles");
-        styleField(rotationWeightField, "Relative weighted-selection chance, 1-1000. Equal weights reproduce the old uniform selection.");
-        styleField(cooldownAttacksField, "Future attack opportunities this attack must sit out after use, 0-100.");
-        styleField(animationField, "Animation id, or -1 for NPC default");
-        styleField(graphicField, "NPC graphic id, or -1 for NPC default");
-        styleField(projectileField, "Projectile id, or -1 for NPC default");
-        styleField(maxHitField, "Impact amount. Damage players uses this as max hit; heal/boss effects use a fixed amount. -1 uses NPC style max hit.");
-        styleField(combatDelayField, "Combat delay override, or -1 for NPC default");
-        styleField(telegraphGraphicField, "Ground warning graphic id, or -1 for none");
-        styleField(impactGraphicField, "Ground impact graphic id, or -1 for none");
-        styleField(telegraphTicksField, "Ticks between warning and impact, 0-50");
-        styleField(hazardGraphicField, "Lingering ground graphic id, or -1 for none");
-        styleField(hazardDurationField, "Hazard duration in ticks; 0 disables the lingering hazard");
-        styleField(hazardIntervalField, "Effect interval in ticks, 1-50; must not exceed duration when enabled");
-        styleField(hazardMaxHitField, "Hazard amount. Damage players uses this as max hit; heal/boss effects use a fixed amount. -1 uses NPC style max hit.");
-        styleCombo(attackStyleBox);
-        styleCombo(targetModeBox);
-        styleCombo(repeatModeBox);
-        styleCombo(impactEffectBox);
-        styleCombo(hazardEffectBox);
-        targetModeBox.setToolTipText("Random nearby player prefers someone other than the NPC's current combat target; solo fights fall back safely.");
-        repeatModeBox.setToolTipText("Prefer another ready attack blocks an immediate repeat only when another non-cooldown attack is available.");
-        impactEffectBox.setToolTipText("Action performed once on the painted tiles at impact.");
-        hazardEffectBox.setToolTipText("Action repeated on the painted tiles while the lingering hazard is active.");
-
-        addFormRow(form, 0, "Attack ID", attackIdField);
-        addFormRow(form, 1, "Style", attackStyleBox);
-        addFormRow(form, 2, "Target", targetModeBox);
-        addFormRow(form, 3, "Target range", targetRangeField);
-        addFormRow(form, 4, "Weight", rotationWeightField);
-        addFormRow(form, 5, "Cooldown turns", cooldownAttacksField);
-        addFormRow(form, 6, "Repeat rule", repeatModeBox);
-        addFormRow(form, 7, "Animation", animationField);
-        addFormRow(form, 8, "NPC graphic", graphicField);
-        addFormRow(form, 9, "Projectile", projectileField);
-        addFormRow(form, 10, "Impact effect", impactEffectBox);
-        addFormRow(form, 11, "Impact amount / max hit", maxHitField);
-        addFormRow(form, 12, "Combat delay", combatDelayField);
-        addFormRow(form, 13, "Warning GFX", telegraphGraphicField);
-        addFormRow(form, 14, "Impact GFX", impactGraphicField);
-        addFormRow(form, 15, "Warning ticks", telegraphTicksField);
-        addFormRow(form, 16, "Hazard effect", hazardEffectBox);
-        addFormRow(form, 17, "Hazard GFX", hazardGraphicField);
-        addFormRow(form, 18, "Hazard duration", hazardDurationField);
-        addFormRow(form, 19, "Hazard interval", hazardIntervalField);
-        addFormRow(form, 20, "Hazard amount / max hit", hazardMaxHitField);
-
-        JButton update = new JButton("Update Attack");
-        styleButton(update);
-        update.addActionListener(e -> updateAttack());
-
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setOpaque(false);
-        form.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        update.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        attackStatus.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        body.add(form);
-        body.add(Box.createVerticalStrut(10));
-        body.add(update);
-        body.add(Box.createVerticalStrut(8));
-        body.add(attackStatus);
-        formCard.add(body, BorderLayout.CENTER);
-
-        JPanel patternCard = createCard();
-        patternCard.setPreferredSize(new Dimension(500, 285));
-        JPanel patternHeading = verticalHeading("Tile pattern", "Origin 0,0 is the resolved attack target's snapshotted tile. Presets replace the painted pattern; left click can fine-tune afterward.");
-        patternCard.add(patternHeading, BorderLayout.NORTH);
-
-        JPanel patternBody = new JPanel(new BorderLayout(6, 6));
-        patternBody.setOpaque(false);
-        patternBody.add(createPatternPresetToolbar(), BorderLayout.NORTH);
-        patternBody.add(tilePatternCanvas, BorderLayout.CENTER);
-        patternCard.add(patternBody, BorderLayout.CENTER);
-        patternCard.add(patternStatus, BorderLayout.SOUTH);
-
-        JPanel editorColumn = new JPanel(new BorderLayout(10, 10));
+        JPanel editorColumn = new JPanel();
+        editorColumn.setLayout(new BoxLayout(editorColumn, BoxLayout.Y_AXIS));
         editorColumn.setOpaque(false);
-        editorColumn.add(formCard, BorderLayout.CENTER);
-        editorColumn.add(patternCard, BorderLayout.SOUTH);
+
+        editorColumn.add(createCollapsibleSection("Basic", true, createAttackBasicBody()));
+        editorColumn.add(Box.createVerticalStrut(8));
+        editorColumn.add(createCollapsibleSection("Rotation", false, createAttackRotationBody()));
+        editorColumn.add(Box.createVerticalStrut(8));
+        editorColumn.add(createCollapsibleSection("Animation & FX", false, createAttackPresentationBody()));
+        editorColumn.add(Box.createVerticalStrut(8));
+        editorColumn.add(createCollapsibleSection("Area / Telegraph", false, createAttackAreaBody()));
+        editorColumn.add(Box.createVerticalStrut(8));
+        editorColumn.add(createCollapsibleSection("Lingering Ground Effect", false, createAttackHazardBody()));
+        editorColumn.add(Box.createVerticalStrut(8));
+        editorColumn.add(createCollapsibleSection("Advanced / internal", false, createAttackAdvancedBody()));
 
         JScrollPane editorScroll = new JScrollPane(editorColumn);
         editorScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -423,61 +404,127 @@ public final class BossLabsDefinitionEditor {
         attacksRoot.add(editorScroll, BorderLayout.CENTER);
     }
 
-    private JPanel createPatternPresetToolbar() {
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        toolbar.setOpaque(false);
+    private JComponent createAttackBasicBody() {
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
 
-        JLabel radiusLabel = new JLabel("Radius");
-        radiusLabel.setFont(ConsoleTheme.SMALL_FONT);
-        radiusLabel.setForeground(ConsoleTheme.MUTED_TEXT);
-        patternRadiusField.setPreferredSize(new Dimension(48, 28));
-        patternRadiusField.setToolTipText("Pattern radius from 0 to 16 tiles. Oversized presets are rejected before changing the draft.");
-        ConsoleTheme.styleTextField(patternRadiusField);
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        styleField(attackNameField, "Creator-facing attack name, for example Meteor Strike");
+        styleCombo(attackStyleBox);
+        styleCombo(targetModeBox);
+        styleField(targetRangeField, "Maximum range for Random nearby player targeting, 1-32 tiles");
+        styleField(maxHitField, "Damage max hit, or -1 to use the NPC's normal style max hit");
+        styleField(combatDelayField, "Attack delay override, or -1 to use the NPC default");
+        addFormRow(form, 0, "Attack name", attackNameField);
+        addFormRow(form, 1, "Style", attackStyleBox);
+        addFormRow(form, 2, "Target", targetModeBox);
+        addFormRow(form, 3, "Target range", targetRangeField);
+        addFormRow(form, 4, "Damage / max hit", maxHitField);
+        addFormRow(form, 5, "Attack delay", combatDelayField);
 
-        JButton cross = new JButton("Cross");
-        JButton horizontal = new JButton("H Line");
-        JButton vertical = new JButton("V Line");
-        JButton square = new JButton("Square");
-        JButton ring = new JButton("Ring");
-        JButton clear = new JButton("Clear");
-        styleButton(cross);
-        styleButton(horizontal);
-        styleButton(vertical);
-        styleButton(square);
-        styleButton(ring);
-        styleButton(clear);
-        cross.setToolTipText("Replace the current pattern with a plus-shaped cross.");
-        horizontal.setToolTipText("Replace the current pattern with a horizontal line through target 0,0.");
-        vertical.setToolTipText("Replace the current pattern with a vertical line through target 0,0.");
-        square.setToolTipText("Replace the current pattern with a filled square centered on target 0,0.");
-        ring.setToolTipText("Replace the current pattern with a square perimeter ring; the center remains safe for radius above 0.");
-        clear.setToolTipText("Clear every painted tile and return the attack to its normal no-pattern behavior when valid.");
-        cross.addActionListener(e -> applyPatternPreset(PATTERN_CROSS, "Cross"));
-        horizontal.addActionListener(e -> applyPatternPreset(PATTERN_HORIZONTAL_LINE, "Horizontal line"));
-        vertical.addActionListener(e -> applyPatternPreset(PATTERN_VERTICAL_LINE, "Vertical line"));
-        square.addActionListener(e -> applyPatternPreset(PATTERN_FILLED_SQUARE, "Filled square"));
-        ring.addActionListener(e -> applyPatternPreset(PATTERN_RING, "Ring"));
-        clear.addActionListener(e -> clearPattern());
+        JButton update = new JButton("Save Attack");
+        styleButton(update);
+        update.addActionListener(e -> updateAttack());
 
-        toolbar.add(radiusLabel);
-        toolbar.add(patternRadiusField);
-        toolbar.add(cross);
-        toolbar.add(horizontal);
-        toolbar.add(vertical);
-        toolbar.add(square);
-        toolbar.add(ring);
-        toolbar.add(clear);
-        return toolbar;
+        JPanel patternCard = new JPanel(new BorderLayout(0, 4));
+        patternCard.setOpaque(false);
+        JLabel patternTitle = new JLabel("Attack Pattern");
+        patternTitle.setFont(ConsoleTheme.BODY_FONT);
+        patternTitle.setForeground(ConsoleTheme.TEXT);
+        JLabel patternHint = new JLabel("Paint AoE/ground geometry in the Attack Pattern tab. This summary follows the selected attack.");
+        patternHint.setFont(ConsoleTheme.SMALL_FONT);
+        patternHint.setForeground(ConsoleTheme.MUTED_TEXT);
+        patternCard.add(patternTitle, BorderLayout.NORTH);
+        JPanel patternText = new JPanel();
+        patternText.setLayout(new BoxLayout(patternText, BoxLayout.Y_AXIS));
+        patternText.setOpaque(false);
+        patternText.add(attackPatternSummary);
+        patternText.add(Box.createVerticalStrut(3));
+        patternText.add(patternHint);
+        patternCard.add(patternText, BorderLayout.CENTER);
+
+        body.add(form);
+        body.add(Box.createVerticalStrut(8));
+        body.add(update);
+        body.add(Box.createVerticalStrut(8));
+        body.add(patternCard);
+        body.add(Box.createVerticalStrut(8));
+        body.add(attackStatus);
+        return body;
+    }
+
+    private JComponent createAttackRotationBody() {
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        styleField(rotationWeightField, "Relative weighted-selection chance, 1-1000");
+        styleField(cooldownAttacksField, "Attack opportunities this attack sits out after use, 0-100");
+        styleCombo(repeatModeBox);
+        addFormRow(form, 0, "Weight", rotationWeightField);
+        addFormRow(form, 1, "Cooldown attacks", cooldownAttacksField);
+        addFormRow(form, 2, "Repeat rule", repeatModeBox);
+        return form;
+    }
+
+    private JComponent createAttackPresentationBody() {
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        styleField(animationField, "Animation ID, or -1 for the NPC default");
+        styleField(graphicField, "NPC graphic ID, or -1 for the NPC default");
+        styleField(projectileField, "Projectile ID, or -1 for the NPC default");
+        addFormRow(form, 0, "Animation", animationField);
+        addFormRow(form, 1, "NPC graphic", graphicField);
+        addFormRow(form, 2, "Projectile", projectileField);
+        return form;
+    }
+
+    private JComponent createAttackAreaBody() {
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        styleCombo(impactEffectBox);
+        styleField(telegraphGraphicField, "Ground warning GFX, or -1 for none");
+        styleField(impactGraphicField, "Ground impact GFX, or -1 for none");
+        styleField(telegraphTicksField, "Ticks between warning and impact, 0-50");
+        addFormRow(form, 0, "Impact effect", impactEffectBox);
+        addFormRow(form, 1, "Warning GFX", telegraphGraphicField);
+        addFormRow(form, 2, "Impact GFX", impactGraphicField);
+        addFormRow(form, 3, "Warning ticks", telegraphTicksField);
+        return form;
+    }
+
+    private JComponent createAttackHazardBody() {
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        styleCombo(hazardEffectBox);
+        styleField(hazardGraphicField, "Lingering ground GFX, or -1 for none");
+        styleField(hazardDurationField, "Duration in ticks; 0 disables the lingering effect");
+        styleField(hazardIntervalField, "Effect interval in ticks, 1-50");
+        styleField(hazardMaxHitField, "Hazard amount/max hit, or -1 for NPC style max hit");
+        addFormRow(form, 0, "Ground effect", hazardEffectBox);
+        addFormRow(form, 1, "Ground GFX", hazardGraphicField);
+        addFormRow(form, 2, "Duration", hazardDurationField);
+        addFormRow(form, 3, "Tick interval", hazardIntervalField);
+        addFormRow(form, 4, "Amount / max hit", hazardMaxHitField);
+        return form;
+    }
+
+    private JComponent createAttackAdvancedBody() {
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        styleReadOnlyField(attackIdField, "Generated BossLabs Attack ID used by persistence/testing internals");
+        addFormRow(form, 0, "Internal Attack ID", attackIdField);
+        return form;
     }
 
     private void addPhase() {
         if (draft == null)
             return;
-        int number = draft.getPhases().size() + 1;
-        BossLabsDraftDefinition.Phase phase = new BossLabsDraftDefinition.Phase("phase_" + number, 0, 100);
+        String id = nextPhaseId();
+        BossLabsDraftDefinition.Phase phase = new BossLabsDraftDefinition.Phase(id, 0, 100);
         draft.getPhases().add(phase);
         refreshPhaseViews(draft.getPhases().size() - 1);
-        phaseStatus.setText("Phase added. Set its HP range, optional transition actions, then add at least one attack.");
+        phaseStatus.setText("Phase added. Give it a useful name and HP range, then add an attack.");
         changed();
     }
 
@@ -500,35 +547,55 @@ public final class BossLabsDefinitionEditor {
         Integer minimum = parseInteger(phaseMinField.getText());
         Integer maximum = parseInteger(phaseMaxField.getText());
         if (minimum == null || maximum == null) {
-            phaseStatus.setText("Min and max HP must be whole numbers.");
+            phaseStatus.setText("Phase HP values must be whole numbers.");
             return;
         }
-        String id = trim(phaseIdField.getText());
-        if (id.length() == 0) {
-            phaseStatus.setText("Phase ID is required.");
+        String creatorName = trim(phaseNameField.getText());
+        if (creatorName.length() == 0) {
+            phaseStatus.setText("Give the phase a name.");
             return;
         }
-        phase.setId(id);
+        String candidate = creatorName.equalsIgnoreCase(creatorLabel(phase.getId()))
+                ? phase.getId() : slugify(creatorName);
+        if (candidate.length() == 0) {
+            phaseStatus.setText("Phase name must contain at least one letter or number.");
+            return;
+        }
+        if (phaseIdExists(candidate, phase)) {
+            phaseStatus.setText("Another phase already uses that name. Choose a different phase name.");
+            return;
+        }
+        if (minimum.intValue() < 0 || minimum.intValue() > 100 || maximum.intValue() < 0 || maximum.intValue() > 100
+                || minimum.intValue() > maximum.intValue()) {
+            phaseStatus.setText("Phase HP must stay between 0 and 100, with Ends at HP no higher than Starts at HP.");
+            return;
+        }
+
+        phase.setId(candidate);
         phase.setMinimumHealthPercent(minimum.intValue());
         phase.setMaximumHealthPercent(maximum.intValue());
         refreshPhaseViews(phaseList.getSelectedIndex());
-        phaseStatus.setText("Phase updated in local draft.");
+        phaseStatus.setText("Phase saved in local draft.");
         changed();
     }
 
     private void loadSelectedPhase() {
         BossLabsDraftDefinition.Phase phase = phaseList.getSelectedValue();
         if (phase == null) {
-            phaseIdField.setText("");
+            phaseNameField.setText("");
             phaseMinField.setText("");
             phaseMaxField.setText("");
+            phaseIdField.setText("");
             refreshPhaseActionLists();
+            notifySelectionChanged();
             return;
         }
-        phaseIdField.setText(phase.getId());
+        phaseNameField.setText(creatorLabel(phase.getId()));
         phaseMinField.setText(Integer.toString(phase.getMinimumHealthPercent()));
         phaseMaxField.setText(Integer.toString(phase.getMaximumHealthPercent()));
+        phaseIdField.setText(phase.getId());
         refreshPhaseActionLists();
+        notifySelectionChanged();
     }
 
     private void refreshPhaseActionLists() {
@@ -543,6 +610,16 @@ public final class BossLabsDefinitionEditor {
             exitActionListModel.addElement(action);
     }
 
+    private void updatePhaseActionInputs() {
+        boolean minions = phaseActionTypeBox.getSelectedIndex() == BossLabsDraftDefinition.PHASE_ACTION_SPAWN_MINIONS;
+        phaseActionAmountField.setEnabled(minions);
+        phaseActionRadiusField.setEnabled(minions);
+        if (!minions) {
+            phaseActionAmountField.setText("1");
+            phaseActionRadiusField.setText("1");
+        }
+    }
+
     private void addPhaseAction(boolean entry) {
         BossLabsDraftDefinition.Phase phase = phaseList.getSelectedValue();
         if (phase == null) {
@@ -551,27 +628,24 @@ public final class BossLabsDefinitionEditor {
         }
 
         int type = phaseActionTypeBox.getSelectedIndex();
+        Integer value = parseInteger(phaseActionValueField.getText());
+        if (value == null) {
+            phaseActionStatus.setText(type == BossLabsDraftDefinition.PHASE_ACTION_SPAWN_MINIONS
+                    ? "Enter the minion NPC ID as a whole number."
+                    : "Enter a whole-number value for this action.");
+            return;
+        }
+
         BossLabsDraftDefinition.PhaseAction action;
         if (type == BossLabsDraftDefinition.PHASE_ACTION_SPAWN_MINIONS) {
-            String[] parts = trim(phaseActionValueField.getText()).split(",");
-            if (parts.length != 3) {
-                phaseActionStatus.setText("Spawn minions value must be NPC_ID,AMOUNT,RADIUS (example 1282,4,2).");
+            Integer amount = parseInteger(phaseActionAmountField.getText());
+            Integer radius = parseInteger(phaseActionRadiusField.getText());
+            if (amount == null || radius == null) {
+                phaseActionStatus.setText("Minion amount and radius must be whole numbers.");
                 return;
             }
-            Integer npcId = parseInteger(parts[0]);
-            Integer amount = parseInteger(parts[1]);
-            Integer radius = parseInteger(parts[2]);
-            if (npcId == null || amount == null || radius == null) {
-                phaseActionStatus.setText("Spawn minions NPC ID, amount, and radius must be whole numbers.");
-                return;
-            }
-            action = new BossLabsDraftDefinition.PhaseAction(type, npcId.intValue(), amount.intValue(), radius.intValue());
+            action = new BossLabsDraftDefinition.PhaseAction(type, value.intValue(), amount.intValue(), radius.intValue());
         } else {
-            Integer value = parseInteger(phaseActionValueField.getText());
-            if (value == null) {
-                phaseActionStatus.setText("Phase action value must be a whole number.");
-                return;
-            }
             action = new BossLabsDraftDefinition.PhaseAction(type, value.intValue());
         }
 
@@ -579,8 +653,9 @@ public final class BossLabsDefinitionEditor {
             phase.getEntryActions().add(action);
         else
             phase.getExitActions().add(action);
-        refreshPhaseViews(phaseList.getSelectedIndex());
-        phaseActionStatus.setText((entry ? "On-enter" : "On-exit") + " action added at the end of the ordered list.");
+        refreshPhaseActionLists();
+        phaseList.repaint();
+        phaseActionStatus.setText((entry ? "On-enter" : "On-exit") + " action added.");
         changed();
     }
 
@@ -597,8 +672,9 @@ public final class BossLabsDefinitionEditor {
             phase.getEntryActions().remove(index);
         else
             phase.getExitActions().remove(index);
-        refreshPhaseViews(phaseList.getSelectedIndex());
-        phaseActionStatus.setText((entry ? "On-enter" : "On-exit") + " action removed from local draft.");
+        refreshPhaseActionLists();
+        phaseList.repaint();
+        phaseActionStatus.setText((entry ? "On-enter" : "On-exit") + " action removed.");
         changed();
     }
 
@@ -628,9 +704,44 @@ public final class BossLabsDefinitionEditor {
             attackStatus.setText("Add a phase before adding attacks.");
     }
 
+    private void syncAttackPhaseToPhaseList() {
+        int index = phaseList.getSelectedIndex();
+        if (index < 0 || index >= attackPhaseModel.getSize())
+            return;
+        suppressSelectionEvents = true;
+        try {
+            attackPhaseBox.setSelectedIndex(index);
+        } finally {
+            suppressSelectionEvents = false;
+        }
+    }
+
+    private void syncPhaseListToAttackPhase() {
+        int index = attackPhaseBox.getSelectedIndex();
+        if (index < 0 || index >= phaseListModel.getSize())
+            return;
+        suppressSelectionEvents = true;
+        try {
+            phaseList.setSelectedIndex(index);
+        } finally {
+            suppressSelectionEvents = false;
+        }
+    }
+
     private BossLabsDraftDefinition.Phase selectedAttackPhase() {
         Object selected = attackPhaseBox.getSelectedItem();
         return selected instanceof BossLabsDraftDefinition.Phase ? (BossLabsDraftDefinition.Phase) selected : null;
+    }
+
+    private void addAttackToSelectedPhase() {
+        BossLabsDraftDefinition.Phase phase = phaseList.getSelectedValue();
+        if (phase == null) {
+            phaseStatus.setText("Select a phase first.");
+            return;
+        }
+        syncAttackPhaseToPhaseList();
+        addAttack();
+        phaseStatus.setText("Attack added to " + creatorLabel(phase.getId()) + ". Open Attacks to configure it.");
     }
 
     private void addAttack() {
@@ -639,10 +750,10 @@ public final class BossLabsDefinitionEditor {
             attackStatus.setText("Add or select a phase first.");
             return;
         }
-        int number = phase.getAttacks().size() + 1;
-        phase.getAttacks().add(new BossLabsDraftDefinition.Attack("attack_" + number, 0, -1, -1, -1, -1, -1));
+        String id = nextAttackId(phase);
+        phase.getAttacks().add(new BossLabsDraftDefinition.Attack(id, 0, -1, -1, -1, -1, -1));
         refreshAttackList(phase.getAttacks().size() - 1);
-        attackStatus.setText("Attack added. Default tile effects damage players; other combat defaults remain unchanged.");
+        attackStatus.setText("Attack added with safe defaults. Configure only what this attack needs.");
         changed();
     }
 
@@ -658,8 +769,9 @@ public final class BossLabsDefinitionEditor {
     }
 
     private void updateAttack() {
+        BossLabsDraftDefinition.Phase phase = selectedAttackPhase();
         BossLabsDraftDefinition.Attack attack = attackList.getSelectedValue();
-        if (attack == null) {
+        if (phase == null || attack == null) {
             attackStatus.setText("Select an attack first.");
             return;
         }
@@ -683,16 +795,27 @@ public final class BossLabsDefinitionEditor {
                 || graphic == null || projectile == null || maxHit == null || combatDelay == null
                 || telegraphGraphic == null || impactGraphic == null || telegraphTicks == null
                 || hazardGraphic == null || hazardDuration == null || hazardInterval == null || hazardMaxHit == null) {
-            attackStatus.setText("Attack numeric fields must be whole numbers.");
-            return;
-        }
-        String id = trim(attackIdField.getText());
-        if (id.length() == 0) {
-            attackStatus.setText("Attack ID is required.");
+            attackStatus.setText("One of the attack number fields is invalid. Use whole numbers only.");
             return;
         }
 
-        attack.setId(id);
+        String creatorName = trim(attackNameField.getText());
+        if (creatorName.length() == 0) {
+            attackStatus.setText("Give the attack a name.");
+            return;
+        }
+        String candidate = creatorName.equalsIgnoreCase(creatorLabel(attack.getId()))
+                ? attack.getId() : slugify(creatorName);
+        if (candidate.length() == 0) {
+            attackStatus.setText("Attack name must contain at least one letter or number.");
+            return;
+        }
+        if (attackIdExists(phase, candidate, attack)) {
+            attackStatus.setText("Another attack in this phase already uses that name.");
+            return;
+        }
+
+        attack.setId(candidate);
         attack.setCombatStyle(attackStyleBox.getSelectedIndex());
         attack.setTargetMode(targetModeBox.getSelectedIndex());
         attack.setTargetRange(targetRange.intValue());
@@ -713,9 +836,12 @@ public final class BossLabsDefinitionEditor {
         attack.setHazardDurationTicks(hazardDuration.intValue());
         attack.setHazardTickInterval(hazardInterval.intValue());
         attack.setHazardMaxHitOverride(hazardMaxHit.intValue());
-        refreshAttackList(attackList.getSelectedIndex());
-        attackStatus.setText("Attack updated in local draft.");
+        attackIdField.setText(attack.getId());
+        attackList.repaint();
+        updateAttackPatternSummary(attack);
+        attackStatus.setText("Attack saved in local draft.");
         changed();
+        notifySelectionChanged();
     }
 
     private void refreshAttackList(int preferredIndex) {
@@ -740,6 +866,7 @@ public final class BossLabsDefinitionEditor {
     private void loadSelectedAttack() {
         BossLabsDraftDefinition.Attack attack = attackList.getSelectedValue();
         if (attack == null) {
+            attackNameField.setText("");
             attackIdField.setText("");
             attackStyleBox.setSelectedIndex(0);
             targetModeBox.setSelectedIndex(BossLabsDraftDefinition.TARGET_CURRENT);
@@ -761,10 +888,11 @@ public final class BossLabsDefinitionEditor {
             hazardDurationField.setText("0");
             hazardIntervalField.setText("1");
             hazardMaxHitField.setText("-1");
-            updatePatternStatus(null);
-            tilePatternCanvas.repaint();
+            updateAttackPatternSummary(null);
+            notifySelectionChanged();
             return;
         }
+        attackNameField.setText(creatorLabel(attack.getId()));
         attackIdField.setText(attack.getId());
         attackStyleBox.setSelectedIndex(Math.max(0, Math.min(2, attack.getCombatStyle())));
         targetModeBox.setSelectedIndex(Math.max(0, Math.min(1, attack.getTargetMode())));
@@ -786,133 +914,137 @@ public final class BossLabsDefinitionEditor {
         hazardDurationField.setText(Integer.toString(attack.getHazardDurationTicks()));
         hazardIntervalField.setText(Integer.toString(attack.getHazardTickInterval()));
         hazardMaxHitField.setText(Integer.toString(attack.getHazardMaxHitOverride()));
-        updatePatternStatus(attack);
-        tilePatternCanvas.repaint();
+        updateAttackPatternSummary(attack);
+        notifySelectionChanged();
     }
 
-    private void applyPatternPreset(int preset, String label) {
-        BossLabsDraftDefinition.Attack attack = attackList.getSelectedValue();
+    private void updateAttackPatternSummary(BossLabsDraftDefinition.Attack attack) {
         if (attack == null) {
-            patternStatus.setText("Select an attack before applying a pattern preset.");
-            return;
-        }
-        Integer radiusValue = parseInteger(patternRadiusField.getText());
-        if (radiusValue == null) {
-            patternStatus.setText("Pattern radius must be a whole number from 0 to " + MAX_TILE_OFFSET + ".");
-            return;
-        }
-        int radius = radiusValue.intValue();
-        if (radius < 0 || radius > MAX_TILE_OFFSET) {
-            patternStatus.setText("Pattern radius must stay between 0 and " + MAX_TILE_OFFSET + ".");
-            return;
-        }
-
-        int expectedTiles = expectedPresetTileCount(preset, radius);
-        if (expectedTiles < 0) {
-            patternStatus.setText("Unsupported BossLabs pattern preset.");
-            return;
-        }
-        if (expectedTiles > MAX_PATTERN_TILES) {
-            patternStatus.setText(label + " radius " + radius + " would create " + expectedTiles
-                    + " tiles; reduce the radius to stay within the " + MAX_PATTERN_TILES + "-tile limit.");
-            return;
-        }
-
-        attack.getTilePattern().clear();
-        if (preset == PATTERN_CROSS) {
-            for (int offset = -radius; offset <= radius; offset++) {
-                addPatternTile(attack, offset, 0);
-                addPatternTile(attack, 0, offset);
-            }
-        } else if (preset == PATTERN_HORIZONTAL_LINE) {
-            for (int x = -radius; x <= radius; x++)
-                addPatternTile(attack, x, 0);
-        } else if (preset == PATTERN_VERTICAL_LINE) {
-            for (int y = -radius; y <= radius; y++)
-                addPatternTile(attack, 0, y);
-        } else if (preset == PATTERN_FILLED_SQUARE) {
-            for (int x = -radius; x <= radius; x++) {
-                for (int y = -radius; y <= radius; y++)
-                    addPatternTile(attack, x, y);
-            }
-        } else if (preset == PATTERN_RING) {
-            if (radius == 0) {
-                addPatternTile(attack, 0, 0);
-            } else {
-                for (int x = -radius; x <= radius; x++) {
-                    addPatternTile(attack, x, -radius);
-                    addPatternTile(attack, x, radius);
-                }
-                for (int y = -radius + 1; y <= radius - 1; y++) {
-                    addPatternTile(attack, -radius, y);
-                    addPatternTile(attack, radius, y);
-                }
-            }
-        }
-
-        updatePatternStatus(attack);
-        patternStatus.setText(label + " radius " + radius + " applied: "
-                + attack.getTilePattern().size() + " tile(s). Left click to fine-tune.");
-        changed();
-        tilePatternCanvas.repaint();
-    }
-
-    private int expectedPresetTileCount(int preset, int radius) {
-        if (preset == PATTERN_CROSS)
-            return radius * 4 + 1;
-        if (preset == PATTERN_HORIZONTAL_LINE || preset == PATTERN_VERTICAL_LINE)
-            return radius * 2 + 1;
-        if (preset == PATTERN_FILLED_SQUARE) {
-            int width = radius * 2 + 1;
-            return width * width;
-        }
-        if (preset == PATTERN_RING)
-            return radius == 0 ? 1 : radius * 8;
-        return -1;
-    }
-
-    private void addPatternTile(BossLabsDraftDefinition.Attack attack, int x, int y) {
-        BossLabsDraftDefinition.TileOffset tile = new BossLabsDraftDefinition.TileOffset(x, y);
-        if (!attack.getTilePattern().contains(tile))
-            attack.getTilePattern().add(tile);
-    }
-
-    private void clearPattern() {
-        BossLabsDraftDefinition.Attack attack = attackList.getSelectedValue();
-        if (attack == null) {
-            patternStatus.setText("Select an attack before clearing its pattern.");
-            return;
-        }
-        attack.getTilePattern().clear();
-        updatePatternStatus(attack);
-        changed();
-        tilePatternCanvas.repaint();
-    }
-
-    private void updatePatternStatus(BossLabsDraftDefinition.Attack attack) {
-        if (attack == null) {
-            patternStatus.setText("Select an attack, then click tiles to build a target-centered pattern.");
+            attackPatternSummary.setText("No attack selected.");
             return;
         }
         if (attack.getTilePattern().isEmpty()) {
-            if (attack.getHazardDurationTicks() > 0) {
-                patternStatus.setText("Pattern cleared. Disable the hazard or repaint at least one tile before publishing.");
-            } else if (attack.getImpactTileEffectType() != BossLabsDraftDefinition.TILE_EFFECT_DAMAGE_PLAYERS) {
-                patternStatus.setText("Pattern cleared. " + BossLabsDraftDefinition.tileEffectName(attack.getImpactTileEffectType())
-                        + " requires at least one painted impact tile.");
-            } else {
-                patternStatus.setText("No tile pattern: this attack uses normal single-target combat against its resolved target.");
-            }
+            attackPatternSummary.setText(attack.getHazardDurationTicks() > 0
+                    ? "No tiles painted - disable the ground effect or paint a pattern before publishing."
+                    : "Single target - no painted pattern.");
             return;
         }
-        String text = attack.getTilePattern().size() + " tile(s) | impact: "
-                + BossLabsDraftDefinition.tileEffectName(attack.getImpactTileEffectType());
-        if (attack.getHazardDurationTicks() > 0) {
-            text += " | hazard: " + BossLabsDraftDefinition.tileEffectName(attack.getHazardTileEffectType())
-                    + " every " + attack.getHazardTickInterval() + " tick(s) for "
-                    + attack.getHazardDurationTicks() + " tick(s)";
+        String text = attack.getTilePattern().size() + " painted tile(s)";
+        if (attack.getTelegraphTicks() > 0)
+            text += " • warning " + attack.getTelegraphTicks() + "t";
+        if (attack.getHazardDurationTicks() > 0)
+            text += " • ground effect " + attack.getHazardDurationTicks() + "t";
+        attackPatternSummary.setText(text);
+    }
+
+    private String nextPhaseId() {
+        int number = draft == null ? 1 : draft.getPhases().size() + 1;
+        String candidate;
+        do {
+            candidate = "phase_" + number++;
+        } while (phaseIdExists(candidate, null));
+        return candidate;
+    }
+
+    private String nextAttackId(BossLabsDraftDefinition.Phase phase) {
+        int number = phase == null ? 1 : phase.getAttacks().size() + 1;
+        String candidate;
+        do {
+            candidate = "attack_" + number++;
+        } while (attackIdExists(phase, candidate, null));
+        return candidate;
+    }
+
+    private boolean phaseIdExists(String id, BossLabsDraftDefinition.Phase ignore) {
+        if (draft == null)
+            return false;
+        for (BossLabsDraftDefinition.Phase phase : draft.getPhases()) {
+            if (phase != ignore && phase.getId().equalsIgnoreCase(id))
+                return true;
         }
-        patternStatus.setText(text);
+        return false;
+    }
+
+    private boolean attackIdExists(BossLabsDraftDefinition.Phase phase, String id, BossLabsDraftDefinition.Attack ignore) {
+        if (phase == null)
+            return false;
+        for (BossLabsDraftDefinition.Attack attack : phase.getAttacks()) {
+            if (attack != ignore && attack.getId().equalsIgnoreCase(id))
+                return true;
+        }
+        return false;
+    }
+
+    private void notifySelectionChanged() {
+        if (selectionListener == null)
+            return;
+        BossLabsDraftDefinition.Phase phase = selectedAttackPhase();
+        if (phase == null)
+            phase = phaseList.getSelectedValue();
+        BossLabsDraftDefinition.Attack attack = attackList.getSelectedValue();
+        selectionListener.onSelectionChanged(phase, attack);
+    }
+
+    private String phaseLabel(BossLabsDraftDefinition.Phase phase) {
+        if (phase == null)
+            return "No phase";
+        return creatorLabel(phase.getId()) + "  •  " + phase.getMaximumHealthPercent() + "% → "
+                + phase.getMinimumHealthPercent() + "% HP  •  " + phase.getAttacks().size() + " attack"
+                + (phase.getAttacks().size() == 1 ? "" : "s");
+    }
+
+    private String attackLabel(BossLabsDraftDefinition.Attack attack) {
+        if (attack == null)
+            return "No attack";
+        String text = creatorLabel(attack.getId()) + "  •  " + BossLabsDraftDefinition.styleName(attack.getCombatStyle());
+        if (attack.getTargetMode() == BossLabsDraftDefinition.TARGET_RANDOM_NEARBY_PLAYER)
+            text += "  •  random target";
+        if (attack.getCooldownAttacks() > 0)
+            text += "  •  cd " + attack.getCooldownAttacks();
+        if (!attack.getTilePattern().isEmpty())
+            text += "  •  AoE " + attack.getTilePattern().size();
+        if (attack.getHazardDurationTicks() > 0)
+            text += "  •  ground " + attack.getHazardDurationTicks() + "t";
+        return text;
+    }
+
+    private String creatorLabel(String id) {
+        String value = trim(id).replace('_', ' ').replace('-', ' ');
+        if (value.length() == 0)
+            return "Unnamed";
+        StringBuilder result = new StringBuilder(value.length());
+        boolean capitalize = true;
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (Character.isWhitespace(character)) {
+                if (result.length() > 0 && result.charAt(result.length() - 1) != ' ')
+                    result.append(' ');
+                capitalize = true;
+            } else {
+                result.append(capitalize ? Character.toUpperCase(character) : character);
+                capitalize = false;
+            }
+        }
+        return result.toString();
+    }
+
+    private String slugify(String value) {
+        String source = trim(value).toLowerCase();
+        StringBuilder result = new StringBuilder();
+        boolean underscore = false;
+        for (int index = 0; index < source.length(); index++) {
+            char character = source.charAt(index);
+            if (Character.isLetterOrDigit(character)) {
+                result.append(character);
+                underscore = false;
+            } else if (!underscore && result.length() > 0) {
+                result.append('_');
+                underscore = true;
+            }
+        }
+        while (result.length() > 0 && result.charAt(result.length() - 1) == '_')
+            result.deleteCharAt(result.length() - 1);
+        return result.toString();
     }
 
     private JPanel verticalHeading(String titleText, String subtitleText) {
@@ -923,7 +1055,7 @@ public final class BossLabsDefinitionEditor {
         title.setFont(ConsoleTheme.SECTION_FONT);
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        JLabel subtitle = new JLabel(subtitleText);
+        JLabel subtitle = new JLabel("<html>" + escapeHtml(subtitleText) + "</html>");
         subtitle.setFont(ConsoleTheme.SMALL_FONT);
         subtitle.setForeground(ConsoleTheme.MUTED_TEXT);
         subtitle.setAlignmentX(JComponent.LEFT_ALIGNMENT);
@@ -948,6 +1080,37 @@ public final class BossLabsDefinitionEditor {
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ConsoleTheme.BORDER),
                 ConsoleTheme.panelPadding(10, 10, 10, 10)));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        return card;
+    }
+
+    private JPanel createCollapsibleSection(String title, boolean expanded, JComponent body) {
+        final JPanel card = createCard();
+        final JButton toggle = new JButton();
+        final boolean[] open = new boolean[] { expanded };
+        styleButton(toggle);
+        toggle.setHorizontalAlignment(JButton.LEFT);
+        final JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.add(body, BorderLayout.CENTER);
+        content.setVisible(expanded);
+
+        Runnable refresh = new Runnable() {
+            @Override
+            public void run() {
+                toggle.setText((open[0] ? "▼ " : "▶ ") + title);
+                content.setVisible(open[0]);
+                card.revalidate();
+                card.repaint();
+            }
+        };
+        toggle.addActionListener(e -> {
+            open[0] = !open[0];
+            refresh.run();
+        });
+        refresh.run();
+        card.add(toggle, BorderLayout.NORTH);
+        card.add(content, BorderLayout.CENTER);
         return card;
     }
 
@@ -955,13 +1118,19 @@ public final class BossLabsDefinitionEditor {
         list.setBackground(ConsoleTheme.INPUT);
         list.setForeground(ConsoleTheme.TEXT);
         list.setFont(ConsoleTheme.BODY_FONT);
-        list.setFixedCellHeight(28);
+        list.setFixedCellHeight(32);
     }
 
     private void styleField(JTextField field, String tooltip) {
         field.setToolTipText(tooltip);
         field.setPreferredSize(new Dimension(220, 34));
         ConsoleTheme.styleTextField(field);
+    }
+
+    private void styleReadOnlyField(JTextField field, String tooltip) {
+        styleField(field, tooltip);
+        field.setEditable(false);
+        field.setFocusable(false);
     }
 
     private void styleCombo(JComboBox<?> combo) {
@@ -997,7 +1166,7 @@ public final class BossLabsDefinitionEditor {
     }
 
     private static JLabel createStatus(String text) {
-        JLabel label = new JLabel(text);
+        JLabel label = new JLabel("<html>" + escapeHtmlStatic(text) + "</html>");
         label.setFont(ConsoleTheme.SMALL_FONT);
         label.setForeground(ConsoleTheme.MUTED_TEXT);
         return label;
@@ -1022,183 +1191,12 @@ public final class BossLabsDefinitionEditor {
             changeListener.run();
     }
 
-    private final class TilePatternCanvas extends JPanel {
+    private String escapeHtml(String value) {
+        return escapeHtmlStatic(value);
+    }
 
-        private static final long serialVersionUID = -5092715298132887648L;
-        private static final int MIN_TILE_SIZE = 16;
-        private static final int MAX_TILE_SIZE = 64;
-
-        private int tileSize = 28;
-        private int panX;
-        private int panY;
-        private Point lastPanPoint;
-        private int hoverX = Integer.MIN_VALUE;
-        private int hoverY = Integer.MIN_VALUE;
-
-        private TilePatternCanvas() {
-            setBackground(ConsoleTheme.INPUT);
-            setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
-            setPreferredSize(new Dimension(480, 185));
-
-            MouseAdapter mouse = new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent event) {
-                    if (SwingUtilities.isMiddleMouseButton(event))
-                        lastPanPoint = event.getPoint();
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent event) {
-                    if (SwingUtilities.isMiddleMouseButton(event))
-                        lastPanPoint = null;
-                }
-
-                @Override
-                public void mouseClicked(MouseEvent event) {
-                    if (!SwingUtilities.isLeftMouseButton(event))
-                        return;
-                    updateHover(event.getPoint());
-                    toggleHoveredTile();
-                }
-
-                @Override
-                public void mouseExited(MouseEvent event) {
-                    hoverX = Integer.MIN_VALUE;
-                    hoverY = Integer.MIN_VALUE;
-                    repaint();
-                }
-
-                @Override
-                public void mouseWheelMoved(MouseWheelEvent event) {
-                    int requested = tileSize - event.getWheelRotation() * 4;
-                    tileSize = Math.max(MIN_TILE_SIZE, Math.min(MAX_TILE_SIZE, requested));
-                    updateHover(event.getPoint());
-                    repaint();
-                }
-            };
-            addMouseListener(mouse);
-            addMouseWheelListener(mouse);
-            addMouseMotionListener(new MouseMotionAdapter() {
-                @Override
-                public void mouseMoved(MouseEvent event) {
-                    updateHover(event.getPoint());
-                }
-
-                @Override
-                public void mouseDragged(MouseEvent event) {
-                    if (lastPanPoint == null)
-                        return;
-                    panX += event.getX() - lastPanPoint.x;
-                    panY += event.getY() - lastPanPoint.y;
-                    lastPanPoint = event.getPoint();
-                    updateHover(event.getPoint());
-                    repaint();
-                }
-            });
-        }
-
-        private BossLabsDraftDefinition.Attack selectedAttack() {
-            return attackList.getSelectedValue();
-        }
-
-        private void toggleHoveredTile() {
-            BossLabsDraftDefinition.Attack attack = selectedAttack();
-            if (attack == null) {
-                patternStatus.setText("Select an attack first.");
-                return;
-            }
-            if (Math.abs(hoverX) > MAX_TILE_OFFSET || Math.abs(hoverY) > MAX_TILE_OFFSET) {
-                patternStatus.setText("Pattern tiles must stay within +/-" + MAX_TILE_OFFSET + " of the target.");
-                return;
-            }
-
-            BossLabsDraftDefinition.TileOffset tile = new BossLabsDraftDefinition.TileOffset(hoverX, hoverY);
-            if (attack.getTilePattern().contains(tile)) {
-                attack.getTilePattern().remove(tile);
-            } else {
-                if (attack.getTilePattern().size() >= MAX_PATTERN_TILES) {
-                    patternStatus.setText("Pattern limit reached: " + MAX_PATTERN_TILES + " tiles.");
-                    return;
-                }
-                attack.getTilePattern().add(tile);
-            }
-            updatePatternStatus(attack);
-            changed();
-            repaint();
-        }
-
-        private void updateHover(Point point) {
-            int originX = getWidth() / 2 + panX;
-            int originY = getHeight() / 2 + panY;
-            hoverX = floorDiv(point.x - originX, tileSize);
-            hoverY = floorDiv(point.y - originY, tileSize);
-            BossLabsDraftDefinition.Attack attack = selectedAttack();
-            if (attack != null)
-                patternStatus.setText("Hover " + hoverX + ", " + hoverY + " | " + attack.getTilePattern().size() + " painted tile(s)");
-            repaint();
-        }
-
-        private int floorDiv(int value, int divisor) {
-            int result = value / divisor;
-            if ((value ^ divisor) < 0 && result * divisor != value)
-                result--;
-            return result;
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            super.paintComponent(graphics);
-            Graphics2D g = (Graphics2D) graphics.create();
-            try {
-                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int originX = getWidth() / 2 + panX;
-                int originY = getHeight() / 2 + panY;
-                int startX = positiveModulo(originX, tileSize);
-                int startY = positiveModulo(originY, tileSize);
-
-                g.setColor(ConsoleTheme.BORDER);
-                for (int x = startX; x < getWidth(); x += tileSize)
-                    g.drawLine(x, 0, x, getHeight());
-                for (int y = startY; y < getHeight(); y += tileSize)
-                    g.drawLine(0, y, getWidth(), y);
-
-                BossLabsDraftDefinition.Attack attack = selectedAttack();
-                if (attack != null) {
-                    for (BossLabsDraftDefinition.TileOffset tile : attack.getTilePattern()) {
-                        int drawX = originX + tile.getX() * tileSize;
-                        int drawY = originY + tile.getY() * tileSize;
-                        g.setColor(new Color(ConsoleTheme.ACCENT.getRed(), ConsoleTheme.ACCENT.getGreen(),
-                                ConsoleTheme.ACCENT.getBlue(), 80));
-                        g.fillRect(drawX + 1, drawY + 1, Math.max(1, tileSize - 1), Math.max(1, tileSize - 1));
-                        g.setColor(ConsoleTheme.ACCENT);
-                        g.drawRect(drawX, drawY, tileSize, tileSize);
-                    }
-                }
-
-                g.setStroke(new BasicStroke(2.0f));
-                g.setColor(ConsoleTheme.ACCENT_DARK);
-                g.drawLine(originX, 0, originX, getHeight());
-                g.drawLine(0, originY, getWidth(), originY);
-
-                if (hoverX != Integer.MIN_VALUE) {
-                    int drawX = originX + hoverX * tileSize;
-                    int drawY = originY + hoverY * tileSize;
-                    g.setColor(ConsoleTheme.TEXT);
-                    g.setStroke(new BasicStroke(1.5f));
-                    g.drawRect(drawX, drawY, tileSize, tileSize);
-                }
-
-                g.setFont(ConsoleTheme.SMALL_FONT);
-                g.setColor(ConsoleTheme.MUTED_TEXT);
-                g.drawString("target 0,0", originX + 5, originY - 6);
-            } finally {
-                g.dispose();
-            }
-        }
-
-        private int positiveModulo(int value, int modulus) {
-            int result = value % modulus;
-            return result < 0 ? result + modulus : result;
-        }
+    private static String escapeHtmlStatic(String value) {
+        String safe = value == null ? "" : value;
+        return safe.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 }
