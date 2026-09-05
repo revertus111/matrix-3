@@ -26,3 +26,8 @@
 - Split symbol location into `compiledPath` and `sourcePath`; declaration scanning resolves Java source files from original internal owners while preserving compiled class paths.
 - Existing EXTENDS/IMPLEMENTS/DECLARES records now persist source-path evidence with occurrence count 1; line/opcode evidence remains reserved for method-body scanning.
 - Bumped Atlas workspace schema to 2 and treat older schema indexes as stale so query/export requires an explicit rebuild instead of silently reusing incompatible generated data.
+- Added Phase 2 method-body scanning with `ClassReader.SKIP_FRAMES` so code/debug line information is available without frame processing.
+- Added exact `CALLS` relationships for method/constructor bytecode targets and distinct `DYNAMIC_CALL` records for `invokedynamic` bootstrap sites.
+- Added `READS_FIELD` for GETFIELD/GETSTATIC and `WRITES_FIELD` for PUTFIELD/PUTSTATIC using exact stable field IDs.
+- Added per-method relationship aggregation so repeated identical targets emit one record with `occurrenceCount`; source line and opcode evidence are retained when consistent.
+- Dynamic-call targets include bootstrap owner/name/descriptor while tag/interface facts remain in detail; bootstrap arguments remain deferred to 2A.3 structural/type/constant work.
