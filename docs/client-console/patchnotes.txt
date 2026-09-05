@@ -74,3 +74,10 @@
 - Player world position is derived from the live local-player scene transform plus Matrix3's current scene base; plane uses the same local-player field already used by Dev Mode world actions.
 - Player region display is derived from the resolved world tile using Matrix3/RuneScape 64x64 region boundaries and includes both region ID and region X/Y.
 - Player panel refresh runs only while the panel is showing and performs no server command, packet send, gameplay mutation, or persistence write.
+
+2026-09-04
+- Replaced the Client Console rail's permanent C/O/>_/P/I/S text placeholders with original Java2D home, owner, commands, player, items, and settings icons.
+- Added shared `ConsoleIcons` rendering with consistent 22px geometry, antialiasing, theme-aware normal/hover/selected/disabled coloring, tooltips, and accessible names without external icon assets or dependencies.
+- Kept the existing rail size, panel IDs, lazy panel lifecycle, selection behavior, persistence, and collapse semantics unchanged; this is presentation-only shell polish.
+- Updated the shell's docking help text to describe icon-based navigation rather than the removed letter buttons.
+- Reduced Item Browser search debounce from 1.25 seconds to 500ms while preserving the existing bounded empty-list behavior, full non-empty search results, lazy thumbnails, and Swing-thread refresh ownership.
