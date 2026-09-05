@@ -152,7 +152,7 @@ public final class DashboardPanel extends JScrollPane {
     private JPanel createWorkspaceCard() {
         JPanel card = createCard("Workspace");
 
-        JLabel note = new JLabel("Window, console width, and active panel restore after a clean exit.");
+        JLabel note = new JLabel("Layout restores after a clean exit.");
         note.setFont(ConsoleTheme.SMALL_FONT);
         note.setForeground(ConsoleTheme.MUTED_TEXT);
         note.setAlignmentX(LEFT_ALIGNMENT);
