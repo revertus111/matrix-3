@@ -90,3 +90,15 @@ First-boss proof
 Professional usability gate
 59. Hand BossLabs to another competent RSPS developer with no implementation briefing. Confirm they can complete a small boss-edit/test task without asking what internal IDs, wire/storage versions, or framework classes mean.
 60. If they cannot, treat that workflow as a UX defect unless the task is genuinely Advanced/custom-Java work.
+
+V2.1 creator-shell checkpoint
+61. Eclipse clean/build the Client with Java 8 and confirm BossLabsWindow, BossLabsPanel, BossLabsDefinitionEditor, BossLabsTestingPanel, and BossLabsArenaPanel compile together with the existing bridge/runtime model unchanged.
+62. Open BossLabs and confirm the creator-facing navigation is Overview, Phases, Attacks, Attack Pattern, Arena, Drops, Testing, and Advanced; normal creation no longer starts from separate Identity/Stats/Mechanics implementation-oriented tabs.
+63. Confirm BossLabsPanel directly owns and registers the live Testing panel, BossLabsWindow no longer searches the Swing component tree by tab title, and closing/reopening releases both listeners cleanly.
+64. Add and rename phases using creator-facing names plus Starts at HP/Ends at HP. Confirm BossLabs generates/preserves a unique internal Phase ID automatically and shows it only under Advanced/internal details.
+65. Select a phase in Phases and confirm the Attacks phase selector follows it; change the phase in Attacks and confirm the Phases selection follows it without requiring duplicate selection or ID entry.
+66. Add an attack and confirm Basic is visible by default while Rotation, Animation & FX, Area / Telegraph, Lingering Ground Effect, and Advanced / internal are collapsed but reachable. Confirm the old duplicate attack-form tile painter is absent.
+67. Rename an attack using a creator-facing name and confirm BossLabs generates/preserves its unique internal Attack ID automatically while the attack list presents human-readable name/style/mechanic summaries.
+68. Choose Spawn minions as a phase action and confirm NPC ID, amount, and radius use separate controls; confirm the creator is no longer required to enter compact NPC_ID,AMOUNT,RADIUS CSV syntax.
+69. Apply a valid BossLabs definition live, select a phase/attack in the editor, open Testing, and confirm Enter Selected Phase / Test Selected Attack use that selection through the existing authoritative bridge with no manual ID fields.
+70. Confirm this V2.1 UI slice does not alter BossDefinition wire/store version, server combat selection, NPC/world ownership, persistence ordering, packet framing, or Matrix3 testing-service authorization semantics.
