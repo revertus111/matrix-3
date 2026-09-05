@@ -11,6 +11,10 @@ Quick/high-value checks
 [ ] Confirm normal `game.RS3Applet` launch ownership/configuration is unchanged.
 
 Phase 1 gate checks after 1A.4
-[ ] Query one exact obfuscated class/method through the Atlas CLI.
-[ ] Export one compact machine-readable symbol result/neighborhood.
-[ ] Reopen/query without rebuilding the Atlas index.
+[ ] Run `game.atlas.ClientAtlasMain query "CLASS:game/Class1"` and confirm one exact symbol plus immediate relationships are returned as JSON.
+[ ] Copy one METHOD or CONSTRUCTOR id from the returned DECLARES records and query that exact canonical id; confirm the owning DECLARES relationship is returned.
+[ ] Run `game.atlas.ClientAtlasMain export "CLASS:game/Class1" docs/client-atlas/snapshots/class1.json` and confirm a compact UTF-8 JSON file is written.
+[ ] Confirm query/export output includes `schemaVersion`, `clientFingerprint`, `queryId`, `indexCurrent`, relationship count/truncation state, the exact symbol, and immediate relationships.
+[ ] Re-run query/export without rescanning and confirm the existing index reopens successfully.
+[ ] Make a real client source change + rebuild (or otherwise change compiled client classes) and confirm query/export refuses the stale index until `scan` is run again.
+[ ] If a queried class owns more than 200 stored immediate relationships, confirm output is capped and `relationshipsTruncated` is true while `relationshipCount` reports the full matching count.
