@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.util.Locale;
 
 import game.atlas.AtlasAssistantExportEngine.ExportResult;
+import game.atlas.AtlasDomainCorrelationEngine.DomainCorrelationResult;
 import game.atlas.AtlasQueryEngine.QueryResult;
 import game.atlas.AtlasRelationshipQueryEngine.RelationshipQueryResult;
 import game.atlas.AtlasScanner.ScanResult;
@@ -91,14 +92,18 @@ public final class ClientAtlasMain {
         }
 
         if ("search".equals(command)) {
-            requireArgument(args, 1, "search requires a symbol query or relationship command");
+            requireArgument(args, 1, "search requires a symbol, relationship, or domain query");
             Path classRoot = classRoot(workspace, args, 2);
             AtlasInvestigationIndex index = AtlasInvestigationIndex.load(workspace, classRoot);
+            AtlasDomainCorrelationEngine domains = new AtlasDomainCorrelationEngine(index);
             AtlasRelationshipQueryEngine relationships = new AtlasRelationshipQueryEngine(index);
             System.out.println("Investigation index: " + index.getSymbolCount() + " symbols / "
                     + index.getRelationshipCount() + " relationships");
             System.out.println("Index load time: " + formatMillis(index.getLoadNanos()) + " ms");
-            if (relationships.isRelationshipCommand(args[1])) {
+            if (domains.isDomainQuery(args[1])) {
+                DomainCorrelationResult result = domains.query(args[1]);
+                System.out.println(result.toDisplayText());
+            } else if (relationships.isRelationshipCommand(args[1])) {
                 RelationshipQueryResult result = relationships.query(args[1]);
                 System.out.println(result.toDisplayText());
             } else {
@@ -109,7 +114,7 @@ public final class ClientAtlasMain {
         }
 
         if ("assistant-json".equals(command)) {
-            requireArgument(args, 1, "assistant-json requires a symbol query or relationship command");
+            requireArgument(args, 1, "assistant-json requires a symbol, relationship, or domain query");
             Path classRoot = classRoot(workspace, args, 2);
             AtlasInvestigationIndex index = AtlasInvestigationIndex.load(workspace, classRoot);
             ExportResult result = new AtlasAssistantExportEngine(index).build(args[1]);
@@ -118,7 +123,7 @@ public final class ClientAtlasMain {
         }
 
         if ("assistant-export".equals(command)) {
-            requireArgument(args, 1, "assistant-export requires a symbol query or relationship command");
+            requireArgument(args, 1, "assistant-export requires a symbol, relationship, or domain query");
             requireArgument(args, 2, "assistant-export requires an output file");
             Path classRoot = classRoot(workspace, args, 3);
             AtlasInvestigationIndex index = AtlasInvestigationIndex.load(workspace, classRoot);
@@ -189,13 +194,13 @@ public final class ClientAtlasMain {
         System.out.println("  (no args)                                      Open the standalone Client Atlas Control UI");
         System.out.println("  scan [classes-dir]                              Rebuild the generated Atlas index");
         System.out.println("  verify-structural [classes-dir]                 Rebuild + run structural checks/metrics");
-        System.out.println("  verify-search [classes-dir]                     Run investigation/search/export checks without rescanning");
+        System.out.println("  verify-search [classes-dir]                     Run investigation/search/export/domain checks without rescanning");
         System.out.println("  status [classes-dir]                            Show persisted metadata and stale/current fingerprint state");
         System.out.println("  init [classes-dir]                              Create/reset metadata for the compiled client class directory");
-        System.out.println("  search \"<query-or-command>\" [classes-dir]       Friendly symbol search or relationship investigation");
-        System.out.println("     examples: Class387 | Class387.method4844 | calls Class387.method4844");
-        System.out.println("               called-by <symbol> | reads <symbol/field> | written-by <field>");
-        System.out.println("               references <type/class> | constant 762 | neighbors <symbol> depth=2");
+        System.out.println("  search \"<query-or-command>\" [classes-dir]       Friendly symbol, relationship, or domain investigation");
+        System.out.println("     symbols: Class387 | Class387.method4844 | method4844");
+        System.out.println("     relationships: calls | called-by | reads | written-by | references | constant | neighbors");
+        System.out.println("     domain candidates: interface 762 | component 7 | 762:7 | animation 1234 | model 5678");
         System.out.println("  assistant-json \"<query-or-command>\" [classes-dir]");
         System.out.println("                                                  Print bounded machine-readable investigation JSON");
         System.out.println("  assistant-export \"<query-or-command>\" <file> [classes-dir]");
