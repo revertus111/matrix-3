@@ -51,3 +51,4 @@ Phase 3 / 3A.6 runtime correlation
 - Added `latest` trace lookup plus atomic correlation export.
 - Added CLI commands `trace-correlate <trace|latest>` and `trace-correlate-export <trace|latest> <file>`.
 - 3A.6 implementation is verified-static; runtime validation remains bundled with the single final Bundle 3A gate.
+- Fixed the Java 8/Eclipse compile blocker by importing `DirectoryStream` from `java.nio.file` instead of the nonexistent `java.io` location; no runtime behavior changed.
