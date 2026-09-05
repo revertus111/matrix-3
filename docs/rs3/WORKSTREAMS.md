@@ -1,0 +1,53 @@
+# Matrix3 Workstream Registry
+
+This file is the lightweight index of persistent Matrix3 development workstreams.
+
+It is not a backlog and should not duplicate the detailed roadmap inside each workstream's authoritative `PROJECT.md`.
+
+## Purpose
+
+Use this registry to answer:
+
+- What substantial ideas/workstreams exist?
+- Where is the authoritative project document?
+- What is the current high-level state?
+- What should a new chat read before continuing that workstream?
+
+## Workstream rules
+
+- One substantial idea should have one authoritative workstream project document, normally `docs/<subject>/PROJECT.md`.
+- Register a workstream here when its authoritative project document is created or normalized.
+- Keep detailed bundles, patch state, discovery notes, blockers, testing, and `Resume Here` information inside the workstream project document.
+- Do not create competing roadmap/status files for the same workstream.
+- Existing subject documentation does not need to be reorganized immediately. Normalize it when that workstream is actively resumed.
+- Shared architecture maps or discovery references may be listed when they materially reduce repeat scanning, but they do not replace feature/workstream ownership.
+
+## Status values
+
+- `PLANNED` - idea captured but not actively developed.
+- `ACTIVE` - current implementation/research is underway.
+- `NEEDS TEST` - current implementation is waiting on user runtime verification.
+- `PAUSED` - valid workstream intentionally not current priority.
+- `BLOCKED` - cannot safely continue until a documented dependency/blocker is resolved.
+- `COMPLETE` - current defined workstream goal is complete.
+
+## Registered workstreams
+
+| Workstream | Authority document | Status | Notes |
+| --- | --- | --- | --- |
+| _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
+
+## Shared discovery / navigation references
+
+| Reference | Document | Purpose |
+| --- | --- | --- |
+| Client architecture map | _Pending_ | Future navigation map for client systems/classes so feature work can use known paths instead of repeatedly rescanning the client. |
+
+## Registration checklist
+
+When adding a workstream:
+
+1. Create or normalize its authoritative `docs/<subject>/PROJECT.md` using `WORKSTREAM_TEMPLATE.md` where useful.
+2. Add one row above with the exact authority path and current high-level status.
+3. Preserve existing verified findings and patch history; do not rewrite history just to fit the template.
+4. Identify the current bundle and populate `Resume Here` before ending the session if work remains.
