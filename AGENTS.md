@@ -20,19 +20,20 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 ## Workstream workflow
 
 - Treat substantial ideas such as a boss, developer tool, combat framework, game mode, class system, or other multi-patch feature as a persistent workstream.
-- Use the hierarchy `Idea -> Bundle -> Patch`.
-- The user supplies the idea, goals, preferences, and decisions. The assistant owns architecture, dependencies, discovery, implementation order, logical bundles, patch boundaries, tests, and carryover work.
+- Use the hierarchy `Idea -> Phase -> Bundle -> Patch/Checklist`.
+- A phase is an ordered milestone of the workstream. A bundle is a related unit of work inside a phase. Patches/checklist items are the concrete implementation, discovery, documentation, or verification steps inside that bundle.
+- The user supplies the idea, goals, preferences, and decisions. The assistant owns architecture, phase decomposition, dependencies, discovery, implementation order, logical bundles, patch/checklist boundaries, tests, and carryover work.
 - Each persistent workstream has one authoritative project document, normally `docs/<subject>/PROJECT.md`.
 - Use `docs/rs3/WORKSTREAMS.md` as the lightweight registry and `docs/rs3/WORKSTREAM_TEMPLATE.md` when creating or normalizing a workstream document.
 - Do not create duplicate roadmap, ownership, backlog, status, or carryover documents when the authoritative workstream document can hold that information.
 - Group tasks into a bundle only when they share ownership, files, dependencies, implementation sequence, or runtime testing. Keep each logical patch independently understandable and revertible.
 - Prefer narrow, descriptive commits per logical patch when practical.
 - If one patch in an approved bundle becomes blocked, mark it `CARRYOVER` or `BLOCKED` and continue with other safe, independent approved patches.
-- New ideas for an existing workstream belong in the current bundle, a future bundle, or backlog/decisions. Do not interrupt active work unless the idea is a required dependency or the user explicitly changes priority.
+- New ideas for an existing workstream belong in the current phase/bundle, a future phase/bundle, or backlog/decisions. Do not interrupt active work unless the idea is a required dependency or the user explicitly changes priority.
 - Preserve discovery state using `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN` where useful.
-- Every persistent workstream must maintain a concise `Resume Here` state whenever work stops midstream. Record the last completed checkpoint, current state, next action, inspected files/systems, areas that should not be rescanned, blockers, pending runtime verification, and important uncertainty.
+- Every persistent workstream must maintain a concise `Resume Here` state whenever work stops midstream. Record the last completed checkpoint, current phase/bundle/checklist item, next action, inspected files/systems, areas that should not be rescanned, blockers, pending runtime verification, and important uncertainty.
 - Do not rediscover information already established in the authoritative workstream document unless repository changes, runtime evidence, or contradictory evidence requires re-verification.
-- At the end of a bundle, persist each included patch as appropriate: `READY`, `ACTIVE`, `NEEDS TEST`, `CARRYOVER`, `BLOCKED`, or `DONE`.
+- At the end of a bundle, persist each included patch/checklist item as appropriate: `READY`, `ACTIVE`, `NEEDS TEST`, `CARRYOVER`, `BLOCKED`, or `DONE`.
 
 ## Phase/checklist discipline
 
