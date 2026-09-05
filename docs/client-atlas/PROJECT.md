@@ -2,9 +2,9 @@
 
 ## Goal
 
-Build a persistent, searchable reverse-engineering map of the obfuscated **718+ Client** so future client investigations can start from known evidence instead of repeatedly searching, tracing, and guessing through decompiled source.
+Build a persistent, searchable reverse-engineering map of the obfuscated **718+ Client** so future client investigations start from known evidence instead of repeatedly searching, tracing, and guessing through decompiled source.
 
-Client Atlas is primarily an engineering/research index for fast machine-assisted investigation. A Client Console browser may consume the same data later, but the Atlas data/search layer is the product.
+Client Atlas is primarily an engineering/research index for fast machine-assisted investigation. Human UI consumes the same Atlas engine/data; it is not a second source of truth.
 
 ## Scope
 
@@ -12,35 +12,35 @@ Client Atlas is primarily an engineering/research index for fast machine-assiste
 
 - Persistent class/field/method/constructor symbol index.
 - Inheritance and implemented-interface mapping.
-- Static caller/callee, field read/write, type-reference, constant, and literal-ID relationships where reliably derivable.
+- Static caller/callee, field read/write, type-reference, constant, and evidence-backed literal-ID relationships.
 - Search by original symbol, ID, alias, evidence note, domain, or related symbol.
 - Targeted runtime trace sessions after the static foundation is proven.
 - Evidence records using `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN`.
 - External semantic aliases/notes without renaming original client symbols.
-- Machine-readable exports intended for future assistant/code investigation.
+- Machine-readable exports for future assistant/code investigation.
 - Incremental/stale-index detection.
-- Later Client Console viewer over the same Atlas data.
+- Small standalone developer control UI and later Client Console browser.
 
 ### Out of scope
 
 - Renaming obfuscated classes, fields, or methods.
-- Pretending original Jagex names can be recovered when absent.
+- Pretending stripped Jagex names can be recovered.
 - Promoting guessed semantics to verified status.
 - Replacing client runtime/system ownership with tooling.
 - Always-on tracing that materially hurts client performance.
-- Building the visual graph/UI before the static Atlas/search workflow proves useful.
-- Scanning unrelated server systems unless a client finding specifically requires correlation.
+- Unbounded graph dumps.
+- Scanning unrelated server systems without a concrete correlation need.
 
 ## Architecture / ownership
 
 - Atlas is developer/reverse-engineering tooling, not gameplay authority.
-- Existing client runtime, cache, networking, renderer, interface, input, and definition systems remain authoritative.
-- Atlas owns generated reverse-engineering metadata, search indexes, aliases, evidence, and trace-session records.
+- Existing client runtime/cache/network/render/interface/input/definition systems remain authoritative.
+- Atlas owns generated metadata, indexes, aliases, evidence, exports, and trace-session records.
 - Original obfuscated names remain permanent primary identifiers.
 - Runtime instrumentation must be explicit, bounded, and switchable.
-- UI code must consume Atlas data/APIs rather than duplicate discovery logic.
+- UI code must call Atlas APIs rather than duplicate scanner/query ownership.
 
-# Phase 1 implementation architecture
+# Phase 1 implementation
 
 ## Offline ownership
 
@@ -50,13 +50,25 @@ Source package:
 Client/src/main/java/game/atlas/
 ```
 
-Entry point:
+Main CLI/control entry:
 
 ```text
 game.atlas.ClientAtlasMain
 ```
 
-Normal `game.RS3Applet` startup remains unchanged.
+Standalone control class:
+
+```text
+game.atlas.ClientAtlasControl
+```
+
+Normal client startup remains:
+
+```text
+game.RS3Applet
+```
+
+Running `ClientAtlasMain` with **no arguments** now opens the standalone Atlas control window. Explicit CLI commands remain available for automation.
 
 ## Scan input
 
@@ -74,14 +86,11 @@ game/atlas/**
 
 ## Parser
 
-- ASM core is used for bytecode declaration scanning.
-- Pinned dependency: `org.ow2.asm:asm:9.7.1`.
-- Phase 1 uses `ClassReader.SKIP_CODE | SKIP_DEBUG | SKIP_FRAMES` so method bodies are deliberately not analyzed yet.
-- Phase 2 owns callers/callees, field reads/writes, constants, literal IDs, and deeper structural relationships.
+- ASM core dependency: `org.ow2.asm:asm:9.7.1`.
+- Eclipse may require **Gradle -> Refresh Gradle Project** after first pulling the ASM dependency; this was runtime-confirmed to resolve the missing-ASM classpath errors.
+- Phase 1 uses `ClassReader.SKIP_CODE | SKIP_DEBUG | SKIP_FRAMES` so method bodies remain Phase 2 ownership.
 
 ## Persistence
-
-Local generated workspace:
 
 ```text
 Client/.client-atlas/
@@ -89,123 +98,166 @@ Client/.client-atlas/
     symbols.jsonl
     relationships.jsonl
     evidence.jsonl
+    phase1-check.json
+    exports/
     traces/
 ```
 
 Rules:
 
 - `.client-atlas/` is ignored by Git and survives normal `build/` cleaning.
-- `metadata.properties` stores schema version, client fingerprint, scan root, timestamp, and record counts.
-- `symbols.jsonl` stores one deterministic JSON object per symbol.
-- `relationships.jsonl` stores one deterministic JSON object per relationship.
-- Fresh scanning replaces generated symbol/relationship files but preserves evidence/traces.
-- Scanner writes temporary files first and only publishes completed generated files.
-- A before/after fingerprint check rejects a scan if compiled client classes change during the scan.
-- SQLite/native persistence remains deferred until measured size/performance proves a need.
+- Metadata stores schema/fingerprint/scan root/timestamp/counts.
+- Generated symbol/relationship files are deterministic JSONL.
+- Fresh scans replace generated symbol/relationship data but preserve evidence/traces.
+- Scanner publishes through temporary files and rejects class changes during a scan.
+- SQLite/native persistence stays deferred until measurements prove a need.
 
-## Indexed symbol coverage
+## Phase 1 indexed coverage
 
-Phase 1 scanner records:
+- classes / interfaces / enums / annotations
+- fields / methods / constructors
+- descriptors / generic signatures / access flags
+- compiled class paths
+- `EXTENDS`
+- `IMPLEMENTS`
+- `DECLARES`
 
-- classes,
-- interfaces,
-- enums,
-- annotations,
-- fields,
-- methods,
-- constructors,
-- JVM descriptors/signatures,
-- access flags,
-- compiled source path,
-- `EXTENDS`,
-- `IMPLEMENTS`,
-- `DECLARES` relationships.
+Stable IDs preserve original internal names, for example:
 
-Original JVM/internal names are preserved exactly.
+```text
+CLASS:game/Class387
+METHOD:game/Class387#method4844(II)V
+FIELD:game/Class540#anInt7134:I
+```
 
-## Exact query/export
+## Query/export
 
-Phase 1 provides exact canonical-ID investigation without a UI:
+CLI remains available:
 
 ```text
 game.atlas.ClientAtlasMain query "CLASS:game/Class1"
 game.atlas.ClientAtlasMain query "METHOD:game/Class387#method4844(II)V"
-game.atlas.ClientAtlasMain export "CLASS:game/Class1" docs/client-atlas/snapshots/class1.json
+game.atlas.ClientAtlasMain export "CLASS:game/Class1" <file>
 ```
 
 Rules:
 
-- Phase 1 accepts the exact stable Atlas symbol ID; ranked/fuzzy/shorthand search belongs to Phase 2.
-- Query/export reopens the generated index and validates the saved schema version.
-- Query/export recomputes the current client fingerprint and refuses to return results from a stale index.
-- Exact lookup streams `symbols.jsonl`; it does not build a second database or duplicate scanner ownership.
-- Immediate stored relationships are included when `fromId` or `target` exactly matches the queried symbol ID.
-- Relationship output is bounded to 200 records; the result includes the full matching count and `relationshipsTruncated` state.
-- `query` writes compact machine-readable JSON to stdout.
-- `export` atomically writes the same compact UTF-8 JSON result to the requested file.
-- No extra JSON/database dependency is added for Phase 1 query/export.
+- Phase 1 canonical-ID lookup is exact; ranked/fuzzy search belongs to Phase 2.
+- Query/export validates schema and current fingerprint before returning data.
+- Immediate relationships are capped at 200 while preserving full count/truncation state.
+- Export is atomic UTF-8 JSON.
 
-## Assistant-visible knowledge
+## Standalone Client Atlas Control
 
-Use two layers:
+Purpose: remove manual Eclipse run-argument churn from normal developer use.
 
-1. **Local working Atlas** - full generated/indexed data under `Client/.client-atlas/`.
-2. **Repository-visible knowledge/export** - compact durable exports under `docs/client-atlas/`.
+Current controls:
 
-Candidate durable paths:
+- **Run Phase 1 Check**
+- **Scan / Rebuild Index**
+- **Refresh Status**
+- **Search**
+- **Export Last Result**
+- **Open Workspace**
 
-```text
-docs/client-atlas/knowledge/
-docs/client-atlas/snapshots/
-```
+UI behavior:
 
-Do not commit a massive generated dump by default. Measure the first real index first.
+- Auto-finds Matrix3 Client root and compiled class root.
+- Shows current/stale/no-index state, symbol count, relationship count, and fingerprint.
+- Uses background workers so scans/checks do not freeze the Swing UI.
+- Accepts class shorthand such as `Class1` / `game.Class1` plus exact canonical Atlas IDs.
+- Pretty-prints query output for humans while reusing the same `AtlasQueryEngine` results.
+- Exports normal UI results under `.client-atlas/exports/`.
+- Uses a dark theme suitable for the existing developer-tool workflow.
+
+`Run Phase 1 Check` automates the high-value gate work without changing program arguments:
+
+1. Scan compiled classes.
+2. Require non-zero class/symbol/relationship counts.
+3. Reopen metadata and verify the current fingerprint.
+4. Verify CLASS/FIELD/METHOD/CONSTRUCTOR coverage.
+5. Verify DECLARES/EXTENDS/IMPLEMENTS coverage.
+6. Verify `game/atlas/**` is excluded.
+7. Run an exact class query.
+8. Run an exact declared method/constructor query where available.
+9. Write `.client-atlas/phase1-check.json` and verify it exists.
+
+The UI intentionally does **not** mutate compiled client classes merely to test stale-index rejection. That guard remains a later intentional-change verification.
+
+# Runtime evidence
+
+## VERIFIED
+
+2026-09-05 local Eclipse/Java 8 Phase 1 evidence:
+
+- Gradle refresh resolved `org.objectweb.asm` / `ClassReader` / `ClassVisitor` / `Opcodes` Eclipse classpath errors.
+- Atlas scanner completed successfully against the compiled Matrix3 client.
+- Class files: **1221**.
+- Symbols: **33742**.
+- Relationships: **34053**.
+- Client fingerprint: `41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26`.
+- `status` reopened persisted metadata successfully with the same counts/fingerprint.
+- `Current fingerprint: true` was runtime-confirmed.
+
+## verified-static
+
+- `Client/build.gradle` targets Java 8 and keeps `game.RS3Applet` as normal main.
+- Atlas remains isolated under `game.atlas`.
+- `AtlasFingerprint` excludes Atlas classes.
+- `AtlasWorkspace` owns local persistence and stale/current checks.
+- `AtlasScanner` owns declaration scanning.
+- `AtlasQueryEngine` owns exact query/export.
+- `ClientAtlasControl` is only a human control surface over those APIs.
+- `ClientAtlasMain` with no args opens the UI; explicit CLI commands remain intact.
+- The new UI source passed a Java-8 language-level static compilation check against the Atlas API signatures before patching.
+
+## HYPOTHESIS
+
+- Streaming exact lookup is sufficient for Phase 1; an in-memory ranked index will likely help Phase 2.
+- Per-method relationship aggregation should keep Phase 2 JSONL reasonably compact.
+
+## UNKNOWN
+
+- Exact generated JSONL file sizes on the verified local scan.
+- Exact scan/query timings on the user's machine.
+- How much Phase 2 method-body relationships increase index size.
+- Quality/completeness of compiled debug/source-line data.
+- Whether meaningful `invokedynamic` usage exists.
+- Safest high-level runtime hooks for Phase 3 tracing.
 
 # Phase 2 prepared architecture
 
-Phase 2 implementation remains gated on the Phase 1 local verification. The design below was completed while that gate is pending so development can resume immediately once the foundation passes.
+Phase 2 implementation remains gated until Phase 1 closes. Architecture discovery is complete enough that it should **not** be redone unless new test evidence contradicts it.
 
 ## Core rule: record facts, not guessed semantics
 
-Phase 2 records what the JVM bytecode proves.
+- method invocation -> `CALLS`
+- `GETFIELD` / `GETSTATIC` -> `READS_FIELD`
+- `PUTFIELD` / `PUTSTATIC` -> `WRITES_FIELD`
+- reliable descriptor/type instruction -> `REFERENCES_TYPE`
+- numeric/string literal -> typed `CONSTANT`
 
-Examples:
+A raw integer such as `762` is **not** automatically an interface, animation, opcode, model, etc. `LITERAL_ID` requires domain/context evidence.
 
-- A method invocation can produce a `CALLS` edge.
-- `GETFIELD`/`GETSTATIC` can produce `READS_FIELD`.
-- `PUTFIELD`/`PUTSTATIC` can produce `WRITES_FIELD`.
-- A numeric/string literal can produce a typed `CONSTANT`.
-- A type instruction or descriptor can produce `REFERENCES_TYPE`.
+## Scanner direction
 
-A raw number such as `762` must **not** automatically become `interface 762`, `animation 762`, `opcode 762`, or any other semantic ID. `LITERAL_ID` remains reserved for later evidence-backed/domain-aware correlation.
+Extend the existing `AtlasScanner`; do not create a competing scanner.
 
-## Scanner strategy
-
-Do not create a second scanner subsystem. Extend `AtlasScanner` after the Phase 1 gate passes.
-
-Phase 2 reader direction:
+Phase 2 reader target:
 
 ```text
 ClassReader.SKIP_FRAMES
 ```
 
-This keeps method code and debug/source information available while still avoiding frame-processing overhead.
-
-Each visited method owns a small in-memory relationship accumulator. Repeated identical relationships inside one method should be compacted before writing rather than flooding JSONL with duplicate edges.
-
-Recommended unique-edge key:
+Per-method relationships should aggregate repeated identical edges using a key like:
 
 ```text
 fromId + relationshipType + target
 ```
 
-Preserve an occurrence count and bounded source-line evidence for repeated bytecode occurrences.
+Preserve occurrence count and bounded source-line evidence.
 
-## Relationship schema v2
-
-Before the first Phase 2 generated index, evolve the relationship record rather than hiding machine-readable evidence in the old free-form `detail` string.
-
-Planned relationship fields:
+## Relationship schema v2 target
 
 ```text
 fromId
@@ -215,68 +267,18 @@ sourcePath
 sourceLine
 opcode
 occurrenceCount
-detail (optional only for data that does not deserve a dedicated field)
+detail (optional)
 ```
 
-Schema version should increment when this lands so old Phase 1 generated data is rejected and explicitly rescanned.
+Schema version increments when this lands so old Phase 1 generated data is explicitly rejected/rescanned.
 
-For symbols, separate the compiled class path from the real Java source path instead of using one ambiguous location field once source enrichment is added.
+Add a distinct dynamic-call relationship type for `invokedynamic`; never mislabel it as a proven direct call.
 
-## Method calls
+## Type/constant/source targets
 
-`visitMethodInsn` produces exact target IDs:
+Collect type references from descriptors, signatures, exceptions, relevant type instructions, instruction owners/descriptors, `Type` LDC values, bootstrap handles/dynamic constants where reliable.
 
-```text
-CALLS -> METHOD:<owner>#<name><descriptor>
-CALLS -> CONSTRUCTOR:<owner>#<init><descriptor>
-```
-
-The bytecode target owner/name/descriptor are facts and should be preserved exactly even when the target class is external to the scanned client.
-
-`invokedynamic` must not be mislabeled as an ordinary direct call. If encountered, use an explicit dynamic-call relationship type and preserve its name/descriptor/bootstrap handle information separately.
-
-## Field access
-
-Opcode mapping:
-
-```text
-GETFIELD / GETSTATIC -> READS_FIELD
-PUTFIELD / PUTSTATIC -> WRITES_FIELD
-```
-
-Targets use exact stable field IDs:
-
-```text
-FIELD:<owner>#<name>:<descriptor>
-```
-
-## Type references
-
-Collect `REFERENCES_TYPE` from reliable bytecode/static structures including:
-
-- field descriptors,
-- method argument/return descriptors,
-- declared exception types,
-- class/method generic signatures where ASM can parse them reliably,
-- `NEW`, `CHECKCAST`, `INSTANCEOF`, `ANEWARRAY`, `MULTIANEWARRAY`,
-- method/field instruction owner and descriptors,
-- `Type` values loaded through `LDC`,
-- bootstrap handles/dynamic constants when present.
-
-Array/descriptor parsing must resolve referenced object element types rather than treating raw JVM descriptor text as a semantic alias.
-
-## Constants
-
-Capture constants as typed values, not guessed IDs.
-
-High-value sources:
-
-- static/final field constant values,
-- `LDC`,
-- `ICONST_*`, `BIPUSH`, `SIPUSH`,
-- `LCONST_*`, `FCONST_*`, `DCONST_*`.
-
-Suggested target encoding:
+Capture constants with typed targets such as:
 
 ```text
 int:762
@@ -285,40 +287,21 @@ float:1.0
 string:Attack
 ```
 
-Skip noisy local arithmetic such as ordinary `IINC` unless later investigations prove it useful.
-
-`Type`, `Handle`, and dynamic-constant values should feed structural references rather than being flattened into misleading strings.
-
-## Source-location enrichment
-
-Use compiled debug/source data when available:
-
-- `ClassVisitor.visitSource` for source file metadata.
-- `MethodVisitor.visitLineNumber` for current Java line evidence.
-
-Map internal owners back to the client source tree:
-
-```text
-Client/src/main/java/<owner>.java
-```
-
-For inner/anonymous classes, strip the `$...` suffix when resolving the owning Java source file.
-
-Do not claim a source location is reliable if no matching source file/debug evidence exists; retain the compiled class path as fallback evidence.
+Use `visitSource` and `visitLineNumber` where debug data exists. Resolve source ownership to `Client/src/main/java/<owner>.java`, stripping `$...` for inner/anonymous classes when locating the Java source file. Do not claim a source location when evidence is absent.
 
 ## Phase 2 query/index direction
 
-Do not commit to SQLite before the first real Phase 1 index is measured.
+Do not add SQLite before measurement.
 
-If generated size is reasonable, Phase 2 should build an on-demand in-memory `AtlasIndex` over JSONL with maps for:
+Likely in-memory investigation maps:
 
-- symbol ID -> symbol,
-- owner/name -> candidate symbols,
-- outgoing relationships,
-- incoming relationships,
-- typed constants -> referencing symbols.
+- symbol ID -> symbol
+- owner/name -> candidates
+- outgoing relationships
+- incoming relationships
+- typed constant -> referencing symbols
 
-Friendly searches may then support:
+Friendly searches later:
 
 ```text
 Class387
@@ -331,128 +314,15 @@ references <type>
 constant 762
 ```
 
-Ambiguous shorthand must return/rank candidates; it must never silently choose the wrong overload.
+Ambiguous shorthand returns candidates; it never silently chooses an overload.
 
-## Bounded relationship neighborhoods
+Bounded neighborhood starting limits:
 
-Assistant-oriented neighborhood export should be query-driven, not an uncontrolled graph dump.
-
-Initial safety targets:
-
-- default depth: 1,
-- optional depth: 2,
-- node cap: 100,
-- edge cap: 500,
-- always include fingerprint/schema/truncation state.
-
-These caps are starting safeguards and may be adjusted only after real index measurements.
-
-# Verified foundation
-
-## VERIFIED
-
-- None yet; Client Atlas has not received the consolidated local Java 8/Eclipse Phase 1 verification.
-
-## verified-static
-
-- Repository rules require original obfuscated names to be preserved unless explicit renaming is approved.
-- Repository rules define `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN` as reverse-engineering evidence labels.
-- Client project root is `Client/` and source root is `Client/src/main/java/`.
-- `Client/build.gradle` targets Java 8 and keeps `game.RS3Applet` as the normal main.
-- Client Console remains separate under `game.console`.
-- Atlas source exists under `game.atlas` and is offline-only.
-- `AtlasSchema` already defines relationship categories for references, calls, field reads/writes, constants, and literal IDs.
-- `AtlasFingerprint` provides deterministic client-class SHA-256 fingerprinting and excludes Atlas classes.
-- `AtlasWorkspace` owns `.client-atlas` paths, metadata persistence/reopen, layout initialization, and stale/current checks.
-- `AtlasScanner` currently scans compiled declarations while intentionally skipping method bodies.
-- `AtlasQueryEngine` performs exact canonical-ID lookup, stale/schema validation, bounded immediate-relationship collection, and atomic compact export.
-- `ClientAtlasMain` exposes `init`, `status`, `scan`, `query`, and `export` without changing normal client startup ownership.
-- ASM visitor APIs already used by `AtlasScanner` provide the extension path required for method-instruction, field-instruction, type, constant, source-file, and line-number evidence without touching gameplay/runtime ownership.
-
-# Unknown / research needed
-
-## HYPOTHESIS
-
-- Streaming exact lookup is sufficient for Phase 1; an in-memory ranked index will likely be useful for Phase 2 search/neighborhood work.
-- Per-method relationship aggregation will keep Phase 2 JSONL compact enough without a database.
-- A compact committed snapshot may be practical, but size must be measured after the first scan.
-
-## UNKNOWN
-
-- First real class/symbol/relationship counts and generated file sizes.
-- Exact scan/query performance on the user's local client build.
-- How much Phase 2 method-body relationships increase index size.
-- How complete compiled debug/source-line data is for this decompiled client build.
-- Whether full Git-visible static snapshots are small enough to commit cleanly.
-- Whether meaningful `invokedynamic` usage exists in the compiled client.
-- Safest high-level runtime hooks for Phase 3 tracing; intentionally deferred.
-
-# Evidence model
-
-Stable IDs retain original names, for example:
-
-```text
-CLASS:game/Class387
-METHOD:game/Class387#method4844(II)V
-FIELD:game/Class540#anInt7134:I
-```
-
-Relationship records contain a source symbol, relationship type, target and evidence location/occurrence metadata once schema v2 lands.
-
-Aliases never replace original names.
-
-# Search requirements
-
-## Phase 1
-
-Exact canonical IDs only:
-
-```text
-CLASS:game/Class387
-METHOD:game/Class387#method4844(II)V
-FIELD:game/Class540#anInt7134:I
-```
-
-This is intentional so the first query layer cannot silently choose the wrong overloaded/ambiguous symbol.
-
-## Phase 2 target
-
-Atlas should later support concise ranked searches such as:
-
-```text
-Class387
-Class387.method4844
-interface 762
-component 7
-762:7
-packet NPC_OP1
-opcode 9
-animation 1234
-model 5678
-npc menu
-projectile
-writes Class540.anInt7134
-calls <symbol>
-called-by <symbol>
-status VERIFIED
-alias "NPC menu builder"
-```
-
-Semantic/domain searches such as `interface 762` must only become authoritative when evidence/domain correlation can distinguish them from a generic constant `762`.
-
-Results should return a small ranked neighborhood rather than force inspection of the full index.
-
-# Performance / safety rules
-
-- Normal client startup/gameplay must not require an Atlas rebuild.
-- Static indexing runs explicitly against compiled client inputs.
-- Atlas failure must not prevent normal client operation.
-- Query/export must refuse known-stale index data rather than presenting it as current evidence.
-- Runtime tracing is opt-in and bounded.
-- Expensive graph expansion is query-driven.
-- Generated data must not pollute Git or normal build outputs.
-- Static scanner work requires no login/game runtime.
-- Phase 2 must aggregate/restrict relationship data enough to remain useful rather than generating an unreadable raw instruction dump.
+- default depth 1
+- optional depth 2
+- node cap 100
+- edge cap 500
+- always report schema/fingerprint/truncation
 
 # Development plan
 
@@ -462,259 +332,177 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 **Status:** NEEDS TEST
 
-**Goal:** Produce the smallest useful offline machine-readable Atlas that can index the compiled client, reopen its data, search an exact symbol, and export a compact result.
+### Bundle 1A - Foundation + usable developer workflow
 
-### Bundle 1A - Implementation foundation
+- [x] **1A.1 Targeted implementation discovery**.
+- [x] **1A.2 Atlas schema + persistence skeleton**.
+- [x] **1A.3 Bytecode scanner MVP**.
+- [x] **1A.4 Basic query/export CLI**.
+- [x] **1A.5 Standalone Client Atlas Control implementation** - no-argument UI, scan/status/search/export/open-workspace controls, one-click Phase 1 automated check. **Implementation complete; UI/runtime verification pending.**
 
-**Status:** NEEDS TEST
+### Phase 1 gate state
 
-Checklist:
+Already runtime-confirmed:
 
-- [x] **1A.1 Targeted implementation discovery** - locate client build/source/tooling ownership and choose implementation path.
-- [x] **1A.2 Atlas schema + persistence skeleton** - isolated Atlas package, stable records, fingerprint, local workspace, and metadata reopen/staleness foundation.
-- [x] **1A.3 Bytecode scanner MVP** - ASM declaration scanner writes class/field/method/constructor symbols plus inheritance/interface/declaration relationships to JSONL.
-- [x] **1A.4 Basic query/export CLI** - exact canonical-ID lookup plus compact bounded machine-readable query/export output with stale-index protection.
+- [x] Atlas compiles/runs in the user's Eclipse + Java 8 setup after Gradle project refresh.
+- [x] Offline scan completes with non-zero counts.
+- [x] Metadata reopens without rebuild.
+- [x] Persisted fingerprint reports current.
 
-### Phase 1 gate
+Still required to close Phase 1:
 
-Implementation is complete. Phase 1 must not advance until the consolidated local verification passes:
+- [ ] Pull/run the new no-argument `ClientAtlasMain` UI.
+- [ ] Click **Run Phase 1 Check** and receive `PHASE 1 AUTOMATED CHECK: PASS`.
+- [ ] Confirm search works from the UI.
+- [ ] Confirm `Export Last Result` writes under `.client-atlas/exports/`.
+- [ ] Later, when a real compiled-client change naturally occurs, verify stale-index rejection before rescanning. This is a guard regression check and does not require intentionally corrupting/mutating the client just to unblock Phase 2 if all automated gate checks pass.
 
-- Java 8/Eclipse-compatible clean/build.
-- Atlas runs without launching/logging into the client.
-- Compiled client classes are indexed with non-zero counts.
-- Index reopens without rebuild and reports a current fingerprint.
-- Known class/field/method/constructor symbols exist.
-- `EXTENDS`, `IMPLEMENTS` where applicable, and `DECLARES` relationships exist.
-- Exact canonical class and method queries work.
-- Compact export works and reopens without rescanning.
-- Stale index is rejected after compiled client classes change.
-- Normal `game.RS3Applet` launch ownership remains unchanged.
+Phase 1 must remain `NEEDS TEST` until the standalone UI/check is runtime-confirmed.
 
 ## Phase 2 - Static Relationship and Investigation Map
 
-**Status:** PLANNED - ARCHITECTURE PREPARED, IMPLEMENTATION GATED ON PHASE 1 TEST
+**Status:** PREPARED - IMPLEMENTATION GATED ON PHASE 1 CHECK
 
 ### Bundle 2A - Structural relationships
 
-- [x] **2A.0 Targeted relationship architecture discovery** - inspected only `AtlasScanner`/`AtlasSchema`, defined evidence-safe bytecode mapping and schema/index direction; no Phase 2 source changes.
-- [ ] **2A.1 Relationship schema v2 + source locator** - add typed occurrence/source fields, compiled/source path separation, dynamic-call relationship support, schema bump/rescan guard. **READY AFTER PHASE 1 GATE.**
-- [ ] **2A.2 Calls + field access scanner** - method-body `CALLS`, `READS_FIELD`, and `WRITES_FIELD` with per-method dedup/occurrence aggregation.
-- [ ] **2A.3 Type references + constants** - descriptors/signatures/type instructions plus typed constants; no automatic semantic ID classification.
-- [ ] **2A.4 Structural verification + size metrics** - validate known call/field paths, measure generated counts/files, tune caps only from evidence.
+- [x] **2A.0 Targeted relationship architecture discovery**.
+- [ ] **2A.1 Relationship schema v2 + source locator** - typed occurrence/source fields, compiled/source path separation, dynamic-call relationship support, schema bump/rescan guard.
+- [ ] **2A.2 Calls + field access scanner** - `CALLS`, `READS_FIELD`, `WRITES_FIELD`, per-method aggregation.
+- [ ] **2A.3 Type references + constants** - descriptors/signatures/type instructions + typed constants; no automatic semantic IDs.
+- [ ] **2A.4 Structural verification + size metrics**.
 
 ### Bundle 2B - Investigation search
 
-- [ ] **2B.1 In-memory investigation index** - exact/shorthand candidate maps plus incoming/outgoing relationship maps when Phase 1/2 measurements support it.
-- [ ] **2B.2 Ranked/friendly search** - owner/member/text/constant resolution with ambiguity surfaced rather than silently selected.
-- [ ] **2B.3 Relationship queries + bounded neighborhoods** - `calls`, `called-by`, `reads`, `written-by`, `references`, depth/cap controls.
-- [ ] **2B.4 Assistant-oriented export** - compact static investigation package including fingerprint/schema/truncation and related symbols.
-- [ ] **2B.5 Safe initial domain correlation** - only promote obvious interface/packet/cache/etc. semantics when context/evidence supports them; generic constants stay generic.
+- [ ] **2B.1 In-memory investigation index**.
+- [ ] **2B.2 Ranked/friendly search**.
+- [ ] **2B.3 Relationship queries + bounded neighborhoods**.
+- [ ] **2B.4 Assistant-oriented export**.
+- [ ] **2B.5 Safe initial domain correlation**.
 
 ## Phase 3 - Runtime Evidence and Knowledge
 
 **Status:** PLANNED
 
-### Bundle 3A - Targeted trace sessions
+### Bundle 3A
 
 - [ ] Start/stop/name/save trace lifecycle.
-- [ ] High-value menu/input hooks.
-- [ ] Packet metadata hooks where safe.
-- [ ] Interface/component activity hooks.
-- [ ] Definition/cache/model/animation/GFX hooks where useful.
-- [ ] Correlate events back to Atlas symbols.
+- [ ] Menu/input hooks.
+- [ ] Packet metadata hooks.
+- [ ] Interface/component hooks.
+- [ ] Definition/cache/model/animation/GFX hooks.
+- [ ] Correlate runtime events back to Atlas symbols.
 
-### Bundle 3B - Durable evidence
+### Bundle 3B
 
 - [ ] External aliases/notes.
 - [ ] Evidence classification/supporting references.
-- [ ] Client-fingerprint stale-evidence warnings.
+- [ ] Fingerprint stale-evidence warnings.
 - [ ] Preserve curated knowledge across rescans.
 
 ## Phase 4 - Client Console Atlas Browser
 
 **Status:** PLANNED
 
-### Bundle 4A - Human browser
-
 - [ ] Search panel.
-- [ ] Symbol detail and relationship navigation.
+- [ ] Symbol detail/relationship navigation.
 - [ ] Evidence/alias editor.
-- [ ] Trace-session controls/browser.
-- [ ] Optional bounded graph for selected neighborhood only.
+- [ ] Trace browser/controls.
+- [ ] Optional bounded relationship graph.
 
 ## Phase 5 - Advanced Correlation
 
 **Status:** BACKLOG
 
-### Bundle 5A - Usage-driven automation
-
 - [ ] Repeated-path clustering.
-- [ ] Suggested aliases kept as `HYPOTHESIS` until proven.
-- [ ] Cross-link reliable cache/definition metadata.
-- [ ] Atlas diff between client revisions/fingerprints.
+- [ ] Suggested aliases remain `HYPOTHESIS` until proven.
+- [ ] Reliable cache/definition crosslinks.
+- [ ] Revision/fingerprint diffs.
 - [ ] Investigation report generation.
-
-# Current execution state
-
-- Current gated phase: **Phase 1 - Static Atlas Foundation**
-- Phase 1 bundle: **Bundle 1A - Implementation foundation**
-- Phase 1 status: **NEEDS TEST**
-- Last completed Phase 1 checklist item: **1A.4 Basic query/export CLI**
-- Next required checkpoint: **Phase 1 consolidated verification gate**
-- Approved side/prep work completed: **Phase 2 / Bundle 2A / 2A.0 Targeted relationship architecture discovery**
-- Prepared post-gate implementation target: **2A.1 Relationship schema v2 + source locator**
-
-## Status table
-
-| Area | Status | Notes |
-| --- | --- | --- |
-| Targeted implementation discovery | DONE | Client/build/tooling path established. |
-| Atlas schema + persistence skeleton | DONE | Offline foundation implemented. |
-| Bytecode scanner MVP | DONE | ASM declaration scanner implemented. |
-| Basic query/export CLI | DONE | Exact canonical-ID query/export with stale-index guard implemented. |
-| Phase 1 verification gate | NEEDS TEST | One consolidated Java 8 build/scan/status/query/export session required. |
-| Static relationship map | PREPARED | Phase 2 architecture/checklist is ready; implementation remains gated on Phase 1 verification. |
-| Runtime traces/evidence | PLANNED | Phase 3. |
-| Client Console browser | PLANNED | Phase 4. |
-| Advanced correlation | CARRYOVER | Phase 5 usage-driven backlog. |
-
-# Decisions / new ideas
-
-- Client Atlas is primarily for future assistant/code investigation; human UI is secondary.
-- The searchable data layer is authoritative for Atlas; Client Console is only a viewer/controller later.
-- Preserve original obfuscated names permanently unless separately approved.
-- Do not create one giant human text dump as the primary interface.
-- Bytecode-first static evidence precedes runtime tracing.
-- Runtime tracing remains short-lived and scoped.
-- Automatically suggested semantics remain `HYPOTHESIS` until evidence supports promotion.
-- Start with portable text persistence; do not add SQLite before measurement proves a need.
-- Keep full local generated data separate from curated repository-visible knowledge/snapshots.
-- ASM 9.7.1 is pinned for Phase 1 declaration scanning.
-- Phase 1 deliberately skips method bodies; deeper relationships remain Phase 2 ownership.
-- Phase 1 query uses canonical stable IDs only; friendly/fuzzy/ranked resolution is Phase 2 work.
-- Exact query/export refuses stale client fingerprints.
-- Immediate relationship output is capped at 200 while retaining the full matching count/truncation signal.
-- No extra JSON dependency was added for query/export because deterministic Atlas JSONL can be streamed directly.
-- Phase 2 static analysis records raw bytecode evidence before semantics.
-- `LITERAL_ID` is not emitted just because an integer exists; domain meaning requires contextual evidence.
-- Phase 2 should extend the existing scanner, not create a competing bytecode-analysis owner.
-- Phase 2 relationship records should carry typed source/occurrence evidence instead of overloading free-form `detail`.
-- Repeated method-level edges should aggregate occurrence information to control index noise.
-- `invokedynamic` must remain distinct from proven direct method calls.
 
 # Testing
 
-## Consolidated Phase 1 quick/high-value checks
+## Current shortest Phase 1 session
 
-1. Clean/build the Client with the Java 8/Eclipse target.
-2. Run `game.atlas.ClientAtlasMain scan` against the compiled class directory.
-3. Confirm non-zero class, symbol, and relationship counts.
-4. Run `game.atlas.ClientAtlasMain status` and confirm metadata reopens and fingerprint is current.
-5. Confirm `symbols.jsonl` contains a known obfuscated class, method, field, and constructor.
-6. Confirm `relationships.jsonl` contains `EXTENDS`, `IMPLEMENTS` where applicable, and `DECLARES` records.
-7. Run `game.atlas.ClientAtlasMain query "CLASS:game/Class1"` and confirm compact JSON plus immediate relationships.
-8. Copy one exact METHOD/CONSTRUCTOR ID from a class query's `DECLARES` records and query that exact ID.
-9. Export a compact result and reopen/query again without rescanning.
-10. Confirm stale client classes cause query/export to refuse the old index until rescanned.
-11. Confirm normal `game.RS3Applet` main/configuration remains unchanged.
+1. `git pull origin main`.
+2. If ASM ever becomes unresolved again, Eclipse -> **Gradle -> Refresh Gradle Project**.
+3. Run `game.atlas.ClientAtlasMain` with **no program arguments**.
+4. Confirm the **Client Atlas Control** window opens and shows the existing current index.
+5. Click **Run Phase 1 Check**.
+6. Confirm the output ends with `PHASE 1 AUTOMATED CHECK: PASS`.
+7. Search `Class1`.
+8. Click **Export Last Result** and confirm the output reports the file path.
 
-## Prepared Phase 2 checks
+No repeated run-configuration argument editing is required anymore.
 
-After the Phase 1 gate passes and each Phase 2 patch lands:
+## Phase 2 checks later
 
-- Query one known method and verify a bytecode-proven outgoing `CALLS` edge.
-- Query the target method and verify the corresponding incoming/called-by neighborhood.
-- Verify one known `GETFIELD`/`PUTFIELD` path produces read/write edges in the expected direction.
-- Verify descriptor/type-instruction references appear as `REFERENCES_TYPE` without semantic renaming.
-- Verify numeric/string constants preserve value/type and are not automatically mislabeled as domain IDs.
-- Verify repeated same-method edges aggregate occurrences instead of creating uncontrolled duplicates.
-- Verify source line/path evidence points to a real matching source location when debug/source data is available.
-- Measure symbols/relationships/file sizes and query time before adding a database or widening graph caps.
-
-## Smoke/regression
-
-- Offline Phase 1/2 static work should not affect normal gameplay smoke coverage.
-- Any later runtime instrumentation must include a normal client launch with Atlas tracing disabled.
+- Known outgoing `CALLS` and corresponding incoming/called-by path.
+- Known field GET/PUT read/write direction.
+- Type references without semantic renaming.
+- Typed constants without automatic domain IDs.
+- Deduplicated occurrence aggregation.
+- Reliable source path/line evidence where debug data exists.
+- Measure symbol/relationship/file-size/query-time growth before changing persistence/caps.
 
 # Carryover / blockers
 
 ## CARRYOVER
 
-- Advanced automatic correlation remains deferred until real Atlas usage identifies high-value automation.
+- Advanced automatic correlation remains usage-driven backlog.
 
-## BLOCKED / GATED
+## GATED
 
-- Phase 2 implementation is intentionally gated on the consolidated Phase 1 verification.
-- Phase 2 architecture/discovery is complete enough to avoid further broad scanning once the gate passes.
+- Phase 2 code stays gated until the new standalone UI/one-click Phase 1 check passes once locally.
 
 # Resume Here
 
-**Last completed:**
+**Last completed implementation:**
 
-- Phase 1 / Bundle 1A / checklist **1A.4 Basic query/export CLI**.
-- Side/prep checkpoint: Phase 2 / Bundle 2A / **2A.0 Targeted relationship architecture discovery**.
+- Phase 1 / Bundle 1A / **1A.5 Standalone Client Atlas Control implementation**.
+- Phase 2 prep / Bundle 2A / **2A.0 Targeted relationship architecture discovery**.
+
+**Runtime evidence already confirmed:**
+
+- Eclipse ASM dependency resolves after Gradle project refresh.
+- Scan: 1221 class files / 33742 symbols / 34053 relationships.
+- Fingerprint: `41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26`.
+- Persisted metadata reopens with `Current fingerprint: true`.
 
 **Current state:**
 
-- Offline Atlas foundation exists under `Client/src/main/java/game/atlas/`.
-- ASM 9.7.1 is pinned in the Client build.
-- Scanner indexes declarations and structural ownership into deterministic JSONL.
-- Client fingerprinting excludes Atlas classes and detects scan-time client-class changes.
-- Exact canonical-ID query/export exists through `AtlasQueryEngine` and `ClientAtlasMain`.
-- Query/export refuses a stale or unsupported-schema index.
-- Compact query/export includes immediate relationships with a 200-record cap plus full count/truncation state.
-- Normal Client Console/game runtime ownership remains untouched.
-- Phase 1 implementation is complete but the mandatory consolidated local verification has not run yet.
-- Phase 2 relationship architecture is now prepared from the existing `AtlasScanner`/`AtlasSchema` path; no Phase 2 source code has been added.
+- Atlas engine/CLI exists and scanner/status have passed locally.
+- `ClientAtlasMain` with no args now opens `ClientAtlasControl`.
+- Control UI wraps scan/status/search/export/open-workspace and one-click Phase 1 automated verification.
+- Normal `game.RS3Applet` ownership is unchanged.
+- Phase 2 architecture is prepared but no Phase 2 scanner code has been added.
 
 **Next required action:**
 
-- Run the **Phase 1 consolidated verification gate** from `docs/client-atlas/testlist.txt`.
+- Pull once, run `ClientAtlasMain` with no arguments, click **Run Phase 1 Check**, then search/export once from the UI.
 
-**Next implementation after that gate passes:**
+**Next implementation after the gate passes:**
 
-- **2A.1 Relationship schema v2 + source locator.** Do not redo relationship architecture discovery unless the Phase 1 test exposes a contradictory foundation problem.
+- **2A.1 Relationship schema v2 + source locator**.
 
-**Files/systems already inspected or changed:**
+**Do not re-scan/re-discover without new evidence:**
 
-- `AGENTS.md`
-- `docs/rs3/PROJECT.md`
-- `docs/client-atlas/PROJECT.md`
-- `docs/rs3/WORKSTREAMS.md`
-- `Client/build.gradle`
-- `Client/src/main/java/game/atlas/AtlasSchema.java`
-- `Client/src/main/java/game/atlas/AtlasFingerprint.java`
-- `Client/src/main/java/game/atlas/AtlasWorkspace.java`
-- `Client/src/main/java/game/atlas/AtlasJson.java`
-- `Client/src/main/java/game/atlas/AtlasScanner.java`
-- `Client/src/main/java/game/atlas/AtlasQueryEngine.java`
-- `Client/src/main/java/game/atlas/ClientAtlasMain.java`
-- `docs/client-atlas/patchnotes.txt`
-- `docs/client-atlas/testlist.txt`
-
-**Do not re-scan without new evidence:**
-
-- Broad `game` package/source tree.
-- Unrelated server/gameplay systems.
-- Runtime tracing hooks until Phase 3.
-- Client Console internals until Phase 4.
-- Phase 2 relationship architecture unless Phase 1 verification contradicts the prepared design.
+- broad `game` source tree
+- unrelated server/gameplay systems
+- Phase 2 relationship architecture
+- runtime tracing hooks before Phase 3
+- Client Console internals before Phase 4
 
 **Pending verification:**
 
-- Consolidated Phase 1 local Java 8/Eclipse build + scan/status/query/export/stale-index checks.
+- standalone UI opens under Eclipse/Java 8
+- one-click Phase 1 check passes
+- UI search/export works
+- stale-index rejection on a later natural compiled-client change
 
 **Blockers:**
 
-- No technical blocker. Phase 2 implementation is held only by the required Phase 1 verification gate.
-
-**Important remaining uncertainty:**
-
-- Real Phase 1 index counts/size/performance until the first local scan.
-- How much method-body analysis grows the relationship index.
-- Availability/quality of compiled source-line debug data.
-- Whether the generated index is small enough for any broader repository-visible snapshot strategy.
+- None technical; only the short UI runtime gate remains.
 
 # Next recommended work
 
-**Phase 1 verification gate.** Development prep no longer needs to stop there: Phase 2 architecture is ready, so once the test passes the next code patch is already defined as **2A.1 Relationship schema v2 + source locator**.
+**Run the standalone Client Atlas Control once.** If `Run Phase 1 Check` passes, close Phase 1 and immediately begin **2A.1 Relationship schema v2 + source locator** without another discovery cycle.
