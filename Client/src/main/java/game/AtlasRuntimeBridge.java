@@ -10,9 +10,11 @@ public final class AtlasRuntimeBridge {
 
     private static final String KEYBOARD_SOURCE = "METHOD:game/AtlasKeyboardObserver#dispatch(Ljava/awt/AWTEvent;)V";
     private static final String KEYBOARD_OWNER = "METHOD:game/Class549_Sub1#method8081(ICII)V";
-    private static final String MENU_ACTION_SOURCE = "METHOD:game/Class319#method4094(Lgame/Class572_Sub12_Sub10;IIB)V";
+    private static final String MENU_ACTION_SOURCE = "METHOD:game/DevModeBridge#handleMenuAction(III)Z";
+    private static final String MENU_ACTION_OWNER = "METHOD:game/Class319#method4094(Lgame/Class572_Sub12_Sub10;IIB)V";
     private static final String OUTGOING_PACKET_SOURCE = "METHOD:game/Class195#method2929(Lgame/Class572_Sub25;B)V";
-    private static final String INCOMING_PACKET_SOURCE = "METHOD:game/PacketsDecoder#method3031(Lgame/Class195;B)Z";
+    private static final String INCOMING_PACKET_SOURCE = "METHOD:game/MaterialInformation#method1605(Lgame/Class195;I)Z";
+    private static final String INCOMING_PACKET_OWNER = "METHOD:game/PacketsDecoder#method3031(Lgame/Class195;B)Z";
     private static final String DEFINITION_SOURCE = "METHOD:game/Class639#method7568(II)Lgame/Interface17;";
 
     private AtlasRuntimeBridge() {
@@ -52,6 +54,7 @@ public final class AtlasRuntimeBridge {
             return;
         }
         AtlasTraceRecorder.record("input", "menu-action", MENU_ACTION_SOURCE,
+                "ownerSymbol", MENU_ACTION_OWNER,
                 "action", Integer.toString(action),
                 "localX", Integer.toString(localX),
                 "localY", Integer.toString(localY));
@@ -80,6 +83,7 @@ public final class AtlasRuntimeBridge {
         String interfaceName = interfacePacketName(packet);
         String category = interfaceName == null ? "network" : "interface";
         AtlasTraceRecorder.record(category, "incoming-packet", INCOMING_PACKET_SOURCE,
+                "ownerSymbol", INCOMING_PACKET_OWNER,
                 "packetId", Integer.toString(packetId),
                 "declaredLength", Integer.toString(declaredLength),
                 "actualLength", Integer.toString(actualLength),
