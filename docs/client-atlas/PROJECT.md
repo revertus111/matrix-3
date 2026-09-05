@@ -140,12 +140,14 @@ Phase 1 is therefore **DONE**. The stale-index guard remains a carryover regress
 - `AtlasScanner` owns bytecode scanning.
 - `AtlasQueryEngine` owns exact query/export.
 - `ClientAtlasControl` is only a human control surface over those APIs.
-- Phase 2 schema v2 is implemented as described below; local rebuild/scan verification is batched with structural scanner verification to minimize user PC time.
+- Phase 2 schema v2 is implemented as described below.
+- Phase 2 method-body scanning now records direct calls, dynamic calls, field reads, and field writes with per-method aggregation and source-line/opcode evidence where available.
+- Local schema-v2 rebuild/scan verification remains intentionally batched with the completed 2A.2 work and upcoming 2A.3/2A.4 structural verification to minimize user PC time.
 
 ## UNKNOWN / measurement needed
 
 - Exact generated JSONL file sizes and timings on schema v2.
-- Growth from method-body relationships.
+- Measured relationship growth from method-body scanning.
 - Completeness of source line/debug data.
 - Whether meaningful `invokedynamic` usage exists in this client.
 - Whether a database is ever needed after measured Phase 2 data.
@@ -198,8 +200,10 @@ Rules:
 
 - `sourceLine` and `opcode` are nullable.
 - `occurrenceCount` is positive and defaults to 1 for structural declaration relationships.
-- Existing `EXTENDS`, `IMPLEMENTS`, and `DECLARES` records now carry Java source-path evidence when available.
-- Method-body line/opcode evidence is intentionally deferred to 2A.2.
+- Existing `EXTENDS`, `IMPLEMENTS`, and `DECLARES` records carry Java source-path evidence when available.
+- Method-body relationships populate line/opcode evidence when compiled debug/instruction evidence supports it.
+- Repeated same-method/type/target edges are aggregated into one record with an incremented `occurrenceCount`.
+- If repeated occurrences of one aggregated edge use different opcodes, the stored opcode becomes null rather than claiming one opcode represents all occurrences.
 - `detail` remains optional and must not replace fields that deserve typed representation.
 
 Relationship types include a distinct:
@@ -208,7 +212,7 @@ Relationship types include a distinct:
 DYNAMIC_CALL
 ```
 
-This exists so future `invokedynamic` evidence is never mislabeled as a proven direct `CALLS` edge.
+This ensures `invokedynamic` evidence is never mislabeled as a proven direct `CALLS` edge.
 
 # Phase 2 architecture
 
@@ -229,19 +233,15 @@ A raw integer such as `762` is **not** automatically an interface, animation, op
 
 Extend the existing `AtlasScanner`; do not create a competing scanner.
 
-Phase 2 method-body reader target:
+Phase 2 method-body scanning uses:
 
 ```text
 ClassReader.SKIP_FRAMES
 ```
 
-Per-method repeated relationships should aggregate using a key like:
+This keeps code and debug line information while avoiding frame-processing overhead.
 
-```text
-fromId + relationshipType + target
-```
-
-Preserve occurrence count and bounded source-line evidence.
+Per-method repeated relationships aggregate by relationship type + exact target. The method ID is the `fromId` for every method-body edge.
 
 ## Calls
 
@@ -254,6 +254,8 @@ CONSTRUCTOR:<owner>#<init><descriptor>
 
 External targets may still be recorded as bytecode facts even when the target symbol is outside the scanned client.
 
+`invokedynamic` uses `DYNAMIC_CALL` with a stable factual target containing the dynamic name/descriptor and bootstrap owner/name/descriptor. Bootstrap tag/interface facts are preserved in `detail`; bootstrap arguments remain 2A.3 structural/type/constant work.
+
 ## Field access
 
 ```text
@@ -261,10 +263,10 @@ GETFIELD / GETSTATIC -> READS_FIELD
 PUTFIELD / PUTSTATIC -> WRITES_FIELD
 ```
 
-Target form:
+Target form matches the existing stable field ID:
 
 ```text
-FIELD:<owner>#<name>:<descriptor>
+FIELD:<owner>#<name><descriptor>
 ```
 
 ## Type references
@@ -363,9 +365,9 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 **Status: ACTIVE**
 
 - [x] **2A.0 Targeted relationship architecture discovery**.
-- [x] **2A.1 Relationship schema v2 + source locator** - schema bump, typed source/occurrence fields, compiled/source path separation, dynamic-call type, old-schema stale guard. Implementation complete; rebuild/record verification is batched with 2A.2-2A.4 checks.
-- [ ] **2A.2 Calls + field access scanner** - `CALLS`, `DYNAMIC_CALL`, `READS_FIELD`, `WRITES_FIELD`, line/opcode evidence, per-method aggregation. **NEXT.**
-- [ ] **2A.3 Type references + constants** - descriptors/signatures/type instructions + typed constants; no automatic semantic IDs.
+- [x] **2A.1 Relationship schema v2 + source locator** - schema bump, typed source/occurrence fields, compiled/source path separation, dynamic-call type, old-schema stale guard. Rebuild/record verification is batched with 2A.2-2A.4 checks.
+- [x] **2A.2 Calls + field access scanner** - method-body `CALLS`, `DYNAMIC_CALL`, `READS_FIELD`, `WRITES_FIELD`, line/opcode evidence, and per-method occurrence aggregation. Runtime verification is batched with 2A.3/2A.4.
+- [ ] **2A.3 Type references + constants** - descriptors/signatures/type instructions + typed constants; no automatic semantic IDs. **NEXT.**
 - [ ] **2A.4 Structural verification + size metrics** - rebuild schema v2, verify known relationships/source evidence, measure counts/files/timing, tune only from evidence.
 
 ### Bundle 2B - Investigation search
@@ -422,9 +424,9 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 ## Current batching strategy
 
-Do not spend a separate PC session solely on the schema-v2 migration.
+Do not spend a separate PC session solely on 2A.1 or 2A.2.
 
-When 2A.2/2A.3 are ready for the structural verification bundle:
+When 2A.3 is implemented, run the structural verification bundle once:
 
 1. Clean/build Client in Eclipse/Java 8.
 2. Open Client Atlas Control.
@@ -456,7 +458,7 @@ See `docs/client-atlas/testlist.txt` for the exact checks.
 **Last completed:**
 
 - Phase 1 local verification gate.
-- Phase 2 / Bundle 2A / **2A.1 Relationship schema v2 + source locator** implementation.
+- Phase 2 / Bundle 2A / **2A.2 Calls + field access scanner** implementation.
 
 **Current phase:**
 
@@ -468,17 +470,21 @@ See `docs/client-atlas/testlist.txt` for the exact checks.
 
 **Next checklist item:**
 
-- **2A.2 Calls + field access scanner**.
+- **2A.3 Type references + constants**.
 
 **Current implementation state:**
 
 - Schema version is 2.
 - Symbol records separate `compiledPath` and `sourcePath`.
 - Relationship records include source path, nullable source line/opcode, occurrence count, and detail.
-- `DYNAMIC_CALL` exists for future invokedynamic evidence.
 - Declaration scan populates source path and occurrence count for structural records.
+- Method bodies are now visited with frames skipped but code/debug line information retained.
+- Direct method/constructor instructions produce exact `CALLS` edges.
+- `invokedynamic` produces distinct `DYNAMIC_CALL` edges with bootstrap identity rather than false direct-call semantics.
+- GETFIELD/GETSTATIC produce `READS_FIELD`; PUTFIELD/PUTSTATIC produce `WRITES_FIELD`.
+- Repeated same-method/type/target edges are aggregated and counted.
 - Old schema data is treated as non-current; one rebuild migrates generated data while preserving evidence/traces.
-- Method-body scanning has **not** started yet.
+- Type-reference and constant indexing have **not** started yet.
 
 **Files already inspected/changed for this phase:**
 
@@ -503,7 +509,7 @@ See `docs/client-atlas/testlist.txt` for the exact checks.
 
 **Pending verification:**
 
-- schema-v2 local rebuild/record shape is batched with 2A.2-2A.4 structural verification.
+- schema-v2 local rebuild/record shape plus 2A.2 call/read/write aggregation is batched with 2A.3-2A.4 structural verification.
 
 **Blockers:**
 
@@ -511,4 +517,4 @@ See `docs/client-atlas/testlist.txt` for the exact checks.
 
 # Next recommended work
 
-**2A.2 Calls + field access scanner.** Extend the existing ASM scanner to inspect method bodies, aggregate direct call and field-access relationships per method, and persist reliable source-line/opcode evidence without starting type/constant indexing yet.
+**2A.3 Type references + constants.** Extend the existing method-body/declaration scanner with reliable structural type references and typed constants while keeping raw numeric values semantically neutral until later evidence-backed correlation.
