@@ -5,3 +5,8 @@
 - Added `.client-atlas` workspace initialization, metadata persistence/reopen support, stale/current fingerprint checks, and reserved JSONL data files.
 - Added a minimal offline `ClientAtlasMain` init/status entry point for Phase 1 validation.
 - Ignored `Client/.client-atlas/` so generated Atlas data survives build cleaning without polluting Git.
+- Pinned ASM 9.7.1 and added the Phase 1 bytecode declaration scanner.
+- Scanner records classes, interfaces, enums, annotations, fields, methods, constructors, descriptors/signatures, access flags, compiled paths, and EXTENDS/IMPLEMENTS/DECLARES relationships.
+- Added deterministic JSONL serialization for generated symbol/relationship records without renaming obfuscated symbols.
+- Added `ClientAtlasMain scan`, temporary-file publishing, metadata count updates, and before/after fingerprint protection against class changes during a scan.
+- Kept method-body analysis out of Phase 1 so callers/callees and field read/write tracing remain isolated to Phase 2.

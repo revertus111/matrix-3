@@ -1,0 +1,276 @@
+package game.atlas;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Stream;
+
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+
+import game.atlas.AtlasSchema.Metadata;
+import game.atlas.AtlasSchema.RelationshipRecord;
+import game.atlas.AtlasSchema.RelationshipType;
+import game.atlas.AtlasSchema.SymbolKind;
+import game.atlas.AtlasSchema.SymbolRecord;
+
+/**
+ * Offline declaration scanner for the Phase 1 Client Atlas symbol catalog.
+ */
+public final class AtlasScanner {
+
+    private static final String ATLAS_PREFIX = "game/atlas/";
+    private static final int READER_FLAGS = ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES;
+
+    private final AtlasWorkspace workspace;
+
+    public AtlasScanner(AtlasWorkspace workspace) {
+        if (workspace == null) {
+            throw new IllegalArgumentException("workspace cannot be null");
+        }
+        this.workspace = workspace;
+    }
+
+    public ScanResult scan(Path classRoot) throws IOException {
+        Path normalizedRoot = requireClassRoot(classRoot);
+        List<Path> classFiles = collectClassFiles(normalizedRoot);
+        workspace.ensureLayout();
+
+        String fingerprintBefore = AtlasFingerprint.compute(normalizedRoot);
+        Path symbolsTemp = workspace.getWorkspaceRoot().resolve(AtlasWorkspace.SYMBOLS_FILE + ".scan.tmp");
+        Path relationshipsTemp = workspace.getWorkspaceRoot().resolve(AtlasWorkspace.RELATIONSHIPS_FILE + ".scan.tmp");
+
+        long symbolCount = 0L;
+        long relationshipCount = 0L;
+        try (BufferedWriter symbols = Files.newBufferedWriter(symbolsTemp, StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+                BufferedWriter relationships = Files.newBufferedWriter(relationshipsTemp, StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
+            ScanCounters counters = new ScanCounters(symbols, relationships);
+            for (Path classFile : classFiles) {
+                scanClass(normalizedRoot, classFile, counters);
+            }
+            symbolCount = counters.symbolCount;
+            relationshipCount = counters.relationshipCount;
+        } catch (IOException | RuntimeException ex) {
+            Files.deleteIfExists(symbolsTemp);
+            Files.deleteIfExists(relationshipsTemp);
+            throw ex;
+        }
+
+        String fingerprintAfter = AtlasFingerprint.compute(normalizedRoot);
+        if (!fingerprintBefore.equals(fingerprintAfter)) {
+            Files.deleteIfExists(symbolsTemp);
+            Files.deleteIfExists(relationshipsTemp);
+            throw new IOException("Compiled client classes changed during Atlas scan; rebuild and scan again.");
+        }
+
+        replaceGeneratedFile(symbolsTemp, workspace.symbolsFile());
+        replaceGeneratedFile(relationshipsTemp, workspace.relationshipsFile());
+
+        Metadata metadata = new Metadata(
+                AtlasWorkspace.SCHEMA_VERSION,
+                fingerprintAfter,
+                normalizedRoot.toString(),
+                Instant.now().toString(),
+                symbolCount,
+                relationshipCount);
+        workspace.writeMetadata(metadata);
+
+        return new ScanResult(classFiles.size(), symbolCount, relationshipCount, fingerprintAfter);
+    }
+
+    private static void scanClass(Path classRoot, Path classFile, ScanCounters counters) throws IOException {
+        final String sourcePath = AtlasFingerprint.normalizedRelativePath(classRoot, classFile);
+        try (InputStream input = new BufferedInputStream(Files.newInputStream(classFile))) {
+            ClassReader reader = new ClassReader(input);
+            try {
+                reader.accept(new ClassVisitor(Opcodes.ASM9) {
+                    private String owner;
+                    private String ownerId;
+
+                    @Override
+                    public void visit(int version, int access, String name, String signature,
+                            String superName, String[] interfaces) {
+                        owner = name;
+                        SymbolKind kind = classKind(access);
+                        SymbolRecord classRecord = new SymbolRecord(kind, name, name,
+                                "L" + name + ";", signature, sourcePath, access);
+                        ownerId = classRecord.getId();
+                        counters.writeSymbol(classRecord);
+
+                        if (superName != null) {
+                            counters.writeRelationship(new RelationshipRecord(ownerId,
+                                    RelationshipType.EXTENDS, superName, null));
+                        }
+                        if (interfaces != null) {
+                            for (String interfaceName : interfaces) {
+                                counters.writeRelationship(new RelationshipRecord(ownerId,
+                                        RelationshipType.IMPLEMENTS, interfaceName, null));
+                            }
+                        }
+                    }
+
+                    @Override
+                    public FieldVisitor visitField(int access, String name, String descriptor,
+                            String signature, Object value) {
+                        SymbolRecord record = new SymbolRecord(SymbolKind.FIELD, owner, name,
+                                descriptor, signature, sourcePath, access);
+                        counters.writeSymbol(record);
+                        counters.writeRelationship(new RelationshipRecord(ownerId,
+                                RelationshipType.DECLARES, record.getId(), null));
+                        return null;
+                    }
+
+                    @Override
+                    public MethodVisitor visitMethod(int access, String name, String descriptor,
+                            String signature, String[] exceptions) {
+                        SymbolKind kind = "<init>".equals(name) ? SymbolKind.CONSTRUCTOR : SymbolKind.METHOD;
+                        SymbolRecord record = new SymbolRecord(kind, owner, name,
+                                descriptor, signature, sourcePath, access);
+                        counters.writeSymbol(record);
+                        counters.writeRelationship(new RelationshipRecord(ownerId,
+                                RelationshipType.DECLARES, record.getId(), null));
+                        return null;
+                    }
+                }, READER_FLAGS);
+            } catch (UncheckedIOException ex) {
+                throw ex.getCause();
+            }
+        }
+    }
+
+    private static SymbolKind classKind(int access) {
+        if ((access & Opcodes.ACC_ANNOTATION) != 0) {
+            return SymbolKind.ANNOTATION;
+        }
+        if ((access & Opcodes.ACC_ENUM) != 0) {
+            return SymbolKind.ENUM;
+        }
+        if ((access & Opcodes.ACC_INTERFACE) != 0) {
+            return SymbolKind.INTERFACE;
+        }
+        return SymbolKind.CLASS;
+    }
+
+    private static List<Path> collectClassFiles(Path classRoot) throws IOException {
+        final List<Path> classFiles = new ArrayList<Path>();
+        try (Stream<Path> stream = Files.walk(classRoot)) {
+            stream.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().endsWith(".class"))
+                    .filter(path -> !AtlasFingerprint.normalizedRelativePath(classRoot, path).startsWith(ATLAS_PREFIX))
+                    .forEach(classFiles::add);
+        }
+
+        if (classFiles.isEmpty()) {
+            throw new IOException("No compiled client .class files found under: " + classRoot);
+        }
+
+        Collections.sort(classFiles, new Comparator<Path>() {
+            @Override
+            public int compare(Path left, Path right) {
+                return AtlasFingerprint.normalizedRelativePath(classRoot, left)
+                        .compareTo(AtlasFingerprint.normalizedRelativePath(classRoot, right));
+            }
+        });
+        return classFiles;
+    }
+
+    private static Path requireClassRoot(Path classRoot) throws IOException {
+        if (classRoot == null) {
+            throw new IllegalArgumentException("classRoot cannot be null");
+        }
+        Path normalized = classRoot.toAbsolutePath().normalize();
+        if (!Files.isDirectory(normalized)) {
+            throw new IOException("Compiled client class directory does not exist: " + normalized);
+        }
+        return normalized;
+    }
+
+    private static void replaceGeneratedFile(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException ex) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private static final class ScanCounters {
+        private final BufferedWriter symbols;
+        private final BufferedWriter relationships;
+        private long symbolCount;
+        private long relationshipCount;
+
+        private ScanCounters(BufferedWriter symbols, BufferedWriter relationships) {
+            this.symbols = symbols;
+            this.relationships = relationships;
+        }
+
+        private void writeSymbol(SymbolRecord record) {
+            try {
+                symbols.write(AtlasJson.symbol(record));
+                symbols.newLine();
+                symbolCount++;
+            } catch (IOException ex) {
+                throw new UncheckedIOException(ex);
+            }
+        }
+
+        private void writeRelationship(RelationshipRecord record) {
+            try {
+                relationships.write(AtlasJson.relationship(record));
+                relationships.newLine();
+                relationshipCount++;
+            } catch (IOException ex) {
+                throw new UncheckedIOException(ex);
+            }
+        }
+    }
+
+    public static final class ScanResult {
+        private final int classFileCount;
+        private final long symbolCount;
+        private final long relationshipCount;
+        private final String clientFingerprint;
+
+        private ScanResult(int classFileCount, long symbolCount, long relationshipCount,
+                String clientFingerprint) {
+            this.classFileCount = classFileCount;
+            this.symbolCount = symbolCount;
+            this.relationshipCount = relationshipCount;
+            this.clientFingerprint = clientFingerprint;
+        }
+
+        public int getClassFileCount() {
+            return classFileCount;
+        }
+
+        public long getSymbolCount() {
+            return symbolCount;
+        }
+
+        public long getRelationshipCount() {
+            return relationshipCount;
+        }
+
+        public String getClientFingerprint() {
+            return clientFingerprint;
+        }
+    }
+}

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import game.atlas.AtlasScanner.ScanResult;
 import game.atlas.AtlasSchema.Metadata;
 
 /**
@@ -37,6 +38,16 @@ public final class ClientAtlasMain {
                 ? Paths.get(args[1]).toAbsolutePath().normalize()
                 : workspace.defaultClassRoot();
 
+        if ("scan".equals(command)) {
+            ScanResult result = new AtlasScanner(workspace).scan(classRoot);
+            System.out.println("Client Atlas scan complete.");
+            System.out.println("Class files: " + result.getClassFileCount());
+            System.out.println("Symbols: " + result.getSymbolCount());
+            System.out.println("Relationships: " + result.getRelationshipCount());
+            System.out.println("Client fingerprint: " + result.getClientFingerprint());
+            return;
+        }
+
         if ("init".equals(command)) {
             Metadata metadata = workspace.initialize(classRoot);
             System.out.println("Client Atlas workspace initialized.");
@@ -66,6 +77,7 @@ public final class ClientAtlasMain {
 
     private static void printUsage() {
         System.out.println("Client Atlas offline tool");
+        System.out.println("  scan [classes-dir]    Scan compiled client declarations into Atlas JSONL");
         System.out.println("  status [classes-dir]  Show persisted metadata and stale/current fingerprint state");
         System.out.println("  init [classes-dir]    Create/reset metadata for the compiled client class directory");
         System.out.println("  help                  Show this help");

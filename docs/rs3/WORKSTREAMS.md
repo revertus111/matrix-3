@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 active; schema/persistence foundation is complete and the bytecode scanner MVP is next. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 active; bytecode scanner MVP is implemented and exact query/export CLI is next. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
 ## Shared discovery / navigation references

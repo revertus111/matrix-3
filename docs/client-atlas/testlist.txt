@@ -1,0 +1,16 @@
+Client Atlas - Phase 1 test list
+
+Quick/high-value checks
+[ ] Clean/build Client with Java 8/Eclipse-compatible settings.
+[ ] Run `game.atlas.ClientAtlasMain scan` from the Client project or repository root.
+[ ] Confirm scan reports non-zero class, symbol, and relationship counts.
+[ ] Confirm `.client-atlas/symbols.jsonl` contains a known obfuscated class, field, method, and constructor.
+[ ] Confirm `.client-atlas/relationships.jsonl` contains DECLARES and at least one EXTENDS record; confirm IMPLEMENTS where a known implementing class exists.
+[ ] Run `game.atlas.ClientAtlasMain status` and confirm metadata reopens and `Current fingerprint: true`.
+[ ] Confirm `game/atlas/**` records are absent from generated symbol data.
+[ ] Confirm normal `game.RS3Applet` launch ownership/configuration is unchanged.
+
+Phase 1 gate checks after 1A.4
+[ ] Query one exact obfuscated class/method through the Atlas CLI.
+[ ] Export one compact machine-readable symbol result/neighborhood.
+[ ] Reopen/query without rebuilding the Atlas index.

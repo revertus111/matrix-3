@@ -66,14 +66,18 @@ public final class AtlasWorkspace {
         return clientRoot.resolve("build/classes/java/main");
     }
 
-    public Metadata initialize(Path classRoot) throws IOException {
-        Path normalizedClassRoot = requireClassRoot(classRoot);
+    public void ensureLayout() throws IOException {
         Files.createDirectories(workspaceRoot);
         Files.createDirectories(tracesDirectory());
+        createIfMissing(evidenceFile());
+    }
+
+    public Metadata initialize(Path classRoot) throws IOException {
+        Path normalizedClassRoot = requireClassRoot(classRoot);
+        ensureLayout();
 
         resetGeneratedFile(symbolsFile());
         resetGeneratedFile(relationshipsFile());
-        createIfMissing(evidenceFile());
 
         Metadata metadata = new Metadata(
                 SCHEMA_VERSION,
