@@ -107,6 +107,7 @@ Client/.client-atlas/
     phase2-structural-check.txt
     phase2-structural-query.json
     phase2-investigation-check.txt
+    phase2-assistant-export-check.json
     exports/
     traces/
 ```
@@ -208,8 +209,9 @@ This closes the consolidated 2B.1-2B.3 runtime gate. The in-memory index, ranked
 - `AtlasInvestigationIndex` owns the Phase 2B in-memory acceleration layer; it does not scan or replace JSONL persistence.
 - `AtlasSearchEngine` owns ranked/friendly symbol resolution; it never changes authoritative IDs or silently selects ambiguous candidates.
 - `AtlasRelationshipQueryEngine` owns bounded relationship filtering/traversal over already-recorded bytecode facts.
-- `AtlasInvestigationVerifier` owns the consolidated Bundle 2B local search/investigation gate and does not rescan compiled classes.
-- UI/CLI consume the same investigation/search/relationship APIs instead of duplicating resolution logic.
+- `AtlasAssistantExportEngine` owns bounded machine-readable assistant/code packages over the investigation index; it does not scan or create another persistent index.
+- `AtlasInvestigationVerifier` owns the consolidated Bundle 2B local search/investigation/export gate and does not rescan compiled classes.
+- UI/CLI consume the same investigation/search/relationship/export APIs instead of duplicating resolution logic.
 
 # Schema v2
 
@@ -398,13 +400,47 @@ Behavior:
 - neighborhoods support depth **1-2**, cap at **100 nodes / 500 edges**, and explicitly report truncation,
 - relationship output preserves source path/line, opcode, and occurrence count where available.
 
-Standalone control now uses one **Search / Investigate** box for friendly symbols and relationship commands. It caches a current investigation snapshot, invalidates it when generated data changes/stales, and reuses the same APIs as CLI automation.
+Standalone control uses one **Search / Investigate** box for friendly symbols and relationship commands. It caches a current investigation snapshot, invalidates it when generated data changes/stales, and reuses the same APIs as CLI automation.
 
-The former **Run Phase 2 Check** label is now **Run Structural Check** because that action verifies Bundle 2A structural data rather than all of Phase 2.
+The former **Run Phase 2 Check** label is **Run Structural Check** because that action verifies Bundle 2A structural data rather than all of Phase 2.
+
+## 2B.4 assistant-oriented export implementation
+
+`AtlasAssistantExportEngine` produces a compact bounded JSON package directly from the current `AtlasInvestigationIndex`.
+
+Machine paths:
+
+```text
+ClientAtlasMain assistant-json "Class387"
+ClientAtlasMain assistant-json "calls Class387.method4844"
+ClientAtlasMain assistant-export "neighbors Class387 depth=2" <file>
+```
+
+Rules:
+
+- plain resolved symbol search automatically includes bounded depth-1 relationship context,
+- relationship commands export their already-filtered relationship result,
+- ambiguous/fuzzy resolution exports candidates and does not traverse as if resolved,
+- package metadata includes Atlas schema version, client fingerprint, generated timestamp, scan root, index totals, and current-snapshot marker,
+- symbol records include exact stable ID/kind/owner/name/descriptor/signature/compiled/source paths/access,
+- relationship records include type/target/source path/line/opcode/occurrence count/detail,
+- export caps are **50 candidates / 200 relationships / 250 relevant symbols**,
+- candidate/relationship/symbol truncation is explicit,
+- file export is atomic UTF-8 and does not create another persistent index,
+- standalone **Export Assistant JSON** exports the last successful friendly search or relationship command,
+- UI friendly search no longer runs the old exact streaming query merely to prepare an export.
+
+The existing `Run Search Check` / `verify-search` gate now includes assistant-package checks and writes:
+
+```text
+.client-atlas/phase2-assistant-export-check.json
+```
+
+Implementation is **verified-static**; the updated local gate must pass before 2B.4 is runtime-verified.
 
 ## Bundle 2B verifier
 
-`AtlasInvestigationVerifier` performs the consolidated local 2B.1-2B.3 gate **without rescanning** compiled classes.
+`AtlasInvestigationVerifier` performs the consolidated local 2B investigation gate **without rescanning** compiled classes.
 
 It checks:
 
@@ -419,6 +455,9 @@ It checks:
 - `REFERENCES_TYPE`,
 - typed `CONSTANT`,
 - depth-2 neighborhood caps,
+- assistant package metadata/source locations/caps,
+- assistant plain-search context and relationship-command export,
+- assistant ambiguity safety and atomic verification export,
 - index-load/search timing and approximate used-memory delta.
 
 Human workflow:
@@ -433,10 +472,11 @@ CLI automation:
 ClientAtlasMain verify-search
 ```
 
-Report:
+Reports:
 
 ```text
 .client-atlas/phase2-investigation-check.txt
+.client-atlas/phase2-assistant-export-check.json
 ```
 
 # Development plan
@@ -477,8 +517,9 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 - [x] **2B.1 In-memory investigation index implementation**.
 - [x] **2B.2 Ranked/friendly search implementation**.
 - [x] **2B.3 Relationship queries + bounded neighborhoods implementation** - includes standalone Search / Investigate integration and one-click Bundle 2B verification harness.
-- [x] **2B local verification gate** - `PHASE 2 INVESTIGATION CHECK: PASS` runtime-confirmed; measurements recorded above.
-- [ ] **2B.4 Assistant-oriented export** - current execution target.
+- [x] **2B.1-2B.3 local verification gate** - `PHASE 2 INVESTIGATION CHECK: PASS` runtime-confirmed; measurements recorded above.
+- [x] **2B.4 Assistant-oriented export implementation** - verified-static; local gate pending.
+- [ ] **2B.4 local verification gate** - run updated `Run Search Check` once after pulling.
 - [ ] **2B.5 Safe initial domain correlation**.
 
 ## Phase 3 - Runtime Evidence and Knowledge
@@ -523,9 +564,11 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 # Testing
 
-Bundle 2A structural gate and the consolidated 2B.1-2B.3 investigation gate are complete. Do not request another structural/search gate without new contradictory evidence or a relevant implementation change.
+Bundle 2A structural gate and the consolidated 2B.1-2B.3 investigation gate are complete. Do not request another structural gate without new contradictory evidence or a relevant implementation change.
 
-Future Bundle 2B verification should focus on the new export/correlation behavior added by 2B.4/2B.5 while reusing the existing current schema-v2 dataset where practical.
+2B.4 implementation is verified-static. Its updated **Run Search Check** is the current one-time local gate; it reuses the existing current schema-v2 dataset and must not rescan compiled classes. On PASS it validates the new assistant export behavior together with the already-established 2B.1-2B.3 regressions.
+
+Future 2B.5 verification should focus on correlation behavior and reuse this same current dataset where practical.
 
 # Carryover / blockers
 
@@ -538,13 +581,13 @@ Future Bundle 2B verification should focus on the new export/correlation behavio
 
 ## BLOCKERS
 
-- None for 2B.4.
+- None for the 2B.4 local gate.
 
 # Resume Here
 
 **Last completed checkpoint:**
 
-- Phase 2 / Bundle 2B / **2B local investigation/search verification gate** - `PHASE 2 INVESTIGATION CHECK: PASS`.
+- Phase 2 / Bundle 2B / **2B.4 Assistant-oriented export implementation** - `verified-static`; local gate pending.
 
 **Current phase:**
 
@@ -556,7 +599,7 @@ Future Bundle 2B verification should focus on the new export/correlation behavio
 
 **Current/next checklist item:**
 
-- **2B.4 Assistant-oriented export**.
+- **2B.4 local verification gate** - run updated **Run Search Check** once after pulling.
 
 **Verified dataset baseline:**
 
@@ -582,7 +625,9 @@ Future Bundle 2B verification should focus on the new export/correlation behavio
 - `AtlasInvestigationIndex` is runtime-verified on the current 33742/325826 dataset.
 - `AtlasSearchEngine` exact/friendly/ranked ambiguity behavior is runtime-verified.
 - `AtlasRelationshipQueryEngine` call/read/write/type/constant/neighborhood behavior is runtime-verified.
-- Standalone Atlas Control Search / Investigate surface is runtime-verified through the consolidated check.
+- `AtlasAssistantExportEngine` is implemented verified-static with bounded machine JSON, plain-search context, relationship-command export, source locations, snapshot metadata, and explicit truncation.
+- Standalone Atlas Control can export the last successful search/relationship command as assistant JSON from the cached investigation index.
+- The updated consolidated search verifier includes 2B.4 checks but has not yet been runtime-run after this implementation.
 - The `Canonical Main-Goal Status` table above is the authority for cross-chat user-facing status rows; execution/checklist state below it must not rewrite those rows implicitly.
 
 **Files/systems already inspected or changed for Phase 2:**
@@ -596,6 +641,7 @@ Future Bundle 2B verification should focus on the new export/correlation behavio
 - `Client/src/main/java/game/atlas/AtlasInvestigationIndex.java`
 - `Client/src/main/java/game/atlas/AtlasSearchEngine.java`
 - `Client/src/main/java/game/atlas/AtlasRelationshipQueryEngine.java`
+- `Client/src/main/java/game/atlas/AtlasAssistantExportEngine.java`
 - `Client/src/main/java/game/atlas/AtlasInvestigationVerifier.java`
 - `Client/src/main/java/game/atlas/ClientAtlasControl.java`
 - `Client/src/main/java/game/atlas/ClientAtlasMain.java`
@@ -614,12 +660,14 @@ Future Bundle 2B verification should focus on the new export/correlation behavio
 
 **Pending verification:**
 
-- None for 2B.1-2B.3.
+- Eclipse/Java 8 clean/build after pulling 2B.4.
+- Run **Run Search Check** once. Expected final gate remains `PHASE 2 INVESTIGATION CHECK: PASS` and the report must include `Assistant export checks` plus assistant PASS lines.
+- Confirm `.client-atlas/phase2-assistant-export-check.json` is written and non-empty.
 
-**Next implementation:**
+**Next implementation after gate:**
 
-- Build **2B.4 Assistant-oriented export** so a future assistant investigation can request a compact, bounded, machine-readable package of resolved symbols, relevant relationships, source locations, fingerprint/schema metadata, and truncation state without parsing human UI output.
+- **2B.5 Safe initial domain correlation**. Keep correlation evidence-backed; generic constants must not become guessed interface/animation/model/etc. IDs.
 
 # Next recommended work
 
-**2B.4 Assistant-oriented export.**
+**Run the 2B.4 local verification gate.**

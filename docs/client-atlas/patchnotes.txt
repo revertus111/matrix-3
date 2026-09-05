@@ -67,3 +67,10 @@
 - Hardened investigation verification sample selection so hot methods/fields/types above the 500-edge display cap cannot cause false failures from choosing a known edge that would be intentionally truncated.
 - Runtime-confirmed `PHASE 2 INVESTIGATION CHECK: PASS` on the real 33742-symbol / 325826-relationship dataset without rescanning; investigation-index load was 946.649 ms with ~181.5 MiB approximate used-memory delta.
 - Runtime-confirmed exact/friendly Class1 resolution, ambiguity safety (`<init>` 1294 candidates), fuzzy-result capping (`Clas` 29421 matches / 50 shown), all relationship directions/types, and depth-2 neighborhood bounds (28 nodes / 40 relationships).
+- Added `AtlasAssistantExportEngine` for compact bounded assistant/code investigation packages over the current in-memory index; JSONL remains the persistence authority.
+- Assistant packages include schema/fingerprint/snapshot metadata, exact resolution or bounded candidates, source-bearing symbol records, relevant relationships, neighborhood context for resolved plain searches, and explicit truncation/cap state.
+- Added `assistant-json` and `assistant-export` CLI paths so automation can consume machine JSON without parsing human search output.
+- Replaced the standalone control's legacy last-result export with `Export Assistant JSON`; any successful friendly search or relationship command can now be exported from the cached investigation index.
+- Removed the UI search-time exact streaming export preparation, avoiding an unnecessary symbols/relationships JSONL pass after every resolved friendly search.
+- Extended `Run Search Check` / `verify-search` to validate assistant metadata/source fields, plain-search context, relationship-command export, ambiguity safety, caps, and atomic verification-file output without rescanning.
+- 2B.4 implementation is complete as verified-static; local runtime verification is pending through the updated one-click search check.

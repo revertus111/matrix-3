@@ -54,7 +54,7 @@ Bundle 2B - investigation search implementation/runtime verified through 2B.3
     [x] Investigation index cached only for the current generated snapshot.
     [x] `Run Search Check` + CLI `verify-search`.
 
-Bundle 2B consolidated runtime gate - VERIFIED 2026-09-05
+Bundle 2B consolidated runtime gate - VERIFIED 2026-09-05 through 2B.3
 [x] `Run Search Check` completed against the existing current index without rescanning.
 [x] Output confirmed `PHASE 2 INVESTIGATION CHECK: PASS`.
 [x] VERIFIED: 33742 symbols / 325826 relationships.
@@ -74,10 +74,32 @@ Bundle 2B consolidated runtime gate - VERIFIED 2026-09-05
 [x] VERIFIED REFERENCES_TYPE lookup.
 [x] VERIFIED typed CONSTANT lookup.
 [x] VERIFIED depth-2 neighborhood: 28 nodes / 40 relationships, within 100/500 caps.
-[x] 2B local verification gate PASS.
+[x] 2B.1-2B.3 local verification gate PASS.
+
+Bundle 2B / 2B.4 - assistant-oriented export implementation
+[x] `AtlasAssistantExportEngine` uses the already-current in-memory investigation index; no rescan or second persistence owner.
+[x] Plain resolved searches automatically package bounded depth-1 relationship context.
+[x] Relationship commands package their filtered result directly.
+[x] Ambiguous/fuzzy searches preserve candidates and do not traverse as if resolved.
+[x] Package includes schema version, client fingerprint, generated timestamp, scan root, index counts, and current-snapshot marker.
+[x] Symbol records preserve exact IDs/kinds/owners/descriptors plus compiled/source paths and access flags.
+[x] Relationship records preserve type/target/sourcePath/sourceLine/opcode/occurrenceCount/detail.
+[x] Assistant caps: 50 candidates / 200 relationships / 250 relevant symbols with explicit truncation state.
+[x] CLI `assistant-json "<query-or-command>"` prints machine JSON without human-output parsing.
+[x] CLI `assistant-export "<query-or-command>" <file>` writes the same package atomically.
+[x] Standalone `Export Assistant JSON` exports the last successful friendly search or relationship command.
+[x] Resolved UI search no longer performs an extra streaming exact-query pass just to prepare export.
+[x] Existing `Run Search Check` / `verify-search` now includes 2B.4 export assertions and writes `phase2-assistant-export-check.json`.
+
+2B.4 local verification gate - NEEDS TEST
+[ ] Eclipse/Java 8 clean/build succeeds after pulling 2B.4.
+[ ] Open Client Atlas Control and click `Run Search Check` once; no structural rescan should occur.
+[ ] Output still ends with `PHASE 2 INVESTIGATION CHECK: PASS`.
+[ ] Report includes `Assistant export checks` and the three assistant PASS lines.
+[ ] `.client-atlas/phase2-assistant-export-check.json` exists and is non-empty.
+[ ] Optional quick UI check: search `Class1`, click `Export Assistant JSON`, confirm an `exports/assistant-Class1.json` file is written.
 
 Remaining Bundle 2B
-[ ] 2B.4 Assistant-oriented export - current execution target.
 [ ] 2B.5 Safe initial domain correlation.
 
 Carryover regression checks
@@ -88,4 +110,5 @@ Carryover regression checks
 Gate rule
 - Bundle 2A is complete; do not request another structural scan/test without new contradictory evidence.
 - 2B.1-2B.3 implementation and consolidated runtime verification are complete.
-- Next valid implementation target is 2B.4 Assistant-oriented export.
+- 2B.4 implementation is verified-static; the next valid item is its one-click local verification gate.
+- Do not start 2B.5 until the 2B.4 gate passes or is explicitly deferred.

@@ -35,6 +35,7 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
+import game.atlas.AtlasAssistantExportEngine.ExportResult;
 import game.atlas.AtlasQueryEngine.QueryResult;
 import game.atlas.AtlasRelationshipQueryEngine.RelationshipQueryResult;
 import game.atlas.AtlasScanner.ScanResult;
@@ -66,8 +67,7 @@ public final class ClientAtlasControl {
     private final List<JButton> taskButtons = new ArrayList<JButton>();
 
     private AtlasInvestigationIndex investigationIndex;
-    private QueryResult lastQueryResult;
-    private String lastQueryId;
+    private String lastAssistantRequest;
 
     private ClientAtlasControl(AtlasWorkspace workspace) {
         this.workspace = workspace;
@@ -170,6 +170,7 @@ public final class ClientAtlasControl {
                 + "Friendly search: Class387 | Class387.method4844 | method4844\n"
                 + "Relationships: calls | called-by | reads | written-by | references | constant\n"
                 + "Neighborhood: neighbors <symbol> depth=1 or depth=2\n"
+                + "Export Assistant JSON packages the last successful search/command.\n"
                 + "Use Run Search Check for the one-click Bundle 2B local gate.\n");
 
         JScrollPane scrollPane = new JScrollPane(outputArea);
@@ -213,7 +214,7 @@ public final class ClientAtlasControl {
                 refreshStatus();
             }
         }));
-        panel.add(taskButton("Export Last Result", new Runnable() {
+        panel.add(taskButton("Export Assistant JSON", new Runnable() {
             @Override
             public void run() {
                 exportLastResult();
@@ -244,7 +245,7 @@ public final class ClientAtlasControl {
     }
 
     private void runInvestigationCheck() {
-        runBackground("Running the consolidated investigation/search check...", new BackgroundTask() {
+        runBackground("Running the consolidated investigation/search/export check...", new BackgroundTask() {
             private AtlasInvestigationVerifier.VerificationResult result;
 
             @Override
@@ -353,8 +354,7 @@ public final class ClientAtlasControl {
         }
 
         runBackground("Searching " + raw + "...", new BackgroundTask() {
-            private QueryResult exportableResult;
-            private String exportableId;
+            private String exportRequest;
 
             @Override
             public String execute() throws Exception {
@@ -368,22 +368,19 @@ public final class ClientAtlasControl {
                 if (relationshipEngine.isRelationshipCommand(raw)) {
                     RelationshipQueryResult result = relationshipEngine.query(raw);
                     output.append(result.toDisplayText());
+                    exportRequest = raw;
                     return output.toString();
                 }
 
                 SearchResult result = new AtlasSearchEngine(index).search(raw);
                 output.append(result.toDisplayText());
-                if (result.isResolved()) {
-                    exportableId = result.getResolvedSymbol().getId();
-                    exportableResult = new AtlasQueryEngine(workspace).queryExact(exportableId, classRoot);
-                }
+                exportRequest = raw;
                 return output.toString();
             }
 
             @Override
             public void complete() {
-                lastQueryResult = exportableResult;
-                lastQueryId = exportableId;
+                lastAssistantRequest = exportRequest;
             }
         });
     }
@@ -411,25 +408,30 @@ public final class ClientAtlasControl {
     }
 
     private void clearLastExportableQuery() {
-        lastQueryResult = null;
-        lastQueryId = null;
+        lastAssistantRequest = null;
     }
 
     private void exportLastResult() {
-        if (lastQueryResult == null || lastQueryId == null) {
-            showError("Run a friendly/exact symbol search that resolves to one symbol first. "
-                    + "Relationship-command export arrives in the assistant-export step.");
+        if (lastAssistantRequest == null) {
+            showError("Run a search or relationship command successfully first.");
             return;
         }
 
-        runBackground("Exporting last resolved symbol...", new BackgroundTask() {
+        runBackground("Exporting assistant investigation package...", new BackgroundTask() {
             @Override
             public String execute() throws Exception {
+                AtlasInvestigationIndex index = currentInvestigationIndex();
+                AtlasAssistantExportEngine engine = new AtlasAssistantExportEngine(index);
+                ExportResult result = engine.build(lastAssistantRequest);
                 Path exportDirectory = workspace.getWorkspaceRoot().resolve("exports");
-                String fileName = safeFileName(lastQueryId) + ".json";
-                Path output = new AtlasQueryEngine(workspace).writeExport(lastQueryResult,
-                        exportDirectory.resolve(fileName));
-                return "Export written:\n" + output;
+                String fileName = "assistant-" + safeFileName(lastAssistantRequest) + ".json";
+                Path output = engine.writeExport(result, exportDirectory.resolve(fileName));
+                return "Assistant export written:\n" + output + "\n"
+                        + "Resolved: " + result.isResolved() + "\n"
+                        + "Relevant symbols: " + result.getRelevantSymbolCount()
+                        + (result.isSymbolsTruncated() ? " (output capped)" : "") + "\n"
+                        + "Relationships: " + result.getTotalRelationshipMatches()
+                        + (result.isRelationshipsTruncated() ? " (output capped)" : "");
             }
         });
     }
@@ -652,7 +654,11 @@ public final class ClientAtlasControl {
     }
 
     private static String safeFileName(String value) {
-        return value.replaceAll("[^A-Za-z0-9._-]+", "_");
+        String safe = value.replaceAll("[^A-Za-z0-9._-]+", "_");
+        if (safe.length() > 80) {
+            safe = safe.substring(0, 80);
+        }
+        return safe.length() == 0 ? "query" : safe;
     }
 
     private static String formatMillis(long nanos) {

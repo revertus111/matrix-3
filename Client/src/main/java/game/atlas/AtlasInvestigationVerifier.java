@@ -9,6 +9,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Locale;
 
+import game.atlas.AtlasAssistantExportEngine.ExportResult;
 import game.atlas.AtlasInvestigationIndex.RelationshipEntry;
 import game.atlas.AtlasInvestigationIndex.SymbolEntry;
 import game.atlas.AtlasRelationshipQueryEngine.RelationshipQueryResult;
@@ -24,6 +25,7 @@ import game.atlas.AtlasSearchEngine.SearchResult;
 public final class AtlasInvestigationVerifier {
 
     private static final String REPORT_FILE = "phase2-investigation-check.txt";
+    private static final String ASSISTANT_EXPORT_FILE = "phase2-assistant-export-check.json";
 
     private final AtlasWorkspace workspace;
     private final Path classRoot;
@@ -123,9 +125,42 @@ public final class AtlasInvestigationVerifier {
         require(neighbors.getRelationships().size() <= AtlasRelationshipQueryEngine.MAX_EDGES,
                 "neighborhood exceeded edge cap");
 
+        AtlasAssistantExportEngine assistant = new AtlasAssistantExportEngine(index);
+        ExportResult assistantClass = assistant.build("Class1");
+        require(assistantClass.isResolved()
+                        && class1.getId().equals(assistantClass.getResolvedTarget()),
+                "assistant Class1 package did not preserve exact resolution");
+        require(assistantClass.getSymbols().size() <= AtlasAssistantExportEngine.MAX_SYMBOLS,
+                "assistant symbol package exceeded its cap");
+        require(assistantClass.getRelationships().size() <= AtlasAssistantExportEngine.MAX_RELATIONSHIPS,
+                "assistant relationship package exceeded its cap");
+        String assistantJson = assistantClass.toJson();
+        require(assistantJson.contains("\"schemaVersion\":" + AtlasWorkspace.SCHEMA_VERSION),
+                "assistant package omitted schema metadata");
+        require(assistantJson.contains("\"clientFingerprint\":" + AtlasJson.quote(metadata.getClientFingerprint())),
+                "assistant package omitted fingerprint metadata");
+        require(assistantJson.contains("\"sourcePath\":"),
+                "assistant package omitted source-location fields");
+
+        ExportResult assistantCalls = assistant.build("calls " + samples.call.getFromId());
+        require(contains(assistantCalls.getRelationships(), samples.call),
+                "assistant relationship-command package missed its known CALLS edge");
+
+        ExportResult assistantAmbiguous = assistant.build(ambiguous.getQuery());
+        require(!assistantAmbiguous.isResolved() && assistantAmbiguous.getCandidateCount() > 1L,
+                "assistant package silently resolved an ambiguous search");
+        require(assistantAmbiguous.getRelationships().isEmpty(),
+                "assistant ambiguous search unexpectedly traversed relationships");
+
+        Path assistantExportPath = workspace.getWorkspaceRoot().resolve(ASSISTANT_EXPORT_FILE);
+        assistant.writeExport(assistantClass, assistantExportPath);
+        require(Files.isRegularFile(assistantExportPath) && Files.size(assistantExportPath) > 0L,
+                "assistant export verification file was not written");
+
         String report = buildReport(index, memoryBefore, memoryAfter, canonical, friendly,
                 memberQuery, member, ambiguous, fuzzy, samples, calls, calledBy,
-                reads, writtenBy, references, constant, neighbors);
+                reads, writtenBy, references, constant, neighbors, assistantClass,
+                assistantCalls, assistantAmbiguous, assistantExportPath);
         Path reportPath = workspace.getWorkspaceRoot().resolve(REPORT_FILE);
         writeReport(reportPath, report);
         return new VerificationResult(metadata, report, reportPath);
@@ -226,9 +261,11 @@ public final class AtlasInvestigationVerifier {
             RelationshipQueryResult calls, RelationshipQueryResult calledBy,
             RelationshipQueryResult reads, RelationshipQueryResult writtenBy,
             RelationshipQueryResult references, RelationshipQueryResult constant,
-            RelationshipQueryResult neighbors) {
-        StringBuilder report = new StringBuilder(4096);
-        report.append("Client Atlas - Phase 2 investigation/search verification\n\n");
+            RelationshipQueryResult neighbors, ExportResult assistantClass,
+            ExportResult assistantCalls, ExportResult assistantAmbiguous,
+            Path assistantExportPath) {
+        StringBuilder report = new StringBuilder(4608);
+        report.append("Client Atlas - Phase 2 investigation/search/export verification\n\n");
         report.append("PHASE 2 INVESTIGATION CHECK: PASS\n\n");
         report.append("Symbols: ").append(index.getSymbolCount()).append('\n');
         report.append("Relationships: ").append(index.getRelationshipCount()).append('\n');
@@ -261,6 +298,18 @@ public final class AtlasInvestigationVerifier {
                 .append(" / cap ").append(AtlasRelationshipQueryEngine.MAX_EDGES)
                 .append(neighbors.isTruncated() ? " (truncated)" : "").append("\n\n");
 
+        report.append("Assistant export checks\n");
+        report.append("  Class1 resolved: ").append(assistantClass.getResolvedTarget()).append('\n');
+        report.append("  Class1 relevant symbols: ").append(assistantClass.getRelevantSymbolCount())
+                .append(assistantClass.isSymbolsTruncated() ? " (truncated)" : "").append('\n');
+        report.append("  Class1 relationships: ").append(assistantClass.getTotalRelationshipMatches())
+                .append(assistantClass.isRelationshipsTruncated() ? " (truncated)" : "").append('\n');
+        report.append("  CALLS command relationships: ").append(assistantCalls.getTotalRelationshipMatches())
+                .append(assistantCalls.isRelationshipsTruncated() ? " (truncated)" : "").append('\n');
+        report.append("  ambiguous candidate count: ").append(assistantAmbiguous.getCandidateCount())
+                .append(assistantAmbiguous.isCandidatesTruncated() ? " (truncated)" : "").append('\n');
+        report.append("  verification export: ").append(assistantExportPath).append("\n\n");
+
         report.append("PASS  current schema/fingerprint without rescan\n");
         report.append("PASS  in-memory index counts match metadata\n");
         report.append("PASS  canonical + friendly + owner/member search\n");
@@ -269,6 +318,9 @@ public final class AtlasInvestigationVerifier {
         report.append("PASS  calls / called-by / reads / written-by\n");
         report.append("PASS  type references + typed constants\n");
         report.append("PASS  depth-2 neighborhood respects node/edge caps\n");
+        report.append("PASS  assistant package carries schema/fingerprint/source locations\n");
+        report.append("PASS  assistant plain-search context + relationship-command export\n");
+        report.append("PASS  assistant ambiguity stays unresolved and package caps hold\n");
         return report.toString();
     }
 
