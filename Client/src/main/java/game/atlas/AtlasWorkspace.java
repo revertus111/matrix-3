@@ -18,7 +18,7 @@ import game.atlas.AtlasSchema.Metadata;
  */
 public final class AtlasWorkspace {
 
-    public static final int SCHEMA_VERSION = 1;
+    public static final int SCHEMA_VERSION = 2;
     public static final String WORKSPACE_DIRECTORY = ".client-atlas";
     public static final String METADATA_FILE = "metadata.properties";
     public static final String SYMBOLS_FILE = "symbols.jsonl";
