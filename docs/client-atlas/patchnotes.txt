@@ -64,3 +64,4 @@
 - Renamed the old `Run Phase 2 Check` UI action to `Run Structural Check` because it verifies Bundle 2A structural data, not all of Phase 2.
 - Added `AtlasInvestigationVerifier`, `Run Search Check`, and `ClientAtlasMain verify-search` for one-click Bundle 2B verification without rescanning compiled client classes.
 - Search verification covers current-index load/counts, exact/friendly/member resolution, ambiguity/fuzzy safety, call/read/write/type/constant directions, and depth-2 node/edge caps; report writes to `.client-atlas/phase2-investigation-check.txt`.
+- Hardened investigation verification sample selection so hot methods/fields/types above the 500-edge display cap cannot cause false failures from choosing a known edge that would be intentionally truncated.
