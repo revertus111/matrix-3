@@ -41,3 +41,13 @@ Phase 3 / 3A-Core bundled hooks
 - Exact model/animation loader instrumentation remains CARRYOVER until real ownership is established; no guessed asset hook was added.
 - Trace events now distinguish the literal hook `sourceSymbol` from the verified logical `ownerSymbol` for keyboard, menu, and incoming packet observations so later correlation does not blur evidence provenance.
 - All Core runtime hooks remain opt-in through the recorder, payload-minimal, bounded, and failure-isolated. Runtime verification remains deliberately consolidated with 3A-Correlation and the final Bundle 3A gate.
+
+Phase 3 / 3A.6 runtime correlation
+- Added `AtlasTraceCorrelationEngine` to resolve saved runtime trace `sourceSymbol` / `ownerSymbol` IDs against the already-current `AtlasInvestigationIndex`.
+- Correlation refuses stale generated Atlas data through the existing index load gate and separately checks the trace fingerprint against the current Atlas fingerprint.
+- Correlation is accepted as current only when fingerprint, event count, source IDs, and owner IDs all validate; mismatch/unknown/unresolved states remain explicit diagnostics.
+- Trace input remains bounded to 10000 events; assistant JSON exports at most 1000 events and 100 unresolved IDs per list.
+- Correlation output includes category counts, dropped count, resolution totals, exact symbol metadata, safe original fields, and truncation state without creating semantic evidence or `LITERAL_ID` claims.
+- Added `latest` trace lookup plus atomic correlation export.
+- Added CLI commands `trace-correlate <trace|latest>` and `trace-correlate-export <trace|latest> <file>`.
+- 3A.6 implementation is verified-static; runtime validation remains bundled with the single final Bundle 3A gate.
