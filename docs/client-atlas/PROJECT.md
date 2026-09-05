@@ -102,6 +102,7 @@ Rules:
 - Scanner publishes generated data through temporary files.
 - Fingerprints are checked before/after scan so changed compiled classes reject the scan.
 - Query/export rejects stale or incompatible-schema generated data.
+- JSONL remains the persistence authority.
 - SQLite/native persistence remains deferred; verified Bundle 2A measurements do not justify it.
 
 # Evidence
@@ -132,7 +133,7 @@ Local **Run Phase 2 Check** completed with:
 PHASE 2 STRUCTURAL CHECK: PASS
 ```
 
-Verified measurements visible in the local report:
+Verified measurements:
 
 - Pre-scan index: schema 2 / current.
 - Schema version: **2**.
@@ -146,9 +147,9 @@ Verified measurements visible in the local report:
 - `relationships.jsonl`: **78,016,586 bytes (~74.4 MiB)**.
 - Fingerprint remained current.
 
-The verifier PASS means its mandatory assertions succeeded, including schema-v2 record shape, generated `CALLS`, `READS_FIELD`, `WRITES_FIELD`, `REFERENCES_TYPE`, typed `CONSTANT` relationships, zero automatic `LITERAL_ID` promotion, exact-query regression, compact export regression, and preservation of evidence/trace generated-state boundaries.
+The verifier PASS means mandatory assertions succeeded for schema-v2 record shape, generated `CALLS`, `READS_FIELD`, `WRITES_FIELD`, `REFERENCES_TYPE`, typed `CONSTANT`, zero automatic `LITERAL_ID` promotion, exact-query/export regression, and evidence/trace preservation.
 
-**Decision from measurements:** keep portable JSONL + planned in-memory investigation indexes. The current ~83 MiB generated static dataset and ~1.3 second rebuild do not justify SQLite/native persistence.
+**Decision from measurements:** keep portable JSONL + in-memory investigation indexes. The current ~83 MiB generated static dataset and ~1.3 second rebuild do not justify SQLite/native persistence.
 
 Bundle 2A is **DONE**.
 
@@ -159,10 +160,11 @@ Bundle 2A is **DONE**.
 - `AtlasFingerprint` excludes Atlas classes.
 - `AtlasWorkspace` owns local persistence/schema/current checks.
 - `AtlasScanner` owns bytecode scanning.
-- `AtlasQueryEngine` owns exact query/export.
+- `AtlasQueryEngine` owns exact streaming query/export.
 - `ClientAtlasControl` is a human control surface over Atlas APIs.
 - `AtlasStructuralVerifier` owns Bundle 2A structural verification/measurement.
-- UI and CLI use the same Atlas engine/verifier rather than duplicating ownership.
+- `AtlasInvestigationIndex` now owns the Phase 2B in-memory acceleration layer; it does not scan or replace JSONL persistence.
+- UI/CLI continue to consume shared Atlas APIs rather than duplicating discovery ownership.
 
 # Schema v2
 
@@ -204,7 +206,7 @@ Rules:
 - `sourceLine` and `opcode` are nullable.
 - `occurrenceCount` is positive.
 - Repeated same-method/type/target edges aggregate into one record.
-- If an aggregated edge uses different opcodes, stored opcode becomes null instead of claiming one instruction represents all occurrences.
+- If an aggregated edge uses different opcodes, stored opcode becomes null rather than claiming one instruction represents all occurrences.
 - `detail` remains optional and must not replace typed fields.
 
 # Phase 2 structural scanner
@@ -255,19 +257,62 @@ string:Attack
 
 No automatic domain meaning is assigned to generic constants.
 
-# Search/index direction
+# Phase 2B investigation index
 
-Bundle 2A measurements support the planned on-demand/in-memory search layer.
+## 2B.1 implementation
 
-Initial maps for 2B.1:
+`AtlasInvestigationIndex` is an immutable, on-demand acceleration layer over the existing schema-v2 JSONL.
 
-- symbol ID -> symbol
-- owner/name -> candidate symbols
-- outgoing relationships
-- incoming relationships
-- typed constant -> referencing symbols
+It intentionally does **not**:
 
-Friendly searches later in 2B:
+- rescan compiled classes,
+- create another persistent database,
+- rename symbols,
+- infer semantic meaning,
+- replace `AtlasQueryEngine`/`AtlasScanner` ownership.
+
+Load safety:
+
+1. Read persisted metadata.
+2. Require current schema version.
+3. Require current client fingerprint before load.
+4. Require generated symbol/relationship files.
+5. Parse current JSONL into compact entries.
+6. Require loaded symbol/relationship totals to exactly match metadata.
+7. Recheck client fingerprint after load so a concurrent rebuild cannot silently produce a mixed index.
+
+Lookup maps:
+
+- exact symbol ID -> symbol entry
+- normalized owner -> candidate symbols
+- normalized member/class name -> candidate symbols
+- normalized owner+name -> candidate symbols
+- source symbol ID -> outgoing relationships
+- relationship target -> incoming relationships
+- typed constant target -> referencing relationships
+
+Original IDs/names remain untouched in returned entries. Normalization is internal lookup behavior only and uses locale-stable lowercase keys.
+
+Relationship entries preserve:
+
+- `fromId`
+- relationship type
+- target
+- source path
+- source line when available
+- opcode when available
+- occurrence count
+- detail
+
+A temporary load-time string canonicalization pool reuses repeated IDs, targets, and source paths so the ~325k relationship dataset does not needlessly duplicate String objects. The pool itself is not persistent and becomes collectable after index construction.
+
+2B.1 local load/performance verification is deliberately **batched with 2B.2 friendly-search verification**. Requiring a separate Eclipse session for a non-user-facing index loader would waste user runtime time.
+
+# Search direction
+
+2B.2 builds ranked/friendly resolution on top of `AtlasInvestigationIndex`.
+
+Target searches:
 
 ```text
 Class387
@@ -280,9 +325,9 @@ references <type>
 constant 762
 ```
 
-Ambiguous shorthand returns candidates; it never silently chooses an overload.
+Ambiguous shorthand must return candidates; it must never silently choose an overload.
 
-Initial bounded-neighborhood targets:
+Initial bounded-neighborhood targets for 2B.3:
 
 - default depth 1
 - optional depth 2
@@ -325,8 +370,8 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 **Status: ACTIVE**
 
-- [ ] **2B.1 In-memory investigation index** - current execution target.
-- [ ] **2B.2 Ranked/friendly search**.
+- [x] **2B.1 In-memory investigation index implementation** - current/stale guards, count validation, symbol/candidate/incoming/outgoing/constant maps, compact parsed entries, load-time string canonicalization. **Local load/performance verification is batched with 2B.2.**
+- [ ] **2B.2 Ranked/friendly search** - current execution target.
 - [ ] **2B.3 Relationship queries + bounded neighborhoods**.
 - [ ] **2B.4 Assistant-oriented export**.
 - [ ] **2B.5 Safe initial domain correlation**.
@@ -375,22 +420,30 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 Bundle 2A structural gate is complete. Do not request another structural rescan unless new evidence requires it.
 
-Future Bundle 2B tests should reuse the existing current schema-v2 index where possible and validate:
+## Next consolidated Bundle 2B local checks
 
-- index construction against the verified ~325k relationship dataset,
-- exact and shorthand candidate resolution,
-- incoming/outgoing relationship lookup,
-- typed constant lookup,
-- ambiguity surfaced instead of silently resolved,
-- bounded result sizes and truncation state,
-- acceptable index-build/query time and memory use.
+The first 2B runtime session should exercise 2B.1 through the user-facing 2B.2 search path rather than testing the loader alone.
+
+Required 2B.1 checks during that session:
+
+- load the verified current schema-v2 dataset without rescanning,
+- loaded totals equal **33742 symbols / 325826 relationships**,
+- record in-memory index build time,
+- observe memory behavior under the existing Client Atlas JVM settings,
+- exact `CLASS:game/Class1` lookup succeeds,
+- `Class1` name candidate lookup includes the same class,
+- outgoing/incoming maps return known relationships,
+- one typed constant referrer path resolves,
+- stale/schema mismatch still refuses index construction.
+
+2B.2/2B.3 checks will additionally verify ambiguity handling, ranked results, relationship commands, bounded result sizes, and truncation state.
 
 # Carryover / blockers
 
 ## CARRYOVER
 
-- Stale-index rejection on a natural future compiled-client change.
-- >200 immediate-relationship truncation regression when a naturally suitable symbol is available.
+- Stale-index rejection on a natural future client source change.
+- >200 streaming exact-query truncation regression when a naturally suitable symbol is available.
 - Advanced automatic correlation remains usage-driven backlog.
 
 ## BLOCKERS
@@ -399,9 +452,9 @@ Future Bundle 2B tests should reuse the existing current schema-v2 index where p
 
 # Resume Here
 
-**Last completed checkpoint:**
+**Last completed implementation:**
 
-- Phase 2 / Bundle 2A / **2A.4 Structural verification + size metrics** - `PHASE 2 STRUCTURAL CHECK: PASS`.
+- Phase 2 / Bundle 2B / **2B.1 In-memory investigation index implementation**.
 
 **Current phase:**
 
@@ -413,7 +466,7 @@ Future Bundle 2B tests should reuse the existing current schema-v2 index where p
 
 **Current/next checklist item:**
 
-- **2B.1 In-memory investigation index**.
+- **2B.2 Ranked/friendly search**.
 
 **Verified dataset baseline:**
 
@@ -423,17 +476,19 @@ Future Bundle 2B tests should reuse the existing current schema-v2 index where p
 - 8.5 MiB symbols JSONL
 - 74.4 MiB relationships JSONL
 - ~1.28 s full structural scan
-- ~362 ms current streaming exact Class1 query
+- ~362 ms streaming exact Class1 query
 
-**Implementation state:**
+**Current implementation state:**
 
 - Schema v2/source locator complete and verified.
-- CALLS/DYNAMIC_CALL/read/write scanning complete and verified by consolidated gate.
-- Type references + typed constants complete and verified by consolidated gate.
+- CALLS/DYNAMIC_CALL/read/write scanning complete and verified.
+- Type references + typed constants complete and verified.
 - No automatic literal/domain-ID semantics.
-- JSONL remains the persistence authority; no database is currently justified.
+- JSONL remains persistence authority; no database is justified.
+- `AtlasInvestigationIndex` now loads a current JSONL snapshot into immutable lookup maps for fast investigation.
+- 2B.1 runtime load/memory verification is intentionally deferred into the first 2B.2 user-facing search test.
 
-**Files/systems already inspected for Phase 2:**
+**Files/systems already inspected or changed for Phase 2:**
 
 - `Client/src/main/java/game/atlas/AtlasSchema.java`
 - `Client/src/main/java/game/atlas/AtlasJson.java`
@@ -441,6 +496,7 @@ Future Bundle 2B tests should reuse the existing current schema-v2 index where p
 - `Client/src/main/java/game/atlas/AtlasScanner.java`
 - `Client/src/main/java/game/atlas/AtlasQueryEngine.java`
 - `Client/src/main/java/game/atlas/AtlasStructuralVerifier.java`
+- `Client/src/main/java/game/atlas/AtlasInvestigationIndex.java`
 - `Client/src/main/java/game/atlas/ClientAtlasControl.java`
 - `Client/src/main/java/game/atlas/ClientAtlasMain.java`
 - `docs/client-atlas/PROJECT.md`
@@ -458,12 +514,12 @@ Future Bundle 2B tests should reuse the existing current schema-v2 index where p
 
 **Pending verification:**
 
-- None for Bundle 2A.
+- 2B.1 index construction/time/memory and lookup sanity checks, batched with 2B.2 friendly-search runtime verification.
 
 **Next implementation:**
 
-- Build **2B.1 In-memory investigation index** over the verified schema-v2 JSONL dataset. Preserve JSONL as persistence; load bounded/indexed maps on demand rather than introducing a second database.
+- Build **2B.2 Ranked/friendly search** over `AtlasInvestigationIndex`; ambiguous shorthand must return candidates instead of silently choosing a symbol.
 
 # Next recommended work
 
-**2B.1 In-memory investigation index.**
+**2B.2 Ranked/friendly search.**
