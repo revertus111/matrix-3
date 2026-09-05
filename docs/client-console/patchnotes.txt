@@ -81,3 +81,12 @@
 - Kept the existing rail size, panel IDs, lazy panel lifecycle, selection behavior, persistence, and collapse semantics unchanged; this is presentation-only shell polish.
 - Updated the shell's docking help text to describe icon-based navigation rather than the removed letter buttons.
 - Reduced Item Browser search debounce from 1.25 seconds to 500ms while preserving the existing bounded empty-list behavior, full non-empty search results, lazy thumbnails, and Swing-thread refresh ownership.
+
+2026-09-05
+- Replaced the old `Shell foundation` home content with a dedicated `DashboardPanel` that keeps home/dashboard presentation out of `ClientConsoleShell`.
+- Dashboard now shows read-only display name, rights, client state, world tile, plane, and region through the existing `ClientConsoleBridge`; it adds no gameplay/server ownership or packet path.
+- Dashboard live values refresh every 500ms only while the panel is showing, matching the existing Player-panel lifecycle pattern.
+- Preserved direct BossLabs and RS3 CacheEditor launchers on the dashboard and preserved CacheEditor duplicate-launch/failure status reporting.
+- Moved Reset Client Console Layout presentation into DashboardPanel while keeping the existing shell-owned reset callback/geometry authority unchanged.
+- Removed the permanent focus-test/docking scaffold from the home page; focus regression remains covered by the Client Console runtime test list instead of occupying production dashboard space.
+- Reduced `ClientConsoleShell` responsibility back to rail navigation, panel hosting, sizing, collapse/persistence hooks, and panel failure isolation.
