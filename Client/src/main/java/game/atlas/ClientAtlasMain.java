@@ -15,6 +15,7 @@ import game.atlas.AtlasSearchEngine.SearchResult;
 import game.atlas.AtlasStructuralVerifier.VerificationResult;
 import game.atlas.AtlasTraceControl.Command;
 import game.atlas.AtlasTraceControl.RuntimeStatus;
+import game.atlas.AtlasTraceCorrelationEngine.CorrelationResult;
 
 /**
  * Offline Client Atlas entry point. Normal game startup remains game.RS3Applet.
@@ -72,6 +73,31 @@ public final class ClientAtlasMain {
         }
         if ("trace-status".equals(command)) {
             printTraceStatus(AtlasTraceControl.readRuntimeStatus(workspace));
+            return;
+        }
+        if ("trace-correlate".equals(command)) {
+            requireArgument(args, 1, "trace-correlate requires a trace file name/path or 'latest'");
+            Path classRoot = classRoot(workspace, args, 2);
+            AtlasInvestigationIndex index = AtlasInvestigationIndex.load(workspace, classRoot);
+            AtlasTraceCorrelationEngine engine = new AtlasTraceCorrelationEngine(index);
+            CorrelationResult result = engine.correlate(traceFile(workspace, args[1]));
+            System.out.println(result.toJson());
+            return;
+        }
+        if ("trace-correlate-export".equals(command)) {
+            requireArgument(args, 1, "trace-correlate-export requires a trace file name/path or 'latest'");
+            requireArgument(args, 2, "trace-correlate-export requires an output file");
+            Path classRoot = classRoot(workspace, args, 3);
+            AtlasInvestigationIndex index = AtlasInvestigationIndex.load(workspace, classRoot);
+            AtlasTraceCorrelationEngine engine = new AtlasTraceCorrelationEngine(index);
+            CorrelationResult result = engine.correlate(traceFile(workspace, args[1]));
+            Path output = engine.writeExport(result, Paths.get(args[2]));
+            System.out.println("Client Atlas trace correlation written: " + output);
+            System.out.println("Status: " + result.getStatus());
+            System.out.println("Accepted current correlation: " + result.isAccepted());
+            System.out.println("Events: " + result.getTotalEvents()
+                    + (result.isEventsTruncated() ? " (assistant output capped)" : ""));
+            System.out.println("Dropped: " + result.getDroppedCount());
             return;
         }
 
@@ -197,6 +223,17 @@ public final class ClientAtlasMain {
                 : workspace.defaultClassRoot();
     }
 
+    private static Path traceFile(AtlasWorkspace workspace, String value) throws IOException {
+        if ("latest".equalsIgnoreCase(value)) {
+            return AtlasTraceCorrelationEngine.latestTrace(workspace);
+        }
+        Path path = Paths.get(value);
+        if (!path.isAbsolute() && path.getParent() == null) {
+            path = workspace.tracesDirectory().resolve(path);
+        }
+        return path.toAbsolutePath().normalize();
+    }
+
     private static void requireArgument(String[] args, int index, String message) {
         if (args.length <= index || args[index].trim().length() == 0) {
             throw new IllegalArgumentException(message);
@@ -241,6 +278,9 @@ public final class ClientAtlasMain {
         System.out.println("  trace-save                                     Queue trace save");
         System.out.println("  trace-stop-save                                Queue trace stop + save");
         System.out.println("  trace-status                                   Show fresh runtime trace status/heartbeat");
+        System.out.println("  trace-correlate <trace|latest> [classes-dir]   Print bounded runtime-to-symbol correlation JSON");
+        System.out.println("  trace-correlate-export <trace|latest> <file> [classes-dir]");
+        System.out.println("                                                  Write the same correlation package atomically");
         System.out.println("  scan [classes-dir]                              Rebuild the generated Atlas index");
         System.out.println("  verify-structural [classes-dir]                 Rebuild + run structural checks/metrics");
         System.out.println("  verify-search [classes-dir]                     Run investigation/search/export/domain checks without rescanning");
