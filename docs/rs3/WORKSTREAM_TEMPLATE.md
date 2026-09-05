@@ -4,6 +4,23 @@
 
 Describe the finished outcome in plain language.
 
+## Canonical Main-Goal Status
+
+This table is the authoritative user-facing status table for the workstream across chats.
+
+Rules:
+
+- Keep these rows stable and tied to the finished main goal, not the current checklist item.
+- New chats must copy the row names, order, and statuses from this table instead of reconstructing them from phases/bundles/checklists.
+- Subtask/runtime-test states belong in execution state, `Just completed`, or blocker notes; they do not automatically change a milestone row.
+- Change this table only when a top-level milestone genuinely changes state or the user approves a revised roadmap.
+
+| Main-goal area | Status |
+| --- | --- |
+| <Stable milestone 1> | 🔵 In Progress |
+| <Stable milestone 2> | ❌ Not started |
+| <Stable milestone 3> | ❌ Not started |
+
 ## Scope
 
 ### In scope
