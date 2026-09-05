@@ -24,6 +24,7 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 - A phase is an ordered milestone of the workstream. A bundle is a related unit of work inside a phase. Patches/checklist items are the concrete implementation, discovery, documentation, or verification steps inside that bundle.
 - The user supplies the idea, goals, preferences, and decisions. The assistant owns architecture, phase decomposition, dependencies, discovery, implementation order, logical bundles, patch/checklist boundaries, tests, and carryover work.
 - Each persistent workstream has one authoritative project document, normally `docs/<subject>/PROJECT.md`.
+- Each normalized persistent workstream must keep a `Canonical Main-Goal Status` table in its authoritative `PROJECT.md`. That table is the source of truth for user-facing milestone rows across chats; phase/bundle/checklist state is a separate execution map.
 - Use `docs/rs3/WORKSTREAMS.md` as the lightweight registry and `docs/rs3/WORKSTREAM_TEMPLATE.md` when creating or normalizing a workstream document.
 - Do not create duplicate roadmap, ownership, backlog, status, or carryover documents when the authoritative workstream document can hold that information.
 - Group tasks into a bundle only when they share ownership, files, dependencies, implementation sequence, or runtime testing. Keep each logical patch independently understandable and revertible.
@@ -37,7 +38,7 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 
 ## Phase/checklist discipline
 
-- Before inspecting or patching an existing persistent workstream, read its authoritative `docs/<subject>/PROJECT.md` and locate the current phase, bundle, checklist, and `Resume Here` state.
+- Before inspecting or patching an existing persistent workstream, read its authoritative `docs/<subject>/PROJECT.md` and locate the current phase, bundle, checklist, `Canonical Main-Goal Status`, and `Resume Here` state.
 - Determine which phase/bundle is `ACTIVE` and which checklist items are already complete before deciding what work comes next.
 - Treat the workstream phase/checklist as the execution map for that project.
 - Do not redo completed checklist items or skip into later phases unless a dependency requires it or the user explicitly changes priority.
@@ -140,13 +141,17 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 Status updates are a navigation aid for the user's original/main goal, not a changelog for the latest subtask.
 
 - Every status update, including required post-patch status, must stay anchored to the original/main goal of the active project or workstream.
-- Keep a stable set of top-level milestone rows for that goal. Reuse them instead of replacing the table with the latest subtask.
-- Never derive, regenerate, or rename the stable milestone rows from the active phase/bundle/checklist. The checklist is execution detail; milestone rows represent the main goal and change only when the main goal/roadmap itself changes.
+- For a normalized workstream, the authoritative `PROJECT.md` `Canonical Main-Goal Status` table is the only source of truth for the user-facing Area/Status milestone rows.
+- On every new chat, resume, `continue`, or `next`, read that canonical table before reporting status and reproduce its row names, row order, and current status values exactly. Do not reconstruct the table from memory, recent chat, phases, bundles, checklists, tests, or `Resume Here`.
+- Never derive, regenerate, rename, reorder, add, remove, or implicitly change canonical milestone rows from the active phase/bundle/checklist. The checklist is execution detail; the canonical table represents the main goal.
+- A phase/bundle/checklist item being `NEEDS TEST`, `BLOCKED`, `DONE`, or otherwise changing state does **not** automatically change a canonical milestone status. Mention that local state under `Just completed:`, `Current focus:`, or the optional blocker/runtime-verification note.
+- Change a canonical row/status only when the top-level milestone itself genuinely changes state or the user explicitly approves a revised main-goal roadmap. When that happens, update the canonical table in `PROJECT.md` in the same workstream-state patch so future chats inherit the change.
+- If an older workstream does not yet contain a canonical table, do not invent a replacement table in the status response. Treat the workstream as needing status normalization and preserve existing roadmap/checklist facts until the canonical table is explicitly established.
 - Put non-milestone work under `Just completed:` or `Current focus:` rather than turning it into a new main-goal row.
 - Show enough of the remaining main path that the user can return after a side track and immediately see what comes next.
-- If work moves temporarily to a side task, keep the main-goal table unchanged and mention the side task separately.
+- If work moves temporarily to a side task, keep the canonical main-goal table unchanged and mention the side task separately.
 - End status updates with `Next main step:` using the next meaningful milestone/checkpoint from the authoritative plan.
-- Only change the status anchor or stable milestone rows when the user explicitly changes the main goal, starts a separate workstream, or approves a revised roadmap.
+- Only change the status anchor or canonical milestone rows when the user explicitly changes the main goal, starts a separate workstream, approves a revised roadmap, or the saved top-level milestone itself reaches a new state.
 - Do not invent percentage-complete estimates unless grounded in an explicit checklist or measurable scope.
 - Use `✅ Complete`, `🟡 Foundation`, `🔵 In Progress`, `⚠️ Needs runtime verification` (or a concise audit note), and `❌ Not started` where applicable.
 
@@ -154,7 +159,7 @@ Required post-patch status shape:
 
 1. `Main goal:` the original/main objective.
 2. `Just completed:` the patch or subtask that changed.
-3. A concise Area/Status table for the stable main-goal milestones.
+3. The Area/Status table copied from the authoritative `Canonical Main-Goal Status` section without local reinterpretation.
 4. `Next main step:` the next meaningful checkpoint that advances the original goal.
 5. Optional blocker/runtime-verification note only when it materially affects that next step.
 
