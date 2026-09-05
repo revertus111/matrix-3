@@ -10,3 +10,7 @@
 - Added deterministic JSONL serialization for generated symbol/relationship records without renaming obfuscated symbols.
 - Added `ClientAtlasMain scan`, temporary-file publishing, metadata count updates, and before/after fingerprint protection against class changes during a scan.
 - Kept method-body analysis out of Phase 1 so callers/callees and field read/write tracing remain isolated to Phase 2.
+- Added exact canonical Atlas-ID lookup through `ClientAtlasMain query` with stale-index/schema validation before results are returned.
+- Query output now includes the exact symbol plus its immediate stored relationships as compact JSON, capped at 200 relationship records with an explicit truncation flag/count.
+- Added `ClientAtlasMain export` for atomic UTF-8 machine-readable investigation snapshots without adding another JSON/database dependency.
+- Kept ranked/fuzzy/shorthand search out of Phase 1; those remain Phase 2 investigation-search ownership.
