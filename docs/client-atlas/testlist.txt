@@ -20,47 +20,47 @@ Phase 2 - runtime verified
 Phase 3 / Bundle 3A - ACTIVE
 [x] 3A.0 runtime-tracing architecture discovery - verified-static.
 
-3A-Core foundation - implementation complete / NEEDS consolidated runtime gate
+3A-Core - implementation complete / NEEDS consolidated runtime gate
 [x] 3A.1 bounded process-wide recorder: max 10000 stored events.
 [x] Start / stop / named session / save lifecycle.
 [x] Explicit dropped-event counter after cap.
 [x] Atomic `.client-atlas/traces/*.trace.jsonl` persistence.
 [x] Saved trace header includes current compiled-client fingerprint when available.
-[x] File-backed cross-process `trace-control.properties` command protocol.
-[x] Fresh `trace-status.properties` heartbeat/status protocol with stale-runtime detection.
-[x] Standalone dark `ClientAtlasTraceControl` UI.
-[x] `ClientAtlasMain` trace-control / trace-start / trace-stop / trace-save / trace-stop-save / trace-status commands.
-[x] `game.AtlasRuntimeBridge` prepared for keyboard, outgoing packet, incoming packet/interface, and definition facts.
-[x] Packet bridge captures metadata only; no payload arrays.
-[x] Keyboard bridge stores action/key/character code only; no arbitrary typed text string.
-[x] Named incoming interface packet classifier implemented.
-[x] Existing `DevDefinitionBridge` observer now initializes the runtime Atlas control seam and emits safe definition-category events while tracing is active.
+[x] File-backed cross-process trace command + heartbeat/status protocol.
+[x] Standalone dark `ClientAtlasTraceControl` UI and CLI control commands.
 [x] Runtime trace errors are isolated from normal client behavior.
+[x] 3A.2 high-level menu dispatcher resolved verified-static: `Class25.method728` -> `Class319.method4094` -> existing `DevModeBridge.handleMenuAction` seam.
+[x] 3A.2 normalized menu action/local-coordinate hook inserted through the small Dev Mode seam; no menu text captured.
+[x] 3A.2 `AtlasKeyboardObserver` mirrors `Class549_Sub1` key mapping/filter rules without consuming events or rewriting the large input class.
+[x] Keyboard events carry the verified `Class549_Sub1.method8081(...)` owner symbol as correlation evidence.
+[x] 3A.3 outgoing hook inserted at `Class195.method2929(...)` after encoded length is known; audited diff +1 line only.
+[x] 3A.3 incoming hook inserted in `MaterialInformation.method1605(...)` after successful central decoder processing; audited diff +2 lines only.
+[x] Packet bridge captures IDs/declared/actual-or-encoded lengths only; no payload arrays.
+[x] 3A.4 named incoming interface packet classifier active through the incoming packet hook.
+[x] 3A.5 ID-bearing `Class639.method7568(...)` hook inserted after decode/finalization; audited diff +1 line only.
+[x] 3A.5 GFX cache-miss coverage confirmed through the Class639-backed graphics definition loader.
+[x] Direct `Class549_Sub1` rewrite attempt rejected/rolled back after diff audit exposed unrelated array churn.
 
-3A-Core remaining hook patch - test only after compatible hooks are together
-[ ] 3A.2 insert normalized keyboard bridge call in `Class549_Sub1.method8081(...)`.
-[ ] 3A.2 narrowly identify/hook final high-level mouse/menu dispatcher; currently UNKNOWN.
-[ ] 3A.3 insert outgoing bridge call in `Class195.method2929(...)` after encoded length is known.
-[ ] 3A.3 insert incoming bridge call in `PacketsDecoder.method3031(...)` after final packet length is known.
-[ ] 3A.4 verify incoming interface classifications are sufficient; add component-branch calls only if needed.
-[ ] 3A.5 insert ID-bearing definition hook in `Class639.method7568(...)`.
-[ ] 3A.5 add targeted model/animation/GFX loader hooks only where ownership is actually established/needed.
+3A-Core explicit carryover - does not block correlation
+[ ] Component-specific decoded payload values: add only if the initial interface packet stream proves insufficient.
+[ ] Exact animation loader hook: establish ownership before instrumentation.
+[ ] Exact model/cache loader hook: establish ownership before instrumentation.
 
-3A-Correlation + final gate
-[ ] 3A.6 validate runtime source IDs against the current rebuilt Atlas index.
-[ ] Add trace investigation/assistant export only as needed for practical correlation.
-[ ] One consolidated controlled runtime trace: input + packet/interface + definition evidence.
+3A-Correlation + final gate - NEXT
+[ ] 3A.6 validate runtime source/owner IDs against the rebuilt current Atlas index.
+[ ] Add bounded trace investigation/assistant export as needed for practical correlation.
+[ ] One consolidated controlled runtime trace: keyboard/menu + packet/interface + definition/GFX evidence.
 [ ] Confirm stop fully disables event growth.
 [ ] Confirm saved fingerprint matches the rebuilt current index.
-[ ] Confirm dropped count is visible and normal short trace stays below cap.
+[ ] Confirm dropped count is visible and a normal short trace stays below cap.
 [ ] Confirm normal `game.RS3Applet` ownership/startup remains unchanged.
 
 Carryover regression checks
-[ ] On natural Phase 3 rebuild boundary, confirm stale generated data is refused until rebuilt.
+[ ] On the natural Phase 3 rebuild boundary, confirm stale generated data is refused until rebuilt.
 [ ] If an exact streaming query owns >200 immediate relationships, confirm truncation state/count remains correct.
 
 Gate rules
 - Do not request another Phase 2 gate without a relevant Phase 2 change or contradictory evidence.
-- Do not ask the user to runtime-test each 3A.x item separately.
-- Finish all safe 3A-Core hooks first, then correlation, then one short Bundle 3A runtime gate.
+- Do not ask the user to runtime-test individual 3A.x hooks.
+- 3A-Core is implemented verified-static; runtime verification remains batched with 3A-Correlation and one short Bundle 3A gate.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
