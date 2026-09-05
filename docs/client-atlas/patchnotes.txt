@@ -44,3 +44,4 @@
 - Added `ClientAtlasMain verify-structural` as the automation/CLI front end to the same verifier; the UI and CLI do not duplicate verification logic.
 - Phase 2 structural verification writes `.client-atlas/phase2-structural-check.txt` plus a compact query regression export for easy reporting.
 - Fixed the Phase 2 verifier report newline separator so `AtlasStructuralVerifier` compiles cleanly instead of producing Eclipse `Invalid character constant`.
+- Fixed Phase 2 JSONL encoding for obfuscated/malformed client strings by escaping all UTF-16 surrogate code units as deterministic `\\uXXXX` JSON sequences instead of letting the UTF-8 writer fail with `Input length = 1`.
