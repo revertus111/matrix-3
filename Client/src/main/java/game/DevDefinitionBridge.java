@@ -19,6 +19,7 @@ public final class DevDefinitionBridge {
         if (loader == null || definition == null) {
             return;
         }
+        AtlasRuntimeBridge.observeDefinitionLoader(loader, definition);
         if (definition instanceof NPCDefintion) {
             npcDefinitions = loader;
         } else if (definition instanceof ObjectDefinitions) {

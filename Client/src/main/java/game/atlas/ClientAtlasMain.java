@@ -13,6 +13,8 @@ import game.atlas.AtlasScanner.ScanResult;
 import game.atlas.AtlasSchema.Metadata;
 import game.atlas.AtlasSearchEngine.SearchResult;
 import game.atlas.AtlasStructuralVerifier.VerificationResult;
+import game.atlas.AtlasTraceControl.Command;
+import game.atlas.AtlasTraceControl.RuntimeStatus;
 
 /**
  * Offline Client Atlas entry point. Normal game startup remains game.RS3Applet.
@@ -46,6 +48,32 @@ public final class ClientAtlasMain {
 
         Path clientRoot = AtlasWorkspace.findClientRoot(Paths.get("."));
         AtlasWorkspace workspace = new AtlasWorkspace(clientRoot);
+
+        if ("trace-control".equals(command)) {
+            ClientAtlasTraceControl.launch();
+            return;
+        }
+        if ("trace-start".equals(command)) {
+            String name = args.length > 1 ? args[1] : "trace";
+            System.out.println("Queued trace START: " + AtlasTraceControl.queue(workspace, Command.START, name));
+            return;
+        }
+        if ("trace-stop".equals(command)) {
+            System.out.println("Queued trace STOP: " + AtlasTraceControl.queue(workspace, Command.STOP, null));
+            return;
+        }
+        if ("trace-save".equals(command)) {
+            System.out.println("Queued trace SAVE: " + AtlasTraceControl.queue(workspace, Command.SAVE, null));
+            return;
+        }
+        if ("trace-stop-save".equals(command)) {
+            System.out.println("Queued trace STOP_SAVE: " + AtlasTraceControl.queue(workspace, Command.STOP_SAVE, null));
+            return;
+        }
+        if ("trace-status".equals(command)) {
+            printTraceStatus(AtlasTraceControl.readRuntimeStatus(workspace));
+            return;
+        }
 
         if ("scan".equals(command)) {
             Path classRoot = classRoot(workspace, args, 1);
@@ -185,6 +213,21 @@ public final class ClientAtlasMain {
         System.out.println("Relationships: " + metadata.getRelationshipCount());
     }
 
+    private static void printTraceStatus(RuntimeStatus status) {
+        if (status == null || !status.isRuntimePresent()) {
+            System.out.println("Client Atlas runtime trace: OFFLINE / no fresh client heartbeat");
+            return;
+        }
+        System.out.println("Client Atlas runtime trace: " + (status.isActive() ? "ACTIVE" : "IDLE"));
+        System.out.println("Session: " + status.getSessionName());
+        System.out.println("Events: " + status.getEventCount());
+        System.out.println("Dropped: " + status.getDroppedCount());
+        System.out.println("Last save: " + status.getLastSavedPath());
+        if (status.getLastError() != null && status.getLastError().length() > 0) {
+            System.out.println("Last error: " + status.getLastError());
+        }
+    }
+
     private static String formatMillis(long nanos) {
         return String.format(Locale.ROOT, "%.3f", Double.valueOf(nanos / 1000000.0D));
     }
@@ -192,6 +235,12 @@ public final class ClientAtlasMain {
     private static void printUsage() {
         System.out.println("Client Atlas offline tool");
         System.out.println("  (no args)                                      Open the standalone Client Atlas Control UI");
+        System.out.println("  trace-control                                  Open the standalone runtime trace control UI");
+        System.out.println("  trace-start [name]                             Queue a named runtime trace start");
+        System.out.println("  trace-stop                                     Queue trace stop");
+        System.out.println("  trace-save                                     Queue trace save");
+        System.out.println("  trace-stop-save                                Queue trace stop + save");
+        System.out.println("  trace-status                                   Show fresh runtime trace status/heartbeat");
         System.out.println("  scan [classes-dir]                              Rebuild the generated Atlas index");
         System.out.println("  verify-structural [classes-dir]                 Rebuild + run structural checks/metrics");
         System.out.println("  verify-search [classes-dir]                     Run investigation/search/export/domain checks without rescanning");
