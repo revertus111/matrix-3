@@ -15,6 +15,36 @@ Read `docs/rs3/PROJECT.md` before changing code. Also read the relevant `docs/<s
 - `SAP AAA` means scan and patch are approved for that exact task.
 - Before AAA, inspect only the smallest likely file set and report findings, likely files, implementation, and important uncertainty.
 - After AAA, patch directly and keep the change minimal, isolated, and strictly limited to the requested task.
+- AAA may approve a clearly defined workstream bundle containing multiple related patches. When a bundle is explicitly approved, do not stop for another AAA between its listed patches unless the requested scope materially changes.
+
+## Workstream workflow
+
+- Treat substantial ideas such as a boss, developer tool, combat framework, game mode, class system, or other multi-patch feature as a persistent workstream rather than a loose sequence of unrelated requests.
+- Use the hierarchy `Idea -> Bundle -> Patch`.
+- The user supplies the idea, goals, preferences, and decisions. The assistant is responsible for organizing architecture, dependencies, discovery, implementation order, logical bundles, patch boundaries, tests, and carryover work.
+- Each persistent workstream should have one authoritative project document, normally `docs/<subject>/PROJECT.md`.
+- Use `docs/rs3/WORKSTREAMS.md` as the lightweight registry of active/persistent workstreams and `docs/rs3/WORKSTREAM_TEMPLATE.md` when creating or normalizing a workstream document.
+- Do not create duplicate roadmap, ownership, backlog, or status documents when the authoritative workstream document can hold the information cleanly.
+- Group tasks into a bundle when they share system ownership, files, dependencies, implementation sequence, or runtime testing. Do not bundle unrelated work merely to increase patch count.
+- Keep each logical patch independently understandable and revertible even when several patches are executed under one approved bundle.
+- Prefer narrow, descriptive commits per logical patch when practical.
+- If one patch in an approved bundle becomes blocked, document it as `CARRYOVER` or `BLOCKED` and continue with other safe, independent approved patches. Do not let one blocked item stall the entire bundle.
+- New ideas for an existing workstream should be classified into the current bundle, a future bundle, or backlog/decisions section. Do not automatically interrupt active work unless the new idea is a required dependency or the user explicitly changes priority.
+- Preserve discovery state using the evidence labels `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN` where useful.
+- Every persistent workstream must maintain a concise `Resume Here` state whenever work stops midstream. It should record the last completed checkpoint, current state, next action, already inspected files/systems, areas that should not be rescanned, blockers, and important remaining uncertainty.
+- Do not rediscover information already established in the authoritative workstream document unless the repository changed, runtime evidence contradicted it, or the claim requires re-verification.
+- At the end of a bundle, report and persist the state of every included patch as appropriate: `READY`, `ACTIVE`, `NEEDS TEST`, `CARRYOVER`, `BLOCKED`, or `DONE`.
+
+## User-time optimization
+
+- Treat the user's PC/runtime testing time as a scarce project resource.
+- Maximize useful progress per user interaction while preserving stability and the AAA gate.
+- Do as much safe inspection, organization, patching, documentation, and static verification as possible before requiring the user to run the client/server.
+- Consolidate runtime verification into short test sessions when several approved patches can be tested together safely.
+- Prefer one clear pull/start/test session over repeatedly asking the user to pull, restart, and test one minor patch at a time.
+- Keep runtime test instructions ordered, concise, and grouped by required startup state so the user does not waste time restarting the same systems unnecessarily.
+- When practical, distinguish quick checks from deeper tests so limited PC time can be spent on the highest-value verification first.
+- Never trade stability, correct ownership, or reversible changes for raw patch count.
 
 ## Repository scan discipline
 
@@ -92,6 +122,7 @@ Read `docs/rs3/PROJECT.md` before changing code. Also read the relevant `docs/<s
 - Add/update a subject test list when runtime behavior changes.
 - Run or request the relevant portion of `docs/rs3/SMOKE_TEST.md` after meaningful core changes. Cache/loading, object, networking, persistence, or broad engine changes require the full smoke test unless clearly unnecessary.
 - `docs/rs3/BASELINE.md` is the known-good reference point. Do not silently redefine it after regressions.
+- For persistent workstreams, keep roadmap/status/carryover information in the authoritative workstream `PROJECT.md` instead of scattering it across ad hoc notes.
 
 ## Goal-anchored status updates
 
