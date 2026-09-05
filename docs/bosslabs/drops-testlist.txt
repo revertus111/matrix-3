@@ -18,7 +18,7 @@ Creator workflow / validation
 11. Add entries in Always, Common, Uncommon, Rare, and Very Rare. Confirm the list labels them with Matrix3's real bucket semantics: all entries, 90%, 70%, 0.6%, and 0.36% respectively.
 12. Add fixed and ranged quantities (for example 1-1 and 5-25). Confirm both values survive local edit, live apply, save, reload, and restart.
 13. Attempt min amount below 1, max below min, amount above 1,000,000,000, or invalid rarity data. Confirm the DRAFT cannot publish.
-14. Attempt to add the same item twice in the same rarity bucket. Confirm it is rejected. Confirm the same item may exist in different rarity buckets if deliberately authored.
+14. Add the same item more than once in one rolled rarity bucket. Confirm every slot survives local edit, Apply Live, Save & Apply, reload, and restart; repeated slots must remain available because Matrix3 randomly selects an array slot and duplicates can intentionally weight selection. Confirm repeated Always entries also remain distinct guaranteed slots, and the same item may still appear in different rarity buckets.
 15. Attempt an unknown/unloaded item id through a controlled malformed/manual request. Confirm the server rejects the publish even if client-side validation is bypassed.
 16. Confirm the table limit of 200 entries is enforced before live/saved mutation.
 17. Toggle Matrix3 rare-drop-table access and confirm the setting round-trips through live apply, save, reload, and restart.
