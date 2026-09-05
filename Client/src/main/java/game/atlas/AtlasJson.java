@@ -111,12 +111,8 @@ final class AtlasJson {
                 builder.append("\\t");
                 break;
             default:
-                if (c < 0x20) {
-                    builder.append("\\u");
-                    builder.append(HEX[(c >>> 12) & 0xf]);
-                    builder.append(HEX[(c >>> 8) & 0xf]);
-                    builder.append(HEX[(c >>> 4) & 0xf]);
-                    builder.append(HEX[c & 0xf]);
+                if (c < 0x20 || Character.isSurrogate(c)) {
+                    appendUnicodeEscape(builder, c);
                 } else {
                     builder.append(c);
                 }
@@ -124,5 +120,13 @@ final class AtlasJson {
             }
         }
         builder.append('"');
+    }
+
+    private static void appendUnicodeEscape(StringBuilder builder, char c) {
+        builder.append("\\u");
+        builder.append(HEX[(c >>> 12) & 0xf]);
+        builder.append(HEX[(c >>> 8) & 0xf]);
+        builder.append(HEX[(c >>> 4) & 0xf]);
+        builder.append(HEX[c & 0xf]);
     }
 }
