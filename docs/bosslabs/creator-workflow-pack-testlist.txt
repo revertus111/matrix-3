@@ -1,0 +1,25 @@
+Matrix3 BossLabs - creator workflow feature-pack acceptance
+
+Scope
+- This checkpoint upgrades the existing Testing and Attack Pattern creator workflows.
+- BossLabs definition wire/store remains v8.
+- No new combat, NPC, world, drop, scheduler, or persistence authority is introduced.
+
+1. Eclipse Clean the Client with Java 8. Confirm BossLabsTestingPanel and BossLabsArenaPanel compile without new dependencies or language features above Java 8.
+2. Inspect a normal Matrix3 NPC. Confirm Spawn Boss Here, Reset Encounter, Set Boss HP %, and quick HP controls still use the existing controlled per-admin test NPC path; BossLabs-only phase/attack/effect controls remain unavailable until a definition is live.
+3. With a controlled test NPC active, click Full, 75%, 50%, and 25%. Confirm each queues the existing Set Boss HP request for the selected NPC and updates the HP text field to the chosen checkpoint.
+4. Trigger several testing actions and failures. Confirm Testing session history records ordered OK/ERR result messages, keeps at most 40 entries, scrolls to the newest result, and Clear History clears only the local UI history.
+5. With a live BossLabs test encounter containing a delayed tile hazard and owned minions, click Clear Hazards + Minions. Confirm it queues the existing scoped Clear Hazards and Clear Minions operations; both results appear independently in session history and unrelated NPCs/encounters are untouched.
+6. Confirm Enter Selected Phase and Test Selected Attack still follow the current Phases/Attacks editor selection without requiring manual internal IDs.
+7. Confirm local Testing validation gives a useful error when no NPC/phase/attack/live BossLabs definition is available and does not enqueue an invalid testing request.
+8. In Attack Pattern, left-click/left-drag across multiple cells. Confirm cells are painted once per coordinate, the DRAFT becomes modified when the stroke commits, and the existing +/-16 and 128-tile limits remain enforced.
+9. Right-click/right-drag painted cells. Confirm only painted cells are erased, a single drag stroke can erase multiple cells, and Matrix3/BossLabs runtime state is not mutated until Apply Live/Save & Apply.
+10. Paint a recognizable asymmetric pattern, then click Undo Pattern. Confirm the complete state from immediately before the last paint stroke is restored. Repeat with Clear, a preset, Paste Pattern, Rotate, Mirror, and Nudge and confirm each operation provides one-level undo for the selected attack.
+11. Apply Rotate Left then Rotate Right to an asymmetric pattern. Confirm the second operation restores the original coordinate set. Verify the visible rotation direction matches the button labels during runtime UI testing; correct the label/formula if the screen-space Y orientation proves inverted.
+12. Apply each mirror twice. Confirm the original coordinate set is restored and tile count remains unchanged.
+13. Nudge a pattern in each direction. Confirm every tile shifts exactly one relative coordinate and the entire operation is rejected without mutation if any resulting tile would exceed +/-16.
+14. Confirm Cross, H Line, V Line, Square, Ring, Copy Pattern, Paste Pattern, Clear, and Center View retain their previous behavior after the transform/undo additions.
+15. Confirm the Attack Pattern footer reports creator-facing phase/attack names, tile count/bounds, whether target 0,0 is affected or safe, warning delay, impact, and lingering-ground duration/interval without claiming to replace runtime timing authority.
+16. Edit a pattern with paint, transforms, and nudge, then Save & Apply. Restart/re-inspect and confirm the same explicit tile offsets round-trip through the unchanged v8 definition store/wire format.
+17. Resize BossLabs at practical sizes and Windows scaling targets. Confirm the multi-row pattern toolbars, Testing quick controls, history list, and footer remain reachable without horizontal clipping that blocks normal use.
+18. Smoke-test existing BossLabs search/inspection, DRAFT/LIVE/SAVED publishing, selected phase/attack testing, normal non-BossLabs NPC combat, and Client Console input. Confirm this feature pack did not change Commands.java, packet framing, server combat, World/NPC core, BossDefinitionStore, BossLabsDefinitionWireCodec, or Matrix3 drops.
