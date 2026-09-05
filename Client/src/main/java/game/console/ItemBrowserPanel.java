@@ -52,7 +52,7 @@ public final class ItemBrowserPanel extends JPanel {
 
     private static final long serialVersionUID = 6358356620719959796L;
     private static final int MAX_VISIBLE_RESULTS = 160;
-    private static final int SEARCH_DEBOUNCE_MS = 1250;
+    private static final int SEARCH_DEBOUNCE_MS = 500;
     private static final String ALL = "all";
     private static final String FAVORITES = "favorites";
     private static final String CATEGORIES = "categories";
