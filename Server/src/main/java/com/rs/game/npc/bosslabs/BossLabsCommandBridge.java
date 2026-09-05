@@ -84,6 +84,10 @@ public final class BossLabsCommandBridge {
 				processApplySaved(player, cmd);
 				return true;
 			}
+			if ("drops".equals(action)) {
+				BossLabsDropCommandBridge.process(player, cmd);
+				return true;
+			}
 			if ("testing".equals(action)) {
 				processTesting(player, cmd);
 				return true;
