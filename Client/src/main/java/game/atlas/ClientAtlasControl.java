@@ -37,6 +37,7 @@ import javax.swing.border.EmptyBorder;
 import game.atlas.AtlasQueryEngine.QueryResult;
 import game.atlas.AtlasScanner.ScanResult;
 import game.atlas.AtlasSchema.Metadata;
+import game.atlas.AtlasStructuralVerifier.VerificationResult;
 
 /**
  * Small standalone human control surface over the offline Client Atlas engine.
@@ -94,8 +95,8 @@ public final class ClientAtlasControl {
     private void showWindow() {
         frame = new JFrame(WINDOW_TITLE);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setMinimumSize(new Dimension(860, 560));
-        frame.setSize(980, 680);
+        frame.setMinimumSize(new Dimension(940, 580));
+        frame.setSize(1060, 720);
         frame.setLocationByPlatform(true);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
@@ -155,7 +156,9 @@ public final class ClientAtlasControl {
         outputArea.setEditable(false);
         outputArea.setLineWrap(false);
         outputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        outputArea.setText("Client Atlas is ready.\n\nUse Run Phase 1 Check for the one-click verification, or Search for an existing symbol.\n");
+        outputArea.setText("Client Atlas is ready.\n\n"
+                + "Use Run Phase 2 Check for the consolidated structural verification, "
+                + "or Search for an existing symbol.\n");
 
         JScrollPane scrollPane = new JScrollPane(outputArea);
         scrollPane.setBorder(BorderFactory.createTitledBorder("Output"));
@@ -168,6 +171,12 @@ public final class ClientAtlasControl {
     private JPanel buildActionPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
 
+        panel.add(taskButton("Run Phase 2 Check", new Runnable() {
+            @Override
+            public void run() {
+                runPhase2Check();
+            }
+        }));
         panel.add(taskButton("Run Phase 1 Check", new Runnable() {
             @Override
             public void run() {
@@ -216,6 +225,27 @@ public final class ClientAtlasControl {
         return button;
     }
 
+    private void runPhase2Check() {
+        runBackground("Running the consolidated Phase 2 structural check...", new BackgroundTask() {
+            private VerificationResult result;
+
+            @Override
+            public String execute() throws Exception {
+                result = new AtlasStructuralVerifier(workspace, classRoot).run();
+                lastQueryResult = null;
+                lastQueryId = null;
+                return result.getReport() + "\nReport: " + result.getReportPath();
+            }
+
+            @Override
+            public void complete() {
+                if (result != null) {
+                    setStatus(result.getMetadata(), true);
+                }
+            }
+        });
+    }
+
     private void runScan() {
         runBackground("Scanning compiled client...", new BackgroundTask() {
             @Override
@@ -249,10 +279,14 @@ public final class ClientAtlasControl {
                             + "\nBuild Matrix3-Client in Eclipse first.");
                 }
                 if (!Files.isRegularFile(workspace.metadataFile())) {
-                    return "No Atlas index exists yet. Click Scan / Rebuild Index or Run Phase 1 Check.";
+                    return "No Atlas index exists yet. Click Run Phase 2 Check or Scan / Rebuild Index.";
                 }
                 metadata = workspace.readMetadata();
                 current = workspace.isCurrent(classRoot);
+                if (metadata.getSchemaVersion() != AtlasWorkspace.SCHEMA_VERSION) {
+                    return "Atlas status refreshed. Schema " + metadata.getSchemaVersion()
+                            + " requires rebuild to schema " + AtlasWorkspace.SCHEMA_VERSION + ".";
+                }
                 return "Atlas status refreshed. Index is " + (current ? "CURRENT" : "STALE") + ".";
             }
 
@@ -313,7 +347,7 @@ public final class ClientAtlasControl {
     }
 
     private void runPhase1Check() {
-        runBackground("Running the full Phase 1 Atlas check...", new BackgroundTask() {
+        runBackground("Running the Phase 1 regression check...", new BackgroundTask() {
             private Metadata metadata;
 
             @Override
@@ -357,7 +391,7 @@ public final class ClientAtlasControl {
                     engine.queryExact(memberId, classRoot);
                     report.append("PASS  Exact member query: ").append(memberId).append('\n');
                 } else {
-                    report.append("NOTE  No METHOD/CONSTRUCTOR DECLARES target found for chosen class; class query still passed.\n");
+                    report.append("NOTE  No METHOD/CONSTRUCTOR DECLARES target found for chosen class.\n");
                 }
 
                 Path exportPath = workspace.getWorkspaceRoot().resolve("phase1-check.json");
@@ -365,10 +399,7 @@ public final class ClientAtlasControl {
                 require(Files.isRegularFile(exportPath) && Files.size(exportPath) > 0L,
                         "compact export was not written");
                 report.append("PASS  Compact export: ").append(exportPath).append('\n');
-
-                report.append("\nPHASE 1 AUTOMATED CHECK: PASS\n");
-                report.append("Fingerprint: ").append(metadata.getClientFingerprint()).append('\n');
-                report.append("Note: stale-index rejection still requires an intentional compiled-client change later; the UI will never mutate client classes just to test that guard.");
+                report.append("\nPHASE 1 REGRESSION CHECK: PASS\n");
                 return report.toString();
             }
 
@@ -492,7 +523,12 @@ public final class ClientAtlasControl {
     }
 
     private void setStatus(Metadata metadata, boolean current) {
-        indexStatusValue.setText(current ? "CURRENT" : "STALE");
+        if (metadata.getSchemaVersion() != AtlasWorkspace.SCHEMA_VERSION) {
+            indexStatusValue.setText("REBUILD REQUIRED (schema " + metadata.getSchemaVersion()
+                    + " -> " + AtlasWorkspace.SCHEMA_VERSION + ")");
+        } else {
+            indexStatusValue.setText(current ? "CURRENT" : "STALE");
+        }
         symbolCountValue.setText(Long.toString(metadata.getSymbolCount()));
         relationshipCountValue.setText(Long.toString(metadata.getRelationshipCount()));
         String fingerprint = metadata.getClientFingerprint();
