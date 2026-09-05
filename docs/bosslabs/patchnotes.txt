@@ -125,3 +125,7 @@
 - Replaced manual Testing Phase ID/Attack ID fields with selected editor context and one-click Enter Selected Phase / Test Selected Attack actions over the existing authoritative bridge.
 - Split Spawn minions authoring into separate NPC ID, amount, and radius fields instead of compact NPC_ID,AMOUNT,RADIUS text syntax.
 - Preserved the existing BossLabs definition wire/store version, Matrix3 combat/world ownership, persistence ordering, bridge protocol, and server testing authorization semantics.
+- Upgraded Testing with Full/75/50/25 HP checkpoints, a combined UI action that queues the existing scoped hazard/minion cleanup controls, and a bounded 40-entry session result history with local clear.
+- Upgraded Attack Pattern authoring with drag-paint/right-drag erase, one-level pattern undo, rotate/mirror/nudge transforms, and multi-row toolbars while retaining the existing +/-16 and 128-tile limits.
+- Added Attack Pattern geometry/timing summaries for tile bounds, whether target 0,0 is affected or safe, warning delay, impact, and lingering-ground duration/interval.
+- Creator workflow feature-pack edits continue to mutate the existing BossLabs DRAFT and persist through the unchanged v8 store/wire path; no server combat, NPC/world, packet, drop, scheduler, or cleanup authority changed.
