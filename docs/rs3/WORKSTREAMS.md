@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 and Phase 2 Bundle 2A are runtime-verified. Structural scan: 1221 classes / 33742 symbols / 325826 relationships, ~74.4 MiB relationship JSONL, ~1.28 s scan. Bundle 2B is active; 2B.1 in-memory index and 2B.2 friendly/ranked search are implemented, with 2B.3 relationship queries + bounded neighborhoods next. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | NEEDS TEST | Phase 1 and Phase 2 Bundle 2A are runtime-verified. Bundle 2B 2B.1-2B.3 implementation is complete: in-memory index, friendly/ranked resolution, bounded relationship commands, standalone Search / Investigate UI, and one-click verifier. `Run Search Check` / `PHASE 2 INVESTIGATION CHECK: PASS` is the gate before 2B.4 assistant export. |
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
