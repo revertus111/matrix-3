@@ -163,7 +163,8 @@ Bundle 2A is **DONE**.
 - `AtlasQueryEngine` owns exact streaming query/export.
 - `ClientAtlasControl` is a human control surface over Atlas APIs.
 - `AtlasStructuralVerifier` owns Bundle 2A structural verification/measurement.
-- `AtlasInvestigationIndex` now owns the Phase 2B in-memory acceleration layer; it does not scan or replace JSONL persistence.
+- `AtlasInvestigationIndex` owns the Phase 2B in-memory acceleration layer; it does not scan or replace JSONL persistence.
+- `AtlasSearchEngine` owns ranked/friendly symbol resolution over the investigation index; it never changes authoritative IDs or silently selects ambiguous candidates.
 - UI/CLI continue to consume shared Atlas APIs rather than duplicating discovery ownership.
 
 # Schema v2
@@ -306,26 +307,64 @@ Relationship entries preserve:
 
 A temporary load-time string canonicalization pool reuses repeated IDs, targets, and source paths so the ~325k relationship dataset does not needlessly duplicate String objects. The pool itself is not persistent and becomes collectable after index construction.
 
-2B.1 local load/performance verification is deliberately **batched with 2B.2 friendly-search verification**. Requiring a separate Eclipse session for a non-user-facing index loader would waste user runtime time.
+2B.1 local load/performance verification is deliberately **batched with the first consolidated Bundle 2B user-facing investigation test**. Requiring a separate Eclipse session for a non-user-facing index loader would waste user runtime time.
+
+## 2B.2 implementation
+
+`AtlasSearchEngine` provides deterministic ranked/friendly symbol resolution over `AtlasInvestigationIndex`.
+
+Supported exact forms:
+
+```text
+CLASS:game/Class387
+game/Class387
+game.Class387
+Class387
+Class387.method4844
+Class387.method4844(II)V
+method4844
+```
+
+Rules:
+
+- Canonical Atlas IDs remain the highest-authority lookup form.
+- Exact class-owner paths resolve class/interface/enum/annotation symbols.
+- Simple exact names resolve only when one candidate exists.
+- Owner/member shorthand resolves a member only when one candidate/overload exists.
+- Optional method descriptors can select an exact overload.
+- Multiple exact-name or overload matches are returned as candidates; Atlas never silently chooses one.
+- Prefix/contains fallback is deterministic and capped at 50 candidates.
+- Fuzzy/partial matches never auto-resolve, even when only one fuzzy result remains.
+- Match output preserves kind, exact stable ID, match reason, source path where available, full candidate count, truncation state, and search time.
+
+CLI automation path:
+
+```text
+ClientAtlasMain search "Class387"
+ClientAtlasMain search "Class387.method4844"
+ClientAtlasMain search "method4844"
+```
+
+The CLI loads the current investigation index, reports index-load timing/counts, and prints ranked candidates/resolution output.
+
+Standalone `ClientAtlasControl` search-box integration is intentionally bundled with **2B.3** so friendly symbol search and `calls/called-by/reads/written-by/references/constant` commands are added to the same UI surface in one rewrite instead of two.
 
 # Search direction
 
-2B.2 builds ranked/friendly resolution on top of `AtlasInvestigationIndex`.
+2B.3 builds relationship investigation commands and bounded neighborhoods on top of the same in-memory index/search engine.
 
-Target searches:
+Target commands:
 
 ```text
-Class387
-Class387.method4844
 calls <symbol>
 called-by <symbol>
-reads <field>
-written-by <field>
-references <type>
+reads <field-or-symbol>
+written-by <field-or-symbol>
+references <type-or-symbol>
 constant 762
 ```
 
-Ambiguous shorthand must return candidates; it must never silently choose an overload.
+Resolution rules from 2B.2 remain in force: ambiguous shorthand returns candidates before relationship traversal; it never silently selects an overload.
 
 Initial bounded-neighborhood targets for 2B.3:
 
@@ -370,9 +409,9 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 **Status: ACTIVE**
 
-- [x] **2B.1 In-memory investigation index implementation** - current/stale guards, count validation, symbol/candidate/incoming/outgoing/constant maps, compact parsed entries, load-time string canonicalization. **Local load/performance verification is batched with 2B.2.**
-- [ ] **2B.2 Ranked/friendly search** - current execution target.
-- [ ] **2B.3 Relationship queries + bounded neighborhoods**.
+- [x] **2B.1 In-memory investigation index implementation** - current/stale guards, count validation, symbol/candidate/incoming/outgoing/constant maps, compact parsed entries, load-time string canonicalization. **Local load/performance verification is batched with 2B.3.**
+- [x] **2B.2 Ranked/friendly search implementation** - exact IDs/class paths/names/member shorthand, ambiguity-safe candidate results, deterministic prefix/contains ranking, CLI search. **Local verification and standalone UI integration are batched with 2B.3.**
+- [ ] **2B.3 Relationship queries + bounded neighborhoods** - current execution target.
 - [ ] **2B.4 Assistant-oriented export**.
 - [ ] **2B.5 Safe initial domain correlation**.
 
@@ -422,21 +461,24 @@ Bundle 2A structural gate is complete. Do not request another structural rescan 
 
 ## Next consolidated Bundle 2B local checks
 
-The first 2B runtime session should exercise 2B.1 through the user-facing 2B.2 search path rather than testing the loader alone.
+Do **not** request a standalone 2B.1 or 2B.2 runtime session. The next useful local session should happen after 2B.3 integrates friendly + relationship commands into the standalone Atlas Control search surface.
 
-Required 2B.1 checks during that session:
+That one session must cover:
 
 - load the verified current schema-v2 dataset without rescanning,
 - loaded totals equal **33742 symbols / 325826 relationships**,
-- record in-memory index build time,
-- observe memory behavior under the existing Client Atlas JVM settings,
-- exact `CLASS:game/Class1` lookup succeeds,
-- `Class1` name candidate lookup includes the same class,
+- record in-memory index build time and observe memory behavior,
+- exact `CLASS:game/Class1` resolution,
+- friendly `Class1` resolution to the same class,
+- owner/member shorthand resolution on a known class method,
+- ambiguous member/name search returns candidates instead of choosing one,
+- prefix/contains fallback is ranked, bounded, and marked non-resolved,
 - outgoing/incoming maps return known relationships,
 - one typed constant referrer path resolves,
-- stale/schema mismatch still refuses index construction.
-
-2B.2/2B.3 checks will additionally verify ambiguity handling, ranked results, relationship commands, bounded result sizes, and truncation state.
+- stale/schema mismatch still refuses index construction,
+- 2B.3 relationship commands filter the correct relationship family/direction,
+- depth/result caps and truncation state are reported correctly,
+- standalone UI uses the same index/search/query APIs rather than duplicating search logic.
 
 # Carryover / blockers
 
@@ -454,7 +496,7 @@ Required 2B.1 checks during that session:
 
 **Last completed implementation:**
 
-- Phase 2 / Bundle 2B / **2B.1 In-memory investigation index implementation**.
+- Phase 2 / Bundle 2B / **2B.2 Ranked/friendly search implementation**.
 
 **Current phase:**
 
@@ -466,7 +508,7 @@ Required 2B.1 checks during that session:
 
 **Current/next checklist item:**
 
-- **2B.2 Ranked/friendly search**.
+- **2B.3 Relationship queries + bounded neighborhoods**.
 
 **Verified dataset baseline:**
 
@@ -485,8 +527,10 @@ Required 2B.1 checks during that session:
 - Type references + typed constants complete and verified.
 - No automatic literal/domain-ID semantics.
 - JSONL remains persistence authority; no database is justified.
-- `AtlasInvestigationIndex` now loads a current JSONL snapshot into immutable lookup maps for fast investigation.
-- 2B.1 runtime load/memory verification is intentionally deferred into the first 2B.2 user-facing search test.
+- `AtlasInvestigationIndex` loads a current JSONL snapshot into immutable lookup maps for fast investigation.
+- `AtlasSearchEngine` resolves exact/friendly symbol forms, ranks partial candidates, and never silently resolves ambiguous/fuzzy matches.
+- CLI `search` exposes the new resolution engine for automation.
+- 2B.1/2B.2 runtime verification and standalone UI friendly-search integration are intentionally deferred into 2B.3 so the user gets one useful consolidated test session.
 
 **Files/systems already inspected or changed for Phase 2:**
 
@@ -497,6 +541,7 @@ Required 2B.1 checks during that session:
 - `Client/src/main/java/game/atlas/AtlasQueryEngine.java`
 - `Client/src/main/java/game/atlas/AtlasStructuralVerifier.java`
 - `Client/src/main/java/game/atlas/AtlasInvestigationIndex.java`
+- `Client/src/main/java/game/atlas/AtlasSearchEngine.java`
 - `Client/src/main/java/game/atlas/ClientAtlasControl.java`
 - `Client/src/main/java/game/atlas/ClientAtlasMain.java`
 - `docs/client-atlas/PROJECT.md`
@@ -514,12 +559,13 @@ Required 2B.1 checks during that session:
 
 **Pending verification:**
 
-- 2B.1 index construction/time/memory and lookup sanity checks, batched with 2B.2 friendly-search runtime verification.
+- 2B.1 index construction/time/memory + lookup sanity checks, batched with 2B.3.
+- 2B.2 friendly/ranked search behavior on the real dataset, batched with 2B.3.
 
 **Next implementation:**
 
-- Build **2B.2 Ranked/friendly search** over `AtlasInvestigationIndex`; ambiguous shorthand must return candidates instead of silently choosing a symbol.
+- Build **2B.3 Relationship queries + bounded neighborhoods** over `AtlasInvestigationIndex` and `AtlasSearchEngine`, then integrate friendly + relationship commands into the standalone Atlas Control search box once.
 
 # Next recommended work
 
-**2B.2 Ranked/friendly search.**
+**2B.3 Relationship queries + bounded neighborhoods.**
