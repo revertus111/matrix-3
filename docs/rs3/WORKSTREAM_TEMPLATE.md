@@ -49,11 +49,58 @@ Describe the finished outcome in plain language.
 
 ## Development plan
 
-Use `Idea -> Bundle -> Patch`.
+Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
-A bundle groups related work sharing dependencies, ownership, files, implementation sequence, or testing. Keep unrelated workstreams separate.
+A phase is an ordered milestone. A bundle groups related work inside that phase. Checklist items are the concrete discovery, implementation, documentation, or verification steps that drive execution.
 
-### Bundle 1 - <Name>
+Use phase statuses consistently:
+
+- `PLANNED` - defined but not current.
+- `ACTIVE` - current phase.
+- `NEEDS TEST` - implementation for the phase is complete but required runtime verification remains.
+- `BLOCKED` - phase cannot advance because of a documented blocker.
+- `COMPLETE` - required phase work and verification are complete.
+
+### Phase 1 - <Name>
+
+**Purpose:**
+
+**Status:** ACTIVE
+
+**Entry conditions:**
+
+- 
+
+**Exit conditions:**
+
+- 
+
+#### Bundle 1.1 - <Name>
+
+**Purpose:**
+
+**Status:** ACTIVE
+
+**Dependencies:**
+
+- 
+
+**Checklist / patches:**
+
+- [ ] <Item 1>
+  - Goal:
+  - Likely files/systems:
+  - Verification:
+- [ ] <Item 2>
+  - Goal:
+  - Likely files/systems:
+  - Verification:
+
+**Runtime tests:**
+
+- 
+
+#### Bundle 1.2 - <Name>
 
 **Purpose:**
 
@@ -63,60 +110,62 @@ A bundle groups related work sharing dependencies, ownership, files, implementat
 
 - 
 
-**Patches:**
+**Checklist / patches:**
 
-1. <Patch>
-   - Goal:
-   - Likely files/systems:
-   - Verification:
-2. <Patch>
-   - Goal:
-   - Likely files/systems:
-   - Verification:
+- [ ] 
 
 **Runtime tests:**
 
 - 
 
-### Bundle 2 - <Name>
+### Phase 2 - <Name>
 
 **Purpose:**
 
 **Status:** PLANNED
 
-**Dependencies:**
+**Entry conditions:**
+
+- Phase 1 exit conditions satisfied.
+
+**Exit conditions:**
 
 - 
 
-**Patches:**
+#### Bundle 2.1 - <Name>
 
-1. 
+**Purpose:**
 
-**Runtime tests:**
+**Status:** PLANNED
 
-- 
+**Checklist / patches:**
 
-## Current bundle
+- [ ] 
 
+## Current execution state
+
+- Phase:
+- Phase status:
 - Bundle:
+- Bundle status:
 - Approval state:
-- Current patch:
+- Current checklist item:
 - Current objective:
 
-## Patch status
+## Checklist / patch status
 
-Use these states consistently:
+Use these states consistently when a checkbox alone is not enough:
 
 - `READY` - understood and ready to enter an approved bundle.
 - `ACTIVE` - currently being worked.
 - `NEEDS TEST` - implementation complete but waiting on runtime verification.
-- `CARRYOVER` - partially complete; preserve context and continue in a later bundle/session.
+- `CARRYOVER` - partially complete; preserve context and continue later.
 - `BLOCKED` - cannot safely proceed until the documented blocker is resolved.
-- `DONE` - implementation and required verification for the defined patch are complete.
+- `DONE` - implementation and required verification for the defined item are complete.
 
-| Patch | Bundle | Status | Notes |
-| --- | --- | --- | --- |
-|  |  | READY |  |
+| Item | Phase | Bundle | Status | Notes |
+| --- | --- | --- | --- | --- |
+|  |  |  | READY |  |
 
 ## Decisions / new ideas
 
@@ -124,8 +173,9 @@ Capture new ideas here without automatically interrupting active work.
 
 For each idea, classify it as one of:
 
-- current bundle dependency,
-- future bundle,
+- current phase/bundle dependency,
+- future bundle in the current phase,
+- future phase,
 - backlog/optional improvement,
 - rejected/out of scope.
 
@@ -154,6 +204,7 @@ Keep runtime testing concise and optimize around limited PC time.
 ### CARRYOVER
 
 - Task:
+- Phase/bundle:
 - Current state:
 - Remaining work:
 - Likely files/systems:
@@ -162,6 +213,7 @@ Keep runtime testing concise and optimize around limited PC time.
 ### BLOCKED
 
 - Task:
+- Phase/bundle:
 - Blocker:
 - What is already verified:
 - What still needs verification:
@@ -175,11 +227,19 @@ Keep this section current whenever work stops before the workstream is complete.
 
 - 
 
-**Current state:**
+**Current phase:**
 
 - 
 
-**Next action:**
+**Active bundle:**
+
+- 
+
+**Next checklist item:**
+
+- 
+
+**Current state / next action:**
 
 - 
 
@@ -205,4 +265,4 @@ Keep this section current whenever work stops before the workstream is complete.
 
 ## Next recommended work
 
-State the single next bundle/patch/checkpoint that best advances the main goal.
+State the single next checklist item, bundle, or phase checkpoint that best advances the main goal.
