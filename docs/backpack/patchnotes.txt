@@ -20,4 +20,4 @@
 - Registered the workstream in `docs/rs3/WORKSTREAMS.md` as `NEEDS TEST`.
 - Added the Backpack ownership row to `docs/rs3/SYSTEM_OWNERSHIP.md`.
 - Preserved the existing implementation; this documentation-only patch intentionally makes no Java/client behavior changes.
-- Set Phase 3 Bundle 3.1 consolidated runtime verification as the next execution target before any additional implementation changes.
+- Set Phase 1 Bundle 1.2 consolidated runtime verification as the next execution target before any additional implementation changes.
