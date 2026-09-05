@@ -29,42 +29,25 @@ Phase 2 / Bundle 2B - runtime verified
 [x] Fuzzy `Clas` remained bounded to 50 displayed candidates.
 [x] CALLS / CALLED_BY / READS_FIELD / WRITES_FIELD / REFERENCES_TYPE / CONSTANT passed.
 [x] Depth-2 neighborhood stayed within 100-node / 500-edge caps.
-
-2B.4 assistant export
-[x] Bounded assistant export v2 implemented.
-[x] Plain resolved search includes bounded context.
-[x] Relationship command export implemented.
-[x] Ambiguous searches do not traverse as resolved.
-[x] Schema/fingerprint/source/cap/truncation metadata preserved.
-[x] CLI assistant-json / assistant-export implemented.
-[x] Standalone Export Assistant JSON implemented.
-[x] Atomic verification export included in Run Search Check.
-
-2B.5 safe initial domain correlation
-[x] Domain-hint candidate engine implemented over typed CONSTANT facts only.
-[x] `interface 762`, `component 7`, `animation 1234`, `model 5678`, etc. recognized.
-[x] `762:7` uses same-symbol constant co-occurrence.
-[x] Candidate cap = 50 symbols / relationship cap = 200.
-[x] Semantic status always remains UNKNOWN from query hints alone.
-[x] `LITERAL_ID promoted: false` preserved.
-[x] No generated domain meaning is written from a query hint.
-[x] Domain queries integrated into UI, CLI search, and assistant export v2.
-
-Final Bundle 2B combined local gate - VERIFIED 2026-09-05
-[x] Updated `Run Search Check` executed after 2B.4 + 2B.5 implementation.
-[x] User reported `PHASE 2 INVESTIGATION CHECK: PASS`.
-[x] Successful execution confirms Java 8/Eclipse compilation of the updated verifier path.
-[x] Assistant export assertions passed.
-[x] Domain correlation assertions passed.
-[x] UNKNOWN semantic-state guard passed.
-[x] No automatic LITERAL_ID promotion assertion passed.
-[x] Assistant-domain UNKNOWN/no-promotion assertion passed.
-[x] Verification export write assertion passed.
-[x] Bundle 2B DONE.
-[x] Phase 2 DONE.
+[x] 2B.4 assistant export implemented and verified by final combined gate.
+[x] 2B.5 safe domain correlation implemented and verified by final combined gate.
+[x] Final combined `PHASE 2 INVESTIGATION CHECK: PASS` user-reported 2026-09-05.
+[x] Bundle 2B DONE / Phase 2 DONE.
 
 Phase 3 / Bundle 3A - ACTIVE
-[ ] 3A.0 targeted runtime-tracing architecture discovery.
+[x] 3A.0 targeted runtime-tracing architecture discovery - verified-static.
+    [x] `AtlasWorkspace.tracesDirectory()` is the existing trace storage owner; no second root/store required.
+    [x] Chosen package seam: one-way `game.AtlasRuntimeBridge` -> `game.atlas` trace recorder so package-private obfuscated metadata can be normalized without moving ownership.
+    [x] Keyboard hook: `Class549_Sub1.method8081(...)` is the central normalized keyboard/focus event queue point.
+    [x] Outgoing packet hook: `Class195.method2929(Class572_Sub25,...)` is the central enqueue point before flush.
+    [x] Incoming packet hook: `PacketsDecoder.method3031(Class195,...)` resolves `currentPacket`/length before named packet dispatch.
+    [x] Initial interface activity should use named incoming interface packet branches, not blanket `Class512.method6083` definition lookup.
+    [x] Definition/cache hook: `Class639.method7568(...)` is the cache-miss decode path and already hosts a narrow `DevDefinitionBridge` observer seam.
+    [x] Hot hooks must early-return while tracing is off; no disk I/O on runtime event paths.
+    [x] Packet payload bytes, credentials, arbitrary chat/text payloads, object dumps, and stack traces are excluded by default.
+    [x] Trace event buffers must be bounded and expose dropped/overflow counts.
+    [x] Trace failures must never interrupt client behavior.
+    [x] High-level menu action dispatcher remains UNKNOWN; resolve narrowly during 3A.2 instead of guessing.
 [ ] 3A.1 start/stop/name/save trace lifecycle with bounded storage/buffers.
 [ ] 3A.2 menu/input hooks.
 [ ] 3A.3 packet metadata hooks.
@@ -80,5 +63,6 @@ Carryover regression checks
 
 Gate rule
 - Do not request another Phase 2 structural/search gate without contradictory evidence or a relevant Phase 2 change.
-- Current execution target is Phase 3 / Bundle 3A / 3A.0.
-- Runtime tracing must remain targeted, bounded, switchable, and failure-isolated.
+- 3A.0 is documentation/static discovery only; no runtime test is required for it.
+- Current execution target is Phase 3 / Bundle 3A / 3A.1.
+- Runtime tracing must remain targeted, bounded, switchable, failure-isolated, and payload-minimal.
