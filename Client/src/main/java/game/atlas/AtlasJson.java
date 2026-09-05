@@ -4,8 +4,8 @@ import game.atlas.AtlasSchema.RelationshipRecord;
 import game.atlas.AtlasSchema.SymbolRecord;
 
 /**
- * Minimal deterministic JSON serialization for generated Atlas JSONL records.
- * Parsing remains a separate concern for the query/export step.
+ * Deterministic JSON serialization helpers for generated Atlas records and
+ * compact query/export output.
  */
 final class AtlasJson {
 
@@ -37,6 +37,15 @@ final class AtlasJson {
         appendStringField(builder, "target", record.getTarget(), false);
         appendStringField(builder, "detail", record.getDetail(), false);
         builder.append('}');
+        return builder.toString();
+    }
+
+    static String quote(String value) {
+        if (value == null) {
+            return "null";
+        }
+        StringBuilder builder = new StringBuilder(value.length() + 2);
+        appendString(builder, value);
         return builder.toString();
     }
 
