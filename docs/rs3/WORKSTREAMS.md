@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | NEEDS TEST | Phase 1 implementation still needs the consolidated Java 8 gate; Phase 2 relationship architecture is already prepared so 2A.1 can start immediately after it passes. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | NEEDS TEST | Scanner/status are runtime-verified (1221 classes / 33742 symbols / 34053 relationships); standalone one-click Atlas Control gate is the only immediate check before Phase 2 2A.1. |
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
