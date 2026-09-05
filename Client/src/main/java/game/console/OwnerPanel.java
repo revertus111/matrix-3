@@ -69,6 +69,8 @@ public final class OwnerPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createActionsCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(new BossResearchPanel());
+        content.add(Box.createVerticalStrut(12));
         content.add(createRotsResearchCard());
         content.add(Box.createVerticalGlue());
 
@@ -108,7 +110,7 @@ public final class OwnerPanel extends JScrollPane {
         JPanel card = createCard("Quick actions");
 
         JTextArea message = createWrappedText(
-                "Read-only for this slice. Command-backed Owner actions come next so Matrix3 remains authoritative.", 2);
+                "Core account actions stay read-only here. Boss Research Lab below uses the existing Matrix3 command queue for targeted runtime probes.", 2);
         card.add(Box.createVerticalStrut(9));
         card.add(message);
         return card;
