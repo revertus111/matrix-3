@@ -13,3 +13,11 @@
 - Rambler's backpack context actions are now defined by `data/items/custom-item-actions.properties` rather than item-id checks in the generic click router.
 - Inventory Option 4 and Equipment Option 1 are configured as `Open`; Bank Option 7 is configured as `Open` pending runtime confirmation that the bank client presents the per-item equipped-option label.
 - `EMPTY_TO_BANK` server behavior is implemented but its bank option remains disabled in config until a verified per-item bank-menu label hook exists; no stock bank label is silently repurposed.
+
+2026-09-05
+- Normalized Rambler's Backpack as its own persistent workstream under `docs/backpack/PROJECT.md`.
+- Documented ownership boundaries: `Inventory`/`Backpack` own player-carried storage, Matrix3 persistence and Bank remain authoritative, and `CustomItemActions` only routes context actions.
+- Registered the workstream in `docs/rs3/WORKSTREAMS.md` as `NEEDS TEST`.
+- Added the Backpack ownership row to `docs/rs3/SYSTEM_OWNERSHIP.md`.
+- Preserved the existing implementation; this documentation-only patch intentionally makes no Java/client behavior changes.
+- Set Phase 3 Bundle 3.1 consolidated runtime verification as the next execution target before any additional implementation changes.
