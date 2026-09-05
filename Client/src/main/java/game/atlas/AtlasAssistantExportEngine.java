@@ -14,6 +14,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import game.atlas.AtlasDomainCorrelationEngine.DomainCandidate;
+import game.atlas.AtlasDomainCorrelationEngine.DomainCorrelationResult;
 import game.atlas.AtlasInvestigationIndex.RelationshipEntry;
 import game.atlas.AtlasInvestigationIndex.SymbolEntry;
 import game.atlas.AtlasRelationshipQueryEngine.RelationshipQueryResult;
@@ -31,7 +33,7 @@ import game.atlas.AtlasSearchEngine.SearchResult;
  */
 public final class AtlasAssistantExportEngine {
 
-    public static final int FORMAT_VERSION = 1;
+    public static final int FORMAT_VERSION = 2;
     public static final int MAX_CANDIDATES = 50;
     public static final int MAX_RELATIONSHIPS = 200;
     public static final int MAX_SYMBOLS = 250;
@@ -39,6 +41,7 @@ public final class AtlasAssistantExportEngine {
     private final AtlasInvestigationIndex index;
     private final AtlasSearchEngine search;
     private final AtlasRelationshipQueryEngine relationships;
+    private final AtlasDomainCorrelationEngine domains;
 
     public AtlasAssistantExportEngine(AtlasInvestigationIndex index) {
         if (index == null) {
@@ -47,10 +50,14 @@ public final class AtlasAssistantExportEngine {
         this.index = index;
         this.search = new AtlasSearchEngine(index);
         this.relationships = new AtlasRelationshipQueryEngine(index);
+        this.domains = new AtlasDomainCorrelationEngine(index);
     }
 
     public ExportResult build(String request) {
         String value = requireRequest(request);
+        if (domains.isDomainQuery(value)) {
+            return buildDomainResult(value, domains.query(value));
+        }
         if (relationships.isRelationshipCommand(value)) {
             RelationshipQueryResult relationshipResult = relationships.query(value);
             return buildResult(value, "relationship-query", relationshipResult.getResolution(),
@@ -101,6 +108,42 @@ public final class AtlasAssistantExportEngine {
         return normalized;
     }
 
+    private ExportResult buildDomainResult(String request, DomainCorrelationResult domainResult) {
+        List<Candidate> candidates = new ArrayList<Candidate>();
+        for (DomainCandidate candidate : domainResult.getCandidates()) {
+            candidates.add(new Candidate(candidate.getSubjectId(), candidate.getScore(), candidate.getReason()));
+        }
+
+        List<RelationshipEntry> exportedRelationships = new ArrayList<RelationshipEntry>();
+        int relationshipLimit = Math.min(MAX_RELATIONSHIPS, domainResult.getRelationships().size());
+        for (int i = 0; i < relationshipLimit; i++) {
+            exportedRelationships.add(domainResult.getRelationships().get(i));
+        }
+
+        Map<String, SymbolEntry> relevant = new LinkedHashMap<String, SymbolEntry>();
+        for (DomainCandidate candidate : domainResult.getCandidates()) {
+            addRelevant(relevant, index.getSymbol(candidate.getSubjectId()));
+        }
+        for (RelationshipEntry relationship : exportedRelationships) {
+            addRelevant(relevant, index.getSymbol(relationship.getFromId()));
+            addRelevant(relevant, index.getSymbol(relationship.getTarget()));
+        }
+        List<SymbolEntry> exportedSymbols = boundedSymbols(relevant);
+
+        return new ExportResult(index.getMetadata(), index.getLoadNanos(),
+                index.getSymbolCount(), index.getRelationshipCount(), request, "domain-correlation",
+                false, null, null, candidates, domainResult.getTotalCandidates(),
+                domainResult.isCandidatesTruncated(), null, null, 0, 0,
+                domainResult.getTotalRelationships(), domainResult.getRelationships().size(),
+                domainResult.isRelationshipsTruncated(), exportedRelationships,
+                domainResult.isRelationshipsTruncated()
+                        || domainResult.getTotalRelationships() > exportedRelationships.size(),
+                exportedSymbols, relevant.size(), relevant.size() > exportedSymbols.size(),
+                domainResult.getRequestedDomain(), domainResult.getValue(),
+                domainResult.getSecondaryValue(), domainResult.getSemanticStatus(),
+                domainResult.getCorrelationBasis(), domainResult.isLiteralIdPromoted());
+    }
+
     private ExportResult buildResult(String request, String requestType,
             SearchResult resolution, RelationshipQueryResult relationshipResult,
             String resolvedTarget, SymbolEntry resolvedSymbol) {
@@ -144,15 +187,7 @@ public final class AtlasAssistantExportEngine {
             addRelevant(relevant, index.getSymbol(relationship.getFromId()));
             addRelevant(relevant, index.getSymbol(relationship.getTarget()));
         }
-
-        long relevantSymbolCount = relevant.size();
-        List<SymbolEntry> exportedSymbols = new ArrayList<SymbolEntry>();
-        for (SymbolEntry symbol : relevant.values()) {
-            if (exportedSymbols.size() >= MAX_SYMBOLS) {
-                break;
-            }
-            exportedSymbols.add(symbol);
-        }
+        List<SymbolEntry> exportedSymbols = boundedSymbols(relevant);
 
         String error = relationshipValidationError(relationshipResult);
         boolean resolved = error == null && (resolution != null
@@ -170,7 +205,19 @@ public final class AtlasAssistantExportEngine {
                 relationshipResult == null ? 0 : relationshipResult.getNodeCount(),
                 totalRelationships, queryRelationships.size(), queryRelationshipsTruncated,
                 exportedRelationships, relationshipsTruncated, exportedSymbols,
-                relevantSymbolCount, relevantSymbolCount > exportedSymbols.size());
+                relevant.size(), relevant.size() > exportedSymbols.size(),
+                null, null, null, null, null, false);
+    }
+
+    private static List<SymbolEntry> boundedSymbols(Map<String, SymbolEntry> relevant) {
+        List<SymbolEntry> exportedSymbols = new ArrayList<SymbolEntry>();
+        for (SymbolEntry symbol : relevant.values()) {
+            if (exportedSymbols.size() >= MAX_SYMBOLS) {
+                break;
+            }
+            exportedSymbols.add(symbol);
+        }
+        return exportedSymbols;
     }
 
     private static String relationshipValidationError(RelationshipQueryResult result) {
@@ -292,6 +339,12 @@ public final class AtlasAssistantExportEngine {
         private final List<SymbolEntry> symbols;
         private final long relevantSymbolCount;
         private final boolean symbolsTruncated;
+        private final String requestedDomain;
+        private final String domainValue;
+        private final String domainSecondaryValue;
+        private final String semanticStatus;
+        private final String correlationBasis;
+        private final boolean literalIdPromoted;
 
         private ExportResult(Metadata metadata, long indexLoadNanos,
                 long indexSymbolCount, long indexRelationshipCount,
@@ -301,7 +354,9 @@ public final class AtlasAssistantExportEngine {
                 long totalRelationshipMatches, int queryRelationshipCount,
                 boolean queryRelationshipsTruncated, List<RelationshipEntry> relationships,
                 boolean relationshipsTruncated, List<SymbolEntry> symbols,
-                long relevantSymbolCount, boolean symbolsTruncated) {
+                long relevantSymbolCount, boolean symbolsTruncated,
+                String requestedDomain, String domainValue, String domainSecondaryValue,
+                String semanticStatus, String correlationBasis, boolean literalIdPromoted) {
             this.metadata = metadata;
             this.indexLoadNanos = indexLoadNanos;
             this.indexSymbolCount = indexSymbolCount;
@@ -326,6 +381,12 @@ public final class AtlasAssistantExportEngine {
             this.symbols = Collections.unmodifiableList(new ArrayList<SymbolEntry>(symbols));
             this.relevantSymbolCount = relevantSymbolCount;
             this.symbolsTruncated = symbolsTruncated;
+            this.requestedDomain = requestedDomain;
+            this.domainValue = domainValue;
+            this.domainSecondaryValue = domainSecondaryValue;
+            this.semanticStatus = semanticStatus;
+            this.correlationBasis = correlationBasis;
+            this.literalIdPromoted = literalIdPromoted;
         }
 
         public String getRequest() { return request; }
@@ -343,6 +404,12 @@ public final class AtlasAssistantExportEngine {
         public List<SymbolEntry> getSymbols() { return symbols; }
         public long getRelevantSymbolCount() { return relevantSymbolCount; }
         public boolean isSymbolsTruncated() { return symbolsTruncated; }
+        public String getRequestedDomain() { return requestedDomain; }
+        public String getDomainValue() { return domainValue; }
+        public String getDomainSecondaryValue() { return domainSecondaryValue; }
+        public String getSemanticStatus() { return semanticStatus; }
+        public String getCorrelationBasis() { return correlationBasis; }
+        public boolean isLiteralIdPromoted() { return literalIdPromoted; }
 
         public String toJson() {
             StringBuilder out = new StringBuilder(8192);
@@ -361,6 +428,12 @@ public final class AtlasAssistantExportEngine {
             out.append(",\"resolved\":").append(resolved);
             out.append(",\"resolvedTarget\":").append(AtlasJson.quote(resolvedTarget));
             out.append(",\"error\":").append(AtlasJson.quote(error));
+            out.append(",\"requestedDomain\":").append(AtlasJson.quote(requestedDomain));
+            out.append(",\"domainValue\":").append(AtlasJson.quote(domainValue));
+            out.append(",\"domainSecondaryValue\":").append(AtlasJson.quote(domainSecondaryValue));
+            out.append(",\"semanticStatus\":").append(AtlasJson.quote(semanticStatus));
+            out.append(",\"correlationBasis\":").append(AtlasJson.quote(correlationBasis));
+            out.append(",\"literalIdPromoted\":").append(literalIdPromoted);
             out.append(",\"candidateCount\":").append(candidateCount);
             out.append(",\"candidatesTruncated\":").append(candidatesTruncated);
             out.append(",\"candidates\":[");
