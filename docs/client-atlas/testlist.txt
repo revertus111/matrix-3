@@ -1,35 +1,41 @@
-Client Atlas - Phase 1 test list
+Client Atlas test list
 
-Runtime-confirmed foundation
-[x] Eclipse/Java 8 can compile/run Atlas after Gradle -> Refresh Gradle Project resolves ASM.
-[x] Run scanner against compiled Matrix3 Client classes.
-[x] Confirm scan reports non-zero counts.
-    VERIFIED: 1221 class files / 33742 symbols / 34053 relationships.
-[x] Reopen metadata with status.
-[x] Confirm `Current fingerprint: true`.
-    VERIFIED fingerprint: 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
+Phase 1 - runtime verified
+[x] Eclipse/Java 8 compiles/runs Atlas after Gradle -> Refresh Gradle Project resolves ASM.
+[x] Scanner completed against compiled Matrix3 Client classes.
+[x] VERIFIED: 1221 class files / 33742 symbols / 34053 relationships.
+[x] Metadata reopened without rebuild.
+[x] `Current fingerprint: true`.
+[x] VERIFIED fingerprint: 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
+[x] Standalone `Client Atlas Control` opens through no-argument `ClientAtlasMain`.
+[x] `Run Phase 1 Check` ended with `PHASE 1 AUTOMATED CHECK: PASS`.
+[x] UI exact class search worked.
+[x] UI export worked for `CLASS:game/Class1`.
+[x] Export reported schema 1, current fingerprint, 15 immediate relationships, and no truncation before the Phase 2 schema bump.
 
-Standalone Client Atlas Control gate
-[ ] Pull current main.
-[ ] Run `game.atlas.ClientAtlasMain` with NO program arguments.
-[ ] Confirm the `Client Atlas Control` window opens.
-[ ] Confirm the status panel shows the existing index/counts and CURRENT fingerprint state.
-[ ] Click `Run Phase 1 Check`.
-[ ] Confirm output ends with `PHASE 1 AUTOMATED CHECK: PASS`.
-[ ] Confirm automated check verifies CLASS/FIELD/METHOD/CONSTRUCTOR symbol coverage.
-[ ] Confirm automated check verifies DECLARES/EXTENDS/IMPLEMENTS relationship coverage.
-[ ] Confirm automated check verifies generated symbols exclude `game/atlas/**`.
-[ ] Confirm automated check exercises an exact class query and a METHOD/CONSTRUCTOR query where available.
-[ ] Confirm `.client-atlas/phase1-check.json` is written and non-empty.
-[ ] Search `Class1` in the UI and confirm readable JSON output is shown.
-[ ] Click `Export Last Result` and confirm a file is written under `.client-atlas/exports/`.
-[ ] Click `Open Workspace` and confirm the local Atlas workspace opens.
+Phase 2 / 2A.1 schema-v2 checks - batch with structural scanner verification
+[ ] Clean/build Client after pulling schema v2.
+[ ] Open Client Atlas Control and confirm the old schema-v1 generated index reports non-current/stale until rebuilt.
+[ ] Click `Scan / Rebuild Index` and confirm metadata becomes schema version 2/current.
+[ ] Confirm a symbol JSONL record contains separate `compiledPath` and `sourcePath` fields.
+[ ] Confirm a normal `game/Class1` symbol resolves `compiledPath` to its `.class` and `sourcePath` to its real `src/main/java/...java` file.
+[ ] Confirm a relationship JSONL record contains `sourcePath`, `sourceLine`, `opcode`, `occurrenceCount`, and `detail`.
+[ ] Confirm Phase-1 structural DECLARES/EXTENDS/IMPLEMENTS records use `occurrenceCount:1` with null line/opcode.
+[ ] Confirm exact query/export still works after the schema-v2 rebuild.
+[ ] Confirm evidence/traces remain preserved across the generated-index rebuild.
 
-Remaining guard/regression checks
-[ ] On a later real client source change + rebuild, confirm query/export refuses the stale index until `Scan / Rebuild Index` runs again.
-[ ] If a queried symbol owns more than 200 immediate relationships, confirm output is capped while full relationshipCount/truncation state remains accurate.
-[ ] Confirm normal `game.RS3Applet` launch ownership/configuration remains unchanged.
+Phase 2 / upcoming 2A.2-2A.4 checks
+[ ] Known outgoing `CALLS` edge and corresponding incoming/called-by path.
+[ ] Known `GETFIELD`/`GETSTATIC` -> `READS_FIELD` edge.
+[ ] Known `PUTFIELD`/`PUTSTATIC` -> `WRITES_FIELD` edge.
+[ ] Repeated same-method edges aggregate occurrence count instead of flooding JSONL.
+[ ] Source line/opcode evidence is present where bytecode/debug data supports it.
+[ ] `invokedynamic`, if present, uses `DYNAMIC_CALL` rather than `CALLS`.
+[ ] Type references remain structural facts without semantic renaming.
+[ ] Typed constants do not become interface/animation/opcode/etc. IDs without evidence.
+[ ] Measure generated relationship count/file size/query time before changing persistence or graph caps.
 
-Notes
-- Do not intentionally mutate compiled classes solely to prove stale-index rejection if the one-click Phase 1 check passes; verify that guard on the next natural client rebuild/change.
-- Normal developer use should no longer require editing Eclipse program arguments between scan/status/query/export commands.
+Carryover regression checks
+[ ] On a natural future client source change + rebuild, confirm query/export refuses the stale index until rebuilt.
+[ ] If a queried symbol owns more than 200 immediate relationships, confirm output stays capped while full count/truncation remains accurate.
+[ ] Confirm normal `game.RS3Applet` launch ownership/configuration remains unchanged after meaningful Atlas changes.
