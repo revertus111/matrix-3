@@ -114,6 +114,9 @@ public final class AtlasWorkspace {
 
     public boolean isCurrent(Path classRoot) throws IOException {
         Metadata metadata = readMetadata();
+        if (metadata.getSchemaVersion() != SCHEMA_VERSION) {
+            return false;
+        }
         String currentFingerprint = AtlasFingerprint.compute(requireClassRoot(classRoot));
         return metadata.getClientFingerprint().equals(currentFingerprint);
     }
