@@ -41,7 +41,7 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 - Determine which phase/bundle is `ACTIVE` and which checklist items are already complete before deciding what work comes next.
 - Treat the workstream phase/checklist as the execution map for that project.
 - Do not redo completed checklist items or skip into later phases unless a dependency requires it or the user explicitly changes priority.
-- When the user says `continue`, `next`, or otherwise resumes an existing workstream, continue from the first valid unfinished item in the active phase/bundle unless `Resume Here` specifies a more precise next action.
+- When the user says `continue`, `next`, or otherwise resumes an existing workstream, continue from the first valid unfinished checklist item in the active phase/bundle unless `Resume Here` specifies a more precise next action.
 - After completing work, update the authoritative checklist/phase state so another chat can immediately determine where the workstream stands.
 - If chat discussion and the saved workstream checklist disagree, stop before patching and identify the mismatch rather than guessing which state is correct.
 
@@ -141,6 +141,7 @@ Status updates are a navigation aid for the user's original/main goal, not a cha
 
 - Every status update, including required post-patch status, must stay anchored to the original/main goal of the active project or workstream.
 - Keep a stable set of top-level milestone rows for that goal. Reuse them instead of replacing the table with the latest subtask.
+- Never derive, regenerate, or rename the stable milestone rows from the active phase/bundle/checklist. The checklist is execution detail; milestone rows represent the main goal and change only when the main goal/roadmap itself changes.
 - Put non-milestone work under `Just completed:` or `Current focus:` rather than turning it into a new main-goal row.
 - Show enough of the remaining main path that the user can return after a side track and immediately see what comes next.
 - If work moves temporarily to a side task, keep the main-goal table unchanged and mention the side task separately.
