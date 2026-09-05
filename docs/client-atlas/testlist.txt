@@ -4,61 +4,58 @@ Phase 1 - runtime verified
 [x] Eclipse/Java 8 compiles/runs Atlas after Gradle -> Refresh Gradle Project resolves ASM.
 [x] Scanner completed against compiled Matrix3 Client classes.
 [x] VERIFIED: 1221 class files / 33742 symbols / 34053 relationships.
-[x] Metadata reopened without rebuild.
-[x] `Current fingerprint: true`.
+[x] Metadata reopened without rebuild and `Current fingerprint: true`.
 [x] VERIFIED fingerprint: 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
-[x] Standalone `Client Atlas Control` opens through no-argument `ClientAtlasMain`.
-[x] `Run Phase 1 Check` ended with `PHASE 1 AUTOMATED CHECK: PASS`.
-[x] UI exact class search worked.
-[x] UI export worked for `CLASS:game/Class1`.
-[x] Export reported schema 1, current fingerprint, 15 immediate relationships, and no truncation before the Phase 2 schema bump.
+[x] Standalone Client Atlas Control opened through no-argument ClientAtlasMain.
+[x] Phase 1 automated check passed.
+[x] UI exact Class1 search/export passed.
 
-Phase 2 / Bundle 2A consolidated structural verification
-[ ] Clean/build Client in Eclipse/Java 8 after pulling Phase 2 scanner work.
-[ ] Open Client Atlas Control and confirm the old schema-v1 generated index reports non-current/stale until rebuilt.
-[ ] Click `Scan / Rebuild Index` once and confirm metadata becomes schema version 2/current.
-[ ] Confirm evidence/traces remain preserved across the generated-index rebuild.
+Phase 2 / Bundle 2A - one-click 2A.4 gate
+[ ] `git pull origin main`.
+[ ] Eclipse/Java 8 clean/build Client.
+[ ] Run `game.atlas.ClientAtlasMain` with NO program arguments.
+[ ] Before the check, old schema-v1 metadata should show `REBUILD REQUIRED` if it still exists locally.
+[ ] Click `Run Phase 2 Check` ONCE.
+[ ] Confirm output contains `PHASE 2 STRUCTURAL CHECK: PASS`.
+[ ] Send/copy the generated report from `.client-atlas/phase2-structural-check.txt`.
 
-2A.1 schema-v2/source checks
-[ ] Confirm a symbol JSONL record contains separate `compiledPath` and `sourcePath` fields.
-[ ] Confirm `game/Class1` resolves `compiledPath` to its `.class` and `sourcePath` to its real `src/main/java/...java` file.
-[ ] Confirm relationship records contain `sourcePath`, `sourceLine`, `opcode`, `occurrenceCount`, and `detail`.
-[ ] Confirm DECLARES/EXTENDS/IMPLEMENTS records use `occurrenceCount:1` with null line/opcode.
+`Run Phase 2 Check` automatically performs these 2A.1-2A.4 checks:
+[auto] Rebuild generated Atlas data using schema version 2.
+[auto] Require current fingerprint after rebuild.
+[auto] Require class/symbol counts > 0 and relationship count above the Phase 1 structural-only baseline (34053).
+[auto] Verify symbol records expose `compiledPath` + `sourcePath`.
+[auto] Verify Class1 path resolution when Class1 is present.
+[auto] Verify relationship schema fields: sourcePath/sourceLine/opcode/occurrenceCount/detail.
+[auto] Verify DECLARES/EXTENDS/IMPLEMENTS structural records keep occurrenceCount=1 with null line/opcode.
+[auto] Require generated CALLS relationships.
+[auto] Require generated READS_FIELD relationships.
+[auto] Require generated WRITES_FIELD relationships.
+[auto] Require generated REFERENCES_TYPE relationships.
+[auto] Require generated typed CONSTANT relationships.
+[auto] Require zero automatic LITERAL_ID relationships.
+[auto] Select an internal CALLS target and exercise the incoming exact-query path.
+[auto] Re-run an exact class query and compact export against schema 2/current data.
+[auto] Verify evidence.jsonl size is unchanged by the generated-index rebuild.
+[auto] Verify trace file count/bytes are unchanged by the generated-index rebuild.
+[auto] Record class/symbol/relationship counts.
+[auto] Count each relationship type.
+[auto] Record how many relationships have source-line evidence and opcode evidence.
+[auto] Record how many aggregated relationships have occurrenceCount > 1.
+[auto] Record symbols.jsonl and relationships.jsonl file sizes.
+[auto] Record scan time and one exact-query time.
+[auto] Write `.client-atlas/phase2-structural-check.txt`.
+[auto] Write `.client-atlas/phase2-structural-query.json`.
 
-2A.2 calls + field-access checks
-[ ] Confirm rebuilt relationship count increases above the Phase 1 structural-only baseline where method-body edges exist.
-[ ] Find one known method invocation and confirm exact `CALLS` target `METHOD:<owner>#<name><descriptor>` or `CONSTRUCTOR:<owner>#<init><descriptor>`.
-[ ] Query the called symbol and confirm the same edge is discoverable as an incoming immediate relationship.
-[ ] Find one GETFIELD/GETSTATIC and confirm `READS_FIELD` targets the exact stable field ID.
-[ ] Find one PUTFIELD/PUTSTATIC and confirm `WRITES_FIELD` targets the exact stable field ID.
-[ ] Confirm method-body relationships carry Java `sourcePath` when resolvable.
-[ ] Confirm positive `sourceLine` where compiled line-number debug data exists.
-[ ] Confirm opcode matches the observed instruction when one opcode is consistent across aggregated occurrences.
-[ ] Confirm repeated same-method/type/target edges emit one record with `occurrenceCount > 1` rather than duplicate JSONL rows.
-[ ] If one aggregated edge occurs through different opcodes, confirm stored `opcode` is null rather than misleading.
-[ ] If `invokedynamic` exists, confirm it emits `DYNAMIC_CALL`, not `CALLS`, and preserves bootstrap identity/details.
-
-2A.3 type-reference + constant checks
-[ ] Confirm field object descriptors produce neutral `REFERENCES_TYPE` targets such as `TYPE:game/Class161`.
-[ ] Confirm method argument/return descriptors produce object type references while primitive-only descriptors do not create fake object types.
-[ ] Confirm declared exception types produce `REFERENCES_TYPE` records.
-[ ] Confirm generic signatures produce referenced JVM types; where an inner type is present, confirm exact `$` inner-name evidence is preserved.
-[ ] Confirm NEW/CHECKCAST/INSTANCEOF/ANEWARRAY/MULTIANEWARRAY produce structural object type references.
-[ ] Confirm method/field bytecode owners and referenced object descriptors contribute `REFERENCES_TYPE` evidence.
-[ ] Confirm LDC `Type`, bootstrap `Handle`, and `ConstantDynamic` structures contribute type references rather than misleading string constants.
-[ ] Confirm static/classfile field literal values emit typed `CONSTANT` records when present.
-[ ] Confirm ICONST/BIPUSH/SIPUSH/LCONST/FCONST/DCONST and ordinary LDC literals emit typed constant targets.
-[ ] Confirm numeric targets remain generic (`int:762`, etc.) and do NOT emit `LITERAL_ID`, interface/animation/opcode/model semantics, or aliases automatically.
-[ ] Confirm repeated same-method constants/type references aggregate with `occurrenceCount` instead of flooding JSONL.
-
-2A.4 metrics/regression
-[ ] Record schema-v2 class/symbol/relationship counts after the full structural scan.
-[ ] Record `symbols.jsonl` and `relationships.jsonl` file sizes.
-[ ] Record approximate scan time and one exact query time if practical.
-[ ] Re-run exact search/export and confirm schema 2/current output.
-[ ] Use measured data before changing persistence, graph caps, or introducing a database.
+Non-failing evidence notes reported by the verifier
+[info] DYNAMIC_CALL may legitimately be zero if this compiled client contains no invokedynamic sites.
+[info] Positive sourceLine may be zero if the compiled client lacks line-number debug data; report instead of inventing source evidence.
+[info] occurrenceCount > 1 may be zero only if no naturally repeated same-method relationship occurs; report instead of manufacturing a test case.
 
 Carryover regression checks
 [ ] On a natural future client source change + rebuild, confirm query/export refuses the stale index until rebuilt.
 [ ] If a queried symbol owns more than 200 immediate relationships, confirm output stays capped while full count/truncation remains accurate.
 [ ] Confirm normal `game.RS3Applet` launch ownership/configuration remains unchanged after meaningful Atlas changes.
+
+Gate rule
+- Bundle 2A remains NEEDS TEST until the one-click Phase 2 structural report passes locally.
+- Do not begin 2B.1 implementation until this gate passes or the authoritative PROJECT.md explicitly changes priority.
