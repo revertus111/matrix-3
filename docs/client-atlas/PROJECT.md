@@ -91,6 +91,7 @@ Client/.client-atlas/
     phase1-check.json
     phase2-structural-check.txt
     phase2-structural-query.json
+    phase2-investigation-check.txt
     exports/
     traces/
 ```
@@ -127,7 +128,7 @@ Phase 1 is **DONE**.
 
 ### Phase 2 / Bundle 2A - 2026-09-05
 
-Local **Run Phase 2 Check** completed with:
+Local structural verification completed with:
 
 ```text
 PHASE 2 STRUCTURAL CHECK: PASS
@@ -161,11 +162,13 @@ Bundle 2A is **DONE**.
 - `AtlasWorkspace` owns local persistence/schema/current checks.
 - `AtlasScanner` owns bytecode scanning.
 - `AtlasQueryEngine` owns exact streaming query/export.
-- `ClientAtlasControl` is a human control surface over Atlas APIs.
+- `ClientAtlasControl` is the standalone human control surface over shared Atlas APIs.
 - `AtlasStructuralVerifier` owns Bundle 2A structural verification/measurement.
 - `AtlasInvestigationIndex` owns the Phase 2B in-memory acceleration layer; it does not scan or replace JSONL persistence.
-- `AtlasSearchEngine` owns ranked/friendly symbol resolution over the investigation index; it never changes authoritative IDs or silently selects ambiguous candidates.
-- UI/CLI continue to consume shared Atlas APIs rather than duplicating discovery ownership.
+- `AtlasSearchEngine` owns ranked/friendly symbol resolution; it never changes authoritative IDs or silently selects ambiguous candidates.
+- `AtlasRelationshipQueryEngine` owns bounded relationship filtering/traversal over already-recorded bytecode facts.
+- `AtlasInvestigationVerifier` owns the consolidated Bundle 2B local search/investigation gate and does not rescan compiled classes.
+- UI/CLI consume the same investigation/search/relationship APIs instead of duplicating resolution logic.
 
 # Schema v2
 
@@ -258,19 +261,13 @@ string:Attack
 
 No automatic domain meaning is assigned to generic constants.
 
-# Phase 2B investigation index
+# Phase 2B investigation/search
 
 ## 2B.1 implementation
 
 `AtlasInvestigationIndex` is an immutable, on-demand acceleration layer over the existing schema-v2 JSONL.
 
-It intentionally does **not**:
-
-- rescan compiled classes,
-- create another persistent database,
-- rename symbols,
-- infer semantic meaning,
-- replace `AtlasQueryEngine`/`AtlasScanner` ownership.
+It intentionally does **not** rescan compiled classes, create another persistent database, rename symbols, infer semantic meaning, or replace scanner/query ownership.
 
 Load safety:
 
@@ -292,28 +289,13 @@ Lookup maps:
 - relationship target -> incoming relationships
 - typed constant target -> referencing relationships
 
-Original IDs/names remain untouched in returned entries. Normalization is internal lookup behavior only and uses locale-stable lowercase keys.
-
-Relationship entries preserve:
-
-- `fromId`
-- relationship type
-- target
-- source path
-- source line when available
-- opcode when available
-- occurrence count
-- detail
-
-A temporary load-time string canonicalization pool reuses repeated IDs, targets, and source paths so the ~325k relationship dataset does not needlessly duplicate String objects. The pool itself is not persistent and becomes collectable after index construction.
-
-2B.1 local load/performance verification is deliberately **batched with the first consolidated Bundle 2B user-facing investigation test**. Requiring a separate Eclipse session for a non-user-facing index loader would waste user runtime time.
+A temporary load-time string canonicalization pool reuses repeated IDs, targets, and source paths so the ~325k relationship dataset does not needlessly duplicate String objects.
 
 ## 2B.2 implementation
 
 `AtlasSearchEngine` provides deterministic ranked/friendly symbol resolution over `AtlasInvestigationIndex`.
 
-Supported exact forms:
+Supported forms include:
 
 ```text
 CLASS:game/Class387
@@ -345,34 +327,76 @@ ClientAtlasMain search "Class387.method4844"
 ClientAtlasMain search "method4844"
 ```
 
-The CLI loads the current investigation index, reports index-load timing/counts, and prints ranked candidates/resolution output.
+## 2B.3 implementation
 
-Standalone `ClientAtlasControl` search-box integration is intentionally bundled with **2B.3** so friendly symbol search and `calls/called-by/reads/written-by/references/constant` commands are added to the same UI surface in one rewrite instead of two.
-
-# Search direction
-
-2B.3 builds relationship investigation commands and bounded neighborhoods on top of the same in-memory index/search engine.
-
-Target commands:
+`AtlasRelationshipQueryEngine` adds bounded investigation commands over the same in-memory index/search engine:
 
 ```text
 calls <symbol>
 called-by <symbol>
 reads <field-or-symbol>
-written-by <field-or-symbol>
-references <type-or-symbol>
+written-by <field>
+references <type-or-class>
 constant 762
+constant int:762
+neighbors <symbol> depth=1
+neighbors <symbol> depth=2
 ```
 
-Resolution rules from 2B.2 remain in force: ambiguous shorthand returns candidates before relationship traversal; it never silently selects an overload.
+Behavior:
 
-Initial bounded-neighborhood targets for 2B.3:
+- ambiguous/fuzzy operands return search candidates before traversal; no silent overload selection,
+- `calls` / `called-by` filter `CALLS` in the correct direction,
+- class-level call/read queries expand through declared methods so a class query is useful even though bytecode edges originate from methods,
+- `reads <field>` returns incoming `READS_FIELD`; method/class reads return outgoing reads,
+- `written-by` requires a field and returns incoming `WRITES_FIELD`,
+- `references` accepts a class-like symbol or neutral `TYPE:<internal-name>` and returns incoming `REFERENCES_TYPE`,
+- raw integer constants search both normalized `int:` and `long:` forms where valid; decimals search normalized float/double forms; typed targets remain authoritative,
+- generic numeric constants remain structural facts and never become domain IDs automatically,
+- normal relationship results cap at **500 edges**,
+- neighborhoods support depth **1-2**, cap at **100 nodes / 500 edges**, and explicitly report truncation,
+- relationship output preserves source path/line, opcode, and occurrence count where available.
 
-- default depth 1
-- optional depth 2
-- node cap 100
-- edge cap 500
-- always report schema/fingerprint/truncation
+Standalone control now uses one **Search / Investigate** box for friendly symbols and relationship commands. It caches a current investigation snapshot, invalidates it when generated data changes/stales, and reuses the same APIs as CLI automation.
+
+The former **Run Phase 2 Check** label is now **Run Structural Check** because that action verifies Bundle 2A structural data rather than all of Phase 2.
+
+## Bundle 2B verifier
+
+`AtlasInvestigationVerifier` performs the consolidated local 2B.1-2B.3 gate **without rescanning** compiled classes.
+
+It checks:
+
+- current schema/fingerprint,
+- investigation-index counts equal persisted metadata,
+- exact + friendly Class1 resolution,
+- exact owner/member shorthand with descriptor,
+- ambiguous exact names remain unresolved candidates,
+- fuzzy/prefix search remains bounded and non-resolved,
+- one known internal `CALLS` edge in outgoing and incoming directions,
+- `READS_FIELD` and `WRITES_FIELD` field directions,
+- `REFERENCES_TYPE`,
+- typed `CONSTANT`,
+- depth-2 neighborhood caps,
+- index-load/search timing and approximate used-memory delta.
+
+Human workflow:
+
+```text
+Run ClientAtlasMain with no args -> Run Search Check
+```
+
+CLI automation:
+
+```text
+ClientAtlasMain verify-search
+```
+
+Report:
+
+```text
+.client-atlas/phase2-investigation-check.txt
+```
 
 # Development plan
 
@@ -407,12 +431,13 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 ### Bundle 2B - Investigation search
 
-**Status: ACTIVE**
+**Status: NEEDS TEST**
 
-- [x] **2B.1 In-memory investigation index implementation** - current/stale guards, count validation, symbol/candidate/incoming/outgoing/constant maps, compact parsed entries, load-time string canonicalization. **Local load/performance verification is batched with 2B.3.**
-- [x] **2B.2 Ranked/friendly search implementation** - exact IDs/class paths/names/member shorthand, ambiguity-safe candidate results, deterministic prefix/contains ranking, CLI search. **Local verification and standalone UI integration are batched with 2B.3.**
-- [ ] **2B.3 Relationship queries + bounded neighborhoods** - current execution target.
-- [ ] **2B.4 Assistant-oriented export**.
+- [x] **2B.1 In-memory investigation index implementation**.
+- [x] **2B.2 Ranked/friendly search implementation**.
+- [x] **2B.3 Relationship queries + bounded neighborhoods implementation** - includes standalone Search / Investigate integration and one-click Bundle 2B verification harness.
+- [ ] **2B local verification gate** - `PHASE 2 INVESTIGATION CHECK: PASS` required before 2B.4.
+- [ ] **2B.4 Assistant-oriented export** - gated on local investigation PASS.
 - [ ] **2B.5 Safe initial domain correlation**.
 
 ## Phase 3 - Runtime Evidence and Knowledge
@@ -459,44 +484,43 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 Bundle 2A structural gate is complete. Do not request another structural rescan unless new evidence requires it.
 
-## Next consolidated Bundle 2B local checks
+## Current shortest Bundle 2B local session
 
-Do **not** request a standalone 2B.1 or 2B.2 runtime session. The next useful local session should happen after 2B.3 integrates friendly + relationship commands into the standalone Atlas Control search surface.
+1. `git pull origin main`.
+2. Eclipse/Java 8 clean/build Client.
+3. Run `game.atlas.ClientAtlasMain` with no program arguments.
+4. Click **Run Search Check** once.
+5. Confirm output contains:
 
-That one session must cover:
+```text
+PHASE 2 INVESTIGATION CHECK: PASS
+```
 
-- load the verified current schema-v2 dataset without rescanning,
-- loaded totals equal **33742 symbols / 325826 relationships**,
-- record in-memory index build time and observe memory behavior,
-- exact `CLASS:game/Class1` resolution,
-- friendly `Class1` resolution to the same class,
-- owner/member shorthand resolution on a known class method,
-- ambiguous member/name search returns candidates instead of choosing one,
-- prefix/contains fallback is ranked, bounded, and marked non-resolved,
-- outgoing/incoming maps return known relationships,
-- one typed constant referrer path resolves,
-- stale/schema mismatch still refuses index construction,
-- 2B.3 relationship commands filter the correct relationship family/direction,
-- depth/result caps and truncation state are reported correctly,
-- standalone UI uses the same index/search/query APIs rather than duplicating search logic.
+6. Send/copy `.client-atlas/phase2-investigation-check.txt`.
+
+**Do not click Scan or Run Structural Check first.** The Bundle 2B verifier intentionally proves the current generated index can be loaded/searched without rescanning.
+
+The verifier automatically covers the 2B.1-2B.3 checks listed above. Manual relationship commands are optional smoke checks, not required for the normal gate.
 
 # Carryover / blockers
 
 ## CARRYOVER
 
-- Stale-index rejection on a natural future client source change.
+- On a natural future client source change + rebuild boundary, confirm cached/streaming query paths refuse stale generated data before rebuild.
 - >200 streaming exact-query truncation regression when a naturally suitable symbol is available.
+- Destructive schema-mismatch simulation is not required for the normal Bundle 2B gate; static guards remain in place.
 - Advanced automatic correlation remains usage-driven backlog.
 
 ## BLOCKERS
 
-- None for Bundle 2B.
+- No implementation blocker.
+- Bundle 2B is waiting only on the one-click local investigation/search PASS.
 
 # Resume Here
 
 **Last completed implementation:**
 
-- Phase 2 / Bundle 2B / **2B.2 Ranked/friendly search implementation**.
+- Phase 2 / Bundle 2B / **2B.3 Relationship queries + bounded neighborhoods + consolidated search verifier**.
 
 **Current phase:**
 
@@ -504,11 +528,11 @@ That one session must cover:
 
 **Active bundle:**
 
-- **Bundle 2B - Investigation search / ACTIVE**
+- **Bundle 2B - Investigation search / NEEDS TEST**
 
 **Current/next checklist item:**
 
-- **2B.3 Relationship queries + bounded neighborhoods**.
+- **Bundle 2B local investigation/search verification gate**.
 
 **Verified dataset baseline:**
 
@@ -527,10 +551,11 @@ That one session must cover:
 - Type references + typed constants complete and verified.
 - No automatic literal/domain-ID semantics.
 - JSONL remains persistence authority; no database is justified.
-- `AtlasInvestigationIndex` loads a current JSONL snapshot into immutable lookup maps for fast investigation.
-- `AtlasSearchEngine` resolves exact/friendly symbol forms, ranks partial candidates, and never silently resolves ambiguous/fuzzy matches.
-- CLI `search` exposes the new resolution engine for automation.
-- 2B.1/2B.2 runtime verification and standalone UI friendly-search integration are intentionally deferred into 2B.3 so the user gets one useful consolidated test session.
+- `AtlasInvestigationIndex` loads current JSONL into immutable investigation maps.
+- `AtlasSearchEngine` handles exact/friendly/ranked candidate resolution safely.
+- `AtlasRelationshipQueryEngine` handles bounded calls/read/write/type/constant/neighborhood investigation.
+- Standalone Atlas Control exposes the shared Search / Investigate surface.
+- `AtlasInvestigationVerifier` exposes one-click/CLI Bundle 2B verification without rescanning.
 
 **Files/systems already inspected or changed for Phase 2:**
 
@@ -542,6 +567,8 @@ That one session must cover:
 - `Client/src/main/java/game/atlas/AtlasStructuralVerifier.java`
 - `Client/src/main/java/game/atlas/AtlasInvestigationIndex.java`
 - `Client/src/main/java/game/atlas/AtlasSearchEngine.java`
+- `Client/src/main/java/game/atlas/AtlasRelationshipQueryEngine.java`
+- `Client/src/main/java/game/atlas/AtlasInvestigationVerifier.java`
 - `Client/src/main/java/game/atlas/ClientAtlasControl.java`
 - `Client/src/main/java/game/atlas/ClientAtlasMain.java`
 - `docs/client-atlas/PROJECT.md`
@@ -559,13 +586,13 @@ That one session must cover:
 
 **Pending verification:**
 
-- 2B.1 index construction/time/memory + lookup sanity checks, batched with 2B.3.
-- 2B.2 friendly/ranked search behavior on the real dataset, batched with 2B.3.
+- Pull/build once and click **Run Search Check**.
+- Persist the actual investigation-index load time/memory/search evidence from the generated report.
 
-**Next implementation:**
+**Next implementation after gate passes:**
 
-- Build **2B.3 Relationship queries + bounded neighborhoods** over `AtlasInvestigationIndex` and `AtlasSearchEngine`, then integrate friendly + relationship commands into the standalone Atlas Control search box once.
+- **2B.4 Assistant-oriented export**.
 
 # Next recommended work
 
-**2B.3 Relationship queries + bounded neighborhoods.**
+**Run the one-click Bundle 2B investigation/search gate.** If it reports PASS, close the gate and begin **2B.4 Assistant-oriented export**.
