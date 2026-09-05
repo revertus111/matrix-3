@@ -4,3 +4,11 @@
 - Scoped v1 around fast NPC transformation/spawning, animation/GFX/projectile testing, persistent evidence, related-asset candidates, candidate classification, and lightweight test sequences.
 - Explicitly separated research ownership from BossLabs combat authoring, map editing, drop editing, FX Labs, and generic cache editing.
 - Defined the 10-minute-session workflow and v1 stop condition so tool work remains driven by RoTS research needs.
+
+2026-09-04
+- Added the first Boss Research Lab runtime slice inside Client Console -> Owner with RoTS as the initial preset.
+- Added one-click Ahrim/Dharok/Guthan/Karil/Torag/Verac selection using empowered NPC IDs 18538/18540/18541/18543/18544/18545.
+- Reused the existing Client Console command queue and existing Matrix3 `tonpc`, `emote`, and `gfx` commands for Become NPC, Reset Appearance, animation playback/stop, and self-GFX playback; Commands.java was not changed.
+- Added previous/next ID stepping for animation and GFX probes and automatically copies the tested ID/type into the finding form.
+- Added persistent RoTS findings with mechanic, asset type/ID, VERIFIED/verified-static/HYPOTHESIS confidence, note, timestamp, and NPC identity in `data/client-console/boss-research-lab/rots-findings.tsv`.
+- Added per-brother saved-findings display so short research sessions can resume without remembering tested IDs.
