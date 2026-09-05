@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 
 import game.atlas.AtlasAssistantExportEngine.ExportResult;
+import game.atlas.AtlasDomainCorrelationEngine.DomainCorrelationResult;
 import game.atlas.AtlasInvestigationIndex.RelationshipEntry;
 import game.atlas.AtlasInvestigationIndex.SymbolEntry;
 import game.atlas.AtlasRelationshipQueryEngine.RelationshipQueryResult;
@@ -57,6 +58,7 @@ public final class AtlasInvestigationVerifier {
 
         AtlasSearchEngine search = new AtlasSearchEngine(index);
         AtlasRelationshipQueryEngine relationships = new AtlasRelationshipQueryEngine(index);
+        AtlasDomainCorrelationEngine domains = new AtlasDomainCorrelationEngine(index);
 
         SymbolEntry class1 = index.getSymbol("CLASS:game/Class1");
         require(class1 != null, "known Class1 symbol is missing from the current index");
@@ -94,7 +96,7 @@ public final class AtlasInvestigationVerifier {
         require(samples.write != null && index.getSymbol(samples.write.getTarget()) != null,
                 "no bounded internal WRITES_FIELD sample was available");
         require(samples.type != null, "no bounded REFERENCES_TYPE sample was available");
-        require(samples.constant != null, "no bounded CONSTANT sample was available");
+        require(samples.constant != null, "no bounded numeric CONSTANT sample was available");
 
         RelationshipQueryResult calls = relationships.query("calls " + samples.call.getFromId());
         require(contains(calls.getRelationships(), samples.call), "calls query missed its known edge");
@@ -125,6 +127,30 @@ public final class AtlasInvestigationVerifier {
         require(neighbors.getRelationships().size() <= AtlasRelationshipQueryEngine.MAX_EDGES,
                 "neighborhood exceeded edge cap");
 
+        String domainOperand = rawConstantValue(samples.constant.getTarget());
+        String domainQuery = "animation " + domainOperand;
+        require(domains.isDomainQuery(domainQuery), "animation numeric domain query was not recognized");
+        require(domains.isDomainQuery("762:7"), "bare interface/component pair query was not recognized");
+
+        DomainCorrelationResult domain = domains.query(domainQuery);
+        require("UNKNOWN".equals(domain.getSemanticStatus()),
+                "domain candidate query did not remain UNKNOWN");
+        require(!domain.isLiteralIdPromoted(), "domain candidate query promoted a generic constant to LITERAL_ID");
+        require(contains(domain.getRelationships(), samples.constant),
+                "domain candidate query missed its known structural constant edge");
+        require(domain.getCandidates().size() <= AtlasDomainCorrelationEngine.MAX_CANDIDATES,
+                "domain candidate query exceeded its candidate cap");
+        require(domain.getRelationships().size() <= AtlasDomainCorrelationEngine.MAX_RELATIONSHIPS,
+                "domain candidate query exceeded its relationship cap");
+
+        DomainCorrelationResult pairDomain = domains.query("762:7");
+        require("interface-component".equals(pairDomain.getRequestedDomain()),
+                "bare pair domain query did not preserve interface-component request type");
+        require("UNKNOWN".equals(pairDomain.getSemanticStatus()) && !pairDomain.isLiteralIdPromoted(),
+                "bare pair domain query invented verified semantics");
+        require("same-symbol-constant-cooccurrence".equals(pairDomain.getCorrelationBasis()),
+                "bare pair domain query did not use same-symbol co-occurrence");
+
         AtlasAssistantExportEngine assistant = new AtlasAssistantExportEngine(index);
         ExportResult assistantClass = assistant.build("Class1");
         require(assistantClass.isResolved()
@@ -152,6 +178,18 @@ public final class AtlasInvestigationVerifier {
         require(assistantAmbiguous.getRelationships().isEmpty(),
                 "assistant ambiguous search unexpectedly traversed relationships");
 
+        ExportResult assistantDomain = assistant.build(domainQuery);
+        require("domain-correlation".equals(assistantDomain.getRequestType()),
+                "assistant package did not classify domain correlation request");
+        require(!assistantDomain.isResolved() && "UNKNOWN".equals(assistantDomain.getSemanticStatus()),
+                "assistant domain package invented resolved semantics");
+        require(!assistantDomain.isLiteralIdPromoted(),
+                "assistant domain package reported generic constant promotion");
+        require(contains(assistantDomain.getRelationships(), samples.constant),
+                "assistant domain package missed its known structural constant edge");
+        require(assistantDomain.toJson().contains("\"literalIdPromoted\":false"),
+                "assistant domain JSON omitted explicit no-promotion state");
+
         Path assistantExportPath = workspace.getWorkspaceRoot().resolve(ASSISTANT_EXPORT_FILE);
         assistant.writeExport(assistantClass, assistantExportPath);
         require(Files.isRegularFile(assistantExportPath) && Files.size(assistantExportPath) > 0L,
@@ -159,8 +197,9 @@ public final class AtlasInvestigationVerifier {
 
         String report = buildReport(index, memoryBefore, memoryAfter, canonical, friendly,
                 memberQuery, member, ambiguous, fuzzy, samples, calls, calledBy,
-                reads, writtenBy, references, constant, neighbors, assistantClass,
-                assistantCalls, assistantAmbiguous, assistantExportPath);
+                reads, writtenBy, references, constant, neighbors, domain, pairDomain,
+                assistantClass, assistantCalls, assistantAmbiguous, assistantDomain,
+                assistantExportPath);
         Path reportPath = workspace.getWorkspaceRoot().resolve(REPORT_FILE);
         writeReport(reportPath, report);
         return new VerificationResult(metadata, report, reportPath);
@@ -217,7 +256,8 @@ public final class AtlasInvestigationVerifier {
                         && typeCountWithinCap(index.incoming(edge.getTarget()), RelationshipType.REFERENCES_TYPE)) {
                     samples.type = edge;
                 } else if (edge.getType() == RelationshipType.CONSTANT && samples.constant == null
-                        && index.constantReferrers(edge.getTarget()).size() <= AtlasRelationshipQueryEngine.MAX_EDGES) {
+                        && isNumericConstant(edge.getTarget())
+                        && index.constantReferrers(edge.getTarget()).size() <= AtlasDomainCorrelationEngine.MAX_RELATIONSHIPS) {
                     samples.constant = edge;
                 }
             }
@@ -226,6 +266,15 @@ public final class AtlasInvestigationVerifier {
             }
         }
         return samples;
+    }
+
+    private static boolean isNumericConstant(String target) {
+        return target != null && (target.startsWith("int:") || target.startsWith("long:"));
+    }
+
+    private static String rawConstantValue(String target) {
+        int colon = target == null ? -1 : target.indexOf(':');
+        return colon >= 0 && colon + 1 < target.length() ? target.substring(colon + 1) : target;
     }
 
     private static boolean typeCountWithinCap(List<RelationshipEntry> entries, RelationshipType type) {
@@ -261,11 +310,12 @@ public final class AtlasInvestigationVerifier {
             RelationshipQueryResult calls, RelationshipQueryResult calledBy,
             RelationshipQueryResult reads, RelationshipQueryResult writtenBy,
             RelationshipQueryResult references, RelationshipQueryResult constant,
-            RelationshipQueryResult neighbors, ExportResult assistantClass,
+            RelationshipQueryResult neighbors, DomainCorrelationResult domain,
+            DomainCorrelationResult pairDomain, ExportResult assistantClass,
             ExportResult assistantCalls, ExportResult assistantAmbiguous,
-            Path assistantExportPath) {
-        StringBuilder report = new StringBuilder(4608);
-        report.append("Client Atlas - Phase 2 investigation/search/export verification\n\n");
+            ExportResult assistantDomain, Path assistantExportPath) {
+        StringBuilder report = new StringBuilder(5632);
+        report.append("Client Atlas - Phase 2 investigation/search/export/domain verification\n\n");
         report.append("PHASE 2 INVESTIGATION CHECK: PASS\n\n");
         report.append("Symbols: ").append(index.getSymbolCount()).append('\n');
         report.append("Relationships: ").append(index.getRelationshipCount()).append('\n');
@@ -298,6 +348,17 @@ public final class AtlasInvestigationVerifier {
                 .append(" / cap ").append(AtlasRelationshipQueryEngine.MAX_EDGES)
                 .append(neighbors.isTruncated() ? " (truncated)" : "").append("\n\n");
 
+        report.append("Domain correlation checks\n");
+        report.append("  sample: ").append(domain.getQuery()).append('\n');
+        report.append("  semantic status: ").append(domain.getSemanticStatus()).append('\n');
+        report.append("  literal-id promoted: ").append(domain.isLiteralIdPromoted()).append('\n');
+        report.append("  candidates: ").append(domain.getTotalCandidates())
+                .append(domain.isCandidatesTruncated() ? " (truncated)" : "").append('\n');
+        report.append("  relationships: ").append(domain.getTotalRelationships())
+                .append(domain.isRelationshipsTruncated() ? " (truncated)" : "").append('\n');
+        report.append("  bare pair basis: ").append(pairDomain.getCorrelationBasis())
+                .append(" | status ").append(pairDomain.getSemanticStatus()).append("\n\n");
+
         report.append("Assistant export checks\n");
         report.append("  Class1 resolved: ").append(assistantClass.getResolvedTarget()).append('\n');
         report.append("  Class1 relevant symbols: ").append(assistantClass.getRelevantSymbolCount())
@@ -308,6 +369,8 @@ public final class AtlasInvestigationVerifier {
                 .append(assistantCalls.isRelationshipsTruncated() ? " (truncated)" : "").append('\n');
         report.append("  ambiguous candidate count: ").append(assistantAmbiguous.getCandidateCount())
                 .append(assistantAmbiguous.isCandidatesTruncated() ? " (truncated)" : "").append('\n');
+        report.append("  domain request type: ").append(assistantDomain.getRequestType())
+                .append(" | status ").append(assistantDomain.getSemanticStatus()).append('\n');
         report.append("  verification export: ").append(assistantExportPath).append("\n\n");
 
         report.append("PASS  current schema/fingerprint without rescan\n");
@@ -318,9 +381,13 @@ public final class AtlasInvestigationVerifier {
         report.append("PASS  calls / called-by / reads / written-by\n");
         report.append("PASS  type references + typed constants\n");
         report.append("PASS  depth-2 neighborhood respects node/edge caps\n");
+        report.append("PASS  domain syntax returns bounded structural candidates only\n");
+        report.append("PASS  domain semantics remain UNKNOWN; no automatic LITERAL_ID promotion\n");
+        report.append("PASS  interface/component pair correlation uses same-symbol co-occurrence\n");
         report.append("PASS  assistant package carries schema/fingerprint/source locations\n");
         report.append("PASS  assistant plain-search context + relationship-command export\n");
         report.append("PASS  assistant ambiguity stays unresolved and package caps hold\n");
+        report.append("PASS  assistant domain package preserves UNKNOWN/no-promotion state\n");
         return report.toString();
     }
 
