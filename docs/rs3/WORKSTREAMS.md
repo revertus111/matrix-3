@@ -17,7 +17,7 @@ Use this registry to answer:
 
 - One substantial idea should have one authoritative workstream project document, normally `docs/<subject>/PROJECT.md`.
 - Register a workstream here when its authoritative project document is created or normalized.
-- Keep detailed bundles, patch state, discovery notes, blockers, testing, and `Resume Here` information inside the workstream project document.
+- Keep detailed phase/bundle/checklist state, discovery notes, blockers, testing, and `Resume Here` information inside the workstream project document.
 - Do not create competing roadmap/status files for the same workstream.
 - Existing subject documentation does not need to be reorganized immediately. Normalize it when that workstream is actively resumed.
 - Shared architecture maps or discovery references may be listed when they materially reduce repeat scanning, but they do not replace feature/workstream ownership.
@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 active; implementation discovery is complete and Atlas schema/persistence foundation is next. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 active; schema/persistence foundation is complete and the bytecode scanner MVP is next. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
 ## Shared discovery / navigation references
@@ -51,4 +51,4 @@ When adding a workstream:
 1. Create or normalize its authoritative `docs/<subject>/PROJECT.md` using `WORKSTREAM_TEMPLATE.md` where useful.
 2. Add one row above with the exact authority path and current high-level status.
 3. Preserve existing verified findings and patch history; do not rewrite history just to fit the template.
-4. Identify the current bundle and populate `Resume Here` before ending the session if work remains.
+4. Identify the current phase, active bundle, next checklist item, and `Resume Here` state before ending the session if work remains.

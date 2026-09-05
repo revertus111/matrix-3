@@ -1,0 +1,7 @@
+2026-09-05
+- Added the isolated `game.atlas` offline foundation without changing normal `game.RS3Applet` startup ownership.
+- Added stable Atlas symbol/relationship/evidence/metadata models preserving original obfuscated identifiers.
+- Added deterministic SHA-256 fingerprinting over sorted compiled client `.class` inputs while excluding `game/atlas/**`.
+- Added `.client-atlas` workspace initialization, metadata persistence/reopen support, stale/current fingerprint checks, and reserved JSONL data files.
+- Added a minimal offline `ClientAtlasMain` init/status entry point for Phase 1 validation.
+- Ignored `Client/.client-atlas/` so generated Atlas data survives build cleaning without polluting Git.
