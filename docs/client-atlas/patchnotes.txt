@@ -73,4 +73,13 @@
 - Replaced the standalone control's legacy last-result export with `Export Assistant JSON`; any successful friendly search or relationship command can now be exported from the cached investigation index.
 - Removed the UI search-time exact streaming export preparation, avoiding an unnecessary symbols/relationships JSONL pass after every resolved friendly search.
 - Extended `Run Search Check` / `verify-search` to validate assistant metadata/source fields, plain-search context, relationship-command export, ambiguity safety, caps, and atomic verification-file output without rescanning.
-- 2B.4 implementation is complete as verified-static; local runtime verification is pending through the updated one-click search check.
+- 2B.4 implementation is complete as verified-static; its new runtime assertions are intentionally batched with the 2B.5 final Phase 2 search gate rather than requiring a separate repeated user test.
+- Added `AtlasDomainCorrelationEngine` for safe domain-aware candidate searches over existing typed `CONSTANT` relationships only.
+- Domain searches now support forms such as `interface 762`, `component 7`, `animation 1234`, `model 5678`, `packet NPC_OP1`, and bare `762:7` interface/component co-occurrence.
+- Bare or domain-qualified numeric pairs correlate only when both constants occur from the same Atlas source symbol; they do not infer that either value has the requested meaning.
+- Domain results are bounded to 50 candidate symbols / 200 relationships and preserve source locations from structural constant evidence.
+- Every domain result explicitly reports semantic status `UNKNOWN` and `LITERAL_ID promoted: false`; no query hint writes or promotes generated domain semantics.
+- Integrated domain candidate queries into CLI `search`, standalone Search / Investigate, and assistant JSON/export format v2.
+- Assistant domain packages remain unresolved and include requested domain/value, correlation basis, semantic status, and explicit no-promotion state.
+- Extended the existing `Run Search Check` / `verify-search` gate to verify numeric domain matching, `762:7` co-occurrence handling, bounded output, UNKNOWN semantics, no `LITERAL_ID` promotion, and assistant-domain export.
+- 2B.5 implementation is complete as verified-static; one final combined search gate now covers both 2B.4 and 2B.5 without rescanning.
