@@ -22,11 +22,15 @@ import java.util.stream.Stream;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.signature.SignatureReader;
+import org.objectweb.asm.signature.SignatureVisitor;
 
 import game.atlas.AtlasSchema.Metadata;
 import game.atlas.AtlasSchema.RelationshipRecord;
@@ -132,6 +136,7 @@ public final class AtlasScanner {
                                         RelationshipType.IMPLEMENTS, interfaceName, sourcePath));
                             }
                         }
+                        writeSignatureTypeReferences(counters, ownerId, sourcePath, signature, false);
                     }
 
                     @Override
@@ -142,6 +147,13 @@ public final class AtlasScanner {
                         counters.writeSymbol(record);
                         counters.writeRelationship(structuralRelationship(ownerId,
                                 RelationshipType.DECLARES, record.getId(), sourcePath));
+
+                        StaticRelationshipAccumulator relationships =
+                                new StaticRelationshipAccumulator(record.getId(), sourcePath, counters);
+                        relationships.recordDescriptorTypes(descriptor, false);
+                        relationships.recordSignatureTypes(signature, true);
+                        relationships.recordConstant(value);
+                        relationships.flush();
                         return null;
                     }
 
@@ -155,7 +167,12 @@ public final class AtlasScanner {
                         counters.writeRelationship(structuralRelationship(ownerId,
                                 RelationshipType.DECLARES, record.getId(), sourcePath));
 
-                        return new MethodRelationshipVisitor(record.getId(), sourcePath, counters);
+                        MethodRelationshipVisitor visitor =
+                                new MethodRelationshipVisitor(record.getId(), sourcePath, counters);
+                        visitor.recordMethodDescriptor(descriptor);
+                        visitor.recordSignature(signature);
+                        visitor.recordExceptions(exceptions);
+                        return visitor;
                     }
                 }, READER_FLAGS);
             } catch (UncheckedIOException ex) {
@@ -167,6 +184,17 @@ public final class AtlasScanner {
     private static RelationshipRecord structuralRelationship(String fromId, RelationshipType type,
             String target, String sourcePath) {
         return new RelationshipRecord(fromId, type, target, sourcePath, null, null, 1, null);
+    }
+
+    private static void writeSignatureTypeReferences(ScanCounters counters, String fromId,
+            String sourcePath, String signature, boolean typeOnly) {
+        if (signature == null || signature.length() == 0) {
+            return;
+        }
+        StaticRelationshipAccumulator accumulator =
+                new StaticRelationshipAccumulator(fromId, sourcePath, counters);
+        accumulator.recordSignatureTypes(signature, typeOnly);
+        accumulator.flush();
     }
 
     private static String resolveJavaSourcePath(Path clientRoot, String internalName) {
@@ -249,6 +277,10 @@ public final class AtlasScanner {
         return AtlasSchema.symbolId(SymbolKind.FIELD, owner, name, descriptor);
     }
 
+    private static String typeTarget(String internalName) {
+        return "TYPE:" + internalName;
+    }
+
     private static String dynamicTarget(String name, String descriptor, Handle bootstrapMethodHandle) {
         StringBuilder builder = new StringBuilder(128);
         builder.append("DYNAMIC:").append(name).append(descriptor).append('@');
@@ -268,6 +300,203 @@ public final class AtlasScanner {
                 + ",bootstrapInterface=" + bootstrapMethodHandle.isInterface();
     }
 
+    private static String constantTarget(Object value) {
+        if (value instanceof Integer) {
+            return "int:" + value;
+        }
+        if (value instanceof Long) {
+            return "long:" + value;
+        }
+        if (value instanceof Float) {
+            return "float:" + value;
+        }
+        if (value instanceof Double) {
+            return "double:" + value;
+        }
+        if (value instanceof String) {
+            return "string:" + value;
+        }
+        return null;
+    }
+
+    private static boolean isFieldHandle(int tag) {
+        return tag == Opcodes.H_GETFIELD || tag == Opcodes.H_GETSTATIC
+                || tag == Opcodes.H_PUTFIELD || tag == Opcodes.H_PUTSTATIC;
+    }
+
+    private static abstract class RelationshipAccumulator {
+        private final String fromId;
+        private final String sourcePath;
+        private final ScanCounters counters;
+        private final Map<String, MutableRelationship> relationships =
+                new LinkedHashMap<String, MutableRelationship>();
+
+        private RelationshipAccumulator(String fromId, String sourcePath, ScanCounters counters) {
+            this.fromId = fromId;
+            this.sourcePath = sourcePath;
+            this.counters = counters;
+        }
+
+        protected final void record(RelationshipType type, String target, int sourceLine,
+                int opcode, String detail) {
+            if (target == null || target.length() == 0) {
+                return;
+            }
+            String key = type.name() + "\n" + target;
+            MutableRelationship relationship = relationships.get(key);
+            Integer lineValue = sourceLine > 0 ? Integer.valueOf(sourceLine) : null;
+            Integer opcodeValue = opcode >= 0 ? Integer.valueOf(opcode) : null;
+            if (relationship == null) {
+                relationships.put(key, new MutableRelationship(type, target, lineValue, opcodeValue, detail));
+                return;
+            }
+            relationship.increment(lineValue, opcodeValue, detail);
+        }
+
+        protected final void recordType(Type type, int sourceLine, int opcode) {
+            if (type == null) {
+                return;
+            }
+            switch (type.getSort()) {
+            case Type.ARRAY:
+                recordType(type.getElementType(), sourceLine, opcode);
+                break;
+            case Type.OBJECT:
+                record(RelationshipType.REFERENCES_TYPE, typeTarget(type.getInternalName()),
+                        sourceLine, opcode, null);
+                break;
+            case Type.METHOD:
+                Type[] arguments = type.getArgumentTypes();
+                for (Type argument : arguments) {
+                    recordType(argument, sourceLine, opcode);
+                }
+                recordType(type.getReturnType(), sourceLine, opcode);
+                break;
+            default:
+                break;
+            }
+        }
+
+        protected final void recordFieldDescriptor(String descriptor, int sourceLine, int opcode) {
+            if (descriptor == null || descriptor.length() == 0) {
+                return;
+            }
+            recordType(Type.getType(descriptor), sourceLine, opcode);
+        }
+
+        protected final void recordMethodDescriptor(String descriptor, int sourceLine, int opcode) {
+            if (descriptor == null || descriptor.length() == 0) {
+                return;
+            }
+            recordType(Type.getMethodType(descriptor), sourceLine, opcode);
+        }
+
+        protected final void recordDescriptorTypes(String descriptor, boolean methodDescriptor) {
+            if (methodDescriptor) {
+                recordMethodDescriptor(descriptor, -1, -1);
+            } else {
+                recordFieldDescriptor(descriptor, -1, -1);
+            }
+        }
+
+        protected final void recordSignatureTypes(String signature, boolean typeOnly) {
+            if (signature == null || signature.length() == 0) {
+                return;
+            }
+            SignatureReader reader = new SignatureReader(signature);
+            SignatureVisitor visitor = new TypeReferenceSignatureVisitor(this);
+            if (typeOnly) {
+                reader.acceptType(visitor);
+            } else {
+                reader.accept(visitor);
+            }
+        }
+
+        protected final void recordExceptionTypes(String[] exceptions) {
+            if (exceptions == null) {
+                return;
+            }
+            for (String exception : exceptions) {
+                if (exception != null && exception.length() > 0) {
+                    record(RelationshipType.REFERENCES_TYPE, typeTarget(exception), -1, -1, null);
+                }
+            }
+        }
+
+        protected final void recordHandleTypes(Handle handle, int sourceLine, int opcode) {
+            if (handle == null) {
+                return;
+            }
+            record(RelationshipType.REFERENCES_TYPE, typeTarget(handle.getOwner()),
+                    sourceLine, opcode, null);
+            if (isFieldHandle(handle.getTag())) {
+                recordFieldDescriptor(handle.getDesc(), sourceLine, opcode);
+            } else {
+                recordMethodDescriptor(handle.getDesc(), sourceLine, opcode);
+            }
+        }
+
+        protected final void recordBootstrapValue(Object value, int sourceLine, int opcode) {
+            if (value instanceof Type) {
+                recordType((Type) value, sourceLine, opcode);
+                return;
+            }
+            if (value instanceof Handle) {
+                recordHandleTypes((Handle) value, sourceLine, opcode);
+                return;
+            }
+            if (value instanceof ConstantDynamic) {
+                ConstantDynamic dynamic = (ConstantDynamic) value;
+                recordFieldDescriptor(dynamic.getDescriptor(), sourceLine, opcode);
+                recordHandleTypes(dynamic.getBootstrapMethod(), sourceLine, opcode);
+                for (int i = 0; i < dynamic.getBootstrapMethodArgumentCount(); i++) {
+                    recordBootstrapValue(dynamic.getBootstrapMethodArgument(i), sourceLine, opcode);
+                }
+                return;
+            }
+            recordConstant(value, sourceLine, opcode);
+        }
+
+        protected final void recordConstant(Object value, int sourceLine, int opcode) {
+            String target = constantTarget(value);
+            if (target != null) {
+                record(RelationshipType.CONSTANT, target, sourceLine, opcode, null);
+            }
+        }
+
+        protected final void recordConstant(Object value) {
+            recordConstant(value, -1, -1);
+        }
+
+        protected final void flush() {
+            for (MutableRelationship relationship : relationships.values()) {
+                counters.writeRelationship(new RelationshipRecord(fromId, relationship.type,
+                        relationship.target, sourcePath, relationship.sourceLine,
+                        relationship.opcode, relationship.occurrenceCount, relationship.detail));
+            }
+        }
+    }
+
+    private static final class StaticRelationshipAccumulator extends RelationshipAccumulator {
+        private StaticRelationshipAccumulator(String fromId, String sourcePath, ScanCounters counters) {
+            super(fromId, sourcePath, counters);
+        }
+    }
+
+    private static final class TypeReferenceSignatureVisitor extends SignatureVisitor {
+        private final RelationshipAccumulator accumulator;
+
+        private TypeReferenceSignatureVisitor(RelationshipAccumulator accumulator) {
+            super(Opcodes.ASM9);
+            this.accumulator = accumulator;
+        }
+
+        @Override
+        public void visitClassType(String name) {
+            accumulator.record(RelationshipType.REFERENCES_TYPE, typeTarget(name), -1, -1, null);
+        }
+    }
+
     private static final class MethodRelationshipVisitor extends MethodVisitor {
         private final MethodRelationshipAccumulator accumulator;
         private int currentLine = -1;
@@ -277,24 +506,73 @@ public final class AtlasScanner {
             accumulator = new MethodRelationshipAccumulator(methodId, sourcePath, counters);
         }
 
+        private void recordMethodDescriptor(String descriptor) {
+            accumulator.recordDescriptorTypes(descriptor, true);
+        }
+
+        private void recordSignature(String signature) {
+            accumulator.recordSignatureTypes(signature, false);
+        }
+
+        private void recordExceptions(String[] exceptions) {
+            accumulator.recordExceptionTypes(exceptions);
+        }
+
         @Override
         public void visitLineNumber(int line, Label start) {
             currentLine = line;
         }
 
         @Override
-        public void visitMethodInsn(int opcode, String owner, String name, String descriptor,
-                boolean isInterface) {
-            accumulator.record(RelationshipType.CALLS, methodTarget(owner, name, descriptor),
-                    currentLine, opcode, null);
+        public void visitInsn(int opcode) {
+            switch (opcode) {
+            case Opcodes.ICONST_M1:
+                accumulator.recordConstant(Integer.valueOf(-1), currentLine, opcode);
+                break;
+            case Opcodes.ICONST_0:
+            case Opcodes.ICONST_1:
+            case Opcodes.ICONST_2:
+            case Opcodes.ICONST_3:
+            case Opcodes.ICONST_4:
+            case Opcodes.ICONST_5:
+                accumulator.recordConstant(Integer.valueOf(opcode - Opcodes.ICONST_0), currentLine, opcode);
+                break;
+            case Opcodes.LCONST_0:
+            case Opcodes.LCONST_1:
+                accumulator.recordConstant(Long.valueOf(opcode - Opcodes.LCONST_0), currentLine, opcode);
+                break;
+            case Opcodes.FCONST_0:
+            case Opcodes.FCONST_1:
+            case Opcodes.FCONST_2:
+                accumulator.recordConstant(Float.valueOf(opcode - Opcodes.FCONST_0), currentLine, opcode);
+                break;
+            case Opcodes.DCONST_0:
+            case Opcodes.DCONST_1:
+                accumulator.recordConstant(Double.valueOf(opcode - Opcodes.DCONST_0), currentLine, opcode);
+                break;
+            default:
+                break;
+            }
         }
 
         @Override
-        public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle,
-                Object... bootstrapMethodArguments) {
-            accumulator.record(RelationshipType.DYNAMIC_CALL,
-                    dynamicTarget(name, descriptor, bootstrapMethodHandle),
-                    currentLine, Opcodes.INVOKEDYNAMIC, dynamicDetail(bootstrapMethodHandle));
+        public void visitIntInsn(int opcode, int operand) {
+            if (opcode == Opcodes.BIPUSH || opcode == Opcodes.SIPUSH) {
+                accumulator.recordConstant(Integer.valueOf(operand), currentLine, opcode);
+            }
+        }
+
+        @Override
+        public void visitTypeInsn(int opcode, String type) {
+            if (type == null || type.length() == 0) {
+                return;
+            }
+            if (type.charAt(0) == '[') {
+                accumulator.recordType(Type.getType(type), currentLine, opcode);
+            } else {
+                accumulator.record(RelationshipType.REFERENCES_TYPE, typeTarget(type),
+                        currentLine, opcode, null);
+            }
         }
 
         @Override
@@ -308,6 +586,50 @@ public final class AtlasScanner {
                 return;
             }
             accumulator.record(type, fieldTarget(owner, name, descriptor), currentLine, opcode, null);
+            accumulator.record(RelationshipType.REFERENCES_TYPE, typeTarget(owner), currentLine, opcode, null);
+            accumulator.recordFieldDescriptor(descriptor, currentLine, opcode);
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String descriptor,
+                boolean isInterface) {
+            accumulator.record(RelationshipType.CALLS, methodTarget(owner, name, descriptor),
+                    currentLine, opcode, null);
+            accumulator.record(RelationshipType.REFERENCES_TYPE, typeTarget(owner), currentLine, opcode, null);
+            accumulator.recordMethodDescriptor(descriptor, currentLine, opcode);
+        }
+
+        @Override
+        public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle,
+                Object... bootstrapMethodArguments) {
+            accumulator.record(RelationshipType.DYNAMIC_CALL,
+                    dynamicTarget(name, descriptor, bootstrapMethodHandle),
+                    currentLine, Opcodes.INVOKEDYNAMIC, dynamicDetail(bootstrapMethodHandle));
+            accumulator.recordMethodDescriptor(descriptor, currentLine, Opcodes.INVOKEDYNAMIC);
+            accumulator.recordHandleTypes(bootstrapMethodHandle, currentLine, Opcodes.INVOKEDYNAMIC);
+            if (bootstrapMethodArguments != null) {
+                for (Object argument : bootstrapMethodArguments) {
+                    accumulator.recordBootstrapValue(argument, currentLine, Opcodes.INVOKEDYNAMIC);
+                }
+            }
+        }
+
+        @Override
+        public void visitLdcInsn(Object value) {
+            if (value instanceof Type) {
+                accumulator.recordType((Type) value, currentLine, Opcodes.LDC);
+            } else if (value instanceof Handle) {
+                accumulator.recordHandleTypes((Handle) value, currentLine, Opcodes.LDC);
+            } else if (value instanceof ConstantDynamic) {
+                accumulator.recordBootstrapValue(value, currentLine, Opcodes.LDC);
+            } else {
+                accumulator.recordConstant(value, currentLine, Opcodes.LDC);
+            }
+        }
+
+        @Override
+        public void visitMultiANewArrayInsn(String descriptor, int numDimensions) {
+            accumulator.recordType(Type.getType(descriptor), currentLine, Opcodes.MULTIANEWARRAY);
         }
 
         @Override
@@ -316,37 +638,9 @@ public final class AtlasScanner {
         }
     }
 
-    private static final class MethodRelationshipAccumulator {
-        private final String fromId;
-        private final String sourcePath;
-        private final ScanCounters counters;
-        private final Map<String, MutableRelationship> relationships =
-                new LinkedHashMap<String, MutableRelationship>();
-
+    private static final class MethodRelationshipAccumulator extends RelationshipAccumulator {
         private MethodRelationshipAccumulator(String fromId, String sourcePath, ScanCounters counters) {
-            this.fromId = fromId;
-            this.sourcePath = sourcePath;
-            this.counters = counters;
-        }
-
-        private void record(RelationshipType type, String target, int sourceLine, int opcode, String detail) {
-            String key = type.name() + "\n" + target;
-            MutableRelationship relationship = relationships.get(key);
-            Integer lineValue = sourceLine > 0 ? Integer.valueOf(sourceLine) : null;
-            Integer opcodeValue = opcode >= 0 ? Integer.valueOf(opcode) : null;
-            if (relationship == null) {
-                relationships.put(key, new MutableRelationship(type, target, lineValue, opcodeValue, detail));
-                return;
-            }
-            relationship.increment(lineValue, opcodeValue, detail);
-        }
-
-        private void flush() {
-            for (MutableRelationship relationship : relationships.values()) {
-                counters.writeRelationship(new RelationshipRecord(fromId, relationship.type,
-                        relationship.target, sourcePath, relationship.sourceLine,
-                        relationship.opcode, relationship.occurrenceCount, relationship.detail));
-            }
+            super(fromId, sourcePath, counters);
         }
     }
 
