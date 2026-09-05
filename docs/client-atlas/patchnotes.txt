@@ -50,4 +50,9 @@
 - Added immutable lookup maps for exact symbol ID, normalized owner/name candidates, outgoing relationships, incoming relationships, and typed-constant referrers.
 - Added compact parsed symbol/relationship entries preserving source path, source line, opcode, occurrence count, and detail for later bounded investigation queries.
 - Added a temporary string canonicalization pool while loading the ~325k relationship dataset to reduce duplicate String memory without introducing a database or persistent secondary index.
-- 2B.1 local load/memory verification is intentionally batched with 2B.2 friendly-search verification so the user does not need a standalone runtime session for a non-user-facing loader.
+- 2B.1 local load/memory verification is intentionally batched with the first user-facing Bundle 2B investigation check so the user does not need a standalone runtime session for a non-user-facing loader.
+- Added `AtlasSearchEngine` for ranked/friendly symbol resolution over the in-memory investigation index without changing authoritative obfuscated IDs.
+- Friendly search resolves exact Atlas IDs, exact class paths, exact class/member names, optional method descriptors, and plain exact names; ambiguous overloads/names return ranked candidates instead of being silently chosen.
+- Added deterministic prefix/contains fallback ranking capped at 50 results; fuzzy/partial matches never auto-resolve even when only one candidate remains.
+- Added `ClientAtlasMain search "<friendly-query>"` so the assistant/developer automation path can search `Class387`, `Class387.method4844`, canonical IDs, and partial names while reporting index-load/search timing.
+- Standalone Atlas Control search-box integration is intentionally bundled with 2B.3 relationship commands so the UI search surface is rewritten once instead of twice.
