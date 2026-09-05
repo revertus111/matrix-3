@@ -9,6 +9,7 @@ import game.atlas.AtlasTraceRecorder;
 public final class AtlasRuntimeBridge {
 
     private static final String KEYBOARD_SOURCE = "METHOD:game/Class549_Sub1#method8081(ICII)V";
+    private static final String MENU_ACTION_SOURCE = "METHOD:game/Class319#method4094(Lgame/Class572_Sub12_Sub10;IIB)V";
     private static final String OUTGOING_PACKET_SOURCE = "METHOD:game/Class195#method2929(Lgame/Class572_Sub25;B)V";
     private static final String INCOMING_PACKET_SOURCE = "METHOD:game/PacketsDecoder#method3031(Lgame/Class195;B)Z";
     private static final String DEFINITION_SOURCE = "METHOD:game/Class639#method7568(II)Lgame/Interface17;";
@@ -17,13 +18,10 @@ public final class AtlasRuntimeBridge {
     }
 
     static void observeDefinitionLoader(Interface18 loader, Interface17 definition) {
-        if (!ready() || loader == null || definition == null) {
+        if (loader == null || definition == null) {
             return;
         }
-        AtlasTraceRecorder.record("definition", "definition-observed", DEFINITION_SOURCE,
-                "definitionId", "UNKNOWN",
-                "loaderClass", safeClassName(loader),
-                "definitionClass", safeClassName(definition));
+        AtlasTraceRecorder.ensureRuntimeControl();
     }
 
     public static void observeDefinitionLoad(int definitionId, Object loader, Object definition) {
@@ -44,6 +42,16 @@ public final class AtlasRuntimeBridge {
                 "action", Integer.toString(action),
                 "keyCode", Integer.toString(normalizedKeyCode),
                 "charCode", Integer.toString((int) typedCharacter));
+    }
+
+    public static void observeMenuAction(int action, int localX, int localY) {
+        if (!ready()) {
+            return;
+        }
+        AtlasTraceRecorder.record("input", "menu-action", MENU_ACTION_SOURCE,
+                "action", Integer.toString(action),
+                "localX", Integer.toString(localX),
+                "localY", Integer.toString(localY));
     }
 
     public static void observeOutgoingPacket(Class572_Sub25 node) {
