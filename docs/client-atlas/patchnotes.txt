@@ -1,85 +1,30 @@
 2026-09-05
-- Added the isolated `game.atlas` offline foundation without changing normal `game.RS3Applet` startup ownership.
-- Added stable Atlas symbol/relationship/evidence/metadata models preserving original obfuscated identifiers.
-- Added deterministic SHA-256 fingerprinting over sorted compiled client `.class` inputs while excluding `game/atlas/**`.
-- Added `.client-atlas` workspace initialization, metadata persistence/reopen support, stale/current fingerprint checks, and reserved JSONL data files.
-- Added a minimal offline `ClientAtlasMain` init/status entry point for Phase 1 validation.
-- Ignored `Client/.client-atlas/` so generated Atlas data survives build cleaning without polluting Git.
-- Pinned ASM 9.7.1 and added the Phase 1 bytecode declaration scanner.
-- Scanner records classes, interfaces, enums, annotations, fields, methods, constructors, descriptors/signatures, access flags, compiled paths, and EXTENDS/IMPLEMENTS/DECLARES relationships.
-- Added deterministic JSONL serialization for generated symbol/relationship records without renaming obfuscated symbols.
-- Added `ClientAtlasMain scan`, temporary-file publishing, metadata count updates, and before/after fingerprint protection against class changes during a scan.
-- Kept method-body analysis out of Phase 1 so callers/callees and field read/write tracing remain isolated to Phase 2.
-- Added exact canonical Atlas-ID lookup through `ClientAtlasMain query` with stale-index/schema validation before results are returned.
-- Query output now includes the exact symbol plus its immediate stored relationships as compact JSON, capped at 200 relationship records with an explicit truncation flag/count.
-- Added `ClientAtlasMain export` for atomic UTF-8 machine-readable investigation snapshots without adding another JSON/database dependency.
-- Kept ranked/fuzzy/shorthand search out of Phase 1; those remain Phase 2 investigation-search ownership.
-- Runtime-confirmed Eclipse/Java 8 scanner output: 1221 class files, 33742 symbols, 34053 relationships; persisted fingerprint reopened current.
-- Confirmed Eclipse ASM classpath issue was resolved by Gradle -> Refresh Gradle Project; no dependency workaround was required.
-- Added standalone dark `ClientAtlasControl` Swing UI with automatic Client/class-root discovery, current/stale status, scan, search, export, workspace access, and background tasks.
-- Added one-click `Run Phase 1 Check` to scan, validate symbol/relationship coverage, verify Atlas exclusion/current fingerprint, exercise exact class/member query, and write a compact verification export.
-- `ClientAtlasMain` with no program arguments now opens the control UI; explicit CLI commands remain available for automation.
-- Runtime-confirmed the standalone UI Phase 1 automated check passes and UI search/export successfully produced `CLASS:game/Class1` with a current fingerprint and 15 immediate relationships.
-- Closed Phase 1 and activated Phase 2 structural relationship work.
-- Added Atlas schema v2: relationship records now carry `sourcePath`, nullable `sourceLine`, nullable `opcode`, `occurrenceCount`, and optional `detail`.
-- Added distinct `DYNAMIC_CALL` relationship type so future `invokedynamic` evidence cannot be mislabeled as a proven direct call.
-- Split symbol location into `compiledPath` and `sourcePath`; declaration scanning resolves Java source files from original internal owners while preserving compiled class paths.
-- Existing EXTENDS/IMPLEMENTS/DECLARES records now persist source-path evidence with occurrence count 1; line/opcode evidence remains reserved for method-body scanning.
-- Bumped Atlas workspace schema to 2 and treat older schema indexes as stale so query/export requires an explicit rebuild instead of silently reusing incompatible generated data.
-- Added Phase 2 method-body scanning with `ClassReader.SKIP_FRAMES` so code/debug line information is available without frame processing.
-- Added exact `CALLS` relationships for method/constructor bytecode targets and distinct `DYNAMIC_CALL` records for `invokedynamic` bootstrap sites.
-- Added `READS_FIELD` for GETFIELD/GETSTATIC and `WRITES_FIELD` for PUTFIELD/PUTSTATIC using exact stable field IDs.
-- Added per-method relationship aggregation so repeated identical targets emit one record with `occurrenceCount`; source line and opcode evidence are retained when consistent.
-- Dynamic-call targets include bootstrap owner/name/descriptor while tag/interface facts remain in detail.
-- Added `REFERENCES_TYPE` indexing across field/method descriptors, declared exceptions, generic signatures, type instructions, field/method owners and descriptors, LDC `Type` values, bootstrap handles, and constant-dynamic structure.
-- Type references use neutral `TYPE:<internal-name>` targets so structural facts do not guess class/interface/domain semantics.
-- Object arrays resolve to referenced object element types; primitive-only descriptors do not generate fake object references.
-- Added typed `CONSTANT` relationships from field constant values, LDC literals, ICONST/LCONST/FCONST/DCONST, BIPUSH/SIPUSH, and reliable bootstrap arguments.
-- Constant targets preserve literal type (`int:`, `long:`, `float:`, `double:`, `string:`); raw numeric constants never auto-promote to `LITERAL_ID` or domain IDs.
-- `Type`, `Handle`, and `ConstantDynamic` values are treated structurally rather than flattened into misleading string constants.
-- Generic inner-class signatures now retain exact JVM inner-type references (`Outer$Inner`) in addition to outer type evidence.
-- Added `AtlasStructuralVerifier` for the 2A.4 consolidated gate: one run rebuilds schema v2, verifies structural relationship families, checks evidence/trace preservation, exercises incoming/exact query + export, and records scan/query timing plus generated JSONL sizes.
-- Added `Run Phase 2 Check` to Client Atlas Control so the full Bundle 2A verification no longer requires manual JSONL inspection.
-- Atlas Control now labels incompatible generated metadata as `REBUILD REQUIRED (schema old -> current)` instead of generic stale state.
-- Added `ClientAtlasMain verify-structural` as the automation/CLI front end to the same verifier; the UI and CLI do not duplicate verification logic.
-- Phase 2 structural verification writes `.client-atlas/phase2-structural-check.txt` plus a compact query regression export for easy reporting.
-- Fixed the Phase 2 verifier report newline separator so `AtlasStructuralVerifier` compiles cleanly instead of producing Eclipse `Invalid character constant`.
-- Fixed Phase 2 JSONL encoding for obfuscated/malformed client strings by escaping all UTF-16 surrogate code units as deterministic `\\uXXXX` JSON sequences instead of letting the UTF-8 writer fail with `Input length = 1`.
-- Added `AtlasInvestigationIndex` as the Phase 2B in-memory acceleration layer over current schema-v2 JSONL; scanner/JSONL ownership is unchanged.
-- Investigation index validates schema/fingerprint before and after load, verifies loaded symbol/relationship totals against metadata, and refuses stale/inconsistent generated data.
-- Added immutable lookup maps for exact symbol ID, normalized owner/name candidates, outgoing relationships, incoming relationships, and typed-constant referrers.
-- Added compact parsed symbol/relationship entries preserving source path, source line, opcode, occurrence count, and detail for later bounded investigation queries.
-- Added a temporary string canonicalization pool while loading the ~325k relationship dataset to reduce duplicate String memory without introducing a database or persistent secondary index.
-- 2B.1 local load/memory verification is intentionally batched with the first user-facing Bundle 2B investigation check so the user does not need a standalone runtime session for a non-user-facing loader.
-- Added `AtlasSearchEngine` for ranked/friendly symbol resolution over the in-memory investigation index without changing authoritative obfuscated IDs.
-- Friendly search resolves exact Atlas IDs, exact class paths, exact class/member names, optional method descriptors, and plain exact names; ambiguous overloads/names return ranked candidates instead of being silently chosen.
-- Added deterministic prefix/contains fallback ranking capped at 50 results; fuzzy/partial matches never auto-resolve even when only one candidate remains.
-- Added `ClientAtlasMain search "<friendly-query>"` so the assistant/developer automation path can search `Class387`, `Class387.method4844`, canonical IDs, and partial names while reporting index-load/search timing.
-- Standalone Atlas Control search-box integration is intentionally bundled with 2B.3 relationship commands so the UI search surface is rewritten once instead of twice.
-- Added `AtlasRelationshipQueryEngine` for `calls`, `called-by`, `reads`, `written-by`, `references`, typed/raw `constant`, and depth-1/2 neighborhood investigation over the in-memory Atlas index.
-- Class-level call/read queries expand through declared methods so class searches return useful bytecode relationships instead of empty class-record results.
-- Relationship output is capped at 500 edges; neighborhoods are capped at 100 nodes / 500 edges and report truncation instead of dumping unbounded graphs.
-- Added numeric constant normalization for raw integer/decimal searches while preserving typed constant authority and avoiding domain-ID guesses.
-- Integrated friendly search and relationship commands into the standalone Atlas Control search box, with Enter-to-search and cached current-snapshot investigation indexes.
-- Renamed the old `Run Phase 2 Check` UI action to `Run Structural Check` because it verifies Bundle 2A structural data, not all of Phase 2.
-- Added `AtlasInvestigationVerifier`, `Run Search Check`, and `ClientAtlasMain verify-search` for one-click Bundle 2B verification without rescanning compiled client classes.
-- Search verification covers current-index load/counts, exact/friendly/member resolution, ambiguity/fuzzy safety, call/read/write/type/constant directions, and depth-2 node/edge caps; report writes to `.client-atlas/phase2-investigation-check.txt`.
-- Hardened investigation verification sample selection so hot methods/fields/types above the 500-edge display cap cannot cause false failures from choosing a known edge that would be intentionally truncated.
-- Runtime-confirmed `PHASE 2 INVESTIGATION CHECK: PASS` on the real 33742-symbol / 325826-relationship dataset without rescanning; investigation-index load was 946.649 ms with ~181.5 MiB approximate used-memory delta.
-- Runtime-confirmed exact/friendly Class1 resolution, ambiguity safety (`<init>` 1294 candidates), fuzzy-result capping (`Clas` 29421 matches / 50 shown), all relationship directions/types, and depth-2 neighborhood bounds (28 nodes / 40 relationships).
-- Added `AtlasAssistantExportEngine` for compact bounded assistant/code investigation packages over the current in-memory index; JSONL remains the persistence authority.
-- Assistant packages include schema/fingerprint/snapshot metadata, exact resolution or bounded candidates, source-bearing symbol records, relevant relationships, neighborhood context for resolved plain searches, and explicit truncation/cap state.
-- Added `assistant-json` and `assistant-export` CLI paths so automation can consume machine JSON without parsing human search output.
-- Replaced the standalone control's legacy last-result export with `Export Assistant JSON`; any successful friendly search or relationship command can now be exported from the cached investigation index.
-- Removed the UI search-time exact streaming export preparation, avoiding an unnecessary symbols/relationships JSONL pass after every resolved friendly search.
-- Extended `Run Search Check` / `verify-search` to validate assistant metadata/source fields, plain-search context, relationship-command export, ambiguity safety, caps, and atomic verification-file output without rescanning.
-- 2B.4 implementation is complete as verified-static; its new runtime assertions are intentionally batched with the 2B.5 final Phase 2 search gate rather than requiring a separate repeated user test.
-- Added `AtlasDomainCorrelationEngine` for safe domain-aware candidate searches over existing typed `CONSTANT` relationships only.
-- Domain searches now support forms such as `interface 762`, `component 7`, `animation 1234`, `model 5678`, `packet NPC_OP1`, and bare `762:7` interface/component co-occurrence.
-- Bare or domain-qualified numeric pairs correlate only when both constants occur from the same Atlas source symbol; they do not infer that either value has the requested meaning.
-- Domain results are bounded to 50 candidate symbols / 200 relationships and preserve source locations from structural constant evidence.
-- Every domain result explicitly reports semantic status `UNKNOWN` and `LITERAL_ID promoted: false`; no query hint writes or promotes generated domain semantics.
-- Integrated domain candidate queries into CLI `search`, standalone Search / Investigate, and assistant JSON/export format v2.
-- Assistant domain packages remain unresolved and include requested domain/value, correlation basis, semantic status, and explicit no-promotion state.
-- Extended the existing `Run Search Check` / `verify-search` gate to verify numeric domain matching, `762:7` co-occurrence handling, bounded output, UNKNOWN semantics, no `LITERAL_ID` promotion, and assistant-domain export.
-- 2B.5 implementation is complete as verified-static; one final combined search gate now covers both 2B.4 and 2B.5 without rescanning.
+
+Phase 1
+- Added isolated `game.atlas` workspace, stable symbol IDs, deterministic client fingerprinting, ASM declaration scanner, JSONL persistence, exact query/export, standalone Atlas Control, and one-click verification.
+- Runtime verified against 1221 compiled client classes / 33742 symbols / 34053 initial relationships.
+
+Phase 2 structural map
+- Added schema-v2 source locators plus CALLS, DYNAMIC_CALL, READS_FIELD, WRITES_FIELD, REFERENCES_TYPE, and typed CONSTANT relationships.
+- Added deterministic malformed-string JSON escaping and consolidated structural verification.
+- Runtime verified 33742 symbols / 325826 relationships; full scan ~1.28 s, symbols ~8.5 MiB, relationships ~74.4 MiB.
+
+Phase 2 investigation/search
+- Added immutable in-memory investigation index, ranked/friendly search, ambiguity safety, relationship commands, bounded depth-1/2 neighborhoods, and consolidated search verification.
+- Added assistant export v2 and safe domain correlation (`interface 762`, `component 7`, `762:7`, animation/model/etc.) over typed constants only.
+- Domain requests remain hints with semantic status UNKNOWN and no automatic LITERAL_ID promotion.
+- Final combined Phase 2 investigation gate runtime-verified by user report.
+
+Phase 3 / 3A.0
+- Documented targeted runtime hook ownership for normalized keyboard input, outgoing packet enqueue, incoming packet decode, interface packet activity, and Class639 definition/cache misses.
+- Chosen one-way `game.AtlasRuntimeBridge` -> `game.atlas` recorder ownership with tracing off by default and no event-path disk I/O.
+
+Phase 3 / 3A-Core foundation
+- Added `AtlasTraceRecorder`: bounded 10000-event process-wide sessions, start/stop/name/save lifecycle, dropped-event accounting, failure isolation, atomic JSONL trace persistence, and current compiled-client fingerprint capture on save.
+- Added `AtlasTraceControl`: atomic file-backed cross-process START/STOP/SAVE/STOP_SAVE commands plus runtime heartbeat/status so the standalone tooling JVM can control the running client JVM without Client Console ownership.
+- Added `ClientAtlasTraceControl`, a small dark trace-control window showing runtime connection, active session, event count, dropped count, and last saved trace.
+- Added `ClientAtlasMain` trace-control/status/command CLI paths.
+- Added `game.AtlasRuntimeBridge` APIs for normalized keyboard facts, outgoing/incoming packet metadata, named interface packet classification, and definition-load observations; packet payload bytes are never copied.
+- Wired the existing `DevDefinitionBridge` definition observer into the Atlas runtime seam so the trace-control daemon is lazily initialized from a real client path and safe definition-category events can be recorded while tracing is active.
+- Prepared remaining hot-path hook APIs before touching the large decompiled runtime classes so the next patch can be surgical one-line callsite insertions instead of broad rewrites.
+- Runtime verification intentionally batched until the remaining 3A-Core hooks and 3A.6 correlation are ready; no user launch required for this foundation patch.
