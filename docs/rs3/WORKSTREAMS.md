@@ -35,13 +35,14 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Searchable reverse-engineering index for the obfuscated 718+ Client; Bundle 1 implementation discovery is next. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
 ## Shared discovery / navigation references
 
 | Reference | Document | Purpose |
 | --- | --- | --- |
-| Client architecture map | _Pending_ | Future navigation map for client systems/classes so feature work can use known paths instead of repeatedly rescanning the client. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | Persistent client architecture/search/evidence map so client work can reuse known paths instead of repeatedly rescanning obfuscated code. |
 
 ## Registration checklist
 
