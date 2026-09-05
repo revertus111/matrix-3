@@ -194,7 +194,9 @@ Runtime-confirmed measurements visible in the local report:
 - `CALLS`, `CALLED_BY`, `READS_FIELD`, `WRITES_FIELD`, `REFERENCES_TYPE`, and typed `CONSTANT` checks passed.
 - Depth-2 neighborhood stayed bounded at **28 nodes / 40 relationships**, below the **100 node / 500 edge** caps.
 
-This closes the consolidated 2B.1-2B.3 runtime gate. The in-memory index, ranked/friendly resolution, relationship directions, constant lookup, ambiguity handling, and bounded-neighborhood protections are now runtime-verified on the real dataset.
+This closes the consolidated 2B.1-2B.3 runtime gate. The in-memory index, ranked/friendly resolution, relationship directions, constant lookup, ambiguity handling, and bounded-neighborhood protections are runtime-verified on the real dataset.
+
+2B.4/2B.5 were implemented afterward. Their new assertions are intentionally batched into one final Bundle 2B local gate rather than asking the user to repeat the same button after each implementation patch.
 
 ## verified-static
 
@@ -210,8 +212,9 @@ This closes the consolidated 2B.1-2B.3 runtime gate. The in-memory index, ranked
 - `AtlasSearchEngine` owns ranked/friendly symbol resolution; it never changes authoritative IDs or silently selects ambiguous candidates.
 - `AtlasRelationshipQueryEngine` owns bounded relationship filtering/traversal over already-recorded bytecode facts.
 - `AtlasAssistantExportEngine` owns bounded machine-readable assistant/code packages over the investigation index; it does not scan or create another persistent index.
-- `AtlasInvestigationVerifier` owns the consolidated Bundle 2B local search/investigation/export gate and does not rescan compiled classes.
-- UI/CLI consume the same investigation/search/relationship/export APIs instead of duplicating resolution logic.
+- `AtlasDomainCorrelationEngine` owns safe domain-hint candidate correlation over existing typed `CONSTANT` facts; it never persists or promotes guessed domain semantics.
+- `AtlasInvestigationVerifier` owns the consolidated Bundle 2B local search/investigation/export/domain gate and does not rescan compiled classes.
+- UI/CLI consume the same investigation/search/relationship/domain/export APIs instead of duplicating resolution logic.
 
 # Schema v2
 
@@ -400,7 +403,7 @@ Behavior:
 - neighborhoods support depth **1-2**, cap at **100 nodes / 500 edges**, and explicitly report truncation,
 - relationship output preserves source path/line, opcode, and occurrence count where available.
 
-Standalone control uses one **Search / Investigate** box for friendly symbols and relationship commands. It caches a current investigation snapshot, invalidates it when generated data changes/stales, and reuses the same APIs as CLI automation.
+Standalone control uses one **Search / Investigate** box for friendly symbols, relationship commands, and safe domain candidate queries. It caches a current investigation snapshot, invalidates it when generated data changes/stales, and reuses the same APIs as CLI automation.
 
 The former **Run Phase 2 Check** label is **Run Structural Check** because that action verifies Bundle 2A structural data rather than all of Phase 2.
 
@@ -427,16 +430,47 @@ Rules:
 - export caps are **50 candidates / 200 relationships / 250 relevant symbols**,
 - candidate/relationship/symbol truncation is explicit,
 - file export is atomic UTF-8 and does not create another persistent index,
-- standalone **Export Assistant JSON** exports the last successful friendly search or relationship command,
+- standalone **Export Assistant JSON** exports the last successful friendly search, relationship command, or domain query,
 - UI friendly search no longer runs the old exact streaming query merely to prepare an export.
 
-The existing `Run Search Check` / `verify-search` gate now includes assistant-package checks and writes:
+Assistant export format is now **v2** so domain-correlation packages can also carry requested domain/value, semantic status, correlation basis, and explicit no-promotion state.
+
+Implementation is **verified-static**. Its runtime assertions are batched with 2B.5 in the final Bundle 2B local gate.
+
+## 2B.5 safe initial domain correlation implementation
+
+`AtlasDomainCorrelationEngine` provides the first domain-aware investigation syntax without pretending a raw constant proves semantic meaning.
+
+Supported examples include:
 
 ```text
-.client-atlas/phase2-assistant-export-check.json
+interface 762
+component 7
+762:7
+animation 1234
+model 5678
+packet NPC_OP1
 ```
 
-Implementation is **verified-static**; the updated local gate must pass before 2B.4 is runtime-verified.
+Initial recognized domains include interface/component, packet/opcode, NPC/item/object/player, cache/model/animation/GFX/sprite/projectile/particle, varp/varbit, container/inventory/equipment, menu, camera/input/rendering.
+
+Rules:
+
+- the requested domain is a **query hint only**,
+- single values resolve to existing normalized typed `CONSTANT` targets,
+- `762:7` is treated as an `interface-component` request and returns only source symbols where both constants co-occur,
+- domain-qualified numeric pairs use the same same-symbol co-occurrence rule,
+- candidate output caps at **50 source symbols / 200 constant relationships**,
+- source locations remain attached to structural constant evidence,
+- every result reports semantic status `UNKNOWN`,
+- every result reports `LITERAL_ID promoted: false`,
+- no domain query writes or changes generated JSONL,
+- no `LITERAL_ID` relationship is created from query hints,
+- actual verified domain meaning remains future evidence/runtime work rather than a static guess.
+
+CLI `search`, standalone Search / Investigate, and assistant JSON/export all consume the same domain engine.
+
+Implementation is **verified-static** pending the final combined Bundle 2B local gate.
 
 ## Bundle 2B verifier
 
@@ -458,6 +492,11 @@ It checks:
 - assistant package metadata/source locations/caps,
 - assistant plain-search context and relationship-command export,
 - assistant ambiguity safety and atomic verification export,
+- numeric domain candidate lookup against a known structural constant,
+- bare `762:7` same-symbol co-occurrence handling,
+- domain candidate/relationship caps,
+- domain semantics remain `UNKNOWN` with no `LITERAL_ID` promotion,
+- assistant domain package preserves the same UNKNOWN/no-promotion state,
 - index-load/search timing and approximate used-memory delta.
 
 Human workflow:
@@ -518,9 +557,9 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 - [x] **2B.2 Ranked/friendly search implementation**.
 - [x] **2B.3 Relationship queries + bounded neighborhoods implementation** - includes standalone Search / Investigate integration and one-click Bundle 2B verification harness.
 - [x] **2B.1-2B.3 local verification gate** - `PHASE 2 INVESTIGATION CHECK: PASS` runtime-confirmed; measurements recorded above.
-- [x] **2B.4 Assistant-oriented export implementation** - verified-static; local gate pending.
-- [ ] **2B.4 local verification gate** - run updated `Run Search Check` once after pulling.
-- [ ] **2B.5 Safe initial domain correlation**.
+- [x] **2B.4 Assistant-oriented export implementation** - verified-static; runtime assertions batched into final Bundle 2B gate.
+- [x] **2B.5 Safe initial domain correlation implementation** - verified-static; no automatic domain semantics or `LITERAL_ID` promotion.
+- [ ] **Final Bundle 2B local verification gate** - one updated `Run Search Check` validates 2B.4 + 2B.5 together.
 
 ## Phase 3 - Runtime Evidence and Knowledge
 
@@ -564,11 +603,11 @@ Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
 # Testing
 
-Bundle 2A structural gate and the consolidated 2B.1-2B.3 investigation gate are complete. Do not request another structural gate without new contradictory evidence or a relevant implementation change.
+Bundle 2A structural verification and the 2B.1-2B.3 investigation gate are complete. Do not request another structural scan/test without new contradictory evidence or a relevant structural implementation change.
 
-2B.4 implementation is verified-static. Its updated **Run Search Check** is the current one-time local gate; it reuses the existing current schema-v2 dataset and must not rescan compiled classes. On PASS it validates the new assistant export behavior together with the already-established 2B.1-2B.3 regressions.
+2B.4 and 2B.5 are now both implemented as verified-static. Do **not** request a separate 2B.4 rerun. One final updated **Run Search Check** reuses the current schema-v2 dataset, performs no structural rescan, and validates both new slices plus the already-established 2B.1-2B.3 regressions.
 
-Future 2B.5 verification should focus on correlation behavior and reuse this same current dataset where practical.
+On PASS, Phase 2 can close and the next active execution target becomes Phase 3 / Bundle 3A runtime trace lifecycle.
 
 # Carryover / blockers
 
@@ -581,13 +620,13 @@ Future 2B.5 verification should focus on correlation behavior and reuse this sam
 
 ## BLOCKERS
 
-- None for the 2B.4 local gate.
+- None for the final Bundle 2B local gate.
 
 # Resume Here
 
 **Last completed checkpoint:**
 
-- Phase 2 / Bundle 2B / **2B.4 Assistant-oriented export implementation** - `verified-static`; local gate pending.
+- Phase 2 / Bundle 2B / **2B.5 Safe initial domain correlation implementation** - `verified-static`.
 
 **Current phase:**
 
@@ -599,7 +638,7 @@ Future 2B.5 verification should focus on correlation behavior and reuse this sam
 
 **Current/next checklist item:**
 
-- **2B.4 local verification gate** - run updated **Run Search Check** once after pulling.
+- **Final Bundle 2B local verification gate** - run updated **Run Search Check** once after pulling; it validates 2B.4 + 2B.5 together.
 
 **Verified dataset baseline:**
 
@@ -625,9 +664,10 @@ Future 2B.5 verification should focus on correlation behavior and reuse this sam
 - `AtlasInvestigationIndex` is runtime-verified on the current 33742/325826 dataset.
 - `AtlasSearchEngine` exact/friendly/ranked ambiguity behavior is runtime-verified.
 - `AtlasRelationshipQueryEngine` call/read/write/type/constant/neighborhood behavior is runtime-verified.
-- `AtlasAssistantExportEngine` is implemented verified-static with bounded machine JSON, plain-search context, relationship-command export, source locations, snapshot metadata, and explicit truncation.
-- Standalone Atlas Control can export the last successful search/relationship command as assistant JSON from the cached investigation index.
-- The updated consolidated search verifier includes 2B.4 checks but has not yet been runtime-run after this implementation.
+- `AtlasAssistantExportEngine` v2 is implemented verified-static with bounded machine JSON, plain-search context, relationship/domain export, source locations, snapshot metadata, and explicit truncation/no-promotion state.
+- `AtlasDomainCorrelationEngine` is implemented verified-static for safe domain-hint candidate lookup and same-symbol pair co-occurrence.
+- Standalone Atlas Control handles friendly, relationship, and domain candidate queries through the cached investigation index and can export all three as assistant JSON.
+- The updated consolidated search verifier includes both 2B.4 and 2B.5 assertions; it has not yet been runtime-run after those implementations.
 - The `Canonical Main-Goal Status` table above is the authority for cross-chat user-facing status rows; execution/checklist state below it must not rewrite those rows implicitly.
 
 **Files/systems already inspected or changed for Phase 2:**
@@ -642,6 +682,7 @@ Future 2B.5 verification should focus on correlation behavior and reuse this sam
 - `Client/src/main/java/game/atlas/AtlasSearchEngine.java`
 - `Client/src/main/java/game/atlas/AtlasRelationshipQueryEngine.java`
 - `Client/src/main/java/game/atlas/AtlasAssistantExportEngine.java`
+- `Client/src/main/java/game/atlas/AtlasDomainCorrelationEngine.java`
 - `Client/src/main/java/game/atlas/AtlasInvestigationVerifier.java`
 - `Client/src/main/java/game/atlas/ClientAtlasControl.java`
 - `Client/src/main/java/game/atlas/ClientAtlasMain.java`
@@ -660,14 +701,15 @@ Future 2B.5 verification should focus on correlation behavior and reuse this sam
 
 **Pending verification:**
 
-- Eclipse/Java 8 clean/build after pulling 2B.4.
-- Run **Run Search Check** once. Expected final gate remains `PHASE 2 INVESTIGATION CHECK: PASS` and the report must include `Assistant export checks` plus assistant PASS lines.
+- Eclipse/Java 8 clean/build after pulling the combined 2B.4/2B.5 implementation.
+- Run **Run Search Check** once. Expected final gate remains `PHASE 2 INVESTIGATION CHECK: PASS`.
+- Report must include `Domain correlation checks`, `Assistant export checks`, and PASS lines confirming domain results remain `UNKNOWN` with no automatic `LITERAL_ID` promotion.
 - Confirm `.client-atlas/phase2-assistant-export-check.json` is written and non-empty.
 
 **Next implementation after gate:**
 
-- **2B.5 Safe initial domain correlation**. Keep correlation evidence-backed; generic constants must not become guessed interface/animation/model/etc. IDs.
+- Close **Phase 2 / Bundle 2B** and activate **Phase 3 / Bundle 3A - runtime trace lifecycle**.
 
 # Next recommended work
 
-**Run the 2B.4 local verification gate.**
+**Run the final Bundle 2B local verification gate once.**
