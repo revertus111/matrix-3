@@ -308,7 +308,7 @@ public final class AtlasStructuralVerifier {
         report.append("  records with opcode: ").append(coverage.opcodeEvidenceCount).append('\n');
         report.append("  aggregated occurrenceCount > 1: ")
                 .append(coverage.aggregatedRelationshipCount).append('\n');
-        report.append("  LITERAL_ID auto-classifications: ").append(coverage.literalIdCount).append('\n\n');
+        report.append("  LITERAL_ID auto-classifications: ").append(coverage.literalIdCount).append("\n\n");
 
         report.append("Samples\n");
         appendSample(report, "CALLS", coverage.sampleCall);
