@@ -1,7 +1,32 @@
-Boss Research Lab planning acceptance
+Boss Research Lab runtime acceptance
 
-- Confirm PLAN.md keeps Boss Research Lab scoped to research/verification only.
-- Confirm RoTS is the first preset while the architecture remains boss-generic.
-- Confirm v1 covers NPC selection/transform, animation/GFX/projectile testing, evidence labels, persistent findings, candidate queues, related-asset scanning, and lightweight test sequences.
-- Confirm BossLabs, Fight Recorder, AnimLab, FX Labs, map editing, drops, and combat scripting retain separate ownership.
-- Confirm v1 stop condition prioritizes using the tool on RoTS before adding broader features.
+Client Console -> Owner -> Boss Research Lab · RoTS
+
+- Confirm the panel opens without affecting the existing Owner account card or RoTS Scan/Deep Scan card.
+- Confirm each brother button selects the expected empowered NPC ID:
+  - Ahrim 18538
+  - Dharok 18540
+  - Guthan 18541
+  - Karil 18543
+  - Torag 18544
+  - Verac 18545
+- While logged in as Owner/Admin, select each brother and press Become NPC; confirm the player appearance changes to that NPC.
+- Press Reset Appearance; confirm the player returns to normal player appearance.
+- Enter animation 21941 and press Play; confirm the selected transformed player performs the animation.
+- Press animation - / + and confirm the field changes by one and immediately plays the new ID.
+- Press Stop; confirm the current player animation is cancelled.
+- Enter a known-safe GFX ID and press Play; confirm it renders on the player.
+- Press GFX - / + and confirm the field changes by one and immediately plays the new ID.
+- Confirm animation/GFX playback copies the tested asset type and ID into Save Finding.
+- Save a HYPOTHESIS finding with mechanic and note; confirm it immediately appears in the selected brother's saved-findings list.
+- Switch brothers and confirm findings are filtered by the selected brother.
+- Close/reopen Client Console and confirm the saved finding reloads from `data/client-console/boss-research-lab/rots-findings.tsv`.
+- Save verified-static and VERIFIED findings and confirm the exact confidence label persists.
+- Confirm malformed/blank IDs, missing mechanic, or missing asset ID produce a status message instead of an exception.
+- Confirm research actions use the existing command queue and do not modify RoTS combat scripts, BossLabs, cache files, or Commands.java.
+
+Regression
+
+- RoTS Scan and Deep Scan still run and Copy All/Clear still work.
+- Existing Client Console command queue continues sending normal commands.
+- Client compiles in Eclipse with Java 8.
