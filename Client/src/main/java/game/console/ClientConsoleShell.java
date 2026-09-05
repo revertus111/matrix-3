@@ -46,12 +46,12 @@ public final class ClientConsoleShell extends JPanel {
     private final JPanel dockContainer = new JPanel(new BorderLayout());
     private final JPanel panelHost = new JPanel(new BorderLayout());
     private final JPanel divider = new JPanel();
-    private final JToggleButton consoleButton = new JToggleButton("C");
-    private final JToggleButton ownerButton = new JToggleButton("O");
-    private final JToggleButton commandsButton = new JToggleButton(">_");
-    private final JToggleButton playerButton = new JToggleButton("P");
-    private final JToggleButton itemButton = new JToggleButton("I");
-    private final JToggleButton settingsButton = new JToggleButton("S");
+    private final JToggleButton consoleButton = new JToggleButton(ConsoleIcons.home());
+    private final JToggleButton ownerButton = new JToggleButton(ConsoleIcons.owner());
+    private final JToggleButton commandsButton = new JToggleButton(ConsoleIcons.commands());
+    private final JToggleButton playerButton = new JToggleButton(ConsoleIcons.player());
+    private final JToggleButton itemButton = new JToggleButton(ConsoleIcons.items());
+    private final JToggleButton settingsButton = new JToggleButton(ConsoleIcons.settings());
     private final JButton resetLayoutButton = new JButton("Reset Client Console Layout");
 
     private final JComponent shellPanel;
@@ -157,7 +157,10 @@ public final class ClientConsoleShell extends JPanel {
 
     private void configureRailButton(JToggleButton button, String tooltip, String panelId) {
         button.setToolTipText(tooltip + " - click active panel again to collapse");
+        button.getAccessibleContext().setAccessibleName(tooltip);
         button.setAlignmentX(CENTER_ALIGNMENT);
+        button.setHorizontalAlignment(SwingConstants.CENTER);
+        button.setIconTextGap(0);
         button.setMaximumSize(new Dimension(RAIL_WIDTH, 44));
         button.setPreferredSize(new Dimension(RAIL_WIDTH, 44));
         ConsoleTheme.styleRailButton(button);
@@ -187,8 +190,8 @@ public final class ClientConsoleShell extends JPanel {
         content.add(createInfoCard(
                 "Docking",
                 "Drag the left edge to resize.",
-                "Use C for this shell panel.",
-                "Use O for Owner, >_ for Commands, P for Player, I for Items, and S for Settings."));
+                "Use the rail icons to switch tools.",
+                "Click the active icon again to collapse the console."));
         content.add(Box.createVerticalStrut(12));
         content.add(createFocusCard());
         content.add(Box.createVerticalStrut(12));
