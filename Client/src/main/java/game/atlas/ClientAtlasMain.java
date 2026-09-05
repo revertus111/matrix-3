@@ -8,6 +8,7 @@ import java.util.Locale;
 import game.atlas.AtlasQueryEngine.QueryResult;
 import game.atlas.AtlasScanner.ScanResult;
 import game.atlas.AtlasSchema.Metadata;
+import game.atlas.AtlasStructuralVerifier.VerificationResult;
 
 /**
  * Offline Client Atlas entry point. Normal game startup remains game.RS3Applet.
@@ -50,6 +51,14 @@ public final class ClientAtlasMain {
             System.out.println("Symbols: " + result.getSymbolCount());
             System.out.println("Relationships: " + result.getRelationshipCount());
             System.out.println("Client fingerprint: " + result.getClientFingerprint());
+            return;
+        }
+
+        if ("verify-structural".equals(command)) {
+            Path classRoot = classRoot(workspace, args, 1);
+            VerificationResult result = new AtlasStructuralVerifier(workspace, classRoot).run();
+            System.out.println(result.getReport());
+            System.out.println("Report: " + result.getReportPath());
             return;
         }
 
@@ -118,7 +127,8 @@ public final class ClientAtlasMain {
     private static void printUsage() {
         System.out.println("Client Atlas offline tool");
         System.out.println("  (no args)                                      Open the standalone Client Atlas Control UI");
-        System.out.println("  scan [classes-dir]                              Scan compiled client declarations into Atlas JSONL");
+        System.out.println("  scan [classes-dir]                              Rebuild the generated Atlas index");
+        System.out.println("  verify-structural [classes-dir]                 Rebuild + run Phase 2 structural checks/metrics");
         System.out.println("  status [classes-dir]                            Show persisted metadata and stale/current fingerprint state");
         System.out.println("  init [classes-dir]                              Create/reset metadata for the compiled client class directory");
         System.out.println("  query \"<atlas-symbol-id>\" [classes-dir]        Print one exact symbol and immediate relationships as compact JSON");
