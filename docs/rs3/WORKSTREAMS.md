@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Searchable reverse-engineering index for the obfuscated 718+ Client; Bundle 1 implementation discovery is next. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 active; implementation discovery is complete and Atlas schema/persistence foundation is next. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
 ## Shared discovery / navigation references
