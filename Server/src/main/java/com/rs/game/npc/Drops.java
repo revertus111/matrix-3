@@ -131,6 +131,10 @@ public class Drops {
 		acessRareTable = t;
 	}
 
+	public boolean canAccessRareDropTable() {
+		return acessRareTable;
+	}
+
 	public void addCharms(List<Drop> d, int size) {
 		if (!d.isEmpty() && Utils.random(8 / size) == 0)
 			d.add(new Drop(CHARMS[Utils.random(CHARMS.length)], 1, size));
@@ -141,6 +145,32 @@ public class Drops {
 	}
 	public Drop[] getDrops(int rarity) {
 		return drops[rarity];
+	}
+
+	/**
+	 * Read-only editor view that faithfully includes the rare/very-rare gear
+	 * bucket Matrix3 internally splits away inside addDrops().
+	 */
+	public Drop[] getAllDropsForEditing(int rarity) {
+		if (rarity < ALWAYS || rarity > VERY_RARE)
+			throw new IllegalArgumentException("Invalid drop rarity: " + rarity);
+		Drop[] normal = drops[rarity];
+		Drop[] gear = rarity >= RARE ? gearRareDrops[rarity - RARE] : null;
+		int normalCount = normal == null ? 0 : normal.length;
+		int gearCount = gear == null ? 0 : gear.length;
+		if (normalCount + gearCount == 0)
+			return new Drop[0];
+		Drop[] combined = new Drop[normalCount + gearCount];
+		int index = 0;
+		if (normal != null) {
+			for (Drop drop : normal)
+				combined[index++] = new Drop(drop.getItemId(), drop.getMinAmount(), drop.getMaxAmount());
+		}
+		if (gear != null) {
+			for (Drop drop : gear)
+				combined[index++] = new Drop(drop.getItemId(), drop.getMinAmount(), drop.getMaxAmount());
+		}
+		return combined;
 	}
 	
 	public Drop getDrop(int rarity, double e) {
