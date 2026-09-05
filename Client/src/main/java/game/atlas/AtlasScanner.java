@@ -485,6 +485,7 @@ public final class AtlasScanner {
 
     private static final class TypeReferenceSignatureVisitor extends SignatureVisitor {
         private final RelationshipAccumulator accumulator;
+        private String currentClassName;
 
         private TypeReferenceSignatureVisitor(RelationshipAccumulator accumulator) {
             super(Opcodes.ASM9);
@@ -493,7 +494,22 @@ public final class AtlasScanner {
 
         @Override
         public void visitClassType(String name) {
+            currentClassName = name;
             accumulator.record(RelationshipType.REFERENCES_TYPE, typeTarget(name), -1, -1, null);
+        }
+
+        @Override
+        public void visitInnerClassType(String name) {
+            if (currentClassName == null || currentClassName.length() == 0) {
+                return;
+            }
+            currentClassName = currentClassName + "$" + name;
+            accumulator.record(RelationshipType.REFERENCES_TYPE, typeTarget(currentClassName), -1, -1, null);
+        }
+
+        @Override
+        public void visitEnd() {
+            currentClassName = null;
         }
     }
 
