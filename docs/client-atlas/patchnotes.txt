@@ -30,4 +30,11 @@
 - Added exact `CALLS` relationships for method/constructor bytecode targets and distinct `DYNAMIC_CALL` records for `invokedynamic` bootstrap sites.
 - Added `READS_FIELD` for GETFIELD/GETSTATIC and `WRITES_FIELD` for PUTFIELD/PUTSTATIC using exact stable field IDs.
 - Added per-method relationship aggregation so repeated identical targets emit one record with `occurrenceCount`; source line and opcode evidence are retained when consistent.
-- Dynamic-call targets include bootstrap owner/name/descriptor while tag/interface facts remain in detail; bootstrap arguments remain deferred to 2A.3 structural/type/constant work.
+- Dynamic-call targets include bootstrap owner/name/descriptor while tag/interface facts remain in detail.
+- Added `REFERENCES_TYPE` indexing across field/method descriptors, declared exceptions, generic signatures, type instructions, field/method owners and descriptors, LDC `Type` values, bootstrap handles, and constant-dynamic structure.
+- Type references use neutral `TYPE:<internal-name>` targets so structural facts do not guess class/interface/domain semantics.
+- Object arrays resolve to referenced object element types; primitive-only descriptors do not generate fake object references.
+- Added typed `CONSTANT` relationships from field constant values, LDC literals, ICONST/LCONST/FCONST/DCONST, BIPUSH/SIPUSH, and reliable bootstrap arguments.
+- Constant targets preserve literal type (`int:`, `long:`, `float:`, `double:`, `string:`); raw numeric constants never auto-promote to `LITERAL_ID` or domain IDs.
+- `Type`, `Handle`, and `ConstantDynamic` values are treated structurally rather than flattened into misleading string constants.
+- Generic inner-class signatures now retain exact JVM inner-type references (`Outer$Inner`) in addition to outer type evidence.
