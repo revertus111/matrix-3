@@ -1,0 +1,54 @@
+Matrix3 BossLabs - Drops integration acceptance list
+
+Build / startup
+1. Eclipse Clean/build Client and Server with Java 8. Confirm BossLabsDropDefinition, BossLabsDropWireCodec, BossLabsDropPublisher, BossLabsDropStore, BossLabsDropCommandBridge, BossLabsDropDraftDefinition, BossLabsDropClientBridge, BossLabsDropPanel, and the narrow Drops/NPCDrops/CombatScriptsHandler seams compile cleanly.
+2. Start the server with no data/bosslabs/drops.bld. Confirm Matrix3 packed NPC drops load normally and BossLabs startup reports no error.
+3. Save one BossLabs drop override, restart the server, and confirm Matrix3 packed drops load first and the saved BossLabs override is then live for that NPC.
+4. Run the full docs/rs3/SMOKE_TEST.md after this persistence/startup slice. Login, command/chat, normal NPC combat, normal drops, Client Console, and BossLabs are blockers if regressed.
+
+Existing-table inspection / fidelity
+5. Load an NPC that already has Matrix3 drops. Confirm the Drops tab reports LIVE: Matrix3, shows the current entries, min/max quantities, rarity buckets, and rare-drop-table toggle.
+6. Inspect a Matrix3 table containing wearable Rare or Very Rare items. Confirm those entries remain visible despite Matrix3 internally splitting them into the rare gear bucket.
+7. Reload the table without editing and confirm no entry, rarity, min/max quantity, or rare-drop-table setting is lost.
+8. Load an NPC with no Matrix3 drop table. Confirm BossLabs presents an empty clean DRAFT with LIVE: Matrix3 rather than inventing a drop entry.
+
+Creator workflow / validation
+9. Search for an item by exact numeric item id. Confirm the existing ClientConsoleItemBridge resolves the same item definition used by Item Browser.
+10. Search for items by case-insensitive name fragment. Confirm usable matching definitions appear without a second cache/item-definition loader.
+11. Add entries in Always, Common, Uncommon, Rare, and Very Rare. Confirm the list labels them with Matrix3's real bucket semantics: all entries, 90%, 70%, 0.6%, and 0.36% respectively.
+12. Add fixed and ranged quantities (for example 1-1 and 5-25). Confirm both values survive local edit, live apply, save, reload, and restart.
+13. Attempt min amount below 1, max below min, amount above 1,000,000,000, or invalid rarity data. Confirm the DRAFT cannot publish.
+14. Attempt to add the same item twice in the same rarity bucket. Confirm it is rejected. Confirm the same item may exist in different rarity buckets if deliberately authored.
+15. Attempt an unknown/unloaded item id through a controlled malformed/manual request. Confirm the server rejects the publish even if client-side validation is bypassed.
+16. Confirm the table limit of 200 entries is enforced before live/saved mutation.
+17. Toggle Matrix3 rare-drop-table access and confirm the setting round-trips through live apply, save, reload, and restart.
+
+Live / saved / rollback
+18. Apply Drops Live on an existing Matrix3 NPC. Confirm NPCDrops.getDrops(npcId) immediately reflects the authored table and data/bosslabs/drops.bld is not created/rewritten by Apply Live alone.
+19. Kill the NPC after Apply Drops Live. Confirm NPC death still uses Matrix3's existing NPCDrops -> Drops.generateDrops path; BossLabs does not run a second loot roller.
+20. Save & Apply Drops. Confirm data/bosslabs/drops.bld is written successfully before the authored table becomes live.
+21. Cause a controlled drops.bld persistence failure. Confirm Save & Apply reports failure and the pre-existing live table remains unchanged.
+22. Apply drop table A live, then B live, then Undo Drops. Confirm A is restored exactly and the one-level rollback is consumed.
+23. From a BossLabs live override, click Restore Matrix3. Confirm the exact pre-BossLabs Matrix3 table is restored, including the rare-drop-table flag and rare gear entries.
+24. For an NPC that originally had no drop table, Apply a BossLabs table then Restore Matrix3. Confirm NPCDrops again has no table for that NPC.
+25. With a saved override present but Matrix3 currently restored live, click Apply Saved Drops. Confirm the saved BossLabs table becomes live without rewriting the store.
+26. Click Delete Saved Override. Confirm that NPC's saved entry is removed from drops.bld and the captured Matrix3 table is restored live.
+27. Save overrides for two different NPC ids, then update/delete only one. Confirm the other saved override remains unchanged.
+
+Security / protocol / persistence safety
+28. Attempt bosslabs drops commands without admin rights. Confirm BossLabsDropCommandBridge performs no inspection or mutation and Matrix3 permissions remain authoritative.
+29. Fill the Client Console command queue so the complete drop publish transaction cannot fit. Confirm queueConsoleCommands rejects it before any uploadbegin/chunk/commit packet is queued.
+30. Send an incomplete, missing-chunk, mismatched-request, malformed, or unsupported-version drop upload in a controlled test. Confirm neither live NPCDrops nor drops.bld changes.
+31. Corrupt or replace the drops.bld magic/version in a disposable backup test. Confirm the store rejects/logs it rather than partially applying saved overrides.
+32. Confirm data/npcs/packedDrops.d remains byte-for-byte unchanged after Apply Live, Save & Apply, Undo, Restore Matrix3, Apply Saved, and Delete Saved Override.
+33. Confirm BossLabs combat definitions remain data/bosslabs/definitions.bld wire/store v8 and are unaffected by drop editing.
+34. Confirm Commands.java, NPC death, XP ownership, Drop generation probabilities, Ring of Wealth logic, rare-drop-table logic, and combat scripting are not replaced by the BossLabs drop editor.
+35. Confirm normal NPCs with no BossLabs drop override continue producing their original Matrix3 drops before and after another NPC is edited.
+36. Confirm ordinary BossLabs definition/search/testing messages and normal type-99/command traffic continue routing correctly after the drop-* client response delegation.
+
+Creator usability
+37. Switch between two NPCs and confirm each Drops tab state reloads for the selected NPC rather than leaking entries between drafts.
+38. Modify a local drop DRAFT, click Reload Current, decline the discard warning, and confirm the local edits remain. Accept it and confirm current live data replaces them.
+39. Confirm Delete Saved Override requires explicit confirmation and cannot be triggered merely by selecting an NPC.
+40. Resize BossLabs around its supported minimum size. Confirm the drop list, item search, entry editor, and publish/restore controls remain reachable through the split/scroll layout.
+41. Confirm closing/reopening BossLabs clears the static drop listener and a reopened Drops tab receives replies without retaining the disposed panel.
