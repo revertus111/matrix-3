@@ -177,9 +177,11 @@ public final class AtlasRelationshipQueryEngine {
         Set<String> nodes = new LinkedHashSet<String>();
         Set<String> frontier = new LinkedHashSet<String>();
         Map<String, RelationshipEntry> edges = new LinkedHashMap<String, RelationshipEntry>();
+        Set<String> seenEdges = new LinkedHashSet<String>();
         nodes.add(root.getId());
         frontier.add(root.getId());
         boolean truncated = false;
+        long totalUniqueEdgesSeen = 0L;
 
         for (int depth = 0; depth < request.depth && !frontier.isEmpty(); depth++) {
             Set<String> next = new LinkedHashSet<String>();
@@ -190,20 +192,24 @@ public final class AtlasRelationshipQueryEngine {
 
                 for (RelationshipEntry edge : around) {
                     String key = edgeKey(edge);
-                    if (!edges.containsKey(key)) {
-                        if (edges.size() >= MAX_EDGES) {
-                            truncated = true;
-                            continue;
-                        }
-                        edges.put(key, edge);
+                    if (!seenEdges.add(key)) {
+                        continue;
                     }
+                    totalUniqueEdgesSeen++;
 
                     String other = node.equals(edge.getFromId()) ? edge.getTarget() : edge.getFromId();
-                    if (!nodes.contains(other)) {
-                        if (nodes.size() >= MAX_NODES) {
-                            truncated = true;
-                            continue;
-                        }
+                    boolean newNode = !nodes.contains(other);
+                    if (newNode && nodes.size() >= MAX_NODES) {
+                        truncated = true;
+                        continue;
+                    }
+                    if (edges.size() >= MAX_EDGES) {
+                        truncated = true;
+                        continue;
+                    }
+
+                    edges.put(key, edge);
+                    if (newNode) {
                         nodes.add(other);
                         if (index.getSymbol(other) != null) {
                             next.add(other);
@@ -215,7 +221,8 @@ public final class AtlasRelationshipQueryEngine {
         }
 
         List<RelationshipEntry> edgeList = new ArrayList<RelationshipEntry>(edges.values());
-        EdgeSelection selection = new EdgeSelection(edgeList, edgeList.size(), truncated);
+        EdgeSelection selection = new EdgeSelection(edgeList, totalUniqueEdgesSeen,
+                truncated || totalUniqueEdgesSeen > edgeList.size());
         return new RelationshipQueryResult(command, request.operand, root.getId(), root,
                 selection.records, selection.totalCount, selection.truncated,
                 request.depth, nodes.size(), resolution, null, System.nanoTime() - started);
@@ -271,11 +278,14 @@ public final class AtlasRelationshipQueryEngine {
                 if (entry.getType() != type) {
                     continue;
                 }
-                total++;
                 String key = edgeKey(entry);
-                if (matches.size() < MAX_EDGES && seen.add(key)) {
+                if (!seen.add(key)) {
+                    continue;
+                }
+                total++;
+                if (matches.size() < MAX_EDGES) {
                     matches.add(entry);
-                } else if (matches.size() >= MAX_EDGES) {
+                } else {
                     truncated = true;
                 }
             }
@@ -328,36 +338,47 @@ public final class AtlasRelationshipQueryEngine {
             return Collections.singletonList(value);
         }
 
-        if (isInteger(value)) {
+        Long integer = parseLong(value);
+        if (integer != null) {
             List<String> targets = new ArrayList<String>();
-            targets.add("int:" + value);
-            targets.add("long:" + value);
+            long number = integer.longValue();
+            if (number >= Integer.MIN_VALUE && number <= Integer.MAX_VALUE) {
+                targets.add("int:" + Integer.toString((int) number));
+            }
+            targets.add("long:" + Long.toString(number));
             return targets;
         }
-        if (isDecimal(value)) {
+
+        Double decimal = parseDecimal(value);
+        if (decimal != null) {
             List<String> targets = new ArrayList<String>();
-            targets.add("float:" + value);
-            targets.add("double:" + value);
+            float floatValue = Float.parseFloat(value);
+            if (!Float.isInfinite(floatValue) && !Float.isNaN(floatValue)) {
+                targets.add("float:" + Float.toString(floatValue));
+            }
+            targets.add("double:" + Double.toString(decimal.doubleValue()));
             return targets;
         }
         return Collections.singletonList("string:" + value);
     }
 
-    private static boolean isInteger(String value) {
+    private static Long parseLong(String value) {
         try {
-            Long.parseLong(value);
-            return true;
+            return Long.valueOf(Long.parseLong(value));
         } catch (NumberFormatException ex) {
-            return false;
+            return null;
         }
     }
 
-    private static boolean isDecimal(String value) {
+    private static Double parseDecimal(String value) {
+        if (value.indexOf('.') < 0 && value.indexOf('e') < 0 && value.indexOf('E') < 0) {
+            return null;
+        }
         try {
-            Double.parseDouble(value);
-            return value.indexOf('.') >= 0 || value.indexOf('e') >= 0 || value.indexOf('E') >= 0;
+            double number = Double.parseDouble(value);
+            return Double.isInfinite(number) || Double.isNaN(number) ? null : Double.valueOf(number);
         } catch (NumberFormatException ex) {
-            return false;
+            return null;
         }
     }
 
