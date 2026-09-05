@@ -186,6 +186,9 @@ public final class BossLabsClientBridge {
         if (command == null || !command.startsWith(RESPONSE_PREFIX)) {
             return false;
         }
+        if (BossLabsDropClientBridge.handleServerCommand(command)) {
+            return true;
+        }
 
         try {
             String[] parts = command.split("\\|", -1);
