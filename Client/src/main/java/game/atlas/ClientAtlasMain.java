@@ -3,6 +3,7 @@ package game.atlas;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 
 import game.atlas.AtlasQueryEngine.QueryResult;
 import game.atlas.AtlasScanner.ScanResult;
@@ -27,7 +28,12 @@ public final class ClientAtlasMain {
     }
 
     private static void run(String[] args) throws IOException {
-        String command = args.length == 0 ? "status" : args[0].toLowerCase();
+        if (args.length == 0) {
+            ClientAtlasControl.launch();
+            return;
+        }
+
+        String command = args[0].toLowerCase(Locale.ROOT);
         if ("help".equals(command) || "--help".equals(command) || "-h".equals(command)) {
             printUsage();
             return;
@@ -111,6 +117,7 @@ public final class ClientAtlasMain {
 
     private static void printUsage() {
         System.out.println("Client Atlas offline tool");
+        System.out.println("  (no args)                                      Open the standalone Client Atlas Control UI");
         System.out.println("  scan [classes-dir]                              Scan compiled client declarations into Atlas JSONL");
         System.out.println("  status [classes-dir]                            Show persisted metadata and stale/current fingerprint state");
         System.out.println("  init [classes-dir]                              Create/reset metadata for the compiled client class directory");
