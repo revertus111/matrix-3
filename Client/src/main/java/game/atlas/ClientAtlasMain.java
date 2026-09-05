@@ -64,6 +64,15 @@ public final class ClientAtlasMain {
             return;
         }
 
+        if ("verify-search".equals(command)) {
+            Path classRoot = classRoot(workspace, args, 1);
+            AtlasInvestigationVerifier.VerificationResult result =
+                    new AtlasInvestigationVerifier(workspace, classRoot).run();
+            System.out.println(result.getReport());
+            System.out.println("Report: " + result.getReportPath());
+            return;
+        }
+
         if ("init".equals(command)) {
             Path classRoot = classRoot(workspace, args, 1);
             Metadata metadata = workspace.initialize(classRoot);
@@ -152,7 +161,8 @@ public final class ClientAtlasMain {
         System.out.println("Client Atlas offline tool");
         System.out.println("  (no args)                                      Open the standalone Client Atlas Control UI");
         System.out.println("  scan [classes-dir]                              Rebuild the generated Atlas index");
-        System.out.println("  verify-structural [classes-dir]                 Rebuild + run Phase 2 structural checks/metrics");
+        System.out.println("  verify-structural [classes-dir]                 Rebuild + run structural checks/metrics");
+        System.out.println("  verify-search [classes-dir]                     Run investigation/search checks without rescanning");
         System.out.println("  status [classes-dir]                            Show persisted metadata and stale/current fingerprint state");
         System.out.println("  init [classes-dir]                              Create/reset metadata for the compiled client class directory");
         System.out.println("  search \"<query-or-command>\" [classes-dir]       Friendly symbol search or relationship investigation");
