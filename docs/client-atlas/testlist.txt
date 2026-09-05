@@ -1,20 +1,35 @@
 Client Atlas - Phase 1 test list
 
-Quick/high-value checks
-[ ] Clean/build Client with Java 8/Eclipse-compatible settings.
-[ ] Run `game.atlas.ClientAtlasMain scan` from the Client project or repository root.
-[ ] Confirm scan reports non-zero class, symbol, and relationship counts.
-[ ] Confirm `.client-atlas/symbols.jsonl` contains a known obfuscated class, field, method, and constructor.
-[ ] Confirm `.client-atlas/relationships.jsonl` contains DECLARES and at least one EXTENDS record; confirm IMPLEMENTS where a known implementing class exists.
-[ ] Run `game.atlas.ClientAtlasMain status` and confirm metadata reopens and `Current fingerprint: true`.
-[ ] Confirm `game/atlas/**` records are absent from generated symbol data.
-[ ] Confirm normal `game.RS3Applet` launch ownership/configuration is unchanged.
+Runtime-confirmed foundation
+[x] Eclipse/Java 8 can compile/run Atlas after Gradle -> Refresh Gradle Project resolves ASM.
+[x] Run scanner against compiled Matrix3 Client classes.
+[x] Confirm scan reports non-zero counts.
+    VERIFIED: 1221 class files / 33742 symbols / 34053 relationships.
+[x] Reopen metadata with status.
+[x] Confirm `Current fingerprint: true`.
+    VERIFIED fingerprint: 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
 
-Phase 1 gate checks after 1A.4
-[ ] Run `game.atlas.ClientAtlasMain query "CLASS:game/Class1"` and confirm one exact symbol plus immediate relationships are returned as JSON.
-[ ] Copy one METHOD or CONSTRUCTOR id from the returned DECLARES records and query that exact canonical id; confirm the owning DECLARES relationship is returned.
-[ ] Run `game.atlas.ClientAtlasMain export "CLASS:game/Class1" docs/client-atlas/snapshots/class1.json` and confirm a compact UTF-8 JSON file is written.
-[ ] Confirm query/export output includes `schemaVersion`, `clientFingerprint`, `queryId`, `indexCurrent`, relationship count/truncation state, the exact symbol, and immediate relationships.
-[ ] Re-run query/export without rescanning and confirm the existing index reopens successfully.
-[ ] Make a real client source change + rebuild (or otherwise change compiled client classes) and confirm query/export refuses the stale index until `scan` is run again.
-[ ] If a queried class owns more than 200 stored immediate relationships, confirm output is capped and `relationshipsTruncated` is true while `relationshipCount` reports the full matching count.
+Standalone Client Atlas Control gate
+[ ] Pull current main.
+[ ] Run `game.atlas.ClientAtlasMain` with NO program arguments.
+[ ] Confirm the `Client Atlas Control` window opens.
+[ ] Confirm the status panel shows the existing index/counts and CURRENT fingerprint state.
+[ ] Click `Run Phase 1 Check`.
+[ ] Confirm output ends with `PHASE 1 AUTOMATED CHECK: PASS`.
+[ ] Confirm automated check verifies CLASS/FIELD/METHOD/CONSTRUCTOR symbol coverage.
+[ ] Confirm automated check verifies DECLARES/EXTENDS/IMPLEMENTS relationship coverage.
+[ ] Confirm automated check verifies generated symbols exclude `game/atlas/**`.
+[ ] Confirm automated check exercises an exact class query and a METHOD/CONSTRUCTOR query where available.
+[ ] Confirm `.client-atlas/phase1-check.json` is written and non-empty.
+[ ] Search `Class1` in the UI and confirm readable JSON output is shown.
+[ ] Click `Export Last Result` and confirm a file is written under `.client-atlas/exports/`.
+[ ] Click `Open Workspace` and confirm the local Atlas workspace opens.
+
+Remaining guard/regression checks
+[ ] On a later real client source change + rebuild, confirm query/export refuses the stale index until `Scan / Rebuild Index` runs again.
+[ ] If a queried symbol owns more than 200 immediate relationships, confirm output is capped while full relationshipCount/truncation state remains accurate.
+[ ] Confirm normal `game.RS3Applet` launch ownership/configuration remains unchanged.
+
+Notes
+- Do not intentionally mutate compiled classes solely to prove stale-index rejection if the one-click Phase 1 check passes; verify that guard on the next natural client rebuild/change.
+- Normal developer use should no longer require editing Eclipse program arguments between scan/status/query/export commands.
