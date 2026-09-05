@@ -197,7 +197,7 @@ Deliver Rambler's backpack as safe player-owned persistent carried storage that 
 | Explicit bank-inventory action set | 1 | 1.1 | NEEDS TEST | Exact visible menu/order requires runtime verification. |
 | Empty to bank | 1 | 1.1 | NEEDS TEST | Partial/full-bank behavior is statically defensive; runtime proof remains. |
 | Consolidated Backpack runtime gate | 1 | 1.2 | READY | Next execution target. |
-| Evidence-backed final polish | 2 | 2.1 | READY | Do not enter until Phase 1 exit conditions pass. |
+| Evidence-backed final polish | 2 | 2.1 | BLOCKED | Dependency only: do not enter until Phase 1 exit conditions pass. |
 
 ## Decisions / new ideas
 
