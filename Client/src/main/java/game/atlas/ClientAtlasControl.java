@@ -169,7 +169,8 @@ public final class ClientAtlasControl {
         outputArea.setText("Client Atlas is ready.\n\n"
                 + "Friendly search: Class387 | Class387.method4844 | method4844\n"
                 + "Relationships: calls | called-by | reads | written-by | references | constant\n"
-                + "Neighborhood: neighbors <symbol> depth=1 or depth=2\n");
+                + "Neighborhood: neighbors <symbol> depth=1 or depth=2\n"
+                + "Use Run Search Check for the one-click Bundle 2B local gate.\n");
 
         JScrollPane scrollPane = new JScrollPane(outputArea);
         scrollPane.setBorder(BorderFactory.createTitledBorder("Output"));
@@ -182,6 +183,12 @@ public final class ClientAtlasControl {
     private JPanel buildActionPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
 
+        panel.add(taskButton("Run Search Check", new Runnable() {
+            @Override
+            public void run() {
+                runInvestigationCheck();
+            }
+        }));
         panel.add(taskButton("Run Structural Check", new Runnable() {
             @Override
             public void run() {
@@ -234,6 +241,27 @@ public final class ClientAtlasControl {
             }
         });
         return button;
+    }
+
+    private void runInvestigationCheck() {
+        runBackground("Running the consolidated investigation/search check...", new BackgroundTask() {
+            private AtlasInvestigationVerifier.VerificationResult result;
+
+            @Override
+            public String execute() throws Exception {
+                invalidateInvestigationIndex();
+                clearLastExportableQuery();
+                result = new AtlasInvestigationVerifier(workspace, classRoot).run();
+                return result.getReport() + "\nReport: " + result.getReportPath();
+            }
+
+            @Override
+            public void complete() {
+                if (result != null) {
+                    setStatus(result.getMetadata(), true);
+                }
+            }
+        });
     }
 
     private void runPhase2Check() {
