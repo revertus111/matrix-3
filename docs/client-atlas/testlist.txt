@@ -12,7 +12,7 @@ Phase 1 - runtime verified
 
 Phase 2 / Bundle 2A - runtime verified
 [x] Schema-v2 index rebuilt/current locally.
-[x] `Run Phase 2 Check` completed.
+[x] Structural verifier completed.
 [x] Output confirmed `PHASE 2 STRUCTURAL CHECK: PASS`.
 [x] VERIFIED: schema version 2.
 [x] VERIFIED: 1221 class files / 33742 symbols / 325826 relationships.
@@ -21,71 +21,79 @@ Phase 2 / Bundle 2A - runtime verified
 [x] VERIFIED exact-query time: 362.0 ms.
 [x] VERIFIED `symbols.jsonl`: 8,980,282 bytes (~8.5 MiB).
 [x] VERIFIED `relationships.jsonl`: 78,016,586 bytes (~74.4 MiB).
+[x] Bundle 2A is DONE; current UI label is `Run Structural Check`.
 
-`Run Phase 2 Check` automated assertions - passed as one consolidated gate
-[x] Rebuild generated Atlas data using schema version 2.
-[x] Require current fingerprint after rebuild.
-[x] Require class/symbol counts > 0 and relationship count above Phase-1 structural baseline.
-[x] Verify symbol records expose `compiledPath` + `sourcePath`.
-[x] Verify Class1 path resolution when Class1 is present.
-[x] Verify relationship schema fields: sourcePath/sourceLine/opcode/occurrenceCount/detail.
-[x] Verify DECLARES/EXTENDS/IMPLEMENTS structural records retain valid structural evidence shape.
-[x] Require generated CALLS relationships.
-[x] Require generated READS_FIELD relationships.
-[x] Require generated WRITES_FIELD relationships.
-[x] Require generated REFERENCES_TYPE relationships.
-[x] Require generated typed CONSTANT relationships.
-[x] Require zero automatic LITERAL_ID relationships.
-[x] Exercise an internal incoming CALLS exact-query path.
-[x] Re-run exact class query and compact export against schema 2/current data.
-[x] Verify evidence.jsonl is unchanged by generated-index rebuild.
-[x] Verify trace state is unchanged by generated-index rebuild.
-[x] Record class/symbol/relationship counts and relationship-family metrics.
-[x] Record source-line/opcode/aggregation evidence metrics without manufacturing missing evidence.
-[x] Record generated file sizes, scan time, and exact-query time.
-[x] Write `.client-atlas/phase2-structural-check.txt` and `.client-atlas/phase2-structural-query.json`.
-
-Bundle 2A result
-[x] Phase 2 Bundle 2A structural relationship gate is DONE.
-[x] Measurements support retaining JSONL persistence; no SQLite/native database is currently justified.
-
-Bundle 2B - investigation search
+Bundle 2B - investigation search implementation
 [x] 2B.1 In-memory investigation index implementation.
     [x] Load only current schema-v2 generated JSONL; do not scan or create a second persistence owner.
     [x] Validate schema/fingerprint before and after load.
     [x] Verify loaded symbol/relationship counts match metadata.
-    [x] Exact symbol ID map.
-    [x] Normalized owner/name candidate maps while preserving original IDs/names in entries.
-    [x] Outgoing relationship map.
-    [x] Incoming relationship map.
-    [x] Typed CONSTANT referrer map.
-    [x] Preserve sourcePath/sourceLine/opcode/occurrenceCount/detail in relationship entries.
+    [x] Exact symbol ID + normalized owner/name candidate maps.
+    [x] Outgoing/incoming relationship maps + typed CONSTANT referrers.
+    [x] Preserve sourcePath/sourceLine/opcode/occurrenceCount/detail.
     [x] Canonicalize repeated loaded strings to control memory use.
-    [ ] LOCAL/BATCHED WITH 2B.3: load verified 33742/325826 dataset and record build time/memory behavior.
-    [ ] LOCAL/BATCHED WITH 2B.3: verify `Class1` candidate/exact symbol lookup, incoming/outgoing lookup, and one typed constant referrer path.
 [x] 2B.2 Ranked/friendly search implementation.
-    [x] Exact canonical Atlas IDs remain authoritative.
-    [x] Resolve exact class paths such as `game.Class387` / `game/Class387`.
-    [x] Resolve simple exact names such as `Class387` and plain member names.
-    [x] Resolve owner/member shorthand such as `Class387.method4844` without requiring descriptors when unambiguous.
-    [x] Accept an optional method descriptor in owner/member shorthand for exact overload selection.
-    [x] Return all exact-name/overload candidates when ambiguous; never silently choose one.
-    [x] Add deterministic prefix/contains fallback ranking with a 50-result cap.
-    [x] Fuzzy/partial results never auto-resolve, even when only one candidate remains.
-    [x] Add CLI `search "<friendly-query>"` over the in-memory index with load/search timing output.
-    [x] Keep relationship commands out of 2B.2; `calls/called-by/reads/written-by/references/constant` remain 2B.3 ownership.
-    [x] Defer standalone UI search-box rewrite into 2B.3 so friendly + relationship search are integrated once.
-    [ ] LOCAL/BATCHED WITH 2B.3: verify `Class1`, canonical ID, `Class1.method...`, ambiguous-name candidates, and fuzzy ranking on the real dataset.
-[ ] 2B.3 Relationship queries + bounded neighborhoods.
-[ ] 2B.4 Assistant-oriented export.
+    [x] Canonical IDs remain authoritative.
+    [x] Exact class path/simple name/owner-member shorthand resolution.
+    [x] Optional method descriptor for exact overload selection.
+    [x] Ambiguous exact-name/overload searches return candidates instead of guessing.
+    [x] Deterministic prefix/contains fallback capped at 50.
+    [x] Fuzzy/partial results never auto-resolve.
+    [x] CLI `search "<query-or-command>"` path.
+[x] 2B.3 Relationship queries + bounded neighborhoods implementation.
+    [x] `calls <symbol>` and `called-by <symbol>`.
+    [x] `reads <field-or-symbol>` and `written-by <field>`.
+    [x] `references <TYPE:... or class>`.
+    [x] `constant <raw-or-typed literal>` with numeric normalization but no domain-ID guessing.
+    [x] Class-level calls/reads expand through declared methods.
+    [x] Normal relationship cap = 500 edges.
+    [x] `neighbors <symbol> depth=1|2`.
+    [x] Neighborhood caps = 100 nodes / 500 edges with explicit truncation state.
+    [x] Standalone Search / Investigate box uses shared index/search/relationship APIs.
+    [x] Enter key executes search.
+    [x] Investigation index cached only for the current generated snapshot and invalidated on stale/rebuild paths.
+    [x] Old `Run Phase 2 Check` UI wording renamed to `Run Structural Check`.
+    [x] Added one-click `Run Search Check` + CLI `verify-search`.
+    [x] Search verifier writes `.client-atlas/phase2-investigation-check.txt` without rescanning.
+
+Bundle 2B - current one-click local gate
+[ ] `git pull origin main`.
+[ ] Eclipse/Java 8 clean/build Client.
+[ ] Run `game.atlas.ClientAtlasMain` with NO program arguments.
+[ ] Confirm existing Atlas status is CURRENT; do NOT click Scan/Rebuild first.
+[ ] Click `Run Search Check` ONCE.
+[ ] Confirm output contains `PHASE 2 INVESTIGATION CHECK: PASS`.
+[ ] Send/copy `.client-atlas/phase2-investigation-check.txt`.
+
+`Run Search Check` automatically verifies
+[auto] Current schema/fingerprint and no structural rescan.
+[auto] In-memory counts match persisted metadata.
+[auto] Record investigation-index load time + approximate used-memory delta.
+[auto] Exact canonical `CLASS:game/Class1` resolution.
+[auto] Friendly `Class1` resolves to the same class.
+[auto] Owner/member shorthand + descriptor resolves a known Class1 method.
+[auto] Ambiguous exact-name search returns multiple candidates and stays unresolved.
+[auto] Fuzzy/prefix search returns ranked bounded candidates and stays unresolved.
+[auto] Internal CALLS edge through `calls`.
+[auto] Same CALLS edge through `called-by`.
+[auto] Known READS_FIELD edge through `reads <field>`.
+[auto] Known WRITES_FIELD edge through `written-by <field>`.
+[auto] Known REFERENCES_TYPE edge.
+[auto] Known typed CONSTANT edge.
+[auto] Depth-2 neighborhood never exceeds 100 nodes / 500 edges.
+[auto] Write `.client-atlas/phase2-investigation-check.txt`.
+
+Remaining Bundle 2B
+[ ] 2B local verification gate PASS.
+[ ] 2B.4 Assistant-oriented export - gated on Bundle 2B PASS.
 [ ] 2B.5 Safe initial domain correlation.
 
 Carryover regression checks
-[ ] On a natural future client source change + rebuild, confirm query/export refuses the stale index until rebuilt.
-[ ] If a queried symbol owns more than 200 immediate relationships, confirm output stays capped while full count/truncation remains accurate.
+[ ] On a natural future client source change + rebuild boundary, confirm stale generated data is refused until rebuilt.
+[ ] If a streaming exact query owns more than 200 immediate relationships, confirm output stays capped while full count/truncation remains accurate.
 [ ] Confirm normal `game.RS3Applet` launch ownership/configuration remains unchanged after meaningful Atlas changes.
 
 Gate rule
 - Bundle 2A is complete; do not request another structural scan/test without new contradictory evidence.
-- 2B.1 and 2B.2 implementation are complete; their local checks are deliberately bundled with the 2B.3 relationship-query/UI test so there is one useful user runtime session.
-- Next valid implementation target is 2B.3 relationship queries + bounded neighborhoods.
+- 2B.1-2B.3 implementation is complete.
+- Do not begin 2B.4 until `PHASE 2 INVESTIGATION CHECK: PASS` is confirmed locally or PROJECT.md explicitly changes the gate.
