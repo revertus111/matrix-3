@@ -61,9 +61,21 @@ Bundle 2B - investigation search
     [x] Typed CONSTANT referrer map.
     [x] Preserve sourcePath/sourceLine/opcode/occurrenceCount/detail in relationship entries.
     [x] Canonicalize repeated loaded strings to control memory use.
-    [ ] LOCAL/BATCHED WITH 2B.2: load verified 33742/325826 dataset and record build time/memory behavior.
-    [ ] LOCAL/BATCHED WITH 2B.2: verify `Class1` candidate/exact symbol lookup, incoming/outgoing lookup, and one typed constant referrer path.
-[ ] 2B.2 Ranked/friendly search.
+    [ ] LOCAL/BATCHED WITH 2B.3: load verified 33742/325826 dataset and record build time/memory behavior.
+    [ ] LOCAL/BATCHED WITH 2B.3: verify `Class1` candidate/exact symbol lookup, incoming/outgoing lookup, and one typed constant referrer path.
+[x] 2B.2 Ranked/friendly search implementation.
+    [x] Exact canonical Atlas IDs remain authoritative.
+    [x] Resolve exact class paths such as `game.Class387` / `game/Class387`.
+    [x] Resolve simple exact names such as `Class387` and plain member names.
+    [x] Resolve owner/member shorthand such as `Class387.method4844` without requiring descriptors when unambiguous.
+    [x] Accept an optional method descriptor in owner/member shorthand for exact overload selection.
+    [x] Return all exact-name/overload candidates when ambiguous; never silently choose one.
+    [x] Add deterministic prefix/contains fallback ranking with a 50-result cap.
+    [x] Fuzzy/partial results never auto-resolve, even when only one candidate remains.
+    [x] Add CLI `search "<friendly-query>"` over the in-memory index with load/search timing output.
+    [x] Keep relationship commands out of 2B.2; `calls/called-by/reads/written-by/references/constant` remain 2B.3 ownership.
+    [x] Defer standalone UI search-box rewrite into 2B.3 so friendly + relationship search are integrated once.
+    [ ] LOCAL/BATCHED WITH 2B.3: verify `Class1`, canonical ID, `Class1.method...`, ambiguous-name candidates, and fuzzy ranking on the real dataset.
 [ ] 2B.3 Relationship queries + bounded neighborhoods.
 [ ] 2B.4 Assistant-oriented export.
 [ ] 2B.5 Safe initial domain correlation.
@@ -75,5 +87,5 @@ Carryover regression checks
 
 Gate rule
 - Bundle 2A is complete; do not request another structural scan/test without new contradictory evidence.
-- 2B.1 implementation is complete; its local load/performance checks are deliberately bundled with 2B.2 so there is no standalone user test session.
-- Next valid implementation target is 2B.2 ranked/friendly search.
+- 2B.1 and 2B.2 implementation are complete; their local checks are deliberately bundled with the 2B.3 relationship-query/UI test so there is one useful user runtime session.
+- Next valid implementation target is 2B.3 relationship queries + bounded neighborhoods.
