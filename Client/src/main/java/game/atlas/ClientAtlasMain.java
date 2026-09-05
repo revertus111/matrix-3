@@ -8,6 +8,7 @@ import java.util.Locale;
 import game.atlas.AtlasQueryEngine.QueryResult;
 import game.atlas.AtlasScanner.ScanResult;
 import game.atlas.AtlasSchema.Metadata;
+import game.atlas.AtlasSearchEngine.SearchResult;
 import game.atlas.AtlasStructuralVerifier.VerificationResult;
 
 /**
@@ -78,6 +79,18 @@ public final class ClientAtlasMain {
             return;
         }
 
+        if ("search".equals(command)) {
+            requireArgument(args, 1, "search requires a symbol name, shorthand, or Atlas id");
+            Path classRoot = classRoot(workspace, args, 2);
+            AtlasInvestigationIndex index = AtlasInvestigationIndex.load(workspace, classRoot);
+            SearchResult result = new AtlasSearchEngine(index).search(args[1]);
+            System.out.println("Investigation index: " + index.getSymbolCount() + " symbols / "
+                    + index.getRelationshipCount() + " relationships");
+            System.out.println("Index load time: " + formatMillis(index.getLoadNanos()) + " ms");
+            System.out.println(result.toDisplayText());
+            return;
+        }
+
         if ("query".equals(command)) {
             requireArgument(args, 1, "query requires an exact Atlas symbol id");
             Path classRoot = classRoot(workspace, args, 2);
@@ -124,6 +137,10 @@ public final class ClientAtlasMain {
         System.out.println("Relationships: " + metadata.getRelationshipCount());
     }
 
+    private static String formatMillis(long nanos) {
+        return String.format(Locale.ROOT, "%.3f", Double.valueOf(nanos / 1000000.0D));
+    }
+
     private static void printUsage() {
         System.out.println("Client Atlas offline tool");
         System.out.println("  (no args)                                      Open the standalone Client Atlas Control UI");
@@ -131,6 +148,7 @@ public final class ClientAtlasMain {
         System.out.println("  verify-structural [classes-dir]                 Rebuild + run Phase 2 structural checks/metrics");
         System.out.println("  status [classes-dir]                            Show persisted metadata and stale/current fingerprint state");
         System.out.println("  init [classes-dir]                              Create/reset metadata for the compiled client class directory");
+        System.out.println("  search \"<friendly-query>\" [classes-dir]        Rank/resolve symbols without guessing ambiguous overloads");
         System.out.println("  query \"<atlas-symbol-id>\" [classes-dir]        Print one exact symbol and immediate relationships as compact JSON");
         System.out.println("  export \"<atlas-symbol-id>\" <file> [classes-dir] Write the same compact JSON result to a file");
         System.out.println("  help                                            Show this help");
