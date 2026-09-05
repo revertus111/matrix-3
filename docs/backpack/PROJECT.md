@@ -90,133 +90,102 @@ Deliver Rambler's backpack as safe player-owned persistent carried storage that 
 
 ## Development plan
 
-### Phase 1 - Storage foundation
+### Phase 1 - Stabilize and verify Backpack
 
-**Purpose:** Establish persistent player-owned carried storage without replacing Matrix3 inventory/persistence ownership.
-
-**Status:** NEEDS TEST
-
-**Entry conditions:**
-
-- Existing Matrix3 inventory/persistence baseline available.
-
-**Exit conditions:**
-
-- Storage implementation is statically sound.
-- Runtime persistence and death/familiar isolation checks pass.
-
-#### Bundle 1.1 - Player-owned storage
-
-**Purpose:** Own 30-slot Backpack storage inside Inventory and preserve it across normal inventory resets.
-
-**Status:** NEEDS TEST
-
-**Checklist / patches:**
-
-- [x] Add serialized Backpack ownership to Inventory. `NEEDS TEST`
-- [x] Add 30-slot storage and player reattachment. `NEEDS TEST`
-- [x] Preserve Backpack contents across normal Inventory reset. `NEEDS TEST`
-- [x] Keep storage independent from Familiar/BeastOfBurden state. `NEEDS TEST`
-
-**Runtime tests:**
-
-- Logout/login persistence.
-- Death persistence / current keep-all behavior.
-- Real familiar/BoB isolation.
-
-### Phase 2 - Contextual access and bank integration
-
-**Purpose:** Make the physical backpack usable naturally from Matrix3 item contexts while preserving stock Matrix3 behavior.
+**Purpose:** Convert the existing Backpack implementation into a runtime-verified Matrix3 feature before expanding or polishing it.
 
 **Status:** NEEDS TEST
 
 **Entry conditions:**
 
-- Phase 1 implementation present.
+- Existing Backpack storage and contextual-action implementation present.
 
 **Exit conditions:**
 
-- Intended contextual menus and actions pass runtime verification.
-- Normal unconfigured item behavior remains unchanged.
+- Storage persistence, contextual actions, bank integration, familiar/BoB isolation, and death behavior pass the required runtime checks.
+- Any defects exposed by the gate are fixed with evidence-backed minimal patches and retested.
 
-#### Bundle 2.1 - Config-driven contextual Open
+#### Bundle 1.1 - Existing implementation foundation
 
-**Purpose:** Route Open from inventory, equipment, main bank, and bank inventory through the shared custom-action layer.
-
-**Status:** NEEDS TEST
-
-**Checklist / patches:**
-
-- [x] Configure inventory Open. `NEEDS TEST`
-- [x] Configure equipment Open. `NEEDS TEST`
-- [x] Configure main-bank Open. `NEEDS TEST`
-- [x] Configure bank-inventory Open. `NEEDS TEST`
-- [x] Keep unconfigured item handling on Matrix3's original path. `NEEDS TEST`
-
-#### Bundle 2.2 - Bank inventory action set
-
-**Purpose:** Present only the useful Rambler-specific bank-inventory actions without replacing Matrix3 stock Deposit/Wear/Examine behavior.
+**Purpose:** Preserve the implemented storage/action architecture and its ownership boundaries while awaiting runtime proof.
 
 **Status:** NEEDS TEST
 
 **Checklist / patches:**
 
-- [x] Add explicit per-item bank-inventory allowlist. `NEEDS TEST`
-- [x] Preserve stock Deposit, Wear, and Examine via `STOCK` fallthrough. `NEEDS TEST`
-- [x] Add Empty to bank action. `NEEDS TEST`
-- [x] Hide Deposit-5/10/X/All for configured Rambler's backpack only. `NEEDS TEST`
+- [x] Serialized Backpack ownership inside Inventory. `NEEDS TEST`
+- [x] 30-slot player-owned storage independent of Familiar/BeastOfBurden. `NEEDS TEST`
+- [x] Store/withdraw/take-all behavior. `NEEDS TEST`
+- [x] Contextual Open from inventory/equipment/main bank/bank inventory. `NEEDS TEST`
+- [x] Explicit Rambler bank-inventory action allowlist. `NEEDS TEST`
+- [x] Matrix3 stock Deposit/Wear/Examine fallthrough. `NEEDS TEST`
+- [x] Transactional Empty to bank behavior. `NEEDS TEST`
+- [x] Preserve Backpack storage across normal Inventory reset. `NEEDS TEST`
+
+#### Bundle 1.2 - Consolidated runtime verification
+
+**Purpose:** Verify the complete Backpack path in one short PC session and establish evidence for any remaining patch.
+
+**Status:** READY
+
+**Dependencies:**
+
+- Bundle 1.1 implementation present.
+
+**Checklist / patches:**
+
+- [ ] Confirm Client and Server load the canonical custom-item-action config.
+- [ ] Verify inventory Open.
+- [ ] Verify equipment Open.
+- [ ] Verify main-bank Open.
+- [ ] Verify bank-inventory five-action menu and visible ordering.
+- [ ] Verify Deposit/Wear/Examine stock fallthrough.
+- [ ] Verify Empty to bank with normal and insufficient bank space.
+- [ ] Verify logout/login persistence.
+- [ ] Verify familiar/BoB isolation and death persistence.
+- [ ] Record runtime results; patch only evidence-backed failures.
 
 **Runtime tests:**
 
-- Verify exactly five intended actions.
-- Verify stock Deposit/Wear/Examine still execute normally.
-- Verify Open and Empty to bank.
-- Verify ordinary bank-inventory items remain unchanged.
-- Verify repeated bank open/close does not duplicate entries.
+- Use the quick/high-value checks first.
+- Preserve `Server/data/logs/custom-item-actions-debug.txt` only if a contextual action/menu test fails.
 
-### Phase 3 - Runtime gate and polish
+### Phase 2 - Evidence-backed polish
 
-**Purpose:** Convert the static foundation into a verified feature and address only evidence-backed defects/polish.
+**Purpose:** Finish only the polish or cleanup justified by Phase 1 runtime evidence.
 
 **Status:** PLANNED
 
 **Entry conditions:**
 
-- Phases 1 and 2 implementation present.
+- Phase 1 exit conditions satisfied.
 
 **Exit conditions:**
 
-- Consolidated high-value runtime test passes.
-- Any evidence-backed defects are patched and retested.
-- Final menu ordering/polish decision is recorded.
+- Evidence-backed defects/polish are complete and retested.
+- Backpack reaches the defined finished goal without unnecessary generalization.
 
-#### Bundle 3.1 - Consolidated runtime verification
+#### Bundle 2.1 - Final polish
 
-**Purpose:** Verify the complete Backpack path in one short PC session.
+**Purpose:** Resolve confirmed menu/order/usability issues and close the workstream.
 
-**Status:** READY
+**Status:** PLANNED
 
 **Checklist / patches:**
 
-- [ ] Confirm client/server custom-action config loads from the canonical file.
-- [ ] Verify inventory Open.
-- [ ] Verify equipment Open.
-- [ ] Verify main-bank Open.
-- [ ] Verify bank-inventory five-action menu and ordering.
-- [ ] Verify Deposit/Wear/Examine stock fallthrough.
-- [ ] Verify Empty to bank with normal and insufficient bank space.
-- [ ] Verify logout/login persistence.
-- [ ] Verify familiar/BoB isolation and death persistence.
-- [ ] Record runtime results and advance only evidence-backed follow-up work.
+- [ ] Review Phase 1 runtime evidence.
+- [ ] Apply only required minimal fixes/polish.
+- [ ] Retest affected paths.
+- [ ] Update canonical status and close the workstream when all exit conditions pass.
 
 ## Current execution state
 
-- Phase: Phase 3 - Runtime gate and polish
-- Phase status: PLANNED
-- Bundle: Bundle 3.1 - Consolidated runtime verification
+- Phase: Phase 1 - Stabilize and verify Backpack
+- Phase status: NEEDS TEST
+- Bundle: Bundle 1.2 - Consolidated runtime verification
 - Bundle status: READY
 - Approval state: Documentation normalization approved by AAA on 2026-09-05. No additional code change is approved by this normalization patch.
-- Current checklist item: Confirm client/server custom-action config loads from the canonical file.
+- Current checklist item: Confirm Client and Server load the canonical custom-item-action config.
 - Current objective: Run one consolidated Backpack verification session before changing working code.
 
 ## Checklist / patch status
@@ -224,10 +193,11 @@ Deliver Rambler's backpack as safe player-owned persistent carried storage that 
 | Item | Phase | Bundle | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Serialized player-owned storage | 1 | 1.1 | NEEDS TEST | Static ownership established; runtime persistence gate remains. |
-| Contextual Open routing | 2 | 2.1 | NEEDS TEST | Config and server routing are present. |
-| Explicit bank-inventory action set | 2 | 2.2 | NEEDS TEST | Exact visible menu/order requires runtime verification. |
-| Empty to bank | 2 | 2.2 | NEEDS TEST | Partial/full-bank behavior is statically defensive; runtime proof remains. |
-| Consolidated Backpack runtime gate | 3 | 3.1 | READY | Next execution target. |
+| Contextual Open routing | 1 | 1.1 | NEEDS TEST | Config and server routing are present. |
+| Explicit bank-inventory action set | 1 | 1.1 | NEEDS TEST | Exact visible menu/order requires runtime verification. |
+| Empty to bank | 1 | 1.1 | NEEDS TEST | Partial/full-bank behavior is statically defensive; runtime proof remains. |
+| Consolidated Backpack runtime gate | 1 | 1.2 | READY | Next execution target. |
+| Evidence-backed final polish | 2 | 2.1 | READY | Do not enter until Phase 1 exit conditions pass. |
 
 ## Decisions / new ideas
 
@@ -269,7 +239,7 @@ The detailed existing action-level test list remains at `docs/custom-item-action
 ### CARRYOVER
 
 - Task: Backpack runtime verification.
-- Phase/bundle: Phase 3 / Bundle 3.1.
+- Phase/bundle: Phase 1 / Bundle 1.2.
 - Current state: Implementation foundation is present; runtime proof is incomplete.
 - Remaining work: Execute the consolidated verification list and preserve the targeted debug log only if a failure occurs.
 - Likely files/systems: `Backpack.java`, `Inventory.java`, `CustomItemActions.java`, client custom-item-action presentation hook, canonical properties file.
@@ -287,11 +257,11 @@ The detailed existing action-level test list remains at `docs/custom-item-action
 
 **Current phase:**
 
-- Phase 3 - Runtime gate and polish.
+- Phase 1 - Stabilize and verify Backpack.
 
 **Active bundle:**
 
-- Bundle 3.1 - Consolidated runtime verification.
+- Bundle 1.2 - Consolidated runtime verification.
 
 **Next checklist item:**
 
@@ -342,4 +312,4 @@ The detailed existing action-level test list remains at `docs/custom-item-action
 
 ## Next recommended work
 
-Run Bundle 3.1 as one consolidated Backpack runtime session. Patch only failures supported by that runtime evidence.
+Run Phase 1 Bundle 1.2 as one consolidated Backpack runtime session. Patch only failures supported by that runtime evidence.
