@@ -25,6 +25,18 @@ Phase 3 / 3A-Core foundation
 - Added `ClientAtlasTraceControl`, a small dark trace-control window showing runtime connection, active session, event count, dropped count, and last saved trace.
 - Added `ClientAtlasMain` trace-control/status/command CLI paths.
 - Added `game.AtlasRuntimeBridge` APIs for normalized keyboard facts, outgoing/incoming packet metadata, named interface packet classification, and definition-load observations; packet payload bytes are never copied.
-- Wired the existing `DevDefinitionBridge` definition observer into the Atlas runtime seam so the trace-control daemon is lazily initialized from a real client path and safe definition-category events can be recorded while tracing is active.
-- Prepared remaining hot-path hook APIs before touching the large decompiled runtime classes so the next patch can be surgical one-line callsite insertions instead of broad rewrites.
-- Runtime verification intentionally batched until the remaining 3A-Core hooks and 3A.6 correlation are ready; no user launch required for this foundation patch.
+- Wired the existing `DevDefinitionBridge` definition observer into the Atlas runtime seam so the trace-control daemon is lazily initialized from a real client path.
+- Runtime verification intentionally batched until the 3A-Correlation/final gate; no user launch required for the foundation patch.
+
+Phase 3 / 3A-Core bundled hooks
+- Resolved the high-level menu execution path as verified-static: `Class25.method728(...)` selects the menu entry, `Class319.method4094(...)` normalizes/dispatches the action, and its existing `DevModeBridge.handleMenuAction(...)` seam is called before normal Matrix3 action handling.
+- Added menu-action tracing through that existing narrow Dev Mode seam without modifying the giant `Class319` dispatcher; records normalized action/local coordinates only and does not capture menu text.
+- Added the outgoing packet hook at `Class195.method2929(...)` after encoded/enqueued length is known and before buffer reset; the audited decompiled-file diff is exactly one inserted line.
+- Added incoming packet tracing through `MaterialInformation.method1605(...)` immediately after `PacketsDecoder.method3031(...)` successfully processes a packet; this preserves the decoder as authority and avoids rewriting the giant decoder. Records processed packet identity/final length only.
+- Named incoming interface packets are classified as interface activity by `AtlasRuntimeBridge`; component payload values remain targeted carryover instead of blanket decoder instrumentation.
+- Added the ID-bearing `Class639.method7568(...)` cache-miss hook after definition decode/finalization; the audited decompiled-file diff is exactly one inserted line.
+- Confirmed GFX definitions are `Class639`-backed where its `Class452_Sub1` factory registers the graphics loader, so the generic definition hook already covers GFX cache-miss loads.
+- Added `AtlasKeyboardObserver` as a failure-isolated AWT observer that mirrors Matrix3's verified `Class549_Sub1` key normalization/filtering without consuming events or rewriting the large decompiled input class. Keyboard trace records include the verified Matrix3 owner symbol as an explicit correlation hint.
+- A direct attempted `Class549_Sub1` one-line rewrite was rejected because audit showed unrelated array-line churn; the branch was rolled back before using the safer observer implementation.
+- Exact model/animation loader instrumentation remains CARRYOVER until real ownership is established; no guessed asset hook was added.
+- All Core runtime hooks remain opt-in through the recorder, payload-minimal, bounded, and failure-isolated. Runtime verification remains deliberately consolidated with 3A-Correlation and the final Bundle 3A gate.
