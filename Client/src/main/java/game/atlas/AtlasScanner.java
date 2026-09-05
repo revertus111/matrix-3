@@ -330,7 +330,7 @@ public final class AtlasScanner {
         }
 
         private void record(RelationshipType type, String target, int sourceLine, int opcode, String detail) {
-            String key = type.name() + '\u0000' + target;
+            String key = type.name() + "\n" + target;
             MutableRelationship relationship = relationships.get(key);
             Integer lineValue = sourceLine > 0 ? Integer.valueOf(sourceLine) : null;
             Integer opcodeValue = opcode >= 0 ? Integer.valueOf(opcode) : null;
