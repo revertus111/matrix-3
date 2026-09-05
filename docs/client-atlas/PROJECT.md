@@ -2,9 +2,9 @@
 
 ## Goal
 
-Build a persistent, searchable reverse-engineering map of the obfuscated **718+ Client** so future client investigations can start from known evidence instead of repeatedly searching, tracing, and guessing through obfuscated source.
+Build a persistent, searchable reverse-engineering map of the obfuscated **718+ Client** so future client investigations can start from known evidence instead of repeatedly searching, tracing, and guessing through decompiled source.
 
-Client Atlas is primarily an engineering/research index for fast machine-assisted investigation. A Client Console UI may browse the same data later, but the database/export is the authoritative product.
+Client Atlas is primarily an engineering/research index for fast machine-assisted investigation. A Client Console browser may consume the same data later, but the Atlas data/search layer is the product.
 
 The finished system should answer questions such as:
 
@@ -19,61 +19,179 @@ The finished system should answer questions such as:
 
 ### In scope
 
-- Persistent symbol index for client classes, fields, methods, constructors, inheritance, and implemented interfaces.
-- Static relationship mapping:
-  - callers/callees where determinable,
-  - field reads/writes,
-  - class/type references,
-  - constants and literal IDs,
-  - inheritance/interface relationships.
-- Domain correlation where evidence permits:
-  - interfaces/components,
-  - menu actions,
-  - packets/opcodes,
-  - NPC/item/object/player definitions,
-  - cache indexes,
-  - models,
-  - animations,
-  - GFX,
-  - sprites,
-  - projectiles,
-  - particles,
-  - varps/varbits,
-  - containers/inventory/equipment,
-  - camera/input/rendering references.
-- Search by exact obfuscated symbol, ID, alias, evidence note, domain, or related symbol.
-- Runtime trace sessions that can record targeted execution/state evidence while the user performs one action in the client.
+- Persistent class/field/method/constructor symbol index.
+- Inheritance and implemented-interface mapping.
+- Static caller/callee, field read/write, type-reference, constant, and literal-ID relationships where reliably derivable.
+- Search by original symbol, ID, alias, evidence note, domain, or related symbol.
+- Targeted runtime trace sessions after the static foundation is proven.
 - Evidence records using `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN`.
-- Human semantic aliases and notes stored externally without renaming original client symbols.
-- Machine-readable exports designed for future assistant/code investigation.
-- Incremental refresh so unchanged client data does not need to be rebuilt unnecessarily.
-- A later human-friendly Client Console browser over the same Atlas data.
+- External semantic aliases/notes without renaming original client symbols.
+- Machine-readable exports intended for future assistant/code investigation.
+- Incremental/stale-index detection.
+- Later Client Console viewer over the same Atlas data.
 
 ### Out of scope
 
-- Renaming obfuscated classes, fields, or methods in source.
-- Pretending original Jagex symbol names can be recovered when the information is not present.
-- Automatically classifying guessed semantics as verified.
-- Replacing Matrix3/client runtime ownership with Atlas tooling.
-- Broad always-on tracing that materially degrades normal client performance.
-- Building the visual graph/UI before the underlying index/search workflow proves useful.
+- Renaming obfuscated classes, fields, or methods.
+- Pretending original Jagex names can be recovered when they are absent.
+- Promoting guessed semantics to verified status.
+- Replacing client runtime/system ownership with tooling.
+- Always-on method logging that materially hurts client performance.
+- Building the visual graph/UI before the static Atlas/search workflow proves useful.
 - Scanning unrelated server systems unless a client finding specifically requires correlation.
 
 ## Architecture / ownership
 
-- Matrix3 authority involved: none for gameplay ownership; Atlas observes/indexes the **718+ Client** and must not become an alternate gameplay authority.
-- Tool ownership: `Client Atlas` owns generated reverse-engineering metadata, aliases, evidence, search indexes, and trace-session records.
-- Existing systems that must remain authoritative: client source/runtime behavior, cache/data loaders, networking, rendering, interface handling, input handling, and other existing client systems.
-- Important boundaries:
-  - Original obfuscated names remain unchanged.
-  - Atlas metadata is descriptive, not authoritative runtime behavior.
-  - Runtime instrumentation should be targeted and switchable.
-  - Generated data should live outside hand-maintained source logic.
-  - A UI must consume Atlas APIs/data rather than duplicate discovery logic.
+- Atlas is developer/reverse-engineering tooling, not gameplay authority.
+- Existing client runtime, cache, networking, renderer, interface, input, and definition systems remain authoritative.
+- Atlas owns generated reverse-engineering metadata, search indexes, aliases, evidence, and trace-session records.
+- Original obfuscated names remain the permanent primary identifiers.
+- Runtime instrumentation must be explicit, bounded, and switchable.
+- UI code must consume Atlas data/APIs rather than duplicate discovery logic.
 
-### Preferred data architecture
+## Phase 1 implementation architecture
 
-Use a persistent indexed store plus portable exports. Exact implementation is intentionally deferred until the current client/build dependencies are inspected.
+Targeted implementation discovery is complete.
+
+### Scanner ownership
+
+The static Atlas starts as an **offline client-side CLI/tool**, isolated from Client Console and normal game startup.
+
+Proposed source package:
+
+```text
+Client/src/main/java/game/atlas/
+```
+
+Proposed entry point:
+
+```text
+game.atlas.ClientAtlasMain
+```
+
+The static scanner must not require `RS3Applet` or a logged-in client.
+
+### Scan input
+
+Primary scan input:
+
+```text
+Client/build/classes/java/main/
+```
+
+This is the normal compiled-class output of the existing Java Gradle project and avoids scanning classes expanded from `clientlibs.jar` into the fat application jar.
+
+The Atlas package itself must be excluded from scans:
+
+```text
+game/atlas/**
+```
+
+The first implementation test must confirm the actual local class-output path rather than silently assuming it.
+
+### Build/dependency direction
+
+- Keep Java 8 source/target compatibility.
+- Keep the existing `game.RS3Applet` application main unchanged.
+- Add Atlas as a separate runnable main/tool; do not turn normal client launch into Atlas launch.
+- Prefer a mature bytecode library rather than writing a custom JVM class-file parser.
+- **ASM is the preferred parser direction.** Pin an explicit Java-8-compatible version during the implementation patch after compatibility verification.
+- Use a small JSON library only if needed for robust JSONL persistence; do not add a database/native dependency for the MVP.
+- Do not assume `clientlibs.jar` provides bytecode/indexing support. No such dependency is declared by the client build.
+
+### Persistence direction
+
+Use simple portable text records first rather than a binary database.
+
+Preferred MVP layout:
+
+```text
+Client/.client-atlas/
+    metadata.json
+    symbols.jsonl
+    relationships.jsonl
+    evidence.jsonl
+    traces/
+```
+
+`Client/.client-atlas/` should be ignored by Git and survive normal `build/` cleaning.
+
+Search can load compact indexes into memory on demand. Do not introduce SQLite until measured Atlas size/search behavior proves it is necessary.
+
+### Assistant-visible knowledge
+
+A purely local ignored database would not fully satisfy the main goal because future repository investigations need reusable evidence.
+
+Use two layers:
+
+1. **Local working Atlas** - full generated/indexed data under `Client/.client-atlas/`.
+2. **Repository-visible knowledge/export** - explicit compact text exports under `docs/client-atlas/` for durable verified knowledge and targeted investigation snapshots.
+
+Candidate durable paths:
+
+```text
+docs/client-atlas/knowledge/
+docs/client-atlas/snapshots/
+```
+
+Do not commit a massive generated dump by default. Measure the first real index before deciding whether a full static snapshot is small enough to keep in Git. Targeted neighborhood exports must remain available regardless.
+
+### Revision/staleness identity
+
+The static scan should calculate a deterministic fingerprint from the scanned class inputs, preferably SHA-256 over sorted relative class paths plus class bytes.
+
+Evidence/index metadata must record that fingerprint so stale discoveries can be detected after client changes.
+
+### Later Client Console integration
+
+The existing human tooling lives under:
+
+```text
+Client/src/main/java/game/console/
+```
+
+`game.RS3Applet` already integrates `game.console.ClientConsoleShell` and `ConsolePreferences`.
+
+A later Atlas browser belongs with that existing console UI, but the console must consume Atlas output rather than own scanning/indexing.
+
+## Verified foundation
+
+### VERIFIED
+
+- None yet. No Client Atlas runtime/source implementation exists.
+
+### verified-static
+
+- Repository rules require original obfuscated class/field/method names to be preserved unless explicit renaming is approved.
+- Repository rules define `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN` as the reverse-engineering evidence vocabulary.
+- Client project root is `Client/`.
+- Client source root is `Client/src/main/java/`.
+- Source roots currently include `game`, `com`, `jaclib`, `jagdx`, `jaggl`, and `vartracker`.
+- The `game` package contains the large obfuscated/decompiled client class set plus named/custom client code.
+- `Client/build.gradle` applies Java/application plugins, targets Java 8, uses `game.RS3Applet` as the normal main class, and declares only `lib:clientlibs` as its implementation dependency.
+- `Client/settings.gradle` names the project `Matrix3-Client` and enables Maven Central plus the local `lib` directory.
+- `Client/lib/` currently contains one `clientlibs.jar`.
+- The Gradle wrapper is 8.7.
+- `Client/.gitignore` currently ignores `bin/`, `build/`, and `.gradle/`.
+- Client Console is integrated from `game.RS3Applet` through `game.console.ClientConsoleShell` / `ConsolePreferences`.
+- Existing developer UI/tool classes live in `Client/src/main/java/game/console/`.
+
+## Unknown / research needed
+
+### HYPOTHESIS
+
+- ASM-based bytecode indexing plus JSONL persistence is the smallest professional implementation for the static Atlas MVP.
+- Loading symbols/relationships into in-memory maps will be fast enough for this client without SQLite.
+- A compact committed snapshot may be practical, but its size must be measured after the first scan.
+
+### UNKNOWN
+
+- Exact ASM/JSON library versions to pin while preserving Java 8 compatibility.
+- First real Atlas symbol/relationship counts and generated file sizes.
+- Whether full Git-visible static snapshots are small enough to commit cleanly.
+- Which high-level runtime hooks are safest for Phase 3 tracing; intentionally deferred until static Atlas is useful.
+
+## Evidence model
 
 Conceptual records:
 
@@ -90,102 +208,28 @@ Relationship
 - from symbol
 - relation type
 - to symbol/value
-- static/runtime evidence source
+- evidence source
 
 Evidence
 - subject
 - status: VERIFIED | verified-static | HYPOTHESIS | UNKNOWN
-- semantic alias
+- optional semantic alias
 - concise claim
-- supporting references/trace ids
-- last verified revision/hash
+- supporting symbol/trace references
+- client fingerprint
 
 Trace Session
 - session id/name/time
-- optional target/action description
-- methods/events observed
-- fields/values observed
-- packets/menu/interface/cache events when instrumented
-- correlation back to indexed symbols
+- target/action description
+- observed events/values
+- correlation back to Atlas symbols
 ```
 
-Portable exports should be query-friendly rather than one huge human-readable dump. JSON/JSONL or another simple Java-8-compatible representation is preferred for interchange; the internal searchable store may differ.
-
-### Static-analysis direction
-
-Prefer a bytecode-first or otherwise structurally reliable index for exact symbols/references, with source-location enrichment where practical. Do not commit to ASM or any new parser dependency until the existing client dependency/build environment is verified.
-
-Reason: decompiled source can be awkward, while compiled structure provides a stronger foundation for exact class/member/reference relationships.
-
-### Runtime-analysis direction
-
-Use narrow trace categories and explicit recording sessions rather than globally logging every call.
-
-Example workflow:
-
-```text
-Start Trace: NPC menu action
-Perform one right-click/selection
-Stop Trace
-Save session
-Correlate observed events with Atlas symbols
-```
-
-Runtime tracing should favor useful high-level hooks first (menu actions, packets, interfaces, input, definitions, cache/model/animation/GFX activity) and only add deeper method/field tracing when a real investigation requires it.
-
-## Verified foundation
-
-### VERIFIED
-
-- None yet. No Client Atlas runtime implementation exists yet.
-
-### verified-static
-
-- Repository development rules require original obfuscated class/field/method names to be preserved unless explicit renaming is approved.
-- Repository rules define `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN` as the evidence vocabulary for reverse-engineering work.
-- `docs/rs3/WORKSTREAMS.md` already identified a client architecture map as a desired shared discovery/navigation reference.
-- Client Atlas is a developer/reverse-engineering tool and must remain separate from gameplay/system ownership.
-
-## Unknown / research needed
-
-### HYPOTHESIS
-
-- A bytecode-first static scanner will likely provide the most reliable base for symbols and relationships while source parsing can enrich navigation.
-- Existing client libraries may already provide enough bytecode/reflection/instrumentation support to avoid adding a new dependency.
-- A compact local indexed store plus JSON/JSONL exports will likely give better search performance and assistant usability than flat text dumps.
-
-### UNKNOWN
-
-- Exact client project/package location and build/output layout relevant to Atlas implementation.
-- Whether a suitable bytecode library already exists in the client dependencies.
-- Best Java-8-compatible persistent index format given the existing project dependencies.
-- Which existing Client Console/tool framework should host later Atlas controls.
-- How much runtime instrumentation can be added cleanly without invasive changes to obfuscated client code.
-- Which high-level client systems already expose hooks that Atlas can reuse.
-
-## Dependencies
-
-- Required systems/features:
-  - **718+ Client** source/build output.
-  - Java 8 / Eclipse-compatible tooling.
-  - Stable way to identify client revision/build state for index invalidation.
-- Optional supporting tools:
-  - Existing Client Console for later human UI.
-  - Existing developer logging/tool infrastructure if it has suitable reusable hooks.
-- Runtime/data dependencies:
-  - Client runtime only for `VERIFIED` trace evidence; static indexing must work without launching the game where practical.
-
-## Product priorities
-
-1. **Fast investigation for future code work.**
-2. **Persistent evidence so discoveries are not repeated.**
-3. **Accurate relationships over guessed semantics.**
-4. **Targeted runtime proof when static evidence is insufficient.**
-5. **Human UI only after the underlying data/search flow is useful.**
+Aliases never replace original names.
 
 ## Search requirements
 
-Atlas search should eventually support:
+Atlas should eventually support concise queries such as:
 
 ```text
 Class387
@@ -206,291 +250,173 @@ status VERIFIED
 alias "NPC menu builder"
 ```
 
-Results should return a small ranked neighborhood rather than forcing consumers to inspect an entire generated dump.
-
-A result should be able to expose:
-
-- original symbol,
-- semantic alias if one exists,
-- evidence status,
-- location,
-- callers,
-- callees,
-- fields read/written,
-- referenced constants/IDs,
-- related domain records,
-- relevant runtime traces,
-- evidence notes.
-
-## Evidence rules
-
-Aliases never replace original names.
-
-Example:
-
-```text
-Original: Class387.method4844
-Alias: NPC menu builder
-Status: verified-static
-Evidence:
-- references NPC definitions
-- constructs menu entries
-Runtime evidence: none yet
-```
-
-After runtime confirmation:
-
-```text
-Original: Class387.method4844
-Alias: NPC menu builder
-Status: VERIFIED
-Evidence:
-- static references
-- runtime trace atlas-trace-00184
-```
-
-Atlas must preserve the distinction between structural fact and semantic interpretation.
+Results should return a small ranked neighborhood rather than force consumers to inspect the entire index.
 
 ## Performance / safety rules
 
-- Normal client startup/gameplay should not require a full Atlas rebuild.
-- Static indexing should run explicitly or incrementally against changed build/source inputs.
-- Runtime tracing must be opt-in and category/target scoped.
-- Trace buffers require sane limits so accidental sessions cannot consume unbounded memory/disk.
-- Expensive graph expansion must be query-driven, not eagerly rendered for the entire client.
-- Failures in Atlas tooling must not prevent normal client operation unless running a dedicated offline scanner where failure is expected to stop that scan.
+- Normal client startup/gameplay must not require an Atlas rebuild.
+- Static indexing runs explicitly against compiled client inputs.
+- Atlas failure must not prevent normal client operation.
+- Runtime tracing is opt-in and bounded.
+- Expensive graph expansion is query-driven.
+- Generated data must not silently pollute Git or normal build outputs.
+- Static scanner work should require no client login/game runtime.
 
-## Development plan
+# Development plan
 
-Use `Idea -> Bundle -> Patch`.
+Use `Idea -> Phase -> Bundle -> Patch/Checklist`.
 
-### Bundle 1 - Atlas Foundation
+## Phase 1 - Static Atlas Foundation
 
-**Purpose:** Establish the smallest useful machine-readable Atlas pipeline and the implementation ownership path.
+**Status:** ACTIVE
 
-**Status:** READY
+**Goal:** Produce the smallest useful offline machine-readable Atlas that can index the compiled client, reopen its data, search an exact symbol, and export a compact result.
 
-**Dependencies:**
+### Bundle 1A - Implementation foundation
 
-- Targeted inspection of the **718+ Client** project/build/tooling only.
-- No broad repository scan.
+**Status:** ACTIVE
 
-**Patches:**
+Checklist:
 
-1. Targeted implementation discovery
-   - Goal: identify the smallest client/tool files, build output, dependency options, and safe generated-data location needed for Atlas.
-   - Likely files/systems: client build metadata, existing developer-tool entry point, directly relevant class-output/dependency configuration.
-   - Verification: document exact implementation path and unresolved dependency choices before source modification.
-2. Atlas schema + persistent index foundation
-   - Goal: create stable symbol/relationship/evidence/trace record models and index metadata/versioning.
-   - Likely files/systems: new isolated Client Atlas tool package plus generated-data directory/configuration.
-   - Verification: create/open/rebuild an empty/minimal index under Java 8.
-3. Static symbol scanner MVP
-   - Goal: index classes, fields, methods, descriptors, inheritance, and implemented interfaces from the client.
-   - Verification: exact symbol lookup returns known obfuscated symbols and stable locations.
-4. Basic query/export path
-   - Goal: provide a machine-friendly way to query symbols and export relevant neighborhoods without a UI.
-   - Verification: exact class/method queries and portable export work from a generated index.
+- [x] **1A.1 Targeted implementation discovery** - locate client build/source/tooling ownership and choose the implementation path.
+- [ ] **1A.2 Atlas schema + persistence skeleton** - create isolated Atlas package, record models, metadata/fingerprint, and local data directory handling.
+- [ ] **1A.3 Bytecode scanner MVP** - index classes, fields, methods, constructors, descriptors, inheritance, and implemented interfaces.
+- [ ] **1A.4 Basic query/export CLI** - exact symbol lookup plus compact machine-readable export.
 
-**Runtime tests:**
+**Phase 1 gate:**
 
-- Prefer no game launch until the static foundation needs integration validation.
-- One consolidated test should prove index generation, reopen, exact search, and export.
+- Java 8/Eclipse-compatible build.
+- Atlas runs without launching/logging into the client.
+- Compiled client classes can be indexed.
+- Index can be reopened without rebuild.
+- One known obfuscated class/method can be found exactly.
+- Compact export works.
+- Normal `game.RS3Applet` launch ownership is unchanged.
 
-### Bundle 2 - Static Relationship Mapping
-
-**Purpose:** Turn the symbol catalog into a navigable client map.
+## Phase 2 - Static Relationship and Investigation Map
 
 **Status:** PLANNED
 
-**Dependencies:**
+### Bundle 2A - Structural relationships
 
-- Bundle 1 stable symbol identities/index.
+- [ ] Class/type/member reference edges.
+- [ ] Method caller/callee edges where reliably derivable.
+- [ ] Field read/write edges.
+- [ ] Constants/literal-ID indexing.
+- [ ] Reliable source-location enrichment.
 
-**Patches:**
+### Bundle 2B - Investigation search
 
-1. Class/type/member reference edges.
-2. Method caller/callee edges where reliably derivable.
-3. Field read/write edges.
-4. Constants/literal-ID indexing.
-5. Source-location enrichment where reliable.
-6. Domain correlation rules for obvious interfaces/components/packets/cache IDs without inventing semantics.
+- [ ] Ranked exact/text/ID search.
+- [ ] Relationship-neighborhood queries.
+- [ ] Compact assistant-oriented investigation exports.
+- [ ] Initial obvious domain correlation without invented semantics.
 
-**Runtime tests:**
-
-- Static-only validation against a few known source relationships where possible.
-
-### Bundle 3 - Search and Investigation API
-
-**Purpose:** Make Atlas immediately useful for targeted code investigations.
+## Phase 3 - Runtime Evidence and Knowledge
 
 **Status:** PLANNED
 
-**Dependencies:**
+### Bundle 3A - Targeted trace sessions
 
-- Bundle 2 relationships.
+- [ ] Start/stop/name/save trace lifecycle.
+- [ ] High-value menu/input hooks.
+- [ ] Packet metadata hooks where safe.
+- [ ] Interface/component activity hooks.
+- [ ] Definition/cache/model/animation/GFX hooks where useful.
+- [ ] Correlate events back to Atlas symbols.
 
-**Patches:**
+### Bundle 3B - Durable evidence
 
-1. Ranked exact/text/ID search.
-2. Relationship-neighborhood queries (`calls`, `called-by`, reads/writes, related IDs).
-3. Evidence/alias search.
-4. Compact investigation export suitable for future assistant analysis.
+- [ ] External aliases/notes.
+- [ ] Evidence classification/supporting references.
+- [ ] Client-fingerprint stale-evidence warnings.
+- [ ] Preserve curated knowledge across rescans.
 
-**Runtime tests:**
-
-- Query known symbols/IDs and verify relevant small neighborhoods are returned without full-database dumps.
-
-### Bundle 4 - Runtime Trace Sessions
-
-**Purpose:** Add targeted runtime evidence for behavior static analysis cannot prove.
-
-**Status:** PLANNED
-
-**Dependencies:**
-
-- Stable Atlas symbol identities and search.
-- Targeted discovery of reusable runtime hooks.
-
-**Patches:**
-
-1. Trace-session lifecycle: start/stop/name/save.
-2. High-value event hooks: menu actions and input path.
-3. Packet send/receive metadata hooks where safe.
-4. Interface/component activity hooks.
-5. Definition/cache/model/animation/GFX hooks where safe and useful.
-6. Correlation of recorded events back to Atlas symbols.
-
-**Runtime tests:**
-
-- Short controlled sessions only; validate one action at a time and confirm tracing can be completely disabled.
-
-### Bundle 5 - Evidence and Knowledge Layer
-
-**Purpose:** Preserve what we learn so future chats do not rediscover the same client behavior.
+## Phase 4 - Client Console Atlas Browser
 
 **Status:** PLANNED
 
-**Dependencies:**
+### Bundle 4A - Human browser
 
-- Searchable Atlas and trace records.
+- [ ] Search panel.
+- [ ] Symbol detail and relationship navigation.
+- [ ] Evidence/alias editor.
+- [ ] Trace-session controls/browser.
+- [ ] Optional bounded graph for the selected neighborhood only.
 
-**Patches:**
-
-1. External aliases/notes.
-2. Evidence status and supporting-reference records.
-3. Revision/hash invalidation warnings for stale evidence.
-4. Merge/update workflow that preserves manually verified knowledge across rescans.
-
-**Runtime tests:**
-
-- Promote one known symbol from `verified-static` to `VERIFIED` using a saved trace without altering its original obfuscated name.
-
-### Bundle 6 - Client Console Atlas Browser
-
-**Purpose:** Add a fast human-facing viewer over the proven Atlas APIs/data.
-
-**Status:** PLANNED
-
-**Dependencies:**
-
-- Bundles 1-5 useful without UI.
-
-**Patches:**
-
-1. Atlas search panel.
-2. Symbol detail + callers/callees/reads/writes navigation.
-3. Evidence/alias editor.
-4. Trace-session controls/browser.
-5. Optional bounded relationship graph for the selected neighborhood only.
-
-**Runtime tests:**
-
-- Search/navigate a known symbol and record a short trace without blocking the client UI.
-
-### Bundle 7 - Advanced Correlation
-
-**Purpose:** Reduce manual reverse-engineering work after the core system has proven itself.
+## Phase 5 - Advanced Correlation
 
 **Status:** BACKLOG
 
-**Dependencies:**
+### Bundle 5A - Usage-driven automation
 
-- Real usage evidence from earlier bundles.
+- [ ] Repeated-path clustering.
+- [ ] Suggested aliases kept as `HYPOTHESIS` until proven.
+- [ ] Cross-link reliable cache/definition metadata.
+- [ ] Atlas diff between client revisions/fingerprints.
+- [ ] Investigation report generation.
 
-**Candidate patches:**
+## Current execution state
 
-1. Automatic clustering of repeated runtime/static paths.
-2. Suggested semantic aliases marked strictly as `HYPOTHESIS` until verified.
-3. Cross-link IDs to cache/definition metadata where reliable.
-4. Diff Atlas indexes between client revisions/commits.
-5. Investigation reports that capture only the relevant symbol neighborhood and evidence.
+- Phase: **Phase 1 - Static Atlas Foundation**
+- Active bundle: **Bundle 1A - Implementation foundation**
+- Approval state: **SAP AAA completed for checklist 1A.1 discovery/documentation only.**
+- Last completed checklist item: **1A.1 Targeted implementation discovery**
+- Next checklist item: **1A.2 Atlas schema + persistence skeleton**
 
-## Current bundle
+## Status table
 
-- Bundle: **Bundle 1 - Atlas Foundation**
-- Approval state: **Documentation foundation approved. Client/source implementation not yet approved.**
-- Current patch: **1. Targeted implementation discovery**
-- Current objective: establish the smallest safe implementation path before touching client source.
-
-## Patch status
-
-| Patch | Bundle | Status | Notes |
-| --- | --- | --- | --- |
-| Targeted implementation discovery | 1 | READY | Next action; no client source inspected yet. |
-| Atlas schema + persistent index foundation | 1 | READY | Architecture outlined; exact storage/dependency choice awaits discovery. |
-| Static symbol scanner MVP | 1 | READY | Bytecode-first preferred, exact parser dependency still UNKNOWN. |
-| Basic query/export path | 1 | READY | Must work without UI first. |
-| Static relationship mapping | 2 | READY | Begins after stable symbol identities. |
-| Search/investigation API | 3 | READY | Machine/assistant workflow is priority. |
-| Runtime trace sessions | 4 | READY | Targeted/opt-in only. |
-| Evidence/knowledge layer | 5 | READY | Preserve aliases and verification evidence externally. |
-| Client Console browser | 6 | READY | Deliberately after data/search foundation. |
-| Advanced correlation | 7 | CARRYOVER | Optional after real-world usage proves needs. |
+| Area | Status | Notes |
+| --- | --- | --- |
+| Targeted implementation discovery | DONE | Client/build/tooling path established. |
+| Atlas schema + persistence skeleton | READY | Next implementation patch. |
+| Bytecode scanner MVP | READY | Follows stable schema/fingerprint. |
+| Basic query/export CLI | READY | Completes Phase 1 static foundation. |
+| Static relationship map | PLANNED | Phase 2. |
+| Runtime traces/evidence | PLANNED | Phase 3. |
+| Client Console browser | PLANNED | Phase 4. |
+| Advanced correlation | CARRYOVER | Phase 5 usage-driven backlog. |
 
 ## Decisions / new ideas
 
-### Decision log
-
-- **Client Atlas is primarily for future assistant/code investigation.** Human UI is secondary.
-- The searchable/indexed data layer is authoritative; do not make the Client Console panel the owner of discovery data.
-- Preserve original obfuscated names permanently unless the user separately approves renaming.
-- Do not produce one giant text dump as the main interface. Support targeted search and compact neighborhood exports.
-- Prefer static evidence first; use runtime tracing to prove claims static analysis cannot establish.
-- Runtime tracing should be explicit, short-lived, and scoped rather than always-on method logging.
-- Any automatically suggested semantic meaning remains `HYPOTHESIS` until evidence supports promotion.
-- Client Atlas replaces the vague future "Client architecture map" concept with a concrete persistent workstream and generated navigation/evidence system.
+- Client Atlas is primarily for future assistant/code investigation; human UI is secondary.
+- The searchable data layer is authoritative for Atlas; Client Console is only a viewer/controller later.
+- Preserve original obfuscated names permanently unless separately approved.
+- Do not create one giant human text dump as the primary interface.
+- Bytecode-first static evidence precedes runtime tracing.
+- Runtime tracing remains short-lived and scoped.
+- Automatically suggested semantics remain `HYPOTHESIS` until evidence supports promotion.
+- Start with portable text persistence; do not add SQLite before measurement proves a need.
+- Keep full local generated data separate from curated repository-visible knowledge/snapshots.
 
 ## Testing
 
-Keep runtime testing concise and optimize around limited PC time.
+### Phase 1 quick/high-value checks
 
-### Quick/high-value checks
+1. Compile the Client under Java 8-compatible source/target settings.
+2. Run Atlas against the compiled class directory.
+3. Reopen the generated Atlas without rebuilding it.
+4. Search one exact obfuscated class and method.
+5. Export that symbol's compact record.
+6. Confirm normal client main class/configuration remains unchanged.
 
-1. Generate/rebuild Atlas against the client.
-2. Search one exact obfuscated class and method.
-3. Query its immediate relationships.
-4. Export only that investigation neighborhood.
-5. Reopen Atlas without rebuilding and repeat the search.
+### Later deeper checks
 
-### Deeper checks
-
-1. Modify/rebuild one small client input and confirm incremental/stale-index handling.
+1. Change/rebuild one client input and confirm fingerprint/staleness handling.
 2. Record one targeted runtime trace.
 3. Correlate the trace to indexed symbols.
-4. Save an alias/evidence classification and confirm it survives static re-indexing.
+4. Save an alias/evidence classification and confirm it survives re-indexing.
 
-### Smoke/regression checks
+### Smoke/regression
 
-- Static/offline scanner work should not affect Matrix3 runtime smoke coverage.
-- Any runtime client instrumentation must include a normal-client launch check with Atlas tracing disabled.
-- Broader smoke requirements will be determined from the exact implementation ownership discovered in Bundle 1.
+- Offline Phase 1 work should not affect normal gameplay smoke coverage.
+- Any later runtime instrumentation must include a normal client launch with Atlas tracing disabled.
 
 ## Carryover / blockers
 
 ### CARRYOVER
 
-- Advanced automatic correlation is intentionally deferred until the core Atlas has real usage evidence.
+- Advanced automatic correlation remains intentionally deferred until real Atlas usage identifies high-value automation.
 
 ### BLOCKED
 
@@ -500,33 +426,46 @@ Keep runtime testing concise and optimize around limited PC time.
 
 **Last completed:**
 
-- Client Atlas workstream architecture and bundle plan created.
+- Phase 1 / Bundle 1A / checklist **1A.1 Targeted implementation discovery**.
 
 **Current state:**
 
-- Design/documentation foundation exists.
-- No Client Atlas source has been created.
-- No **718+ Client** implementation files have been inspected for this workstream yet.
+- Client Atlas architecture is documented.
+- Exact client project/build/tooling path is established.
+- No Atlas source code exists yet.
+- Normal Client Console/runtime source has not been modified for Atlas.
 
 **Next action:**
 
-- After implementation/discovery approval, inspect only the smallest relevant **718+ Client** build/tool/dependency files to establish the Atlas implementation path for Bundle 1 Patch 1.
+- Execute **1A.2 Atlas schema + persistence skeleton** only after AAA/SAP AAA for that implementation step.
 
 **Files/systems already inspected:**
 
 - `AGENTS.md`
 - `docs/rs3/PROJECT.md`
-- `docs/rs3/WORKSTREAM_TEMPLATE.md`
+- `docs/client-atlas/PROJECT.md`
 - `docs/rs3/WORKSTREAMS.md`
+- `Client/build.gradle`
+- `Client/settings.gradle`
+- `Client/gradle/wrapper/gradle-wrapper.properties`
+- `Client/.gitignore`
+- `Client/lib/` listing
+- `Client/src/main/java/` root listing
+- `Client/src/main/java/game/` direct listing only
+- `Client/src/main/java/game/RS3Applet.java` beginning/integration imports
+- `Client/src/main/java/game/console/` direct listing only
+- `docs/client-console/patchnotes.txt`
 
 **Do not re-scan without new evidence:**
 
-- The above project-rule/workstream files unless they changed.
+- The above build/layout paths.
+- Broad `game` package/source tree.
 - Unrelated server/gameplay systems.
+- Runtime tracing hooks until Phase 3.
 
 **Pending runtime verification:**
 
-- None; implementation has not started.
+- None for discovery.
 
 **Blockers:**
 
@@ -534,11 +473,9 @@ Keep runtime testing concise and optimize around limited PC time.
 
 **Important remaining uncertainty:**
 
-- Exact client implementation/package/build path.
-- Existing bytecode/instrumentation dependencies.
-- Exact persistent index format.
-- Best existing runtime hooks for later targeted traces.
+- Exact Java-8-compatible dependency versions to pin.
+- Real index size/performance until the first scan exists.
 
 ## Next recommended work
 
-**Bundle 1, Patch 1 - Targeted implementation discovery.** Establish the smallest safe implementation path for the static Atlas foundation, then stop and report before source modification unless that implementation bundle has explicit AAA approval.
+**Phase 1 -> Bundle 1A -> 1A.2 Atlas schema + persistence skeleton.** Create the isolated offline Atlas foundation without changing normal client runtime ownership.
