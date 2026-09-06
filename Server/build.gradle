@@ -16,6 +16,7 @@ java {
 
 tasks.withType(JavaCompile) {
     options.encoding = 'windows-1252'
+    options.warnings = false
 }
 
 jar {
