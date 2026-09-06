@@ -17,7 +17,7 @@ Creator workflow / validation
 10. Search for items by case-insensitive name fragment. Confirm usable matching definitions appear without a second cache/item-definition loader.
 11. Add entries in Always, Common, Uncommon, Rare, and Very Rare. Confirm the list labels them with Matrix3's real bucket semantics: all entries, 90%, 70%, 0.6%, and 0.36% respectively.
 12. Add fixed and ranged quantities (for example 1-1 and 5-25). Confirm both values survive local edit, live apply, save, reload, and restart.
-13. Attempt min amount below 1, max below min, amount above 1,000,000,000, or invalid rarity data. Confirm the DRAFT cannot publish.
+13. Attempt min amount below 0, max below min, amount above 1,000,000,000, or invalid rarity data. Confirm the DRAFT cannot publish. Quantity 0 is accepted because Matrix3's legacy Drop object/packed format permits it.
 14. Add the same item more than once in one rolled rarity bucket. Confirm every slot survives local edit, Apply Live, Save & Apply, reload, and restart; repeated slots must remain available because Matrix3 randomly selects an array slot and duplicates can intentionally weight selection. Confirm repeated Always entries also remain distinct guaranteed slots, and the same item may still appear in different rarity buckets.
 15. Attempt an unknown/unloaded item id through a controlled malformed/manual request. Confirm the server rejects the publish even if client-side validation is bypassed.
 16. Confirm the table limit of 200 entries is enforced before live/saved mutation.
@@ -50,5 +50,15 @@ Creator usability
 37. Switch between two NPCs and confirm each Drops tab state reloads for the selected NPC rather than leaking entries between drafts.
 38. Modify a local drop DRAFT, click Reload Current, decline the discard warning, and confirm the local edits remain. Accept it and confirm current live data replaces them.
 39. Confirm Delete Saved Override requires explicit confirmation and cannot be triggered merely by selecting an NPC.
-40. Resize BossLabs around its supported minimum size. Confirm the drop list, item search, entry editor, and publish/restore controls remain reachable through the split/scroll layout.
+40. Resize BossLabs around its supported minimum size. Confirm the drop list, item search, entry editor, fixed Add/Update Drop button, and publish/restore controls remain reachable through the split/scroll layout.
 41. Confirm closing/reopening BossLabs clears the static drop listener and a reopened Drops tab receives replies without retaining the disposed panel.
+
+2026-09-06 Drops runtime/creator repair checkpoint
+42. Reproduce the runtime failure that previously showed DRAFT: none plus "Reloading current live drops..." on NPC 1. Confirm the Drops tab now reaches DRAFT: clean (or gives an explicit inspection/decode/timeout error) rather than hanging silently.
+43. While a drop inspection is in flight, confirm the tab shows DRAFT: loading and disables New Drop, Add/Update Drop, item editing, and publish/restore mutation controls until the matching response completes.
+44. Confirm the primary Add Drop / Update Drop button remains fixed at the bottom of the right-side editor and is visible at the supported minimum BossLabs window size without scrolling the item form to find the commit action.
+45. Click New Drop, choose/search an item, set rarity/min/max, then click Add Drop. Confirm the row appears immediately in the left table, DRAFT changes to modified, and Apply Drops Live / Save & Apply Drops become available when validation passes.
+46. Load or synthesize a legacy Matrix3 table containing a 0 minimum/maximum quantity. Confirm inspection round-trips the row instead of failing. If max is lower than min, confirm the row still loads for repair but publishing stays disabled until corrected.
+47. Force a server-side drop inspection conversion/encoding exception in a controlled test. Confirm BossLabs receives "Drop inspection failed: ...", leaves DRAFT in error state, and does not mutate NPCDrops or drops.bld.
+48. Drop or suppress a drop inspection reply in a controlled development test. Confirm the client stops waiting after about five seconds and shows the timeout error instead of remaining on DRAFT: loading indefinitely.
+49. Feed a malformed/incomplete drop response payload to the client bridge in a controlled test. Confirm it reports "Drop response decode failed: ...", clears loading state, and does not replace the current NPC's drop DRAFT with partial data.
