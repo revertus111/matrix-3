@@ -32,6 +32,7 @@ public final class ClientConsoleShell extends JPanel {
     public static final String PANEL_COMMANDS = "commands";
     public static final String PANEL_PLAYER = "player";
     public static final String PANEL_ITEMS = "items";
+    public static final String PANEL_ATLAS = "atlas";
     public static final String PANEL_SETTINGS = "settings";
 
     private static final int RAIL_WIDTH = 48;
@@ -45,6 +46,7 @@ public final class ClientConsoleShell extends JPanel {
     private final JToggleButton commandsButton = new JToggleButton(ConsoleIcons.commands());
     private final JToggleButton playerButton = new JToggleButton(ConsoleIcons.player());
     private final JToggleButton itemButton = new JToggleButton(ConsoleIcons.items());
+    private final JToggleButton atlasButton = new JToggleButton(ConsoleIcons.atlas());
     private final JToggleButton settingsButton = new JToggleButton(ConsoleIcons.settings());
 
     private final DashboardPanel shellPanel;
@@ -52,6 +54,7 @@ public final class ClientConsoleShell extends JPanel {
     private JComponent commandsPanel;
     private JComponent playerPanel;
     private JComponent itemBrowserPanel;
+    private JComponent atlasPanel;
     private JComponent settingsPanel;
 
     private boolean consoleOpen = true;
@@ -127,6 +130,7 @@ public final class ClientConsoleShell extends JPanel {
         configureRailButton(commandsButton, "Commands", PANEL_COMMANDS);
         configureRailButton(playerButton, "Player", PANEL_PLAYER);
         configureRailButton(itemButton, "Item Browser", PANEL_ITEMS);
+        configureRailButton(atlasButton, "Client Atlas", PANEL_ATLAS);
         configureRailButton(settingsButton, "Settings", PANEL_SETTINGS);
 
         rail.add(Box.createVerticalStrut(8));
@@ -141,6 +145,8 @@ public final class ClientConsoleShell extends JPanel {
         rail.add(playerButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(itemButton);
+        rail.add(Box.createVerticalStrut(4));
+        rail.add(atlasButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(settingsButton);
         rail.add(Box.createVerticalGlue());
@@ -265,6 +271,17 @@ public final class ClientConsoleShell extends JPanel {
             }
             return itemBrowserPanel;
         }
+        if (PANEL_ATLAS.equals(panelId)) {
+            if (atlasPanel == null) {
+                try {
+                    atlasPanel = new AtlasPanel();
+                } catch (RuntimeException ex) {
+                    ex.printStackTrace();
+                    atlasPanel = createPanelError("Client Atlas panel failed to initialize.");
+                }
+            }
+            return atlasPanel;
+        }
         if (PANEL_SETTINGS.equals(panelId)) {
             if (settingsPanel == null) {
                 try {
@@ -303,6 +320,9 @@ public final class ClientConsoleShell extends JPanel {
         }
         if (PANEL_ITEMS.equals(panelId)) {
             return PANEL_ITEMS;
+        }
+        if (PANEL_ATLAS.equals(panelId)) {
+            return PANEL_ATLAS;
         }
         if (PANEL_SETTINGS.equals(panelId)) {
             return PANEL_SETTINGS;
@@ -374,6 +394,7 @@ public final class ClientConsoleShell extends JPanel {
         commandsButton.setSelected(consoleOpen && PANEL_COMMANDS.equals(activePanelId));
         playerButton.setSelected(consoleOpen && PANEL_PLAYER.equals(activePanelId));
         itemButton.setSelected(consoleOpen && PANEL_ITEMS.equals(activePanelId));
+        atlasButton.setSelected(consoleOpen && PANEL_ATLAS.equals(activePanelId));
         settingsButton.setSelected(consoleOpen && PANEL_SETTINGS.equals(activePanelId));
     }
 
