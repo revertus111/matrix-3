@@ -99,4 +99,13 @@ Phase 4 / Bundle 4A browser foundation implementation
 - Added exact symbol detail plus bounded relationship browsing with at most 60 outgoing and 60 incoming rows; exact symbol-backed relationships navigate directly while constants/type/value targets remain visible without guessed semantics.
 - Added a curated evidence editor over `AtlasEvidenceStore` for classification, external alias, note/claim, and supporting references. Save/delete I/O stays off the Swing EDT and freshness/orphan warnings come directly from `EvidenceView`.
 - Added an original Java2D Atlas/globe rail icon and retained exact obfuscated IDs as the visible primary identity throughout the browser.
-- Bundle 4A implementation is complete / verified-static. One consolidated Java 8/Eclipse Client Console runtime gate remains before closing the bundle.
+- Bundle 4A implementation is complete / verified-static. Its runtime gate is intentionally deferred into the combined Phase 4 Atlas/Client Console acceptance session so it does not consume a separate client restart.
+
+Phase 4 / Bundle 4B runtime evidence workflow implementation
+- Added `AtlasTraceCatalog`, a metadata-only `game.atlas` trace catalog that keeps trace discovery outside Client Console semantics and exposes at most the newest 100 saved `.trace.jsonl` files.
+- Added `AtlasWorkspacePanel` under the existing persistent `atlas` rail destination with Browser and lazily-created Runtime evidence views; the Client Console panel ID/persistence contract did not change.
+- Added `AtlasRuntimeEvidencePanel` to browse saved traces, correlate a selected trace or the latest trace against a current-only `AtlasInvestigationIndex`, and display the existing correlation status/acceptance/fingerprint/event summary.
+- Runtime trace listing and correlation run in `SwingWorker`; no trace/event file scanning or index load is performed on the Swing EDT.
+- Added a first-class Runtime Trace Control button that launches the existing `ClientAtlasTraceControl`; recording/session control ownership is not duplicated inside Client Console.
+- Correlation still uses `AtlasTraceCorrelationEngine` unchanged, including the 10000-event read cap, 1000-event correlated preview cap, fingerprint/event-count/source-owner acceptance rules, and no semantic promotion.
+- Bundle 4B implementation is complete / verified-static. Bundle 4A + 4B now share one consolidated runtime gate; no per-control test cycle is required.
