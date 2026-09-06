@@ -52,6 +52,7 @@ public class Class514 {
 
 	static final void method6093(int i) {
 		CustomItemActionConfig.apply();
+		ClientConsoleInterfaceBridge.flushInterfaceEditorRequests();
 		ClientConsoleBridge.flushQueuedCommands();
 		if (-507155049 * client.anInt8790 != -1) {
 			int i_7_ = Class26.aClass564_216.method6657((short) -9926);
