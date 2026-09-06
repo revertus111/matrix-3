@@ -20,7 +20,9 @@ public final class Backpack implements Serializable {
     public static final int ITEM_ID = 21445;
     public static final int CAPACITY = 30;
 
-    private static final int ITEMS_KEY = 531;
+    // Interface 671's main BoB grid is bound to the native client container key 530.
+    // This is only the UI/protocol key; Backpack.items remains separate player-owned storage.
+    private static final int ITEMS_KEY = 530;
     private static final int STORAGE_INTERFACE = 671;
     private static final int STORAGE_COMPONENT = 27;
     private static final int INVENTORY_INTERFACE = 665;
