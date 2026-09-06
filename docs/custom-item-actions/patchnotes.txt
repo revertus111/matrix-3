@@ -38,4 +38,9 @@
 - verified-static: Matrix3's native `BeastOfBurden` also uses interface 671 component 27, so the storage component was not changed.
 - verified-static: native `BeastOfBurden` binds the 671:27 grid to client item-container key 530; Backpack had diverged to key 531 while reusing the same interface.
 - Changed Backpack's UI/protocol item-container key from 531 to the native BoB key 530. The server-side `Backpack.items` container remains independent player-owned storage; only the transient client interface binding is shared.
-- Runtime verification is still required to confirm backpack items now populate the main 671 grid and that opening a real familiar BoB afterward refreshes key 530 back to familiar contents normally.
+- VERIFIED runtime: key 530 now renders backpack contents in the main interface 671 grid.
+- Runtime screenshot exposed a remaining interaction-mask issue: the rightmost visible column rendered items but did not accept withdraw clicks, while the rest of the grid did.
+- verified-static: Matrix3's native `BeastOfBurden` unlocks 671:27 over slot-mask range 0..530; Backpack was using only 0..29. Backpack now matches the native 0..530 mask while its server container remains 30 slots.
+- Added interface 671 component 14 text override to `BACKPACK` when this player-owned storage is opened; real familiar BoB code is unchanged.
+- Component 29 remains the native take-all/Take BoB control and was not repurposed.
+- Runtime verification is required for the rightmost-column click mask and the new title text before returning to bank-inventory Open/Empty-to-bank work.
