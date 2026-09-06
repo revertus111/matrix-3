@@ -130,7 +130,7 @@ Safety contract:
 
 # Phase 3 - Runtime Evidence and Knowledge
 
-**Status: ACTIVE**
+**Status: DONE**
 
 ## Bundle 3A - Targeted runtime tracing
 
@@ -254,7 +254,7 @@ Bundle 3A is closed. Do not request another 3A runtime gate without a relevant i
 
 ## Bundle 3B - Evidence/knowledge
 
-**Status: IMPLEMENTED / CONSOLIDATED OFFLINE GATE REQUIRED**
+**Status: DONE / OFFLINE VERIFIED**
 
 The complete compatible Bundle 3B implementation was patched before requesting another user test.
 
@@ -286,27 +286,44 @@ The complete compatible Bundle 3B implementation was patched before requesting a
   - verifier writes only to an isolated temporary evidence workspace and does not touch the developer's real `evidence.jsonl`,
   - covers JSON escape round-trip, alias/note/classification/references, freshness warnings, orphan retention, rescan preservation, deterministic upsert/search, and delete.
 
-### Bundle 3B consolidated offline gate - NEXT
+### Bundle 3B consolidated offline gate - PASS
 
-One Eclipse action set only; no Matrix3 client launch is required:
+Completed under Eclipse / Java 8 on 2026-09-06:
 
-1. Pull current `main` and Eclipse clean/build Client under Java 8 once.
-2. Run `game.atlas.AtlasEvidenceVerifier` as **Run As -> Java Application**.
-3. Require final result:
+- `AtlasEvidenceVerifier` passed alias + note/claim + classification + supporting-reference JSONL round-trip.
+- Current-fingerprint evidence evaluated `CURRENT`.
+- Fingerprint mismatch produced an explicit stale-evidence warning.
+- Missing exact subjects were retained and flagged for review.
+- Curated evidence survived generated Atlas initialize/rescan.
+- Same-subject upsert and curated knowledge search passed deterministically.
+- Curated record delete persisted atomically.
+- Final result: `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
+- Report: `Client/.client-atlas/knowledge-check.txt`.
 
-```text
-BUNDLE 3B KNOWLEDGE CHECK: PASS
-```
+Bundle 3B is closed. Phase 3 Runtime Evidence and Knowledge is DONE. No Matrix3 client launch/smoke was required because Bundle 3B changed only offline `game.atlas` tooling.
 
-If PASS, Bundle 3B closes and Phase 3 is complete. This bundle changes only offline `game.atlas` tooling; Atlas fingerprint calculation excludes `game/atlas/`, no runtime packet/input/client seam changed, and a Matrix3 smoke launch is therefore not part of this gate.
+# Phase 4 - Client Console Atlas Browser
 
-# Phase 4 - Client Console Atlas Browser - PLANNED
+**Status: NEXT**
 
-- [ ] Search panel.
-- [ ] Symbol/relationship navigation.
-- [ ] Evidence/alias editor.
-- [ ] Trace browser/controls.
-- [ ] Optional bounded relationship graph.
+## Bundle 4A - Browser foundation - NEXT
+
+- [ ] Register/lazy-load a dedicated Client Console Atlas panel without moving Atlas engine ownership into Client Console.
+- [ ] Reuse the existing Atlas search/index APIs for a fast search panel.
+- [ ] Add symbol detail plus bounded relationship navigation.
+- [ ] Add curated evidence/alias view + editor over `AtlasEvidenceStore` with explicit freshness warnings.
+- [ ] Keep exact obfuscated Atlas IDs visible and primary throughout the UI.
+
+## Bundle 4B - Runtime evidence workflow - PLANNED
+
+- [ ] Browse saved traces/correlation summaries from the Atlas panel.
+- [ ] Surface existing trace controls without duplicating runtime-trace ownership.
+- [ ] Keep trace/correlation safety and bounded-output rules unchanged.
+
+## Bundle 4C - Browser polish - BACKLOG
+
+- [ ] Optional bounded relationship graph only if it improves investigation speed without adding heavy dependencies.
+- [ ] Navigation/history/filter polish driven by actual browser use.
 
 # Phase 5 - Advanced Correlation - BACKLOG
 
@@ -316,7 +333,7 @@ If PASS, Bundle 3B closes and Phase 3 is complete. This bundle changes only offl
 - [ ] Revision/fingerprint diffs.
 - [ ] Investigation report generation.
 
-# Current Phase 3 files
+# Current Atlas files
 
 Core/runtime tracing:
 
@@ -368,9 +385,11 @@ Client/src/main/java/game/Class639.java
 - Same-launch Matrix3 smoke: **PASS by user report 2026-09-06**.
 - Bundle 3A: **DONE**.
 - Bundle 3B implementation: **complete / verified-static**.
-- Bundle 3B verifier: **implemented / one Java 8 Eclipse run pending**.
-- Bundle 3B does not change client runtime behavior; no game smoke is required unless the compile/runtime evidence contradicts that classification.
-- No Phase 2 or Bundle 3A retest unless contradictory evidence or a relevant implementation change appears.
+- Bundle 3B consolidated offline verifier: **PASS by user report 2026-09-06**.
+- Bundle 3B: **DONE**.
+- Phase 3: **DONE**.
+- Bundle 3B did not change client runtime behavior; no game smoke was required.
+- No Phase 2 / Bundle 3A / Bundle 3B retest unless contradictory evidence or a relevant implementation change appears.
 
 # Carryover / blockers
 
@@ -381,7 +400,7 @@ Client/src/main/java/game/Class639.java
 - Exact model/cache loader instrumentation after ownership is established.
 - Verify >200 streaming exact-query truncation when a naturally suitable symbol appears.
 
-These do not block Bundle 3B.
+These do not block Phase 4.
 
 ## BLOCKERS
 
@@ -391,27 +410,25 @@ These do not block Bundle 3B.
 
 **Last completed checkpoint:**
 
-- **Phase 3 / Bundle 3A corrected consolidated runtime gate: PASS.**
-- Bundle 3A targeted runtime tracing is DONE.
-- Full compatible Bundle 3B evidence/knowledge implementation is now patched and documented.
-- `AtlasEvidenceStore` owns curated evidence persistence/search/freshness evaluation.
-- `AtlasEvidenceVerifier` owns the single isolated Bundle 3B acceptance check.
+- **Phase 3 / Bundle 3B consolidated offline knowledge gate: PASS.**
+- `BUNDLE 3B KNOWLEDGE CHECK: PASS` was user-reported under Eclipse / Java 8.
+- Bundle 3A targeted runtime tracing and Bundle 3B curated evidence/knowledge are both DONE.
+- Phase 3 Runtime Evidence and Knowledge is DONE.
 
 **Current phase:**
 
-- **Phase 3 - Runtime Evidence and Knowledge / ACTIVE**
+- **Phase 4 - Client Console Atlas Browser / NEXT**
 
-**Active bundle:**
+**Active/next bundle:**
 
-- **Bundle 3B - Evidence/knowledge / IMPLEMENTED / NEEDS CONSOLIDATED OFFLINE GATE**
+- **Bundle 4A - Browser foundation / NEXT**
 
 **Current/next work:**
 
-- Do not split Bundle 3B into smaller test cycles.
-- Pull/build Client once under Java 8/Eclipse.
-- Run `game.atlas.AtlasEvidenceVerifier` once.
-- Require `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
-- On PASS, mark Bundle 3B and Phase 3 DONE, then advance to Phase 4 Client Console Atlas Browser.
+- Inspect only the established Client Console panel-registration/lazy-load seam and the existing Atlas APIs needed by Bundle 4A.
+- Implement the full compatible Browser Foundation bundle before asking for runtime verification: panel registration, Atlas search, symbol detail/relationship navigation, and evidence/alias editing with freshness warnings.
+- Keep Atlas engine/data ownership in `game.atlas`; Client Console is a UI consumer only.
+- Consolidate Bundle 4A runtime verification into one short Eclipse/client session after implementation.
 
 **Do not re-scan/re-discover without new evidence:**
 
@@ -420,15 +437,13 @@ These do not block Bundle 3B.
 - resolved keyboard/menu/network/interface/Class639 ownership paths,
 - Bundle 3A runtime tracing/correlation gate,
 - Bundle 3B curated evidence architecture,
-- unrelated server/gameplay systems,
-- Client Console internals before Phase 4.
+- unrelated server/gameplay systems.
 
 **Pending runtime/offline verification:**
 
-- Java 8/Eclipse compile of the full Bundle 3B implementation,
-- one isolated `AtlasEvidenceVerifier` run,
-- no Matrix3 game-client smoke unless new evidence shows runtime code was affected.
+- None for Phase 3.
+- Bundle 4A verification begins only after its full compatible implementation bundle is patched.
 
 # Next recommended work
 
-**Bundle 3B consolidated offline knowledge gate.**
+**Phase 4 / Bundle 4A - Client Console Atlas Browser foundation.**
