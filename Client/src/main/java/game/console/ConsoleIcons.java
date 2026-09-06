@@ -38,6 +38,10 @@ public final class ConsoleIcons {
         return new GlyphIcon(Glyph.ITEMS);
     }
 
+    public static Icon interfaceEditor() {
+        return new GlyphIcon(Glyph.INTERFACE_EDITOR);
+    }
+
     public static Icon atlas() {
         return new GlyphIcon(Glyph.ATLAS);
     }
@@ -56,6 +60,7 @@ public final class ConsoleIcons {
         COMMANDS,
         PLAYER,
         ITEMS,
+        INTERFACE_EDITOR,
         ATLAS,
         BOSS_RESEARCH,
         SETTINGS
@@ -103,6 +108,9 @@ public final class ConsoleIcons {
                     break;
                 case ITEMS:
                     paintItems(g, x, y);
+                    break;
+                case INTERFACE_EDITOR:
+                    paintInterfaceEditor(g, x, y);
                     break;
                 case ATLAS:
                     paintAtlas(g, x, y);
@@ -176,6 +184,14 @@ public final class ConsoleIcons {
             g.drawRoundRect(x + 4, y + 6, 14, 14, 4, 4);
             g.drawLine(x + 7, y + 11, x + 15, y + 11);
             g.drawRoundRect(x + 7, y + 13, 8, 4, 2, 2);
+        }
+
+        private void paintInterfaceEditor(Graphics2D g, int x, int y) {
+            g.drawRoundRect(x + 3, y + 3, 16, 16, 2, 2);
+            g.drawLine(x + 8, y + 3, x + 8, y + 19);
+            g.drawLine(x + 3, y + 9, x + 19, y + 9);
+            g.drawRect(x + 11, y + 12, 5, 4);
+            g.fillOval(x + 5, y + 6, 2, 2);
         }
 
         private void paintAtlas(Graphics2D g, int x, int y) {
