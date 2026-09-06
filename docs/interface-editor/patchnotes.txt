@@ -1,0 +1,10 @@
+2026-09-06
+- Added `ClientConsoleInterfaceBridge` as the client-thread authority for Interface Editor reads/writes; Swing only queues requests and consumes immutable snapshots.
+- Added generic interface/component snapshots with component boundary detection, type/parent/item/child counts, base geometry, runtime geometry, alignment, text, sprite ID, and live-override state.
+- Added reversible live overrides for base X/Y/W/H, runtime X/Y/W/H, alignment bytes, text, and sprite ID.
+- Added pre-editor value capture so Reset Selected and Reset Interface restore the component state that existed before the first live override.
+- Added `InterfaceEditorPanel` with `interface` / `interface:component` targeting, searchable component list, professional dark Client Console styling, Apply Live, Reset Selected, Reset Interface, and Copy Values.
+- Added lazy Interface Editor rail navigation with a dedicated Java2D icon and generic active-panel persistence through the existing Client Console shell.
+- Added Interface Editor request flushing to the existing logged-in client-cycle path in `Class514.method6093(...)`.
+- Removed the temporary hardcoded Backpack `671:9` width repair so it cannot compete with manual live editor values; Backpack storage/server routing was not changed.
+- V1 implementation is `NEEDS TEST` under Eclipse/Java 8.
