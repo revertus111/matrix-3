@@ -2,12 +2,10 @@ package game.console;
 
 import game.ClientConsoleBridge;
 
-import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.awt.event.HierarchyEvent;
 
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
@@ -26,12 +24,12 @@ public final class PlayerPanel extends JScrollPane {
     private static final long serialVersionUID = 4867224871629009468L;
     private static final int REFRESH_DELAY_MS = 500;
 
-    private final JLabel displayNameValue = createValueLabel();
-    private final JLabel rightsValue = createValueLabel();
-    private final JLabel playerStateValue = createValueLabel();
-    private final JLabel positionValue = createValueLabel();
-    private final JLabel planeValue = createValueLabel();
-    private final JLabel regionValue = createValueLabel();
+    private final JLabel displayNameValue = ConsoleTheme.createValueLabel();
+    private final JLabel rightsValue = ConsoleTheme.createValueLabel();
+    private final JLabel playerStateValue = ConsoleTheme.createValueLabel();
+    private final JLabel positionValue = ConsoleTheme.createValueLabel();
+    private final JLabel planeValue = ConsoleTheme.createValueLabel();
+    private final JLabel regionValue = ConsoleTheme.createValueLabel();
 
     private final Timer refreshTimer = new Timer(REFRESH_DELAY_MS, e -> refresh());
 
@@ -42,19 +40,9 @@ public final class PlayerPanel extends JScrollPane {
         content.setBorder(ConsoleTheme.panelPadding(20, 18, 20, 18));
         content.setMinimumSize(new Dimension(0, 0));
 
-        JLabel title = new JLabel("PLAYER");
-        title.setFont(ConsoleTheme.TITLE_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel subtitle = new JLabel("Live local-player visibility");
-        subtitle.setFont(ConsoleTheme.SMALL_FONT);
-        subtitle.setForeground(ConsoleTheme.ACCENT);
-        subtitle.setAlignmentX(LEFT_ALIGNMENT);
-
-        content.add(title);
+        content.add(ConsoleTheme.titleLabel("PLAYER"));
         content.add(Box.createVerticalStrut(4));
-        content.add(subtitle);
+        content.add(ConsoleTheme.subtitleLabel("Live local-player visibility"));
         content.add(Box.createVerticalStrut(18));
         content.add(createIdentityCard());
         content.add(Box.createVerticalStrut(12));
@@ -83,66 +71,25 @@ public final class PlayerPanel extends JScrollPane {
     }
 
     private JPanel createIdentityCard() {
-        JPanel card = createCard("Identity");
+        JPanel card = ConsoleTheme.createCard("Identity");
         card.add(Box.createVerticalStrut(10));
-        card.add(createRow("Display name", displayNameValue));
+        card.add(ConsoleTheme.createValueRow("Display name", displayNameValue));
         card.add(Box.createVerticalStrut(7));
-        card.add(createRow("Rights", rightsValue));
+        card.add(ConsoleTheme.createValueRow("Rights", rightsValue));
         card.add(Box.createVerticalStrut(7));
-        card.add(createRow("Client state", playerStateValue));
+        card.add(ConsoleTheme.createValueRow("Client state", playerStateValue));
         return card;
     }
 
     private JPanel createPositionCard() {
-        JPanel card = createCard("World position");
+        JPanel card = ConsoleTheme.createCard("World position");
         card.add(Box.createVerticalStrut(10));
-        card.add(createRow("Tile", positionValue));
+        card.add(ConsoleTheme.createValueRow("Tile", positionValue));
         card.add(Box.createVerticalStrut(7));
-        card.add(createRow("Plane", planeValue));
+        card.add(ConsoleTheme.createValueRow("Plane", planeValue));
         card.add(Box.createVerticalStrut(7));
-        card.add(createRow("Region", regionValue));
+        card.add(ConsoleTheme.createValueRow("Region", regionValue));
         return card;
-    }
-
-    private JPanel createCard(String titleText) {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(ConsoleTheme.CARD);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ConsoleTheme.BORDER),
-                ConsoleTheme.panelPadding(14, 14, 14, 14)));
-        card.setAlignmentX(LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-
-        JLabel title = new JLabel(titleText);
-        title.setFont(ConsoleTheme.SECTION_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-        card.add(title);
-        return card;
-    }
-
-    private JPanel createRow(String labelText, JLabel valueLabel) {
-        JPanel row = new JPanel(new BorderLayout(12, 0));
-        row.setBackground(ConsoleTheme.CARD);
-        row.setOpaque(true);
-        row.setAlignmentX(LEFT_ALIGNMENT);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
-
-        JLabel label = new JLabel(labelText);
-        label.setFont(ConsoleTheme.SMALL_FONT);
-        label.setForeground(ConsoleTheme.MUTED_TEXT);
-
-        row.add(label, BorderLayout.WEST);
-        row.add(valueLabel, BorderLayout.EAST);
-        return row;
-    }
-
-    private static JLabel createValueLabel() {
-        JLabel label = new JLabel();
-        label.setFont(ConsoleTheme.BODY_FONT);
-        label.setForeground(ConsoleTheme.TEXT);
-        return label;
     }
 
     private void refresh() {
