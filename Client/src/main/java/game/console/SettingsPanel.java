@@ -7,13 +7,13 @@ import game.QolSettings;
 import java.awt.Dimension;
 import java.awt.event.HierarchyEvent;
 
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JToggleButton;
 import javax.swing.Timer;
 
@@ -48,16 +48,6 @@ public final class SettingsPanel extends JScrollPane {
         content.setBackground(ConsoleTheme.PANEL);
         content.setBorder(ConsoleTheme.panelPadding(20, 18, 20, 18));
 
-        JLabel title = new JLabel("SETTINGS");
-        title.setFont(ConsoleTheme.TITLE_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel subtitle = new JLabel("Game modes + quality of life + developer tools");
-        subtitle.setFont(ConsoleTheme.SMALL_FONT);
-        subtitle.setForeground(ConsoleTheme.ACCENT);
-        subtitle.setAlignmentX(LEFT_ALIGNMENT);
-
         hasSavedCombination = ConsolePreferences.hasModeSelection();
         legacyCombatButton.setSelected(ConsolePreferences.isLegacyCombatSelected());
         legacyInterfaceButton.setSelected(ConsolePreferences.isLegacyInterfaceSelected());
@@ -73,9 +63,9 @@ public final class SettingsPanel extends JScrollPane {
         configureDevModeToggle();
         updateDevModeLabel();
 
-        content.add(title);
+        content.add(ConsoleTheme.titleLabel("SETTINGS"));
         content.add(Box.createVerticalStrut(4));
-        content.add(subtitle);
+        content.add(ConsoleTheme.subtitleLabel("Game modes + quality of life + developer tools"));
         content.add(Box.createVerticalStrut(18));
         content.add(createModeCard());
         content.add(Box.createVerticalStrut(12));
@@ -105,13 +95,10 @@ public final class SettingsPanel extends JScrollPane {
     }
 
     private JPanel createModeCard() {
-        JPanel card = createCard("Game modes");
-
-        JLabel description = new JLabel("<html><div style='width:240px'>Combat and interface mode are independent here.<br>"
-                + "For Legacy combat with the modern NIS interface: turn Legacy combat ON and Legacy interface OFF.</div></html>");
-        description.setFont(ConsoleTheme.SMALL_FONT);
-        description.setForeground(ConsoleTheme.MUTED_TEXT);
-        description.setAlignmentX(LEFT_ALIGNMENT);
+        JPanel card = ConsoleTheme.createCard("Game modes");
+        JTextArea description = ConsoleTheme.createWrappedText(
+                "Combat and interface mode are independent here. For Legacy combat with the modern NIS interface, turn Legacy combat ON and Legacy interface OFF.",
+                3);
 
         legacyCombatButton.setAlignmentX(LEFT_ALIGNMENT);
         legacyCombatButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -123,16 +110,11 @@ public final class SettingsPanel extends JScrollPane {
         applyButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         ConsoleTheme.styleButton(applyButton);
         applyButton.addActionListener(e -> applyCombination(false));
+        ConsoleTheme.styleStatus(status, true);
 
-        status.setFont(ConsoleTheme.SMALL_FONT);
-        status.setForeground(ConsoleTheme.ACCENT);
-        status.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel note = new JLabel("<html><div style='width:240px'>The in-game Legacy Mode checkbox is still Matrix3's original combined switch. "
-                + "Applying these controls normalizes that combined state and restores the split selection.</div></html>");
-        note.setFont(ConsoleTheme.SMALL_FONT);
-        note.setForeground(ConsoleTheme.MUTED_TEXT);
-        note.setAlignmentX(LEFT_ALIGNMENT);
+        JTextArea note = ConsoleTheme.createWrappedText(
+                "The in-game Legacy Mode checkbox is still Matrix3's original combined switch. Applying these controls normalizes that combined state and restores the split selection.",
+                3);
 
         card.add(Box.createVerticalStrut(9));
         card.add(description);
@@ -150,18 +132,16 @@ public final class SettingsPanel extends JScrollPane {
     }
 
     private JPanel createQolCard() {
-        JPanel card = createCard("Quality of life");
+        JPanel card = ConsoleTheme.createCard("Quality of life");
 
         JLabel section = new JLabel("Inventory");
         section.setFont(ConsoleTheme.SMALL_FONT);
         section.setForeground(ConsoleTheme.ACCENT);
         section.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel description = new JLabel("<html><div style='width:240px'>Shift-click Drop changes only the left-click choice while Shift is held. "
-                + "The normal Matrix3 right-click menu and item action handling stay intact.</div></html>");
-        description.setFont(ConsoleTheme.SMALL_FONT);
-        description.setForeground(ConsoleTheme.MUTED_TEXT);
-        description.setAlignmentX(LEFT_ALIGNMENT);
+        JTextArea description = ConsoleTheme.createWrappedText(
+                "Shift-click Drop changes only the left-click choice while Shift is held. The normal Matrix3 right-click menu and item action handling stay intact.",
+                3);
 
         shiftClickDropButton.setAlignmentX(LEFT_ALIGNMENT);
         shiftClickDropButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -176,26 +156,18 @@ public final class SettingsPanel extends JScrollPane {
     }
 
     private JPanel createDevModeCard() {
-        JPanel card = createCard("Dev Mode");
-
-        JLabel description = new JLabel("<html><div style='width:240px'>Adds owner-only developer actions to the live game world. "
-                + "Phase 1 adds tile spawning without replacing normal Matrix3 right-click options.</div></html>");
-        description.setFont(ConsoleTheme.SMALL_FONT);
-        description.setForeground(ConsoleTheme.MUTED_TEXT);
-        description.setAlignmentX(LEFT_ALIGNMENT);
+        JPanel card = ConsoleTheme.createCard("Dev Mode");
+        JTextArea description = ConsoleTheme.createWrappedText(
+                "Adds owner-only developer actions to the live game world. Phase 1 adds tile spawning without replacing normal Matrix3 right-click options.",
+                3);
 
         devModeButton.setAlignmentX(LEFT_ALIGNMENT);
         devModeButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        ConsoleTheme.styleStatus(devModeStatus, true);
 
-        devModeStatus.setFont(ConsoleTheme.SMALL_FONT);
-        devModeStatus.setForeground(ConsoleTheme.ACCENT);
-        devModeStatus.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel note = new JLabel("<html><div style='width:240px'>Dev Mode is intentionally session-only and starts OFF after every client launch. "
-                + "Live spawns are not source-data saves.</div></html>");
-        note.setFont(ConsoleTheme.SMALL_FONT);
-        note.setForeground(ConsoleTheme.MUTED_TEXT);
-        note.setAlignmentX(LEFT_ALIGNMENT);
+        JTextArea note = ConsoleTheme.createWrappedText(
+                "Dev Mode is intentionally session-only and starts OFF after every client launch. Live spawns are not source-data saves.",
+                3);
 
         card.add(Box.createVerticalStrut(9));
         card.add(description);
@@ -205,23 +177,6 @@ public final class SettingsPanel extends JScrollPane {
         card.add(devModeStatus);
         card.add(Box.createVerticalStrut(10));
         card.add(note);
-        return card;
-    }
-
-    private JPanel createCard(String titleText) {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(ConsoleTheme.CARD);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ConsoleTheme.BORDER),
-                ConsoleTheme.panelPadding(14, 14, 14, 14)));
-        card.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel title = new JLabel(titleText);
-        title.setFont(ConsoleTheme.SECTION_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-        card.add(title);
         return card;
     }
 
