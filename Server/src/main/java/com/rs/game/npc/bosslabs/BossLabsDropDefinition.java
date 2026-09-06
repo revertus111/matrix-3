@@ -52,6 +52,9 @@ public final class BossLabsDropDefinition {
 
 	public void validateItems() {
 		for (Entry entry : entries) {
+			String validation = entry.validate();
+			if (validation != null)
+				throw new IllegalArgumentException(validation);
 			ItemDefinitions definitions = ItemDefinitions.getItemDefinitions(entry.getItemId());
 			if (definitions == null || !definitions.isLoaded())
 				throw new IllegalArgumentException("Unknown/unloaded item id in BossLabs drops: " + entry.getItemId());
@@ -63,6 +66,9 @@ public final class BossLabsDropDefinition {
 		Drops drops = new Drops(accessRareDropTable);
 		List<Drop>[] lists = new ArrayList[Drops.VERY_RARE + 1];
 		for (Entry entry : entries) {
+			String validation = entry.validate();
+			if (validation != null)
+				throw new IllegalArgumentException(validation);
 			if (lists[entry.getRarity()] == null)
 				lists[entry.getRarity()] = new ArrayList<Drop>();
 			lists[entry.getRarity()].add(new Drop(entry.getItemId(), entry.getMinAmount(), entry.getMaxAmount()));
@@ -80,7 +86,7 @@ public final class BossLabsDropDefinition {
 					continue;
 				for (Drop drop : matrixDrops) {
 					if (drop != null)
-						entries.add(new Entry(rarity, drop.getItemId(), drop.getMinAmount(), drop.getMaxAmount()));
+						entries.add(Entry.fromMatrix(rarity, drop.getItemId(), drop.getMinAmount(), drop.getMaxAmount()));
 				}
 			}
 		}
@@ -111,19 +117,31 @@ public final class BossLabsDropDefinition {
 		private final int maxAmount;
 
 		public Entry(int rarity, int itemId, int minAmount, int maxAmount) {
+			this(rarity, itemId, minAmount, maxAmount, true);
+		}
+
+		private Entry(int rarity, int itemId, int minAmount, int maxAmount, boolean validateForPublish) {
 			if (rarity < Drops.ALWAYS || rarity > Drops.VERY_RARE)
 				throw new IllegalArgumentException("Unsupported Matrix3 drop rarity: " + rarity);
 			if (itemId < 0)
 				throw new IllegalArgumentException("Drop item id must be zero or greater.");
-			if (minAmount < 1 || minAmount > MAX_AMOUNT)
-				throw new IllegalArgumentException("Drop minimum amount must be between 1 and " + MAX_AMOUNT + ".");
-			if (maxAmount < minAmount || maxAmount > MAX_AMOUNT)
-				throw new IllegalArgumentException("Drop maximum amount must be at least the minimum and no greater than "
-						+ MAX_AMOUNT + ".");
+			if (minAmount < 0 || minAmount > MAX_AMOUNT)
+				throw new IllegalArgumentException("Drop minimum amount must be between 0 and " + MAX_AMOUNT + ".");
+			if (maxAmount < 0 || maxAmount > MAX_AMOUNT)
+				throw new IllegalArgumentException("Drop maximum amount must be between 0 and " + MAX_AMOUNT + ".");
 			this.rarity = rarity;
 			this.itemId = itemId;
 			this.minAmount = minAmount;
 			this.maxAmount = maxAmount;
+			if (validateForPublish) {
+				String validation = validate();
+				if (validation != null)
+					throw new IllegalArgumentException(validation);
+			}
+		}
+
+		private static Entry fromMatrix(int rarity, int itemId, int minAmount, int maxAmount) {
+			return new Entry(rarity, itemId, minAmount, maxAmount, false);
 		}
 
 		public int getRarity() {
@@ -140,6 +158,12 @@ public final class BossLabsDropDefinition {
 
 		public int getMaxAmount() {
 			return maxAmount;
+		}
+
+		private String validate() {
+			if (maxAmount < minAmount)
+				return "Drop maximum amount must be at least the minimum amount.";
+			return null;
 		}
 	}
 }
