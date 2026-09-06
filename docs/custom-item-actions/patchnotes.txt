@@ -27,3 +27,9 @@
 - Added a pre-Backpack pipeline trace call so a raw item click can still be seen even if Backpack interface ownership consumes it before `CustomItemActions.processButtonClick(...)`.
 - The runtime log path resolves back to repository `Server/data/logs` from normal Client/Server Eclipse working directories; `Server/.gitignore` already excludes `data/logs/`.
 - Tightened the trace so detailed CLIENT bank-menu and SERVER pipeline output is emitted only for items present in the custom-item-action config, avoiding normal inventory/bank click spam.
+
+2026-09-06
+- VERIFIED from `custom-item-actions-debug.txt`: configured inventory option 4 for Rambler's backpack reaches the server as packet 87, which is `ACTION_BUTTON6_PACKET`, not `ACTION_BUTTON4_PACKET`.
+- Fixed the generic inventory config-slot mapping in `CustomItemActions`: option 1 -> BUTTON1, option 2 -> BUTTON2, option 3 -> BUTTON3, option 4 -> BUTTON6, option 5 -> BUTTON7.
+- This is a framework-level fix; no 21445-specific routing exception was added.
+- Bank-inventory menu behavior was not changed by this patch and remains the next runtime evidence target if Open/Empty to bank are still missing there.
