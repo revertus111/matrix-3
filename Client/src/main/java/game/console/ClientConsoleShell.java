@@ -297,7 +297,7 @@ public final class ClientConsoleShell extends JPanel {
         if (PANEL_ATLAS.equals(panelId)) {
             if (atlasPanel == null) {
                 try {
-                    atlasPanel = new AtlasPanel();
+                    atlasPanel = new AtlasWorkspacePanel();
                 } catch (RuntimeException ex) {
                     ex.printStackTrace();
                     atlasPanel = createPanelError("Client Atlas panel failed to initialize.");
