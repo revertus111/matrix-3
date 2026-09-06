@@ -74,10 +74,10 @@ public final class AtlasEvidenceVerifier {
 
             List<String> references = Arrays.asList(
                     "source:game/example.java:10",
-                    "trace:example-session:event-42",
+                    "trace:example-session:event-42 mentions \"claim\" and \"clientFingerprint\"",
                     "source:game/example.java:10");
-            String alias = "Verifier alias \"quoted\" \\ path";
-            String note = "Verifier note line 1\nline 2 with escaped content.";
+            String alias = "Verifier alias \"quoted\" \\ path mentioning \"supportingReferences\"";
+            String note = "Verifier note line 1\nline 2 mentions \"clientFingerprint\", \"status\", and \"alias\" safely.";
 
             EvidenceRecord created = store.upsert(index, subjectId,
                     EvidenceStatus.VERIFIED_STATIC, alias, note, references);
@@ -95,6 +95,7 @@ public final class AtlasEvidenceVerifier {
             require(reopened.getSupportingReferences().equals(created.getSupportingReferences()),
                     "supporting references did not round-trip through JSONL");
             report.append("PASS  Alias + note/claim + classification + references JSONL round-trip\n");
+            report.append("PASS  Field-name-like quoted evidence text remains data, not JSON properties\n");
 
             EvidenceView currentView = store.getView(subjectId, index);
             require(currentView != null && currentView.isCurrent(),
