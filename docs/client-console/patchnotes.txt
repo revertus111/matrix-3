@@ -47,7 +47,7 @@
 2026-09-03
 - Added a separate Owner `Deep Scan` action for focused RoTS render/BAS and GFX correlation while preserving the existing normal RoTS scan.
 - Deep Scan resolves known RoTS render sets into raw cache opcode animation references and marks targeted animation candidates by render-set membership without assigning unverified mechanic semantics.
-- Added a narrow GraphicsDefinition loader registration hook and read-only GFX scan for explicit candidate-animation or known RoTS-model matches.
+- Added a narrow GraphicsDefinition loader registration hook and read-only GFX scan for explicit candidate-animation or known-RoTS-model matches.
 - Deep Scan remains daemon-worker based; Copy All/Clear continue to operate on the complete generated text without gameplay/server mutation.
 - Fixed Owner content clipping by making the scroll content track viewport width and wrapping long informational text instead of widening the panel off-screen.
 - Added a read-only RoTS GFX bootstrap that builds the spot-animation definition loader from the already-live config archive before Deep Scan, removing the dependency on a prior runtime GFX instantiation.
@@ -103,3 +103,11 @@
 - Added curated evidence editing through `AtlasEvidenceStore` for classification, alias, note/claim, references, save/delete, and current/stale/orphan freshness warnings.
 - Added an original Java2D Atlas globe icon through `ConsoleIcons`; no external resources or dependencies were added.
 - No gameplay/server command/packet authority changed. Bundle 4A needs one consolidated Java 8/Eclipse Client Console runtime gate.
+- Normalized Client Console as a persistent workstream with `docs/client-console/PROJECT.md` and registered it in `docs/rs3/WORKSTREAMS.md`; bundle-first execution and deferred consolidated runtime verification are now durable project state.
+- Added a dedicated lazy Boss Research rail panel with an original Java2D target icon while preserving the concurrently-added Client Atlas panel and the existing string-based active-panel persistence path.
+- Consolidated the existing RoTS runtime probe/persistent-finding workflow and the older RoTS Scan/Deep Scan/Copy/Clear cache-evidence workflow into one scrollable Boss Research workspace without changing their specialist bridges or threading authority.
+- Removed Boss Research and RoTS cache scanning from Owner; Owner is now limited to account/rights/client-state visibility plus owner-tool guidance instead of acting as a boss-tool container.
+- Expanded `ConsoleTheme` with small shared title/subtitle/card/value-row/wrapped-text/combo/status/popup/menu primitives rather than adding a custom UI framework.
+- Applied shared Client Console presentation to Dashboard, Owner, Player, Settings, and Boss Research; Settings now explicitly tracks viewport width so wrapped content stays usable at narrow sidebar sizes.
+- Item Browser behavior was left untouched during the shared-style pass because its existing private popup wrappers already match the same Client Console palette; avoiding a full 35k-file rewrite solely for three delegating style methods reduces regression risk.
+- Expanded `v2-testlist.txt` into the consolidated acceptance path for icons/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas/navigation/persistence in one later runtime session.
