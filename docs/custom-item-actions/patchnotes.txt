@@ -4,7 +4,7 @@
 - Client and Server now walk parent directories to resolve the same canonical config from normal Eclipse launch working directories; the duplicate repo-root `data/items/custom-item-actions.properties` was removed.
 - Server now logs the resolved config path and number of loaded custom actions on first use so presentation-only success cannot hide a server config loading failure.
 - Added server `CustomItemActions` registry with config-driven inventory/equipment/bank option routing; unconfigured items fall through to normal Matrix3 handlers unchanged.
-- Added client `CustomItemActionConfig` presentation hook that applies configured inventory option labels and equipped-item option params to decoded item definitions without editing cache data.
+- Added client `CustomItemActionConfig` presentation hook that applies configured inventory option labels and equipped-item option params to already-decoded Matrix3 ItemDefinitions, plus configured option entries for the bank inventory pane.
 - Option numbers are 1-based in config so a future editor can expose Option 1..N directly.
 - Handler/action identifiers are stable data values (`BACKPACK`, `OPEN`, `EMPTY_TO_BANK`); Java method names are intentionally not stored in config.
 - Rambler's backpack 21445 is the first configured item: Inventory Option 4 = Open, Equipment Option 1 = Open, Bank Option 7 = Open.
@@ -44,3 +44,6 @@
 - Added focused `Server/data/logs/backpack-debug.txt` tracing. While Backpack is open, server lines record every 671/665 click with exact interface, component, slot, packet, and resolved slot item.
 - Added a one-shot client dump of interface 671 non-empty string fields for components 0..63 into the same `backpack-debug.txt`. This is intended to identify the real title component without another guessed text override.
 - No new interaction component or title component is assumed in this diagnostic patch; the next fix must be driven by the runtime trace.
+- VERIFIED runtime: the initial client component probe crashed at component 52 because this interface revision exposes fewer than 64 direct components and `Class512.method6083(...)` throws past the array boundary.
+- Made `BackpackInterfaceTrace` bounds-safe: `ArrayIndexOutOfBoundsException` now records the boundary and stops probing instead of crashing the client. Other runtime probe failures are logged and stop the one-shot dump safely.
+- The trace still records every valid component reached before the boundary, so the title/component evidence remains useful without hardcoding a guessed component count.
