@@ -58,9 +58,11 @@ Phase 3 / Bundle 3A - ACTIVE
 [x] Atomic correlation export and `latest` trace selection implemented.
 [x] CLI `trace-correlate <trace|latest> [classes-dir]`.
 [x] CLI `trace-correlate-export <trace|latest> <file> [classes-dir]`.
+[x] Main `ClientAtlasControl` now exposes `Runtime Trace Control` + `Correlate Latest Trace` wiring - verified-static.
 [ ] Prove 3A.6 against the rebuilt current index during the final Bundle 3A runtime gate.
 
 Bundle 3A consolidated runtime gate - NEXT / ONE SESSION
+[ ] Main Atlas Control visibly shows `Runtime Trace Control` and `Correlate Latest Trace`; Runtime Trace Control opens from the button.
 [ ] Eclipse clean/build succeeds under Java 8.
 [ ] Before rebuilding Atlas, confirm the old Phase 2 generated index is reported stale for the newly compiled Phase 3 client.
 [ ] Rebuild Atlas once against the current compiled client.
@@ -72,8 +74,8 @@ Bundle 3A consolidated runtime gate - NEXT / ONE SESSION
 [ ] Produce at least one named interface packet event.
 [ ] Produce definition/cache evidence; GFX if naturally triggered.
 [ ] Stop + save the trace.
-[ ] Run `trace-correlate latest`.
-[ ] Correlation reports `status=CURRENT` and `correlationAccepted=true`.
+[ ] Click `Correlate Latest Trace` in the main Atlas Control.
+[ ] Correlation reports `Status: CURRENT` and `Accepted: true`.
 [ ] Saved trace fingerprint equals the rebuilt current Atlas fingerprint.
 [ ] All emitted source IDs resolve; all emitted owner IDs resolve.
 [ ] Header event count equals actual parsed event count.
