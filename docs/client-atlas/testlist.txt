@@ -104,11 +104,30 @@ Bundle 3A consolidated runtime gate - PASS / ONE SESSION
 [x] Complete same-launch Matrix3 smoke because central packet enqueue/decode seams changed; user reported client works perfectly on 2026-09-06.
 [x] Bundle 3A DONE.
 
-Phase 3 / Bundle 3B - NEXT
-[ ] External aliases/notes.
-[ ] Evidence classification/supporting references.
-[ ] Fingerprint stale-evidence warnings for curated knowledge.
-[ ] Preserve curated knowledge across rescans.
+Phase 3 / Bundle 3B - implementation complete / NEEDS one consolidated offline gate
+[x] `AtlasEvidenceStore` persists curated evidence in `.client-atlas/evidence.jsonl`.
+[x] External alias is metadata only; exact obfuscated Atlas subject ID remains primary.
+[x] One curated record per exact subject ID; same-subject upsert replaces deterministically instead of duplicating.
+[x] New/updated records require an exact current `AtlasInvestigationIndex` symbol and bind to that index fingerprint.
+[x] Note/claim text persists independently of generated source semantics.
+[x] Evidence classifications persist as `VERIFIED`, `verified-static`, `HYPOTHESIS`, or `UNKNOWN`.
+[x] Supporting references persist as a bounded de-duplicated list.
+[x] Evidence JSONL writes are deterministic and atomic.
+[x] Curated store is bounded: 5000 records, bounded line/alias/claim/reference sizes.
+[x] Curated search covers subject ID, alias, note/claim, status, and supporting references.
+[x] Curated search remains separate from generated symbol ranking/structural evidence.
+[x] Current fingerprint + existing subject evaluates `CURRENT`.
+[x] Fingerprint mismatch evaluates `STALE_FINGERPRINT` with explicit warning.
+[x] Missing exact subject evaluates `SUBJECT_NOT_PRESENT`; stale+missing has a combined explicit state.
+[x] Stale/missing records are retained for review and are never silently deleted or semantically promoted.
+[x] `AtlasWorkspace.initialize()` continues to reset generated symbols/relationships only; `evidence.jsonl` is preserved across rescans.
+[x] `AtlasJson` serializes evidence deterministically including supporting-reference arrays.
+[x] `AtlasEvidenceVerifier` added as one isolated Bundle 3B check; it never edits the real developer evidence file.
+[x] Verifier covers JSONL escape round-trip, aliases/notes, classifications/refs, stale warning, orphan retention, rescan preservation, upsert/search, and delete.
+[ ] Eclipse Java 8 clean/build current Client once.
+[ ] Run `game.atlas.AtlasEvidenceVerifier` once as a Java Application in Eclipse.
+[ ] Require final line `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
+[ ] If PASS, mark Bundle 3B DONE and close Phase 3; no client launch/runtime smoke is required for this offline-only bundle.
 
 Carryover regression checks
 [ ] If an exact streaming query owns >200 immediate relationships, confirm truncation state/count remains correct when naturally encountered.
@@ -116,4 +135,6 @@ Carryover regression checks
 Gate rules
 - Do not request another Phase 2 gate without a relevant Phase 2 change or contradictory evidence.
 - Do not request another Bundle 3A runtime gate without a relevant 3A implementation change or contradictory evidence.
+- Bundle 3B gets one consolidated offline verifier run after the full implementation bundle; do not split it into per-feature tests.
+- Bundle 3B does not touch game runtime seams, so normal client startup/smoke is not part of its gate.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
