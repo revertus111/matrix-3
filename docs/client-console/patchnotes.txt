@@ -95,3 +95,11 @@
 - Added search-field Up/Down navigation, Enter selection, Esc clear, result-click selection, and Enter-to-select behavior without executing commands directly from the result list.
 - Kept command arguments/preview/run composition separate from palette navigation and preserved the existing five-second second-confirm requirement for protected commands.
 - Added wrapped command usage/category presentation in the composer and compact result rows with visible protected-command warning markers.
+
+2026-09-06
+- Added a lazy Client Atlas rail panel through the existing Client Console panel-registration, failure-isolation, collapse, and active-panel persistence paths.
+- The Atlas panel consumes existing `game.atlas` authorities rather than moving scanner/search/evidence ownership into Client Console.
+- Added off-EDT structural search with a 50-result cap, exact symbol detail, and bounded 60-out/60-in relationship navigation.
+- Added curated evidence editing through `AtlasEvidenceStore` for classification, alias, note/claim, references, save/delete, and current/stale/orphan freshness warnings.
+- Added an original Java2D Atlas globe icon through `ConsoleIcons`; no external resources or dependencies were added.
+- No gameplay/server command/packet authority changed. Bundle 4A needs one consolidated Java 8/Eclipse Client Console runtime gate.
