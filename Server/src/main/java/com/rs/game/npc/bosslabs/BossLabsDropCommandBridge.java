@@ -205,20 +205,24 @@ public final class BossLabsDropCommandBridge {
 	}
 
 	private static void sendState(Player player, int requestId, int npcId) {
-		BossLabsDropDefinition definition = BossLabsDropPublisher.inspectCurrent(npcId);
-		String payload = BossLabsDropWireCodec.encode(definition);
-		int chunks = (payload.length() + RESPONSE_CHUNK_LENGTH - 1) / RESPONSE_CHUNK_LENGTH;
-		String source = BossLabsDropPublisher.hasLiveOverride(npcId) ? "BossLabs" : "Matrix3";
-		send(player, RESPONSE_PREFIX + "drop-begin|" + requestId + "|" + npcId + "|" + source + "|"
-				+ (BossLabsDropStore.isSaved(npcId) ? 1 : 0) + "|" + (BossLabsDropPublisher.hasRollback(npcId) ? 1 : 0)
-				+ "|" + chunks);
-		for (int index = 0; index < chunks; index++) {
-			int start = index * RESPONSE_CHUNK_LENGTH;
-			int end = Math.min(payload.length(), start + RESPONSE_CHUNK_LENGTH);
-			send(player, RESPONSE_PREFIX + "drop-chunk|" + requestId + "|" + npcId + "|" + index + "|"
-					+ payload.substring(start, end));
+		try {
+			BossLabsDropDefinition definition = BossLabsDropPublisher.inspectCurrent(npcId);
+			String payload = BossLabsDropWireCodec.encode(definition);
+			int chunks = (payload.length() + RESPONSE_CHUNK_LENGTH - 1) / RESPONSE_CHUNK_LENGTH;
+			String source = BossLabsDropPublisher.hasLiveOverride(npcId) ? "BossLabs" : "Matrix3";
+			send(player, RESPONSE_PREFIX + "drop-begin|" + requestId + "|" + npcId + "|" + source + "|"
+					+ (BossLabsDropStore.isSaved(npcId) ? 1 : 0) + "|" + (BossLabsDropPublisher.hasRollback(npcId) ? 1 : 0)
+					+ "|" + chunks);
+			for (int index = 0; index < chunks; index++) {
+				int start = index * RESPONSE_CHUNK_LENGTH;
+				int end = Math.min(payload.length(), start + RESPONSE_CHUNK_LENGTH);
+				send(player, RESPONSE_PREFIX + "drop-chunk|" + requestId + "|" + npcId + "|" + index + "|"
+						+ payload.substring(start, end));
+			}
+			send(player, RESPONSE_PREFIX + "drop-end|" + requestId + "|" + npcId);
+		} catch (RuntimeException e) {
+			sendAction(player, requestId, false, npcId, "Drop inspection failed: " + safeMessage(e));
 		}
-		send(player, RESPONSE_PREFIX + "drop-end|" + requestId + "|" + npcId);
 	}
 
 	private static void sendAction(Player player, int requestId, boolean success, int npcId, String message) {
