@@ -42,6 +42,7 @@ public final class ClientAtlasTraceControl {
     private JLabel sessionValue;
     private JLabel eventsValue;
     private JLabel droppedValue;
+    private JLabel suppressedValue;
     private JLabel savedValue;
     private JLabel messageValue;
     private Timer refreshTimer;
@@ -74,8 +75,8 @@ public final class ClientAtlasTraceControl {
     private void showWindow() {
         frame = new JFrame(TITLE);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setMinimumSize(new Dimension(650, 330));
-        frame.setSize(720, 380);
+        frame.setMinimumSize(new Dimension(650, 350));
+        frame.setSize(720, 400);
         frame.setLocationByPlatform(true);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
@@ -107,16 +108,18 @@ public final class ClientAtlasTraceControl {
         JPanel outer = new JPanel(new BorderLayout(8, 8));
         outer.setBorder(BorderFactory.createTitledBorder("Runtime trace status"));
 
-        JPanel grid = new JPanel(new GridLayout(5, 2, 8, 7));
+        JPanel grid = new JPanel(new GridLayout(6, 2, 8, 7));
         runtimeValue = valueLabel("Checking...");
         sessionValue = valueLabel("-");
         eventsValue = valueLabel("0");
         droppedValue = valueLabel("0");
+        suppressedValue = valueLabel("0");
         savedValue = valueLabel("-");
         addRow(grid, "Client runtime", runtimeValue);
         addRow(grid, "Session", sessionValue);
         addRow(grid, "Events", eventsValue);
         addRow(grid, "Dropped", droppedValue);
+        addRow(grid, "Suppressed", suppressedValue);
         addRow(grid, "Last save", savedValue);
 
         messageValue = new JLabel("Tracing is off by default. Start the Matrix3 client, then start a named trace.");
@@ -192,6 +195,7 @@ public final class ClientAtlasTraceControl {
                 sessionValue.setText("-");
                 eventsValue.setText("0");
                 droppedValue.setText("0");
+                suppressedValue.setText("0");
                 savedValue.setText("-");
                 return;
             }
@@ -199,6 +203,7 @@ public final class ClientAtlasTraceControl {
             sessionValue.setText(empty(status.getSessionName(), "-"));
             eventsValue.setText(Long.toString(status.getEventCount()));
             droppedValue.setText(Long.toString(status.getDroppedCount()));
+            suppressedValue.setText(Long.toString(status.getSuppressedCount()));
             savedValue.setText(empty(status.getLastSavedPath(), "-"));
             if (status.getLastError() != null && status.getLastError().length() > 0) {
                 messageValue.setText("Runtime trace error: " + status.getLastError());
