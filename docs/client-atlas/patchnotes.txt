@@ -53,3 +53,12 @@ Phase 3 / 3A.6 runtime correlation
 - 3A.6 implementation is verified-static; runtime validation remains bundled with the single final Bundle 3A gate.
 - Fixed the Java 8/Eclipse compile blocker by importing `DirectoryStream` from `java.nio.file` instead of the nonexistent `java.io` location; no runtime behavior changed.
 - Added first-class `Runtime Trace Control` and `Correlate Latest Trace` buttons to `ClientAtlasControl`, plus a compact correlation result summary, so the Phase 3 runtime gate no longer requires hidden CLI commands.
+
+Phase 3 / first runtime gate evidence + correction
+- First controlled trace proved keyboard/menu/network/interface/definition hooks are live, but the 10000-event buffer saturated: 9934 stored definition events and 63578 hard drops versus only 66 stored non-definition events.
+- Trace analysis found only ~2961 unique definition/load combinations among the 9934 stored definition events, proving repeat definition loads were the dominant noise source.
+- Added first-occurrence-per-session definition tracing plus a 4000-event definition-category ceiling so definition activity cannot consume the whole 10000-event session.
+- Added `suppressedCount` separately from `droppedCount`; duplicate/category-capped definition events are intentional suppression, while `droppedCount` now remains reserved for real global-buffer loss.
+- Runtime Trace Control now shows both Dropped and Suppressed counts.
+- Renamed unproven menu `localX/localY` fields to neutral `rawArg1/rawArg2` after runtime evidence showed the values do not support coordinate semantics.
+- Correction is implementation-complete / verified-static; one consolidated gate rerun remains required.
