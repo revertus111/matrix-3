@@ -45,7 +45,13 @@ public final class BossLabsDropClientBridge {
         final int requestId = nextRequestId();
         String error = ClientConsoleBridge.queueConsoleCommand("bosslabs drops inspect " + requestId + " " + npcId);
         if (error != null) {
-            dispatchFailure(requestId, npcId, "Drop inspect request failed: " + error);
+            final String failure = "Drop inspect request failed: " + error;
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    dispatchFailure(requestId, npcId, failure);
+                }
+            });
             return requestId;
         }
         PENDING_INSPECTIONS.add(Integer.valueOf(requestId));
@@ -154,21 +160,27 @@ public final class BossLabsDropClientBridge {
             } else if ("drop-end".equals(type) && parts.length >= 4) {
                 final int requestId = parseInt(parts[2]);
                 final int npcId = parseInt(parts[3]);
-                Download download = DOWNLOADS.remove(Integer.valueOf(requestId));
-                PENDING_INSPECTIONS.remove(Integer.valueOf(requestId));
-                if (download == null || download.npcId != npcId)
-                    throw new IllegalArgumentException("BossLabs drop response is incomplete.");
-                final BossLabsDropDraftDefinition draft = BossLabsDropDraftDefinition.fromPayload(download.join());
-                if (draft.getNpcId() != npcId)
-                    throw new IllegalArgumentException("BossLabs drop response NPC id mismatch.");
-                final DropState state = new DropState(requestId, npcId, download.source, download.saved,
-                        download.rollback, draft);
-                dispatch(new ListenerCall() {
-                    @Override
-                    public void call(Listener target) {
-                        target.onDropState(state);
-                    }
-                });
+                try {
+                    Download download = DOWNLOADS.remove(Integer.valueOf(requestId));
+                    if (download == null || download.npcId != npcId)
+                        throw new IllegalArgumentException("BossLabs drop response is incomplete.");
+                    final BossLabsDropDraftDefinition draft = BossLabsDropDraftDefinition.fromPayload(download.join());
+                    if (draft.getNpcId() != npcId)
+                        throw new IllegalArgumentException("BossLabs drop response NPC id mismatch.");
+                    PENDING_INSPECTIONS.remove(Integer.valueOf(requestId));
+                    final DropState state = new DropState(requestId, npcId, download.source, download.saved,
+                            download.rollback, draft);
+                    dispatch(new ListenerCall() {
+                        @Override
+                        public void call(Listener target) {
+                            target.onDropState(state);
+                        }
+                    });
+                } catch (RuntimeException decodeFailure) {
+                    PENDING_INSPECTIONS.remove(Integer.valueOf(requestId));
+                    DOWNLOADS.remove(Integer.valueOf(requestId));
+                    dispatchFailure(requestId, npcId, "Drop response decode failed: " + safeMessage(decodeFailure));
+                }
             } else if ("drop-action".equals(type) && parts.length >= 6) {
                 final int requestId = parseInt(parts[2]);
                 final boolean success = parseBoolean(parts[3]);
