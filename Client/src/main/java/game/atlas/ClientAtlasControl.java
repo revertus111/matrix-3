@@ -43,6 +43,7 @@ import game.atlas.AtlasScanner.ScanResult;
 import game.atlas.AtlasSchema.Metadata;
 import game.atlas.AtlasSearchEngine.SearchResult;
 import game.atlas.AtlasStructuralVerifier.VerificationResult;
+import game.atlas.AtlasTraceCorrelationEngine.CorrelationResult;
 
 /**
  * Small standalone human control surface over the offline Client Atlas engine.
@@ -174,7 +175,7 @@ public final class ClientAtlasControl {
                 + "Domain candidates: interface 762 | component 7 | 762:7 | animation 1234 | model 5678\n"
                 + "Domain results stay UNKNOWN until evidence proves their meaning.\n"
                 + "Export Assistant JSON packages the last successful search/command.\n"
-                + "Use Run Search Check for the consolidated Bundle 2B local gate.\n");
+                + "Phase 3 gate: Scan / Rebuild Index -> Runtime Trace Control -> Stop + Save -> Correlate Latest Trace.\n");
 
         JScrollPane scrollPane = new JScrollPane(outputArea);
         scrollPane.setBorder(BorderFactory.createTitledBorder("Output"));
@@ -187,6 +188,22 @@ public final class ClientAtlasControl {
     private JPanel buildActionPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
 
+        JButton traceControl = new JButton("Runtime Trace Control");
+        traceControl.setToolTipText("Start, stop, save, and monitor a running Client Atlas trace.");
+        traceControl.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ClientAtlasTraceControl.launch();
+            }
+        });
+        panel.add(traceControl);
+
+        panel.add(taskButton("Correlate Latest Trace", new Runnable() {
+            @Override
+            public void run() {
+                correlateLatestTrace();
+            }
+        }));
         panel.add(taskButton("Run Search Check", new Runnable() {
             @Override
             public void run() {
@@ -245,6 +262,27 @@ public final class ClientAtlasControl {
             }
         });
         return button;
+    }
+
+    private void correlateLatestTrace() {
+        runBackground("Correlating the latest saved runtime trace against the current Atlas index...", new BackgroundTask() {
+            @Override
+            public String execute() throws Exception {
+                AtlasInvestigationIndex index = currentInvestigationIndex();
+                AtlasTraceCorrelationEngine engine = new AtlasTraceCorrelationEngine(index);
+                Path trace = AtlasTraceCorrelationEngine.latestTrace(workspace);
+                CorrelationResult result = engine.correlate(trace);
+                return "Latest trace correlation\n"
+                        + "Status: " + result.getStatus() + "\n"
+                        + "Accepted: " + result.isAccepted() + "\n"
+                        + "Events: " + result.getTotalEvents() + "\n"
+                        + "Dropped: " + result.getDroppedCount() + "\n"
+                        + "Trace fingerprint: " + result.getTraceFingerprint() + "\n"
+                        + "Atlas fingerprint: " + result.getAtlasFingerprint() + "\n"
+                        + "Trace: " + result.getTracePath() + "\n\n"
+                        + "PASS target: Status CURRENT + Accepted true.";
+            }
+        });
     }
 
     private void runInvestigationCheck() {
