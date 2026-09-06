@@ -13,7 +13,11 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -23,9 +27,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class AtlasTraceRecorder {
 
     public static final int MAX_EVENTS = 10000;
+    public static final int MAX_DEFINITION_EVENTS = 4000;
 
     private static final Object LOCK = new Object();
     private static final List<TraceEvent> EVENTS = new ArrayList<TraceEvent>(MAX_EVENTS);
+    private static final Set<String> UNIQUE_KEYS = new HashSet<String>(MAX_DEFINITION_EVENTS);
+    private static final Map<String, Integer> CATEGORY_COUNTS = new HashMap<String, Integer>();
     private static final AtomicBoolean CONTROL_SERVER_STARTED = new AtomicBoolean(false);
     private static final DateTimeFormatter FILE_TIME = DateTimeFormatter
             .ofPattern("yyyyMMdd-HHmmss-SSS").withZone(ZoneOffset.UTC);
@@ -37,6 +44,7 @@ public final class AtlasTraceRecorder {
     private static String lastSavedPath;
     private static long sequence;
     private static long droppedCount;
+    private static long suppressedCount;
 
     private AtlasTraceRecorder() {
     }
@@ -66,8 +74,11 @@ public final class AtlasTraceRecorder {
                 throw new IllegalStateException("Client Atlas trace is already active");
             }
             EVENTS.clear();
+            UNIQUE_KEYS.clear();
+            CATEGORY_COUNTS.clear();
             sequence = 0L;
             droppedCount = 0L;
+            suppressedCount = 0L;
             sessionName = normalizeSessionName(requestedName);
             startedAtUtc = Instant.now().toString();
             stoppedAtUtc = null;
@@ -87,6 +98,25 @@ public final class AtlasTraceRecorder {
     }
 
     public static void record(String category, String eventType, String sourceId, String... fields) {
+        recordInternal(category, eventType, sourceId, null, 0, fields);
+    }
+
+    /**
+     * Records only the first occurrence of a caller-provided key per session and
+     * optionally caps that category below the global buffer ceiling. Intentional
+     * filtering increments suppressedCount rather than droppedCount.
+     */
+    public static void recordOnce(String category, String eventType, String sourceId,
+            String uniqueKey, int maxCategoryEvents, String... fields) {
+        if (uniqueKey == null || uniqueKey.length() == 0) {
+            record(category, eventType, sourceId, fields);
+            return;
+        }
+        recordInternal(category, eventType, sourceId, uniqueKey, maxCategoryEvents, fields);
+    }
+
+    private static void recordInternal(String category, String eventType, String sourceId,
+            String uniqueKey, int maxCategoryEvents, String... fields) {
         if (!active) {
             return;
         }
@@ -97,16 +127,36 @@ public final class AtlasTraceRecorder {
         String safeThread = limit(Thread.currentThread().getName(), 80);
         String[] safeFields = sanitizeFields(fields);
         String timestampUtc = Instant.now().toString();
+        String safeUniqueKey = uniqueKey == null ? null
+                : safeCategory + '|' + safeEventType + '|' + limit(uniqueKey, 320);
 
         synchronized (LOCK) {
             if (!active) {
                 return;
             }
+
+            if (safeUniqueKey != null && UNIQUE_KEYS.contains(safeUniqueKey)) {
+                suppressedCount++;
+                return;
+            }
+
+            Integer currentCategoryCount = CATEGORY_COUNTS.get(safeCategory);
+            int categoryCount = currentCategoryCount == null ? 0 : currentCategoryCount.intValue();
+            if (maxCategoryEvents > 0 && categoryCount >= maxCategoryEvents) {
+                suppressedCount++;
+                return;
+            }
+
             long eventSequence = ++sequence;
             if (EVENTS.size() >= MAX_EVENTS) {
                 droppedCount++;
                 return;
             }
+
+            if (safeUniqueKey != null) {
+                UNIQUE_KEYS.add(safeUniqueKey);
+            }
+            CATEGORY_COUNTS.put(safeCategory, Integer.valueOf(categoryCount + 1));
             EVENTS.add(new TraceEvent(eventSequence, timestampUtc, safeCategory, safeEventType,
                     safeSourceId, safeThread, safeFields));
         }
@@ -114,7 +164,7 @@ public final class AtlasTraceRecorder {
 
     public static Snapshot snapshot() {
         synchronized (LOCK) {
-            return new Snapshot(active, sessionName, EVENTS.size(), droppedCount,
+            return new Snapshot(active, sessionName, EVENTS.size(), droppedCount, suppressedCount,
                     startedAtUtc, stoppedAtUtc, lastSavedPath);
         }
     }
@@ -130,7 +180,7 @@ public final class AtlasTraceRecorder {
                 throw new IOException("No Client Atlas trace session exists to save");
             }
             copy = new SessionCopy(active, sessionName, startedAtUtc, stoppedAtUtc,
-                    droppedCount, new ArrayList<TraceEvent>(EVENTS));
+                    droppedCount, suppressedCount, new ArrayList<TraceEvent>(EVENTS));
         }
 
         workspace.ensureLayout();
@@ -248,7 +298,7 @@ public final class AtlasTraceRecorder {
     }
 
     private static String headerJson(SessionCopy copy, String fingerprint) {
-        StringBuilder builder = new StringBuilder(384);
+        StringBuilder builder = new StringBuilder(416);
         builder.append('{');
         builder.append("\"recordType\":\"trace-session\"");
         builder.append(",\"formatVersion\":1");
@@ -258,6 +308,7 @@ public final class AtlasTraceRecorder {
         builder.append(",\"activeAtSave\":").append(copy.activeAtSave);
         builder.append(",\"eventCount\":").append(copy.events.size());
         builder.append(",\"droppedCount\":").append(copy.droppedCount);
+        builder.append(",\"suppressedCount\":").append(copy.suppressedCount);
         builder.append(",\"maxEvents\":").append(MAX_EVENTS);
         builder.append(",\"clientFingerprint\":").append(AtlasJson.quote(fingerprint));
         builder.append('}');
@@ -340,16 +391,18 @@ public final class AtlasTraceRecorder {
         private final String sessionName;
         private final long eventCount;
         private final long droppedCount;
+        private final long suppressedCount;
         private final String startedAtUtc;
         private final String stoppedAtUtc;
         private final String lastSavedPath;
 
         private Snapshot(boolean active, String sessionName, long eventCount, long droppedCount,
-                String startedAtUtc, String stoppedAtUtc, String lastSavedPath) {
+                long suppressedCount, String startedAtUtc, String stoppedAtUtc, String lastSavedPath) {
             this.active = active;
             this.sessionName = sessionName;
             this.eventCount = eventCount;
             this.droppedCount = droppedCount;
+            this.suppressedCount = suppressedCount;
             this.startedAtUtc = startedAtUtc;
             this.stoppedAtUtc = stoppedAtUtc;
             this.lastSavedPath = lastSavedPath;
@@ -369,6 +422,10 @@ public final class AtlasTraceRecorder {
 
         public long getDroppedCount() {
             return droppedCount;
+        }
+
+        public long getSuppressedCount() {
+            return suppressedCount;
         }
 
         public String getStartedAtUtc() {
@@ -411,15 +468,17 @@ public final class AtlasTraceRecorder {
         private final String startedAtUtc;
         private final String stoppedAtUtc;
         private final long droppedCount;
+        private final long suppressedCount;
         private final List<TraceEvent> events;
 
         private SessionCopy(boolean activeAtSave, String sessionName, String startedAtUtc,
-                String stoppedAtUtc, long droppedCount, List<TraceEvent> events) {
+                String stoppedAtUtc, long droppedCount, long suppressedCount, List<TraceEvent> events) {
             this.activeAtSave = activeAtSave;
             this.sessionName = sessionName;
             this.startedAtUtc = startedAtUtc;
             this.stoppedAtUtc = stoppedAtUtc;
             this.droppedCount = droppedCount;
+            this.suppressedCount = suppressedCount;
             this.events = events;
         }
     }
