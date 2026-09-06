@@ -90,3 +90,8 @@
 - Moved Reset Client Console Layout presentation into DashboardPanel while keeping the existing shell-owned reset callback/geometry authority unchanged.
 - Removed the permanent focus-test/docking scaffold from the home page; focus regression remains covered by the Client Console runtime test list instead of occupying production dashboard space.
 - Reduced `ClientConsoleShell` responsibility back to rail navigation, panel hosting, sizing, collapse/persistence hooks, and panel failure isolation.
+- Replaced the Commands panel's 304 individual Swing command buttons with one lightweight searchable `JList` command palette while keeping the existing `CommandCatalog` and authoritative `ClientConsoleBridge` execution path unchanged.
+- Commands search now matches command name, category, and usage text; category filtering remains available as a secondary filter.
+- Added search-field Up/Down navigation, Enter selection, Esc clear, result-click selection, and Enter-to-select behavior without executing commands directly from the result list.
+- Kept command arguments/preview/run composition separate from palette navigation and preserved the existing five-second second-confirm requirement for protected commands.
+- Added wrapped command usage/category presentation in the composer and compact result rows with visible protected-command warning markers.
