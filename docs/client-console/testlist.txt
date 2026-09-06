@@ -1,4 +1,4 @@
-Matrix3 Client Console - shell + Owner + Commands + Player + Item Browser + Settings runtime test list
+Matrix3 Client Console - shell + Owner + Commands + Player + Item Browser + Atlas + Settings runtime test list
 
 1. Start the client through the normal Matrix3 client launch path. Confirm the game still renders and reaches normal login/gameplay with the Client Console attached beside the game view.
 2. Confirm the shell is dark-themed, the M3 rail remains visible, the Home icon visibly indicates the open state, and the placeholder content scrolls vertically when space is limited.
@@ -93,3 +93,13 @@ Matrix3 Client Console - shell + Owner + Commands + Player + Item Browser + Sett
 91. Inspect all six rail icons at normal client size. Confirm Home, Owner, Commands, Player, Items, and Settings are recognizable, centered inside the existing 48x44 rail targets, and no old C/O/>_/P/I/S text placeholders remain.
 92. Hover, press, select, disable where applicable, and switch between rail icons. Confirm the Java2D glyphs follow the existing muted/hover/selected theme treatment and the selected panel remains obvious without changing panel IDs or collapse behavior.
 93. Verify the icon rail at 100%, 125%, and 150% Windows display scaling where available. Confirm the 22px vector-drawn glyphs remain crisp/readable, tooltips identify every icon, and no resource-loading or missing-glyph issue occurs.
+94. After compiling the Phase 4A Client Console changes, rebuild the static Client Atlas index once so the generated fingerprint matches the current compiled client.
+95. Click the new Client Atlas globe icon. Confirm Atlas is lazy-created on first open, becomes the active panel, and normal game rendering/input remains responsive while the first index is loaded off the Swing EDT.
+96. Search `Class1`, then use an exact canonical Atlas ID from the results. Confirm the exact ID, kind, owner, name, descriptor, and available source/signature detail are shown without renaming the obfuscated symbol.
+97. Select a relationship whose target/source resolves to an exact Atlas symbol and click Open selected relation (or double-click). Confirm the exact symbol opens. Select a constant/type/value row and confirm it stays visible but does not navigate as a guessed symbol.
+98. On one harmless test symbol, save HYPOTHESIS evidence with alias `Atlas UI test`, note `Phase 4A runtime UI test`, and reference `runtime:phase4a-ui`. Confirm freshness reports CURRENT and the saved record reappears after selecting another symbol and returning.
+99. Delete the temporary `Atlas UI test` evidence. Confirm the editor returns to No curated evidence and no generated Atlas symbol/relationship data changes.
+100. Resize the console to the narrowest supported width with Atlas open. Confirm search, result selection, exact detail, relationship browsing, and evidence controls remain reachable without requiring fullscreen/maximized mode.
+101. Move/interact in game while repeatedly searching and navigating Atlas. Confirm there is no visible render/input hitch and no Swing/client-thread exception.
+102. Leave Atlas selected, close Matrix3 normally, and relaunch. Confirm Atlas restores as the active panel through the existing generic Client Console active-panel preference path.
+103. Final Phase 4A regression: switch Atlas/Home/Owner/Commands/Player/Items/Settings, perform one safe normal game interaction, and confirm Atlas remains tooling-only with no gameplay/server command/packet behavior change.
