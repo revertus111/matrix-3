@@ -161,29 +161,31 @@ definition cache miss:    Class639.method7568(int,int)
 - [x] Added CLI commands:
   - `trace-correlate <trace|latest> [classes-dir]`
   - `trace-correlate-export <trace|latest> <file> [classes-dir]`
+- [x] Main `ClientAtlasControl` now exposes `Runtime Trace Control` and `Correlate Latest Trace`, so the normal Phase 3 gate can be completed without CLI arguments.
 - [ ] Runtime proof against the rebuilt current index is intentionally folded into the final Bundle 3A gate.
 
 ### Bundle 3A consolidated runtime gate - NEXT
 
-One pull/build/start session only:
+One pull/build/start session only. The normal path is now GUI-first; CLI remains optional.
 
 1. Eclipse Java 8 clean/build.
-2. Confirm the old Phase 2 Atlas index is stale after the Phase 3 source build.
-3. Rebuild Atlas once with the new compiled classes.
-4. Start client/login normally.
-5. Start one named trace.
-6. Perform a few controlled keyboard/menu/network/interface/definition/GFX actions.
-7. Stop + save.
-8. Run `trace-correlate latest`.
-9. Require:
-   - `status = CURRENT`,
-   - `correlationAccepted = true`,
+2. Open the main Atlas Control and confirm `Runtime Trace Control` + `Correlate Latest Trace` are visible.
+3. Confirm the old Phase 2 Atlas index is stale after the Phase 3 source build.
+4. Click `Scan / Rebuild Index` once.
+5. Start client/login normally.
+6. Click `Runtime Trace Control`, then `Start Trace` and name it `phase3-gate`.
+7. Perform a few controlled keyboard/menu/network/interface/definition/GFX actions.
+8. In Runtime Trace Control click `Stop + Save`.
+9. Back in the main Atlas Control click `Correlate Latest Trace`.
+10. Require:
+   - `Status: CURRENT`,
+   - `Accepted: true`,
    - trace fingerprint = rebuilt Atlas fingerprint,
    - source/owner IDs resolve,
    - expected categories exist,
    - dropped count visible and normal short trace below cap.
-10. Confirm stopped tracing no longer grows event count.
-11. Because central packet enqueue/decode seams changed, complete the permanent Matrix3 smoke checklist during this same launch before Phase 3/Bundle 3A is marked DONE.
+11. Confirm stopped tracing no longer grows event count.
+12. Because central packet enqueue/decode seams changed, complete the permanent Matrix3 smoke checklist during this same launch before Phase 3/Bundle 3A is marked DONE.
 
 Do not request per-hook runtime launches.
 
@@ -227,6 +229,7 @@ Correlation/offline tooling:
 ```text
 Client/src/main/java/game/atlas/AtlasTraceCorrelationEngine.java
 Client/src/main/java/game/atlas/ClientAtlasMain.java
+Client/src/main/java/game/atlas/ClientAtlasControl.java
 ```
 
 Small runtime seams:
@@ -246,6 +249,7 @@ Client/src/main/java/game/Class639.java
 - 3A.0: verified-static discovery.
 - 3A-Core: implementation complete / verified-static / runtime gate deferred intentionally.
 - 3A.6: implementation complete / verified-static / runtime validation deferred to the same consolidated Bundle 3A gate.
+- Runtime-gate GUI wiring: implemented / verified-static; user-visible button/open behavior remains part of the same consolidated gate.
 - No Phase 2 retest unless contradictory evidence or a Phase 2 implementation change appears.
 
 # Carryover / blockers
@@ -269,6 +273,7 @@ These do not block the initial Bundle 3A gate.
 
 - **Phase 3 / Bundle 3A / 3A.6 correlation implementation complete - verified-static.**
 - Runtime hooks plus bounded exact symbol correlation/export are implemented.
+- Main Atlas Control now exposes the runtime trace and latest-correlation actions directly.
 
 **Current phase:**
 
@@ -280,7 +285,7 @@ These do not block the initial Bundle 3A gate.
 
 **Current/next work:**
 
-- Run one consolidated Java 8 build + Atlas rebuild + controlled trace + correlation + required Matrix3 smoke verification.
+- Pull/build once, then complete the GUI-first Atlas rebuild -> Runtime Trace Control -> Stop + Save -> Correlate Latest Trace flow and required Matrix3 smoke verification.
 - Do not add more trace features before this gate unless compilation/runtime evidence requires a fix.
 
 **Do not re-scan/re-discover without new evidence:**
@@ -293,6 +298,7 @@ These do not block the initial Bundle 3A gate.
 
 **Pending runtime verification:**
 
+- Runtime gate buttons are visible/open correctly.
 - 3A-Core hooks.
 - 3A.6 exact source/owner correlation against the rebuilt current Atlas index.
 - stop/disabled behavior, fingerprint match, dropped count, normal startup/ownership, and permanent smoke checks.
