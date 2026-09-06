@@ -122,8 +122,9 @@ Phase 3 / Bundle 3B - implementation complete / NEEDS one consolidated offline g
 [x] Stale/missing records are retained for review and are never silently deleted or semantically promoted.
 [x] `AtlasWorkspace.initialize()` continues to reset generated symbols/relationships only; `evidence.jsonl` is preserved across rescans.
 [x] `AtlasJson` serializes evidence deterministically including supporting-reference arrays.
+[x] Free-form evidence values encode literal quotes safely so field-name-like text cannot be mistaken for JSON property names by the deterministic evidence parser.
 [x] `AtlasEvidenceVerifier` added as one isolated Bundle 3B check; it never edits the real developer evidence file.
-[x] Verifier covers JSONL escape round-trip, aliases/notes, classifications/refs, stale warning, orphan retention, rescan preservation, upsert/search, and delete.
+[x] Verifier covers JSONL escape round-trip, field-name-like quoted evidence text, aliases/notes, classifications/refs, stale warning, orphan retention, rescan preservation, upsert/search, and delete.
 [ ] Eclipse Java 8 clean/build current Client once.
 [ ] Run `game.atlas.AtlasEvidenceVerifier` once as a Java Application in Eclipse.
 [ ] Require final line `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
