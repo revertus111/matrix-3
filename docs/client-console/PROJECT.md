@@ -4,7 +4,7 @@
 
 Finish the existing Matrix3 Client Console as a professional, fast, coherent developer sidebar that accelerates Matrix3 content work without becoming an alternate owner of gameplay, commands, persistence, cache decoding, or renderer behavior.
 
-`docs/client-console/CLIENT_CONSOLE.md` remains the detailed design/UX authority. This file owns workstream phases, bundles, checklist state, main-goal status, deferred verification, and resume state.
+`docs/client-console/CLIENT_CONSOLE.md` remains the detailed design/UX reference. This file owns workstream phases, bundles, checklist state, main-goal status, deferred verification, and resume state.
 
 ## Canonical Main-Goal Status
 
@@ -12,15 +12,16 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 | --- | --- |
 | Shell & workspace foundation | ✅ Complete |
 | Core developer workflows | ✅ Complete |
-| Professional V2 presentation | 🔵 In Progress |
-| Tool ownership & organization | 🔵 In Progress |
-| Consolidated V2 runtime acceptance | ❌ Not started |
+| Professional V2 presentation | ⚠️ Needs runtime verification |
+| Tool ownership & organization | ⚠️ Needs runtime verification |
+| Consolidated V2 runtime acceptance | ⚠️ Needs runtime verification |
 
 ## Scope
 
 ### In scope
 
-- Client Console shell, rail, dashboard, Owner, Commands, Player, Item Browser, Settings, and small specialist-tool launch/navigation surfaces.
+- Client Console shell, rail, Dashboard, Owner, Commands, Player, Item Browser, Settings, and small specialist-tool navigation/launch surfaces.
+- Dedicated Client Console navigation for specialist developer workflows such as Client Atlas and Boss Research while preserving their own authorities.
 - Shared Client Console visual primitives and responsive Swing presentation.
 - Client-side bridges that expose existing Matrix3 state/actions without taking ownership from Matrix3 systems.
 - Consolidated developer runtime verification optimized for limited PC time.
@@ -35,18 +36,20 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 ## Architecture / ownership
 
 - `ClientConsoleShell` owns rail navigation, panel hosting, open/collapse behavior, width/layout integration, lazy panel creation, and failure isolation.
-- `ConsolePreferences` owns Client Console workspace geometry/open/active-panel persistence.
+- `ConsolePreferences` owns Client Console workspace geometry/open/active-panel persistence; panel IDs remain generic persisted strings.
 - `ConsoleTheme` owns shared Client Console presentation primitives.
 - Individual panels own their controls/display formatting and call existing Matrix3/client-console bridges.
 - `ClientConsoleBridge` and specialist bridges hand off to existing authoritative Matrix3 systems; they do not replace those systems.
-- `Commands.java` remains server command authority and must not be modified by Client Console UI polish.
-- Boss/cache research belongs in dedicated Boss Research/BossLabs workflows rather than accumulating in Owner.
+- `Commands.java` remains server command authority and is not owned by Client Console.
+- Client Atlas remains owned by the existing `game.atlas` authorities; Client Console only hosts its panel.
+- Boss runtime probes/findings remain owned by `ClientConsoleBossResearchBridge` and RoTS cache evidence remains owned by `ClientConsoleRotsBridge`/`ClientConsoleRotsGfxBootstrap`; Client Console now gives those workflows one dedicated Boss Research home.
+- Owner is limited to account/rights/client-state visibility and future genuine owner/admin controls. Boss/cache research no longer belongs there.
 
 ## Verified foundation
 
 ### VERIFIED
 
-- User has runtime-observed the current V2 dashboard/icon direction and reported that it looks substantially better.
+- User runtime-observed the current V2 dashboard/icon direction and reported that it looks substantially better.
 - OpenGL is a working renderer baseline and is not part of this workstream's unfinished scope.
 
 ### verified-static
@@ -55,26 +58,32 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 - Dashboard reuses read-only `ClientConsoleBridge` display name/rights/player/world-position state.
 - Item Browser uses a 500ms debounce and preserves bounded empty browse plus lazy thumbnail work.
 - Commands uses a search-first `JList` palette while preserving `ClientConsoleBridge.queueConsoleCommand(...)` and dangerous-command confirmation.
-- Owner currently contains both the new generic `BossResearchPanel` and the older RoTS cache Scan/Deep Scan card; the new panel does not yet replace all cache-evidence functionality.
-- `ConsoleTheme` centralizes basic colors/fonts/button/text-field/scroll treatment, but several panels still duplicate card/header/value-row/combo/status/popup styling.
+- Client Atlas remains registered through its existing `atlas` panel ID and icon.
+- Boss Research is now a dedicated lazy panel with its own icon/panel ID. It combines the pre-existing brother transform/animation/GFX/finding workflow with the pre-existing RoTS Scan/Deep Scan/Copy/Clear cache-evidence workflow.
+- Owner no longer imports or hosts boss research/RoTS cache research.
+- `ConsoleTheme` now centralizes title/subtitle/card/value-row/wrapped-text/combo/status/popup/menu primitives in addition to the existing button/text-field/scroll styling.
+- Dashboard, Owner, Player, Settings, and Boss Research use the shared visual primitives. Settings explicitly tracks viewport width for narrow-sidebar wrapping.
+- Item Browser's local popup/menu wrappers already match the same Client Console palette; they were intentionally left behaviorally untouched rather than rewriting the large panel solely for three style delegations.
 
 ## Unknown / research needed
 
 ### HYPOTHESIS
 
-- None required for the current V2 Finish Bundle.
+- None required for the current V2 runtime gate.
 
 ### UNKNOWN
 
 - Final DPI/layout/input behavior of the accumulated V2 changes remains pending consolidated runtime acceptance.
-- Exact visual quality of the final shared-component pass remains runtime/visual acceptance rather than a static claim.
+- Runtime behavior of the newly dedicated Boss Research panel, migrated RoTS evidence controls, and `bossResearch` active-panel restore remains pending.
+- Exact visual quality at all requested resolutions/scaling values remains a runtime/visual acceptance question rather than a static claim.
 
 ## Dependencies
 
 - Existing `ClientConsoleRotsBridge` and `ClientConsoleRotsGfxBootstrap` for RoTS cache evidence.
 - Existing `ClientConsoleBossResearchBridge` for runtime probes and finding persistence.
 - Existing `ConsolePreferences` string-based active-panel persistence.
-- Existing Client Console V2 deferred runtime list.
+- Existing Client Atlas panel/authorities, which must remain unaffected.
+- `docs/client-console/v2-testlist.txt` for the consolidated runtime gate.
 
 ## Development plan
 
@@ -88,7 +97,7 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 
 ### Phase 2 - Professional V2 finish
 
-**Status:** ACTIVE
+**Status:** NEEDS TEST
 
 **Purpose:** Make the established Client Console intentionally designed, efficiently organized, and consistent without rewriting the known-good architecture.
 
@@ -96,10 +105,11 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 
 **Exit conditions:**
 
-- Navigation/dashboard/Commands/Item Browser V2 behavior implemented.
-- Boss research has one coherent dedicated home and Owner no longer contains duplicate boss-specific tooling.
-- Shared visual primitives remove obvious panel-by-panel Swing inconsistency without creating a UI framework.
-- Consolidated V2 runtime acceptance passes.
+- V2 navigation/dashboard/Commands/Item Browser behavior passes consolidated runtime checks.
+- Boss Research dedicated ownership and migrated RoTS cache-evidence workflow pass runtime checks without feature loss.
+- Owner contains no duplicated boss-specific tooling.
+- Shared presentation remains readable/responsive across the requested window sizes/scaling targets.
+- No regression in Matrix3 input, renderer ownership, Commands authority, Item Browser bridges, Settings, Atlas, or workspace persistence.
 
 #### Bundle 2.1 - Initial V2 interaction polish
 
@@ -117,58 +127,51 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 
 #### Bundle 2.2 - V2 Finish Bundle
 
-**Status:** ACTIVE
+**Status:** NEEDS TEST
 
-**Purpose:** Finish ownership cleanup and visual consistency as one larger compatible patch bundle before the deferred runtime session.
-
-**Dependencies:** Bundle 2.1 implementation is present. Its pending runtime checks do not block this bundle because Bundle 2.2 preserves the same shell/bridge ownership and can be validated in the same consolidated session.
+**Purpose:** Finish ownership cleanup and visual consistency as one larger compatible implementation bundle before the deferred runtime session.
 
 **Checklist / patches:**
 
 - [x] Scan remaining V2 ownership/presentation work and establish bundle boundaries.
-- [ ] Add dedicated lazy Boss Research navigation/panel ownership.
-- [ ] Consolidate old RoTS Scan/Deep Scan evidence into Boss Research without losing functionality.
-- [ ] Remove boss-specific/research duplication from Owner.
-- [ ] Expand `ConsoleTheme` with small shared card/header/value-row/combo/status/popup helpers.
-- [ ] Apply shared presentation cleanup across Dashboard, Owner, Player, Settings, Boss Research, and Item Browser context menus where beneficial.
-- [ ] Update design authority/patchnotes/deferred tests for final V2 structure.
-- [ ] Perform narrow static verification of changed files and Java 8 compatibility.
-- [ ] Mark implementation `NEEDS TEST` and prepare one consolidated runtime session.
+- [x] Add dedicated lazy Boss Research navigation/panel ownership while preserving the concurrently-added Client Atlas panel.
+- [x] Consolidate old RoTS Scan/Deep Scan/Copy/Clear evidence into Boss Research without changing specialist bridge/thread ownership.
+- [x] Remove boss-specific/research duplication from Owner.
+- [x] Expand `ConsoleTheme` with small shared card/header/value-row/wrapped-text/combo/status/popup/menu helpers.
+- [x] Apply shared presentation cleanup across Dashboard, Owner, Player, Settings, and Boss Research. Item Browser's already-matching local popup wrappers are intentionally retained to avoid high-risk full-file churn for no visual gain.
+- [x] Update workstream authority, patchnotes, and deferred tests for the final V2 structure.
+- [x] Perform narrow static source verification for ownership paths, panel registration/persistence, bridge preservation, and Java 8-compatible language/API usage.
+- [x] Mark implementation `NEEDS TEST` and prepare one consolidated runtime session.
 
-**Runtime tests:** Use `docs/client-console/v2-testlist.txt` after this bundle; do not interrupt implementation for per-patch launches unless static evidence exposes a blocker.
+**Static verification notes:**
 
-### Phase 3 - Consolidated runtime acceptance
+- No server/gameplay/Commands.java files were changed by this bundle.
+- Boss Research uses the same `ClientConsoleBossResearchBridge`, `ClientConsoleRotsBridge`, and `ClientConsoleRotsGfxBootstrap` calls that already owned the workflows before migration.
+- RoTS Scan/Deep Scan still execute on daemon worker threads and return completed UI updates through Swing EDT ownership.
+- `ClientConsoleShell` adds `bossResearch` alongside the existing `atlas` panel and includes it in lazy creation, normalization, selected-state display, and generic active-panel persistence.
+- Source uses Java 8-compatible Swing/AWT/lambda constructs only. A local Eclipse compile/runtime launch is intentionally deferred to the consolidated user test session because repository access here is connector-based rather than a local checkout.
 
-**Status:** PLANNED
+#### Bundle 2.3 - Consolidated V2 runtime gate
 
-**Purpose:** Validate the accumulated V2 bundle in one efficient Matrix3 launch/test session.
+**Status:** NEEDS TEST
 
-**Entry conditions:** Phase 2 implementation complete.
-
-**Exit conditions:**
-
-- V2 deferred test list passes or failures are recorded as targeted carryover.
-- No regression in gameplay input, renderer ownership, commands, Item Browser bridges, Settings, workspace persistence, BossLabs/CacheEditor launches, or Boss Research workflows.
-
-#### Bundle 3.1 - V2 acceptance session
-
-**Status:** PLANNED
+**Purpose:** Validate all accumulated V2 implementation in one efficient Matrix3 launch/test session.
 
 **Checklist / patches:**
 
-- [ ] Run quick visual/navigation/dashboard/Commands/Item Browser/Boss Research checks.
-- [ ] Run focus, resize/DPI, persistence, and authority regression checks.
-- [ ] Record runtime evidence and close/carry over failures precisely.
+- [ ] Run the quick visual/navigation/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas checks in `v2-testlist.txt`.
+- [ ] Run focus, resize/DPI, persistence, bridge-authority, and restart checks from the same list.
+- [ ] Record runtime evidence and convert any failures into targeted carryover rather than broad rescans.
 
 ## Current execution state
 
 - Phase: Phase 2 - Professional V2 finish
-- Phase status: ACTIVE
-- Bundle: Bundle 2.2 - V2 Finish Bundle
-- Bundle status: ACTIVE
-- Approval state: SAP AAA approved for the complete Bundle 2.2 implementation scope.
-- Current checklist item: Add dedicated lazy Boss Research navigation/panel ownership.
-- Current objective: Finish the remaining V2 ownership and presentation work before one consolidated runtime session.
+- Phase status: NEEDS TEST
+- Bundle: Bundle 2.3 - Consolidated V2 runtime gate
+- Bundle status: NEEDS TEST
+- Approval state: Bundle 2.2 implementation completed under SAP AAA. Runtime verification is intentionally deferred until the user's later test session.
+- Current checklist item: Run `docs/client-console/v2-testlist.txt` in one consolidated Matrix3 session.
+- Current objective: Validate the accumulated V2 implementation without additional feature expansion first.
 
 ## Checklist / patch status
 
@@ -178,9 +181,10 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 | Developer dashboard | 2 | 2.1 | NEEDS TEST | Implemented; user reports improved appearance. |
 | Item Browser 500ms search | 2 | 2.1 | NEEDS TEST | Implemented; deferred performance/runtime check. |
 | Commands palette | 2 | 2.1 | NEEDS TEST | Implemented; deferred keyboard/runtime check. |
-| Boss Research ownership migration | 2 | 2.2 | ACTIVE | Preserve both runtime-probe findings and old RoTS cache evidence. |
-| Shared visual primitives | 2 | 2.2 | READY | Small helpers only; no UI framework. |
-| V2 consolidated acceptance | 3 | 3.1 | READY | One runtime session after implementation bundle. |
+| Boss Research ownership migration | 2 | 2.2 | NEEDS TEST | Dedicated lazy panel; runtime probes/findings + RoTS cache evidence consolidated. |
+| Owner cleanup | 2 | 2.2 | NEEDS TEST | Boss-specific tooling removed from Owner. |
+| Shared visual primitives | 2 | 2.2 | NEEDS TEST | Applied to primary V2 panels; final layout/DPI acceptance pending. |
+| V2 consolidated acceptance | 2 | 2.3 | NEEDS TEST | One runtime session after pull. |
 
 ## Decisions / new ideas
 
@@ -189,8 +193,10 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 - 2026-09-06: Switch Client Console work to bundle-first execution. Scan first, group compatible changes by ownership/files/dependencies/runtime tests, then implement the approved bundle without stopping for tiny AAA gates.
 - 2026-09-06: Do not delete Owner's old RoTS cache research until equivalent Scan/Deep Scan/Copy/Clear evidence access exists in the dedicated Boss Research workflow.
 - 2026-09-06: Use one dedicated Boss Research panel rather than leaving boss research embedded in Owner.
-- 2026-09-06: Shared styling expansion must remain small and presentation-only; no plugin/component framework is approved.
-- 2026-09-06: Pinned/recent tools, renderer telemetry, and other optional dashboard expansion are backlog only and do not belong in the V2 Finish Bundle.
+- 2026-09-06: Preserve Client Atlas as a separate concurrently-developed panel/workstream; Boss Research is added alongside it rather than replacing or absorbing it.
+- 2026-09-06: Shared styling expansion remains small and presentation-only; no plugin/component framework is approved.
+- 2026-09-06: Do not rewrite the 35k Item Browser solely to replace three already-matching private menu-style wrappers when no narrow patch operation is available; stability beats cosmetic deduplication.
+- 2026-09-06: Pinned/recent tools, renderer telemetry, and other optional dashboard expansion remain backlog only and do not belong in the V2 Finish Bundle.
 
 ## Testing
 
@@ -200,7 +206,7 @@ Use `docs/client-console/v2-testlist.txt` as the primary consolidated V2 accepta
 
 ### Deeper checks
 
-Use the historical `docs/client-console/testlist.txt` only when a V2 failure points to a deeper subsystem regression.
+Use the historical `docs/client-console/testlist.txt` only when a V2 failure points to a deeper subsystem regression. Use the Client Atlas/BossLabs specialist test lists for deeper specialist-tool failures.
 
 ### Smoke/regression checks
 
@@ -208,14 +214,15 @@ Use the historical `docs/client-console/testlist.txt` only when a V2 failure poi
 - Commands still route through server command authority.
 - Item Browser Inventory/Bank bridge behavior unchanged.
 - Settings authority/persistence unchanged.
-- Workspace geometry/open/active-panel persistence unchanged.
+- Workspace geometry/open/active-panel persistence unchanged, including `bossResearch` and existing `atlas` IDs.
 - Boss Research runtime probes/findings and RoTS Scan/Deep Scan remain available after migration.
+- Owner remains read-only and free of duplicated boss-specific tooling.
 
 ## Carryover / blockers
 
 ### CARRYOVER
 
-- Runtime verification for Bundle 2.1 is intentionally deferred into Phase 3 to save user PC time.
+- Runtime verification for Bundles 2.1 and 2.2 is intentionally consolidated into Bundle 2.3 to save user PC time.
 
 ### BLOCKED
 
@@ -225,23 +232,24 @@ Use the historical `docs/client-console/testlist.txt` only when a V2 failure poi
 
 **Last completed:**
 
-- Remaining V2 work scanned and normalized into the larger V2 Finish Bundle.
+- Bundle 2.2 V2 Finish Bundle implemented and statically reviewed: dedicated Boss Research navigation, RoTS evidence migration, Owner cleanup, shared visual primitives, responsive Settings, patchnotes, and consolidated V2 tests.
 
 **Current phase:**
 
-- Phase 2 - Professional V2 finish.
+- Phase 2 - Professional V2 finish (`NEEDS TEST`).
 
 **Active bundle:**
 
-- Bundle 2.2 - V2 Finish Bundle.
+- Bundle 2.3 - Consolidated V2 runtime gate (`NEEDS TEST`).
 
 **Next checklist item:**
 
-- Add dedicated lazy Boss Research navigation/panel ownership, then migrate the legacy RoTS cache evidence card into that dedicated workflow before cleaning Owner.
+- Pull current `main`, launch Matrix3 once in Eclipse/Java 8, and run `docs/client-console/v2-testlist.txt` as one batch when runtime time is available.
 
 **Current state / next action:**
 
-- SAP AAA is approved for the full bundle. Continue implementation without requesting another approval between listed checklist items unless scope materially changes.
-- Files already inspected: `ClientConsoleShell.java`, `ConsolePreferences.java`, `ConsoleTheme.java`, `OwnerPanel.java`, `BossResearchPanel.java`, `DashboardPanel.java`, `PlayerPanel.java`, `SettingsPanel.java`, `ItemBrowserPanel.java`, `CLIENT_CONSOLE.md`, patch/test docs.
-- Do not rescan unrelated client/server systems. Existing research bridges are sufficient for this bundle.
-- Pending runtime verification: accumulated V2 icon/dashboard/search/command-palette plus this finish bundle.
+- Do not add more V2 feature scope before the consolidated gate unless a separate urgent workstream explicitly changes priority.
+- Files already inspected/changed for this bundle: `ClientConsoleShell.java`, `ConsoleIcons.java`, `ConsoleTheme.java`, `OwnerPanel.java`, `BossResearchPanel.java`, `DashboardPanel.java`, `PlayerPanel.java`, `SettingsPanel.java`, Client Console workstream/patch/test docs.
+- `ItemBrowserPanel.java` was inspected but intentionally not rewritten for menu-style delegation because its existing menu palette already matches and the available GitHub write path would require replacing the full large file.
+- Do not rescan unrelated client/server systems; existing specialist bridges are sufficient.
+- Pending runtime verification: accumulated V2 icon/dashboard/search/command-palette plus dedicated Boss Research migration/shared presentation and existing Atlas coexistence.
