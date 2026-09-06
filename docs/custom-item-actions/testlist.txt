@@ -1,7 +1,7 @@
 Matrix3 custom item action runtime test list
 
 1. Pull current `main`, delete any old `Server/data/logs/backpack-debug.txt`, then restart both Client and Server through the normal Eclipse/Java 8 workflow.
-2. Confirm `Server/data/logs/backpack-debug.txt` is created. The client should add one-time `[CLIENT] IFACE671 ...` lines describing non-empty string fields for interface 671 components 0..63.
+2. Confirm `Server/data/logs/backpack-debug.txt` is created. The client should add one-time `[CLIENT] IFACE671 ...` lines for valid interface 671 components and then a safe `IFACE671 boundary component=...` line when it reaches the real component-array boundary. The client must not crash.
 3. Open Rambler's backpack 21445 from the normal NIS inventory. VERIFIED: configured Inventory Option 4 routes to Backpack and interface 671/665 opens successfully.
 4. Click one item in the LARGE main visible backpack grid first. Do not click the right-side strip yet. Confirm a `[SERVER] CLICK interface=671 component=... slot=... packet=... item=...` line is added.
 5. Click one item in the NARROW right-side strip second. Confirm a second `[SERVER] CLICK interface=671 ...` line is added. Preserve the order: large grid first, narrow strip second, so the two component IDs can be classified unambiguously.
