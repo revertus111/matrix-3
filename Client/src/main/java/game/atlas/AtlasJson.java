@@ -53,9 +53,9 @@ final class AtlasJson {
         builder.append('{');
         appendStringField(builder, "subjectId", record.getSubjectId(), true);
         appendStringField(builder, "status", record.getStatus().getWireValue(), false);
-        appendStringField(builder, "alias", record.getAlias(), false);
-        appendStringField(builder, "claim", record.getClaim(), false);
-        appendStringArrayField(builder, "supportingReferences", record.getSupportingReferences());
+        appendEvidenceStringField(builder, "alias", record.getAlias());
+        appendEvidenceStringField(builder, "claim", record.getClaim());
+        appendEvidenceStringArrayField(builder, "supportingReferences", record.getSupportingReferences());
         appendStringField(builder, "clientFingerprint", record.getClientFingerprint(), false);
         builder.append('}');
         return builder.toString();
@@ -83,7 +83,24 @@ final class AtlasJson {
         }
     }
 
-    private static void appendStringArrayField(StringBuilder builder, String name, List<String> values) {
+    /**
+     * Curated evidence is parsed by a small deterministic field parser rather
+     * than a general JSON library. Encode literal quote characters in free-form
+     * evidence values as unicode escapes so text such as "clientFingerprint"
+     * can never be mistaken for a later JSON property name.
+     */
+    private static void appendEvidenceStringField(StringBuilder builder, String name, String value) {
+        builder.append(',');
+        appendString(builder, name);
+        builder.append(':');
+        if (value == null) {
+            builder.append("null");
+        } else {
+            appendEvidenceString(builder, value);
+        }
+    }
+
+    private static void appendEvidenceStringArrayField(StringBuilder builder, String name, List<String> values) {
         builder.append(',');
         appendString(builder, name);
         builder.append(':').append('[');
@@ -91,7 +108,7 @@ final class AtlasJson {
             if (i > 0) {
                 builder.append(',');
             }
-            appendString(builder, values.get(i));
+            appendEvidenceString(builder, values.get(i));
         }
         builder.append(']');
     }
@@ -113,42 +130,58 @@ final class AtlasJson {
         }
     }
 
-    private static void appendString(StringBuilder builder, String value) {
+    private static void appendEvidenceString(StringBuilder builder, String value) {
         builder.append('"');
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
-            switch (c) {
-            case '"':
-                builder.append("\\\"");
-                break;
-            case '\\':
-                builder.append("\\\\");
-                break;
-            case '\b':
-                builder.append("\\b");
-                break;
-            case '\f':
-                builder.append("\\f");
-                break;
-            case '\n':
-                builder.append("\\n");
-                break;
-            case '\r':
-                builder.append("\\r");
-                break;
-            case '\t':
-                builder.append("\\t");
-                break;
-            default:
-                if (c < 0x20 || Character.isSurrogate(c)) {
-                    appendUnicodeEscape(builder, c);
-                } else {
-                    builder.append(c);
-                }
-                break;
+            if (c == '"') {
+                appendUnicodeEscape(builder, c);
+                continue;
             }
+            appendEscapedCharacter(builder, c);
         }
         builder.append('"');
+    }
+
+    private static void appendString(StringBuilder builder, String value) {
+        builder.append('"');
+        for (int i = 0; i < value.length(); i++) {
+            appendEscapedCharacter(builder, value.charAt(i));
+        }
+        builder.append('"');
+    }
+
+    private static void appendEscapedCharacter(StringBuilder builder, char c) {
+        switch (c) {
+        case '"':
+            builder.append("\\\"");
+            break;
+        case '\\':
+            builder.append("\\\\");
+            break;
+        case '\b':
+            builder.append("\\b");
+            break;
+        case '\f':
+            builder.append("\\f");
+            break;
+        case '\n':
+            builder.append("\\n");
+            break;
+        case '\r':
+            builder.append("\\r");
+            break;
+        case '\t':
+            builder.append("\\t");
+            break;
+        default:
+            if (c < 0x20 || Character.isSurrogate(c)) {
+                appendUnicodeEscape(builder, c);
+            } else {
+                builder.append(c);
+            }
+            break;
+        }
     }
 
     private static void appendUnicodeEscape(StringBuilder builder, char c) {
