@@ -3,11 +3,19 @@ package game.console;
 import game.ClientConsoleBossResearchBridge;
 import game.ClientConsoleBossResearchBridge.BrotherPreset;
 import game.ClientConsoleBossResearchBridge.Finding;
+import game.ClientConsoleRotsBridge;
+import game.ClientConsoleRotsGfxBootstrap;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.HierarchyEvent;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -17,16 +25,22 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.Scrollable;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.Timer;
 
 /**
- * First Boss Research Lab vertical slice. RoTS is intentionally the first
- * preset; reusable command/persistence ownership lives in the generic bridge.
+ * Dedicated Boss Research workspace. RoTS is the first preset, while command,
+ * persistence, cache-evidence, and normal Matrix3 ownership stay in the
+ * existing specialist bridges.
  */
-final class BossResearchPanel extends JPanel {
+final class BossResearchPanel extends JScrollPane {
 
     private static final long serialVersionUID = -3130969491627280185L;
+    private static final int REFRESH_DELAY_MS = 750;
 
     private BrotherPreset selectedBrother = BrotherPreset.DHAROK;
 
@@ -45,50 +59,72 @@ final class BossResearchPanel extends JPanel {
     private final JTextField noteField = new JTextField();
     private final JTextArea findingsOutput = new JTextArea();
 
+    private final JLabel rotsStatus = new JLabel("Waiting for definition loaders...");
+    private final JTextArea rotsOutput = new JTextArea();
+    private final JButton rotsScanButton = new JButton("Scan RoTS");
+    private final JButton rotsDeepScanButton = new JButton("Deep Scan");
+    private final AtomicBoolean rotsScanning = new AtomicBoolean();
+    private final Timer refreshTimer = new Timer(REFRESH_DELAY_MS, e -> refreshReadiness());
+
     BossResearchPanel() {
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        setBackground(ConsoleTheme.CARD);
-        setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ConsoleTheme.BORDER),
-                ConsoleTheme.panelPadding(14, 14, 14, 14)));
-        setAlignmentX(LEFT_ALIGNMENT);
-        setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        ViewportWidthPanel content = new ViewportWidthPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(ConsoleTheme.PANEL);
+        content.setBorder(ConsoleTheme.panelPadding(20, 18, 20, 18));
+        content.setMinimumSize(new Dimension(0, 0));
 
-        JLabel title = new JLabel("Boss Research Lab · RoTS");
-        title.setFont(ConsoleTheme.SECTION_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
+        content.add(ConsoleTheme.titleLabel("BOSS RESEARCH"));
+        content.add(Box.createVerticalStrut(4));
+        content.add(ConsoleTheme.subtitleLabel("RoTS runtime probes + persistent findings + cache evidence"));
+        content.add(Box.createVerticalStrut(18));
+        content.add(createRuntimeResearchCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createCacheEvidenceCard());
+        content.add(Box.createVerticalGlue());
 
-        JLabel subtitle = new JLabel("Fast runtime probes + persistent evidence");
-        subtitle.setFont(ConsoleTheme.SMALL_FONT);
-        subtitle.setForeground(ConsoleTheme.ACCENT);
-        subtitle.setAlignmentX(LEFT_ALIGNMENT);
+        setViewportView(content);
+        setHorizontalScrollBarPolicy(HORIZONTAL_SCROLLBAR_NEVER);
+        setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_AS_NEEDED);
+        ConsoleTheme.styleScrollPane(this);
+
+        refreshTimer.setCoalesce(true);
+        addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) == 0) {
+                return;
+            }
+            if (isShowing()) {
+                refreshReadiness();
+                refreshTimer.start();
+            } else {
+                refreshTimer.stop();
+            }
+        });
+
+        updateBrotherSelection(BrotherPreset.DHAROK);
+        refreshReadiness();
+    }
+
+    private JPanel createRuntimeResearchCard() {
+        JPanel card = ConsoleTheme.createCard("RoTS runtime research");
 
         selectedValue.setFont(ConsoleTheme.BODY_FONT);
         selectedValue.setForeground(ConsoleTheme.TEXT);
         selectedValue.setAlignmentX(LEFT_ALIGNMENT);
+        ConsoleTheme.styleStatus(status, false);
 
-        status.setFont(ConsoleTheme.SMALL_FONT);
-        status.setForeground(ConsoleTheme.MUTED_TEXT);
-        status.setAlignmentX(LEFT_ALIGNMENT);
-
-        add(title);
-        add(Box.createVerticalStrut(3));
-        add(subtitle);
-        add(Box.createVerticalStrut(10));
-        add(createBrotherButtons());
-        add(Box.createVerticalStrut(8));
-        add(selectedValue);
-        add(Box.createVerticalStrut(8));
-        add(createAppearanceActions());
-        add(Box.createVerticalStrut(12));
-        add(createProbeSection());
-        add(Box.createVerticalStrut(12));
-        add(createFindingSection());
-        add(Box.createVerticalStrut(8));
-        add(status);
-
-        updateBrotherSelection(BrotherPreset.DHAROK);
+        card.add(Box.createVerticalStrut(10));
+        card.add(createBrotherButtons());
+        card.add(Box.createVerticalStrut(8));
+        card.add(selectedValue);
+        card.add(Box.createVerticalStrut(8));
+        card.add(createAppearanceActions());
+        card.add(Box.createVerticalStrut(12));
+        card.add(createProbeSection());
+        card.add(Box.createVerticalStrut(12));
+        card.add(createFindingSection());
+        card.add(Box.createVerticalStrut(8));
+        card.add(status);
+        return card;
     }
 
     private JPanel createBrotherButtons() {
@@ -119,7 +155,7 @@ final class BossResearchPanel extends JPanel {
 
         become.addActionListener(e -> showCommandResult(
                 ClientConsoleBossResearchBridge.becomeNpc(selectedBrother),
-                "Queued transform into " + selectedBrother + "."));
+                "Queued transform into " + selectedBrother.getDisplayName() + "."));
         reset.addActionListener(e -> showCommandResult(
                 ClientConsoleBossResearchBridge.resetAppearance(),
                 "Queued player appearance restore."));
@@ -130,7 +166,7 @@ final class BossResearchPanel extends JPanel {
     }
 
     private JPanel createProbeSection() {
-        JPanel section = createInnerCard("Runtime probes");
+        JPanel section = createInnerSection("Runtime probes");
         ConsoleTheme.styleTextField(animationField);
         ConsoleTheme.styleTextField(gfxField);
 
@@ -202,12 +238,12 @@ final class BossResearchPanel extends JPanel {
     }
 
     private JPanel createFindingSection() {
-        JPanel section = createInnerCard("Save finding");
+        JPanel section = createInnerSection("Save finding");
         ConsoleTheme.styleTextField(mechanicField);
         ConsoleTheme.styleTextField(assetIdField);
         ConsoleTheme.styleTextField(noteField);
-        styleCombo(assetType);
-        styleCombo(confidence);
+        ConsoleTheme.styleComboBox(assetType);
+        ConsoleTheme.styleComboBox(confidence);
 
         section.add(Box.createVerticalStrut(7));
         section.add(createFieldRow("Mechanic", mechanicField));
@@ -253,7 +289,140 @@ final class BossResearchPanel extends JPanel {
         return section;
     }
 
-    private JPanel createInnerCard(String titleText) {
+    private JPanel createCacheEvidenceCard() {
+        JPanel card = ConsoleTheme.createCard("RoTS cache evidence");
+        ConsoleTheme.styleStatus(rotsStatus, true);
+
+        rotsOutput.setEditable(false);
+        rotsOutput.setLineWrap(false);
+        rotsOutput.setWrapStyleWord(false);
+        rotsOutput.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        rotsOutput.setForeground(ConsoleTheme.TEXT);
+        rotsOutput.setBackground(ConsoleTheme.PANEL);
+        rotsOutput.setCaretColor(ConsoleTheme.TEXT);
+        rotsOutput.setBorder(ConsoleTheme.panelPadding(8, 8, 8, 8));
+
+        JScrollPane outputScroll = new JScrollPane(rotsOutput);
+        outputScroll.setAlignmentX(LEFT_ALIGNMENT);
+        outputScroll.setPreferredSize(new Dimension(320, 260));
+        outputScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 320));
+        outputScroll.setHorizontalScrollBarPolicy(HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        outputScroll.setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_AS_NEEDED);
+        ConsoleTheme.styleScrollPane(outputScroll);
+        outputScroll.setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
+
+        JButton copyButton = new JButton("Copy All");
+        JButton clearButton = new JButton("Clear");
+        ConsoleTheme.styleButton(rotsScanButton);
+        ConsoleTheme.styleButton(rotsDeepScanButton);
+        ConsoleTheme.styleButton(copyButton);
+        ConsoleTheme.styleButton(clearButton);
+        rotsScanButton.addActionListener(e -> runRotsScan(false));
+        rotsDeepScanButton.addActionListener(e -> runRotsScan(true));
+        copyButton.addActionListener(e -> copyRotsOutput());
+        clearButton.addActionListener(e -> {
+            rotsOutput.setText("");
+            rotsStatus.setText(ClientConsoleRotsBridge.getReadinessLabel());
+        });
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 6, 6));
+        buttons.setBackground(ConsoleTheme.CARD);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 74));
+        buttons.add(rotsScanButton);
+        buttons.add(rotsDeepScanButton);
+        buttons.add(copyButton);
+        buttons.add(clearButton);
+
+        JTextArea note = ConsoleTheme.createWrappedText(
+                "Read-only cache evidence. Scan and Deep Scan stay off the Swing thread; Deep Scan correlates render sets and GFX without assigning unverified mechanic names.",
+                3);
+
+        card.add(Box.createVerticalStrut(8));
+        card.add(rotsStatus);
+        card.add(Box.createVerticalStrut(8));
+        card.add(buttons);
+        card.add(Box.createVerticalStrut(8));
+        card.add(outputScroll);
+        card.add(Box.createVerticalStrut(7));
+        card.add(note);
+        return card;
+    }
+
+    private void runRotsScan(final boolean deep) {
+        if (!rotsScanning.compareAndSet(false, true)) {
+            return;
+        }
+
+        rotsScanButton.setEnabled(false);
+        rotsDeepScanButton.setEnabled(false);
+        rotsStatus.setText(deep ? "Deep-scanning RoTS render/GFX relationships..." : "Scanning RoTS cache definitions...");
+
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String result;
+                try {
+                    if (deep) {
+                        ClientConsoleRotsGfxBootstrap.ensureReady();
+                    }
+                    result = deep
+                            ? ClientConsoleRotsBridge.buildDeepResearchDump()
+                            : ClientConsoleRotsBridge.buildResearchDump();
+                } catch (Throwable ex) {
+                    result = deep
+                            ? "=== RISE OF THE SIX DEEP CACHE RESEARCH ===\n"
+                            : "=== RISE OF THE SIX CLIENT CACHE RESEARCH ===\n";
+                    result += "Scan failed: " + ex.getClass().getSimpleName() + ": " + ex.getMessage() + "\n";
+                }
+
+                final String completed = result;
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        rotsOutput.setText(completed);
+                        rotsOutput.setCaretPosition(0);
+                        if (deep) {
+                            rotsStatus.setText(ClientConsoleRotsBridge.isDeepReady()
+                                    ? "Deep Scan complete · ready to Copy All"
+                                    : ClientConsoleRotsBridge.getDeepReadinessLabel());
+                        } else {
+                            rotsStatus.setText(ClientConsoleRotsBridge.isReady()
+                                    ? "Scan complete · ready to Copy All"
+                                    : ClientConsoleRotsBridge.getReadinessLabel());
+                        }
+                        rotsScanButton.setEnabled(true);
+                        rotsDeepScanButton.setEnabled(true);
+                        rotsScanning.set(false);
+                    }
+                });
+            }
+        }, deep ? "Matrix3-RoTS-Deep-Cache-Research" : "Matrix3-RoTS-Cache-Research");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void copyRotsOutput() {
+        String text = rotsOutput.getText();
+        if (text == null || text.length() == 0) {
+            rotsStatus.setText("Nothing to copy yet.");
+            return;
+        }
+        try {
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
+            rotsStatus.setText("Copied complete RoTS dump to clipboard.");
+        } catch (IllegalStateException ex) {
+            rotsStatus.setText("Clipboard is busy. Try Copy All again.");
+        }
+    }
+
+    private void refreshReadiness() {
+        if (!rotsScanning.get() && rotsOutput.getText().length() == 0) {
+            rotsStatus.setText(ClientConsoleRotsBridge.getReadinessLabel());
+        }
+    }
+
+    private JPanel createInnerSection(String titleText) {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(ConsoleTheme.CARD);
@@ -281,13 +450,6 @@ final class BossResearchPanel extends JPanel {
         row.add(label, BorderLayout.WEST);
         row.add(field, BorderLayout.CENTER);
         return row;
-    }
-
-    private void styleCombo(JComboBox<String> combo) {
-        combo.setFont(ConsoleTheme.BODY_FONT);
-        combo.setForeground(ConsoleTheme.TEXT);
-        combo.setBackground(ConsoleTheme.INPUT);
-        combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
     }
 
     private void updateBrotherSelection(BrotherPreset brother) {
@@ -380,5 +542,35 @@ final class BossResearchPanel extends JPanel {
 
     private interface ProbeAction {
         void run(int id);
+    }
+
+    private static final class ViewportWidthPanel extends JPanel implements Scrollable {
+        private static final long serialVersionUID = 2634844303606030829L;
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 16;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            int extent = orientation == SwingConstants.VERTICAL ? visibleRect.height : visibleRect.width;
+            return Math.max(16, extent - 16);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 }
