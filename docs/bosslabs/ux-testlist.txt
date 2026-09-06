@@ -102,3 +102,14 @@ V2.1 creator-shell checkpoint
 68. Choose Spawn minions as a phase action and confirm NPC ID, amount, and radius use separate controls; confirm the creator is no longer required to enter compact NPC_ID,AMOUNT,RADIUS CSV syntax.
 69. Apply a valid BossLabs definition live, select a phase/attack in the editor, open Testing, and confirm Enter Selected Phase / Test Selected Attack use that selection through the existing authoritative bridge with no manual ID fields.
 70. Confirm this V2.1 UI slice does not alter BossDefinition wire/store version, server combat selection, NPC/world ownership, persistence ordering, packet framing, or Matrix3 testing-service authorization semantics.
+
+V2.1 creator-state regression checkpoint
+71. Open BossLabs with no NPC selected. Confirm the state strip reads DRAFT: none / LIVE: none / SAVED: none, Boss name is disabled, Overview remains visible, and Phases/Attacks/Attack Pattern/Arena/Drops/Testing/Advanced cannot be entered.
+72. Confirm the visible workspace guidance says to select/load an NPC before authoring; no normal creator action should silently no-op because the internal draft is null.
+73. Start loading an NPC while another NPC was previously loaded. Confirm BossLabs immediately returns to Overview, clears the old DRAFT/identity/inspection values, shows LIVE/SAVED loading state, and keeps dependent tabs locked until the new inspection succeeds.
+74. Rapidly request NPC A then NPC B. If A's inspection reply arrives after B was requested, confirm it is ignored and cannot replace B's workspace.
+75. Load a valid NPC. Confirm authoring tabs unlock only after the matching inspection arrives, Boss name becomes editable, DRAFT becomes clean rather than modified, and the workspace tells the creator to begin in Phases.
+76. Add the first phase and confirm the existing safe default is 100% Starts at HP to 0% Ends at HP; rename/save it without entering an internal Phase ID.
+77. Enter an invalid phase range such as Starts at HP 1 / Ends at HP 2 and click Save Phase. Confirm the phase remains unchanged and the inline phase status explains that Ends at HP cannot be higher than Starts at HP.
+78. Before any phase exists, confirm Add Attack is unavailable and the attack status tells the creator to add a phase first; after adding a phase, Add Attack becomes available and the new attack is selected with safe defaults.
+79. Request an invalid/missing NPC ID and confirm BossLabs returns to the same clean locked no-NPC state without retaining the failed ID, previous draft, LIVE/SAVED ownership, Testing selection, or Drops selection.
