@@ -89,158 +89,263 @@ public final class CustomItemActionConfig {
     }
 
     private static void applyEquipmentOptions(ItemDefinitions definition, int itemId) {
-        for (int option = 1; option <= 10; option++) {
+        for (int option = 1; option <= 4; option++) {
             ActionEntry entry = getEntry(itemId, "equipment", option);
-            if (entry == null)
-                continue;
-            int key = 528 + option;
-            definition.method10145(key, entry.label, (byte) 1);
-            CustomItemActionTrace.log("APPLY context=equipment item=" + itemId + " option=" + option
-                    + " action=" + entry.action + " label=" + entry.label);
-        }
-    }
-
-    private static void applyBankInventoryMenuActions() {
-        if (ITEM_IDS.isEmpty())
-            return;
-        InterfaceDefinitions definition;
-        try {
-            definition = Class512.method6083(BANK_INVENTORY_INTERFACE_HASH, (short) 3691);
-        } catch (RuntimeException ex) {
-            return;
-        }
-        if (definition == null || definition.aStringArray867 == null)
-            return;
-        int itemId = definition.nvmtheindexisotherone * 411192987;
-        if (!ITEM_IDS.contains(Integer.valueOf(itemId)))
-            return;
-
-        String mode = PROPERTIES.getProperty("item." + itemId + ".bank_inventory.mode");
-        boolean explicit = EXPLICIT_MENU_MODE.equalsIgnoreCase(mode == null ? "" : mode.trim());
-        boolean[] present = new boolean[MAX_INTERFACE_OPTIONS + 1];
-        for (int option = 1; option <= MAX_INTERFACE_OPTIONS; option++) {
-            if (option - 1 >= definition.aStringArray867.length)
-                break;
-            String label = definition.aStringArray867[option - 1];
-            if (label != null && label.length() > 0) {
-                present[option] = true;
-                ActionEntry configured = getEntry(itemId, "bank_inventory", option);
-                boolean allowed = !explicit || configured != null;
-                CustomItemActionTrace.log("BANK_NATIVE item=" + itemId + " option=" + option + " label=" + label
-                        + " explicit=" + explicit + " allowed=" + allowed);
-                if (!allowed)
-                    definition.aStringArray867[option - 1] = null;
+            if (entry != null) {
+                setStringParam(definition, 527 + option, entry.label);
+                CustomItemActionTrace.log("APPLY context=equipment item=" + itemId + " option=" + option
+                        + " action=" + entry.action + " label=" + entry.label);
             }
         }
+    }
 
-        for (int option = 1; option <= MAX_INTERFACE_OPTIONS; option++) {
-            ActionEntry entry = getEntry(itemId, "bank_inventory", option);
-            if (entry == null || "STOCK".equalsIgnoreCase(entry.action) || present[option])
+    /**
+     * Called from Matrix3's existing menu-entry constructor before an entry is
+     * grouped/inserted. Explicit configured bank-inventory menus suppress only
+     * unlisted stock option slots for the clicked configured item.
+     */
+    static boolean shouldSuppressBankInventoryMenuEntry(int opcode, long optionValue,
+            int child, int widgetHash) {
+        ensureLoaded();
+        int normalizedOpcode = opcode >= 2000 ? opcode - 2000 : opcode;
+        if (normalizedOpcode != INTERFACE_OPTION_OPCODE
+                && normalizedOpcode != INTERFACE_OPTION_SECONDARY_OPCODE)
+            return false;
+        if (widgetHash != BANK_INVENTORY_INTERFACE_HASH)
+            return false;
+
+        InterfaceDefinitions component = Class530.method6338(widgetHash, child, -582563422);
+        if (component == null)
+            return false;
+
+        int itemId = component.nvmtheindexisotherone * 411192987;
+        if (!ITEM_IDS.contains(Integer.valueOf(itemId)))
+            return false;
+
+        int option = (int) optionValue;
+        boolean explicit = isExplicitBankInventoryMenu(itemId);
+        ActionEntry configured = option >= 1 && option <= MAX_INTERFACE_OPTIONS
+                ? getEntry(itemId, "bank_inventory", option) : null;
+        boolean suppress = explicit && option >= 1 && option <= MAX_INTERFACE_OPTIONS && configured == null;
+
+        CustomItemActionTrace.log("BANK_NATIVE widget=762:7 child=" + child + " item=" + itemId
+                + " option=" + option + " explicit=" + explicit
+                + " configured=" + describe(configured) + " suppress=" + suppress);
+        return suppress;
+    }
+
+    /**
+     * Adds configured bank-inventory-pane option slots that Matrix3 did not
+     * create natively. Existing configured STOCK slots remain untouched.
+     */
+    private static void applyBankInventoryMenuActions() {
+        if (ITEM_IDS.isEmpty() || Class25.aBool165 || Class25.aClass675_174 == null)
+            return;
+
+        Map<Integer, BankMenuTarget> targets = new HashMap<Integer, BankMenuTarget>();
+        Set<String> existingOptions = new HashSet<String>();
+        Class675 entries = Class25.aClass675_174;
+
+        for (Class572 node = entries.aClass572_8547.aClass572_6433;
+                node != entries.aClass572_8547;
+                node = node.aClass572_6433) {
+            Class572_Sub12_Sub10 menuEntry = (Class572_Sub12_Sub10) node;
+            int opcode = menuEntry.anInt11402 * -44467871;
+            if (opcode >= 2000)
+                opcode -= 2000;
+            if (opcode != INTERFACE_OPTION_OPCODE && opcode != INTERFACE_OPTION_SECONDARY_OPCODE)
                 continue;
-            if (option - 1 >= definition.aStringArray867.length)
+
+            int widgetHash = menuEntry.anInt11392 * 200110927;
+            if (widgetHash != BANK_INVENTORY_INTERFACE_HASH)
                 continue;
-            definition.aStringArray867[option - 1] = entry.label;
-            CustomItemActionTrace.log("BANK_ADD item=" + itemId + " option=" + option + " action=" + entry.action
-                    + " label=" + entry.label);
+
+            int child = menuEntry.anInt11397 * 740323685;
+            InterfaceDefinitions component = Class530.method6338(widgetHash, child, -582563422);
+            if (component == null)
+                continue;
+
+            int itemId = component.nvmtheindexisotherone * 411192987;
+            if (!hasBankInventoryEntries(itemId))
+                continue;
+
+            Integer targetKey = Integer.valueOf(child);
+            if (!targets.containsKey(targetKey))
+                targets.put(targetKey, new BankMenuTarget(itemId, menuEntry));
+
+            int option = (int) (menuEntry.aLong11395 * -6760453999157901937L);
+            existingOptions.add(bankMenuKey(child, option));
+        }
+
+        for (BankMenuTarget target : targets.values()) {
+            int child = target.anchor.anInt11397 * 740323685;
+            for (int option = MAX_INTERFACE_OPTIONS; option >= 1; option--) {
+                ActionEntry configured = getEntry(target.itemId, "bank_inventory", option);
+                if (configured == null || existingOptions.contains(bankMenuKey(child, option)))
+                    continue;
+                if (357782167 * Class25.anInt172 >= 504) {
+                    CustomItemActionTrace.log("BANK_ADD aborted reason=menu-capacity item=" + target.itemId
+                            + " child=" + child + " option=" + option + " configured=" + describe(configured));
+                    return;
+                }
+                addBankInventoryEntry(target.itemId, target.anchor, option, configured);
+                existingOptions.add(bankMenuKey(child, option));
+            }
         }
     }
 
-    static boolean shouldKeepBankInventoryNativeOption(InterfaceDefinitions definition, int option) {
-        ensureLoaded();
-        if (definition == null || option < 1 || option > MAX_INTERFACE_OPTIONS)
-            return true;
-        int itemId = definition.nvmtheindexisotherone * 411192987;
-        if (!ITEM_IDS.contains(Integer.valueOf(itemId)))
-            return true;
+    private static boolean isExplicitBankInventoryMenu(int itemId) {
         String mode = PROPERTIES.getProperty("item." + itemId + ".bank_inventory.mode");
-        if (!EXPLICIT_MENU_MODE.equalsIgnoreCase(mode == null ? "" : mode.trim()))
-            return true;
-        ActionEntry entry = getEntry(itemId, "bank_inventory", option);
-        boolean allowed = entry != null;
-        String label = definition.aStringArray867 != null && option - 1 < definition.aStringArray867.length
-                ? definition.aStringArray867[option - 1]
-                : null;
-        CustomItemActionTrace.log("BANK_NATIVE item=" + itemId + " option=" + option + " label=" + label
-                + " explicit=true allowed=" + allowed);
-        return allowed;
+        return mode != null && EXPLICIT_MENU_MODE.equals(mode.trim().toUpperCase());
+    }
+
+    private static boolean hasBankInventoryEntries(int itemId) {
+        for (int option = 1; option <= MAX_INTERFACE_OPTIONS; option++) {
+            if (getEntry(itemId, "bank_inventory", option) != null)
+                return true;
+        }
+        return false;
+    }
+
+    private static String bankMenuKey(int child, int option) {
+        return child + ":" + option;
+    }
+
+    private static void addBankInventoryEntry(int itemId, Class572_Sub12_Sub10 anchor,
+            int option, ActionEntry configured) {
+        int child = anchor.anInt11397 * 740323685;
+        int widgetHash = anchor.anInt11392 * 200110927;
+        int opcode = option <= 5 ? INTERFACE_OPTION_OPCODE : INTERFACE_OPTION_SECONDARY_OPCODE;
+
+        Class572_Sub12_Sub10 menuEntry = new Class572_Sub12_Sub10(
+                configured.label,
+                anchor.aString11391,
+                client.anInt8751 * -646491435,
+                opcode,
+                -1,
+                option,
+                child,
+                widgetHash,
+                anchor.aBool11398,
+                anchor.aBool11399,
+                0L,
+                anchor.aBool11401);
+
+        // Keep the stock bank entry's target/group metadata while preserving the
+        // configured label, option slot, and interface-option opcode above.
+        menuEntry.anInt11396 = anchor.anInt11396;
+        menuEntry.anInt11394 = anchor.anInt11394;
+        menuEntry.anInt11397 = anchor.anInt11397;
+        menuEntry.anInt11392 = anchor.anInt11392;
+        menuEntry.aBool11398 = anchor.aBool11398;
+        menuEntry.aBool11399 = anchor.aBool11399;
+        menuEntry.aLong11400 = anchor.aLong11400;
+        menuEntry.aBool11401 = anchor.aBool11401;
+        menuEntry.aString11403 = anchor.aString11403;
+        Class412.method5075(menuEntry, 722976984);
+        CustomItemActionTrace.log("BANK_ADD widget=762:7 child=" + child + " item=" + itemId
+                + " option=" + option + " action=" + configured.action + " label=" + configured.label);
+    }
+
+    private static void setStringParam(ItemDefinitions definition, int paramId, String value) {
+        if (definition.aClass676_8185 == null)
+            definition.aClass676_8185 = new Class676(4);
+        Class572 existing = definition.aClass676_8185.get((long) paramId);
+        if (existing != null)
+            existing.method6794((byte) 0);
+        definition.aClass676_8185.put(new LinkableObject(value), (long) paramId);
     }
 
     private static ActionEntry getEntry(int itemId, String context, int option) {
         String value = PROPERTIES.getProperty("item." + itemId + "." + context + "." + option);
         if (value == null)
             return null;
-        String trimmed = value.trim();
-        if (trimmed.length() == 0)
-            return null;
-        int split = trimmed.indexOf('|');
-        if (split < 0)
-            return new ActionEntry(trimmed, trimmed);
-        String action = trimmed.substring(0, split).trim();
-        String label = trimmed.substring(split + 1).trim();
+        value = value.trim();
+        int split = value.indexOf('|');
+        String action = split == -1 ? value : value.substring(0, split);
+        String label = split == -1 ? value : value.substring(split + 1);
+        action = action.trim();
+        label = label.trim();
         if (action.length() == 0 || label.length() == 0)
             return null;
         return new ActionEntry(action, label);
     }
 
-    private static void ensureLoaded() {
+    private static String describe(ActionEntry entry) {
+        return entry == null ? "none" : entry.action + "|" + entry.label;
+    }
+
+    private static synchronized void ensureLoaded() {
         if (loaded)
             return;
         loaded = true;
-        File file = resolveConfigFile();
-        if (file == null || !file.isFile()) {
-            CustomItemActionTrace.log("CONFIG missing");
+        File file = findConfig();
+        if (file == null) {
+            System.err.println("Custom item actions: " + CONFIG_PATH + " was not found.");
+            CustomItemActionTrace.log("CONFIG missing expected=" + CONFIG_PATH + " userDir="
+                    + System.getProperty("user.dir", "."));
             return;
         }
         FileInputStream input = null;
         try {
             input = new FileInputStream(file);
             PROPERTIES.load(input);
-            for (String key : PROPERTIES.stringPropertyNames()) {
-                if (!key.startsWith("item."))
+            for (String name : PROPERTIES.stringPropertyNames()) {
+                if (!name.startsWith("item."))
                     continue;
-                int secondDot = key.indexOf('.', 5);
-                if (secondDot < 0)
+                String[] parts = name.split("\\.");
+                if (parts.length < 3)
                     continue;
                 try {
-                    ITEM_IDS.add(Integer.valueOf(Integer.parseInt(key.substring(5, secondDot))));
-                } catch (NumberFormatException ignored) {
-                    // Skip malformed item ids; the rest of the config remains usable.
+                    ITEM_IDS.add(Integer.valueOf(Integer.parseInt(parts[1])));
+                } catch (NumberFormatException e) {
+                    // Ignore malformed item ids and leave normal cache behavior intact.
                 }
             }
-            CustomItemActionTrace.log("CONFIG loaded path=" + file.getAbsolutePath() + " itemIds=" + ITEM_IDS.size());
-        } catch (IOException ex) {
-            CustomItemActionTrace.log("CONFIG read-failed path=" + file.getAbsolutePath() + " error="
-                    + ex.getClass().getSimpleName() + ":" + String.valueOf(ex.getMessage()));
+            CustomItemActionTrace.log("CONFIG loaded path=" + file.getPath() + " itemIds=" + ITEM_IDS.size());
+        } catch (IOException e) {
+            e.printStackTrace();
+            CustomItemActionTrace.log("CONFIG read-failed path=" + file.getPath() + " error="
+                    + e.getClass().getSimpleName() + ":" + String.valueOf(e.getMessage()));
         } finally {
             if (input != null) {
                 try {
                     input.close();
-                } catch (IOException ignored) {
-                    // Nothing useful to do here.
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
     }
 
-    private static File resolveConfigFile() {
-        File start = new File(System.getProperty("user.dir", "."));
-        File directory = start;
+    private static File findConfig() {
+        File directory = new File(System.getProperty("user.dir", "."));
         for (int depth = 0; directory != null && depth < 6; depth++, directory = directory.getParentFile()) {
-            File candidate = new File(directory, CONFIG_PATH);
-            if (candidate.isFile())
-                return candidate;
+            File repoCandidate = new File(directory, CONFIG_PATH);
+            if (repoCandidate.isFile())
+                return repoCandidate;
+            File serverCandidate = new File(directory, SERVER_RELATIVE_CONFIG_PATH);
+            if (serverCandidate.isFile())
+                return serverCandidate;
         }
-        File serverRelative = new File(start, SERVER_RELATIVE_CONFIG_PATH);
-        if (serverRelative.isFile())
-            return serverRelative;
         return null;
     }
 
-    private static final class ActionEntry {
-        final String action;
-        final String label;
+    private static final class BankMenuTarget {
+        private final int itemId;
+        private final Class572_Sub12_Sub10 anchor;
 
-        ActionEntry(String action, String label) {
+        private BankMenuTarget(int itemId, Class572_Sub12_Sub10 anchor) {
+            this.itemId = itemId;
+            this.anchor = anchor;
+        }
+    }
+
+    private static final class ActionEntry {
+        private final String action;
+        private final String label;
+
+        private ActionEntry(String action, String label) {
             this.action = action;
             this.label = label;
         }
