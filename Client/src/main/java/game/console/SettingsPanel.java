@@ -5,6 +5,7 @@ import game.DevModeBridge;
 import game.QolSettings;
 
 import java.awt.Dimension;
+import java.awt.Rectangle;
 import java.awt.event.HierarchyEvent;
 
 import javax.swing.Box;
@@ -13,6 +14,8 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.Scrollable;
+import javax.swing.SwingConstants;
 import javax.swing.JTextArea;
 import javax.swing.JToggleButton;
 import javax.swing.Timer;
@@ -43,10 +46,11 @@ public final class SettingsPanel extends JScrollPane {
     private final Timer loginApplyTimer = new Timer(750, e -> refreshLoginApplyState());
 
     public SettingsPanel() {
-        JPanel content = new JPanel();
+        ViewportWidthPanel content = new ViewportWidthPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBackground(ConsoleTheme.PANEL);
         content.setBorder(ConsoleTheme.panelPadding(20, 18, 20, 18));
+        content.setMinimumSize(new Dimension(0, 0));
 
         hasSavedCombination = ConsolePreferences.hasModeSelection();
         legacyCombatButton.setSelected(ConsolePreferences.isLegacyCombatSelected());
@@ -296,6 +300,36 @@ public final class SettingsPanel extends JScrollPane {
         }
         if (!appliedWhileShowing) {
             applyCombination(true);
+        }
+    }
+
+    private static final class ViewportWidthPanel extends JPanel implements Scrollable {
+        private static final long serialVersionUID = 6751939267969128725L;
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 16;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            int extent = orientation == SwingConstants.VERTICAL ? visibleRect.height : visibleRect.width;
+            return Math.max(16, extent - 16);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
         }
     }
 }
