@@ -88,6 +88,7 @@ public final class AtlasTraceControl {
                 properties.getProperty("sessionName"),
                 parseLong(properties, "eventCount"),
                 parseLong(properties, "droppedCount"),
+                parseLong(properties, "suppressedCount"),
                 properties.getProperty("startedAtUtc"),
                 properties.getProperty("stoppedAtUtc"),
                 properties.getProperty("lastSavedPath"),
@@ -103,6 +104,7 @@ public final class AtlasTraceControl {
         properties.setProperty("sessionName", nullToEmpty(snapshot.getSessionName()));
         properties.setProperty("eventCount", Long.toString(snapshot.getEventCount()));
         properties.setProperty("droppedCount", Long.toString(snapshot.getDroppedCount()));
+        properties.setProperty("suppressedCount", Long.toString(snapshot.getSuppressedCount()));
         properties.setProperty("startedAtUtc", nullToEmpty(snapshot.getStartedAtUtc()));
         properties.setProperty("stoppedAtUtc", nullToEmpty(snapshot.getStoppedAtUtc()));
         properties.setProperty("lastSavedPath", nullToEmpty(snapshot.getLastSavedPath()));
@@ -203,20 +205,22 @@ public final class AtlasTraceControl {
         private final String sessionName;
         private final long eventCount;
         private final long droppedCount;
+        private final long suppressedCount;
         private final String startedAtUtc;
         private final String stoppedAtUtc;
         private final String lastSavedPath;
         private final String lastError;
 
         private RuntimeStatus(String heartbeatUtc, String lastRequestId, boolean active,
-                String sessionName, long eventCount, long droppedCount, String startedAtUtc,
-                String stoppedAtUtc, String lastSavedPath, String lastError) {
+                String sessionName, long eventCount, long droppedCount, long suppressedCount,
+                String startedAtUtc, String stoppedAtUtc, String lastSavedPath, String lastError) {
             this.heartbeatUtc = heartbeatUtc;
             this.lastRequestId = lastRequestId;
             this.active = active;
             this.sessionName = sessionName;
             this.eventCount = eventCount;
             this.droppedCount = droppedCount;
+            this.suppressedCount = suppressedCount;
             this.startedAtUtc = startedAtUtc;
             this.stoppedAtUtc = stoppedAtUtc;
             this.lastSavedPath = lastSavedPath;
@@ -257,6 +261,10 @@ public final class AtlasTraceControl {
 
         public long getDroppedCount() {
             return droppedCount;
+        }
+
+        public long getSuppressedCount() {
+            return suppressedCount;
         }
 
         public String getStartedAtUtc() {
