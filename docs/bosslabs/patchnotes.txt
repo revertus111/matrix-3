@@ -139,3 +139,10 @@
 - Boss combat definitions remain definitions.bld/wire v8; drop content is independently persisted/rollbackable and does not change BossCombatScript, NPC death, XP, or loot-generation algorithms.
 - Corrected BossLabs drop authoring to preserve repeated item slots inside the same rarity bucket; Matrix3 selects rolled-bucket entries by array slot, so duplicates may intentionally weight selection, while repeated Always slots remain repeated guaranteed drops.
 - Normalized BossLabs into docs/bosslabs/PROJECT.md and registered it in docs/rs3/WORKSTREAMS.md; the current gate is one consolidated runtime verification session, V2.3 Asset Workflow is the next implementation phase after that gate, and true Arena Layout remains content-driven carryover.
+
+2026-09-06
+- Repaired the BossLabs creator workspace state after runtime testing exposed a ghost-DRAFT workflow: with no inspected NPC, DRAFT now stays `none`, boss-name editing is locked, and all dependent authoring/testing/drop tabs remain disabled.
+- Loading a different NPC now clears the previous local definition immediately, resets stale ownership/inspection values, returns to Overview, and keeps authoring locked until the matching inspection reply arrives.
+- Stale inspection replies for a previously requested NPC are ignored instead of being allowed to replace the currently requested workspace.
+- Successful inspection explicitly unlocks the workspace and explains the first authoring step; invalid/missing NPC inspection returns BossLabs to a clean locked state rather than leaving partially editable controls.
+- No server, combat, packet, definition-store, drop-store, or Matrix3 runtime ownership changed in this creator-state repair.
