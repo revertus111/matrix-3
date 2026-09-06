@@ -62,3 +62,14 @@ Phase 3 / first runtime gate evidence + correction
 - Runtime Trace Control now shows both Dropped and Suppressed counts.
 - Renamed unproven menu `localX/localY` fields to neutral `rawArg1/rawArg2` after runtime evidence showed the values do not support coordinate semantics.
 - Correction is implementation-complete / verified-static; one consolidated gate rerun remains required.
+
+2026-09-06
+
+Phase 3 / Bundle 3A corrected gate PASS
+- Corrected controlled trace stored 6050 events with 0 hard drops and 6617488 intentionally suppressed noisy events.
+- Definition activity stopped at the 4000-event category cap while later useful input/network/interface events continued recording.
+- Corrected trace included 1267 network, 631 interface, 152 input, 86 keyboard, and 66 menu events; menu fields used neutral `rawArg1/rawArg2`.
+- `Stop + Save` finalized the trace normally.
+- `Correlate Latest Trace` passed against the rebuilt current Atlas index with `Status: CURRENT` and `Accepted: true`; acceptance confirms fingerprint/event-count/source-owner resolution checks passed.
+- User reported the same-launch Matrix3 smoke behaved perfectly after the central packet seam changes.
+- Bundle 3A targeted runtime tracing is DONE; runtime evidence/tracing top-level milestone is complete. Next work is Bundle 3B evidence/knowledge.
