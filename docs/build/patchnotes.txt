@@ -1,0 +1,2 @@
+2026-09-06
+- Suppressed Java compiler warning output for Server compile tasks to keep Java 8 builds readable while preserving compile errors.
