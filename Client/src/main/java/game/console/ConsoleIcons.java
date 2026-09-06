@@ -42,6 +42,10 @@ public final class ConsoleIcons {
         return new GlyphIcon(Glyph.ATLAS);
     }
 
+    public static Icon bossResearch() {
+        return new GlyphIcon(Glyph.BOSS_RESEARCH);
+    }
+
     public static Icon settings() {
         return new GlyphIcon(Glyph.SETTINGS);
     }
@@ -53,6 +57,7 @@ public final class ConsoleIcons {
         PLAYER,
         ITEMS,
         ATLAS,
+        BOSS_RESEARCH,
         SETTINGS
     }
 
@@ -101,6 +106,9 @@ public final class ConsoleIcons {
                     break;
                 case ATLAS:
                     paintAtlas(g, x, y);
+                    break;
+                case BOSS_RESEARCH:
+                    paintBossResearch(g, x, y);
                     break;
                 case SETTINGS:
                     paintSettings(g, x, y);
@@ -179,6 +187,17 @@ public final class ConsoleIcons {
             g.drawArc(x + 7, y + 4, 8, 14, 90, 180);
             g.drawArc(x + 7, y + 4, 8, 14, 270, 180);
             g.fillOval(cx - 2, cy - 2, 4, 4);
+        }
+
+        private void paintBossResearch(Graphics2D g, int x, int y) {
+            int cx = x + SIZE / 2;
+            int cy = y + SIZE / 2;
+            g.drawOval(cx - 7, cy - 7, 14, 14);
+            g.drawOval(cx - 3, cy - 3, 6, 6);
+            g.drawLine(cx, y + 2, cx, y + 6);
+            g.drawLine(cx, y + SIZE - 6, cx, y + SIZE - 2);
+            g.drawLine(x + 2, cy, x + 6, cy);
+            g.drawLine(x + SIZE - 6, cy, x + SIZE - 2, cy);
         }
 
         private void paintSettings(Graphics2D g, int x, int y) {
