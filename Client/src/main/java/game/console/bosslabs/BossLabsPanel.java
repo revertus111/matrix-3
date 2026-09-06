@@ -40,13 +40,15 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
 
     private final JTextField npcSearchField = new JTextField();
     private final JLabel searchStatus = new JLabel("Search by NPC id or name.");
+    private final JLabel workspaceStatus = new JLabel("Select an NPC above to unlock boss authoring.");
     private final DefaultListModel<BossLabsClientBridge.SearchResult> searchResultsModel =
             new DefaultListModel<BossLabsClientBridge.SearchResult>();
     private final JList<BossLabsClientBridge.SearchResult> searchResults =
             new JList<BossLabsClientBridge.SearchResult>(searchResultsModel);
     private JScrollPane searchResultsScroll;
+    private JTabbedPane tabs;
 
-    private final JLabel draftState = createStateLabel("DRAFT", ConsoleTheme.ACCENT);
+    private final JLabel draftState = createStateLabel("DRAFT: none", ConsoleTheme.CARD_HOVER);
     private final JLabel liveState = createStateLabel("LIVE: none", ConsoleTheme.CARD_HOVER);
     private final JLabel savedState = createStateLabel("SAVED: none", ConsoleTheme.CARD_HOVER);
 
@@ -111,6 +113,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         add(createPublishBar(), BorderLayout.SOUTH);
 
         installDraftListeners();
+        setWorkspaceLoaded(false, "Select an NPC above to unlock boss authoring.");
         updateDraftState();
         updatePublishButtons();
         BossLabsClientBridge.setListener(this);
@@ -128,6 +131,8 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     }
 
     void arenaDraftChanged() {
+        if (!hasActiveDraft())
+            return;
         markDraftChanged();
         definitionEditor.refreshSelectedAttackSummary();
     }
@@ -162,11 +167,17 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         titleRow.add(titles, BorderLayout.WEST);
         titleRow.add(createStateStrip(), BorderLayout.EAST);
 
+        workspaceStatus.setFont(ConsoleTheme.SMALL_FONT);
+        workspaceStatus.setForeground(ConsoleTheme.MUTED_TEXT);
+        workspaceStatus.setAlignmentX(LEFT_ALIGNMENT);
+
         top.add(titleRow);
         top.add(Box.createVerticalStrut(12));
         top.add(createSearchBar());
         top.add(Box.createVerticalStrut(6));
         top.add(createSearchResults());
+        top.add(Box.createVerticalStrut(4));
+        top.add(workspaceStatus);
         return top;
     }
 
@@ -257,13 +268,28 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     }
 
     private void inspectNpc(int npcId) {
+        beginInspection(npcId);
+        BossLabsClientBridge.requestInspect(npcId);
+    }
+
+    private void beginInspection(int npcId) {
         selectedNpcId = npcId;
+        savedAvailable = false;
+        rollbackAvailable = false;
+        definitionEditor.setDraft(null);
         testingPanel.clearSelection();
         dropsPanel.clearSelection();
+        clearLoadedFields();
+        liveState.setText("LIVE: loading");
+        liveState.setBackground(ConsoleTheme.CARD_HOVER);
+        savedState.setText("SAVED: loading");
+        savedState.setBackground(ConsoleTheme.CARD_HOVER);
+        setDraftClean();
+        setWorkspaceLoaded(false, "Loading NPC " + npcId + "... authoring is locked until inspection finishes.");
         searchStatus.setText("Loading NPC " + npcId + "...");
+        publishStatus.setForeground(ConsoleTheme.MUTED_TEXT);
         publishStatus.setText("Loading boss data...");
         updatePublishButtons();
-        BossLabsClientBridge.requestInspect(npcId);
     }
 
     private boolean isAllDigits(String value) {
@@ -275,7 +301,7 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     }
 
     private JComponent createTabs() {
-        JTabbedPane tabs = new JTabbedPane();
+        tabs = new JTabbedPane();
         tabs.setFont(ConsoleTheme.BODY_FONT);
         tabs.setForeground(ConsoleTheme.TEXT);
         tabs.setBackground(ConsoleTheme.PANEL);
@@ -314,8 +340,8 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         content.add(createSectionCard("At a glance", quickStats));
         content.add(Box.createVerticalStrut(10));
         content.add(createInfoCard("Workflow",
-                "1. Add phases  •  2. Add attacks  •  3. Paint attack patterns when needed  •  4. Apply Live  •  5. Test  •  6. Save & Apply.",
-                "Internal IDs and bridge details are kept in Advanced so normal content work stays focused on the encounter."));
+                "Select an NPC first. Then: 1. Add phases  •  2. Add attacks  •  3. Paint attack patterns when needed  •  4. Apply Live  •  5. Test  •  6. Save & Apply.",
+                "A new phase starts as a safe 100% → 0% phase. Internal IDs and bridge details stay in Advanced."));
         content.add(Box.createVerticalGlue());
         return scroll(content);
     }
@@ -566,14 +592,23 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     }
 
     private void markDraftChanged() {
-        if (suppressDraftEvents)
+        if (suppressDraftEvents || !hasActiveDraft())
             return;
         draftDirty = true;
         updateDraftState();
         updatePublishButtons();
     }
 
+    private boolean hasActiveDraft() {
+        return selectedNpcId >= 0 && definitionEditor != null && definitionEditor.getDraft() != null;
+    }
+
     private void updateDraftState() {
+        if (!hasActiveDraft()) {
+            draftState.setText("DRAFT: none");
+            draftState.setBackground(ConsoleTheme.CARD_HOVER);
+            return;
+        }
         draftState.setText(draftDirty ? "DRAFT: modified" : "DRAFT: clean");
         draftState.setBackground(draftDirty ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.CARD_HOVER);
     }
@@ -581,6 +616,64 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
     private void setDraftClean() {
         draftDirty = false;
         updateDraftState();
+    }
+
+    private void setWorkspaceLoaded(boolean loaded, String message) {
+        displayNameField.setEnabled(loaded);
+        workspaceStatus.setText(message == null ? "" : message);
+        workspaceStatus.setForeground(loaded ? ConsoleTheme.ACCENT : ConsoleTheme.MUTED_TEXT);
+        if (tabs == null)
+            return;
+        if (!loaded)
+            tabs.setSelectedIndex(0);
+        for (int index = 1; index < tabs.getTabCount(); index++) {
+            tabs.setEnabledAt(index, loaded);
+            tabs.setToolTipTextAt(index, loaded ? null : "Select and load an NPC before using this tab.");
+        }
+    }
+
+    private void clearLoadedFields() {
+        withSuppressedDraftEvents(new Runnable() {
+            @Override
+            public void run() {
+                npcIdField.setText("");
+                definitionIdField.setText("");
+                displayNameField.setText("");
+            }
+        });
+        combatLevelValue.setText("-");
+        sizeValue.setText("-");
+        hitpointsValue.setText("-");
+        attackSpeedValue.setText("-");
+        attackAnimationValue.setText("-");
+        defenceAnimationValue.setText("-");
+        deathAnimationValue.setText("-");
+        respawnDelayValue.setText("-");
+        attackGraphicValue.setText("-");
+        attackProjectileValue.setText("-");
+        aggressiveValue.setText("-");
+        aggressionRangeValue.setText("-");
+        poisonImmuneValue.setText("-");
+        combatSourceValue.setText("Waiting for inspection");
+        combatScriptValue.setText("-");
+        ownershipValue.setText("-");
+    }
+
+    private void clearWorkspace(String message) {
+        selectedNpcId = -1;
+        savedAvailable = false;
+        rollbackAvailable = false;
+        definitionEditor.setDraft(null);
+        testingPanel.clearSelection();
+        dropsPanel.clearSelection();
+        clearLoadedFields();
+        liveState.setText("LIVE: none");
+        liveState.setBackground(ConsoleTheme.CARD_HOVER);
+        savedState.setText("SAVED: none");
+        savedState.setBackground(ConsoleTheme.CARD_HOVER);
+        setDraftClean();
+        setWorkspaceLoaded(false, message);
+        updatePublishButtons();
     }
 
     private void withSuppressedDraftEvents(Runnable runnable) {
@@ -658,7 +751,9 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
 
     @Override
     public void onInspection(int requestId, final BossLabsClientBridge.Inspection inspection) {
-        selectedNpcId = inspection.getNpcId();
+        if (inspection == null || inspection.getNpcId() != selectedNpcId)
+            return;
+
         dropsPanel.loadNpc(inspection.getNpcId(), inspection.getName());
         final BossLabsDraftDefinition blankDraft = new BossLabsDraftDefinition("", inspection.getName(), inspection.getNpcId());
         definitionEditor.setDraft(blankDraft);
@@ -687,6 +782,9 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
         poisonImmuneValue.setText(inspection.isPoisonImmune() ? "Yes" : "No");
         combatSourceValue.setText(inspection.getCombatSource());
 
+        setDraftClean();
+        setWorkspaceLoaded(true, "Loaded " + inspection.getName() + " [" + inspection.getNpcId()
+                + "]. Authoring unlocked — start in Phases; a new phase defaults to 100% → 0%.");
         searchStatus.setText("Loaded " + inspection.getName() + " [" + inspection.getNpcId() + "].");
         publishStatus.setText("Boss loaded. Checking live/saved state...");
         updatePublishButtons();
@@ -769,16 +867,11 @@ public final class BossLabsPanel extends JPanel implements BossLabsClientBridge.
 
     @Override
     public void onInspectionMissing(int requestId, int npcId) {
-        if (npcId == selectedNpcId)
-            selectedNpcId = -1;
-        savedAvailable = false;
-        rollbackAvailable = false;
-        definitionEditor.setDraft(null);
-        testingPanel.clearSelection();
-        dropsPanel.clearSelection();
+        if (npcId != selectedNpcId)
+            return;
         searchStatus.setText("NPC " + npcId + " was not found.");
         publishStatus.setText("No boss loaded.");
-        updatePublishButtons();
+        clearWorkspace("NPC " + npcId + " was not found. Select another NPC to begin.");
     }
 
     @Override
