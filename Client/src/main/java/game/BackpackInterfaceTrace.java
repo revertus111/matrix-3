@@ -25,8 +25,20 @@ final class BackpackInterfaceTrace {
         if (dumped)
             return;
         boolean foundAny = false;
+        int lastProbed = -1;
         for (int component = 0; component < MAX_COMPONENT_PROBE; component++) {
-            InterfaceDefinitions definition = Class512.method6083((INTERFACE_ID << 16) | component, (short) 3691);
+            InterfaceDefinitions definition;
+            try {
+                definition = Class512.method6083((INTERFACE_ID << 16) | component, (short) 3691);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                log("IFACE671 boundary component=" + component);
+                break;
+            } catch (RuntimeException e) {
+                log("IFACE671 probe-failed component=" + component + " error="
+                        + e.getClass().getSimpleName() + ":" + String.valueOf(e.getMessage()));
+                break;
+            }
+            lastProbed = component;
             if (definition == null)
                 continue;
             foundAny = true;
@@ -41,7 +53,7 @@ final class BackpackInterfaceTrace {
                 log("IFACE671 component=" + component + " " + strings.toString());
         }
         if (foundAny) {
-            log("IFACE671 dump-complete probed=0.." + (MAX_COMPONENT_PROBE - 1));
+            log("IFACE671 dump-complete lastProbed=" + lastProbed);
             dumped = true;
         }
     }
