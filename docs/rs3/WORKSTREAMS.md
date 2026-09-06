@@ -39,6 +39,7 @@ Use this registry to answer:
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
 | Rambler's Backpack | `docs/backpack/PROJECT.md` | NEEDS TEST | Player-owned storage and contextual/bank integration are implemented statically. Phase 1 Bundle 1.2 consolidated runtime verification is the next execution target. |
 | Client Console | `docs/client-console/PROJECT.md` | NEEDS TEST | V2 implementation bundles are complete statically. Bundle 2.3 consolidated runtime gate is next: icons/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas coexistence, focus, DPI/layout, bridge authority, and persistence in one session. |
+| Interface Editor | `docs/interface-editor/PROJECT.md` | NEEDS TEST | V1 live inspector/editor is implemented statically; targeted runtime acceptance and Backpack 671 value discovery are next. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
 ## Shared discovery / navigation references
