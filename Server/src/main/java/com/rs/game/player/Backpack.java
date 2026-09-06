@@ -147,6 +147,16 @@ public final class Backpack implements Serializable {
     public boolean processButtonClick(int interfaceId, int componentId, int slotId, int packetId) {
         if (!isOpen())
             return false;
+        if (interfaceId == STORAGE_INTERFACE || interfaceId == INVENTORY_INTERFACE) {
+            Item tracedItem = null;
+            if (interfaceId == STORAGE_INTERFACE && slotId >= 0 && slotId < items.getSize())
+                tracedItem = items.get(slotId);
+            else if (interfaceId == INVENTORY_INTERFACE && slotId >= 0)
+                tracedItem = player.getInventory().getItem(slotId);
+            BackpackTrace.log("CLICK interface=" + interfaceId + " component=" + componentId
+                    + " slot=" + slotId + " packet=" + packetId + " item="
+                    + (tracedItem == null ? -1 : tracedItem.getId()));
+        }
         if (interfaceId == INVENTORY_INTERFACE && componentId == INVENTORY_COMPONENT) {
             if (packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
                 addItem(slotId, 1);
