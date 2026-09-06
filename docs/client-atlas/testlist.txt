@@ -82,7 +82,7 @@ Phase 3 / Bundle 3A - DONE / runtime verified
 [x] `Correlate Latest Trace` returned `Status: CURRENT` and `Accepted: true`.
 [x] Correlation acceptance confirms saved trace fingerprint equals current Atlas fingerprint.
 [x] Correlation acceptance confirms emitted source IDs and owner IDs resolve.
-[x] Correlation acceptance confirms header event count equals parsed event count.
+[x] Correlation acceptance confirms header event count equals actual parsed event count.
 
 Bundle 3A consolidated runtime gate - PASS / ONE SESSION
 [x] Java 8/Eclipse compile blocker from bad DirectoryStream import fixed and build works.
@@ -132,6 +132,34 @@ Phase 3 / Bundle 3B - DONE / consolidated offline gate PASS
 [x] Bundle 3B DONE.
 [x] Phase 3 DONE; no client launch/runtime smoke required for this offline-only bundle.
 
+Phase 4 / Bundle 4A - implementation complete / NEEDS one consolidated runtime gate
+[x] Dedicated `atlas` Client Console panel ID registered through the existing lazy panel/failure-isolation shell seam.
+[x] Atlas panel uses existing `game.atlas` engine/data ownership; Client Console remains a UI consumer only.
+[x] Original Java2D Atlas/globe rail icon added without external assets/dependencies.
+[x] First index load and structural searches run off the Swing EDT.
+[x] Structural search reuses `AtlasSearchEngine`; visible candidate list capped at 50.
+[x] Exact selected Atlas ID remains visible and primary in symbol detail/status.
+[x] Symbol detail exposes kind/owner/name/descriptor plus signature/source when present.
+[x] Relationship browser is bounded to 60 outgoing + 60 incoming rows per selected symbol.
+[x] Exact symbol-backed relationships can navigate by button/double-click.
+[x] Constant/type/value relationships remain visible but are not guessed/navigated as exact symbols.
+[x] Curated evidence editor uses `AtlasEvidenceStore` for classification, alias, note/claim, refs, save/upsert, delete, and freshness evaluation.
+[x] Evidence save/delete I/O runs off the Swing EDT.
+[x] Freshness display comes from `EvidenceView`: `CURRENT`, `STALE_FINGERPRINT`, `SUBJECT_NOT_PRESENT`, or combined warning state.
+[x] Existing Client Console active-panel persistence can restore `atlas` through the generic panel-ID preference path.
+[ ] Eclipse Java 8 clean/build Client once.
+[ ] Rebuild the static Atlas index once after compiling this Client Console change so the fingerprint is current.
+[ ] Start Matrix3 normally and open the new Client Atlas globe icon.
+[ ] Confirm first Atlas load/search does not freeze normal game rendering/input.
+[ ] Search `Class1`, choose/use an exact canonical Atlas ID, and confirm exact detail is populated.
+[ ] Open one symbol-backed relationship and confirm it navigates to that exact symbol; confirm a non-symbol constant/type/value row remains non-navigable.
+[ ] Save temporary evidence on a harmless test symbol as HYPOTHESIS / alias `Atlas UI test` / note `Phase 4A runtime UI test` / ref `runtime:phase4a-ui`; require freshness `CURRENT` and reopen persistence.
+[ ] Delete the temporary evidence and confirm the selected symbol returns to `No curated evidence`.
+[ ] Resize to the narrow supported console width and confirm Atlas search/results/details/relationships/evidence controls remain reachable.
+[ ] Move/interact in game while searching/navigating Atlas; require no visible render/input hitch or Swing/client-thread exception.
+[ ] Leave Atlas selected, clean-close/relaunch once, and confirm Atlas restores as the active Client Console panel.
+[ ] If all above pass, mark Bundle 4A DONE and advance to Bundle 4B.
+
 Carryover regression checks
 [ ] If an exact streaming query owns >200 immediate relationships, confirm truncation state/count remains correct when naturally encountered.
 
@@ -139,5 +167,5 @@ Gate rules
 - Do not request another Phase 2 gate without a relevant Phase 2 change or contradictory evidence.
 - Do not request another Bundle 3A runtime gate without a relevant 3A implementation change or contradictory evidence.
 - Do not request another Bundle 3B gate without a relevant evidence/knowledge implementation change or contradictory evidence.
-- Bundle 3B does not touch game runtime seams, so normal client startup/smoke is not part of its gate.
+- Bundle 4A gets one consolidated Client Console runtime gate after the full implementation bundle; do not split it into per-control test cycles.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
