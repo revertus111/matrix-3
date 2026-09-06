@@ -32,10 +32,14 @@ public final class AtlasRuntimeBridge {
         if (!ready()) {
             return;
         }
-        AtlasTraceRecorder.record("definition", "cache-miss-load", DEFINITION_SOURCE,
+        String loaderClass = safeClassName(loader);
+        String definitionClass = safeClassName(definition);
+        String uniqueKey = definitionId + "|" + loaderClass + "|" + definitionClass;
+        AtlasTraceRecorder.recordOnce("definition", "cache-miss-load", DEFINITION_SOURCE,
+                uniqueKey, AtlasTraceRecorder.MAX_DEFINITION_EVENTS,
                 "definitionId", Integer.toString(definitionId),
-                "loaderClass", safeClassName(loader),
-                "definitionClass", safeClassName(definition));
+                "loaderClass", loaderClass,
+                "definitionClass", definitionClass);
     }
 
     public static void observeKeyboardEvent(int action, char typedCharacter, int normalizedKeyCode) {
@@ -49,15 +53,15 @@ public final class AtlasRuntimeBridge {
                 "charCode", Integer.toString((int) typedCharacter));
     }
 
-    public static void observeMenuAction(int action, int localX, int localY) {
+    public static void observeMenuAction(int action, int rawArg1, int rawArg2) {
         if (!ready()) {
             return;
         }
         AtlasTraceRecorder.record("input", "menu-action", MENU_ACTION_SOURCE,
                 "ownerSymbol", MENU_ACTION_OWNER,
                 "action", Integer.toString(action),
-                "localX", Integer.toString(localX),
-                "localY", Integer.toString(localY));
+                "rawArg1", Integer.toString(rawArg1),
+                "rawArg2", Integer.toString(rawArg2));
     }
 
     public static void observeOutgoingPacket(Class572_Sub25 node) {
