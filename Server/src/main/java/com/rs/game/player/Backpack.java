@@ -24,6 +24,7 @@ public final class Backpack implements Serializable {
     // This is only the UI/protocol key; Backpack.items remains separate player-owned storage.
     private static final int ITEMS_KEY = 530;
     private static final int STORAGE_INTERFACE = 671;
+    private static final int STORAGE_TITLE_COMPONENT = 14;
     private static final int STORAGE_COMPONENT = 27;
     private static final int INVENTORY_INTERFACE = 665;
     private static final int INVENTORY_COMPONENT = 0;
@@ -109,6 +110,7 @@ public final class Backpack implements Serializable {
     private void openInternal(int itemId) {
         player.stopAll();
         player.getInterfaceManager().sendCentralInterface(STORAGE_INTERFACE);
+        player.getPackets().sendIComponentText(STORAGE_INTERFACE, STORAGE_TITLE_COMPONENT, "BACKPACK");
         player.getInterfaceManager().sendInventoryInterface(INVENTORY_INTERFACE);
         accessItemId = itemId;
         open = true;
@@ -373,8 +375,10 @@ public final class Backpack implements Serializable {
                 INVENTORY_INTERFACE, INVENTORY_COMPONENT, 93, 4, 7,
                 "Store", "Store-5", "Store-10", "Store-All");
 
+        // Match Matrix3's native BeastOfBurden interaction mask for 671:27.
+        // The client interface uses a wider slot-mask range than Backpack's 30-slot server container.
         player.getPackets().sendUnlockIComponentOptionSlots(
-                STORAGE_INTERFACE, STORAGE_COMPONENT, 0, CAPACITY - 1, 0, 1, 2, 3);
+                STORAGE_INTERFACE, STORAGE_COMPONENT, 0, ITEMS_KEY, 0, 1, 2, 3);
         player.getPackets().sendInterSetItemsOptionsScript(
                 STORAGE_INTERFACE, STORAGE_COMPONENT, ITEMS_KEY, 6, 5,
                 "Withdraw", "Withdraw-5", "Withdraw-10", "Withdraw-All");
