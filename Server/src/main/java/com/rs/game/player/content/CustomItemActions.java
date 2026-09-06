@@ -186,8 +186,8 @@ public final class CustomItemActions {
             if (packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET) return 1;
             if (packetId == WorldPacketsDecoder.ACTION_BUTTON2_PACKET) return 2;
             if (packetId == WorldPacketsDecoder.ACTION_BUTTON3_PACKET) return 3;
-            if (packetId == WorldPacketsDecoder.ACTION_BUTTON4_PACKET) return 4;
-            if (packetId == WorldPacketsDecoder.ACTION_BUTTON5_PACKET) return 5;
+            if (packetId == WorldPacketsDecoder.ACTION_BUTTON6_PACKET) return 4;
+            if (packetId == WorldPacketsDecoder.ACTION_BUTTON7_PACKET) return 5;
             return -1;
         }
         if (context == Context.EQUIPMENT) {
