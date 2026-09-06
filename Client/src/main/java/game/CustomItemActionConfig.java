@@ -41,7 +41,6 @@ public final class CustomItemActionConfig {
 
     public static void apply() {
         ensureLoaded();
-        BackpackInterfaceLayout.apply();
         BackpackInterfaceTrace.dumpOnce();
         applyBankInventoryMenuActions();
         if (ITEM_IDS.isEmpty())
