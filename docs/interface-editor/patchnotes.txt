@@ -7,4 +7,5 @@
 - Added lazy Interface Editor rail navigation with a dedicated Java2D icon and generic active-panel persistence through the existing Client Console shell.
 - Added Interface Editor request flushing to the existing logged-in client-cycle path in `Class514.method6093(...)`.
 - Removed the temporary hardcoded Backpack `671:9` width repair so it cannot compete with manual live editor values; Backpack storage/server routing was not changed.
+- Protected dirty inspector fields from the 350ms live snapshot refresh so values being typed are not replaced while the component list refreshes.
 - V1 implementation is `NEEDS TEST` under Eclipse/Java 8.
