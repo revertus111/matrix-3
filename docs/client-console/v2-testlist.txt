@@ -1,6 +1,6 @@
 Matrix3 Client Console V2 - deferred runtime acceptance list
 
-Run this list after a batch of V2 polish changes. It supersedes old home-page checks that refer to the removed Shell foundation/focus-test scaffold; the detailed legacy testlist.txt remains useful for deeper subsystem regressions.
+Run this list after a batch of V2 polish changes. It supersedes old home-page/Commands presentation checks that refer to the removed Shell foundation, focus-test scaffold, or 304-button command wall; the detailed legacy testlist.txt remains useful for deeper subsystem regressions.
 
 1. Start Matrix3 normally in Eclipse/Java 8. Confirm the game renders/logs in normally and the Client Console opens beside the game without Canvas/Swing flicker, focus loss, or input regression.
 2. Inspect the rail. Confirm Home, Owner, Commands, Player, Items, and Settings use recognizable centered icons; tooltips identify each icon; selected/hover/pressed states remain obvious; clicking the active icon still collapses the panel.
@@ -15,8 +15,13 @@ Run this list after a batch of V2 polish changes. It supersedes old home-page ch
 11. From Dashboard, open RS3 CacheEditor. Confirm it uses the existing external Server-side launcher, reports launch status, suppresses duplicate launch requests while already running, and does not block the client.
 12. Use Reset Client Console Layout from Dashboard. Confirm the existing workspace authority resets window/console geometry, returns Home as appropriate, and the reset state survives a clean restart.
 13. Item Browser: type a broad partial name and stop typing. Confirm results refresh after about 500ms (not the previous 1.25 seconds), broad matches remain complete, empty browse remains capped at 160, and thumbnail/game rendering stays responsive.
-14. Run one safe Commands action, one Item Browser Inventory spawn, one Item Browser Bank spawn, and one Settings apply. Confirm all existing bridges/permissions remain authoritative and Commands.java behavior is unchanged.
-15. Rapidly switch Home/Owner/Commands/Player/Items/Settings while moving in game, resizing the console, and typing into console fields. Confirm no panel is rebuilt unnecessarily, focused console text fields do not leak movement/hotkeys into the game, and returning focus to the game restores normal controls.
-16. Cleanly close and relaunch Matrix3. Confirm window position/size/state, console open/collapsed state, console width, and active panel still restore correctly after the V2 dashboard/icon changes.
+14. Open Commands. Confirm the old wall of individual command buttons is gone and the palette shows one scrollable result list with command name, category, usage, and a visible warning mark for protected commands.
+15. In Commands search, type `tele`, `item`, `gfx`, and a usage fragment such as `itemId`. Confirm filtering is immediate, case-insensitive, searches name/category/usage, keeps the category filter working, and does not visibly hitch the game.
+16. Keep focus in Commands search. Use Up/Down to move the highlighted result, Enter to select it into the composer, and Esc to clear search. Confirm these keys do not leak movement/hotkeys into the game. Click a result with the mouse and confirm it selects the command but does not execute it.
+17. Select `::item`, enter `4151 1` in Arguments, confirm Preview becomes `::item 4151 1`, then press Enter in Arguments. Confirm the command queues through the existing ClientConsoleBridge/normal Matrix3 server command path and behaves exactly like the prior Commands panel.
+18. Select `::shutdown` or another protected command. Confirm the first Run/Enter attempt changes the action to Confirm Run and does NOT execute. Let five seconds expire and confirm a later attempt again requires a fresh first confirmation. Do not perform the second confirmation unless intentionally testing the destructive command.
+19. Run one safe Commands action, one Item Browser Inventory spawn, one Item Browser Bank spawn, and one Settings apply. Confirm all existing bridges/permissions remain authoritative and Commands.java behavior is unchanged.
+20. Rapidly switch Home/Owner/Commands/Player/Items/Settings while moving in game, resizing the console, searching Commands, and typing into console fields. Confirm no panel is rebuilt unnecessarily, focused console text fields do not leak movement/hotkeys into the game, and returning focus to the game restores normal controls.
+21. Cleanly close and relaunch Matrix3. Confirm window position/size/state, console open/collapsed state, console width, and active panel still restore correctly after the V2 dashboard/icon/command-palette changes.
 
-Pass condition: V2 looks and feels more intentional without changing Matrix3 gameplay, renderer ownership, command authority, panel persistence, or client-thread ownership.
+Pass condition: V2 looks and feels more intentional without changing Matrix3 gameplay, renderer ownership, command authority, panel persistence, permissions, or client-thread ownership.
