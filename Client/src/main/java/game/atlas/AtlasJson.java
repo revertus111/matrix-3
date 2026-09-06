@@ -1,5 +1,8 @@
 package game.atlas;
 
+import java.util.List;
+
+import game.atlas.AtlasSchema.EvidenceRecord;
 import game.atlas.AtlasSchema.RelationshipRecord;
 import game.atlas.AtlasSchema.SymbolRecord;
 
@@ -45,6 +48,19 @@ final class AtlasJson {
         return builder.toString();
     }
 
+    static String evidence(EvidenceRecord record) {
+        StringBuilder builder = new StringBuilder(512);
+        builder.append('{');
+        appendStringField(builder, "subjectId", record.getSubjectId(), true);
+        appendStringField(builder, "status", record.getStatus().getWireValue(), false);
+        appendStringField(builder, "alias", record.getAlias(), false);
+        appendStringField(builder, "claim", record.getClaim(), false);
+        appendStringArrayField(builder, "supportingReferences", record.getSupportingReferences());
+        appendStringField(builder, "clientFingerprint", record.getClientFingerprint(), false);
+        builder.append('}');
+        return builder.toString();
+    }
+
     static String quote(String value) {
         if (value == null) {
             return "null";
@@ -65,6 +81,19 @@ final class AtlasJson {
         } else {
             appendString(builder, value);
         }
+    }
+
+    private static void appendStringArrayField(StringBuilder builder, String name, List<String> values) {
+        builder.append(',');
+        appendString(builder, name);
+        builder.append(':').append('[');
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) {
+                builder.append(',');
+            }
+            appendString(builder, values.get(i));
+        }
+        builder.append(']');
     }
 
     private static void appendNumberField(StringBuilder builder, String name, int value) {
