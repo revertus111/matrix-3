@@ -104,7 +104,7 @@ Bundle 3A consolidated runtime gate - PASS / ONE SESSION
 [x] Complete same-launch Matrix3 smoke because central packet enqueue/decode seams changed; user reported client works perfectly on 2026-09-06.
 [x] Bundle 3A DONE.
 
-Phase 3 / Bundle 3B - implementation complete / NEEDS one consolidated offline gate
+Phase 3 / Bundle 3B - DONE / consolidated offline gate PASS
 [x] `AtlasEvidenceStore` persists curated evidence in `.client-atlas/evidence.jsonl`.
 [x] External alias is metadata only; exact obfuscated Atlas subject ID remains primary.
 [x] One curated record per exact subject ID; same-subject upsert replaces deterministically instead of duplicating.
@@ -125,10 +125,12 @@ Phase 3 / Bundle 3B - implementation complete / NEEDS one consolidated offline g
 [x] Free-form evidence values encode literal quotes safely so field-name-like text cannot be mistaken for JSON property names by the deterministic evidence parser.
 [x] `AtlasEvidenceVerifier` added as one isolated Bundle 3B check; it never edits the real developer evidence file.
 [x] Verifier covers JSONL escape round-trip, field-name-like quoted evidence text, aliases/notes, classifications/refs, stale warning, orphan retention, rescan preservation, upsert/search, and delete.
-[ ] Eclipse Java 8 clean/build current Client once.
-[ ] Run `game.atlas.AtlasEvidenceVerifier` once as a Java Application in Eclipse.
-[ ] Require final line `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
-[ ] If PASS, mark Bundle 3B DONE and close Phase 3; no client launch/runtime smoke is required for this offline-only bundle.
+[x] Eclipse Java 8 clean/build current Client completed.
+[x] `game.atlas.AtlasEvidenceVerifier` ran as a Java Application in Eclipse.
+[x] Final result `BUNDLE 3B KNOWLEDGE CHECK: PASS` user-reported 2026-09-06.
+[x] Report written to `.client-atlas/knowledge-check.txt`.
+[x] Bundle 3B DONE.
+[x] Phase 3 DONE; no client launch/runtime smoke required for this offline-only bundle.
 
 Carryover regression checks
 [ ] If an exact streaming query owns >200 immediate relationships, confirm truncation state/count remains correct when naturally encountered.
@@ -136,6 +138,6 @@ Carryover regression checks
 Gate rules
 - Do not request another Phase 2 gate without a relevant Phase 2 change or contradictory evidence.
 - Do not request another Bundle 3A runtime gate without a relevant 3A implementation change or contradictory evidence.
-- Bundle 3B gets one consolidated offline verifier run after the full implementation bundle; do not split it into per-feature tests.
+- Do not request another Bundle 3B gate without a relevant evidence/knowledge implementation change or contradictory evidence.
 - Bundle 3B does not touch game runtime seams, so normal client startup/smoke is not part of its gate.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
