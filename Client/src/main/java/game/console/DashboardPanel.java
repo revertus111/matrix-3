@@ -3,14 +3,12 @@ package game.console;
 import game.ClientConsoleBridge;
 import game.console.bosslabs.BossLabsWindow;
 
-import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
 import java.awt.event.HierarchyEvent;
 import java.io.IOException;
 
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -30,12 +28,12 @@ public final class DashboardPanel extends JScrollPane {
     private static final long serialVersionUID = 7818686426616483880L;
     private static final int REFRESH_DELAY_MS = 500;
 
-    private final JLabel displayNameValue = createValueLabel();
-    private final JLabel rightsValue = createValueLabel();
-    private final JLabel playerStateValue = createValueLabel();
-    private final JLabel positionValue = createValueLabel();
-    private final JLabel planeValue = createValueLabel();
-    private final JLabel regionValue = createValueLabel();
+    private final JLabel displayNameValue = ConsoleTheme.createValueLabel();
+    private final JLabel rightsValue = ConsoleTheme.createValueLabel();
+    private final JLabel playerStateValue = ConsoleTheme.createValueLabel();
+    private final JLabel positionValue = ConsoleTheme.createValueLabel();
+    private final JLabel planeValue = ConsoleTheme.createValueLabel();
+    private final JLabel regionValue = ConsoleTheme.createValueLabel();
     private final JLabel cacheEditorStatus = new JLabel("Ready");
     private final JButton resetLayoutButton = new JButton("Reset Client Console Layout");
     private final Timer refreshTimer = new Timer(REFRESH_DELAY_MS, e -> refresh());
@@ -49,19 +47,9 @@ public final class DashboardPanel extends JScrollPane {
         content.setBorder(ConsoleTheme.panelPadding(20, 18, 20, 18));
         content.setMinimumSize(new Dimension(0, 0));
 
-        JLabel title = new JLabel("MATRIX3");
-        title.setFont(ConsoleTheme.TITLE_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel subtitle = new JLabel("Developer dashboard");
-        subtitle.setFont(ConsoleTheme.SMALL_FONT);
-        subtitle.setForeground(ConsoleTheme.ACCENT);
-        subtitle.setAlignmentX(LEFT_ALIGNMENT);
-
-        content.add(title);
+        content.add(ConsoleTheme.titleLabel("MATRIX3"));
         content.add(Box.createVerticalStrut(4));
-        content.add(subtitle);
+        content.add(ConsoleTheme.subtitleLabel("Developer dashboard"));
         content.add(Box.createVerticalStrut(18));
         content.add(createSessionCard());
         content.add(Box.createVerticalStrut(12));
@@ -100,29 +88,29 @@ public final class DashboardPanel extends JScrollPane {
     }
 
     private JPanel createSessionCard() {
-        JPanel card = createCard("Session");
+        JPanel card = ConsoleTheme.createCard("Session");
         card.add(Box.createVerticalStrut(10));
-        card.add(createRow("Display name", displayNameValue));
+        card.add(ConsoleTheme.createValueRow("Display name", displayNameValue));
         card.add(Box.createVerticalStrut(7));
-        card.add(createRow("Rights", rightsValue));
+        card.add(ConsoleTheme.createValueRow("Rights", rightsValue));
         card.add(Box.createVerticalStrut(7));
-        card.add(createRow("Client state", playerStateValue));
+        card.add(ConsoleTheme.createValueRow("Client state", playerStateValue));
         return card;
     }
 
     private JPanel createWorldCard() {
-        JPanel card = createCard("World");
+        JPanel card = ConsoleTheme.createCard("World");
         card.add(Box.createVerticalStrut(10));
-        card.add(createRow("Tile", positionValue));
+        card.add(ConsoleTheme.createValueRow("Tile", positionValue));
         card.add(Box.createVerticalStrut(7));
-        card.add(createRow("Plane", planeValue));
+        card.add(ConsoleTheme.createValueRow("Plane", planeValue));
         card.add(Box.createVerticalStrut(7));
-        card.add(createRow("Region", regionValue));
+        card.add(ConsoleTheme.createValueRow("Region", regionValue));
         return card;
     }
 
     private JPanel createToolsCard() {
-        JPanel card = createCard("Developer tools");
+        JPanel card = ConsoleTheme.createCard("Developer tools");
 
         JButton bossLabsButton = new JButton("Open BossLabs");
         JButton cacheEditorButton = new JButton("Open RS3 CacheEditor");
@@ -138,9 +126,7 @@ public final class DashboardPanel extends JScrollPane {
         buttons.add(bossLabsButton);
         buttons.add(cacheEditorButton);
 
-        cacheEditorStatus.setFont(ConsoleTheme.SMALL_FONT);
-        cacheEditorStatus.setForeground(ConsoleTheme.MUTED_TEXT);
-        cacheEditorStatus.setAlignmentX(LEFT_ALIGNMENT);
+        ConsoleTheme.styleStatus(cacheEditorStatus, false);
 
         card.add(Box.createVerticalStrut(10));
         card.add(buttons);
@@ -150,12 +136,9 @@ public final class DashboardPanel extends JScrollPane {
     }
 
     private JPanel createWorkspaceCard() {
-        JPanel card = createCard("Workspace");
-
+        JPanel card = ConsoleTheme.createCard("Workspace");
         JLabel note = new JLabel("Layout restores after a clean exit.");
-        note.setFont(ConsoleTheme.SMALL_FONT);
-        note.setForeground(ConsoleTheme.MUTED_TEXT);
-        note.setAlignmentX(LEFT_ALIGNMENT);
+        ConsoleTheme.styleStatus(note, false);
 
         resetLayoutButton.setAlignmentX(LEFT_ALIGNMENT);
         resetLayoutButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
@@ -186,47 +169,6 @@ public final class DashboardPanel extends JScrollPane {
             ex.printStackTrace();
             cacheEditorStatus.setText("CacheEditor launch failed; see client console output.");
         }
-    }
-
-    private JPanel createCard(String titleText) {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(ConsoleTheme.CARD);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ConsoleTheme.BORDER),
-                ConsoleTheme.panelPadding(14, 14, 14, 14)));
-        card.setAlignmentX(LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-
-        JLabel title = new JLabel(titleText);
-        title.setFont(ConsoleTheme.SECTION_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-        card.add(title);
-        return card;
-    }
-
-    private JPanel createRow(String labelText, JLabel valueLabel) {
-        JPanel row = new JPanel(new BorderLayout(12, 0));
-        row.setBackground(ConsoleTheme.CARD);
-        row.setOpaque(true);
-        row.setAlignmentX(LEFT_ALIGNMENT);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
-
-        JLabel label = new JLabel(labelText);
-        label.setFont(ConsoleTheme.SMALL_FONT);
-        label.setForeground(ConsoleTheme.MUTED_TEXT);
-
-        row.add(label, BorderLayout.WEST);
-        row.add(valueLabel, BorderLayout.EAST);
-        return row;
-    }
-
-    private static JLabel createValueLabel() {
-        JLabel label = new JLabel();
-        label.setFont(ConsoleTheme.BODY_FONT);
-        label.setForeground(ConsoleTheme.TEXT);
-        return label;
     }
 
     private void refresh() {
