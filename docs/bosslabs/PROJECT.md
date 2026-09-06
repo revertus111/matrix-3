@@ -78,6 +78,8 @@ If older BossLabs prose conflicts with the phase/checklist or Resume Here state 
 - BossLabs external UI has opened in the running client and loaded/inspected an NPC in user runtime testing.
 - A prior runtime screenshot exposed the Testing-tab gating defect on a normal Matrix3 NPC; that defect was patched afterward but the correction still requires re-verification.
 - 2026-09-06 runtime video verified a creator-state defect: with no NPC selected, the shell still looked editable, Boss-name typing could show `DRAFT: modified`, and phase/attack actions could appear usable while the actual definition editor had no DRAFT. This blocked the intended authoring workflow and is treated as a V2.1/V2.2 regression gate.
+- After the creator-state repair, the user reported the BossLabs creator workflow was working except Drops. A 2026-09-06 runtime screenshot showed NPC `Man [1]` loaded normally and item search resolving item definitions inside Drops.
+- The same screenshot/runtime report verified a Drops blocker: the Drops sub-workspace stayed `DRAFT: none` / `Reloading current live drops...`, so Add Drop could not mutate a local drop draft even though item search and NPC context were present.
 
 ### verified-static
 
@@ -93,7 +95,9 @@ If older BossLabs prose conflicts with the phase/checklist or Resume Here state 
 - Saved drop overrides load after packed Matrix3 drops so the packed table is available as the restore baseline.
 - Matrix3 Rare/Very Rare wearable split entries are exposed back to the editor so inspection does not silently lose them.
 - Duplicate drop entries are valid and preserved. For rolled rarity buckets, repeated array slots can intentionally increase selection weight; repeated `Always` slots remain repeated guaranteed drops.
-- The creator-state repair now enforces the client invariant `no successfully inspected NPC -> no editable BossLabs DRAFT`: dependent tabs and Boss-name editing are locked while empty/loading, the previous draft is cleared before a new inspection, stale inspection replies are ignored by NPC id, and missing inspection restores a clean locked state.
+- The creator-state repair enforces the client invariant `no successfully inspected NPC -> no editable BossLabs DRAFT`: dependent tabs and Boss-name editing are locked while empty/loading, the previous draft is cleared before a new inspection, stale inspection replies are ignored by NPC id, and missing inspection restores a clean locked state.
+- The V2.4-B Drops repair now preserves Matrix3 legacy quantity `0`, can transport structurally readable legacy rows for repair without publishing invalid max<min ranges, reports server inspection failures, reports client decode failures, and bounds missing inspect replies with a five-second client timeout.
+- Drops creator controls now have explicit loading/error states and the primary Add Drop / Update Drop action is fixed outside the scroll area so it remains visible.
 
 ## Unknown / research needed
 
@@ -103,11 +107,11 @@ If older BossLabs prose conflicts with the phase/checklist or Resume Here state 
 
 ### UNKNOWN
 
-- Full Java 8 Eclipse compile state of the accumulated BossLabs V2 changes until the user performs the consolidated build.
-- Runtime correctness of the 2026-09-06 creator-state repair until the exact no-NPC/load/phase/attack sequence is retested.
+- Full Java 8 Eclipse compile state of the latest Drops repair until the user rebuilds Client + Server.
+- Whether the runtime Drops blocker was specifically caused by a legacy quantity/range row or another server-side inspection exception; the repair intentionally makes either case visible instead of silent.
 - Runtime correctness/timing of weighted rotation, phase transitions, telegraph delay, hazard interval, minion lifecycle cleanup, and definition-replacement cleanup under real combat.
 - Visual orientation of Attack Pattern Rotate Left/Right and Nudge Up/Down in the actual Swing canvas.
-- Runtime behavior of the new drop override store across save/restart/restore/rollback.
+- Runtime behavior of the drop override store across save/restart/restore/rollback.
 - Whether the first complete proof boss requires true fixed Arena Layout semantics or can be completed with existing world placement plus relative attack patterns.
 
 ## Dependencies
@@ -123,7 +127,7 @@ If older BossLabs prose conflicts with the phase/checklist or Resume Here state 
 
 The historical `BOSSLABS.md` V2 sequence remains the product roadmap, but implementation advanced ahead of the phase gates before this workstream was normalized. That history is preserved below rather than rewritten.
 
-No later phase may be marked COMPLETE until its earlier required gate is satisfied. Already-landed later-phase code is treated as implementation awaiting validation, not permission to skip the current gate.
+No later phase may be marked COMPLETE until its earlier required gate is satisfied. Already-landed later-phase code is treated as implementation awaiting validation, not permission to skip the current gate. The user explicitly reprioritized the runtime-blocking Drops defect on 2026-09-06; repairing that landed V2.4 implementation does not close the still-open V2.1/V2.2 gates.
 
 ### Phase V2.0 - Creator UX authority
 
@@ -167,22 +171,24 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - [x] V2.1 creator shell/direct composition implemented.
 - [x] Testing panel directly owned by BossLabsPanel.
 - [x] Drops panel directly composed into BossLabsPanel.
-- [ ] Eclipse Clean/build Client with Java 8.
-- [ ] Eclipse Clean/build Server with Java 8.
+- [ ] Eclipse Clean/build Client with Java 8 after the latest bundle.
+- [ ] Eclipse Clean/build Server with Java 8 after the latest bundle.
 - [ ] Open, close, and reopen BossLabs; verify no stale listener/window behavior.
-- [ ] Inspect a safe normal Matrix3 NPC and a BossLabs NPC.
-- [ ] Run the high-value BossLabs workflow checks listed under Testing below.
+- [x] Runtime-load a safe normal Matrix3 NPC after the creator-state repair; `Man [1]` loaded successfully in the 2026-09-06 retest.
+- [ ] Inspect a live BossLabs NPC after applying a test definition.
+- [ ] Run the remaining high-value BossLabs workflow checks listed under Testing below.
 - [ ] Run required `docs/rs3/SMOKE_TEST.md` coverage after the drop startup/persistence change.
 
 #### Bundle V2.1-B - Creator-state invariant repair
 
 **Purpose:** Repair the runtime-proven ghost-DRAFT/empty-workspace failure before resuming the larger verification session.
 
-**Status:** NEEDS TEST
+**Status:** NEEDS TEST / RUNTIME IMPROVED
 
 **Runtime evidence:**
 
 - User video on 2026-09-06 showed no selected NPC while the shell displayed editable boss/phase/attack workflow and `DRAFT: modified`; actions appeared to do nothing because the internal definition editor had no loaded DRAFT.
+- After the repair the user reported everything tested in the main creator flow was working except Drops; this is positive runtime evidence for the shell repair, but the full V2.1 gate remains open until the remaining checklist is completed.
 
 **Checklist / patches:**
 
@@ -194,8 +200,8 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - [x] Restore a clean locked state after invalid/missing NPC inspection.
 - [x] Add explicit visible workspace guidance and document the safe first-phase 100% -> 0% default.
 - [x] Add focused creator-state regression checks to `ux-testlist.txt`.
-- [ ] Eclipse Clean/build Client with Java 8.
-- [ ] Repeat the exact no-NPC -> load NPC -> add phase -> add attack sequence from the failing video.
+- [x] Runtime launch after repair; normal NPC loading/creator navigation works according to user retest.
+- [ ] Re-run the exact no-NPC locked-state assertion when convenient.
 - [ ] Confirm invalid Starts at HP 1 / Ends at HP 2 produces the existing inline range error and does not mutate the phase.
 
 ### Phase V2.2 - Phases and attacks workflow
@@ -204,7 +210,7 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 
 **Status:** NEEDS TEST
 
-**Gate note:** Implementation landed before V2.1 runtime verification. It may be tested in the same consolidated session, but it is not considered complete until V2.1 passes first. The first V2.2 runtime attempt was blocked by the V2.1 ghost-DRAFT state and must be retried after Bundle V2.1-B passes.
+**Gate note:** Implementation landed before V2.1 runtime verification. It may be tested in the same consolidated session, but it is not considered complete until V2.1 passes first. The first V2.2 runtime attempt was blocked by the V2.1 ghost-DRAFT state; the post-repair user retest reports the creator flow working, but deeper phase/attack behavior remains to be verified.
 
 **Implemented:**
 
@@ -265,9 +271,9 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 
 #### Bundle V2.4-B - Matrix3-native Drops
 
-**Status:** NEEDS TEST
+**Status:** NEEDS TEST / ACTIVE RUNTIME REPAIR
 
-- [x] Existing Matrix3 table inspection.
+- [x] Existing Matrix3 table inspection implementation.
 - [x] Item ID/name search through existing Client Console item definitions.
 - [x] Matrix3 rarity buckets and quantity ranges.
 - [x] Rare-drop-table toggle.
@@ -275,7 +281,17 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - [x] Independent atomic `drops.bld` persistence.
 - [x] Rare/Very Rare gear-split readback.
 - [x] Preserve duplicate slots for Matrix3 selection weighting and repeated Always entries.
-- [ ] Java 8 compile/runtime verification.
+- [x] Runtime failure captured: `Man [1]` reached Drops item search but remained `DRAFT: none` / reloading, preventing Add Drop.
+- [x] Make Matrix3 legacy zero-quantity rows inspection-safe and allow structurally readable invalid ranges to load for repair without allowing publish.
+- [x] Return explicit server inspection errors instead of letting world-task conversion failures disappear.
+- [x] Bound client inspection waits with explicit queue/decode/timeout errors.
+- [x] Add explicit DRAFT loading/error states and disable mutations while an inspection is pending.
+- [x] Keep Add Drop / Update Drop fixed and visible outside the scroll area; rename `New Entry` to `New Drop` and explain the commit step.
+- [x] Add focused acceptance checks 42-49 in `drops-testlist.txt`.
+- [ ] Eclipse Clean/build Client + Server with Java 8 after this repair.
+- [ ] Re-open Drops on `Man [1]`; confirm it reaches `DRAFT: clean` or reports a concrete error rather than hanging.
+- [ ] Add Abyssal whip `4151` as a test row and confirm it appears immediately in the DRAFT list.
+- [ ] Apply Drops Live, Reload Current, Undo Drops, and Restore Matrix3 on a safe NPC.
 - [ ] Save/restart/reapply/restore verification.
 - [ ] Normal Matrix3 NPC drop regression verification.
 
@@ -326,25 +342,25 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 
 ## Current execution state
 
-- **Phase:** V2.1 - Shell and composition cleanup
+- **Phase:** V2.4 - Arena and Drops (runtime blocker repair explicitly reprioritized by user; earlier gates remain open)
 - **Phase status:** NEEDS TEST
-- **Bundle:** V2.1-B - Creator-state invariant repair
+- **Bundle:** V2.4-B - Matrix3-native Drops / runtime & creator workflow repair
 - **Bundle status:** NEEDS TEST
-- **Approval state:** SAP AAA approved for the creator-state regression repair; implementation/docs are complete statically and runtime verification is pending.
-- **Current checklist item:** Pull current `main`, Eclipse Clean/build Client, then repeat the exact no-NPC -> load NPC -> phase -> attack workflow from the failing video.
-- **Current objective:** Prove the creator workspace can never expose a ghost/stale DRAFT before resuming the broader BossLabs verification session.
+- **Approval state:** SAP AAA approved the full Drops Runtime & Creator Workflow Repair bundle; implementation/docs are complete statically and runtime verification is pending.
+- **Current checklist item:** Pull current `main`, Eclipse Clean/build Client + Server, reopen `Man [1]` Drops, and verify DRAFT loads plus Abyssal whip `4151` can be added.
+- **Current objective:** Remove the runtime Drops blocker so the broader BossLabs verification session can continue without another feature expansion.
 
 ## Checklist / patch status
 
 | Item | Phase | Bundle | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Creator shell/direct composition | V2.1 | V2.1-B | NEEDS TEST | Runtime ghost-DRAFT bug found; shell-boundary repair landed and needs exact-sequence retest. |
-| Phase/attack creator workflow | V2.2 | V2.2 | NEEDS TEST | First runtime attempt was blocked by the V2.1 empty-workspace bug; retry after V2.1-B passes. |
+| Creator shell/direct composition | V2.1 | V2.1-B | NEEDS TEST | User reports repaired creator flow works; full shell gate still has a few checks pending. |
+| Phase/attack creator workflow | V2.2 | V2.2 | NEEDS TEST | Main creator flow improved; deeper author/test/save behavior still pending. |
 | Context-aware Testing workflow | V2.2 | V2.2 | NEEDS TEST | Includes plain Matrix3 spawn/reset/HP and BossLabs-specific controls. |
 | Attack Pattern transforms/undo | V2.2/V2.4 | V2.4-A | NEEDS TEST | Visual direction and persistence check pending. |
-| Matrix3-native Drops | V2.4 | V2.4-B | NEEDS TEST | Full implementation present; startup/live/save/restore/drop-generation tests pending. |
+| Matrix3-native Drops | V2.4 | V2.4-B | NEEDS TEST | Runtime DRAFT-none blocker found; repair bundle landed and needs exact NPC 1/Add Drop retest. |
 | Duplicate drop slot weighting correction | V2.4 | V2.4-B | NEEDS TEST | Static semantics corrected client/server/UI; runtime round-trip pending. |
-| Asset workflow | V2.3 | V2.3-A | READY | Next implementation phase only after V2.1/V2.2 runtime gates pass. |
+| Asset workflow | V2.3 | V2.3-A | READY | Next implementation phase only after required runtime gates pass. |
 | True Arena Layout | V2.4 | V2.4-C | CARRYOVER | Build only when first boss proves fixed anchors/bounds are required. |
 | First complete boss | V2.5 | V2.5 | READY after dependencies | Generic proof boss; not Volcanic-Warden-specific. |
 
@@ -354,42 +370,48 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 
 - BossLabs is a **generic tool first**. Reference bosses/examples must never become hardcoded requirements.
 - Volcanic Warden is reference/proof material only; the actual first proof boss is chosen later.
-- Larger coherent BossLabs feature packs are acceptable when they preserve ownership, rollback points, narrow logical commits, and one consolidated runtime test session.
+- Larger coherent BossLabs feature/repair packs are acceptable when they preserve ownership, rollback points, narrow logical commits, and one consolidated runtime test session.
 - Runtime testing time is scarce; batch compatible checks rather than requiring repeated pull/restart cycles.
-- Content drives future tooling. After the current runtime gate, finish the missing asset workflow, then move toward a complete boss instead of endlessly expanding editor features.
+- Content drives future tooling. After the runtime gates, finish the missing asset workflow, then move toward a complete boss instead of endlessly expanding editor features.
 - Matrix3 drop rarity semantics are bucket-based. Do not invent unsupported per-item percentages.
 - Duplicate drop entries are meaningful Matrix3 data and must round-trip faithfully.
+- Matrix3 legacy `Drop`/packed data permits quantity `0`; BossLabs inspection must preserve that data rather than rejecting the entire table. New/edited rows must still satisfy max >= min before publishing.
+- A failed Drops inspection must terminate with a visible error. Silent world-task exceptions or indefinite `DRAFT: loading` are not acceptable creator behavior.
 - True Arena Layout is deferred until real encounter content requires fixed encounter-space semantics.
 - Creator-state invariant: **no successfully inspected NPC means no editable BossLabs DRAFT**. Empty/loading/missing states must be explicit and non-interactive rather than relying on individual controls to silently no-op.
 
 ## Testing
 
-### Immediate creator-state retest
+### Immediate Drops repair retest
 
 1. `git pull origin main`.
-2. Eclipse Clean/build **Client** with Java 8.
-3. Open BossLabs and do not select an NPC. Confirm `DRAFT: none / LIVE: none / SAVED: none`, Boss name is disabled, and every dependent tab is locked.
-4. Enter a safe NPC ID/name and Load. Confirm BossLabs returns/stays on Overview, clears any prior boss values, shows loading state, and keeps authoring locked until inspection completes.
-5. After inspection, confirm the workspace explicitly unlocks, DRAFT is clean, Boss name is editable, and Phases becomes available.
-6. Add the first phase. Confirm it starts at 100% and ends at 0%.
-7. Change it to Starts at HP 1 / Ends at HP 2 and Save Phase. Confirm the phase is not changed and the inline phase status explains the invalid range.
-8. Restore a valid range, save it, open Attacks, add an attack, and confirm the attack is selected with safe defaults instead of silently doing nothing.
-9. Optional stale-response check: request NPC A then NPC B quickly and confirm A cannot replace B if its reply arrives later.
-10. Enter an invalid NPC ID and confirm the tool returns to the clean locked no-NPC state.
+2. Eclipse Clean/build **Client and Server** with Java 8.
+3. Start Server + Client and load `Man [1]` in BossLabs.
+4. Open Drops. Confirm it shows `DRAFT: loading` briefly, then `DRAFT: clean`; it must not remain `DRAFT: none` / `Reloading...` indefinitely. If inspection fails, record the explicit error text now shown.
+5. Confirm item search still resolves `whip`, select Abyssal whip `4151`, choose a safe rarity/1-1 amount, and press the fixed **Add Drop** button.
+6. Confirm the row appears immediately in the left Drop table and DRAFT becomes modified.
+7. Add the same item a second time in one rolled bucket and confirm both rows remain.
+8. Apply Drops Live, then Reload Current; confirm rows round-trip.
+9. Undo Drops and Restore Matrix3; confirm the original table returns.
+10. If those pass, Save & Apply a safe override, restart Server, confirm it reloads, then restore/delete the test override.
 
-### Quick/high-value consolidated session after the creator-state retest passes
+### Remaining creator-state checks
 
-1. Start Server + Client and verify normal login/Client Console behavior.
-2. Open BossLabs, inspect a safe ordinary Matrix3 NPC, close/reopen BossLabs, and inspect again.
-3. Confirm plain Matrix3 Testing allows Spawn Boss Here, Reset Encounter, and Set HP; BossLabs-only controls remain disabled until a live BossLabs definition exists.
-4. Create a simple valid phase + attack, Apply Live, spawn the controlled test boss, enter the selected phase, and test the selected attack.
-5. Exercise a patterned attack: drag-paint/erase, Undo, rotate, mirror, nudge, Apply Live, and confirm the intended visual direction/tiles.
-6. Exercise one telegraph/hazard and one minion action; use Clear Hazards + Minions and Reset Encounter.
-7. In Drops, load an NPC with an existing Matrix3 table and verify entries/rarities/amounts load.
-8. Add the same item twice to one rolled rarity bucket and verify both rows remain; Apply Drops Live and reload current state to confirm both slots survive.
-9. Test Drops Undo and Restore Matrix3 on that NPC.
-10. Save & Apply a safe BossLabs boss/drop override, restart the server, and verify both saved boss content and saved drop override reload.
-11. Confirm an unrelated normal Matrix3 NPC still uses its original combat and drop behavior.
+1. Open BossLabs with no NPC selected and confirm `DRAFT: none / LIVE: none / SAVED: none`, Boss name disabled, dependent tabs locked.
+2. Load a safe NPC and confirm authoring unlocks only after inspection.
+3. Add a first phase and confirm default 100% -> 0%.
+4. Set Starts at HP 1 / Ends at HP 2 and confirm inline validation rejects the range.
+5. Restore a valid range, add an attack, and confirm safe defaults/selection.
+
+### Quick/high-value consolidated session after the Drops repair passes
+
+1. Verify normal login/Client Console behavior and BossLabs close/reopen lifecycle.
+2. Confirm plain Matrix3 Testing allows Spawn Boss Here, Reset Encounter, and Set HP; BossLabs-only controls remain disabled until a live BossLabs definition exists.
+3. Create a simple valid phase + attack, Apply Live, spawn the controlled test boss, enter the selected phase, and test the selected attack.
+4. Exercise a patterned attack: drag-paint/erase, Undo, rotate, mirror, nudge, Apply Live, and confirm intended visual direction/tiles.
+5. Exercise one telegraph/hazard and one minion action; use Clear Hazards + Minions and Reset Encounter.
+6. Confirm an unrelated normal Matrix3 NPC still uses its original combat and drop behavior.
+7. Run required `docs/rs3/SMOKE_TEST.md` coverage after the startup/drop-persistence change.
 
 ### Deeper checks when time allows
 
@@ -419,85 +441,90 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 
 ### BLOCKED
 
-- Feature progression into V2.3 is blocked until the creator-state repair and V2.1/V2.2 runtime gates pass.
-- No known server/runtime code blocker is introduced by the current repair; it is client-only and awaiting user verification.
+- V2.3 feature progression remains blocked until the required V2.1/V2.2 gates and the runtime-blocking V2.4-B Drops repair are proven.
+- No known Matrix3 runtime-ownership blocker was introduced by the Drops repair; current blocker is user runtime verification of the repaired client/server round-trip.
 
 ## Resume Here
 
 **Last completed:**
 
-- Patched the runtime-proven BossLabs ghost-DRAFT/empty-workspace failure at the client shell boundary.
-- Added explicit empty/loading/loaded creator states, stale-inspection rejection, clean missing-NPC recovery, focused UX regression checks, and this workstream-state update.
+- Patched the runtime-proven Drops `DRAFT: none` / endless-reload failure as a full V2.4-B repair bundle.
+- Added legacy-safe drop inspection, explicit server/decode/timeout failure handling, explicit loading/error UI state, a fixed visible Add/Update Drop action, and focused repair acceptance checks.
 
 **Current phase:**
 
-- V2.1 - Shell and composition cleanup (`NEEDS TEST`).
+- V2.4 - Arena and Drops (`NEEDS TEST`; runtime blocker repair explicitly reprioritized while earlier phase gates remain open).
 
 **Active bundle:**
 
-- V2.1-B - Creator-state invariant repair (`NEEDS TEST`).
+- V2.4-B - Matrix3-native Drops / Runtime & Creator Workflow Repair (`NEEDS TEST`).
 
 **Next checklist item:**
 
-- User pulls current `main`, Eclipse Clean/builds Client, and repeats the exact no-NPC -> load NPC -> phase -> attack flow from the 2026-09-06 failing video.
+- User pulls current `main`, Eclipse Clean/builds Client + Server, loads `Man [1]`, confirms Drops reaches a real DRAFT, then adds Abyssal whip `4151` and tests live/reload/undo/restore.
 
 **Current state / next action:**
 
-- Do **not** start V2.3 or another feature pack before this repair is runtime-proven.
-- If the focused retest passes, continue the consolidated V2.1/V2.2/Testing/Pattern/Drops verification session.
-- If another creator-state defect appears, fix it inside V2.1-B before testing deeper mechanics.
-- After V2.1 and V2.2 pass in order, record any V2.4 results already gathered and start V2.3 Asset Workflow.
+- Do **not** start V2.3 or another feature pack before the Drops repair is runtime-proven.
+- If Drops now loads but reports a concrete error, use that new evidence for the smallest owning fix rather than broad rescanning.
+- If Drops passes, resume the remaining consolidated V2.1/V2.2/Testing/Pattern verification.
+- After V2.1/V2.2 and required V2.4 checks pass, start V2.3 Asset Workflow, then move to the first complete generic boss.
 
 **Files/systems already inspected:**
 
 - `AGENTS.md`
 - `docs/rs3/PROJECT.md`
 - `docs/bosslabs/PROJECT.md`
-- `docs/bosslabs/BOSSLABS.md`
-- `docs/bosslabs/ux-testlist.txt`
-- `Client/src/main/java/game/console/bosslabs/BossLabsPanel.java`
-- `Client/src/main/java/game/console/bosslabs/BossLabsDefinitionEditor.java`
-- BossLabs Testing/Pattern/Drops panels and existing bridge ownership from prior work
+- `docs/bosslabs/drops-testlist.txt`
+- `Client/src/main/java/game/console/bosslabs/BossLabsDropPanel.java`
+- `Client/src/main/java/game/console/bosslabs/BossLabsDropClientBridge.java`
+- `Client/src/main/java/game/console/bosslabs/BossLabsDropDraftDefinition.java`
+- `Server/src/main/java/com/rs/game/npc/bosslabs/BossLabsDropCommandBridge.java`
+- `Server/src/main/java/com/rs/game/npc/bosslabs/BossLabsDropDefinition.java`
+- `Server/src/main/java/com/rs/game/npc/bosslabs/BossLabsDropPublisher.java`
+- `Server/src/main/java/com/rs/game/npc/bosslabs/BossLabsDropWireCodec.java`
+- Matrix3 `Drop`, `Drops`, `NPCDrops` amount/readback semantics
+- Existing BossLabs command/reply ownership already proven by working NPC search/inspection in the same runtime session
 
 **Do not re-scan without new evidence:**
 
-- Matrix3 drop bucket semantics and drop-runtime authority.
-- BossLabs drop persistence/bridge architecture.
+- Matrix3 drop bucket rates and drop-runtime authority.
+- BossLabs drop persistence/store architecture.
 - BossLabs combat authority boundaries.
 - Existing definition wire/store v8 ownership.
 - Existing Testing exact-instance ownership.
-- The creator-state failure path established by the 2026-09-06 video and `BossLabsPanel` inspection.
+- The main creator-state failure path established by the 2026-09-06 video.
+- Drops item-index/search path; runtime screenshot already proved it resolves items.
 
 **Pending runtime verification:**
 
-- Java 8 Client compile for the creator-state repair.
-- Empty/no-NPC workspace locking and DRAFT:none invariant.
-- Loading-state clearing/locking and stale-inspection rejection.
-- Valid NPC unlock and clean DRAFT state.
-- First-phase 100% -> 0% default and invalid-range feedback.
-- Add Attack gating/selection after a phase exists.
+- Java 8 Client + Server compile after the Drops repair.
+- NPC 1 Drops inspection reaches DRAFT:clean or surfaces a concrete error.
+- Add/Update Drop fixed button and New Drop workflow.
+- Legacy zero-quantity row readback and invalid-range repair behavior where available.
+- Drop live apply/rollback/restore/save/restart.
+- Duplicate drop slot round-trip.
+- Normal Matrix3 combat/drop regression.
+- Remaining creator-state/phase/attack checks.
 - BossLabs window lifecycle and direct composition.
 - Testing spawn/reset/HP/selected phase/selected attack.
 - Pattern transform visual directions and save/reload.
 - Encounter hazard/minion cleanup.
 - Boss definition persistence/restart.
-- Drop live apply/rollback/restore/save/restart.
-- Duplicate drop slot round-trip.
-- Normal Matrix3 combat/drop regression.
 - Full required smoke test after startup/drop persistence changes.
 
 **Blockers:**
 
-- Focused creator-state runtime verification.
+- Runtime verification of the V2.4-B Drops repair bundle.
 
 **Important remaining uncertainty:**
 
-- Whether the shell-boundary repair fully resolves the confusing no-op workflow seen in the video or exposes a second phase-editor-specific UX defect afterward.
+- The exact legacy row/exception that caused the original NPC 1 drop-inspection silence; the repair now makes any remaining cause visible rather than hiding it.
 - Exact best reuse path for animation/GFX/projectile selection until V2.3 narrow scan.
 - Whether true Arena Layout is actually required by the first proof boss.
 
 ## Next recommended work
 
-**Runtime-test Bundle V2.1-B using the exact failing creator sequence.**
+**Runtime-test the V2.4-B Drops repair bundle on `Man [1]`, beginning with adding Abyssal whip `4151`.**
 
-After it passes, resume the consolidated V2.1/V2.2 verification. V2.3 Asset Workflow remains the next implementation phase only after those gates pass.
+After it passes, resume the consolidated V2.1/V2.2 verification. V2.3 Asset Workflow remains the next implementation phase only after those required gates pass.
