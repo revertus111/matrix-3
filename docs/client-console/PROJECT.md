@@ -49,7 +49,8 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 
 ### VERIFIED
 
-- User runtime-observed the current V2 dashboard/icon direction and reported that it looks substantially better.
+- User runtime-observed the initial V2 dashboard/icon direction and reported that it looks substantially better.
+- User runtime-observed the post-Bundle 2.2 Client Console V2 finish direction and reported that it is "looking really good". Treat the overall visual direction at the user's current runtime layout as accepted; this does not substitute for the remaining interaction, persistence, focus, DPI, or bridge-regression checks.
 - OpenGL is a working renderer baseline and is not part of this workstream's unfinished scope.
 
 ### verified-static
@@ -73,9 +74,9 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 
 ### UNKNOWN
 
-- Final DPI/layout/input behavior of the accumulated V2 changes remains pending consolidated runtime acceptance.
+- Final DPI/layout/input behavior across the requested resolutions/scaling values remains pending consolidated runtime acceptance.
 - Runtime behavior of the newly dedicated Boss Research panel, migrated RoTS evidence controls, and `bossResearch` active-panel restore remains pending.
-- Exact visual quality at all requested resolutions/scaling values remains a runtime/visual acceptance question rather than a static claim.
+- Commands keyboard flow/danger confirmation, Item Browser 500ms behavior/bridges, Settings behavior, Atlas coexistence, focus handoff, and clean-restart persistence still require the consolidated gate.
 
 ## Dependencies
 
@@ -159,8 +160,9 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 
 **Checklist / patches:**
 
-- [ ] Run the quick visual/navigation/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas checks in `v2-testlist.txt`.
-- [ ] Run focus, resize/DPI, persistence, bridge-authority, and restart checks from the same list.
+- [x] Record user acceptance of the final V2 visual direction at the current runtime layout.
+- [ ] Run the remaining visual/navigation/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas checks in `v2-testlist.txt`, including resize/DPI coverage not established by the general visual acceptance.
+- [ ] Run focus, persistence, bridge-authority, and restart checks from the same list.
 - [ ] Record runtime evidence and convert any failures into targeted carryover rather than broad rescans.
 
 ## Current execution state
@@ -169,22 +171,22 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 - Phase status: NEEDS TEST
 - Bundle: Bundle 2.3 - Consolidated V2 runtime gate
 - Bundle status: NEEDS TEST
-- Approval state: Bundle 2.2 implementation completed under SAP AAA. Runtime verification is intentionally deferred until the user's later test session.
-- Current checklist item: Run `docs/client-console/v2-testlist.txt` in one consolidated Matrix3 session.
-- Current objective: Validate the accumulated V2 implementation without additional feature expansion first.
+- Approval state: SAP AAA approved. Current code bundle is implemented; user has visually accepted the final V2 direction, while deeper runtime verification remains intentionally open.
+- Current checklist item: Continue the consolidated runtime gate beyond general visual acceptance.
+- Current objective: Validate interactions, focus, bridge authority, Boss Research migration, resize/DPI behavior, and persistence without adding more feature scope first.
 
 ## Checklist / patch status
 
 | Item | Phase | Bundle | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Icon rail | 2 | 2.1 | NEEDS TEST | Implemented; deferred runtime acceptance. |
-| Developer dashboard | 2 | 2.1 | NEEDS TEST | Implemented; user reports improved appearance. |
-| Item Browser 500ms search | 2 | 2.1 | NEEDS TEST | Implemented; deferred performance/runtime check. |
-| Commands palette | 2 | 2.1 | NEEDS TEST | Implemented; deferred keyboard/runtime check. |
-| Boss Research ownership migration | 2 | 2.2 | NEEDS TEST | Dedicated lazy panel; runtime probes/findings + RoTS cache evidence consolidated. |
-| Owner cleanup | 2 | 2.2 | NEEDS TEST | Boss-specific tooling removed from Owner. |
-| Shared visual primitives | 2 | 2.2 | NEEDS TEST | Applied to primary V2 panels; final layout/DPI acceptance pending. |
-| V2 consolidated acceptance | 2 | 2.3 | NEEDS TEST | One runtime session after pull. |
+| Icon rail | 2 | 2.1 | NEEDS TEST | Current visual direction accepted; tooltip/interaction/DPI checks remain. |
+| Developer dashboard | 2 | 2.1 | NEEDS TEST | Appearance accepted by user; live refresh/resize/persistence checks remain. |
+| Item Browser 500ms search | 2 | 2.1 | NEEDS TEST | Implemented; performance/runtime/bridge check remains. |
+| Commands palette | 2 | 2.1 | NEEDS TEST | Implemented; keyboard/danger-confirm/bridge runtime check remains. |
+| Boss Research ownership migration | 2 | 2.2 | NEEDS TEST | Visual direction accepted; runtime probes/findings + RoTS cache evidence still need functional verification. |
+| Owner cleanup | 2 | 2.2 | NEEDS TEST | Visual direction accepted; live refresh/no-duplication check remains. |
+| Shared visual primitives | 2 | 2.2 | NEEDS TEST | Current appearance accepted; minimum-width and DPI acceptance remain. |
+| V2 consolidated acceptance | 2 | 2.3 | NEEDS TEST | General visual acceptance recorded; functional/regression gate remains. |
 
 ## Decisions / new ideas
 
@@ -197,12 +199,13 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 - 2026-09-06: Shared styling expansion remains small and presentation-only; no plugin/component framework is approved.
 - 2026-09-06: Do not rewrite the 35k Item Browser solely to replace three already-matching private menu-style wrappers when no narrow patch operation is available; stability beats cosmetic deduplication.
 - 2026-09-06: Pinned/recent tools, renderer telemetry, and other optional dashboard expansion remain backlog only and do not belong in the V2 Finish Bundle.
+- 2026-09-06: User visually accepted the final V2 direction at the current runtime layout. Do not use that broad visual approval as evidence that focus, DPI, command/item/settings bridges, Boss Research migration, or persistence have passed.
 
 ## Testing
 
 ### Quick/high-value checks
 
-Use `docs/client-console/v2-testlist.txt` as the primary consolidated V2 acceptance path.
+Use `docs/client-console/v2-testlist.txt` as the primary consolidated V2 acceptance path. General visual appearance at the user's current runtime layout is accepted; prioritize the still-unverified interaction, authority, resize/DPI, and persistence checks.
 
 ### Deeper checks
 
@@ -222,7 +225,8 @@ Use the historical `docs/client-console/testlist.txt` only when a V2 failure poi
 
 ### CARRYOVER
 
-- Runtime verification for Bundles 2.1 and 2.2 is intentionally consolidated into Bundle 2.3 to save user PC time.
+- General post-Bundle 2.2 visual direction is runtime-accepted at the user's current layout.
+- Remaining Bundle 2.3 interaction, authority, resize/DPI, and persistence verification is intentionally left for the consolidated test session.
 
 ### BLOCKED
 
@@ -232,7 +236,7 @@ Use the historical `docs/client-console/testlist.txt` only when a V2 failure poi
 
 **Last completed:**
 
-- Bundle 2.2 V2 Finish Bundle implemented and statically reviewed: dedicated Boss Research navigation, RoTS evidence migration, Owner cleanup, shared visual primitives, responsive Settings, patchnotes, and consolidated V2 tests.
+- User visually accepted the final Client Console V2 direction after Bundle 2.2; workstream state updated without adding more feature scope.
 
 **Current phase:**
 
@@ -244,12 +248,13 @@ Use the historical `docs/client-console/testlist.txt` only when a V2 failure poi
 
 **Next checklist item:**
 
-- Pull current `main`, launch Matrix3 once in Eclipse/Java 8, and run `docs/client-console/v2-testlist.txt` as one batch when runtime time is available.
+- Continue `docs/client-console/v2-testlist.txt` with the still-unverified interaction, Boss Research migration, focus, resize/DPI, bridge-authority, and persistence checks when runtime time is available.
 
 **Current state / next action:**
 
-- Do not add more V2 feature scope before the consolidated gate unless a separate urgent workstream explicitly changes priority.
-- Files already inspected/changed for this bundle: `ClientConsoleShell.java`, `ConsoleIcons.java`, `ConsoleTheme.java`, `OwnerPanel.java`, `BossResearchPanel.java`, `DashboardPanel.java`, `PlayerPanel.java`, `SettingsPanel.java`, Client Console workstream/patch/test docs.
+- Do not add more Client Console V2 feature scope before the consolidated gate unless a separate urgent workstream explicitly changes priority.
+- General visual quality at the user's current runtime layout is accepted; do not waste time re-litigating the same appearance direction.
+- Files already inspected/changed for Bundle 2.2: `ClientConsoleShell.java`, `ConsoleIcons.java`, `ConsoleTheme.java`, `OwnerPanel.java`, `BossResearchPanel.java`, `DashboardPanel.java`, `PlayerPanel.java`, `SettingsPanel.java`, Client Console workstream/patch/test docs.
 - `ItemBrowserPanel.java` was inspected but intentionally not rewritten for menu-style delegation because its existing menu palette already matches and the available GitHub write path would require replacing the full large file.
 - Do not rescan unrelated client/server systems; existing specialist bridges are sufficient.
-- Pending runtime verification: accumulated V2 icon/dashboard/search/command-palette plus dedicated Boss Research migration/shared presentation and existing Atlas coexistence.
+- Pending runtime verification: command/item/settings functionality, Boss Research migration, Atlas coexistence, focus handoff, minimum-width/DPI behavior, and clean-restart persistence.
