@@ -432,12 +432,11 @@ public final class InterfaceEditorPanel extends JScrollPane {
                     componentModel.addElement(component);
                 }
             }
+            if (preserveSelection >= 0) {
+                selectComponent(preserveSelection);
+            }
         } finally {
             populating = false;
-        }
-
-        if (preserveSelection >= 0) {
-            selectComponent(preserveSelection);
         }
     }
 
