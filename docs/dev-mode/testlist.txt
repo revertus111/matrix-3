@@ -8,6 +8,20 @@ Matrix3 Dev Mode - targeted runtime test list
 [ ] Re-enable Dev Mode, choose `Dev > Spawn...`, and confirm the dark Spawn Browser opens with the exact selected world X/Y/plane shown.
 [ ] Confirm normal Walk Here still works when Dev Mode is ON.
 
+NPC / Object targeting + Inspector
+[ ] Right-click a normal NPC with Dev Mode ON and confirm exactly one each of `Dev > Inspect NPC`, `Dev > Edit NPC`, `Dev > Copy NPC ID`, and `Dev > Copy NPC Tile` appear without replacing normal NPC options.
+[ ] Choose `Dev > Inspect NPC` and confirm the shared Inspector shows the NPC type, cache name, exact definition ID, world tile/plane, and live NPC runtime index.
+[ ] Choose `Dev > Edit NPC` and confirm the same Inspector window retargets/reopens with `EDIT ROUTE - read-only foundation`; no NPC values are mutated.
+[ ] Choose `Dev > Copy NPC ID` and confirm the clipboard receives the exact NPC definition ID.
+[ ] Choose `Dev > Copy NPC Tile` and confirm the clipboard receives `x, y, plane` for the live NPC tile.
+[ ] Right-click a normal object with Dev Mode ON and confirm exactly one each of `Dev > Inspect Object`, `Dev > Edit Object`, `Dev > Copy Object ID`, and `Dev > Copy Object Tile` appear without replacing normal object options.
+[ ] Choose `Dev > Inspect Object` and confirm the same shared Inspector retargets to the object and shows the exact object definition ID and selected world tile/plane.
+[ ] Choose `Dev > Edit Object` and confirm only the read-only edit route is selected; no object definition/map/spawn mutation occurs.
+[ ] Choose both object Copy actions and confirm the clipboard receives the exact object ID and selected `x, y, plane`.
+[ ] Right-click a second NPC/object while the Inspector is open and confirm the same window retargets instead of creating duplicate Inspector frames.
+[ ] Disable Dev Mode and confirm NPC/object Dev entries disappear from newly built menus while normal interactions remain unchanged.
+[ ] Test a tile with multiple/stacked interactable entities and confirm each target keeps its own Dev actions/selection instead of cross-selecting another entity.
+
 Tile Editor
 [ ] Choose `Dev > Edit Tile` and confirm the dark Tile Editor opens for the exact tile that was right-clicked.
 [ ] Confirm world X/Y and plane match the selected tile.
@@ -39,6 +53,6 @@ Placement
 
 Regression checks
 [ ] Right-click NPCs, objects, ground items, and normal tiles; confirm their existing Matrix3 menu options are unchanged.
-[ ] Walk several tiles and interact with normal objects after using Dev Spawn/Tile Editor.
+[ ] Walk several tiles and interact with normal objects after using Dev Spawn/Tile Editor/Inspector.
 [ ] Use the normal Client Console Item Browser after Dev Spawn search and confirm its item indexing/thumbnails still work.
 [ ] Spawn then restart the server; confirm runtime placement is not mistaken for persistent source/map data.
