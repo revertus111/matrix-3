@@ -16,7 +16,7 @@ This table is the authority for user-facing Client Atlas status across chats.
 | Static relationship mapping | ✅ Complete |
 | Fast investigation/search | ✅ Complete |
 | Runtime evidence/tracing | ✅ Complete |
-| Client Console Atlas browser | ❌ Not started |
+| Client Console Atlas browser | 🔵 In Progress |
 | Advanced correlation/knowledge | 🔵 In Progress |
 
 Checklist state below is the execution map. Do not derive replacement milestone rows from it.
@@ -74,8 +74,19 @@ exact current Atlas symbol ID
     -> AtlasEvidenceStore
         -> persistent .client-atlas/evidence.jsonl
             -> EvidenceView freshness/orphan evaluation
-                -> curated search / future Phase 4 editor + browser
+                -> curated search / Client Console Atlas editor
 ```
+
+Client Console browser path:
+
+```text
+ClientConsoleShell lazy Atlas panel
+    -> game.console.AtlasPanel (UI consumer only)
+        -> AtlasWorkspace / AtlasInvestigationIndex / AtlasSearchEngine
+        -> AtlasEvidenceStore
+```
+
+The Client Console does not own Atlas scanning, ranking, relationship semantics, fingerprint rules, or evidence persistence. `game.atlas` remains the engine/data authority.
 
 Curated knowledge rules:
 
@@ -106,7 +117,11 @@ Safety contract:
 - saved traces carry the compiled-client fingerprint when available,
 - correlation never creates semantic claims or auto-promotes `LITERAL_ID`,
 - curated evidence is bounded and atomically rewritten,
-- malformed/duplicate curated records fail explicitly instead of being silently accepted.
+- malformed/duplicate curated records fail explicitly instead of being silently accepted,
+- Client Console Atlas index loading/search/evidence I/O runs off the Swing EDT,
+- Client Console search output is bounded to 50 structural candidates,
+- relationship display is bounded to 60 outgoing + 60 incoming relationships per selected symbol,
+- exact obfuscated IDs remain visible throughout search, detail, relationship navigation, and evidence editing.
 
 # Completed static capabilities
 
@@ -304,15 +319,57 @@ Bundle 3B is closed. Phase 3 Runtime Evidence and Knowledge is DONE. No Matrix3 
 
 # Phase 4 - Client Console Atlas Browser
 
-**Status: NEXT**
+**Status: ACTIVE**
 
-## Bundle 4A - Browser foundation - NEXT
+## Bundle 4A - Browser foundation
 
-- [ ] Register/lazy-load a dedicated Client Console Atlas panel without moving Atlas engine ownership into Client Console.
-- [ ] Reuse the existing Atlas search/index APIs for a fast search panel.
-- [ ] Add symbol detail plus bounded relationship navigation.
-- [ ] Add curated evidence/alias view + editor over `AtlasEvidenceStore` with explicit freshness warnings.
-- [ ] Keep exact obfuscated Atlas IDs visible and primary throughout the UI.
+**Status: IMPLEMENTED / CONSOLIDATED RUNTIME GATE REQUIRED**
+
+The full compatible Browser Foundation implementation is patched before requesting runtime verification.
+
+- [x] Register/lazy-load a dedicated Client Console Atlas panel without moving Atlas engine ownership into Client Console.
+  - new persistent panel ID: `atlas`,
+  - lazy `AtlasPanel` construction through the established `ClientConsoleShell` panel seam,
+  - panel creation failures remain isolated by the existing shell error boundary,
+  - active-panel persistence automatically reuses `ConsolePreferences`.
+- [x] Reuse the existing Atlas search/index APIs for a fast search panel.
+  - `AtlasWorkspace.findClientRoot(...)` + current-only `AtlasInvestigationIndex.load(...)`,
+  - `AtlasSearchEngine` remains the structural search authority,
+  - first index load and searches run in `SwingWorker` rather than on the Swing EDT,
+  - visible structural results are capped at 50,
+  - Reload explicitly discards the cached panel index and reopens the current Atlas snapshot.
+- [x] Add symbol detail plus bounded relationship navigation.
+  - exact ID, kind, owner, name, descriptor, signature/source when present,
+  - combined outgoing/incoming relationship list,
+  - each direction capped at 60 entries,
+  - exact symbol-backed relationships can be opened by button or double-click,
+  - constant/type/value targets remain visible but intentionally non-navigable rather than being guessed into symbol semantics.
+- [x] Add curated evidence/alias view + editor over `AtlasEvidenceStore` with explicit freshness warnings.
+  - classification picker uses Atlas `EvidenceStatus`,
+  - alias, required note/claim, and one-reference-per-line editing,
+  - save/upsert and delete use `AtlasEvidenceStore` off the EDT,
+  - `CURRENT`, stale fingerprint, missing subject, and combined warnings come directly from `EvidenceView`,
+  - Client Console does not duplicate evidence persistence or fingerprint rules.
+- [x] Keep exact obfuscated Atlas IDs visible and primary throughout the UI.
+  - result selection, symbol detail, relationship navigation, save/delete targets, and status text all retain the exact Atlas subject ID.
+- [x] Add an original Java2D Atlas/globe rail icon through the existing `ConsoleIcons` authority; no asset/dependency added.
+
+### Bundle 4A consolidated runtime gate - NEXT
+
+One short Eclipse/client session after pulling/building:
+
+1. Eclipse Java 8 clean/build Client once.
+2. Start Matrix3 normally and click the new **Client Atlas** globe icon.
+3. Confirm the panel opens lazily and the game remains responsive while the first Atlas index loads.
+4. Search `Class1`, then search an exact canonical ID from the results. Confirm exact ID/kind/owner/name/descriptor detail appears.
+5. Select a relationship that points to another exact Atlas symbol and use **Open selected relation** (or double-click). Confirm navigation opens that exact symbol. Select a constant/type/value relationship and confirm it remains visible but is not falsely opened as a symbol.
+6. On one harmless test symbol, save evidence as `HYPOTHESIS` with alias `Atlas UI test`, note `Phase 4A runtime UI test`, and reference `runtime:phase4a-ui`. Confirm freshness shows `CURRENT` and the saved values reopen after switching symbols and returning.
+7. Delete that temporary evidence record and confirm the editor returns to `No curated evidence`.
+8. Resize the Client Console to its narrow supported width and confirm search/results/detail/relationships/evidence controls remain reachable through the panel split/scroll areas.
+9. Move/interact in game while searching/navigating Atlas. Confirm no visible render/input hitch and no Swing/client-thread exception.
+10. Leave Atlas selected, close Matrix3 normally, relaunch once, and confirm the Atlas rail selection restores through the existing active-panel preference path.
+
+If these pass, close Bundle 4A and advance directly to Bundle 4B. No Phase 1/2/3 regression gate is required unless contradictory evidence appears; this bundle consumes those APIs rather than modifying their engine behavior.
 
 ## Bundle 4B - Runtime evidence workflow - PLANNED
 
@@ -363,6 +420,14 @@ Client/src/main/java/game/atlas/AtlasEvidenceVerifier.java
 Client/src/main/java/game/atlas/AtlasWorkspace.java
 ```
 
+Client Console browser consumer:
+
+```text
+Client/src/main/java/game/console/AtlasPanel.java
+Client/src/main/java/game/console/ClientConsoleShell.java
+Client/src/main/java/game/console/ConsoleIcons.java
+```
+
 Small runtime seams:
 
 ```text
@@ -388,7 +453,8 @@ Client/src/main/java/game/Class639.java
 - Bundle 3B consolidated offline verifier: **PASS by user report 2026-09-06**.
 - Bundle 3B: **DONE**.
 - Phase 3: **DONE**.
-- Bundle 3B did not change client runtime behavior; no game smoke was required.
+- Bundle 4A implementation: **complete / verified-static; one consolidated Client Console runtime gate pending**.
+- Bundle 4A does not modify Atlas engine semantics or game/server behavior; the runtime gate is for shell integration, UI workflow, responsiveness, persistence, and evidence-editor wiring.
 - No Phase 2 / Bundle 3A / Bundle 3B retest unless contradictory evidence or a relevant implementation change appears.
 
 # Carryover / blockers
@@ -411,24 +477,24 @@ These do not block Phase 4.
 **Last completed checkpoint:**
 
 - **Phase 3 / Bundle 3B consolidated offline knowledge gate: PASS.**
-- `BUNDLE 3B KNOWLEDGE CHECK: PASS` was user-reported under Eclipse / Java 8.
-- Bundle 3A targeted runtime tracing and Bundle 3B curated evidence/knowledge are both DONE.
 - Phase 3 Runtime Evidence and Knowledge is DONE.
+- Full compatible Phase 4 / Bundle 4A Browser Foundation implementation is patched.
+- `game.console.AtlasPanel` is a UI consumer of existing `game.atlas` authorities; no Atlas engine ownership moved into Client Console.
 
 **Current phase:**
 
-- **Phase 4 - Client Console Atlas Browser / NEXT**
+- **Phase 4 - Client Console Atlas Browser / ACTIVE**
 
-**Active/next bundle:**
+**Active bundle:**
 
-- **Bundle 4A - Browser foundation / NEXT**
+- **Bundle 4A - Browser foundation / IMPLEMENTED / NEEDS CONSOLIDATED RUNTIME GATE**
 
 **Current/next work:**
 
-- Inspect only the established Client Console panel-registration/lazy-load seam and the existing Atlas APIs needed by Bundle 4A.
-- Implement the full compatible Browser Foundation bundle before asking for runtime verification: panel registration, Atlas search, symbol detail/relationship navigation, and evidence/alias editing with freshness warnings.
-- Keep Atlas engine/data ownership in `game.atlas`; Client Console is a UI consumer only.
-- Consolidate Bundle 4A runtime verification into one short Eclipse/client session after implementation.
+- Do not split Bundle 4A into per-control test cycles.
+- Pull + Eclipse Java 8 clean/build once.
+- Run the single Bundle 4A Client Console gate: lazy open, search, exact detail, bounded relationship navigation, evidence save/reopen/delete, narrow resize/responsiveness, and active-panel restart restore.
+- On PASS, mark Bundle 4A DONE and continue to Bundle 4B runtime evidence workflow.
 
 **Do not re-scan/re-discover without new evidence:**
 
@@ -437,13 +503,14 @@ These do not block Phase 4.
 - resolved keyboard/menu/network/interface/Class639 ownership paths,
 - Bundle 3A runtime tracing/correlation gate,
 - Bundle 3B curated evidence architecture,
+- established Client Console shell/panel lazy-load seam,
 - unrelated server/gameplay systems.
 
 **Pending runtime/offline verification:**
 
-- None for Phase 3.
-- Bundle 4A verification begins only after its full compatible implementation bundle is patched.
+- Eclipse Java 8 compile of the full Bundle 4A implementation.
+- One consolidated Client Console Bundle 4A runtime gate.
 
 # Next recommended work
 
-**Phase 4 / Bundle 4A - Client Console Atlas Browser foundation.**
+**Run the Phase 4 / Bundle 4A consolidated Client Console runtime gate once.**
