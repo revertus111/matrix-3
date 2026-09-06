@@ -92,3 +92,11 @@ Phase 3 / Bundle 3B consolidated offline gate PASS
 - Final verifier result: `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
 - Report written to `Client/.client-atlas/knowledge-check.txt`.
 - Bundle 3B is DONE and Phase 3 Runtime Evidence and Knowledge is complete. No Matrix3 client smoke was required because Bundle 3B changed only offline `game.atlas` tooling.
+
+Phase 4 / Bundle 4A browser foundation implementation
+- Added lazy `AtlasPanel` registration to Client Console through the established shell panel/failure-isolation/persistence seam; Atlas engine/data ownership remains in `game.atlas`.
+- Added off-EDT Atlas index loading and bounded structural search through `AtlasSearchEngine` with at most 50 visible candidates.
+- Added exact symbol detail plus bounded relationship browsing with at most 60 outgoing and 60 incoming rows; exact symbol-backed relationships navigate directly while constants/type/value targets remain visible without guessed semantics.
+- Added a curated evidence editor over `AtlasEvidenceStore` for classification, external alias, note/claim, and supporting references. Save/delete I/O stays off the Swing EDT and freshness/orphan warnings come directly from `EvidenceView`.
+- Added an original Java2D Atlas/globe rail icon and retained exact obfuscated IDs as the visible primary identity throughout the browser.
+- Bundle 4A implementation is complete / verified-static. One consolidated Java 8/Eclipse Client Console runtime gate remains before closing the bundle.
