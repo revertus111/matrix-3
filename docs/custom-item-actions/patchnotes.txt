@@ -54,3 +54,5 @@
 - VERIFIED runtime geometry: interface root `671:9` decodes at 485x299, then is mutated to 290x299 at runtime. That shrinks parent `671:11` to 274px and causes its two 225px child panes to overlap; `671:27` consequently lands at x=209 as the exposed thin right-side strip.
 - Added `BackpackInterfaceLayout` as a narrow client repair. It only triggers for the exact verified bad `671:9 = 290x299` state and restores the cache-defined 485px root width before the next layout pass.
 - The repair does not change Backpack storage, item key 530, component 27 routing, familiar storage, or server withdraw behavior. Runtime verification is required for full-width rendering and slot alignment.
+- RETIRED before runtime acceptance: the hardcoded `BackpackInterfaceLayout` width repair was removed once the user chose a generic live Interface Editor workflow. The previous 485px assumption remains evidence/history, not an active fix.
+- Interface 671 layout discovery now belongs to the reversible Client Console Interface Editor; `CustomItemActionConfig` no longer mutates interface geometry each cycle.
