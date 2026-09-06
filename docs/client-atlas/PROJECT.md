@@ -15,7 +15,7 @@ This table is the authority for user-facing Client Atlas status across chats.
 | Static client knowledge foundation | ✅ Complete |
 | Static relationship mapping | ✅ Complete |
 | Fast investigation/search | ✅ Complete |
-| Runtime evidence/tracing | 🔵 In Progress |
+| Runtime evidence/tracing | ✅ Complete |
 | Client Console Atlas browser | ❌ Not started |
 | Advanced correlation/knowledge | ❌ Not started |
 
@@ -42,7 +42,7 @@ Last Phase 2 runtime-confirmed fingerprint:
 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
 ```
 
-Phase 3 changes client runtime source, so the final corrected gate must rebuild Atlas against the current compiled client before correlation is accepted.
+Phase 3 changed client runtime source. The corrected Bundle 3A gate rebuilt Atlas against the current compiled client and accepted the saved trace as `CURRENT`.
 
 # Architecture / ownership
 
@@ -110,27 +110,29 @@ Safety contract:
 
 ## Bundle 3A - Targeted runtime tracing
 
-### 3A-Core - IMPLEMENTED / CORRECTED GATE RERUN REQUIRED
+**Status: DONE / RUNTIME VERIFIED**
+
+### 3A-Core - DONE / RUNTIME VERIFIED
 
 - [x] **3A.0 Targeted architecture discovery - verified-static.**
-- [x] **3A.1 Trace-session lifecycle - implementation complete / verified-static.**
-- [x] **3A.2 Menu/input coverage - implementation complete; first runtime evidence captured.**
+- [x] **3A.1 Trace-session lifecycle - runtime verified.**
+- [x] **3A.2 Menu/input coverage - runtime verified.**
   - menu path: `Class25.method728(...) -> Class319.method4094(...) -> DevModeBridge.handleMenuAction(...)`,
   - no menu text captured,
-  - first runtime trace proved the hook is live,
-  - two previously guessed coordinate fields are now neutral `rawArg1/rawArg2` because runtime values did not support coordinate semantics,
+  - runtime traces proved the hook is live,
+  - two previously guessed coordinate fields are neutral `rawArg1/rawArg2` because runtime values did not support coordinate semantics,
   - `AtlasKeyboardObserver` mirrors verified `Class549_Sub1` normalization without consuming events or rewriting the large input class.
-- [x] **3A.3 Packet metadata coverage - implementation complete; first runtime evidence captured.**
+- [x] **3A.3 Packet metadata coverage - runtime verified.**
   - outgoing: `Class195.method2929(...)`,
   - incoming safe wrapper: `MaterialInformation.method1605(...)` after central decoder processing,
   - IDs/length metadata only; no payload bytes.
-- [x] **3A.4 Initial interface activity coverage - implementation complete; first runtime evidence captured.**
+- [x] **3A.4 Initial interface activity coverage - runtime verified.**
   - named interface/component packet classification,
-  - first trace observed `ROOT_INTERFACE`, `SET_INTERFACE`, and `HIDE_INTERFACE_COMPONENT`,
+  - traces observed interface activity while normal client behavior remained intact,
   - no blanket `Class512.method6083(...)` hook.
-- [x] **3A.5 Safe definition/cache/GFX coverage - implementation complete; first runtime evidence captured.**
+- [x] **3A.5 Safe definition/cache/GFX coverage - runtime verified.**
   - ID-bearing `Class639.method7568(...)` cache-miss hook,
-  - first trace naturally captured AnimationDefinition, ItemDefinitions, ObjectDefinitions, and VarBitDefinition activity,
+  - traces naturally captured AnimationDefinition, ItemDefinitions, ObjectDefinitions, and VarBitDefinition activity,
   - GFX remains confirmed Class639-backed verified-static,
   - model/animation-specific loader hooks remain carryover until ownership is established.
 
@@ -171,7 +173,7 @@ Classification:
 - **VERIFIED:** repeated definition/cache activity saturated the global trace buffer and caused useful later events to be dropped.
 - **UNKNOWN:** semantic meaning of the menu numeric arguments beyond their raw values; do not call them coordinates.
 
-### 3A trace-noise correction - IMPLEMENTED / VERIFIED-STATIC / NEEDS RERUN
+### 3A trace-noise correction - RUNTIME VERIFIED / PASS
 
 - [x] Definition tracing is first-occurrence-per-session by definition ID + loader class + definition class.
 - [x] Definition category has a 4000 stored-event ceiling, preserving at least 6000 global slots for other categories.
@@ -181,7 +183,21 @@ Classification:
 - [x] Saved trace header persists `suppressedCount` while retaining trace format version 1 compatibility.
 - [x] Menu numeric fields renamed to neutral `rawArg1/rawArg2`.
 
-### 3A.6 Runtime-to-Atlas correlation - IMPLEMENTED / NEEDS CONSOLIDATED RUNTIME VALIDATION
+Corrected runtime evidence:
+
+- stored events: 6050,
+- hard dropped events: 0,
+- intentionally suppressed events: 6617488,
+- definition events: 4000 (category cap reached without exhausting the global buffer),
+- network events: 1267,
+- interface events: 631,
+- input events: 152,
+- keyboard events: 86,
+- menu events: 66.
+
+The corrected trace remained useful after the definition cap was reached and finalized normally through `Stop + Save`.
+
+### 3A.6 Runtime-to-Atlas correlation - DONE / RUNTIME VERIFIED
 
 - [x] Added `AtlasTraceCorrelationEngine` - verified-static.
 - [x] Correlation loads only through `AtlasInvestigationIndex.load(...)`, so stale generated Atlas data is rejected before correlation.
@@ -193,34 +209,26 @@ Classification:
 - [x] Atomic correlation export + `latest` trace resolution.
 - [x] CLI correlation commands remain available.
 - [x] Main `ClientAtlasControl` exposes `Runtime Trace Control` and `Correlate Latest Trace`.
-- [ ] Runtime proof against the rebuilt current index remains part of the corrected final gate rerun.
+- [x] Corrected trace correlated against the rebuilt current index with `Status: CURRENT` and `Accepted: true`.
 
-### Bundle 3A corrected consolidated runtime gate - NEXT
+### Bundle 3A corrected consolidated runtime gate - PASS
 
-One pull/build/start session only:
+Completed in one Eclipse/Java 8 client session:
 
-1. Eclipse Java 8 clean/build.
-2. Open main Atlas Control and click `Scan / Rebuild Index` once against the newly compiled client.
+1. Clean/build current Client source.
+2. Rebuild Atlas against the current compiled client.
 3. Start client/login normally.
-4. Open `Runtime Trace Control` and start one named trace.
-5. Perform a few keyboard/menu/network/interface/definition actions.
-6. Click `Stop + Save`.
-7. Require in Runtime Trace Control:
-   - `Dropped = 0`,
-   - `Suppressed` may be high and is expected,
-   - stored event count remains below 10000 for this short controlled trace.
-8. Back in main Atlas Control click `Correlate Latest Trace`.
-9. Require:
-   - `Status: CURRENT`,
-   - `Accepted: true`,
-   - trace fingerprint = rebuilt Atlas fingerprint,
-   - source/owner IDs resolve.
-10. Confirm stopped tracing no longer grows event count.
-11. Complete the permanent Matrix3 smoke checklist during this same launch because central packet enqueue/decode seams changed.
+4. Start one controlled runtime trace.
+5. Exercise keyboard/menu/network/interface/definition activity.
+6. `Stop + Save` finalized the trace.
+7. Runtime trace result: `Dropped = 0`, suppression active, stored event count below 10000.
+8. `Correlate Latest Trace` returned `Status: CURRENT` and `Accepted: true`.
+9. Correlation acceptance proves trace/current fingerprints matched, header event count matched parsed event count, and emitted source/owner symbol IDs resolved.
+10. User-reported same-launch Matrix3 smoke passed; client behavior remained normal.
 
-Do not request per-hook runtime launches.
+Bundle 3A is closed. Do not request another 3A runtime gate without a relevant implementation change or contradictory evidence.
 
-## Bundle 3B - Evidence/knowledge - PLANNED
+## Bundle 3B - Evidence/knowledge - NEXT
 
 - [ ] External aliases/notes.
 - [ ] Evidence classification/supporting references.
@@ -278,11 +286,13 @@ Client/src/main/java/game/Class639.java
 - Phase 1: runtime-verified.
 - Phase 2: runtime-verified.
 - 3A.0: verified-static discovery.
-- 3A-Core hooks: first runtime evidence confirms they emit useful events.
-- First Bundle 3A gate: **FAILED because definition noise saturated the recorder; failure is understood and corrected.**
-- Trace-noise correction: implementation complete / verified-static / one corrected gate rerun required.
-- 3A.6: implementation complete / verified-static / final correlation validation still pending.
-- No Phase 2 retest unless contradictory evidence or a Phase 2 implementation change appears.
+- 3A-Core runtime hooks: runtime-verified.
+- First Bundle 3A gate: **FAILED because definition noise saturated the recorder; failure was understood and corrected.**
+- Trace-noise correction: **runtime-verified / PASS** with 6050 stored, 0 dropped, and 6617488 intentionally suppressed events.
+- 3A.6 correlation: **runtime-verified / PASS** with `Status: CURRENT` and `Accepted: true` against the rebuilt current Atlas index.
+- Same-launch Matrix3 smoke: **PASS by user report 2026-09-06**.
+- Bundle 3A: **DONE**.
+- No Phase 2 or Bundle 3A retest unless contradictory evidence or a relevant implementation change appears.
 
 # Carryover / blockers
 
@@ -293,51 +303,49 @@ Client/src/main/java/game/Class639.java
 - Exact model/cache loader instrumentation after ownership is established.
 - Verify >200 streaming exact-query truncation when a naturally suitable symbol appears.
 
-These do not block the corrected Bundle 3A gate.
+These do not block Bundle 3B.
 
 ## BLOCKERS
 
-- None after the trace-noise correction; runtime rerun is the active gate.
+- None.
 
 # Resume Here
 
 **Last completed checkpoint:**
 
-- **Phase 3 / Bundle 3A / first runtime gate attempted.**
-- Hook emission is runtime-proven.
-- First gate failed from definition-event flooding.
-- Definition dedupe/category cap + separate suppression accounting + neutral menu raw arguments are now implemented / verified-static.
+- **Phase 3 / Bundle 3A corrected consolidated runtime gate: PASS.**
+- Corrected trace stored 6050 events with 0 hard drops; noisy definition activity was suppressed instead of consuming the global buffer.
+- `Correlate Latest Trace` returned `Status: CURRENT` / `Accepted: true` against the rebuilt current Atlas index.
+- Same-launch Matrix3 smoke passed by user report.
+- Bundle 3A targeted runtime tracing is DONE.
 
 **Current phase:**
 
 - **Phase 3 - Runtime Evidence and Knowledge / ACTIVE**
 
-**Active bundle:**
+**Active/next bundle:**
 
-- **Bundle 3A corrected consolidated runtime gate / NEXT**
+- **Bundle 3B - Evidence/knowledge / NEXT**
 
 **Current/next work:**
 
-- Pull/build once, rebuild Atlas once, rerun one controlled trace, require `Dropped = 0`, then run `Correlate Latest Trace` and finish the same-session smoke verification.
-- High `Suppressed` is expected and is not a gate failure; it proves noisy duplicate definition activity is being filtered instead of consuming the global buffer.
+- Design and implement curated external aliases/notes without renaming obfuscated primary IDs.
+- Add explicit evidence classification/supporting references and stale-fingerprint warnings.
+- Preserve curated knowledge across static Atlas rescans.
 
 **Do not re-scan/re-discover without new evidence:**
 
 - broad `game` source tree,
 - Phase 1/2 scanner/search architecture,
 - resolved keyboard/menu/network/interface/Class639 ownership paths,
+- Bundle 3A runtime tracing/correlation gate,
 - unrelated server/gameplay systems,
 - Client Console internals before Phase 4.
 
 **Pending runtime verification:**
 
-- corrected definition dedupe/category cap behavior,
-- zero hard drops in a normal short trace,
-- 3A.6 exact source/owner correlation against rebuilt current Atlas index,
-- stop/disabled behavior,
-- fingerprint match,
-- normal startup/ownership and permanent smoke checks.
+- None for Bundle 3A.
 
 # Next recommended work
 
-**Bundle 3A corrected consolidated runtime gate rerun.**
+**Bundle 3B - Evidence/knowledge.**
