@@ -61,6 +61,8 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
     private final JCheckBox rareTable = new JCheckBox("Access Matrix3 rare drop table");
     private final DefaultListModel<EntryRow> entryModel = new DefaultListModel<EntryRow>();
     private final JList<EntryRow> entryList = new JList<EntryRow>(entryModel);
+    private final JButton newEntry = new JButton("New Drop");
+    private final JButton remove = new JButton("Remove Selected");
 
     private final JTextField itemSearch = new JTextField();
     private final JLabel itemSearchStatus = new JLabel("Item index waiting...");
@@ -71,7 +73,6 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
     private final JTextField minAmount = new JTextField("1");
     private final JTextField maxAmount = new JTextField("1");
     private final JButton addUpdate = new JButton("Add Drop");
-    private final JButton remove = new JButton("Remove Selected");
 
     private final JButton reload = new JButton("Reload Current");
     private final JButton applyLive = new JButton("Apply Drops Live");
@@ -94,6 +95,8 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
     private boolean suppressDraftEvents;
     private boolean savedAvailable;
     private boolean rollbackAvailable;
+    private boolean loadingDrops;
+    private int activeInspectRequestId = -1;
     private String liveSource = "Matrix3";
 
     public BossLabsDropPanel() {
@@ -123,6 +126,7 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         dirty = false;
         savedAvailable = false;
         rollbackAvailable = false;
+        loadingDrops = true;
         liveSource = "Matrix3";
         title.setText(selectedNpcName + "  [" + npcId + "]");
         entryModel.clear();
@@ -131,7 +135,7 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText("Loading current Matrix3/BossLabs drops...");
         updateButtons();
-        BossLabsDropClientBridge.requestInspect(npcId);
+        activeInspectRequestId = BossLabsDropClientBridge.requestInspect(npcId);
     }
 
     void clearSelection() {
@@ -141,11 +145,14 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         dirty = false;
         savedAvailable = false;
         rollbackAvailable = false;
+        loadingDrops = false;
+        activeInspectRequestId = -1;
         liveSource = "Matrix3";
         title.setText("No NPC loaded");
         entryModel.clear();
         clearEntryEditor();
         updateStateLabels();
+        status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText("Select a boss/NPC first.");
         updateButtons();
     }
@@ -207,14 +214,10 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
 
         JPanel actions = new JPanel(new java.awt.GridLayout(1, 2, 6, 0));
         actions.setOpaque(false);
-        JButton newEntry = new JButton("New Entry");
         styleButton(newEntry);
         styleButton(remove);
-        newEntry.addActionListener(e -> {
-            entryList.clearSelection();
-            clearEntryEditor();
-            itemSearch.requestFocusInWindow();
-        });
+        newEntry.setToolTipText("Clear the editor and start a new drop row.");
+        newEntry.addActionListener(e -> beginNewEntry());
         remove.addActionListener(e -> removeSelected());
         actions.add(newEntry);
         actions.add(remove);
@@ -268,8 +271,8 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         form.setOpaque(false);
         form.setAlignmentX(LEFT_ALIGNMENT);
         configureField(itemId, "Item ID");
-        configureField(minAmount, "Minimum quantity");
-        configureField(maxAmount, "Maximum quantity");
+        configureField(minAmount, "Minimum quantity. Matrix3 legacy tables may contain zero.");
+        configureField(maxAmount, "Maximum quantity. Must be at least the minimum when publishing.");
         rarity.setFont(ConsoleTheme.BODY_FONT);
         rarity.setBackground(ConsoleTheme.INPUT);
         rarity.setForeground(ConsoleTheme.TEXT);
@@ -278,13 +281,6 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         addFormRow(form, 2, "Min amount", minAmount);
         addFormRow(form, 3, "Max amount", maxAmount);
         content.add(form);
-        content.add(Box.createVerticalStrut(8));
-
-        styleButton(addUpdate);
-        addUpdate.setAlignmentX(LEFT_ALIGNMENT);
-        addUpdate.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        addUpdate.addActionListener(e -> addOrUpdateEntry());
-        content.add(addUpdate);
         content.add(Box.createVerticalStrut(10));
 
         JLabel semantics = new JLabel("<html>Matrix3 rolls rarity buckets, not per-item percentages. "
@@ -302,6 +298,12 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         ConsoleTheme.styleScrollPane(scroll);
         outer.add(scroll, BorderLayout.CENTER);
+
+        styleButton(addUpdate);
+        addUpdate.setToolTipText("Add this row to the local drop DRAFT, or update the selected row.");
+        addUpdate.setPreferredSize(new Dimension(220, 38));
+        addUpdate.addActionListener(e -> addOrUpdateEntry());
+        outer.add(addUpdate, BorderLayout.SOUTH);
         return outer;
     }
 
@@ -351,7 +353,7 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
 
     private void installListeners() {
         rareTable.addActionListener(e -> {
-            if (!suppressDraftEvents && draft != null) {
+            if (!suppressDraftEvents && draft != null && !loadingDrops) {
                 draft.setAccessRareDropTable(rareTable.isSelected());
                 markDirty();
             }
@@ -376,9 +378,23 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         });
     }
 
-    private void addOrUpdateEntry() {
-        if (draft == null || selectedNpcId < 0)
+    private void beginNewEntry() {
+        if (draft == null || loadingDrops) {
+            setError("Drops are not loaded yet. Wait for the current table or use Reload Current.");
             return;
+        }
+        entryList.clearSelection();
+        clearEntryEditor();
+        status.setForeground(ConsoleTheme.MUTED_TEXT);
+        status.setText("New drop row — choose an item, rarity and quantity, then press Add Drop.");
+        itemSearch.requestFocusInWindow();
+    }
+
+    private void addOrUpdateEntry() {
+        if (draft == null || selectedNpcId < 0 || loadingDrops) {
+            setError("Drops are not loaded yet. Wait for the current table or use Reload Current.");
+            return;
+        }
         try {
             int id = Integer.parseInt(itemId.getText().trim());
             int min = Integer.parseInt(minAmount.getText().trim());
@@ -416,7 +432,7 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
     }
 
     private void removeSelected() {
-        if (draft == null)
+        if (draft == null || loadingDrops)
             return;
         int index = entryList.getSelectedIndex();
         if (index < 0 || index >= draft.getEntries().size())
@@ -425,12 +441,13 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         markDirty();
         refreshEntries();
         clearEntryEditor();
+        status.setForeground(ConsoleTheme.ACCENT);
         status.setText("Removed drop from local DRAFT.");
     }
 
     private void loadSelectedEntry() {
         int index = entryList.getSelectedIndex();
-        if (draft == null || index < 0 || index >= draft.getEntries().size()) {
+        if (draft == null || loadingDrops || index < 0 || index >= draft.getEntries().size()) {
             remove.setEnabled(false);
             addUpdate.setText("Add Drop");
             return;
@@ -469,8 +486,10 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
     }
 
     private void publish(boolean save) {
-        if (draft == null || selectedNpcId < 0)
+        if (draft == null || selectedNpcId < 0 || loadingDrops) {
+            setError("Drops are not ready to publish yet.");
             return;
+        }
         draft.setNpcId(selectedNpcId);
         draft.setAccessRareDropTable(rareTable.isSelected());
         String validation = draft.validate();
@@ -493,33 +512,37 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
             if (choice != JOptionPane.YES_OPTION)
                 return;
         }
+        loadingDrops = true;
+        activeInspectRequestId = BossLabsDropClientBridge.requestInspect(selectedNpcId);
+        updateStateLabels();
+        updateButtons();
+        status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText("Reloading current live drops...");
-        BossLabsDropClientBridge.requestInspect(selectedNpcId);
     }
 
     private void undo() {
-        if (selectedNpcId >= 0 && rollbackAvailable) {
+        if (selectedNpcId >= 0 && rollbackAvailable && !loadingDrops) {
             status.setText("Restoring previous live drop table...");
             BossLabsDropClientBridge.requestUndo(selectedNpcId);
         }
     }
 
     private void applySaved() {
-        if (selectedNpcId >= 0 && savedAvailable) {
+        if (selectedNpcId >= 0 && savedAvailable && !loadingDrops) {
             status.setText("Applying saved BossLabs drops live...");
             BossLabsDropClientBridge.requestApplySaved(selectedNpcId);
         }
     }
 
     private void restoreMatrix3() {
-        if (selectedNpcId >= 0) {
+        if (selectedNpcId >= 0 && !loadingDrops) {
             status.setText("Restoring captured Matrix3 drop table...");
             BossLabsDropClientBridge.requestRestoreMatrix3(selectedNpcId);
         }
     }
 
     private void deleteSaved() {
-        if (selectedNpcId < 0 || !savedAvailable)
+        if (selectedNpcId < 0 || !savedAvailable || loadingDrops)
             return;
         int choice = JOptionPane.showConfirmDialog(this,
                 "Delete the saved BossLabs drop override and restore Matrix3 drops live?",
@@ -537,8 +560,14 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
     }
 
     private void updateStateLabels() {
-        draftState.setText(draft == null ? "DRAFT: none" : dirty ? "DRAFT: modified" : "DRAFT: clean");
-        draftState.setBackground(dirty ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.CARD_HOVER);
+        if (selectedNpcId < 0) {
+            draftState.setText("DRAFT: none");
+        } else if (loadingDrops) {
+            draftState.setText("DRAFT: loading");
+        } else {
+            draftState.setText(draft == null ? "DRAFT: error" : dirty ? "DRAFT: modified" : "DRAFT: clean");
+        }
+        draftState.setBackground(dirty && !loadingDrops ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.CARD_HOVER);
         liveState.setText("LIVE: " + (selectedNpcId < 0 ? "-" : liveSource));
         liveState.setBackground("BossLabs".equalsIgnoreCase(liveSource) ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.CARD_HOVER);
         savedState.setText(savedAvailable ? "SAVED: yes" : "SAVED: no");
@@ -546,18 +575,25 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
     }
 
     private void updateButtons() {
-        boolean loaded = selectedNpcId >= 0 && draft != null;
+        boolean loaded = selectedNpcId >= 0 && draft != null && !loadingDrops;
         String validation = loaded ? draft.validate() : "No draft";
         applyLive.setEnabled(loaded && validation == null);
         saveApply.setEnabled(loaded && validation == null);
-        reload.setEnabled(selectedNpcId >= 0);
+        reload.setEnabled(selectedNpcId >= 0 && !loadingDrops);
         undo.setEnabled(loaded && rollbackAvailable);
         applySaved.setEnabled(loaded && savedAvailable);
         restoreMatrix.setEnabled(loaded && "BossLabs".equalsIgnoreCase(liveSource));
         deleteSaved.setEnabled(loaded && savedAvailable);
+        newEntry.setEnabled(loaded);
         remove.setEnabled(loaded && entryList.getSelectedIndex() >= 0);
         addUpdate.setEnabled(loaded);
         rareTable.setEnabled(loaded);
+        itemSearch.setEnabled(loaded);
+        itemResults.setEnabled(loaded);
+        itemId.setEnabled(loaded);
+        rarity.setEnabled(loaded);
+        minAmount.setEnabled(loaded);
+        maxAmount.setEnabled(loaded);
     }
 
     private void setError(String message) {
@@ -707,14 +743,20 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
     public void onDropState(BossLabsDropClientBridge.DropState state) {
         if (state == null || state.getNpcId() != selectedNpcId)
             return;
+        if (loadingDrops && activeInspectRequestId >= 0 && state.getRequestId() != activeInspectRequestId)
+            return;
         suppressDraftEvents = true;
         try {
             draft = state.getDraft();
+            if (draft == null)
+                draft = new BossLabsDropDraftDefinition(selectedNpcId);
             liveSource = state.getSource();
             savedAvailable = state.isSaved();
             rollbackAvailable = state.isRollbackAvailable();
             dirty = false;
-            rareTable.setSelected(draft != null && draft.canAccessRareDropTable());
+            loadingDrops = false;
+            activeInspectRequestId = -1;
+            rareTable.setSelected(draft.canAccessRareDropTable());
             refreshEntries();
             clearEntryEditor();
             updateStateLabels();
@@ -722,9 +764,14 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
         } finally {
             suppressDraftEvents = false;
         }
-        status.setForeground(ConsoleTheme.ACCENT);
-        status.setText("Loaded current " + liveSource + " drop table — "
-                + (draft == null ? 0 : draft.getEntries().size()) + " entries.");
+        String validation = draft.validate();
+        if (validation == null) {
+            status.setForeground(ConsoleTheme.ACCENT);
+            status.setText("Loaded current " + liveSource + " drop table — " + draft.getEntries().size() + " entries.");
+        } else {
+            status.setForeground(ConsoleTheme.MUTED_TEXT);
+            status.setText("Loaded legacy Matrix3 drops, but one row needs correction before publishing: " + validation);
+        }
     }
 
     @Override
@@ -733,6 +780,12 @@ public final class BossLabsDropPanel extends JPanel implements BossLabsDropClien
             return;
         if (result.getNpcId() >= 0 && result.getNpcId() != selectedNpcId)
             return;
+        if (!result.isSuccess() && result.getRequestId() == activeInspectRequestId) {
+            loadingDrops = false;
+            activeInspectRequestId = -1;
+            updateStateLabels();
+            updateButtons();
+        }
         status.setForeground(result.isSuccess() ? ConsoleTheme.ACCENT : ConsoleTheme.MUTED_TEXT);
         status.setText(result.getMessage());
     }
