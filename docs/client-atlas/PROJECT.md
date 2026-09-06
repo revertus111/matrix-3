@@ -17,7 +17,7 @@ This table is the authority for user-facing Client Atlas status across chats.
 | Fast investigation/search | ✅ Complete |
 | Runtime evidence/tracing | ✅ Complete |
 | Client Console Atlas browser | ❌ Not started |
-| Advanced correlation/knowledge | ❌ Not started |
+| Advanced correlation/knowledge | 🔵 In Progress |
 
 Checklist state below is the execution map. Do not derive replacement milestone rows from it.
 
@@ -67,6 +67,28 @@ Matrix3 runtime / small existing bridge
                         -> bounded assistant correlation JSON
 ```
 
+Curated knowledge path:
+
+```text
+exact current Atlas symbol ID
+    -> AtlasEvidenceStore
+        -> persistent .client-atlas/evidence.jsonl
+            -> EvidenceView freshness/orphan evaluation
+                -> curated search / future Phase 4 editor + browser
+```
+
+Curated knowledge rules:
+
+- exact obfuscated Atlas IDs remain primary; aliases never rename generated symbols,
+- one curated record per exact subject ID,
+- new/updated records require a symbol that exists in a current `AtlasInvestigationIndex`,
+- each record stores the current Atlas fingerprint at edit time,
+- classifications are only `VERIFIED`, `verified-static`, `HYPOTHESIS`, or `UNKNOWN`,
+- supporting references are external evidence pointers/notes and never create generated relationships,
+- stale fingerprints and missing subject IDs produce warnings instead of deletion or automatic reclassification,
+- curated search is separate from generated symbol ranking so notes/aliases cannot distort structural evidence,
+- `evidence.jsonl` is curated state and is never reset by normal static rescans.
+
 Safety contract:
 
 - tracing OFF by default,
@@ -82,7 +104,9 @@ Safety contract:
 - no arbitrary object dumps or stack traces,
 - observation failures cannot interrupt normal client behavior,
 - saved traces carry the compiled-client fingerprint when available,
-- correlation never creates semantic claims or auto-promotes `LITERAL_ID`.
+- correlation never creates semantic claims or auto-promotes `LITERAL_ID`,
+- curated evidence is bounded and atomically rewritten,
+- malformed/duplicate curated records fail explicitly instead of being silently accepted.
 
 # Completed static capabilities
 
@@ -228,12 +252,53 @@ Completed in one Eclipse/Java 8 client session:
 
 Bundle 3A is closed. Do not request another 3A runtime gate without a relevant implementation change or contradictory evidence.
 
-## Bundle 3B - Evidence/knowledge - NEXT
+## Bundle 3B - Evidence/knowledge
 
-- [ ] External aliases/notes.
-- [ ] Evidence classification/supporting references.
-- [ ] Fingerprint stale-evidence warnings for curated knowledge.
-- [ ] Preserve curated knowledge across rescans.
+**Status: IMPLEMENTED / CONSOLIDATED OFFLINE GATE REQUIRED**
+
+The complete compatible Bundle 3B implementation was patched before requesting another user test.
+
+- [x] **3B.1 External aliases/notes.**
+  - `AtlasEvidenceStore` persists curated records in `.client-atlas/evidence.jsonl`.
+  - exact obfuscated `subjectId` remains primary; alias is external metadata only,
+  - note/claim text is stored outside generated scanner data,
+  - one curated record per exact subject ID; same-subject upsert replaces deterministically,
+  - curated search covers subject ID, alias, note/claim, status, and references without affecting static symbol ranking.
+- [x] **3B.2 Evidence classification/supporting references.**
+  - statuses persist as `VERIFIED`, `verified-static`, `HYPOTHESIS`, or `UNKNOWN`,
+  - supporting references are bounded and de-duplicated,
+  - new/updated evidence must attach to an exact symbol in a current `AtlasInvestigationIndex`,
+  - the record stores that current Atlas fingerprint,
+  - JSONL serialization is deterministic; writes replace atomically.
+- [x] **3B.3 Fingerprint stale-evidence warnings.**
+  - current fingerprint + present subject -> `CURRENT`,
+  - fingerprint mismatch -> `STALE_FINGERPRINT`,
+  - absent exact subject -> `SUBJECT_NOT_PRESENT`,
+  - stale + absent subject -> combined explicit state,
+  - stale/orphan records remain visible for human review; no automatic semantic promotion or deletion.
+- [x] **3B.4 Preserve curated knowledge across rescans.**
+  - `AtlasWorkspace.initialize()` continues to reset only generated `symbols.jsonl` and `relationships.jsonl`,
+  - `evidence.jsonl` remains curated persistent state,
+  - evidence load validates duplicate IDs/malformed records explicitly,
+  - store limits protect against accidentally unbounded curated data.
+- [x] **3B.5 Consolidated verifier.**
+  - `AtlasEvidenceVerifier` tests the whole bundle in one run,
+  - verifier writes only to an isolated temporary evidence workspace and does not touch the developer's real `evidence.jsonl`,
+  - covers JSON escape round-trip, alias/note/classification/references, freshness warnings, orphan retention, rescan preservation, deterministic upsert/search, and delete.
+
+### Bundle 3B consolidated offline gate - NEXT
+
+One Eclipse action set only; no Matrix3 client launch is required:
+
+1. Pull current `main` and Eclipse clean/build Client under Java 8 once.
+2. Run `game.atlas.AtlasEvidenceVerifier` as **Run As -> Java Application**.
+3. Require final result:
+
+```text
+BUNDLE 3B KNOWLEDGE CHECK: PASS
+```
+
+If PASS, Bundle 3B closes and Phase 3 is complete. This bundle changes only offline `game.atlas` tooling; Atlas fingerprint calculation excludes `game/atlas/`, no runtime packet/input/client seam changed, and a Matrix3 smoke launch is therefore not part of this gate.
 
 # Phase 4 - Client Console Atlas Browser - PLANNED
 
@@ -271,6 +336,16 @@ Client/src/main/java/game/atlas/ClientAtlasMain.java
 Client/src/main/java/game/atlas/ClientAtlasControl.java
 ```
 
+Curated evidence/knowledge:
+
+```text
+Client/src/main/java/game/atlas/AtlasSchema.java
+Client/src/main/java/game/atlas/AtlasJson.java
+Client/src/main/java/game/atlas/AtlasEvidenceStore.java
+Client/src/main/java/game/atlas/AtlasEvidenceVerifier.java
+Client/src/main/java/game/atlas/AtlasWorkspace.java
+```
+
 Small runtime seams:
 
 ```text
@@ -292,6 +367,9 @@ Client/src/main/java/game/Class639.java
 - 3A.6 correlation: **runtime-verified / PASS** with `Status: CURRENT` and `Accepted: true` against the rebuilt current Atlas index.
 - Same-launch Matrix3 smoke: **PASS by user report 2026-09-06**.
 - Bundle 3A: **DONE**.
+- Bundle 3B implementation: **complete / verified-static**.
+- Bundle 3B verifier: **implemented / one Java 8 Eclipse run pending**.
+- Bundle 3B does not change client runtime behavior; no game smoke is required unless the compile/runtime evidence contradicts that classification.
 - No Phase 2 or Bundle 3A retest unless contradictory evidence or a relevant implementation change appears.
 
 # Carryover / blockers
@@ -314,24 +392,26 @@ These do not block Bundle 3B.
 **Last completed checkpoint:**
 
 - **Phase 3 / Bundle 3A corrected consolidated runtime gate: PASS.**
-- Corrected trace stored 6050 events with 0 hard drops; noisy definition activity was suppressed instead of consuming the global buffer.
-- `Correlate Latest Trace` returned `Status: CURRENT` / `Accepted: true` against the rebuilt current Atlas index.
-- Same-launch Matrix3 smoke passed by user report.
 - Bundle 3A targeted runtime tracing is DONE.
+- Full compatible Bundle 3B evidence/knowledge implementation is now patched and documented.
+- `AtlasEvidenceStore` owns curated evidence persistence/search/freshness evaluation.
+- `AtlasEvidenceVerifier` owns the single isolated Bundle 3B acceptance check.
 
 **Current phase:**
 
 - **Phase 3 - Runtime Evidence and Knowledge / ACTIVE**
 
-**Active/next bundle:**
+**Active bundle:**
 
-- **Bundle 3B - Evidence/knowledge / NEXT**
+- **Bundle 3B - Evidence/knowledge / IMPLEMENTED / NEEDS CONSOLIDATED OFFLINE GATE**
 
 **Current/next work:**
 
-- Design and implement curated external aliases/notes without renaming obfuscated primary IDs.
-- Add explicit evidence classification/supporting references and stale-fingerprint warnings.
-- Preserve curated knowledge across static Atlas rescans.
+- Do not split Bundle 3B into smaller test cycles.
+- Pull/build Client once under Java 8/Eclipse.
+- Run `game.atlas.AtlasEvidenceVerifier` once.
+- Require `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
+- On PASS, mark Bundle 3B and Phase 3 DONE, then advance to Phase 4 Client Console Atlas Browser.
 
 **Do not re-scan/re-discover without new evidence:**
 
@@ -339,13 +419,16 @@ These do not block Bundle 3B.
 - Phase 1/2 scanner/search architecture,
 - resolved keyboard/menu/network/interface/Class639 ownership paths,
 - Bundle 3A runtime tracing/correlation gate,
+- Bundle 3B curated evidence architecture,
 - unrelated server/gameplay systems,
 - Client Console internals before Phase 4.
 
-**Pending runtime verification:**
+**Pending runtime/offline verification:**
 
-- None for Bundle 3A.
+- Java 8/Eclipse compile of the full Bundle 3B implementation,
+- one isolated `AtlasEvidenceVerifier` run,
+- no Matrix3 game-client smoke unless new evidence shows runtime code was affected.
 
 # Next recommended work
 
-**Bundle 3B - Evidence/knowledge.**
+**Bundle 3B consolidated offline knowledge gate.**
