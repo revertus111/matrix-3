@@ -2,11 +2,14 @@ package game.console.bosslabs;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 import game.ClientConsoleBridge;
 
@@ -16,8 +19,11 @@ public final class BossLabsDropClientBridge {
     private static final String RESPONSE_PREFIX = "bosslabs|";
     private static final int PUBLISH_CHUNK_LENGTH = 180;
     private static final int MAX_PUBLISH_CHUNKS = 32;
+    private static final int INSPECT_TIMEOUT_MS = 5000;
     private static final AtomicInteger REQUEST_SEQUENCE = new AtomicInteger(500000);
     private static final Map<Integer, Download> DOWNLOADS = new ConcurrentHashMap<Integer, Download>();
+    private static final Set<Integer> PENDING_INSPECTIONS =
+            Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 
     private static volatile Listener listener;
 
@@ -32,11 +38,26 @@ public final class BossLabsDropClientBridge {
         if (listener == oldListener)
             listener = null;
         DOWNLOADS.clear();
+        PENDING_INSPECTIONS.clear();
     }
 
-    public static int requestInspect(int npcId) {
-        int requestId = nextRequestId();
-        queue(requestId, "bosslabs drops inspect " + requestId + " " + npcId, "Drop inspect request failed");
+    public static int requestInspect(final int npcId) {
+        final int requestId = nextRequestId();
+        String error = ClientConsoleBridge.queueConsoleCommand("bosslabs drops inspect " + requestId + " " + npcId);
+        if (error != null) {
+            dispatchFailure(requestId, npcId, "Drop inspect request failed: " + error);
+            return requestId;
+        }
+        PENDING_INSPECTIONS.add(Integer.valueOf(requestId));
+        Timer timeout = new Timer(INSPECT_TIMEOUT_MS, e -> {
+            if (PENDING_INSPECTIONS.remove(Integer.valueOf(requestId))) {
+                DOWNLOADS.remove(Integer.valueOf(requestId));
+                dispatchFailure(requestId, npcId,
+                        "Drop inspection timed out. Reload Current to retry; check the Server console if it repeats.");
+            }
+        });
+        timeout.setRepeats(false);
+        timeout.start();
         return requestId;
     }
 
@@ -134,6 +155,7 @@ public final class BossLabsDropClientBridge {
                 final int requestId = parseInt(parts[2]);
                 final int npcId = parseInt(parts[3]);
                 Download download = DOWNLOADS.remove(Integer.valueOf(requestId));
+                PENDING_INSPECTIONS.remove(Integer.valueOf(requestId));
                 if (download == null || download.npcId != npcId)
                     throw new IllegalArgumentException("BossLabs drop response is incomplete.");
                 final BossLabsDropDraftDefinition draft = BossLabsDropDraftDefinition.fromPayload(download.join());
@@ -148,8 +170,14 @@ public final class BossLabsDropClientBridge {
                     }
                 });
             } else if ("drop-action".equals(type) && parts.length >= 6) {
-                final DropActionResult result = new DropActionResult(parseInt(parts[2]), parseBoolean(parts[3]),
-                        parseInt(parts[4]), decode(parts[5]));
+                final int requestId = parseInt(parts[2]);
+                final boolean success = parseBoolean(parts[3]);
+                final int npcId = parseInt(parts[4]);
+                if (!success) {
+                    PENDING_INSPECTIONS.remove(Integer.valueOf(requestId));
+                    DOWNLOADS.remove(Integer.valueOf(requestId));
+                }
+                final DropActionResult result = new DropActionResult(requestId, success, npcId, decode(parts[5]));
                 dispatch(new ListenerCall() {
                     @Override
                     public void call(Listener target) {
