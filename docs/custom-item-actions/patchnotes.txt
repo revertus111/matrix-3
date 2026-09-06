@@ -33,3 +33,9 @@
 - Fixed the generic inventory config-slot mapping in `CustomItemActions`: option 1 -> BUTTON1, option 2 -> BUTTON2, option 3 -> BUTTON3, option 4 -> BUTTON6, option 5 -> BUTTON7.
 - This is a framework-level fix; no 21445-specific routing exception was added.
 - Bank-inventory menu behavior was not changed by this patch and remains the next runtime evidence target if Open/Empty to bank are still missing there.
+- VERIFIED runtime: configured inventory Open now reaches the Backpack handler and opens interface 671/665 successfully.
+- Runtime screenshot then showed backpack contents rendering in the narrow right-side strip while the main Beast of Burden grid remained empty.
+- verified-static: Matrix3's native `BeastOfBurden` also uses interface 671 component 27, so the storage component was not changed.
+- verified-static: native `BeastOfBurden` binds the 671:27 grid to client item-container key 530; Backpack had diverged to key 531 while reusing the same interface.
+- Changed Backpack's UI/protocol item-container key from 531 to the native BoB key 530. The server-side `Backpack.items` container remains independent player-owned storage; only the transient client interface binding is shared.
+- Runtime verification is still required to confirm backpack items now populate the main 671 grid and that opening a real familiar BoB afterward refreshes key 530 back to familiar contents normally.
