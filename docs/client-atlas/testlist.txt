@@ -132,7 +132,7 @@ Phase 3 / Bundle 3B - DONE / consolidated offline gate PASS
 [x] Bundle 3B DONE.
 [x] Phase 3 DONE; no client launch/runtime smoke required for this offline-only bundle.
 
-Phase 4 / Bundle 4A - implementation complete / NEEDS one consolidated runtime gate
+Phase 4 / Bundle 4A - implementation complete / runtime gate deferred into combined Phase 4 gate
 [x] Dedicated `atlas` Client Console panel ID registered through the existing lazy panel/failure-isolation shell seam.
 [x] Atlas panel uses existing `game.atlas` engine/data ownership; Client Console remains a UI consumer only.
 [x] Original Java2D Atlas/globe rail icon added without external assets/dependencies.
@@ -147,18 +147,36 @@ Phase 4 / Bundle 4A - implementation complete / NEEDS one consolidated runtime g
 [x] Evidence save/delete I/O runs off the Swing EDT.
 [x] Freshness display comes from `EvidenceView`: `CURRENT`, `STALE_FINGERPRINT`, `SUBJECT_NOT_PRESENT`, or combined warning state.
 [x] Existing Client Console active-panel persistence can restore `atlas` through the generic panel-ID preference path.
+[x] User explicitly chose to defer the 4A runtime gate and continue the independent compatible 4B implementation so both can be tested in one session.
+
+Phase 4 / Bundle 4B - implementation complete / NEEDS combined runtime gate
+[x] Added `AtlasTraceCatalog` as the `game.atlas` metadata-only owner for saved-trace listing.
+[x] Saved trace browser is bounded to the newest 100 `.trace.jsonl` files and sorts newest first deterministically.
+[x] Added `AtlasWorkspacePanel` under the existing persistent `atlas` rail destination; Browser remains the default view and Runtime evidence initializes only when opened.
+[x] Runtime evidence lists saved traces without parsing event payloads on the Swing EDT.
+[x] Runtime Trace Control button launches the existing `ClientAtlasTraceControl`; no second start/stop/save protocol exists in Client Console.
+[x] Selected or latest trace correlation uses the existing current-only `AtlasInvestigationIndex` + `AtlasTraceCorrelationEngine` path.
+[x] Correlation work runs in `SwingWorker`, not on the Swing EDT.
+[x] Correlation summary surfaces trace path, status, accepted flag, event count, dropped count, bounded preview count, and trace/current Atlas fingerprints.
+[x] Existing trace safety/correlation limits remain unchanged: 10000 trace events, 1000 correlated preview events, explicit fingerprint/event-count/source-owner acceptance, no semantic promotion.
+[x] No runtime trace hook, packet hook, recorder format, or gameplay/server behavior changed in 4B.
+
+Phase 4 / combined Bundle 4A + 4B runtime gate - ONE SESSION / NEXT
 [ ] Eclipse Java 8 clean/build Client once.
-[ ] Rebuild the static Atlas index once after compiling this Client Console change so the fingerprint is current.
-[ ] Start Matrix3 normally and open the new Client Atlas globe icon.
+[ ] Rebuild the static Atlas index once after compiling so the generated fingerprint matches the current client.
+[ ] Start Matrix3 normally and open the Client Atlas globe icon; Browser should be the default Atlas view.
 [ ] Confirm first Atlas load/search does not freeze normal game rendering/input.
 [ ] Search `Class1`, choose/use an exact canonical Atlas ID, and confirm exact detail is populated.
-[ ] Open one symbol-backed relationship and confirm it navigates to that exact symbol; confirm a non-symbol constant/type/value row remains non-navigable.
-[ ] Save temporary evidence on a harmless test symbol as HYPOTHESIS / alias `Atlas UI test` / note `Phase 4A runtime UI test` / ref `runtime:phase4a-ui`; require freshness `CURRENT` and reopen persistence.
-[ ] Delete the temporary evidence and confirm the selected symbol returns to `No curated evidence`.
-[ ] Resize to the narrow supported console width and confirm Atlas search/results/details/relationships/evidence controls remain reachable.
-[ ] Move/interact in game while searching/navigating Atlas; require no visible render/input hitch or Swing/client-thread exception.
-[ ] Leave Atlas selected, clean-close/relaunch once, and confirm Atlas restores as the active Client Console panel.
-[ ] If all above pass, mark Bundle 4A DONE and advance to Bundle 4B.
+[ ] Open one symbol-backed relationship and confirm exact navigation; confirm a non-symbol constant/type/value row remains visible but non-navigable.
+[ ] Save temporary evidence on a harmless test symbol as HYPOTHESIS / alias `Atlas UI test` / note `Phase 4 runtime UI test` / ref `runtime:phase4-ui`; require freshness `CURRENT`, reopen it, then delete it and require `No curated evidence`.
+[ ] Switch the Atlas workspace to Runtime evidence. Confirm the view lazy-opens and saved traces populate without freezing the client.
+[ ] Click Runtime Trace Control, start one short named trace, perform a few normal keyboard/menu/interface actions, then Stop + Save. This creates a trace against the newly compiled fingerprint; no separate Phase 3 regression session is required.
+[ ] Return to Runtime evidence and Refresh traces. Confirm the new trace appears near the top and selecting/double-clicking it remains responsive.
+[ ] Correlate the new selected trace and require `Status: CURRENT` + `Accepted: true`. `Dropped = 0` remains expected; suppression may be high and is not a failure.
+[ ] Use Correlate latest and require it resolves the same newest trace with `CURRENT` + `Accepted: true`.
+[ ] Resize to the narrow supported console width and switch Browser/Runtime evidence repeatedly; all controls remain reachable and no Swing/client-thread exception or obvious render/input hitch appears.
+[ ] Leave Atlas selected, clean-close/relaunch once, and confirm Atlas restores as the active Client Console panel. Atlas subview persistence is not required; Browser may reopen as the default subview.
+[ ] If all above pass, mark Bundles 4A and 4B DONE and advance Phase 4 to 4C/backlog decision.
 
 Carryover regression checks
 [ ] If an exact streaming query owns >200 immediate relationships, confirm truncation state/count remains correct when naturally encountered.
@@ -167,5 +185,6 @@ Gate rules
 - Do not request another Phase 2 gate without a relevant Phase 2 change or contradictory evidence.
 - Do not request another Bundle 3A runtime gate without a relevant 3A implementation change or contradictory evidence.
 - Do not request another Bundle 3B gate without a relevant evidence/knowledge implementation change or contradictory evidence.
-- Bundle 4A gets one consolidated Client Console runtime gate after the full implementation bundle; do not split it into per-control test cycles.
+- Bundle 4A and 4B share one consolidated Client Console runtime gate; do not split them into per-control test cycles.
+- The Phase 4 gate may be combined with the pending Client Console V2 acceptance session to avoid another client restart, as long as all Atlas checks above are covered.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
