@@ -20,7 +20,7 @@ Phase 2 - runtime verified
 Phase 3 / Bundle 3A - ACTIVE
 [x] 3A.0 runtime-tracing architecture discovery - verified-static.
 
-3A-Core - implementation complete / NEEDS consolidated runtime gate
+3A-Core - implementation complete / NEEDS consolidated runtime gate rerun
 [x] 3A.1 bounded process-wide recorder: max 10000 stored events.
 [x] Start / stop / named session / save lifecycle.
 [x] Explicit dropped-event counter after cap.
@@ -30,19 +30,31 @@ Phase 3 / Bundle 3A - ACTIVE
 [x] Standalone dark `ClientAtlasTraceControl` UI and CLI control commands.
 [x] Runtime trace errors are isolated from normal client behavior.
 [x] 3A.2 high-level menu dispatcher resolved verified-static: `Class25.method728` -> `Class319.method4094` -> existing `DevModeBridge.handleMenuAction` seam.
-[x] 3A.2 normalized menu action/local-coordinate hook inserted through the small Dev Mode seam; no menu text captured.
+[x] 3A.2 menu-action hook is live at runtime; unproven numeric fields are now neutral `rawArg1/rawArg2` rather than guessed coordinates.
 [x] 3A.2 `AtlasKeyboardObserver` mirrors `Class549_Sub1` key mapping/filter rules without consuming events or rewriting the large input class.
-[x] Keyboard events carry the verified `Class549_Sub1.method8081(...)` owner symbol as correlation evidence.
+[x] Keyboard runtime evidence captured.
 [x] 3A.3 outgoing hook inserted at `Class195.method2929(...)` after encoded length is known; audited diff +1 line only.
 [x] 3A.3 incoming hook inserted in `MaterialInformation.method1605(...)` after successful central decoder processing; audited diff +2 lines only.
 [x] Packet bridge captures IDs/declared/actual-or-encoded lengths only; no payload arrays.
-[x] 3A.4 named incoming interface packet classifier active through the incoming packet hook.
+[x] Outgoing + incoming packet runtime evidence captured.
+[x] 3A.4 named incoming interface packet classifier active; ROOT_INTERFACE / SET_INTERFACE / HIDE_INTERFACE_COMPONENT observed in first runtime trace.
 [x] 3A.5 ID-bearing `Class639.method7568(...)` hook inserted after decode/finalization; audited diff +1 line only.
-[x] 3A.5 GFX cache-miss coverage confirmed through the Class639-backed graphics definition loader.
+[x] 3A.5 definition/cache runtime evidence captured including AnimationDefinition, ItemDefinitions, ObjectDefinitions, and VarBitDefinition.
+[x] 3A.5 GFX cache-miss coverage remains Class639-backed verified-static.
 [x] Direct `Class549_Sub1` rewrite attempt rejected/rolled back after diff audit exposed unrelated array churn.
 
+3A-Core trace-noise correction - implementation complete / NEEDS gate rerun
+[x] First runtime gate exposed 10000 stored events / 63578 dropped events.
+[x] First trace contained 9934 definition events versus 66 non-definition events.
+[x] Analysis found ~2961 unique definition/load combinations among 9934 stored definition events.
+[x] Definition tracing now records first occurrence per session only.
+[x] Definition category capped at 4000 stored events, preserving at least 6000 global slots for other categories.
+[x] Intentional duplicate/category suppression tracked separately as `suppressedCount`.
+[x] `droppedCount` remains reserved for actual global 10000-event buffer overflow.
+[x] Runtime Trace Control displays both Dropped and Suppressed.
+
 3A-Core explicit carryover - does not block gate
-[ ] Component-specific decoded payload values: add only if the initial interface packet stream proves insufficient.
+[ ] Component-specific decoded payload values: add only if the interface packet stream proves insufficient.
 [ ] Exact animation loader hook: establish ownership before instrumentation.
 [ ] Exact model/cache loader hook: establish ownership before instrumentation.
 
@@ -58,30 +70,27 @@ Phase 3 / Bundle 3A - ACTIVE
 [x] Atomic correlation export and `latest` trace selection implemented.
 [x] CLI `trace-correlate <trace|latest> [classes-dir]`.
 [x] CLI `trace-correlate-export <trace|latest> <file> [classes-dir]`.
-[x] Main `ClientAtlasControl` now exposes `Runtime Trace Control` + `Correlate Latest Trace` wiring - verified-static.
-[ ] Prove 3A.6 against the rebuilt current index during the final Bundle 3A runtime gate.
+[x] Main `ClientAtlasControl` exposes `Runtime Trace Control` + `Correlate Latest Trace` wiring.
+[ ] Prove 3A.6 against the rebuilt current index during the rerun.
 
-Bundle 3A consolidated runtime gate - NEXT / ONE SESSION
-[ ] Main Atlas Control visibly shows `Runtime Trace Control` and `Correlate Latest Trace`; Runtime Trace Control opens from the button.
-[ ] Eclipse clean/build succeeds under Java 8.
-[ ] Before rebuilding Atlas, confirm the old Phase 2 generated index is reported stale for the newly compiled Phase 3 client.
-[ ] Rebuild Atlas once against the current compiled client.
-[ ] Client starts through normal `game.RS3Applet` / local launcher path and login succeeds.
+Bundle 3A consolidated runtime gate - RERUN / ONE SESSION
+[x] Java 8/Eclipse compile blocker from bad DirectoryStream import fixed and user confirmed build works.
+[x] Runtime Trace Control GUI path used successfully.
+[x] First trace proved input/network/interface/definition hooks are live.
+[ ] Pull/build the trace-noise correction under Java 8.
+[ ] Rebuild Atlas once against the newly compiled client.
+[ ] Start client/login through normal path.
 [ ] Start one named trace.
-[ ] Produce keyboard input evidence.
-[ ] Produce at least one high-level menu action event.
-[ ] Produce outgoing + incoming packet evidence.
-[ ] Produce at least one named interface packet event.
-[ ] Produce definition/cache evidence; GFX if naturally triggered.
-[ ] Stop + save the trace.
-[ ] Click `Correlate Latest Trace` in the main Atlas Control.
-[ ] Correlation reports `Status: CURRENT` and `Accepted: true`.
+[ ] Perform a few keyboard/menu/network/interface/definition actions.
+[ ] Stop + Save.
+[ ] Require `Dropped = 0`; `Suppressed` may be high and is expected.
+[ ] Require stored event count stays below 10000 for the short controlled trace.
+[ ] Click `Correlate Latest Trace`.
+[ ] Require `Status: CURRENT` and `Accepted: true`.
 [ ] Saved trace fingerprint equals the rebuilt current Atlas fingerprint.
 [ ] All emitted source IDs resolve; all emitted owner IDs resolve.
 [ ] Header event count equals actual parsed event count.
-[ ] Dropped count is visible and a normal short trace remains below the 10000-event cap.
 [ ] After STOP, confirm event count no longer grows.
-[ ] Correlation output is bounded and does not create semantic evidence or `LITERAL_ID` promotion.
 [ ] Complete `docs/rs3/SMOKE_TEST.md` during the same launch because central packet enqueue/decode seams changed.
 
 Carryover regression checks
@@ -90,5 +99,5 @@ Carryover regression checks
 Gate rules
 - Do not request another Phase 2 gate without a relevant Phase 2 change or contradictory evidence.
 - Do not ask the user to runtime-test individual 3A.x hooks.
-- 3A-Core + 3A.6 implementation is verified-static; one consolidated runtime gate decides Bundle 3A completion.
+- First Bundle 3A gate attempt produced useful runtime evidence but FAILED due definition-event flooding; do not mark Bundle 3A DONE until the corrected rerun passes.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
