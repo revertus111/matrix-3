@@ -73,3 +73,14 @@ Phase 3 / Bundle 3A corrected gate PASS
 - `Correlate Latest Trace` passed against the rebuilt current Atlas index with `Status: CURRENT` and `Accepted: true`; acceptance confirms fingerprint/event-count/source-owner resolution checks passed.
 - User reported the same-launch Matrix3 smoke behaved perfectly after the central packet seam changes.
 - Bundle 3A targeted runtime tracing is DONE; runtime evidence/tracing top-level milestone is complete. Next work is Bundle 3B evidence/knowledge.
+
+Phase 3 / Bundle 3B evidence/knowledge implementation
+- Added `AtlasEvidenceStore` over the existing `.client-atlas/evidence.jsonl` authority. Curated evidence is deterministic, bounded, atomically rewritten, and keyed by exact Atlas subject ID; generated obfuscated IDs remain primary.
+- Added external alias + note/claim persistence without renaming symbols. New/updated evidence can only attach to an exact symbol in a current `AtlasInvestigationIndex` and records that index fingerprint.
+- Added explicit `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN` classification persistence plus bounded supporting-reference lists.
+- Added evidence inspection/search views with explicit `CURRENT`, `STALE_FINGERPRINT`, `SUBJECT_NOT_PRESENT`, and combined stale/orphan states. Stale or missing evidence is retained for review and is never silently deleted or semantically promoted.
+- Preserved curated knowledge across static rescans by keeping `evidence.jsonl` outside `AtlasWorkspace.initialize()` generated-file resets; symbols/relationships remain the only reset generated datasets.
+- Added curated alias/note/reference search that remains separate from generated symbol ranking so external knowledge cannot alter structural evidence.
+- Extended deterministic Atlas JSON serialization for evidence records.
+- Added `AtlasEvidenceVerifier`, a single isolated Bundle 3B gate that tests JSONL round-trip, classifications/references, freshness warnings, orphan retention, rescan preservation, deterministic upsert/search, and delete without touching the developer's real evidence file.
+- Bundle 3B implementation is complete / verified-static. One Java 8/Eclipse clean-build plus one `AtlasEvidenceVerifier` run remains before closing the bundle. No client launch or Matrix3 runtime smoke is required because this bundle only changes offline `game.atlas` tooling.
