@@ -83,4 +83,5 @@ Phase 3 / Bundle 3B evidence/knowledge implementation
 - Added curated alias/note/reference search that remains separate from generated symbol ranking so external knowledge cannot alter structural evidence.
 - Extended deterministic Atlas JSON serialization for evidence records.
 - Added `AtlasEvidenceVerifier`, a single isolated Bundle 3B gate that tests JSONL round-trip, classifications/references, freshness warnings, orphan retention, rescan preservation, deterministic upsert/search, and delete without touching the developer's real evidence file.
+- Hardened free-form evidence JSON serialization so literal quoted text resembling Atlas property names is unicode-escaped and cannot be mistaken for a JSON field by the intentionally small deterministic parser; verifier coverage now includes those field-name-like values in aliases, notes, and references.
 - Bundle 3B implementation is complete / verified-static. One Java 8/Eclipse clean-build plus one `AtlasEvidenceVerifier` run remains before closing the bundle. No client launch or Matrix3 runtime smoke is required because this bundle only changes offline `game.atlas` tooling.
