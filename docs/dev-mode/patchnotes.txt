@@ -1,3 +1,10 @@
+2026-09-06 - Dev Mode NPC/object target + Inspector foundation
+- Added owner-only Dev actions to normal NPC/object right-click targets: Inspect, Edit route, Copy ID, and Copy Tile.
+- Added one shared contextual Inspector window that retargets to the selected live NPC/object instead of opening separate editor windows.
+- Reused Matrix3's already-resolved NPC/object menu targets; object IDs come from the normal object menu UID and NPC IDs come from the live NPC definition ID field.
+- Edit currently routes into the same read-only Inspector shell only; no NPC/object definition, spawn, map, clipping, or persistence mutation was added in this slice.
+- Added shared current-target context for later Move/Rotate/Duplicate/editor slices without changing Matrix3 interaction ownership.
+
 2026-09-03 - Dev Mode creation-studio design expansion
 - Reframed Dev Mode as the main live-world Matrix3 creation environment instead of a collection of generic admin/cache panels.
 - Added the planned World/Scene, contextual Inspector, universal browser, and History concepts plus Select/Move/Rotate/Spawn/Paint/Erase/Inspect tool modes.
