@@ -1,3 +1,12 @@
+2026-09-07 - Dev Mode World Manipulation bundle
+- Added server-side runtime ownership tracking for exact NPC/Object instances created through Dev Mode; tracking is session-only and does not persist world data.
+- Added Move and Duplicate placement modes that use a right-clicked destination tile (`Dev > Move Here` / `Dev > Duplicate Here`) instead of coordinate-entry forms.
+- Added object Rotate Left/Right plus guarded Delete Development Spawn actions in right-click menus and the shared Inspector.
+- NPC Move resolves the exact Matrix3 NPC runtime index; ordinary NPC moves are runtime-only while Dev-owned NPC moves also update their runtime respawn tile.
+- NPC Delete and object Move/Rotate/Delete require server-side proof of Dev ownership. Ordinary map objects/NPCs are protected from destructive deletion; ordinary targets may still be duplicated into Dev-owned copies.
+- Reused native Matrix3 World/NPC/WorldObject runtime APIs and the existing Admin+ Item Browser command bridge; no map, clipping, definition, or persistent spawn ownership was changed.
+- Normalized Dev Mode into `docs/dev-mode/PROJECT.md` and registered the workstream for persistent phase/bundle/Resume tracking.
+
 2026-09-06 - Dev Mode NPC/object target + Inspector foundation
 - Added owner-only Dev actions to normal NPC/object right-click targets: Inspect, Edit route, Copy ID, and Copy Tile.
 - Added one shared contextual Inspector window that retargets to the selected live NPC/object instead of opening separate editor windows.
