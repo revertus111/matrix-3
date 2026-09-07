@@ -2,6 +2,7 @@ package game.console;
 
 import game.DevModeBridge;
 import game.DevModeBridge.DevTarget;
+import game.DevModeBridge.TargetType;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -18,11 +19,10 @@ import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 
 /**
- * Shared contextual Inspector shell for Dev Mode entity targets.
+ * Shared contextual Inspector for Dev Mode entity targets.
  *
- * This foundation is intentionally read-only. Inspect and Edit menu routes both
- * select the same shared target; Edit only marks mutation intent until verified
- * editor/save owners are added in later slices.
+ * Runtime manipulation routes through DevModeBridge and the server's guarded Dev
+ * ownership manager. Definition/map persistence remains intentionally separate.
  */
 public final class DevInspectorWindow {
 
@@ -37,6 +37,13 @@ public final class DevInspectorWindow {
     private final JLabel runtimeLabel = valueLabel();
     private final JLabel modeLabel = valueLabel();
     private final JLabel statusLabel = new JLabel("Select an NPC or object in the live game.");
+
+    private final JButton moveButton = new JButton("Move to tile...");
+    private final JButton duplicateButton = new JButton("Duplicate to tile...");
+    private final JButton rotateLeftButton = new JButton("Rotate left");
+    private final JButton rotateRightButton = new JButton("Rotate right");
+    private final JButton deleteButton = new JButton("Delete Development Spawn");
+    private final JButton cancelPlacementButton = new JButton("Cancel placement");
     private final JButton copyIdButton = new JButton("Copy ID");
     private final JButton copyTileButton = new JButton("Copy tile coordinates");
 
@@ -57,6 +64,18 @@ public final class DevInspectorWindow {
         frame.requestFocus();
     }
 
+    public static void showStatus(String message) {
+        if (instance != null && message != null) {
+            instance.statusLabel.setText(message);
+        }
+    }
+
+    public static void refreshTarget(DevTarget target) {
+        if (instance != null && target != null) {
+            instance.setTarget(target, true);
+        }
+    }
+
     private static void ensureWindow() {
         if (frame != null) {
             return;
@@ -65,8 +84,8 @@ public final class DevInspectorWindow {
         frame = new JFrame("Matrix3 Dev Mode - Inspector");
         frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
         frame.setContentPane(instance.root);
-        frame.setMinimumSize(new Dimension(520, 390));
-        frame.setSize(new Dimension(610, 470));
+        frame.setMinimumSize(new Dimension(540, 560));
+        frame.setSize(new Dimension(640, 690));
         frame.setLocationByPlatform(true);
     }
 
@@ -83,7 +102,7 @@ public final class DevInspectorWindow {
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Shared live Dev target / contextual editor foundation");
+        JLabel subtitle = new JLabel("Shared live Dev target / contextual world tools");
         subtitle.setFont(ConsoleTheme.SMALL_FONT);
         subtitle.setForeground(ConsoleTheme.ACCENT);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -101,7 +120,9 @@ public final class DevInspectorWindow {
         center.add(Box.createVerticalStrut(12));
         center.add(createModeCard());
         center.add(Box.createVerticalStrut(12));
-        center.add(createActionsCard());
+        center.add(createManipulationCard());
+        center.add(Box.createVerticalStrut(12));
+        center.add(createUtilityCard());
         root.add(center, BorderLayout.CENTER);
 
         statusLabel.setFont(ConsoleTheme.SMALL_FONT);
@@ -129,9 +150,10 @@ public final class DevInspectorWindow {
         card.add(Box.createVerticalStrut(9));
         card.add(modeLabel);
 
-        JLabel note = new JLabel("<html><div style='width:500px'>The shared target/Inspector path is active. "
-                + "This slice does not mutate NPC definitions, object definitions, spawns, or map data. "
-                + "Edit is a routing intent only until each authoritative save path is verified.</div></html>");
+        JLabel note = new JLabel("<html><div style='width:520px'>Move/Duplicate use the live world as the placement surface. "
+                + "NPC movement is runtime-only. Object Move/Rotate/Delete are allowed only for server-tracked Dev placements; "
+                + "ordinary map objects are protected. Duplicate leaves the source untouched and creates a new Dev-owned copy. "
+                + "No persistent map/definition save path is used by this bundle.</div></html>");
         note.setFont(ConsoleTheme.SMALL_FONT);
         note.setForeground(ConsoleTheme.MUTED_TEXT);
         note.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -140,24 +162,94 @@ public final class DevInspectorWindow {
         return card;
     }
 
-    private JPanel createActionsCard() {
-        JPanel card = card("Target actions");
+    private JPanel createManipulationCard() {
+        JPanel card = card("World manipulation");
 
-        copyIdButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        copyIdButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        ConsoleTheme.styleButton(copyIdButton);
-        copyIdButton.addActionListener(e -> copyId());
+        configureActionButton(moveButton, new Runnable() {
+            @Override
+            public void run() {
+                statusLabel.setText(DevModeBridge.armMove(target));
+            }
+        });
+        configureActionButton(duplicateButton, new Runnable() {
+            @Override
+            public void run() {
+                statusLabel.setText(DevModeBridge.armDuplicate(target));
+            }
+        });
+        configureActionButton(rotateLeftButton, new Runnable() {
+            @Override
+            public void run() {
+                statusLabel.setText(DevModeBridge.rotateTarget(target, -1));
+            }
+        });
+        configureActionButton(rotateRightButton, new Runnable() {
+            @Override
+            public void run() {
+                statusLabel.setText(DevModeBridge.rotateTarget(target, 1));
+            }
+        });
+        configureActionButton(deleteButton, new Runnable() {
+            @Override
+            public void run() {
+                statusLabel.setText(DevModeBridge.deleteTarget(target));
+            }
+        });
+        configureActionButton(cancelPlacementButton, new Runnable() {
+            @Override
+            public void run() {
+                statusLabel.setText(DevModeBridge.cancelPlacement());
+            }
+        });
 
-        copyTileButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        copyTileButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        ConsoleTheme.styleButton(copyTileButton);
-        copyTileButton.addActionListener(e -> copyTile());
+        card.add(Box.createVerticalStrut(9));
+        card.add(moveButton);
+        card.add(Box.createVerticalStrut(7));
+        card.add(duplicateButton);
+        card.add(Box.createVerticalStrut(7));
+
+        JPanel rotations = new JPanel(new GridLayout(1, 2, 7, 0));
+        rotations.setOpaque(false);
+        rotations.setAlignmentX(Component.LEFT_ALIGNMENT);
+        rotations.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        rotations.add(rotateLeftButton);
+        rotations.add(rotateRightButton);
+        card.add(rotations);
+        card.add(Box.createVerticalStrut(7));
+        card.add(deleteButton);
+        card.add(Box.createVerticalStrut(7));
+        card.add(cancelPlacementButton);
+        return card;
+    }
+
+    private JPanel createUtilityCard() {
+        JPanel card = card("Target utilities");
+
+        configureActionButton(copyIdButton, new Runnable() {
+            @Override
+            public void run() {
+                copyId();
+            }
+        });
+        configureActionButton(copyTileButton, new Runnable() {
+            @Override
+            public void run() {
+                copyTile();
+            }
+        });
 
         card.add(Box.createVerticalStrut(9));
         card.add(copyIdButton);
         card.add(Box.createVerticalStrut(7));
         card.add(copyTileButton);
         return card;
+    }
+
+    private void configureActionButton(JButton button, final Runnable action) {
+        button.setAlignmentX(Component.LEFT_ALIGNMENT);
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        ConsoleTheme.styleButton(button);
+        button.addActionListener(e -> action.run());
     }
 
     private JPanel card(String titleText) {
@@ -203,9 +295,19 @@ public final class DevInspectorWindow {
                 ? "NPC index " + value.getRuntimeIndex()
                 : "Scene object target");
         modeLabel.setText(editIntent
-                ? "EDIT ROUTE - read-only foundation"
-                : "INSPECT ROUTE - read-only");
-        copyIdButton.setEnabled(value.getId() >= 0);
+                ? "EDIT ROUTE - runtime world tools enabled"
+                : "INSPECT ROUTE - runtime tools available below");
+
+        boolean validId = value.getId() >= 0;
+        boolean object = value.getType() == TargetType.OBJECT;
+        moveButton.setEnabled(validId);
+        duplicateButton.setEnabled(validId);
+        rotateLeftButton.setEnabled(validId && object);
+        rotateRightButton.setEnabled(validId && object);
+        deleteButton.setEnabled(validId);
+        cancelPlacementButton.setEnabled(true);
+        copyIdButton.setEnabled(validId);
+        copyTileButton.setEnabled(true);
         statusLabel.setText("Target updated from the live Matrix3 right-click menu.");
     }
 
