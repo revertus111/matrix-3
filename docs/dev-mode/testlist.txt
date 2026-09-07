@@ -9,18 +9,41 @@ Matrix3 Dev Mode - targeted runtime test list
 [ ] Confirm normal Walk Here still works when Dev Mode is ON.
 
 NPC / Object targeting + Inspector
-[ ] Right-click a normal NPC with Dev Mode ON and confirm exactly one each of `Dev > Inspect NPC`, `Dev > Edit NPC`, `Dev > Copy NPC ID`, and `Dev > Copy NPC Tile` appear without replacing normal NPC options.
+[ ] Right-click a normal NPC with Dev Mode ON and confirm the Dev target actions appear without replacing normal NPC options.
 [ ] Choose `Dev > Inspect NPC` and confirm the shared Inspector shows the NPC type, cache name, exact definition ID, world tile/plane, and live NPC runtime index.
-[ ] Choose `Dev > Edit NPC` and confirm the same Inspector window retargets/reopens with `EDIT ROUTE - read-only foundation`; no NPC values are mutated.
+[ ] Choose `Dev > Edit NPC` and confirm the same Inspector window retargets/reopens with runtime world manipulation controls available; no NPC definition/persistent spawn data is changed by opening Edit.
 [ ] Choose `Dev > Copy NPC ID` and confirm the clipboard receives the exact NPC definition ID.
 [ ] Choose `Dev > Copy NPC Tile` and confirm the clipboard receives `x, y, plane` for the live NPC tile.
-[ ] Right-click a normal object with Dev Mode ON and confirm exactly one each of `Dev > Inspect Object`, `Dev > Edit Object`, `Dev > Copy Object ID`, and `Dev > Copy Object Tile` appear without replacing normal object options.
+[ ] Right-click a normal object with Dev Mode ON and confirm the Dev target actions appear without replacing normal object options.
 [ ] Choose `Dev > Inspect Object` and confirm the same shared Inspector retargets to the object and shows the exact object definition ID and selected world tile/plane.
-[ ] Choose `Dev > Edit Object` and confirm only the read-only edit route is selected; no object definition/map/spawn mutation occurs.
+[ ] Choose `Dev > Edit Object` and confirm runtime world manipulation controls are available; no object definition/map persistence data is changed by opening Edit.
 [ ] Choose both object Copy actions and confirm the clipboard receives the exact object ID and selected `x, y, plane`.
 [ ] Right-click a second NPC/object while the Inspector is open and confirm the same window retargets instead of creating duplicate Inspector frames.
 [ ] Disable Dev Mode and confirm NPC/object Dev entries disappear from newly built menus while normal interactions remain unchanged.
 [ ] Test a tile with multiple/stacked interactable entities and confirm each target keeps its own Dev actions/selection instead of cross-selecting another entity.
+
+World Manipulation - consolidated Bundle 1.2 gate
+[ ] Eclipse/Java 8: clean/build Client and Server and confirm no compilation errors before runtime checks.
+[ ] Spawn an NPC through Dev Spawn, inspect it, choose Move, then right-click another tile and select `Dev > Move Here`; confirm that exact NPC moves to the chosen tile.
+[ ] Move a normal non-Dev NPC and confirm the move is runtime-only; its persistent/original spawn authority is not rewritten.
+[ ] Put two identical NPCs close/stacked, select one, move it, and confirm the exact runtime-index target moves rather than the other NPC.
+[ ] Select a normal NPC, arm Duplicate, choose `Dev > Duplicate Here`, and confirm the source remains untouched and a new matching NPC appears on the destination tile.
+[ ] Inspect the duplicated NPC and use `Delete Development Spawn`; confirm the duplicate disappears.
+[ ] Attempt `Delete Development Spawn` on an ordinary non-Dev NPC and confirm the server blocks deletion and the NPC remains.
+[ ] Spawn an object through Dev Spawn and confirm it is eligible for Dev-owned Move/Rotate/Delete behavior.
+[ ] Move the Dev-spawned object with `Dev > Move Here`, then reselect it on the destination tile and confirm its ID/type/rotation are preserved.
+[ ] Rotate the Dev-spawned object left and right; confirm rotation wraps safely through 0-3 and the object remains on the same tile.
+[ ] Delete the Dev-spawned object and confirm it is removed without altering unrelated map objects.
+[ ] Select an ordinary map object, arm Duplicate, choose `Dev > Duplicate Here`, and confirm the original remains and the new copy appears at the destination with the source type/rotation.
+[ ] Reselect the duplicated object and confirm Move, Rotate, and Delete Development Spawn work on the Dev-owned copy.
+[ ] Attempt Move on an ordinary map object and confirm the server blocks it with a Dev Mode message and the original object remains unchanged.
+[ ] Attempt Rotate Left/Right on an ordinary map object and confirm the server blocks it and the object remains unchanged.
+[ ] Attempt Delete Development Spawn on an ordinary map object and confirm the server blocks deletion and the map object remains.
+[ ] Arm Move or Duplicate, right-click a destination tile, and confirm exactly one contextual `Dev > Move Here` or `Dev > Duplicate Here` entry appears in addition to normal tile actions.
+[ ] Click `Cancel placement`, build a fresh tile menu, and confirm Move Here/Duplicate Here no longer appears.
+[ ] Re-arm a placement after cancelling and confirm the new selected target replaces the previous pending placement cleanly.
+[ ] Deeper check: move a Dev-owned object across a chunk/region boundary and confirm it disappears from the old location and appears correctly at the destination without clipping/map corruption.
+[ ] Restart the server after manipulation testing and confirm Dev-created NPC/object placements do not persist as source/map data.
 
 Tile Editor
 [ ] Choose `Dev > Edit Tile` and confirm the dark Tile Editor opens for the exact tile that was right-clicked.
@@ -47,12 +70,12 @@ Placement
 [ ] Object: choose a known object result/ID, type, and rotation; confirm it appears on the selected tile with the requested orientation.
 [ ] Ground item: choose a known item result/ID and amount; confirm the owner can see the temporary item on the selected tile.
 [ ] Enter invalid/unknown IDs and malformed values; confirm they are rejected without server/client exceptions.
-[ ] Confirm an account below Admin rights cannot use the server Dev spawn bridge and does not receive either client tile Dev entry.
+[ ] Confirm an account below Admin rights cannot use the server Dev spawn/edit bridge and does not receive client Dev entries.
 [ ] Restart the client and confirm Dev Mode returns to OFF.
-[ ] Eclipse/Java 8: clean/build Client and Server and confirm no compilation errors.
 
 Regression checks
 [ ] Right-click NPCs, objects, ground items, and normal tiles; confirm their existing Matrix3 menu options are unchanged.
-[ ] Walk several tiles and interact with normal objects after using Dev Spawn/Tile Editor/Inspector.
+[ ] Walk several tiles and interact with normal objects after using Dev Spawn/Tile Editor/Inspector/manipulation tools.
 [ ] Use the normal Client Console Item Browser after Dev Spawn search and confirm its item indexing/thumbnails still work.
-[ ] Spawn then restart the server; confirm runtime placement is not mistaken for persistent source/map data.
+[ ] Confirm normal NPC/object interaction packets still target the same live entities after Dev manipulation testing.
+[ ] Spawn/manipulate then restart the server; confirm runtime placement is not mistaken for persistent source/map data.
