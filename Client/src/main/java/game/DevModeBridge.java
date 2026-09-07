@@ -21,22 +21,34 @@ public final class DevModeBridge {
 
     public static final int TILE_SPAWN_MENU_ACTION = 1500;
     public static final int TILE_EDIT_MENU_ACTION = 1501;
+    public static final int TILE_MOVE_HERE_MENU_ACTION = 1502;
+    public static final int TILE_DUPLICATE_HERE_MENU_ACTION = 1503;
 
     public static final int NPC_INSPECT_MENU_ACTION = 1510;
     public static final int NPC_EDIT_MENU_ACTION = 1511;
     public static final int NPC_COPY_ID_MENU_ACTION = 1512;
     public static final int NPC_COPY_TILE_MENU_ACTION = 1513;
+    public static final int NPC_MOVE_MENU_ACTION = 1514;
+    public static final int NPC_DUPLICATE_MENU_ACTION = 1515;
+    public static final int NPC_DELETE_DEV_MENU_ACTION = 1516;
 
     public static final int OBJECT_INSPECT_MENU_ACTION = 1520;
     public static final int OBJECT_EDIT_MENU_ACTION = 1521;
     public static final int OBJECT_COPY_ID_MENU_ACTION = 1522;
     public static final int OBJECT_COPY_TILE_MENU_ACTION = 1523;
+    public static final int OBJECT_MOVE_MENU_ACTION = 1524;
+    public static final int OBJECT_ROTATE_LEFT_MENU_ACTION = 1525;
+    public static final int OBJECT_ROTATE_RIGHT_MENU_ACTION = 1526;
+    public static final int OBJECT_DUPLICATE_MENU_ACTION = 1527;
+    public static final int OBJECT_DELETE_DEV_MENU_ACTION = 1528;
 
     private static final int MATRIX3_TILE_ACTION = 23;
     private static final int NPC_DEFINITION_ID_MULTIPLIER = 1355909985;
 
     private static volatile boolean enabled;
     private static volatile DevTarget currentTarget;
+    private static volatile PlacementMode placementMode = PlacementMode.NONE;
+    private static volatile DevTarget placementTarget;
 
     private DevModeBridge() {
     }
@@ -49,11 +61,52 @@ public final class DevModeBridge {
         enabled = value;
         if (!value) {
             currentTarget = null;
+            placementTarget = null;
+            placementMode = PlacementMode.NONE;
         }
     }
 
     public static DevTarget getCurrentTarget() {
         return currentTarget;
+    }
+
+    public static String armMove(DevTarget target) {
+        return armPlacement(PlacementMode.MOVE, target);
+    }
+
+    public static String armDuplicate(DevTarget target) {
+        return armPlacement(PlacementMode.DUPLICATE, target);
+    }
+
+    public static String cancelPlacement() {
+        placementMode = PlacementMode.NONE;
+        placementTarget = null;
+        return "Placement cancelled.";
+    }
+
+    public static String rotateTarget(DevTarget target, int delta) {
+        if (!enabled || target == null || target.getType() != TargetType.OBJECT) {
+            return "Select an object before rotating it.";
+        }
+        if (delta != -1 && delta != 1) {
+            return "Rotation direction must be left or right.";
+        }
+        String error = queueEditCommand("rotate", target, " " + delta);
+        if (error != null) {
+            return error;
+        }
+        return "Rotate queued. Dev-owned runtime objects rotate immediately; permanent map objects are protected.";
+    }
+
+    public static String deleteTarget(DevTarget target) {
+        if (!enabled || target == null) {
+            return "Select an NPC or object before deleting it.";
+        }
+        String error = queueEditCommand("delete", target, "");
+        if (error != null) {
+            return error;
+        }
+        return "Delete queued. The server will remove only a proven Dev-owned runtime placement.";
     }
 
     /**
@@ -73,6 +126,11 @@ public final class DevModeBridge {
 
         addTileEntry("Dev > Edit Tile", TILE_EDIT_MENU_ACTION, localX, localY);
         addTileEntry("Dev > Spawn...", TILE_SPAWN_MENU_ACTION, localX, localY);
+        if (placementTarget != null && placementMode == PlacementMode.MOVE) {
+            addTileEntry("Dev > Move Here", TILE_MOVE_HERE_MENU_ACTION, localX, localY);
+        } else if (placementTarget != null && placementMode == PlacementMode.DUPLICATE) {
+            addTileEntry("Dev > Duplicate Here", TILE_DUPLICATE_HERE_MENU_ACTION, localX, localY);
+        }
     }
 
     /**
@@ -84,7 +142,7 @@ public final class DevModeBridge {
     static void mirrorEntityEntries(String targetText, int cursor, int sourceAction, int sourceParam,
             long targetUid, int localX, int localY, boolean bool, boolean bool5, long groupUid,
             boolean bool7) {
-        if (!enabled || !isOwnerSession() || Class25.aBool165 || 357782167 * Class25.anInt172 > 500) {
+        if (!enabled || !isOwnerSession() || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
             return;
         }
 
@@ -99,6 +157,12 @@ public final class DevModeBridge {
                     targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
             addEntityEntry("Dev > Copy NPC Tile", targetText, cursor, NPC_COPY_TILE_MENU_ACTION, sourceParam,
                     targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Move NPC", targetText, cursor, NPC_MOVE_MENU_ACTION, sourceParam,
+                    targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Duplicate NPC", targetText, cursor, NPC_DUPLICATE_MENU_ACTION, sourceParam,
+                    targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Delete Development Spawn", targetText, cursor, NPC_DELETE_DEV_MENU_ACTION,
+                    sourceParam, targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
         } else if (isObjectSourceAction(normalizedAction)) {
             int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
             int packedTile = packLocalCoordinates(localX, localY);
@@ -110,6 +174,16 @@ public final class DevModeBridge {
                     targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
             addEntityEntry("Dev > Copy Object Tile", targetText, cursor, OBJECT_COPY_TILE_MENU_ACTION, sourceParam,
                     targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Move Object", targetText, cursor, OBJECT_MOVE_MENU_ACTION, sourceParam,
+                    targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Rotate Left", targetText, cursor, OBJECT_ROTATE_LEFT_MENU_ACTION, sourceParam,
+                    targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Rotate Right", targetText, cursor, OBJECT_ROTATE_RIGHT_MENU_ACTION, sourceParam,
+                    targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Duplicate Object", targetText, cursor, OBJECT_DUPLICATE_MENU_ACTION, sourceParam,
+                    targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Delete Development Spawn", targetText, cursor, OBJECT_DELETE_DEV_MENU_ACTION,
+                    sourceParam, targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
         }
     }
 
@@ -120,7 +194,7 @@ public final class DevModeBridge {
     static boolean handleMenuAction(int action, int payloadA, int payloadB) {
         AtlasRuntimeBridge.observeMenuAction(action, payloadA, payloadB);
 
-        if (action == TILE_SPAWN_MENU_ACTION || action == TILE_EDIT_MENU_ACTION) {
+        if (isTileDevAction(action)) {
             return handleTileAction(action, payloadA, payloadB);
         }
         if (!isEntityDevAction(action)) {
@@ -134,6 +208,7 @@ public final class DevModeBridge {
                 ? resolveNpcTarget(payloadA)
                 : resolveObjectTarget(payloadA, payloadB);
         if (target == null) {
+            notifyInspector("The live target could not be resolved. Right-click it again.");
             return true;
         }
         currentTarget = target;
@@ -151,6 +226,16 @@ public final class DevModeBridge {
             copyTargetId(target);
         } else if (action == NPC_COPY_TILE_MENU_ACTION || action == OBJECT_COPY_TILE_MENU_ACTION) {
             copyTargetTile(target);
+        } else if (action == NPC_MOVE_MENU_ACTION || action == OBJECT_MOVE_MENU_ACTION) {
+            notifyInspector(armMove(target));
+        } else if (action == NPC_DUPLICATE_MENU_ACTION || action == OBJECT_DUPLICATE_MENU_ACTION) {
+            notifyInspector(armDuplicate(target));
+        } else if (action == OBJECT_ROTATE_LEFT_MENU_ACTION) {
+            notifyInspector(rotateTarget(target, -1));
+        } else if (action == OBJECT_ROTATE_RIGHT_MENU_ACTION) {
+            notifyInspector(rotateTarget(target, 1));
+        } else if (action == NPC_DELETE_DEV_MENU_ACTION || action == OBJECT_DELETE_DEV_MENU_ACTION) {
+            notifyInspector(deleteTarget(target));
         }
         return true;
     }
@@ -171,6 +256,18 @@ public final class DevModeBridge {
         return true;
     }
 
+    private static String armPlacement(PlacementMode mode, DevTarget target) {
+        if (!enabled || target == null || target.getId() < 0) {
+            return "Select a valid NPC or object first.";
+        }
+        placementMode = mode;
+        placementTarget = target;
+        currentTarget = target;
+        return (mode == PlacementMode.MOVE ? "Move" : "Duplicate") + " armed for " + target.getName()
+                + ". Right-click the destination tile and choose Dev > "
+                + (mode == PlacementMode.MOVE ? "Move Here" : "Duplicate Here") + ".";
+    }
+
     private static boolean handleTileAction(int action, int localX, int localY) {
         if (!enabled || !isOwnerSession() || client.aClass613_8605 == null
                 || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
@@ -185,8 +282,14 @@ public final class DevModeBridge {
         final int worldX = sceneBase.localX * -2109597897 + localX;
         final int worldY = sceneBase.localY * 417324155 + localY;
         final int plane = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff;
-        final boolean editTile = action == TILE_EDIT_MENU_ACTION;
 
+        if (action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION) {
+            String result = executePlacement(worldX, worldY, plane);
+            notifyInspector(result);
+            return true;
+        }
+
+        final boolean editTile = action == TILE_EDIT_MENU_ACTION;
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -198,6 +301,41 @@ public final class DevModeBridge {
             }
         });
         return true;
+    }
+
+    private static String executePlacement(int worldX, int worldY, int plane) {
+        DevTarget target = placementTarget;
+        PlacementMode mode = placementMode;
+        if (target == null || mode == PlacementMode.NONE) {
+            return "No Move/Duplicate placement is armed.";
+        }
+
+        String operation = mode == PlacementMode.MOVE ? "move" : "duplicate";
+        String error = queueEditCommand(operation, target, " " + worldX + " " + worldY + " " + plane);
+        if (error != null) {
+            return error;
+        }
+
+        placementMode = PlacementMode.NONE;
+        placementTarget = null;
+        if (mode == PlacementMode.MOVE) {
+            DevTarget moved = target.withTile(worldX, worldY, plane);
+            currentTarget = moved;
+            refreshInspectorTarget(moved);
+        }
+        return (mode == PlacementMode.MOVE ? "Move" : "Duplicate") + " queued for " + worldX + ", "
+                + worldY + ", " + plane + ".";
+    }
+
+    private static String queueEditCommand(String operation, DevTarget target, String extra) {
+        if (!isOwnerSession()) {
+            return "Dev Mode manipulation requires an Admin+ live session.";
+        }
+        String kind = target.getType() == TargetType.NPC ? "npc" : "object";
+        String command = "itembrowser devedit " + operation + " " + kind + " " + target.getId() + " "
+                + target.getWorldX() + " " + target.getWorldY() + " " + target.getPlane() + " "
+                + target.getRuntimeIndex() + extra;
+        return ClientConsoleBridge.queueConsoleCommand(command);
     }
 
     private static DevTarget resolveNpcTarget(int npcIndex) {
@@ -299,12 +437,17 @@ public final class DevModeBridge {
     }
 
     private static boolean isNpcDevAction(int action) {
-        return action >= NPC_INSPECT_MENU_ACTION && action <= NPC_COPY_TILE_MENU_ACTION;
+        return action >= NPC_INSPECT_MENU_ACTION && action <= NPC_DELETE_DEV_MENU_ACTION;
     }
 
     private static boolean isEntityDevAction(int action) {
         return isNpcDevAction(action)
-                || action >= OBJECT_INSPECT_MENU_ACTION && action <= OBJECT_COPY_TILE_MENU_ACTION;
+                || action >= OBJECT_INSPECT_MENU_ACTION && action <= OBJECT_DELETE_DEV_MENU_ACTION;
+    }
+
+    private static boolean isTileDevAction(int action) {
+        return action == TILE_SPAWN_MENU_ACTION || action == TILE_EDIT_MENU_ACTION
+                || action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION;
     }
 
     private static int normalizeAction(int action) {
@@ -336,6 +479,24 @@ public final class DevModeBridge {
         });
     }
 
+    private static void notifyInspector(final String message) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                DevInspectorWindow.showStatus(message);
+            }
+        });
+    }
+
+    private static void refreshInspectorTarget(final DevTarget target) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                DevInspectorWindow.refreshTarget(target);
+            }
+        });
+    }
+
     private static boolean hasDevAction(int targetAction) {
         for (Class572_Sub12_Sub10 entry = (Class572_Sub12_Sub10) Class25.aClass675_174.method7932((byte) 50);
                 entry != null;
@@ -359,6 +520,12 @@ public final class DevModeBridge {
         return false;
     }
 
+    private enum PlacementMode {
+        NONE,
+        MOVE,
+        DUPLICATE
+    }
+
     public enum TargetType {
         NPC("NPC"),
         OBJECT("Object");
@@ -375,7 +542,8 @@ public final class DevModeBridge {
     }
 
     /**
-     * Immutable shared target context used by the first contextual Inspector.
+     * Immutable shared target context used by the contextual Inspector and Dev
+     * manipulation placement modes.
      */
     public static final class DevTarget {
         private final TargetType type;
@@ -395,6 +563,10 @@ public final class DevModeBridge {
             this.worldY = worldY;
             this.plane = plane;
             this.runtimeIndex = runtimeIndex;
+        }
+
+        private DevTarget withTile(int x, int y, int newPlane) {
+            return new DevTarget(type, id, name, x, y, newPlane, runtimeIndex);
         }
 
         public TargetType getType() {
