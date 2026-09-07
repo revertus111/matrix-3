@@ -13,7 +13,7 @@ import com.rs.game.player.Player;
 
 /**
  * Owner-only server authority bridge for Client Console Item Browser,
- * development settings, and Dev Mode live placement actions.
+ * development settings, and Dev Mode live placement/manipulation actions.
  */
 public final class ItemBrowserCommandBridge {
 
@@ -41,6 +41,9 @@ public final class ItemBrowserCommandBridge {
         }
         if (cmd != null && cmd.length >= 2 && "devspawn".equalsIgnoreCase(cmd[1])) {
             return processDevSpawn(player, cmd);
+        }
+        if (cmd != null && cmd.length >= 2 && "devedit".equalsIgnoreCase(cmd[1])) {
+            return processDevEdit(player, cmd);
         }
         if (cmd == null || cmd.length < 4) {
             player.getPackets().sendGameMessage(
@@ -96,7 +99,7 @@ public final class ItemBrowserCommandBridge {
     }
 
     private static boolean processDevSpawn(Player player, String[] cmd) {
-        if (cmd.length < 6) {
+        if (cmd.length < 7) {
             player.getPackets().sendGameMessage(
                     "Use: ::itembrowser devspawn <npc|object|item> <id> <x> <y> <plane> [type rotation|amount]");
             return true;
@@ -115,13 +118,9 @@ public final class ItemBrowserCommandBridge {
         } catch (NumberFormatException ex) {
             player.getPackets().sendGameMessage("Dev spawn id and tile coordinates must be whole numbers.");
             return true;
-        } catch (ArrayIndexOutOfBoundsException ex) {
-            player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser devspawn <npc|object|item> <id> <x> <y> <plane> [type rotation|amount]");
-            return true;
         }
 
-        if (id < 0 || x < 0 || x > 16383 || y < 0 || y > 16383 || plane < 0 || plane > 3) {
+        if (!validTarget(id, x, y, plane)) {
             player.getPackets().sendGameMessage("Dev spawn id/tile is outside the supported Matrix3 world range.");
             return true;
         }
@@ -139,6 +138,7 @@ public final class ItemBrowserCommandBridge {
                 player.getPackets().sendGameMessage("Matrix3 could not spawn NPC id " + id + " on that tile.");
                 return true;
             }
+            DevModeRuntimeManager.trackNpc(player, npc);
             player.getPackets().sendGameMessage("Dev Mode spawned NPC " + displayName(definition.name, id)
                     + " at " + x + ", " + y + ", " + plane + ".");
             return true;
@@ -168,7 +168,9 @@ public final class ItemBrowserCommandBridge {
                 player.getPackets().sendGameMessage("Unable to spawn unknown object id " + id + ".");
                 return true;
             }
-            World.spawnObject(new WorldObject(id, type, rotation, tile));
+            WorldObject object = new WorldObject(id, type, rotation, tile);
+            World.spawnObject(object);
+            DevModeRuntimeManager.trackObject(player, object);
             player.getPackets().sendGameMessage("Dev Mode spawned object " + displayName(definition.name, id)
                     + " at " + x + ", " + y + ", " + plane + ".");
             return true;
@@ -204,6 +206,122 @@ public final class ItemBrowserCommandBridge {
 
         player.getPackets().sendGameMessage("Dev spawn type must be npc, object, or item.");
         return true;
+    }
+
+    private static boolean processDevEdit(Player player, String[] cmd) {
+        if (cmd.length < 9) {
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser devedit <move|duplicate|rotate|delete> <npc|object> <id> <x> <y> <plane> <runtimeRef> [...]");
+            return true;
+        }
+
+        String operation = cmd[2].toLowerCase();
+        String kind = cmd[3].toLowerCase();
+        final int id;
+        final int sourceX;
+        final int sourceY;
+        final int sourcePlane;
+        final int runtimeRef;
+        try {
+            id = Integer.parseInt(cmd[4]);
+            sourceX = Integer.parseInt(cmd[5]);
+            sourceY = Integer.parseInt(cmd[6]);
+            sourcePlane = Integer.parseInt(cmd[7]);
+            runtimeRef = Integer.parseInt(cmd[8]);
+        } catch (NumberFormatException ex) {
+            player.getPackets().sendGameMessage("Dev edit target values must be whole numbers.");
+            return true;
+        }
+
+        if (!validTarget(id, sourceX, sourceY, sourcePlane)) {
+            player.getPackets().sendGameMessage("Dev edit source target is outside the supported Matrix3 world range.");
+            return true;
+        }
+        if (!"npc".equals(kind) && !"object".equals(kind)) {
+            player.getPackets().sendGameMessage("Dev edit type must be npc or object.");
+            return true;
+        }
+
+        WorldTile source = new WorldTile(sourceX, sourceY, sourcePlane);
+
+        if ("move".equals(operation) || "duplicate".equals(operation)) {
+            if (cmd.length < 12) {
+                player.getPackets().sendGameMessage("Dev move/duplicate requires destination x y plane.");
+                return true;
+            }
+            final int destinationX;
+            final int destinationY;
+            final int destinationPlane;
+            try {
+                destinationX = Integer.parseInt(cmd[9]);
+                destinationY = Integer.parseInt(cmd[10]);
+                destinationPlane = Integer.parseInt(cmd[11]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Dev edit destination values must be whole numbers.");
+                return true;
+            }
+            if (!validTile(destinationX, destinationY, destinationPlane)) {
+                player.getPackets().sendGameMessage("Dev edit destination is outside the supported Matrix3 world range.");
+                return true;
+            }
+            WorldTile destination = new WorldTile(destinationX, destinationY, destinationPlane);
+            if ("npc".equals(kind)) {
+                if ("move".equals(operation)) {
+                    DevModeRuntimeManager.moveNpc(player, runtimeRef, id, source, destination);
+                } else {
+                    DevModeRuntimeManager.duplicateNpc(player, runtimeRef, id, source, destination);
+                }
+            } else if ("move".equals(operation)) {
+                DevModeRuntimeManager.moveObject(player, id, source, destination);
+            } else {
+                DevModeRuntimeManager.duplicateObject(player, id, source, destination);
+            }
+            return true;
+        }
+
+        if ("rotate".equals(operation)) {
+            if (!"object".equals(kind)) {
+                player.getPackets().sendGameMessage("Only objects can be rotated by this Dev Mode bundle.");
+                return true;
+            }
+            if (cmd.length < 10) {
+                player.getPackets().sendGameMessage("Dev rotate requires a -1 or 1 direction.");
+                return true;
+            }
+            final int delta;
+            try {
+                delta = Integer.parseInt(cmd[9]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Dev rotate direction must be -1 or 1.");
+                return true;
+            }
+            if (delta != -1 && delta != 1) {
+                player.getPackets().sendGameMessage("Dev rotate direction must be -1 or 1.");
+                return true;
+            }
+            DevModeRuntimeManager.rotateObject(player, id, source, delta);
+            return true;
+        }
+
+        if ("delete".equals(operation)) {
+            if ("npc".equals(kind)) {
+                DevModeRuntimeManager.deleteNpc(player, runtimeRef, id, source);
+            } else {
+                DevModeRuntimeManager.deleteObject(player, id, source);
+            }
+            return true;
+        }
+
+        player.getPackets().sendGameMessage("Dev edit operation must be move, duplicate, rotate, or delete.");
+        return true;
+    }
+
+    private static boolean validTarget(int id, int x, int y, int plane) {
+        return id >= 0 && validTile(x, y, plane);
+    }
+
+    private static boolean validTile(int x, int y, int plane) {
+        return x >= 0 && x <= 16383 && y >= 0 && y <= 16383 && plane >= 0 && plane <= 3;
     }
 
     private static boolean hasName(String name) {
