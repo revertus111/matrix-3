@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a professional Client Console Interface Editor that lets Matrix3 development inspect and safely experiment with live interface/component values without repeatedly hardcoding speculative fixes into game code.
+Build a professional Client Console Interface Editor that lets Matrix3 development discover, inspect, and safely experiment with live interface/component values without repeatedly hardcoding speculative fixes into game code.
 
 ## Canonical Main-Goal Status
 
@@ -19,71 +19,79 @@ Build a professional Client Console Interface Editor that lets Matrix3 developme
 ### In scope
 
 - Generic Matrix3 interface/component inspection by `interface` or `interface:component` target.
+- Runtime interface discovery from the actual root/subinterface state rather than guessed IDs.
+- `Load Active Interface` for the most relevant newly attached foreground interface.
+- `Open now` browsing for currently attached runtime interfaces.
+- Searchable all-interface browser across the current cache interface-ID range.
 - Searchable component list with type, parent, item, child-count, base geometry, runtime geometry, alignment, text, and sprite visibility.
 - Client-thread-owned live overrides for base X/Y/W/H, runtime X/Y/W/H, alignment bytes, text, and sprite ID.
-- Professional live geometry tuning with sliders, exact number fields, one-pixel nudges, and selectable Fine/Normal/Wide ranges.
-- Live Wire Mesh visualization over the game Canvas with selected-component emphasis, optional IDs/dimensions, and optional parent links.
-- One-shot Pick Component mode that selects a visible interface component from the game Canvas while consuming only the armed diagnostic click.
+- Professional live geometry tuning with sliders, exact number fields, one-pixel nudges, and Fine/Normal/Wide ranges.
 - Reversible Reset Selected / Reset Interface behavior.
 - Copy Values for quickly preserving working discoveries.
+- Diagnostic Wire Mesh / Pick Component as carryover tooling until the overlay has a renderer-native paint path.
 - Client Console rail integration and existing workspace active-panel persistence.
 
 ### Out of scope
 
 - Replacing Matrix3 interface decoding/layout ownership.
 - Permanent cache editing in V1.
-- Arbitrary editing of every obfuscated InterfaceDefinitions field before semantics are established.
+- Arbitrary editing of every obfuscated `InterfaceDefinitions` field before semantics are established.
 - Server/gameplay authority changes.
-- Turning the Wire Mesh into an alternate renderer or scene-picking implementation.
+- Treating a cache-range entry as OPEN unless Matrix3 runtime state says it is attached.
+- Replacing the current AWT Wire Mesh with renderer-native drawing inside the V1.3 browser bundle.
 
 ## Architecture / ownership
 
 - Matrix3 `InterfaceDefinitions` remains the interface-data authority.
-- `ClientConsoleInterfaceBridge` owns the safe client-thread handoff, snapshots, temporary live overrides, and reset-to-pre-editor state.
-- `InterfaceEditorPanel` owns Swing presentation, slider/nudge UX, overlay controls, picker state presentation, and UI-side coalescing of rapid live geometry changes.
-- `ClientConsoleInterfaceOverlay` owns read-only diagnostic drawing over `Class584.aCanvas7745` and one-shot picker hit testing from immutable Interface Editor snapshots. It does not read/write `InterfaceDefinitions` directly.
+- `ClientConsoleInterfaceBridge` owns the safe client-thread handoff, component snapshots, temporary live overrides, reset-to-pre-editor state, and immutable runtime interface-catalog snapshots.
+- Matrix3 root interface state is read from `client.anInt8790`; attached subinterfaces are read from `client.aClass676_8760` on the client thread.
+- `Class572_Sub29` supplies the attached interface ID while its inherited hash remains the parent component hash, matching the existing `SET_INTERFACE -> Class104_Sub1.method9918(...)` ownership path.
+- `InterfaceEditorPanel` owns Swing presentation, target/open-interface controls, slider/nudge UX, and UI-side coalescing of rapid live geometry changes.
+- `InterfaceBrowserDialog` owns searchable all-interface browsing. It consumes only immutable catalog metadata and never reads obfuscated client state directly.
+- `ClientConsoleInterfaceOverlay` remains a diagnostic overlay/picker helper only; it is not interface/render authority.
 - `ClientConsoleShell` owns lazy panel hosting/navigation/persistence as before.
 - Overrides are temporary development state; they do not write cache/server data.
 - Slider drag events are rate-limited in Swing to one queued override every 50ms before entering the existing client-thread bridge.
-- Wire Mesh drawing stops when Interface Editor is hidden; picker mode consumes only its armed left-click and is cancelled when the editor/overlay is hidden.
 
 ## Verified foundation
 
 ### VERIFIED
 
-- Backpack runtime tracing established that current interface work needs fast live geometry experimentation rather than more guessed hardcoded component patches.
+- Live geometry editing is useful for finding interface values without repeated hardcoded patches.
+- The current AWT Wire Mesh paint path flashes the game canvas under the user's OpenGL runtime. It is therefore unsafe as an always-on default and now starts OFF.
 
 ### verified-static
 
-- `Class512.method6083(...)` is the current Matrix3 client component lookup path.
-- Interface geometry uses decoded base fields plus runtime layout fields already observed by the focused Backpack trace.
-- Client Console already has lazy panel hosting, shared dark-theme primitives, and a logged-in client-cycle hook at `Class514.method6093(...)`.
-- Interface Editor V1 uses the client-cycle bridge for all Matrix3 reads/writes and keeps Swing as presentation/request ownership only.
-- V1.1 adds eight live geometry sliders, exact numeric entry, one-pixel nudges, and Fine +/-64, Normal +/-256, Wide +/-1024 ranges without changing bridge/server authority.
-- V1.2 Wire Mesh reads only immutable `InterfaceSnapshot`/`ComponentSnapshot` data and paints temporary diagnostics through the existing game Canvas; no new server or cache ownership is introduced.
-- V1.2 picker hit testing prefers deepest/smallest overlapping component bounds and consumes input only while the one-shot picker is armed.
+- `Class512.method6083(...)` is the current Matrix3 component lookup path used by Interface Editor snapshots.
+- `IncomingPacket.ROOT_INTERFACE` writes the current root interface to `client.anInt8790`.
+- `IncomingPacket.SET_INTERFACE` constructs `Class572_Sub29(interfaceId, clipped)` and routes it through `Class104_Sub1.method9918(parentHash, ...)`.
+- `Class104_Sub1.method9918(...)` stores the subinterface node in `client.aClass676_8760` keyed by parent hash.
+- `Class676` is iterable and is the live subinterface table used by the existing Matrix3 client path.
+- `Class534.aClass83Array5975.length` provides the current interface-cache group range after interface definitions initialize.
+- Interface Editor component reads/writes and runtime interface discovery remain client-thread-owned through the existing `Class514.method6093(...)` flush path.
+- V1.1 provides eight live geometry sliders, exact numeric entry, one-pixel nudges, and Fine +/-64, Normal +/-256, Wide +/-1024 ranges.
+- V1.3 provides immutable open-interface catalog snapshots, active-interface preference, `Open now`, and searchable all-interface browsing without changing Matrix3 gameplay/server authority.
 
 ## Unknown / research needed
 
 ### HYPOTHESIS
 
-- Pinning runtime geometry each client cycle should provide the most useful direct experimentation mode for interfaces whose normal alignment/layout scripts would otherwise overwrite trial values.
-- Accumulating parent-relative runtime X/Y values should place Wire Mesh rectangles close enough to the rendered interface for interface 671 diagnostics.
+- When several subinterfaces attach during one operation, preferring the newly attached non-root interface with the greatest loaded component count should usually choose the main foreground interface over small helper children.
+- Pinning runtime geometry each client cycle remains the most useful direct experimentation mode for interfaces whose normal layout scripts would otherwise overwrite trial values.
 
 ### UNKNOWN
 
-- Final runtime behavior of the V1.2 editor across arbitrary interfaces/components until the consolidated test.
-- Whether the AWT Canvas diagnostic paint remains visually stable with the current OpenGL renderer under continuous redraw.
-- Whether scrolled/clipped interfaces need parent scroll offsets added to the Wire Mesh transform after V1.2 runtime evidence.
-- Whether some interfaces require additional editable fields beyond V1 geometry/alignment/text/sprite controls.
-- Exact interface 671 values needed for the finished Backpack layout.
+- Runtime accuracy of V1.3 active-interface selection across arbitrary interface combinations until the targeted test.
+- Whether some cache interface IDs within the archive-group range are intentionally empty/unusable; Browse All deliberately exposes the numeric cache range without claiming every ID is populated.
+- Whether some interfaces require editable fields beyond V1 geometry/alignment/text/sprite controls.
+- Final renderer-native ownership point for a non-flashing Wire Mesh replacement.
 
 ## Dependencies
 
 - Existing Client Console shell/theme/icons.
 - Matrix3 `InterfaceDefinitions` / `Class512` component lookup.
+- Matrix3 root/subinterface runtime state (`client.anInt8790`, `client.aClass676_8760`, `Class572_Sub29`).
 - Existing logged-in client-cycle hook in `Class514.method6093(...)`.
-- Existing Matrix3 game Canvas at `Class584.aCanvas7745` for temporary diagnostic drawing/input observation.
 
 ## Development plan
 
@@ -91,138 +99,155 @@ Build a professional Client Console Interface Editor that lets Matrix3 developme
 
 **Status:** NEEDS TEST
 
-**Purpose:** Deliver a usable V1/V1.1/V1.2 that solves the immediate interface-debugging problem safely.
+**Purpose:** Deliver a usable live editor with low-friction interface discovery and reversible runtime experimentation.
 
 **Exit conditions:**
 
 - Editor opens from Client Console and remains responsive.
-- Component discovery/search works for interface 671 and at least one unrelated interface.
+- `Load Active Interface` identifies the expected foreground interface in representative cases.
+- `Open now` matches Matrix3's currently attached interfaces and updates when interfaces open/close.
+- Browse All searches the current cache interface range and loads selected IDs.
+- Component discovery/search works for interface 762 and at least one unrelated interface.
 - Live geometry sliders/nudges visibly change a selected component without an apply click or action backlog.
-- Wire Mesh visibly tracks useful component bounds and selected-component movement.
-- Pick Component selects a visible UI component without stealing normal game input outside picker mode.
 - Exact entry and deliberate text/sprite application work.
 - Reset Selected and Reset Interface restore pre-editor values.
+- Wire Mesh remains off by default under OpenGL until its paint path is replaced.
 - No Matrix3 gameplay/server authority regression occurs.
 
-#### Bundle 1.1 - V1 inspector/editor + live tuning/visualization UX
+#### Bundle 1.1 - Inspector/editor + live tuning foundation
 
 **Status:** NEEDS TEST
 
 **Checklist / patches:**
 
-- [x] Add client-thread interface snapshot/override bridge. `NEEDS TEST`
+- [x] Add client-thread component snapshot/override bridge. `NEEDS TEST`
 - [x] Add professional searchable Client Console editor panel. `NEEDS TEST`
 - [x] Add base/runtime geometry, alignment, text, and sprite controls. `NEEDS TEST`
-- [x] Add Apply Live, Reset Selected, Reset Interface, and Copy Values foundation. `NEEDS TEST`
-- [x] Add lazy rail navigation/persistence path. `NEEDS TEST`
-- [x] Remove the temporary hardcoded Backpack 671 width repair so it cannot fight live editor values. `NEEDS TEST`
+- [x] Add Reset Selected, Reset Interface, and Copy Values. `NEEDS TEST`
 - [x] Add live sliders for base/runtime X/Y/W/H. `NEEDS TEST`
 - [x] Add one-pixel nudges, exact geometry entry, and Fine/Normal/Wide slider ranges. `NEEDS TEST`
 - [x] Coalesce live drag writes to at most one queued client-thread override every 50ms. `NEEDS TEST`
-- [x] Keep text/sprite/alignment exact application and reset/copy workflows intact. `NEEDS TEST`
-- [x] Add Wire Mesh overlay with all/selected-only, IDs, dimensions, and parent-link controls. `NEEDS TEST`
-- [x] Add one-shot game-Canvas Pick Component and editor-selection synchronization. `NEEDS TEST`
-- [x] Disable overlay/picker outside Interface Editor so normal client input/render ownership remains isolated. `NEEDS TEST`
-- [x] Add targeted docs/tests. `NEEDS TEST`
+- [x] Add diagnostic Wire Mesh / Pick Component foundation. `CARRYOVER - overlay paint path flashes under OpenGL`
+- [x] Default Wire Mesh OFF after runtime flashing evidence. `NEEDS TEST`
 
-#### Bundle 1.2 - Runtime acceptance
+#### Bundle 1.2 - Runtime interface discovery/browser
+
+**Status:** NEEDS TEST
+
+**Checklist / patches:**
+
+- [x] Snapshot current root + attached subinterfaces on the client thread. `NEEDS TEST`
+- [x] Track a preferred active foreground interface using newly attached/main-interface heuristics. `NEEDS TEST`
+- [x] Add `Load Active Interface`. `NEEDS TEST`
+- [x] Add live `Open now` dropdown. `NEEDS TEST`
+- [x] Add searchable `Browse All Interfaces...` dialog with double-click / Load Selected. `NEEDS TEST`
+- [x] Mark OPEN / ACTIVE / ROOT state without claiming closed cache IDs are open. `NEEDS TEST`
+- [x] Update targeted docs/tests. `NEEDS TEST`
+
+#### Bundle 1.3 - Consolidated runtime acceptance
 
 **Status:** READY
 
 **Checklist / patches:**
 
-- [ ] Run `docs/interface-editor/testlist.txt`, including continuous slider drag/backlog/reset, Wire Mesh visibility/alignment, and picker/input-isolation checks.
-- [ ] Record any editor/layout/overlay failures as evidence-backed carryover.
-- [ ] Use the editor + Wire Mesh to identify the correct Backpack 671 values and copy them for the final Backpack fix.
+- [ ] Run `docs/interface-editor/testlist.txt`, starting with active/open/all-interface browsing on interface 762.
+- [ ] Verify one unrelated interface so discovery remains generic.
+- [ ] Verify one live slider -> nudge -> reset cycle with Wire Mesh OFF.
+- [ ] Record any active-selection/browser failures as evidence-backed carryover.
+- [ ] Keep renderer-native Wire Mesh replacement separate unless it blocks ordinary editor use.
+
+### Phase 2 - Evidence-backed editor expansion
+
+**Status:** PLANNED
+
+**Purpose:** Add only the higher-value capabilities justified by Phase 1 runtime use.
+
+**Possible future bundles:**
+
+- Renderer-native Wire Mesh / picker drawing without AWT/OpenGL contention.
+- Parent-chain/clipping visualization.
+- Friendly saved interface aliases/names when evidence exists.
+- Recent/favorite targets.
+- Permanent cache override export only after temporary editing is proven safe and useful.
 
 ## Current execution state
 
 - Phase: Phase 1 - Professional live editor foundation
 - Phase status: NEEDS TEST
-- Bundle: Bundle 1.2 - Runtime acceptance
+- Bundle: Bundle 1.3 - Consolidated runtime acceptance
 - Bundle status: READY
-- Approval state: V1.2 Wire Mesh + Pick Component approved by `SAP AAA` on 2026-09-08.
-- Current checklist item: Pull current main and run the quick Interface Editor V1.2 Wire Mesh/picker acceptance path.
-- Current objective: Prove overlay alignment, picker isolation, and fluid live tuning, then use them together to solve interface 671 without another guessed hardcoded layout patch.
+- Approval state: V1.3 active/open/all-interface browser approved by `SAP AAA` on 2026-09-08.
+- Current checklist item: Pull current main and verify `Load Active Interface`, `Open now`, and `Browse All Interfaces...` against interface 762.
+- Current objective: Prove low-friction interface discovery while keeping Wire Mesh off and preserving existing reversible editing behavior.
 
 ## Checklist / patch status
 
 | Item | Phase | Bundle | Status | Notes |
-| --- | --- | --- | --- | --- |
-| Client-thread bridge | 1 | 1.1 | NEEDS TEST | Swing queues requests; Matrix3 client cycle performs reads/writes. |
-| Searchable editor workspace | 1 | 1.1 | NEEDS TEST | Lazy Client Console panel with `interface[:component]` targeting. |
-| Live geometry sliders/nudges | 1 | 1.1 | NEEDS TEST | Eight sliders, exact fields, 1px nudges, three ranges, 50ms UI coalescing. |
-| Wire Mesh overlay | 1 | 1.1 | NEEDS TEST | Snapshot-driven Canvas diagnostics with selected/all, IDs, dimensions, parent links. |
-| Pick Component | 1 | 1.1 | NEEDS TEST | One-shot Canvas hit test; only armed diagnostic click is consumed. |
+| --- | --- | --- | --- |
+| Client-thread bridge | 1 | 1.1 | NEEDS TEST | Swing queues requests; Matrix3 client cycle performs reads/writes/discovery. |
+| Searchable editor workspace | 1 | 1.1 | NEEDS TEST | Generic `interface[:component]` targeting remains available. |
+| Live geometry sliders/nudges | 1 | 1.1 | NEEDS TEST | Eight sliders, exact fields, 1px nudges, three ranges, 50ms coalescing. |
+| Runtime interface catalog | 1 | 1.2 | NEEDS TEST | Root + attached subinterfaces exposed as immutable snapshots. |
+| Load Active / Open now | 1 | 1.2 | NEEDS TEST | Foreground heuristic + direct open-interface loading. |
+| Browse All Interfaces | 1 | 1.2 | NEEDS TEST | Searchable cache range with OPEN/ACTIVE/ROOT markers. |
+| Wire Mesh overlay | 1 | 1.1 | CARRYOVER | AWT paint flashes OpenGL canvas; default OFF pending renderer-native replacement. |
 | Reversible live overrides | 1 | 1.1 | NEEDS TEST | Original values captured on first override and restored on reset. |
-| Value capture | 1 | 1.1 | NEEDS TEST | Copy Values exports the current working component state. |
-| V1.2 runtime acceptance | 1 | 1.2 | READY | Next execution target. |
+| Value capture | 1 | 1.1 | NEEDS TEST | Copy Values exports current working component state. |
+| V1.3 runtime acceptance | 1 | 1.3 | READY | Next execution target. |
 
 ## Decisions / new ideas
 
 ### Decision log
 
-- 2026-09-06: Build a generic Interface Editor rather than continue one-off interface 671 guesses.
-- 2026-09-06: Keep V1 edits temporary/reversible and client-thread-owned; permanent cache/server writes are explicitly deferred.
-- 2026-09-06: Expose known/useful fields first instead of presenting every obfuscated integer as if its semantics were understood.
-- 2026-09-06: Remove the temporary automatic Backpack width override because it would conflict with manual editor experiments.
-- 2026-09-08: Geometry discovery should be direct-manipulation first. Sliders and 1px nudges apply live by default; exact number entry remains available for final values.
-- 2026-09-08: Rate-limit slider traffic at the Swing/editor layer rather than changing Matrix3 interface authority or adding another worker/thread owner.
+- 2026-09-06: Build a generic Interface Editor rather than continue one-off interface-value guesses.
+- 2026-09-06: Keep V1 edits temporary/reversible and client-thread-owned; permanent cache writes are deferred.
+- 2026-09-06: Expose known/useful fields first rather than presenting every obfuscated integer as understood.
+- 2026-09-08: Geometry discovery is direct-manipulation first: sliders + 1px nudges apply live while exact entry remains available.
+- 2026-09-08: Rate-limit slider traffic at the editor layer instead of changing Matrix3 interface authority.
 - 2026-09-08: Keep text/sprite edits deliberate instead of auto-applying every keystroke.
-- 2026-09-08: Wire Mesh is a read-only diagnostic consumer of Interface Editor snapshots, not a second interface renderer/data owner.
-- 2026-09-08: Pick Component is deliberately one-shot and consumes only its armed left-click so ordinary Matrix3 interaction remains untouched outside diagnostic selection.
-- 2026-09-08: Parent-link visualization is optional and off by default to keep the normal overlay readable; enable it when diagnosing hierarchy/overlap.
+- 2026-09-08: Wire Mesh remains diagnostic-only. Runtime evidence showed the AWT Canvas paint path conflicts with OpenGL, so it defaults OFF and renderer-native drawing is carryover.
+- 2026-09-08: Interface discovery should use Matrix3's live root/subinterface registry rather than infer openness from loaded definitions.
+- 2026-09-08: `Load Active Interface` uses a bounded heuristic: newly attached non-root interfaces are preferred, with loaded component count used to favor a main foreground interface over small helpers.
+- 2026-09-08: Browse All exposes the cache ID range but only labels an interface OPEN when the runtime catalog says it is attached.
 
 ## Testing
 
+See `docs/interface-editor/testlist.txt` for the targeted V1.3 acceptance path.
+
 ### Quick/high-value checks
 
-1. Open Interface Editor from the Client Console rail.
-2. Load `671:27`; confirm component list/inspector populate and Wire Mesh appears over the open Backpack interface.
-3. Arm Pick Component and click the visible item-grid/component area; confirm the editor selects the picked component without also firing the normal game action.
-4. With picker off, click/use the game normally and confirm input is untouched.
-5. Drag Runtime X and confirm both component 27 and its selected wireframe move continuously without pressing Apply.
-6. Toggle selected-only, IDs, dimensions, and parent links; confirm these are diagnostic-only changes.
-7. Use +/- and exact Enter/focus-loss values; confirm 1px nudges and exact values apply live.
-8. Change Fine/Normal/Wide range and confirm the current value is preserved.
-9. Drag quickly and confirm no delayed backlog after release.
-10. Reset Selected and confirm the component + wireframe return to pre-editor state with no stale live write afterward.
-11. Switch away from Interface Editor and confirm Wire Mesh/picker disappear immediately.
-12. Copy Values and verify the clipboard includes interface/component/base/runtime/alignment/text/sprite values.
-
-### Deeper checks
-
-1. Use Pick Component across several overlapping 671 regions and confirm child/deeper widgets win over large parent containers where expected.
-2. Search/filter components, then pick a hidden-by-filter component and confirm the editor makes the picked row selectable.
-3. Disable Live geometry and verify manual `Apply Exact / Visual` behavior.
-4. Test text override on a harmless known text component.
-5. Test Reset Interface after multiple component overrides.
-6. Load one unrelated interface and confirm sliders/Wire Mesh/picker remain generic.
-7. Restart Client and confirm temporary overrides and diagnostic overlay state do not persist as interface/cache changes.
+1. Open Bank/Backpack interface 762.
+2. Open Interface Editor; confirm Wire Mesh is OFF and no flashing occurs.
+3. Click Load Active Interface; expect 762.
+4. Confirm Open now contains 762 plus the root/helper interfaces.
+5. Browse All -> search 762 -> double-click; expect 762 to load.
+6. Close/reopen 762 and confirm Open now updates.
+7. Perform one harmless Runtime X drag, +/- nudge, then Reset Selected.
 
 ### Smoke/regression checks
 
 - Normal login/render/input.
 - Existing Client Console panels still open/collapse/persist normally.
-- Commands/Item Browser/Settings authority unchanged.
-- Backpack server storage/routing unchanged by this tool.
-- With picker off or Interface Editor hidden, normal Matrix3 mouse behavior is unchanged.
+- Interface discovery/browser is client tooling only; no server/gameplay authority change.
+- Wire Mesh OFF does not flash the OpenGL canvas.
+- Temporary live overrides still disappear after reset/restart.
 
 ## Carryover / blockers
 
 ### CARRYOVER
 
-- Backpack final interface layout remains a separate Backpack workstream task. Use Interface Editor findings as evidence for the final minimal patch.
+- Renderer-native Wire Mesh replacement: current AWT paint path flashes under OpenGL. Do not re-enable by default until the renderer-native owner is established and tested.
+- Parent-chain/clipping visualization can build on the future renderer-native overlay if still useful.
 
 ### BLOCKED
 
-- None.
+- None. The browser/editor can proceed with Wire Mesh disabled.
 
 ## Resume Here
 
 **Last completed:**
 
-- Interface Editor V1.2 Wire Mesh + Pick Component implemented statically on top of the V1.1 live-slider editor. Overlay controls, selected-component synchronization, optional parent links, and one-shot game-Canvas picking are present.
+- Interface Editor V1.3 active/open/all-interface discovery implemented statically. Runtime interface state now comes from Matrix3's root/subinterface owners, and Wire Mesh defaults OFF after verified OpenGL flashing.
 
 **Current phase:**
 
@@ -230,47 +255,46 @@ Build a professional Client Console Interface Editor that lets Matrix3 developme
 
 **Active bundle:**
 
-- Bundle 1.2 - Runtime acceptance (`READY`).
+- Bundle 1.3 - Consolidated runtime acceptance (`READY`).
 
 **Next checklist item:**
 
-- Run `docs/interface-editor/testlist.txt`, starting with Wire Mesh visibility on open `671`, then one Pick Component click and one live Runtime X drag on `671:27`.
+- Run the short V1.3 discovery test: open 762 -> Load Active -> inspect Open now -> Browse All search 762 -> one live slider/reset check.
 
 **Current state / next action:**
 
-- Pull current main, clean/build the Client in Eclipse/Java 8, open Interface Editor + Backpack, and verify overlay -> pick -> live slider -> reset behavior in one short session.
+- Pull current main, clean/build Client in Eclipse/Java 8, launch normally, and test discovery first with Wire Mesh left OFF.
 
 **Files/systems already inspected:**
 
 - `AGENTS.md`
 - `docs/rs3/PROJECT.md`
-- `docs/client-console/PROJECT.md`
-- `docs/backpack/PROJECT.md`
-- `ClientConsoleShell.java`
-- `ConsoleTheme.java`
-- `ConsoleIcons.java`
-- `PlayerPanel.java`
-- `ClientConsoleBridge.java`
+- `docs/interface-editor/PROJECT.md`
 - `ClientConsoleInterfaceBridge.java`
-- `ClientConsoleInterfaceOverlay.java`
 - `InterfaceEditorPanel.java`
-- `Class512.java`
-- `Class514.java`
-- `Class584.java`
-- `Canvas_Sub1.java`
-- `CustomItemActionConfig.java`
-- removed `BackpackInterfaceLayout.java`
+- `InterfaceBrowserDialog.java`
+- `ClientConsoleInterfaceOverlay.java`
+- `PacketsDecoder.java` ROOT_INTERFACE / SET_INTERFACE paths
+- `Class104_Sub1.method9918(...)`
+- `Class676.java`
+- `Class572.java`
+- `Class572_Sub29.java`
+- `Class534.java`
+- `Class83.java`
 
 **Do not re-scan without new evidence:**
 
-- Client Console shell/lazy-panel ownership.
-- Interface 671 component-lookup path already established by Backpack tracing.
-- Backpack server storage/routing while testing editor-only behavior.
-- Broader renderer internals unless runtime evidence shows the AWT Canvas diagnostic overlay cannot remain visible with the current renderer.
+- Root/subinterface runtime ownership (`client.anInt8790`, `client.aClass676_8760`).
+- Existing component snapshot/live-override ownership.
+- Broader renderer internals until the renderer-native Wire Mesh carryover is explicitly resumed.
 
 **Pending runtime verification:**
 
-- V1.2 editor visual quality, live slider smoothness, nudge/exact entry, action-queue behavior, reset safety, Wire Mesh OpenGL visibility/alignment, parent-link usefulness, picker hit selection/input isolation, copy, generic interface handling, and active-panel persistence.
+- Active-interface heuristic accuracy.
+- Open-now add/remove behavior.
+- Browse-All cache range/search/load behavior.
+- Existing slider/nudge/reset behavior after browser integration.
+- Wire Mesh remains safely off by default.
 
 **Blockers:**
 
@@ -278,9 +302,8 @@ Build a professional Client Console Interface Editor that lets Matrix3 developme
 
 **Important remaining uncertainty:**
 
-- Whether the Canvas overlay remains stable/accurately aligned under the current OpenGL renderer and nested/scrolled interface layouts.
-- Which exact interface 671 component values produce the correct full Backpack layout; the editor is the intended discovery path.
+- Whether the active-interface heuristic needs a stronger foreground/parent-priority rule after real runtime testing.
 
 ## Next recommended work
 
-Run Interface Editor V1.2 acceptance, then use Wire Mesh + picker + copied working 671 values to make the final evidence-backed Backpack interface fix.
+Run Interface Editor V1.3 acceptance. Patch only evidence-backed discovery/selection failures; keep the OpenGL Wire Mesh renderer replacement as a separate future bundle unless the user explicitly resumes it.
