@@ -95,6 +95,7 @@ If older BossLabs prose conflicts with the phase/checklist or Resume Here state 
 - Testing uses an exact per-admin test NPC instance rather than world lookup by NPC ID.
 - The Testing UI can spawn/reset/set HP for plain Matrix3 NPCs; BossLabs-only phase/attack/hazard/minion controls remain live-definition gated.
 - Attack Pattern authoring edits the same DRAFT tile-offset data persisted by the existing v8 definition path.
+- `BossCombatScript.resolvePatternTiles()` applies authored offsets through `origin.transform(x, y, 0)`. The Attack Pattern canvas now renders the same convention (`+X` right, `+Y` up), so manual painting, hover coordinates, Nudge Up/Down, and Rotate Left/Right agree statically with Matrix3 world offsets without changing persisted data.
 - BossLabs drop editing overlays the existing `NPCDrops` map while Matrix3 `Drops.generateDrops()` remains runtime authority.
 - Saved drop overrides load after packed Matrix3 drops so the packed table is available as the restore baseline.
 - Matrix3 Rare/Very Rare wearable split entries are exposed back to the editor so inspection does not silently lose them.
@@ -112,7 +113,7 @@ If older BossLabs prose conflicts with the phase/checklist or Resume Here state 
 ### UNKNOWN
 
 - Runtime correctness/timing of weighted rotation, phase transitions, telegraph delay, hazard interval, minion lifecycle cleanup, and definition-replacement cleanup under real combat.
-- Visual orientation of Attack Pattern Rotate Left/Right and Nudge Up/Down in the actual Swing canvas.
+- Runtime confirmation that the corrected `+Y`-up Attack Pattern canvas corresponds to the intended in-game tile placement and survives v8 save/reload exactly.
 - Runtime behavior of deeper Drops controls/edge cases not required for the core milestone: one-level Undo, Apply Saved, Delete Saved Override, duplicate-slot weighting round-trip, Rare/Very Rare wearable readback, and multi-NPC store isolation.
 - Whether the first complete proof boss requires true fixed Arena Layout semantics or can be completed with existing world placement plus relative attack patterns.
 
@@ -268,7 +269,8 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - [x] Large phase/attack-aware relative pattern workspace.
 - [x] Presets, copy/paste, zoom/pan, drag paint/erase.
 - [x] Undo and transform tooling.
-- [ ] Runtime/UI verification of transform directions and save/reload fidelity.
+- [x] Static audit corrected the canvas Y-axis adapter to match Matrix3 `WorldTile.transform(x, y, 0)`: +X right, +Y up; existing rotate/nudge math now matches the visual coordinate convention.
+- [ ] Runtime/UI verification of corrected world/canvas direction, in-game tile placement, and save/reload fidelity.
 
 #### Bundle V2.4-B - Matrix3-native Drops
 
@@ -348,8 +350,8 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - **Phase status:** NEEDS TEST
 - **Bundle:** V2.1-A - Consolidated runtime verification
 - **Bundle status:** NEEDS TEST
-- **Approval state:** V2.4-B Drops core workflow is runtime-proven; no new feature expansion is active.
-- **Current checklist item:** Continue the consolidated BossLabs runtime pass: window lifecycle, live BossLabs NPC inspection, phase/attack authoring/testing, Attack Pattern transforms/persistence, encounter cleanup, and smoke coverage.
+- **Approval state:** SAP AAA approved the next verification-prep step; a static Attack Pattern coordinate mismatch was found and repaired without expanding runtime ownership.
+- **Current checklist item:** Pull/build the corrected Attack Pattern client, then continue the consolidated BossLabs runtime pass: window lifecycle, live BossLabs NPC inspection, phase/attack authoring/testing, corrected pattern transforms/persistence, encounter cleanup, and smoke coverage.
 - **Current objective:** Close the required V2.1/V2.2 gates so V2.3 Asset Workflow can begin without carrying known workflow regressions forward.
 
 ## Checklist / patch status
@@ -359,7 +361,7 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 | Creator shell/direct composition | V2.1 | V2.1-B | NEEDS TEST | User reports repaired creator flow works; full shell gate still has a few checks pending. |
 | Phase/attack creator workflow | V2.2 | V2.2 | NEEDS TEST | Main creator flow improved; deeper author/test/save behavior still pending. |
 | Context-aware Testing workflow | V2.2 | V2.2 | NEEDS TEST | Includes plain Matrix3 spawn/reset/HP and BossLabs-specific controls. |
-| Attack Pattern transforms/undo | V2.2/V2.4 | V2.4-A | NEEDS TEST | Visual direction and persistence check pending. |
+| Attack Pattern transforms/undo | V2.2/V2.4 | V2.4-A | NEEDS TEST | Static screen/world Y-axis mismatch repaired; corrected direction, runtime placement, and persistence still need runtime verification. |
 | Matrix3-native Drops | V2.4 | V2.4-B | DONE | Runtime-proven: edit, Apply Live, actual Matrix3 ground drop, Save & Apply, restart persistence, and Restore Matrix3. |
 | Duplicate drop slot weighting correction | V2.4 | V2.4-B | NEEDS TEST | Verified-static semantics preserved; runtime duplicate-slot round-trip is optional deeper acceptance. |
 | Asset workflow | V2.3 | V2.3-A | READY | Next implementation phase only after required V2.1/V2.2 gates pass. |
@@ -380,6 +382,7 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - Matrix3 legacy `Drop`/packed data permits quantity `0`; BossLabs inspection must preserve that data rather than rejecting the entire table. New/edited rows must still satisfy max >= min before publishing.
 - A failed Drops inspection must terminate with a visible error. Silent world-task exceptions or indefinite `DRAFT: loading` are not acceptable creator behavior.
 - A malformed legacy Matrix3 row may block publishing until corrected; future Drops polish may highlight/jump to invalid rows, but this is usability carryover and does not block the proven core drop pipeline.
+- Attack Pattern uses Matrix3 runtime tile-offset coordinates directly. The authoring canvas must adapt Swing screen Y to world Y rather than changing stored/runtime offsets; +X is right and +Y is up in the creator view.
 - True Arena Layout is deferred until real encounter content requires fixed encounter-space semantics.
 - Creator-state invariant: **no successfully inspected NPC means no editable BossLabs DRAFT**. Empty/loading/missing states must be explicit and non-interactive rather than relying on individual controls to silently no-op.
 
@@ -408,10 +411,11 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 1. Verify normal login/Client Console behavior and BossLabs close/reopen lifecycle.
 2. Confirm plain Matrix3 Testing allows Spawn Boss Here, Reset Encounter, and Set HP; BossLabs-only controls remain disabled until a live BossLabs definition exists.
 3. Create a simple valid phase + attack, Apply Live, spawn the controlled test boss, enter the selected phase, and test the selected attack.
-4. Exercise a patterned attack: drag-paint/erase, Undo, rotate, mirror, nudge, Apply Live, and confirm intended visual direction/tiles.
+4. Exercise an asymmetric patterned attack: paint one tile above target and confirm hover reports `Y +1`; drag-paint/erase, Undo, Nudge Up/Down, Rotate Left/Right, mirror, Apply Live, and confirm the in-game tiles correspond to the same +X-right/+Y-up authored offsets.
 5. Exercise one telegraph/hazard and one minion action; use Clear Hazards + Minions and Reset Encounter.
-6. Confirm an unrelated normal Matrix3 NPC still uses its original combat and drop behavior.
-7. Run required `docs/rs3/SMOKE_TEST.md` coverage after the startup/drop-persistence change.
+6. Save & Apply the boss definition, restart/reinspect, and confirm the phase/attack/pattern survives through definition store/wire v8.
+7. Confirm an unrelated normal Matrix3 NPC still uses its original combat and drop behavior.
+8. Run required `docs/rs3/SMOKE_TEST.md` coverage after the startup/drop-persistence change.
 
 ### Deeper checks when time allows
 
@@ -456,7 +460,8 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 
 - Runtime-proven the repaired Matrix3-native Drops core pipeline end-to-end on `Man [1]`.
 - Verified local DRAFT editing, `Apply Drops Live`, actual Matrix3 ground-drop generation, `Save & Apply Drops`, Server restart persistence, and `Restore Matrix3`.
-- Reclassified Matrix3-native Drops as a completed canonical milestone while preserving deeper edge-case acceptance as non-blocking follow-up.
+- Static pre-test audit found the Attack Pattern canvas displayed Matrix3 +Y downward because it used raw Swing screen Y. The canvas adapter now flips screen Y so +Y renders upward while stored/runtime offsets remain unchanged.
+- Updated the Attack Pattern acceptance list to match the current left-paint/right-erase workflow and explicitly test +X-right/+Y-up world/canvas semantics.
 
 **Current phase:**
 
@@ -468,7 +473,7 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 
 **Next checklist item:**
 
-- Continue the short consolidated BossLabs runtime pass: close/reopen lifecycle, inspect a live BossLabs NPC, author/test a simple phase + attack, verify Testing controls, verify Attack Pattern transforms/save-reload, exercise hazard/minion cleanup, then run the required smoke coverage.
+- Pull/build the corrected Client, then continue the short consolidated BossLabs runtime pass: close/reopen lifecycle, inspect a live BossLabs NPC, author/test a simple phase + attack, verify Testing controls, verify corrected Attack Pattern directions/runtime placement/save-reload, exercise hazard/minion cleanup, then run the required smoke coverage.
 
 **Current state / next action:**
 
@@ -482,9 +487,17 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - `docs/rs3/PROJECT.md`
 - `docs/bosslabs/PROJECT.md`
 - `docs/bosslabs/drops-testlist.txt`
+- `docs/bosslabs/arena-workspace-testlist.txt`
+- `Client/src/main/java/game/console/bosslabs/BossLabsPanel.java`
+- `Client/src/main/java/game/console/bosslabs/BossLabsDefinitionEditor.java`
+- `Client/src/main/java/game/console/bosslabs/BossLabsTestingPanel.java`
+- `Client/src/main/java/game/console/bosslabs/BossLabsArenaPanel.java`
+- `Client/src/main/java/game/console/bosslabs/BossLabsClientBridge.java`
 - `Client/src/main/java/game/console/bosslabs/BossLabsDropPanel.java`
 - `Client/src/main/java/game/console/bosslabs/BossLabsDropClientBridge.java`
 - `Client/src/main/java/game/console/bosslabs/BossLabsDropDraftDefinition.java`
+- `Server/src/main/java/com/rs/game/npc/bosslabs/BossLabsCommandBridge.java`
+- `Server/src/main/java/com/rs/game/npc/bosslabs/BossCombatScript.java` pattern resolution seam
 - `Server/src/main/java/com/rs/game/npc/bosslabs/BossLabsDropCommandBridge.java`
 - `Server/src/main/java/com/rs/game/npc/bosslabs/BossLabsDropDefinition.java`
 - `Server/src/main/java/com/rs/game/npc/bosslabs/BossLabsDropPublisher.java`
@@ -500,6 +513,7 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - BossLabs combat authority boundaries.
 - Existing definition wire/store v8 ownership.
 - Existing Testing exact-instance ownership.
+- Attack Pattern coordinate ownership: server uses `WorldTile.transform(x, y, 0)` and the client canvas now adapts screen Y to that world convention.
 - The main creator-state failure path established by the 2026-09-06 video.
 - Drops item-index/search path; runtime verified to resolve and author item `4151`.
 
@@ -508,7 +522,7 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 - Remaining creator-state/phase/attack checks.
 - BossLabs window lifecycle and direct composition.
 - Testing spawn/reset/HP/selected phase/selected attack.
-- Pattern transform visual directions and save/reload.
+- Corrected Attack Pattern +Y-up canvas, transform directions, runtime tile placement, and save/reload.
 - Encounter hazard/minion cleanup.
 - Boss definition persistence/restart.
 - Normal unrelated Matrix3 NPC combat/drop regression.
@@ -521,11 +535,12 @@ No later phase may be marked COMPLETE until its earlier required gate is satisfi
 
 **Important remaining uncertainty:**
 
+- Runtime correspondence between the corrected pattern canvas and actual in-game tile placement until the next test pass.
 - Exact best reuse path for animation/GFX/projectile selection until V2.3 narrow scan.
 - Whether true Arena Layout is actually required by the first proof boss.
 
 ## Next recommended work
 
-**Resume the consolidated V2.1/V2.2 BossLabs runtime verification; Drops no longer blocks progress.**
+**Pull/build the corrected Client and resume the consolidated V2.1/V2.2 BossLabs runtime verification.**
 
 After those required gates and the remaining pattern/smoke checks pass, start V2.3 Asset Workflow, then move toward the first complete generic boss.
