@@ -2,9 +2,24 @@
 
 ## Goal
 
-Build a persistent, searchable reverse-engineering map of the obfuscated **718+ Client** so future investigations start from saved structural/runtime evidence instead of repeatedly searching, tracing, and guessing through decompiled source.
+Build a persistent reverse-engineering system that can **systematically map the whole obfuscated 718+ Client over time** instead of repeatedly searching and guessing through decompiled source.
 
-Client Atlas is developer/reverse-engineering tooling. Client runtime behavior remains authoritative; Atlas records evidence without renaming obfuscated symbols or inventing semantics.
+The primary workflow is now assistant-driven semantic mapping:
+
+```text
+current compiled client
+    -> static Atlas structure
+    -> runtime evidence when needed
+    -> semantic coverage state
+    -> bounded mapping queue / structural bundle
+    -> assistant investigation
+    -> curated exact-ID evidence
+    -> next unfinished bundle
+```
+
+The Client Console browser remains useful as a lookup/viewer/editor, but it is **not** the main mapping workflow and the user is not expected to manually reverse-engineer random obfuscated fields.
+
+Client runtime behavior remains authoritative. Atlas must never invent semantics, rename obfuscated source, or silently promote guesses.
 
 ## Canonical Main-Goal Status
 
@@ -12,12 +27,13 @@ This table is the authority for user-facing Client Atlas status across chats.
 
 | Main-goal area | Status |
 | --- | --- |
-| Static client knowledge foundation | ✅ Complete |
-| Static relationship mapping | ✅ Complete |
-| Fast investigation/search | ✅ Complete |
+| Static structural map | ✅ Complete |
 | Runtime evidence/tracing | ✅ Complete |
-| Client Console Atlas browser | 🔵 In Progress |
-| Advanced correlation/knowledge | 🔵 In Progress |
+| Persistent semantic knowledge | ✅ Complete |
+| Semantic mapping/coverage engine | 🔵 In Progress |
+| Assistant mapping queue/bundles | 🔵 In Progress |
+| Atlas lookup/viewer | ⚠️ Needs runtime verification |
+| Whole-client semantic coverage | 🟡 Foundation |
 
 Checklist state below is the execution map. Do not derive replacement milestone rows from it.
 
@@ -26,15 +42,13 @@ Checklist state below is the execution map. Do not derive replacement milestone 
 - Phase 1 runtime gate: PASS.
 - Phase 2 structural gate: `PHASE 2 STRUCTURAL CHECK: PASS`.
 - Phase 2 final investigation gate: `PHASE 2 INVESTIGATION CHECK: PASS`.
-- 1221 compiled client classes.
-- 33742 symbols.
-- 325826 relationships.
-- `symbols.jsonl` ~8.5 MiB / `relationships.jsonl` ~74.4 MiB.
+- Historical verified structural baseline: 1221 compiled client classes / 33742 symbols / 325826 relationships.
+- `symbols.jsonl` ~8.5 MiB / `relationships.jsonl` ~74.4 MiB at that baseline.
 - Structural scan ~1.28 s.
 - Investigation-index load ~946.649 ms / ~181.5 MiB approximate memory delta.
 - Exact search ~0.588 ms / friendly search ~0.416 ms.
-- Depth-2 verifier neighborhood 28 nodes / 40 relationships.
-- Domain queries remain hints; semantic status stays `UNKNOWN` and never auto-promotes `LITERAL_ID`.
+- Depth-2 verifier neighborhood: 28 nodes / 40 relationships.
+- Domain candidates stay semantic `UNKNOWN` until evidence proves meaning; no automatic `LITERAL_ID` promotion.
 
 Last Phase 2 runtime-confirmed fingerprint:
 
@@ -42,159 +56,110 @@ Last Phase 2 runtime-confirmed fingerprint:
 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
 ```
 
-Phase 3 changed client runtime source. The corrected Bundle 3A gate rebuilt Atlas against the current compiled client and accepted the saved trace as `CURRENT`.
+Later phases changed client/tooling classes, so current generated Atlas data must always be rebuilt against the current compiled fingerprint before current-only search/correlation/mapping is accepted.
 
 # Architecture / ownership
 
 - Existing Matrix3 client runtime/cache/network/interface/input/definition systems remain authoritative.
-- Atlas owns generated metadata, search/correlation APIs, exports, traces, aliases, and evidence records.
+- `game.atlas` owns generated structure, search, trace control/correlation, semantic evidence, mapping coverage, and mapping-queue planning.
+- Client Console remains a UI consumer only.
 - Original obfuscated identifiers remain primary IDs.
-- JSONL remains static persistence authority; no database is justified by current measurements.
-- `.client-atlas/` remains Git-ignored and survives normal build cleaning.
-- Runtime tracing is opt-in, bounded, switchable, payload-minimal, and failure-isolated.
-- Normal client startup remains `game.RS3Applet`.
+- JSONL remains the structural/evidence persistence format; no database is justified by current measurements.
+- `.client-atlas/` remains Git-ignored local Atlas state and survives normal build cleaning.
 - Java 8 / Eclipse remains the protected target.
 
-Runtime observation/correlation path:
+Static/runtime path:
+
+```text
+compiled Matrix3 client
+    -> AtlasScanner
+        -> symbols.jsonl + relationships.jsonl + fingerprint
+            -> AtlasInvestigationIndex
+                -> search / relationship queries
+                -> runtime correlation
+```
+
+Runtime evidence path:
 
 ```text
 Matrix3 runtime / small existing bridge
     -> game.AtlasRuntimeBridge
-        -> game.atlas.AtlasTraceRecorder
-            -> bounded .trace.jsonl
-                -> current AtlasInvestigationIndex
-                    -> AtlasTraceCorrelationEngine
-                        -> bounded assistant correlation JSON
+        -> AtlasTraceRecorder
+            -> bounded trace JSONL
+                -> AtlasTraceCorrelationEngine
+                    -> exact current Atlas symbols
 ```
 
-Curated knowledge path:
+Curated semantic knowledge path:
 
 ```text
 exact current Atlas symbol ID
     -> AtlasEvidenceStore
-        -> persistent .client-atlas/evidence.jsonl
-            -> EvidenceView freshness/orphan evaluation
-                -> curated search / Client Console Atlas editor
+        -> .client-atlas/evidence.jsonl
+            -> VERIFIED / verified-static / HYPOTHESIS / UNKNOWN
+            -> freshness/orphan evaluation
 ```
 
-Client Console browser/runtime path:
+Semantic mapping path:
 
 ```text
-ClientConsoleShell lazy Atlas destination
-    -> game.console.AtlasWorkspacePanel
-        -> Browser: game.console.AtlasPanel
-            -> AtlasWorkspace / AtlasInvestigationIndex / AtlasSearchEngine
-            -> AtlasEvidenceStore
-        -> Runtime evidence: game.console.AtlasRuntimeEvidencePanel
-            -> AtlasTraceCatalog
-            -> existing ClientAtlasTraceControl
-            -> current AtlasInvestigationIndex / AtlasTraceCorrelationEngine
+AtlasInvestigationIndex + AtlasEvidenceStore
+    -> AtlasMappingQueue
+        -> per-symbol semantic coverage state
+        -> owner connectivity graph
+        -> deterministic bounded structural bundles
+        -> next assistant mapping package
+        -> .client-atlas/mapping-next.md
 ```
 
-The Client Console does not own Atlas scanning, ranking, relationship semantics, trace recording/control semantics, correlation acceptance, fingerprint rules, or evidence persistence. `game.atlas` remains the engine/data authority.
+The queue is planning only. It cannot create semantic claims. It may prioritize unknown/stale/high-connectivity areas, but evidence classification remains human/assistant evidence-driven.
 
-Curated knowledge rules:
+# Evidence and safety rules
 
-- exact obfuscated Atlas IDs remain primary; aliases never rename generated symbols,
-- one curated record per exact subject ID,
-- new/updated records require a symbol that exists in a current `AtlasInvestigationIndex`,
-- each record stores the current Atlas fingerprint at edit time,
-- classifications are only `VERIFIED`, `verified-static`, `HYPOTHESIS`, or `UNKNOWN`,
-- supporting references are external evidence pointers/notes and never create generated relationships,
-- stale fingerprints and missing subject IDs produce warnings instead of deletion or automatic reclassification,
-- curated search is separate from generated symbol ranking so notes/aliases cannot distort structural evidence,
-- `evidence.jsonl` is curated state and is never reset by normal static rescans.
+- Exact obfuscated Atlas IDs remain primary; aliases never rename generated symbols.
+- One curated record currently exists per exact subject ID.
+- New/updated evidence requires a symbol present in a current `AtlasInvestigationIndex`.
+- Each record stores the current Atlas fingerprint at edit time.
+- Classifications are only `VERIFIED`, `verified-static`, `HYPOTHESIS`, or `UNKNOWN`.
+- `VERIFIED` requires runtime confirmation.
+- `verified-static` requires direct source/data proof.
+- `HYPOTHESIS` is plausible but unproven.
+- `UNKNOWN` remains unknown.
+- Stale fingerprints and missing subjects produce warnings instead of deletion or reclassification.
+- Curated evidence never changes structural ranking.
+- Normal static rescans reset generated symbols/relationships only; curated evidence survives.
+- Tracing remains OFF by default, bounded to 10000 stored/read events, payload-minimal, and failure-isolated.
+- Definition tracing remains capped at 4000 stored events with duplicate/category filtering counted as suppression rather than drops.
+- Packet payload byte arrays, credentials, arbitrary chat/text strings, arbitrary object dumps, and stack traces are not captured.
+- Runtime correlation never creates semantic claims.
+- Mapping queue output is bounded and exact-ID based.
+- Atlas-owned `game.atlas`, Client Console `game.console`, and the Atlas runtime bridge classes are excluded from semantic self-mapping.
 
-Safety contract:
+# Completed foundations
 
-- tracing OFF by default,
-- no event-path disk writes,
-- maximum 10000 stored/read trace events,
-- definition category maximum 4000 stored events,
-- repeated definition/load combinations recorded once per session,
-- intentional filtering counted as `suppressedCount`,
-- actual global-buffer loss counted as `droppedCount`,
-- no packet payload byte arrays,
-- no credentials,
-- no arbitrary chat/text strings,
-- no arbitrary object dumps or stack traces,
-- observation failures cannot interrupt normal client behavior,
-- saved traces carry the compiled-client fingerprint when available,
-- correlation never creates semantic claims or auto-promotes `LITERAL_ID`,
-- curated evidence is bounded and atomically rewritten,
-- malformed/duplicate curated records fail explicitly instead of being silently accepted,
-- Client Console Atlas index loading/search/evidence I/O runs off the Swing EDT,
-- Client Console search output is bounded to 50 structural candidates,
-- relationship display is bounded to 60 outgoing + 60 incoming relationships per selected symbol,
-- Runtime evidence trace browsing exposes at most the newest 100 saved traces,
-- Runtime evidence trace listing/correlation runs off the Swing EDT,
-- Runtime evidence correlation reuses the existing current-index/10000-event/1000-preview acceptance path unchanged,
-- exact obfuscated IDs remain visible throughout search, detail, relationship navigation, and evidence editing,
-- human-readable browser wording is presentation only; it does not alter Atlas relationship types, symbol IDs, evidence status, ranking, or persistence,
-- `What Atlas knows` may summarize structural facts and saved curated evidence, but must explicitly leave unknown real game meaning unknown rather than inventing semantics.
-
-# Completed static capabilities
-
-## Phase 1 - DONE
+## Phase 1 - Static knowledge foundation - DONE
 
 - Stable symbol IDs and metadata/fingerprint workspace.
-- ASM bytecode declaration scanner.
+- ASM declaration scanner.
 - Exact query/export.
 - Standalone Atlas Control.
 - Runtime verification passed.
 
-## Phase 2 - DONE
+## Phase 2 - Structural relationships + investigation - DONE
 
 - CALLS / DYNAMIC_CALL / field reads+writes / type references / typed constants.
-- In-memory investigation index.
+- Immutable in-memory investigation index.
 - Ranked/friendly search with ambiguity safety.
 - Bounded relationship and depth-1/2 neighborhood queries.
 - Assistant export v2.
-- Safe domain correlation such as `interface 762`, `component 7`, `762:7`, `animation 1234`, and `model 5678`.
-- Final combined runtime verification passed.
+- Safe domain candidate correlation.
+- Final investigation runtime gate passed.
 
-# Phase 3 - Runtime Evidence and Knowledge
+## Phase 3 - Runtime Evidence and Knowledge - DONE
 
-**Status: DONE**
+### Bundle 3A - Targeted runtime tracing - DONE / RUNTIME VERIFIED
 
-## Bundle 3A - Targeted runtime tracing
-
-**Status: DONE / RUNTIME VERIFIED**
-
-### 3A-Core - DONE / RUNTIME VERIFIED
-
-- [x] **3A.0 Targeted architecture discovery - verified-static.**
-- [x] **3A.1 Trace-session lifecycle - runtime verified.**
-- [x] **3A.2 Menu/input coverage - runtime verified.**
-  - menu path: `Class25.method728(...) -> Class319.method4094(...) -> DevModeBridge.handleMenuAction(...)`,
-  - no menu text captured,
-  - runtime traces proved the hook is live,
-  - two previously guessed coordinate fields are neutral `rawArg1/rawArg2` because runtime values did not support coordinate semantics,
-  - `AtlasKeyboardObserver` mirrors verified `Class549_Sub1` normalization without consuming events or rewriting the large input class.
-- [x] **3A.3 Packet metadata coverage - runtime verified.**
-  - outgoing: `Class195.method2929(...)`,
-  - incoming safe wrapper: `MaterialInformation.method1605(...)` after central decoder processing,
-  - IDs/length metadata only; no payload bytes.
-- [x] **3A.4 Initial interface activity coverage - runtime verified.**
-  - named interface/component packet classification,
-  - traces observed interface activity while normal client behavior remained intact,
-  - no blanket `Class512.method6083(...)` hook.
-- [x] **3A.5 Safe definition/cache/GFX coverage - runtime verified.**
-  - ID-bearing `Class639.method7568(...)` cache-miss hook,
-  - traces naturally captured AnimationDefinition, ItemDefinitions, ObjectDefinitions, and VarBitDefinition activity,
-  - GFX remains confirmed Class639-backed verified-static,
-  - model/animation-specific loader hooks remain carryover until ownership is established.
-
-### Hook audit
-
-Accepted decompiled runtime edits remain surgical:
-
-- `Class195.java`: +1 line / 0 deletions.
-- `MaterialInformation.java`: +2 lines / 0 deletions.
-- `Class639.java`: +1 line / 0 deletions.
-- Direct `Class549_Sub1` rewrite was rejected/rolled back after unrelated array-line churn appeared.
-
-Resolved verified-static ownership:
+Verified runtime ownership/seams:
 
 ```text
 keyboard semantics owner: Class549_Sub1.method8081(int,char,int,int)
@@ -205,249 +170,127 @@ incoming safe wrapper:    MaterialInformation.method1605(Class195,int)
 definition cache miss:    Class639.method7568(int,int)
 ```
 
-### First Bundle 3A runtime-gate attempt - FAILED USEFULLY / VERIFIED EVIDENCE
+Accepted decompiled runtime edits remain surgical:
 
-The first controlled trace proved the hooks work but exposed a recorder-design problem:
+- `Class195.java`: +1 line / 0 deletions.
+- `MaterialInformation.java`: +2 lines / 0 deletions.
+- `Class639.java`: +1 line / 0 deletions.
+- A direct `Class549_Sub1` rewrite was rejected/rolled back after unrelated decompiler churn.
 
-- stored events: 10000,
-- hard dropped events: 63578,
-- definition events among stored events: 9934,
-- non-definition stored events: 66,
-- observed non-definition categories still included input, network, and interface,
-- ~2961 unique definition/load combinations existed among the 9934 stored definition events.
+Corrected runtime gate evidence:
 
-Classification:
+- 6050 stored events.
+- 0 hard drops.
+- 6617488 intentionally suppressed noisy events.
+- 4000 definition events at the category cap.
+- 1267 network / 631 interface / 152 input.
+- 86 keyboard / 66 menu events.
+- `Correlate Latest Trace`: `Status: CURRENT`, `Accepted: true`.
+- Same-launch Matrix3 smoke: PASS by user report.
 
-- **VERIFIED:** input/menu/network/interface/definition runtime hooks emit events.
-- **VERIFIED:** repeated definition/cache activity saturated the global trace buffer and caused useful later events to be dropped.
-- **UNKNOWN:** semantic meaning of the menu numeric arguments beyond their raw values; do not call them coordinates.
+### Bundle 3B - Persistent curated evidence - DONE / OFFLINE VERIFIED
 
-### 3A trace-noise correction - RUNTIME VERIFIED / PASS
+- `AtlasEvidenceStore` persists aliases, claims, evidence classification, references, and fingerprints.
+- Stale/orphan evidence is retained and explicitly warned.
+- Curated evidence survives static rescans.
+- Curated search remains separate from structural ranking.
+- `AtlasEvidenceVerifier` final result: `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
 
-- [x] Definition tracing is first-occurrence-per-session by definition ID + loader class + definition class.
-- [x] Definition category has a 4000 stored-event ceiling, preserving at least 6000 global slots for other categories.
-- [x] Duplicate/category-capped events increment `suppressedCount` instead of `droppedCount`.
-- [x] `droppedCount` remains reserved for true global 10000-event-buffer overflow.
-- [x] Runtime Trace Control displays Events / Dropped / Suppressed separately.
-- [x] Saved trace header persists `suppressedCount` while retaining trace format version 1 compatibility.
-- [x] Menu numeric fields renamed to neutral `rawArg1/rawArg2`.
+# Phase 4 - Atlas Lookup / Viewer
 
-Corrected runtime evidence:
+**Status: IMPLEMENTED / ACCEPTANCE DEFERRED BY EXPLICIT PRIORITY CHANGE**
 
-- stored events: 6050,
-- hard dropped events: 0,
-- intentionally suppressed events: 6617488,
-- definition events: 4000 (category cap reached without exhausting the global buffer),
-- network events: 1267,
-- interface events: 631,
-- input events: 152,
-- keyboard events: 86,
-- menu events: 66.
+The user clarified that the Browser is not the primary goal. It remains useful as a viewer/editor for already-known Atlas data, but semantic mapping now has priority.
 
-The corrected trace remained useful after the definition cap was reached and finalized normally through `Stop + Save`.
+## Bundle 4A - Browser foundation - IMPLEMENTED / NEEDS COMBINED RUNTIME GATE
 
-### 3A.6 Runtime-to-Atlas correlation - DONE / RUNTIME VERIFIED
+- Lazy Client Console Atlas destination.
+- Off-EDT current-index loading and structural search.
+- Exact symbol details.
+- Bounded outgoing/incoming relationship navigation.
+- Curated evidence editor over `AtlasEvidenceStore`.
+- Exact Atlas IDs remain visible and authoritative.
+- Human-readable presentation layer added after the first live view proved raw Atlas terminology was too difficult for practical use.
+- `What Atlas knows`, readable connection names, `[open]` vs `[info only]`, and readable evidence confidence labels are presentation only; semantics remain unchanged.
 
-- [x] Added `AtlasTraceCorrelationEngine` - verified-static.
-- [x] Correlation loads only through `AtlasInvestigationIndex.load(...)`, so stale generated Atlas data is rejected before correlation.
-- [x] Saved trace fingerprint is compared against the current loaded Atlas fingerprint.
-- [x] Exact event `sourceSymbol` and optional `ownerSymbol` IDs resolve with `index.getSymbol(...)`.
-- [x] Correlation is accepted as current only when fingerprint, trace event count, source IDs, and owner IDs all validate.
-- [x] Unknown/mismatched fingerprints and unresolved IDs remain explicit diagnostic states.
-- [x] Input remains bounded at 10000 trace events; assistant event output is capped at 1000 and unresolved-ID lists at 100.
-- [x] Atomic correlation export + `latest` trace resolution.
-- [x] CLI correlation commands remain available.
-- [x] Main `ClientAtlasControl` exposes `Runtime Trace Control` and `Correlate Latest Trace`.
-- [x] Corrected trace correlated against the rebuilt current index with `Status: CURRENT` and `Accepted: true`.
+## Bundle 4B - Runtime evidence viewer - IMPLEMENTED / NEEDS COMBINED RUNTIME GATE
 
-### Bundle 3A corrected consolidated runtime gate - PASS
+- Saved trace catalog capped to newest 100 traces.
+- Existing Runtime Trace Control surfaced without duplicate recording ownership.
+- Selected/latest trace correlation reuses `AtlasTraceCorrelationEngine` unchanged.
+- Listing/correlation stays off the Swing EDT.
 
-Completed in one Eclipse/Java 8 client session:
+## Phase 4 acceptance - DEFERRED
 
-1. Clean/build current Client source.
-2. Rebuild Atlas against the current compiled client.
-3. Start client/login normally.
-4. Start one controlled runtime trace.
-5. Exercise keyboard/menu/network/interface/definition activity.
-6. `Stop + Save` finalized the trace.
-7. Runtime trace result: `Dropped = 0`, suppression active, stored event count below 10000.
-8. `Correlate Latest Trace` returned `Status: CURRENT` and `Accepted: true`.
-9. Correlation acceptance proves trace/current fingerprints matched, header event count matched parsed event count, and emitted source/owner symbol IDs resolved.
-10. User-reported same-launch Matrix3 smoke passed; client behavior remained normal.
+The combined Browser + Runtime evidence gate is still required before Phase 4 can be marked DONE, but it is intentionally deferred and does **not** block offline semantic mapping work. When resumed, use the existing consolidated checklist in `docs/client-atlas/testlist.txt`; do not split it into small per-control cycles.
 
-Bundle 3A is closed. Do not request another 3A runtime gate without a relevant implementation change or contradictory evidence.
-
-## Bundle 3B - Evidence/knowledge
-
-**Status: DONE / OFFLINE VERIFIED**
-
-The complete compatible Bundle 3B implementation was patched before requesting another user test.
-
-- [x] **3B.1 External aliases/notes.**
-  - `AtlasEvidenceStore` persists curated records in `.client-atlas/evidence.jsonl`.
-  - exact obfuscated `subjectId` remains primary; alias is external metadata only,
-  - note/claim text is stored outside generated scanner data,
-  - one curated record per exact subject ID; same-subject upsert replaces deterministically,
-  - curated search covers subject ID, alias, note/claim, status, and references without affecting static symbol ranking.
-- [x] **3B.2 Evidence classification/supporting references.**
-  - statuses persist as `VERIFIED`, `verified-static`, `HYPOTHESIS`, or `UNKNOWN`,
-  - supporting references are bounded and de-duplicated,
-  - new/updated evidence must attach to an exact symbol in a current `AtlasInvestigationIndex`,
-  - the record stores that current Atlas fingerprint,
-  - JSONL serialization is deterministic; writes replace atomically.
-- [x] **3B.3 Fingerprint stale-evidence warnings.**
-  - current fingerprint + present subject -> `CURRENT`,
-  - fingerprint mismatch -> `STALE_FINGERPRINT`,
-  - absent exact subject -> `SUBJECT_NOT_PRESENT`,
-  - stale + absent subject -> combined explicit state,
-  - stale/orphan records remain visible for human review; no automatic semantic promotion or deletion.
-- [x] **3B.4 Preserve curated knowledge across rescans.**
-  - `AtlasWorkspace.initialize()` continues to reset only generated `symbols.jsonl` and `relationships.jsonl`,
-  - `evidence.jsonl` remains curated persistent state,
-  - evidence load validates duplicate IDs/malformed records explicitly,
-  - store limits protect against accidentally unbounded curated data.
-- [x] **3B.5 Consolidated verifier.**
-  - `AtlasEvidenceVerifier` tests the whole bundle in one run,
-  - verifier writes only to an isolated temporary evidence workspace and does not touch the developer's real `evidence.jsonl`,
-  - covers JSON escape round-trip, alias/note/classification/references, freshness warnings, orphan retention, rescan preservation, deterministic upsert/search, and delete.
-
-### Bundle 3B consolidated offline gate - PASS
-
-Completed under Eclipse / Java 8 on 2026-09-06:
-
-- `AtlasEvidenceVerifier` passed alias + note/claim + classification + supporting-reference JSONL round-trip.
-- Current-fingerprint evidence evaluated `CURRENT`.
-- Fingerprint mismatch produced an explicit stale-evidence warning.
-- Missing exact subjects were retained and flagged for review.
-- Curated evidence survived generated Atlas initialize/rescan.
-- Same-subject upsert and curated knowledge search passed deterministically.
-- Curated record delete persisted atomically.
-- Final result: `BUNDLE 3B KNOWLEDGE CHECK: PASS`.
-- Report: `Client/.client-atlas/knowledge-check.txt`.
-
-Bundle 3B is closed. Phase 3 Runtime Evidence and Knowledge is DONE. No Matrix3 client launch/smoke was required because Bundle 3B changed only offline `game.atlas` tooling.
-
-# Phase 4 - Client Console Atlas Browser
+# Phase 5 - Whole-Client Semantic Mapping
 
 **Status: ACTIVE**
 
-## Bundle 4A - Browser foundation
+## Bundle 5A - Semantic coverage + mapping queue
 
-**Status: IMPLEMENTED / USABILITY CORRECTION IMPLEMENTED / COMBINED RUNTIME GATE REQUIRED**
+**Status: IMPLEMENTED / OFFLINE GATE NEXT**
 
-The full compatible Browser Foundation implementation is patched. Runtime use of the first UI proved the underlying data path worked but the presentation was too raw to be useful to the user. The approved usability correction is now folded into the same combined 4A + 4B runtime gate instead of creating another small test cycle.
+- [x] Add `AtlasMappingQueue` over the current investigation index + curated evidence.
+- [x] Track every scoped symbol as current runtime-verified, static-verified, hypothesis, unknown, or stale.
+- [x] Track orphan curated records separately.
+- [x] Build an owner-level structural connectivity graph from exact symbol-backed relationships.
+- [x] Deterministically partition scoped owners into bounded investigation bundles.
+- [x] Cap bundles at 8 owners.
+- [x] Prioritize stale/hypothesis/unknown areas plus structural connectivity.
+- [x] Exclude Atlas/Client Console tooling from semantic self-mapping.
+- [x] Export the next bundle with at most 80 unresolved priority symbols, 12 boundary owners, and 40 existing evidence summaries.
+- [x] Export exact IDs + source paths where available to `.client-atlas/mapping-next.md`.
+- [x] Tell the assistant to use static evidence first and request runtime evidence only when necessary.
+- [x] Add `AtlasMappingVerifier` as one consolidated offline gate.
+- [ ] Eclipse Java 8 clean/build + `AtlasMappingVerifier` PASS.
 
-- [x] Register/lazy-load a dedicated Client Console Atlas panel without moving Atlas engine ownership into Client Console.
-  - persistent panel ID remains `atlas`,
-  - lazy Atlas workspace construction through the established `ClientConsoleShell` panel seam,
-  - panel creation failures remain isolated by the existing shell error boundary,
-  - active-panel persistence automatically reuses `ConsolePreferences`.
-- [x] Reuse the existing Atlas search/index APIs for a fast search panel.
-  - `AtlasWorkspace.findClientRoot(...)` + current-only `AtlasInvestigationIndex.load(...)`,
-  - `AtlasSearchEngine` remains the structural search authority,
-  - first index load and searches run in `SwingWorker` rather than on the Swing EDT,
-  - visible structural results are capped at 50,
-  - Reload explicitly discards the cached browser index and reopens the current Atlas snapshot.
-- [x] Add symbol detail plus bounded relationship navigation.
-  - exact ID, kind, owner, name, descriptor, signature/source when present,
-  - combined outgoing/incoming relationship list,
-  - each direction capped at 60 entries,
-  - exact symbol-backed relationships can be opened by button or double-click,
-  - constant/type/value targets remain visible but intentionally non-navigable rather than being guessed into symbol semantics.
-- [x] Add curated evidence/alias view + editor over `AtlasEvidenceStore` with explicit freshness warnings.
-  - classification picker uses Atlas `EvidenceStatus`,
-  - alias, required note/claim, and one-reference-per-line editing,
-  - save/upsert and delete use `AtlasEvidenceStore` off the EDT,
-  - `CURRENT`, stale fingerprint, missing subject, and combined warnings come directly from `EvidenceView`,
-  - Client Console does not duplicate evidence persistence or fingerprint rules.
-- [x] Keep exact obfuscated Atlas IDs visible and primary throughout the UI.
-  - result selection, symbol detail, relationship navigation, save/delete targets, and status text all retain the exact Atlas subject ID.
-- [x] Add an original Java2D Atlas/globe rail icon through the existing `ConsoleIcons` authority; no asset/dependency added.
+Acceptance target:
 
-### 4A usability correction - IMPLEMENTED / NEEDS COMBINED GATE
+```text
+BUNDLE 5A MAPPING QUEUE CHECK: PASS
+```
 
-- [x] Added a `What Atlas knows` summary that explains only proven structure and saved evidence.
-  - class/interface/enum/field/method/constructor kinds are described in plain English,
-  - saved alias, claim, confidence, and stale-warning state are summarized when present,
-  - when no curated meaning exists, the summary explicitly says real game meaning is not identified and Atlas will not guess.
-- [x] Humanized search results without changing ranking.
-  - visible row is readable name + readable type + readable match reason,
-  - exact Atlas ID, raw score, and raw reason remain available through status/tooltips.
-- [x] Humanized exact detail presentation without hiding authority.
-  - readable name/type/source appear first,
-  - exact `Technical ID`, owner, descriptor, and signature remain available.
-- [x] Humanized relationship rows without changing relationship semantics.
-  - `DECLARES`, `CALLS`, `READS_FIELD`, `WRITES_FIELD`, `EXTENDS`, etc. render as phrases such as `Contains field`, `Calls`, `Reads field`, `Written by`, and `Extends`,
-  - exact symbol-backed rows are visibly `[open]`,
-  - constants/types/values are visibly `[info only]` and the open action disables rather than inventing a target,
-  - raw relationship diagnostics remain available in tooltips.
-- [x] Humanized evidence editing without changing persisted status values.
-  - `Classification` -> `Confidence`,
-  - `Alias` -> `Human-readable name`,
-  - `Note / claim` -> `What does this code do?`,
-  - supporting references -> `Why do we believe this?`,
-  - `VERIFIED`, `verified-static`, `HYPOTHESIS`, `UNKNOWN` render as `Verified at runtime`, `Confirmed from code/data`, `Best guess - not proven`, `Unknown`.
-- [x] Save/delete/status wording now describes the user action instead of Atlas storage internals.
+The verifier rebuilds only generated Atlas structure against the current compiled fingerprint, preserves curated evidence, checks deterministic full-scope partitioning/bounds/self-exclusion, and writes:
 
-The usability correction changes only the Client Console presentation layer. Atlas indexing, ranking, exact IDs, relationship types, evidence persistence/fingerprints, trace control, and correlation acceptance remain unchanged.
+```text
+Client/.client-atlas/mapping-check.txt
+Client/.client-atlas/mapping-next.md
+```
 
-## Bundle 4B - Runtime evidence workflow
+No Matrix3 client launch is required for 5A.
 
-**Status: IMPLEMENTED / CONSOLIDATED RUNTIME GATE REQUIRED**
+## Bundle 5B - Assistant semantic writeback + scalable knowledge store - PLANNED
 
-- [x] Browse saved traces/correlation summaries from the Atlas panel.
-  - `AtlasTraceCatalog` owns metadata-only trace discovery in `game.atlas`,
-  - newest 100 `.trace.jsonl` files maximum,
-  - newest-first deterministic ordering,
-  - Runtime evidence view lists trace filename/size and correlates a selected trace by button or double-click,
-  - Correlate latest uses the existing `AtlasTraceCorrelationEngine.latestTrace(...)` authority,
-  - correlation summary exposes trace path, status, accepted flag, total/dropped events, bounded preview count, and trace/current Atlas fingerprints.
-- [x] Surface existing trace controls without duplicating runtime-trace ownership.
-  - Browser and Runtime evidence live under one `AtlasWorkspacePanel` using the same persistent `atlas` Client Console destination,
-  - Browser remains the default view,
-  - Runtime evidence is lazy-created only when opened,
-  - Runtime Trace Control launches the existing `ClientAtlasTraceControl`,
-  - Client Console does not implement a second START/STOP/SAVE protocol.
-- [x] Keep trace/correlation safety and bounded-output rules unchanged.
-  - saved trace listing/correlation runs in `SwingWorker`,
-  - correlation loads through current-only `AtlasInvestigationIndex.load(...)`,
-  - `AtlasTraceCorrelationEngine` is reused unchanged,
-  - 10000-event trace read cap and 1000-event correlated preview cap remain unchanged,
-  - fingerprint/event-count/source-owner acceptance remains unchanged,
-  - no runtime trace hook, packet hook, recorder format, or game/server behavior changed.
+Purpose: make whole-client mapping practical at bundle scale instead of manually saving one record at a time.
 
-## Bundle 4A + 4B consolidated runtime gate - NEXT
+- [ ] Add validated batch evidence upsert/import keyed by exact Atlas IDs.
+- [ ] Increase/rework the current 5000-record curated evidence bound because whole-client exact-symbol mapping can exceed 33000 symbols; remain explicitly bounded rather than unlimited.
+- [ ] Avoid O(n^2)-style whole-file rewrite behavior when applying large mapping bundles.
+- [ ] Produce a deterministic semantic snapshot/export suitable for repository/cross-chat persistence without making generated static data authoritative semantics.
+- [ ] Reject unknown IDs, invalid classifications, stale fingerprints, duplicate subjects, and unproven automatic promotions.
+- [ ] Let an assistant mapping bundle return many proven/hypothesis records in one validated writeback step.
 
-The pre-correction browser opening proved panel/search/detail loading worked but is not the final Phase 4 acceptance because the browser presentation changed afterward. Pull/build once and continue with one consolidated session:
+## Bundle 5C - Runtime-targeted mapping assistance - PLANNED
 
-1. Pull current `main`, Eclipse Java 8 clean/build Client once, and rebuild the static Atlas index once after compiling so its fingerprint matches the current compiled Client.
-2. Start Matrix3 normally and open the Client Atlas globe icon; Browser should be the default Atlas view.
-3. Confirm first Atlas load/search does not freeze normal game rendering/input.
-4. Search `Class1`; require a readable result, a `What Atlas knows` explanation, and Technical details that still show `Technical ID: CLASS:game/Class1`.
-5. In Connections, require readable wording. Open one `[open]` exact symbol-backed row; select one `[info only]` constant/type/value row and confirm the open action disables rather than guessing a symbol.
-6. Save/reopen/delete temporary knowledge on a harmless symbol using Confidence `Best guess - not proven`, Human-readable name `Atlas UI test`, What does this code do? `Phase 4 runtime UI test`, and reference `runtime:phase4-ui`. Require `Saved knowledge is current` while saved and `Nothing identified yet` after delete.
-7. Confirm `What Atlas knows` reflects the saved alias/claim/confidence while present and returns to explicit unknown meaning after deletion.
-8. Switch to Runtime evidence and confirm saved traces populate without freezing the game/UI.
-9. Open existing Runtime Trace Control, create one short named trace against the newly compiled client, exercise a few normal keyboard/menu/interface actions, then Stop + Save.
-10. Refresh traces; confirm the new trace appears near the top.
-11. Correlate that selected trace and require `Status: CURRENT`, `Accepted: true`, and `Dropped = 0`.
-12. Correlate latest and require the same newest trace to return `CURRENT` + `Accepted: true`.
-13. Resize to the narrow supported console width and switch Browser/Runtime evidence repeatedly; controls remain reachable and no visible render/input hitch or Swing/client-thread exception appears.
-14. Leave Atlas selected, clean-close/relaunch once, and confirm the Atlas rail destination restores. Browser may reopen as the default Atlas subview; subview persistence is not required.
+- [ ] Use saved trace/correlation data to identify which unresolved exact symbols actually participated in a behavior being investigated.
+- [ ] Suggest runtime targets without auto-promoting semantics.
+- [ ] Preserve existing packet/input/interface/definition safety limits.
+- [ ] Add component/model/animation-specific tracing only after exact ownership is established and only when current evidence proves the need.
 
-If this passes, mark Bundles 4A and 4B DONE. No Phase 1/2/3 regression gate is required unless contradictory evidence appears because Phase 4 consumes those authorities rather than modifying their runtime semantics.
+## Bundle 5D - Coverage/progress presentation - PLANNED
 
-## Bundle 4C - Browser polish - BACKLOG
+- [ ] Surface mapping coverage and next bundle in a simple viewer/control surface after the queue/writeback workflow proves useful.
+- [ ] Browser remains lookup-first; do not return to manual field-by-field reverse engineering as the primary workflow.
+- [ ] Add navigation/history/graph polish only when it measurably speeds mapping work.
 
-- [ ] Optional bounded relationship graph only if it improves investigation speed without adding heavy dependencies.
-- [ ] Navigation/history/filter polish driven by actual browser use.
+# Phase 6 - Advanced Correlation / Revision Intelligence - BACKLOG
 
-# Phase 5 - Advanced Correlation - BACKLOG
-
-- [ ] Repeated-path clustering.
+- [ ] Repeated-path clustering informed by semantic mappings.
 - [ ] Suggested aliases remain `HYPOTHESIS` until proven.
 - [ ] Reliable cache/definition crosslinks.
-- [ ] Revision/fingerprint diffs.
+- [ ] Revision/fingerprint semantic diffs.
 - [ ] Investigation report generation.
 
 # Current Atlas files
@@ -462,16 +305,20 @@ Client/src/main/java/game/atlas/AtlasTraceRecorder.java
 Client/src/main/java/game/atlas/ClientAtlasTraceControl.java
 ```
 
-Correlation/offline tooling:
+Static/search/correlation:
 
 ```text
+Client/src/main/java/game/atlas/AtlasScanner.java
+Client/src/main/java/game/atlas/AtlasInvestigationIndex.java
+Client/src/main/java/game/atlas/AtlasSearchEngine.java
+Client/src/main/java/game/atlas/AtlasAssistantExportEngine.java
 Client/src/main/java/game/atlas/AtlasTraceCorrelationEngine.java
 Client/src/main/java/game/atlas/AtlasTraceCatalog.java
 Client/src/main/java/game/atlas/ClientAtlasMain.java
 Client/src/main/java/game/atlas/ClientAtlasControl.java
 ```
 
-Curated evidence/knowledge:
+Curated semantic knowledge:
 
 ```text
 Client/src/main/java/game/atlas/AtlasSchema.java
@@ -481,7 +328,14 @@ Client/src/main/java/game/atlas/AtlasEvidenceVerifier.java
 Client/src/main/java/game/atlas/AtlasWorkspace.java
 ```
 
-Client Console browser/runtime consumer:
+Semantic mapping:
+
+```text
+Client/src/main/java/game/atlas/AtlasMappingQueue.java
+Client/src/main/java/game/atlas/AtlasMappingVerifier.java
+```
+
+Client Console viewer:
 
 ```text
 Client/src/main/java/game/console/AtlasPanel.java
@@ -501,85 +355,70 @@ Client/src/main/java/game/MaterialInformation.java
 Client/src/main/java/game/Class639.java
 ```
 
-# Testing
+# Testing state
 
-- Phase 1: runtime-verified.
-- Phase 2: runtime-verified.
-- 3A.0: verified-static discovery.
-- 3A-Core runtime hooks: runtime-verified.
-- First Bundle 3A gate: **FAILED because definition noise saturated the recorder; failure was understood and corrected.**
-- Trace-noise correction: **runtime-verified / PASS** with 6050 stored, 0 dropped, and 6617488 intentionally suppressed events.
-- 3A.6 correlation: **runtime-verified / PASS** with `Status: CURRENT` and `Accepted: true` against the rebuilt current Atlas index.
-- Same-launch Matrix3 smoke: **PASS by user report 2026-09-06**.
-- Bundle 3A: **DONE**.
-- Bundle 3B implementation: **complete / verified-static**.
-- Bundle 3B consolidated offline verifier: **PASS by user report 2026-09-06**.
-- Bundle 3B: **DONE**.
-- Phase 3: **DONE**.
-- Bundle 4A implementation: **complete / verified-static; combined runtime gate pending**.
-- First live Browser opening: **underlying panel/search/detail path worked, but usability was insufficient; this is evidence for the correction, not final acceptance**.
-- Bundle 4A usability correction: **implementation complete / verified-static; folded into combined runtime gate**.
-- Bundle 4B implementation: **complete / verified-static; combined Phase 4 gate pending**.
-- Bundle 4B adds only metadata trace browsing/Client Console invocation of existing Atlas APIs; no runtime trace/packet/game semantics changed.
-- No Phase 2 / Bundle 3A / Bundle 3B retest unless contradictory evidence or a relevant implementation change appears.
+- Phase 1: runtime verified.
+- Phase 2: runtime verified.
+- Bundle 3A tracing/correlation: runtime verified, smoke PASS.
+- Bundle 3B evidence/knowledge: offline verifier PASS.
+- Phase 4 Browser/Runtime viewer: implementation complete, final combined acceptance deferred by explicit priority change.
+- Bundle 5A mapping queue: implementation complete / verified-static review; one offline Java 8/Eclipse verifier is next.
+- No Phase 1/2/3 regression gate is required for 5A because it adds offline planning/export tooling only and does not modify runtime hooks or gameplay behavior.
 
 # Carryover / blockers
 
 ## CARRYOVER
 
-- Component-specific decoded interface payload values only if the current interface packet stream proves insufficient.
+- Phase 4 combined Browser + Runtime evidence acceptance gate.
+- Component-specific decoded interface payload values only if current packet metadata proves insufficient.
 - Exact animation loader instrumentation after ownership is established.
 - Exact model/cache loader instrumentation after ownership is established.
-- Verify >200 streaming exact-query truncation when a naturally suitable symbol appears.
-
-These do not block Phase 4.
+- Verify >200 streaming exact-query truncation when naturally encountered.
+- Bundle 5B evidence capacity/batch-write work is required before large-scale exact-symbol writeback becomes practical.
 
 ## BLOCKERS
 
-- None.
+- None for Bundle 5A offline verification.
 
 # Resume Here
 
 **Last completed checkpoint:**
 
-- Phase 3 Runtime Evidence and Knowledge is DONE.
-- Full compatible Phase 4 / Bundle 4A Browser Foundation implementation is patched / verified-static.
-- Full compatible Phase 4 / Bundle 4B Runtime Evidence workflow implementation is patched / verified-static.
-- First live Atlas Browser opening proved search/detail loading but user feedback established that raw Atlas terminology was not understandable enough for practical use.
-- Approved 4A usability correction is now patched / verified-static: plain-English summary, relationship names, confidence/evidence wording, navigability labels/actions, while exact IDs and semantics remain authoritative.
+- Phases 1-3 foundations are verified.
+- Phase 4 Browser + Runtime viewer implementation exists; its final combined acceptance is deferred because the user clarified that manual browsing is not the primary Atlas goal.
+- User explicitly approved the revised priority: systematically map the whole client through assistant-driven bundles and durable semantic evidence.
+- Bundle 5A semantic coverage/queue implementation is patched.
 
 **Current phase:**
 
-- **Phase 4 - Client Console Atlas Browser / ACTIVE**
+- **Phase 5 - Whole-Client Semantic Mapping / ACTIVE**
 
 **Active/next bundle:**
 
-- **Bundle 4A usability correction + 4A + 4B consolidated runtime gate / NEXT**
+- **Bundle 5A - Semantic coverage + mapping queue / OFFLINE GATE NEXT**
 
 **Current/next work:**
 
-- Do not split Atlas verification into per-control cycles.
-- Pull current `main` and Eclipse Java 8 clean/build once because `AtlasPanel.java` changed after the first live browser opening.
-- Rebuild Atlas once for the new compiled fingerprint.
-- Run the human-readable Browser + Runtime evidence gate from `docs/client-atlas/testlist.txt` in that same client launch.
-- On PASS, mark Bundles 4A and 4B DONE and decide whether 4C polish is justified by actual browser use before entering Phase 5.
+1. Pull current `main` and Eclipse Java 8 clean/build Client.
+2. Run `game.atlas.AtlasMappingVerifier` as a Java Application.
+3. Require `BUNDLE 5A MAPPING QUEUE CHECK: PASS`.
+4. Record the generated coverage snapshot and next bundle from `.client-atlas/mapping-next.md`.
+5. After 5A passes, start Bundle 5B scalable assistant writeback so mapping bundles can be applied in bulk rather than manually through the Browser.
 
 **Do not re-scan/re-discover without new evidence:**
 
-- broad `game` source tree,
 - Phase 1/2 scanner/search architecture,
-- resolved keyboard/menu/network/interface/Class639 ownership paths,
+- resolved keyboard/menu/network/interface/Class639 runtime ownership,
 - Bundle 3A runtime tracing/correlation gate,
-- Bundle 3B curated evidence architecture,
-- established Client Console shell/panel lazy-load seam,
-- existing trace-control/correlation ownership,
+- Bundle 3B evidence freshness/persistence architecture,
+- Client Console Atlas shell/viewer seams,
 - unrelated server/gameplay systems.
 
 **Pending runtime/offline verification:**
 
-- Eclipse Java 8 compile of the humanized Phase 4 Browser + existing 4B implementation.
-- One combined Client Console Atlas Browser + Runtime evidence gate after rebuilding the static Atlas fingerprint.
+- Bundle 5A one-shot offline verifier.
+- Phase 4 combined viewer runtime gate remains deferred and should be merged into a future Client Console acceptance session, not run now.
 
 # Next recommended work
 
-**Pull/build once, rebuild Atlas, then run the single human-readable Phase 4 / Bundle 4A + 4B consolidated runtime gate.**
+**Run the single Bundle 5A mapping verifier. On PASS, use the generated first mapping bundle as the handoff into scalable assistant semantic writeback instead of further Browser polish.**
