@@ -2,7 +2,7 @@
 
 ## Goal
 
-Deliver Rambler's backpack as safe player-owned persistent carried storage that integrates cleanly with Matrix3 inventory, equipment, bank, and interface behavior without creating a second persistence or bank implementation.
+Deliver Rambler's backpack as safe player-owned persistent carried storage using Matrix3's Bank interface as a familiar storage presentation surface, while keeping Backpack contents completely separate from the player's real Bank.
 
 ## Canonical Main-Goal Status
 
@@ -10,7 +10,7 @@ Deliver Rambler's backpack as safe player-owned persistent carried storage that 
 | --- | --- |
 | Player-owned backpack storage | 🟡 Foundation |
 | Contextual access and actions | 🟡 Foundation |
-| Bank integration | 🟡 Foundation |
+| Bank integration | ⚠️ Needs runtime verification |
 | Persistence and safety verification | ⚠️ Needs runtime verification |
 | Final polish | ❌ Not started |
 
@@ -19,288 +19,294 @@ Deliver Rambler's backpack as safe player-owned persistent carried storage that 
 ### In scope
 
 - Rambler's backpack item 21445.
-- 30-slot player-owned carried storage.
-- Store/withdraw behavior through the existing 671/665 interface layout.
+- Existing 30-slot player-owned persistent Backpack container for the migration foundation.
+- Matrix3 Bank interface `762` reused as Backpack presentation only.
+- Backpack contents sent through Bank display container key `95`; normal inventory remains key `93`.
+- Backpack-mode interception of interface `762` before Matrix3's normal Bank button handler.
+- V1 Backpack-mode actions: Deposit-1/5/10/All, Withdraw-1/5/10/All, and Examine.
 - Contextual Open access from inventory, equipment, main bank, and bank inventory.
-- Bank-inventory actions: Deposit, Wear, Open, Empty to bank, Examine.
-- Persistent storage across normal player save/load.
-- Safe partial/full-bank behavior when emptying backpack contents.
-- Regression protection for normal Matrix3 inventory, equipment, bank, familiar/BoB, and death behavior.
+- Transactional Empty to bank through the real Matrix3 Bank authority.
+- Persistent storage across normal player save/load and death invariants already established by the storage foundation.
+- Future progression for storage-slot capacity and per-item stack limits.
 
-### Out of scope
+### Out of scope for the current migration bundle
 
-- A generic multi-backpack framework unless a future content requirement needs multiple backpack item types.
-- Replacing Matrix3 inventory, bank, equipment, persistence, or familiar systems.
-- Redesigning the 671/665 interfaces.
-- Unrelated custom-item-action features.
+- Using `Bank.bankTabs` as Backpack storage.
+- Copying/forking the full Matrix3 `Bank` implementation.
+- Bank search, tabs, insert/rearrange, withdraw-as-note, Bank PIN, equipment deposit, BoB deposit, money-pouch deposit, or native Bank drag/reorder while Backpack mode is open.
+- Deposit-X / Withdraw-X / last-amount / all-but-one until the Backpack mode owns those workflows explicitly.
+- Slot/stack upgrade economy and tier values in the Bank-interface foundation patch.
+- Permanent cache/interface redesign or a custom new interface.
+- A generic multi-backpack framework unless future content requires multiple backpack item types.
 
 ## Architecture / ownership
 
 - Matrix3 `Inventory` owns the serialized `Backpack` instance.
 - Matrix3 player/account persistence remains the save/load authority; Backpack does not create a second save system.
-- `Backpack` owns player-carried storage behavior and validates physical access-item presence.
-- Matrix3 `Bank` remains the authority for adding items to the bank.
-- `CustomItemActions` owns configurable routing of item context actions; it does not own backpack storage, inventory, equipment, or bank behavior.
-- The Matrix3 client/interface path owns menu presentation and the existing 671/665 interface rendering.
-- Rambler's item ID may remain specific to `Backpack` while the shared custom-action routing remains config-driven. Do not generalize backpack item identity without a real content requirement.
+- `Backpack` owns player-carried storage and Backpack-mode interface routing.
+- Matrix3 `Bank` remains authoritative only for the player's real bank and for explicit Backpack -> Bank transfers such as `emptyToBank()`.
+- Backpack does **not** call `Bank.openBank()` and never uses `Bank.bankTabs` as its backend.
+- Interface `762` is presentation only. Backpack supplies its own container to key `95` and intercepts `762` clicks through the existing `ControlerManager` pre-handler path before stock Bank handling.
+- `CustomItemActions` continues to own configurable Open/Empty-to-bank context routing only; it does not own Backpack storage.
+- Matrix3 client/cache remains authoritative for Bank-interface rendering.
 
 ## Verified foundation
 
 ### VERIFIED
 
-- Runtime evidence previously confirmed that a configured `Open` label could be presented by the client. That test also exposed a server config-path/routing failure, which was subsequently corrected in the custom-item-action implementation.
+- Configured inventory `Open` for item 21445 previously runtime-opened the Backpack successfully.
+- Runtime tracing proved the abandoned 671/665 path had interface geometry/clipping problems; the user explicitly changed priority on 2026-09-08 to Bank-interface presentation instead of continuing that layout workaround.
 
 ### verified-static
 
-- `Inventory` contains a non-transient `Backpack backpack` field, creates it for new inventories, restores it when absent, and reattaches the player in `Inventory.setPlayer(...)`.
-- `Inventory.reset()` clears the normal 28-slot inventory while intentionally preserving Backpack storage.
-- `Backpack` uses a 30-slot `ItemsContainer<Item>` independent of Familiar/BeastOfBurden state.
-- Backpack storage uses interfaces 671 and 665 for its storage/inventory interaction surface.
-- `Backpack` implements validated Open access from inventory, equipment, and bank locations.
-- Store/withdraw supports 1, 5, 10, and all amounts with inventory/storage-space checks.
-- The physical backpack cannot be stored inside its own Backpack storage.
-- `emptyToBank()` delegates item addition to Matrix3 `Bank.addItem(...)`, measures the successfully banked quantity, and removes only that quantity from Backpack storage.
-- Full/partial bank handling preserves quantities that were not successfully banked.
-- `CustomItemActions` routes configured Backpack actions before normal controller/preset handling while `STOCK` entries deliberately fall through to Matrix3's normal handlers.
-- The canonical config currently maps Rambler's backpack 21445 to inventory/equipment/bank Open actions and an explicit bank-inventory allowlist.
-- The configured bank-inventory allowlist contains only Deposit, Open, Wear, Examine, and Empty to bank slots for Rambler's backpack.
+- `Inventory` contains a non-transient `Backpack backpack`, restores it when absent, and reattaches the player in `Inventory.setPlayer(...)`.
+- Backpack storage is an independent `ItemsContainer<Item>` and is not Familiar/BeastOfBurden storage.
+- `Inventory.reset()` intentionally preserves Backpack storage.
+- Matrix3 `Bank.openBank()` uses interface `762`, Bank item container key `95`, inventory component `762:7`, Bank grid `762:215`, and child interface `1463` at `762:112`.
+- Matrix3 stock `ButtonHandler` routes `762:215` to Bank withdraw actions and `762:7` to Bank deposit actions.
+- `ControlerManager.processButtonClick(...)` calls `Backpack.processButtonClick(...)` before stock `ButtonHandler` continues, giving Backpack mode a safe interception point.
+- Current Backpack migration opens `762` directly without calling `Bank.openBank()`, sends Backpack items to key `95`, sends inventory to key `93`, and consumes the `762` surface while Backpack mode is active.
+- Current Backpack migration unlocks only option slots for Deposit/Withdraw 1, 5, 10, All and Examine; native Bank drag/search/tab/note/etc. ownership is not enabled for Backpack mode.
+- Closing Backpack mode restores real-Bank presentation vars/tabs through existing Bank refresh methods.
+- `emptyToBank()` continues to delegate actual bank insertion to Matrix3 `Bank.addItem(...)` and removes only quantities successfully accepted.
 
 ## Unknown / research needed
 
 ### HYPOTHESIS
 
-- The exact visible ordering of the five bank-inventory menu entries should be `Deposit / Wear / Open / Empty to bank / Examine`, but Matrix3's internal menu sorting requires runtime confirmation.
+- Reusing Bank interface `762` with Backpack key `95` should provide the complete uncropped grid/layout the user wanted without requiring custom client geometry patches.
 
 ### UNKNOWN
 
-- Whether all four Open entry points currently execute correctly at runtime after the latest routing/config fixes.
-- Whether Empty to bank behaves correctly at runtime with both sufficient and insufficient bank space.
-- Whether backpack contents persist correctly across logout/login in the current runtime build.
-- Whether death handling and familiar/BoB behavior remain unaffected in the current runtime build.
-- Whether repeated bank open/close cycles ever duplicate or restore suppressed menu entries.
+- Runtime appearance of `762` when populated by Backpack rather than `Bank.bankTabs`.
+- Whether the restricted option masks expose exactly the intended five menu actions on this cache revision.
+- Whether all unsupported Bank controls remain inert/locked as expected.
+- Whether closing Backpack mode restores normal Bank visual/tab state perfectly before the next real-bank open.
+- Whether all contextual Open entry points still behave correctly after the presentation migration.
+- Current logout/login and death persistence proof after the migration.
+- Final storage-capacity tiers, stack-limit tiers, costs, and whether special item categories should modify stack limits.
 
 ## Dependencies
 
 - Matrix3 player/account persistence.
-- Matrix3 Inventory, Equipment, and Bank implementations.
-- Existing 671/665 interface behavior.
+- Matrix3 Inventory and Bank implementations.
+- Matrix3 Bank interface `762` / child `1463` presentation.
 - `Server/data/items/custom-item-actions.properties`.
 - Client custom-item-action presentation hook.
-- Server `CustomItemActions` routing and targeted debug trace.
+- Server `CustomItemActions` routing.
 
 ## Development plan
 
-### Phase 1 - Stabilize and verify Backpack
+### Phase 1 - Bank-interface Backpack foundation
 
-**Purpose:** Convert the existing Backpack implementation into a runtime-verified Matrix3 feature before expanding or polishing it.
+**Purpose:** Replace the abandoned BoB presentation with a safe Bank-interface mode while preserving existing player-owned storage.
 
 **Status:** NEEDS TEST
 
-**Entry conditions:**
-
-- Existing Backpack storage and contextual-action implementation present.
-
 **Exit conditions:**
 
-- Storage persistence, contextual actions, bank integration, familiar/BoB isolation, and death behavior pass the required runtime checks.
-- Any defects exposed by the gate are fixed with evidence-backed minimal patches and retested.
+- Backpack opens interface `762` without displaying or mutating real Bank contents.
+- Deposit/withdraw/examine actions operate only on Backpack + Inventory.
+- Real Bank remains unchanged before, during, and after Backpack use.
+- Contextual Open and persistence/safety regressions pass the consolidated runtime gate.
 
-#### Bundle 1.1 - Existing implementation foundation
-
-**Purpose:** Preserve the implemented storage/action architecture and its ownership boundaries while awaiting runtime proof.
+#### Bundle 1.1 - Persistent storage/action foundation
 
 **Status:** NEEDS TEST
 
 **Checklist / patches:**
 
 - [x] Serialized Backpack ownership inside Inventory. `NEEDS TEST`
-- [x] 30-slot player-owned storage independent of Familiar/BeastOfBurden. `NEEDS TEST`
-- [x] Store/withdraw/take-all behavior. `NEEDS TEST`
+- [x] Player-owned storage independent of Familiar/BeastOfBurden. `NEEDS TEST`
 - [x] Contextual Open from inventory/equipment/main bank/bank inventory. `NEEDS TEST`
-- [x] Explicit Rambler bank-inventory action allowlist. `NEEDS TEST`
-- [x] Matrix3 stock Deposit/Wear/Examine fallthrough. `NEEDS TEST`
-- [x] Transactional Empty to bank behavior. `NEEDS TEST`
+- [x] Transactional Empty to bank. `NEEDS TEST`
 - [x] Preserve Backpack storage across normal Inventory reset. `NEEDS TEST`
 
-#### Bundle 1.2 - Consolidated runtime verification
+#### Bundle 1.2 - Bank-interface presentation migration
 
-**Purpose:** Verify the complete Backpack path in one short PC session and establish evidence for any remaining patch.
+**Status:** NEEDS TEST
+
+**Checklist / patches:**
+
+- [x] Replace 671/665 Backpack presentation with Bank interface `762`. `NEEDS TEST`
+- [x] Feed Backpack storage to Bank display key `95` without using `Bank.bankTabs`. `NEEDS TEST`
+- [x] Route `762:7` inventory deposits to Backpack before stock Bank handling. `NEEDS TEST`
+- [x] Route `762:215` withdrawals to Backpack before stock Bank handling. `NEEDS TEST`
+- [x] Restrict V1 menu mask to 1/5/10/All/Examine actions. `NEEDS TEST`
+- [x] Consume unsupported Bank-interface controls while Backpack mode owns `762`. `NEEDS TEST`
+- [x] Restore normal Bank presentation state when Backpack closes. `NEEDS TEST`
+- [x] Update ownership/docs/tests. `NEEDS TEST`
+
+#### Bundle 1.3 - Consolidated runtime acceptance
 
 **Status:** READY
 
-**Dependencies:**
-
-- Bundle 1.1 implementation present.
-
 **Checklist / patches:**
 
-- [ ] Confirm Client and Server load the canonical custom-item-action config.
-- [ ] Verify inventory Open.
-- [ ] Verify equipment Open.
-- [ ] Verify main-bank Open.
-- [ ] Verify bank-inventory five-action menu and visible ordering.
-- [ ] Verify Deposit/Wear/Examine stock fallthrough.
-- [ ] Verify Empty to bank with normal and insufficient bank space.
-- [ ] Verify logout/login persistence.
-- [ ] Verify familiar/BoB isolation and death persistence.
-- [ ] Record runtime results; patch only evidence-backed failures.
+- [ ] Open Backpack from inventory and confirm interface `762` shows Backpack contents, not real Bank contents.
+- [ ] Verify Deposit-1/5/10/All and inventory Examine.
+- [ ] Verify Withdraw-1/5/10/All and Backpack Examine.
+- [ ] Confirm item 21445 cannot be stored inside itself.
+- [ ] Confirm unsupported Bank controls do not mutate real Bank state.
+- [ ] Close Backpack, open the real Bank, and confirm tabs/items/counts/actions are normal.
+- [ ] Verify equipment/main-bank/bank-inventory Open contexts.
+- [ ] Verify Empty to bank normal/full-bank behavior.
+- [ ] Verify logout/login persistence and death/familiar isolation.
 
-**Runtime tests:**
+### Phase 2 - Backpack progression
 
-- Use the quick/high-value checks first.
-- Preserve `Server/data/logs/custom-item-actions-debug.txt` only if a contextual action/menu test fails.
-
-### Phase 2 - Evidence-backed polish
-
-**Purpose:** Finish only the polish or cleanup justified by Phase 1 runtime evidence.
+**Purpose:** Turn Backpack storage into an upgradeable player progression system after the Bank-interface foundation is proven.
 
 **Status:** PLANNED
 
-**Entry conditions:**
-
-- Phase 1 exit conditions satisfied.
-
-**Exit conditions:**
-
-- Evidence-backed defects/polish are complete and retested.
-- Backpack reaches the defined finished goal without unnecessary generalization.
-
-#### Bundle 2.1 - Final polish
-
-**Purpose:** Resolve confirmed menu/order/usability issues and close the workstream.
+#### Bundle 2.1 - Capacity progression
 
 **Status:** PLANNED
 
-**Checklist / patches:**
+**Planned direction:**
 
-- [ ] Review Phase 1 runtime evidence.
-- [ ] Apply only required minimal fixes/polish.
-- [ ] Retest affected paths.
-- [ ] Update canonical status and close the workstream when all exit conditions pass.
+- Separate player-owned storage-slot progression from the physical item.
+- Support increasing usable Backpack slots without changing real Bank capacity.
+- Preserve existing contents safely when capacity increases.
+- Exact starting capacity, tiers, costs, and unlock sources to be designed before implementation.
+
+#### Bundle 2.2 - Stack-limit progression
+
+**Status:** PLANNED
+
+**Planned direction:**
+
+- Add a Backpack-specific maximum amount per stack.
+- User direction: early tiers may begin around 10 of the same stackable item, then increase through upgrades.
+- Keep normal item stackability semantics unless a later explicit compression mechanic is approved.
+- Exact tiers, costs, category exceptions, and endgame cap remain design work.
+
+### Phase 3 - Final polish
+
+**Status:** PLANNED
+
+**Purpose:** Add only the Bank-mode presentation polish and quality-of-life features justified after runtime proof and progression design.
 
 ## Current execution state
 
-- Phase: Phase 1 - Stabilize and verify Backpack
+- Phase: Phase 1 - Bank-interface Backpack foundation
 - Phase status: NEEDS TEST
-- Bundle: Bundle 1.2 - Consolidated runtime verification
+- Bundle: Bundle 1.3 - Consolidated runtime acceptance
 - Bundle status: READY
-- Approval state: Documentation normalization approved by AAA on 2026-09-05. No additional code change is approved by this normalization patch.
-- Current checklist item: Confirm Client and Server load the canonical custom-item-action config.
-- Current objective: Run one consolidated Backpack verification session before changing working code.
+- Approval state: Bank-interface Backpack foundation approved by `SAP AAA` on 2026-09-08.
+- Current checklist item: Open Backpack from inventory and confirm `762` displays Backpack contents rather than real Bank contents.
+- Current objective: Prove backend isolation and V1 transfers in one short runtime session before adding progression.
 
 ## Checklist / patch status
 
 | Item | Phase | Bundle | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Serialized player-owned storage | 1 | 1.1 | NEEDS TEST | Static ownership established; runtime persistence gate remains. |
-| Contextual Open routing | 1 | 1.1 | NEEDS TEST | Config and server routing are present. |
-| Explicit bank-inventory action set | 1 | 1.1 | NEEDS TEST | Exact visible menu/order requires runtime verification. |
-| Empty to bank | 1 | 1.1 | NEEDS TEST | Partial/full-bank behavior is statically defensive; runtime proof remains. |
-| Consolidated Backpack runtime gate | 1 | 1.2 | READY | Next execution target. |
-| Evidence-backed final polish | 2 | 2.1 | BLOCKED | Dependency only: do not enter until Phase 1 exit conditions pass. |
+| Serialized player-owned storage | 1 | 1.1 | NEEDS TEST | Existing persistent foundation retained. |
+| Contextual Open routing | 1 | 1.1 | NEEDS TEST | Existing config/router retained; presentation target changed to `762`. |
+| Bank-interface presentation | 1 | 1.2 | NEEDS TEST | `762` + key `95`, Backpack backend only. |
+| Backpack-mode transfer routing | 1 | 1.2 | NEEDS TEST | `762:7` deposit and `762:215` withdraw intercepted before real Bank handler. |
+| Backend isolation | 1 | 1.2 | NEEDS TEST | No `Bank.openBank()` / `Bank.bankTabs` ownership in Backpack mode. |
+| Consolidated runtime gate | 1 | 1.3 | READY | Next execution target. |
+| Slot-capacity progression | 2 | 2.1 | PLANNED | Design after foundation passes. |
+| Stack-limit progression | 2 | 2.2 | PLANNED | Design after foundation passes. |
 
 ## Decisions / new ideas
 
 ### Decision log
 
-- `CustomItemActions` is a supporting routing system, not the Backpack workstream authority.
-- `Backpack.java` may remain specifically tied to Rambler's backpack 21445. A generic multi-backpack framework is deferred until content actually requires multiple backpack item types.
-- Preserve existing Matrix3 Bank, Inventory, Equipment, persistence, familiar, and interface ownership.
-- Do not redesign working code before the runtime gate produces evidence that a change is required.
+- 2026-09-08: User explicitly superseded the BoB 671/665 presentation direction after persistent clipping/layout problems.
+- 2026-09-08: Reuse Matrix3 Bank interface `762` as presentation while keeping Backpack storage completely separate from real Bank storage.
+- 2026-09-08: Do not fork/copy `Bank.java`; Backpack mode intercepts the existing interface before stock Bank handling.
+- 2026-09-08: Foundation first: prove safe independent storage on Bank UI before adding upgrade mechanics.
+- 2026-09-08: Future Backpack progression will have separate storage-slot and per-stack-limit upgrade tracks; exact progression/economy remains to be designed.
+- `CustomItemActions` remains a supporting router, not the Backpack authority.
+- Backpack contents remain attached to the player rather than the physical item.
 
 ## Testing
 
-The detailed existing action-level test list remains at `docs/custom-item-actions/testlist.txt`. This workstream keeps only the high-value Backpack gate so testing stays short.
+The authoritative migration checks are in `docs/backpack/testlist.txt`.
 
 ### Quick/high-value checks
 
-1. Start Client and Server; confirm both load `Server/data/items/custom-item-actions.properties`.
-2. Inventory: right-click 21445 and confirm Open works.
-3. Bank inventory: confirm only Deposit, Wear, Open, Empty to bank, Examine are present; exercise Open and Empty to bank.
-4. Logout/login and confirm stored contents remain.
-
-### Deeper checks
-
-1. Equipment and main-bank Open.
-2. Full/partial-bank Empty to bank behavior.
-3. Repeated bank open/close menu stability.
-4. Ordinary unconfigured item regression check.
-5. Familiar/BoB isolation and death persistence.
+1. Open Backpack from inventory.
+2. Confirm interface `762` shows Backpack items only.
+3. Deposit one item and withdraw it again.
+4. Close Backpack and open real Bank; verify real Bank contents/tabs remain unchanged.
+5. Logout/login and confirm Backpack item contents persist.
 
 ### Smoke/regression checks
 
-- Inventory add/remove/equip behavior remains normal.
-- Bank deposit/equip/examine behavior remains normal.
-- Player save/load remains on Matrix3's existing persistence path.
-- No change to real familiar/BoB storage behavior.
+- Normal Inventory add/remove/equip behavior remains normal.
+- Normal real Bank open/deposit/withdraw/tab behavior remains normal after Backpack use.
+- Player save/load remains on Matrix3 persistence.
+- Familiar/BeastOfBurden behavior remains independent.
+- No item loss/duplication during Backpack transfer or Empty to bank.
 
 ## Carryover / blockers
 
 ### CARRYOVER
 
-- Task: Backpack runtime verification.
-- Phase/bundle: Phase 1 / Bundle 1.2.
-- Current state: Implementation foundation is present; runtime proof is incomplete.
-- Remaining work: Execute the consolidated verification list and preserve the targeted debug log only if a failure occurs.
-- Likely files/systems: `Backpack.java`, `Inventory.java`, `CustomItemActions.java`, client custom-item-action presentation hook, canonical properties file.
-- Next action: Run the quick/high-value checks before any additional implementation patch.
+- Backpack progression (slot capacity + stack limits) is intentionally deferred until Phase 1 Bank-interface isolation passes runtime.
+- Bank-interface title/reskin/search/preset polish is intentionally deferred; first prove the storage owner and transfer path.
 
 ### BLOCKED
 
-- None. Further code changes are intentionally gated on runtime evidence, not blocked by an implementation dependency.
+- None.
 
 ## Resume Here
 
 **Last completed:**
 
-- Backpack workstream normalized under the current Matrix3 project rules without changing working code.
+- Bank-interface presentation migration implemented statically: interface `762`, Backpack display key `95`, restricted V1 actions, and pre-Bank-handler routing.
 
 **Current phase:**
 
-- Phase 1 - Stabilize and verify Backpack.
+- Phase 1 - Bank-interface Backpack foundation (`NEEDS TEST`).
 
 **Active bundle:**
 
-- Bundle 1.2 - Consolidated runtime verification.
+- Bundle 1.3 - Consolidated runtime acceptance (`READY`).
 
 **Next checklist item:**
 
-- Confirm both Client and Server load the canonical custom-item-action config, then verify inventory Open and the bank-inventory five-action menu.
+- Open Backpack from inventory and confirm the Bank interface displays Backpack contents rather than the real Bank.
 
 **Current state / next action:**
 
-- Do not redesign or genericize Backpack yet. Run the short runtime gate first. If a failure occurs, use `Server/data/logs/custom-item-actions-debug.txt` to establish the smallest evidence-backed patch boundary.
+- Pull/build Server and run the short Bank-interface Backpack test. Do not start slot/stack progression until backend isolation is runtime-proven.
 
 **Files/systems already inspected:**
 
 - `AGENTS.md`
 - `docs/rs3/PROJECT.md`
-- `docs/rs3/WORKSTREAMS.md`
+- `docs/backpack/PROJECT.md`
+- `docs/backpack/patchnotes.txt`
+- `docs/backpack/testlist.txt`
 - `docs/rs3/SYSTEM_OWNERSHIP.md`
-- `docs/rs3/WORKSTREAM_TEMPLATE.md`
-- `docs/custom-item-actions/patchnotes.txt`
-- `docs/custom-item-actions/testlist.txt`
-- `Server/data/items/custom-item-actions.properties`
 - `Server/src/main/java/com/rs/game/player/Backpack.java`
-- `Server/src/main/java/com/rs/game/player/Inventory.java`
+- `Server/src/main/java/com/rs/game/player/Bank.java`
+- `Server/src/main/java/com/rs/game/player/InterfaceManager.java`
 - `Server/src/main/java/com/rs/game/player/ControlerManager.java`
-- `Server/src/main/java/com/rs/game/player/content/CustomItemActions.java`
+- `Server/src/main/java/com/rs/net/decoders/handlers/ButtonHandler.java`
+- `Client/src/main/java/game/CustomItemActionConfig.java`
 
 **Do not re-scan without new evidence:**
 
-- Backpack storage ownership/persistence structure.
-- Current custom-item-action routing architecture.
-- Bank-inventory configured slot mapping already documented in the existing custom-item-action patchnotes/testlist.
+- Existing Backpack persistence ownership.
+- Custom-item-action routing architecture.
+- Matrix3 Bank key/component ownership (`95`, `762:7`, `762:215`).
+- BoB 671/665 layout debugging for Backpack; that presentation direction is superseded.
 
 **Pending runtime verification:**
 
-- Config loading on both sides.
-- All intended Open contexts.
-- Five-action bank-inventory menu and visible ordering.
-- Stock action fallthrough.
+- Bank-interface visual population.
+- Restricted option labels/actions.
+- Real-Bank backend isolation.
+- Close/reopen Bank state restoration.
+- All contextual Open entry points.
 - Empty to bank normal/full-bank behavior.
 - Logout/login persistence.
-- Familiar/BoB isolation and death behavior.
+- Familiar/BoB and death isolation.
 
 **Blockers:**
 
@@ -308,8 +314,8 @@ The detailed existing action-level test list remains at `docs/custom-item-action
 
 **Important remaining uncertainty:**
 
-- Runtime behavior after the latest config/routing fixes, especially exact bank-menu ordering and persistence/regression checks.
+- Runtime behavior of Bank interface `762` when driven by the independent Backpack container rather than `Bank.bankTabs`.
 
 ## Next recommended work
 
-Run Phase 1 Bundle 1.2 as one consolidated Backpack runtime session. Patch only failures supported by that runtime evidence.
+Run the consolidated Bank-interface Backpack acceptance. If isolation passes, design Phase 2 capacity/stack progression next.
