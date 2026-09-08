@@ -117,7 +117,7 @@ public final class BossLabsArenaPanel extends JPanel {
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel description = new JLabel("Author real BossLabs attack geometry. Origin 0,0 is the resolved attack target; fixed world-arena layout stays separate.");
+        JLabel description = new JLabel("Author real BossLabs attack geometry. Origin 0,0 is the resolved attack target; Matrix3 offsets are +X right and +Y up.");
         description.setFont(ConsoleTheme.SMALL_FONT);
         description.setForeground(ConsoleTheme.MUTED_TEXT);
         description.setAlignmentX(LEFT_ALIGNMENT);
@@ -859,7 +859,7 @@ public final class BossLabsArenaPanel extends JPanel {
             int originX = getWidth() / 2 + panX;
             int originY = getHeight() / 2 + panY;
             hoverX = floorDiv(point.x - originX, tileSize);
-            hoverY = floorDiv(point.y - originY, tileSize);
+            hoverY = -floorDiv(point.y - originY, tileSize);
             BossLabsDraftDefinition.Attack attack = selectedAttack();
             if (attack != null) {
                 setStatus("Hover " + hoverX + ", " + hoverY + "  •  " + attack.getTilePattern().size()
@@ -896,7 +896,7 @@ public final class BossLabsArenaPanel extends JPanel {
                 if (attack != null) {
                     for (BossLabsDraftDefinition.TileOffset tile : attack.getTilePattern()) {
                         int drawX = originX + tile.getX() * tileSize;
-                        int drawY = originY + tile.getY() * tileSize;
+                        int drawY = originY - tile.getY() * tileSize;
                         g.setColor(new Color(ConsoleTheme.ACCENT.getRed(), ConsoleTheme.ACCENT.getGreen(),
                                 ConsoleTheme.ACCENT.getBlue(), 85));
                         g.fillRect(drawX + 1, drawY + 1, Math.max(1, tileSize - 1), Math.max(1, tileSize - 1));
@@ -912,7 +912,7 @@ public final class BossLabsArenaPanel extends JPanel {
 
                 if (hoverX != Integer.MIN_VALUE) {
                     int drawX = originX + hoverX * tileSize;
-                    int drawY = originY + hoverY * tileSize;
+                    int drawY = originY - hoverY * tileSize;
                     g.setColor(ConsoleTheme.TEXT);
                     g.setStroke(new BasicStroke(1.5f));
                     g.drawRect(drawX, drawY, tileSize, tileSize);
