@@ -1,11 +1,15 @@
 package game;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,7 +17,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Client-thread bridge for the Client Console Interface Editor.
  *
  * Swing only queues requests and reads immutable snapshots. All Matrix3
- * InterfaceDefinitions reads/writes happen from the normal client cycle.
+ * InterfaceDefinitions reads/writes and open-interface discovery happen from
+ * the normal client cycle.
  */
 public final class ClientConsoleInterfaceBridge {
 
@@ -32,15 +37,24 @@ public final class ClientConsoleInterfaceBridge {
 
     private static final int SPRITE_ENCODE = -249108765;
 
+    private static final int ROOT_INTERFACE_DECODE = -507155049;
+    private static final int OPEN_INTERFACE_ID_DECODE = 493419501;
+    private static final long OPEN_INTERFACE_PARENT_DECODE = 381237825124074065L;
+
     private static final AtomicInteger REQUESTED_INTERFACE = new AtomicInteger(-1);
     private static final Queue<EditorAction> ACTION_QUEUE = new ConcurrentLinkedQueue<EditorAction>();
 
     /** Client-thread only. */
     private static final Map<Integer, OverrideState> LIVE_OVERRIDES = new HashMap<Integer, OverrideState>();
+    /** Client-thread only. */
+    private static final Set<Integer> PREVIOUS_OPEN_INTERFACES = new HashSet<Integer>();
 
     private static volatile InterfaceSnapshot latestSnapshot = InterfaceSnapshot.empty();
+    private static volatile InterfaceCatalogSnapshot latestCatalog = InterfaceCatalogSnapshot.empty();
     private static volatile String latestStatus = "Enter an interface ID to begin.";
     private static long snapshotSequence;
+    private static long catalogSequence;
+    private static int activeInterfaceId = -1;
 
     private ClientConsoleInterfaceBridge() {
     }
@@ -55,6 +69,10 @@ public final class ClientConsoleInterfaceBridge {
 
     public static InterfaceSnapshot getLatestSnapshot() {
         return latestSnapshot;
+    }
+
+    public static InterfaceCatalogSnapshot getLatestCatalog() {
+        return latestCatalog;
     }
 
     public static String getLatestStatus() {
@@ -96,11 +114,126 @@ public final class ClientConsoleInterfaceBridge {
         }
 
         applyLiveOverrides();
+        refreshInterfaceCatalog();
 
         int requestedInterface = REQUESTED_INTERFACE.getAndSet(-1);
         if (requestedInterface >= 0) {
             latestSnapshot = buildSnapshot(requestedInterface);
         }
+    }
+
+    private static void refreshInterfaceCatalog() {
+        int rootInterfaceId = client.anInt8790 * ROOT_INTERFACE_DECODE;
+        int totalInterfaceCount = Class534.aClass83Array5975 == null ? 0 : Class534.aClass83Array5975.length;
+
+        List<OpenInterfaceSnapshot> open = new ArrayList<OpenInterfaceSnapshot>();
+        Set<Integer> currentOpenIds = new HashSet<Integer>();
+
+        if (rootInterfaceId >= 0 && rootInterfaceId <= 65535) {
+            currentOpenIds.add(Integer.valueOf(rootInterfaceId));
+            open.add(new OpenInterfaceSnapshot(rootInterfaceId, -1, true,
+                    getLoadedComponentCount(rootInterfaceId), false));
+        }
+
+        if (client.aClass676_8760 != null) {
+            for (Object value : client.aClass676_8760) {
+                if (!(value instanceof Class572_Sub29)) {
+                    continue;
+                }
+                Class572_Sub29 node = (Class572_Sub29) value;
+                int interfaceId = node.anInt9301 * OPEN_INTERFACE_ID_DECODE;
+                if (interfaceId < 0 || interfaceId > 65535 || interfaceId == rootInterfaceId) {
+                    continue;
+                }
+                int parentHash = (int) (node.hash * OPEN_INTERFACE_PARENT_DECODE);
+                currentOpenIds.add(Integer.valueOf(interfaceId));
+                open.add(new OpenInterfaceSnapshot(interfaceId, parentHash, false,
+                        getLoadedComponentCount(interfaceId), false));
+            }
+        }
+
+        int newlyOpened = pickMostSubstantialNewInterface(open);
+        if (newlyOpened >= 0) {
+            activeInterfaceId = newlyOpened;
+        } else if (!currentOpenIds.contains(Integer.valueOf(activeInterfaceId))) {
+            activeInterfaceId = pickMostSubstantialOpenInterface(open, rootInterfaceId);
+        }
+        if (activeInterfaceId < 0 && rootInterfaceId >= 0) {
+            activeInterfaceId = rootInterfaceId;
+        }
+
+        List<OpenInterfaceSnapshot> marked = new ArrayList<OpenInterfaceSnapshot>(open.size());
+        for (OpenInterfaceSnapshot entry : open) {
+            marked.add(new OpenInterfaceSnapshot(entry.interfaceId, entry.parentHash,
+                    entry.root, entry.componentCount, entry.interfaceId == activeInterfaceId));
+        }
+        Collections.sort(marked, new Comparator<OpenInterfaceSnapshot>() {
+            @Override
+            public int compare(OpenInterfaceSnapshot left, OpenInterfaceSnapshot right) {
+                if (left.active != right.active)
+                    return left.active ? -1 : 1;
+                if (left.root != right.root)
+                    return left.root ? -1 : 1;
+                if (left.componentCount != right.componentCount)
+                    return right.componentCount - left.componentCount;
+                return left.interfaceId - right.interfaceId;
+            }
+        });
+
+        InterfaceCatalogSnapshot candidate = new InterfaceCatalogSnapshot(
+                0L, rootInterfaceId, activeInterfaceId, totalInterfaceCount,
+                marked.toArray(new OpenInterfaceSnapshot[marked.size()]));
+        if (!candidate.sameContent(latestCatalog)) {
+            catalogSequence++;
+            latestCatalog = new InterfaceCatalogSnapshot(
+                    catalogSequence, rootInterfaceId, activeInterfaceId, totalInterfaceCount,
+                    marked.toArray(new OpenInterfaceSnapshot[marked.size()]));
+        }
+
+        PREVIOUS_OPEN_INTERFACES.clear();
+        PREVIOUS_OPEN_INTERFACES.addAll(currentOpenIds);
+    }
+
+    private static int pickMostSubstantialNewInterface(List<OpenInterfaceSnapshot> open) {
+        int bestInterfaceId = -1;
+        int bestComponentCount = -1;
+        for (OpenInterfaceSnapshot entry : open) {
+            if (entry.root || PREVIOUS_OPEN_INTERFACES.contains(Integer.valueOf(entry.interfaceId))) {
+                continue;
+            }
+            if (entry.componentCount > bestComponentCount) {
+                bestInterfaceId = entry.interfaceId;
+                bestComponentCount = entry.componentCount;
+            }
+        }
+        return bestInterfaceId;
+    }
+
+    private static int pickMostSubstantialOpenInterface(List<OpenInterfaceSnapshot> open, int rootInterfaceId) {
+        int bestInterfaceId = -1;
+        int bestComponentCount = -1;
+        for (OpenInterfaceSnapshot entry : open) {
+            if (entry.interfaceId == rootInterfaceId || entry.root) {
+                continue;
+            }
+            if (entry.componentCount > bestComponentCount) {
+                bestInterfaceId = entry.interfaceId;
+                bestComponentCount = entry.componentCount;
+            }
+        }
+        return bestInterfaceId;
+    }
+
+    private static int getLoadedComponentCount(int interfaceId) {
+        if (Class534.aClass83Array5975 == null || interfaceId < 0
+                || interfaceId >= Class534.aClass83Array5975.length) {
+            return 0;
+        }
+        Class83 group = Class534.aClass83Array5975[interfaceId];
+        if (group == null || group.aClass73Array1081 == null) {
+            return 0;
+        }
+        return group.aClass73Array1081.length;
     }
 
     private static void process(EditorAction action) {
@@ -324,6 +457,129 @@ public final class ClientConsoleInterfaceBridge {
             this.text = text;
             this.overrideSprite = overrideSprite;
             this.spriteId = spriteId;
+        }
+    }
+
+    public static final class InterfaceCatalogSnapshot {
+        private final long sequence;
+        private final int rootInterfaceId;
+        private final int activeInterfaceId;
+        private final int totalInterfaceCount;
+        private final OpenInterfaceSnapshot[] openInterfaces;
+
+        private InterfaceCatalogSnapshot(long sequence, int rootInterfaceId, int activeInterfaceId,
+                int totalInterfaceCount, OpenInterfaceSnapshot[] openInterfaces) {
+            this.sequence = sequence;
+            this.rootInterfaceId = rootInterfaceId;
+            this.activeInterfaceId = activeInterfaceId;
+            this.totalInterfaceCount = totalInterfaceCount;
+            this.openInterfaces = openInterfaces;
+        }
+
+        private static InterfaceCatalogSnapshot empty() {
+            return new InterfaceCatalogSnapshot(0L, -1, -1, 0, new OpenInterfaceSnapshot[0]);
+        }
+
+        public static InterfaceCatalogSnapshot emptyForUi() {
+            return empty();
+        }
+
+        public long getSequence() {
+            return sequence;
+        }
+
+        public int getRootInterfaceId() {
+            return rootInterfaceId;
+        }
+
+        public int getActiveInterfaceId() {
+            return activeInterfaceId;
+        }
+
+        public int getTotalInterfaceCount() {
+            return totalInterfaceCount;
+        }
+
+        public OpenInterfaceSnapshot[] getOpenInterfaces() {
+            return openInterfaces.clone();
+        }
+
+        public OpenInterfaceSnapshot findOpen(int interfaceId) {
+            for (OpenInterfaceSnapshot entry : openInterfaces) {
+                if (entry.interfaceId == interfaceId)
+                    return entry;
+            }
+            return null;
+        }
+
+        private boolean sameContent(InterfaceCatalogSnapshot other) {
+            if (other == null || rootInterfaceId != other.rootInterfaceId
+                    || activeInterfaceId != other.activeInterfaceId
+                    || totalInterfaceCount != other.totalInterfaceCount
+                    || openInterfaces.length != other.openInterfaces.length) {
+                return false;
+            }
+            for (int index = 0; index < openInterfaces.length; index++) {
+                OpenInterfaceSnapshot left = openInterfaces[index];
+                OpenInterfaceSnapshot right = other.openInterfaces[index];
+                if (left.interfaceId != right.interfaceId
+                        || left.parentHash != right.parentHash
+                        || left.root != right.root
+                        || left.componentCount != right.componentCount
+                        || left.active != right.active) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    public static final class OpenInterfaceSnapshot {
+        private final int interfaceId;
+        private final int parentHash;
+        private final boolean root;
+        private final int componentCount;
+        private final boolean active;
+
+        private OpenInterfaceSnapshot(int interfaceId, int parentHash, boolean root,
+                int componentCount, boolean active) {
+            this.interfaceId = interfaceId;
+            this.parentHash = parentHash;
+            this.root = root;
+            this.componentCount = componentCount;
+            this.active = active;
+        }
+
+        public int getInterfaceId() {
+            return interfaceId;
+        }
+
+        public int getParentHash() {
+            return parentHash;
+        }
+
+        public boolean isRoot() {
+            return root;
+        }
+
+        public int getComponentCount() {
+            return componentCount;
+        }
+
+        public boolean isActive() {
+            return active;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder text = new StringBuilder();
+            if (active)
+                text.append("● ");
+            text.append(interfaceId);
+            text.append(root ? "  ROOT" : "  OPEN");
+            if (componentCount > 0)
+                text.append("  ").append(componentCount).append(" comps");
+            return text.toString();
         }
     }
 
