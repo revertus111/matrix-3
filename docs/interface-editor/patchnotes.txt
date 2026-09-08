@@ -24,4 +24,10 @@
 - Added Wire Mesh controls for all-components/selected-only display, component IDs, dimensions, and parent-link lines; the selected component receives a stronger diagnostic outline and position/size label.
 - Added one-shot `Pick Component` mode. Only the armed diagnostic left-click is consumed; normal game input remains untouched outside picker mode. Overlapping hits prefer the deepest/smallest component so child widgets win over large parent containers.
 - Wire Mesh automatically disables when Interface Editor is hidden and follows the currently loaded interface and selected component while sliders are tuning live geometry.
-- V1.2 wire-mesh/picker behavior is `NEEDS TEST`, including OpenGL Canvas visibility and parent-relative overlay alignment.
+- Runtime evidence confirmed the AWT wire-mesh paint path flashes the OpenGL game canvas. Wire Mesh now defaults OFF; renderer-native replacement remains carryover.
+- Added client-thread runtime interface catalog snapshots sourced from Matrix3's root interface and live subinterface table, without making Swing read obfuscated client state directly.
+- Added `Load Active Interface`; newly attached interfaces are tracked and the most substantial foreground candidate is preferred over the permanent root/gameframe.
+- Added an `Open now` dropdown listing current runtime interfaces with active/root markers and loaded component counts; choosing one loads it directly.
+- Added `InterfaceBrowserDialog` for searchable browsing across the current interface-cache ID range. Open/active/root interfaces are marked, and double-click or Load Selected jumps into the editor.
+- Updated the default editor target to 762 for the current Bank-interface Backpack work while keeping all browser/editor behavior generic.
+- V1.3 active/open/cache browser behavior is `NEEDS TEST` under Eclipse/Java 8.
