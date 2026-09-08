@@ -112,12 +112,24 @@ AtlasInvestigationIndex + AtlasEvidenceStore
         -> .client-atlas/mapping-next.md
 ```
 
-The queue is planning only. It cannot create semantic claims. It may prioritize unknown/stale/high-connectivity areas, but evidence classification remains human/assistant evidence-driven.
+Semantic writeback path:
+
+```text
+assistant mapping result
+    -> fingerprinted semantic-writeback JSONL
+        -> AtlasSemanticWriteback
+            -> AtlasEvidenceStore.upsertBatch(...)
+                -> one validated keyed merge
+                -> one atomic evidence.jsonl replacement
+                -> deterministic semantic-snapshot.jsonl
+```
+
+The queue is planning only. It cannot create semantic claims. Batch writeback only persists explicit supplied classifications after validation; it cannot infer or promote semantic meaning.
 
 # Evidence and safety rules
 
 - Exact obfuscated Atlas IDs remain primary; aliases never rename generated symbols.
-- One curated record currently exists per exact subject ID.
+- One curated record exists per exact subject ID.
 - New/updated evidence requires a symbol present in a current `AtlasInvestigationIndex`.
 - Each record stores the current Atlas fingerprint at edit time.
 - Classifications are only `VERIFIED`, `verified-static`, `HYPOTHESIS`, or `UNKNOWN`.
@@ -125,15 +137,21 @@ The queue is planning only. It cannot create semantic claims. It may prioritize 
 - `verified-static` requires direct source/data proof.
 - `HYPOTHESIS` is plausible but unproven.
 - `UNKNOWN` remains unknown.
+- Batch `VERIFIED` requires an explicit `runtime:` or `trace:` supporting reference.
+- Batch `verified-static` requires an explicit `source:`, `static:`, or `data:` supporting reference.
+- Batch writeback rejects stale fingerprints, unknown current IDs, duplicate subjects, malformed classifications, and oversized batches before mutating the evidence store.
+- Semantic writeback is capped at 10000 records per batch; the curated store is capped at 50000 records.
+- One batch performs one load/merge/sort/atomic evidence-file replacement instead of per-record whole-file rewrites.
 - Stale fingerprints and missing subjects produce warnings instead of deletion or reclassification.
 - Curated evidence never changes structural ranking.
 - Normal static rescans reset generated symbols/relationships only; curated evidence survives.
+- Semantic snapshots export curated knowledge only; generated static symbols/relationships remain separate structural authority.
 - Tracing remains OFF by default, bounded to 10000 stored/read events, payload-minimal, and failure-isolated.
 - Definition tracing remains capped at 4000 stored events with duplicate/category filtering counted as suppression rather than drops.
 - Packet payload byte arrays, credentials, arbitrary chat/text strings, arbitrary object dumps, and stack traces are not captured.
 - Runtime correlation never creates semantic claims.
 - Mapping queue output is bounded and exact-ID based.
-- Atlas-owned `game.atlas`, Client Console `game.console`, and Atlas runtime bridge classes are excluded from semantic self-mapping.
+- Atlas-owned `game.atlas`, Client Console `game.console`, and the Atlas runtime bridge classes are excluded from semantic self-mapping.
 
 # Completed foundations
 
@@ -295,17 +313,45 @@ Client/.client-atlas/mapping-next.md
 
 No Matrix3 client launch was required for 5A.
 
-## Bundle 5B - Assistant semantic writeback + scalable knowledge store - ACTIVE / NEXT
+## Bundle 5B - Assistant semantic writeback + scalable knowledge store
+
+**Status: IMPLEMENTED / OFFLINE GATE NEXT**
 
 Purpose: make whole-client mapping practical at bundle scale instead of manually saving one record at a time.
 
-- [ ] Add validated batch evidence upsert/import keyed by exact Atlas IDs.
-- [ ] Increase/rework the current 5000-record curated evidence bound because whole-client exact-symbol mapping can exceed 33000 symbols; remain explicitly bounded rather than unlimited.
-- [ ] Avoid O(n^2)-style whole-file rewrite behavior when applying large mapping bundles.
-- [ ] Produce a deterministic semantic snapshot/export suitable for repository/cross-chat persistence without making generated static data authoritative semantics.
-- [ ] Reject unknown IDs, invalid classifications, stale fingerprints, duplicate subjects, and unproven automatic promotions.
-- [ ] Let an assistant mapping bundle return many proven/hypothesis records in one validated writeback step.
-- [ ] Add one consolidated offline verifier for batch apply/capacity/fingerprint/duplicate/atomicity behavior.
+- [x] Add validated batch evidence upsert/import keyed by exact Atlas IDs.
+  - `AtlasEvidenceStore.upsertBatch(...)` validates the entire batch before replacing curated state.
+  - existing evidence is keyed once in memory, merged once, sorted once, and atomically written once per batch.
+- [x] Rework the old 5000-record evidence ceiling for whole-client scale while remaining bounded.
+  - curated evidence maximum: 50000 records,
+  - semantic writeback maximum: 10000 records per batch.
+- [x] Avoid per-record whole-file rewrite behavior for mapping bundles.
+  - assistant batches use one load + keyed merge + one atomic evidence-file replacement,
+  - single-record Browser `upsert(...)` remains available for manual edits but is not the mapping-bundle path.
+- [x] Add deterministic semantic snapshot/export suitable for repository/cross-chat handoff.
+  - `.client-atlas/semantic-snapshot.jsonl`,
+  - snapshot contains curated evidence only plus deterministic metadata counts,
+  - generated static symbol/relationship data is not exported as semantic authority.
+- [x] Reject invalid semantic writeback before mutation.
+  - stale batch/header/record fingerprints,
+  - unknown current exact IDs,
+  - duplicate subjects,
+  - malformed/invalid classifications,
+  - batch/record bounds,
+  - `VERIFIED` without `runtime:` / `trace:` proof reference,
+  - `verified-static` without `source:` / `static:` / `data:` proof reference.
+- [x] Let one assistant mapping bundle return many explicit evidence records in one validated writeback step.
+  - `AtlasSemanticWriteback` owns the bounded fingerprinted JSONL handoff,
+  - default input is `.client-atlas/semantic-writeback.jsonl`,
+  - successful apply refreshes `.client-atlas/semantic-snapshot.jsonl`.
+- [x] Add one consolidated offline verifier for batch apply/capacity/fingerprint/duplicate/atomicity behavior.
+  - `AtlasSemanticWritebackVerifier` uses isolated temporary evidence stores,
+  - real developer `evidence.jsonl` is never edited by the verifier.
+- [ ] Eclipse Java 8 clean/build current Client.
+- [ ] Run `game.atlas.AtlasSemanticWritebackVerifier` as Java Application.
+- [ ] Require final line `BUNDLE 5B SEMANTIC WRITEBACK CHECK: PASS`.
+
+No Matrix3 client launch is required for Bundle 5B because this bundle changes only offline Atlas semantic persistence/handoff tooling.
 
 ## Bundle 5C - Runtime-targeted mapping assistance - PLANNED
 
@@ -360,6 +406,8 @@ Client/src/main/java/game/atlas/AtlasSchema.java
 Client/src/main/java/game/atlas/AtlasJson.java
 Client/src/main/java/game/atlas/AtlasEvidenceStore.java
 Client/src/main/java/game/atlas/AtlasEvidenceVerifier.java
+Client/src/main/java/game/atlas/AtlasSemanticWriteback.java
+Client/src/main/java/game/atlas/AtlasSemanticWritebackVerifier.java
 Client/src/main/java/game/atlas/AtlasWorkspace.java
 ```
 
@@ -399,7 +447,8 @@ Client/src/main/java/game/Class639.java
 - Phase 4 Browser/Runtime viewer: implementation complete, final combined acceptance deferred by explicit priority change.
 - Bundle 5A mapping queue: **DONE / OFFLINE VERIFIED** with `BUNDLE 5A MAPPING QUEUE CHECK: PASS`.
 - First verified queue state: 33742 scoped symbols, 1221 owners, 393 deterministic bundles, all 33742 symbols initially UNKNOWN, first bundle `MAP-0001` seeded at `game/Class574`.
-- No Phase 1/2/3 regression gate was required for 5A because it adds offline planning/export tooling only and does not modify runtime hooks or gameplay behavior.
+- Bundle 5B semantic writeback/scalable evidence implementation: complete / verified-static review; one consolidated offline Java 8/Eclipse verifier is next.
+- No Phase 1/2/3 or Matrix3 runtime regression gate is required for 5B because it changes only offline Atlas persistence/handoff tooling.
 
 # Carryover / blockers
 
@@ -413,7 +462,7 @@ Client/src/main/java/game/Class639.java
 
 ## BLOCKERS
 
-- None for Bundle 5B implementation.
+- None for Bundle 5B offline verification.
 
 # Resume Here
 
@@ -422,9 +471,9 @@ Client/src/main/java/game/Class639.java
 - Phases 1-3 foundations are verified.
 - Phase 4 Browser + Runtime viewer implementation exists; its final combined acceptance is deferred because manual browsing is not the primary Atlas goal.
 - Bundle 5A semantic coverage/queue is **DONE / OFFLINE VERIFIED**.
-- `AtlasMappingVerifier` passed every queue/coverage/bounds/determinism/self-exclusion/export check.
 - Initial queue snapshot contains 33742 UNKNOWN scoped symbols across 1221 owners and 393 bundles.
 - First generated bundle is `MAP-0001`, seed `game/Class574`, 8 owners / 2298 total symbols; assistant export remains bounded to its priority exact-symbol subset.
+- Bundle 5B full compatible implementation is patched: scalable 50000-record evidence store, bounded batch upsert, fingerprint/exact-ID/proof validation, atomic writeback file handoff, deterministic semantic snapshot, and one consolidated verifier.
 
 **Current phase:**
 
@@ -432,15 +481,15 @@ Client/src/main/java/game/Class639.java
 
 **Active/next bundle:**
 
-- **Bundle 5B - Assistant semantic writeback + scalable knowledge store / NEXT**
+- **Bundle 5B - Assistant semantic writeback + scalable knowledge store / OFFLINE GATE NEXT**
 
 **Current/next work:**
 
-1. Build the full compatible 5B batch-write/capacity/snapshot/validation bundle before requesting another user test.
-2. Keep exact Atlas IDs and current fingerprint as the writeback authority.
-3. Preserve `VERIFIED` / `verified-static` / `HYPOTHESIS` / `UNKNOWN` discipline; no automatic promotion.
-4. Add one consolidated offline 5B verifier rather than per-subitem tests.
-5. After 5B passes, begin actual assistant investigation/writeback of `MAP-0001` and continue queue-first through the remaining bundles.
+1. Pull current `main` and Eclipse Java 8 clean/build Client once.
+2. Run `game.atlas.AtlasSemanticWritebackVerifier` as a Java Application.
+3. Require `BUNDLE 5B SEMANTIC WRITEBACK CHECK: PASS`.
+4. Do not launch Matrix3; 5B is offline-only.
+5. On PASS, mark Bundle 5B DONE and begin real assistant investigation/writeback of `MAP-0001`.
 
 **Do not re-scan/re-discover without new evidence:**
 
@@ -454,10 +503,9 @@ Client/src/main/java/game/Class639.java
 
 **Pending runtime/offline verification:**
 
-- None for Bundle 5A.
+- Bundle 5B one-shot offline semantic-writeback verifier.
 - Phase 4 combined viewer runtime gate remains deferred and should be merged into a future Client Console acceptance session, not run now.
-- Bundle 5B will define its own single consolidated offline gate after implementation.
 
 # Next recommended work
 
-**Implement the complete Bundle 5B scalable assistant semantic writeback bundle, then verify it once before beginning real `MAP-0001` semantic mapping.**
+**Run the single Bundle 5B semantic writeback verifier. On PASS, start real `MAP-0001` assistant semantic investigation and bulk writeback.**
