@@ -21,3 +21,12 @@
 - Added the Backpack ownership row to `docs/rs3/SYSTEM_OWNERSHIP.md`.
 - Preserved the existing implementation; this documentation-only patch intentionally makes no Java/client behavior changes.
 - Set Phase 1 Bundle 1.2 consolidated runtime verification as the next execution target before any additional implementation changes.
+
+2026-09-08
+- Superseded the BoB 671/665 Backpack presentation after runtime interface clipping/layout problems; storage ownership remains unchanged.
+- Backpack now reuses Matrix3 Bank interface 762 as presentation only and sends its independent ItemsContainer through Bank display key 95; normal inventory remains key 93.
+- Backpack does not call `Bank.openBank()` and never uses or mutates `Bank.bankTabs` as its storage backend.
+- Reused the existing ControlerManager pre-handler so Backpack mode consumes 762 clicks before stock Bank ButtonHandler routing can touch the real bank.
+- V1 unlocks only Deposit/Withdraw 1, 5, 10, All and Examine option slots on 762:7 and 762:215; native Bank drag/reorder, Wear, X, last amount, all-but-one, tabs, search, note mode, and other Bank-only controls are intentionally not owned by Backpack mode.
+- Closing Backpack mode restores real-Bank tab/view/count presentation vars through existing Bank refresh methods.
+- Kept the existing 30-slot persistent container for migration safety; storage-slot upgrades and Backpack-specific stack-limit progression are explicitly deferred until the Bank-interface backend-isolation runtime gate passes.
