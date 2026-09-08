@@ -9,3 +9,13 @@
 - Removed the temporary hardcoded Backpack `671:9` width repair so it cannot compete with manual live editor values; Backpack storage/server routing was not changed.
 - Protected dirty inspector fields from the 350ms live snapshot refresh so values being typed are not replaced while the component list refreshes.
 - V1 implementation is `NEEDS TEST` under Eclipse/Java 8.
+
+2026-09-08
+- Replaced geometry-only text-box tuning with eight live slider controls for base/runtime X, Y, Width, and Height while preserving exact numeric entry.
+- Added one-pixel `-` / `+` nudges for each geometry value and shared Fine +/-64, Normal +/-256, and Wide +/-1024 slider ranges.
+- Slider/nudge changes apply automatically when Live geometry is enabled; exact geometry values also apply on Enter or focus loss.
+- Live drag traffic is coalesced by the Swing panel to at most one queued client-thread override every 50ms, preventing slider motion from flooding the existing Interface Editor action queue.
+- Width/height controls reject negative exact values and clamp slider ranges at zero; X/Y remain signed.
+- Renamed the manual action to `Apply Exact / Visual` so text/sprite/alignment or exact full-state application remains explicit alongside live geometry tuning.
+- Reset Selected / Reset Interface cancel any pending live slider write before restoring pre-editor values.
+- V1.1 live-tuning UX remains `NEEDS TEST` under Eclipse/Java 8.
