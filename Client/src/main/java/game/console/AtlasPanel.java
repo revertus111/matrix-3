@@ -50,7 +50,8 @@ import javax.swing.SwingWorker;
  * Client Console browser/editor over the existing Client Atlas engine.
  *
  * Atlas remains authoritative for indexing, search, relationships, and curated
- * evidence persistence. This panel only provides a lazy Swing control surface.
+ * evidence persistence. This panel only translates that data into a human
+ * developer workflow; raw Atlas IDs remain visible and authoritative.
  */
 public final class AtlasPanel extends JPanel {
 
@@ -62,33 +63,37 @@ public final class AtlasPanel extends JPanel {
 
     private final JTextField searchField = new JTextField("Class1");
     private final JButton searchButton = new JButton("Search");
-    private final JButton reloadButton = new JButton("Reload");
-    private final JLabel statusLabel = new JLabel("Search to load the current Atlas index.");
+    private final JButton reloadButton = new JButton("Reload Atlas");
+    private final JLabel statusLabel = new JLabel("Search for a class, method, field, or exact Atlas ID.");
 
     private final DefaultListModel<SearchRow> resultModel = new DefaultListModel<SearchRow>();
     private final JList<SearchRow> resultList = new JList<SearchRow>(resultModel);
 
+    private final JTextArea meaningText = readOnlyBodyArea(5);
     private final JTextArea symbolText = readOnlyArea(7, true);
     private final DefaultListModel<RelationshipRow> relationshipModel =
             new DefaultListModel<RelationshipRow>();
     private final JList<RelationshipRow> relationshipList =
             new JList<RelationshipRow>(relationshipModel);
-    private final JButton openRelationshipButton = new JButton("Open selected relation");
+    private final JLabel relationshipHelpLabel = new JLabel(
+            "Rows marked [open] jump to code. [info only] rows are useful facts, not Atlas symbols.");
+    private final JButton openRelationshipButton = new JButton("Select a connection");
 
-    private final JLabel evidenceFreshnessLabel = new JLabel("No symbol selected");
-    private final JTextArea evidenceWarningArea = readOnlyArea(3, true);
+    private final JLabel evidenceFreshnessLabel = new JLabel("No code selected");
+    private final JTextArea evidenceWarningArea = readOnlyBodyArea(3);
     private final JComboBox<EvidenceStatus> evidenceStatus =
             new JComboBox<EvidenceStatus>(EvidenceStatus.values());
     private final JTextField aliasField = new JTextField();
     private final JTextArea claimArea = editableArea(5);
     private final JTextArea referencesArea = editableArea(4);
-    private final JButton saveEvidenceButton = new JButton("Save evidence");
-    private final JButton deleteEvidenceButton = new JButton("Delete evidence");
+    private final JButton saveEvidenceButton = new JButton("Save what we know");
+    private final JButton deleteEvidenceButton = new JButton("Delete saved note");
 
     private volatile AtlasWorkspace workspace;
     private volatile AtlasInvestigationIndex index;
     private volatile AtlasEvidenceStore evidenceStore;
     private SymbolEntry selectedSymbol;
+    private List<RelationshipRow> selectedRelationships = Collections.emptyList();
     private int detailGeneration;
 
     public AtlasPanel() {
@@ -100,6 +105,7 @@ public final class AtlasPanel extends JPanel {
         add(buildBrowser(), BorderLayout.CENTER);
 
         configureInteractions();
+        openRelationshipButton.setEnabled(false);
         setEvidenceEditorEnabled(false);
     }
 
@@ -113,7 +119,7 @@ public final class AtlasPanel extends JPanel {
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Search symbols, follow relationships, and curate evidence");
+        JLabel subtitle = new JLabel("Find client code, see what connects to it, and save what we learn.");
         subtitle.setFont(ConsoleTheme.SMALL_FONT);
         subtitle.setForeground(ConsoleTheme.ACCENT);
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
@@ -122,8 +128,11 @@ public final class AtlasPanel extends JPanel {
         searchRow.setOpaque(false);
         searchRow.setAlignmentX(LEFT_ALIGNMENT);
         ConsoleTheme.styleTextField(searchField);
+        searchField.setToolTipText(
+                "Examples: Class387, method4844, or an exact ID such as METHOD:game/Class387#...");
         ConsoleTheme.styleButton(searchButton);
         ConsoleTheme.styleButton(reloadButton);
+        reloadButton.setToolTipText("Reload the current Atlas index from disk, then search again.");
 
         JPanel searchButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         searchButtons.setOpaque(false);
@@ -148,7 +157,7 @@ public final class AtlasPanel extends JPanel {
     }
 
     private JSplitPane buildBrowser() {
-        JPanel resultsCard = createCard("Search results");
+        JPanel resultsCard = createCard("Matches");
         configureList(resultList);
         resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         resultList.setCellRenderer(new SearchRowRenderer());
@@ -161,22 +170,43 @@ public final class AtlasPanel extends JPanel {
         details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
         details.setBackground(ConsoleTheme.PANEL);
 
-        JPanel symbolCard = createCard("Exact symbol");
+        JPanel meaningCard = createCard("What Atlas knows");
+        meaningText.setText("Select a search result and Atlas will explain what it can prove without guessing.");
+        meaningCard.add(wrap(meaningText), BorderLayout.CENTER);
+
+        JPanel symbolCard = createCard("Technical details");
         symbolCard.add(wrap(symbolText), BorderLayout.CENTER);
 
-        JPanel relationshipCard = createCard("Relationships");
+        JPanel relationshipCard = createCard("Connections");
         configureList(relationshipList);
         relationshipList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         relationshipList.setCellRenderer(new RelationshipRowRenderer());
         JScrollPane relationScroll = new JScrollPane(relationshipList);
         ConsoleTheme.styleScrollPane(relationScroll);
-        relationScroll.setPreferredSize(new Dimension(1, 165));
+        relationScroll.setPreferredSize(new Dimension(1, 190));
         relationshipCard.add(relationScroll, BorderLayout.CENTER);
+
+        relationshipHelpLabel.setFont(ConsoleTheme.SMALL_FONT);
+        relationshipHelpLabel.setForeground(ConsoleTheme.MUTED_TEXT);
+
         ConsoleTheme.styleButton(openRelationshipButton);
-        relationshipCard.add(openRelationshipButton, BorderLayout.SOUTH);
+        JPanel relationshipFooter = new JPanel();
+        relationshipFooter.setLayout(new BoxLayout(relationshipFooter, BoxLayout.Y_AXIS));
+        relationshipFooter.setOpaque(false);
+        relationshipFooter.add(Box.createVerticalStrut(6));
+        relationshipFooter.add(relationshipHelpLabel);
+        relationshipFooter.add(Box.createVerticalStrut(6));
+
+        JPanel relationshipActionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        relationshipActionRow.setOpaque(false);
+        relationshipActionRow.add(openRelationshipButton);
+        relationshipFooter.add(relationshipActionRow);
+        relationshipCard.add(relationshipFooter, BorderLayout.SOUTH);
 
         JPanel evidenceCard = buildEvidenceCard();
 
+        details.add(meaningCard);
+        details.add(Box.createVerticalStrut(10));
         details.add(symbolCard);
         details.add(Box.createVerticalStrut(10));
         details.add(relationshipCard);
@@ -193,7 +223,7 @@ public final class AtlasPanel extends JPanel {
         split.setBorder(BorderFactory.createEmptyBorder());
         split.setBackground(ConsoleTheme.PANEL);
         split.setDividerSize(5);
-        split.setResizeWeight(0.28D);
+        split.setResizeWeight(0.24D);
         split.setContinuousLayout(true);
         split.setOneTouchExpandable(false);
         split.setDividerLocation(190);
@@ -201,7 +231,7 @@ public final class AtlasPanel extends JPanel {
     }
 
     private JPanel buildEvidenceCard() {
-        JPanel card = createCard("Curated evidence");
+        JPanel card = createCard("What we know");
 
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
@@ -226,19 +256,19 @@ public final class AtlasPanel extends JPanel {
         body.add(Box.createVerticalStrut(5));
         body.add(evidenceWarningArea);
         body.add(Box.createVerticalStrut(8));
-        body.add(fieldLabel("Classification"));
+        body.add(fieldLabel("Confidence"));
         body.add(Box.createVerticalStrut(4));
         body.add(evidenceStatus);
         body.add(Box.createVerticalStrut(8));
-        body.add(fieldLabel("Alias (external only)"));
+        body.add(fieldLabel("Human-readable name"));
         body.add(Box.createVerticalStrut(4));
         body.add(aliasField);
         body.add(Box.createVerticalStrut(8));
-        body.add(fieldLabel("Note / claim"));
+        body.add(fieldLabel("What does this code do?"));
         body.add(Box.createVerticalStrut(4));
         body.add(wrap(claimArea));
         body.add(Box.createVerticalStrut(8));
-        body.add(fieldLabel("Supporting references - one per line"));
+        body.add(fieldLabel("Why do we believe this? - one reference per line"));
         body.add(Box.createVerticalStrut(4));
         body.add(wrap(referencesArea));
         body.add(Box.createVerticalStrut(10));
@@ -294,6 +324,11 @@ public final class AtlasPanel extends JPanel {
             }
         });
 
+        relationshipList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                updateRelationshipAction();
+            }
+        });
         relationshipList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -326,7 +361,7 @@ public final class AtlasPanel extends JPanel {
     private void runSearch(final boolean forceReload) {
         final String query = searchField.getText() == null ? "" : searchField.getText().trim();
         if (query.length() == 0) {
-            setStatus("Enter an Atlas symbol/name query.", true);
+            setStatus("Type a class, method, field, or exact Atlas ID first.", true);
             return;
         }
 
@@ -401,10 +436,9 @@ public final class AtlasPanel extends JPanel {
             status.append("es");
         }
         if (result.isTruncated()) {
-            status.append(" (showing ").append(result.getMatches().size()).append(')');
+            status.append(" - showing ").append(result.getMatches().size());
         }
-        status.append(" | ").append(loadedIndex.getSymbolCount()).append(" symbols / ")
-                .append(loadedIndex.getRelationshipCount()).append(" relationships");
+        status.append(" | ").append(loadedIndex.getSymbolCount()).append(" code symbols indexed");
         setStatus(status.toString(), false);
 
         if (result.isResolved()) {
@@ -433,10 +467,14 @@ public final class AtlasPanel extends JPanel {
             return;
         }
         selectedSymbol = symbol;
+        selectedRelationships = Collections.emptyList();
         final int generation = ++detailGeneration;
+        meaningText.setText("Reading " + shortDisplay(symbol)
+                + "... Atlas will describe structure and saved evidence without guessing.");
         symbolText.setText(formatSymbol(symbol));
         relationshipModel.clear();
-        evidenceFreshnessLabel.setText("Loading evidence...");
+        updateRelationshipAction();
+        evidenceFreshnessLabel.setText("Loading saved knowledge...");
         evidenceWarningArea.setText("");
         setEvidenceEditorEnabled(false);
 
@@ -468,20 +506,27 @@ public final class AtlasPanel extends JPanel {
                 try {
                     if (failure != null) {
                         relationshipModel.clear();
-                        evidenceFreshnessLabel.setText("Evidence unavailable");
+                        selectedRelationships = Collections.emptyList();
+                        meaningText.setText("Atlas could not load details for this symbol: "
+                                + failure.getMessage());
+                        evidenceFreshnessLabel.setText("Saved knowledge unavailable");
                         evidenceWarningArea.setText(failure.getMessage());
                         setStatus("Atlas detail load failed: " + failure.getMessage(), true);
                         return;
                     }
                     DetailPayload payload = get();
+                    selectedRelationships =
+                            Collections.unmodifiableList(new ArrayList<RelationshipRow>(payload.relationships));
                     relationshipModel.clear();
                     for (RelationshipRow row : payload.relationships) {
                         relationshipModel.addElement(row);
                     }
+                    updateRelationshipAction();
                     showEvidence(payload.evidence);
-                    setStatus("Selected exact symbol: " + symbol.getId(), false);
+                    setStatus("Selected " + shortDisplay(symbol)
+                            + " | Technical ID: " + symbol.getId(), false);
                 } catch (Exception ex) {
-                    evidenceFreshnessLabel.setText("Evidence unavailable");
+                    evidenceFreshnessLabel.setText("Saved knowledge unavailable");
                     evidenceWarningArea.setText(ex.getMessage());
                     setStatus("Atlas detail load failed: " + ex.getMessage(), true);
                 }
@@ -496,35 +541,50 @@ public final class AtlasPanel extends JPanel {
         int outgoingCount = Math.min(outgoing.size(), RELATION_LIMIT_PER_DIRECTION);
         for (int i = 0; i < outgoingCount; i++) {
             RelationshipEntry relation = outgoing.get(i);
-            String targetId = loadedIndex.getSymbol(relation.getTarget()) != null
-                    ? relation.getTarget() : null;
-            rows.add(new RelationshipRow(true, relation, targetId));
+            SymbolEntry targetSymbol = loadedIndex.getSymbol(relation.getTarget());
+            rows.add(new RelationshipRow(true, relation, targetSymbol));
         }
         List<RelationshipEntry> incoming = loadedIndex.incoming(symbol.getId());
         int incomingCount = Math.min(incoming.size(), RELATION_LIMIT_PER_DIRECTION);
         for (int i = 0; i < incomingCount; i++) {
             RelationshipEntry relation = incoming.get(i);
-            String sourceId = loadedIndex.getSymbol(relation.getFromId()) != null
-                    ? relation.getFromId() : null;
-            rows.add(new RelationshipRow(false, relation, sourceId));
+            SymbolEntry sourceSymbol = loadedIndex.getSymbol(relation.getFromId());
+            rows.add(new RelationshipRow(false, relation, sourceSymbol));
         }
         return rows;
+    }
+
+    private void updateRelationshipAction() {
+        RelationshipRow row = relationshipList.getSelectedValue();
+        if (row == null) {
+            openRelationshipButton.setText("Select a connection");
+            openRelationshipButton.setEnabled(false);
+            return;
+        }
+        if (row.navigableSymbol == null) {
+            openRelationshipButton.setText("Info only - no code to open");
+            openRelationshipButton.setEnabled(false);
+            return;
+        }
+        openRelationshipButton.setText("Open " + shortDisplay(row.navigableSymbol));
+        openRelationshipButton.setEnabled(true);
     }
 
     private void openSelectedRelationship() {
         RelationshipRow row = relationshipList.getSelectedValue();
         if (row == null) {
-            setStatus("Select a relationship first.", true);
+            setStatus("Select a connection first.", true);
             return;
         }
-        if (row.navigableSymbolId == null) {
-            setStatus("That relationship target is a constant/type/value, not an exact Atlas symbol.", true);
+        if (row.navigableSymbol == null) {
+            setStatus("This is useful structural information, but it is not another Atlas code symbol.", false);
             return;
         }
         AtlasInvestigationIndex loadedIndex = index;
-        SymbolEntry symbol = loadedIndex == null ? null : loadedIndex.getSymbol(row.navigableSymbolId);
+        SymbolEntry symbol = loadedIndex == null
+                ? null : loadedIndex.getSymbol(row.navigableSymbol.getId());
         if (symbol == null) {
-            setStatus("Relationship symbol is not present in the current Atlas index.", true);
+            setStatus("That code symbol is not present in the current Atlas index.", true);
             return;
         }
         searchField.setText(symbol.getId());
@@ -536,25 +596,29 @@ public final class AtlasPanel extends JPanel {
 
     private void showEvidence(EvidenceView view) {
         if (view == null) {
-            evidenceFreshnessLabel.setText("No curated evidence");
+            evidenceFreshnessLabel.setText("Nothing identified yet");
             evidenceFreshnessLabel.setForeground(ConsoleTheme.MUTED_TEXT);
-            evidenceWarningArea.setText("Create a note/claim below. Exact obfuscated ID remains primary.");
+            evidenceWarningArea.setText(
+                    "When we learn what this code really does, save a readable name and note here. "
+                    + "Atlas will keep the technical ID unchanged.");
             evidenceStatus.setSelectedItem(EvidenceStatus.UNKNOWN);
             aliasField.setText("");
             claimArea.setText("");
             referencesArea.setText("");
-            deleteEvidenceButton.setEnabled(false);
             setEvidenceEditorEnabled(true);
             deleteEvidenceButton.setEnabled(false);
+            refreshMeaning(null);
             return;
         }
 
         EvidenceRecord record = view.getRecord();
-        evidenceFreshnessLabel.setText(view.getFreshnessStatus());
+        evidenceFreshnessLabel.setText(view.isCurrent()
+                ? "Saved knowledge is current"
+                : "Saved knowledge needs review");
         evidenceFreshnessLabel.setForeground(view.isCurrent()
                 ? ConsoleTheme.ACCENT : new java.awt.Color(230, 171, 82));
         evidenceWarningArea.setText(view.getWarning() == null
-                ? "Evidence matches the current Atlas fingerprint and exact subject."
+                ? "This saved note matches the current Atlas build and exact code symbol."
                 : view.getWarning());
         evidenceStatus.setSelectedItem(record.getStatus());
         aliasField.setText(record.getAlias() == null ? "" : record.getAlias());
@@ -562,6 +626,17 @@ public final class AtlasPanel extends JPanel {
         referencesArea.setText(joinLines(record.getSupportingReferences()));
         setEvidenceEditorEnabled(true);
         deleteEvidenceButton.setEnabled(true);
+        refreshMeaning(view);
+    }
+
+    private void refreshMeaning(EvidenceView evidence) {
+        SymbolEntry symbol = selectedSymbol;
+        if (symbol == null) {
+            meaningText.setText("Select a search result and Atlas will explain what it can prove without guessing.");
+            return;
+        }
+        meaningText.setText(formatMeaningSummary(symbol, selectedRelationships, evidence));
+        meaningText.setCaretPosition(0);
     }
 
     private void saveEvidence() {
@@ -569,7 +644,7 @@ public final class AtlasPanel extends JPanel {
         final AtlasInvestigationIndex loadedIndex = index;
         final AtlasEvidenceStore store = evidenceStore;
         if (symbol == null || loadedIndex == null || store == null) {
-            setStatus("Select an exact Atlas symbol first.", true);
+            setStatus("Select a code symbol first.", true);
             return;
         }
 
@@ -578,13 +653,13 @@ public final class AtlasPanel extends JPanel {
         final String claim = claimArea.getText() == null ? "" : claimArea.getText().trim();
         final List<String> references = splitReferences(referencesArea.getText());
         if (claim.length() == 0) {
-            setStatus("Note / claim is required before saving evidence.", true);
+            setStatus("Tell Atlas what this code does before saving.", true);
             claimArea.requestFocusInWindow();
             return;
         }
 
         setEvidenceBusy(true);
-        setStatus("Saving curated evidence...", false);
+        setStatus("Saving what we know...", false);
         new SwingWorker<EvidenceView, Void>() {
             private Exception failure;
 
@@ -603,15 +678,16 @@ public final class AtlasPanel extends JPanel {
             protected void done() {
                 try {
                     if (failure != null) {
-                        setStatus("Evidence save failed: " + failure.getMessage(), true);
+                        setStatus("Save failed: " + failure.getMessage(), true);
                         return;
                     }
                     if (selectedSymbol == symbol) {
                         showEvidence(get());
                     }
-                    setStatus("Evidence saved for " + symbol.getId(), false);
+                    setStatus("Saved what we know about " + shortDisplay(symbol)
+                            + " | Technical ID: " + symbol.getId(), false);
                 } catch (Exception ex) {
-                    setStatus("Evidence save failed: " + ex.getMessage(), true);
+                    setStatus("Save failed: " + ex.getMessage(), true);
                 } finally {
                     setEvidenceBusy(false);
                 }
@@ -623,12 +699,12 @@ public final class AtlasPanel extends JPanel {
         final SymbolEntry symbol = selectedSymbol;
         final AtlasEvidenceStore store = evidenceStore;
         if (symbol == null || store == null) {
-            setStatus("Select an exact Atlas symbol first.", true);
+            setStatus("Select a code symbol first.", true);
             return;
         }
 
         setEvidenceBusy(true);
-        setStatus("Deleting curated evidence...", false);
+        setStatus("Deleting saved knowledge...", false);
         new SwingWorker<Boolean, Void>() {
             private Exception failure;
 
@@ -646,17 +722,17 @@ public final class AtlasPanel extends JPanel {
             protected void done() {
                 try {
                     if (failure != null) {
-                        setStatus("Evidence delete failed: " + failure.getMessage(), true);
+                        setStatus("Delete failed: " + failure.getMessage(), true);
                         return;
                     }
                     boolean removed = get().booleanValue();
                     if (selectedSymbol == symbol) {
                         showEvidence(null);
                     }
-                    setStatus(removed ? "Evidence deleted for " + symbol.getId()
-                            : "No evidence record existed for " + symbol.getId(), false);
+                    setStatus(removed ? "Deleted saved knowledge for " + shortDisplay(symbol)
+                            : "No saved knowledge existed for " + shortDisplay(symbol), false);
                 } catch (Exception ex) {
-                    setStatus("Evidence delete failed: " + ex.getMessage(), true);
+                    setStatus("Delete failed: " + ex.getMessage(), true);
                 } finally {
                     setEvidenceBusy(false);
                 }
@@ -671,10 +747,14 @@ public final class AtlasPanel extends JPanel {
 
     private void clearSelectionDetails() {
         selectedSymbol = null;
+        selectedRelationships = Collections.emptyList();
         detailGeneration++;
-        symbolText.setText("No exact symbol selected.");
+        meaningText.setText("Select a search result and Atlas will explain what it can prove without guessing.");
+        symbolText.setText("No code symbol selected.");
         relationshipModel.clear();
-        evidenceFreshnessLabel.setText("No symbol selected");
+        relationshipList.clearSelection();
+        updateRelationshipAction();
+        evidenceFreshnessLabel.setText("No code selected");
         evidenceFreshnessLabel.setForeground(ConsoleTheme.MUTED_TEXT);
         evidenceWarningArea.setText("");
         aliasField.setText("");
@@ -700,6 +780,9 @@ public final class AtlasPanel extends JPanel {
             deleteEvidenceButton.setEnabled(false);
         } else {
             setEvidenceEditorEnabled(selectedSymbol != null);
+            if (selectedSymbol != null) {
+                deleteEvidenceButton.setEnabled(evidenceFreshnessLabel.getText().startsWith("Saved knowledge"));
+            }
         }
     }
 
@@ -763,6 +846,19 @@ public final class AtlasPanel extends JPanel {
         return area;
     }
 
+    private static JTextArea readOnlyBodyArea(int rows) {
+        JTextArea area = new JTextArea(rows, 1);
+        area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setFont(ConsoleTheme.BODY_FONT);
+        area.setForeground(ConsoleTheme.TEXT);
+        area.setBackground(ConsoleTheme.INPUT);
+        area.setCaretColor(ConsoleTheme.TEXT);
+        area.setBorder(ConsoleTheme.panelPadding(7, 8, 7, 8));
+        return area;
+    }
+
     private static JTextArea editableArea(int rows) {
         JTextArea area = new JTextArea(rows, 1);
         area.setLineWrap(true);
@@ -799,7 +895,7 @@ public final class AtlasPanel extends JPanel {
                 JLabel label = (JLabel) super.getListCellRendererComponent(
                         list, value, index, isSelected, cellHasFocus);
                 label.setText(value instanceof EvidenceStatus
-                        ? ((EvidenceStatus) value).getWireValue() : String.valueOf(value));
+                        ? evidenceStatusLabel((EvidenceStatus) value) : String.valueOf(value));
                 label.setFont(ConsoleTheme.BODY_FONT);
                 label.setForeground(ConsoleTheme.TEXT);
                 label.setBackground(isSelected ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.INPUT);
@@ -818,26 +914,132 @@ public final class AtlasPanel extends JPanel {
         list.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
     }
 
-    private static String formatSymbol(SymbolEntry symbol) {
-        StringBuilder out = new StringBuilder(512);
-        out.append("ID: ").append(symbol.getId()).append('\n');
-        out.append("Kind: ").append(symbol.getKind().name()).append('\n');
-        out.append("Owner: ").append(symbol.getOwner()).append('\n');
-        out.append("Name: ").append(symbol.getName()).append('\n');
-        out.append("Descriptor: ").append(symbol.getDescriptor()).append('\n');
-        if (symbol.getSignature() != null) {
-            out.append("Signature: ").append(symbol.getSignature()).append('\n');
+    private static String formatMeaningSummary(SymbolEntry symbol,
+            List<RelationshipRow> relationships, EvidenceView evidence) {
+        StringBuilder out = new StringBuilder(640);
+        String display = shortDisplay(symbol);
+        out.append(display).append(" is ").append(symbolKindDescription(symbol)).append(".\n");
+
+        if (evidence == null) {
+            out.append("Real game meaning: not identified yet. Atlas will not guess.\n");
+        } else {
+            EvidenceRecord record = evidence.getRecord();
+            if (record.getAlias() != null && record.getAlias().trim().length() > 0) {
+                out.append("Known as: ").append(record.getAlias().trim()).append('\n');
+            }
+            out.append("Confidence: ").append(evidenceStatusLabel(record.getStatus())).append('\n');
+            out.append("What we know: ").append(compact(record.getClaim(), 420)).append('\n');
+            if (!evidence.isCurrent()) {
+                out.append("Warning: this saved knowledge needs review against the current Atlas build.\n");
+            }
         }
-        if (symbol.getSourcePath() != null) {
-            out.append("Source: ").append(symbol.getSourcePath()).append('\n');
+
+        int openable = 0;
+        for (RelationshipRow row : relationships) {
+            if (row.navigableSymbol != null) {
+                openable++;
+            }
+        }
+        if (relationships.isEmpty()) {
+            out.append("Connections: none are currently indexed for this symbol.");
+        } else {
+            out.append("Connections: ").append(relationships.size()).append(" shown; ")
+                    .append(openable).append(" can be opened as exact code symbols.");
         }
         return out.toString();
     }
 
+    private static String formatSymbol(SymbolEntry symbol) {
+        StringBuilder out = new StringBuilder(512);
+        out.append("Name: ").append(shortDisplay(symbol)).append('\n');
+        out.append("Type: ").append(kindLabel(symbol)).append('\n');
+        if (symbol.getSourcePath() != null) {
+            out.append("Source: ").append(symbol.getSourcePath()).append('\n');
+        }
+        out.append("Technical ID: ").append(symbol.getId()).append('\n');
+        out.append("Owner: ").append(symbol.getOwner()).append('\n');
+        if (symbol.getDescriptor() != null && symbol.getDescriptor().length() > 0) {
+            out.append("Descriptor: ").append(symbol.getDescriptor()).append('\n');
+        }
+        if (symbol.getSignature() != null) {
+            out.append("Signature: ").append(symbol.getSignature()).append('\n');
+        }
+        return out.toString();
+    }
+
+    private static String kindLabel(SymbolEntry symbol) {
+        String kind = symbol.getKind().name();
+        if ("CLASS".equals(kind)) {
+            return "Class";
+        }
+        if ("INTERFACE".equals(kind)) {
+            return "Java interface";
+        }
+        if ("ENUM".equals(kind)) {
+            return "Enum";
+        }
+        if ("ANNOTATION".equals(kind)) {
+            return "Annotation";
+        }
+        if ("FIELD".equals(kind)) {
+            return "Field";
+        }
+        if ("METHOD".equals(kind)) {
+            return "Method";
+        }
+        if ("CONSTRUCTOR".equals(kind)) {
+            return "Constructor";
+        }
+        return sentenceCase(kind.replace('_', ' '));
+    }
+
+    private static String symbolKindDescription(SymbolEntry symbol) {
+        String kind = symbol.getKind().name();
+        String owner = simpleOwner(symbol.getOwner());
+        if ("CLASS".equals(kind)) {
+            return "a class in the client";
+        }
+        if ("INTERFACE".equals(kind)) {
+            return "a Java interface in the client";
+        }
+        if ("ENUM".equals(kind)) {
+            return "an enum in the client";
+        }
+        if ("ANNOTATION".equals(kind)) {
+            return "an annotation in the client";
+        }
+        if ("FIELD".equals(kind)) {
+            return "a field stored by " + owner;
+        }
+        if ("METHOD".equals(kind)) {
+            return "a method on " + owner;
+        }
+        if ("CONSTRUCTOR".equals(kind)) {
+            return "a constructor for " + owner;
+        }
+        return "an indexed client code symbol";
+    }
+
+    private static String evidenceStatusLabel(EvidenceStatus status) {
+        if (status == null) {
+            return "Unknown";
+        }
+        switch (status) {
+        case VERIFIED:
+            return "Verified at runtime";
+        case VERIFIED_STATIC:
+            return "Confirmed from code/data";
+        case HYPOTHESIS:
+            return "Best guess - not proven";
+        case UNKNOWN:
+        default:
+            return "Unknown";
+        }
+    }
+
     private static String shortDisplay(SymbolEntry symbol) {
         String owner = symbol.getOwner();
-        int slash = owner == null ? -1 : owner.lastIndexOf('/');
-        String simpleOwner = slash >= 0 ? owner.substring(slash + 1) : owner;
+        String simpleOwner = simpleOwner(owner);
         if (symbol.getKind().name().equals("CLASS")
                 || symbol.getKind().name().equals("INTERFACE")
                 || symbol.getKind().name().equals("ENUM")
@@ -845,6 +1047,141 @@ public final class AtlasPanel extends JPanel {
             return simpleOwner;
         }
         return simpleOwner + "." + symbol.getName();
+    }
+
+    private static String simpleOwner(String owner) {
+        if (owner == null) {
+            return "";
+        }
+        int slash = owner.lastIndexOf('/');
+        return slash >= 0 ? owner.substring(slash + 1) : owner;
+    }
+
+    private static String humanRelationship(RelationshipRow row) {
+        String relation;
+        switch (row.relationship.getType()) {
+        case EXTENDS:
+            relation = row.outgoing ? "Extends" : "Extended by";
+            break;
+        case IMPLEMENTS:
+            relation = row.outgoing ? "Implements" : "Implemented by";
+            break;
+        case DECLARES:
+            relation = row.outgoing ? declaresLabel(row.navigableSymbol) : "Contained by";
+            break;
+        case REFERENCES_TYPE:
+            relation = row.outgoing ? "Uses type" : "Used as a type by";
+            break;
+        case CALLS:
+            relation = row.outgoing ? "Calls" : "Called by";
+            break;
+        case DYNAMIC_CALL:
+            relation = row.outgoing ? "Dynamically calls" : "Dynamically called by";
+            break;
+        case READS_FIELD:
+            relation = row.outgoing ? "Reads field" : "Read by";
+            break;
+        case WRITES_FIELD:
+            relation = row.outgoing ? "Writes field" : "Written by";
+            break;
+        case CONSTANT:
+            relation = row.outgoing ? "Uses constant" : "Constant used by";
+            break;
+        case LITERAL_ID:
+            relation = row.outgoing ? "References ID" : "ID referenced by";
+            break;
+        default:
+            relation = sentenceCase(row.relationship.getType().name().replace('_', ' '));
+            break;
+        }
+
+        String target = row.navigableSymbol == null
+                ? prettyRawTarget(row.rawTarget())
+                : shortDisplay(row.navigableSymbol);
+        String suffix = row.navigableSymbol == null ? "  [info only]" : "  [open]";
+        if (row.relationship.getOccurrenceCount() > 1) {
+            suffix += " x" + row.relationship.getOccurrenceCount();
+        }
+        return relation + ": " + compact(target, 86) + suffix;
+    }
+
+    private static String declaresLabel(SymbolEntry target) {
+        if (target == null) {
+            return "Contains";
+        }
+        String kind = target.getKind().name();
+        if ("FIELD".equals(kind)) {
+            return "Contains field";
+        }
+        if ("METHOD".equals(kind)) {
+            return "Contains method";
+        }
+        if ("CONSTRUCTOR".equals(kind)) {
+            return "Contains constructor";
+        }
+        if ("CLASS".equals(kind)) {
+            return "Contains class";
+        }
+        return "Contains";
+    }
+
+    private static String prettyRawTarget(String value) {
+        if (value == null) {
+            return "";
+        }
+        if (value.indexOf('/') >= 0
+                && !value.startsWith("METHOD:")
+                && !value.startsWith("FIELD:")
+                && !value.startsWith("CONSTRUCTOR:")
+                && !value.startsWith("CLASS:")) {
+            return value.replace('/', '.');
+        }
+        return value;
+    }
+
+    private static String relationTooltip(RelationshipRow row) {
+        StringBuilder tooltip = new StringBuilder(240);
+        tooltip.append(row.outgoing ? "Outgoing " : "Incoming ")
+                .append(row.relationship.getType().name())
+                .append(" | raw target: ").append(row.rawTarget());
+        if (row.relationship.getSourcePath() != null) {
+            tooltip.append(" | source: ").append(row.relationship.getSourcePath());
+            if (row.relationship.getSourceLine() != null) {
+                tooltip.append(':').append(row.relationship.getSourceLine().intValue());
+            }
+        }
+        tooltip.append(" | occurrences: ").append(row.relationship.getOccurrenceCount());
+        return tooltip.toString();
+    }
+
+    private static String reasonLabel(String reason) {
+        if (reason == null || reason.length() == 0) {
+            return "match";
+        }
+        if ("exact-name".equals(reason)) {
+            return "exact name match";
+        }
+        if ("exact-id".equals(reason)) {
+            return "exact technical ID";
+        }
+        if ("exact-navigation".equals(reason)) {
+            return "opened from connection";
+        }
+        if ("friendly-owner-member".equals(reason) || "owner-member".equals(reason)) {
+            return "owner/member match";
+        }
+        if ("simple-name".equals(reason)) {
+            return "name match";
+        }
+        return reason.replace('-', ' ').replace('_', ' ');
+    }
+
+    private static String sentenceCase(String value) {
+        if (value == null || value.length() == 0) {
+            return "";
+        }
+        return Character.toUpperCase(value.charAt(0))
+                + (value.length() == 1 ? "" : value.substring(1).toLowerCase(Locale.ROOT));
     }
 
     private static String compact(String value, int limit) {
@@ -923,28 +1260,30 @@ public final class AtlasPanel extends JPanel {
 
         @Override
         public String toString() {
-            return shortDisplay(symbol) + "  [" + symbol.getKind().name().toLowerCase(Locale.ROOT)
-                    + ", " + score + ", " + reason + "]";
+            return shortDisplay(symbol) + "  -  " + kindLabel(symbol)
+                    + " | " + reasonLabel(reason);
         }
     }
 
     private static final class RelationshipRow {
         private final boolean outgoing;
         private final RelationshipEntry relationship;
-        private final String navigableSymbolId;
+        private final SymbolEntry navigableSymbol;
 
         private RelationshipRow(boolean outgoing, RelationshipEntry relationship,
-                String navigableSymbolId) {
+                SymbolEntry navigableSymbol) {
             this.outgoing = outgoing;
             this.relationship = relationship;
-            this.navigableSymbolId = navigableSymbolId;
+            this.navigableSymbol = navigableSymbol;
+        }
+
+        private String rawTarget() {
+            return outgoing ? relationship.getTarget() : relationship.getFromId();
         }
 
         @Override
         public String toString() {
-            String direction = outgoing ? "OUT" : "IN";
-            String target = outgoing ? relationship.getTarget() : relationship.getFromId();
-            return direction + " " + relationship.getType().name() + "  " + compact(target, 92);
+            return humanRelationship(this);
         }
     }
 
@@ -961,6 +1300,14 @@ public final class AtlasPanel extends JPanel {
             label.setForeground(ConsoleTheme.TEXT);
             label.setBackground(isSelected ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.INPUT);
             label.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+            if (value instanceof SearchRow) {
+                SearchRow row = (SearchRow) value;
+                label.setToolTipText("Technical ID: " + row.symbol.getId()
+                        + " | Atlas score: " + row.score
+                        + " | raw match reason: " + row.reason);
+            } else {
+                label.setToolTipText(null);
+            }
             return label;
         }
     }
@@ -978,10 +1325,14 @@ public final class AtlasPanel extends JPanel {
             label.setForeground(ConsoleTheme.TEXT);
             label.setBackground(isSelected ? ConsoleTheme.ACCENT_DARK : ConsoleTheme.INPUT);
             label.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
-            if (value instanceof RelationshipRow
-                    && ((RelationshipRow) value).navigableSymbolId == null
-                    && !isSelected) {
-                label.setForeground(ConsoleTheme.MUTED_TEXT);
+            if (value instanceof RelationshipRow) {
+                RelationshipRow row = (RelationshipRow) value;
+                label.setToolTipText(relationTooltip(row));
+                if (row.navigableSymbol == null && !isSelected) {
+                    label.setForeground(ConsoleTheme.MUTED_TEXT);
+                }
+            } else {
+                label.setToolTipText(null);
             }
             return label;
         }
