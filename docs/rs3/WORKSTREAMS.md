@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phases 1-3 are verified foundations. Browser/runtime viewer implementation exists but its combined acceptance gate is deferred by explicit priority change. Active work is Phase 5 semantic mapping: whole-client coverage, deterministic structural mapping bundles, and assistant-driven map expansion. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phases 1-3 are verified foundations. Bundle 5A semantic coverage/mapping queue is offline-verified across 33742 symbols / 1221 owners / 393 deterministic bundles. Phase 4 viewer acceptance remains deferred; Bundle 5B scalable assistant semantic writeback is next before real MAP-0001 mapping begins. |
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
 | Rambler's Backpack | `docs/backpack/PROJECT.md` | NEEDS TEST | BoB 671/665 presentation is superseded. Bank-interface 762 presentation is implemented statically with independent Backpack storage; Phase 1 Bundle 1.3 backend-isolation/runtime acceptance is next. |
 | Client Console | `docs/client-console/PROJECT.md` | NEEDS TEST | V2 implementation bundles are complete statically. Bundle 2.3 consolidated runtime gate is next: icons/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas coexistence, focus, DPI/layout, bridge authority, and persistence in one session. |
