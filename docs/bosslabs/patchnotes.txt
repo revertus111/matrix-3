@@ -40,3 +40,6 @@
 - Resumed the required V2.1/V2.2 consolidated BossLabs verification gate; Drops is no longer a progression blocker.
 - Corrected Attack Pattern canvas coordinates to match Matrix3 runtime offsets: +X renders right and +Y renders up, matching `WorldTile.transform(x, y, 0)` semantics used by BossCombatScript.
 - With the canvas coordinate adapter corrected, Nudge Up/Down and Rotate Left/Right now use the same visual/world convention without changing persisted tile offsets, BossCombatScript, or definition wire/store v8.
+- Added a one-click `Run Prefab Self-Test` action in Testing for any safely inspected NPC. It runs an exact controlled spawn, temporary in-memory phase/attack definition, 50% HP/phase resolution, asymmetric three-tile attack through the real BossCombatScript testing path, encounter-owned cleanup, and automatic session teardown.
+- Prefab self-test content is passed directly to a new exact-definition testing hook; it is never globally registered or persisted and asserts that LIVE/SAVED/rollback state remains unchanged. The prefab uses zero effect amount and does not modify Drops.
+- Added project-wide prefab/self-test engineering rules to AGENTS.md so substantial systems should provide a disposable one-click confidence check when practical without replacing deeper acceptance/smoke testing.
