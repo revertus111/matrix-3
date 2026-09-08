@@ -1,6 +1,7 @@
 package game.console;
 
-import game.ClientConsoleBridge;
+import game.DevModeBridge;
+import game.DevSpawnPlacement;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -13,6 +14,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -38,7 +40,14 @@ public final class DevSpawnBrowserWindow {
     private final JPanel root = new JPanel(new BorderLayout());
     private final JPanel cards = new JPanel(new CardLayout());
     private final JLabel targetLabel = new JLabel();
-    private final JLabel statusLabel = new JLabel("Choose a type and spawn it on the selected tile.");
+    private final JLabel statusLabel = new JLabel("Choose a type and placement mode.");
+
+    private final JComboBox<String> placementModeBox = new JComboBox<String>(new String[] {
+            "Once", "Continuous", "Paint"
+    });
+    private final JComboBox<String> objectRotationModeBox = new JComboBox<String>(new String[] {
+            "Fixed", "Cycle", "Random"
+    });
 
     private final JTextField npcIdField = new JTextField();
     private final JTextField objectIdField = new JTextField();
@@ -46,6 +55,10 @@ public final class DevSpawnBrowserWindow {
     private final JTextField objectRotationField = new JTextField("0");
     private final JTextField itemIdField = new JTextField();
     private final JTextField itemAmountField = new JTextField("1");
+
+    private final JButton npcSpawnButton = new JButton();
+    private final JButton objectSpawnButton = new JButton();
+    private final JButton itemSpawnButton = new JButton();
 
     private final DevSpawnSearchPanel npcSearch = new DevSpawnSearchPanel(
             DevSpawnSearchPanel.NPC,
@@ -93,6 +106,12 @@ public final class DevSpawnBrowserWindow {
         frame.requestFocus();
     }
 
+    public static void showStatus(String message) {
+        if (instance != null && message != null) {
+            instance.statusLabel.setText(message);
+        }
+    }
+
     private static void ensureWindow() {
         if (frame != null) {
             return;
@@ -101,8 +120,8 @@ public final class DevSpawnBrowserWindow {
         frame = new JFrame("Matrix3 Dev Mode - Spawn Browser");
         frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
         frame.setContentPane(instance.root);
-        frame.setMinimumSize(new Dimension(650, 640));
-        frame.setSize(new Dimension(790, 760));
+        frame.setMinimumSize(new Dimension(680, 690));
+        frame.setSize(new Dimension(820, 800));
         frame.setLocationByPlatform(true);
     }
 
@@ -128,6 +147,8 @@ public final class DevSpawnBrowserWindow {
         header.add(targetLabel);
         header.add(Box.createVerticalStrut(14));
         header.add(createTypeBar());
+        header.add(Box.createVerticalStrut(9));
+        header.add(createPlacementBar());
         header.add(Box.createVerticalStrut(12));
         root.add(header, BorderLayout.NORTH);
 
@@ -141,6 +162,9 @@ public final class DevSpawnBrowserWindow {
         statusLabel.setForeground(ConsoleTheme.MUTED_TEXT);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
         root.add(statusLabel, BorderLayout.SOUTH);
+
+        placementModeBox.addActionListener(e -> updateSpawnButtonLabels());
+        updateSpawnButtonLabels();
     }
 
     private JScrollPane wrapCard(JPanel card) {
@@ -173,6 +197,28 @@ public final class DevSpawnBrowserWindow {
         return bar;
     }
 
+    private JPanel createPlacementBar() {
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        bar.setBackground(ConsoleTheme.WINDOW);
+        bar.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel label = new JLabel("Placement mode");
+        label.setFont(ConsoleTheme.SMALL_FONT);
+        label.setForeground(ConsoleTheme.MUTED_TEXT);
+
+        placementModeBox.setPreferredSize(new Dimension(150, 36));
+        ConsoleTheme.styleComboBox(placementModeBox);
+
+        JButton cancel = new JButton("Cancel active placement");
+        ConsoleTheme.styleButton(cancel);
+        cancel.addActionListener(e -> statusLabel.setText(DevModeBridge.cancelPlacement()));
+
+        bar.add(label);
+        bar.add(placementModeBox);
+        bar.add(cancel);
+        return bar;
+    }
+
     private JToggleButton createTypeButton(String label, final String cardId) {
         JToggleButton button = new JToggleButton(label);
         ConsoleTheme.styleButton(button);
@@ -182,27 +228,30 @@ public final class DevSpawnBrowserWindow {
     }
 
     private JPanel createNpcCard() {
-        JPanel card = createCard("Spawn NPC", "Search by NPC name or ID, then spawn it on the exact tile selected in game.");
+        JPanel card = createCard("Spawn NPC",
+                "Once places on the selected tile. Continuous stays armed for repeated right-click placement. Paint stays armed and places on normal left-clicked world tiles while Walk Here remains active.");
         npcSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(npcSearch);
         card.add(Box.createVerticalStrut(14));
         addField(card, "Selected NPC ID", npcIdField);
         card.add(Box.createVerticalStrut(14));
-        card.add(createSpawnButton("Spawn NPC", new Runnable() {
+        configureSpawnButton(npcSpawnButton, new Runnable() {
             @Override
             public void run() {
                 Integer npcId = parseNonNegative(npcIdField, "NPC ID");
                 if (npcId == null) {
                     return;
                 }
-                queue("itembrowser devspawn npc " + npcId + " " + targetX + " " + targetY + " " + targetPlane);
+                place(DevSpawnPlacement.npc(npcId.intValue()));
             }
-        }));
+        });
+        card.add(npcSpawnButton);
         return card;
     }
 
     private JPanel createObjectCard() {
-        JPanel card = createCard("Spawn Object", "Search by object name or ID, then place it with an explicit type and rotation.");
+        JPanel card = createCard("Spawn Object",
+                "Place an object with explicit type plus Fixed, Cycle, or Random rotation behavior for repeated placement.");
         objectSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(objectSearch);
         card.add(Box.createVerticalStrut(14));
@@ -210,9 +259,11 @@ public final class DevSpawnBrowserWindow {
         card.add(Box.createVerticalStrut(9));
         addField(card, "Type (0-22)", objectTypeField);
         card.add(Box.createVerticalStrut(9));
-        addField(card, "Rotation (0-3)", objectRotationField);
+        addField(card, "Starting rotation (0-3)", objectRotationField);
+        card.add(Box.createVerticalStrut(9));
+        addCombo(card, "Rotation behavior", objectRotationModeBox);
         card.add(Box.createVerticalStrut(14));
-        card.add(createSpawnButton("Spawn Object", new Runnable() {
+        configureSpawnButton(objectSpawnButton, new Runnable() {
             @Override
             public void run() {
                 Integer objectId = parseNonNegative(objectIdField, "Object ID");
@@ -221,15 +272,17 @@ public final class DevSpawnBrowserWindow {
                 if (objectId == null || type == null || rotation == null) {
                     return;
                 }
-                queue("itembrowser devspawn object " + objectId + " " + targetX + " " + targetY + " "
-                        + targetPlane + " " + type + " " + rotation);
+                place(DevSpawnPlacement.object(objectId.intValue(), type.intValue(), rotation.intValue(),
+                        selectedRotationMode()));
             }
-        }));
+        });
+        card.add(objectSpawnButton);
         return card;
     }
 
     private JPanel createItemCard() {
-        JPanel card = createCard("Spawn Ground Item", "Search by item name or ID. Item results reuse the real Item Browser thumbnail renderer.");
+        JPanel card = createCard("Spawn Ground Item",
+                "Item results reuse the real Item Browser thumbnail renderer. Continuous/Paint can place repeated ground-item stacks with the selected amount.");
         itemSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(itemSearch);
         card.add(Box.createVerticalStrut(14));
@@ -237,7 +290,7 @@ public final class DevSpawnBrowserWindow {
         card.add(Box.createVerticalStrut(9));
         addField(card, "Amount", itemAmountField);
         card.add(Box.createVerticalStrut(14));
-        card.add(createSpawnButton("Spawn Item", new Runnable() {
+        configureSpawnButton(itemSpawnButton, new Runnable() {
             @Override
             public void run() {
                 Integer itemId = parseNonNegative(itemIdField, "Item ID");
@@ -245,10 +298,10 @@ public final class DevSpawnBrowserWindow {
                 if (itemId == null || amount == null) {
                     return;
                 }
-                queue("itembrowser devspawn item " + itemId + " " + targetX + " " + targetY + " "
-                        + targetPlane + " " + amount);
+                place(DevSpawnPlacement.item(itemId.intValue(), amount.intValue()));
             }
-        }));
+        });
+        card.add(itemSpawnButton);
         return card;
     }
 
@@ -265,7 +318,7 @@ public final class DevSpawnBrowserWindow {
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel description = new JLabel("<html><div style='width:560px'>" + descriptionText + "</div></html>");
+        JLabel description = new JLabel("<html><div style='width:590px'>" + descriptionText + "</div></html>");
         description.setFont(ConsoleTheme.SMALL_FONT);
         description.setForeground(ConsoleTheme.MUTED_TEXT);
         description.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -292,13 +345,71 @@ public final class DevSpawnBrowserWindow {
         card.add(field);
     }
 
-    private JButton createSpawnButton(String text, final Runnable action) {
-        JButton button = new JButton(text);
+    private void addCombo(JPanel card, String labelText, JComboBox<String> combo) {
+        JLabel label = new JLabel(labelText, SwingConstants.LEFT);
+        label.setFont(ConsoleTheme.SMALL_FONT);
+        label.setForeground(ConsoleTheme.MUTED_TEXT);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        combo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ConsoleTheme.styleComboBox(combo);
+        card.add(label);
+        card.add(Box.createVerticalStrut(5));
+        card.add(combo);
+    }
+
+    private void configureSpawnButton(JButton button, final Runnable action) {
         button.setAlignmentX(Component.LEFT_ALIGNMENT);
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         ConsoleTheme.styleButton(button);
         button.addActionListener(e -> action.run());
-        return button;
+    }
+
+    private void updateSpawnButtonLabels() {
+        DevSpawnPlacement.SpawnMode mode = selectedSpawnMode();
+        if (mode == DevSpawnPlacement.SpawnMode.CONTINUOUS) {
+            npcSpawnButton.setText("Arm Continuous NPC");
+            objectSpawnButton.setText("Arm Continuous Object");
+            itemSpawnButton.setText("Arm Continuous Item");
+        } else if (mode == DevSpawnPlacement.SpawnMode.PAINT) {
+            npcSpawnButton.setText("Arm NPC Paint");
+            objectSpawnButton.setText("Arm Object Paint");
+            itemSpawnButton.setText("Arm Item Paint");
+        } else {
+            npcSpawnButton.setText("Spawn NPC");
+            objectSpawnButton.setText("Spawn Object");
+            itemSpawnButton.setText("Spawn Item");
+        }
+    }
+
+    private void place(DevSpawnPlacement.Request request) {
+        DevSpawnPlacement.SpawnMode mode = selectedSpawnMode();
+        if (mode == DevSpawnPlacement.SpawnMode.ONCE) {
+            statusLabel.setText(DevModeBridge.spawnOnce(request, targetX, targetY, targetPlane));
+        } else {
+            statusLabel.setText(DevModeBridge.armSpawn(request, mode));
+        }
+    }
+
+    private DevSpawnPlacement.SpawnMode selectedSpawnMode() {
+        int index = placementModeBox.getSelectedIndex();
+        if (index == 1) {
+            return DevSpawnPlacement.SpawnMode.CONTINUOUS;
+        }
+        if (index == 2) {
+            return DevSpawnPlacement.SpawnMode.PAINT;
+        }
+        return DevSpawnPlacement.SpawnMode.ONCE;
+    }
+
+    private DevSpawnPlacement.RotationMode selectedRotationMode() {
+        int index = objectRotationModeBox.getSelectedIndex();
+        if (index == 1) {
+            return DevSpawnPlacement.RotationMode.CYCLE;
+        }
+        if (index == 2) {
+            return DevSpawnPlacement.RotationMode.RANDOM;
+        }
+        return DevSpawnPlacement.RotationMode.FIXED;
     }
 
     private void setTarget(int x, int y, int plane) {
@@ -306,7 +417,7 @@ public final class DevSpawnBrowserWindow {
         targetY = y;
         targetPlane = plane;
         targetLabel.setText("Target tile: " + x + ", " + y + ", plane " + plane);
-        statusLabel.setText("Ready. Spawns are live runtime edits and are not saved to source data.");
+        statusLabel.setText("Ready. Once spawns here; Continuous/Paint stay armed until cancelled.");
     }
 
     private Integer parseNonNegative(JTextField field, String label) {
@@ -333,14 +444,5 @@ public final class DevSpawnBrowserWindow {
             field.requestFocusInWindow();
             return null;
         }
-    }
-
-    private void queue(String command) {
-        String error = ClientConsoleBridge.queueConsoleCommand(command);
-        if (error != null) {
-            statusLabel.setText(error);
-            return;
-        }
-        statusLabel.setText("Spawn queued for tile " + targetX + ", " + targetY + ", plane " + targetPlane + ".");
     }
 }
