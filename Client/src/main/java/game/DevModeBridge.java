@@ -1,7 +1,10 @@
 package game;
 
+import java.awt.AWTEvent;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.AWTEventListener;
+import java.awt.event.KeyEvent;
 
 import javax.swing.SwingUtilities;
 
@@ -23,6 +26,9 @@ public final class DevModeBridge {
     public static final int TILE_EDIT_MENU_ACTION = 1501;
     public static final int TILE_MOVE_HERE_MENU_ACTION = 1502;
     public static final int TILE_DUPLICATE_HERE_MENU_ACTION = 1503;
+    public static final int TILE_PLACE_ACTIVE_MENU_ACTION = 1504;
+    public static final int TILE_PLACE_LAST_MENU_ACTION = 1505;
+    public static final int TILE_CANCEL_PLACEMENT_MENU_ACTION = 1506;
 
     public static final int NPC_INSPECT_MENU_ACTION = 1510;
     public static final int NPC_EDIT_MENU_ACTION = 1511;
@@ -49,6 +55,7 @@ public final class DevModeBridge {
     private static volatile DevTarget currentTarget;
     private static volatile PlacementMode placementMode = PlacementMode.NONE;
     private static volatile DevTarget placementTarget;
+    private static volatile boolean escapeListenerInstalled;
 
     private DevModeBridge() {
     }
@@ -59,10 +66,12 @@ public final class DevModeBridge {
 
     public static void setEnabled(boolean value) {
         enabled = value;
-        if (!value) {
+        if (value) {
+            ensureEscapeListener();
+        } else {
             currentTarget = null;
-            placementTarget = null;
-            placementMode = PlacementMode.NONE;
+            clearManipulationPlacement();
+            DevSpawnPlacement.cancel();
         }
     }
 
@@ -78,10 +87,28 @@ public final class DevModeBridge {
         return armPlacement(PlacementMode.DUPLICATE, target);
     }
 
+    public static String spawnOnce(DevSpawnPlacement.Request request, int x, int y, int plane) {
+        if (!enabled || !isOwnerSession()) {
+            return "Dev Spawn requires an Admin+ live session with Dev Mode enabled.";
+        }
+        clearManipulationPlacement();
+        DevSpawnPlacement.cancel();
+        return DevSpawnPlacement.placeOnce(request, x, y, plane);
+    }
+
+    public static String armSpawn(DevSpawnPlacement.Request request, DevSpawnPlacement.SpawnMode mode) {
+        if (!enabled || !isOwnerSession()) {
+            return "Dev Spawn requires an Admin+ live session with Dev Mode enabled.";
+        }
+        clearManipulationPlacement();
+        return DevSpawnPlacement.arm(request, mode);
+    }
+
     public static String cancelPlacement() {
-        placementMode = PlacementMode.NONE;
-        placementTarget = null;
-        return "Placement cancelled.";
+        boolean hadManipulation = placementTarget != null || placementMode != PlacementMode.NONE;
+        clearManipulationPlacement();
+        boolean hadSpawn = DevSpawnPlacement.cancel();
+        return hadManipulation || hadSpawn ? "Placement cancelled." : "No placement is armed.";
     }
 
     public static String rotateTarget(DevTarget target, int delta) {
@@ -126,10 +153,24 @@ public final class DevModeBridge {
 
         addTileEntry("Dev > Edit Tile", TILE_EDIT_MENU_ACTION, localX, localY);
         addTileEntry("Dev > Spawn...", TILE_SPAWN_MENU_ACTION, localX, localY);
+
         if (placementTarget != null && placementMode == PlacementMode.MOVE) {
             addTileEntry("Dev > Move Here", TILE_MOVE_HERE_MENU_ACTION, localX, localY);
         } else if (placementTarget != null && placementMode == PlacementMode.DUPLICATE) {
             addTileEntry("Dev > Duplicate Here", TILE_DUPLICATE_HERE_MENU_ACTION, localX, localY);
+        } else {
+            String activeText = DevSpawnPlacement.getActiveMenuText();
+            if (activeText != null) {
+                addTileEntry(activeText, TILE_PLACE_ACTIVE_MENU_ACTION, localX, localY);
+            }
+            String lastText = DevSpawnPlacement.getLastMenuText();
+            if (lastText != null) {
+                addTileEntry(lastText, TILE_PLACE_LAST_MENU_ACTION, localX, localY);
+            }
+        }
+
+        if (hasAnyPlacementArmed()) {
+            addTileEntry("Dev > Cancel Placement", TILE_CANCEL_PLACEMENT_MENU_ACTION, localX, localY);
         }
     }
 
@@ -189,10 +230,18 @@ public final class DevModeBridge {
 
     /**
      * Handles only custom Dev Mode actions and leaves every normal Matrix3 menu
-     * action untouched.
+     * action untouched. Paint placement observes normal action 23, queues a Dev
+     * spawn, then returns false so Matrix3 still performs its ordinary Walk Here.
      */
     static boolean handleMenuAction(int action, int payloadA, int payloadB) {
         AtlasRuntimeBridge.observeMenuAction(action, payloadA, payloadB);
+
+        int normalizedAction = normalizeAction(action);
+        if (normalizedAction == MATRIX3_TILE_ACTION && enabled && isOwnerSession()
+                && DevSpawnPlacement.isPaintActive()) {
+            notifyPlacementStatus(placeActiveSpawnAtLocal(payloadA, payloadB));
+            return false;
+        }
 
         if (isTileDevAction(action)) {
             return handleTileAction(action, payloadA, payloadB);
@@ -260,6 +309,7 @@ public final class DevModeBridge {
         if (!enabled || target == null || target.getId() < 0) {
             return "Select a valid NPC or object first.";
         }
+        DevSpawnPlacement.cancel();
         placementMode = mode;
         placementTarget = target;
         currentTarget = target;
@@ -269,27 +319,37 @@ public final class DevModeBridge {
     }
 
     private static boolean handleTileAction(int action, int localX, int localY) {
-        if (!enabled || !isOwnerSession() || client.aClass613_8605 == null
-                || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
+        if (!enabled || !isOwnerSession()) {
             return true;
         }
 
-        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
-        if (sceneBase == null) {
+        if (action == TILE_CANCEL_PLACEMENT_MENU_ACTION) {
+            notifyPlacementStatus(cancelPlacement());
             return true;
         }
 
-        final int worldX = sceneBase.localX * -2109597897 + localX;
-        final int worldY = sceneBase.localY * 417324155 + localY;
-        final int plane = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff;
+        WorldTileTarget tile = resolveWorldTile(localX, localY);
+        if (tile == null) {
+            return true;
+        }
 
         if (action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION) {
-            String result = executePlacement(worldX, worldY, plane);
-            notifyInspector(result);
+            notifyInspector(executePlacement(tile.worldX, tile.worldY, tile.plane));
+            return true;
+        }
+        if (action == TILE_PLACE_ACTIVE_MENU_ACTION) {
+            notifyPlacementStatus(DevSpawnPlacement.placeActive(tile.worldX, tile.worldY, tile.plane));
+            return true;
+        }
+        if (action == TILE_PLACE_LAST_MENU_ACTION) {
+            notifyPlacementStatus(DevSpawnPlacement.placeLast(tile.worldX, tile.worldY, tile.plane));
             return true;
         }
 
         final boolean editTile = action == TILE_EDIT_MENU_ACTION;
+        final int worldX = tile.worldX;
+        final int worldY = tile.worldY;
+        final int plane = tile.plane;
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -301,6 +361,28 @@ public final class DevModeBridge {
             }
         });
         return true;
+    }
+
+    private static String placeActiveSpawnAtLocal(int localX, int localY) {
+        WorldTileTarget tile = resolveWorldTile(localX, localY);
+        if (tile == null) {
+            return "Paint placement could not resolve that live world tile.";
+        }
+        return DevSpawnPlacement.placeActive(tile.worldX, tile.worldY, tile.plane);
+    }
+
+    private static WorldTileTarget resolveWorldTile(int localX, int localY) {
+        if (client.aClass613_8605 == null || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
+            return null;
+        }
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
+        if (sceneBase == null) {
+            return null;
+        }
+        int worldX = sceneBase.localX * -2109597897 + localX;
+        int worldY = sceneBase.localY * 417324155 + localY;
+        int plane = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff;
+        return new WorldTileTarget(worldX, worldY, plane);
     }
 
     private static String executePlacement(int worldX, int worldY, int plane) {
@@ -316,8 +398,7 @@ public final class DevModeBridge {
             return error;
         }
 
-        placementMode = PlacementMode.NONE;
-        placementTarget = null;
+        clearManipulationPlacement();
         if (mode == PlacementMode.MOVE) {
             DevTarget moved = target.withTile(worldX, worldY, plane);
             currentTarget = moved;
@@ -447,7 +528,9 @@ public final class DevModeBridge {
 
     private static boolean isTileDevAction(int action) {
         return action == TILE_SPAWN_MENU_ACTION || action == TILE_EDIT_MENU_ACTION
-                || action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION;
+                || action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION
+                || action == TILE_PLACE_ACTIVE_MENU_ACTION || action == TILE_PLACE_LAST_MENU_ACTION
+                || action == TILE_CANCEL_PLACEMENT_MENU_ACTION;
     }
 
     private static int normalizeAction(int action) {
@@ -488,6 +571,16 @@ public final class DevModeBridge {
         });
     }
 
+    private static void notifyPlacementStatus(final String message) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                DevInspectorWindow.showStatus(message);
+                DevSpawnBrowserWindow.showStatus(message);
+            }
+        });
+    }
+
     private static void refreshInspectorTarget(final DevTarget target) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
@@ -495,6 +588,39 @@ public final class DevModeBridge {
                 DevInspectorWindow.refreshTarget(target);
             }
         });
+    }
+
+    private static void clearManipulationPlacement() {
+        placementMode = PlacementMode.NONE;
+        placementTarget = null;
+    }
+
+    private static boolean hasAnyPlacementArmed() {
+        return placementTarget != null || placementMode != PlacementMode.NONE || DevSpawnPlacement.hasActive();
+    }
+
+    private static synchronized void ensureEscapeListener() {
+        if (escapeListenerInstalled) {
+            return;
+        }
+        try {
+            Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
+                @Override
+                public void eventDispatched(AWTEvent event) {
+                    if (!(event instanceof KeyEvent)) {
+                        return;
+                    }
+                    KeyEvent keyEvent = (KeyEvent) event;
+                    if (keyEvent.getID() == KeyEvent.KEY_PRESSED && keyEvent.getKeyCode() == KeyEvent.VK_ESCAPE
+                            && enabled && hasAnyPlacementArmed()) {
+                        notifyPlacementStatus(cancelPlacement());
+                    }
+                }
+            }, AWTEvent.KEY_EVENT_MASK);
+            escapeListenerInstalled = true;
+        } catch (RuntimeException ex) {
+            // Escape is a convenience cancellation path. Explicit Cancel remains available.
+        }
     }
 
     private static boolean hasDevAction(int targetAction) {
@@ -595,6 +721,18 @@ public final class DevModeBridge {
 
         public int getRuntimeIndex() {
             return runtimeIndex;
+        }
+    }
+
+    private static final class WorldTileTarget {
+        private final int worldX;
+        private final int worldY;
+        private final int plane;
+
+        private WorldTileTarget(int worldX, int worldY, int plane) {
+            this.worldX = worldX;
+            this.worldY = worldY;
+            this.plane = plane;
         }
     }
 }
