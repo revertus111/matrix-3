@@ -1,6 +1,8 @@
 package com.rs.game.npc.bosslabs;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -9,6 +11,7 @@ import com.rs.game.Entity;
 import com.rs.game.World;
 import com.rs.game.WorldTile;
 import com.rs.game.npc.NPC;
+import com.rs.game.npc.combat.NPCCombatDefinitions;
 import com.rs.game.player.Player;
 import com.rs.game.tasks.WorldTask;
 import com.rs.game.tasks.WorldTasksManager;
@@ -25,6 +28,10 @@ import com.rs.utils.Utils;
  * that mutate NPC/world state.
  */
 public final class BossLabsTestingService {
+
+	private static final int PREFAB_TEST_STEPS = 8;
+	private static final String PREFAB_PHASE_ID = "prefab_phase";
+	private static final String PREFAB_ATTACK_ID = "prefab_corner";
 
 	private static final int[][] SPAWN_DIRECTIONS = {
 			{0, 1}, {1, 1}, {1, 0}, {1, -1},
@@ -65,6 +72,130 @@ public final class BossLabsTestingService {
 
 	public static String resetEncounter(Player player, int npcId) {
 		return spawnBoss(player, npcId).replace("Spawned", "Reset and spawned");
+	}
+
+	/**
+	 * Runs a small deterministic BossLabs smoke test against one exact controlled
+	 * NPC instance. The prefab definition is passed directly to the testing hook;
+	 * it is never registered globally, never saved, and never changes Drops.
+	 */
+	public static String runPrefabSelfTest(Player player, int npcId) {
+		requirePlayer(player);
+		BossDefinition liveBefore = BossDefinitionRegistry.get(npcId);
+		BossDefinition savedBefore = BossDefinitionStore.getSaved(npcId);
+		boolean rollbackBefore = BossDefinitionRegistry.hasRollback(npcId);
+		int passed = 0;
+		String step = "controlled test spawn";
+
+		try {
+			spawnBoss(player, npcId);
+			NPC boss = requireTestBoss(player, npcId);
+			passed++;
+
+			step = "disposable prefab definition";
+			BossDefinition prefab = createPrefabDefinition(npcId, boss.getName());
+			if (prefab.getNpcId() != npcId || prefab.getPhases().size() != 1)
+				throw new IllegalStateException("Prefab definition did not build as expected.");
+			passed++;
+
+			step = "HP and phase resolution";
+			setHealthPercent(player, npcId, 50);
+			BossPhaseDefinition phase = prefab.getPhaseForHealth(boss.getHitpoints(), Math.max(1, boss.getMaxHitpoints()));
+			if (phase == null || !PREFAB_PHASE_ID.equals(phase.getId()))
+				throw new IllegalStateException("Prefab phase did not resolve after the HP checkpoint.");
+			passed++;
+
+			step = "encounter context ownership";
+			BossEncounterContext encounter = BossEncounterRuntime.getOrCreate(boss);
+			encounter.registerParticipant(player);
+			if (encounter.getParticipantCount() < 1)
+				throw new IllegalStateException("Testing player was not registered in the prefab encounter context.");
+			passed++;
+
+			step = "owned task tracking";
+			WorldTask cleanupProbe = new WorldTask() {
+				@Override
+				public void run() {
+					stop();
+				}
+			};
+			encounter.trackTask(cleanupProbe);
+			if (encounter.getOwnedTaskCount() < 1)
+				throw new IllegalStateException("Prefab cleanup probe was not tracked by the encounter.");
+			passed++;
+
+			step = "real asymmetric tile attack path";
+			int delay = BossCombatScript.INSTANCE.executeAttackForTesting(
+					boss, player, prefab, PREFAB_PHASE_ID, PREFAB_ATTACK_ID);
+			if (delay < 1)
+				throw new IllegalStateException("Prefab attack returned an invalid combat delay.");
+			passed++;
+
+			step = "encounter-owned cleanup";
+			int clearedTasks = BossEncounterRuntime.clearOwnedTasks(boss);
+			BossEncounterRuntime.clearOwnedNpcs(boss);
+			if (clearedTasks < 1 || encounter.getOwnedTaskCount() != 0)
+				throw new IllegalStateException("Prefab encounter-owned task cleanup did not complete.");
+			passed++;
+
+			step = "session cleanup and global-state isolation";
+			removeCurrentTestBoss(player);
+			if (TEST_BOSSES.get(player) != null)
+				throw new IllegalStateException("Controlled prefab NPC session was not removed.");
+			if (BossDefinitionRegistry.get(npcId) != liveBefore
+					|| BossDefinitionRegistry.hasRollback(npcId) != rollbackBefore
+					|| BossDefinitionStore.getSaved(npcId) != savedBefore)
+				throw new IllegalStateException("Prefab self-test changed global LIVE/SAVED/rollback state.");
+			passed++;
+
+			return "Prefab self-test PASS " + passed + "/" + PREFAB_TEST_STEPS
+					+ " — spawn, disposable definition, HP/phase, context, owned-task tracking, asymmetric tile attack, cleanup, and global-state isolation passed.";
+		} catch (RuntimeException e) {
+			throw new IllegalStateException("Prefab self-test FAIL " + passed + "/" + PREFAB_TEST_STEPS
+					+ " at " + step + ": " + safeMessage(e), e);
+		} finally {
+			removeCurrentTestBoss(player);
+		}
+	}
+
+	private static BossDefinition createPrefabDefinition(int npcId, String npcName) {
+		List<BossTileOffset> pattern = Arrays.asList(
+				new BossTileOffset(0, 0),
+				new BossTileOffset(0, 1),
+				new BossTileOffset(1, 0));
+		BossAttackDefinition attack = new BossAttackDefinition(
+				PREFAB_ATTACK_ID,
+				NPCCombatDefinitions.MELEE,
+				BossAttackDefinition.USE_NPC_DEFAULT,
+				BossAttackDefinition.USE_NPC_DEFAULT,
+				BossAttackDefinition.USE_NPC_DEFAULT,
+				0,
+				1,
+				-1,
+				-1,
+				0,
+				pattern,
+				-1,
+				0,
+				1,
+				0,
+				BossAttackDefinition.TARGET_CURRENT,
+				14,
+				1,
+				0,
+				true,
+				BossAttackDefinition.TILE_EFFECT_HEAL_BOSS,
+				BossAttackDefinition.TILE_EFFECT_HEAL_BOSS);
+		BossPhaseDefinition phase = new BossPhaseDefinition(
+				PREFAB_PHASE_ID, 1, 100, Arrays.asList(attack));
+		String name = npcName == null || npcName.trim().isEmpty() ? "NPC " + npcId : npcName.trim();
+		return new BossDefinition("prefab_self_test_" + npcId, name + " Prefab Self-Test", npcId,
+				Arrays.asList(phase));
+	}
+
+	private static String safeMessage(RuntimeException e) {
+		String message = e == null ? null : e.getMessage();
+		return message == null || message.trim().isEmpty() ? e.getClass().getSimpleName() : message;
 	}
 
 	public static String setHealthPercent(Player player, int npcId, int percent) {
