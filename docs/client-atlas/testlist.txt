@@ -74,14 +74,27 @@ Phase 5 / Bundle 5A - semantic mapping coverage + queue - DONE / OFFLINE VERIFIE
 [x] `.client-atlas/mapping-check.txt` and `.client-atlas/mapping-next.md` generated.
 [x] Bundle 5A DONE.
 
-Phase 5 / Bundle 5B - scalable assistant semantic writeback - NEXT
-[ ] Validated batch evidence upsert/import keyed by exact current Atlas IDs.
-[ ] Rework current 5000-record evidence capacity for whole-client scale while staying explicitly bounded.
-[ ] Avoid O(n^2)-style whole-file rewrite behavior during large bundle apply.
-[ ] Deterministic semantic snapshot/export for repository/cross-chat persistence.
-[ ] Reject unknown IDs, stale fingerprints, duplicate subjects, invalid classifications, and unproven automatic promotions.
-[ ] Allow one assistant mapping bundle to return many validated semantic records in one writeback step.
-[ ] Add one consolidated offline verifier for the whole compatible 5B bundle.
+Phase 5 / Bundle 5B - scalable assistant semantic writeback - IMPLEMENTED / OFFLINE GATE NEXT
+[x] Curated evidence ceiling raised to an explicit 50000 records for whole-client semantic coverage.
+[x] Assistant semantic writeback is bounded to 10000 evidence records per batch.
+[x] `AtlasEvidenceStore.upsertBatch(...)` validates the full batch before any persistent mutation.
+[x] Batch header and every record must match the current Atlas fingerprint.
+[x] Unknown current exact subject IDs are rejected.
+[x] Duplicate subject IDs inside one writeback are rejected.
+[x] Invalid evidence classifications are rejected while parsing the writeback.
+[x] Batch `VERIFIED` requires explicit `runtime:` or `trace:` supporting evidence.
+[x] Batch `verified-static` requires explicit `source:`, `static:`, or `data:` supporting evidence.
+[x] Batch apply performs one keyed existing-state merge, one deterministic sort, and one atomic evidence-file replacement rather than per-record whole-file rewrites.
+[x] Added `AtlasSemanticWriteback` fingerprinted JSONL handoff; default input is `.client-atlas/semantic-writeback.jsonl`.
+[x] Successful batch apply refreshes deterministic `.client-atlas/semantic-snapshot.jsonl`.
+[x] Semantic snapshot contains curated knowledge only; generated symbols/relationships remain separate structural authority.
+[x] Added `AtlasSemanticWritebackVerifier`; it uses isolated temporary evidence stores and never edits real `evidence.jsonl`.
+[x] Verifier covers exact-ID batch apply/reapply, atomic rejection/no partial mutation, stale/unknown/duplicate/invalid-status rejection, evidence-proof guards, >5000 capacity, explicit 50000 ceiling, and deterministic semantic snapshot output.
+[ ] Eclipse Java 8 clean/build current Client.
+[ ] Run `game.atlas.AtlasSemanticWritebackVerifier` as Java Application.
+[ ] Require final line `BUNDLE 5B SEMANTIC WRITEBACK CHECK: PASS`.
+[ ] Require report at `.client-atlas/semantic-writeback-check.txt`.
+[ ] No Matrix3 client launch required; this gate is offline-only.
 
 Carryover regression checks
 [ ] Component-specific decoded interface payload values only if current packet metadata proves insufficient.
@@ -95,6 +108,6 @@ Gate rules
 - Do not request another Bundle 3B gate without a relevant evidence/knowledge implementation change or contradictory evidence.
 - Phase 4 Browser/Runtime evidence acceptance is deferred by explicit user priority change and does not block offline Phase 5 mapping work.
 - Bundle 5A is closed; do not rerun it without a relevant mapping-queue change or contradictory evidence.
-- Bundle 5B should be implemented as one compatible bundle and verified once, not split into per-subitem cycles.
-- After 5B passes, use generated mapping bundles to drive bounded assistant investigation rather than asking the user to manually interpret obfuscated relationships.
+- Bundle 5B uses one consolidated offline Java 8/Eclipse verifier; do not split it into per-subitem test cycles.
+- After 5B passes, begin actual `MAP-0001` assistant investigation/writeback rather than asking the user to manually interpret obfuscated relationships.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
