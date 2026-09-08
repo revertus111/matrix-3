@@ -4,6 +4,7 @@ import game.ClientConsoleInterfaceBridge;
 import game.ClientConsoleInterfaceBridge.ComponentOverride;
 import game.ClientConsoleInterfaceBridge.ComponentSnapshot;
 import game.ClientConsoleInterfaceBridge.InterfaceSnapshot;
+import game.ClientConsoleInterfaceOverlay;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -61,6 +62,13 @@ public final class InterfaceEditorPanel extends JScrollPane {
     private final JLabel itemValue = ConsoleTheme.createValueLabel();
     private final JLabel childrenValue = ConsoleTheme.createValueLabel();
 
+    private final JCheckBox wireMeshCheck = checkBox("Wire Mesh overlay");
+    private final JCheckBox selectedOnlyCheck = checkBox("Selected component only");
+    private final JCheckBox showIdsCheck = checkBox("Show component IDs");
+    private final JCheckBox showDimensionsCheck = checkBox("Show dimensions");
+    private final JCheckBox showParentLinksCheck = checkBox("Show parent links");
+    private final JButton pickComponentButton = new JButton("Pick Component");
+
     private final LiveGeometryControl baseXControl = new LiveGeometryControl("X", false);
     private final LiveGeometryControl baseYControl = new LiveGeometryControl("Y", false);
     private final LiveGeometryControl baseWidthControl = new LiveGeometryControl("Width", true);
@@ -111,12 +119,14 @@ public final class InterfaceEditorPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(6));
         content.add(ConsoleTheme.createWrappedText(
                 "Drag geometry sliders and watch the interface update while you tune it. "
-                + "Exact values, reset, and copy/export remain available for final cleanup.", 3));
+                + "Use Wire Mesh to see component bounds directly over the game interface.", 3));
         content.add(Box.createVerticalStrut(16));
 
         content.add(createTargetCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createComponentsCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createWireMeshCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createInspectorCard());
         content.add(Box.createVerticalStrut(10));
@@ -136,6 +146,11 @@ public final class InterfaceEditorPanel extends JScrollPane {
             geometryRangeCombo.setSelectedItem(RANGE_NORMAL);
             liveGeometryCheck.setSelected(true);
             pinRuntimeCheck.setSelected(true);
+            wireMeshCheck.setSelected(true);
+            showIdsCheck.setSelected(true);
+            selectedOnlyCheck.setSelected(false);
+            showDimensionsCheck.setSelected(false);
+            showParentLinksCheck.setSelected(false);
         } finally {
             populating = false;
         }
@@ -151,9 +166,11 @@ public final class InterfaceEditorPanel extends JScrollPane {
             if (isShowing()) {
                 loadTarget();
                 refreshTimer.start();
+                syncOverlayState();
             } else {
                 refreshTimer.stop();
                 cancelPendingLiveApply();
+                ClientConsoleInterfaceOverlay.setState(-1, -1, false, false, false, false, false);
             }
         });
     }
@@ -202,6 +219,38 @@ public final class InterfaceEditorPanel extends JScrollPane {
         ConsoleTheme.styleScrollPane(listScroll);
         listScroll.setBorder(BorderFactory.createLineBorder(ConsoleTheme.BORDER));
         card.add(listScroll);
+        return card;
+    }
+
+    private JPanel createWireMeshCard() {
+        JPanel card = ConsoleTheme.createCard("Wire Mesh");
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createWrappedText(
+                "Draw live component bounds over the game canvas. Pick Component consumes only the next left-click used to select a UI component.", 3));
+        card.add(Box.createVerticalStrut(9));
+
+        styleCheck(wireMeshCheck);
+        styleCheck(selectedOnlyCheck);
+        styleCheck(showIdsCheck);
+        styleCheck(showDimensionsCheck);
+        styleCheck(showParentLinksCheck);
+
+        card.add(wireMeshCheck);
+        card.add(Box.createVerticalStrut(4));
+        card.add(selectedOnlyCheck);
+        card.add(Box.createVerticalStrut(4));
+        card.add(showIdsCheck);
+        card.add(Box.createVerticalStrut(4));
+        card.add(showDimensionsCheck);
+        card.add(Box.createVerticalStrut(4));
+        card.add(showParentLinksCheck);
+        card.add(Box.createVerticalStrut(10));
+
+        ConsoleTheme.styleButton(pickComponentButton);
+        pickComponentButton.setAlignmentX(LEFT_ALIGNMENT);
+        pickComponentButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        pickComponentButton.setToolTipText("Arm one-shot picker, then left-click a component in the game interface.");
+        card.add(pickComponentButton);
         return card;
     }
 
@@ -394,6 +443,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
                 cancelPendingLiveApply();
                 selectedComponentId = selected.getComponentId();
                 populateInspector(selected);
+                syncOverlayState();
             }
         });
 
@@ -443,6 +493,13 @@ public final class InterfaceEditorPanel extends JScrollPane {
             markDirty();
         });
 
+        wireMeshCheck.addItemListener(e -> syncOverlayState());
+        selectedOnlyCheck.addItemListener(e -> syncOverlayState());
+        showIdsCheck.addItemListener(e -> syncOverlayState());
+        showDimensionsCheck.addItemListener(e -> syncOverlayState());
+        showParentLinksCheck.addItemListener(e -> syncOverlayState());
+        pickComponentButton.addActionListener(e -> armComponentPicker());
+
         textField.setEnabled(false);
         spriteField.setEnabled(false);
     }
@@ -454,6 +511,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
             return;
         }
         cancelPendingLiveApply();
+        ClientConsoleInterfaceOverlay.cancelPicker();
         loadedInterfaceId = target.interfaceId;
         pendingSelectComponent = target.componentId;
         selectedComponentId = -1;
@@ -462,16 +520,20 @@ public final class InterfaceEditorPanel extends JScrollPane {
         componentModel.clear();
         clearInspector();
         ClientConsoleInterfaceBridge.requestSnapshot(loadedInterfaceId);
+        syncOverlayState();
         setStatus("Loading interface " + loadedInterfaceId + "...", true);
     }
 
     private void refreshFromBridge() {
+        handlePickedComponent();
+
         if (loadedInterfaceId >= 0) {
             ClientConsoleInterfaceBridge.requestSnapshot(loadedInterfaceId);
         }
 
         InterfaceSnapshot snapshot = ClientConsoleInterfaceBridge.getLatestSnapshot();
         if (snapshot.getInterfaceId() != loadedInterfaceId || snapshot.getSequence() == lastSnapshotSequence) {
+            updatePickerButton();
             return;
         }
 
@@ -492,6 +554,68 @@ public final class InterfaceEditorPanel extends JScrollPane {
                 populateInspector(selected);
             }
         }
+        syncOverlayState();
+        updatePickerButton();
+    }
+
+    private void handlePickedComponent() {
+        int pickedComponent = ClientConsoleInterfaceOverlay.consumePickedComponent();
+        if (pickedComponent < 0 || loadedInterfaceId < 0) {
+            return;
+        }
+
+        cancelPendingLiveApply();
+        if (searchField.getText() != null && searchField.getText().length() > 0) {
+            searchField.setText("");
+        }
+        selectedComponentId = pickedComponent;
+        pendingSelectComponent = -1;
+        selectComponent(pickedComponent);
+
+        InterfaceSnapshot snapshot = ClientConsoleInterfaceBridge.getLatestSnapshot();
+        ComponentSnapshot selected = snapshot.getInterfaceId() == loadedInterfaceId
+                ? snapshot.findComponent(pickedComponent) : null;
+        if (selected != null) {
+            populateInspector(selected);
+        }
+        syncOverlayState();
+        setStatus("Picked component " + loadedInterfaceId + ":" + pickedComponent + " from the game canvas.", true);
+    }
+
+    private void armComponentPicker() {
+        if (loadedInterfaceId < 0) {
+            setStatus("Load an interface before using Pick Component.", false);
+            return;
+        }
+        if (!wireMeshCheck.isSelected()) {
+            wireMeshCheck.setSelected(true);
+        }
+        syncOverlayState();
+        String error = ClientConsoleInterfaceOverlay.armPicker();
+        if (error != null) {
+            setStatus(error, false);
+            return;
+        }
+        updatePickerButton();
+        setStatus("Pick mode armed - left-click a component in the open game interface.", true);
+    }
+
+    private void updatePickerButton() {
+        pickComponentButton.setText(ClientConsoleInterfaceOverlay.isPickerArmed()
+                ? "Picking... click in game" : "Pick Component");
+    }
+
+    private void syncOverlayState() {
+        boolean overlayVisible = isShowing() && wireMeshCheck.isSelected() && loadedInterfaceId >= 0;
+        ClientConsoleInterfaceOverlay.setState(
+                loadedInterfaceId,
+                selectedComponentId,
+                overlayVisible,
+                selectedOnlyCheck.isSelected(),
+                showIdsCheck.isSelected(),
+                showDimensionsCheck.isSelected(),
+                showParentLinksCheck.isSelected());
+        updatePickerButton();
     }
 
     private void rebuildComponentList() {
@@ -527,6 +651,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
                 selectedComponentId = componentId;
                 componentList.setSelectedIndex(index);
                 componentList.ensureIndexIsVisible(index);
+                syncOverlayState();
                 return;
             }
         }
@@ -572,6 +697,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
         } finally {
             populating = false;
         }
+        syncOverlayState();
     }
 
     private void clearInspector() {
