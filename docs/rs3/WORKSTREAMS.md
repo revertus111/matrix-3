@@ -35,7 +35,7 @@ Use this registry to answer:
 
 | Workstream | Authority document | Status | Notes |
 | --- | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 and Phase 2 Bundle 2A are runtime-verified. Bundle 2B search/investigation through 2B.3 is also runtime-verified on 33742 symbols / 325826 relationships (`PHASE 2 INVESTIGATION CHECK: PASS`). 2B.4 Assistant-oriented export is the next execution target. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phases 1-3 are verified foundations. Browser/runtime viewer implementation exists but its combined acceptance gate is deferred by explicit priority change. Active work is Phase 5 semantic mapping: whole-client coverage, deterministic structural mapping bundles, and assistant-driven map expansion. |
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
 | Rambler's Backpack | `docs/backpack/PROJECT.md` | NEEDS TEST | BoB 671/665 presentation is superseded. Bank-interface 762 presentation is implemented statically with independent Backpack storage; Phase 1 Bundle 1.3 backend-isolation/runtime acceptance is next. |
 | Client Console | `docs/client-console/PROJECT.md` | NEEDS TEST | V2 implementation bundles are complete statically. Bundle 2.3 consolidated runtime gate is next: icons/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas coexistence, focus, DPI/layout, bridge authority, and persistence in one session. |
@@ -47,7 +47,7 @@ Use this registry to answer:
 
 | Reference | Document | Purpose |
 | --- | --- | --- |
-| Client Atlas | `docs/client-atlas/PROJECT.md` | Persistent client architecture/search/evidence map so client work can reuse known paths instead of repeatedly rescanning obfuscated code. |
+| Client Atlas | `docs/client-atlas/PROJECT.md` | Persistent client architecture/search/evidence map plus semantic mapping queue so client work can reuse known paths and steadily convert unknown obfuscated code into durable evidence. |
 
 ## Registration checklist
 
