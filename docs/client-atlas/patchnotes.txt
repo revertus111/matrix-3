@@ -121,3 +121,14 @@ Phase 4 / Browser usability correction
 - Phase 4 combined runtime gate remains the single acceptance session; the usability correction is folded into that gate instead of creating a separate restart/test cycle.
 - Fixed the Java 8 compile blocker in the new connection tooltip: `RelationshipEntry#getSourceLine()` is primitive and uses `hasSourceLine()` as the presence check, so the UI now follows that API instead of null/unboxing logic.
 - This compile-only correction does not change Atlas runtime, search, relationship, evidence, or correlation semantics; it stays inside the same combined Phase 4 runtime gate.
+
+Phase 5 / Bundle 5A semantic mapping queue
+- User clarified the primary Atlas goal: systematically map the whole client over time, with the browser demoted to a lookup/viewer instead of requiring manual reverse-engineering by the user.
+- Added `AtlasMappingQueue`, an offline semantic coverage/queue engine over the current structural index plus curated evidence. It never invents meaning or changes exact Atlas IDs.
+- Coverage now separates current `VERIFIED`, `verified-static`, `HYPOTHESIS`, `UNKNOWN`, stale evidence, and orphan evidence.
+- Added deterministic bounded structural clustering: each scoped owner appears in exactly one bundle, bundles contain at most 8 structurally connected owners, and queue priority favors unresolved/stale/high-connectivity areas.
+- Atlas-owned `game.atlas`, Client Console `game.console`, and Atlas runtime bridge classes are excluded from semantic self-mapping so the queue targets the client rather than the tool itself.
+- Each next mapping bundle exports at most 80 priority exact symbols, 12 strong boundary owners, and 40 existing evidence summaries to `.client-atlas/mapping-next.md`.
+- Assistant bundle instructions preserve evidence discipline and direct investigation toward exact IDs/strong structural connections; runtime evidence is requested only when static evidence cannot prove semantics.
+- Added `AtlasMappingVerifier`, a single offline Bundle 5A gate that rebuilds only generated Atlas data, preserves curated evidence, verifies full scoped partitioning/bounds/determinism/self-exclusion, and writes `mapping-check.txt` + `mapping-next.md`.
+- No client/runtime hooks, packet paths, gameplay behavior, browser semantics, or server code changed in Bundle 5A.
