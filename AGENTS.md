@@ -63,6 +63,18 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 - Keep runtime instructions ordered, concise, and grouped by required startup state. Distinguish quick checks from deeper tests when practical.
 - Never trade stability, correct ownership, evidence, or revertibility for raw patch count.
 
+## Prefab/self-test discipline
+
+- For substantial runtime-affecting systems, developer tools, and persistent workstreams, prefer a small deterministic prefab/self-test once the owning APIs are stable enough to support one safely.
+- The ideal fast path is `pull -> clean/build -> launch -> select/load safe context -> click one test action -> read PASS/FAIL`, so routine verification costs the user seconds instead of a long manual checklist.
+- A prefab/self-test must exercise the real owning APIs or runtime path; do not fake success by only toggling UI state or duplicating production logic inside the test.
+- Keep prefab tests disposable and scoped. Prefer exact developer-owned test instances, temporary in-memory definitions/configuration, zero/harmless damage, no rewards, bounded work, deterministic cleanup, and explicit PASS/FAIL output.
+- Prefab tests must not silently rewrite persistent content, global live state, rollback history, drops, player saves, cache data, or unrelated world state. If temporary mutation is unavoidable, snapshot and restore it exactly or do not automate that check.
+- Rights/admin/developer gates remain authoritative. A self-test is never a bypass around normal permissions or engine ownership.
+- A prefab/self-test is the first-line confidence check, not a replacement for focused manual acceptance, persistence/restart verification, multiplayer behavior, or `docs/rs3/SMOKE_TEST.md` when those are required.
+- When designing a new substantial workstream, include a prefab/self-test checkpoint when practical after the architecture becomes stable enough; reuse proven harness patterns instead of inventing bespoke testing infrastructure for every feature.
+- When a runtime regression is found repeatedly, prefer strengthening the relevant prefab/self-test so the same failure becomes cheap to detect in future patches.
+
 ## Repository scan discipline
 
 - Start with the smallest likely file set for the requested task.
