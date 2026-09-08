@@ -78,13 +78,27 @@ public final class BossCombatScript extends CombatScript {
 	 * rotation/cooldown state or NPCCombat's authoritative target.
 	 */
 	int executeAttackForTesting(NPC npc, Entity currentTarget, String phaseId, String attackId) {
+		BossDefinition definition = BossDefinitionRegistry.get(npc == null ? -1 : npc.getId());
+		if (definition == null)
+			throw new IllegalArgumentException("The test NPC no longer has a live BossLabs definition.");
+		return executeAttackForTesting(npc, currentTarget, definition, phaseId, attackId);
+	}
+
+	/**
+	 * Exact-definition testing hook used by disposable prefab/self-tests. The
+	 * supplied immutable definition is not registered globally and is never
+	 * persisted; only the exact controlled test NPC executes it.
+	 */
+	int executeAttackForTesting(NPC npc, Entity currentTarget, BossDefinition definition,
+			String phaseId, String attackId) {
 		if (npc == null || npc.hasFinished() || npc.isDead())
 			throw new IllegalArgumentException("The BossLabs test boss is not active.");
 		if (currentTarget == null || currentTarget.hasFinished() || currentTarget.isDead())
 			throw new IllegalArgumentException("The BossLabs test boss has no valid target.");
-		BossDefinition definition = BossDefinitionRegistry.get(npc.getId());
 		if (definition == null)
-			throw new IllegalArgumentException("The test NPC no longer has a live BossLabs definition.");
+			throw new IllegalArgumentException("The BossLabs test definition is not available.");
+		if (definition.getNpcId() != npc.getId())
+			throw new IllegalArgumentException("The BossLabs test definition belongs to a different NPC id.");
 
 		BossPhaseDefinition selectedPhase = null;
 		for (BossPhaseDefinition phase : definition.getPhases()) {
