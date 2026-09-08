@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 
 import com.alex.store.Index;
@@ -16,6 +17,7 @@ public final class CacheSession {
 
 	private final File cacheDirectory;
 	private final Store store;
+	private volatile boolean writeEnabled;
 
 	public CacheSession(File cacheDirectory) throws IOException {
 		if (cacheDirectory == null || !cacheDirectory.isDirectory()) {
@@ -48,7 +50,18 @@ public final class CacheSession {
 		return getIndex(indexId).getFile(archiveId, fileId);
 	}
 
+	public boolean isWriteEnabled() {
+		return writeEnabled;
+	}
+
+	public void setWriteEnabled(boolean writeEnabled) {
+		this.writeEnabled = writeEnabled;
+	}
+
 	public File writeFileWithBackup(int indexId, int archiveId, int fileId, byte[] data) throws IOException {
+		if (!writeEnabled) {
+			throw new IllegalStateException("Cache writes are disabled. Enable Edit Mode first.");
+		}
 		if (data == null) {
 			throw new IllegalArgumentException("Replacement data cannot be null.");
 		}
@@ -62,6 +75,10 @@ public final class CacheSession {
 		}
 		if (!index.putFile(archiveId, fileId, data)) {
 			throw new IOException("FileStore rejected write for index " + indexId + ", archive " + archiveId + ", file " + fileId + ".");
+		}
+		byte[] verified = index.getFile(archiveId, fileId);
+		if (!Arrays.equals(data, verified)) {
+			throw new IOException("Cache write verification failed for index " + indexId + ", archive " + archiveId + ", file " + fileId + ".");
 		}
 		return backupFile;
 	}
