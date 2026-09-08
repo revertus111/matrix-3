@@ -5,13 +5,14 @@ import java.io.Serializable;
 import com.rs.game.item.Item;
 import com.rs.game.item.ItemsContainer;
 import com.rs.net.decoders.WorldPacketsDecoder;
+import com.rs.utils.ItemExamines;
 
 /**
- * Player-owned carried storage backed by the existing Beast of Burden interfaces.
+ * Player-owned carried storage presented through Matrix3's Bank interface.
  *
- * This is intentionally independent from Familiar/BeastOfBurden state: the
- * backpack persists with the player's Inventory object and only reuses the
- * proven 671/665 interface layout and container interaction pattern.
+ * Backpack.items remains completely independent from Bank.bankTabs. Interface
+ * 762 is reused only as the presentation surface; Backpack intercepts its own
+ * grid/inventory clicks before Matrix3's normal Bank button handler can run.
  */
 public final class Backpack implements Serializable {
 
@@ -20,14 +21,13 @@ public final class Backpack implements Serializable {
     public static final int ITEM_ID = 21445;
     public static final int CAPACITY = 30;
 
-    // Interface 671's main BoB grid is bound to the native client container key 530.
-    // This is only the UI/protocol key; Backpack.items remains separate player-owned storage.
-    private static final int ITEMS_KEY = 530;
-    private static final int STORAGE_INTERFACE = 671;
-    private static final int STORAGE_TITLE_COMPONENT = 14;
-    private static final int STORAGE_COMPONENT = 27;
-    private static final int INVENTORY_INTERFACE = 665;
-    private static final int INVENTORY_COMPONENT = 0;
+    private static final int BANK_INTERFACE = 762;
+    private static final int BANK_INVENTORY_COMPONENT = 7;
+    private static final int BANK_ITEMS_COMPONENT = 215;
+    private static final int BANK_AUX_COMPONENT = 112;
+    private static final int BANK_AUX_INTERFACE = 1463;
+    private static final int BANK_ITEMS_KEY = 95;
+    private static final int INVENTORY_ITEMS_KEY = 93;
 
     private ItemsContainer<Item> items;
 
@@ -109,26 +109,62 @@ public final class Backpack implements Serializable {
 
     private void openInternal(int itemId) {
         player.stopAll();
-        player.getInterfaceManager().sendCentralInterface(STORAGE_INTERFACE);
-        player.getPackets().sendIComponentText(STORAGE_INTERFACE, STORAGE_TITLE_COMPONENT, "BACKPACK");
-        player.getInterfaceManager().sendInventoryInterface(INVENTORY_INTERFACE);
+
+        // Reuse Matrix3's Bank presentation only. Do not call Bank.openBank():
+        // that would make Bank.bankTabs the displayed/interaction authority.
+        player.getInterfaceManager().sendBankInterface(BANK_INTERFACE);
+        player.getInterfaceManager().setInterface(true, BANK_INTERFACE, BANK_AUX_COMPONENT, BANK_AUX_INTERFACE);
+        if (!player.hasEmailRestrictions())
+            player.getPackets().sendCSVarInteger(1324, 3);
+
         accessItemId = itemId;
         open = true;
+        prepareBackpackPresentation();
+        sendItems();
+        sendOptions();
+
         player.setCloseInterfacesEvent(new Runnable() {
             @Override
             public void run() {
                 open = false;
                 accessItemId = -1;
+                restoreBankPresentationState();
             }
         });
-        sendItems();
-        sendOptions();
+    }
+
+    /**
+     * Bank tab/search counters are presentation state, not Backpack ownership.
+     * Zero them while Backpack is open so stale real-bank tab state is not shown.
+     */
+    private void prepareBackpackPresentation() {
+        player.getVarsManager().sendVar(4145, 2);
+        player.getVarsManager().sendVarBit(288, 1);
+        for (int varBit = 280; varBit <= 287; varBit++)
+            player.getVarsManager().sendVarBit(varBit, 0);
+        player.getPackets().sendCSVarInteger(190, 0);
+        refreshTotalSize();
+    }
+
+    /** Restore Matrix3 Bank presentation vars for the next real-bank open. */
+    private void restoreBankPresentationState() {
+        if (player == null)
+            return;
+        Bank bank = player.getBank();
+        if (bank == null)
+            return;
+        bank.refreshViewingTab();
+        bank.refreshTabs();
+        bank.refreshLastX();
+        bank.refreshBank50Rows();
+        bank.refreshTotalSize();
+        player.getPackets().sendCSVarInteger(190, 0);
     }
 
     public boolean isOpen() {
         return open && player != null && hasAccessItem(accessItemId)
-                && player.getInterfaceManager().containsInterface(STORAGE_INTERFACE)
-                && player.getInterfaceManager().containsInterface(INVENTORY_INTERFACE);
+                && player.getInterfaceManager().containsBankInterface()
+                && player.getInterfaceManager().containsInterface(BANK_INTERFACE);
     }
 
     private boolean hasAccessItem(int itemId) {
@@ -144,51 +180,69 @@ public final class Backpack implements Serializable {
         return player.getBank().containsItem(itemId);
     }
 
+    /**
+     * Consumes interface 762 while Backpack mode is open so no click can fall
+     * through into Matrix3 Bank.bankTabs. Only the intentionally exposed V1
+     * deposit/withdraw/examine actions are executed.
+     */
     public boolean processButtonClick(int interfaceId, int componentId, int slotId, int packetId) {
-        if (!isOpen())
+        if (!isOpen() || interfaceId != BANK_INTERFACE)
             return false;
-        if (interfaceId == STORAGE_INTERFACE || interfaceId == INVENTORY_INTERFACE) {
-            Item tracedItem = null;
-            if (interfaceId == STORAGE_INTERFACE && slotId >= 0 && slotId < items.getSize())
-                tracedItem = items.get(slotId);
-            else if (interfaceId == INVENTORY_INTERFACE && slotId >= 0)
-                tracedItem = player.getInventory().getItem(slotId);
-            BackpackTrace.log("CLICK interface=" + interfaceId + " component=" + componentId
-                    + " slot=" + slotId + " packet=" + packetId + " item="
-                    + (tracedItem == null ? -1 : tracedItem.getId()));
-        }
-        if (interfaceId == INVENTORY_INTERFACE && componentId == INVENTORY_COMPONENT) {
+
+        Item tracedItem = null;
+        if (componentId == BANK_ITEMS_COMPONENT && slotId >= 0 && slotId < items.getSize())
+            tracedItem = items.get(slotId);
+        else if (componentId == BANK_INVENTORY_COMPONENT && slotId >= 0)
+            tracedItem = player.getInventory().getItem(slotId);
+        BackpackTrace.log("CLICK interface=" + interfaceId + " component=" + componentId
+                + " slot=" + slotId + " packet=" + packetId + " item="
+                + (tracedItem == null ? -1 : tracedItem.getId()));
+
+        if (componentId == BANK_INVENTORY_COMPONENT) {
             if (packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
                 addItem(slotId, 1);
             else if (packetId == WorldPacketsDecoder.ACTION_BUTTON2_PACKET)
                 addItem(slotId, 5);
             else if (packetId == WorldPacketsDecoder.ACTION_BUTTON3_PACKET)
                 addItem(slotId, 10);
-            else if (packetId == WorldPacketsDecoder.ACTION_BUTTON4_PACKET)
+            else if (packetId == WorldPacketsDecoder.ACTION_BUTTON9_PACKET)
                 addItem(slotId, Integer.MAX_VALUE);
-            else
-                return false;
+            else if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET)
+                examineInventory(slotId);
             return true;
         }
-        if (interfaceId == STORAGE_INTERFACE && componentId == STORAGE_COMPONENT) {
+
+        if (componentId == BANK_ITEMS_COMPONENT) {
             if (packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
                 removeItem(slotId, 1);
             else if (packetId == WorldPacketsDecoder.ACTION_BUTTON2_PACKET)
                 removeItem(slotId, 5);
             else if (packetId == WorldPacketsDecoder.ACTION_BUTTON3_PACKET)
                 removeItem(slotId, 10);
-            else if (packetId == WorldPacketsDecoder.ACTION_BUTTON4_PACKET)
+            else if (packetId == WorldPacketsDecoder.ACTION_BUTTON9_PACKET)
                 removeItem(slotId, Integer.MAX_VALUE);
-            else
-                return false;
+            else if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET)
+                examineBackpack(slotId);
             return true;
         }
-        if (interfaceId == STORAGE_INTERFACE && componentId == 29
-                && packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET) {
-            takeAll();
-            return true;
-        }
-        return false;
+
+        // Backpack mode owns the entire 762 interaction surface while open.
+        // Unsupported bank-only controls are intentionally inert in V1.
+        return true;
+    }
+
+    private void examineInventory(int slotId) {
+        Item item = player.getInventory().getItem(slotId);
+        if (item != null)
+            player.getPackets().sendGameMessage(ItemExamines.getExamine(item));
+    }
+
+    private void examineBackpack(int slotId) {
+        if (slotId < 0 || slotId >= items.getSize())
+            return;
+        Item item = items.get(slotId);
+        if (item != null)
+            player.getPackets().sendGameMessage(ItemExamines.getExamine(item));
     }
 
     public void addItem(int inventorySlot, int amount) {
@@ -230,10 +284,11 @@ public final class Backpack implements Serializable {
         }
         player.getInventory().deleteItem(inventorySlot, moving);
         refreshItems(before);
+        refreshTotalSize();
     }
 
     public void removeItem(int backpackSlot, int amount) {
-        if (player == null || amount <= 0)
+        if (player == null || amount <= 0 || backpackSlot < 0 || backpackSlot >= items.getSize())
             return;
         Item source = items.get(backpackSlot);
         if (source == null)
@@ -265,6 +320,7 @@ public final class Backpack implements Serializable {
         items.remove(backpackSlot, moving);
         items.shift();
         refreshItems(before);
+        refreshTotalSize();
     }
 
     public void takeAll() {
@@ -285,6 +341,7 @@ public final class Backpack implements Serializable {
         }
         items.shift();
         sendItems();
+        refreshTotalSize();
     }
 
     public void emptyToBankFromBank(int fakeSlot, int itemId) {
@@ -327,8 +384,10 @@ public final class Backpack implements Serializable {
             }
         }
         items.shift();
-        if (open)
+        if (open) {
             sendItems();
+            refreshTotalSize();
+        }
         if (full)
             player.getPackets().sendGameMessage("Your bank does not have enough space for all backpack items.");
         else if (movedAnything)
@@ -370,28 +429,31 @@ public final class Backpack implements Serializable {
         }
         int[] finalChanged = new int[count];
         System.arraycopy(changed, 0, finalChanged, 0, count);
-        player.getPackets().sendUpdateItems(ITEMS_KEY, items, finalChanged);
+        player.getPackets().sendUpdateItems(BANK_ITEMS_KEY, items, finalChanged);
     }
 
     private void sendItems() {
-        player.getPackets().sendItems(ITEMS_KEY, items);
-        player.getPackets().sendItems(93, player.getInventory().getItems());
+        player.getPackets().sendItems(BANK_ITEMS_KEY, items);
+        player.getPackets().sendItems(INVENTORY_ITEMS_KEY, player.getInventory().getItems());
     }
 
     private void sendOptions() {
+        // Expose only V1-owned actions. Using the narrow option-slot helper also
+        // avoids enabling native Bank drag/reorder, wear, X, all-but-one, tabs,
+        // search, note-mode, and other controls against the wrong backend.
         player.getPackets().sendUnlockIComponentOptionSlots(
-                INVENTORY_INTERFACE, INVENTORY_COMPONENT, 0, Inventory.INVENTORY_SIZE - 1, 0, 1, 2, 3);
-        player.getPackets().sendInterSetItemsOptionsScript(
-                INVENTORY_INTERFACE, INVENTORY_COMPONENT, 93, 4, 7,
-                "Store", "Store-5", "Store-10", "Store-All");
+                BANK_INTERFACE, BANK_INVENTORY_COMPONENT, 0, Inventory.INVENTORY_SIZE - 1,
+                0, 1, 2, 7, 8);
+        player.getPackets().sendUnlockIComponentOptionSlots(
+                BANK_INTERFACE, BANK_ITEMS_COMPONENT, 0, CAPACITY - 1,
+                0, 1, 2, 7, 8);
+    }
 
-        // Match Matrix3's native BeastOfBurden interaction mask for 671:27.
-        // The client interface uses a wider slot-mask range than Backpack's 30-slot server container.
-        player.getPackets().sendUnlockIComponentOptionSlots(
-                STORAGE_INTERFACE, STORAGE_COMPONENT, 0, ITEMS_KEY, 0, 1, 2, 3);
-        player.getPackets().sendInterSetItemsOptionsScript(
-                STORAGE_INTERFACE, STORAGE_COMPONENT, ITEMS_KEY, 6, 5,
-                "Withdraw", "Withdraw-5", "Withdraw-10", "Withdraw-All");
+    private void refreshTotalSize() {
+        int usedSlots = CAPACITY - items.getFreeSlots();
+        int displayed = usedSlots > 403 ? 403 : usedSlots;
+        player.getPackets().sendCSVarInteger(1038, displayed);
+        player.getPackets().sendCSVarInteger(192, usedSlots);
     }
 
     public ItemsContainer<Item> getItems() {
