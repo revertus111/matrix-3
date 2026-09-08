@@ -131,9 +131,14 @@ public final class InterfaceEditorPanel extends JScrollPane {
         ConsoleTheme.styleScrollPane(this);
 
         installListeners();
-        geometryRangeCombo.setSelectedItem(RANGE_NORMAL);
-        liveGeometryCheck.setSelected(true);
-        pinRuntimeCheck.setSelected(true);
+        populating = true;
+        try {
+            geometryRangeCombo.setSelectedItem(RANGE_NORMAL);
+            liveGeometryCheck.setSelected(true);
+            pinRuntimeCheck.setSelected(true);
+        } finally {
+            populating = false;
+        }
 
         refreshTimer.setCoalesce(true);
         liveApplyTimer.setCoalesce(true);
@@ -381,7 +386,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
         });
 
         componentList.addListSelectionListener(e -> {
-            if (e.getValueIsAdjusting()) {
+            if (e.getValueIsAdjusting() || populating) {
                 return;
             }
             ComponentSnapshot selected = componentList.getSelectedValue();
@@ -410,6 +415,8 @@ public final class InterfaceEditorPanel extends JScrollPane {
         };
 
         javax.swing.JTextField[] editableFields = {
+                baseXControl.field, baseYControl.field, baseWidthControl.field, baseHeightControl.field,
+                runtimeXControl.field, runtimeYControl.field, runtimeWidthControl.field, runtimeHeightControl.field,
                 xAlignField, yAlignField, widthAlignField, heightAlignField,
                 textField, spriteField
         };
@@ -475,6 +482,10 @@ public final class InterfaceEditorPanel extends JScrollPane {
         if (pendingSelectComponent >= 0) {
             selectComponent(pendingSelectComponent);
             pendingSelectComponent = -1;
+            ComponentSnapshot selected = snapshot.findComponent(selectedComponentId);
+            if (selected != null) {
+                populateInspector(selected);
+            }
         } else if (selectedComponentId >= 0) {
             ComponentSnapshot selected = snapshot.findComponent(selectedComponentId);
             if (selected != null && !dirty) {
@@ -513,6 +524,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
         for (int index = 0; index < componentModel.size(); index++) {
             ComponentSnapshot component = componentModel.getElementAt(index);
             if (component.getComponentId() == componentId) {
+                selectedComponentId = componentId;
                 componentList.setSelectedIndex(index);
                 componentList.ensureIndexIsVisible(index);
                 return;
@@ -681,6 +693,9 @@ public final class InterfaceEditorPanel extends JScrollPane {
     }
 
     private void cancelPendingLiveApply() {
+        if (populating) {
+            return;
+        }
         pendingLiveApply = false;
         liveApplyTimer.stop();
     }
