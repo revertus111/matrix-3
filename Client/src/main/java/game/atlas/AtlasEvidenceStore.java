@@ -11,9 +11,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import game.atlas.AtlasInvestigationIndex.SymbolEntry;
@@ -30,7 +32,10 @@ import game.atlas.AtlasSchema.EvidenceStatus;
  */
 public final class AtlasEvidenceStore {
 
-    private static final int MAX_RECORDS = 5000;
+    /** Bounded above the current whole-client symbol count, but never unlimited. */
+    public static final int MAX_RECORDS = 50000;
+    public static final int MAX_BATCH_RECORDS = 10000;
+
     private static final int MAX_LINE_CHARS = 65536;
     private static final int MAX_ALIAS_CHARS = 240;
     private static final int MAX_CLAIM_CHARS = 4096;
@@ -47,9 +52,7 @@ public final class AtlasEvidenceStore {
         this.workspace = workspace;
     }
 
-    /**
-     * Load all curated knowledge in deterministic subject-id order.
-     */
+    /** Load all curated knowledge in deterministic subject-id order. */
     public List<EvidenceRecord> load() throws IOException {
         workspace.ensureLayout();
         List<EvidenceRecord> records = loadMutable();
@@ -57,9 +60,7 @@ public final class AtlasEvidenceStore {
         return Collections.unmodifiableList(records);
     }
 
-    /**
-     * Return the single curated record for an exact Atlas subject ID.
-     */
+    /** Return the single curated record for an exact Atlas subject ID. */
     public EvidenceRecord get(String subjectId) throws IOException {
         String normalized = requireText(subjectId, "subjectId");
         for (EvidenceRecord record : load()) {
@@ -117,6 +118,89 @@ public final class AtlasEvidenceStore {
         sort(records);
         writeAll(records);
         return replacement;
+    }
+
+    /**
+     * Apply a bounded assistant mapping batch in one load/merge/atomic-write pass.
+     *
+     * Every record must already carry the exact current fingerprint. The whole
+     * batch is validated before the evidence file is replaced, so one bad row
+     * cannot partially apply earlier rows.
+     */
+    public BatchResult upsertBatch(AtlasInvestigationIndex index, String expectedFingerprint,
+            List<EvidenceRecord> replacements) throws IOException {
+        if (index == null) {
+            throw new IllegalArgumentException("index cannot be null");
+        }
+        String expected = requireText(expectedFingerprint, "expectedFingerprint");
+        String current = index.getMetadata().getClientFingerprint();
+        if (!current.equals(expected)) {
+            throw new IOException("Client Atlas semantic writeback fingerprint is stale: expected "
+                    + expected + " but current Atlas is " + current);
+        }
+        if (replacements == null || replacements.isEmpty()) {
+            throw new IOException("Client Atlas semantic writeback contains no evidence records");
+        }
+        if (replacements.size() > MAX_BATCH_RECORDS) {
+            throw new IOException("Client Atlas semantic writeback exceeds " + MAX_BATCH_RECORDS
+                    + " records in one batch");
+        }
+
+        List<EvidenceRecord> prepared = new ArrayList<EvidenceRecord>(replacements.size());
+        Set<String> batchSubjects = new LinkedHashSet<String>();
+        for (EvidenceRecord replacement : replacements) {
+            if (replacement == null) {
+                throw new IOException("Client Atlas semantic writeback contains a null evidence record");
+            }
+            try {
+                validateRecord(replacement);
+                validateBatchEvidenceDiscipline(replacement);
+            } catch (RuntimeException ex) {
+                throw new IOException("Invalid Client Atlas semantic writeback for "
+                        + replacement.getSubjectId() + ": " + ex.getMessage(), ex);
+            }
+            if (!expected.equals(replacement.getClientFingerprint())) {
+                throw new IOException("Client Atlas semantic writeback record fingerprint mismatch for "
+                        + replacement.getSubjectId());
+            }
+            if (index.getSymbol(replacement.getSubjectId()) == null) {
+                throw new IOException("Client Atlas semantic writeback references unknown current symbol: "
+                        + replacement.getSubjectId());
+            }
+            if (!batchSubjects.add(replacement.getSubjectId())) {
+                throw new IOException("Duplicate Client Atlas semantic writeback subjectId: "
+                        + replacement.getSubjectId());
+            }
+            prepared.add(replacement);
+        }
+
+        workspace.ensureLayout();
+        List<EvidenceRecord> existing = loadMutable();
+        Map<String, EvidenceRecord> merged = new LinkedHashMap<String, EvidenceRecord>(
+                Math.max(16, existing.size() + prepared.size()));
+        for (EvidenceRecord record : existing) {
+            merged.put(record.getSubjectId(), record);
+        }
+
+        int inserted = 0;
+        int updated = 0;
+        for (EvidenceRecord replacement : prepared) {
+            EvidenceRecord previous = merged.put(replacement.getSubjectId(), replacement);
+            if (previous == null) {
+                inserted++;
+            } else {
+                updated++;
+            }
+        }
+        if (merged.size() > MAX_RECORDS) {
+            throw new IOException("Client Atlas evidence store would exceed its " + MAX_RECORDS
+                    + " record limit after semantic writeback");
+        }
+
+        List<EvidenceRecord> output = new ArrayList<EvidenceRecord>(merged.values());
+        sort(output);
+        writeAll(output);
+        return new BatchResult(prepared.size(), inserted, updated, output.size());
     }
 
     public boolean delete(String subjectId) throws IOException {
@@ -187,9 +271,7 @@ public final class AtlasEvidenceStore {
         return Collections.unmodifiableList(matches);
     }
 
-    /**
-     * Shared freshness evaluation used by the store and verifier.
-     */
+    /** Shared freshness evaluation used by the store and verifiers. */
     public static EvidenceView evaluate(EvidenceRecord record, String currentFingerprint,
             boolean subjectPresent) {
         if (record == null) {
@@ -264,7 +346,8 @@ public final class AtlasEvidenceStore {
         }
     }
 
-    private static EvidenceRecord parseRecord(String json) {
+    /** Package-private parser shared by the bounded semantic writeback importer. */
+    static EvidenceRecord parseRecord(String json) {
         String subjectId = JsonLine.requiredString(json, "subjectId");
         EvidenceStatus status = parseStatus(JsonLine.requiredString(json, "status"));
         String alias = JsonLine.optionalString(json, "alias");
@@ -283,7 +366,8 @@ public final class AtlasEvidenceStore {
         throw new IllegalArgumentException("unknown evidence status " + value);
     }
 
-    private static void validateRecord(EvidenceRecord record) {
+    /** Package-private shape validation shared with semantic snapshot/writeback. */
+    static void validateRecord(EvidenceRecord record) {
         requireText(record.getSubjectId(), "subjectId");
         requireStatus(record.getStatus());
         String alias = record.getAlias();
@@ -306,6 +390,40 @@ public final class AtlasEvidenceStore {
             }
         }
         requireText(record.getClientFingerprint(), "clientFingerprint");
+    }
+
+    private static void validateBatchEvidenceDiscipline(EvidenceRecord record) {
+        if (record.getStatus() == EvidenceStatus.VERIFIED
+                && !hasReferencePrefix(record, "runtime:", "trace:")) {
+            throw new IllegalArgumentException(
+                    "VERIFIED batch evidence requires an explicit runtime: or trace: supporting reference");
+        }
+        if (record.getStatus() == EvidenceStatus.VERIFIED_STATIC
+                && !hasReferencePrefix(record, "source:", "static:", "data:")) {
+            throw new IllegalArgumentException(
+                    "verified-static batch evidence requires an explicit source:, static:, or data: supporting reference");
+        }
+    }
+
+    private static boolean hasReferencePrefix(EvidenceRecord record, String first, String second) {
+        for (String reference : record.getSupportingReferences()) {
+            String normalized = reference.toLowerCase(Locale.ROOT);
+            if (normalized.startsWith(first) || normalized.startsWith(second)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasReferencePrefix(EvidenceRecord record, String first, String second, String third) {
+        for (String reference : record.getSupportingReferences()) {
+            String normalized = reference.toLowerCase(Locale.ROOT);
+            if (normalized.startsWith(first) || normalized.startsWith(second)
+                    || normalized.startsWith(third)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String normalizeAlias(String alias) {
@@ -398,6 +516,36 @@ public final class AtlasEvidenceStore {
             throw new IllegalArgumentException(name + " cannot be empty");
         }
         return value;
+    }
+
+    public static final class BatchResult {
+        private final int batchSize;
+        private final int insertedCount;
+        private final int updatedCount;
+        private final int totalRecordCount;
+
+        private BatchResult(int batchSize, int insertedCount, int updatedCount, int totalRecordCount) {
+            this.batchSize = batchSize;
+            this.insertedCount = insertedCount;
+            this.updatedCount = updatedCount;
+            this.totalRecordCount = totalRecordCount;
+        }
+
+        public int getBatchSize() {
+            return batchSize;
+        }
+
+        public int getInsertedCount() {
+            return insertedCount;
+        }
+
+        public int getUpdatedCount() {
+            return updatedCount;
+        }
+
+        public int getTotalRecordCount() {
+            return totalRecordCount;
+        }
     }
 
     public static final class EvidenceView {
