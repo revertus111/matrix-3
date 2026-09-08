@@ -38,3 +38,5 @@
 - Runtime-proven Save & Apply across a Server restart and Restore Matrix3 back to the original drop table.
 - Reclassified the canonical Matrix3-native Drops milestone as complete; deeper Undo/Apply Saved/Delete Saved/duplicate-weighting/readback edge cases remain non-blocking acceptance work.
 - Resumed the required V2.1/V2.2 consolidated BossLabs verification gate; Drops is no longer a progression blocker.
+- Corrected Attack Pattern canvas coordinates to match Matrix3 runtime offsets: +X renders right and +Y renders up, matching `WorldTile.transform(x, y, 0)` semantics used by BossCombatScript.
+- With the canvas coordinate adapter corrected, Nudge Up/Down and Rotate Left/Right now use the same visual/world convention without changing persisted tile offsets, BossCombatScript, or definition wire/store v8.
