@@ -3,7 +3,9 @@ package game.console;
 import game.ClientConsoleInterfaceBridge;
 import game.ClientConsoleInterfaceBridge.ComponentOverride;
 import game.ClientConsoleInterfaceBridge.ComponentSnapshot;
+import game.ClientConsoleInterfaceBridge.InterfaceCatalogSnapshot;
 import game.ClientConsoleInterfaceBridge.InterfaceSnapshot;
+import game.ClientConsoleInterfaceBridge.OpenInterfaceSnapshot;
 import game.ClientConsoleInterfaceOverlay;
 
 import java.awt.BorderLayout;
@@ -52,7 +54,8 @@ public final class InterfaceEditorPanel extends JScrollPane {
     private static final RangeOption RANGE_NORMAL = new RangeOption("Normal +/-256", 256);
     private static final RangeOption RANGE_WIDE = new RangeOption("Wide +/-1024", 1024);
 
-    private final javax.swing.JTextField targetField = new javax.swing.JTextField("671:27");
+    private final javax.swing.JTextField targetField = new javax.swing.JTextField("762");
+    private final JComboBox<OpenInterfaceSnapshot> openInterfacesCombo = new JComboBox<OpenInterfaceSnapshot>();
     private final javax.swing.JTextField searchField = new javax.swing.JTextField();
     private final DefaultListModel<ComponentSnapshot> componentModel = new DefaultListModel<ComponentSnapshot>();
     private final JList<ComponentSnapshot> componentList = new JList<ComponentSnapshot>(componentModel);
@@ -93,7 +96,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
     private final JCheckBox overrideSpriteCheck = checkBox("Override sprite");
     private final javax.swing.JTextField spriteField = numberField();
 
-    private final JLabel statusLabel = new JLabel("Enter an interface ID or interface:component target.");
+    private final JLabel statusLabel = new JLabel("Load the active interface, choose an open interface, or enter an ID.");
 
     private final Timer refreshTimer = new Timer(REFRESH_DELAY_MS, e -> refreshFromBridge());
     private final Timer liveApplyTimer = new Timer(LIVE_APPLY_DELAY_MS, e -> flushPendingLiveApply());
@@ -102,6 +105,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
     private int pendingSelectComponent = -1;
     private int selectedComponentId = -1;
     private long lastSnapshotSequence = -1L;
+    private long lastCatalogSequence = -1L;
     private boolean populating;
     private boolean dirty;
     private boolean pendingLiveApply;
@@ -118,8 +122,8 @@ public final class InterfaceEditorPanel extends JScrollPane {
         content.add(ConsoleTheme.subtitleLabel("Live component geometry and visual overrides"));
         content.add(Box.createVerticalStrut(6));
         content.add(ConsoleTheme.createWrappedText(
-                "Drag geometry sliders and watch the interface update while you tune it. "
-                + "Use Wire Mesh to see component bounds directly over the game interface.", 3));
+                "Load whatever interface is open, browse the cache, then drag geometry sliders "
+                + "and watch the selected component update live.", 3));
         content.add(Box.createVerticalStrut(16));
 
         content.add(createTargetCard());
@@ -146,7 +150,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
             geometryRangeCombo.setSelectedItem(RANGE_NORMAL);
             liveGeometryCheck.setSelected(true);
             pinRuntimeCheck.setSelected(true);
-            wireMeshCheck.setSelected(true);
+            wireMeshCheck.setSelected(false);
             showIdsCheck.setSelected(true);
             selectedOnlyCheck.setSelected(false);
             showDimensionsCheck.setSelected(false);
@@ -164,6 +168,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
                 return;
             }
             if (isShowing()) {
+                refreshInterfaceCatalog();
                 loadTarget();
                 refreshTimer.start();
                 syncOverlayState();
@@ -176,12 +181,12 @@ public final class InterfaceEditorPanel extends JScrollPane {
     }
 
     private JPanel createTargetCard() {
-        JPanel card = ConsoleTheme.createCard("Target");
+        JPanel card = ConsoleTheme.createCard("Interface Browser");
         card.add(Box.createVerticalStrut(9));
 
         JPanel row = transparentRow(new BorderLayout(8, 0));
         ConsoleTheme.styleTextField(targetField);
-        targetField.setToolTipText("Examples: 671 or 671:27");
+        targetField.setToolTipText("Examples: 762 or 762:215");
 
         JButton loadButton = new JButton("Load");
         ConsoleTheme.styleButton(loadButton);
@@ -190,9 +195,41 @@ public final class InterfaceEditorPanel extends JScrollPane {
         row.add(targetField, BorderLayout.CENTER);
         row.add(loadButton, BorderLayout.EAST);
         card.add(row);
+        card.add(Box.createVerticalStrut(8));
+
+        JButton loadActiveButton = new JButton("Load Active Interface");
+        ConsoleTheme.styleButton(loadActiveButton);
+        loadActiveButton.setAlignmentX(LEFT_ALIGNMENT);
+        loadActiveButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        loadActiveButton.setToolTipText("Load the most relevant foreground interface currently attached to the gameframe.");
+        loadActiveButton.addActionListener(e -> loadActiveInterface());
+        card.add(loadActiveButton);
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel openRow = transparentRow(new BorderLayout(8, 0));
+        JLabel openLabel = new JLabel("Open now");
+        openLabel.setFont(ConsoleTheme.SMALL_FONT);
+        openLabel.setForeground(ConsoleTheme.MUTED_TEXT);
+        openLabel.setPreferredSize(new Dimension(74, 32));
+
+        ConsoleTheme.styleComboBox(openInterfacesCombo);
+        openInterfacesCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        openInterfacesCombo.setToolTipText("Every interface currently attached in Matrix3 runtime state. Selecting one loads it.");
+        openRow.add(openLabel, BorderLayout.WEST);
+        openRow.add(openInterfacesCombo, BorderLayout.CENTER);
+        card.add(openRow);
+        card.add(Box.createVerticalStrut(8));
+
+        JButton browseButton = new JButton("Browse All Interfaces...");
+        ConsoleTheme.styleButton(browseButton);
+        browseButton.setAlignmentX(LEFT_ALIGNMENT);
+        browseButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        browseButton.setToolTipText("Search every interface ID available in the current cache.");
+        browseButton.addActionListener(e -> browseAllInterfaces());
+        card.add(browseButton);
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Use interface:component to jump straight to a known child.", 2));
+                "Use interface:component for an exact jump. Open now is live runtime state; Browse All lists the current cache range.", 3));
         return card;
     }
 
@@ -226,7 +263,8 @@ public final class InterfaceEditorPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Wire Mesh");
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createWrappedText(
-                "Draw live component bounds over the game canvas. Pick Component consumes only the next left-click used to select a UI component.", 3));
+                "OpenGL runtime testing showed the current AWT wire overlay can flash the game canvas, so it starts off. "
+                + "Enable it only when you specifically need the diagnostic overlay.", 4));
         card.add(Box.createVerticalStrut(9));
 
         styleCheck(wireMeshCheck);
@@ -417,6 +455,15 @@ public final class InterfaceEditorPanel extends JScrollPane {
     private void installListeners() {
         targetField.addActionListener(e -> loadTarget());
 
+        openInterfacesCombo.addActionListener(e -> {
+            if (populating)
+                return;
+            Object selected = openInterfacesCombo.getSelectedItem();
+            if (selected instanceof OpenInterfaceSnapshot) {
+                loadInterfaceTarget(((OpenInterfaceSnapshot) selected).getInterfaceId());
+            }
+        });
+
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
@@ -504,10 +551,79 @@ public final class InterfaceEditorPanel extends JScrollPane {
         spriteField.setEnabled(false);
     }
 
+    private void loadActiveInterface() {
+        InterfaceCatalogSnapshot catalog = ClientConsoleInterfaceBridge.getLatestCatalog();
+        int activeInterfaceId = catalog.getActiveInterfaceId();
+        if (activeInterfaceId < 0) {
+            setStatus("No active interface is available yet. Open an interface in game or choose one from Browse All.", false);
+            return;
+        }
+        loadInterfaceTarget(activeInterfaceId);
+        setStatus("Loaded active interface " + activeInterfaceId + ".", true);
+    }
+
+    private void loadInterfaceTarget(int interfaceId) {
+        if (interfaceId < 0 || interfaceId > 65535)
+            return;
+        targetField.setText(Integer.toString(interfaceId));
+        loadTarget();
+    }
+
+    private void browseAllInterfaces() {
+        InterfaceCatalogSnapshot catalog = ClientConsoleInterfaceBridge.getLatestCatalog();
+        if (catalog.getTotalInterfaceCount() <= 0) {
+            setStatus("The interface cache range is not available yet.", false);
+            return;
+        }
+        InterfaceBrowserDialog.open(this, catalog, new InterfaceBrowserDialog.SelectionHandler() {
+            @Override
+            public void interfaceSelected(int interfaceId) {
+                loadInterfaceTarget(interfaceId);
+            }
+        });
+    }
+
+    private void refreshInterfaceCatalog() {
+        InterfaceCatalogSnapshot catalog = ClientConsoleInterfaceBridge.getLatestCatalog();
+        if (catalog.getSequence() == lastCatalogSequence)
+            return;
+        lastCatalogSequence = catalog.getSequence();
+
+        int preserve = -1;
+        Object current = openInterfacesCombo.getSelectedItem();
+        if (current instanceof OpenInterfaceSnapshot)
+            preserve = ((OpenInterfaceSnapshot) current).getInterfaceId();
+
+        populating = true;
+        try {
+            openInterfacesCombo.removeAllItems();
+            OpenInterfaceSnapshot[] openInterfaces = catalog.getOpenInterfaces();
+            int selectIndex = -1;
+            for (int index = 0; index < openInterfaces.length; index++) {
+                OpenInterfaceSnapshot entry = openInterfaces[index];
+                openInterfacesCombo.addItem(entry);
+                if (entry.getInterfaceId() == preserve)
+                    selectIndex = index;
+            }
+            if (selectIndex < 0) {
+                for (int index = 0; index < openInterfaces.length; index++) {
+                    if (openInterfaces[index].isActive()) {
+                        selectIndex = index;
+                        break;
+                    }
+                }
+            }
+            if (selectIndex >= 0)
+                openInterfacesCombo.setSelectedIndex(selectIndex);
+        } finally {
+            populating = false;
+        }
+    }
+
     private void loadTarget() {
         Target target = parseTarget(targetField.getText());
         if (target == null) {
-            setStatus("Target must be an interface ID or interface:component, for example 671:27.", false);
+            setStatus("Target must be an interface ID or interface:component, for example 762:215.", false);
             return;
         }
         cancelPendingLiveApply();
@@ -525,6 +641,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
     }
 
     private void refreshFromBridge() {
+        refreshInterfaceCatalog();
         handlePickedComponent();
 
         if (loadedInterfaceId >= 0) {
