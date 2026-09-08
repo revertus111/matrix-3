@@ -129,7 +129,9 @@ Safety contract:
 - Runtime evidence trace browsing exposes at most the newest 100 saved traces,
 - Runtime evidence trace listing/correlation runs off the Swing EDT,
 - Runtime evidence correlation reuses the existing current-index/10000-event/1000-preview acceptance path unchanged,
-- exact obfuscated IDs remain visible throughout search, detail, relationship navigation, and evidence editing.
+- exact obfuscated IDs remain visible throughout search, detail, relationship navigation, and evidence editing,
+- human-readable browser wording is presentation only; it does not alter Atlas relationship types, symbol IDs, evidence status, ranking, or persistence,
+- `What Atlas knows` may summarize structural facts and saved curated evidence, but must explicitly leave unknown real game meaning unknown rather than inventing semantics.
 
 # Completed static capabilities
 
@@ -331,9 +333,9 @@ Bundle 3B is closed. Phase 3 Runtime Evidence and Knowledge is DONE. No Matrix3 
 
 ## Bundle 4A - Browser foundation
 
-**Status: IMPLEMENTED / RUNTIME GATE DEFERRED INTO COMBINED PHASE 4 GATE**
+**Status: IMPLEMENTED / USABILITY CORRECTION IMPLEMENTED / COMBINED RUNTIME GATE REQUIRED**
 
-The full compatible Browser Foundation implementation is patched. At the user's explicit request, its runtime gate is deferred while the independent compatible Bundle 4B implementation proceeds so both can be verified in one Client Console session.
+The full compatible Browser Foundation implementation is patched. Runtime use of the first UI proved the underlying data path worked but the presentation was too raw to be useful to the user. The approved usability correction is now folded into the same combined 4A + 4B runtime gate instead of creating another small test cycle.
 
 - [x] Register/lazy-load a dedicated Client Console Atlas panel without moving Atlas engine ownership into Client Console.
   - persistent panel ID remains `atlas`,
@@ -362,7 +364,32 @@ The full compatible Browser Foundation implementation is patched. At the user's 
   - result selection, symbol detail, relationship navigation, save/delete targets, and status text all retain the exact Atlas subject ID.
 - [x] Add an original Java2D Atlas/globe rail icon through the existing `ConsoleIcons` authority; no asset/dependency added.
 
-Deferred verification does not block 4B because 4B consumes the same established Atlas panel destination and existing `game.atlas` APIs without changing 4A browser semantics, evidence persistence, or runtime hooks. Bundle 4A cannot be marked DONE until the combined gate passes.
+### 4A usability correction - IMPLEMENTED / NEEDS COMBINED GATE
+
+- [x] Added a `What Atlas knows` summary that explains only proven structure and saved evidence.
+  - class/interface/enum/field/method/constructor kinds are described in plain English,
+  - saved alias, claim, confidence, and stale-warning state are summarized when present,
+  - when no curated meaning exists, the summary explicitly says real game meaning is not identified and Atlas will not guess.
+- [x] Humanized search results without changing ranking.
+  - visible row is readable name + readable type + readable match reason,
+  - exact Atlas ID, raw score, and raw reason remain available through status/tooltips.
+- [x] Humanized exact detail presentation without hiding authority.
+  - readable name/type/source appear first,
+  - exact `Technical ID`, owner, descriptor, and signature remain available.
+- [x] Humanized relationship rows without changing relationship semantics.
+  - `DECLARES`, `CALLS`, `READS_FIELD`, `WRITES_FIELD`, `EXTENDS`, etc. render as phrases such as `Contains field`, `Calls`, `Reads field`, `Written by`, and `Extends`,
+  - exact symbol-backed rows are visibly `[open]`,
+  - constants/types/values are visibly `[info only]` and the open action disables rather than inventing a target,
+  - raw relationship diagnostics remain available in tooltips.
+- [x] Humanized evidence editing without changing persisted status values.
+  - `Classification` -> `Confidence`,
+  - `Alias` -> `Human-readable name`,
+  - `Note / claim` -> `What does this code do?`,
+  - supporting references -> `Why do we believe this?`,
+  - `VERIFIED`, `verified-static`, `HYPOTHESIS`, `UNKNOWN` render as `Verified at runtime`, `Confirmed from code/data`, `Best guess - not proven`, `Unknown`.
+- [x] Save/delete/status wording now describes the user action instead of Atlas storage internals.
+
+The usability correction changes only the Client Console presentation layer. Atlas indexing, ranking, exact IDs, relationship types, evidence persistence/fingerprints, trace control, and correlation acceptance remain unchanged.
 
 ## Bundle 4B - Runtime evidence workflow
 
@@ -391,20 +418,22 @@ Deferred verification does not block 4B because 4B consumes the same established
 
 ## Bundle 4A + 4B consolidated runtime gate - NEXT
 
-Run this once, preferably inside the already-pending Client Console V2 acceptance launch:
+The pre-correction browser opening proved panel/search/detail loading worked but is not the final Phase 4 acceptance because the browser presentation changed afterward. Pull/build once and continue with one consolidated session:
 
-1. Eclipse Java 8 clean/build Client once.
-2. Rebuild the static Atlas index once after compiling so its fingerprint matches the current compiled Client.
-3. Start Matrix3 normally and open the Client Atlas globe icon; Browser should be the default Atlas view.
-4. Search `Class1`, choose/use an exact canonical Atlas ID, verify exact detail, and open one symbol-backed relationship. Confirm a constant/type/value relationship stays visible but non-navigable.
-5. Save/reopen/delete one temporary HYPOTHESIS evidence record and require `CURRENT` while saved.
-6. Switch to Runtime evidence and confirm saved traces populate without freezing the game/UI.
-7. Open the existing Runtime Trace Control, create one short named trace against this newly compiled client, exercise a few normal keyboard/menu/interface actions, then Stop + Save.
-8. Refresh traces; confirm the new trace appears near the top.
-9. Correlate that selected trace and require `Status: CURRENT`, `Accepted: true`, and `Dropped = 0`.
-10. Correlate latest and require the same newest trace to return `CURRENT` + `Accepted: true`.
-11. Resize to the narrow supported console width and switch Browser/Runtime evidence repeatedly; controls remain reachable and no visible render/input hitch or Swing/client-thread exception appears.
-12. Leave Atlas selected, clean-close/relaunch once, and confirm the Atlas rail destination restores. Browser may reopen as the default Atlas subview; subview persistence is not required.
+1. Pull current `main`, Eclipse Java 8 clean/build Client once, and rebuild the static Atlas index once after compiling so its fingerprint matches the current compiled Client.
+2. Start Matrix3 normally and open the Client Atlas globe icon; Browser should be the default Atlas view.
+3. Confirm first Atlas load/search does not freeze normal game rendering/input.
+4. Search `Class1`; require a readable result, a `What Atlas knows` explanation, and Technical details that still show `Technical ID: CLASS:game/Class1`.
+5. In Connections, require readable wording. Open one `[open]` exact symbol-backed row; select one `[info only]` constant/type/value row and confirm the open action disables rather than guessing a symbol.
+6. Save/reopen/delete temporary knowledge on a harmless symbol using Confidence `Best guess - not proven`, Human-readable name `Atlas UI test`, What does this code do? `Phase 4 runtime UI test`, and reference `runtime:phase4-ui`. Require `Saved knowledge is current` while saved and `Nothing identified yet` after delete.
+7. Confirm `What Atlas knows` reflects the saved alias/claim/confidence while present and returns to explicit unknown meaning after deletion.
+8. Switch to Runtime evidence and confirm saved traces populate without freezing the game/UI.
+9. Open existing Runtime Trace Control, create one short named trace against the newly compiled client, exercise a few normal keyboard/menu/interface actions, then Stop + Save.
+10. Refresh traces; confirm the new trace appears near the top.
+11. Correlate that selected trace and require `Status: CURRENT`, `Accepted: true`, and `Dropped = 0`.
+12. Correlate latest and require the same newest trace to return `CURRENT` + `Accepted: true`.
+13. Resize to the narrow supported console width and switch Browser/Runtime evidence repeatedly; controls remain reachable and no visible render/input hitch or Swing/client-thread exception appears.
+14. Leave Atlas selected, clean-close/relaunch once, and confirm the Atlas rail destination restores. Browser may reopen as the default Atlas subview; subview persistence is not required.
 
 If this passes, mark Bundles 4A and 4B DONE. No Phase 1/2/3 regression gate is required unless contradictory evidence appears because Phase 4 consumes those authorities rather than modifying their runtime semantics.
 
@@ -487,10 +516,11 @@ Client/src/main/java/game/Class639.java
 - Bundle 3B consolidated offline verifier: **PASS by user report 2026-09-06**.
 - Bundle 3B: **DONE**.
 - Phase 3: **DONE**.
-- Bundle 4A implementation: **complete / verified-static; runtime verification intentionally deferred into the combined Phase 4 gate**.
+- Bundle 4A implementation: **complete / verified-static; combined runtime gate pending**.
+- First live Browser opening: **underlying panel/search/detail path worked, but usability was insufficient; this is evidence for the correction, not final acceptance**.
+- Bundle 4A usability correction: **implementation complete / verified-static; folded into combined runtime gate**.
 - Bundle 4B implementation: **complete / verified-static; combined Phase 4 gate pending**.
 - Bundle 4B adds only metadata trace browsing/Client Console invocation of existing Atlas APIs; no runtime trace/packet/game semantics changed.
-- The combined Phase 4 gate may be run inside the pending Client Console V2 acceptance launch to avoid another restart.
 - No Phase 2 / Bundle 3A / Bundle 3B retest unless contradictory evidence or a relevant implementation change appears.
 
 # Carryover / blockers
@@ -515,7 +545,8 @@ These do not block Phase 4.
 - Phase 3 Runtime Evidence and Knowledge is DONE.
 - Full compatible Phase 4 / Bundle 4A Browser Foundation implementation is patched / verified-static.
 - Full compatible Phase 4 / Bundle 4B Runtime Evidence workflow implementation is patched / verified-static.
-- The user explicitly chose to skip the standalone 4A test and continue 4B so both can share one runtime gate.
+- First live Atlas Browser opening proved search/detail loading but user feedback established that raw Atlas terminology was not understandable enough for practical use.
+- Approved 4A usability correction is now patched / verified-static: plain-English summary, relationship names, confidence/evidence wording, navigability labels/actions, while exact IDs and semantics remain authoritative.
 
 **Current phase:**
 
@@ -523,14 +554,14 @@ These do not block Phase 4.
 
 **Active/next bundle:**
 
-- **Bundle 4A + 4B consolidated runtime gate / NEXT**
+- **Bundle 4A usability correction + 4A + 4B consolidated runtime gate / NEXT**
 
 **Current/next work:**
 
 - Do not split Atlas verification into per-control cycles.
-- Pull + Eclipse Java 8 clean/build once when the Client Console V2 implementation bundle is also ready for runtime acceptance.
+- Pull current `main` and Eclipse Java 8 clean/build once because `AtlasPanel.java` changed after the first live browser opening.
 - Rebuild Atlas once for the new compiled fingerprint.
-- Run the combined Browser + Runtime evidence gate from `docs/client-atlas/testlist.txt` in that same client launch.
+- Run the human-readable Browser + Runtime evidence gate from `docs/client-atlas/testlist.txt` in that same client launch.
 - On PASS, mark Bundles 4A and 4B DONE and decide whether 4C polish is justified by actual browser use before entering Phase 5.
 
 **Do not re-scan/re-discover without new evidence:**
@@ -546,10 +577,9 @@ These do not block Phase 4.
 
 **Pending runtime/offline verification:**
 
-- Eclipse Java 8 compile of the full Phase 4A + 4B implementation.
-- One combined Client Console Atlas Browser + Runtime evidence gate.
-- This may share the pending Client Console V2 acceptance launch.
+- Eclipse Java 8 compile of the humanized Phase 4 Browser + existing 4B implementation.
+- One combined Client Console Atlas Browser + Runtime evidence gate after rebuilding the static Atlas fingerprint.
 
 # Next recommended work
 
-**Run the combined Phase 4 / Bundle 4A + 4B Atlas runtime gate once the Client Console V2 implementation bundle is ready for its own consolidated acceptance session.**
+**Pull/build once, rebuild Atlas, then run the single human-readable Phase 4 / Bundle 4A + 4B consolidated runtime gate.**
