@@ -37,9 +37,9 @@ Use this registry to answer:
 | --- | --- | --- | --- |
 | Client Atlas | `docs/client-atlas/PROJECT.md` | ACTIVE | Phase 1 and Phase 2 Bundle 2A are runtime-verified. Bundle 2B search/investigation through 2B.3 is also runtime-verified on 33742 symbols / 325826 relationships (`PHASE 2 INVESTIGATION CHECK: PASS`). 2B.4 Assistant-oriented export is the next execution target. |
 | BossLabs | `docs/bosslabs/PROJECT.md` | NEEDS TEST | V2.1 runtime gate is current; accumulated shell/phases/testing/pattern/Drops work needs one consolidated verification session before V2.3 Asset Workflow. |
-| Rambler's Backpack | `docs/backpack/PROJECT.md` | NEEDS TEST | Player-owned storage and contextual/bank integration are implemented statically. Phase 1 Bundle 1.2 consolidated runtime verification is the next execution target. |
+| Rambler's Backpack | `docs/backpack/PROJECT.md` | NEEDS TEST | BoB 671/665 presentation is superseded. Bank-interface 762 presentation is implemented statically with independent Backpack storage; Phase 1 Bundle 1.3 backend-isolation/runtime acceptance is next. |
 | Client Console | `docs/client-console/PROJECT.md` | NEEDS TEST | V2 implementation bundles are complete statically. Bundle 2.3 consolidated runtime gate is next: icons/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas coexistence, focus, DPI/layout, bridge authority, and persistence in one session. |
-| Interface Editor | `docs/interface-editor/PROJECT.md` | NEEDS TEST | V1 live inspector/editor is implemented statically; targeted runtime acceptance and Backpack 671 value discovery are next. |
+| Interface Editor | `docs/interface-editor/PROJECT.md` | NEEDS TEST | V1 live inspector/editor plus wire mesh/picker is implemented statically; generic runtime acceptance remains. Backpack 671 discovery is no longer a dependency because Backpack moved to Bank-interface presentation. |
 | Dev Mode | `docs/dev-mode/PROJECT.md` | NEEDS TEST | Phase 1 Bundles 1.2 World Manipulation and 1.3 Continuous/Paint are implemented statically; runtime is intentionally deferred in one accumulated test queue. Safe independent contextual-editor work may continue when explicitly requested. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
