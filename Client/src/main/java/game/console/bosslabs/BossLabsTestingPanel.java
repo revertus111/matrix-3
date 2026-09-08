@@ -39,6 +39,7 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     private final DefaultListModel<String> historyModel = new DefaultListModel<String>();
     private final JList<String> historyList = new JList<String>(historyModel);
 
+    private final JButton prefabButton = new JButton("Run Prefab Self-Test");
     private final JButton spawnButton = new JButton("Spawn Boss Here");
     private final JButton resetButton = new JButton("Reset Encounter");
     private final JButton setHealthButton = new JButton("Set Boss HP %");
@@ -82,7 +83,7 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         status.setForeground(ConsoleTheme.MUTED_TEXT);
         status.setText(liveBossLabsDefinition
                 ? "Ready. Select a phase or attack in the editor, then test it here without retyping IDs."
-                : "Ready for Matrix3 spawn/reset/HP. Apply a BossLabs definition live to test authored phases and attacks.");
+                : "Ready for prefab/self-test and Matrix3 spawn/reset/HP. Apply Live for authored phase/attack testing.");
         updateEnabledState();
     }
 
@@ -146,15 +147,17 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
 
         JPanel buttons = new JPanel(new GridBagLayout());
         buttons.setOpaque(false);
-        addButton(buttons, spawnButton, 0, 0);
-        addButton(buttons, resetButton, 1, 0);
-        addButton(buttons, setHealthButton, 0, 1);
-        addButton(buttons, forcePhaseButton, 1, 1);
-        addButton(buttons, forceAttackButton, 0, 2);
-        addButton(buttons, clearEffectsButton, 1, 2);
-        addButton(buttons, clearHazardsButton, 0, 3);
-        addButton(buttons, clearMinionsButton, 1, 3);
+        addWideButton(buttons, prefabButton, 0);
+        addButton(buttons, spawnButton, 0, 1);
+        addButton(buttons, resetButton, 1, 1);
+        addButton(buttons, setHealthButton, 0, 2);
+        addButton(buttons, forcePhaseButton, 1, 2);
+        addButton(buttons, forceAttackButton, 0, 3);
+        addButton(buttons, clearEffectsButton, 1, 3);
+        addButton(buttons, clearHazardsButton, 0, 4);
+        addButton(buttons, clearMinionsButton, 1, 4);
 
+        prefabButton.setToolTipText("Runs a disposable 0-damage BossLabs smoke test on an exact controlled NPC. It never changes DRAFT, SAVED, Drops, global LIVE, or rollback state.");
         forcePhaseButton.setToolTipText("Uses the phase currently selected in BossLabs. Apply Live first if the draft selection is new or renamed.");
         forceAttackButton.setToolTipText("Uses the attack currently selected in BossLabs. Apply Live first if the draft selection is new or renamed.");
         clearEffectsButton.setToolTipText("Queues both existing BossLabs cleanup operations for this exact controlled test encounter.");
@@ -227,6 +230,8 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
         body.setOpaque(false);
+        addInfoLine(body, "Run Prefab Self-Test is the fast smoke check: it spawns one exact controlled NPC, uses a disposable one-phase asymmetric 3-tile definition with 0 damage, exercises HP/phase/context/attack/cleanup, then removes the test NPC.");
+        addInfoLine(body, "The prefab definition is passed directly to the BossCombatScript testing hook. It is never registered globally, never persisted, never changes Drops, and asserts that LIVE/SAVED/rollback state remains untouched.");
         addInfoLine(body, "Spawn, Reset, Set Boss HP, and the quick HP buttons work for any valid inspected Matrix3 NPC. Selected-phase/attack testing and encounter-effect cleanup require a live BossLabs definition.");
         addInfoLine(body, "Phase and attack testing follow the current BossLabs editor selection. You should never need to copy an internal Phase ID or Attack ID into this tab.");
         addInfoLine(body, "Controls affect only the NPC copy spawned by your own Testing tab session; BossLabs never searches for an arbitrary world NPC by ID.");
@@ -239,6 +244,10 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     }
 
     private void installActions() {
+        prefabButton.addActionListener(e -> {
+            setPendingStatus("Running disposable BossLabs prefab self-test...");
+            BossLabsClientBridge.requestTestingPrefab(selectedNpcId);
+        });
         spawnButton.addActionListener(e -> {
             setPendingStatus("Spawning controlled test NPC...");
             BossLabsClientBridge.requestTestingSpawn(selectedNpcId);
@@ -342,6 +351,7 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
     private void updateEnabledState() {
         boolean selected = selectedNpcId >= 0;
         boolean bossLabsEnabled = selected && liveBossLabsDefinition;
+        prefabButton.setEnabled(selected);
         spawnButton.setEnabled(selected);
         resetButton.setEnabled(selected);
         setHealthButton.setEnabled(selected);
@@ -375,6 +385,18 @@ public final class BossLabsTestingPanel extends JPanel implements BossLabsClient
         line.setForeground(ConsoleTheme.MUTED_TEXT);
         line.setAlignmentX(LEFT_ALIGNMENT);
         body.add(line);
+    }
+
+    private void addWideButton(JPanel panel, JButton button, int y) {
+        ConsoleTheme.styleButton(button);
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = 0;
+        constraints.gridy = y;
+        constraints.gridwidth = 2;
+        constraints.weightx = 1.0;
+        constraints.fill = GridBagConstraints.HORIZONTAL;
+        constraints.insets = new Insets(4, 4, 8, 4);
+        panel.add(button, constraints);
     }
 
     private void addButton(JPanel panel, JButton button, int x, int y) {
