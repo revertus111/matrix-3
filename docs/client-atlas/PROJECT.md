@@ -4,7 +4,7 @@
 
 Build a persistent reverse-engineering system that can **systematically map the whole obfuscated 718+ Client over time** instead of repeatedly searching and guessing through decompiled source.
 
-The primary workflow is now assistant-driven semantic mapping:
+The primary workflow is assistant-driven semantic mapping:
 
 ```text
 current compiled client
@@ -30,8 +30,8 @@ This table is the authority for user-facing Client Atlas status across chats.
 | Static structural map | ✅ Complete |
 | Runtime evidence/tracing | ✅ Complete |
 | Persistent semantic knowledge | ✅ Complete |
-| Semantic mapping/coverage engine | 🔵 In Progress |
-| Assistant mapping queue/bundles | 🔵 In Progress |
+| Semantic mapping/coverage engine | ✅ Complete |
+| Assistant mapping queue/bundles | ✅ Complete |
 | Atlas lookup/viewer | ⚠️ Needs runtime verification |
 | Whole-client semantic coverage | 🟡 Foundation |
 
@@ -42,21 +42,21 @@ Checklist state below is the execution map. Do not derive replacement milestone 
 - Phase 1 runtime gate: PASS.
 - Phase 2 structural gate: `PHASE 2 STRUCTURAL CHECK: PASS`.
 - Phase 2 final investigation gate: `PHASE 2 INVESTIGATION CHECK: PASS`.
-- Historical verified structural baseline: 1221 compiled client classes / 33742 symbols / 325826 relationships.
-- `symbols.jsonl` ~8.5 MiB / `relationships.jsonl` ~74.4 MiB at that baseline.
+- Verified current mapping baseline: 1221 compiled client classes / 33742 symbols / 325826 relationships.
+- `symbols.jsonl` ~8.5 MiB / `relationships.jsonl` ~74.4 MiB at the verified structural baseline.
 - Structural scan ~1.28 s.
 - Investigation-index load ~946.649 ms / ~181.5 MiB approximate memory delta.
 - Exact search ~0.588 ms / friendly search ~0.416 ms.
 - Depth-2 verifier neighborhood: 28 nodes / 40 relationships.
 - Domain candidates stay semantic `UNKNOWN` until evidence proves meaning; no automatic `LITERAL_ID` promotion.
 
-Last Phase 2 runtime-confirmed fingerprint:
+Current Bundle 5A verified mapping fingerprint:
 
 ```text
 41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26
 ```
 
-Later phases changed client/tooling classes, so current generated Atlas data must always be rebuilt against the current compiled fingerprint before current-only search/correlation/mapping is accepted.
+Current generated Atlas data must always be rebuilt against the current compiled fingerprint before current-only search/correlation/mapping is accepted.
 
 # Architecture / ownership
 
@@ -133,7 +133,7 @@ The queue is planning only. It cannot create semantic claims. It may prioritize 
 - Packet payload byte arrays, credentials, arbitrary chat/text strings, arbitrary object dumps, and stack traces are not captured.
 - Runtime correlation never creates semantic claims.
 - Mapping queue output is bounded and exact-ID based.
-- Atlas-owned `game.atlas`, Client Console `game.console`, and the Atlas runtime bridge classes are excluded from semantic self-mapping.
+- Atlas-owned `game.atlas`, Client Console `game.console`, and Atlas runtime bridge classes are excluded from semantic self-mapping.
 
 # Completed foundations
 
@@ -230,7 +230,7 @@ The combined Browser + Runtime evidence gate is still required before Phase 4 ca
 
 ## Bundle 5A - Semantic coverage + mapping queue
 
-**Status: IMPLEMENTED / OFFLINE GATE NEXT**
+**Status: DONE / OFFLINE VERIFIED**
 
 - [x] Add `AtlasMappingQueue` over the current investigation index + curated evidence.
 - [x] Track every scoped symbol as current runtime-verified, static-verified, hypothesis, unknown, or stale.
@@ -244,24 +244,58 @@ The combined Browser + Runtime evidence gate is still required before Phase 4 ca
 - [x] Export exact IDs + source paths where available to `.client-atlas/mapping-next.md`.
 - [x] Tell the assistant to use static evidence first and request runtime evidence only when necessary.
 - [x] Add `AtlasMappingVerifier` as one consolidated offline gate.
-- [ ] Eclipse Java 8 clean/build + `AtlasMappingVerifier` PASS.
+- [x] Eclipse Java 8 clean/build + `AtlasMappingVerifier` PASS.
 
-Acceptance target:
+### Bundle 5A consolidated offline gate - PASS
+
+User-reported verifier result on 2026-09-08:
+
+- Scan classes: 1221.
+- Atlas symbols: 33742.
+- Atlas relationships: 325826.
+- Mapping fingerprint: `41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26`.
+- Coverage partition: PASS.
+- Structural owner/symbol partition: PASS.
+- Bundle bounds: PASS.
+- Atlas/Client Console self-exclusion: PASS.
+- Deterministic queue ordering/clustering: PASS.
+- Exact-ID assistant export <=256 KiB: PASS.
+
+Coverage snapshot at first verified mapping queue run:
 
 ```text
-BUNDLE 5A MAPPING QUEUE CHECK: PASS
+Scoped symbols:    33742
+Verified runtime:      0
+Verified static:       0
+Hypotheses:            0
+Stale:                 0
+Unknown:           33742
+Orphan evidence:       0
+Owners:             1221
+Bundles:             393
 ```
 
-The verifier rebuilds only generated Atlas structure against the current compiled fingerprint, preserves curated evidence, checks deterministic full-scope partitioning/bounds/self-exclusion, and writes:
+First generated structural bundle:
+
+```text
+MAP-0001
+seed=game/Class574
+owners=8
+symbols=2298
+```
+
+`mapping-next.md` remains bounded to the selected priority exact-symbol subset even when the structural owner cluster contains more symbols.
+
+Verifier output files:
 
 ```text
 Client/.client-atlas/mapping-check.txt
 Client/.client-atlas/mapping-next.md
 ```
 
-No Matrix3 client launch is required for 5A.
+No Matrix3 client launch was required for 5A.
 
-## Bundle 5B - Assistant semantic writeback + scalable knowledge store - PLANNED
+## Bundle 5B - Assistant semantic writeback + scalable knowledge store - ACTIVE / NEXT
 
 Purpose: make whole-client mapping practical at bundle scale instead of manually saving one record at a time.
 
@@ -271,6 +305,7 @@ Purpose: make whole-client mapping practical at bundle scale instead of manually
 - [ ] Produce a deterministic semantic snapshot/export suitable for repository/cross-chat persistence without making generated static data authoritative semantics.
 - [ ] Reject unknown IDs, invalid classifications, stale fingerprints, duplicate subjects, and unproven automatic promotions.
 - [ ] Let an assistant mapping bundle return many proven/hypothesis records in one validated writeback step.
+- [ ] Add one consolidated offline verifier for batch apply/capacity/fingerprint/duplicate/atomicity behavior.
 
 ## Bundle 5C - Runtime-targeted mapping assistance - PLANNED
 
@@ -362,8 +397,9 @@ Client/src/main/java/game/Class639.java
 - Bundle 3A tracing/correlation: runtime verified, smoke PASS.
 - Bundle 3B evidence/knowledge: offline verifier PASS.
 - Phase 4 Browser/Runtime viewer: implementation complete, final combined acceptance deferred by explicit priority change.
-- Bundle 5A mapping queue: implementation complete / verified-static review; one offline Java 8/Eclipse verifier is next.
-- No Phase 1/2/3 regression gate is required for 5A because it adds offline planning/export tooling only and does not modify runtime hooks or gameplay behavior.
+- Bundle 5A mapping queue: **DONE / OFFLINE VERIFIED** with `BUNDLE 5A MAPPING QUEUE CHECK: PASS`.
+- First verified queue state: 33742 scoped symbols, 1221 owners, 393 deterministic bundles, all 33742 symbols initially UNKNOWN, first bundle `MAP-0001` seeded at `game/Class574`.
+- No Phase 1/2/3 regression gate was required for 5A because it adds offline planning/export tooling only and does not modify runtime hooks or gameplay behavior.
 
 # Carryover / blockers
 
@@ -374,20 +410,21 @@ Client/src/main/java/game/Class639.java
 - Exact animation loader instrumentation after ownership is established.
 - Exact model/cache loader instrumentation after ownership is established.
 - Verify >200 streaming exact-query truncation when naturally encountered.
-- Bundle 5B evidence capacity/batch-write work is required before large-scale exact-symbol writeback becomes practical.
 
 ## BLOCKERS
 
-- None for Bundle 5A offline verification.
+- None for Bundle 5B implementation.
 
 # Resume Here
 
 **Last completed checkpoint:**
 
 - Phases 1-3 foundations are verified.
-- Phase 4 Browser + Runtime viewer implementation exists; its final combined acceptance is deferred because the user clarified that manual browsing is not the primary Atlas goal.
-- User explicitly approved the revised priority: systematically map the whole client through assistant-driven bundles and durable semantic evidence.
-- Bundle 5A semantic coverage/queue implementation is patched.
+- Phase 4 Browser + Runtime viewer implementation exists; its final combined acceptance is deferred because manual browsing is not the primary Atlas goal.
+- Bundle 5A semantic coverage/queue is **DONE / OFFLINE VERIFIED**.
+- `AtlasMappingVerifier` passed every queue/coverage/bounds/determinism/self-exclusion/export check.
+- Initial queue snapshot contains 33742 UNKNOWN scoped symbols across 1221 owners and 393 bundles.
+- First generated bundle is `MAP-0001`, seed `game/Class574`, 8 owners / 2298 total symbols; assistant export remains bounded to its priority exact-symbol subset.
 
 **Current phase:**
 
@@ -395,15 +432,15 @@ Client/src/main/java/game/Class639.java
 
 **Active/next bundle:**
 
-- **Bundle 5A - Semantic coverage + mapping queue / OFFLINE GATE NEXT**
+- **Bundle 5B - Assistant semantic writeback + scalable knowledge store / NEXT**
 
 **Current/next work:**
 
-1. Pull current `main` and Eclipse Java 8 clean/build Client.
-2. Run `game.atlas.AtlasMappingVerifier` as a Java Application.
-3. Require `BUNDLE 5A MAPPING QUEUE CHECK: PASS`.
-4. Record the generated coverage snapshot and next bundle from `.client-atlas/mapping-next.md`.
-5. After 5A passes, start Bundle 5B scalable assistant writeback so mapping bundles can be applied in bulk rather than manually through the Browser.
+1. Build the full compatible 5B batch-write/capacity/snapshot/validation bundle before requesting another user test.
+2. Keep exact Atlas IDs and current fingerprint as the writeback authority.
+3. Preserve `VERIFIED` / `verified-static` / `HYPOTHESIS` / `UNKNOWN` discipline; no automatic promotion.
+4. Add one consolidated offline 5B verifier rather than per-subitem tests.
+5. After 5B passes, begin actual assistant investigation/writeback of `MAP-0001` and continue queue-first through the remaining bundles.
 
 **Do not re-scan/re-discover without new evidence:**
 
@@ -411,14 +448,16 @@ Client/src/main/java/game/Class639.java
 - resolved keyboard/menu/network/interface/Class639 runtime ownership,
 - Bundle 3A runtime tracing/correlation gate,
 - Bundle 3B evidence freshness/persistence architecture,
+- Bundle 5A queue partitioning/bounds/self-exclusion behavior,
 - Client Console Atlas shell/viewer seams,
 - unrelated server/gameplay systems.
 
 **Pending runtime/offline verification:**
 
-- Bundle 5A one-shot offline verifier.
+- None for Bundle 5A.
 - Phase 4 combined viewer runtime gate remains deferred and should be merged into a future Client Console acceptance session, not run now.
+- Bundle 5B will define its own single consolidated offline gate after implementation.
 
 # Next recommended work
 
-**Run the single Bundle 5A mapping verifier. On PASS, use the generated first mapping bundle as the handoff into scalable assistant semantic writeback instead of further Browser polish.**
+**Implement the complete Bundle 5B scalable assistant semantic writeback bundle, then verify it once before beginning real `MAP-0001` semantic mapping.**
