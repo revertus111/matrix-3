@@ -137,6 +137,10 @@ public final class BossLabsClientBridge {
         return requestId;
     }
 
+    public static int requestTestingPrefab(int npcId) {
+        return requestTesting("prefab", npcId, null, null);
+    }
+
     public static int requestTestingSpawn(int npcId) {
         return requestTesting("spawn", npcId, null, null);
     }
