@@ -308,7 +308,9 @@ public final class BossLabsCommandBridge {
 			public void run() {
 				try {
 					String message;
-					if ("spawn".equals(operation)) {
+					if ("prefab".equals(operation)) {
+						message = BossLabsTestingService.runPrefabSelfTest(player, npcId);
+					} else if ("spawn".equals(operation)) {
 						message = BossLabsTestingService.spawnBoss(player, npcId);
 					} else if ("reset".equals(operation)) {
 						message = BossLabsTestingService.resetEncounter(player, npcId);
@@ -341,8 +343,8 @@ public final class BossLabsCommandBridge {
 	}
 
 	private static boolean isTestingOperation(String operation) {
-		return "spawn".equals(operation) || "reset".equals(operation) || "sethp".equals(operation)
-				|| "forcephase".equals(operation) || "forceattack".equals(operation)
+		return "prefab".equals(operation) || "spawn".equals(operation) || "reset".equals(operation)
+				|| "sethp".equals(operation) || "forcephase".equals(operation) || "forceattack".equals(operation)
 				|| "clearhazards".equals(operation) || "clearminions".equals(operation);
 	}
 
