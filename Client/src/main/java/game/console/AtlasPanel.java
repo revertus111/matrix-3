@@ -1146,8 +1146,8 @@ public final class AtlasPanel extends JPanel {
                 .append(" | raw target: ").append(row.rawTarget());
         if (row.relationship.getSourcePath() != null) {
             tooltip.append(" | source: ").append(row.relationship.getSourcePath());
-            if (row.relationship.getSourceLine() != null) {
-                tooltip.append(':').append(row.relationship.getSourceLine().intValue());
+            if (row.relationship.hasSourceLine()) {
+                tooltip.append(':').append(row.relationship.getSourceLine());
             }
         }
         tooltip.append(" | occurrences: ").append(row.relationship.getOccurrenceCount());
