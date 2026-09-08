@@ -18,4 +18,6 @@
 - Width/height controls reject negative exact values and clamp slider ranges at zero; X/Y remain signed.
 - Renamed the manual action to `Apply Exact / Visual` so text/sprite/alignment or exact full-state application remains explicit alongside live geometry tuning.
 - Reset Selected / Reset Interface cancel any pending live slider write before restoring pre-editor values.
+- Preserved dirty-field protection for all eight exact geometry boxes so the 350ms snapshot refresh cannot overwrite a value while it is being typed.
+- Programmatic component-list refresh/reselection no longer cancels a pending live slider write; only an actual user target/component change or reset does.
 - V1.1 live-tuning UX remains `NEEDS TEST` under Eclipse/Java 8.
