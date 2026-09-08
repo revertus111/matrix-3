@@ -1,0 +1,32 @@
+Matrix3 BossLabs - Prefab self-test acceptance
+
+Fast runtime gate
+1. Eclipse Clean/build Client and Server with Java 8.
+2. Start Client + Server, load a safe ordinary NPC such as Man [1], open Testing, and confirm Run Prefab Self-Test is enabled even while LIVE is Matrix3.
+3. Click Run Prefab Self-Test once. Confirm Testing history/status reports `Prefab self-test PASS 8/8` without requiring a manually authored BossLabs definition.
+4. Confirm the disposable test NPC is removed automatically when the result returns; no test boss should remain fighting the player.
+5. Confirm the prefab does not damage the player, award loot/XP, or write a BossLabs drop override.
+
+Isolation / ownership
+6. Before running on a Matrix3-owned NPC, note LIVE/SAVED/rollback state. Run the prefab and confirm those states are unchanged afterward.
+7. Apply a real BossLabs definition live, note its LIVE/SAVED/rollback state, run the prefab, and confirm the exact real BossLabs state remains unchanged afterward.
+8. Confirm `data/bosslabs/definitions.bld`, `data/bosslabs/drops.bld`, and `data/npcs/packedDrops.d` are not rewritten by the prefab self-test.
+9. Confirm the prefab uses only the exact per-admin controlled Testing NPC; it must not locate, reset, finish, or mutate an arbitrary world NPC sharing the same NPC id.
+10. Start with an existing controlled Testing NPC, run the prefab, and confirm only that admin-owned test session is replaced/cleaned; unrelated NPCs and other admins' sessions remain untouched.
+
+Runtime path
+11. Confirm the prefab builds one temporary in-memory BossDefinition with one 1-100% phase and one asymmetric three-tile attack: (0,0), (0,+1), (+1,0).
+12. Confirm the prefab sets the controlled NPC to the 50% HP checkpoint and the temporary phase resolves successfully.
+13. Confirm the real `BossCombatScript.executeAttackForTesting` path accepts the exact temporary immutable definition and reports a valid combat delay.
+14. Confirm the prefab attack uses zero effect amount / harmless boss-heal tile behavior so the test exercises target-relative tile resolution without intentionally damaging the player.
+15. Confirm a harmless encounter-owned WorldTask probe is tracked, `BossEncounterRuntime.clearOwnedTasks` clears it, and the encounter context is finished during session cleanup.
+16. Confirm the final self-test assertion verifies global BossDefinitionRegistry live state, one-level rollback availability, and BossDefinitionStore saved state are exactly unchanged.
+
+Failure behavior / security
+17. Run the prefab where the selected NPC cannot be safely spawned because no free test tile exists. Confirm a clear FAIL/error result is returned and no stale controlled NPC/context remains.
+18. Attempt the prefab request without admin rights. Confirm the existing BossLabs rights gate rejects/ignores it and no test NPC or content state is mutated.
+19. Confirm a prefab failure always runs final exact-session cleanup and does not leave the disposable NPC, encounter context, or owned task probe behind.
+20. Confirm Commands.java, BossDefinitionStore wire/store v8, Drops/drop-store v1, normal BossCombatScript registry ownership, NPC death, XP, and Matrix3 world ownership are not replaced by this test harness.
+
+Role of the prefab test
+21. Treat PASS as a fast first-line confidence check only. It does not replace manual current-DRAFT testing, pattern visual-orientation checks, persistence/restart acceptance, multiplayer tests, or required docs/rs3/SMOKE_TEST.md coverage.
