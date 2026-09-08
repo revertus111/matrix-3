@@ -8,10 +8,13 @@ import game.ClientConsoleInterfaceBridge.InterfaceSnapshot;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.ItemEvent;
 import java.util.Locale;
@@ -23,10 +26,12 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
@@ -40,6 +45,11 @@ public final class InterfaceEditorPanel extends JScrollPane {
 
     private static final long serialVersionUID = -8864251023502314325L;
     private static final int REFRESH_DELAY_MS = 350;
+    private static final int LIVE_APPLY_DELAY_MS = 50;
+
+    private static final RangeOption RANGE_FINE = new RangeOption("Fine +/-64", 64);
+    private static final RangeOption RANGE_NORMAL = new RangeOption("Normal +/-256", 256);
+    private static final RangeOption RANGE_WIDE = new RangeOption("Wide +/-1024", 1024);
 
     private final javax.swing.JTextField targetField = new javax.swing.JTextField("671:27");
     private final javax.swing.JTextField searchField = new javax.swing.JTextField();
@@ -51,21 +61,24 @@ public final class InterfaceEditorPanel extends JScrollPane {
     private final JLabel itemValue = ConsoleTheme.createValueLabel();
     private final JLabel childrenValue = ConsoleTheme.createValueLabel();
 
-    private final javax.swing.JTextField baseXField = numberField();
-    private final javax.swing.JTextField baseYField = numberField();
-    private final javax.swing.JTextField baseWidthField = numberField();
-    private final javax.swing.JTextField baseHeightField = numberField();
+    private final LiveGeometryControl baseXControl = new LiveGeometryControl("X", false);
+    private final LiveGeometryControl baseYControl = new LiveGeometryControl("Y", false);
+    private final LiveGeometryControl baseWidthControl = new LiveGeometryControl("Width", true);
+    private final LiveGeometryControl baseHeightControl = new LiveGeometryControl("Height", true);
 
-    private final javax.swing.JTextField runtimeXField = numberField();
-    private final javax.swing.JTextField runtimeYField = numberField();
-    private final javax.swing.JTextField runtimeWidthField = numberField();
-    private final javax.swing.JTextField runtimeHeightField = numberField();
+    private final LiveGeometryControl runtimeXControl = new LiveGeometryControl("X", false);
+    private final LiveGeometryControl runtimeYControl = new LiveGeometryControl("Y", false);
+    private final LiveGeometryControl runtimeWidthControl = new LiveGeometryControl("Width", true);
+    private final LiveGeometryControl runtimeHeightControl = new LiveGeometryControl("Height", true);
 
     private final javax.swing.JTextField xAlignField = numberField();
     private final javax.swing.JTextField yAlignField = numberField();
     private final javax.swing.JTextField widthAlignField = numberField();
     private final javax.swing.JTextField heightAlignField = numberField();
 
+    private final JComboBox<RangeOption> geometryRangeCombo = new JComboBox<RangeOption>(
+            new RangeOption[] { RANGE_FINE, RANGE_NORMAL, RANGE_WIDE });
+    private final JCheckBox liveGeometryCheck = checkBox("Live geometry - sliders and +/- apply instantly");
     private final JCheckBox pinRuntimeCheck = checkBox("Pin runtime X/Y/W/H every client cycle");
     private final JCheckBox overrideTextCheck = checkBox("Override text");
     private final javax.swing.JTextField textField = new javax.swing.JTextField();
@@ -75,6 +88,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
     private final JLabel statusLabel = new JLabel("Enter an interface ID or interface:component target.");
 
     private final Timer refreshTimer = new Timer(REFRESH_DELAY_MS, e -> refreshFromBridge());
+    private final Timer liveApplyTimer = new Timer(LIVE_APPLY_DELAY_MS, e -> flushPendingLiveApply());
 
     private int loadedInterfaceId = -1;
     private int pendingSelectComponent = -1;
@@ -82,6 +96,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
     private long lastSnapshotSequence = -1L;
     private boolean populating;
     private boolean dirty;
+    private boolean pendingLiveApply;
 
     public InterfaceEditorPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -95,8 +110,8 @@ public final class InterfaceEditorPanel extends JScrollPane {
         content.add(ConsoleTheme.subtitleLabel("Live component geometry and visual overrides"));
         content.add(Box.createVerticalStrut(6));
         content.add(ConsoleTheme.createWrappedText(
-                "Load an interface, select a component, edit values, and apply them live. "
-                + "All overrides are reversible and remain client-side.", 3));
+                "Drag geometry sliders and watch the interface update while you tune it. "
+                + "Exact values, reset, and copy/export remain available for final cleanup.", 3));
         content.add(Box.createVerticalStrut(16));
 
         content.add(createTargetCard());
@@ -116,7 +131,14 @@ public final class InterfaceEditorPanel extends JScrollPane {
         ConsoleTheme.styleScrollPane(this);
 
         installListeners();
+        geometryRangeCombo.setSelectedItem(RANGE_NORMAL);
+        liveGeometryCheck.setSelected(true);
+        pinRuntimeCheck.setSelected(true);
+
         refreshTimer.setCoalesce(true);
+        liveApplyTimer.setCoalesce(true);
+        liveApplyTimer.setRepeats(true);
+
         addHierarchyListener(e -> {
             if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) == 0) {
                 return;
@@ -126,6 +148,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
                 refreshTimer.start();
             } else {
                 refreshTimer.stop();
+                cancelPendingLiveApply();
             }
         });
     }
@@ -189,31 +212,42 @@ public final class InterfaceEditorPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(5));
         card.add(ConsoleTheme.createValueRow("Children", childrenValue));
 
-        card.add(Box.createVerticalStrut(12));
+        card.add(Box.createVerticalStrut(14));
+        card.add(createGeometryToolbar());
+
+        card.add(Box.createVerticalStrut(14));
         card.add(sectionLabel("Base geometry"));
         card.add(Box.createVerticalStrut(6));
-        card.add(createQuadRow(
-                new String[] { "X", "Y", "W", "H" },
-                new javax.swing.JTextField[] { baseXField, baseYField, baseWidthField, baseHeightField }));
+        card.add(baseXControl.getPanel());
+        card.add(Box.createVerticalStrut(7));
+        card.add(baseYControl.getPanel());
+        card.add(Box.createVerticalStrut(7));
+        card.add(baseWidthControl.getPanel());
+        card.add(Box.createVerticalStrut(7));
+        card.add(baseHeightControl.getPanel());
 
-        card.add(Box.createVerticalStrut(12));
+        card.add(Box.createVerticalStrut(14));
         card.add(sectionLabel("Runtime geometry"));
         card.add(Box.createVerticalStrut(6));
-        card.add(createQuadRow(
-                new String[] { "X", "Y", "W", "H" },
-                new javax.swing.JTextField[] { runtimeXField, runtimeYField, runtimeWidthField, runtimeHeightField }));
+        card.add(runtimeXControl.getPanel());
+        card.add(Box.createVerticalStrut(7));
+        card.add(runtimeYControl.getPanel());
+        card.add(Box.createVerticalStrut(7));
+        card.add(runtimeWidthControl.getPanel());
+        card.add(Box.createVerticalStrut(7));
+        card.add(runtimeHeightControl.getPanel());
         card.add(Box.createVerticalStrut(7));
         styleCheck(pinRuntimeCheck);
         card.add(pinRuntimeCheck);
 
-        card.add(Box.createVerticalStrut(12));
+        card.add(Box.createVerticalStrut(14));
         card.add(sectionLabel("Alignment"));
         card.add(Box.createVerticalStrut(6));
         card.add(createQuadRow(
                 new String[] { "X", "Y", "W", "H" },
                 new javax.swing.JTextField[] { xAlignField, yAlignField, widthAlignField, heightAlignField }));
 
-        card.add(Box.createVerticalStrut(12));
+        card.add(Box.createVerticalStrut(14));
         card.add(sectionLabel("Visual"));
         card.add(Box.createVerticalStrut(6));
         styleCheck(overrideTextCheck);
@@ -236,11 +270,38 @@ public final class InterfaceEditorPanel extends JScrollPane {
         return card;
     }
 
+    private JPanel createGeometryToolbar() {
+        JPanel container = new JPanel();
+        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+        container.setOpaque(false);
+        container.setAlignmentX(LEFT_ALIGNMENT);
+        container.setMaximumSize(new Dimension(Integer.MAX_VALUE, 84));
+
+        JPanel rangeRow = transparentRow(new BorderLayout(8, 0));
+        JLabel rangeLabel = new JLabel("Slider range");
+        rangeLabel.setFont(ConsoleTheme.SMALL_FONT);
+        rangeLabel.setForeground(ConsoleTheme.MUTED_TEXT);
+
+        ConsoleTheme.styleComboBox(geometryRangeCombo);
+        geometryRangeCombo.setPreferredSize(new Dimension(150, 32));
+        geometryRangeCombo.setMaximumSize(new Dimension(180, 34));
+
+        rangeRow.add(rangeLabel, BorderLayout.WEST);
+        rangeRow.add(geometryRangeCombo, BorderLayout.EAST);
+        container.add(rangeRow);
+        container.add(Box.createVerticalStrut(5));
+
+        styleCheck(liveGeometryCheck);
+        container.add(liveGeometryCheck);
+        return container;
+    }
+
     private JPanel createActionRow() {
         JPanel row = transparentRow(new GridLayout(1, 2, 7, 0));
 
-        JButton apply = new JButton("Apply Live");
+        JButton apply = new JButton("Apply Exact / Visual");
         ConsoleTheme.styleButton(apply);
+        apply.setToolTipText("Apply all exact fields plus optional text/sprite overrides immediately.");
         apply.addActionListener(e -> applySelected());
 
         JButton copy = new JButton("Copy Values");
@@ -325,6 +386,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
             }
             ComponentSnapshot selected = componentList.getSelectedValue();
             if (selected != null) {
+                cancelPendingLiveApply();
                 selectedComponentId = selected.getComponentId();
                 populateInspector(selected);
             }
@@ -348,8 +410,6 @@ public final class InterfaceEditorPanel extends JScrollPane {
         };
 
         javax.swing.JTextField[] editableFields = {
-                baseXField, baseYField, baseWidthField, baseHeightField,
-                runtimeXField, runtimeYField, runtimeWidthField, runtimeHeightField,
                 xAlignField, yAlignField, widthAlignField, heightAlignField,
                 textField, spriteField
         };
@@ -357,7 +417,16 @@ public final class InterfaceEditorPanel extends JScrollPane {
             field.getDocument().addDocumentListener(dirtyListener);
         }
 
-        pinRuntimeCheck.addItemListener(e -> markDirty());
+        geometryRangeCombo.addActionListener(e -> updateGeometryRanges());
+        liveGeometryCheck.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.DESELECTED) {
+                cancelPendingLiveApply();
+            }
+        });
+        pinRuntimeCheck.addItemListener(e -> {
+            markDirty();
+            scheduleLiveApply();
+        });
         overrideTextCheck.addItemListener(e -> {
             textField.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
             markDirty();
@@ -369,7 +438,6 @@ public final class InterfaceEditorPanel extends JScrollPane {
 
         textField.setEnabled(false);
         spriteField.setEnabled(false);
-        pinRuntimeCheck.setSelected(true);
     }
 
     private void loadTarget() {
@@ -378,6 +446,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
             setStatus("Target must be an interface ID or interface:component, for example 671:27.", false);
             return;
         }
+        cancelPendingLiveApply();
         loadedInterfaceId = target.interfaceId;
         pendingSelectComponent = target.componentId;
         selectedComponentId = -1;
@@ -464,15 +533,16 @@ public final class InterfaceEditorPanel extends JScrollPane {
             itemValue.setText(Integer.toString(component.getItemId()));
             childrenValue.setText(component.getStaticChildren() + " / " + component.getDynamicChildren());
 
-            setNumber(baseXField, component.getBaseX());
-            setNumber(baseYField, component.getBaseY());
-            setNumber(baseWidthField, component.getBaseWidth());
-            setNumber(baseHeightField, component.getBaseHeight());
+            int range = getGeometryRange();
+            baseXControl.setModelValue(component.getBaseX(), range);
+            baseYControl.setModelValue(component.getBaseY(), range);
+            baseWidthControl.setModelValue(component.getBaseWidth(), range);
+            baseHeightControl.setModelValue(component.getBaseHeight(), range);
 
-            setNumber(runtimeXField, component.getRuntimeX());
-            setNumber(runtimeYField, component.getRuntimeY());
-            setNumber(runtimeWidthField, component.getRuntimeWidth());
-            setNumber(runtimeHeightField, component.getRuntimeHeight());
+            runtimeXControl.setModelValue(component.getRuntimeX(), range);
+            runtimeYControl.setModelValue(component.getRuntimeY(), range);
+            runtimeWidthControl.setModelValue(component.getRuntimeWidth(), range);
+            runtimeHeightControl.setModelValue(component.getRuntimeHeight(), range);
 
             setNumber(xAlignField, component.getXAlignment());
             setNumber(yAlignField, component.getYAlignment());
@@ -499,9 +569,15 @@ public final class InterfaceEditorPanel extends JScrollPane {
             parentValue.setText("-");
             itemValue.setText("-");
             childrenValue.setText("-");
+            baseXControl.clear();
+            baseYControl.clear();
+            baseWidthControl.clear();
+            baseHeightControl.clear();
+            runtimeXControl.clear();
+            runtimeYControl.clear();
+            runtimeWidthControl.clear();
+            runtimeHeightControl.clear();
             javax.swing.JTextField[] fields = {
-                    baseXField, baseYField, baseWidthField, baseHeightField,
-                    runtimeXField, runtimeYField, runtimeWidthField, runtimeHeightField,
                     xAlignField, yAlignField, widthAlignField, heightAlignField,
                     textField, spriteField
             };
@@ -524,34 +600,9 @@ public final class InterfaceEditorPanel extends JScrollPane {
             return;
         }
 
+        cancelPendingLiveApply();
         try {
-            int baseX = parseInt(baseXField, "Base X");
-            int baseY = parseInt(baseYField, "Base Y");
-            int baseWidth = parseInt(baseWidthField, "Base width");
-            int baseHeight = parseInt(baseHeightField, "Base height");
-
-            int runtimeX = parseInt(runtimeXField, "Runtime X");
-            int runtimeY = parseInt(runtimeYField, "Runtime Y");
-            int runtimeWidth = parseInt(runtimeWidthField, "Runtime width");
-            int runtimeHeight = parseInt(runtimeHeightField, "Runtime height");
-
-            int xAlign = parseByte(xAlignField, "X alignment");
-            int yAlign = parseByte(yAlignField, "Y alignment");
-            int widthAlign = parseByte(widthAlignField, "Width alignment");
-            int heightAlign = parseByte(heightAlignField, "Height alignment");
-
-            int spriteId = parseInt(spriteField, "Sprite ID");
-
-            ComponentOverride override = new ComponentOverride(
-                    loadedInterfaceId,
-                    selected.getComponentId(),
-                    baseX, baseY, baseWidth, baseHeight,
-                    runtimeX, runtimeY, runtimeWidth, runtimeHeight,
-                    xAlign, yAlign, widthAlign, heightAlign,
-                    pinRuntimeCheck.isSelected(),
-                    overrideTextCheck.isSelected(), textField.getText(),
-                    overrideSpriteCheck.isSelected(), spriteId);
-
+            ComponentOverride override = buildOverride(selected);
             String error = ClientConsoleInterfaceBridge.queueApply(override);
             if (error != null) {
                 setStatus(error, false);
@@ -560,10 +611,103 @@ public final class InterfaceEditorPanel extends JScrollPane {
 
             dirty = false;
             ClientConsoleInterfaceBridge.requestSnapshot(loadedInterfaceId);
-            setStatus("Queued live override for " + loadedInterfaceId + ":" + selected.getComponentId() + ".", true);
+            setStatus("Queued exact override for " + loadedInterfaceId + ":" + selected.getComponentId() + ".", true);
         } catch (IllegalArgumentException ex) {
             setStatus(ex.getMessage(), false);
         }
+    }
+
+    private ComponentOverride buildOverride(ComponentSnapshot selected) {
+        int spriteId = overrideSpriteCheck.isSelected()
+                ? parseInt(spriteField, "Sprite ID") : selected.getSpriteId();
+
+        return new ComponentOverride(
+                loadedInterfaceId,
+                selected.getComponentId(),
+                baseXControl.getValue("Base X"),
+                baseYControl.getValue("Base Y"),
+                baseWidthControl.getValue("Base width"),
+                baseHeightControl.getValue("Base height"),
+                runtimeXControl.getValue("Runtime X"),
+                runtimeYControl.getValue("Runtime Y"),
+                runtimeWidthControl.getValue("Runtime width"),
+                runtimeHeightControl.getValue("Runtime height"),
+                parseByte(xAlignField, "X alignment"),
+                parseByte(yAlignField, "Y alignment"),
+                parseByte(widthAlignField, "Width alignment"),
+                parseByte(heightAlignField, "Height alignment"),
+                pinRuntimeCheck.isSelected(),
+                overrideTextCheck.isSelected(), textField.getText(),
+                overrideSpriteCheck.isSelected(), spriteId);
+    }
+
+    private void scheduleLiveApply() {
+        if (populating || !liveGeometryCheck.isSelected() || selectedComponentId < 0) {
+            return;
+        }
+        dirty = true;
+        pendingLiveApply = true;
+        if (!liveApplyTimer.isRunning()) {
+            liveApplyTimer.start();
+        }
+    }
+
+    private void flushPendingLiveApply() {
+        if (!pendingLiveApply) {
+            liveApplyTimer.stop();
+            return;
+        }
+        pendingLiveApply = false;
+
+        ComponentSnapshot selected = currentSelectedComponent();
+        if (selected == null) {
+            liveApplyTimer.stop();
+            return;
+        }
+
+        try {
+            String error = ClientConsoleInterfaceBridge.queueApply(buildOverride(selected));
+            if (error != null) {
+                setStatus(error, false);
+                liveApplyTimer.stop();
+                return;
+            }
+            setStatus("Live tuning " + loadedInterfaceId + ":" + selected.getComponentId()
+                    + " - drag, nudge, or enter an exact geometry value.", true);
+        } catch (IllegalArgumentException ex) {
+            setStatus(ex.getMessage(), false);
+            liveApplyTimer.stop();
+        }
+    }
+
+    private void cancelPendingLiveApply() {
+        pendingLiveApply = false;
+        liveApplyTimer.stop();
+    }
+
+    private void updateGeometryRanges() {
+        if (populating) {
+            return;
+        }
+        int range = getGeometryRange();
+        populating = true;
+        try {
+            baseXControl.recenterRange(range);
+            baseYControl.recenterRange(range);
+            baseWidthControl.recenterRange(range);
+            baseHeightControl.recenterRange(range);
+            runtimeXControl.recenterRange(range);
+            runtimeYControl.recenterRange(range);
+            runtimeWidthControl.recenterRange(range);
+            runtimeHeightControl.recenterRange(range);
+        } finally {
+            populating = false;
+        }
+    }
+
+    private int getGeometryRange() {
+        Object selected = geometryRangeCombo.getSelectedItem();
+        return selected instanceof RangeOption ? ((RangeOption) selected).range : RANGE_NORMAL.range;
     }
 
     private void resetSelected() {
@@ -572,6 +716,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
             setStatus("Select a component first.", false);
             return;
         }
+        cancelPendingLiveApply();
         String error = ClientConsoleInterfaceBridge.queueResetComponent(
                 loadedInterfaceId, selected.getComponentId());
         if (error != null) {
@@ -588,6 +733,7 @@ public final class InterfaceEditorPanel extends JScrollPane {
             setStatus("Load an interface first.", false);
             return;
         }
+        cancelPendingLiveApply();
         String error = ClientConsoleInterfaceBridge.queueResetInterface(loadedInterfaceId);
         if (error != null) {
             setStatus(error, false);
@@ -610,14 +756,14 @@ public final class InterfaceEditorPanel extends JScrollPane {
                 .append(':').append(selected.getComponentId()).append('\n');
         copy.append("type=").append(typeValue.getText())
                 .append(" parent=").append(parentValue.getText()).append('\n');
-        copy.append("base=").append(baseXField.getText()).append(',')
-                .append(baseYField.getText()).append(',')
-                .append(baseWidthField.getText()).append(',')
-                .append(baseHeightField.getText()).append('\n');
-        copy.append("runtime=").append(runtimeXField.getText()).append(',')
-                .append(runtimeYField.getText()).append(',')
-                .append(runtimeWidthField.getText()).append(',')
-                .append(runtimeHeightField.getText()).append('\n');
+        copy.append("base=").append(baseXControl.getText()).append(',')
+                .append(baseYControl.getText()).append(',')
+                .append(baseWidthControl.getText()).append(',')
+                .append(baseHeightControl.getText()).append('\n');
+        copy.append("runtime=").append(runtimeXControl.getText()).append(',')
+                .append(runtimeYControl.getText()).append(',')
+                .append(runtimeWidthControl.getText()).append(',')
+                .append(runtimeHeightControl.getText()).append('\n');
         copy.append("align=").append(xAlignField.getText()).append(',')
                 .append(yAlignField.getText()).append(',')
                 .append(widthAlignField.getText()).append(',')
@@ -725,6 +871,237 @@ public final class InterfaceEditorPanel extends JScrollPane {
 
     private static void setNumber(javax.swing.JTextField field, int value) {
         field.setText(Integer.toString(value));
+    }
+
+    private final class LiveGeometryControl {
+        private final String label;
+        private final boolean nonNegative;
+        private final JPanel panel = new JPanel();
+        private final javax.swing.JTextField field = numberField();
+        private final JSlider slider = new JSlider();
+
+        private LiveGeometryControl(String label, boolean nonNegative) {
+            this.label = label;
+            this.nonNegative = nonNegative;
+
+            panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+            panel.setOpaque(false);
+            panel.setAlignmentX(LEFT_ALIGNMENT);
+            panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
+
+            JPanel top = new JPanel(new BorderLayout(7, 0));
+            top.setOpaque(false);
+            top.setAlignmentX(LEFT_ALIGNMENT);
+            top.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+
+            JLabel name = new JLabel(label);
+            name.setFont(ConsoleTheme.SMALL_FONT);
+            name.setForeground(ConsoleTheme.MUTED_TEXT);
+            name.setPreferredSize(new Dimension(48, 28));
+
+            JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+            controls.setOpaque(false);
+
+            JButton minus = compactButton("-");
+            JButton plus = compactButton("+");
+
+            ConsoleTheme.styleTextField(field);
+            field.setPreferredSize(new Dimension(76, 32));
+            field.setMaximumSize(new Dimension(76, 32));
+            field.setToolTipText("Type an exact value and press Enter, or use the slider / +/- buttons.");
+
+            minus.addActionListener(e -> nudge(-1));
+            plus.addActionListener(e -> nudge(1));
+            field.addActionListener(e -> commitExactField());
+            field.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    commitExactField();
+                }
+            });
+
+            controls.add(minus);
+            controls.add(field);
+            controls.add(plus);
+
+            top.add(name, BorderLayout.WEST);
+            top.add(controls, BorderLayout.EAST);
+            panel.add(top);
+            panel.add(Box.createVerticalStrut(3));
+
+            slider.setBackground(ConsoleTheme.CARD);
+            slider.setForeground(ConsoleTheme.ACCENT);
+            slider.setOpaque(true);
+            slider.setPaintTicks(false);
+            slider.setPaintLabels(false);
+            slider.setFocusable(false);
+            slider.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+            slider.addChangeListener(e -> sliderChanged());
+            panel.add(slider);
+        }
+
+        private JPanel getPanel() {
+            return panel;
+        }
+
+        private void setModelValue(int value, int range) {
+            int safeValue = nonNegative ? Math.max(0, value) : value;
+            configureRange(safeValue, range);
+            slider.setValue(safeValue);
+            field.setText(Integer.toString(safeValue));
+        }
+
+        private void recenterRange(int range) {
+            Integer value = tryParseField();
+            int current = value == null ? slider.getValue() : value.intValue();
+            if (nonNegative) {
+                current = Math.max(0, current);
+            }
+            configureRange(current, range);
+            slider.setValue(current);
+            field.setText(Integer.toString(current));
+        }
+
+        private void configureRange(int center, int range) {
+            long low = (long) center - (long) range;
+            long high = (long) center + (long) range;
+            if (nonNegative && low < 0L) {
+                low = 0L;
+            }
+            low = Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, low));
+            high = Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, high));
+            if (high <= low) {
+                high = Math.min((long) Integer.MAX_VALUE, low + 1L);
+            }
+            slider.setMinimum((int) low);
+            slider.setMaximum((int) high);
+        }
+
+        private void sliderChanged() {
+            if (populating) {
+                return;
+            }
+            int value = slider.getValue();
+            setFieldSilently(value);
+            markDirty();
+            scheduleLiveApply();
+        }
+
+        private void nudge(int delta) {
+            Integer parsed = tryParseField();
+            int current = parsed == null ? slider.getValue() : parsed.intValue();
+            long candidate = (long) current + delta;
+            if (nonNegative) {
+                candidate = Math.max(0L, candidate);
+            }
+            candidate = Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, candidate));
+            setUserValue((int) candidate, true);
+        }
+
+        private void commitExactField() {
+            if (populating || field.getText() == null || field.getText().trim().length() == 0) {
+                return;
+            }
+            try {
+                int value = Integer.parseInt(field.getText().trim());
+                if (nonNegative && value < 0) {
+                    setStatus(label + " cannot be negative.", false);
+                    return;
+                }
+                setUserValue(value, true);
+            } catch (NumberFormatException ex) {
+                setStatus(label + " must be a whole number.", false);
+            }
+        }
+
+        private void setUserValue(int value, boolean live) {
+            int range = getGeometryRange();
+            populating = true;
+            try {
+                if (value < slider.getMinimum() || value > slider.getMaximum()) {
+                    configureRange(value, range);
+                }
+                slider.setValue(value);
+                field.setText(Integer.toString(value));
+            } finally {
+                populating = false;
+            }
+            markDirty();
+            if (live) {
+                scheduleLiveApply();
+            }
+        }
+
+        private void setFieldSilently(int value) {
+            populating = true;
+            try {
+                field.setText(Integer.toString(value));
+            } finally {
+                populating = false;
+            }
+        }
+
+        private Integer tryParseField() {
+            try {
+                String raw = field.getText();
+                return raw == null || raw.trim().length() == 0
+                        ? null : Integer.valueOf(Integer.parseInt(raw.trim()));
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+
+        private int getValue(String fieldLabel) {
+            String raw = field.getText() == null ? "" : field.getText().trim();
+            if (raw.length() == 0) {
+                throw new IllegalArgumentException(fieldLabel + " is empty.");
+            }
+            try {
+                int value = Integer.parseInt(raw);
+                if (nonNegative && value < 0) {
+                    throw new IllegalArgumentException(fieldLabel + " cannot be negative.");
+                }
+                return value;
+            } catch (NumberFormatException ex) {
+                throw new IllegalArgumentException(fieldLabel + " must be a whole number.");
+            }
+        }
+
+        private String getText() {
+            return field.getText() == null ? "" : field.getText().trim();
+        }
+
+        private void clear() {
+            field.setText("");
+            slider.setMinimum(0);
+            slider.setMaximum(1);
+            slider.setValue(0);
+        }
+
+        private JButton compactButton(String text) {
+            JButton button = new JButton(text);
+            ConsoleTheme.styleButton(button);
+            button.setPreferredSize(new Dimension(34, 32));
+            button.setMinimumSize(new Dimension(34, 32));
+            button.setMaximumSize(new Dimension(34, 32));
+            button.setToolTipText("Adjust " + label + " by 1 pixel.");
+            return button;
+        }
+    }
+
+    private static final class RangeOption {
+        private final String label;
+        private final int range;
+
+        private RangeOption(String label, int range) {
+            this.label = label;
+            this.range = range;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
     }
 
     private static final class Target {
