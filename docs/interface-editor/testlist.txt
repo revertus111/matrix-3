@@ -1,42 +1,45 @@
-Matrix3 Interface Editor V1.2 - targeted runtime acceptance
+Matrix3 Interface Editor V1.3 - targeted runtime acceptance
 
 Quick path
 1. Pull current `main`, clean/build Client in Eclipse/Java 8, then launch Matrix3 normally.
-2. Open Client Console and click Interface Editor. Confirm the panel lazy-loads, stays dark/readable, scrolls at normal sidebar width, and does not disturb game input/rendering.
-3. Leave the default target `671:27` and click Load if needed. Confirm interface 671 components populate and component 27 becomes selected without a crash at the component-array boundary.
-4. Confirm the selected inspector shows Type, Parent, Item ID, Children, Base geometry sliders, Runtime geometry sliders, Alignment X/Y/W/H, Text, and Sprite ID.
-5. Confirm Slider range offers `Fine +/-64`, `Normal +/-256`, and `Wide +/-1024`, with Normal selected by default. Confirm `Live geometry`, `Pin runtime X/Y/W/H`, `Wire Mesh overlay`, and `Show component IDs` are enabled by default.
-6. Open Rambler's Backpack. Confirm the Wire Mesh draws component rectangles over the game interface while Interface Editor is visible. The selected component should use a stronger outline and include its component ID, size, and resolved overlay position.
-7. Toggle `Selected component only`, `Show dimensions`, and `Show parent links`. Confirm each changes only the diagnostic overlay and does not alter the RuneScape interface itself.
-8. Click `Pick Component`, then left-click a visible Backpack UI component. Confirm the diagnostic click is consumed, the editor selects the picked component, the selected wireframe follows it, and normal Walk/interaction does not also fire from that one pick click.
-9. With picker NOT armed, left-click/use the game normally once. Confirm Wire Mesh does not consume ordinary game input.
-10. Drag Runtime X on component 27 slowly left/right. Confirm the actual component and selected wireframe move while the slider is moving, the game/client remains responsive, and no Apply button is required.
-11. Use the Runtime X `-` and `+` buttons. Confirm each click moves exactly one pixel and applies immediately.
-12. Type an exact Runtime X value and press Enter. Confirm the slider recenters if needed and the exact value applies live. Repeat once by typing a value and clicking elsewhere to verify focus-loss apply.
-13. Switch Fine -> Normal -> Wide while preserving the current value. Confirm only the slider travel range changes; the component does not jump solely because range changed.
-14. Drag Runtime Width/Height toward their lower bounds. Confirm geometry controls never produce a negative width/height. X/Y controls must still allow negative values where the component/layout supports them.
-15. Drag a geometry control quickly for several seconds. Confirm movement remains responsive and settles on the final slider value without a delayed backlog of old positions after you stop dragging.
-16. Click Reset Selected. Confirm component 27 returns to the exact pre-editor geometry, the wireframe follows the restored position, and no pending slider update reapplies after reset.
-17. Apply harmless live changes to two components, then click Reset Interface. Confirm both restore and no pending/live override remains on interface 671.
-18. Click Copy Values on a selected component. Paste into Notepad/chat and confirm it contains interface:component, type/parent, base geometry, runtime geometry, alignment, text, and sprite values.
+2. Open Client Console and click Interface Editor. Confirm the panel lazy-loads, stays dark/readable, scrolls normally, and Wire Mesh is OFF by default so the OpenGL canvas does not flash.
+3. With Bank/Backpack interface 762 open, click `Load Active Interface`. Confirm the editor loads 762 rather than the permanent 1477 root/gameframe or a small helper interface.
+4. Open the `Open now` dropdown. Confirm it lists currently attached runtime interfaces, marks the active entry with a dot, marks the root entry, and shows loaded component counts when available.
+5. Choose one `Open now` entry. Confirm that interface loads immediately and its component list/inspector refreshes without needing to type an ID.
+6. Click `Browse All Interfaces...`. Confirm a dark searchable browser opens, shows the current cache interface-ID range, marks OPEN/ACTIVE/ROOT entries, and does not block the game/client.
+7. Search for `762`, double-click it, and confirm the browser closes and Interface Editor loads 762. Repeat once using `Load Selected` instead of double-click.
+8. Search the browser for `open`, `active`, and `root`. Confirm those filters surface the expected runtime-marked entries.
+9. Enter an explicit target such as `762:215` and press Enter/Load. Confirm exact interface:component targeting still works alongside the new browser workflow.
+10. Confirm the selected inspector shows Type, Parent, Item ID, Children, Base geometry sliders, Runtime geometry sliders, Alignment X/Y/W/H, Text, and Sprite ID.
+11. Confirm Slider range offers `Fine +/-64`, `Normal +/-256`, and `Wide +/-1024`, with Normal selected by default. Confirm `Live geometry` and `Pin runtime X/Y/W/H` are enabled by default.
+12. Drag Runtime X on a harmless selected component slowly left/right. Confirm the actual component moves while dragging, the client remains responsive, and no Apply button is required.
+13. Use Runtime X `-` and `+`. Confirm each click moves exactly one pixel and applies immediately.
+14. Type an exact Runtime X value and press Enter. Confirm the slider recenters if needed and the exact value applies live. Repeat once using focus-loss apply.
+15. Drag quickly for several seconds. Confirm the component settles on the final slider value without delayed old movements after release.
+16. Click Reset Selected. Confirm the component returns to its exact pre-editor geometry and no pending slider update reapplies afterward.
+17. Apply harmless changes to two components, then Reset Interface. Confirm both restore.
+18. Click Copy Values and confirm clipboard output contains interface:component, type/parent, base geometry, runtime geometry, alignment, text, and sprite values.
 
-Backpack discovery path
-19. Use `Pick Component` on the visible Backpack frame, title/header region, large grid area, and the real item-grid region. Confirm the editor makes it obvious which component owns each visible area instead of requiring guessed component IDs.
-20. Turn on parent links while component 27 is selected. Confirm its parent relationship is visually useful and the bounds are close enough to the rendered interface to diagnose overlap/clipping. If parent-relative placement is offset, preserve a screenshot and the selected component IDs instead of guessing a correction.
-21. Use the live sliders to tune likely 671 components without changing server code. Start with Runtime X/Y/W/H for direct visual placement, then use Base geometry/alignment when testing normal layout behavior.
-22. Use Fine range for final pixel-level alignment, Normal for ordinary movement, and Wide only when a component is substantially displaced.
-23. Once the full Backpack frame/grid looks correct, Copy Values for every component changed and preserve those values for the final evidence-backed Backpack patch.
+Runtime-interface discovery checks
+19. With Interface Editor open, close interface 762 in game. Confirm `Open now` removes 762 on the next refresh.
+20. Reopen 762. Confirm it reappears and becomes the preferred active foreground interface.
+21. Open a different substantial central interface. Confirm `Load Active Interface` follows the newly attached foreground interface; if several helper interfaces open at once, the larger/main interface should be preferred.
+22. Confirm the permanent root/gameframe remains visible in `Open now` as ROOT but is not preferred over a newly opened substantial foreground interface.
+23. Browse a closed interface ID from `Browse All Interfaces...`. Confirm it can still be inspected without pretending it is OPEN.
+
+Wire Mesh carryover/regression
+24. Leave Wire Mesh OFF during normal editor use and confirm there is no OpenGL black flashing.
+25. Optional diagnostic only: enable Wire Mesh once and confirm the known AWT/OpenGL flashing behavior is still isolated to that overlay. Turn it back off. Do not treat this as a pass requirement; renderer-native overlay replacement is carryover.
+26. With Wire Mesh OFF, confirm Pick Component is not used accidentally. If intentionally testing Pick Component, expect it to enable the current overlay path and treat any flashing as known carryover evidence rather than a new browser regression.
 
 Generic/regression path
-24. Load one unrelated known interface ID. Confirm component discovery/search, geometry sliders, Wire Mesh, and picker remain generic and are not hardcoded to 671.
-25. Type part of a component ID/type/text into Components search. Confirm the list filters without blocking the game and picking a component clears a hiding filter when necessary so the picked row can be selected.
-26. Disable `Live geometry`, move a slider, and confirm no live write occurs until `Apply Exact / Visual` is pressed. Re-enable it and confirm live behavior resumes.
-27. On a harmless text component, enable Override text, change the text, click `Apply Exact / Visual`, then Reset Selected. Confirm both override and restoration work.
-28. If testing a sprite component, enable Override sprite, change to a known safe sprite ID, click `Apply Exact / Visual`, then Reset Selected. Do not guess unknown sprite IDs during the quick acceptance test.
-29. Switch away from Interface Editor. Confirm Wire Mesh immediately disappears and picker mode is cancelled. Return to Interface Editor and confirm the overlay resumes only for the currently loaded target.
-30. Switch rapidly between Interface Editor and existing Client Console panels. Confirm lazy-panel behavior, collapse/reopen, and normal Client Console input remain intact.
-31. Close Matrix3 with Interface Editor selected and relaunch. Confirm the active panel can restore through the existing generic Client Console preference path, while live interface overrides themselves do NOT persist across restart.
-32. Run one safe normal gameplay/input action after editor use. Confirm no server/gameplay authority changed.
+27. Load one unrelated interface through `Open now` and one through `Browse All`. Confirm component discovery/search and geometry editing remain generic and are not hardcoded to 762.
+28. Type part of a component ID/type/text into Components search. Confirm filtering remains responsive.
+29. Disable `Live geometry`, move a slider, and confirm no live write occurs until `Apply Exact / Visual` is pressed. Re-enable it and confirm live behavior resumes.
+30. On a harmless text component, enable Override text, change it, click `Apply Exact / Visual`, then Reset Selected. Confirm override/restoration work.
+31. Switch rapidly between Interface Editor and existing Client Console panels. Confirm lazy-panel behavior, collapse/reopen, and normal Client Console input remain intact.
+32. Restart Client and confirm temporary interface overrides do not persist across restart.
+33. Run one safe normal gameplay/input action after editor use. Confirm no server/gameplay authority changed.
 
 Pass condition
-- Interface Editor is professional/readable, geometry can be tuned fluidly with live sliders/nudges/exact values, Wire Mesh accurately exposes useful component ownership, Pick Component selects UI targets without stealing normal input outside picker mode, reset reliably restores pre-editor values, and no Matrix3 gameplay/server authority is changed.
+- Interface Editor can discover the current foreground interface without typing an ID, exposes real currently attached interfaces, provides a searchable all-interface cache browser, retains live/reversible geometry editing, keeps Wire Mesh safely off by default after the verified OpenGL flashing issue, and does not change Matrix3 gameplay/server authority.
