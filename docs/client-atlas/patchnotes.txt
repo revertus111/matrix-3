@@ -132,3 +132,14 @@ Phase 5 / Bundle 5A semantic mapping queue
 - Assistant bundle instructions preserve evidence discipline and direct investigation toward exact IDs/strong structural connections; runtime evidence is requested only when static evidence cannot prove semantics.
 - Added `AtlasMappingVerifier`, a single offline Bundle 5A gate that rebuilds only generated Atlas data, preserves curated evidence, verifies full scoped partitioning/bounds/determinism/self-exclusion, and writes `mapping-check.txt` + `mapping-next.md`.
 - No client/runtime hooks, packet paths, gameplay behavior, browser semantics, or server code changed in Bundle 5A.
+
+Phase 5 / Bundle 5A consolidated offline gate PASS
+- Eclipse Java 8 clean/build completed and `game.atlas.AtlasMappingVerifier` ran successfully as a Java Application.
+- Final result: `BUNDLE 5A MAPPING QUEUE CHECK: PASS`.
+- Verified 1221 classes / 33742 scoped symbols / 325826 relationships against mapping fingerprint `41be330f2baa1044db8da56ddc160447b1cc3db7e7bdcd4c1c5cfc955973fc26`.
+- Coverage-state partition, structural owner/symbol partition, bundle bounds, self-exclusion, deterministic clustering/order, and exact-ID <=256 KiB assistant export all passed.
+- Initial semantic coverage is intentionally empty: 0 runtime verified / 0 static verified / 0 hypotheses / 0 stale / 0 orphan evidence / 33742 UNKNOWN.
+- Queue partition produced 1221 owners across 393 deterministic bundles.
+- First generated bundle is `MAP-0001`, seed `game/Class574`, 8 owners / 2298 total symbols; the assistant handoff remains bounded to its priority exact-symbol subset.
+- Reports written to `Client/.client-atlas/mapping-check.txt` and `Client/.client-atlas/mapping-next.md`.
+- Bundle 5A is DONE / OFFLINE VERIFIED. Bundle 5B scalable assistant semantic writeback is next so real mapping results can be applied in bulk instead of manually through the Browser.
