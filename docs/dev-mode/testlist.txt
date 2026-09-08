@@ -1,5 +1,45 @@
 Matrix3 Dev Mode - targeted runtime test list
 
+DEFERRED RUNTIME QUEUE - run when PC/runtime time is available
+
+Build gate
+[ ] Eclipse/Java 8: clean/build Client and Server with no compilation errors.
+
+Bundle 1.2 - World Manipulation high-value checks
+[ ] Spawn a Dev NPC -> Move -> Duplicate -> Delete the duplicate.
+[ ] Attempt Delete on a normal non-Dev NPC and confirm it is blocked.
+[ ] Spawn a Dev object -> Move -> Rotate left/right -> Delete.
+[ ] Duplicate a normal map object, then Move/Rotate/Delete the Dev-owned copy.
+[ ] Attempt Move/Rotate/Delete on the original normal map object and confirm all are blocked.
+[ ] Stack identical NPCs and confirm the exact selected runtime-index NPC is manipulated.
+[ ] Arm Move/Duplicate -> cancel/re-arm -> confirm tile contextual placement follows only the current target.
+
+Bundle 1.3 - Continuous / Paint Placement high-value checks
+[ ] Open Dev Spawn and confirm placement modes are Once / Continuous / Paint; Once remains the default.
+[ ] Once: spawn one NPC/object/item on the browser target tile and confirm behavior matches the old one-shot workflow.
+[ ] Continuous: arm an NPC, right-click 3 different tiles, use the contextual Dev placement entry, and confirm all 3 placements appear while the mode remains armed.
+[ ] Paint: arm an NPC, normal-left-click 3 world tiles, confirm one placement per clicked tile AND normal Walk Here still occurs.
+[ ] Repeat Continuous/Paint for an object and a ground item.
+[ ] Object Fixed rotation: repeated placements keep the selected 0-3 rotation.
+[ ] Object Cycle rotation: starting at a known rotation, repeated successful placements advance 0-3 and wrap.
+[ ] Object Random rotation: repeated placements use valid rotations 0-3 and are not forced to one fixed direction.
+[ ] After any successful Once/Continuous/Paint selection, right-click a tile and confirm `Dev > Place Last ...` places the remembered target once.
+[ ] Arm Continuous/Paint and press Escape while the game has focus; confirm active placement cancels and normal Escape behavior is not swallowed.
+[ ] Arm Move/Duplicate and press Escape; confirm those placement modes also cancel.
+[ ] Use the browser Cancel button and tile `Dev > Cancel Placement`; both should clear the active mode.
+[ ] Arm Continuous/Paint, then arm Move/Duplicate; confirm the spawn mode is replaced rather than both being active.
+[ ] Arm Move/Duplicate, then arm Continuous/Paint; confirm the manipulation mode is replaced rather than both being active.
+[ ] Disable Dev Mode while a placement is armed; re-enable and confirm active placement was cleared.
+
+Regression / persistence checks
+[ ] Normal Walk Here, NPC options, object options, Spawn Browser search, Tile Editor, Inspector, and Item Browser still work.
+[ ] No duplicate Dev menu entries accumulate after repeated right-clicks.
+[ ] Server restart removes runtime Dev NPC/object placements; no runtime placement becomes persistent map/source data.
+[ ] Client restart returns Dev Mode to OFF and clears active placement state.
+
+Detailed checks below remain available if a quick check fails or deeper verification is desired.
+
+General Dev Mode foundation
 [ ] Start the client and confirm Dev Mode is OFF by default.
 [ ] Open Client Console > Settings, enable Dev Mode, and confirm the toggle reports ON.
 [ ] With an Admin+ account, right-click an ordinary world tile and confirm exactly one `Dev > Spawn...` and one `Dev > Edit Tile` entry appear in addition to normal Matrix3 options.
@@ -22,8 +62,7 @@ NPC / Object targeting + Inspector
 [ ] Disable Dev Mode and confirm NPC/object Dev entries disappear from newly built menus while normal interactions remain unchanged.
 [ ] Test a tile with multiple/stacked interactable entities and confirm each target keeps its own Dev actions/selection instead of cross-selecting another entity.
 
-World Manipulation - consolidated Bundle 1.2 gate
-[ ] Eclipse/Java 8: clean/build Client and Server and confirm no compilation errors before runtime checks.
+World Manipulation - Bundle 1.2 detailed gate
 [ ] Spawn an NPC through Dev Spawn, inspect it, choose Move, then right-click another tile and select `Dev > Move Here`; confirm that exact NPC moves to the chosen tile.
 [ ] Move a normal non-Dev NPC and confirm the move is runtime-only; its persistent/original spawn authority is not rewritten.
 [ ] Put two identical NPCs close/stacked, select one, move it, and confirm the exact runtime-index target moves rather than the other NPC.
@@ -45,6 +84,29 @@ World Manipulation - consolidated Bundle 1.2 gate
 [ ] Deeper check: move a Dev-owned object across a chunk/region boundary and confirm it disappears from the old location and appears correctly at the destination without clipping/map corruption.
 [ ] Restart the server after manipulation testing and confirm Dev-created NPC/object placements do not persist as source/map data.
 
+Continuous / Paint Placement - Bundle 1.3 detailed gate
+[ ] Spawn Browser shows a single shared placement selector with Once, Continuous, and Paint for NPC/Object/Item cards.
+[ ] Changing the placement selector updates the action-button label for the current mode without changing the selected definition ID.
+[ ] Once mode queues exactly one existing `devspawn` command for the browser target and does not leave an active placement mode.
+[ ] Continuous mode remains armed after each successful explicit tile placement and exposes exactly one active placement entry on newly built tile menus.
+[ ] Paint mode places only when the dispatched normal tile action is Matrix3 action 23; entity interactions must not accidentally paint.
+[ ] Paint mode returns control to Matrix3 so the clicked tile remains a normal Walk Here destination.
+[ ] Continuous/Paint NPC placement uses the selected NPC ID on every placement.
+[ ] Continuous/Paint ground-item placement preserves the selected amount on every placement.
+[ ] Continuous/Paint object placement preserves selected object ID and type.
+[ ] Fixed object rotation preserves the selected starting rotation on every placement.
+[ ] Cycle object rotation starts from the selected starting rotation, advances after successful queueing only, and wraps 0-3.
+[ ] Random object rotation always sends a valid 0-3 rotation.
+[ ] `Dev > Place Last ...` remembers the last NPC/object/item request after both one-shot and armed placement workflows.
+[ ] Place Last is one-shot and does not silently convert into Continuous/Paint.
+[ ] Explicit browser cancel clears Continuous/Paint/Move/Duplicate active state but keeps the session last-used spawn target.
+[ ] Contextual tile Cancel clears the same active placement state.
+[ ] Escape cancels active placement from the game/client AWT focus path without consuming normal Escape behavior.
+[ ] Starting Move/Duplicate cancels active Continuous/Paint state.
+[ ] Starting Continuous/Paint cancels active Move/Duplicate state.
+[ ] Disabling Dev Mode clears active placement and prevents paint placement until Dev Mode is enabled and re-armed.
+[ ] Invalid IDs/type/rotation/amount still fail through existing client/server validation without leaving corrupt placement state.
+
 Tile Editor
 [ ] Choose `Dev > Edit Tile` and confirm the dark Tile Editor opens for the exact tile that was right-clicked.
 [ ] Confirm world X/Y and plane match the selected tile.
@@ -65,7 +127,7 @@ Spawn Browser search
 [ ] NPC/object result cards must show cache-backed names/IDs only; do not mistake the N/O placeholder for a real model thumbnail.
 [ ] Select a search result and confirm its ID is copied into the existing spawn field while manual ID editing still works.
 
-Placement
+Placement validation
 [ ] NPC: choose a known NPC result/ID, spawn it, and confirm it appears on the selected tile using normal Matrix3 NPC behavior.
 [ ] Object: choose a known object result/ID, type, and rotation; confirm it appears on the selected tile with the requested orientation.
 [ ] Ground item: choose a known item result/ID and amount; confirm the owner can see the temporary item on the selected tile.
@@ -75,7 +137,7 @@ Placement
 
 Regression checks
 [ ] Right-click NPCs, objects, ground items, and normal tiles; confirm their existing Matrix3 menu options are unchanged.
-[ ] Walk several tiles and interact with normal objects after using Dev Spawn/Tile Editor/Inspector/manipulation tools.
+[ ] Walk several tiles and interact with normal objects after using Dev Spawn/Tile Editor/Inspector/manipulation/paint tools.
 [ ] Use the normal Client Console Item Browser after Dev Spawn search and confirm its item indexing/thumbnails still work.
 [ ] Confirm normal NPC/object interaction packets still target the same live entities after Dev manipulation testing.
-[ ] Spawn/manipulate then restart the server; confirm runtime placement is not mistaken for persistent source/map data.
+[ ] Spawn/manipulate/paint then restart the server; confirm runtime placement is not mistaken for persistent source/map data.
