@@ -7,7 +7,7 @@ Phase 1
 Phase 2 structural map
 - Added schema-v2 source locators plus CALLS, DYNAMIC_CALL, READS_FIELD, WRITES_FIELD, REFERENCES_TYPE, and typed CONSTANT relationships.
 - Added deterministic malformed-string JSON escaping and consolidated structural verification.
-- Runtime verified 33742 symbols / 325826 relationships; full scan ~1.28 s, symbols ~8.5 MiB, relationships ~74.4 MiB.
+- Runtime verified 33742 symbols / 325826 relationships; full scan ~1.28 s, symbols ~8.5 MiB / relationships ~74.4 MiB.
 
 Phase 2 investigation/search
 - Added immutable in-memory investigation index, ranked/friendly search, ambiguity safety, relationship commands, bounded depth-1/2 neighborhoods, and consolidated search verification.
@@ -119,3 +119,5 @@ Phase 4 / Browser usability correction
 - Reworded search results, technical detail labels, relationship rows, buttons, evidence confidence labels, and save/delete actions into plain English while keeping exact Atlas IDs visible and raw diagnostics available in tooltips.
 - Relationship rows now distinguish actionable `[open]` code symbols from `[info only]` constants/types/values, and the open button reflects whether the selected row is navigable.
 - Phase 4 combined runtime gate remains the single acceptance session; the usability correction is folded into that gate instead of creating a separate restart/test cycle.
+- Fixed the Java 8 compile blocker in the new connection tooltip: `RelationshipEntry#getSourceLine()` is primitive and uses `hasSourceLine()` as the presence check, so the UI now follows that API instead of null/unboxing logic.
+- This compile-only correction does not change Atlas runtime, search, relationship, evidence, or correlation semantics; it stays inside the same combined Phase 4 runtime gate.
