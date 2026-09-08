@@ -143,3 +143,12 @@ Phase 5 / Bundle 5A consolidated offline gate PASS
 - First generated bundle is `MAP-0001`, seed `game/Class574`, 8 owners / 2298 total symbols; the assistant handoff remains bounded to its priority exact-symbol subset.
 - Reports written to `Client/.client-atlas/mapping-check.txt` and `Client/.client-atlas/mapping-next.md`.
 - Bundle 5A is DONE / OFFLINE VERIFIED. Bundle 5B scalable assistant semantic writeback is next so real mapping results can be applied in bulk instead of manually through the Browser.
+
+Phase 5 / Bundle 5B scalable semantic writeback implementation
+- Raised the curated evidence ceiling from 5000 to an explicit 50000 records so the store can cover the current 33742-symbol client map without becoming unbounded.
+- Added `AtlasEvidenceStore.upsertBatch(...)`: exact current-fingerprint validation, exact current symbol checks, duplicate rejection, one in-memory keyed merge, one deterministic sort, and one atomic evidence-file replacement per assistant batch.
+- Batch writeback requires explicit proof-reference classes before accepting `VERIFIED` (`runtime:` / `trace:`) or `verified-static` (`source:` / `static:` / `data:`), preventing silent evidence promotion by import logic.
+- Added `AtlasSemanticWriteback` with a bounded fingerprinted JSONL handoff format, deterministic helper writer, all-or-nothing import, and standalone Java Application entry point.
+- Added deterministic `semantic-snapshot.jsonl` export containing curated semantic records only; generated symbols/relationships remain outside the snapshot and retain their separate structural authority.
+- Added `AtlasSemanticWritebackVerifier` as one isolated Bundle 5B gate. It covers exact-ID batch upsert, duplicate/stale/unknown/invalid-status rejection, no-partial-write atomicity, proof-discipline guards, >5000 capacity, explicit 50000 ceiling, and deterministic semantic snapshots without touching the real evidence store.
+- Bundle 5B implementation is complete / verified-static. One Eclipse Java 8 clean/build plus one `AtlasSemanticWritebackVerifier` run remains; no Matrix3 client launch is required.
