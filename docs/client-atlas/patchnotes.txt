@@ -109,3 +109,13 @@ Phase 4 / Bundle 4B runtime evidence workflow implementation
 - Added a first-class Runtime Trace Control button that launches the existing `ClientAtlasTraceControl`; recording/session control ownership is not duplicated inside Client Console.
 - Correlation still uses `AtlasTraceCorrelationEngine` unchanged, including the 10000-event read cap, 1000-event correlated preview cap, fingerprint/event-count/source-owner acceptance rules, and no semantic promotion.
 - Bundle 4B implementation is complete / verified-static. Bundle 4A + 4B now share one consolidated runtime gate; no per-control test cycle is required.
+
+2026-09-08
+
+Phase 4 / Browser usability correction
+- Runtime use exposed that the first Browser UI was structurally correct but too raw for practical human use: relationship rows and evidence labels surfaced Atlas internals without explaining them.
+- Humanized `AtlasPanel` without changing Atlas engine semantics, persistence, limits, or exact-ID authority.
+- Added a `What Atlas knows` summary that explains symbol kind, saved alias/claim/confidence, evidence freshness, and connection count while explicitly refusing to guess unknown game meaning.
+- Reworded search results, technical detail labels, relationship rows, buttons, evidence confidence labels, and save/delete actions into plain English while keeping exact Atlas IDs visible and raw diagnostics available in tooltips.
+- Relationship rows now distinguish actionable `[open]` code symbols from `[info only]` constants/types/values, and the open button reflects whether the selected row is navigable.
+- Phase 4 combined runtime gate remains the single acceptance session; the usability correction is folded into that gate instead of creating a separate restart/test cycle.
