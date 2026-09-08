@@ -132,7 +132,7 @@ Phase 3 / Bundle 3B - DONE / consolidated offline gate PASS
 [x] Bundle 3B DONE.
 [x] Phase 3 DONE; no client launch/runtime smoke required for this offline-only bundle.
 
-Phase 4 / Bundle 4A - implementation complete / runtime gate deferred into combined Phase 4 gate
+Phase 4 / Bundle 4A - implementation complete / runtime gate deferred
 [x] Dedicated `atlas` Client Console panel ID registered through the existing lazy panel/failure-isolation shell seam.
 [x] Atlas panel uses existing `game.atlas` engine/data ownership; Client Console remains a UI consumer only.
 [x] Original Java2D Atlas/globe rail icon added without external assets/dependencies.
@@ -147,9 +147,8 @@ Phase 4 / Bundle 4A - implementation complete / runtime gate deferred into combi
 [x] Evidence save/delete I/O runs off the Swing EDT.
 [x] Freshness display comes from `EvidenceView`: `CURRENT`, `STALE_FINGERPRINT`, `SUBJECT_NOT_PRESENT`, or combined warning state.
 [x] Existing Client Console active-panel persistence can restore `atlas` through the generic panel-ID preference path.
-[x] User explicitly chose to defer the 4A runtime gate and continue the independent compatible 4B implementation so both can be tested in one session.
 
-Phase 4 / Bundle 4A usability correction - implementation complete / folded into combined gate
+Phase 4 / Bundle 4A usability correction - implementation complete / runtime gate deferred
 [x] First runtime look proved the original browser terminology was too raw for the user even though the underlying data loaded correctly.
 [x] Added `What Atlas knows` plain-English summary over structural symbol kind + saved evidence only; unknown real game meaning explicitly remains unknown instead of being guessed.
 [x] Search rows now show readable name/type/match reason while raw score/reason/exact ID remain available in tooltips/status.
@@ -161,7 +160,7 @@ Phase 4 / Bundle 4A usability correction - implementation complete / folded into
 [x] Confidence choices render as `Verified at runtime`, `Confirmed from code/data`, `Best guess - not proven`, or `Unknown` without changing stored enum values.
 [x] No Atlas indexing/ranking/evidence persistence/runtime trace/correlation authority or bounds changed.
 
-Phase 4 / Bundle 4B - implementation complete / NEEDS combined runtime gate
+Phase 4 / Bundle 4B - implementation complete / runtime gate deferred
 [x] Added `AtlasTraceCatalog` as the `game.atlas` metadata-only owner for saved-trace listing.
 [x] Saved trace browser is bounded to the newest 100 `.trace.jsonl` files and sorts newest first deterministically.
 [x] Added `AtlasWorkspacePanel` under the existing persistent `atlas` rail destination; Browser remains the default view and Runtime evidence initializes only when opened.
@@ -173,22 +172,28 @@ Phase 4 / Bundle 4B - implementation complete / NEEDS combined runtime gate
 [x] Existing trace safety/correlation limits remain unchanged: 10000 trace events, 1000 correlated preview events, explicit fingerprint/event-count/source-owner acceptance, no semantic promotion.
 [x] No runtime trace hook, packet hook, recorder format, or gameplay/server behavior changed in 4B.
 
-Phase 4 / combined Bundle 4A + 4B runtime gate - ONE SESSION / NEXT
-[ ] Pull current `main`, Eclipse Java 8 clean/build Client once, and rebuild the static Atlas index once after compiling so the generated fingerprint matches the current client.
-[ ] Start Matrix3 normally and open the Client Atlas globe icon; Browser should be the default Atlas view.
-[ ] Confirm first Atlas load/search does not freeze normal game rendering/input.
-[ ] Search `Class1`; require a readable result such as `Class1 - Class | ...`, a `What Atlas knows` explanation, and Technical details that still show `Technical ID: CLASS:game/Class1`.
-[ ] In Connections, require readable relationship wording. Open one `[open]` symbol-backed row and confirm exact navigation; select one `[info only]` constant/type/value row and confirm the open action disables rather than guessing a symbol.
-[ ] Save temporary knowledge on a harmless test symbol using Confidence `Best guess - not proven`, Human-readable name `Atlas UI test`, What does this code do? `Phase 4 runtime UI test`, and reference `runtime:phase4-ui`; require `Saved knowledge is current`, reopen it, then delete it and require `Nothing identified yet`.
-[ ] Confirm the `What Atlas knows` summary reflects the saved alias/claim/confidence while saved and returns to explicit unknown meaning after deletion.
-[ ] Switch the Atlas workspace to Runtime evidence. Confirm the view lazy-opens and saved traces populate without freezing the client.
-[ ] Click Runtime Trace Control, start one short named trace, perform a few normal keyboard/menu/interface actions, then Stop + Save. This creates a trace against the newly compiled fingerprint; no separate Phase 3 regression session is required.
-[ ] Return to Runtime evidence and Refresh traces. Confirm the new trace appears near the top and selecting/double-clicking it remains responsive.
-[ ] Correlate the new selected trace and require `Status: CURRENT` + `Accepted: true`. `Dropped = 0` remains expected; suppression may be high and is not a failure.
-[ ] Use Correlate latest and require it resolves the same newest trace with `CURRENT` + `Accepted: true`.
-[ ] Resize to the narrow supported console width and switch Browser/Runtime evidence repeatedly; all controls remain reachable and no Swing/client-thread exception or obvious render/input hitch appears.
-[ ] Leave Atlas selected, clean-close/relaunch once, and confirm Atlas restores as the active Client Console panel. Atlas subview persistence is not required; Browser may reopen as the default subview.
-[ ] If all above pass, mark Bundles 4A and 4B DONE and advance Phase 4 to 4C/backlog decision.
+Phase 4 / combined Bundle 4A + 4B runtime gate - DEFERRED BY EXPLICIT PRIORITY CHANGE
+[ ] Client Console Browser + Runtime evidence combined acceptance remains valid and must be run before Phase 4 is marked DONE.
+[ ] Do not consume a separate client restart for this gate while semantic mapping is the active priority; combine it with a future Client Console acceptance session.
+[ ] When resumed: search/readable detail + exact navigation + info-only rows + evidence save/reopen/delete + Runtime evidence trace/correlation + narrow layout + panel restore all still apply.
+
+Phase 5 / Bundle 5A - semantic mapping coverage + queue - IMPLEMENTED / OFFLINE GATE NEXT
+[x] `AtlasMappingQueue` computes semantic coverage from the current Atlas index + curated evidence without inventing meaning.
+[x] Coverage separates current runtime-verified, static-verified, hypothesis, unknown, stale, and orphan evidence states.
+[x] Structural mapping scope excludes Atlas/Client Console tooling so Atlas does not queue itself for reverse engineering.
+[x] Every scoped owner belongs to exactly one deterministic structural bundle.
+[x] Bundle size capped at 8 connected owners.
+[x] Queue priority favors stale/hypothesis/unknown symbols plus structural connectivity.
+[x] Each next assistant bundle is bounded to 80 priority exact symbols, 12 boundary owners, and 40 existing evidence summaries.
+[x] Next bundle export written atomically to `.client-atlas/mapping-next.md`.
+[x] Export instructions preserve exact IDs and VERIFIED / verified-static / HYPOTHESIS / UNKNOWN discipline.
+[x] Runtime evidence is not guessed as necessary; bundle tells the assistant to request it only when static evidence cannot prove semantics.
+[x] `AtlasMappingVerifier` added as one consolidated offline gate; it rebuilds generated Atlas data while preserving curated evidence.
+[x] Verifier checks full symbol-state partitioning, owner/symbol coverage, bundle caps, deterministic clustering, self-exclusion, exact-ID output, and <=256 KiB assistant export.
+[ ] Eclipse Java 8 clean/build current Client.
+[ ] Run `game.atlas.AtlasMappingVerifier` as Java Application.
+[ ] Require final line `BUNDLE 5A MAPPING QUEUE CHECK: PASS`.
+[ ] Confirm `.client-atlas/mapping-next.md` exists and report the coverage snapshot/next bundle so the first assistant mapping investigation can begin.
 
 Carryover regression checks
 [ ] If an exact streaming query owns >200 immediate relationships, confirm truncation state/count remains correct when naturally encountered.
@@ -197,6 +202,7 @@ Gate rules
 - Do not request another Phase 2 gate without a relevant Phase 2 change or contradictory evidence.
 - Do not request another Bundle 3A runtime gate without a relevant 3A implementation change or contradictory evidence.
 - Do not request another Bundle 3B gate without a relevant evidence/knowledge implementation change or contradictory evidence.
-- Bundle 4A, its usability correction, and 4B share one consolidated Client Console runtime gate; do not split them into per-control test cycles.
-- The Phase 4 gate may be combined with the pending Client Console V2 acceptance session to avoid another client restart, as long as all Atlas checks above are covered.
+- Phase 4 Browser/Runtime evidence acceptance is deferred by explicit user priority change and does not block offline Phase 5 mapping work.
+- Bundle 5A uses one offline Java 8/Eclipse verifier; no Matrix3 client launch is required because it changes only offline Atlas planning/export tooling.
+- After Bundle 5A passes, use generated mapping bundles to drive bounded assistant investigation rather than asking the user to manually interpret obfuscated relationships.
 - Runtime tracing must remain opt-in, bounded, payload-minimal, switchable, and failure-isolated.
