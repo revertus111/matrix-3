@@ -1,3 +1,13 @@
+2026-09-08 - Dev Mode Continuous / Paint Placement bundle
+- Added shared client-side Dev Spawn placement state with Once, Continuous, and Paint modes while reusing the existing owner-only server `devspawn` authority for every actual placement.
+- Continuous mode stays armed and adds a contextual tile placement entry for repeated NPC/object/item placement.
+- Paint mode observes Matrix3's verified normal tile action (23), queues the selected Dev spawn, and returns control so normal Walk Here still executes.
+- Added session last-used spawn target with contextual `Dev > Place Last ...` tile placement.
+- Added explicit tile/browser cancellation plus a non-consuming AWT Escape listener that cancels armed Move/Duplicate/Continuous/Paint placement without taking over normal Escape behavior.
+- Added object repeated-placement rotation behavior: Fixed, Cycle from the selected starting rotation, or Random 0-3.
+- Placement modes are mutually exclusive with Move/Duplicate to prevent stale overlapping editor state; disabling Dev Mode clears active placement while last-used spawn remains session-only.
+- No new server/world/map ownership was added; this bundle is client tooling layered over the existing validated runtime spawn path.
+
 2026-09-07 - Dev Mode World Manipulation bundle
 - Added server-side runtime ownership tracking for exact NPC/Object instances created through Dev Mode; tracking is session-only and does not persist world data.
 - Added Move and Duplicate placement modes that use a right-clicked destination tile (`Dev > Move Here` / `Dev > Duplicate Here`) instead of coordinate-entry forms.
