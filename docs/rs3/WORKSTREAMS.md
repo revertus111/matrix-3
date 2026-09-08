@@ -40,7 +40,7 @@ Use this registry to answer:
 | Rambler's Backpack | `docs/backpack/PROJECT.md` | NEEDS TEST | Player-owned storage and contextual/bank integration are implemented statically. Phase 1 Bundle 1.2 consolidated runtime verification is the next execution target. |
 | Client Console | `docs/client-console/PROJECT.md` | NEEDS TEST | V2 implementation bundles are complete statically. Bundle 2.3 consolidated runtime gate is next: icons/dashboard/Commands/Item Browser/Boss Research/Owner/Settings/Atlas coexistence, focus, DPI/layout, bridge authority, and persistence in one session. |
 | Interface Editor | `docs/interface-editor/PROJECT.md` | NEEDS TEST | V1 live inspector/editor is implemented statically; targeted runtime acceptance and Backpack 671 value discovery are next. |
-| Dev Mode | `docs/dev-mode/PROJECT.md` | NEEDS TEST | Phase 1 Bundle 1.2 World Manipulation is implemented statically; one consolidated Move/Rotate/Duplicate/Delete ownership-safety runtime gate is next. |
+| Dev Mode | `docs/dev-mode/PROJECT.md` | NEEDS TEST | Phase 1 Bundles 1.2 World Manipulation and 1.3 Continuous/Paint are implemented statically; runtime is intentionally deferred in one accumulated test queue. Safe independent contextual-editor work may continue when explicitly requested. |
 | _Register when a subject is next normalized_ | `docs/<subject>/PROJECT.md` | PLANNED | Existing feature docs remain valid until their workstream is actively normalized. |
 
 ## Shared discovery / navigation references
