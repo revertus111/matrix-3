@@ -1,23 +1,47 @@
-Matrix3 Rambler's backpack runtime test list
+Matrix3 Rambler's Backpack - Bank-interface runtime acceptance
 
-1. Spawn item 21445 (Rambler's backpack) through the existing owner Item Browser path and equip it. Confirm it occupies the cape/back equipment slot and its worn model renders correctly. If it cannot be worn, record that as cache/equip-definition runtime evidence before changing unrelated equipment code.
-2. With 21445 equipped, right-click it in the equipment interface. Confirm configured `Open` appears and opens interfaces 671/665. Owner fallback test: `::itembrowser backpack open` must still open the same view only while the backpack is equipped.
-3. Put 21445 in the normal NIS inventory and right-click it. Confirm configured `Open` appears without replacing normal Wear/Use/Drop/Examine actions, and clicking Open accesses the same player-owned Backpack storage without requiring equipment.
-4. Put 21445 in the bank and right-click it. Confirm the configured bank wearable-item action presents as `Open` and opens Backpack without withdrawing the physical item. If the client still displays `Wear`, record that as bank-menu client/CS2 evidence; do not enable Empty-to-bank yet.
-5. Unequip 21445, remove every copy from inventory/bank, and run `::itembrowser backpack open`. Confirm the owner fallback refuses access with the equip-the-backpack message.
-6. Store one normal item, then Store-5, Store-10, and Store-All where quantities permit. Confirm the inventory decreases by exactly the amount added to backpack container key 531.
-7. Withdraw one item, then Withdraw-5, Withdraw-10, and Withdraw-All. Confirm the backpack decreases by exactly the amount returned to inventory and partial transfers stop safely when inventory space is limited.
-8. Fill the 30 backpack slots with non-stackable items. Confirm another non-stackable store request is refused without deleting or duplicating the source item. Confirm a stackable item can still merge into an existing backpack stack when no free slot remains.
-9. Attempt to store item 21445 inside its own backpack. Confirm it is rejected and remains outside the backpack.
-10. Use Take All with enough inventory space and confirm all backpack contents move to inventory. Repeat with limited inventory space and confirm only accepted items/amounts move, with no duplication.
-11. Close and reopen the backpack repeatedly. Confirm stale clicks do not route to backpack storage after interfaces 671/665 are closed.
-12. Summon a real Beast of Burden and use its normal storage before and after testing the backpack. Confirm familiar BoB still uses container key 530 and its existing behavior is unchanged; backpack uses key 531 and does not require or replace a familiar.
-13. Store items in the backpack, log out normally, restart/relog, regain access through inventory/equipment/bank 21445, and confirm all backpack contents persist exactly.
-14. Run the migration test in docs/inventory/testlist.txt for a temporary 36-slot save and confirm former inventory slots 29-36 move once into the backpack without item loss or duplication.
-15. Put identifiable items in the backpack, then die through the current normal death path. After respawn, reopen the backpack from any valid 21445 access location. Confirm every stored backpack item and amount is unchanged.
-16. Exercise a future Hardcore-style death path where the physical 21445 backpack item itself is lost/dropped. Confirm backpack contents remain attached to the character and become available again only when that same player obtains a Rambler's backpack again.
-17. If another player can obtain a dropped physical 21445, confirm they do not receive the dead player's backpack contents; their 21445 continues to address their own Backpack container.
-18. Main-game death: verify inventory, equipment, physical backpack, and backpack contents all remain with the player after death.
-19. Keep `item.21445.bank.6=EMPTY_TO_BANK|Empty to bank` commented in the shared config until the client bank menu can show that label for item 21445 only. Confirm the current stock Withdraw-All-but-one option retains its normal behavior and does not empty Backpack.
-20. After the bank-only label hook is implemented, enable the config entry and test Empty-to-bank with an empty bank, nearly-full bank, stack merges, and a completely full bank. Confirm only successfully banked quantities leave Backpack and 21445 itself never moves.
-21. Run the normal Matrix3 equipment, inventory, bank, familiar/BoB, death, and login persistence smoke paths after backpack testing.
+Quick/high-value path
+1. Pull current `main`, clean/build Server in Eclipse/Java 8, and launch Client + Server normally.
+2. Put item 21445 in normal inventory and right-click Open. Confirm the Backpack opens using interface 762 (Bank-style UI) and does not open 671/665.
+3. Before opening Backpack, note one or two distinctive items/tabs in the real Bank. Open Backpack and confirm those real Bank contents are NOT shown; only the player-owned Backpack contents appear in the main Bank grid.
+4. Put a normal item in inventory and test Deposit-1, Deposit-5, Deposit-10, and Deposit-All where quantities allow. Confirm only Backpack contents change and the real Bank does not change.
+5. Right-click the deposited Backpack item and test Withdraw-1, Withdraw-5, Withdraw-10, and Withdraw-All. Confirm only Backpack + Inventory change.
+6. Use Examine on one inventory item and one Backpack item. Confirm normal examine text and no storage mutation.
+7. Attempt to deposit physical item 21445 into its own Backpack. Confirm it is refused and remains outside Backpack storage.
+8. Close Backpack, immediately open the real Bank, and confirm its original items, tabs, counts, search state, deposit/withdraw behavior, and item ordering are unchanged.
+9. Logout/login and reopen Backpack. Confirm Backpack contents persist exactly and remain separate from real Bank contents.
+
+Isolation / unsupported-control checks
+10. While Backpack mode is open, confirm Bank-only controls such as search, Bank PIN/settings, tabs, withdraw-as-note, insert/swap, equipment/BoB/money-pouch deposit, and native Bank drag/reorder do not mutate real Bank state. They may be hidden/locked/inert in this foundation build.
+11. Confirm the Backpack grid exposes only the intended V1 transfer/examine actions (1, 5, 10, All, Examine). Record any extra visible native Bank actions rather than using them repeatedly.
+12. Confirm the inventory pane likewise exposes the intended V1 Deposit-1/5/10/All + Examine actions for ordinary items.
+13. Drag a Backpack grid item and an inventory item once. Expected foundation behavior: no native Bank reorder/deposit path should alter `Bank.bankTabs` or duplicate/delete items. If drag is possible despite the restricted mask, stop and record it as runtime evidence.
+14. Open/close Backpack repeatedly, then use real Bank normally. Confirm no stale Backpack mode continues intercepting 762 clicks after close.
+
+Contextual access
+15. Equip 21445 and use configured Equipment Open. Confirm it opens the same Bank-style Backpack view and the storage contents are identical.
+16. Put 21445 in the real Bank and use configured main-bank Open. Confirm Backpack opens without withdrawing the physical item and the displayed grid still represents Backpack storage, not the real Bank.
+17. From the Bank inventory pane, exercise configured Backpack Open if available. Confirm it opens the same independent Backpack storage.
+18. Remove every 21445 from inventory/equipment/bank and confirm the owner fallback refuses Backpack access until the player has the physical access item again.
+
+Capacity / transaction safety
+19. Fill all 30 current Backpack slots with non-stackable items. Confirm another non-stackable deposit is refused without item loss/duplication.
+20. With no free Backpack slot, confirm a normal stackable item can still merge into an existing Backpack stack where Matrix3 item stackability permits it.
+21. Withdraw with limited inventory space. Confirm only the amount that fits transfers and the remainder stays in Backpack.
+22. Use existing Empty to bank with enough real-Bank space. Confirm only Backpack contents move into the real Bank and the physical 21445 stays where it was.
+23. Repeat Empty to bank with a nearly/full real Bank. Confirm only quantities actually accepted by Matrix3 Bank are removed from Backpack and the remainder is preserved.
+
+Persistence / regressions
+24. Summon/use a real Beast of Burden before and after Backpack testing. Confirm familiar BoB storage is unchanged and independent.
+25. Store identifiable items in Backpack, die through the current normal death path, then regain/open 21445. Confirm Backpack contents remain attached to the player according to the existing Backpack death invariant.
+26. If testing a Hardcore-style physical-backpack loss path later, confirm losing/dropping 21445 removes access only; stored Backpack contents remain with the character and another player who obtains that physical item does not inherit them.
+27. Run normal Inventory add/remove/equip, normal real-Bank deposit/withdraw/tab, login persistence, and familiar/BoB smoke actions after Backpack testing.
+
+Pass condition
+- Interface 762 displays the independent Backpack container, V1 transfer actions touch only Backpack/Inventory, real Bank contents/tabs remain unchanged before/during/after Backpack mode, close cleanly releases Backpack ownership of 762, and existing persistence/familiar/death invariants remain intact.
+
+Deferred until the foundation passes
+- Storage-slot upgrade tiers/economy.
+- Backpack-specific stack-limit upgrades (user direction includes an early limit around 10 per stack, then higher upgrade tiers).
+- Deposit-X / Withdraw-X / last amount / all-but-one.
+- Backpack-specific title/reskin/search/presets or other Bank-style polish.
