@@ -73,9 +73,10 @@ public final class CacheSession {
 			Files.createDirectories(backupFile.getParentFile().toPath());
 			Files.write(backupFile.toPath(), original);
 		}
-		if (!index.putFile(archiveId, fileId, data)) {
-			throw new IOException("FileStore rejected write for index " + indexId + ", archive " + archiveId + ", file " + fileId + ".");
-		}
+
+		// Alex FileStore variants do not all expose the same putFile return type.
+		// Treat an immediate byte-for-byte readback as the authoritative success check.
+		index.putFile(archiveId, fileId, data);
 		byte[] verified = index.getFile(archiveId, fileId);
 		if (!Arrays.equals(data, verified)) {
 			throw new IOException("Cache write verification failed for index " + indexId + ", archive " + archiveId + ", file " + fileId + ".");
