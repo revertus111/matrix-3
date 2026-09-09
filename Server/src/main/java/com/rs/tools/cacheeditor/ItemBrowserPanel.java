@@ -48,6 +48,8 @@ public final class ItemBrowserPanel extends JPanel {
 	private final DetailPanel detailContent = new DetailPanel();
 	private volatile List<ItemEntry> itemIndex;
 	private volatile boolean indexBuilding;
+	private SwingWorker<List<ItemEntry>, Void> activeSearchWorker;
+	private int searchGeneration;
 
 	public ItemBrowserPanel(CacheSession session) {
 		super(new BorderLayout());
@@ -176,6 +178,7 @@ public final class ItemBrowserPanel extends JPanel {
 
 	private void search() {
 		String query = searchField.getText() == null ? "" : searchField.getText().trim();
+		cancelActiveSearch();
 		if (isInteger(query)) {
 			loadExactId(query);
 			return;
@@ -185,6 +188,14 @@ public final class ItemBrowserPanel extends JPanel {
 			return;
 		}
 		filterIndex(query);
+	}
+
+	private void cancelActiveSearch() {
+		searchGeneration++;
+		if (activeSearchWorker != null && !activeSearchWorker.isDone()) {
+			activeSearchWorker.cancel(true);
+		}
+		activeSearchWorker = null;
 	}
 
 	private void loadExactId(String query) {
@@ -253,24 +264,31 @@ public final class ItemBrowserPanel extends JPanel {
 
 	private void filterIndex(final String query) {
 		final String normalized = query.toLowerCase();
+		final int generation = searchGeneration;
 		status.setText(normalized.length() == 0 ? "Showing the first cache items." : "Searching items...");
-		new SwingWorker<List<ItemEntry>, Void>() {
+
+		SwingWorker<List<ItemEntry>, Void> worker = new SwingWorker<List<ItemEntry>, Void>() {
 			@Override
 			protected List<ItemEntry> doInBackground() {
 				List<ItemEntry> matches = new ArrayList<ItemEntry>();
 				for (ItemEntry entry : itemIndex) {
+					if (isCancelled()) {
+						break;
+					}
 					if (normalized.length() == 0 || entry.name.toLowerCase().contains(normalized)) {
 						matches.add(entry);
 						if (matches.size() >= MAX_RESULTS) {
 							break;
 						}
-					}
 				}
 				return matches;
 			}
 
 			@Override
 			protected void done() {
+				if (isCancelled() || generation != searchGeneration) {
+					return;
+				}
 				try {
 					String current = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
 					if (!normalized.equals(current) || isInteger(current)) {
@@ -294,7 +312,9 @@ public final class ItemBrowserPanel extends JPanel {
 					showError("Item search failed: " + rootMessage(e));
 				}
 			}
-		}.execute();
+		};
+		activeSearchWorker = worker;
+		worker.execute();
 	}
 
 	private void showItem(int id) {
@@ -347,10 +367,10 @@ public final class ItemBrowserPanel extends JPanel {
 		JPanel card = new JPanel(new BorderLayout(12, 0));
 		card.setBackground(CacheEditorTheme.CARD);
 		card.setBorder(CacheEditorTheme.cardBorder());
-		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 88));
+		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 92));
 
 		JLabel badge = new JLabel("#" + id, SwingConstants.CENTER);
-		badge.setPreferredSize(new Dimension(76, 54));
+		badge.setPreferredSize(new Dimension(76, 58));
 		badge.setFont(CacheEditorTheme.SECTION_FONT);
 		badge.setForeground(CacheEditorTheme.ACCENT);
 		badge.setOpaque(true);
