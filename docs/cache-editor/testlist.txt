@@ -1,5 +1,6 @@
 RS3 CacheEditor foundation test list
 
+[ ] Eclipse/Java 8: clean/build Matrix3-Server and confirm ItemBrowserPanel has no syntax errors and no `entry cannot be resolved` errors around filterIndex().
 [ ] In Eclipse with Java 8, run com.rs.tools.cacheeditor.CacheEditorLauncher as a Java Application.
 [ ] Select the revision-830 cache directory and confirm the editor opens without starting the game server.
 [ ] Raw Cache: load a known index/archive/file and confirm the byte count and hex preview populate.
