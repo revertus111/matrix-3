@@ -25,3 +25,8 @@
 - Hardened Item Browser live search so obsolete background name-search workers are cancelled and generation-checked instead of stacking stale scans while typing quickly.
 - Added docs/cache-editor/PROJECT.md as the authoritative phase/bundle/checklist and Resume Here map for this persistent workstream.
 - Item visual preview remains intentionally carried over until a clean reusable renderer boundary is proven. Structured item writes remain disabled until a round-trip-safe encoder/save pipeline is proven.
+
+2026-09-09
+- Fixed a compile-breaking missing closing brace in CacheEditor ItemBrowserPanel.filterIndex() introduced during stale-search-worker hardening.
+- The missing loop brace caused Eclipse to report one misplaced-construct syntax error plus two follow-on `entry cannot be resolved` errors.
+- Search cancellation/generation behavior is unchanged; this patch only restores the intended loop structure.
