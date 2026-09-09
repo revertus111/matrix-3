@@ -280,6 +280,7 @@ public final class ItemBrowserPanel extends JPanel {
 						if (matches.size() >= MAX_RESULTS) {
 							break;
 						}
+					}
 				}
 				return matches;
 			}
