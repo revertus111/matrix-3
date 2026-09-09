@@ -22,7 +22,7 @@ Build a professional standalone Java 8 cache editor for Matrix3's revision-830 c
 | Dark professional shell | COMPLETE | Sidebar navigation replaces the long-term top-tab layout. |
 | Raw Cache inspector/export | COMPLETE | Manual Go To plus index/archive browsing, immutable loaded selection, hex preview, export. |
 | Raw Cache write safety | COMPLETE | READ ONLY default, explicit Edit Mode, backup-before-write, immediate byte-for-byte readback verification. |
-| Item Browser/search | COMPLETE | Background definition index, exact-ID lookup, debounced name search, stale search cancellation, Item Browser-style result/detail layout. |
+| Item Browser/search | NEEDS TEST | Missing-loop-brace compile regression is patched; Eclipse/Java 8 clean-build verification is pending before restoring COMPLETE. |
 | Item visual preview | CARRYOVER | No renderer is connected until a clean reusable Matrix3/client rendering boundary is proven. Do not duplicate the client renderer into CacheEditor. |
 | Structured Item Editor | BLOCKED | Requires a round-trip-safe ItemDefinitions encoder + verify/redecode/compare save pipeline. |
 | NPC/Object editors | PLANNED | Build after shared editor/save infrastructure is proven. |
@@ -48,7 +48,7 @@ Status: ACTIVE
 
 ### Bundle A - Shell / Raw Safety / Item Browser Hardening
 
-Status: COMPLETE
+Status: NEEDS TEST
 
 - [x] Replace crowded top-tab shell with category sidebar navigation.
 - [x] Keep inactive future tools visible but disabled/planned.
@@ -59,6 +59,8 @@ Status: COMPLETE
 - [x] Verify raw writes by immediate byte-for-byte readback.
 - [x] Remove FileStore putFile return-type assumption.
 - [x] Cancel obsolete item name-search workers so rapid typing does not stack stale scans.
+- [x] Repair the missing loop brace introduced in the item-search cancellation patch.
+- [ ] Eclipse/Java 8 clean-build confirms ItemBrowserPanel has no syntax/`entry` errors.
 
 ### Bundle B - Item Preview + Structured Editor Foundation
 
@@ -95,4 +97,4 @@ Status: PLANNED
 
 ## Resume Here
 
-Start with **Phase 2 / Bundle B**. First prove the preview renderer ownership boundary using the smallest relevant client/server/tool file set. Do not reconnect or duplicate client rendering blindly. If preview remains blocked, continue independently with the ItemDefinitions round-trip encoder investigation and dirty-state editor shell, but do not enable structured saves until byte-for-byte/semantic round-trip validation is proven.
+First run the **Phase 2 / Bundle A compile gate**: Eclipse/Java 8 clean-build Matrix3-Server and confirm `com.rs.tools.cacheeditor.ItemBrowserPanel` no longer reports the misplaced-construct or `entry cannot be resolved` errors. If clean, restore Item Browser/search and Bundle A to COMPLETE, then continue with **Phase 2 / Bundle B** by proving the preview renderer ownership boundary using the smallest relevant client/server/tool file set. Do not reconnect or duplicate client rendering blindly. If preview remains blocked, continue independently with the ItemDefinitions round-trip encoder investigation and dirty-state editor shell, but do not enable structured saves until byte-for-byte/semantic round-trip validation is proven.
