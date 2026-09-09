@@ -13,3 +13,15 @@
 - Added a shared CacheEditor dark theme based on the Client Console palette and applied it to startup, shell, tabs, Raw Cache, dialogs, inputs, lists, and scroll panes.
 - Reworked the Items tab to follow the Client Console Item Browser workflow: automatic debounced ID/name search, background indexing on open, taller two-line result rows, a selected-item summary card, and grouped read-only definition cards instead of one large field/value table.
 - Kept cache decoding and write ownership unchanged; this slice is presentation/search UX only and structured item editing remains disabled.
+
+2026-09-08
+- Replaced the long-term top-tab shell with a dark left navigation sidebar grouped into Cache, Definitions, Assets, and Effects while preserving disabled future-tool placeholders.
+- Added a session-level READ ONLY / EDIT MODE safety gate. Cache writes now remain disabled until Edit Mode is explicitly confirmed.
+- Added Raw Cache index/archive navigation while preserving manual Index/Archive/File Go To for exact coordinates.
+- Raw Cache Export and Replace now target the immutable file that was actually loaded rather than whatever coordinates may later be typed into the controls.
+- Improved raw export filenames to include index/archive/file coordinates.
+- Raw replacement now backs up existing bytes, performs the write, and verifies success with an immediate byte-for-byte readback.
+- Removed the unsafe assumption that Alex FileStore Index.putFile has a boolean return type; readback verification is the authoritative write-success check across FileStore variants.
+- Hardened Item Browser live search so obsolete background name-search workers are cancelled and generation-checked instead of stacking stale scans while typing quickly.
+- Added docs/cache-editor/PROJECT.md as the authoritative phase/bundle/checklist and Resume Here map for this persistent workstream.
+- Item visual preview remains intentionally carried over until a clean reusable renderer boundary is proven. Structured item writes remain disabled until a round-trip-safe encoder/save pipeline is proven.
