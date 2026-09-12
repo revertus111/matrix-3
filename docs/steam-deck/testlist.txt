@@ -1,0 +1,84 @@
+# Steam Deck Runtime Test List
+
+Use this list in order. Stop at the first failure and preserve the newest log(s).
+
+## 1. Pull and one-time setup
+
+```bash
+git pull origin main
+bash ./steamdeck/setup.sh
+```
+
+Pass:
+- setup reports a Java 8 runtime;
+- no root password/read-only SteamOS modification is requested;
+- `~/.local/share/matrix3/java8/bin/java` exists.
+
+## 2. Desktop Mode launch
+
+```bash
+./steamdeck/matrix3.sh
+```
+
+Pass:
+- server process stays alive;
+- launcher reports that local world 1 on `127.0.0.1:43594` is ready;
+- client process starts;
+- Matrix3 window becomes visible.
+
+If the server fails, inspect the newest:
+
+```text
+~/.local/state/matrix3/logs/server-*.log
+```
+
+If the client fails, inspect the newest:
+
+```text
+~/.local/state/matrix3/logs/client-*.log
+```
+
+## 3. Local gameplay
+
+Pass:
+- login screen reaches the local server;
+- test account logs in;
+- player can move;
+- no immediate renderer/native crash occurs.
+
+## 4. Clean close/relaunch
+
+Close the Matrix3 client normally.
+
+Pass:
+- launcher exits;
+- server shuts down shortly after client exit;
+- a second `./steamdeck/matrix3.sh` starts without a stale-session warning.
+
+If stale:
+
+```bash
+./steamdeck/stop.sh
+```
+
+## 5. Gaming Mode
+
+Only after Desktop Mode passes:
+
+- Add `steamdeck/matrix3.sh` to Steam as a Non-Steam Game.
+- Launch it from Gaming Mode.
+- Confirm window, login, controls, stop, and relaunch.
+
+## 6. Phone Remote Play
+
+Only after Gaming Mode passes:
+
+- Pair the phone with the Deck through Steam Link / Remote Play.
+- Launch Matrix3 from the phone session.
+- Confirm video, audio, and input.
+- Disconnect/reconnect once.
+- Stop Matrix3 from Steam and confirm the next launch is clean.
+
+## Safety / physical placement
+
+The Deck must remain powered and awake during the session. Keep its intake/exhaust vents unobstructed; "put away" must not mean enclosed where heat cannot escape.
