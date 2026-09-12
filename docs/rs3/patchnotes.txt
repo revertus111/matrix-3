@@ -17,3 +17,6 @@
 - Reset active Matrix3 Client and Server runtime trees to protected baseline e86851b95e1d2927d58463b67f600153b9166f6a.
 - Preserved current AGENTS.md and docs/ tree so ideas, research, mappings, workstream notes, and reusable implementation history remain available.
 - Recorded pre-reset main HEAD 8c524fa5949dc436484e49144e736215b42586d4 and selective-reuse policy in RESET_REUSE_INDEX.md.
+- Registered Steam Deck Runtime as the current enabling workstream.
+- Normalized pre-reset feature workstreams to PAUSED/reference status so their preserved docs are not mistaken for code still present in the reset Client/Server trees.
+- Added SteamOS launcher/bootstrap support outside Matrix3 runtime source; physical Deck verification is pending.
