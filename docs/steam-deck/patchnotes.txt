@@ -1,0 +1,7 @@
+2026-09-12
+- Added Steam Deck / SteamOS x86_64 bootstrap support without changing Matrix3 Client or Server source.
+- Added a private Eclipse Temurin Java 8 installer under the user's home directory.
+- Added a one-launch server/client runner that waits for local world 1 on port 43594 before starting the client.
+- Added session sleep inhibition, timestamped external logs, PID tracking, stale-session stop support, and a Desktop Mode application entry.
+- Added physical Deck, Gaming Mode, and phone Remote Play acceptance gates.
+- Static shell syntax validation passed; physical Steam Deck runtime verification remains required.
