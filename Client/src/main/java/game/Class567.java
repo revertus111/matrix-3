@@ -54,9 +54,8 @@ public class Class567 implements Interface67 {
 					break;
 				}
 			}
-		} else {
+		} else
 			bool = false;
-		}
 		if (!bool) {
 			try {
 				FileOutputStream fileoutputstream = new FileOutputStream(file);
@@ -101,9 +100,7 @@ public class Class567 implements Interface67 {
 			// 	method.invoke(method_7_, new Object[] { Boolean.FALSE });
 			// 	((Class567) this).aHashtable6379.put(string, var_class);
 			// } catch (NoSuchMethodException nosuchmethodexception) {
-				if ("jaclib".equals(string) && Class589.aString7805.startsWith("win"))
-					System.loadLibrary("jawt");
-				System.load(file.getAbsolutePath());
+				System.load(file.getPath());
 				((Class567) this).aHashtable6379.put(string, Class550.class);
 			} catch (Throwable throwable) {
 				throw new Exception_Sub7(3, string, throwable);

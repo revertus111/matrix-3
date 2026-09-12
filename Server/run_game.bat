@@ -1,6 +1,4 @@
 @echo off
-title MATRIX3 - GAME SERVER
-cd /d "%~dp0"
-call "%~dp0gradlew.bat" runGame
-echo.
+@title RUN MATRIX(GAME)
+gradlew runGame
 pause

@@ -30,10 +30,6 @@ public class NPCDrops {
 		npcDrops.put(npcId, drops);
 	}
 
-	public static void removeDrops(int npcId) {
-		npcDrops.remove(npcId);
-	}
-
 	private static void loadPackedNPCDrops() {
 		try {
 			RandomAccessFile in = new RandomAccessFile(PACKED_PATH, "r");

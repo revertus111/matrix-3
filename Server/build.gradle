@@ -16,7 +16,6 @@ java {
 
 tasks.withType(JavaCompile) {
     options.encoding = 'windows-1252'
-    options.warnings = false
 }
 
 jar {
@@ -40,12 +39,4 @@ task runLogin(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     applicationName = "LoginLauncher"
     main = "com.rs.LoginLauncher"
-}
-
-task runCacheEditor(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    applicationName = "CacheEditor"
-    main = "com.rs.tools.cacheeditor.CacheEditorLauncher"
-    args = [file('../830_cache').absolutePath]
-    jvmArgs = ['-Xms128m', '-Xmx1024m']
 }

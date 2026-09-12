@@ -8,7 +8,6 @@ import com.rs.game.EffectsManager.EffectType;
 import com.rs.game.Entity;
 import com.rs.game.Region;
 import com.rs.game.World;
-import com.rs.game.combat.framework.CombatFramework;
 import com.rs.game.item.Item;
 import com.rs.game.npc.NPC;
 import com.rs.game.player.CombatDefinitions;
@@ -202,10 +201,7 @@ public final class Combat {
 			accuracy *= (double) from.getEffectsManager().getEffectForType(EffectType.CONFUSE_EFFECT).getArguments()[0];
 		if (from.getEffectsManager().hasActiveEffect(EffectType.STAGGER_EFFECT))
 			accuracy *= (double) from.getEffectsManager().getEffectForType(EffectType.STAGGER_EFFECT).getArguments()[0];
-		double hitChance = (accuracy / defence*Combat.WEAKNESS_MULTIPLIER_NEUTRAL) * 100;
-		if (from instanceof Player)
-			hitChance = CombatFramework.resolveHitChance((Player) from, target, hitChance);
-		return hitChance;
+		return (accuracy / defence*Combat.WEAKNESS_MULTIPLIER_NEUTRAL) * 100;
 	}
 
 	public static double getAccuracy(double tierLevel) {

@@ -17,10 +17,7 @@ public final class Inventory implements Serializable {
 
     private static final long serialVersionUID = 8842800123753277093L;
 
-    public static final int INVENTORY_SIZE = 28;
-
     private ItemsContainer<Item> items;
-    private Backpack backpack;
 
     private transient Player player;
     private transient double inventoryWeight;
@@ -28,43 +25,11 @@ public final class Inventory implements Serializable {
     public static final int INVENTORY_INTERFACE = 1473, INVENTORY_INTERFACE_2 = 1474;
 
     public Inventory() {
-	items = new ItemsContainer<Item>(INVENTORY_SIZE, false);
-	backpack = new Backpack();
+	items = new ItemsContainer<Item>(28, false);
     }
 
     public void setPlayer(Player player) {
 	this.player = player;
-	if (backpack == null)
-	    backpack = new Backpack();
-	backpack.setPlayer(player);
-	normalizeInventorySize();
-    }
-
-    private void normalizeInventorySize() {
-	if (items == null) {
-	    items = new ItemsContainer<Item>(INVENTORY_SIZE, false);
-	    return;
-	}
-	if (items.getSize() == INVENTORY_SIZE)
-	    return;
-	if (items.getSize() < INVENTORY_SIZE) {
-	    ItemsContainer<Item> expanded = new ItemsContainer<Item>(INVENTORY_SIZE, false);
-	    for (int slot = 0; slot < items.getSize(); slot++)
-		expanded.set(slot, items.get(slot));
-	    items = expanded;
-	    return;
-	}
-
-	Item[] overflow = new Item[items.getSize() - INVENTORY_SIZE];
-	for (int slot = INVENTORY_SIZE; slot < items.getSize(); slot++)
-	    overflow[slot - INVENTORY_SIZE] = items.get(slot);
-	if (!backpack.migrateOverflow(overflow))
-	    return; // preserve the larger legacy container rather than risk item loss
-
-	ItemsContainer<Item> restored = new ItemsContainer<Item>(INVENTORY_SIZE, false);
-	for (int slot = 0; slot < INVENTORY_SIZE; slot++)
-	    restored.set(slot, items.get(slot));
-	items = restored;
     }
 
     public void init() {
@@ -77,7 +42,7 @@ public final class Inventory implements Serializable {
 	    player.getPackets().sendIComponentSettings(menu ? INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE,
 		    menu ? 15 : 34, -1, -1, 2097152);
 	    player.getPackets().sendIComponentSettings(menu ? INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE,
-		    menu ? 15 : 34, 0, INVENTORY_SIZE - 1, 15302030);
+		    menu ? 15 : 34, 0, 27, 15302030);
 	    // player.getPackets().sendIComponentSettings(menu ?
 	    // INVENTORY_INTERFACE_2 : INVENTORY_INTERFACE, menu ? 15 : 34, 0,
 	    // 27, 1536);
@@ -85,8 +50,6 @@ public final class Inventory implements Serializable {
     }
 
     public void reset() {
-	// Normal-inventory reset only. Backpack storage is player-owned persistent
-	// state and intentionally survives death and any normal inventory clear.
 	items.reset();
 	init(); // as all slots reseted better just send all again
     }
@@ -245,10 +208,6 @@ public final class Inventory implements Serializable {
 	return items;
     }
 
-    public Backpack getBackpack() {
-	return backpack;
-    }
-
     public boolean hasFreeSlots() {
 	return items.getFreeSlot() != -1;
     }
@@ -306,9 +265,8 @@ public final class Inventory implements Serializable {
 
     public boolean containsOneItem(int... itemIds) {
 	for (int itemId : itemIds) {
-	    if (items.containsOne(new Item(itemId, 1))) {
+	    if (items.containsOne(new Item(itemId, 1)))
 		return true;
-	    }
 	}
 	return false;
     }

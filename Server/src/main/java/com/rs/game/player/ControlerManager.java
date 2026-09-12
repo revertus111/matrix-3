@@ -10,7 +10,6 @@ import com.rs.game.WorldTile;
 import com.rs.game.item.FloorItem;
 import com.rs.game.item.Item;
 import com.rs.game.npc.NPC;
-import com.rs.game.player.content.CustomItemActions;
 import com.rs.game.player.content.Drinkables.Drink;
 import com.rs.game.player.controllers.ControlerHandler;
 import com.rs.game.player.controllers.Controller;
@@ -251,15 +250,9 @@ public final class ControlerManager implements Serializable {
     }
 
     public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packetId) {
-	CustomItemActions.tracePipelineEntry(player, interfaceId, componentId, slotId, slotId2, packetId);
-	Backpack backpack = player.getInventory().getBackpack();
-	if (backpack != null && backpack.processButtonClick(interfaceId, componentId, slotId, packetId))
-	    return false;
-	if (CustomItemActions.processButtonClick(player, interfaceId, componentId, slotId, slotId2, packetId))
-	    return false;
-	if (controler != null && inited && !controler.processButtonClick(interfaceId, componentId, slotId, slotId2, packetId))
-	    return false;
-	return !PresetManager.processButtonClick(player, interfaceId, componentId, slotId, slotId2, packetId);
+	if (controler == null || !inited)
+	    return true;
+	return controler.processButtonClick(interfaceId, componentId, slotId, slotId2, packetId);
     }
 
     public boolean processNPCClick1(NPC npc) {

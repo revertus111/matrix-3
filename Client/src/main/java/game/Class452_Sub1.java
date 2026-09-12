@@ -12,7 +12,7 @@ public class Class452_Sub1 extends Class452 {
 	}
 
 	public Interface17 method458(int i, Interface18 interface18, int i_0_) {
-		return createDefinition(i, interface18);
+		return new GraphicsDefinition(i, this);
 	}
 
 	public Class method459(int i) {
@@ -20,15 +20,15 @@ public class Class452_Sub1 extends Class452 {
 	}
 
 	public Interface17 method462(int i, Interface18 interface18) {
-		return createDefinition(i, interface18);
+		return new GraphicsDefinition(i, this);
 	}
 
 	public Interface17 method465(int i, Interface18 interface18) {
-		return createDefinition(i, interface18);
+		return new GraphicsDefinition(i, this);
 	}
 
 	public Interface17 method460(int i, Interface18 interface18) {
-		return createDefinition(i, interface18);
+		return new GraphicsDefinition(i, this);
 	}
 
 	Class452_Sub1(Class248 class248) {
@@ -36,11 +36,11 @@ public class Class452_Sub1 extends Class452 {
 	}
 
 	public Interface17 method464(int i, Interface18 interface18) {
-		return createDefinition(i, interface18);
+		return new GraphicsDefinition(i, this);
 	}
 
 	public Interface17 method463(int i, Interface18 interface18) {
-		return createDefinition(i, interface18);
+		return new GraphicsDefinition(i, this);
 	}
 
 	public Class method461() {
@@ -49,11 +49,6 @@ public class Class452_Sub1 extends Class452 {
 
 	public Class method467() {
 		return GraphicsDefinition.class;
-	}
-
-	private GraphicsDefinition createDefinition(int id, Interface18 definitions) {
-		ClientConsoleRotsBridge.registerGraphicsDefinitions(definitions);
-		return new GraphicsDefinition(id, this);
 	}
 
 	static final void method8210(Cs2Executor class441, byte i) {

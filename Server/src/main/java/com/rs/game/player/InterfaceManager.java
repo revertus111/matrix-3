@@ -805,8 +805,8 @@ public class InterfaceManager {
 			}
 			else if (subMenu == 6) { //presets
 				setMenuInterface(0, 579);
-				setMenuInterface(1, 627);
-				setMenuInterface(2, 577);
+				setMenuInterface(1, 577);
+				setMenuInterface(2, 627);
 				//Runscripts: [9916]
 				/*	sendCSVarInteger(3838, 0);
 					sendCSVarInteger(3840, 0);
