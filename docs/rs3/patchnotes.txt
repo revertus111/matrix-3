@@ -12,3 +12,8 @@
 - Added an explicit mismatch stop rule when chat state and the authoritative workstream checklist disagree.
 - Added phase completion gates so phases cannot be marked DONE while required checklist items, runtime verification, or unresolved blockers still prevent closure.
 - Required deferred verification and phase-gate exceptions to be explicitly recorded in the authoritative workstream PROJECT.md.
+
+2026-09-12
+- Reset active Matrix3 Client and Server runtime trees to protected baseline e86851b95e1d2927d58463b67f600153b9166f6a.
+- Preserved current AGENTS.md and docs/ tree so ideas, research, mappings, workstream notes, and reusable implementation history remain available.
+- Recorded pre-reset main HEAD 8c524fa5949dc436484e49144e736215b42586d4 and selective-reuse policy in RESET_REUSE_INDEX.md.
