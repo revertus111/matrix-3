@@ -8,21 +8,17 @@ Do not add a competing implementation without explicitly changing this record.
 | --- | --- | --- |
 | Networking / protocol | Matrix3 core | Preserve unless a requested feature requires a verified change. |
 | Login/session lifecycle | Matrix3 core | Local bootstrap may start the login core, but does not replace login ownership. |
-| Local owner/developer rights | Matrix3 rights flow + current bootstrap override | Current local development behavior is documented under `docs/matrix_bootstrap/`. |
-| Player/account persistence | Matrix3 login/account store + current flush hardening | Do not create a second save system beside it without an explicit migration plan. |
+| Local owner/developer rights | Matrix3 rights flow + protected baseline bootstrap | Preserve baseline behavior unless a verified requirement changes it. |
+| Player/account persistence | Matrix3 login/account store | Construction settlement state must integrate with this authority, not create a parallel save system. |
 | World lifecycle | Matrix3 core | Core authority. |
-| Map/object handling | Matrix3 core | Historical fragility makes this a protected regression area. |
-| NPC/game entity behavior | Matrix3 core/content layer | Engine remains Matrix3; custom mechanics belong in content extensions. |
-| Combat engine | Matrix3 core | 718 combat is reference-only. Do not replace working Matrix3 combat by default. |
+| Map/object handling | Matrix3 core | Protected regression area; Construction may extend it only through the smallest verified integration boundary. |
+| NPC/game entity behavior | Matrix3 core/content layer | Worker AI belongs in a Construction content layer using Matrix3 NPC/entity authority. |
+| Combat engine | Matrix3 core | Construction combat is deferred and must not replace combat ownership. |
 | Item/NPC/object/cache definitions | Revision-830 cache/data consumed by Matrix3 | Data authority does not imply engine ownership. |
-| Animations/models/GFX | Revision-830 cache/data consumed by Matrix3 | Custom additions should use a documented content pipeline. |
-| Interfaces | Matrix3 client/cache path | 718 interfaces are reference-only unless a specific port is approved. |
-| Local launcher bootstrap | Matrix3 startup/bootstrap + Gradle-owned runGame path | Eclipse convenience launcher may hand startup to Gradle; it does not replace server/login ownership. |
-| Client Console shell/UI | Custom Matrix3 tooling layer | Planned authority defined by `docs/client-console/CLIENT_CONSOLE.md`; owns docking/navigation/UI only. |
-| Command browser UI | Client Console tooling layer | UI/search/structured arguments only. Existing Matrix3 server command and permission path remains behavioral authority. |
-| Owner console controls | Client Console tooling layer | Owner panel may expose actions but must not create separate rights, persistence, or gameplay implementations. |
-| Rambler's backpack storage | `Inventory` / `Backpack` content layer on Matrix3 | `Inventory` owns serialized Backpack state; Backpack owns its independent storage and Backpack-mode routing. Matrix3 Bank remains authority for the real bank only. Interface 762/key 95 are reused as presentation and do not transfer `Bank.bankTabs` ownership. `CustomItemActions` routes context actions only. See `docs/backpack/PROJECT.md`. |
-| Custom bosses/content | Custom content layer on Matrix3 | Primary product lane; should extend, not replace, stable core systems. |
+| Animations/models/GFX | Revision-830 cache/data consumed by Matrix3 | Construction visuals should use existing data/definitions where practical. |
+| Interfaces | Matrix3 client/cache path | Construction UI must use Matrix3 interface ownership; 718 interfaces are reference-only. |
+| Construction / settlement gameplay | Custom Matrix3 Construction content layer | New workstream. Freeform building, worker/settlement simulation and economy live here while core maps/objects/persistence/NPCs remain authoritative underneath. |
+| Historical custom tools/features | Reference documentation only until revalidated | The runtime tree was reset to the protected Matrix3 baseline; preserved docs do not prove current code ownership. |
 | 718 project implementations | Reference only | Ideas/UX/algorithms may be studied; never automatic authority. |
 
 ## Ownership-change rule

@@ -1,0 +1,6 @@
+2026-09-16 - Matrix3 Construction Revamp preservation/reset
+- Established `revertus111/matrix-3` as the only implementation repository for this workstream.
+- Preserved the approved Construction settlement design in a Matrix3-native workstream document.
+- Explicitly rejected the legacy 718 Construction implementation as architecture authority; it remains reference-only.
+- Returned tracked repository content to the Sept. 12 Matrix3 runtime-reset checkpoint, removing the later Steam Deck runtime/docs additions from the active tree.
+- Phase 1 Bundle 1.1 is ACTIVE: identify Matrix3-native Construction, instance, persistence and placement ownership before runtime code is added.

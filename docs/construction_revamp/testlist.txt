@@ -1,0 +1,36 @@
+Construction Revamp — targeted acceptance list
+
+Current reset/documentation checkpoint
+[ ] `git pull` completes on `main`.
+[ ] Eclipse still opens the Matrix3 Client and Server projects normally.
+[ ] Existing Matrix3 server/client startup remains baseline behavior.
+
+Phase 1 Bundle 1.2 — placement foundation
+[ ] Enter the settlement instance without disturbing normal world state.
+[ ] Wooden wall can be previewed, rotated and placed.
+[ ] Wooden floor can be previewed, rotated where applicable and placed.
+[ ] Doorway can be previewed, rotated and placed.
+[ ] Invalid/occupied placement is rejected cleanly.
+[ ] A placed piece can be removed.
+[ ] Leaving and re-entering rebuilds the exact saved layout.
+[ ] Logout/relog preserves the layout.
+[ ] Temporary instance/world coordinates are never serialized as settlement identity.
+[ ] Destroying the runtime instance cleans temporary objects/regions without deleting saved state.
+
+Phase 1 Bundle 1.3 — starter resources/storage
+[ ] Wood, food, stone and basic ore are obtainable inside the settlement.
+[ ] Settlement storage is isolated from the normal bank.
+[ ] Normal bank stock cannot be dumped directly into settlement storage.
+[ ] Starter shelter milestone detects the required build/resource state.
+
+Phase 1 Bundle 1.4 — first worker
+[ ] First worker arrives only after the starter milestone.
+[ ] Allowed Jobs checkbox state persists.
+[ ] Worker gathers only allowed valid jobs.
+[ ] Worker hauls output to valid storage.
+[ ] Hunger/thirst/energy stop work when unsupported and recover automatically when supplied.
+[ ] Worker progression/state survives logout/relog.
+[ ] Construction XP is awarded only by approved active/passive sources.
+
+Regression coverage
+[ ] Relevant `docs/rs3/SMOKE_TEST.md` build/startup/login/persistence/world-object checks pass after runtime Construction code is introduced.
