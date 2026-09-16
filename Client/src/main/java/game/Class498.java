@@ -130,6 +130,8 @@ public class Class498 implements Interface52 {
 						Class213.aClass572_Sub24_2463.aClass665_Sub2_9203.setVolume(0, (byte) 16);
 					}
 					int i_10_ = Class213.aClass572_Sub24_2463.aClass665_Sub30_9205.method9129(1694079504);
+					if (i == 3)
+						i_10_ = 1;
 					Class213.aClass572_Sub24_2463.method8622(Class213.aClass572_Sub24_2463.aClass665_Sub30_9205, 0, 535002073);
 					if (class106 != null) {
 						try {

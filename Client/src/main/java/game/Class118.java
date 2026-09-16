@@ -46,6 +46,10 @@ public class Class118 {
 	}
 
 	public static void method2154(String string, int i) {
+		// verified-static: BossLabs type-99 replies are tool protocol messages,
+		// not normal client-console output.
+		if (game.console.bosslabs.BossLabsClientBridge.handleServerCommand(string))
+			return;
 		if (LinkableInt.aStringArray9257 == null)
 			Class501.method5994(-1166047028);
 		client.aCalendar8872.setTime(new Date(Class69.method1067(-1939707224)));

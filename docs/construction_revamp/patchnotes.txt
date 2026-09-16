@@ -4,3 +4,9 @@
 - Explicitly rejected the legacy 718 Construction implementation as architecture authority; it remains reference-only.
 - Returned tracked repository content to the Sept. 12 Matrix3 runtime-reset checkpoint, removing the later Steam Deck runtime/docs additions from the active tree.
 - Phase 1 Bundle 1.1 is ACTIVE: identify Matrix3-native Construction, instance, persistence and placement ownership before runtime code is added.
+
+2026-09-16 - Runtime feature-stack recovery
+- Restored unrelated pre-reset Matrix3 Client/Server systems from `8c524fa5949dc436484e49144e736215b42586d4` without changing the approved Construction roadmap or implementation scope.
+- Construction remains Matrix3-native; restored historical systems are not Construction architecture authority.
+- Steam Deck files remain excluded from the active tree.
+- Phase 1 Bundle 1.1 state is unchanged.

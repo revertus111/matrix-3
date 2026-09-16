@@ -55,6 +55,7 @@ public class Class195 {
 	public final void method2929(Class572_Sub25 class572_sub25, byte i) {
 		((Class195) this).aClass675_2326.method7940(class572_sub25, -1923528490);
 		class572_sub25.anInt9254 = class572_sub25.aRsByteBuffer.o * -2123714935;
+		AtlasRuntimeBridge.observeOutgoingPacket(class572_sub25);
 		class572_sub25.aRsByteBuffer.o = 0;
 		anInt2327 += class572_sub25.anInt9254 * -1050417047;
 	}

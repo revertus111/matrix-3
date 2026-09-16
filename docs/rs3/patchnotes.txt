@@ -18,3 +18,10 @@
 - Registered Construction Revamp as the active Matrix3-native workstream.
 - Marked preserved historical workstreams PAUSED because their runtime implementations were reset and require revalidation before reuse.
 - Updated system ownership so Construction extends Matrix3 core instead of importing the legacy 718 implementation.
+
+2026-09-16 - Pre-reset feature-stack recovery
+- Restored the complete pre-reset `Client/` and `Server/` trees from `8c524fa5949dc436484e49144e736215b42586d4` on top of current `main`.
+- Restored deleted systems and their integration hooks together, including Client Atlas/Console, BossLabs, ROTS, Backpack/Presets, Dev Mode, Interface Editor, CacheEditor, custom item actions, and combat/framework support present at that checkpoint.
+- Preserved the Construction Revamp workstream and current Matrix3-native Construction architecture rules.
+- Did not restore the later Steam Deck runtime/docs additions.
+- Reinstated the pre-reset workstream statuses; existing `NEEDS TEST` gates remain required.

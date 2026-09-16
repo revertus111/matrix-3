@@ -275,6 +275,8 @@ public class MaterialInformation {
 		boolean bool;
 		try {
 			bool = PacketsDecoder.method3031(class195, (byte) 78);
+			if (bool)
+				AtlasRuntimeBridge.observeIncomingPacket(class195.aClass321_2334, class195.anInt2333 * -875297237);
 		} catch (IOException ioexception) {
 			if (client.anInt8580 * 835742603 == 11) {
 				class195.method2946((byte) 0);

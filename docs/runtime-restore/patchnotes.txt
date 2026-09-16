@@ -1,0 +1,6 @@
+2026-09-16 - Pre-reset Matrix3 runtime feature-stack restoration
+- Recovery source: `8c524fa5949dc436484e49144e736215b42586d4`.
+- Replaced current `Client/` and `Server/` subtrees with the exact pre-reset trees so deleted systems and modified integration hooks are restored together.
+- Preserved current Construction Revamp documentation and Matrix3-native Construction ownership.
+- Excluded Steam Deck additions from the restore scope.
+- Runtime verification is still required for workstreams previously marked `NEEDS TEST`.

@@ -8,11 +8,11 @@ public class Class415_Sub1 extends Class415 {
 	static int anInt9809;
 
 	public Interface17 method460(int i, Interface18 interface18) {
-		return new NPCDefintion(i, this, interface18);
+		return createDefinition(i, interface18);
 	}
 
 	public Interface17 method458(int i, Interface18 interface18, int i_0_) {
-		return new NPCDefintion(i, this, interface18);
+		return createDefinition(i, interface18);
 	}
 
 	public Class method467() {
@@ -24,19 +24,19 @@ public class Class415_Sub1 extends Class415 {
 	}
 
 	public Interface17 method465(int i, Interface18 interface18) {
-		return new NPCDefintion(i, this, interface18);
+		return createDefinition(i, interface18);
 	}
 
 	public Interface17 method462(int i, Interface18 interface18) {
-		return new NPCDefintion(i, this, interface18);
+		return createDefinition(i, interface18);
 	}
 
 	public Interface17 method463(int i, Interface18 interface18) {
-		return new NPCDefintion(i, this, interface18);
+		return createDefinition(i, interface18);
 	}
 
 	public Interface17 method464(int i, Interface18 interface18) {
-		return new NPCDefintion(i, this, interface18);
+		return createDefinition(i, interface18);
 	}
 
 	public Class method459(int i) {
@@ -49,5 +49,10 @@ public class Class415_Sub1 extends Class415 {
 
 	public Class method466() {
 		return NPCDefintion.class;
+	}
+
+	private NPCDefintion createDefinition(int id, Interface18 definitions) {
+		ClientConsoleRotsBridge.registerNpcDefinitions(definitions);
+		return new NPCDefintion(id, this, definitions);
 	}
 }
