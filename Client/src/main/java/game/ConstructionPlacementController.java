@@ -104,6 +104,7 @@ public final class ConstructionPlacementController {
         hoverTracking = true;
         clearHoveredTile();
         ConstructionGhostPreview.beginDebugSession();
+        ConstructionBuildCamera.enter();
         status = DevModeBridge.cancelPlacement();
         if ("No placement is armed.".equals(status)) {
             status = "Choose a build piece.";
@@ -114,6 +115,7 @@ public final class ConstructionPlacementController {
         hoverTracking = false;
         clearHoveredTile();
         ConstructionGhostPreview.endDebugSession();
+        ConstructionBuildCamera.exit();
         if (cancelPlacement) {
             status = DevModeBridge.cancelPlacement();
         }
