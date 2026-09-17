@@ -87,6 +87,17 @@ public final class ConstructionGhostPreview {
             return;
         }
 
+        if (scene.aClass174Array5840 == scene.aClass174Array5875 && scene.aClass174Array5838[0] != null) {
+            Class86 environment = new Class86();
+            environment.anInt1193 = scene.method6231(localX, localY, 1258315415) * 1368828903;
+            environment.anInt1190 = scene.method6230(localX, localY, -981999643) * 1765263439;
+            environment.anInt1191 = scene.method6283(localX, localY, 775342000) * 628738217;
+            environment.anInt1189 = scene.method6233(localX, localY, -1042067865) * -233369847;
+            environment.anInt1194 = scene.method6234(localX, localY, (byte) 16) * -223776263;
+            environment.anInt1195 = scene.method6235(localX, localY, (byte) 95) * -963547665;
+            renderer.method1790(scene.aClass174Array5838[0].method2726(sceneX, sceneZ, 358769667), environment);
+        }
+
         Model model = (Model) built.anObject8324;
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         model.method1375(TRANSFORM, null, 0);
