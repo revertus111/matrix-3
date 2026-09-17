@@ -86,3 +86,9 @@
 - Existing terminal `[ConstructionGhostPreview]` guard/failure diagnostics remain intact, so one runtime launch can identify the exact method boundary where the invisible preview stops progressing.
 - Diagnostic logging is intentionally one-shot per client launch to avoid per-frame scene-render console spam.
 - No renderer behavior, scene ownership, placement authority, collision, persistence or server state was changed by this diagnostic patch.
+
+2026-09-17 - Construction ghost on-screen diagnostic bridge
+- Runtime capture showed valid Construction placement commands reaching the server but no `[ConstructionGhostDebug]` / `[ConstructionGhostPreview]` lines in the Gradle console, leaving hook execution vs client stdout routing ambiguous.
+- Added a temporary client-owned `GHOST DEBUG:` JWindow that starts when the Construction palette opens and displays the latest ghost-pipeline milestone directly in the game client.
+- The debug bar begins at `PALETTE_OPENED - waiting for render hook` and advances through hook/model/tint/draw states; palette close ends the diagnostic session and hides the bar.
+- This patch changes diagnostics only; ghost rendering, placement authority, scene ownership, collision, persistence and server state remain unchanged.
