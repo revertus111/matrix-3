@@ -51,7 +51,7 @@ public final class ConstructionPaletteOverlay {
 
     private static final int FRAME_MS = 33;
     private static final int PANEL_WIDTH = 360;
-    private static final int PANEL_HEIGHT = 468;
+    private static final int PANEL_HEIGHT = 492;
     private static final int CARD_HEIGHT = 66;
     private static final int CARD_GAP = 7;
     private static final int MAX_VISIBLE_CARDS = 4;
@@ -505,7 +505,7 @@ public final class ConstructionPaletteOverlay {
         paintButton(g, layout.continuousMode, "Cont.",
                 ConstructionPlacementController.getPlacementMode() == PlacementMode.CONTINUOUS);
 
-        int textY = layout.panel.y + layout.panel.height - 58;
+        int textY = layout.panel.y + layout.panel.height - 72;
         BuildPiece selected = ConstructionPlacementController.getSelectedPiece();
         g.setFont(BODY_FONT);
         g.setColor(TEXT);
@@ -519,6 +519,11 @@ public final class ConstructionPaletteOverlay {
         String target = tile == null ? "Target tile: move cursor over the world"
                 : "Target tile: " + tile.getWorldX() + ", " + tile.getWorldY() + ", " + tile.getPlane();
         g.drawString(target, layout.panel.x + 14, textY + 18);
+
+        g.setColor(ACCENT);
+        String ghostState = trimToWidth(g, "Ghost: " + ConstructionGhostPreview.getLatestDebugState(),
+                Math.max(1, layout.panel.width - 124));
+        g.drawString(ghostState, layout.panel.x + 14, textY + 36);
 
         String state = ConstructionPlacementController.isArmed()
                 ? "Armed • click world to place • R / Shift+R or wheel rotates"
