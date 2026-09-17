@@ -40,6 +40,7 @@ Construction build camera v1
 [x] Later `ConnectException` output is secondary to the client crash and not the initiating failure.
 [x] Current Matrix3 generic render-camera globals are verified-static from `Class343.method4302(...)`.
 [x] Native Free Build implementation no longer calls the legacy Orb/root-interface path.
+[x] Free Build Paint clicks now use the already-resolved hovered tile, queue the existing server-authoritative `DevSpawnPlacement` path, zero camera velocity, and consume the canvas event before intentional Walk Here.
 [ ] Opening the Construction palette activates Free Build without switching root interface or crashing.
 [ ] WASD moves the camera horizontally without moving the player.
 [ ] Forward/back/strafe directions match the current camera yaw.
@@ -48,10 +49,9 @@ Construction build camera v1
 [ ] Q/E move the camera vertically in the expected directions.
 [ ] Right-mouse drag rotates yaw/pitch smoothly and respects the 1024-3072 pitch clamp.
 [ ] Left-clicking the game canvas zeros camera velocity immediately.
-[ ] Determine whether action-23 Walk Here still moves the player after a build click; if yes, patch only Construction Free Build + Paint consumption.
+[ ] Paint-mode left click leaves the player stationary and creates exactly one server-authoritative object; if the consumed AWT event still reaches action 23, move suppression to the verified menu-action seam.
 [ ] Hovered-tile tracking and the white/translucent ghost continue working while detached.
 [ ] Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
-[ ] Clicking a target tile still creates exactly one server-authoritative placed object.
 [ ] Closing/cancelling Construction restores the exact previous Matrix3 camera mode/transform.
 [ ] Reopening Construction starts Free Build cleanly after a previous close.
 [ ] No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurs.
