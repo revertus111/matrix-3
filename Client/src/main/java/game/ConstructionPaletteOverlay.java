@@ -2,22 +2,29 @@ package game;
 
 import java.awt.AWTEvent;
 import java.awt.BasicStroke;
+import java.awt.BorderLayout;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.IllegalComponentStateException;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.event.AWTEventListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JComponent;
+import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
@@ -29,9 +36,15 @@ import game.ConstructionPlacementController.PlacementMode;
 /**
  * Custom-drawn in-game Construction object palette.
  *
- * The overlay owns only palette/search/input presentation. World placement stays
- * with ConstructionPlacementController -> DevModeBridge -> server devspawn.
- * The true 3D ghost is intentionally not faked here; the overlay only exposes
+ * The palette is hosted in a small owned JWindow above Matrix3's heavyweight
+ * game Canvas. This avoids racing the renderer through Canvas.getGraphics(),
+ * which is not persistent and visibly flickers as the game repaints.
+ *
+ * The window covers only the palette rectangle, so normal world input remains
+ * owned by Matrix3 everywhere else. World placement still routes through
+ * ConstructionPlacementController -> DevModeBridge -> server devspawn.
+ *
+ * The true 3D ghost is intentionally not faked here; the palette only exposes
  * the verified hovered world tile until a safe scene-render seam is proven.
  */
 public final class ConstructionPaletteOverlay {
@@ -43,16 +56,16 @@ public final class ConstructionPaletteOverlay {
     private static final int CARD_GAP = 7;
     private static final int MAX_VISIBLE_CARDS = 4;
 
-    private static final Color PANEL = new Color(19, 23, 29, 238);
-    private static final Color CARD = new Color(34, 40, 49, 238);
-    private static final Color CARD_SELECTED = new Color(58, 83, 112, 245);
-    private static final Color BORDER = new Color(73, 84, 98, 235);
-    private static final Color TEXT = new Color(236, 239, 243, 255);
-    private static final Color MUTED = new Color(165, 174, 185, 255);
-    private static final Color ACCENT = new Color(111, 174, 235, 255);
-    private static final Color INPUT = new Color(22, 27, 34, 250);
-    private static final Color BUTTON = new Color(44, 51, 62, 245);
-    private static final Color BUTTON_ACTIVE = new Color(78, 123, 169, 250);
+    private static final Color PANEL = new Color(19, 23, 29);
+    private static final Color CARD = new Color(34, 40, 49);
+    private static final Color CARD_SELECTED = new Color(58, 83, 112);
+    private static final Color BORDER = new Color(73, 84, 98);
+    private static final Color TEXT = new Color(236, 239, 243);
+    private static final Color MUTED = new Color(165, 174, 185);
+    private static final Color ACCENT = new Color(111, 174, 235);
+    private static final Color INPUT = new Color(22, 27, 34);
+    private static final Color BUTTON = new Color(44, 51, 62);
+    private static final Color BUTTON_ACTIVE = new Color(78, 123, 169);
 
     private static final Font TITLE_FONT = new Font("SansSerif", Font.BOLD, 16);
     private static final Font BODY_FONT = new Font("SansSerif", Font.PLAIN, 12);
@@ -69,6 +82,9 @@ public final class ConstructionPaletteOverlay {
 
     private static Timer paintTimer;
     private static boolean inputListenerInstalled;
+    private static JWindow paletteWindow;
+    private static PaletteSurface paletteSurface;
+    private static Window paletteOwner;
 
     private ConstructionPaletteOverlay() {
     }
@@ -107,16 +123,21 @@ public final class ConstructionPaletteOverlay {
             });
             return;
         }
+
         if (visible) {
             if (paintTimer == null) {
-                paintTimer = new Timer(FRAME_MS, e -> paint());
+                paintTimer = new Timer(FRAME_MS, e -> refreshWindow());
                 paintTimer.setCoalesce(true);
             }
             if (!paintTimer.isRunning()) {
                 paintTimer.start();
             }
-        } else if (paintTimer != null) {
-            paintTimer.stop();
+            refreshWindow();
+        } else {
+            if (paintTimer != null) {
+                paintTimer.stop();
+            }
+            hideWindowSurface();
         }
     }
 
@@ -132,39 +153,114 @@ public final class ConstructionPaletteOverlay {
                         return;
                     }
                     if (event instanceof MouseWheelEvent) {
-                        handleWheel((MouseWheelEvent) event);
-                    } else if (event instanceof MouseEvent) {
-                        handleMouse((MouseEvent) event);
+                        handleWorldWheel((MouseWheelEvent) event);
                     } else if (event instanceof KeyEvent) {
                         handleKey((KeyEvent) event);
                     }
                 }
-            }, AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_WHEEL_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
+            }, AWTEvent.MOUSE_WHEEL_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
             inputListenerInstalled = true;
         } catch (RuntimeException ex) {
             visible = false;
             ConstructionPlacementController.endPaletteSession(true);
+            hideWindowSurface();
         }
     }
 
-    private static void handleMouse(MouseEvent event) {
-        if (event.getID() != MouseEvent.MOUSE_PRESSED || event.getButton() != MouseEvent.BUTTON1) {
-            return;
-        }
-        Canvas canvas = Class584.aCanvas7745;
-        if (canvas == null || event.getSource() != canvas) {
+    private static void refreshWindow() {
+        if (!visible) {
+            hideWindowSurface();
             return;
         }
 
+        Canvas canvas = Class584.aCanvas7745;
+        if (canvas == null || !canvas.isDisplayable() || !canvas.isVisible()) {
+            hideWindowSurface();
+            return;
+        }
+
+        if (!ensureWindow(canvas)) {
+            hideWindowSurface();
+            return;
+        }
+
+        Point canvasLocation;
+        try {
+            canvasLocation = canvas.getLocationOnScreen();
+        } catch (IllegalComponentStateException ex) {
+            hideWindowSurface();
+            return;
+        }
+
+        int availableWidth = Math.max(1, canvas.getWidth() - 20);
+        int availableHeight = Math.max(1, canvas.getHeight() - 20);
+        int width = Math.min(PANEL_WIDTH, availableWidth);
+        int height = Math.min(PANEL_HEIGHT, availableHeight);
+        int localX = Math.min(10, Math.max(0, canvas.getWidth() - width));
+        int localY = Math.max(0, Math.min(54, canvas.getHeight() - height));
+        Rectangle desired = new Rectangle(canvasLocation.x + localX, canvasLocation.y + localY, width, height);
+
+        if (!desired.equals(paletteWindow.getBounds())) {
+            paletteWindow.setBounds(desired);
+        }
+        if (!paletteWindow.isVisible()) {
+            paletteWindow.setVisible(true);
+        }
+        paletteSurface.repaint();
+    }
+
+    private static boolean ensureWindow(Canvas canvas) {
+        Window owner = SwingUtilities.getWindowAncestor(canvas);
+        if (owner == null) {
+            return false;
+        }
+        if (paletteWindow != null && paletteOwner == owner) {
+            return true;
+        }
+
+        if (paletteWindow != null) {
+            paletteWindow.dispose();
+        }
+
+        paletteOwner = owner;
+        paletteSurface = new PaletteSurface();
+        paletteSurface.setOpaque(true);
+        paletteSurface.setBackground(PANEL);
+        paletteSurface.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent event) {
+                if (visible && event.getButton() == MouseEvent.BUTTON1) {
+                    handlePaletteClick(event.getX(), event.getY());
+                    event.consume();
+                }
+            }
+        });
+        paletteSurface.addMouseWheelListener(event -> {
+            if (visible) {
+                handlePaletteWheel(event);
+            }
+        });
+
+        paletteWindow = new JWindow(owner);
+        paletteWindow.setFocusableWindowState(false);
+        paletteWindow.setAutoRequestFocus(false);
+        paletteWindow.getContentPane().setLayout(new BorderLayout());
+        paletteWindow.getContentPane().add(paletteSurface, BorderLayout.CENTER);
+        return true;
+    }
+
+    private static void hideWindowSurface() {
+        if (paletteWindow != null && paletteWindow.isVisible()) {
+            paletteWindow.setVisible(false);
+        }
+    }
+
+    private static void handlePaletteClick(int x, int y) {
         LayoutSnapshot layout = latestLayout;
-        int x = event.getX();
-        int y = event.getY();
         if (!layout.panel.contains(x, y)) {
             searchFocused = false;
             return;
         }
-
-        event.consume();
         if (layout.close.contains(x, y)) {
             hide(true);
             return;
@@ -179,55 +275,65 @@ public final class ConstructionPaletteOverlay {
             if (layout.tabs[i].contains(x, y)) {
                 category = Category.values()[i];
                 scrollOffset = 0;
+                repaintSurface();
                 return;
             }
         }
         for (CardHitbox card : layout.cards) {
             if (card.bounds.contains(x, y)) {
                 ConstructionPlacementController.select(card.piece);
+                repaintSurface();
                 return;
             }
         }
         if (layout.rotateLeft.contains(x, y)) {
             ConstructionPlacementController.rotate(-1);
+            repaintSurface();
             return;
         }
         if (layout.rotateRight.contains(x, y)) {
             ConstructionPlacementController.rotate(1);
+            repaintSurface();
             return;
         }
         if (layout.paintMode.contains(x, y)) {
             ConstructionPlacementController.setPlacementMode(PlacementMode.PAINT);
+            repaintSurface();
             return;
         }
         if (layout.continuousMode.contains(x, y)) {
             ConstructionPlacementController.setPlacementMode(PlacementMode.CONTINUOUS);
+            repaintSurface();
             return;
         }
         if (layout.cancel.contains(x, y)) {
             ConstructionPlacementController.cancel();
+            repaintSurface();
         }
     }
 
-    private static void handleWheel(MouseWheelEvent event) {
-        Canvas canvas = Class584.aCanvas7745;
-        if (canvas == null || event.getSource() != canvas) {
-            return;
-        }
+    private static void handlePaletteWheel(MouseWheelEvent event) {
         int wheel = event.getWheelRotation();
         if (wheel == 0) {
             return;
         }
         LayoutSnapshot layout = latestLayout;
-        if (layout.panel.contains(event.getX(), event.getY())) {
-            int max = Math.max(0, layout.totalMatchingPieces - MAX_VISIBLE_CARDS);
-            scrollOffset = clamp(scrollOffset + (wheel > 0 ? 1 : -1), 0, max);
-            event.consume();
+        int max = Math.max(0, layout.totalMatchingPieces - MAX_VISIBLE_CARDS);
+        scrollOffset = clamp(scrollOffset + (wheel > 0 ? 1 : -1), 0, max);
+        event.consume();
+        repaintSurface();
+    }
+
+    private static void handleWorldWheel(MouseWheelEvent event) {
+        Canvas canvas = Class584.aCanvas7745;
+        if (canvas == null || event.getSource() != canvas) {
             return;
         }
-        if (ConstructionPlacementController.isArmed()) {
+        int wheel = event.getWheelRotation();
+        if (wheel != 0 && ConstructionPlacementController.isArmed()) {
             ConstructionPlacementController.rotate(wheel > 0 ? 1 : -1);
             event.consume();
+            repaintSurface();
         }
     }
 
@@ -236,6 +342,7 @@ public final class ConstructionPaletteOverlay {
             if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
                 if (searchFocused) {
                     searchFocused = false;
+                    repaintSurface();
                 } else {
                     hide(true);
                 }
@@ -247,15 +354,18 @@ public final class ConstructionPaletteOverlay {
                     search = search.substring(0, search.length() - 1);
                     scrollOffset = 0;
                     event.consume();
+                    repaintSurface();
                 } else if (event.getKeyCode() == KeyEvent.VK_ENTER) {
                     searchFocused = false;
                     event.consume();
+                    repaintSurface();
                 }
                 return;
             }
             if (event.getKeyCode() == KeyEvent.VK_R && ConstructionPlacementController.isArmed()) {
                 ConstructionPlacementController.rotate(event.isShiftDown() ? -1 : 1);
                 event.consume();
+                repaintSurface();
             }
         } else if (event.getID() == KeyEvent.KEY_TYPED && searchFocused) {
             char c = event.getKeyChar();
@@ -263,51 +373,27 @@ public final class ConstructionPaletteOverlay {
                 search += c;
                 scrollOffset = 0;
                 event.consume();
+                repaintSurface();
             }
         }
     }
 
-    private static void paint() {
-        if (!visible) {
-            return;
-        }
-        Canvas canvas = Class584.aCanvas7745;
-        if (canvas == null || !canvas.isDisplayable() || !canvas.isVisible()) {
-            return;
-        }
-        Graphics graphics = canvas.getGraphics();
-        if (!(graphics instanceof Graphics2D)) {
-            if (graphics != null) {
-                graphics.dispose();
-            }
-            return;
-        }
-
-        Graphics2D g = (Graphics2D) graphics;
-        try {
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            LayoutSnapshot layout = buildLayout(canvas);
-            latestLayout = layout;
-            paintPanel(g, layout);
-        } finally {
-            g.dispose();
+    private static void repaintSurface() {
+        if (paletteSurface != null) {
+            paletteSurface.repaint();
         }
     }
 
-    private static LayoutSnapshot buildLayout(Canvas canvas) {
-        int width = Math.min(PANEL_WIDTH, Math.max(300, canvas.getWidth() - 20));
-        int height = Math.min(PANEL_HEIGHT, Math.max(420, canvas.getHeight() - 30));
-        int x = 10;
-        int y = Math.max(10, Math.min(54, canvas.getHeight() - height - 10));
-        Rectangle panel = new Rectangle(x, y, width, height);
-        Rectangle close = new Rectangle(x + width - 36, y + 10, 24, 24);
-        Rectangle searchBox = new Rectangle(x + 14, y + 48, width - 28, 32);
+    private static LayoutSnapshot buildLayout(int width, int height) {
+        Rectangle panel = new Rectangle(0, 0, width, height);
+        Rectangle close = new Rectangle(width - 36, 10, 24, 24);
+        Rectangle searchBox = new Rectangle(14, 48, width - 28, 32);
 
         Rectangle[] tabs = new Rectangle[Category.values().length];
-        int tabY = y + 90;
+        int tabY = 90;
         int tabWidth = (width - 28 - (tabs.length - 1) * 6) / tabs.length;
         for (int i = 0; i < tabs.length; i++) {
-            tabs[i] = new Rectangle(x + 14 + i * (tabWidth + 6), tabY, tabWidth, 30);
+            tabs[i] = new Rectangle(14 + i * (tabWidth + 6), tabY, tabWidth, 30);
         }
 
         List<BuildPiece> matches = matchingPieces();
@@ -316,20 +402,20 @@ public final class ConstructionPaletteOverlay {
             scrollOffset = maxOffset;
         }
         List<CardHitbox> cards = new ArrayList<CardHitbox>();
-        int cardY = y + 132;
+        int cardY = 132;
         int end = Math.min(matches.size(), scrollOffset + MAX_VISIBLE_CARDS);
         for (int i = scrollOffset; i < end; i++) {
-            Rectangle bounds = new Rectangle(x + 14, cardY, width - 28, CARD_HEIGHT);
+            Rectangle bounds = new Rectangle(14, cardY, width - 28, CARD_HEIGHT);
             cards.add(new CardHitbox(bounds, matches.get(i)));
             cardY += CARD_HEIGHT + CARD_GAP;
         }
 
-        int controlsY = y + height - 104;
-        Rectangle rotateLeft = new Rectangle(x + 14, controlsY, 86, 30);
-        Rectangle rotateRight = new Rectangle(x + 106, controlsY, 86, 30);
-        Rectangle paintMode = new Rectangle(x + 202, controlsY, 66, 30);
-        Rectangle continuous = new Rectangle(x + 274, controlsY, width - 288, 30);
-        Rectangle cancel = new Rectangle(x + width - 86, y + height - 38, 72, 26);
+        int controlsY = height - 104;
+        Rectangle rotateLeft = new Rectangle(14, controlsY, 86, 30);
+        Rectangle rotateRight = new Rectangle(106, controlsY, 86, 30);
+        Rectangle paintMode = new Rectangle(202, controlsY, 66, 30);
+        Rectangle continuous = new Rectangle(274, controlsY, Math.max(1, width - 288), 30);
+        Rectangle cancel = new Rectangle(width - 86, height - 38, 72, 26);
         return new LayoutSnapshot(panel, close, searchBox, tabs, cards.toArray(new CardHitbox[cards.size()]),
                 rotateLeft, rotateRight, paintMode, continuous, cancel, matches.size());
     }
@@ -348,9 +434,9 @@ public final class ConstructionPaletteOverlay {
     private static void paintPanel(Graphics2D g, LayoutSnapshot layout) {
         Rectangle panel = layout.panel;
         g.setColor(PANEL);
-        g.fillRoundRect(panel.x, panel.y, panel.width, panel.height, 12, 12);
+        g.fillRect(panel.x, panel.y, panel.width, panel.height);
         g.setColor(BORDER);
-        g.drawRoundRect(panel.x, panel.y, panel.width - 1, panel.height - 1, 12, 12);
+        g.drawRect(panel.x, panel.y, Math.max(0, panel.width - 1), Math.max(0, panel.height - 1));
 
         g.setFont(TITLE_FONT);
         g.setColor(TEXT);
@@ -471,6 +557,27 @@ public final class ConstructionPaletteOverlay {
 
     private static int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private static final class PaletteSurface extends JComponent {
+        private static final long serialVersionUID = 7191062631655302910L;
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            super.paintComponent(graphics);
+            if (!visible || !(graphics instanceof Graphics2D)) {
+                return;
+            }
+            Graphics2D g = (Graphics2D) graphics.create();
+            try {
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                LayoutSnapshot layout = buildLayout(getWidth(), getHeight());
+                latestLayout = layout;
+                paintPanel(g, layout);
+            } finally {
+                g.dispose();
+            }
+        }
     }
 
     private static final class CardHitbox {
