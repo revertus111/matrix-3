@@ -568,7 +568,7 @@ See `docs/construction_revamp/testlist.txt`.
 
 - Runtime-verified the Client Console Construction Editor and its end-to-end placement path.
 - Runtime-identified the current provisional object mappings: `13450` Wooden fence, `13684` Floor decoration, `13344` Door.
-- Added the custom-drawn in-game Construction palette foundation in `a2ce37439896d77d257d0966463104fcb962803f`.
+- Added the custom-drawn in-game Construction palette foundation in `a2ce37439896d77d257d0966463104fcb962803f` and reconciled it onto `main` through merge commit `7e9e9e90eaae923b1f9c342aad4bb0961cb308b8`.
 - Added category/search selection, selected-piece/rotation/mode state, action-23 hover-tile mirroring and palette-safe input ownership without changing server/world placement authority.
 - Narrow render trace established `ObjectDefinitions.method6061(...)` as the object-model factory, but did not establish a safe client-only scene insertion hook; 3D ghost remains unimplemented rather than guessed.
 
