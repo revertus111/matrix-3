@@ -39,6 +39,9 @@ public final class ItemBrowserCommandBridge {
         if (cmd != null && cmd.length >= 2 && "settings".equalsIgnoreCase(cmd[1])) {
             return processSettings(player, cmd);
         }
+        if (cmd != null && cmd.length >= 2 && "constructioncamera".equalsIgnoreCase(cmd[1])) {
+            return processConstructionCamera(player, cmd);
+        }
         if (cmd != null && cmd.length >= 2 && "devspawn".equalsIgnoreCase(cmd[1])) {
             return processDevSpawn(player, cmd);
         }
@@ -95,6 +98,25 @@ public final class ItemBrowserCommandBridge {
                     ? "Unable to add that item to your bank (bank may be full)."
                     : "Unable to add that item to your inventory (inventory may be full or restricted)." );
         }
+        return true;
+    }
+
+    private static boolean processConstructionCamera(Player player, String[] cmd) {
+        if (cmd.length < 3) {
+            player.getPackets().sendGameMessage("Use: ::itembrowser constructioncamera <enter|exit>");
+            return true;
+        }
+        if ("enter".equalsIgnoreCase(cmd[2])) {
+            player.getInterfaceManager().gazeOrbOfOculus();
+            player.getPackets().sendGameMessage("Construction build camera enabled.");
+            return true;
+        }
+        if ("exit".equalsIgnoreCase(cmd[2])) {
+            player.closeInterfaces();
+            player.getPackets().sendGameMessage("Construction build camera closed.");
+            return true;
+        }
+        player.getPackets().sendGameMessage("Use: ::itembrowser constructioncamera <enter|exit>");
         return true;
     }
 
