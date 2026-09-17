@@ -199,3 +199,14 @@
 - This verifies the core camera control/lifecycle path and closes the previous dead-`Class24.method711()` input failure.
 - Remaining Free Build v1 integration checks are intentionally separate: player-stationary build clicks, ghost hover/rotation/piece switching while detached, one authoritative placement/no Walk Here leakage, pre-existing-freecam preservation, bounded server-console diagnostics and combined render stability.
 - Smooth acceleration/deceleration, click-to-stop and RTS/top-down/orbit presets remain deferred until that integration pass closes.
+
+
+2026-09-17 - Construction Free Build smoothing + click-to-stop
+- Replaced instant per-cycle camera steps with time-based world-space velocity on the runtime-verified `ConstructionBuildCamera.tick()` seam.
+- Added normalized directional input, 1250 normal / 3000 Shift-fast / 400 Ctrl-precision units-per-second targets, exponential acceleration response 10.0 and deceleration response 7.0, plus bounded 5-50 ms delta time to avoid frame stalls causing large jumps.
+- Releasing movement now coasts toward zero; near-zero velocity settles exactly to zero to prevent micro-drift.
+- Implemented real `stopMovement()`: ground/build confirmation clears velocity immediately and latches movement off until all movement keys are released once, preventing a held key from restarting the camera on the next tick.
+- Promoted verified Matrix3 action 23 to the Free Build click owner: while Construction camera is active it calls click-to-stop, optionally confirms the existing Paint placement, and consumes the action so the same click cannot become player Walk Here.
+- Outside Construction Free Build, existing Dev Paint action-23 behavior remains unchanged.
+- Added a bounded first-session `[ConstructionBuildCamera] STOP click` server-console diagnostic.
+- Runtime acceptance is required for smoothing feel, drift/diagonal behavior, click-stop latch, stationary-player placement, one-object-per-click, ghost compatibility and combined render stability.
