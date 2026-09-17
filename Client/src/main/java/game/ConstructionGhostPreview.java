@@ -17,6 +17,7 @@ public final class ConstructionGhostPreview {
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
     private static volatile String lastDiagnosticKey = "";
+    private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
 
     private ConstructionGhostPreview() {
     }
@@ -62,6 +63,12 @@ public final class ConstructionGhostPreview {
             diagnostic("WAIT_SCENE_MISMATCH", "WAIT active scene mismatch");
             return;
         }
+
+        int cycle = client.cycles;
+        if (lastRenderedCycle == cycle) {
+            return;
+        }
+        lastRenderedCycle = cycle;
 
         Class497 sceneBase = region.method7280((byte) -102);
         Class639_Sub16 definitions = region.method7288(0);
