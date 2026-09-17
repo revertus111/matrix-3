@@ -210,3 +210,11 @@
 - Outside Construction Free Build, existing Dev Paint action-23 behavior remains unchanged.
 - Added a bounded first-session `[ConstructionBuildCamera] STOP click` server-console diagnostic.
 - Runtime acceptance is required for smoothing feel, drift/diagonal behavior, click-stop latch, stationary-player placement, one-object-per-click, ghost compatibility and combined render stability.
+
+
+2026-09-17 - Construction Free Build smoothing runtime verified
+- User runtime acceptance confirmed the smoothed Class411 controller works as intended: acceleration/deceleration, normalized diagonal movement, Shift fast and Ctrl precision all feel correct.
+- Ground/build click-to-stop is runtime verified, including the held-key latch: movement stops immediately and does not resume until movement keys are released and deliberately pressed again.
+- Free Build action-23 ownership is runtime verified for the tested Paint flow: the player remains planted, the same click does not become Walk Here, and exactly one server-authoritative object is created.
+- The white/translucent ghost remained stable during the smoothed detached-camera acceptance run, with no observed camera/render instability or ghost duplication/flicker.
+- Free Build v1 movement + placement integration is now runtime VERIFIED. Remaining camera-edge checks are limited to pre-existing-freecam preservation and the full bounded server-console diagnostic sequence; the broader ghost completeness checklist remains separate.
