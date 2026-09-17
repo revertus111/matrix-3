@@ -174,7 +174,7 @@
 - Next runtime trace: open Construction, capture CAM DEBUG idle, then use the already-working Alt free-camera and capture CAM DEBUG while moving/rotating. That runtime evidence decides the exact owner/path to mirror; no camera values are guessed in this checkpoint.
 
 2026-09-17 - Construction Free Build switched to proven Class24/Class411 owner
-- Runtime CAM DEBUG screenshots established that the working detached camera remains mode 1 and renders from the `CLASS411` path while the captured generic XYZ values remain zero.
+- Runtime CAM DEBUG screenshots established that the observed moving camera view remained mode 1 and rendered from the `CLASS411` family while captured generic XYZ values remained zero; source tracing, not the screenshots alone, established the separate developer-freecam owner.
 - Source trace identified the existing developer freecam: Ctrl+backtick maps to internal keys 82+28 and activates `Class24.aClass411_Sub1_158` through `Class102_Sub5.method9948(...)`; `IncomingPacket.method4113(...)` exposes active state, `Class24.method711()` updates the camera, and `RSSocket.method7604(...)` closes it.
 - Replaced the read-only camera diagnostic session with Construction lifecycle reuse of that exact detached camera. Opening the Construction palette auto-activates it when needed; closing the palette only closes it when Construction owns the activation, preserving any pre-existing manually active freecam.
 - Extended the proven `Class24.method711()` movement path with Construction-only W/S/A/D mappings while preserving the original arrow controls and existing engine mouse-look.
