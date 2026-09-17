@@ -23,10 +23,10 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the first pre-scene 3D ghost attempt produced no visible model, and the corrected post-scene renderer is implemented and awaiting runtime retest.
+- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; three direct-render ghost attempts have produced no visible model, and transition-only render-pipeline diagnostics are now implemented for the next targeted runtime check.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
-- Corrected 3D ghost render-order implementation is present on `main` through `f57f46b93a78ec9c759bdf2700d9733e2cdd6334`.
+- Instrumented 3D ghost diagnostic implementation is present on `main` through `a31256fd72fa942944d302c9473501c0f4483ab4`.
 - The current Client Console Construction Editor remains a developer/debug harness; the custom in-game palette is the intended player-facing selection direction.
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - First playable target: Phase 1 MVP vertical slice.
@@ -415,7 +415,7 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ### Next tooling slice — Custom Construction Palette + Preview Foundation
 
-**Status:** PALETTE RUNTIME VERIFIED — 3D GHOST POST-SCENE FIX IMPLEMENTED, RETEST PENDING
+**Status:** PALETTE RUNTIME VERIFIED — 3D GHOST DIAGNOSTIC ACTIVE
 
 Runtime-verified palette foundation:
 
@@ -430,21 +430,22 @@ Runtime-verified palette foundation:
 - Palette clicks are consumed only inside the palette; normal world clicks remain owned by Matrix3 outside it.
 - The starter catalog remains explicit about current runtime evidence: Wooden fence is a temporary wall test, Floor decoration is the floor candidate, and Door is the doorway candidate.
 
-3D ghost preview v1 correction:
+3D ghost preview v1 diagnostic state:
 
 - `ConstructionGhostPreview` reads the selected piece, hovered world tile and rotation from `ConstructionPlacementController`.
 - Active `Class523` scene and object definitions are resolved through the live Matrix3 scene stack.
 - Preview model creation uses the same verified-static object-model path as Matrix3 scene objects (`ObjectDefinitions.method6057(...)`).
 - Initial runtime attempt through pre-scene `Class110.method2071(...)` produced no visible ghost; palette/hover/confirmed placement remained functional.
-- Corrected preview draw now runs from `Class343.method4302(...)` immediately after `Class523.method6240(...)` completes the live 3D scene pass.
-- Corrected preview applies the same per-tile `Class86` renderer-environment setup used by `Class523.method6280(...)` before normal scene-object drawing.
-- Preview terrain height is sampled from the active `Class174` terrain and rendered through `Model.method1375(...)`.
+- Post-scene rendering from `Class343.method4302(...)` plus Matrix3 per-tile `Class86` renderer-environment setup still produced no visible ghost.
+- Matrix3's real draw contract was then mirrored with a reusable `Class90` bounds object for ordinary definitions and `Class106.method1738(...)` for `aClass326_5684` definitions; runtime retest with a valid displayed target tile still produced no visible ghost.
+- `ConstructionGhostPreview` now emits transition-only `[ConstructionGhostPreview]` console diagnostics for render guards, model-factory failures, unexpected model results and successful draw submission, including the relevant coordinates on terminal model/draw states.
 - The preview is never registered with `Class523`; it has no collision, persistence, server ownership, or persistent world state.
 - V1 intentionally uses the real object model without guessed translucency/tint/validity coloring.
 
 Still pending in this slice:
 
-- Runtime retest of corrected post-scene 3D model visibility, alignment, hover following, rotation, model switching, cancellation and scene stability.
+- Capture the instrumented runtime terminal state while placement is armed over a valid target tile; do not change renderer behavior again until this result identifies the failing stage.
+- Runtime verification of eventual 3D model visibility, alignment, hover following, rotation, model switching, cancellation and scene stability.
 - Valid/invalid placement feedback tied to future settlement occupancy/rules.
 
 Later interaction polish after single-piece preview is stable:
@@ -525,10 +526,10 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle: 1.1 — Matrix3 ownership and foundation discovery
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation
-- Tooling status: PALETTE RUNTIME VERIFIED — 3D GHOST POST-SCENE FIX IMPLEMENTED, RETEST PENDING
+- Tooling status: PALETTE RUNTIME VERIFIED — 3D GHOST DIAGNOSTIC ACTIVE
 - Approval state: SAP AAA approved the current 3D Construction ghost-preview slice.
-- Current checklist item: runtime-retest the corrected post-scene 3D ghost preview against the live scene.
-- Current objective: confirm the selected real object model follows hovered tile + rotation cleanly without scene registration; once stable, finish the exact persistent Bundle 1.2 settlement-state/instance file plan.
+- Current checklist item: capture the instrumented `[ConstructionGhostPreview]` runtime terminal state while placement is armed over a valid target tile.
+- Current objective: identify whether the preview is blocked before model creation, returns no model, or reaches draw submission; only then apply the next minimal render correction.
 
 ## Verification classifications
 
@@ -547,6 +548,8 @@ Later interaction polish after single-piece preview is stable:
 - Custom Construction palette is runtime verified and stable.
 - Hovered world-tile tracking follows Matrix3's normal scene-tile resolution at runtime.
 - Initial ghost v1 runtime attempt through `Class110.method2071(...)` produced no visible preview while palette/hover/confirmed placement remained functional.
+- Post-scene + renderer-environment attempt also produced no visible preview.
+- Draw-contract retest with a valid displayed target tile still produced no visible preview after adding Matrix3's `Class90`/special-bounds draw behavior.
 
 ### verified-static
 
@@ -560,11 +563,12 @@ Later interaction polish after single-piece preview is stable:
 - `ClientConsoleInterfaceOverlay` proves Matrix3's live Canvas can host temporary custom AWT drawing without taking interface-definition ownership.
 - `ObjectDefinitions.method6057(...)` / `method6061(...)` provide Matrix3's object-model creation path.
 - `Class456_Sub1_Sub2_Sub1` / `Class456_Sub1_Sub4_Sub1` demonstrate the real object render path through `Model.method1375(...)`.
+- Normal object draws pass `aClass90Array9007[0]` into `Model.method1375(...)`; definitions with `aClass326_5684` use null bounds followed by `Class106.method1738(...)`.
 - `Class613.method7285()` exposes the active `Class523` scene manager and `Class613.method7288()` exposes object definitions.
 - `Class523.method6232()` / `method6248()` are scene attach/remove ownership and are intentionally not used by the Construction ghost.
 - `Class523.method6280(...)` establishes per-tile renderer environment state with `Class106.method1790(...)` before normal scene-object draw submission.
 - `Class110.method2071(...)` runs before `Class523.method6257(...)` performs the main scene/object render pass, making it unsuitable as the final direct-model preview hook.
-- `Class343.method4302(...)` owns the viewport scene call and now invokes `ConstructionGhostPreview.render(...)` immediately after `Class523.method6240(...)` returns.
+- `Class343.method4302(...)` owns the viewport scene call and invokes `ConstructionGhostPreview.render(...)` immediately after `Class523.method6240(...)` returns.
 - `ConstructionGhostPreview` direct-renders the selected model without scene registration; static source shows no attach/remove call in the preview path.
 
 ### HYPOTHESIS
@@ -577,7 +581,7 @@ Later interaction polish after single-piece preview is stable:
 - Exact persistent settlement-state owner to add alongside/around the classic POH `House` ownership model.
 - Best Matrix3 instance/dynamic-region owner for freeform settlement projection.
 - Final proper wooden-wall definition; `13450` is verified as a Wooden fence and should not be promoted as the final wall asset.
-- Runtime visibility/alignment behavior of the corrected post-scene 3D ghost until the live client retest is completed.
+- Which direct-render stage currently prevents visible ghost output; the instrumented runtime terminal state is the next evidence gate.
 
 ## Testing
 
@@ -590,8 +594,8 @@ See `docs/construction_revamp/testlist.txt`.
 - Runtime-verified the Client Console Construction Editor and its end-to-end placement path.
 - Runtime-verified the custom Construction palette foundation and hovered world-tile tracking.
 - Verified-static the Matrix3 object-model/direct-render path through `ObjectDefinitions.method6057(...)` / `method6061(...)`, `Class456_Sub1_Sub2_Sub1` / `Class456_Sub1_Sub4_Sub1`, and `Model.method1375(...)`.
-- Runtime test proved the first pre-scene `Class110.method2071(...)` ghost hook did not produce a visible preview.
-- Corrected `ConstructionGhostPreview` to use Matrix3's normal per-tile renderer environment and moved its draw to `Class343.method4302(...)` immediately after the live `Class523.method6240(...)` scene pass.
+- Runtime tests proved the pre-scene hook, corrected post-scene/environment hook, and Matrix3 draw-contract correction still did not produce a visible preview; the latest test displayed a valid hovered target tile while armed.
+- Added transition-only render-pipeline diagnostics to `ConstructionGhostPreview` so the next launch identifies the exact terminal stage without per-frame console spam.
 - Preserved confirmed placement ownership through the existing server-authoritative devspawn path; preview remains unregistered and client-only.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
@@ -600,7 +604,7 @@ See `docs/construction_revamp/testlist.txt`.
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation.
 
-**Next checklist item:** Pull/run Matrix3 and retest the corrected 3D ghost: select each starter piece, hover several tiles including uneven ground, rotate through 0-3, confirm the model follows the hovered tile, cancel/close and confirm the ghost disappears, then place normally and confirm there is only the server-authoritative placed object.
+**Next checklist item:** Pull/run Matrix3 once, arm a Construction piece, hover until the palette shows valid target coordinates, then capture the latest Eclipse-console line beginning `[ConstructionGhostPreview]`. Do not perform broader ghost acceptance testing until that diagnostic identifies the failing stage.
 
 **Files/systems already inspected:**
 
@@ -620,6 +624,7 @@ See `docs/construction_revamp/testlist.txt`.
 - `Client/src/main/java/game/Class319.java`
 - `Client/src/main/java/game/ObjectDefinitions.java`
 - `Client/src/main/java/game/Class456_Sub1_Sub2_Sub1.java`
+- `Client/src/main/java/game/Class456_Sub1_Sub4_Sub1.java`
 - `Client/src/main/java/game/Class613.java`
 - `Client/src/main/java/game/Class523.java`
 - `Client/src/main/java/game/Class110.java`
@@ -629,6 +634,7 @@ See `docs/construction_revamp/testlist.txt`.
 - `Client/src/main/java/game/Class591_Sub2_Sub1_Sub1.java`
 - `Client/src/main/java/game/Class174.java`
 - `Client/src/main/java/game/Class261.java`
+- `Client/src/main/java/game/Class90.java`
 - `Client/src/main/java/game/ConstructionPlacementController.java`
 - `Client/src/main/java/game/ConstructionGhostPreview.java`
 - `Client/src/main/java/game/ClientConsoleInterfaceOverlay.java`
@@ -641,14 +647,15 @@ See `docs/construction_revamp/testlist.txt`.
 - Do not inspect or port the old `Matrix-718_MAIN` Construction code as implementation authority.
 - Do not re-audit unrelated historical Matrix3 workstreams.
 - Do not re-trace the already-proven Dev Mode tile/menu dispatch and `itembrowser devspawn` placement path unless a runtime failure points back to it.
-- Do not re-trace the corrected object model/post-scene render seam unless the live ghost retest exposes another renderer/alignment defect.
+- Do not change or broaden the ghost render seam again until the instrumented runtime terminal state identifies the failing stage.
 - Do not claim the missing freeform settlement-state foundation exists until it is actually added to Matrix3.
 - Do not make `13450` the final wooden-wall definition; runtime proved it is a Wooden fence.
 - Do not add scene registration/collision/persistence to the client ghost; those belong to authoritative placement/runtime ownership, not preview rendering.
 
 **Pending runtime verification:**
 
-- Corrected post-scene path displays the selected real 3D model on the hovered tile while placement is armed.
+- Instrumented ghost reports its terminal render-pipeline state while armed over a valid target tile.
+- Eventual corrected path displays the selected real 3D model on the hovered tile while placement is armed.
 - Preview model/type switches with the selected palette piece.
 - Rotation 0-3 visually matches the selected placement rotation.
 - Terrain height/alignment is correct on flat and uneven tiles.
@@ -659,11 +666,11 @@ See `docs/construction_revamp/testlist.txt`.
 
 **Blockers:**
 
-- No static blocker remains for the corrected post-scene ghost path; runtime retest is the current gate.
+- Ghost visibility is blocked on the next instrumented runtime result; no further renderer patch should be guessed before that evidence is captured.
 - Persistent settlement-state/instance ownership remains intentionally separate and unresolved until the exact Bundle 1.2 file plan is produced.
 
-**Important remaining uncertainty:** The persistent settlement-state/instance owner remains unverified, and the corrected ghost path still needs live runtime acceptance before translucency/tint/validity feedback or broader placement polish is added.
+**Important remaining uncertainty:** The persistent settlement-state/instance owner remains unverified, and the exact ghost failure stage is still unknown until the instrumented runtime line is captured.
 
 ## Next recommended work
 
-Runtime-retest the corrected post-scene 3D Construction ghost in one short session. If it passes, treat the preview foundation as stable and finish Bundle 1.1 by producing the exact persistent Bundle 1.2 settlement-state/instance file plan.
+Run the instrumented ghost once and capture the latest `[ConstructionGhostPreview]` Eclipse-console line while the palette shows a valid target tile. Use that single result to choose the next minimal renderer correction; once the preview is stable, finish Bundle 1.1 by producing the exact persistent Bundle 1.2 settlement-state/instance file plan.
