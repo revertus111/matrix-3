@@ -34,6 +34,18 @@ Custom Construction palette + preview foundation
 [x] Palette input never consumes normal world clicks unless the click is inside the palette itself.
 [x] `13450` remains labeled Wooden fence / temporary wall test and is not presented as the final wooden wall.
 
+Construction build camera v1
+[ ] Opening the Construction palette enters Matrix3's Orb-based detached build camera and stops current player movement/actions.
+[ ] WASD moves the camera without moving the player.
+[ ] Q/E adjusts camera height if the current Matrix3 Orb implementation exposes those controls.
+[ ] Hovered-tile tracking and the white/translucent ghost continue working while the camera is detached.
+[ ] Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
+[ ] Clicking a target tile still creates exactly one server-authoritative placed object.
+[ ] Clicking a target tile does not move the player; if normal action-23 Walk Here still moves the player, record the failure for the narrow Construction-only input-consumption follow-up.
+[ ] Closing/cancelling the Construction palette exits Orb mode and restores the normal Matrix3 root interface/camera.
+[ ] No stuck Orb interface, camera instability, ghost duplication/flicker or scene-render regression occurs.
+[ ] RTS/top-down/orbit presets remain deferred until their camera packet/client semantics are verified instead of guessed.
+
 Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
 [x] Post-scene + renderer-environment + Matrix3 `Class90` draw-contract retest still produced no visible ghost with a valid displayed target tile.
