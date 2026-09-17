@@ -25,7 +25,8 @@ public final class ConstructionGhostPreview {
     private static final int GHOST_TINT_HUE = 0;
     private static final int GHOST_TINT_SATURATION = 0;
     private static final int GHOST_TINT_LIGHTNESS = 127;
-    private static final int GHOST_TINT_WEIGHT = 160;
+    private static final int GHOST_TINT_WEIGHT = 128;
+    private static final byte GHOST_FACE_ALPHA = 96;
     private static final int OBJECT_SIZE_X_DECODE = -876498849;
     private static final int OBJECT_SIZE_Y_DECODE = 1922784011;
 
@@ -38,8 +39,10 @@ public final class ConstructionGhostPreview {
     private static final int DEBUG_MODEL_READY = 1 << 6;
     private static final int DEBUG_TINT_START = 1 << 7;
     private static final int DEBUG_TINT_DONE = 1 << 8;
-    private static final int DEBUG_DRAW_START = 1 << 9;
-    private static final int DEBUG_DRAW_DONE = 1 << 10;
+    private static final int DEBUG_ALPHA_START = 1 << 9;
+    private static final int DEBUG_ALPHA_DONE = 1 << 10;
+    private static final int DEBUG_DRAW_START = 1 << 11;
+    private static final int DEBUG_DRAW_DONE = 1 << 12;
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
@@ -99,9 +102,10 @@ public final class ConstructionGhostPreview {
      * Draws the currently selected Construction piece at the hovered world tile.
      *
      * verified-static: ObjectDefinitions.method6057(...) is the same model factory
-     * used by Matrix3 scene objects, and Model.method1375(...) is their live draw
-     * path. Model.method1396(...) is Matrix3's existing whole-model tint override
-     * path. This method intentionally never calls Class523 attach/remove methods.
+     * used by Matrix3 scene objects, Model.method1375(...) is their live draw path,
+     * Model.method1396(...) is Matrix3's whole-model colour override path, and
+     * Model.method1467(...) applies face alpha. This method intentionally never
+     * calls Class523 attach/remove methods.
      */
     static void render(Class523 scene, Class106 renderer) {
         debugMilestone(DEBUG_RENDER_ENTRY, "RENDER entered ConstructionGhostPreview.render");
@@ -242,6 +246,11 @@ public final class ConstructionGhostPreview {
         model.method1396(GHOST_TINT_HUE, GHOST_TINT_SATURATION, GHOST_TINT_LIGHTNESS, GHOST_TINT_WEIGHT);
         debugMilestone(DEBUG_TINT_DONE, "TINT_DONE Model.method1396 returned normally");
 
+        debugMilestone(DEBUG_ALPHA_START,
+                "ALPHA_START Model.method1467 faceAlpha=" + (GHOST_FACE_ALPHA & 0xff));
+        model.method1467(GHOST_FACE_ALPHA, null);
+        debugMilestone(DEBUG_ALPHA_DONE, "ALPHA_DONE Model.method1467 returned normally");
+
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         Class326 bounds = definition.aClass326_5684;
         debugMilestone(DEBUG_DRAW_START,
@@ -259,6 +268,7 @@ public final class ConstructionGhostPreview {
                 "DRAW_SUBMITTED object=" + piece.getObjectId() + " type=" + piece.getObjectType()
                         + " rot=" + rotation + " specialBounds=" + (bounds != null)
                         + " ghostTint=white/" + GHOST_TINT_WEIGHT
+                        + " faceAlpha=" + (GHOST_FACE_ALPHA & 0xff)
                         + " world=" + tile.getWorldX() + "," + tile.getWorldY() + "," + plane
                         + " local=" + localX + "," + localY
                         + " scene=" + sceneX + "," + sceneY + "," + sceneZ);
