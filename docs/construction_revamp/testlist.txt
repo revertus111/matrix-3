@@ -38,8 +38,10 @@ Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
 [x] Post-scene + renderer-environment + Matrix3 `Class90` draw-contract retest still produced no visible ghost with a valid displayed target tile.
 [x] Gradle-console diagnostic run showed normal login/placement traffic but no `[ConstructionGhostDebug]` or `[ConstructionGhostPreview]` lines, so client stdout routing vs hook execution could not be distinguished from console output alone.
-[ ] Opening the Construction palette shows the temporary `GHOST DEBUG: PALETTE_OPENED - waiting for render hook` bar in the live client.
-[ ] With Wooden fence armed and a valid hovered target tile, the `GHOST DEBUG:` bar advances to the exact latest hook/model/tint/draw stage or terminal WAIT/SKIP/MODEL_* state.
+[x] Opening the Construction palette shows the temporary `GHOST DEBUG:` bar in the live client.
+[x] With Wooden fence armed and a valid hovered target tile, the `GHOST DEBUG:` bar reached `SKIP_BOUNDS`, runtime-proving the ghost render hook and valid tile state are executing.
+[x] The `SKIP_BOUNDS` diagnostic exposed invalid billion-scale object footprints caused by reading obfuscated `ObjectDefinitions.sizeX/sizeY` with their storage multipliers instead of inverse decode multipliers.
+[ ] Retest the corrected footprint decoder and confirm the fence reports a sane footprint (expected 1x1) and advances into model build/tint/draw diagnostics.
 [ ] Active-scene-pass hook renders exactly one preview per client cycle without duplicate/flicker from the retained post-scene fallback.
 [ ] Corrected direct-render path renders the selected real 3D object model on the current hovered world tile while placement is armed.
 [ ] Visible preview uses the current washed-out white ghost tint; true global translucency remains pending until the base model draw is runtime-proven.
