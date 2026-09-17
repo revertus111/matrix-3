@@ -137,22 +137,26 @@ Preset values remain UNKNOWN until Free Build is runtime accepted.
 
 ## Runtime acceptance — current gate
 
+Runtime VERIFIED in the user's acceptance sweep:
+
 - Opening Construction automatically activates the detached Class411 camera.
-- Server console receives `ENTER` and then `TICK live`.
 - W/S move forward/back.
 - A/D strafe.
 - Shift and Ctrl change speed.
-- Q/E move vertically; record if direction needs swapping.
-- Existing arrow aliases move the same detached camera.
+- Q/E move vertically with the accepted direction.
 - Existing mouse-look works.
-- First movement input produces the expected one-shot server-console `INPUT` state.
+- Closing Construction restores the normal camera when Construction owned the detached camera.
+- Reopening Construction starts Free Build cleanly.
+
+Still pending explicit verification:
+
+- Server console receives `ENTER`, `TICK live`, first `INPUT`, and `EXIT` without a `FAIL` state.
+- Existing arrow aliases move the same detached camera.
 - Player remains physically stationary.
-- Ghost hover, piece switching and rotation remain functional.
-- One build click produces exactly one server-authoritative real object.
-- Closing Construction restores normal camera when Construction owned the detached camera.
+- Ghost hover, piece switching and rotation remain functional while detached.
+- One build click produces exactly one server-authoritative real object without Walk Here leakage.
 - Pre-existing detached camera state is preserved when Construction did not own activation.
-- No `FAIL` diagnostic appears.
-- No camera/render crash, duplicate ghost or scene corruption occurs.
+- No camera/render instability, duplicate ghost or scene corruption occurs during the combined placement pass.
 
 ## Classification
 
@@ -161,5 +165,6 @@ Preset values remain UNKNOWN until Free Build is runtime accepted.
 - `VERIFIED`: first Class24 reuse test detached the camera but Construction W/A/S/D/Q/E did not run.
 - `verified-static`: detached render ownership is `Class24.aClass411_Sub1_158`, activated through `Class102_Sub5.method9948(...)` and closed through `RSSocket.method7604(...)`.
 - `verified-static`: Construction controls now execute from the live `Class343.method4302(...)` viewport seam and mutate the detached Class411 position/orientation directly.
-- `NEEDS TEST`: movement directions, Q/E sign, mouse-look, speed modifiers, player-stationary behavior, ghost/placement compatibility and close/reopen lifecycle.
+- `VERIFIED`: automatic Construction activation, W/S/A/D movement, Shift/Ctrl speed modifiers, Q/E vertical movement, mouse-look, normal-camera restore and close/reopen lifecycle passed the user's runtime sweep.
+- `NEEDS TEST`: server-console diagnostic sequence, arrow aliases, player-stationary behavior, ghost/placement compatibility, pre-existing-freecam preservation and combined render stability.
 - `UNKNOWN`: final smoothing constants and RTS/top-down/orbit presets.
