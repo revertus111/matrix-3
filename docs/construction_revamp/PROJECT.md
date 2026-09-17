@@ -25,7 +25,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
 - State: ACTIVE — Construction Editor developer placement prototype is runtime verified; the custom Construction palette/selected-piece foundation is implemented and awaiting runtime verification.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
-- Custom Construction palette foundation implementation: `4b4c86f306b0c9e5d723b597ad4530206fce530e`.
+- Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
 - The current Client Console Construction Editor remains a developer/debug harness; the custom in-game palette is the intended player-facing selection direction.
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - First playable target: Phase 1 MVP vertical slice.
@@ -568,7 +568,7 @@ See `docs/construction_revamp/testlist.txt`.
 
 - Runtime-verified the Client Console Construction Editor and its end-to-end placement path.
 - Runtime-identified the current provisional object mappings: `13450` Wooden fence, `13684` Floor decoration, `13344` Door.
-- Added the custom-drawn in-game Construction palette foundation in `4b4c86f306b0c9e5d723b597ad4530206fce530e`.
+- Added the custom-drawn in-game Construction palette foundation in `a2ce37439896d77d257d0966463104fcb962803f`.
 - Added category/search selection, selected-piece/rotation/mode state, action-23 hover-tile mirroring and palette-safe input ownership without changing server/world placement authority.
 - Narrow render trace established `ObjectDefinitions.method6061(...)` as the object-model factory, but did not establish a safe client-only scene insertion hook; 3D ghost remains unimplemented rather than guessed.
 
