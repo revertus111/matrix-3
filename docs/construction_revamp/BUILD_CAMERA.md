@@ -62,23 +62,42 @@ Construction's live tick reads Matrix3's current keyboard state:
 - **S** / Down Arrow -> backward
 - **A** / Left Arrow -> strafe left
 - **D** / Right Arrow -> strafe right
-- **E** -> vertical direction A
-- **Q** -> vertical direction B
-- **Shift** -> fast step 60
-- **Ctrl** -> precision step 8
-- default step -> 25
+- **E** -> vertical up
+- **Q** -> vertical down
+- **Shift** -> fast max speed
+- **Ctrl** -> precision max speed
+- mouse look -> existing Class411 quaternion/look path
 
-Movement vectors are transformed by the detached camera's current orientation before being applied.
-
-Mouse look uses the same Class411 quaternion/position math already present in the detached-camera code.
-
-Q/E direction remains runtime acceptance pending.
+Movement input is normalized before it is transformed by the detached camera orientation, so diagonal input does not receive a free speed boost.
 
 ## Modern smoothing
 
-Acceleration/deceleration is intentionally deferred until this live control seam passes runtime acceptance.
+Implemented on the verified live Class411 control seam:
 
-After acceptance, smoothing belongs in `ConstructionBuildCamera` on this same Class411 object. Do not reopen camera ownership discovery.
+- movement is time-based from `System.nanoTime()`, with delta time clamped to 5-50 ms to avoid stalls causing camera jumps;
+- normal speed = 1250 camera units/sec;
+- Shift fast speed = 3000 units/sec;
+- Ctrl precision speed = 400 units/sec;
+- acceleration uses exponential response `10.0`;
+- deceleration uses exponential response `7.0`;
+- velocity is world-space, so releasing input coasts smoothly instead of stopping instantly;
+- near-zero velocity settles to zero to prevent a permanent micro-drift.
+
+These constants are `NEEDS TEST` for feel and can be tuned without reopening camera ownership discovery.
+
+### Click-to-stop
+
+Matrix3 action 23 is the verified ground-click seam.
+
+While Construction Free Build is active:
+
+1. action 23 calls `ConstructionBuildCamera.stopMovement()`;
+2. all camera velocity is zeroed immediately;
+3. if a movement key is still held, movement remains latched off until all movement keys are released once;
+4. an armed Paint placement is still confirmed through the existing server-authoritative Dev placement path;
+5. the action is consumed so the same click does not become player Walk Here.
+
+Outside Construction Free Build, normal Dev Paint behavior remains unchanged.
 
 ## Placement ownership
 
@@ -87,7 +106,7 @@ The camera does not own placement.
 - Matrix3 continues resolving the hovered world tile.
 - `ConstructionGhostPreview` remains client-only and unregistered.
 - Confirmed objects remain server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
-- If a build click still triggers Walk Here, suppress that only through the already-verified Construction/Dev menu-action seam.
+- Free Build now owns action 23 while active: it stops camera momentum, optionally confirms Paint placement and consumes the action so the player remains planted.
 
 ## Diagnostics
 
@@ -99,6 +118,7 @@ Construction sends bounded one-shot diagnostics through the existing owner-only 
 [ConstructionBuildCamera] ENTER ...
 [ConstructionBuildCamera] TICK live
 [ConstructionBuildCamera] INPUT W=... A=... S=... D=... Q=... E=... shift=... ctrl=...
+[ConstructionBuildCamera] STOP click
 [ConstructionBuildCamera] EXIT ...
 ```
 
@@ -150,7 +170,11 @@ Runtime VERIFIED in the user's acceptance sweep:
 
 Still pending explicit verification:
 
-- Server console receives `ENTER`, `TICK live`, first `INPUT`, and `EXIT` without a `FAIL` state.
+- New acceleration/deceleration feels smooth and responsive at normal speed.
+- Shift fast and Ctrl precision still feel correct under the velocity system.
+- Releasing movement coasts to a clean stop without long drift or jitter.
+- Clicking the ground while moving stops the camera immediately; if a key is still held, movement does not resume until keys are released/re-pressed.
+- Server console receives `ENTER`, `TICK live`, first `INPUT`, first `STOP click`, and `EXIT` without a `FAIL` state.
 - Existing arrow aliases move the same detached camera.
 - Player remains physically stationary.
 - Ghost hover, piece switching and rotation remain functional while detached.
@@ -166,5 +190,6 @@ Still pending explicit verification:
 - `verified-static`: detached render ownership is `Class24.aClass411_Sub1_158`, activated through `Class102_Sub5.method9948(...)` and closed through `RSSocket.method7604(...)`.
 - `verified-static`: Construction controls now execute from the live `Class343.method4302(...)` viewport seam and mutate the detached Class411 position/orientation directly.
 - `VERIFIED`: automatic Construction activation, W/S/A/D movement, Shift/Ctrl speed modifiers, Q/E vertical movement, mouse-look, normal-camera restore and close/reopen lifecycle passed the user's runtime sweep.
-- `NEEDS TEST`: server-console diagnostic sequence, arrow aliases, player-stationary behavior, ghost/placement compatibility, pre-existing-freecam preservation and combined render stability.
-- `UNKNOWN`: final smoothing constants and RTS/top-down/orbit presets.
+- `verified-static`: smoothing is now time-based/world-velocity-driven on the live Class411 tick, and Free Build action 23 now owns click-to-stop + Walk Here suppression without changing server-authoritative placement.
+- `NEEDS TEST`: smoothing feel/constants, click-to-stop latch behavior, server-console diagnostic sequence, arrow aliases, player-stationary behavior, ghost/placement compatibility, pre-existing-freecam preservation and combined render stability.
+- `UNKNOWN`: final RTS/top-down/orbit preset values and transition feel.
