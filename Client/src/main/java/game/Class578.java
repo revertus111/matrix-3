@@ -47,6 +47,11 @@ public class Class578 {
 	}
 
 	static void method6834(Class531 class531, int i) {
+		if (class531.aClass456_Sub1_5929 == null && client.aClass613_8605 != null) {
+			Class523 scene = client.aClass613_8605.method7285(0);
+			if (scene != null && scene.aClass174Array5875 == scene.aClass174Array5838)
+				ConstructionGhostPreview.render(scene, Class272_Sub2.aClass106_9517);
+		}
 		class531.aClass456_Sub1_5929 = null;
 		synchronized (Class531.aStack5931) {
 			if (Class531.aStack5931.size() < 200)
