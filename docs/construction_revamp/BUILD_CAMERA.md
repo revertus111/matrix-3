@@ -2,129 +2,156 @@
 
 ## Purpose
 
-Construction placement uses a dedicated detached build camera instead of moving the player around the settlement while building.
+Construction uses Matrix3's existing detached developer free-camera instead of moving the player while building.
 
-The player remains physically planted while the camera moves independently. Construction still uses Matrix3's normal scene targeting for the hovered tile, the client-only ghost for preview, and server-authoritative placement for the confirmed object.
+The camera is client-side only. World movement, scene ownership and confirmed object placement remain owned by their existing Matrix3/server paths.
 
-## Ownership
+## Runtime evidence
 
-- Construction owns only build-camera lifecycle, view selection and build-mode UX.
-- Player/world movement remains Matrix3/server-owned.
-- Scene picking remains Matrix3-owned; Construction only consumes the already resolved hovered tile.
-- Confirmed placement remains server authoritative.
-- The legacy Orb-of-Oculus interface path is permanently rejected for Construction.
-- Free Build uses the current Matrix3 renderer camera globals only while the Construction palette is active, then restores the exact previous mode/transform.
+### Rejected paths
 
-## Runtime finding — legacy Orb path rejected
+1. **Legacy Orb interface**
+   - Rejected at runtime.
+   - `InterfaceManager.gazeOrbOfOculus()` attempted legacy root/component `475/57`.
+   - Current client crashed during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`.
 
-The first Orb-backed attempt runtime-crashed the current client.
+2. **Generic renderer-global camera**
+   - Rejected at runtime.
+   - Writing `Class36.anInt387`, `Class572_Sub13_Sub2.anInt11451`, `Class49.anInt490`, `Class455.anInt5187` and `Class406.anInt4765` did not reproduce the working detached camera and produced invalid/empty-looking views.
 
-Observed fatal chain:
+### Proven detached camera
 
-`SET_INTERFACE -> Class104_Sub1.method9918(...) -> Class512.method6083(...) -> Class83.method1256(...) -> ArrayIndexOutOfBoundsException: 57`
+Runtime CAM DEBUG captures established:
 
-`InterfaceManager.gazeOrbOfOculus()` attempts to install interface component `57` under legacy root `475`. That layout is incompatible with the active client/cache and is no longer used by Construction.
+- camera mode remains `1`;
+- render source is `CLASS411`;
+- effective render XYZ changes while the detached camera moves;
+- generic camera XYZ remains `0,0,0` in the observed session.
 
-## Rejected native Free Build v1 attempt (reference only)
+Source trace then established the existing developer free-camera owner:
 
-Verified-static renderer mapping from `Class343.method4302(...)`:
+- Java backtick is mapped to internal key `28`.
+- Ctrl is internal key `82`.
+- Ctrl+backtick activates the detached camera through `Class102_Sub5.method9948(...)`.
+- Active state is `IncomingPacket.method4113(...)` -> `Class24.aBool157`.
+- The detached camera object is `Class24.aClass411_Sub1_158`.
+- View rendering prefers that camera whenever `Class24.aBool157` is true.
+- `Class24.method711()` owns its mouse-look and movement updates.
+- `RSSocket.method7604(...)` closes that detached camera.
 
-- X: `Class36.anInt387`
-- Y/height: `Class572_Sub13_Sub2.anInt11451`
-- Z: `Class49.anInt490`
-- pitch: `Class455.anInt5187`
-- yaw: `Class406.anInt4765`
+This is the authoritative Free Build camera path.
 
-Matrix3 modes 1/2/4/6 have dedicated camera update paths. `Class457.method5426(...)` directly assigns raw `711307203`, which decodes to camera mode 5 under `Class18.anInt143 * 625220759`; mode 5 renders through the generic camera globals above. Free Build therefore reuses that source-proven mode-5 raw value without installing any interface. The prior raw camera mode and transform are snapshotted on entry and restored on exit.
+## Current implementation — Class411 Free Build reuse
 
-### Controls
+Opening the Construction palette now:
 
-- WASD: horizontal movement relative to current camera yaw.
-- Shift: fast movement.
-- Ctrl: precision movement.
-- Q/E: vertical movement.
-- Right-mouse drag: yaw/pitch camera look.
-- Pitch is clamped to Matrix3's verified 1024-3072 range.
-- Movement accelerates/decelerates instead of snapping instantly to full speed.
-- Left-clicking the game canvas immediately zeros camera velocity.
-- In Paint mode, a valid left-click places from Matrix3's already-resolved hovered tile and consumes that canvas event so it does not intentionally become Walk Here.
-- Existing Construction R / Shift+R / mouse-wheel piece rotation remains unchanged.
+1. Checks whether the existing detached free-camera is already active.
+2. If not, activates it through the exact existing `Class102_Sub5.method9948(...)` path using the local player's current seed tile.
+3. Records whether Construction owns that activation.
+4. Leaves Matrix3's existing mouse-look and Class411 render ownership intact.
 
-Paint confirmation still calls `DevSpawnPlacement.placeActive(...)`, so the existing owner-only server `itembrowser devspawn` path remains the only real object authority. Free Build does not perform a second scene pick.
+Closing the palette:
 
-The implementation uses no server camera packet, no player teleport, no legacy Orb/root interface, and no second scene picker.
+- closes the detached camera only when Construction activated it;
+- leaves a pre-existing manually activated free-camera running.
 
-## Active diagnostic — mirror the working Alt free-camera
+No legacy interface, renderer-global camera mode, duplicate scene picker or client-owned world object is introduced.
 
-The first native Free Build runtime acceptance failed: Construction opened, but the attempted generic-camera implementation did not control the live camera correctly and produced invalid/empty-looking scene views. That implementation is rejected as an active camera owner.
+## Controls
 
-Construction now runs a **read-only camera trace** while the palette is open:
+The original developer free-camera arrow controls remain available.
 
-- It does not write camera mode, XYZ, pitch, yaw, velocity or movement keys.
-- It does not consume Alt/WASD/Q/E input.
-- It observes the exact XYZ submitted to `Class523.method6240(...)` from the live viewport render seam.
-- It reports whether the renderer is using the mode-1 `Class411`/object-camera path or the generic camera-global path.
-- It also reports the current generic XYZ/pitch/yaw values for comparison.
-- The `CAM DEBUG [READ ONLY]` bar records Alt/WASD/Q/E key state and render-position delta from the moment Construction was opened.
+While the Construction palette is active, `Class24.method711()` additionally maps:
 
-### Runtime trace procedure
+- **W** (internal 33) -> forward
+- **S** (49) -> backward
+- **A** (48) -> left
+- **D** (50) -> right
+- **E** (34) -> vertical direction A
+- **Q** (32) -> vertical direction B
+- **Shift** (81) -> fast movement, step 60
+- **Ctrl** (82) -> precision movement, step 8
+- default movement step -> 25
+- existing mouse-look -> unchanged Matrix3 free-camera behavior
 
-1. Open Construction and leave Alt released. Capture the CAM DEBUG state.
-2. Use the already-working Matrix3 Alt free-camera exactly as normal.
-3. Move/rotate while Alt is active and capture CAM DEBUG again.
-4. Compare `mode`, `source`, `renderXYZ`, `deltaFromOpen`, and generic XYZ/pitch/yaw.
-5. Promote the actual Alt free-camera owner/path to `VERIFIED` only from that runtime evidence.
-6. Implement Construction Free Build by reusing/mirroring that proven path instead of writing guessed camera fields.
+Q/E direction remains runtime acceptance pending; swap them if runtime proves the intuitive direction is reversed.
 
-This diagnostic checkpoint intentionally restores normal Matrix3 camera/input ownership until the working Alt free-camera seam is runtime identified.
+### Modern smoothing
+
+Acceleration/deceleration is intentionally **not** layered in yet. First accept the proven Class411 path with WASD. Smooth velocity can then be added inside this same camera owner without reopening camera architecture.
+
+## Placement ownership
+
+The camera does not own placement.
+
+- Hovered world tile remains resolved through Matrix3's existing scene/menu path.
+- Ghost remains client-only and unregistered.
+- Confirmed real objects remain server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
+- If a build click still moves the player, suppress action 23 only through the already-verified Construction/Dev menu-action seam after runtime evidence.
+
+## Diagnostics
+
+The temporary `CAM DEBUG [READ ONLY]` overlay has been removed after proving the camera owner.
+
+Construction camera lifecycle now emits transition-only console lines:
+
+```text
+[ConstructionBuildCamera] ENTER source=Class24/Class411 ...
+[ConstructionBuildCamera] EXIT ...
+```
+
+Do not add another on-screen camera diagnostic unless console output cannot establish a future failure.
 
 ## Accepted view roadmap
 
 ### Free Build
 
-Detached modern free camera for close/manual building. The first generic-camera implementation was runtime rejected; implementation resumes after the working Alt free-camera owner/path is captured by the active diagnostic.
+Current target. Proven Class411 detached camera plus Construction-specific modern controls.
 
 ### RTS
 
-Elevated angled settlement overview intended for broad placement, worker observation and later settlement management. WASD pans across the settlement while the player remains stationary.
+Elevated angled settlement overview with panning and controlled zoom.
 
 ### Top Down
 
-Near-vertical layout view intended for floor plans, production layouts and large-area building tools.
+Near-vertical layout view for floors, room planning and production layouts.
 
 ### Orbit / Focus
 
-Camera revolves around or focuses a selected tile, structure or later worker.
+Focus/orbit around a selected tile, structure or worker.
 
 ### Player View
 
-Return to the normal Matrix3 gameplay camera without changing settlement or placement ownership.
+Return to normal Matrix3 gameplay camera without changing Construction state.
 
-## Runtime acceptance — Free Build v1
+Preset values remain UNKNOWN until Free Build is runtime accepted.
 
-- Opening the Construction palette no longer changes root interface or crashes.
-- Free Build activates automatically with the palette.
-- WASD moves the camera horizontally without moving the player.
-- Shift increases speed and Ctrl slows movement for precision.
-- Q/E move vertically in the expected directions.
-- Right-mouse drag rotates yaw/pitch smoothly and respects the pitch clamp.
-- Releasing movement keys decelerates cleanly.
-- Left-click immediately stops camera velocity.
-- In Paint mode, left-clicking a valid hovered tile places once through the existing server-authoritative path and the player remains stationary.
-- Confirm exactly one real object is created per click; if the consumed AWT event still reaches Matrix3's action-23 dispatcher on this client, treat that as a runtime regression and move suppression to the verified menu-action seam.
-- Hovered-tile tracking and the white/translucent ghost continue working while detached.
-- Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
-- Closing/cancelling Construction restores the prior Matrix3 camera mode/transform.
-- No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurs.
+## Runtime acceptance — current gate
+
+- Opening Construction automatically activates the same detached Class411 camera as the existing developer free-camera.
+- No Ctrl+backtick hotkey is required after the palette opens.
+- The camera starts at a sensible position around the current player instead of an invalid/empty view.
+- Existing mouse-look works.
+- W/S move forward/back relative to camera orientation.
+- A/D strafe correctly.
+- Shift is fast and Ctrl is precision.
+- Q/E move vertically; note if direction is reversed.
+- The player remains physically stationary while the camera moves.
+- White/translucent Construction ghost remains visible and follows hovered tiles.
+- Piece switching and rotation remain correct.
+- Confirmed placement still produces exactly one server-authoritative real object.
+- Closing the palette returns to normal camera when Construction activated freecam.
+- If freecam was manually active before opening Construction, closing the palette does not kill it.
+- No `CAM DEBUG` overlay remains.
+- Console receives one ENTER and one EXIT transition line per Construction camera session.
+- No scene/render crash, duplicate ghost or camera corruption occurs.
 
 ## Classification
 
-- `VERIFIED`: legacy Orb interface is incompatible with the current client and rejected for Construction.
-- `verified-static`: generic Matrix3 scene rendering consumes the five mapped camera globals above.
-- `verified-static`: raw `711307203` is Matrix3's source-proven camera-mode-5 value via `Class457.method5426(...)`.
-- `verified-static`: the current diagnostic does not invoke the server Orb bridge and does not write camera state.
-- `verified-static`: the read-only diagnostic leaves the existing palette/hover/placement ownership unchanged; it does not become a placement owner.
-- `VERIFIED`: native generic-camera Free Build v1 failed runtime acceptance and is rejected as the active implementation.
-- `NEEDS TEST`: identify the working Alt free-camera render path from CAM DEBUG idle vs moving captures.
-- `UNKNOWN`: exact input/camera owner used by the working Alt free-camera until the diagnostic trace captures it.
-- `UNKNOWN`: exact deterministic RTS/top-down/orbit preset values; do not hardcode them until Free Build runtime behavior is accepted.
+- `VERIFIED`: legacy Orb interface path crashes current client and is rejected.
+- `VERIFIED`: generic renderer-global Free Build attempt failed runtime acceptance and is rejected.
+- `VERIFIED`: runtime CAM DEBUG showed mode 1 / CLASS411 as the active moving camera render path while generic XYZ remained zero in the captured session.
+- `verified-static`: existing detached developer freecam is `Class24.aClass411_Sub1_158`, activated through `Class102_Sub5.method9948(...)`, tested by `IncomingPacket.method4113(...)`, updated by `Class24.method711()`, and closed by `RSSocket.method7604(...)`.
+- `verified-static`: Construction now activates/reuses that exact owner and preserves a pre-existing manually activated freecam.
+- `NEEDS TEST`: Construction automatic activation, WASD mappings, Shift/Ctrl speeds, Q/E vertical direction, player-stationary behavior, ghost compatibility and close/restore lifecycle.
+- `UNKNOWN`: final RTS/top-down/orbit presets and transition feel.
