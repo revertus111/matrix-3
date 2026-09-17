@@ -450,21 +450,19 @@ Runtime-verified palette foundation:
 
 Construction Build Camera v1 state:
 
-- The first implementation reused `InterfaceManager.gazeOrbOfOculus()` through the owner-only `itembrowser constructioncamera` bridge; runtime proved that legacy root/component `475/57` path crashes this client and it remains permanently rejected for Construction.
-- Bounded current-client tracing established the live generic renderer camera transform in `Class343.method4302(...)`: X `Class36.anInt387`, Y `Class572_Sub13_Sub2.anInt11451`, Z `Class49.anInt490`, pitch `Class455.anInt5187`, yaw `Class406.anInt4765`.
-- Matrix3 modes 1/2/4/6 have dedicated update behavior; Free Build temporarily uses a Construction-only generic camera mode so rendering consumes those verified globals without installing another root interface.
-- `ConstructionBuildCamera` snapshots the prior raw camera mode/transform, activates native Free Build when the palette opens, updates the renderer camera at ~60 Hz and restores the exact prior state on palette close.
-- Implemented controls: WASD relative to current yaw, smooth acceleration/deceleration, Shift fast, Ctrl precision, Q/E vertical and right-mouse drag yaw/pitch with Matrix3's 1024-3072 pitch clamp.
-- Left-click zeros camera velocity immediately.
-- Free Build Paint uses Matrix3's already-resolved hovered tile and calls the existing `DevSpawnPlacement.placeActive(...)` path; the canvas event is consumed to avoid intentionally forwarding the same click into Walk Here.
-- Real object creation remains server authoritative through the existing owner-only `itembrowser devspawn` bridge; Free Build performs no second scene pick and owns no world object.
-- Server `itembrowser constructioncamera` remains fail-closed so the rejected Orb path cannot be re-entered accidentally.
-- RTS, Top Down, Orbit/Focus and Player View remain accepted next views; deterministic preset values are deferred until Free Build runtime behavior is accepted.
+- The legacy `InterfaceManager.gazeOrbOfOculus()` / root-component `475/57` path is permanently runtime-rejected for Construction.
+- The generic renderer-global camera implementation is also runtime-rejected; it produced invalid/empty-looking views and did not control the live detached camera.
+- Runtime diagnostics plus source tracing established `Class24.aClass411_Sub1_158` as the detached Class411 camera object used by the developer camera path.
+- The first Class24 reuse patch detached correctly but its W/A/S/D/Q/E changes were placed in unreached `Class24.method711()`; that patch location is runtime-rejected and `Class24.java` is restored to stock.
+- Current implementation activates/reuses the detached Class24/Class411 camera and drives Construction controls through `ConstructionBuildCamera.tick()`, called once per `client.cycles` from the live `Class343.method4302(...)` viewport seam immediately before camera submission.
+- Runtime VERIFIED in the user's acceptance sweep: automatic activation, W/S/A/D movement, Shift fast, Ctrl precision, Q/E vertical movement, mouse-look, normal-camera restore on close, and clean reopen.
+- Camera ownership remains client-side; confirmed object placement remains server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
+- Smooth acceleration/deceleration and click-to-stop are not yet promoted on this live controller; add them only after the remaining placement/ghost integration checks.
+- RTS, Top Down, Orbit/Focus and Player View remain accepted next views; deterministic preset values are deferred until the current Free Build integration gate closes.
 
 Still pending in this slice:
 
-- Runtime acceptance that opening the palette activates native Free Build with no root-interface change or crash.
-- Runtime acceptance of WASD direction, Shift/Ctrl speeds, Q/E vertical sign, right-drag feel, acceleration/deceleration and exact normal-camera restore on close/reopen.
+- Runtime VERIFIED: opening the palette activates the detached Class411 Free Build camera without a hotkey; W/S/A/D, Shift/Ctrl, Q/E, mouse-look, normal-camera restore and close/reopen all work in the user's acceptance sweep.
 - Runtime acceptance that Paint click consumption keeps the player stationary and produces exactly one authoritative object; if the AWT consumed event still leaks to Matrix3 action 23, move that suppression to the already-verified menu-action seam.
 - Runtime verification that hover/white ghost, rotation 0-3, model switching, terrain alignment, cancel/stale-hover cleanup and one-preview-per-cycle behavior remain stable while detached.
 - Valid/invalid placement feedback tied to future settlement occupancy/rules.
@@ -547,10 +545,10 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle: 1.1 — Matrix3 ownership and foundation discovery
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
-- Tooling status: CLASS411 LIVE-TICK FREE BUILD INPUT FIX IMPLEMENTED — RUNTIME ACCEPTANCE PENDING
+- Tooling status: CLASS411 FREE BUILD CONTROLS + LIFECYCLE RUNTIME VERIFIED — PLACEMENT/GHOST INTEGRATION RETEST PENDING
 - Approval state: SAP AAA remains active for this Construction camera slice; runtime evidence identified the proven Class24/Class411 freecam owner and the approved implementation now reuses that exact path.
-- Current checklist item: run one short live-tick Free Build acceptance session and confirm the server console receives ENTER -> TICK -> INPUT while W/A/S/D/Q/E actually move the detached Class411 camera.
-- Current objective: runtime-accept the live `ConstructionBuildCamera.tick()` control seam on the detached Class24/Class411 camera without legacy interfaces, player teleport, second scene picking or client world-object ownership; only then add smoothing and RTS/top-down presets.
+- Current checklist item: complete the remaining Free Build integration pass: player-stationary behavior, ghost hover/rotation/piece switching, one authoritative placement/no Walk Here leak, pre-existing-freecam preservation and server-console diagnostic sequence.
+- Current objective: close the Free Build integration gate around the now-runtime-verified live Class24/Class411 controls, without changing camera ownership, scene picking or server-authoritative placement; then add smoothing/click-to-stop and RTS/top-down presets on the same owner.
 
 ## Verification classifications
 
@@ -580,6 +578,7 @@ Later interaction polish after single-piece preview is stable:
 - Ghost debug messages before the exception are not the initiating crash source, and the later `ConnectException` is secondary to the client crash.
 - Native generic-camera Free Build v1 failed runtime acceptance: Construction opened, but the attempted camera controls did not operate the live camera and the scene view became invalid/empty-looking. That implementation is rejected.
 - First Class24 reuse runtime acceptance was partial: opening Construction successfully detached the camera, but W/A/S/D/Q/E did not move it. The movement code had been placed in `Class24.method711()` and was not reached by the current Construction runtime path.
+- Live-tick Free Build controls are runtime VERIFIED: the user's follow-up sweep confirmed automatic activation, W/S/A/D, Q/E, Shift/Ctrl speed modifiers, mouse-look, normal-camera restore and clean close/reopen behavior.
 - Runtime CAM DEBUG captures proved the observed moving view remained mode 1 / `source=CLASS411` while generic camera XYZ stayed `0,0,0`; source tracing separately established `Class24.aClass411_Sub1_158` as the actual developer detached-camera owner.
 
 ### verified-static
@@ -623,7 +622,7 @@ Later interaction polish after single-piece preview is stable:
 - Exact persistent settlement-state owner to add alongside/around the classic POH `House` ownership model.
 - Best Matrix3 instance/dynamic-region owner for freeform settlement projection.
 - Final proper wooden-wall definition; `13450` is verified as a Wooden fence and should not be promoted as the final wall asset.
-- Q/E vertical direction, live-tick movement direction/speed and final modern movement feel on the detached Class411 path; runtime acceptance decides whether Q/E needs swapping before smoothing.
+- Final modern movement feel once acceleration/deceleration and click-to-stop are layered onto the now-runtime-verified live Class411 control seam.
 - Exact deterministic RTS/top-down/orbit preset values and transition feel.
 
 ## Testing
@@ -646,6 +645,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Runtime-rejected the first native generic-camera Free Build attempt after it failed to control the live camera correctly and produced invalid/empty-looking scene views.
 - Runtime CAM DEBUG proved the observed moving view uses the Class411 render family rather than the generic globals; source trace then identified the exact Class24 detached-camera activation/update/close path.
 - Runtime-tested the first Class24 reuse: camera detachment worked but W/A/S/D/Q/E did not. Restored stock `Class24.java`, moved Construction controls into `ConstructionBuildCamera.tick()` at the live `Class343.method4302(...)` viewport seam, and added one-shot server-console ENTER/TICK/INPUT/FAIL/EXIT diagnostics.
+- Runtime-verified the live-tick Free Build control/lifecycle sweep: automatic activation, W/S/A/D, Q/E, Shift/Ctrl, mouse-look, camera restore and reopen all work.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
@@ -653,7 +653,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull and run one live-tick Free Build acceptance session. Confirm the server console shows `ENTER`, then `TICK live`, then one `INPUT ...` line when a movement key is pressed; verify W/S/A/D/Q/E actually move the detached camera before testing ghost/placement and close/reopen behavior.
+**Next checklist item:** Complete the remaining Free Build integration pass: verify the player stays physically planted, ghost hover/rotation/piece switching remain stable while detached, one build click creates exactly one real object without Walk Here leakage, a pre-existing detached camera survives Construction close, and the bounded server-console ENTER/TICK/INPUT/EXIT diagnostics show no FAIL state.
 
 **Files/systems already inspected:**
 
@@ -725,29 +725,22 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Pending runtime verification:**
 
-- Opening Construction automatically activates the detached Class24/Class411 camera without a hotkey.
-- Server console receives one `ENTER` line followed by one `TICK live` line, proving the live viewport control seam is executing.
-- First W/A/S/D/Q/E input produces one `INPUT ...` server-console line with the expected key state set true.
-- W/S forward/back and A/D strafing move relative to camera orientation; arrow aliases remain usable.
-- Shift fast and Ctrl precision speeds are useful.
-- Q/E vertical direction is correct; swap only if runtime proves the intuitive direction is reversed.
-- Mouse look updates the same detached Class411 camera from the live Construction tick.
-- The player remains physically stationary while the detached camera moves.
-- Existing white/translucent preview follows hovered tiles; piece switching, rotation, terrain alignment and cancel/stale-hover behavior remain stable.
-- Confirmed placement still creates exactly one server-authoritative real object; if action-23 movement leaks through a build click, patch only the already-verified menu-action seam.
-- Closing Construction returns to normal camera when Construction owns the detached camera; reopening works cleanly.
+- Player remains physically stationary while the detached camera moves and while a build click is confirmed.
+- Existing white/translucent preview follows hovered tiles; piece switching, rotation, terrain alignment and cancel/stale-hover behavior remain stable while detached.
+- Confirmed placement creates exactly one server-authoritative real object and does not leak the same click into Walk Here.
 - A manually active detached camera that predates Construction survives palette close.
-- No `FAIL detached-camera-not-active` or tick-exception line appears.
-- No camera debug overlay is present; diagnostics are server-console only.
+- Server console receives the bounded `ENTER -> TICK -> INPUT -> EXIT` sequence with no `FAIL` diagnostic.
+- Existing arrow-key aliases remain functional if they are intended to be preserved.
+- No camera/render instability, duplicate ghost or scene corruption occurs during the combined placement pass.
 - Final wall/floor/door art selections still need visual acceptance.
 
 **Blockers:**
 
-- No camera-owner discovery blocker remains. The current camera gate is runtime acceptance of the explicit live `ConstructionBuildCamera.tick()` control hook on the detached Class24/Class411 camera.
+- No camera-owner or basic-control blocker remains. The current camera gate is the remaining placement/ghost/lifecycle integration pass around the runtime-verified live `ConstructionBuildCamera.tick()` controls.
 - Persistent settlement-state/instance ownership remains intentionally separate and unresolved until the exact Bundle 1.2 file plan is produced.
 
-**Important remaining uncertainty:** whether the live viewport tick sees the expected Matrix3 key states at runtime, plus Q/E vertical sign, player-stationary build-click behavior and final movement feel. One-shot server-console TICK/INPUT diagnostics are now the acceptance evidence. Smooth acceleration/deceleration and RTS/top-down/orbit preset values remain intentionally deferred.
+**Important remaining uncertainty:** player-stationary build-click behavior, one-placement/no-Walk-Here integration, pre-existing-freecam preservation, and final movement feel after smoothing/click-to-stop. The basic live viewport tick and W/A/S/D/Q/E/Shift/Ctrl/mouse-look lifecycle are runtime verified.
 
 ## Next recommended work
 
-Run one short live-tick Free Build acceptance session. First check the server console for `ENTER -> TICK -> INPUT`, then verify actual W/A/S/D/Q/E movement. If that passes, finish the same session with stationary-player, ghost/placement and close/reopen checks; then add smooth modern movement and view presets on this same Class411 owner without reopening camera architecture.
+Run one short remaining Free Build integration session: stationary player, ghost hover/rotation/piece switching, exactly one authoritative placement with no Walk Here leakage, pre-existing-freecam preservation, and clean server-console diagnostics. If that passes, mark Free Build v1 runtime verified and add smooth acceleration/deceleration, click-to-stop, then RTS/top-down presets on this same Class411 owner.
