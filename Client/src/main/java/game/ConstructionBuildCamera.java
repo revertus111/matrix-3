@@ -203,6 +203,11 @@ public final class ConstructionBuildCamera {
                 event.consume();
             } else if (event.getButton() == MouseEvent.BUTTON1) {
                 stopMovement();
+                // Paint-mode placement uses Matrix3's already-resolved hover tile
+                // and consumes the click so the player does not also Walk Here.
+                if (ConstructionPlacementController.placeHoveredFromBuildCamera()) {
+                    event.consume();
+                }
             }
         } else if (event.getID() == MouseEvent.MOUSE_RELEASED && event.getButton() == MouseEvent.BUTTON3) {
             rightDragging = false;
