@@ -106,3 +106,11 @@
 - The preview remains client-only and unregistered; no scene ownership, collision, persistence or server placement authority was introduced.
 - Current tint is visibly red rather than the intended white and no translucency is present, so visual ghost styling remains pending.
 - Rotation, hover-follow behavior, piece switching, terrain alignment, cancel/stale-hover cleanup and duplicate/flicker behavior remain targeted runtime checks before ghost v1 is accepted.
+
+2026-09-17 - Construction ghost white/translucent styling correction
+- Verified-static `AbstractModel.method1396(...)` interpolates packed colour components with `weight >> 7`; the previous weight 160 overshot the target and explains the runtime red result. The ghost now uses weight 128 for an exact zero-saturation / maximum-lightness target.
+- Verified-static `AbstractModel.alpha` is annotated as face alpha and `Model.method1467(byte, byte[])` sets the model face-alpha values; with a null array it applies one value to every face.
+- Added `Model.method1467((byte) 96, null)` after the colour override, targeting roughly 62% rendered opacity (`255 - 96`) for a visible but clearly translucent placement ghost.
+- Added one-shot alpha start/done diagnostics and included tint weight/face alpha in the final `DRAW_SUBMITTED` state.
+- Render hook, footprint decoding, placement authority, scene ownership, collision, persistence and server behavior are unchanged.
+- Runtime retest is required to accept the white/translucent appearance and then verify hover following, rotation, piece switching, cancellation and scene stability in one bundled pass.
