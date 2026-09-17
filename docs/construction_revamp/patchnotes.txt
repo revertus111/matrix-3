@@ -92,3 +92,10 @@
 - Added a temporary client-owned `GHOST DEBUG:` JWindow that starts when the Construction palette opens and displays the latest ghost-pipeline milestone directly in the game client.
 - The debug bar begins at `PALETTE_OPENED - waiting for render hook` and advances through hook/model/tint/draw states; palette close ends the diagnostic session and hides the bar.
 - This patch changes diagnostics only; ghost rendering, placement authority, scene ownership, collision, persistence and server state remain unchanged.
+
+2026-09-17 - Construction ghost footprint decoder fix
+- On-screen diagnostics runtime-verified that the active ghost render hook is executing with a valid hovered tile.
+- The preview stopped at `SKIP_BOUNDS` because `ObjectDefinitions.sizeX/sizeY` were being multiplied by their obfuscated storage multipliers a second time, producing impossible billion-scale footprints.
+- Corrected the reads to use the 32-bit modular inverse decode multipliers (`sizeX * -876498849`, `sizeY * 1922784011`), which decode the default stored values back to a 1x1 footprint.
+- No render hook, placement authority, scene ownership, collision, persistence or server behavior changed in this fix.
+- Runtime retest should now advance past bounds validation into model build/tint/draw diagnostics.
