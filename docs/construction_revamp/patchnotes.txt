@@ -27,3 +27,10 @@
 - Preserved the verified runtime starter mappings: 13450 Wooden fence (temporary wall test), 13684 Floor decoration, 13344 Door.
 - Traced `ObjectDefinitions.method6061(...)` as an object-model factory, but the safe non-authoritative scene draw/insertion seam remains UNKNOWN; no fake 3D ghost was added.
 - Source and workstream documentation were reconciled without force-pushing or changing branches; runtime verification is the next gate.
+
+2026-09-16 - Construction palette flicker fix
+- Replaced direct `Canvas.getGraphics()` painting with a small owned `JWindow` and Swing-painted palette surface positioned over the Matrix3 game canvas.
+- The palette now has a persistent native surface instead of racing the game renderer, eliminating the known flash/flicker mechanism.
+- Only the palette rectangle owns mouse input; the rest of the heavyweight game canvas remains untouched for normal Matrix3 world interaction.
+- Preserved global search/rotation keyboard handling and world-canvas mouse-wheel rotation without creating a second scene/input owner.
+- Runtime verification is required to confirm stable visibility, window tracking and unchanged placement passthrough.
