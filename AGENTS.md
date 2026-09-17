@@ -164,6 +164,11 @@ Use the Deep lane only when the task genuinely requires unfamiliar obfuscated/co
 
 - Preserve original class, field, and method names unless the user explicitly approves renaming.
 - Trace only references needed for the requested behavior and stop once enough evidence exists to classify the finding.
+- Before expanding an unfamiliar obfuscated/decompiled trace, check the smallest relevant file set for existing developer/decompiler breadcrumbs such as `System.out`, `print`/`println`, `printStackTrace`, debug strings, comments, exception messages, temporary semantic labels, or similar diagnostics.
+- Treat debug/decompiler breadcrumbs as leads, not authority. Prior labels may reflect what an earlier developer believed a method did and must be checked against surrounding source/data and runtime behavior.
+- Use relevant breadcrumbs to narrow symbol/reference tracing and avoid unnecessary broad scans.
+- Promote breadcrumb-derived semantics to `verified-static` only when source/data supports them, and to `VERIFIED` only after runtime confirmation. Unsupported or contradictory labels remain `HYPOTHESIS` or `UNKNOWN`.
+- When a useful breadcrumb helps establish a stable mapping, preserve that verified mapping in the active subject documentation or a narrowly relevant source comment so future work does not rediscover it.
 - Use these labels accurately:
   - `VERIFIED`: runtime-confirmed behavior.
   - `verified-static`: directly established from source/data but not runtime-confirmed.
