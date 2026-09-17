@@ -45,7 +45,7 @@ Construction 3D ghost preview v1
 [x] Runtime diagnostic reaches `DRAW_SUBMITTED object=13450 type=0 rot=0 specialBounds=false` while the preview is visible.
 [ ] Active-scene-pass hook renders exactly one preview per client cycle without duplicate/flicker from the retained post-scene fallback.
 [x] Corrected direct-render path renders the selected real 3D object model on the current hovered world tile while placement is armed.
-[ ] Replace the current visibly red/opaque tint with the intended white ghost styling; true global translucency still needs a verified-safe alpha path.
+[ ] Retest the corrected white tint (`weight=128`) and verified face-alpha path (`faceAlpha=96`); accept only if the preview is visibly white/washed-out and translucent rather than red/opaque.
 [ ] Preview follows hovered world-tile changes without registering a persistent scene object.
 [ ] Rotate -, Rotate +, R, Shift+R and mouse-wheel rotation update the preview orientation through 0-3.
 [ ] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
@@ -53,7 +53,7 @@ Construction 3D ghost preview v1
 [ ] Cancel, palette close or stale/lost hover removes the preview immediately without leaving a model behind.
 [ ] Confirmed placement still routes through the existing server-authoritative devspawn path and does not duplicate the preview as a second object.
 [ ] Camera movement and normal scene rendering remain stable while the preview is visible.
-[ ] V1 validity coloring remains deferred until the base 3D path is runtime-proven.
+[ ] V1 validity coloring remains deferred until the base ghost interaction/stability checks are complete.
 
 Phase 1 Bundle 1.2 — placement foundation
 [ ] Enter the settlement instance without disturbing normal world state.
