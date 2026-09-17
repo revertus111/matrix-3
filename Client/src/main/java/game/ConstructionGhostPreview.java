@@ -26,6 +26,8 @@ public final class ConstructionGhostPreview {
     private static final int GHOST_TINT_SATURATION = 0;
     private static final int GHOST_TINT_LIGHTNESS = 127;
     private static final int GHOST_TINT_WEIGHT = 160;
+    private static final int OBJECT_SIZE_X_DECODE = -876498849;
+    private static final int OBJECT_SIZE_Y_DECODE = 1922784011;
 
     private static final int DEBUG_CLASS578_ENTRY = 1 << 0;
     private static final int DEBUG_CLASS578_IMMEDIATE = 1 << 1;
@@ -177,8 +179,8 @@ public final class ConstructionGhostPreview {
         }
 
         int rotation = ConstructionPlacementController.getRotation() & 0x3;
-        int sizeX = definition.sizeX * 1755098015;
-        int sizeY = definition.sizeY * -1692133213;
+        int sizeX = definition.sizeX * OBJECT_SIZE_X_DECODE;
+        int sizeY = definition.sizeY * OBJECT_SIZE_Y_DECODE;
         if ((rotation & 0x1) != 0) {
             int swap = sizeX;
             sizeX = sizeY;
