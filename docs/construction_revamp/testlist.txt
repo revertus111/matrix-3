@@ -37,8 +37,9 @@ Custom Construction palette + preview foundation
 Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
 [x] Post-scene + renderer-environment + Matrix3 `Class90` draw-contract retest still produced no visible ghost with a valid displayed target tile.
-[ ] Instrumented runtime emits one `[ConstructionGhostPreview]` terminal state while placement is armed over a valid target tile; capture that line before changing renderer code again.
+[ ] Instrumented runtime emits one `[ConstructionGhostPreview]` terminal state while placement is armed over a valid target tile; capture that line before changing renderer ownership again.
 [ ] Corrected direct-render path renders the selected real 3D object model on the current hovered world tile while placement is armed.
+[ ] Visible preview uses the current washed-out white ghost tint; true global translucency remains pending until the base model draw is runtime-proven.
 [ ] Preview follows hovered world-tile changes without registering a persistent scene object.
 [ ] Rotate -, Rotate +, R, Shift+R and mouse-wheel rotation update the preview orientation through 0-3.
 [ ] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
@@ -46,7 +47,7 @@ Construction 3D ghost preview v1
 [ ] Cancel, palette close or stale/lost hover removes the preview immediately without leaving a model behind.
 [ ] Confirmed placement still routes through the existing server-authoritative devspawn path and does not duplicate the preview as a second object.
 [ ] Camera movement and normal scene rendering remain stable while the preview is visible.
-[ ] V1 is accepted without translucency/tint/validity coloring; those remain deferred until the base 3D path is runtime-proven.
+[ ] V1 validity coloring remains deferred until the base 3D path is runtime-proven.
 
 Phase 1 Bundle 1.2 — placement foundation
 [ ] Enter the settlement instance without disturbing normal world state.
