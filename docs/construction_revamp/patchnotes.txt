@@ -136,3 +136,10 @@
 - No custom camera physics, player teleport, scene picker, or placement authority was added.
 - Free Build is the first runtime target; RTS/top-down/orbit presets are documented but remain pending a verified camera-preset seam rather than guessed packet values.
 - Runtime verification is required for current-client WASD/Q/E controls, stationary-player click behavior, ghost compatibility, and clean normal-camera restoration.
+
+2026-09-17 - Construction build-camera Orb crash safety correction
+- Runtime test proved the legacy Orb-of-Oculus interface path is incompatible with the current Matrix3 client/cache: opening the Construction palette crashed during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`.
+- The fatal chain is `Class104_Sub1.method9918(...) -> Class512.method6083(...) -> Class83.method1256(...)`; `InterfaceManager.gazeOrbOfOculus()` installs legacy root/component `475/57`, matching the invalid component index.
+- Disabled the Construction client bridge from sending `itembrowser constructioncamera enter/exit`; palette open/close no longer requests the incompatible legacy root interface.
+- Ghost debug output immediately before the exception is not the initiating failure, and the later `ConnectException` is secondary crash-report/network behavior.
+- Modern Free Build camera work remains blocked on a verified current-client camera/input owner; exact `FreeMove`, `VK_W`, and camera-position searches did not expose a trustworthy current seam, so no obfuscated field or packet value was guessed.
