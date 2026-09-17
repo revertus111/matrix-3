@@ -148,3 +148,12 @@
 - Disabled the owner-only server `itembrowser constructioncamera` entry point so manual/accidental use cannot invoke the rejected legacy Orb root/interface path.
 - The command now fails closed with a compatibility message and leaves camera/interface state untouched.
 - Construction camera work remains blocked on the verified current-client camera/input seam; no legacy interface or guessed camera state was reintroduced.
+
+2026-09-17 - Native Construction Free Build camera v1
+- Verified-static the current renderer camera path in `Class343.method4302(...)`: generic scene rendering consumes `Class36.anInt387`, `Class572_Sub13_Sub2.anInt11451`, `Class49.anInt490`, `Class455.anInt5187` and `Class406.anInt4765`; Matrix3 camera mode 1 instead uses the newer `Class411` camera object directly.
+- Replaced the disabled Construction camera placeholder with a client-owned Free Build camera that snapshots/restores the previous camera mode/transform and never opens legacy root/interface 475.
+- Free Build uses a Construction-only generic camera mode while active and writes the verified renderer camera globals at ~60 Hz.
+- Added WASD horizontal movement relative to camera yaw, smooth acceleration/deceleration, Shift fast movement, Ctrl precision movement, Q/E vertical movement, and right-mouse-drag yaw/pitch with Matrix3's 1024-3072 pitch clamp.
+- Left-clicking the game canvas zeros Construction camera velocity immediately; confirmed placement/world authority remain unchanged.
+- Palette close restores the exact previous Matrix3 camera mode and camera transform.
+- Runtime verification is required for movement direction/speed, Q/E sign, right-drag feel, normal-camera restoration, ghost compatibility, and whether action-23 Walk Here still moves the player after a build click.
