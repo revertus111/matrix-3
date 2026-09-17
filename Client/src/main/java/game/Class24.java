@@ -41,40 +41,30 @@ public class Class24 {
 		anInt156 = Class26.aClass564_216.method6657((short) -4477) * -1827312049;
 		anInt159 = Class26.aClass564_216.method6658((byte) -95) * 935463047;
 		class230.method3175();
-		float constructionStep = ConstructionBuildCamera.movementStep();
-		boolean constructionCamera = ConstructionBuildCamera.isRequested();
-		if (Class108.aClass549_1426.method6514(98, (byte) 1)
-				|| (constructionCamera && Class108.aClass549_1426.method6514(33, (byte) 1))) {
-			Class240 class240_6_ = Class240.method3316(0.0F, 0.0F, constructionStep);
+		if (Class108.aClass549_1426.method6514(98, (byte) 1)) {
+			Class240 class240_6_ = Class240.method3316(0.0F, 0.0F, 25.0F);
 			class240_6_.method3288(class230);
 			class240_6_.aFloat2656 *= -1.0F;
 			class240.method3305(class240_6_);
 		}
-		if (Class108.aClass549_1426.method6514(99, (byte) 1)
-				|| (constructionCamera && Class108.aClass549_1426.method6514(49, (byte) 1))) {
-			Class240 class240_7_ = Class240.method3316(0.0F, 0.0F, -constructionStep);
+		if (Class108.aClass549_1426.method6514(99, (byte) 1)) {
+			Class240 class240_7_ = Class240.method3316(0.0F, 0.0F, -25.0F);
 			class240_7_.method3288(class230);
 			class240_7_.aFloat2656 *= -1.0F;
 			class240.method3305(class240_7_);
 		}
-		if (Class108.aClass549_1426.method6514(96, (byte) 1)
-				|| (constructionCamera && Class108.aClass549_1426.method6514(48, (byte) 1))) {
-			Class240 class240_8_ = Class240.method3316(-constructionStep, 0.0F, 0.0F);
+		if (Class108.aClass549_1426.method6514(96, (byte) 1)) {
+			Class240 class240_8_ = Class240.method3316(-25.0F, 0.0F, 0.0F);
 			class240_8_.method3288(class230);
 			class240_8_.aFloat2656 *= -1.0F;
 			class240.method3305(class240_8_);
 		}
-		if (Class108.aClass549_1426.method6514(97, (byte) 1)
-				|| (constructionCamera && Class108.aClass549_1426.method6514(50, (byte) 1))) {
-			Class240 class240_9_ = Class240.method3316(constructionStep, 0.0F, 0.0F);
+		if (Class108.aClass549_1426.method6514(97, (byte) 1)) {
+			Class240 class240_9_ = Class240.method3316(25.0F, 0.0F, 0.0F);
 			class240_9_.method3288(class230);
 			class240_9_.aFloat2656 *= -1.0F;
 			class240.method3305(class240_9_);
 		}
-		if (constructionCamera && Class108.aClass549_1426.method6514(34, (byte) 1))
-			class240.aFloat2656 += constructionStep;
-		if (constructionCamera && Class108.aClass549_1426.method6514(32, (byte) 1))
-			class240.aFloat2656 -= constructionStep;
 		Class572_Sub17 class572_sub17 = new Class572_Sub17(0, (int) class240.aFloat2653, (int) class240.aFloat2656, (int) class240.aFloat2657);
 		class423_sub2.method9278(class572_sub17, (byte) 3);
 		Class497 class497 = client.aClass613_8605.method7280((byte) -115);
