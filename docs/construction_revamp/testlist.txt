@@ -37,7 +37,7 @@ Custom Construction palette + preview foundation
 Construction build camera v1
 [x] First Orb-backed runtime attempt crashes during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`; legacy root/component mapping is rejected for Construction.
 [x] Native generic-camera Free Build runtime acceptance FAILED: Construction opened, but the attempted camera controls did not operate the live camera and produced invalid/empty-looking scene views.
-[x] Runtime CAM DEBUG capture proved the moving detached camera renders through `mode=1 / source=CLASS411` while generic XYZ remained `0,0,0` in the captured session.
+[x] Runtime CAM DEBUG capture proved the observed moving view renders through `mode=1 / source=CLASS411` while generic XYZ remained `0,0,0`; this rejects generic-global ownership but does not alone distinguish normal mode-1 Class411 from the separate developer freecam.
 [x] Source trace proved the existing developer detached camera owner is `Class24.aClass411_Sub1_158`, activated by Ctrl+backtick through `Class102_Sub5.method9948(...)`, updated by `Class24.method711()`, and closed by `RSSocket.method7604(...)`.
 [x] Temporary CAM DEBUG camera overlay/probe is removed; camera diagnostics return to transition-only console output.
 [x] Construction now activates/reuses the proven Class24/Class411 freecam and preserves a pre-existing manually active freecam.
