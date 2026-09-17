@@ -38,20 +38,24 @@ Construction build camera v1
 [x] First Orb-backed runtime attempt crashes during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`; legacy root/component mapping is rejected for Construction.
 [x] Ghost diagnostics before the exception are not the initiating crash source.
 [x] Later `ConnectException` output is secondary to the client crash and not the initiating failure.
-[ ] After the crash-safety patch, opening the Construction palette no longer switches to legacy root 475 or crashes on component 57.
-[ ] Manually invoking `itembrowser constructioncamera enter` returns the compatibility warning and does not invoke the legacy Orb interface.
-[ ] Existing palette/hover/ghost/placement behavior remains unchanged with the Orb request disabled.
-[ ] Identify the current Matrix3 client camera/input owner with a bounded trace before implementing detached movement.
-[ ] WASD moves the future Free Build camera without moving the player.
-[ ] Shift/Ctrl provide fast/precision camera movement where practical.
-[ ] Q/E adjusts camera height.
-[ ] Right-mouse drag rotates/looks around the scene.
-[ ] Clicking a target tile zeroes camera velocity immediately and does not intentionally walk the player.
-[ ] Hovered-tile tracking and the white/translucent ghost continue working while the future camera is detached.
+[x] Current Matrix3 generic render-camera globals are verified-static from `Class343.method4302(...)`.
+[x] Native Free Build implementation no longer calls the legacy Orb/root-interface path.
+[ ] Opening the Construction palette activates Free Build without switching root interface or crashing.
+[ ] WASD moves the camera horizontally without moving the player.
+[ ] Forward/back/strafe directions match the current camera yaw.
+[ ] Shift increases movement speed; Ctrl provides precision movement.
+[ ] Releasing movement keys decelerates smoothly instead of snapping.
+[ ] Q/E move the camera vertically in the expected directions.
+[ ] Right-mouse drag rotates yaw/pitch smoothly and respects the 1024-3072 pitch clamp.
+[ ] Left-clicking the game canvas zeros camera velocity immediately.
+[ ] Determine whether action-23 Walk Here still moves the player after a build click; if yes, patch only Construction Free Build + Paint consumption.
+[ ] Hovered-tile tracking and the white/translucent ghost continue working while detached.
 [ ] Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
 [ ] Clicking a target tile still creates exactly one server-authoritative placed object.
-[ ] Closing/cancelling Construction restores normal camera behavior without a legacy Orb/root-interface reset.
-[ ] RTS/top-down/orbit presets remain deferred until their current-client camera semantics are verified instead of guessed.
+[ ] Closing/cancelling Construction restores the exact previous Matrix3 camera mode/transform.
+[ ] Reopening Construction starts Free Build cleanly after a previous close.
+[ ] No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurs.
+[ ] RTS/top-down/orbit presets remain deferred until Free Build runtime behavior is accepted and preset semantics are verified.
 
 Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
