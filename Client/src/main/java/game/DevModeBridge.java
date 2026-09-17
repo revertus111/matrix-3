@@ -229,9 +229,11 @@ public final class DevModeBridge {
     }
 
     /**
-     * Handles only custom Dev Mode actions and leaves every normal Matrix3 menu
-     * action untouched. Paint placement observes normal action 23, queues a Dev
-     * spawn, then returns false so Matrix3 still performs its ordinary Walk Here.
+     * Handles only custom Dev Mode actions and otherwise leaves normal Matrix3
+     * menu actions untouched. Paint placement outside Construction Free Build
+     * still mirrors action 23 and allows ordinary Walk Here. While Free Build is
+     * active, action 23 instead stops camera momentum, optionally confirms the
+     * armed Paint placement, and is consumed so the player remains planted.
      */
     static boolean handleMenuAction(int action, int payloadA, int payloadB) {
         AtlasRuntimeBridge.observeMenuAction(action, payloadA, payloadB);
