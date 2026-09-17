@@ -33,7 +33,7 @@ Classification:
 - `VERIFIED`: the ghost renderer diagnostics before the exception are not the crash source; the fatal exception is the interface attachment path.
 - `VERIFIED`: the later `ConnectException` occurs after the client failure and is not the initiating crash.
 
-The Construction client bridge no longer sends the Orb enter/exit command. The legacy server command remains unused and must not be called by Construction.
+The Construction client bridge no longer sends the Orb enter/exit command. The owner-only server `constructioncamera` command is also fail-closed and now reports that the legacy Orb interface is incompatible instead of invoking it.
 
 ## Accepted controls and behavior
 
@@ -84,6 +84,7 @@ Once the current owner is established, implement the smallest client-side Free B
 
 - Opening the Construction palette no longer sends `itembrowser constructioncamera enter`.
 - Opening the Construction palette no longer switches to legacy root `475` or crashes on component `57`.
+- Manually invoking the owner-only `itembrowser constructioncamera ...` command returns the compatibility warning and does not invoke the legacy Orb interface.
 - The existing palette, hover tracking, ghost preview and confirmed placement path behave exactly as before the Build Camera experiment.
 - Closing the palette requires no Orb reset because Orb mode was never entered.
 
@@ -101,6 +102,6 @@ Once the current owner is established, implement the smallest client-side Free B
 ## Classification
 
 - `VERIFIED`: the legacy Orb-interface implementation is incompatible with the current Matrix3 client and is rejected for Construction.
-- `VERIFIED`: Construction no longer invokes that interface path after the crash-safety patch.
+- `verified-static`: Construction no longer invokes that interface path from either the client lifecycle bridge or the owner-only server command.
 - `UNKNOWN`: exact current-client camera/input owner for modern WASD detached movement.
 - `UNKNOWN`: exact safe implementation seam for deterministic RTS/top-down/orbit presets.
