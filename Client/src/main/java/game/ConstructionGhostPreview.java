@@ -1,5 +1,17 @@
 package game;
 
+import java.awt.Canvas;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.IllegalComponentStateException;
+import java.awt.Point;
+import java.awt.Window;
+
+import javax.swing.BorderFactory;
+import javax.swing.JLabel;
+import javax.swing.JWindow;
+import javax.swing.SwingUtilities;
+
 /**
  * Client-only Construction placement preview.
  *
@@ -32,8 +44,34 @@ public final class ConstructionGhostPreview {
     private static volatile String lastDiagnosticKey = "";
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile int debugMilestones;
+    private static volatile boolean debugSessionActive;
+    private static volatile String latestDebugState = "IDLE";
+
+    private static JWindow debugWindow;
+    private static JLabel debugLabel;
+    private static Window debugOwner;
 
     private ConstructionGhostPreview() {
+    }
+
+    static void beginDebugSession() {
+        debugSessionActive = true;
+        debugMilestones = 0;
+        lastDiagnosticKey = "";
+        lastRenderedCycle = Integer.MIN_VALUE;
+        publishDebug("PALETTE_OPENED - waiting for render hook");
+    }
+
+    static void endDebugSession() {
+        debugSessionActive = false;
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                if (debugWindow != null) {
+                    debugWindow.setVisible(false);
+                }
+            }
+        });
     }
 
     static void debugClass578Entry() {
@@ -43,12 +81,12 @@ public final class ConstructionGhostPreview {
 
     static void debugClass578ImmediatePath() {
         debugMilestone(DEBUG_CLASS578_IMMEDIATE,
-                "HOOK Class578 immediate post-object path reached (Class531 has no queued owner)");
+                "HOOK Class578 immediate post-object path reached");
     }
 
     static void debugClass578RenderCall() {
         debugMilestone(DEBUG_CLASS578_RENDER_CALL,
-                "HOOK Class578 calling ConstructionGhostPreview.render inside active scene pass");
+                "HOOK Class578 calling ghost renderer inside active scene pass");
     }
 
     /**
@@ -230,6 +268,7 @@ public final class ConstructionGhostPreview {
             }
             debugMilestones |= bit;
             System.out.println("[ConstructionGhostDebug] " + message);
+            publishDebug(message);
         }
     }
 
@@ -239,5 +278,68 @@ public final class ConstructionGhostPreview {
         }
         lastDiagnosticKey = key;
         System.out.println("[ConstructionGhostPreview] " + message);
+        publishDebug(message);
+    }
+
+    private static void publishDebug(String message) {
+        latestDebugState = message == null ? "UNKNOWN" : message;
+        if (!debugSessionActive) {
+            return;
+        }
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                refreshDebugWindow();
+            }
+        });
+    }
+
+    private static void refreshDebugWindow() {
+        if (!debugSessionActive) {
+            if (debugWindow != null) {
+                debugWindow.setVisible(false);
+            }
+            return;
+        }
+
+        Canvas canvas = Class584.aCanvas7745;
+        if (canvas == null || !canvas.isDisplayable() || !canvas.isVisible()) {
+            return;
+        }
+        Window owner = SwingUtilities.getWindowAncestor(canvas);
+        if (owner == null) {
+            return;
+        }
+
+        if (debugWindow == null || debugOwner != owner) {
+            if (debugWindow != null) {
+                debugWindow.dispose();
+            }
+            debugOwner = owner;
+            debugLabel = new JLabel();
+            debugLabel.setOpaque(true);
+            debugLabel.setBackground(new Color(10, 13, 18));
+            debugLabel.setForeground(new Color(111, 220, 235));
+            debugLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
+            debugLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+
+            debugWindow = new JWindow(owner);
+            debugWindow.setFocusableWindowState(false);
+            debugWindow.setAutoRequestFocus(false);
+            debugWindow.getContentPane().add(debugLabel);
+        }
+
+        debugLabel.setText("GHOST DEBUG: " + latestDebugState);
+        Point canvasLocation;
+        try {
+            canvasLocation = canvas.getLocationOnScreen();
+        } catch (IllegalComponentStateException ex) {
+            return;
+        }
+        int width = Math.max(220, Math.min(680, canvas.getWidth() - 20));
+        debugWindow.setBounds(canvasLocation.x + 10, canvasLocation.y + 18, width, 28);
+        if (!debugWindow.isVisible()) {
+            debugWindow.setVisible(true);
+        }
     }
 }
