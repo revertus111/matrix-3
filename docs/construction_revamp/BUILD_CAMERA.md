@@ -21,14 +21,9 @@ The camera is client-side only. World movement, scene ownership and confirmed ob
 
 ### Proven detached camera
 
-Runtime CAM DEBUG captures established:
+Runtime CAM DEBUG captures established that the observed moving camera view rendered through mode `1` / `CLASS411`, while generic camera XYZ remained `0,0,0` in the captured session. That proves the failed generic-global implementation was targeting the wrong active render family, but the screenshots alone do not distinguish the normal mode-1 Class411 camera from the separate developer freecam.
 
-- camera mode remains `1`;
-- render source is `CLASS411`;
-- effective render XYZ changes while the detached camera moves;
-- generic camera XYZ remains `0,0,0` in the observed session.
-
-Source trace then established the existing developer free-camera owner:
+Source trace then established the existing developer detached-camera owner:
 
 - Java backtick is mapped to internal key `28`.
 - Ctrl is internal key `82`.
@@ -150,7 +145,7 @@ Preset values remain UNKNOWN until Free Build is runtime accepted.
 
 - `VERIFIED`: legacy Orb interface path crashes current client and is rejected.
 - `VERIFIED`: generic renderer-global Free Build attempt failed runtime acceptance and is rejected.
-- `VERIFIED`: runtime CAM DEBUG showed mode 1 / CLASS411 as the active moving camera render path while generic XYZ remained zero in the captured session.
+- `VERIFIED`: runtime CAM DEBUG showed the observed moving view rendering through mode 1 / CLASS411 while generic XYZ remained zero in the captured session; this runtime evidence rejects generic-global ownership but does not by itself identify the separate developer-freecam object.
 - `verified-static`: existing detached developer freecam is `Class24.aClass411_Sub1_158`, activated through `Class102_Sub5.method9948(...)`, tested by `IncomingPacket.method4113(...)`, updated by `Class24.method711()`, and closed by `RSSocket.method7604(...)`.
 - `verified-static`: Construction now activates/reuses that exact owner and preserves a pre-existing manually activated freecam.
 - `NEEDS TEST`: Construction automatic activation, WASD mappings, Shift/Ctrl speeds, Q/E vertical direction, player-stationary behavior, ghost compatibility and close/restore lifecycle.
