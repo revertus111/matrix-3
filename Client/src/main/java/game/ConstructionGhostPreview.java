@@ -11,6 +11,7 @@ public final class ConstructionGhostPreview {
 
     private static final int MODEL_FLAGS = 2048;
     private static final Class261 TRANSFORM = new Class261();
+    private static final Class90 RENDER_BOUNDS = new Class90();
 
     private ConstructionGhostPreview() {
     }
@@ -100,6 +101,12 @@ public final class ConstructionGhostPreview {
 
         Model model = (Model) built.anObject8324;
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
-        model.method1375(TRANSFORM, null, 0);
+        Class326 bounds = definition.aClass326_5684;
+        if (bounds != null) {
+            model.method1375(TRANSFORM, null, 0);
+            renderer.method1738(TRANSFORM, RENDER_BOUNDS, bounds);
+        } else {
+            model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        }
     }
 }
