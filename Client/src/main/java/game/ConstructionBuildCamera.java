@@ -1,45 +1,31 @@
 package game;
 
 /**
- * Construction-only lifecycle bridge into Matrix3's existing Orb of Oculus
- * free-camera mode.
+ * Construction build-camera lifecycle placeholder.
  *
- * This class does not own camera physics, player movement, scene picking, or
- * object placement. It only requests enter/exit through the same owner-only
- * client-to-server console bridge already used by Construction Dev placement.
+ * Runtime verification proved Matrix3's legacy Orb-of-Oculus interface path is
+ * incompatible with the current client/cache: entering it installs interface
+ * component 57 under root 475 and crashes the client with an
+ * ArrayIndexOutOfBoundsException while decoding SET_INTERFACE.
+ *
+ * Keep the Construction camera lifecycle seam client-owned, but do not request
+ * the obsolete server/interface path. A modern Free Build camera must be wired
+ * only after the current client camera/input owner is verified-static.
  */
 public final class ConstructionBuildCamera {
-
-    private static volatile boolean requested;
 
     private ConstructionBuildCamera() {
     }
 
     public static boolean isRequested() {
-        return requested;
+        return false;
     }
 
     public static String enter() {
-        if (requested) {
-            return "Construction build camera is already requested.";
-        }
-        String error = ClientConsoleBridge.queueConsoleCommand("itembrowser constructioncamera enter");
-        if (error != null) {
-            return error;
-        }
-        requested = true;
-        return "Construction build camera requested.";
+        return "Construction build camera disabled pending current-client camera seam.";
     }
 
     public static String exit() {
-        if (!requested) {
-            return "Construction build camera is not active.";
-        }
-        String error = ClientConsoleBridge.queueConsoleCommand("itembrowser constructioncamera exit");
-        if (error != null) {
-            return error;
-        }
-        requested = false;
-        return "Construction build camera exit requested.";
+        return "Construction build camera is not active.";
     }
 }
