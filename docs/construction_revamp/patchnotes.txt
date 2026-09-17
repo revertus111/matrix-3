@@ -72,3 +72,10 @@
 - Preview tint targets zero saturation / maximum signed-byte lightness with a 160 override weight for a washed-out white ghost appearance.
 - True global model translucency remains UNKNOWN and was not guessed; preview remains client-only and unregistered.
 - Existing pipeline diagnostics remain active until the preview is runtime visible.
+
+2026-09-17 - Construction ghost active-scene-pass hook
+- Added a narrow hook in `Class578.method6834(...)`, which Matrix3 calls directly after immediate real scene-object draw submissions.
+- The hook only runs for non-owned immediate `Class531` recycling while the normal `aClass174Array5838` world terrain is active, avoiding queued cleanup and alternate scene passes.
+- Added a one-render-per-`client.cycles` guard in `ConstructionGhostPreview` so repeated scene-object submissions cannot duplicate the ghost in one frame.
+- Existing `Class343` post-scene call remains as a fallback; the per-cycle guard prevents double submission when the in-pass hook fires first.
+- No `Class523` scene attach/remove, collision, persistence or server ownership was added.
