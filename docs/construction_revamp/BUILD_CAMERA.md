@@ -168,19 +168,25 @@ Runtime VERIFIED in the user's acceptance sweep:
 - Closing Construction restores the normal camera when Construction owned the detached camera.
 - Reopening Construction starts Free Build cleanly.
 
-Still pending explicit verification:
+Runtime VERIFIED in the smoothed Free Build acceptance run:
 
-- New acceleration/deceleration feels smooth and responsive at normal speed.
-- Shift fast and Ctrl precision still feel correct under the velocity system.
-- Releasing movement coasts to a clean stop without long drift or jitter.
-- Clicking the ground while moving stops the camera immediately; if a key is still held, movement does not resume until keys are released/re-pressed.
-- Server console receives `ENTER`, `TICK live`, first `INPUT`, first `STOP click`, and `EXIT` without a `FAIL` state.
-- Existing arrow aliases move the same detached camera.
-- Player remains physically stationary.
-- Ghost hover, piece switching and rotation remain functional while detached.
-- One build click produces exactly one server-authoritative real object without Walk Here leakage.
-- Pre-existing detached camera state is preserved when Construction did not own activation.
-- No camera/render instability, duplicate ghost or scene corruption occurs during the combined placement pass.
+- acceleration ramps smoothly from rest;
+- releasing input decelerates cleanly without excessive drift or jitter;
+- diagonal input is normalized;
+- Shift fast and Ctrl precision remain usable;
+- clicking ground while moving stops camera motion immediately;
+- if a movement key is still held, click-stop stays latched until release/re-press;
+- the player remains planted on the build click instead of Walk Here;
+- one Paint click creates exactly one server-authoritative real object;
+- the white/translucent ghost remains stable while detached;
+- no camera/render instability or ghost duplication/flicker appeared in the acceptance run.
+
+Still pending explicit edge verification:
+
+- server console receives the complete `ENTER -> TICK -> INPUT -> STOP click -> EXIT` sequence without a `FAIL` state;
+- existing arrow aliases move the same detached camera;
+- pre-existing detached camera state is preserved when Construction did not own activation;
+- full ghost interaction completeness remains tracked in the separate ghost checklist (all rotations/piece switches/terrain/cancel-stale-hover cases).
 
 ## Classification
 
@@ -191,5 +197,6 @@ Still pending explicit verification:
 - `verified-static`: Construction controls now execute from the live `Class343.method4302(...)` viewport seam and mutate the detached Class411 position/orientation directly.
 - `VERIFIED`: automatic Construction activation, W/S/A/D movement, Shift/Ctrl speed modifiers, Q/E vertical movement, mouse-look, normal-camera restore and close/reopen lifecycle passed the user's runtime sweep.
 - `verified-static`: smoothing is now time-based/world-velocity-driven on the live Class411 tick, and Free Build action 23 now owns click-to-stop + Walk Here suppression without changing server-authoritative placement.
-- `NEEDS TEST`: smoothing feel/constants, click-to-stop latch behavior, server-console diagnostic sequence, arrow aliases, player-stationary behavior, ghost/placement compatibility, pre-existing-freecam preservation and combined render stability.
+- `VERIFIED`: smoothing feel, normalized diagonals, Shift/Ctrl under smoothing, click-to-stop latch, planted-player build click, exactly-one authoritative Paint placement/no Walk Here, detached ghost stability and combined camera/render stability passed the user's runtime acceptance run.
+- `NEEDS TEST`: full server-console diagnostic sequence, arrow aliases, pre-existing-freecam preservation and the separate ghost completeness checklist.
 - `UNKNOWN`: final RTS/top-down/orbit preset values and transition feel.
