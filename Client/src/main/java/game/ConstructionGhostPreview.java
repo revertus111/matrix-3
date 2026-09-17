@@ -21,7 +21,7 @@ import javax.swing.SwingUtilities;
  */
 public final class ConstructionGhostPreview {
 
-    private static final int MODEL_FLAGS = 2048 | 0x80000;
+    private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x100;
     private static final int GHOST_TINT_HUE = 0;
     private static final int GHOST_TINT_SATURATION = 0;
     private static final int GHOST_TINT_LIGHTNESS = 127;
