@@ -20,20 +20,30 @@ Construction Editor prototype
 [ ] No settlement persistence or final 3D ghost-preview acceptance is claimed by this prototype.
 
 Custom Construction palette + preview foundation
-[ ] Construction Editor `Open in-game build palette` draws the custom palette over the live game canvas.
-[ ] Palette remains continuously visible for at least 10 seconds while the game renderer/camera updates; no flashing or flicker.
-[ ] Moving/resizing the Matrix3 window keeps the palette anchored over the game canvas instead of drifting over the Client Console or desktop.
-[ ] Palette close/Cancel consumes only palette input and does not leave hidden placement armed.
-[ ] Walls, Floors and Doors category tabs filter the starter catalog correctly.
-[ ] Search accepts text/backspace and filters across category/name/object id/note without leaking typing into normal game input while focused.
-[ ] Selecting Wooden fence, Floor decoration or Door immediately arms the existing Dev placement path with the correct object id/type.
-[ ] Hovered target coordinates update while the cursor moves over normal Matrix3 world tiles.
-[ ] Clicking outside the palette in Paint mode still reaches normal action 23 and places through the existing server-authoritative devspawn path.
-[ ] Palette Rotate -, Rotate +, R, Shift+R and mouse wheel change fixed rotation without double-rotating against the legacy editor listener.
-[ ] Paint/Continuous mode buttons re-arm the selected piece with the requested existing placement mode.
-[ ] Palette input never consumes normal world clicks unless the click is inside the palette itself.
-[ ] `13450` remains labeled Wooden fence / temporary wall test and is not presented as the final wooden wall.
-[ ] No 3D ghost is claimed until a safe client-only scene draw/insertion seam is verified.
+[x] Construction Editor `Open in-game build palette` draws the custom palette over the live game canvas.
+[x] Palette remains continuously visible for at least 10 seconds while the game renderer/camera updates; no flashing or flicker.
+[x] Moving/resizing the Matrix3 window keeps the palette anchored over the game canvas instead of drifting over the Client Console or desktop.
+[x] Palette close/Cancel consumes only palette input and does not leave hidden placement armed.
+[x] Walls, Floors and Doors category tabs filter the starter catalog correctly.
+[x] Search accepts text/backspace and filters across category/name/object id/note without leaking typing into normal game input while focused.
+[x] Selecting Wooden fence, Floor decoration or Door immediately arms the existing Dev placement path with the correct object id/type.
+[x] Hovered target coordinates update while the cursor moves over normal Matrix3 world tiles.
+[x] Clicking outside the palette in Paint mode still reaches normal action 23 and places through the existing server-authoritative devspawn path.
+[x] Palette Rotate -, Rotate +, R, Shift+R and mouse wheel change fixed rotation without double-rotating against the legacy editor listener.
+[x] Paint/Continuous mode buttons re-arm the selected piece with the requested existing placement mode.
+[x] Palette input never consumes normal world clicks unless the click is inside the palette itself.
+[x] `13450` remains labeled Wooden fence / temporary wall test and is not presented as the final wooden wall.
+
+Construction 3D ghost preview v1
+[ ] Armed placement renders the selected real 3D object model on the current hovered world tile.
+[ ] Preview follows hovered world-tile changes without registering a persistent scene object.
+[ ] Rotate -, Rotate +, R, Shift+R and mouse-wheel rotation update the preview orientation through 0-3.
+[ ] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
+[ ] Preview terrain height/alignment remains correct while moving across uneven nearby tiles.
+[ ] Cancel, palette close or stale/lost hover removes the preview immediately without leaving a model behind.
+[ ] Confirmed placement still routes through the existing server-authoritative devspawn path and does not duplicate the preview as a second object.
+[ ] Camera movement and normal scene rendering remain stable while the preview is visible.
+[ ] V1 is accepted without translucency/tint/validity coloring; those remain deferred until the base 3D path is runtime-proven.
 
 Phase 1 Bundle 1.2 — placement foundation
 [ ] Enter the settlement instance without disturbing normal world state.
