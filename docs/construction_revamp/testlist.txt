@@ -36,29 +36,31 @@ Custom Construction palette + preview foundation
 
 Construction build camera v1
 [x] First Orb-backed runtime attempt crashes during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`; legacy root/component mapping is rejected for Construction.
-[x] Native generic-camera Free Build runtime acceptance FAILED: Construction opened, but the attempted camera controls did not operate the live camera and produced invalid/empty-looking scene views.
-[x] Runtime CAM DEBUG capture proved the observed moving view renders through `mode=1 / source=CLASS411` while generic XYZ remained `0,0,0`; this rejects generic-global ownership but does not alone distinguish normal mode-1 Class411 from the separate developer freecam.
-[x] Source trace proved the existing developer detached camera owner is `Class24.aClass411_Sub1_158`, activated by Ctrl+backtick through `Class102_Sub5.method9948(...)`, updated by `Class24.method711()`, and closed by `RSSocket.method7604(...)`.
-[x] Temporary CAM DEBUG camera overlay/probe is removed; camera diagnostics return to transition-only console output.
-[x] Construction now activates/reuses the proven Class24/Class411 freecam and preserves a pre-existing manually active freecam.
-[ ] Opening the Construction palette automatically activates the detached Class411 freecam without needing Ctrl+backtick.
-[ ] Free Build starts from a sensible view around the local player; no empty/invalid scene view.
-[ ] Existing freecam mouse-look works while Construction is open.
-[ ] W/S move forward/back relative to the current freecam orientation.
+[x] Native generic-camera Free Build runtime acceptance FAILED: Construction opened, but the attempted generic-camera controls did not operate the live camera and produced invalid/empty-looking scene views.
+[x] Runtime CAM DEBUG rejected generic renderer-global ownership; source tracing identified `Class24.aClass411_Sub1_158` as the detached Class411 camera object used by the developer camera path.
+[x] First Class24 reuse acceptance FAILED partially: Construction automatically detached the camera, but W/A/S/D/Q/E did not move it.
+[x] Targeted trace showed the Construction movement code had been placed in `Class24.method711()`, which was not reached by the current Construction runtime path; the key-code table itself was not the failure.
+[x] Construction movement is removed from stock `Class24.java` and now runs through `ConstructionBuildCamera.tick()` at the live `Class343.method4302(...)` viewport seam.
+[x] Temporary CAM DEBUG camera overlay/probe remains removed.
+[ ] Opening the Construction palette automatically activates the detached Class411 camera without needing a hotkey.
+[ ] Server console prints `[ConstructionBuildCamera] ENTER ...` followed by exactly one `TICK live` line.
+[ ] Pressing the first movement key produces one server-console `INPUT W=... A=... S=... D=... Q=... E=...` line with the expected key set true.
+[ ] W/S move forward/back relative to the detached camera orientation.
 [ ] A/D strafe left/right correctly.
+[ ] Existing arrow-key movement aliases still work while Construction is active.
 [ ] Shift provides fast movement and Ctrl provides precision movement.
 [ ] Q/E move vertically; record if the intuitive raise/lower direction needs swapping.
+[ ] Existing detached-camera mouse-look works from the live Construction tick.
 [ ] The player remains physically stationary while the detached camera moves.
 [ ] Hovered-tile tracking and the white/translucent ghost continue working while detached.
 [ ] Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
-[ ] Paint-mode placement creates exactly one server-authoritative real object and does not intentionally Walk Here; if player movement still leaks through action 23, patch only the verified menu-action seam.
-[ ] Closing/cancelling Construction returns to normal camera when Construction activated the freecam.
+[ ] Paint-mode placement creates exactly one server-authoritative real object and does not intentionally Walk Here; if movement leaks through action 23, patch only the verified menu-action seam.
+[ ] Closing/cancelling Construction returns to normal camera when Construction activated the detached camera and server console prints one `EXIT` line.
 [ ] Reopening Construction starts Free Build cleanly after a previous close.
-[ ] If Ctrl+backtick freecam was manually active before opening Construction, closing Construction leaves that pre-existing freecam active.
-[ ] Console prints one `[ConstructionBuildCamera] ENTER ...` and one `EXIT ...` transition line for the session.
-[ ] No `CAM DEBUG` camera overlay remains.
+[ ] If the detached developer camera was manually active before opening Construction, closing Construction leaves that pre-existing camera active.
+[ ] No `FAIL detached-camera-not-active` or tick-exception diagnostic appears.
 [ ] No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurs.
-[ ] Smooth acceleration/deceleration remains deferred until the proven Class411+WASD path passes runtime acceptance.
+[ ] Smooth acceleration/deceleration remains deferred until this live Class411 tick passes runtime acceptance.
 [ ] RTS/top-down/orbit presets remain deferred until Free Build runtime behavior is accepted.
 
 Construction 3D ghost preview v1
