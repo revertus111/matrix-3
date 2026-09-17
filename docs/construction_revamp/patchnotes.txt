@@ -34,3 +34,11 @@
 - Only the palette rectangle owns mouse input; the rest of the heavyweight game canvas remains untouched for normal Matrix3 world interaction.
 - Preserved global search/rotation keyboard handling and world-canvas mouse-wheel rotation without creating a second scene/input owner.
 - Runtime verification is required to confirm stable visibility, window tracking and unchanged placement passthrough.
+
+2026-09-17 - Construction 3D ghost preview v1
+- Added `ConstructionGhostPreview` as a client-only direct renderer for the selected Construction piece on the hovered world tile.
+- Uses Matrix3's verified-static object-model path (`ObjectDefinitions.method6057(...)` -> `Model.method1375(...)`) with live scene terrain height and selected rotation.
+- Hooked the preview into the existing per-scene-frame `Class110.method2071(...)` seam; the preview is never attached to or removed from `Class523`.
+- Preserved server/world authority: the ghost has no collision, persistence, placement ownership, or server state; confirmed placement still uses the existing devspawn path.
+- Kept v1 visually literal: no guessed translucency, tint, validity color, or occupancy rules were added.
+- Runtime verification is required for model alignment, hover following, rotation, cancellation, and scene/render stability.
