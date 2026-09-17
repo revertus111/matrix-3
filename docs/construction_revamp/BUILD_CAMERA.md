@@ -35,7 +35,7 @@ Verified-static renderer mapping from `Class343.method4302(...)`:
 - pitch: `Class455.anInt5187`
 - yaw: `Class406.anInt4765`
 
-Matrix3 modes 1/2/4/6 have dedicated camera update paths. Free Build temporarily uses a Construction-only generic mode so the renderer consumes the verified camera globals without root-interface changes. The prior raw camera mode and transform are snapshotted on entry and restored on exit.
+Matrix3 modes 1/2/4/6 have dedicated camera update paths. `Class457.method5426(...)` directly assigns raw `711307203`, which decodes to camera mode 5 under `Class18.anInt143 * 625220759`; mode 5 renders through the generic camera globals above. Free Build therefore reuses that source-proven mode-5 raw value without installing any interface. The prior raw camera mode and transform are snapshotted on entry and restored on exit.
 
 ### Controls
 
@@ -97,6 +97,7 @@ Return to the normal Matrix3 gameplay camera without changing settlement or plac
 
 - `VERIFIED`: legacy Orb interface is incompatible with the current client and rejected for Construction.
 - `verified-static`: generic Matrix3 scene rendering consumes the five mapped camera globals above.
+- `verified-static`: raw `711307203` is Matrix3's source-proven camera-mode-5 value via `Class457.method5426(...)`.
 - `verified-static`: Free Build snapshots/restores previous raw camera state and does not invoke the server Orb bridge.
 - `verified-static`: Free Build Paint confirmation consumes the existing hovered tile and still routes real placement through `DevSpawnPlacement`/server `devspawn`.
 - `NEEDS TEST`: Free Build movement direction/speed, vertical sign, mouse-look feel, camera restoration, consumed-click behavior and ghost compatibility.
