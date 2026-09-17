@@ -237,6 +237,15 @@ public final class DevModeBridge {
         AtlasRuntimeBridge.observeMenuAction(action, payloadA, payloadB);
 
         int normalizedAction = normalizeAction(action);
+        if (normalizedAction == MATRIX3_TILE_ACTION && ConstructionBuildCamera.isRequested()) {
+            ConstructionBuildCamera.stopMovement();
+            if (enabled && isOwnerSession() && DevSpawnPlacement.isPaintActive()) {
+                notifyPlacementStatus(placeActiveSpawnAtLocal(payloadA, payloadB));
+            }
+            // Free Build owns intentional ground clicks: stop the camera and keep
+            // the player planted instead of forwarding the same click to Walk Here.
+            return true;
+        }
         if (normalizedAction == MATRIX3_TILE_ACTION && enabled && isOwnerSession()
                 && DevSpawnPlacement.isPaintActive()) {
             notifyPlacementStatus(placeActiveSpawnAtLocal(payloadA, payloadB));
