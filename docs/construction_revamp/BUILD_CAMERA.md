@@ -47,7 +47,10 @@ Matrix3 modes 1/2/4/6 have dedicated camera update paths. Free Build temporarily
 - Pitch is clamped to Matrix3's verified 1024-3072 range.
 - Movement accelerates/decelerates instead of snapping instantly to full speed.
 - Left-clicking the game canvas immediately zeros camera velocity.
+- In Paint mode, a valid left-click places from Matrix3's already-resolved hovered tile and consumes that canvas event so it does not intentionally become Walk Here.
 - Existing Construction R / Shift+R / mouse-wheel piece rotation remains unchanged.
+
+Paint confirmation still calls `DevSpawnPlacement.placeActive(...)`, so the existing owner-only server `itembrowser devspawn` path remains the only real object authority. Free Build does not perform a second scene pick.
 
 The implementation uses no server camera packet, no player teleport, no legacy Orb/root interface, and no second scene picker.
 
@@ -83,10 +86,10 @@ Return to the normal Matrix3 gameplay camera without changing settlement or plac
 - Right-mouse drag rotates yaw/pitch smoothly and respects the pitch clamp.
 - Releasing movement keys decelerates cleanly.
 - Left-click immediately stops camera velocity.
+- In Paint mode, left-clicking a valid hovered tile places once through the existing server-authoritative path and the player remains stationary.
+- Confirm exactly one real object is created per click; if the consumed AWT event still reaches Matrix3's action-23 dispatcher on this client, treat that as a runtime regression and move suppression to the verified menu-action seam.
 - Hovered-tile tracking and the white/translucent ghost continue working while detached.
 - Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
-- Clicking a target still creates exactly one server-authoritative placed object.
-- Verify whether normal action-23 Walk Here still moves the player after placement; if it does, the next patch should consume that action only while Construction Free Build + Paint are active.
 - Closing/cancelling Construction restores the prior Matrix3 camera mode/transform.
 - No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurs.
 
@@ -95,6 +98,7 @@ Return to the normal Matrix3 gameplay camera without changing settlement or plac
 - `VERIFIED`: legacy Orb interface is incompatible with the current client and rejected for Construction.
 - `verified-static`: generic Matrix3 scene rendering consumes the five mapped camera globals above.
 - `verified-static`: Free Build snapshots/restores previous raw camera state and does not invoke the server Orb bridge.
-- `NEEDS TEST`: Free Build movement direction/speed, vertical sign, mouse-look feel, camera restoration and ghost compatibility.
-- `UNKNOWN`: whether action-23 Walk Here still needs Construction-only suppression after a build click.
+- `verified-static`: Free Build Paint confirmation consumes the existing hovered tile and still routes real placement through `DevSpawnPlacement`/server `devspawn`.
+- `NEEDS TEST`: Free Build movement direction/speed, vertical sign, mouse-look feel, camera restoration, consumed-click behavior and ghost compatibility.
+- `UNKNOWN`: whether a consumed AWT Paint click fully suppresses Matrix3 action 23 on the active runtime; promote only after testing.
 - `UNKNOWN`: exact deterministic RTS/top-down/orbit preset values; do not hardcode them until Free Build runtime behavior is accepted.
