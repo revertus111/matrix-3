@@ -52,22 +52,22 @@ Construction build camera v1
 [x] Q/E move vertically with the accepted direction in the runtime sweep.
 [x] Existing detached-camera mouse-look works from the live Construction tick.
 [ ] The player remains physically stationary while the detached camera moves.
-[ ] Hovered-tile tracking and the white/translucent ghost continue working while detached.
+[x] Hovered-tile tracking and the white/translucent ghost continue working while detached during the smoothed Free Build acceptance run.
 [ ] Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
-[ ] While Free Build is moving, clicking a normal ground tile stops camera velocity immediately.
-[ ] If W/A/S/D/Q/E is still held during the click, click-stop remains latched until all movement keys are released once; movement resumes on the next deliberate press.
-[ ] Paint-mode placement creates exactly one server-authoritative real object and does not Walk Here; Free Build now consumes verified action 23 after optionally confirming the placement.
+[x] While Free Build is moving, clicking a normal ground tile stops camera velocity immediately.
+[x] If W/A/S/D/Q/E is still held during the click, click-stop remains latched until all movement keys are released once; movement resumes on the next deliberate press.
+[x] Paint-mode placement creates exactly one server-authoritative real object and does not Walk Here; Free Build consumes verified action 23 after optionally confirming the placement.
 [x] Closing/cancelling Construction returns to the normal camera when Construction activated the detached camera.
 [ ] Server console prints one `EXIT` line for the Construction camera session.
 [x] Reopening Construction starts Free Build cleanly after a previous close.
 [ ] If the detached developer camera was manually active before opening Construction, closing Construction leaves that pre-existing camera active.
 [ ] No `FAIL detached-camera-not-active` or tick-exception diagnostic appears.
-[ ] Normal-speed movement accelerates smoothly from rest instead of jumping instantly to full speed.
-[ ] Releasing movement decelerates smoothly to zero without excessive drift, oscillation or jitter.
-[ ] Diagonal movement is normalized and does not move faster than a single-axis direction.
-[ ] Shift fast and Ctrl precision remain useful under the smoothed velocity system.
+[x] Normal-speed movement accelerates smoothly from rest instead of jumping instantly to full speed.
+[x] Releasing movement decelerates smoothly to zero without excessive drift, oscillation or jitter.
+[x] Diagonal movement is normalized and does not move faster than a single-axis direction.
+[x] Shift fast and Ctrl precision remain useful under the smoothed velocity system.
 [ ] Server console prints one `STOP click` line on the first Free Build ground click of the session.
-[ ] No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurs.
+[x] No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurred during the smoothed Free Build acceptance run.
 [ ] RTS/top-down/orbit presets remain deferred until the smoothed Free Build integration pass is accepted.
 
 Construction 3D ghost preview v1
