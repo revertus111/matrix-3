@@ -54,15 +54,21 @@ Construction build camera v1
 [ ] The player remains physically stationary while the detached camera moves.
 [ ] Hovered-tile tracking and the white/translucent ghost continue working while detached.
 [ ] Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
-[ ] Paint-mode placement creates exactly one server-authoritative real object and does not intentionally Walk Here; if movement leaks through action 23, patch only the verified menu-action seam.
+[ ] While Free Build is moving, clicking a normal ground tile stops camera velocity immediately.
+[ ] If W/A/S/D/Q/E is still held during the click, click-stop remains latched until all movement keys are released once; movement resumes on the next deliberate press.
+[ ] Paint-mode placement creates exactly one server-authoritative real object and does not Walk Here; Free Build now consumes verified action 23 after optionally confirming the placement.
 [x] Closing/cancelling Construction returns to the normal camera when Construction activated the detached camera.
 [ ] Server console prints one `EXIT` line for the Construction camera session.
 [x] Reopening Construction starts Free Build cleanly after a previous close.
 [ ] If the detached developer camera was manually active before opening Construction, closing Construction leaves that pre-existing camera active.
 [ ] No `FAIL detached-camera-not-active` or tick-exception diagnostic appears.
+[ ] Normal-speed movement accelerates smoothly from rest instead of jumping instantly to full speed.
+[ ] Releasing movement decelerates smoothly to zero without excessive drift, oscillation or jitter.
+[ ] Diagonal movement is normalized and does not move faster than a single-axis direction.
+[ ] Shift fast and Ctrl precision remain useful under the smoothed velocity system.
+[ ] Server console prints one `STOP click` line on the first Free Build ground click of the session.
 [ ] No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurs.
-[ ] Smooth acceleration/deceleration remains deferred until this live Class411 tick passes runtime acceptance.
-[ ] RTS/top-down/orbit presets remain deferred until Free Build runtime behavior is accepted.
+[ ] RTS/top-down/orbit presets remain deferred until the smoothed Free Build integration pass is accepted.
 
 Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
