@@ -23,7 +23,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the direct-render 3D ghost, white/translucent styling and preview-vs-placed alpha isolation are runtime verified. Legacy Orb and generic-renderer camera attempts are runtime-rejected. Runtime CAM DEBUG plus source tracing have now identified Matrix3's real detached developer camera as the Class24/Class411 path, and Construction Free Build has been reimplemented by reusing that owner; runtime acceptance is pending.
+- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the direct-render 3D ghost, white/translucent styling and preview-vs-placed alpha isolation are runtime verified. Legacy Orb and generic-renderer camera attempts are runtime-rejected. Runtime CAM DEBUG rejected generic-global ownership, and source tracing identified Matrix3's real detached developer camera as the Class24/Class411 path, and Construction Free Build has been reimplemented by reusing that owner; runtime acceptance is pending.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
 - Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling and the `0x100` private-alpha isolation fix are also runtime verified after a full client restart.
@@ -579,7 +579,7 @@ Later interaction polish after single-piece preview is stable:
 - The first Orb-backed Build Camera runtime attempt crashes the current client during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`; that legacy camera path is rejected for Construction.
 - Ghost debug messages before the exception are not the initiating crash source, and the later `ConnectException` is secondary to the client crash.
 - Native generic-camera Free Build v1 failed runtime acceptance: Construction opened, but the attempted camera controls did not operate the live camera and the scene view became invalid/empty-looking. That implementation is rejected.
-- Runtime CAM DEBUG captures proved the active detached camera remains mode 1 and renders through `source=CLASS411`; in the captured session generic camera XYZ remained `0,0,0` while effective Class411 render XYZ changed.
+- Runtime CAM DEBUG captures proved the observed moving view remained mode 1 / `source=CLASS411` while generic camera XYZ stayed `0,0,0`; source tracing separately established `Class24.aClass411_Sub1_158` as the actual developer detached-camera owner.
 
 ### verified-static
 
@@ -643,7 +643,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Runtime-proved the legacy Orb camera/interface path crashes the current client on component `57` and permanently rejected that path for Construction.
 - Verified-static the current generic Matrix3 renderer camera transform through `Class343`, `Class457`, `Class67` and `Class411`.
 - Runtime-rejected the first native generic-camera Free Build attempt after it failed to control the live camera correctly and produced invalid/empty-looking scene views.
-- Runtime CAM DEBUG proved the real detached camera renders through mode 1 / Class411; source trace then identified the exact Class24 activation/update/close path.
+- Runtime CAM DEBUG proved the observed moving view uses the Class411 render family rather than the generic globals; source trace then identified the exact Class24 detached-camera activation/update/close path.
 - Reimplemented Construction Free Build by reusing the proven Class24/Class411 developer camera, added Construction-only WASD/Shift/Ctrl/Q/E inside `Class24.method711()`, removed the temporary CAM DEBUG camera overlay/probe, and updated `BUILD_CAMERA.md`, patchnotes and testlist for runtime acceptance.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
