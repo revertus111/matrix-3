@@ -22,8 +22,9 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 ## Current status
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
-- Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a`.
-- State: ACTIVE — design preserved; Matrix3-native implementation preparation is current.
+- Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
+- State: ACTIVE — Construction Editor developer prototype is implemented; persistent settlement runtime foundation remains the current architecture work.
+- Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - First playable target: Phase 1 MVP vertical slice.
 
@@ -376,8 +377,8 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 - [x] Confirm no current `docs/construction_revamp/PROJECT.md` exists in Matrix3.
 - [x] Targeted default-branch search found no indexed `Construction` implementation symbol.
 - [x] Confirm Matrix3 player layer contains its own `ControlerManager`, `Player`, content and controllers packages; legacy 718 paths are not authoritative.
-- [ ] Inspect only the Matrix3 content/controllers/persistence/map-object paths required to identify the native Construction entry point and settlement-state owner.
-- [ ] Produce the exact Phase 1 Bundle 1.2 file plan before source modification.
+- [x] Inspect the narrow Matrix3 Construction/player/controller/placement path needed to classify current ownership: classic `House`/`HouseControler` exists, `Player` persists `House`, and the restored tree contains no freeform settlement-state foundation.
+- [ ] Produce the exact persistent Phase 1 Bundle 1.2 settlement-state/instance file plan before modifying server-owned Construction runtime.
 
 ### Bundle 1.2 — Freeform placement foundation
 
@@ -389,6 +390,18 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 - Placement preview, rotation, confirmation and removal.
 - Minimal entry/exit path for runtime testing.
 - No 718 controller/code transplant.
+
+### Construction Editor developer prototype
+
+**Status:** IMPLEMENTED — RUNTIME TEST PENDING
+
+- Client Console has a lazy Construction Editor panel for owner/admin development use.
+- Placement reuses verified Matrix3 Dev Mode tile resolution and the existing server-authoritative `itembrowser devspawn` path.
+- Paint and Continuous placement are available without adding a second scene-picking path.
+- Fixed rotation can be changed from the panel, R / Shift+R, or mouse wheel while placement is armed.
+- Existing Dev Mode object actions remain responsible for move/rotate/duplicate/delete of proven Dev-owned runtime objects.
+- Wooden wall/floor/doorway ids and default object types are HYPOTHESIS pending live visual validation.
+- This tooling track does not satisfy Bundle 1.2 persistence, occupancy, settlement ownership, or final 3D ghost-preview requirements.
 
 ### Bundle 1.3 — Starter resource loop
 
@@ -458,28 +471,43 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 - Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
-- Bundle: 1.1 — Matrix3 ownership and foundation discovery
-- Bundle status: ACTIVE
-- Approval state: AAA approved for the corrected Matrix3-only reset/preservation scope.
-- Current checklist item: identify the smallest Matrix3-native implementation path for Bundle 1.2.
-- Current objective: continue from protected Matrix3 runtime, not the legacy 718 implementation.
+- Persistent-runtime bundle: 1.1 — Matrix3 ownership and foundation discovery
+- Persistent-runtime bundle status: ACTIVE
+- Tooling track: Construction Editor developer prototype
+- Tooling status: IMPLEMENTED — RUNTIME TEST PENDING
+- Approval state: AAA was approved for the current Construction Editor work and that implementation is now on `main`.
+- Current checklist item: runtime-verify the Construction Editor controls and provisional wall/floor/door candidates before promoting any cache mapping to VERIFIED.
+- Current objective: validate the editor prototype, then finish the exact persistent Bundle 1.2 settlement-state/instance file plan without transplanting legacy 718 architecture.
 
 ## Verification classifications
+
+### VERIFIED
+
+- Construction Editor implementation commit is `09cd35fec87defd0f49ef8000f49eca3523f112e` on Matrix3 `main`.
+- The editor delegates actual object placement to the existing owner/admin Dev Mode placement path; it does not directly own world state.
 
 ### verified-static
 
 - `matrix-3` is the correct repository.
 - Protected Matrix3 baseline is `e86851b95e1d2927d58463b67f600153b9166f6a`.
-- The Sept. 12 runtime-reset commit restores Client/Server runtime to that baseline while preserving development documentation.
-- Current post-reset differences were Steam Deck/docs-only additions; no post-reset Client/Server runtime files differed from the reset checkpoint.
 - Matrix3 has its own `Server/src/main/java/com/rs/game/player/...` ownership structure.
+- Current Matrix3 Construction runtime contains the classic serializable `House` stack and `HouseControler`.
+- `Player` owns/persists `House`; the restored tree does not contain the previously claimed freeform `SettlementState`/`PlacedBuildPiece`/`SettlementInstance` foundation.
+- Dev Mode mirrors Matrix3's normal scene-tile action 23 instead of performing a second scene pick.
+- Dev Spawn queues object placement through the existing `itembrowser devspawn` server bridge.
+
+### HYPOTHESIS
+
+- Wooden wall candidate: object id `13450`, default object type `0`.
+- Wooden floor candidate: object id `13684`, default object type `22`.
+- Doorway candidate: object id `13344`, default object type `0`.
+- These ids/types remain provisional until visually verified in the active Matrix3 cache/client.
 
 ### UNKNOWN
 
-- Exact native Construction controller/content entry point.
+- Exact persistent settlement-state owner to add alongside/around the classic POH `House` ownership model.
 - Best Matrix3 instance/dynamic-region owner for freeform settlement projection.
-- Exact persistence field/manager where settlement state should live.
-- Best minimal UI/interaction path for placement preview.
+- Final 3D ghost-preview render hook; no unverified render hook is used by the current editor prototype.
 
 ## Testing
 
@@ -489,34 +517,58 @@ See `docs/construction_revamp/testlist.txt`.
 
 **Last completed:**
 
-- Corrected repository identity to `revertus111/matrix-3`.
-- Restored the repository tree to the protected Matrix3 runtime-reset checkpoint and preserved this Construction design.
+- Read the Matrix3-native classic Construction/player/controller ownership path and confirmed the freeform settlement foundation is not present in the restored tree.
+- Added the Client Console Construction Editor prototype on `main` in `09cd35fec87defd0f49ef8000f49eca3523f112e`.
+- Added targeted Construction Editor acceptance checks and explicit HYPOTHESIS labeling for provisional piece mappings.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
-**Active bundle:** Bundle 1.1 — Matrix3 ownership and foundation discovery.
+**Active persistent-runtime bundle:** Bundle 1.1 — Matrix3 ownership and foundation discovery.
 
-**Next checklist item:** Inspect the smallest Matrix3-native content/controllers/persistence/map-object path needed to define Bundle 1.2.
+**Active tooling gate:** Construction Editor runtime verification.
+
+**Next checklist item:** Pull/run Matrix3, open Construction Editor, verify Wall/Floor/Doorway placement and object-type visuals, and record which candidate mappings are actually correct. After that, finish the exact persistent Bundle 1.2 settlement-state/instance file plan.
 
 **Files/systems already inspected:**
 
 - `AGENTS.md`
 - `docs/rs3/PROJECT.md`
-- `docs/rs3/BASELINE.md`
-- `docs/rs3/WORKSTREAM_TEMPLATE.md`
-- protected-baseline player package listing
+- `docs/construction_revamp/PROJECT.md`
+- `docs/construction_revamp/patchnotes.txt`
+- `docs/construction_revamp/testlist.txt`
+- `Server/src/main/java/com/rs/game/player/content/construction/House.java`
+- `Server/src/main/java/com/rs/game/player/controllers/HouseControler.java`
+- `Server/src/main/java/com/rs/game/player/Player.java`
+- `Server/src/main/java/com/rs/game/player/content/commands/Commands.java`
+- `Server/src/main/java/com/rs/game/player/content/commands/ItemBrowserCommandBridge.java`
+- `Client/src/main/java/game/DevModeBridge.java`
+- `Client/src/main/java/game/DevSpawnPlacement.java`
+- `Client/src/main/java/game/Class592.java`
+- `Client/src/main/java/game/Class319.java`
+- `Client/src/main/java/game/console/ClientConsoleShell.java`
+- `Client/src/main/java/game/console/ConsoleTheme.java`
 
 **Do not re-scan without new evidence:**
 
 - Do not inspect or port the old `Matrix-718_MAIN` Construction code as implementation authority.
-- Do not re-audit unrelated historical Matrix3 workstreams during Construction discovery.
+- Do not re-audit unrelated historical Matrix3 workstreams.
+- Do not re-trace the Dev Mode tile/menu dispatch path unless a runtime failure points back to it.
+- Do not claim the missing freeform settlement-state foundation exists until it is actually added to Matrix3.
 
-**Pending runtime verification:** None for this documentation/reset checkpoint. Future Bundle 1.2 will require targeted placement/persistence tests plus relevant smoke-test coverage.
+**Pending runtime verification:**
+
+- Construction Editor rail/panel startup.
+- Admin+ placement gating.
+- Paint and Continuous placement behavior.
+- R / Shift+R / mouse-wheel rotation behavior.
+- Escape/Cancel behavior.
+- Wall/floor/door candidate object ids/types and visual orientation.
+- Regression check that existing Client Console panels still open normally.
 
 **Blockers:** None.
 
-**Important remaining uncertainty:** Native Matrix3 Construction/instance ownership still needs a narrow source trace.
+**Important remaining uncertainty:** The persistent settlement-state/instance owner and final ghost-preview render hook are still unverified; keep them separate from the now-implemented developer placement palette.
 
 ## Next recommended work
 
-Finish Bundle 1.1 source ownership discovery, then produce the exact Bundle 1.2 implementation/file plan before touching runtime code.
+Runtime-test the Construction Editor prototype first. Record verified piece ids/types and any control issues, then finish Bundle 1.1 by producing the exact persistent Bundle 1.2 server/client file plan before adding settlement-owned persistence or instance runtime code.
