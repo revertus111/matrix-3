@@ -35,34 +35,31 @@ Custom Construction palette + preview foundation
 [x] `13450` remains labeled Wooden fence / temporary wall test and is not presented as the final wooden wall.
 
 Construction build camera v1
-[x] Native Free Build v1 runtime acceptance FAILED: Construction opened, but the attempted generic-camera implementation did not control the live camera and produced invalid/empty-looking scene views.
-[x] Failed generic-camera-write implementation is no longer active; Construction camera trace is read-only.
-[ ] Opening Construction shows `CAM DEBUG [READ ONLY]` without changing the current camera view.
-[ ] With Construction open and Alt released, capture one CAM DEBUG screenshot/state.
-[ ] Use the known working Alt free-camera and move/rotate it; CAM DEBUG should show the active mode/source and changing effective render XYZ.
-[ ] While Alt free-camera is moving, verify whether `source=CLASS411` or `source=GLOBALS` and record the mode value.
-[ ] Diagnostic mode does not consume Alt/WASD/Q/E input and does not move the player/camera by itself.
 [x] First Orb-backed runtime attempt crashes during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`; legacy root/component mapping is rejected for Construction.
-[x] Ghost diagnostics before the exception are not the initiating crash source.
-[x] Later `ConnectException` output is secondary to the client crash and not the initiating failure.
-[x] Current Matrix3 generic render-camera globals are verified-static from `Class343.method4302(...)`.
-[x] Native Free Build implementation no longer calls the legacy Orb/root-interface path.
-[x] Free Build Paint clicks now use the already-resolved hovered tile, queue the existing server-authoritative `DevSpawnPlacement` path, zero camera velocity, and consume the canvas event before intentional Walk Here.
-[ ] Opening the Construction palette activates Free Build without switching root interface or crashing.
-[ ] WASD moves the camera horizontally without moving the player.
-[ ] Forward/back/strafe directions match the current camera yaw.
-[ ] Shift increases movement speed; Ctrl provides precision movement.
-[ ] Releasing movement keys decelerates smoothly instead of snapping.
-[ ] Q/E move the camera vertically in the expected directions.
-[ ] Right-mouse drag rotates yaw/pitch smoothly and respects the 1024-3072 pitch clamp.
-[ ] Left-clicking the game canvas zeros camera velocity immediately.
-[ ] Paint-mode left click leaves the player stationary and creates exactly one server-authoritative object; if the consumed AWT event still reaches action 23, move suppression to the verified menu-action seam.
+[x] Native generic-camera Free Build runtime acceptance FAILED: Construction opened, but the attempted camera controls did not operate the live camera and produced invalid/empty-looking scene views.
+[x] Runtime CAM DEBUG capture proved the moving detached camera renders through `mode=1 / source=CLASS411` while generic XYZ remained `0,0,0` in the captured session.
+[x] Source trace proved the existing developer detached camera owner is `Class24.aClass411_Sub1_158`, activated by Ctrl+backtick through `Class102_Sub5.method9948(...)`, updated by `Class24.method711()`, and closed by `RSSocket.method7604(...)`.
+[x] Temporary CAM DEBUG camera overlay/probe is removed; camera diagnostics return to transition-only console output.
+[x] Construction now activates/reuses the proven Class24/Class411 freecam and preserves a pre-existing manually active freecam.
+[ ] Opening the Construction palette automatically activates the detached Class411 freecam without needing Ctrl+backtick.
+[ ] Free Build starts from a sensible view around the local player; no empty/invalid scene view.
+[ ] Existing freecam mouse-look works while Construction is open.
+[ ] W/S move forward/back relative to the current freecam orientation.
+[ ] A/D strafe left/right correctly.
+[ ] Shift provides fast movement and Ctrl provides precision movement.
+[ ] Q/E move vertically; record if the intuitive raise/lower direction needs swapping.
+[ ] The player remains physically stationary while the detached camera moves.
 [ ] Hovered-tile tracking and the white/translucent ghost continue working while detached.
 [ ] Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
-[ ] Closing/cancelling Construction restores the exact previous Matrix3 camera mode/transform.
+[ ] Paint-mode placement creates exactly one server-authoritative real object and does not intentionally Walk Here; if player movement still leaks through action 23, patch only the verified menu-action seam.
+[ ] Closing/cancelling Construction returns to normal camera when Construction activated the freecam.
 [ ] Reopening Construction starts Free Build cleanly after a previous close.
+[ ] If Ctrl+backtick freecam was manually active before opening Construction, closing Construction leaves that pre-existing freecam active.
+[ ] Console prints one `[ConstructionBuildCamera] ENTER ...` and one `EXIT ...` transition line for the session.
+[ ] No `CAM DEBUG` camera overlay remains.
 [ ] No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurs.
-[ ] RTS/top-down/orbit presets remain deferred until Free Build runtime behavior is accepted and preset semantics are verified.
+[ ] Smooth acceleration/deceleration remains deferred until the proven Class411+WASD path passes runtime acceptance.
+[ ] RTS/top-down/orbit presets remain deferred until Free Build runtime behavior is accepted.
 
 Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
