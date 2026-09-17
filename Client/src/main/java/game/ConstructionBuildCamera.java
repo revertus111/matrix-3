@@ -18,8 +18,8 @@ import javax.swing.Timer;
 public final class ConstructionBuildCamera {
 
     private static final int TICK_MS = 16;
-    private static final int CAMERA_MODE_ENCODE = 711307203;
-    private static final int FREE_BUILD_MODE = 5;
+    /** verified-static: Class457.method5426 assigns this raw value for camera mode 5. */
+    private static final int FREE_BUILD_MODE_RAW = 711307203;
     private static final int PITCH_MIN = 1024;
     private static final int PITCH_MAX = 3072;
     private static final float BASE_SPEED = 1536.0F;
@@ -94,9 +94,9 @@ public final class ConstructionBuildCamera {
         clearKeys();
         lastTickNanos = System.nanoTime();
 
-        // verified-static: modes 1/2/4/6 have dedicated update paths in
-        // Class343.method4302; other modes render from the camera globals below.
-        Class18.anInt143 = CAMERA_MODE_ENCODE * FREE_BUILD_MODE;
+        // verified-static: Class457.method5426 uses raw 711307203 for mode 5;
+        // Class343 renders mode 5 from the generic camera globals below.
+        Class18.anInt143 = FREE_BUILD_MODE_RAW;
         active = true;
         ensureInputListener();
         startTimer();
