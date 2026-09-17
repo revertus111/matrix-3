@@ -42,3 +42,11 @@
 - Preserved server/world authority: the ghost has no collision, persistence, placement ownership, or server state; confirmed placement still uses the existing devspawn path.
 - Kept v1 visually literal: no guessed translucency, tint, validity color, or occupancy rules were added.
 - Runtime verification is required for model alignment, hover following, rotation, cancellation, and scene/render stability.
+
+2026-09-17 - Construction ghost render-order correction
+- Runtime test showed the first direct-render hook produced no visible ghost while palette, hover tracking, rotation and confirmed placement remained functional.
+- Removed the preview draw from pre-scene `Class110.method2071(...)`; that seam runs before `Class523.method6257(...)` performs the main scene/object render pass.
+- Moved the preview draw to `Class343.method4302(...)` immediately after `Class523.method6240(...)` completes the live scene render.
+- Added the same per-tile `Class86` renderer environment setup used by `Class523.method6280(...)` before drawing normal scene objects.
+- Preview remains client-only and unregistered: no `Class523` attach/remove, collision, persistence or server ownership was added.
+- Corrected post-scene path requires runtime retest before ghost v1 is accepted.
