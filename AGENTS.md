@@ -90,6 +90,39 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 - If a GitHub, search, or repository tool fails, make one reasonable targeted retry or fallback. If it still cannot be resolved, report the uncertainty instead of entering a tool-call loop.
 - If broader investigation genuinely becomes necessary, state what new evidence requires expanding the scan before doing so.
 
+## Bounded investigation and execution speed
+
+Use two execution lanes so Matrix3 work stays rigorous without allowing reverse-engineering/tool chains to consume an entire session.
+
+### Fast lane
+
+Use the Fast lane when ownership and the implementation path are already known, including normal UI/content changes, documentation, known APIs, established developer-tool paths, and bug fixes with clear evidence.
+
+- Read the required authority/workstream state and the smallest established file set.
+- Do not reopen settled architecture or re-trace known ownership merely because the task touches the same subsystem.
+- Once the patch path is established and AAA covers the task, move directly to implementation, documentation, and targeted verification.
+- Prefer one compact patch/test cycle over extra discovery passes.
+
+### Deep lane
+
+Use the Deep lane only when the task genuinely requires unfamiliar obfuscated/core behavior such as rendering, scene ownership, cache decoding, protocol internals, or another engine path whose semantics are not yet established.
+
+- After required authority/workstream reads, default to one bounded discovery pass of roughly 4-6 targeted source files plus at most one narrow fallback search/read when needed.
+- Fetch/search only the relevant symbols or line ranges from very large decompiled files where the tooling supports it; avoid repeated full-file retrieval.
+- Stop immediately when the ownership/implementation seam is sufficiently established for `verified-static`, `VERIFIED`, `HYPOTHESIS`, or `UNKNOWN` classification.
+- Do not perform additional "confidence scans" after the implementation path is established.
+- If new evidence genuinely requires more than the bounded pass, state the reason before expanding and keep the expansion narrowly tied to that evidence.
+- If the required seam is still unresolved after the bounded pass, persist the exact inspected files, findings, blocker, uncertainty, and next trace target in the authoritative workstream `Resume Here` instead of continuing an open-ended tool chain.
+- Break difficult work into `trace -> patch -> targeted test` checkpoints. Do not combine unrelated reverse-engineering questions into the same deep pass.
+
+### Tool-latency and timeout discipline
+
+- Avoid long serial chains of repository/search calls when the next action can already be determined from existing evidence.
+- A slow/failed repository call gets one targeted retry or one narrower fallback, not repeated variants of the same request.
+- If tool latency or response size starts dominating the task, preserve the current evidence/checkpoint first, then continue from that exact point in a new turn/chat if necessary rather than risking loss to a timeout.
+- Large prior work does not justify a larger current scan; use the saved workstream state to skip already-settled discovery.
+- Speed rules never justify guessing. When the evidence is insufficient after the bounded pass, classify the uncertainty and preserve it rather than forcing a speculative patch.
+
 ## Matrix3 architecture rules
 
 1. Matrix3 is the authoritative game architecture.
