@@ -9,14 +9,40 @@ package game;
  */
 public final class ConstructionBuildCamera {
 
+    // Speeds preserve the accepted v1 feel while making motion time-based.
+    private static final float NORMAL_SPEED = 1250.0F;
+    private static final float FAST_SPEED = 3000.0F;
+    private static final float PRECISION_SPEED = 400.0F;
+
+    // Exponential response rates: higher = more immediate.
+    private static final float ACCEL_RESPONSE = 10.0F;
+    private static final float DECEL_RESPONSE = 7.0F;
+
+    private static final float DEFAULT_DT = 0.020F;
+    private static final float MIN_DT = 0.005F;
+    private static final float MAX_DT = 0.050F;
+    private static final float VELOCITY_EPSILON = 0.5F;
+
     private static volatile boolean active;
     private static volatile boolean ownsFreeCamera;
 
     private static int lastTickCycle = Integer.MIN_VALUE;
     private static int lastMouseX;
     private static int lastMouseY;
+    private static long lastTickNanos;
+
+    // World-space velocity in Matrix3 camera units/second.
+    private static float velocityX;
+    private static float velocityY;
+    private static float velocityZ;
+
+    // A placement click should stop motion even if a key is still physically held.
+    // Movement can resume only after all movement keys are released once.
+    private static boolean clickStopLatched;
+
     private static boolean tickReported;
     private static boolean inputReported;
+    private static boolean stopReported;
     private static boolean failureReported;
 
     private ConstructionBuildCamera() {
@@ -47,8 +73,12 @@ public final class ConstructionBuildCamera {
         lastTickCycle = Integer.MIN_VALUE;
         lastMouseX = Class26.aClass564_216.method6657((short) -1);
         lastMouseY = Class26.aClass564_216.method6658((byte) -1);
+        lastTickNanos = System.nanoTime();
+        clearVelocity();
+        clickStopLatched = false;
         tickReported = false;
         inputReported = false;
+        stopReported = false;
         failureReported = false;
 
         reportToServer("ENTER active=" + IncomingPacket.method4113((byte) 0)
@@ -69,6 +99,9 @@ public final class ConstructionBuildCamera {
         active = false;
         ownsFreeCamera = false;
         lastTickCycle = Integer.MIN_VALUE;
+        lastTickNanos = 0L;
+        clearVelocity();
+        clickStopLatched = false;
 
         reportToServer("EXIT active=" + IncomingPacket.method4113((byte) 0));
         return "Construction Free Build camera closed.";
@@ -103,12 +136,9 @@ public final class ConstructionBuildCamera {
                 reportToServer("TICK live");
             }
 
+            float dt = consumeDeltaSeconds();
             updateMouseLook(lookController, orientation);
-
-            // Mirror Matrix3's existing detached-camera movement math, but read
-            // Construction keys from the live keyboard state at the render seam.
             orientation.method3175();
-            float step = movementStep();
 
             boolean forward = keyDown(98) || keyDown(33); // Up or W
             boolean backward = keyDown(99) || keyDown(49); // Down or S
@@ -117,7 +147,9 @@ public final class ConstructionBuildCamera {
             boolean up = keyDown(34); // E
             boolean down = keyDown(32); // Q
 
-            if (!inputReported && (forward || backward || left || right || up || down)) {
+            boolean anyMovementKey = forward || backward || left || right || up || down;
+
+            if (!inputReported && anyMovementKey) {
                 inputReported = true;
                 reportToServer("INPUT W=" + keyDown(33)
                         + " A=" + keyDown(48)
@@ -129,26 +161,63 @@ public final class ConstructionBuildCamera {
                         + " ctrl=" + keyDown(82));
             }
 
-            if (forward) {
-                addRelative(position, orientation, 0.0F, 0.0F, step);
-            }
-            if (backward) {
-                addRelative(position, orientation, 0.0F, 0.0F, -step);
-            }
-            if (left) {
-                addRelative(position, orientation, -step, 0.0F, 0.0F);
-            }
-            if (right) {
-                addRelative(position, orientation, step, 0.0F, 0.0F);
+            if (clickStopLatched) {
+                if (anyMovementKey) {
+                    forward = false;
+                    backward = false;
+                    left = false;
+                    right = false;
+                    up = false;
+                    down = false;
+                    anyMovementKey = false;
+                } else {
+                    clickStopLatched = false;
+                }
             }
 
-            // Matrix3 world Y is the camera's vertical axis in this controller.
-            if (up) {
-                position.aFloat2656 += step;
+            float localX = (right ? 1.0F : 0.0F) - (left ? 1.0F : 0.0F);
+            float localZ = (forward ? 1.0F : 0.0F) - (backward ? 1.0F : 0.0F);
+            float vertical = (up ? 1.0F : 0.0F) - (down ? 1.0F : 0.0F);
+
+            float magnitude = (float) Math.sqrt(localX * localX + localZ * localZ + vertical * vertical);
+            if (magnitude > 1.0F) {
+                localX /= magnitude;
+                localZ /= magnitude;
+                vertical /= magnitude;
             }
-            if (down) {
-                position.aFloat2656 -= step;
+
+            float targetX = 0.0F;
+            float targetY = 0.0F;
+            float targetZ = 0.0F;
+
+            if (anyMovementKey) {
+                float speed = movementSpeed();
+
+                Class240 direction = Class240.method3316(localX, 0.0F, localZ);
+                direction.method3288(orientation);
+                direction.aFloat2656 *= -1.0F;
+
+                targetX = direction.aFloat2653 * speed;
+                targetY = direction.aFloat2656 * speed + vertical * speed;
+                targetZ = direction.aFloat2657 * speed;
             }
+
+            float response = anyMovementKey ? ACCEL_RESPONSE : DECEL_RESPONSE;
+            float blend = 1.0F - (float) Math.exp(-response * dt);
+
+            velocityX += (targetX - velocityX) * blend;
+            velocityY += (targetY - velocityY) * blend;
+            velocityZ += (targetZ - velocityZ) * blend;
+
+            if (!anyMovementKey) {
+                velocityX = settle(velocityX);
+                velocityY = settle(velocityY);
+                velocityZ = settle(velocityZ);
+            }
+
+            position.aFloat2653 += velocityX * dt;
+            position.aFloat2656 += velocityY * dt;
+            position.aFloat2657 += velocityZ * dt;
 
             Class572_Sub17 target = new Class572_Sub17(
                     0,
@@ -177,11 +246,20 @@ public final class ConstructionBuildCamera {
     }
 
     /**
-     * No inertia exists in this acceptance build yet, so there is no velocity
-     * accumulator to clear. This remains the future click-to-stop seam.
+     * Ground/build confirmation stops the camera immediately. If a movement key
+     * is still held, movement remains latched off until all movement keys have
+     * been released once, preventing the camera from restarting on the next tick.
      */
     public static void stopMovement() {
-        // No-op until smooth velocity is added on the verified live tick.
+        if (!active) {
+            return;
+        }
+        clearVelocity();
+        clickStopLatched = true;
+        if (!stopReported) {
+            stopReported = true;
+            reportToServer("STOP click");
+        }
     }
 
     private static void updateMouseLook(Class658_Sub2 lookController, Class230 orientation) {
@@ -213,22 +291,43 @@ public final class ConstructionBuildCamera {
         lastMouseY = mouseY;
     }
 
-    private static void addRelative(Class240 position, Class230 orientation,
-            float x, float y, float z) {
-        Class240 delta = Class240.method3316(x, y, z);
-        delta.method3288(orientation);
-        delta.aFloat2656 *= -1.0F;
-        position.method3305(delta);
+    private static float consumeDeltaSeconds() {
+        long now = System.nanoTime();
+        if (lastTickNanos == 0L) {
+            lastTickNanos = now;
+            return DEFAULT_DT;
+        }
+
+        float dt = (now - lastTickNanos) / 1000000000.0F;
+        lastTickNanos = now;
+
+        if (dt < MIN_DT) {
+            return MIN_DT;
+        }
+        if (dt > MAX_DT) {
+            return MAX_DT;
+        }
+        return dt;
     }
 
-    private static float movementStep() {
+    private static float movementSpeed() {
         if (keyDown(82)) {
-            return 8.0F; // Ctrl precision
+            return PRECISION_SPEED;
         }
         if (keyDown(81)) {
-            return 60.0F; // Shift fast
+            return FAST_SPEED;
         }
-        return 25.0F;
+        return NORMAL_SPEED;
+    }
+
+    private static float settle(float value) {
+        return Math.abs(value) < VELOCITY_EPSILON ? 0.0F : value;
+    }
+
+    private static void clearVelocity() {
+        velocityX = 0.0F;
+        velocityY = 0.0F;
+        velocityZ = 0.0F;
     }
 
     private static boolean keyDown(int internalKey) {
