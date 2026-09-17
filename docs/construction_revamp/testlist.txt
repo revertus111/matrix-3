@@ -35,7 +35,8 @@ Custom Construction palette + preview foundation
 [x] `13450` remains labeled Wooden fence / temporary wall test and is not presented as the final wooden wall.
 
 Construction 3D ghost preview v1
-[ ] Armed placement renders the selected real 3D object model on the current hovered world tile.
+[x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
+[ ] Corrected post-scene hook renders the selected real 3D object model on the current hovered world tile while placement is armed.
 [ ] Preview follows hovered world-tile changes without registering a persistent scene object.
 [ ] Rotate -, Rotate +, R, Shift+R and mouse-wheel rotation update the preview orientation through 0-3.
 [ ] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
