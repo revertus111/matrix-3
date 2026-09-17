@@ -27,7 +27,6 @@ class Class110 implements Interface31 {
 			if (((Class485) class485).aBool5429)
 				class485.method5776(class523, class106);
 		}
-		ConstructionGhostPreview.render(class523, class106);
 	}
 
 	static final void method2072(Cs2Executor class441, int i) {
