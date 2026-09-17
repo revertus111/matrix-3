@@ -45,7 +45,9 @@ Construction 3D ghost preview v1
 [x] Runtime diagnostic reaches `DRAW_SUBMITTED object=13450 type=0 rot=0 specialBounds=false` while the preview is visible.
 [ ] Active-scene-pass hook renders exactly one preview per client cycle without duplicate/flicker from the retained post-scene fallback.
 [x] Corrected direct-render path renders the selected real 3D object model on the current hovered world tile while placement is armed.
-[ ] Retest the corrected white tint (`weight=128`) and verified face-alpha path (`faceAlpha=96`); accept only if the preview is visibly white/washed-out and translucent rather than red/opaque.
+[x] Corrected white tint (`weight=128`) and face-alpha path (`faceAlpha=96`) render a visibly white/washed-out translucent Door ghost at runtime.
+[x] Runtime placement test exposed that preview face alpha leaked into real placed object models when the ghost clone lacked private alpha storage.
+[ ] After the `0x100` alpha-copy flag fix and a full client restart, previewing/placing the same object leaves real placed objects at their normal opaque appearance while the ghost remains translucent.
 [ ] Preview follows hovered world-tile changes without registering a persistent scene object.
 [ ] Rotate -, Rotate +, R, Shift+R and mouse-wheel rotation update the preview orientation through 0-3.
 [ ] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
