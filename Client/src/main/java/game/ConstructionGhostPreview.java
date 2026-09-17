@@ -9,7 +9,11 @@ package game;
  */
 public final class ConstructionGhostPreview {
 
-    private static final int MODEL_FLAGS = 2048;
+    private static final int MODEL_FLAGS = 2048 | 0x80000;
+    private static final int GHOST_TINT_HUE = 0;
+    private static final int GHOST_TINT_SATURATION = 0;
+    private static final int GHOST_TINT_LIGHTNESS = 127;
+    private static final int GHOST_TINT_WEIGHT = 160;
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
     private static volatile String lastDiagnosticKey = "";
@@ -22,6 +26,7 @@ public final class ConstructionGhostPreview {
      *
      * verified-static: ObjectDefinitions.method6057(...) is the same model factory
      * used by Matrix3 scene objects, and Model.method1375(...) is their live draw
+     * path. Model.method1396(...) is Matrix3's existing whole-model tint override
      * path. This method intentionally never calls Class523 attach/remove methods.
      */
     static void render(Class523 scene, Class106 renderer) {
@@ -139,6 +144,7 @@ public final class ConstructionGhostPreview {
         }
 
         Model model = (Model) built.anObject8324;
+        model.method1396(GHOST_TINT_HUE, GHOST_TINT_SATURATION, GHOST_TINT_LIGHTNESS, GHOST_TINT_WEIGHT);
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         Class326 bounds = definition.aClass326_5684;
         if (bounds != null) {
@@ -152,6 +158,7 @@ public final class ConstructionGhostPreview {
                         + ":" + (bounds != null),
                 "DRAW_SUBMITTED object=" + piece.getObjectId() + " type=" + piece.getObjectType()
                         + " rot=" + rotation + " specialBounds=" + (bounds != null)
+                        + " ghostTint=white/" + GHOST_TINT_WEIGHT
                         + " world=" + tile.getWorldX() + "," + tile.getWorldY() + "," + plane
                         + " local=" + localX + "," + localY
                         + " scene=" + sceneX + "," + sceneY + "," + sceneZ);
