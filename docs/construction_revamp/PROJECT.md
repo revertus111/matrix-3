@@ -23,12 +23,12 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the direct-render 3D ghost, white/translucent styling and preview-vs-placed alpha isolation are runtime verified. The first Orb-backed Build Camera attempt runtime-crashed the current client and has been disabled; crash-fix retest and a bounded current-client camera/input trace are now the active camera tasks.
+- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the direct-render 3D ghost, white/translucent styling and preview-vs-placed alpha isolation are runtime verified. The legacy Orb-backed Build Camera path is runtime-rejected, and native client-side Free Build v1 is now implemented with runtime acceptance pending.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
 - Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling and the `0x100` private-alpha isolation fix are also runtime verified after a full client restart.
 - Construction no longer invokes Matrix3's legacy Orb-of-Oculus interface path because the current client/cache rejects legacy root/component `475/57` with `ArrayIndexOutOfBoundsException: 57` during `SET_INTERFACE` processing.
-- Modern Free Build remains accepted, but its current Matrix3 camera/input owner is UNKNOWN; no stale obfuscated field mapping or guessed camera packet value is approved.
+- Native Free Build now uses the verified current renderer-camera globals directly, with WASD/Shift/Ctrl/Q/E, right-mouse look, acceleration/deceleration, click-to-stop, exact previous-camera restore and Construction-owned Paint click handling without taking world-object authority.
 - The current Client Console Construction Editor remains a developer/debug harness; the custom in-game palette is the intended player-facing selection direction.
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - First playable target: Phase 1 MVP vertical slice.
@@ -417,7 +417,7 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ### Next tooling slice — Custom Construction Palette + Preview Foundation
 
-**Status:** PALETTE + WHITE/TRANSLUCENT GHOST + ALPHA ISOLATION RUNTIME VERIFIED — ORB CAMERA REJECTED / CRASH FIX NEEDS TEST / MODERN CAMERA SEAM UNKNOWN
+**Status:** PALETTE + WHITE/TRANSLUCENT GHOST + ALPHA ISOLATION RUNTIME VERIFIED — NATIVE FREE BUILD V1 IMPLEMENTED / RUNTIME ACCEPTANCE PENDING
 
 Runtime-verified palette foundation:
 
@@ -429,7 +429,7 @@ Runtime-verified palette foundation:
 - Read-only hovered-world-tile tracking from Matrix3's verified action-23 menu-entry seam.
 - Paint/Continuous controls, Rotate - / Rotate +, R / Shift+R and mouse-wheel rotation while the custom palette is active.
 - Escape/Cancel/close clears placement instead of leaving a hidden armed state.
-- Palette clicks are consumed only inside the palette; normal world clicks remain owned by Matrix3 outside it.
+- Palette clicks are consumed only inside the palette; normal world clicks remain owned by Matrix3 outside it except when Free Build Paint deliberately consumes a valid placement click.
 - The starter catalog remains explicit about current runtime evidence: Wooden fence is a temporary wall test, Floor decoration is the floor candidate, and Door is the doorway candidate.
 
 3D ghost preview v1 state:
@@ -450,21 +450,23 @@ Runtime-verified palette foundation:
 
 Construction Build Camera v1 state:
 
-- The first implementation reused `InterfaceManager.gazeOrbOfOculus()` through the owner-only `itembrowser constructioncamera` bridge.
-- Runtime test proved that approach incompatible with the current Matrix3 client/cache: opening the Construction palette crashed during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`.
-- The fatal chain is `Class104_Sub1.method9918(...) -> Class512.method6083(...) -> Class83.method1256(...)`; the legacy Orb path installs root/component `475/57`, matching the invalid component index.
-- The Construction client bridge is now crash-safe and no longer sends Orb enter/exit commands. `ConstructionBuildCamera.enter()/exit()` are inert placeholders until the real current-client camera owner is established.
-- Ghost diagnostics immediately before the exception are not the initiating failure; the later `ConnectException` is secondary crash-report/network behavior.
-- Exact searches for the historical `FreeMove`/`VK_W` identifiers and a camera-position breadcrumb did not expose a trustworthy current seam. The trace is intentionally stopped instead of broadening into speculative obfuscated-field scanning.
-- Free Build remains the first camera target, followed by RTS, Top Down, Orbit/Focus and Player View as documented in `BUILD_CAMERA.md`.
-- No stale historical `Class291` mapping, guessed interface component, or guessed camera packet value is approved.
+- The first implementation reused `InterfaceManager.gazeOrbOfOculus()` through the owner-only `itembrowser constructioncamera` bridge; runtime proved that legacy root/component `475/57` path crashes this client and it remains permanently rejected for Construction.
+- Bounded current-client tracing established the live generic renderer camera transform in `Class343.method4302(...)`: X `Class36.anInt387`, Y `Class572_Sub13_Sub2.anInt11451`, Z `Class49.anInt490`, pitch `Class455.anInt5187`, yaw `Class406.anInt4765`.
+- Matrix3 modes 1/2/4/6 have dedicated update behavior; Free Build temporarily uses a Construction-only generic camera mode so rendering consumes those verified globals without installing another root interface.
+- `ConstructionBuildCamera` snapshots the prior raw camera mode/transform, activates native Free Build when the palette opens, updates the renderer camera at ~60 Hz and restores the exact prior state on palette close.
+- Implemented controls: WASD relative to current yaw, smooth acceleration/deceleration, Shift fast, Ctrl precision, Q/E vertical and right-mouse drag yaw/pitch with Matrix3's 1024-3072 pitch clamp.
+- Left-click zeros camera velocity immediately.
+- Free Build Paint uses Matrix3's already-resolved hovered tile and calls the existing `DevSpawnPlacement.placeActive(...)` path; the canvas event is consumed to avoid intentionally forwarding the same click into Walk Here.
+- Real object creation remains server authoritative through the existing owner-only `itembrowser devspawn` bridge; Free Build performs no second scene pick and owns no world object.
+- Server `itembrowser constructioncamera` remains fail-closed so the rejected Orb path cannot be re-entered accidentally.
+- RTS, Top Down, Orbit/Focus and Player View remain accepted next views; deterministic preset values are deferred until Free Build runtime behavior is accepted.
 
 Still pending in this slice:
 
-- Runtime acceptance that the crash-safety patch restores normal Construction palette opening with no legacy root/interface swap.
-- Runtime verification that the existing palette/hover/ghost/placement path remains unchanged after disabling Orb camera entry.
-- Bounded discovery of the current Matrix3 client camera/input owner before modern Free Build implementation.
-- Runtime verification of hover following, rotation 0-3, model switching, terrain alignment, cancel/stale-hover cleanup, no duplicate/flicker and confirmed-placement behavior.
+- Runtime acceptance that opening the palette activates native Free Build with no root-interface change or crash.
+- Runtime acceptance of WASD direction, Shift/Ctrl speeds, Q/E vertical sign, right-drag feel, acceleration/deceleration and exact normal-camera restore on close/reopen.
+- Runtime acceptance that Paint click consumption keeps the player stationary and produces exactly one authoritative object; if the AWT consumed event still leaks to Matrix3 action 23, move that suppression to the already-verified menu-action seam.
+- Runtime verification that hover/white ghost, rotation 0-3, model switching, terrain alignment, cancel/stale-hover cleanup and one-preview-per-cycle behavior remain stable while detached.
 - Valid/invalid placement feedback tied to future settlement occupancy/rules.
 
 Later interaction polish after single-piece preview is stable:
@@ -545,10 +547,10 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle: 1.1 — Matrix3 ownership and foundation discovery
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
-- Tooling status: ORB CAMERA REJECTED — CRASH-SAFETY PATCH NEEDS RUNTIME TEST; MODERN CAMERA SEAM UNKNOWN
-- Approval state: AAA approved the crash correction and bounded modern-camera seam trace for the current Construction camera slice.
-- Current checklist item: verify that opening the Construction palette no longer enters legacy Orb root `475` or crashes on component `57`.
-- Current objective: restore safe Construction palette/ghost/placement runtime first; after that, continue only the bounded current-client camera/input trace needed for modern Free Build.
+- Tooling status: NATIVE FREE BUILD V1 IMPLEMENTED — RUNTIME ACCEPTANCE PENDING
+- Approval state: SAP AAA approved the native Construction Free Build implementation and supporting Construction documentation for this camera slice.
+- Current checklist item: perform one native Free Build + remaining ghost interaction/stability runtime acceptance pass.
+- Current objective: verify modern camera controls, stationary-player Paint placement, exact camera restore and existing ghost/placement stability without legacy interfaces, player teleport, second scene picking or client world-object ownership.
 
 ## Verification classifications
 
@@ -602,8 +604,11 @@ Later interaction polish after single-piece preview is stable:
 - `AbstractModel.alpha` is explicitly annotated as face alpha and `Model.method1467(byte, byte[])` sets face alpha; with null face data it applies the requested alpha to every face.
 - `AbstractModel.method1351(...)` deep-copies face-alpha backing storage when `Class368.method4561(flags, ...)` is true, and `Class368.method4561(...)` is exactly `(flags & 0x100) != 0`; the preview therefore requests `0x100` before mutating alpha.
 - `InterfaceManager.gazeOrbOfOculus()` installs the legacy Orb root/interface layout including component `57`; `Class83.method1256(...)` indexes the component array using the lower 16 bits of the UID, matching the runtime failing index.
-- `ConstructionBuildCamera.enter()/exit()` no longer queue the Orb server command after the crash-safety patch.
-- `WorldPacketsEncoder` exposes Matrix3 camera look/position/rotation/reset packets, but their exact safe semantics for a modern Construction camera are not yet established.
+- `ConstructionBuildCamera` and the owner-only server camera command no longer enter the rejected Orb path.
+- Generic scene rendering in `Class343.method4302(...)` consumes camera X/Y/Z from `Class36.anInt387`, `Class572_Sub13_Sub2.anInt11451`, `Class49.anInt490` and pitch/yaw from `Class455.anInt5187`, `Class406.anInt4765`.
+- Matrix3 camera mode 1 uses the newer `Class411` camera object directly; modes 2/4/6 also have dedicated update behavior, so Free Build uses a separate generic mode rather than overwriting those owners.
+- `ConstructionBuildCamera` snapshots/restores the prior raw camera mode and all five renderer globals and changes them only while the Construction palette session is active.
+- Free Build Paint confirmation consumes `ConstructionPlacementController`'s already-resolved hovered tile and still routes real placement through `DevSpawnPlacement.placeActive(...)` / server `devspawn`.
 
 ### HYPOTHESIS
 
@@ -615,8 +620,8 @@ Later interaction polish after single-piece preview is stable:
 - Exact persistent settlement-state owner to add alongside/around the classic POH `House` ownership model.
 - Best Matrix3 instance/dynamic-region owner for freeform settlement projection.
 - Final proper wooden-wall definition; `13450` is verified as a Wooden fence and should not be promoted as the final wall asset.
-- Exact current Matrix3 client camera/input owner for safe WASD/Shift/Ctrl/Q/E/right-drag detached movement.
-- Exact safe current-client semantics for deterministic RTS/top-down/orbit presets.
+- Whether consuming the AWT Paint click fully prevents the active client from dispatching normal action-23 Walk Here; runtime test decides whether the verified menu-action seam must own suppression instead.
+- Exact deterministic RTS/top-down/orbit preset values and transition feel.
 
 ## Testing
 
@@ -633,10 +638,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Runtime-verified the base direct-render ghost: Wooden fence is visibly rendered on the hovered tile and the diagnostic reaches `DRAW_SUBMITTED`.
 - Runtime-verified the corrected weight-128 white tint and face-alpha 96 translucency.
 - Runtime-verified the `0x100` alpha-copy isolation fix after a full client restart: preview alpha no longer contaminates the real placed object model.
-- Runtime-proved the legacy Orb camera/interface path crashes the current client on component `57` and rejected that path for Construction.
-- Patched `ConstructionBuildCamera` so palette open/close no longer sends the incompatible Orb enter/exit command.
-- Updated `BUILD_CAMERA.md`, patchnotes and testlist with the crash classification and modern-camera guardrails.
-- Preserved confirmed placement ownership through the existing server-authoritative devspawn path; preview remains unregistered and client-only.
+- Runtime-proved the legacy Orb camera/interface path crashes the current client on component `57` and permanently rejected that path for Construction.
+- Verified-static the current generic Matrix3 renderer camera transform through `Class343`, `Class457`, `Class67` and `Class411`.
+- Implemented native client-side Free Build in `ConstructionBuildCamera`: WASD, smooth acceleration/deceleration, Shift/Ctrl speed modifiers, Q/E vertical movement, right-drag look, click-to-stop and exact prior-camera restore.
+- Added Free Build Paint click ownership through the already-resolved hovered tile while keeping `DevSpawnPlacement`/server `devspawn` authoritative for the real object.
+- Updated `BUILD_CAMERA.md`, patchnotes and testlist for the native implementation/runtime gate.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
@@ -644,7 +650,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull and verify that opening the Construction palette no longer switches to legacy root `475` or crashes on component `57`; confirm palette, hover, ghost and confirmed placement still work. After that passes, resume a bounded current-client camera/input trace for modern Free Build.
+**Next checklist item:** Pull and run one native Free Build acceptance session: open Construction, test WASD/Shift/Ctrl/Q/E/right-drag, verify the player remains stationary on Paint clicks with exactly one real placement, check ghost hover/rotation/piece switching, close/reopen and confirm the normal camera restores cleanly.
 
 **Files/systems already inspected:**
 
@@ -676,6 +682,9 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - `Client/src/main/java/game/Class578.java`
 - `Client/src/main/java/game/Class110.java`
 - `Client/src/main/java/game/Class343.java`
+- `Client/src/main/java/game/Class457.java`
+- `Client/src/main/java/game/Class67.java`
+- `Client/src/main/java/game/Class411.java`
 - `Client/src/main/java/game/Class485.java`
 - `Client/src/main/java/game/Class503.java`
 - `Client/src/main/java/game/Class591_Sub2_Sub1_Sub1.java`
@@ -689,6 +698,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - `Client/src/main/java/game/ConstructionPlacementController.java`
 - `Client/src/main/java/game/ConstructionBuildCamera.java`
 - `Client/src/main/java/game/ConstructionGhostPreview.java`
+- `Client/src/main/java/game/ConstructionPaletteOverlay.java`
 - `Client/src/main/java/game/ClientConsoleInterfaceOverlay.java`
 - `Client/src/main/java/game/console/ClientConsoleShell.java`
 - `Client/src/main/java/game/console/ConstructionEditorPanel.java`
@@ -706,29 +716,34 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Do not add scene registration/collision/persistence to the client ghost; those belong to authoritative placement/runtime ownership, not preview rendering.
 - Do not reuse the stale historical `Class291` camera-field mapping; it does not match the current Matrix3 source.
 - Do not retry `InterfaceManager.gazeOrbOfOculus()` or legacy root/component `475/57` for Construction; runtime proved that path crashes the current client.
-- Do not hardcode guessed WASD camera fields, interface components, or RTS/top-down/orbit packet values without a verified current-client owner.
-- Do not consume action-23 Walk Here solely on assumption; first establish the modern camera/input path and then test the actual conflict.
+- Do not re-trace the five generic camera globals unless runtime behavior contradicts the current verified-static mapping.
+- Do not patch action-23 suppression again before testing the current Free Build Paint event consumption; if it leaks, use the already-verified `DevModeBridge.handleMenuAction(...)` seam rather than broadening input discovery.
+- Do not hardcode RTS/top-down/orbit values until Free Build behavior is runtime accepted.
 
 **Pending runtime verification:**
 
-- Opening the Construction palette no longer sends the Orb command, switches to root `475`, or crashes on component `57`.
-- Existing palette/hover/ghost/confirmed-placement behavior remains functional with Build Camera temporarily disabled.
-- Preview follows hovered world-tile changes without scene registration.
-- Preview model/type switches with the selected palette piece.
-- Rotation 0-3 visually matches the selected placement rotation.
+- Opening the Construction palette activates native Free Build without changing root interface or crashing.
+- WASD moves only the camera; forward/back/strafe orientation matches yaw.
+- Shift and Ctrl provide useful fast/precision speeds and releasing keys decelerates smoothly.
+- Q/E vertical direction is correct.
+- Right-mouse drag yaw/pitch feels correct and stays within the pitch clamp.
+- Left-click instantly zeros camera velocity.
+- Paint click leaves the player stationary and creates exactly one server-authoritative object; consumed AWT event does not leak to normal action 23.
+- Existing white/translucent preview follows hovered world-tile changes while detached.
+- Preview model/type switches with the selected palette piece and rotation 0-3 matches placement orientation.
 - Terrain height/alignment is correct on flat and uneven tiles.
 - Cancel/close/stale hover removes the preview immediately.
 - Active-scene-pass hook/fallback combination produces one visible preview without duplicate/flicker.
-- Normal confirmed placement still produces exactly one server-authoritative object.
+- Closing Construction restores the exact previous camera mode/transform; reopening starts Free Build cleanly.
 - Final wall/floor/door art selections still need visual acceptance.
 
 **Blockers:**
 
-- Modern Free Build camera implementation is BLOCKED on identifying the current Matrix3 client camera/input owner; the legacy Orb interface is explicitly rejected.
+- No implementation blocker remains for native Free Build v1; the current gate is runtime acceptance.
 - Persistent settlement-state/instance ownership remains intentionally separate and unresolved until the exact Bundle 1.2 file plan is produced.
 
-**Important remaining uncertainty:** The current Matrix3 camera/input seam for modern detached movement remains UNKNOWN. The legacy Orb interface is no longer uncertain; it is runtime-rejected for Construction.
+**Important remaining uncertainty:** Free Build's mapped camera ownership is verified-static but its movement feel, vertical sign, AWT click-consumption behavior and exact restore behavior still require runtime confirmation. RTS/top-down/orbit preset values remain UNKNOWN.
 
 ## Next recommended work
 
-First run the short crash-fix acceptance: open the Construction palette and confirm the client stays alive with normal palette/ghost/placement behavior. Once that passes, resume only the bounded current-client camera/input trace needed to implement Free Build; do not retry the legacy Orb interface or guess obfuscated camera fields.
+Run one short native Free Build acceptance session. If movement, stationary Paint placement, camera restoration and the remaining ghost checks pass, close this tooling slice and finish Bundle 1.1 by producing the exact persistent Bundle 1.2 settlement-state/instance file plan. If Paint click still moves the player or double-places, patch only the already-verified `DevModeBridge.handleMenuAction(...)` action-23 seam; do not reopen camera or scene discovery.
