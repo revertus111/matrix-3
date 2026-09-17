@@ -20,7 +20,7 @@
 - This editor slice does not restore persistent settlement state/instance ownership and does not claim the final 3D ghost preview.
 
 2026-09-16 - Custom Construction palette foundation
-- Added a custom-drawn in-game Construction object palette launched from the Client Console Construction Editor.
+- Added a custom-drawn in-game Construction object palette launched from the Construction Editor.
 - Added Walls/Floors/Doors category tabs, text search/filter, build-piece cards, Paint/Continuous mode controls, rotation controls, cancel/close handling and keyboard/mouse-wheel rotation while the palette is active.
 - Added shared Construction selected-piece state that arms the existing server-authoritative Dev placement path instead of creating a second world-placement owner.
 - Added read-only hovered-world-tile tracking from Matrix3's verified action-23 menu-entry seam for future preview/validation use.
@@ -154,6 +154,8 @@
 - Replaced the disabled Construction camera placeholder with a client-owned Free Build camera that snapshots/restores the previous camera mode/transform and never opens legacy root/interface 475.
 - Free Build uses a Construction-only generic camera mode while active and writes the verified renderer camera globals at ~60 Hz.
 - Added WASD horizontal movement relative to camera yaw, smooth acceleration/deceleration, Shift fast movement, Ctrl precision movement, Q/E vertical movement, and right-mouse-drag yaw/pitch with Matrix3's 1024-3072 pitch clamp.
-- Left-clicking the game canvas zeros Construction camera velocity immediately; confirmed placement/world authority remain unchanged.
+- Left-clicking the game canvas zeros Construction camera velocity immediately.
+- Free Build Paint now consumes Matrix3's already-resolved hovered tile and calls `DevSpawnPlacement.placeActive(...)`; the canvas click is consumed so the same intentional build click does not also become Walk Here.
+- Real object creation remains server-authoritative through the existing owner-only `itembrowser devspawn` path; no second scene pick or client world-object owner was added.
 - Palette close restores the exact previous Matrix3 camera mode and camera transform.
-- Runtime verification is required for movement direction/speed, Q/E sign, right-drag feel, normal-camera restoration, ghost compatibility, and whether action-23 Walk Here still moves the player after a build click.
+- Runtime verification is required for movement direction/speed, Q/E sign, right-drag feel, normal-camera restoration, ghost compatibility, one-object-per-click behavior and whether consumed AWT Paint clicks fully suppress action 23 on the active client.
