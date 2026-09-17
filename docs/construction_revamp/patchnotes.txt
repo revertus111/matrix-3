@@ -58,3 +58,10 @@
 - For definitions with `aClass326_5684`, the preview now mirrors Matrix3's special path: draw with null bounds and immediately call `Class106.method1738(...)` with the definition bounds.
 - Preview remains direct-rendered and unregistered; no scene ownership, collision, persistence or server state was added.
 - Runtime retest is required before the ghost-preview slice is accepted.
+
+2026-09-17 - Construction ghost pipeline diagnostics
+- Runtime retest with a valid displayed target tile still produced no visible ghost after the draw-contract correction.
+- Added transition-only `[ConstructionGhostPreview]` console diagnostics for every render guard, object-definition/model-build failure, and successful draw submission.
+- Successful diagnostics include object id/type/rotation plus world/local/scene coordinates without changing placement or scene ownership.
+- Diagnostic output is intentionally state-change-only to avoid per-frame console spam.
+- Next runtime check is to capture the single diagnostic state while placement is armed over a valid target tile.
