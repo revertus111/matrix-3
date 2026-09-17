@@ -122,3 +122,9 @@
 - The existing `0x80000` capability already isolates face-colour storage through `Class368.method4501(...)`; added `0x100` to the ghost model flags so `Model.method1467(...)` mutates preview-owned alpha storage instead of the cached/shared object model.
 - No scene ownership, collision, persistence, placement authority or server behavior changed.
 - A full client restart is required before retest because the previous run may already have contaminated cached model alpha arrays in memory.
+
+2026-09-17 - Construction ghost alpha isolation runtime verified
+- Full-client restart retest visibly shows the Wooden fence ghost as white/translucent while the placed Wooden fence remains its normal brown/opaque appearance.
+- `DRAW_SUBMITTED object=13450 type=0 rot=0 ... ghostTint=white/128 faceAlpha=96` remains active while the isolated preview is visible.
+- This runtime result verifies the added `0x100` model capability gives the preview private alpha storage and prevents `Model.method1467(...)` from contaminating the cached/placed object model.
+- White/translucent ghost styling and preview-vs-placed alpha isolation are now runtime VERIFIED; remaining ghost v1 acceptance is limited to hover-follow, rotation, piece switching, terrain alignment, cancel/stale-hover cleanup, duplicate/flicker, confirmed-placement count and camera/scene stability.
