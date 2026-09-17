@@ -181,3 +181,13 @@
 - Added Construction-only Shift fast (step 60), Ctrl precision (step 8), default step 25, plus Q/E vertical movement on the same Class411 position target. Q/E direction remains runtime acceptance pending.
 - Removed the temporary `CAM DEBUG` render probe/overlay. Future camera diagnostics are transition-only console lines from `ConstructionBuildCamera`.
 - Smooth acceleration/deceleration is intentionally deferred until the Class411+WASD path passes runtime acceptance; no legacy Orb interface or generic renderer-global camera ownership was restored.
+
+
+2026-09-17 - Construction Free Build live-tick input correction
+- Runtime acceptance showed only detached-camera activation worked; Construction W/A/S/D/Q/E controls did not move the camera.
+- Targeted trace found the Construction movement patch had been added to `Class24.method711()`, but that updater was not reached by the current Construction runtime path. The key mappings themselves were verified unchanged by `Class563.method6650(...)`.
+- Restored `Class24.java` to its exact pre-Construction movement state so Construction no longer modifies the stock/decompiled freecam updater.
+- Added `ConstructionBuildCamera.tick()` and call it from the live `Class343.method4302(...)` viewport seam immediately before the active Class411 camera transform is submitted. The tick is guarded to once per `client.cycles`.
+- The live tick now updates the existing detached `Class24.aClass411_Sub1_158` camera directly with W/S/A/D, existing arrow aliases, Shift fast, Ctrl precision, Q/E vertical movement and the same Class411 mouse-look/position math used by the detached-camera code.
+- Added one-shot client-to-server diagnostics through the existing owner-only command bridge. Server console now reports `ENTER`, first live `TICK`, first detected movement `INPUT`, `FAIL` when applicable, and `EXIT`; no on-screen camera debug overlay was reintroduced.
+- Camera ownership, ghost ownership and confirmed server-authoritative object placement are unchanged. Runtime acceptance is required for movement direction, Q/E sign, mouse-look, player-stationary behavior and clean close/reopen lifecycle.
