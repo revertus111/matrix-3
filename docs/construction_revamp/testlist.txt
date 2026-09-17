@@ -38,6 +38,7 @@ Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
 [x] Post-scene + renderer-environment + Matrix3 `Class90` draw-contract retest still produced no visible ghost with a valid displayed target tile.
 [ ] Instrumented runtime emits one `[ConstructionGhostPreview]` terminal state while placement is armed over a valid target tile; capture that line before changing renderer ownership again.
+[ ] Active-scene-pass hook renders exactly one preview per client cycle without duplicate/flicker from the retained post-scene fallback.
 [ ] Corrected direct-render path renders the selected real 3D object model on the current hovered world tile while placement is armed.
 [ ] Visible preview uses the current washed-out white ghost tint; true global translucency remains pending until the base model draw is runtime-proven.
 [ ] Preview follows hovered world-tile changes without registering a persistent scene object.
