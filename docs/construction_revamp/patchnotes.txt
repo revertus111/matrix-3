@@ -20,7 +20,7 @@
 - This editor slice does not restore persistent settlement state/instance ownership and does not claim the final 3D ghost preview.
 
 2026-09-16 - Custom Construction palette foundation
-- Added a custom-drawn in-game Construction palette launched from the Client Console Construction Editor.
+- Added a custom-drawn in-game Construction object palette launched from the Client Console Construction Editor.
 - Added Walls/Floors/Doors category tabs, text search/filter, build-piece cards, Paint/Continuous mode controls, rotation controls, cancel/close handling and keyboard/mouse-wheel rotation while the palette is active.
 - Added shared Construction selected-piece state that arms the existing server-authoritative Dev placement path instead of creating a second world-placement owner.
 - Added read-only hovered-world-tile tracking from Matrix3's verified action-23 menu-entry seam for future preview/validation use.
@@ -143,3 +143,8 @@
 - Disabled the Construction client bridge from sending `itembrowser constructioncamera enter/exit`; palette open/close no longer requests the incompatible legacy root interface.
 - Ghost debug output immediately before the exception is not the initiating failure, and the later `ConnectException` is secondary crash-report/network behavior.
 - Modern Free Build camera work remains blocked on a verified current-client camera/input owner; exact `FreeMove`, `VK_W`, and camera-position searches did not expose a trustworthy current seam, so no obfuscated field or packet value was guessed.
+
+2026-09-17 - Construction camera command hardening
+- Disabled the owner-only server `itembrowser constructioncamera` entry point so manual/accidental use cannot invoke the rejected legacy Orb root/interface path.
+- The command now fails closed with a compatibility message and leaves camera/interface state untouched.
+- Construction camera work remains blocked on the verified current-client camera/input seam; no legacy interface or guessed camera state was reintroduced.
