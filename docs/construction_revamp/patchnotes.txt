@@ -65,3 +65,10 @@
 - Successful diagnostics include object id/type/rotation plus world/local/scene coordinates without changing placement or scene ownership.
 - Diagnostic output is intentionally state-change-only to avoid per-frame console spam.
 - Next runtime check is to capture the single diagnostic state while placement is armed over a valid target tile.
+
+2026-09-17 - Construction ghost white-tint pass
+- Added Matrix3's verified whole-model tint capability (`Model.method1396(...)`) to the Construction preview path.
+- Requested model flags now include `0x80000`, matching Matrix3's own tint-capable model path.
+- Preview tint targets zero saturation / maximum signed-byte lightness with a 160 override weight for a washed-out white ghost appearance.
+- True global model translucency remains UNKNOWN and was not guessed; preview remains client-only and unregistered.
+- Existing pipeline diagnostics remain active until the preview is runtime visible.
