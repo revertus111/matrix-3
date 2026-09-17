@@ -99,3 +99,10 @@
 - Corrected the reads to use the 32-bit modular inverse decode multipliers (`sizeX * -876498849`, `sizeY * 1922784011`), which decode the default stored values back to a 1x1 footprint.
 - No render hook, placement authority, scene ownership, collision, persistence or server behavior changed in this fix.
 - Runtime retest should now advance past bounds validation into model build/tint/draw diagnostics.
+
+2026-09-17 - Construction ghost base render runtime verified
+- Runtime retest after the footprint decoder fix visibly rendered the selected Wooden fence preview on the hovered world tile.
+- The on-screen diagnostic reached `DRAW_SUBMITTED object=13450 type=0 rot=0 specialBounds=false`, runtime-proving the active hook, object-definition lookup, model build, tint call and `Model.method1375(...)` submission all complete successfully.
+- The preview remains client-only and unregistered; no scene ownership, collision, persistence or server placement authority was introduced.
+- Current tint is visibly red rather than the intended white and no translucency is present, so visual ghost styling remains pending.
+- Rotation, hover-follow behavior, piece switching, terrain alignment, cancel/stale-hover cleanup and duplicate/flicker behavior remain targeted runtime checks before ghost v1 is accepted.
