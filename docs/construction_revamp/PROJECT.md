@@ -23,10 +23,10 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the direct-render 3D ghost base path is now runtime verified and the corrected white/translucent styling is implemented for targeted retest.
+- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the direct-render 3D ghost, white/translucent styling and preview-vs-placed alpha isolation are runtime verified. Remaining ghost v1 acceptance is limited to interaction/stability checks.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
-- Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling implementation is `5417b5b9f03b19010519d1813898bec01bcccf00` and awaits runtime acceptance.
+- Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling and the `0x100` private-alpha isolation fix are also runtime verified after a full client restart.
 - The current Client Console Construction Editor remains a developer/debug harness; the custom in-game palette is the intended player-facing selection direction.
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - First playable target: Phase 1 MVP vertical slice.
@@ -415,7 +415,7 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ### Next tooling slice — Custom Construction Palette + Preview Foundation
 
-**Status:** PALETTE RUNTIME VERIFIED — 3D GHOST BASE RENDER VERIFIED, VISUAL POLISH RETEST PENDING
+**Status:** PALETTE + WHITE/TRANSLUCENT GHOST + ALPHA ISOLATION RUNTIME VERIFIED — INTERACTION/STABILITY RETEST PENDING
 
 Runtime-verified palette foundation:
 
@@ -441,13 +441,13 @@ Runtime-verified palette foundation:
 - On-screen diagnostics runtime-proved the active ghost hook and exposed an invalid footprint decode: `ObjectDefinitions.sizeX/sizeY` had been read using storage multipliers instead of their inverse decode multipliers.
 - Correcting the footprint decode to `sizeX * -876498849` / `sizeY * 1922784011` allowed the Wooden fence preview to render visibly on the hovered tile; runtime diagnostic reached `DRAW_SUBMITTED object=13450 type=0 rot=0 specialBounds=false`.
 - The base direct-render ghost pipeline is therefore runtime VERIFIED: hover state, bounds, definition lookup, model build and `Model.method1375(...)` submission all complete to a visible model.
-- The first colour override appeared red because the weight 160 overshot `AbstractModel.method1396(...)`'s `>> 7` interpolation scale. The corrected implementation uses weight 128 for an exact target.
-- `AbstractModel.alpha` is annotated as face alpha and `Model.method1467(byte, byte[])` provides a verified-static whole-model face-alpha path; the current visual-polish build applies face alpha 96 after the white tint, targeting roughly 62% rendered opacity.
+- The first colour override appeared red because the weight 160 overshot `AbstractModel.method1396(...)`'s `>> 7` interpolation scale. Weight 128 now reaches the intended white/washed-out target and is runtime verified.
+- Face alpha 96 through `Model.method1467(byte, byte[])` now produces the intended translucent ghost at runtime.
+- A runtime regression proved preview alpha could leak into placed/cached models when the clone shared face-alpha backing data. Adding the `0x100` model capability forces private alpha storage; after a full client restart the ghost remained white/translucent while the placed Wooden fence remained normal brown/opaque. Preview-vs-placed alpha isolation is runtime VERIFIED.
 - The preview remains unregistered with `Class523`; it has no collision, persistence, server ownership, or persistent world state.
 
 Still pending in this slice:
 
-- Runtime acceptance that the corrected tint is white/washed-out rather than red and that face alpha 96 produces a useful translucent ghost.
 - Runtime verification of hover following, rotation 0-3, model switching, terrain alignment, cancel/stale-hover cleanup, no duplicate/flicker, confirmed-placement behavior and camera/scene stability.
 - Valid/invalid placement feedback tied to future settlement occupancy/rules.
 
@@ -529,10 +529,10 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle: 1.1 — Matrix3 ownership and foundation discovery
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation
-- Tooling status: PALETTE RUNTIME VERIFIED — 3D GHOST BASE RENDER VERIFIED, VISUAL POLISH RETEST PENDING
+- Tooling status: PALETTE + WHITE/TRANSLUCENT GHOST + ALPHA ISOLATION RUNTIME VERIFIED — INTERACTION/STABILITY RETEST PENDING
 - Approval state: SAP AAA approved the current 3D Construction ghost-preview slice.
-- Current checklist item: runtime-retest the corrected white/translucent ghost and complete the bundled preview interaction checks.
-- Current objective: accept the white/translucent styling and verify hover following, rotation, piece switching, cancellation, terrain alignment, one-preview-per-cycle behavior and scene stability without changing scene ownership.
+- Current checklist item: complete the remaining bundled preview interaction/stability checks.
+- Current objective: verify hover following, rotation, piece switching, cancellation, terrain alignment, one-preview-per-cycle behavior, authoritative placement count and scene stability without changing scene ownership.
 
 ## Verification classifications
 
@@ -556,6 +556,8 @@ Later interaction polish after single-piece preview is stable:
 - The on-screen `GHOST DEBUG:` bridge is runtime verified and exposed the incorrect object-footprint decode through `SKIP_BOUNDS`.
 - Corrected footprint decoding produces a visible Wooden fence preview on the hovered world tile.
 - Runtime diagnostic reaches `DRAW_SUBMITTED object=13450 type=0 rot=0 specialBounds=false` while the 3D preview is visible, proving the base direct-render pipeline completes successfully.
+- Weight 128 plus face alpha 96 renders the ghost visibly white/washed-out and translucent at runtime.
+- After the `0x100` alpha-copy capability fix and a full client restart, the preview remains translucent while the placed Wooden fence remains normal/opaque; ghost alpha isolation is runtime verified.
 
 ### verified-static
 
@@ -580,6 +582,7 @@ Later interaction polish after single-piece preview is stable:
 - `ObjectDefinitions.sizeX/sizeY` require inverse read multipliers `-876498849` / `1922784011`; using their storage multipliers as reads creates invalid billion-scale footprints.
 - `AbstractModel.method1396(...)` interpolates packed colour components using `weight >> 7`, so weight 128 reaches the target exactly while 160 overshoots it.
 - `AbstractModel.alpha` is explicitly annotated as face alpha and `Model.method1467(byte, byte[])` sets face alpha; with null face data it applies the requested alpha to every face.
+- `AbstractModel.method1351(...)` deep-copies face-alpha backing storage when `Class368.method4561(flags, ...)` is true, and `Class368.method4561(...)` is exactly `(flags & 0x100) != 0`; the preview therefore requests `0x100` before mutating alpha.
 
 ### HYPOTHESIS
 
@@ -591,7 +594,6 @@ Later interaction polish after single-piece preview is stable:
 - Exact persistent settlement-state owner to add alongside/around the classic POH `House` ownership model.
 - Best Matrix3 instance/dynamic-region owner for freeform settlement projection.
 - Final proper wooden-wall definition; `13450` is verified as a Wooden fence and should not be promoted as the final wall asset.
-- Runtime visual result of the corrected white tint plus face-alpha 96 on the active Matrix3 rendering backend.
 
 ## Testing
 
@@ -606,7 +608,8 @@ See `docs/construction_revamp/testlist.txt`.
 - Verified-static the Matrix3 object-model/direct-render path through `ObjectDefinitions.method6057(...)` / `method6061(...)`, `Class456_Sub1_Sub2_Sub1` / `Class456_Sub1_Sub4_Sub1`, and `Model.method1375(...)`.
 - Runtime diagnostics exposed and corrected the obfuscated object-footprint decode bug.
 - Runtime-verified the base direct-render ghost: Wooden fence is visibly rendered on the hovered tile and the diagnostic reaches `DRAW_SUBMITTED`.
-- Verified-static the tint interpolation and face-alpha paths, corrected tint weight from 160 to 128, and staged face alpha 96 for a translucent white ghost retest.
+- Runtime-verified the corrected weight-128 white tint and face-alpha 96 translucency.
+- Runtime-verified the `0x100` alpha-copy isolation fix after a full client restart: preview alpha no longer contaminates the real placed object model.
 - Preserved confirmed placement ownership through the existing server-authoritative devspawn path; preview remains unregistered and client-only.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
@@ -615,7 +618,7 @@ See `docs/construction_revamp/testlist.txt`.
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation.
 
-**Next checklist item:** Pull/run the current visual-polish build and perform one bundled ghost-preview acceptance pass: confirm white/translucent appearance, hover following, rotation 0-3, Floor/Door model switching, terrain alignment, cancel/close cleanup, one authoritative placed object, and stable camera/scene rendering.
+**Next checklist item:** Perform the remaining bundled ghost-preview interaction/stability acceptance pass: confirm hover following, rotation 0-3, Floor/Door model switching, terrain alignment, cancel/close cleanup, one preview per cycle, one authoritative placed object, and stable camera/scene rendering.
 
 **Files/systems already inspected:**
 
@@ -669,7 +672,6 @@ See `docs/construction_revamp/testlist.txt`.
 
 **Pending runtime verification:**
 
-- Corrected tint renders white/washed-out instead of red and face alpha 96 gives useful translucency.
 - Preview follows hovered world-tile changes without scene registration.
 - Preview model/type switches with the selected palette piece.
 - Rotation 0-3 visually matches the selected placement rotation.
@@ -682,11 +684,11 @@ See `docs/construction_revamp/testlist.txt`.
 
 **Blockers:**
 
-- No base ghost-visibility blocker remains; current gate is runtime acceptance of the corrected white/translucent styling and bundled interaction/stability checks.
+- No base ghost-visibility or styling blocker remains; current gate is the remaining bundled interaction/stability acceptance checks.
 - Persistent settlement-state/instance ownership remains intentionally separate and unresolved until the exact Bundle 1.2 file plan is produced.
 
-**Important remaining uncertainty:** The persistent settlement-state/instance owner remains unverified, and the corrected white/translucent ghost appearance still needs runtime acceptance on the active rendering backend.
+**Important remaining uncertainty:** The persistent settlement-state/instance owner remains unverified; ghost white/translucent styling and alpha isolation are no longer uncertain.
 
 ## Next recommended work
 
-Run one bundled ghost-preview acceptance pass on the current visual-polish build. If styling and interaction/stability checks pass, close the ghost v1 tooling slice and finish Bundle 1.1 by producing the exact persistent Bundle 1.2 settlement-state/instance file plan.
+Run the remaining bundled ghost-preview interaction/stability acceptance pass. If those checks pass, close the ghost v1 tooling slice and finish Bundle 1.1 by producing the exact persistent Bundle 1.2 settlement-state/instance file plan.
