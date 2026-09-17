@@ -74,6 +74,10 @@ public final class ConstructionGhostPreview {
         });
     }
 
+    static String getLatestDebugState() {
+        return latestDebugState;
+    }
+
     static void debugClass578Entry() {
         debugMilestone(DEBUG_CLASS578_ENTRY,
                 "HOOK Class578.method6834 reached while Construction palette is active");
