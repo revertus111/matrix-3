@@ -102,8 +102,19 @@ public final class ItemBrowserCommandBridge {
     }
 
     private static boolean processConstructionCamera(Player player, String[] cmd) {
+        if (cmd != null && cmd.length >= 4 && "debug".equalsIgnoreCase(cmd[2])) {
+            StringBuilder state = new StringBuilder();
+            for (int index = 3; index < cmd.length; index++) {
+                if (state.length() > 0) {
+                    state.append(' ');
+                }
+                state.append(cmd[index]);
+            }
+            System.out.println("[ConstructionBuildCamera] " + state.toString().replace('_', ' '));
+            return true;
+        }
         player.getPackets().sendGameMessage(
-                "Construction build camera is disabled: the legacy Orb interface is incompatible with this client.");
+                "Construction camera is client-owned. Legacy Orb camera commands remain disabled.");
         return true;
     }
 
