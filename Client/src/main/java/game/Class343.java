@@ -188,10 +188,8 @@ public class Class343 {
 				client.aClass613_8605.method7306(-1042067865).method5978(client.aClass613_8605, 666397293);
 				byte i_29_ = (Class213.aClass572_Sub24_2463.aClass665_Sub1_9201.method8101(-790894403) == 2 ? (byte) (client.anInt8699 * 2074321681) : (byte) 1);
 				if (IncomingPacket.method4113((byte) -31) || 625220759 * Class18.anInt143 == 1) {
-					ConstructionBuildCamera.observeRenderCamera(625220759 * Class18.anInt143, 2095151347 * class403.anInt4748, -1940941519 * class403.anInt4747, class403.anInt4749 * -101352869, true);
 					client.aClass613_8605.method7285(1098911112).method6240(client.cycles, 2095151347 * class403.anInt4748, -1940941519 * class403.anInt4747, class403.anInt4749 * -101352869, client.aClass613_8605.method7346((byte) 2), client.anIntArray8701, client.anIntArray8716, client.anIntArray8717, client.anIntArray8718, client.anIntArray8719, 1 + (Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009), i_29_, (int) class240.aFloat2653 >> 9, (int) class240.aFloat2657 >> 9, Class213.aClass572_Sub24_2463.aClass665_Sub14_9215.method8241((byte) 6) == 0, true, 0, true);
 				} else {
-					ConstructionBuildCamera.observeRenderCamera(625220759 * Class18.anInt143, Class36.anInt387 * 386814715, Class572_Sub13_Sub2.anInt11451 * -1094666305, Class49.anInt490 * -999214779, false);
 					client.aClass613_8605.method7285(2030280078).method6240(client.cycles, Class36.anInt387 * 386814715, Class572_Sub13_Sub2.anInt11451 * -1094666305, Class49.anInt490 * -999214779, client.aClass613_8605.method7346((byte) 96), client.anIntArray8701, client.anIntArray8716, client.anIntArray8717, client.anIntArray8718, client.anIntArray8719, 1 + (Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009), i_29_, (int) class240.aFloat2653 >> 9, (int) class240.aFloat2657 >> 9, Class213.aClass572_Sub24_2463.aClass665_Sub14_9215.method8241((byte) 6) == 0, true, 0, true);
 				}
 				ConstructionGhostPreview.render(client.aClass613_8605.method7285(0), Class272_Sub2.aClass106_9517);
