@@ -21,6 +21,8 @@ Construction Editor prototype
 
 Custom Construction palette + preview foundation
 [ ] Construction Editor `Open in-game build palette` draws the custom palette over the live game canvas.
+[ ] Palette remains continuously visible for at least 10 seconds while the game renderer/camera updates; no flashing or flicker.
+[ ] Moving/resizing the Matrix3 window keeps the palette anchored over the game canvas instead of drifting over the Client Console or desktop.
 [ ] Palette close/Cancel consumes only palette input and does not leave hidden placement armed.
 [ ] Walls, Floors and Doors category tabs filter the starter catalog correctly.
 [ ] Search accepts text/backspace and filters across category/name/object id/note without leaking typing into normal game input while focused.
