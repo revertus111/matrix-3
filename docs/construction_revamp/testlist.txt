@@ -41,10 +41,11 @@ Construction 3D ghost preview v1
 [x] Opening the Construction palette shows the temporary `GHOST DEBUG:` bar in the live client.
 [x] With Wooden fence armed and a valid hovered target tile, the `GHOST DEBUG:` bar reached `SKIP_BOUNDS`, runtime-proving the ghost render hook and valid tile state are executing.
 [x] The `SKIP_BOUNDS` diagnostic exposed invalid billion-scale object footprints caused by reading obfuscated `ObjectDefinitions.sizeX/sizeY` with their storage multipliers instead of inverse decode multipliers.
-[ ] Retest the corrected footprint decoder and confirm the fence reports a sane footprint (expected 1x1) and advances into model build/tint/draw diagnostics.
+[x] Corrected footprint decoder advances through model build/tint/draw and visibly renders the Wooden fence preview on the hovered world tile.
+[x] Runtime diagnostic reaches `DRAW_SUBMITTED object=13450 type=0 rot=0 specialBounds=false` while the preview is visible.
 [ ] Active-scene-pass hook renders exactly one preview per client cycle without duplicate/flicker from the retained post-scene fallback.
-[ ] Corrected direct-render path renders the selected real 3D object model on the current hovered world tile while placement is armed.
-[ ] Visible preview uses the current washed-out white ghost tint; true global translucency remains pending until the base model draw is runtime-proven.
+[x] Corrected direct-render path renders the selected real 3D object model on the current hovered world tile while placement is armed.
+[ ] Replace the current visibly red/opaque tint with the intended white ghost styling; true global translucency still needs a verified-safe alpha path.
 [ ] Preview follows hovered world-tile changes without registering a persistent scene object.
 [ ] Rotate -, Rotate +, R, Shift+R and mouse-wheel rotation update the preview orientation through 0-3.
 [ ] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
