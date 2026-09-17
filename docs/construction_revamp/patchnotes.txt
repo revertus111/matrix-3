@@ -191,3 +191,11 @@
 - The live tick now updates the existing detached `Class24.aClass411_Sub1_158` camera directly with W/S/A/D, existing arrow aliases, Shift fast, Ctrl precision, Q/E vertical movement and the same Class411 mouse-look/position math used by the detached-camera code.
 - Added one-shot client-to-server diagnostics through the existing owner-only command bridge. Server console now reports `ENTER`, first live `TICK`, first detected movement `INPUT`, `FAIL` when applicable, and `EXIT`; no on-screen camera debug overlay was reintroduced.
 - Camera ownership, ghost ownership and confirmed server-authoritative object placement are unchanged. Runtime acceptance is required for movement direction, Q/E sign, mouse-look, player-stationary behavior and clean close/reopen lifecycle.
+
+
+2026-09-17 - Construction Free Build live-tick controls runtime verified
+- User runtime acceptance confirmed the live `ConstructionBuildCamera.tick()` seam now works: Construction automatically enters detached Free Build and W/S/A/D, Q/E, Shift fast, Ctrl precision and mouse-look all control the live Class411 camera.
+- Closing Construction restores the normal camera and reopening Construction starts Free Build cleanly.
+- This verifies the core camera control/lifecycle path and closes the previous dead-`Class24.method711()` input failure.
+- Remaining Free Build v1 integration checks are intentionally separate: player-stationary build clicks, ghost hover/rotation/piece switching while detached, one authoritative placement/no Walk Here leakage, pre-existing-freecam preservation, bounded server-console diagnostics and combined render stability.
+- Smooth acceleration/deceleration, click-to-stop and RTS/top-down/orbit presets remain deferred until that integration pass closes.
