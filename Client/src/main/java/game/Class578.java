@@ -47,10 +47,17 @@ public class Class578 {
 	}
 
 	static void method6834(Class531 class531, int i) {
+		if (ConstructionPlacementController.isHoverTracking())
+			ConstructionGhostPreview.debugClass578Entry();
 		if (class531.aClass456_Sub1_5929 == null && client.aClass613_8605 != null) {
+			if (ConstructionPlacementController.isHoverTracking())
+				ConstructionGhostPreview.debugClass578ImmediatePath();
 			Class523 scene = client.aClass613_8605.method7285(0);
-			if (scene != null && scene.aClass174Array5875 == scene.aClass174Array5838)
+			if (scene != null && scene.aClass174Array5875 == scene.aClass174Array5838) {
+				if (ConstructionPlacementController.isHoverTracking())
+					ConstructionGhostPreview.debugClass578RenderCall();
 				ConstructionGhostPreview.render(scene, Class272_Sub2.aClass106_9517);
+			}
 		}
 		class531.aClass456_Sub1_5929 = null;
 		synchronized (Class531.aStack5931) {
