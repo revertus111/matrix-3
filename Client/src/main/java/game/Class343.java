@@ -156,6 +156,7 @@ public class Class343 {
 				Class272_Sub2.aClass106_9517.method1715(i, i_9_, i + i_10_, i_11_ + i_9_);
 				Class472 class472 = client.aClass613_8605.method7306(-1042067865).method5957(1941635118);
 				int i_26_ = class472.method5573((byte) 3);
+				ConstructionBuildCamera.tick();
 				Class403 class403 = new Class403();
 				Class497 class497 = client.aClass613_8605.method7280((byte) -1);
 				if (IncomingPacket.method4113((byte) -101))
