@@ -159,3 +159,8 @@
 - Real object creation remains server-authoritative through the existing owner-only `itembrowser devspawn` path; no second scene pick or client world-object owner was added.
 - Palette close restores the exact previous Matrix3 camera mode and camera transform.
 - Runtime verification is required for movement direction/speed, Q/E sign, right-drag feel, normal-camera restoration, ghost compatibility, one-object-per-click behavior and whether consumed AWT Paint clicks fully suppress action 23 on the active client.
+
+2026-09-17 - Construction Free Build mode encoding correction
+- Static verification caught an obfuscation mistake before runtime testing: raw `711307203` already decodes to camera mode 5 under `Class18.anInt143 * 625220759`; multiplying it by 5 would select decoded mode 25 instead.
+- `Class457.method5426(...)` directly assigns raw `711307203`, source-proving it is Matrix3's mode-5 raw value.
+- Free Build now assigns that raw value directly; camera position/pitch/yaw encode/decode pairs remain unchanged and statically verified.
