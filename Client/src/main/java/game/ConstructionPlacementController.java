@@ -126,6 +126,27 @@ public final class ConstructionPlacementController {
     }
 
     /**
+     * Free Build paint confirmation consumes the already-resolved hovered tile.
+     * It does not perform a second scene pick and still queues the normal
+     * server-authoritative DevSpawnPlacement command.
+     *
+     * @return true when the current click was a valid armed Paint placement and
+     *         should therefore be consumed instead of becoming Walk Here.
+     */
+    public static boolean placeHoveredFromBuildCamera() {
+        if (!ConstructionBuildCamera.isRequested() || placementMode != PlacementMode.PAINT
+                || !DevSpawnPlacement.isPaintActive()) {
+            return false;
+        }
+        HoverTile tile = getHoveredTile();
+        if (tile == null) {
+            return false;
+        }
+        status = DevSpawnPlacement.placeActive(tile.worldX, tile.worldY, tile.plane);
+        return true;
+    }
+
+    /**
      * verified-static: action 23 is Matrix3's normal scene-tile menu entry and
      * carries local X/Y. This mirrors only its resolved tile for preview state;
      * it does not pick a second tile or alter the menu entry.
