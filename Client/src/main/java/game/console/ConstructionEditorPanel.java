@@ -1,5 +1,6 @@
 package game.console;
 
+import game.ConstructionPaletteOverlay;
 import game.DevModeBridge;
 import game.DevSpawnPlacement;
 
@@ -116,6 +117,16 @@ public final class ConstructionEditorPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(10));
         card.add(ConsoleTheme.createWrappedText(
                 "Starter ids are provisional cache candidates. Verify the live model before treating a preset as final.", 2));
+        card.add(Box.createVerticalStrut(10));
+
+        JButton openPalette = new JButton("Open in-game build palette");
+        ConsoleTheme.styleButton(openPalette);
+        openPalette.setAlignmentX(LEFT_ALIGNMENT);
+        openPalette.addActionListener(e -> {
+            ConstructionPaletteOverlay.show();
+            setStatus("In-game Construction palette opened. Select a piece there to arm placement.");
+        });
+        card.add(openPalette);
         return card;
     }
 
@@ -208,8 +219,8 @@ public final class ConstructionEditorPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
                 "This tool currently creates Dev-owned runtime objects through Matrix3's existing Admin+ placement authority. "
-                        + "It does not claim settlement save/reload, occupancy rules, Construction XP, or the final 3D ghost preview. "
-                        + "No unverified render hook is used by this slice.",
+                        + "The custom-drawn in-game palette now owns build selection/search/rotation UI, but settlement persistence, "
+                        + "occupancy rules, Construction XP, and the true 3D ghost renderer are still separate foundation work.",
                 4));
         return card;
     }
@@ -296,7 +307,8 @@ public final class ConstructionEditorPanel extends JScrollPane {
             Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
                 @Override
                 public void eventDispatched(AWTEvent event) {
-                    if (!isShowing() || !DevSpawnPlacement.hasActive() || isEventFromThisPanel(event)) {
+                    if (ConstructionPaletteOverlay.isVisible() || !isShowing() || !DevSpawnPlacement.hasActive()
+                            || isEventFromThisPanel(event)) {
                         return;
                     }
                     if (event instanceof KeyEvent) {

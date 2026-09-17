@@ -18,3 +18,11 @@
 - Added Paint/Continuous placement controls plus R, Shift+R and mouse-wheel fixed-rotation re-arming while placement is active; Escape/Cancel continues through existing Dev Mode cancellation.
 - Starter object ids/types are HYPOTHESIS until visually verified against the active Matrix3 cache.
 - This editor slice does not restore persistent settlement state/instance ownership and does not claim the final 3D ghost preview.
+
+2026-09-16 - Custom Construction palette foundation
+- Added a custom-drawn in-game Construction palette launched from the Client Console Construction Editor.
+- Added Walls/Floors/Doors category tabs, text search/filter, build-piece cards, Paint/Continuous mode controls, rotation controls, cancel/close handling and keyboard/mouse-wheel rotation while the palette is active.
+- Added shared Construction selected-piece state that arms the existing server-authoritative Dev placement path instead of creating a second world-placement owner.
+- Added read-only hovered-world-tile tracking from Matrix3's verified action-23 menu-entry seam for future preview/validation use.
+- Preserved the verified runtime starter mappings: 13450 Wooden fence (temporary wall test), 13684 Floor decoration, 13344 Door.
+- Traced `ObjectDefinitions.method6061(...)` as an object-model factory, but the safe non-authoritative scene draw/insertion seam remains UNKNOWN; no fake 3D ghost was added.
