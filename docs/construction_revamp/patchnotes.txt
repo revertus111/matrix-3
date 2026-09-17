@@ -164,3 +164,11 @@
 - Static verification caught an obfuscation mistake before runtime testing: raw `711307203` already decodes to camera mode 5 under `Class18.anInt143 * 625220759`; multiplying it by 5 would select decoded mode 25 instead.
 - `Class457.method5426(...)` directly assigns raw `711307203`, source-proving it is Matrix3's mode-5 raw value.
 - Free Build now assigns that raw value directly; camera position/pitch/yaw encode/decode pairs remain unchanged and statically verified.
+
+2026-09-17 - Construction camera runtime rejection + Alt free-cam diagnostic trace
+- Native Free Build v1 failed runtime acceptance: opening Construction produced invalid/empty-looking scene views and the intended WASD/Q/E/right-drag controls did not operate the live camera.
+- Rejected the generic-camera-write implementation instead of tuning it further; the failure proves the renderer globals alone are not sufficient evidence for the working detached camera owner.
+- Reworked `ConstructionBuildCamera` into a read-only diagnostic session. It no longer writes camera mode, XYZ, pitch/yaw, consumes movement input, or owns placement clicks.
+- Added a live `CAM DEBUG [READ ONLY]` window that reports camera mode, effective render XYZ, delta from palette-open baseline, generic camera XYZ/pitch/yaw, and observed Alt/WASD/Q/E key state.
+- Added a narrow `Class343.method4302(...)` probe immediately at the existing scene submission seam so diagnostics report the exact XYZ passed to `Class523.method6240(...)` for both the Class411/object-camera path and generic-camera path.
+- Next runtime trace: open Construction, capture CAM DEBUG idle, then use the already-working Alt free-camera and capture CAM DEBUG while moving/rotating. That runtime evidence decides the exact owner/path to mirror; no camera values are guessed in this checkpoint.
