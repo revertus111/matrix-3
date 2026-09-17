@@ -103,6 +103,7 @@ public final class ConstructionPlacementController {
     public static void beginPaletteSession() {
         hoverTracking = true;
         clearHoveredTile();
+        ConstructionGhostPreview.beginDebugSession();
         status = DevModeBridge.cancelPlacement();
         if ("No placement is armed.".equals(status)) {
             status = "Choose a build piece.";
@@ -112,6 +113,7 @@ public final class ConstructionPlacementController {
     public static void endPaletteSession(boolean cancelPlacement) {
         hoverTracking = false;
         clearHoveredTile();
+        ConstructionGhostPreview.endDebugSession();
         if (cancelPlacement) {
             status = DevModeBridge.cancelPlacement();
         }
