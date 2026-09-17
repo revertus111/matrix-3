@@ -25,7 +25,7 @@ Observed fatal chain:
 
 `InterfaceManager.gazeOrbOfOculus()` attempts to install interface component `57` under legacy root `475`. That layout is incompatible with the active client/cache and is no longer used by Construction.
 
-## Current Free Build implementation
+## Rejected native Free Build v1 attempt (reference only)
 
 Verified-static renderer mapping from `Class343.method4302(...)`:
 
@@ -54,11 +54,35 @@ Paint confirmation still calls `DevSpawnPlacement.placeActive(...)`, so the exis
 
 The implementation uses no server camera packet, no player teleport, no legacy Orb/root interface, and no second scene picker.
 
+## Active diagnostic — mirror the working Alt free-camera
+
+The first native Free Build runtime acceptance failed: Construction opened, but the attempted generic-camera implementation did not control the live camera correctly and produced invalid/empty-looking scene views. That implementation is rejected as an active camera owner.
+
+Construction now runs a **read-only camera trace** while the palette is open:
+
+- It does not write camera mode, XYZ, pitch, yaw, velocity or movement keys.
+- It does not consume Alt/WASD/Q/E input.
+- It observes the exact XYZ submitted to `Class523.method6240(...)` from the live viewport render seam.
+- It reports whether the renderer is using the mode-1 `Class411`/object-camera path or the generic camera-global path.
+- It also reports the current generic XYZ/pitch/yaw values for comparison.
+- The `CAM DEBUG [READ ONLY]` bar records Alt/WASD/Q/E key state and render-position delta from the moment Construction was opened.
+
+### Runtime trace procedure
+
+1. Open Construction and leave Alt released. Capture the CAM DEBUG state.
+2. Use the already-working Matrix3 Alt free-camera exactly as normal.
+3. Move/rotate while Alt is active and capture CAM DEBUG again.
+4. Compare `mode`, `source`, `renderXYZ`, `deltaFromOpen`, and generic XYZ/pitch/yaw.
+5. Promote the actual Alt free-camera owner/path to `VERIFIED` only from that runtime evidence.
+6. Implement Construction Free Build by reusing/mirroring that proven path instead of writing guessed camera fields.
+
+This diagnostic checkpoint intentionally restores normal Matrix3 camera/input ownership until the working Alt free-camera seam is runtime identified.
+
 ## Accepted view roadmap
 
 ### Free Build
 
-Detached modern free camera for close/manual building. Implemented; runtime acceptance pending.
+Detached modern free camera for close/manual building. The first generic-camera implementation was runtime rejected; implementation resumes after the working Alt free-camera owner/path is captured by the active diagnostic.
 
 ### RTS
 
@@ -98,8 +122,9 @@ Return to the normal Matrix3 gameplay camera without changing settlement or plac
 - `VERIFIED`: legacy Orb interface is incompatible with the current client and rejected for Construction.
 - `verified-static`: generic Matrix3 scene rendering consumes the five mapped camera globals above.
 - `verified-static`: raw `711307203` is Matrix3's source-proven camera-mode-5 value via `Class457.method5426(...)`.
-- `verified-static`: Free Build snapshots/restores previous raw camera state and does not invoke the server Orb bridge.
-- `verified-static`: Free Build Paint confirmation consumes the existing hovered tile and still routes real placement through `DevSpawnPlacement`/server `devspawn`.
-- `NEEDS TEST`: Free Build movement direction/speed, vertical sign, mouse-look feel, camera restoration, consumed-click behavior and ghost compatibility.
-- `UNKNOWN`: whether a consumed AWT Paint click fully suppresses Matrix3 action 23 on the active runtime; promote only after testing.
+- `verified-static`: the current diagnostic does not invoke the server Orb bridge and does not write camera state.
+- `verified-static`: the read-only diagnostic leaves the existing palette/hover/placement ownership unchanged; it does not become a placement owner.
+- `VERIFIED`: native generic-camera Free Build v1 failed runtime acceptance and is rejected as the active implementation.
+- `NEEDS TEST`: identify the working Alt free-camera render path from CAM DEBUG idle vs moving captures.
+- `UNKNOWN`: exact input/camera owner used by the working Alt free-camera until the diagnostic trace captures it.
 - `UNKNOWN`: exact deterministic RTS/top-down/orbit preset values; do not hardcode them until Free Build runtime behavior is accepted.
