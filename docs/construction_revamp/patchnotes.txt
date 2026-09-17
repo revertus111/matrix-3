@@ -79,3 +79,10 @@
 - Added a one-render-per-`client.cycles` guard in `ConstructionGhostPreview` so repeated scene-object submissions cannot duplicate the ghost in one frame.
 - Existing `Class343` post-scene call remains as a fallback; the per-cycle guard prevents double submission when the in-pass hook fires first.
 - No `Class523` scene attach/remove, collision, persistence or server ownership was added.
+
+2026-09-17 - Construction ghost staged debug instrumentation
+- Added once-only `[ConstructionGhostDebug]` milestone logging through the live `Class578.method6834(...)` hook and `ConstructionGhostPreview` render pipeline.
+- Milestones identify hook entry, immediate post-object path, render dispatch, valid Construction state, model-build entry/return, white-tint entry/return, and draw-call entry/return.
+- Existing terminal `[ConstructionGhostPreview]` guard/failure diagnostics remain intact, so one runtime launch can identify the exact method boundary where the invisible preview stops progressing.
+- Diagnostic logging is intentionally one-shot per client launch to avoid per-frame scene-render console spam.
+- No renderer behavior, scene ownership, placement authority, collision, persistence or server state was changed by this diagnostic patch.
