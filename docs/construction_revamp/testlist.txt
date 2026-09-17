@@ -5,6 +5,20 @@ Current reset/documentation checkpoint
 [ ] Eclipse still opens the Matrix3 Client and Server projects normally.
 [ ] Existing Matrix3 server/client startup remains baseline behavior.
 
+Construction Editor prototype
+[ ] Client Console rail opens Construction Editor without affecting the existing panels.
+[ ] Wall preset arms provisional object id 13450 and allows object type override.
+[ ] Floor preset arms provisional object id 13684 and allows object type override.
+[ ] Doorway preset arms provisional object id 13344 and allows object type override.
+[ ] Paint mode places through the normal left-click world-tile path while Walk Here remains functional.
+[ ] Continuous mode adds the existing right-click Dev placement entry on world tiles.
+[ ] Rotate buttons, R, Shift+R and mouse wheel change fixed rotation through 0-3 while placement is armed.
+[ ] Escape and the panel Cancel button disarm placement cleanly.
+[ ] Existing Dev object actions can move, rotate, duplicate and delete only Dev-owned runtime placements.
+[ ] A non-Admin session cannot arm Construction placement.
+[ ] Provisional wall/floor/door ids and object types are visually validated before being promoted from HYPOTHESIS.
+[ ] No settlement persistence or final 3D ghost-preview acceptance is claimed by this prototype.
+
 Phase 1 Bundle 1.2 — placement foundation
 [ ] Enter the settlement instance without disturbing normal world state.
 [ ] Wooden wall can be previewed, rotated and placed.

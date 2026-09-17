@@ -33,6 +33,7 @@ public final class ClientConsoleShell extends JPanel {
     public static final String PANEL_PLAYER = "player";
     public static final String PANEL_ITEMS = "items";
     public static final String PANEL_INTERFACE_EDITOR = "interfaceEditor";
+    public static final String PANEL_CONSTRUCTION = "construction";
     public static final String PANEL_ATLAS = "atlas";
     public static final String PANEL_BOSS_RESEARCH = "bossResearch";
     public static final String PANEL_SETTINGS = "settings";
@@ -49,6 +50,7 @@ public final class ClientConsoleShell extends JPanel {
     private final JToggleButton playerButton = new JToggleButton(ConsoleIcons.player());
     private final JToggleButton itemButton = new JToggleButton(ConsoleIcons.items());
     private final JToggleButton interfaceEditorButton = new JToggleButton(ConsoleIcons.interfaceEditor());
+    private final JToggleButton constructionButton = new JToggleButton(ConsoleIcons.interfaceEditor());
     private final JToggleButton atlasButton = new JToggleButton(ConsoleIcons.atlas());
     private final JToggleButton bossResearchButton = new JToggleButton(ConsoleIcons.bossResearch());
     private final JToggleButton settingsButton = new JToggleButton(ConsoleIcons.settings());
@@ -59,6 +61,7 @@ public final class ClientConsoleShell extends JPanel {
     private JComponent playerPanel;
     private JComponent itemBrowserPanel;
     private JComponent interfaceEditorPanel;
+    private JComponent constructionEditorPanel;
     private JComponent atlasPanel;
     private JComponent bossResearchPanel;
     private JComponent settingsPanel;
@@ -137,6 +140,7 @@ public final class ClientConsoleShell extends JPanel {
         configureRailButton(playerButton, "Player", PANEL_PLAYER);
         configureRailButton(itemButton, "Item Browser", PANEL_ITEMS);
         configureRailButton(interfaceEditorButton, "Interface Editor", PANEL_INTERFACE_EDITOR);
+        configureRailButton(constructionButton, "Construction Editor", PANEL_CONSTRUCTION);
         configureRailButton(atlasButton, "Client Atlas", PANEL_ATLAS);
         configureRailButton(bossResearchButton, "Boss Research", PANEL_BOSS_RESEARCH);
         configureRailButton(settingsButton, "Settings", PANEL_SETTINGS);
@@ -155,6 +159,8 @@ public final class ClientConsoleShell extends JPanel {
         rail.add(itemButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(interfaceEditorButton);
+        rail.add(Box.createVerticalStrut(4));
+        rail.add(constructionButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(atlasButton);
         rail.add(Box.createVerticalStrut(4));
@@ -294,6 +300,17 @@ public final class ClientConsoleShell extends JPanel {
             }
             return interfaceEditorPanel;
         }
+        if (PANEL_CONSTRUCTION.equals(panelId)) {
+            if (constructionEditorPanel == null) {
+                try {
+                    constructionEditorPanel = new ConstructionEditorPanel();
+                } catch (RuntimeException ex) {
+                    ex.printStackTrace();
+                    constructionEditorPanel = createPanelError("Construction Editor failed to initialize.");
+                }
+            }
+            return constructionEditorPanel;
+        }
         if (PANEL_ATLAS.equals(panelId)) {
             if (atlasPanel == null) {
                 try {
@@ -357,6 +374,9 @@ public final class ClientConsoleShell extends JPanel {
         }
         if (PANEL_INTERFACE_EDITOR.equals(panelId)) {
             return PANEL_INTERFACE_EDITOR;
+        }
+        if (PANEL_CONSTRUCTION.equals(panelId)) {
+            return PANEL_CONSTRUCTION;
         }
         if (PANEL_ATLAS.equals(panelId)) {
             return PANEL_ATLAS;
@@ -435,6 +455,7 @@ public final class ClientConsoleShell extends JPanel {
         playerButton.setSelected(consoleOpen && PANEL_PLAYER.equals(activePanelId));
         itemButton.setSelected(consoleOpen && PANEL_ITEMS.equals(activePanelId));
         interfaceEditorButton.setSelected(consoleOpen && PANEL_INTERFACE_EDITOR.equals(activePanelId));
+        constructionButton.setSelected(consoleOpen && PANEL_CONSTRUCTION.equals(activePanelId));
         atlasButton.setSelected(consoleOpen && PANEL_ATLAS.equals(activePanelId));
         bossResearchButton.setSelected(consoleOpen && PANEL_BOSS_RESEARCH.equals(activePanelId));
         settingsButton.setSelected(consoleOpen && PANEL_SETTINGS.equals(activePanelId));

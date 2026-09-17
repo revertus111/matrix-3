@@ -10,3 +10,11 @@
 - Construction remains Matrix3-native; restored historical systems are not Construction architecture authority.
 - Steam Deck files remain excluded from the active tree.
 - Phase 1 Bundle 1.1 state is unchanged.
+
+2026-09-16 - Construction Editor prototype
+- Added a lazy Client Console Construction Editor panel for owner/admin development placement.
+- Added provisional wooden wall, floor and doorway presets with editable object type and fixed rotation controls.
+- Reused Matrix3 Dev Mode tile resolution and the existing server-authoritative `itembrowser devspawn` path; no new obfuscated scene-picking or rendering hook was added.
+- Added Paint/Continuous placement controls plus R, Shift+R and mouse-wheel fixed-rotation re-arming while placement is active; Escape/Cancel continues through existing Dev Mode cancellation.
+- Starter object ids/types are HYPOTHESIS until visually verified against the active Matrix3 cache.
+- This editor slice does not restore persistent settlement state/instance ownership and does not claim the final 3D ghost preview.
