@@ -23,9 +23,10 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: ACTIVE — Construction Editor developer placement prototype is runtime verified; the next approved direction is the custom Construction object-selection palette + ghost-preview foundation.
+- State: ACTIVE — Construction Editor developer placement prototype is runtime verified; the custom Construction palette/selected-piece foundation is implemented and awaiting runtime verification.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
-- The current Client Console Construction Editor remains a developer/debug harness, not the intended final player-facing Construction interface.
+- Custom Construction palette foundation implementation: `4b4c86f306b0c9e5d723b597ad4530206fce530e`.
+- The current Client Console Construction Editor remains a developer/debug harness; the custom in-game palette is the intended player-facing selection direction.
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - First playable target: Phase 1 MVP vertical slice.
 
@@ -413,24 +414,26 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ### Next tooling slice — Custom Construction Palette + Preview Foundation
 
-**Status:** READY
+**Status:** IMPLEMENTED — RUNTIME TEST PENDING
 
-The intended player-facing Construction workflow is a custom client-side object-selection interface layered on top of the now-proven placement path.
+Implemented in the first palette slice:
 
-Required first slice:
+- Custom-drawn in-game Construction object palette launched from the Construction Editor.
+- Walls, Floors and Doors category tabs.
+- Search/filter across piece name, category, object id and technical note.
+- Shared selected-piece state containing object id, object type, rotation, category and placement mode.
+- Selecting a palette entry immediately arms the already-proven Dev placement authority.
+- Read-only hovered-world-tile tracking from Matrix3's verified action-23 menu-entry seam.
+- Paint/Continuous controls, Rotate - / Rotate +, R / Shift+R and mouse-wheel rotation while the custom palette is active.
+- Escape/Cancel/close clears placement instead of leaving a hidden armed state.
+- Palette clicks are consumed only inside the palette; normal world clicks remain owned by Matrix3 outside it.
+- The starter catalog remains explicit about current runtime evidence: Wooden fence is a temporary wall test, Floor decoration is the floor candidate, and Door is the doorway candidate.
 
-- Custom Construction object palette instead of raw developer id/type controls.
-- Category navigation beginning with Walls, Floors and Doors, designed to expand later into Windows, Fences, Furniture, Workstations and Decoration.
-- Search/filter support for buildable definitions.
-- Selected-piece state containing object/definition, object type, rotation and category metadata.
-- Selecting a palette entry immediately arms placement/preview mode.
-- Client-only hover-tile tracking for the selected build piece.
-- Rotate before confirmation via editor controls and keyboard/mouse-wheel controls where safe.
-- Escape/cancel clears preview state without spawning a real object.
-- Confirm click routes through the already-proven Matrix3 placement authority rather than creating a second world-placement owner.
-- Valid/invalid placement feedback belongs to the preview layer once occupancy/settlement rules exist.
-- True 3D ghost/blueprint rendering remains blocked on a narrow render-path trace; do not invent an unverified render hook.
-- Until the true ghost hook is verified, palette/state/hover/confirm architecture may be built independently if it does not fake preview ownership.
+Still pending in this slice:
+
+- Runtime verification of custom palette drawing/input, search, category filtering, hover target updates and placement passthrough.
+- True 3D ghost/blueprint rendering. `ObjectDefinitions.method6061(...)` is verified-static as an object-model factory, but the safe client-only scene draw/insertion seam is still UNKNOWN.
+- Valid/invalid placement feedback tied to future settlement occupancy/rules.
 
 Later interaction polish after single-piece preview is stable:
 
@@ -510,10 +513,10 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle: 1.1 — Matrix3 ownership and foundation discovery
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation
-- Tooling status: READY
-- Approval state: Construction Editor prototype was AAA-approved and is runtime verified; this documentation update is AAA-approved.
-- Current checklist item: narrowly identify the Matrix3 render/scene seam required for a true client-only Construction ghost preview, then implement the custom palette/selected-piece foundation around the already-proven placement authority.
-- Current objective: replace developer-facing raw object selection with the intended custom Construction build interface while preserving Matrix3 placement authority and keeping persistence/settlement ownership separate.
+- Tooling status: IMPLEMENTED — RUNTIME TEST PENDING
+- Approval state: SAP AAA approved the current palette/preview-foundation implementation slice.
+- Current checklist item: runtime-verify the custom palette foundation; keep true 3D ghost work blocked until the safe client-only scene draw/insertion seam is verified.
+- Current objective: prove the custom in-game selection workflow on the live client, then continue the narrow ghost-render trace or move into the exact persistent Bundle 1.2 file plan without changing ownership boundaries.
 
 ## Verification classifications
 
@@ -539,6 +542,9 @@ Later interaction polish after single-piece preview is stable:
 - `Player` owns/persists `House`; the restored tree does not contain the previously claimed freeform `SettlementState`/`PlacedBuildPiece`/`SettlementInstance` foundation.
 - Dev Mode mirrors Matrix3's normal scene-tile action 23 instead of performing a second scene pick.
 - Dev Spawn queues object placement through the existing `itembrowser devspawn` server bridge.
+- `ClientConsoleInterfaceOverlay` proves Matrix3's live Canvas can host temporary custom AWT drawing without taking interface-definition ownership.
+- `ObjectDefinitions.method6061(...)` constructs an object `Model` from the active object definition/renderer inputs; this does not by itself prove a safe client-only scene insertion path.
+- The custom palette uses the existing action-23 menu-entry stream only to mirror the hovered world tile; it does not create a second tile picker.
 
 ### HYPOTHESIS
 
@@ -549,7 +555,7 @@ Later interaction polish after single-piece preview is stable:
 
 - Exact persistent settlement-state owner to add alongside/around the classic POH `House` ownership model.
 - Best Matrix3 instance/dynamic-region owner for freeform settlement projection.
-- Final 3D ghost-preview render hook; no unverified render hook is used by the current editor prototype.
+- Safe client-only scene draw/insertion hook for a true 3D ghost object.
 - Final proper wooden-wall definition; `13450` is verified as a Wooden fence and should not be promoted as the final wall asset.
 
 ## Testing
@@ -561,9 +567,10 @@ See `docs/construction_revamp/testlist.txt`.
 **Last completed:**
 
 - Runtime-verified the Client Console Construction Editor and its end-to-end placement path.
-- Confirmed Paint placement, live rotation state, existing Dev object manipulation actions, cancellation and Place Last integration.
 - Runtime-identified the current provisional object mappings: `13450` Wooden fence, `13684` Floor decoration, `13344` Door.
-- Confirmed the current panel is the developer/debug harness; the intended final workflow is a custom Construction object-selection palette feeding placement/preview state.
+- Added the custom-drawn in-game Construction palette foundation in `4b4c86f306b0c9e5d723b597ad4530206fce530e`.
+- Added category/search selection, selected-piece/rotation/mode state, action-23 hover-tile mirroring and palette-safe input ownership without changing server/world placement authority.
+- Narrow render trace established `ObjectDefinitions.method6061(...)` as the object-model factory, but did not establish a safe client-only scene insertion hook; 3D ghost remains unimplemented rather than guessed.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
@@ -571,7 +578,7 @@ See `docs/construction_revamp/testlist.txt`.
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation.
 
-**Next checklist item:** Trace only the smallest Matrix3 render/scene path needed to determine how a client-only 3D ghost object can follow the hovered world tile without becoming real world state. Once that seam is classified, implement the custom category/search palette and selected-piece state around the proven placement controller.
+**Next checklist item:** Pull/run Matrix3 and verify the custom in-game palette: open it from Construction Editor, test tabs/search, select each starter piece, confirm target coordinates follow world hover, verify outside-world clicks still place through Paint, and test rotation/cancel. If that passes, continue only the narrow scene-render trace needed for the real 3D ghost.
 
 **Files/systems already inspected:**
 
@@ -589,6 +596,8 @@ See `docs/construction_revamp/testlist.txt`.
 - `Client/src/main/java/game/DevSpawnPlacement.java`
 - `Client/src/main/java/game/Class592.java`
 - `Client/src/main/java/game/Class319.java`
+- `Client/src/main/java/game/ObjectDefinitions.java`
+- `Client/src/main/java/game/ClientConsoleInterfaceOverlay.java`
 - `Client/src/main/java/game/console/ClientConsoleShell.java`
 - `Client/src/main/java/game/console/ConstructionEditorPanel.java`
 - `Client/src/main/java/game/console/ConsoleTheme.java`
@@ -600,21 +609,26 @@ See `docs/construction_revamp/testlist.txt`.
 - Do not re-trace the already-proven Dev Mode tile/menu dispatch and `itembrowser devspawn` placement path unless a runtime failure points back to it.
 - Do not claim the missing freeform settlement-state foundation exists until it is actually added to Matrix3.
 - Do not make `13450` the final wooden-wall definition; runtime proved it is a Wooden fence.
+- Do not treat `ObjectDefinitions.method6061(...)` as proof of a safe ghost insertion path; the scene-side seam still requires evidence.
 
 **Pending runtime verification:**
 
-- Continuous/right-click placement should receive a focused explicit runtime check if it becomes important to the final player workflow; Paint is already runtime verified.
-- R / Shift+R / mouse-wheel shortcuts should receive a focused explicit runtime check if retained in the final interface; editor rotation itself is runtime verified.
+- Custom palette opens and paints correctly over the live Canvas.
+- Category tabs and search/filter work without leaking input into the game.
+- Selecting a palette piece arms the correct id/type through the existing placement path.
+- Hover target coordinates update from normal world-tile menu resolution.
+- Outside palette clicks still perform normal Paint placement/Walk Here behavior.
+- Palette rotation shortcuts/buttons do not double-fire against the legacy editor listener.
+- Cancel/close clears hidden placement state.
 - Final wall/floor/door art selections still need visual acceptance.
-- Future custom palette/preview implementation will require its own targeted acceptance pass.
 
 **Blockers:**
 
-- No blocker to building the palette/state layer.
-- True 3D ghost rendering is blocked until the narrow Matrix3 render seam is verified.
+- No blocker to runtime-testing the custom palette/state layer.
+- True 3D ghost rendering remains blocked until the narrow client scene draw/insertion seam is verified.
 
-**Important remaining uncertainty:** The persistent settlement-state/instance owner and final ghost-preview render hook are still unverified; keep both separate from the already-proven developer placement authority.
+**Important remaining uncertainty:** The persistent settlement-state/instance owner and the client-only 3D ghost scene insertion hook remain unverified; keep both separate from the already-proven placement authority.
 
 ## Next recommended work
 
-Start the Custom Construction Palette + Preview Foundation slice: first classify the minimal client render seam for a non-authoritative ghost object, then build the custom category/search object selector and selected-piece state on top of the working placement controller. Persistence follows after the preview/interface foundation is stable.
+Runtime-test the new custom Construction palette foundation in one short session. If it passes, continue the narrow render trace for a true non-authoritative 3D ghost; after the preview interface is stable, finish Bundle 1.1 by producing the exact persistent Bundle 1.2 settlement-state/instance file plan.
