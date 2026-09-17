@@ -102,21 +102,8 @@ public final class ItemBrowserCommandBridge {
     }
 
     private static boolean processConstructionCamera(Player player, String[] cmd) {
-        if (cmd.length < 3) {
-            player.getPackets().sendGameMessage("Use: ::itembrowser constructioncamera <enter|exit>");
-            return true;
-        }
-        if ("enter".equalsIgnoreCase(cmd[2])) {
-            player.getInterfaceManager().gazeOrbOfOculus();
-            player.getPackets().sendGameMessage("Construction build camera enabled.");
-            return true;
-        }
-        if ("exit".equalsIgnoreCase(cmd[2])) {
-            player.closeInterfaces();
-            player.getPackets().sendGameMessage("Construction build camera closed.");
-            return true;
-        }
-        player.getPackets().sendGameMessage("Use: ::itembrowser constructioncamera <enter|exit>");
+        player.getPackets().sendGameMessage(
+                "Construction build camera is disabled: the legacy Orb interface is incompatible with this client.");
         return true;
     }
 
