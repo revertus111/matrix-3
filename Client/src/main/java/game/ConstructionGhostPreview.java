@@ -14,12 +14,41 @@ public final class ConstructionGhostPreview {
     private static final int GHOST_TINT_SATURATION = 0;
     private static final int GHOST_TINT_LIGHTNESS = 127;
     private static final int GHOST_TINT_WEIGHT = 160;
+
+    private static final int DEBUG_CLASS578_ENTRY = 1 << 0;
+    private static final int DEBUG_CLASS578_IMMEDIATE = 1 << 1;
+    private static final int DEBUG_CLASS578_RENDER_CALL = 1 << 2;
+    private static final int DEBUG_RENDER_ENTRY = 1 << 3;
+    private static final int DEBUG_STATE_READY = 1 << 4;
+    private static final int DEBUG_MODEL_BUILD_START = 1 << 5;
+    private static final int DEBUG_MODEL_READY = 1 << 6;
+    private static final int DEBUG_TINT_START = 1 << 7;
+    private static final int DEBUG_TINT_DONE = 1 << 8;
+    private static final int DEBUG_DRAW_START = 1 << 9;
+    private static final int DEBUG_DRAW_DONE = 1 << 10;
+
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
     private static volatile String lastDiagnosticKey = "";
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
+    private static volatile int debugMilestones;
 
     private ConstructionGhostPreview() {
+    }
+
+    static void debugClass578Entry() {
+        debugMilestone(DEBUG_CLASS578_ENTRY,
+                "HOOK Class578.method6834 reached while Construction palette is active");
+    }
+
+    static void debugClass578ImmediatePath() {
+        debugMilestone(DEBUG_CLASS578_IMMEDIATE,
+                "HOOK Class578 immediate post-object path reached (Class531 has no queued owner)");
+    }
+
+    static void debugClass578RenderCall() {
+        debugMilestone(DEBUG_CLASS578_RENDER_CALL,
+                "HOOK Class578 calling ConstructionGhostPreview.render inside active scene pass");
     }
 
     /**
@@ -31,6 +60,8 @@ public final class ConstructionGhostPreview {
      * path. This method intentionally never calls Class523 attach/remove methods.
      */
     static void render(Class523 scene, Class106 renderer) {
+        debugMilestone(DEBUG_RENDER_ENTRY, "RENDER entered ConstructionGhostPreview.render");
+
         if (scene == null || renderer == null) {
             diagnostic("WAIT_SCENE", "WAIT scene/renderer unavailable");
             return;
@@ -63,6 +94,11 @@ public final class ConstructionGhostPreview {
             diagnostic("WAIT_SCENE_MISMATCH", "WAIT active scene mismatch");
             return;
         }
+
+        debugMilestone(DEBUG_STATE_READY,
+                "STATE_READY object=" + piece.getObjectId() + " type=" + piece.getObjectType()
+                        + " rot=" + ConstructionPlacementController.getRotation()
+                        + " world=" + tile.getWorldX() + "," + tile.getWorldY() + "," + tile.getPlane());
 
         int cycle = client.cycles;
         if (lastRenderedCycle == cycle) {
@@ -123,6 +159,10 @@ public final class ConstructionGhostPreview {
                 ? scene.aClass174Array5838[plane + 1]
                 : null;
 
+        debugMilestone(DEBUG_MODEL_BUILD_START,
+                "MODEL_BUILD_START object=" + piece.getObjectId() + " type=" + piece.getObjectType()
+                        + " rot=" + rotation + " scene=" + sceneX + "," + sceneY + "," + sceneZ);
+
         Class647 built = definition.method6057(renderer, MODEL_FLAGS, piece.getObjectType(), rotation,
                 ground, upperGround, sceneX, sceneY, sceneZ, false, null, -272661735);
         if (built == null) {
@@ -139,6 +179,9 @@ public final class ConstructionGhostPreview {
             return;
         }
 
+        debugMilestone(DEBUG_MODEL_READY,
+                "MODEL_READY object=" + piece.getObjectId() + " modelClass=" + built.anObject8324.getClass().getName());
+
         if (scene.aClass174Array5840 == scene.aClass174Array5875 && scene.aClass174Array5838[0] != null) {
             Class86 environment = new Class86();
             environment.anInt1193 = scene.method6231(localX, localY, 1258315415) * 1368828903;
@@ -151,15 +194,21 @@ public final class ConstructionGhostPreview {
         }
 
         Model model = (Model) built.anObject8324;
+        debugMilestone(DEBUG_TINT_START, "TINT_START Model.method1396 white ghost override");
         model.method1396(GHOST_TINT_HUE, GHOST_TINT_SATURATION, GHOST_TINT_LIGHTNESS, GHOST_TINT_WEIGHT);
+        debugMilestone(DEBUG_TINT_DONE, "TINT_DONE Model.method1396 returned normally");
+
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         Class326 bounds = definition.aClass326_5684;
+        debugMilestone(DEBUG_DRAW_START,
+                "DRAW_START Model.method1375 specialBounds=" + (bounds != null));
         if (bounds != null) {
             model.method1375(TRANSFORM, null, 0);
             renderer.method1738(TRANSFORM, RENDER_BOUNDS, bounds);
         } else {
             model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
         }
+        debugMilestone(DEBUG_DRAW_DONE, "DRAW_DONE model draw call returned normally");
 
         diagnostic("DRAW_SUBMITTED:" + piece.getObjectId() + ":" + piece.getObjectType() + ":" + rotation
                         + ":" + (bounds != null),
@@ -169,6 +218,19 @@ public final class ConstructionGhostPreview {
                         + " world=" + tile.getWorldX() + "," + tile.getWorldY() + "," + plane
                         + " local=" + localX + "," + localY
                         + " scene=" + sceneX + "," + sceneY + "," + sceneZ);
+    }
+
+    private static void debugMilestone(int bit, String message) {
+        if ((debugMilestones & bit) != 0) {
+            return;
+        }
+        synchronized (ConstructionGhostPreview.class) {
+            if ((debugMilestones & bit) != 0) {
+                return;
+            }
+            debugMilestones |= bit;
+            System.out.println("[ConstructionGhostDebug] " + message);
+        }
     }
 
     private static void diagnostic(String key, String message) {
