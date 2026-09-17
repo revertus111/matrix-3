@@ -50,3 +50,11 @@
 - Added the same per-tile `Class86` renderer environment setup used by `Class523.method6280(...)` before drawing normal scene objects.
 - Preview remains client-only and unregistered: no `Class523` attach/remove, collision, persistence or server ownership was added.
 - Corrected post-scene path requires runtime retest before ghost v1 is accepted.
+
+2026-09-17 - Construction ghost draw-contract correction
+- Second runtime test still showed no visible ghost, confirming render-order correction alone was insufficient.
+- Verified the real Matrix3 object draw path passes a `Class90` render-bounds object to `Model.method1375(...)` for ordinary definitions instead of `null`.
+- Updated `ConstructionGhostPreview` to mirror that contract with a reusable `Class90` bounds object.
+- For definitions with `aClass326_5684`, the preview now mirrors Matrix3's special path: draw with null bounds and immediately call `Class106.method1738(...)` with the definition bounds.
+- Preview remains direct-rendered and unregistered; no scene ownership, collision, persistence or server state was added.
+- Runtime retest is required before the ghost-preview slice is accepted.
