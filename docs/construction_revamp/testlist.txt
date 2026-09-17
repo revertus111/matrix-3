@@ -35,16 +35,22 @@ Custom Construction palette + preview foundation
 [x] `13450` remains labeled Wooden fence / temporary wall test and is not presented as the final wooden wall.
 
 Construction build camera v1
-[ ] Opening the Construction palette enters Matrix3's Orb-based detached build camera and stops current player movement/actions.
-[ ] WASD moves the camera without moving the player.
-[ ] Q/E adjusts camera height if the current Matrix3 Orb implementation exposes those controls.
-[ ] Hovered-tile tracking and the white/translucent ghost continue working while the camera is detached.
+[x] First Orb-backed runtime attempt crashes during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`; legacy root/component mapping is rejected for Construction.
+[x] Ghost diagnostics before the exception are not the initiating crash source.
+[x] Later `ConnectException` output is secondary to the client crash and not the initiating failure.
+[ ] After the crash-safety patch, opening the Construction palette no longer switches to legacy root 475 or crashes on component 57.
+[ ] Existing palette/hover/ghost/placement behavior remains unchanged with the Orb request disabled.
+[ ] Identify the current Matrix3 client camera/input owner with a bounded trace before implementing detached movement.
+[ ] WASD moves the future Free Build camera without moving the player.
+[ ] Shift/Ctrl provide fast/precision camera movement where practical.
+[ ] Q/E adjusts camera height.
+[ ] Right-mouse drag rotates/looks around the scene.
+[ ] Clicking a target tile zeroes camera velocity immediately and does not intentionally walk the player.
+[ ] Hovered-tile tracking and the white/translucent ghost continue working while the future camera is detached.
 [ ] Rotation 0-3 and Wooden fence/Floor decoration/Door switching continue working while detached.
 [ ] Clicking a target tile still creates exactly one server-authoritative placed object.
-[ ] Clicking a target tile does not move the player; if normal action-23 Walk Here still moves the player, record the failure for the narrow Construction-only input-consumption follow-up.
-[ ] Closing/cancelling the Construction palette exits Orb mode and restores the normal Matrix3 root interface/camera.
-[ ] No stuck Orb interface, camera instability, ghost duplication/flicker or scene-render regression occurs.
-[ ] RTS/top-down/orbit presets remain deferred until their camera packet/client semantics are verified instead of guessed.
+[ ] Closing/cancelling Construction restores normal camera behavior without a legacy Orb/root-interface reset.
+[ ] RTS/top-down/orbit presets remain deferred until their current-client camera semantics are verified instead of guessed.
 
 Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
