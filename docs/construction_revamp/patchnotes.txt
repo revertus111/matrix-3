@@ -114,3 +114,11 @@
 - Added one-shot alpha start/done diagnostics and included tint weight/face alpha in the final `DRAW_SUBMITTED` state.
 - Render hook, footprint decoding, placement authority, scene ownership, collision, persistence and server behavior are unchanged.
 - Runtime retest is required to accept the white/translucent appearance and then verify hover following, rotation, piece switching, cancellation and scene stability in one bundled pass.
+
+2026-09-17 - Construction ghost alpha-isolation correction
+- Runtime retest verified that the Door ghost renders with the intended white/translucent styling and reaches `DRAW_SUBMITTED object=13344 type=0 rot=0 ... ghostTint=white/128 faceAlpha=96`.
+- The same run exposed a regression: real objects placed after previewing inherited the ghost translucency, proving preview alpha mutation was leaking through shared model backing data.
+- Verified-static `AbstractModel.method1351(...)` only deep-copies the face-alpha array when `Class368.method4561(flags, ...)` is true; `Class368.method4561(...)` is exactly `(flags & 0x100) != 0`. Without that bit, the clone shares `alpha` with its source model.
+- The existing `0x80000` capability already isolates face-colour storage through `Class368.method4501(...)`; added `0x100` to the ghost model flags so `Model.method1467(...)` mutates preview-owned alpha storage instead of the cached/shared object model.
+- No scene ownership, collision, persistence, placement authority or server behavior changed.
+- A full client restart is required before retest because the previous run may already have contaminated cached model alpha arrays in memory.
