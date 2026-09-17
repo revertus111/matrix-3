@@ -23,8 +23,9 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: ACTIVE — Construction Editor developer prototype is implemented; persistent settlement runtime foundation remains the current architecture work.
+- State: ACTIVE — Construction Editor developer placement prototype is runtime verified; the next approved direction is the custom Construction object-selection palette + ghost-preview foundation.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
+- The current Client Console Construction Editor remains a developer/debug harness, not the intended final player-facing Construction interface.
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - First playable target: Phase 1 MVP vertical slice.
 
@@ -393,15 +394,50 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ### Construction Editor developer prototype
 
-**Status:** IMPLEMENTED — RUNTIME TEST PENDING
+**Status:** RUNTIME VERIFIED
 
 - Client Console has a lazy Construction Editor panel for owner/admin development use.
 - Placement reuses verified Matrix3 Dev Mode tile resolution and the existing server-authoritative `itembrowser devspawn` path.
-- Paint and Continuous placement are available without adding a second scene-picking path.
-- Fixed rotation can be changed from the panel, R / Shift+R, or mouse wheel while placement is armed.
-- Existing Dev Mode object actions remain responsible for move/rotate/duplicate/delete of proven Dev-owned runtime objects.
-- Wooden wall/floor/doorway ids and default object types are HYPOTHESIS pending live visual validation.
+- Paint placement works through normal left-click world tiles.
+- Continuous/right-click placement integration is present and uses the existing Dev placement menu path.
+- Fixed rotation works from the editor; runtime test showed rotation state changing through the live panel.
+- Existing Dev Mode object actions expose move, rotate left/right, duplicate, inspect/edit, copy id/tile and delete for placed Dev-owned runtime objects.
+- Cancel Placement and Place Last are exposed in the live world menu while placement is armed.
+- Normal world/object actions remain available alongside the Dev actions.
+- Runtime-observed provisional mappings:
+  - `13450`, type `0` -> `Wooden fence`; placement works, but this is not accepted as the final wooden-wall asset.
+  - `13684`, type `22` -> `Floor decoration`; placement works as the current floor candidate.
+  - `13344`, type `0` -> `Door`; placement and object interaction work as the current doorway candidate.
+- The current editor remains a developer/debug harness; players should not need to enter raw object ids/types in the final Construction workflow.
 - This tooling track does not satisfy Bundle 1.2 persistence, occupancy, settlement ownership, or final 3D ghost-preview requirements.
+
+### Next tooling slice — Custom Construction Palette + Preview Foundation
+
+**Status:** READY
+
+The intended player-facing Construction workflow is a custom client-side object-selection interface layered on top of the now-proven placement path.
+
+Required first slice:
+
+- Custom Construction object palette instead of raw developer id/type controls.
+- Category navigation beginning with Walls, Floors and Doors, designed to expand later into Windows, Fences, Furniture, Workstations and Decoration.
+- Search/filter support for buildable definitions.
+- Selected-piece state containing object/definition, object type, rotation and category metadata.
+- Selecting a palette entry immediately arms placement/preview mode.
+- Client-only hover-tile tracking for the selected build piece.
+- Rotate before confirmation via editor controls and keyboard/mouse-wheel controls where safe.
+- Escape/cancel clears preview state without spawning a real object.
+- Confirm click routes through the already-proven Matrix3 placement authority rather than creating a second world-placement owner.
+- Valid/invalid placement feedback belongs to the preview layer once occupancy/settlement rules exist.
+- True 3D ghost/blueprint rendering remains blocked on a narrow render-path trace; do not invent an unverified render hook.
+- Until the true ghost hook is verified, palette/state/hover/confirm architecture may be built independently if it does not fake preview ownership.
+
+Later interaction polish after single-piece preview is stable:
+
+- Click/inspect an already placed Construction piece for move/rotate/duplicate/remove actions through Construction ownership.
+- Click-drag wall runs.
+- Corner-to-corner or drag area floor filling.
+- Material/variant switching where supported by definitions.
 
 ### Bundle 1.3 — Starter resource loop
 
@@ -473,18 +509,26 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 - Phase status: ACTIVE
 - Persistent-runtime bundle: 1.1 — Matrix3 ownership and foundation discovery
 - Persistent-runtime bundle status: ACTIVE
-- Tooling track: Construction Editor developer prototype
-- Tooling status: IMPLEMENTED — RUNTIME TEST PENDING
-- Approval state: AAA was approved for the current Construction Editor work and that implementation is now on `main`.
-- Current checklist item: runtime-verify the Construction Editor controls and provisional wall/floor/door candidates before promoting any cache mapping to VERIFIED.
-- Current objective: validate the editor prototype, then finish the exact persistent Bundle 1.2 settlement-state/instance file plan without transplanting legacy 718 architecture.
+- Tooling track: Custom Construction Palette + Preview Foundation
+- Tooling status: READY
+- Approval state: Construction Editor prototype was AAA-approved and is runtime verified; this documentation update is AAA-approved.
+- Current checklist item: narrowly identify the Matrix3 render/scene seam required for a true client-only Construction ghost preview, then implement the custom palette/selected-piece foundation around the already-proven placement authority.
+- Current objective: replace developer-facing raw object selection with the intended custom Construction build interface while preserving Matrix3 placement authority and keeping persistence/settlement ownership separate.
 
 ## Verification classifications
 
 ### VERIFIED
 
 - Construction Editor implementation commit is `09cd35fec87defd0f49ef8000f49eca3523f112e` on Matrix3 `main`.
-- The editor delegates actual object placement to the existing owner/admin Dev Mode placement path; it does not directly own world state.
+- Construction Editor opens and functions in the live Matrix3 Client Console.
+- Paint placement successfully creates multiple runtime objects on clicked world tiles.
+- Live editor rotation state changes before placement.
+- Placed runtime objects expose the existing Dev move, rotate, duplicate, edit/inspect and delete actions.
+- Cancel Placement and Place Last are available while placement is armed.
+- Normal RuneScape world/object options remain available alongside the development actions.
+- Object id `13450` with the current wall preset resolves at runtime as `Wooden fence`; it is functional but is not the desired final wall asset.
+- Object id `13684` with the current floor preset resolves at runtime as `Floor decoration` and places successfully.
+- Object id `13344` with the current doorway preset resolves at runtime as `Door` and places/interacts successfully.
 
 ### verified-static
 
@@ -498,16 +542,15 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ### HYPOTHESIS
 
-- Wooden wall candidate: object id `13450`, default object type `0`.
-- Wooden floor candidate: object id `13684`, default object type `22`.
-- Doorway candidate: object id `13344`, default object type `0`.
-- These ids/types remain provisional until visually verified in the active Matrix3 cache/client.
+- `13684` / `Floor decoration` may be usable as the first floor definition, but its final suitability/material appearance still needs acceptance against the intended Construction art direction.
+- `13344` / `Door` may be usable as the first doorway definition, but its final suitability/material appearance still needs acceptance against the intended Construction art direction.
 
 ### UNKNOWN
 
 - Exact persistent settlement-state owner to add alongside/around the classic POH `House` ownership model.
 - Best Matrix3 instance/dynamic-region owner for freeform settlement projection.
 - Final 3D ghost-preview render hook; no unverified render hook is used by the current editor prototype.
+- Final proper wooden-wall definition; `13450` is verified as a Wooden fence and should not be promoted as the final wall asset.
 
 ## Testing
 
@@ -517,17 +560,18 @@ See `docs/construction_revamp/testlist.txt`.
 
 **Last completed:**
 
-- Read the Matrix3-native classic Construction/player/controller ownership path and confirmed the freeform settlement foundation is not present in the restored tree.
-- Added the Client Console Construction Editor prototype on `main` in `09cd35fec87defd0f49ef8000f49eca3523f112e`.
-- Added targeted Construction Editor acceptance checks and explicit HYPOTHESIS labeling for provisional piece mappings.
+- Runtime-verified the Client Console Construction Editor and its end-to-end placement path.
+- Confirmed Paint placement, live rotation state, existing Dev object manipulation actions, cancellation and Place Last integration.
+- Runtime-identified the current provisional object mappings: `13450` Wooden fence, `13684` Floor decoration, `13344` Door.
+- Confirmed the current panel is the developer/debug harness; the intended final workflow is a custom Construction object-selection palette feeding placement/preview state.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
 **Active persistent-runtime bundle:** Bundle 1.1 — Matrix3 ownership and foundation discovery.
 
-**Active tooling gate:** Construction Editor runtime verification.
+**Active tooling slice:** Custom Construction Palette + Preview Foundation.
 
-**Next checklist item:** Pull/run Matrix3, open Construction Editor, verify Wall/Floor/Doorway placement and object-type visuals, and record which candidate mappings are actually correct. After that, finish the exact persistent Bundle 1.2 settlement-state/instance file plan.
+**Next checklist item:** Trace only the smallest Matrix3 render/scene path needed to determine how a client-only 3D ghost object can follow the hovered world tile without becoming real world state. Once that seam is classified, implement the custom category/search palette and selected-piece state around the proven placement controller.
 
 **Files/systems already inspected:**
 
@@ -546,29 +590,31 @@ See `docs/construction_revamp/testlist.txt`.
 - `Client/src/main/java/game/Class592.java`
 - `Client/src/main/java/game/Class319.java`
 - `Client/src/main/java/game/console/ClientConsoleShell.java`
+- `Client/src/main/java/game/console/ConstructionEditorPanel.java`
 - `Client/src/main/java/game/console/ConsoleTheme.java`
 
 **Do not re-scan without new evidence:**
 
 - Do not inspect or port the old `Matrix-718_MAIN` Construction code as implementation authority.
 - Do not re-audit unrelated historical Matrix3 workstreams.
-- Do not re-trace the Dev Mode tile/menu dispatch path unless a runtime failure points back to it.
+- Do not re-trace the already-proven Dev Mode tile/menu dispatch and `itembrowser devspawn` placement path unless a runtime failure points back to it.
 - Do not claim the missing freeform settlement-state foundation exists until it is actually added to Matrix3.
+- Do not make `13450` the final wooden-wall definition; runtime proved it is a Wooden fence.
 
 **Pending runtime verification:**
 
-- Construction Editor rail/panel startup.
-- Admin+ placement gating.
-- Paint and Continuous placement behavior.
-- R / Shift+R / mouse-wheel rotation behavior.
-- Escape/Cancel behavior.
-- Wall/floor/door candidate object ids/types and visual orientation.
-- Regression check that existing Client Console panels still open normally.
+- Continuous/right-click placement should receive a focused explicit runtime check if it becomes important to the final player workflow; Paint is already runtime verified.
+- R / Shift+R / mouse-wheel shortcuts should receive a focused explicit runtime check if retained in the final interface; editor rotation itself is runtime verified.
+- Final wall/floor/door art selections still need visual acceptance.
+- Future custom palette/preview implementation will require its own targeted acceptance pass.
 
-**Blockers:** None.
+**Blockers:**
 
-**Important remaining uncertainty:** The persistent settlement-state/instance owner and final ghost-preview render hook are still unverified; keep them separate from the now-implemented developer placement palette.
+- No blocker to building the palette/state layer.
+- True 3D ghost rendering is blocked until the narrow Matrix3 render seam is verified.
+
+**Important remaining uncertainty:** The persistent settlement-state/instance owner and final ghost-preview render hook are still unverified; keep both separate from the already-proven developer placement authority.
 
 ## Next recommended work
 
-Runtime-test the Construction Editor prototype first. Record verified piece ids/types and any control issues, then finish Bundle 1.1 by producing the exact persistent Bundle 1.2 server/client file plan before adding settlement-owned persistence or instance runtime code.
+Start the Custom Construction Palette + Preview Foundation slice: first classify the minimal client render seam for a non-authoritative ghost object, then build the custom category/search object selector and selected-piece state on top of the working placement controller. Persistence follows after the preview/interface foundation is stable.
