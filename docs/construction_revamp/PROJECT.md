@@ -610,7 +610,7 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: run the new Con Revamp State Self-Test first, then exercise one saved piece through move/rotate/duplicate/delete and use Saved Pieces/Status to verify the live persistent record survives re-entry.
+- Current checklist item: State Self-Test is runtime verified; exercise one saved piece through move/rotate/duplicate/delete and use Saved Pieces/Status to verify the live projected record survives exit/re-entry.
 - Current objective: finish Bundle 1.2 behavior around the now-runtime-verified plot-relative persistence core: edit synchronization, placement validity/occupancy, removal, status accounting and regression coverage.
 
 ## Verification classifications
@@ -686,6 +686,7 @@ Later interaction polish after single-piece preview is stable:
 - `TestConsolePanel` is the consolidated lazy-loaded Client Console workspace for developer/test tools; Owner, Commands and Settings remain top-level shell authorities.
 - `ConstructionRevampTestPanel` calls `ClientConsoleBridge.queueConsoleCommand(...)` for settlement enter/status/exit and opens the existing `ConstructionPaletteOverlay`; it owns no server/gameplay state.
 - `SettlementStateSelfTest` is a disposable deterministic test owner that creates a fresh in-memory `SettlementState`, exercises place/overlap/coexistence/rotate/move/duplicate/delete, serializes/deserializes it with Java serialization, and reports PASS/FAIL without reading or mutating the player's real settlement.
+- `SettlementStateSelfTest` is runtime VERIFIED: the user received PASS for place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
 - Con Revamp now exposes `State Self-Test` and `Saved Pieces`; both queue the existing owner-only server bridge rather than duplicating settlement logic client-side.
 - Test Console / Con Revamp is runtime VERIFIED for navigation and settlement enter/exit harness use: the user confirmed the consolidated rail/sub-tabs are visible, Enter Settlement queues successfully, the private settlement loads, and exit/re-entry works.
 - Settlement persistence core is runtime VERIFIED: the user confirmed a placed settlement piece/layout survives settlement exit/re-entry and normal logout/relog, proving `SettlementState` persists through Matrix3 player save/load and `SettlementInstance` rebuilds from plot-relative saved state.
@@ -736,7 +737,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** In Test Console -> Con Revamp click `State Self-Test` and expect PASS. Then use the existing Dev actions on one saved object (move, rotate, duplicate, delete), inspect `Saved Pieces` / `Settlement Status`, and exit/re-enter to verify those edits rebuild exactly.
+**Next checklist item:** Use the existing Dev actions on one saved object (move, rotate, duplicate, delete), inspect `Saved Pieces` / `Settlement Status`, then exit/re-enter and verify those edits rebuild exactly.
 
 **Files/systems already inspected:**
 
