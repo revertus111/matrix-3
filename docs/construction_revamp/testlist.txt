@@ -105,7 +105,7 @@ Test Console — Construction Revamp harness
 
 Phase 1 Bundle 1.2 — placement foundation
 [x] Con Revamp `State Self-Test` reports PASS for place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
-[ ] Con Revamp `Saved Pieces` lists stable piece id, name/key, plot-relative X/Y/plane and rotation for current saved pieces.
+[x] Con Revamp `Saved Pieces` lists the current saved-piece state used during the live edit verification.
 [x] Persistent identity is source-verified as stable definition key + piece id + plot-relative X/Y/plane + rotation; temporary dynamic world/chunk coordinates are not serialized.
 [x] Player owns a serializable `SettlementState`; existing saves initialize/normalize the new field without migrating or replacing classic POH `House`.
 [x] Runtime projection ownership is isolated in transient `SettlementInstance` + `SettlementControler`.
@@ -124,10 +124,10 @@ Phase 1 Bundle 1.2 — placement foundation
 [x] Temporary instance/world coordinates are never serialized as settlement identity.
 [x] Runtime instance exit/re-entry does not delete saved settlement state; the saved layout rebuilds after re-entry.
 [ ] `::itembrowser settlement status` count matches placements/duplicates/deletes.
-[ ] Existing Dev Move Object updates the saved plot-relative position and survives re-entry.
-[ ] Existing Dev Rotate Left/Right updates saved rotation and survives re-entry.
-[ ] Existing Dev Duplicate Object creates a second persistent piece at the destination.
-[ ] Existing Dev Delete Development Spawn removes the persistent piece and it stays removed after re-entry.
+[x] Existing Dev Move Object updates the saved plot-relative position and survives re-entry.
+[x] Existing Dev Rotate Left/Right updates saved rotation and survives re-entry.
+[x] Existing Dev Duplicate Object creates a second persistent piece at the destination and the duplicate survives re-entry.
+[x] Existing Dev Delete Development Spawn removes the persistent piece and it stays removed after re-entry.
 [ ] Inside the settlement, an unapproved raw object id/type is rejected instead of becoming persistent state.
 [ ] Outside the settlement, ordinary `itembrowser devspawn/devedit` behavior is unchanged.
 [ ] Classic POH House enter/build/leave behavior remains unchanged.
