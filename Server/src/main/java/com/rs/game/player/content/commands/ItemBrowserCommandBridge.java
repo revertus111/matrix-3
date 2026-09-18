@@ -13,6 +13,7 @@ import com.rs.game.player.Player;
 import com.rs.game.player.content.construction.SettlementBuildPiece;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
+import com.rs.game.player.content.construction.SettlementStateAudit;
 import com.rs.game.player.content.construction.SettlementStateSelfTest;
 
 /**
@@ -128,7 +129,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|selftest>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|audit|selftest>");
             return true;
         }
 
@@ -181,6 +182,13 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("audit".equals(operation)) {
+            String result = SettlementStateAudit.run(player.getSettlementState());
+            System.out.println("[SettlementStateAudit] " + result);
+            player.getPackets().sendGameMessage("Settlement saved-state audit: " + result);
+            return true;
+        }
+
         if ("selftest".equals(operation)) {
             String result = SettlementStateSelfTest.run();
             System.out.println("[SettlementStateSelfTest] " + result);
@@ -189,7 +197,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|selftest>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|audit|selftest>");
         return true;
     }
 
