@@ -64,6 +64,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton savedPieces = new JButton("Saved Pieces");
         JButton savedStateAudit = new JButton("Saved State Audit");
         JButton stateSelfTest = new JButton("State Self-Test");
+        JButton finalAutoCheck = new JButton("Final Auto Check");
 
         ConsoleTheme.styleButton(enter);
         ConsoleTheme.styleButton(settlementStatus);
@@ -72,6 +73,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(savedPieces);
         ConsoleTheme.styleButton(savedStateAudit);
         ConsoleTheme.styleButton(stateSelfTest);
+        ConsoleTheme.styleButton(finalAutoCheck);
 
         enter.addActionListener(e -> queue(
                 "itembrowser settlement enter",
@@ -95,6 +97,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         stateSelfTest.addActionListener(e -> queue(
                 "itembrowser settlement selftest",
                 "State Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
+        finalAutoCheck.addActionListener(e -> queue(
+                "itembrowser settlement finalcheck",
+                "Final Auto Check queued. PASS/FAIL will appear in game chat and the server console."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
@@ -107,6 +112,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(savedPieces);
         buttons.add(savedStateAudit);
         buttons.add(stateSelfTest);
+        buttons.add(finalAutoCheck);
         card.add(buttons);
 
         card.add(Box.createVerticalStrut(10));
@@ -120,13 +126,11 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Bundle 1.2 final gate");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Run State Self-Test again; expect PASS including validity checks.\n"
-                + "2. Run Saved State Audit; expect PASS on your real settlement save.\n"
-                + "3. Use Settlement Status and confirm its count matches Saved Pieces.\n"
-                + "4. Exit Settlement and confirm normal Dev Mode still works outside it.\n"
-                + "5. Enter/build/leave the classic POH once to smoke-test that separate system.\n"
-                + "6. If all five pass, Bundle 1.2 is ready to close and Bundle 1.3 can start.",
-                8));
+                "1. Run Final Auto Check; expect PASS. It covers State Self-Test + real-save audit + count + definitions.\n"
+                + "2. Exit Settlement and confirm normal Dev Mode still works outside it.\n"
+                + "3. Enter/build/leave the classic POH once to smoke-test that separate system.\n"
+                + "4. If all three pass, Bundle 1.2 is ready to close and Bundle 1.3 can start.",
+                7));
         return card;
     }
 
