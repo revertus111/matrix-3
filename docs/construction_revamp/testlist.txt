@@ -104,7 +104,7 @@ Test Console — Construction Revamp harness
 [ ] Old saved panel ids for Player/Items/Interfaces/Construction/Atlas/Boss Research resolve to Test Console instead of an unavailable panel.
 
 Phase 1 Bundle 1.2 — placement foundation
-[ ] Con Revamp `State Self-Test` reports PASS for place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
+[x] Con Revamp `State Self-Test` reports PASS for place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
 [ ] Con Revamp `Saved Pieces` lists stable piece id, name/key, plot-relative X/Y/plane and rotation for current saved pieces.
 [x] Persistent identity is source-verified as stable definition key + piece id + plot-relative X/Y/plane + rotation; temporary dynamic world/chunk coordinates are not serialized.
 [x] Player owns a serializable `SettlementState`; existing saves initialize/normalize the new field without migrating or replacing classic POH `House`.
