@@ -231,3 +231,13 @@
 - Added load-failure unlock/cleanup protection and delayed dynamic-map destruction matching Matrix3's existing House lifecycle pattern.
 - Updated `docs/rs3/SYSTEM_OWNERSHIP.md` for the new saved/runtime owner split.
 - Runtime acceptance required: clean build, enter, place/edit/remove, exit/re-enter exact rebuild, logout/relog persistence, dynamic-map cleanup and classic POH/Dev regressions.
+
+
+2026-09-17 - Client Console Test Console + Con Revamp harness
+- Consolidated Client Console navigation so only Client Console/Home, Owner, Commands, Test Console and Settings remain on the top-level rail.
+- Moved Player, Item Browser, Interface Editor, Construction Editor, Client Atlas and Boss Research into lazy-loaded Test Console sub-tabs.
+- Added the new `Con Revamp` Test Console sub-tab with one-click Enter Settlement, Settlement Status, Exit Settlement and Open Build Palette controls.
+- Con Revamp reuses `ClientConsoleBridge` and the existing owner-only server settlement command bridge; no gameplay/persistence logic was duplicated client-side.
+- Legacy saved active-panel ids for moved tools normalize to Test Console for layout compatibility.
+- Added a dedicated Test Console rail glyph and kept Java 8/Swing ownership consistent with the existing Client Console shell.
+- Runtime acceptance required for rail layout, lazy sub-tabs, Con Revamp buttons and existing moved-tool behavior.
