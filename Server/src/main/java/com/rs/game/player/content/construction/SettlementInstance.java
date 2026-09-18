@@ -1,0 +1,400 @@
+package com.rs.game.player.content.construction;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import com.rs.executor.GameExecutorManager;
+import com.rs.game.Region;
+import com.rs.game.World;
+import com.rs.game.WorldObject;
+import com.rs.game.WorldTile;
+import com.rs.game.map.MapBuilder;
+import com.rs.game.player.Player;
+import com.rs.game.player.controllers.Controller;
+import com.rs.game.player.controllers.SettlementControler;
+import com.rs.utils.Logger;
+
+/**
+ * Transient runtime projection of a player's persistent SettlementState.
+ *
+ * Dynamic bounds/world coordinates live only here. Saved settlement identity is
+ * always plot-relative in SettlementState.
+ */
+public final class SettlementInstance {
+
+    public static final int PLOT_CHUNKS = 8;
+    public static final int PLOT_TILES = PLOT_CHUNKS * 8;
+    public static final int PLOT_PLANE = 0;
+
+    private static final int ENTRY_OFFSET = PLOT_TILES / 2;
+
+    private final Player player;
+    private final SettlementState state;
+    private final WorldTile returnTile;
+
+    private volatile int[] boundChunks;
+    private volatile boolean loaded;
+    private volatile boolean destroyed;
+
+    private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
+        this.player = player;
+        this.state = state;
+        this.returnTile = returnTile;
+    }
+
+    public static String enter(Player player) {
+        if (player == null) {
+            return "Settlement entry requires a player.";
+        }
+        if (getActive(player) != null) {
+            return "You are already inside your settlement.";
+        }
+
+        SettlementState state = player.getSettlementState();
+        state.normalize();
+
+        WorldTile returnTile = new WorldTile(player.getX(), player.getY(), player.getPlane());
+        final SettlementInstance instance = new SettlementInstance(player, state, returnTile);
+
+        player.getControlerManager().startControler("SettlementControler", instance);
+        if (getActive(player) != instance) {
+            return "Settlement controller could not be started.";
+        }
+
+        player.lock();
+        player.getPackets().sendGameMessage("Preparing your Construction settlement...");
+
+        GameExecutorManager.slowExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                instance.load();
+            }
+        });
+        return "Settlement instance loading.";
+    }
+
+    public static SettlementInstance getActive(Player player) {
+        if (player == null || player.getControlerManager() == null) {
+            return null;
+        }
+        Controller controller = player.getControlerManager().getControler();
+        if (!(controller instanceof SettlementControler)) {
+            return null;
+        }
+        return ((SettlementControler) controller).getInstance();
+    }
+
+    private void load() {
+        try {
+            int[] allocated = MapBuilder.findEmptyChunkBound(PLOT_CHUNKS, PLOT_CHUNKS);
+            if (allocated == null || allocated.length < 2 || allocated[0] < 0 || allocated[1] < 0) {
+                failLoad("No free dynamic map area was available for the settlement.");
+                return;
+            }
+            boundChunks = allocated;
+
+            for (int chunkX = 0; chunkX < PLOT_CHUNKS; chunkX++) {
+                for (int chunkY = 0; chunkY < PLOT_CHUNKS; chunkY++) {
+                    MapBuilder.copyChunk(
+                            HouseConstants.LAND[0],
+                            HouseConstants.LAND[1],
+                            0,
+                            boundChunks[0] + chunkX,
+                            boundChunks[1] + chunkY,
+                            PLOT_PLANE,
+                            0);
+                    for (int plane = 1; plane < 4; plane++) {
+                        MapBuilder.cutChunk(boundChunks[0] + chunkX, boundChunks[1] + chunkY, plane);
+                    }
+                }
+            }
+
+            final WorldTile entryTile = getEntryTile();
+            final Region region = World.getRegion(entryTile.getRegionId(), true);
+            World.executeAfterLoadRegion(region.getRegionId(), 2400, new Runnable() {
+                @Override
+                public void run() {
+                    finishLoad(entryTile);
+                }
+            });
+        } catch (Throwable e) {
+            Logger.handle(e);
+            failLoad("Settlement instance failed to load.");
+        }
+    }
+
+    private void finishLoad(WorldTile entryTile) {
+        if (destroyed || boundChunks == null) {
+            return;
+        }
+
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            spawnProjectedPiece(piece);
+        }
+
+        player.setForceNextMapLoadRefresh(true);
+        player.loadMapRegions();
+        player.lock(2);
+        player.setNextWorldTile(entryTile);
+        loaded = true;
+        player.getPackets().sendGameMessage(
+                "Settlement loaded: " + state.size() + " saved build piece" + (state.size() == 1 ? "." : "s."));
+    }
+
+    private void failLoad(String message) {
+        player.getPackets().sendGameMessage(message);
+        leaveToReturn();
+    }
+
+    public String placeDevelopmentPiece(int objectId, int objectType, int rotation, WorldTile worldTile) {
+        if (!loaded) {
+            return "Settlement is still loading.";
+        }
+        if (!containsWorldTile(worldTile)) {
+            return "That tile is outside the active settlement plot.";
+        }
+
+        SettlementBuildPiece definition = SettlementBuildPiece.forObject(objectId, objectType);
+        if (definition == null) {
+            return "That object is not an approved settlement build definition.";
+        }
+
+        int plotX = toPlotX(worldTile.getX());
+        int plotY = toPlotY(worldTile.getY());
+        SettlementPlacedPiece saved = state.place(
+                definition, plotX, plotY, worldTile.getPlane(), rotation);
+        if (saved == null) {
+            return "That settlement slot is already occupied.";
+        }
+
+        spawnProjectedPiece(saved);
+        return "Settlement placed " + definition.getDisplayName()
+                + " at plot " + plotX + ", " + plotY + ".";
+    }
+
+    public String moveDevelopmentPiece(int objectId, WorldTile source, WorldTile destination) {
+        if (!loaded || !containsWorldTile(source) || !containsWorldTile(destination)) {
+            return "Move target must stay inside the active settlement plot.";
+        }
+
+        SettlementPlacedPiece current = findSavedPiece(objectId, source);
+        if (current == null) {
+            return "That object is not owned by the persistent settlement.";
+        }
+
+        SettlementPlacedPiece moved = state.move(
+                current.getPieceId(),
+                toPlotX(destination.getX()),
+                toPlotY(destination.getY()),
+                destination.getPlane());
+        if (moved == null) {
+            return "The destination settlement slot is occupied or invalid.";
+        }
+
+        removeProjectedPiece(current);
+        spawnProjectedPiece(moved);
+        return "Settlement piece moved.";
+    }
+
+    public String duplicateDevelopmentPiece(int objectId, WorldTile source, WorldTile destination) {
+        if (!loaded || !containsWorldTile(source) || !containsWorldTile(destination)) {
+            return "Duplicate target must stay inside the active settlement plot.";
+        }
+
+        SettlementPlacedPiece current = findSavedPiece(objectId, source);
+        if (current == null) {
+            return "That object is not owned by the persistent settlement.";
+        }
+
+        SettlementPlacedPiece duplicate = state.duplicate(
+                current.getPieceId(),
+                toPlotX(destination.getX()),
+                toPlotY(destination.getY()),
+                destination.getPlane());
+        if (duplicate == null) {
+            return "The destination settlement slot is occupied or invalid.";
+        }
+
+        spawnProjectedPiece(duplicate);
+        return "Settlement piece duplicated.";
+    }
+
+    public String rotateDevelopmentPiece(int objectId, WorldTile source, int delta) {
+        if (!loaded || !containsWorldTile(source)) {
+            return "Rotate target must be inside the active settlement plot.";
+        }
+
+        SettlementPlacedPiece current = findSavedPiece(objectId, source);
+        if (current == null) {
+            return "That object is not owned by the persistent settlement.";
+        }
+
+        SettlementPlacedPiece rotated = state.rotate(current.getPieceId(), delta);
+        if (rotated == null) {
+            return "Settlement piece could not be rotated.";
+        }
+
+        removeProjectedPiece(current);
+        spawnProjectedPiece(rotated);
+        return "Settlement piece rotated.";
+    }
+
+    public String deleteDevelopmentPiece(int objectId, WorldTile source) {
+        if (!loaded || !containsWorldTile(source)) {
+            return "Delete target must be inside the active settlement plot.";
+        }
+
+        SettlementPlacedPiece current = findSavedPiece(objectId, source);
+        if (current == null) {
+            return "That object is not owned by the persistent settlement.";
+        }
+
+        SettlementPlacedPiece removed = state.remove(current.getPieceId());
+        if (removed == null) {
+            return "Settlement piece could not be removed.";
+        }
+
+        removeProjectedPiece(removed);
+        return "Settlement piece removed.";
+    }
+
+    public boolean containsWorldTile(WorldTile tile) {
+        if (tile == null || boundChunks == null || tile.getPlane() != PLOT_PLANE) {
+            return false;
+        }
+        int plotX = toPlotX(tile.getX());
+        int plotY = toPlotY(tile.getY());
+        return plotX >= 0 && plotX < PLOT_TILES && plotY >= 0 && plotY < PLOT_TILES;
+    }
+
+    public int getSavedPieceCount() {
+        return state.size();
+    }
+
+    public boolean isLoaded() {
+        return loaded;
+    }
+
+    public WorldTile getEntryTile() {
+        if (boundChunks == null) {
+            return null;
+        }
+        return new WorldTile(
+                boundChunks[0] * 8 + ENTRY_OFFSET,
+                boundChunks[1] * 8 + ENTRY_OFFSET,
+                PLOT_PLANE);
+    }
+
+    public void leaveToReturn() {
+        if (destroyed) {
+            return;
+        }
+        player.getControlerManager().removeControlerWithoutCheck();
+        player.setForceNextMapLoadRefresh(true);
+        player.setNextWorldTile(returnTile);
+        destroy();
+    }
+
+    public void leaveForLogout() {
+        if (destroyed) {
+            return;
+        }
+        player.getControlerManager().removeControlerWithoutCheck();
+        player.setLocation(returnTile);
+        destroy();
+    }
+
+    public void leaveForTeleport() {
+        if (destroyed) {
+            return;
+        }
+        player.getControlerManager().removeControlerWithoutCheck();
+        destroy();
+    }
+
+    private SettlementPlacedPiece findSavedPiece(int objectId, WorldTile worldTile) {
+        return state.find(
+                objectId,
+                toPlotX(worldTile.getX()),
+                toPlotY(worldTile.getY()),
+                worldTile.getPlane());
+    }
+
+    private void spawnProjectedPiece(SettlementPlacedPiece piece) {
+        if (piece == null || boundChunks == null) {
+            return;
+        }
+        SettlementBuildPiece definition = SettlementBuildPiece.forKey(piece.getDefinitionKey());
+        if (definition == null) {
+            return;
+        }
+
+        World.spawnObject(new WorldObject(
+                definition.getObjectId(),
+                definition.getObjectType(),
+                piece.getRotation(),
+                toWorldX(piece.getPlotX()),
+                toWorldY(piece.getPlotY()),
+                piece.getPlane()));
+    }
+
+    private void removeProjectedPiece(SettlementPlacedPiece piece) {
+        if (piece == null || boundChunks == null) {
+            return;
+        }
+        SettlementBuildPiece definition = SettlementBuildPiece.forKey(piece.getDefinitionKey());
+        if (definition == null) {
+            return;
+        }
+
+        WorldTile tile = new WorldTile(
+                toWorldX(piece.getPlotX()),
+                toWorldY(piece.getPlotY()),
+                piece.getPlane());
+        WorldObject live = World.getObjectWithType(tile, definition.getObjectType());
+        if (live != null && live.getId() == definition.getObjectId()) {
+            World.removeObject(live);
+        }
+    }
+
+    private int toPlotX(int worldX) {
+        return worldX - boundChunks[0] * 8;
+    }
+
+    private int toPlotY(int worldY) {
+        return worldY - boundChunks[1] * 8;
+    }
+
+    private int toWorldX(int plotX) {
+        return boundChunks[0] * 8 + plotX;
+    }
+
+    private int toWorldY(int plotY) {
+        return boundChunks[1] * 8 + plotY;
+    }
+
+    private void destroy() {
+        if (destroyed) {
+            return;
+        }
+        destroyed = true;
+        loaded = false;
+
+        final int[] bounds = boundChunks;
+        boundChunks = null;
+        if (bounds == null) {
+            return;
+        }
+
+        GameExecutorManager.slowExecutor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    MapBuilder.destroyMap(bounds[0], bounds[1], PLOT_CHUNKS, PLOT_CHUNKS);
+                } catch (Throwable e) {
+                    Logger.handle(e);
+                }
+            }
+        }, 1200L, TimeUnit.MILLISECONDS);
+    }
+}
