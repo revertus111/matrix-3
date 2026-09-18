@@ -21,9 +21,9 @@ import com.rs.utils.Logger;
  */
 public final class SettlementInstance {
 
-    public static final int PLOT_CHUNKS = 8;
-    public static final int PLOT_TILES = PLOT_CHUNKS * 8;
-    public static final int PLOT_PLANE = 0;
+    public static final int PLOT_TILES = SettlementState.PLOT_TILES;
+    public static final int PLOT_CHUNKS = PLOT_TILES / 8;
+    public static final int PLOT_PLANE = SettlementState.PLOT_PLANE;
 
     private static final int ENTRY_OFFSET = PLOT_TILES / 2;
 
@@ -321,7 +321,9 @@ public final class SettlementInstance {
     }
 
     private void spawnProjectedPiece(SettlementPlacedPiece piece) {
-        if (piece == null || boundChunks == null) {
+        if (piece == null || boundChunks == null
+                || !SettlementState.isValidPlotLocation(
+                        piece.getPlotX(), piece.getPlotY(), piece.getPlane())) {
             return;
         }
         SettlementBuildPiece definition = SettlementBuildPiece.forKey(piece.getDefinitionKey());
