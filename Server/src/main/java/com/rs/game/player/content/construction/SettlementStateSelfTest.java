@@ -37,6 +37,23 @@ public final class SettlementStateSelfTest {
             require(floor != null, "compatible floor/wall coexistence failed");
             require(state.size() == 2, "coexistence count mismatch");
 
+            stage = "validity";
+            require(state.place(SettlementBuildPiece.WOOD_FENCE_TEST, -1, 10, 0, 0) == null,
+                    "negative plot X was accepted");
+            require(state.place(SettlementBuildPiece.WOOD_FENCE_TEST,
+                    SettlementState.PLOT_TILES, 10, 0, 0) == null,
+                    "out-of-range plot X was accepted");
+            require(state.place(SettlementBuildPiece.WOOD_FENCE_TEST, 10, -1, 0, 0) == null,
+                    "negative plot Y was accepted");
+            require(state.place(SettlementBuildPiece.WOOD_FENCE_TEST,
+                    10, SettlementState.PLOT_TILES, 0, 0) == null,
+                    "out-of-range plot Y was accepted");
+            require(state.place(SettlementBuildPiece.WOOD_FENCE_TEST, 10, 11, 1, 0) == null,
+                    "wrong settlement plane was accepted");
+            require(SettlementBuildPiece.forObject(Integer.MAX_VALUE, 0) == null,
+                    "unknown raw object definition was accepted");
+            require(state.size() == 2, "invalid placement mutated state");
+
             stage = "rotate";
             SettlementPlacedPiece rotated = state.rotate(wall.getPieceId(), 1);
             require(rotated != null && rotated.getRotation() == 1,
@@ -46,6 +63,10 @@ public final class SettlementStateSelfTest {
             SettlementPlacedPiece moved = state.move(wall.getPieceId(), 11, 10, 0);
             require(moved != null && moved.getPlotX() == 11 && moved.getPlotY() == 10,
                     "move mutation failed");
+            require(state.move(wall.getPieceId(), -1, 10, 0) == null,
+                    "invalid move destination was accepted");
+            require(state.move(wall.getPieceId(), 11, 10, 1) == null,
+                    "invalid move plane was accepted");
 
             stage = "duplicate";
             SettlementPlacedPiece duplicate = state.duplicate(wall.getPieceId(), 12, 10, 0);
@@ -55,6 +76,8 @@ public final class SettlementStateSelfTest {
             require(duplicate.getRotation() == 1,
                     "duplicate did not preserve rotation");
             require(state.size() == 3, "duplicate count mismatch");
+            require(state.duplicate(wall.getPieceId(), SettlementState.PLOT_TILES, 10, 0) == null,
+                    "invalid duplicate destination was accepted");
 
             SettlementPlacedPiece blockedMove = state.move(
                     wall.getPieceId(), 12, 10, 0);
@@ -88,7 +111,7 @@ public final class SettlementStateSelfTest {
                     SettlementBuildPiece.FLOOR_DECORATION.getObjectId(), 10, 10, 0);
             require(removedFloorAfterRestore == null, "deleted floor returned after restore");
 
-            return "PASS: place/occupancy/rotate/move/duplicate/delete/serialization.";
+            return "PASS: place/validity/occupancy/rotate/move/duplicate/delete/serialization.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }
