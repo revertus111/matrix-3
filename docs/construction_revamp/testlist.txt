@@ -93,6 +93,16 @@ Construction 3D ghost preview v1
 [ ] Camera movement and normal scene rendering remain stable while the preview is visible.
 [ ] V1 validity coloring remains deferred until the base ghost interaction/stability checks are complete.
 
+Test Console — Construction Revamp harness
+[ ] Client Console rail shows Client Console/Home, Owner, Commands, Test Console and Settings; moved tool rail buttons are gone.
+[ ] Test Console opens and exposes Con Revamp, Construction, Player, Items, Interfaces, Atlas and Boss Research sub-tabs.
+[ ] Each moved tool lazy-loads from its Test Console sub-tab without breaking its existing behavior.
+[ ] Con Revamp Enter Settlement queues the existing settlement-enter server bridge.
+[ ] Con Revamp Settlement Status queues the existing status bridge.
+[ ] Con Revamp Exit Settlement queues the existing exit bridge.
+[ ] Con Revamp Open Build Palette opens the existing Construction palette.
+[ ] Old saved panel ids for Player/Items/Interfaces/Construction/Atlas/Boss Research resolve to Test Console instead of an unavailable panel.
+
 Phase 1 Bundle 1.2 — placement foundation
 [x] Persistent identity is source-verified as stable definition key + piece id + plot-relative X/Y/plane + rotation; temporary dynamic world/chunk coordinates are not serialized.
 [x] Player owns a serializable `SettlementState`; existing saves initialize/normalize the new field without migrating or replacing classic POH `House`.
