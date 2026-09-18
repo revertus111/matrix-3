@@ -264,3 +264,10 @@
 - Added owner-only `itembrowser settlement selftest` and `itembrowser settlement list` bridge operations.
 - Added Con Revamp `State Self-Test` and `Saved Pieces` buttons so Bundle 1.2 edit/persistence checks no longer require raw commands.
 - Runtime acceptance still required for the self-test PASS result and live move/rotate/duplicate/delete projection persistence across exit/re-entry.
+
+
+2026-09-18 - Bundle 1.2 state self-test runtime verified
+- User runtime confirmed the Con Revamp `State Self-Test` returns PASS.
+- This runtime-verifies the real `SettlementState` mutation/serialization API for place, same-layer occupancy rejection, compatible-layer coexistence, rotate, move, duplicate, delete and Java serialize/deserialize.
+- The self-test remains disposable and does not touch the player's real settlement save.
+- Live runtime projection/edit persistence across exit/re-entry remains the next Bundle 1.2 acceptance gate.
