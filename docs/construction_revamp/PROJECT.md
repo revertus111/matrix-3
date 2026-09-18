@@ -14,7 +14,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 | Starter resource loop and shelter milestone | ❌ Not started |
 | First worker, Allowed Jobs, gathering and hauling | ❌ Not started |
 | Worker needs, storage and settlement recovery | ❌ Not started |
-| Persistence and Construction XP ownership | ❌ Not started |
+| Persistence and Construction XP ownership | 🔵 In Progress |
 | Population, processing and logistics expansion | ❌ Not started |
 | Settlement Wealth, offline production and economy | ❌ Not started |
 | Overworld Construction integration | ❌ Not started |
@@ -429,7 +429,7 @@ Acceptance target for this first server-owned slice:
 
 `enter -> place/rotate/move/remove -> leave -> re-enter -> exact plot-relative layout rebuilds -> logout/relog -> layout still rebuilds`
 
-#### Implementation checkpoint — NEEDS RUNTIME TEST
+#### Implementation checkpoint — PERSISTENCE CORE RUNTIME VERIFIED
 
 Implemented under the approved Bundle 1.2 ownership plan:
 
@@ -610,8 +610,8 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: continue Bundle 1.2 persistence acceptance from the now-verified Test Console -> Con Revamp harness: place/edit at least one approved piece, verify Status count, exit/re-enter exact rebuild, then logout/relog and re-enter to verify saved layout.
-- Current objective: verify that plot-relative `SettlementState` survives dynamic-instance destruction and player save/load while `SettlementInstance` cleanly rebuilds/cleans the Matrix3 runtime projection.
+- Current checklist item: persistence core is runtime verified; continue Bundle 1.2 with persistent move/rotate/duplicate/delete acceptance, occupied/invalid placement rejection, Status-count verification and regression checks.
+- Current objective: finish Bundle 1.2 behavior around the now-runtime-verified plot-relative persistence core: edit synchronization, placement validity/occupancy, removal, status accounting and regression coverage.
 
 ## Verification classifications
 
@@ -686,6 +686,7 @@ Later interaction polish after single-piece preview is stable:
 - `TestConsolePanel` is the consolidated lazy-loaded Client Console workspace for developer/test tools; Owner, Commands and Settings remain top-level shell authorities.
 - `ConstructionRevampTestPanel` calls `ClientConsoleBridge.queueConsoleCommand(...)` for settlement enter/status/exit and opens the existing `ConstructionPaletteOverlay`; it owns no server/gameplay state.
 - Test Console / Con Revamp is runtime VERIFIED for navigation and settlement enter/exit harness use: the user confirmed the consolidated rail/sub-tabs are visible, Enter Settlement queues successfully, the private settlement loads, and exit/re-entry works.
+- Settlement persistence core is runtime VERIFIED: the user confirmed a placed settlement piece/layout survives settlement exit/re-entry and normal logout/relog, proving `SettlementState` persists through Matrix3 player save/load and `SettlementInstance` rebuilds from plot-relative saved state.
 
 ### HYPOTHESIS
 
@@ -724,6 +725,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Locked the exact Bundle 1.2 ownership/file plan and marked Bundle 1.1 discovery DONE.
 - Implemented the first server-owned Bundle 1.2 persistent settlement foundation: player-owned `SettlementState`, plot-relative `SettlementPlacedPiece`, definition registry, dynamic `SettlementInstance`, `SettlementControler`, owner-only enter/exit/status harness and settlement-only Dev placement/edit persistence bridge.
 - Updated system ownership so classic POH `House` remains separate and Matrix3 persistence/map/world authority remain underneath the new content layer.
+- Runtime-verified the Bundle 1.2 persistence core: placed settlement state survives runtime-instance destruction/re-entry and logout/relog, then rebuilds correctly from player-owned plot-relative state.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
@@ -731,7 +733,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** From Test Console -> Con Revamp, open the build palette and place at least one approved piece. Verify Settlement Status count, exit/re-enter and confirm the exact layout rebuilds, then logout/relog and re-enter to confirm player-save persistence.
+**Next checklist item:** Use the existing Dev object actions inside the settlement to move, rotate, duplicate and delete saved pieces; verify each edit survives exit/re-entry. Then verify invalid/occupied placement rejection and Settlement Status count.
 
 **Files/systems already inspected:**
 
@@ -803,16 +805,14 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Pending runtime verification:**
 
-- `itembrowser settlement enter` allocates the 64x64 private plot, loads blank Construction land and teleports the player to its center without disturbing normal world state.
-- Existing palette placements for Wooden fence / Floor decoration / Door are accepted inside the settlement and report plot-relative placement coordinates.
-- Same-type occupancy on the same plot tile is rejected cleanly while compatible different object types can coexist where Matrix3 permits.
-- Existing Dev move/duplicate/rotate/delete object actions update both the live projected object and persistent settlement record.
-- `itembrowser settlement status` reports the expected saved-piece count.
-- Exit returns the player to the pre-entry world tile and destroys the transient dynamic map without deleting `SettlementState`.
-- Re-enter allocates a different/temporary runtime region as needed but rebuilds the exact saved plot-relative layout.
-- Logout/relog followed by re-entry preserves the layout through normal Matrix3 player serialization.
-- Classic POH `House` behavior and Dev Mode outside the settlement remain unchanged.
-- Run the full relevant build/start/login/persistence/world-object smoke coverage after the targeted persistence pass.
+- Existing Dev move/duplicate/rotate/delete object actions update both the live projected object and persistent settlement record, and each edit survives exit/re-entry.
+- Same-type occupancy/invalid placement is rejected cleanly while compatible different object types can coexist where Matrix3 permits.
+- Settlement Status reports the expected saved-piece count after placements, duplicates and deletes.
+- Destroying/re-entering repeatedly does not leak or duplicate transient runtime objects/regions.
+- Inside the settlement, an unapproved raw object id/type is rejected instead of becoming persistent state.
+- Outside the settlement, ordinary Dev Mode behavior remains unchanged.
+- Classic POH `House` behavior remains unchanged.
+- Run the full relevant build/start/login/persistence/world-object smoke coverage after the targeted Bundle 1.2 edit/validity pass.
 - Camera edge diagnostics and full ghost completeness remain recorded carryover, not blockers for this persistence slice.
 
 **Blockers:**
@@ -820,8 +820,8 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - No settlement ownership/design blocker remains; the first Bundle 1.2 server foundation is implemented and the active gate is runtime persistence/dynamic-instance acceptance.
 - Camera edge diagnostics and the separate ghost completeness checklist remain carryover and do not block the current persistent-runtime test.
 
-**Important remaining uncertainty:** runtime behavior of the new 64x64 dynamic settlement projection, cleanup/re-entry timing, and save/reload persistence. The owner boundaries and plot-relative serialization are verified-static; runtime acceptance is still required.
+**Important remaining uncertainty:** edit synchronization, occupancy/validity rules, repeated dynamic-instance cleanup and regression coverage. Core exit/re-entry and logout/relog persistence are runtime verified.
 
 ## Next recommended work
 
-Run the Bundle 1.2 persistent settlement acceptance first. If enter/place/edit/exit/re-enter/logout-relog all pass, promote the persistent freeform foundation to runtime VERIFIED and continue Bundle 1.2 with final occupancy/validity rules and player-facing entry/removal polish. Keep camera/ghost edge checks as carryover unless a regression appears.
+The Bundle 1.2 persistence core is runtime verified. Continue with persistent edit operations, occupancy/validity rules, status accounting and removal/regression coverage; then close Bundle 1.2 and proceed to Bundle 1.3 starter resources/storage. Keep camera/ghost edge checks as carryover unless a regression appears.
