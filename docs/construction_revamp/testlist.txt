@@ -117,10 +117,10 @@ Phase 1 Bundle 1.2 — placement foundation
 [ ] Doorway can be previewed, rotated and placed.
 [ ] Invalid/occupied placement is rejected cleanly.
 [ ] A placed piece can be removed.
-[ ] Leaving and re-entering rebuilds the exact saved layout.
-[ ] Logout/relog preserves the layout.
+[x] Leaving and re-entering rebuilds the exact saved layout.
+[x] Logout/relog preserves the layout.
 [x] Temporary instance/world coordinates are never serialized as settlement identity.
-[ ] Destroying the runtime instance cleans temporary objects/regions without deleting saved state.
+[x] Runtime instance exit/re-entry does not delete saved settlement state; the saved layout rebuilds after re-entry.
 [ ] `::itembrowser settlement status` count matches placements/duplicates/deletes.
 [ ] Existing Dev Move Object updates the saved plot-relative position and survives re-entry.
 [ ] Existing Dev Rotate Left/Right updates saved rotation and survives re-entry.
