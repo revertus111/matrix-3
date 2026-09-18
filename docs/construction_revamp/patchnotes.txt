@@ -256,3 +256,11 @@
 - User runtime confirmed the same saved settlement state survives logout/relog and rebuilds after entering again.
 - This runtime-verifies the core ownership chain: `Player.settlementState` persists plot-relative build state through Matrix3 player serialization while `SettlementInstance` remains transient and rebuilds the live dynamic-region projection.
 - Bundle 1.2 remains ACTIVE for persistent move/rotate/duplicate/delete acceptance, occupancy/invalid-placement rules, status accounting and regression coverage.
+
+
+2026-09-18 - Bundle 1.2 deterministic state self-test
+- Added `SettlementStateSelfTest`, a disposable in-memory test that exercises the real persistent-state API: place, same-layer occupancy rejection, compatible floor/wall coexistence, rotate, move, duplicate, delete, Java serialize/deserialize and exact restored-record checks.
+- The self-test never reads or mutates `Player.settlementState`; it is safe to run repeatedly and reports bounded PASS/FAIL output to game chat and the server console.
+- Added owner-only `itembrowser settlement selftest` and `itembrowser settlement list` bridge operations.
+- Added Con Revamp `State Self-Test` and `Saved Pieces` buttons so Bundle 1.2 edit/persistence checks no longer require raw commands.
+- Runtime acceptance still required for the self-test PASS result and live move/rotate/duplicate/delete projection persistence across exit/re-entry.
