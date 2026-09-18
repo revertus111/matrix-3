@@ -610,7 +610,7 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: live edit persistence is runtime verified; finish Bundle 1.2 with occupied/invalid placement rejection, Settlement Status count, outside-settlement Dev regression and classic POH regression.
+- Current checklist item: run the Con Revamp Bundle 1.2 final gate: rerun State Self-Test with validity checks, run Saved State Audit, verify Status count, then smoke-test ordinary Dev Mode outside the settlement and classic POH.
 - Current objective: finish Bundle 1.2 behavior around the now-runtime-verified plot-relative persistence core: edit synchronization, placement validity/occupancy, removal, status accounting and regression coverage.
 
 ## Verification classifications
@@ -678,6 +678,9 @@ Later interaction polish after single-piece preview is stable:
 - `ConstructionBuildCamera` now applies normalized, time-based world-space velocity on that same live tick with bounded delta time, exponential acceleration/deceleration and exact zero settling; `stopMovement()` clears velocity and latches movement off until key release.
 - `DevModeBridge.handleMenuAction(...)` now consumes action 23 only while Construction Free Build is active: it stops camera movement, optionally confirms the existing Paint placement and prevents the same click from becoming Walk Here. Outside Free Build, existing Dev Paint action-23 behavior is unchanged.
 - `SettlementState` is a normal serializable Player field; new players construct it and existing saves repair a null field during `Player.init(...)`, so no parallel save system is introduced.
+- `SettlementState` now owns plot-bound validity itself: only plane 0 and plot-relative X/Y in 0-63 are accepted by place/move/duplicate, so persistent correctness no longer depends on callers filtering world coordinates first.
+- `SettlementInstance` derives its plot size/plane constants from `SettlementState` and refuses to project any invalid saved record, keeping runtime projection aligned with the saved owner.
+- `SettlementStateAudit` is a read-only real-save invariant check for unique positive piece ids, approved definitions, valid plot location/plane, 0-3 rotation and no same-object-type occupancy collision.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
@@ -687,6 +690,7 @@ Later interaction polish after single-piece preview is stable:
 - `ConstructionRevampTestPanel` calls `ClientConsoleBridge.queueConsoleCommand(...)` for settlement enter/status/exit and opens the existing `ConstructionPaletteOverlay`; it owns no server/gameplay state.
 - `SettlementStateSelfTest` is a disposable deterministic test owner that creates a fresh in-memory `SettlementState`, exercises place/overlap/coexistence/rotate/move/duplicate/delete, serializes/deserializes it with Java serialization, and reports PASS/FAIL without reading or mutating the player's real settlement.
 - `SettlementStateSelfTest` is runtime VERIFIED: the user received PASS for place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
+- The self-test has since been extended to cover negative/out-of-range X/Y, wrong plane, unknown raw definition, invalid move destination and invalid duplicate destination; that expanded validity pass is `NEEDS TEST`.
 - Con Revamp now exposes `State Self-Test` and `Saved Pieces`; both queue the existing owner-only server bridge rather than duplicating settlement logic client-side.
 - Test Console / Con Revamp is runtime VERIFIED for navigation and settlement enter/exit harness use: the user confirmed the consolidated rail/sub-tabs are visible, Enter Settlement queues successfully, the private settlement loads, and exit/re-entry works.
 - Settlement persistence core is runtime VERIFIED: the user confirmed a placed settlement piece/layout survives settlement exit/re-entry and normal logout/relog, proving `SettlementState` persists through Matrix3 player save/load and `SettlementInstance` rebuilds from plot-relative saved state.
@@ -732,6 +736,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Runtime-verified the Bundle 1.2 persistence core: placed settlement state survives runtime-instance destruction/re-entry and logout/relog, then rebuilds correctly from player-owned plot-relative state.
 - Added a disposable Bundle 1.2 state self-test plus Saved Pieces inspection to Con Revamp so remaining edit/occupancy verification is cheap and does not require raw commands.
 - Runtime-verified live move/rotate/duplicate/delete synchronization and confirmed those edits rebuild correctly after settlement exit/re-entry.
+- Hardened `SettlementState` plot validity, aligned `SettlementInstance` with the saved-owner rules, extended the disposable self-test, and added a non-mutating Saved State Audit + final-gate UI in Con Revamp.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
@@ -739,7 +744,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Finish the remaining Bundle 1.2 validity/regression gate: verify occupied/invalid placement rejection, Settlement Status count, ordinary Dev behavior outside the settlement, and classic POH House behavior.
+**Next checklist item:** In Test Console -> Con Revamp run `State Self-Test` and `Saved State Audit` and expect PASS, confirm Settlement Status count matches Saved Pieces, then exit the settlement and smoke-test one ordinary Dev placement/edit plus one classic POH enter/build/leave cycle.
 
 **Files/systems already inspected:**
 
@@ -826,7 +831,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - No settlement ownership/design blocker remains; the first Bundle 1.2 server foundation is implemented and the active gate is runtime persistence/dynamic-instance acceptance.
 - Camera edge diagnostics and the separate ghost completeness checklist remain carryover and do not block the current persistent-runtime test.
 
-**Important remaining uncertainty:** occupancy/invalid-placement behavior, saved-piece status accounting and regression coverage outside the settlement/classic POH. Core persistence and live edit synchronization are runtime verified.
+**Important remaining uncertainty:** runtime acceptance of the newly hardened validity checks/audit, saved-piece status accounting, and regression coverage outside the settlement/classic POH. Core persistence and live edit synchronization are runtime verified.
 
 ## Next recommended work
 
