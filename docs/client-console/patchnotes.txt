@@ -117,3 +117,8 @@
 - User runtime confirmed the new Test Console rail entry is visible and the moved developer tools appear as Test Console sub-tabs.
 - Con Revamp is live in the consolidated workspace and successfully queues the existing settlement server bridge.
 - Remaining Client Console verification is limited to moved-tool behavior and clean-restart active-panel persistence; no navigation blocker remains.
+
+
+2026-09-18 - Con Revamp Bundle 1.2 test controls
+- Added `Saved Pieces` and `State Self-Test` buttons to the existing Con Revamp Test Console sub-tab.
+- Both controls reuse `ClientConsoleBridge` and the owner-only settlement server bridge; Client Console still owns no settlement gameplay/persistence state.
