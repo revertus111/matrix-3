@@ -104,6 +104,7 @@ Test Console — Construction Revamp harness
 [ ] Old saved panel ids for Player/Items/Interfaces/Construction/Atlas/Boss Research resolve to Test Console instead of an unavailable panel.
 
 Phase 1 Bundle 1.2 — placement foundation
+[ ] Con Revamp `Final Auto Check` reports PASS for expanded State Self-Test + real saved-state audit + count consistency + definition-registry integrity.
 [x] Con Revamp `State Self-Test` previously passed place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
 [ ] Rerun Con Revamp `State Self-Test`; expanded validity checks must also reject negative/out-of-range X/Y, wrong plane, unknown raw definition, invalid move destination and invalid duplicate destination.
 [x] Con Revamp `Saved Pieces` lists the current saved-piece state used during the live edit verification.
