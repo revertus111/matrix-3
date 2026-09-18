@@ -104,8 +104,10 @@ Test Console — Construction Revamp harness
 [ ] Old saved panel ids for Player/Items/Interfaces/Construction/Atlas/Boss Research resolve to Test Console instead of an unavailable panel.
 
 Phase 1 Bundle 1.2 — placement foundation
-[x] Con Revamp `State Self-Test` reports PASS for place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
+[x] Con Revamp `State Self-Test` previously passed place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
+[ ] Rerun Con Revamp `State Self-Test`; expanded validity checks must also reject negative/out-of-range X/Y, wrong plane, unknown raw definition, invalid move destination and invalid duplicate destination.
 [x] Con Revamp `Saved Pieces` lists the current saved-piece state used during the live edit verification.
+[ ] Con Revamp `Saved State Audit` reports PASS for the real saved settlement: unique positive ids, approved definitions, valid plot locations/plane, valid rotations and no same-layer collisions.
 [x] Persistent identity is source-verified as stable definition key + piece id + plot-relative X/Y/plane + rotation; temporary dynamic world/chunk coordinates are not serialized.
 [x] Player owns a serializable `SettlementState`; existing saves initialize/normalize the new field without migrating or replacing classic POH `House`.
 [x] Runtime projection ownership is isolated in transient `SettlementInstance` + `SettlementControler`.
@@ -118,7 +120,7 @@ Phase 1 Bundle 1.2 — placement foundation
 [ ] Wooden floor can be previewed, rotated where applicable and placed.
 [ ] Doorway can be previewed, rotated and placed.
 [ ] Invalid/occupied placement is rejected cleanly.
-[ ] A placed piece can be removed.
+[x] A placed piece can be removed and remains removed after exit/re-entry.
 [x] Leaving and re-entering rebuilds the exact saved layout.
 [x] Logout/relog preserves the layout.
 [x] Temporary instance/world coordinates are never serialized as settlement identity.
