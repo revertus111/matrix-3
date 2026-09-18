@@ -49,6 +49,8 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 
 ### VERIFIED
 
+- Test Console consolidation is runtime VERIFIED at the user's current layout: top-level rail shows Home/Owner/Commands/Test Console/Settings and Test Console exposes Con Revamp plus the moved developer-tool sub-tabs.
+
 - User runtime-observed the initial V2 dashboard/icon direction and reported that it looks substantially better.
 - User runtime-observed the post-Bundle 2.2 Client Console V2 finish direction and reported that it is "looking really good". Treat the overall visual direction at the user's current runtime layout as accepted; this does not substitute for the remaining interaction, persistence, focus, DPI, or bridge-regression checks.
 - OpenGL is a working renderer baseline and is not part of this workstream's unfinished scope.
