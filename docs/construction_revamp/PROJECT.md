@@ -376,7 +376,7 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ### Bundle 1.1 — Matrix3 ownership and foundation discovery
 
-**Status:** ACTIVE
+**Status:** DONE
 
 - [x] Confirm correct repository/branch and protected baseline.
 - [x] Confirm no current `docs/construction_revamp/PROJECT.md` exists in Matrix3.
@@ -428,6 +428,22 @@ Files for the first persistent foundation:
 Acceptance target for this first server-owned slice:
 
 `enter -> place/rotate/move/remove -> leave -> re-enter -> exact plot-relative layout rebuilds -> logout/relog -> layout still rebuilds`
+
+#### Implementation checkpoint — NEEDS RUNTIME TEST
+
+Implemented under the approved Bundle 1.2 ownership plan:
+
+- `SettlementBuildPiece` defines the approved starter-piece registry with stable keys.
+- `SettlementPlacedPiece` persists stable piece id + definition key + plot-relative X/Y/plane + rotation only.
+- `SettlementState` is serializable, player-owned, old-save safe and provides placement/move/duplicate/rotate/remove state mutation with same-type slot occupancy protection.
+- `Player.settlementState` is initialized for new players and repaired/normalized for existing saves during `Player.init(...)`.
+- `SettlementInstance` allocates an 8x8-chunk Matrix3 dynamic region, projects the existing blank Construction land chunk, rebuilds saved pieces, translates runtime world tiles back to plot coordinates and destroys the dynamic map on exit.
+- `SettlementControler` owns runtime enter/exit/logout/teleport cleanup and never persists the runtime instance through controller arguments.
+- `ControlerHandler` registers `SettlementControler`.
+- `itembrowser settlement enter|exit|status` provides the first owner-only runtime harness.
+- Inside an active settlement only, existing Dev object spawn/move/duplicate/rotate/delete operations are intercepted and synchronized with `SettlementState`; outside the settlement, Dev Mode remains unchanged.
+- `docs/rs3/SYSTEM_OWNERSHIP.md` now records `Player.settlementState` as saved owner and `SettlementInstance` as transient projection owner.
+
 
 
 
@@ -588,9 +604,9 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: SAP AAA remains active for this Construction camera slice; runtime evidence identified the proven Class24/Class411 freecam owner and the approved implementation now reuses that exact path.
-- Current checklist item: finish the remaining edge checks for the verified Free Build v1 (pre-existing-freecam preservation + bounded server-console sequence), then complete the separate remaining ghost checklist before RTS/Top-Down presets.
-- Current objective: preserve the now-runtime-verified Class24/Class411 Free Build v1 while closing only its remaining edge/ghost checks; then add RTS/Top-Down presets on the same owner.
+- Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
+- Current checklist item: runtime-test the first persistent Bundle 1.2 slice: enter settlement, place/edit/remove approved pieces, leave/re-enter rebuild, then logout/relog and re-enter to verify saved layout.
+- Current objective: verify that plot-relative `SettlementState` survives dynamic-instance destruction and player save/load while `SettlementInstance` cleanly rebuilds/cleans the Matrix3 runtime projection.
 
 ## Verification classifications
 
@@ -630,7 +646,7 @@ Later interaction polish after single-piece preview is stable:
 - Protected Matrix3 baseline is `e86851b95e1d2927d58463b67f600153b9166f6a`.
 - Matrix3 has its own `Server/src/main/java/com/rs/game/player/...` ownership structure.
 - Current Matrix3 Construction runtime contains the classic serializable `House` stack and `HouseControler`.
-- `Player` owns/persists `House`; the restored tree does not contain the previously claimed freeform `SettlementState`/`PlacedBuildPiece`/`SettlementInstance` foundation.
+- Before Bundle 1.2, `Player` owned/persisted classic `House` and no freeform settlement foundation existed. Bundle 1.2 now adds a separate `Player.settlementState` without replacing or migrating `House`.
 - Dev Mode mirrors Matrix3's normal scene-tile action 23 instead of performing a second scene pick.
 - Dev Spawn queues object placement through the existing `itembrowser devspawn` server bridge.
 - `ClientConsoleInterfaceOverlay` proves Matrix3's live Canvas can host temporary custom AWT drawing without taking interface-definition ownership.
@@ -656,6 +672,12 @@ Later interaction polish after single-piece preview is stable:
 - `ConstructionBuildCamera` activates/reuses the existing Class24/Class411 camera and tracks ownership so closing Construction does not kill a camera that was already manually active. Its `tick()` now runs from the live `Class343.method4302(...)` viewport seam, is guarded to once per `client.cycles`, and directly updates the detached Class411 position/orientation for W/S/A/D, arrow aliases, Shift/Ctrl, Q/E and mouse look. `Class24.java` no longer contains Construction movement changes.
 - `ConstructionBuildCamera` now applies normalized, time-based world-space velocity on that same live tick with bounded delta time, exponential acceleration/deceleration and exact zero settling; `stopMovement()` clears velocity and latches movement off until key release.
 - `DevModeBridge.handleMenuAction(...)` now consumes action 23 only while Construction Free Build is active: it stops camera movement, optionally confirms the existing Paint placement and prevents the same click from becoming Walk Here. Outside Free Build, existing Dev Paint action-23 behavior is unchanged.
+- `SettlementState` is a normal serializable Player field; new players construct it and existing saves repair a null field during `Player.init(...)`, so no parallel save system is introduced.
+- `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
+- `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
+- The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
+- `SettlementControler` clears its runtime instance argument immediately in `start()`; unexpected login recovery removes the stale controller instead of trying to persist dynamic-map ownership.
+- `ItemBrowserCommandBridge` intercepts object devspawn/edit operations only while `SettlementControler` is active, keeping ordinary Dev Mode behavior unchanged elsewhere.
 
 ### HYPOTHESIS
 
@@ -664,8 +686,6 @@ Later interaction polish after single-piece preview is stable:
 
 ### UNKNOWN
 
-- Exact persistent settlement-state owner to add alongside/around the classic POH `House` ownership model.
-- Best Matrix3 instance/dynamic-region owner for freeform settlement projection.
 - Final proper wooden-wall definition; `13450` is verified as a Wooden fence and should not be promoted as the final wall asset.
 - Final RTS/Top-Down/Orbit preset values and transition feel.
 - Exact deterministic RTS/top-down/orbit preset values and transition feel.
@@ -693,6 +713,9 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Runtime-verified the live-tick Free Build control/lifecycle sweep: automatic activation, W/S/A/D, Q/E, Shift/Ctrl, mouse-look, camera restore and reopen all work.
 - Implemented time-based smoothing and action-23 click-to-stop on the verified live camera seam; Free Build ground clicks now stop camera velocity and consume Walk Here while preserving server-authoritative Paint placement.
 - Runtime-verified the smoothed Free Build integration pass: acceleration/deceleration, normalized diagonals, Shift/Ctrl speed modes, click-stop latch, planted-player/no-Walk-Here action-23 ownership, exactly one authoritative Paint placement, detached ghost stability and combined camera/render stability all work.
+- Locked the exact Bundle 1.2 ownership/file plan and marked Bundle 1.1 discovery DONE.
+- Implemented the first server-owned Bundle 1.2 persistent settlement foundation: player-owned `SettlementState`, plot-relative `SettlementPlacedPiece`, definition registry, dynamic `SettlementInstance`, `SettlementControler`, owner-only enter/exit/status harness and settlement-only Dev placement/edit persistence bridge.
+- Updated system ownership so classic POH `House` remains separate and Matrix3 persistence/map/world authority remain underneath the new content layer.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
@@ -700,7 +723,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Finish the remaining edge checks for Free Build v1: manually activate detached developer freecam before opening Construction and verify palette close preserves it; capture the bounded server-console `ENTER -> TICK -> INPUT -> STOP click -> EXIT` sequence with no `FAIL`. Then continue the separate ghost checklist (rotation/piece-switch/terrain/cancel-stale-hover completeness).
+**Next checklist item:** Pull/build and run the first persistent settlement acceptance: `::itembrowser settlement enter`, place and manipulate approved pieces with the existing palette/Dev actions, `::itembrowser settlement exit`, re-enter and confirm exact rebuild, then logout/relog and re-enter to confirm player-save persistence.
 
 **Files/systems already inspected:**
 
@@ -772,19 +795,25 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Pending runtime verification:**
 
-- A manually active detached camera that predates Construction survives palette close.
-- Server console receives the bounded `ENTER -> TICK -> INPUT -> STOP click -> EXIT` sequence with no `FAIL` diagnostic.
-- Existing arrow-key aliases remain functional if they are intentionally preserved.
-- Full ghost checklist remains separate: all rotations, piece switching, uneven-terrain alignment, cancel/stale-hover cleanup and exact one-preview-per-cycle behavior.
-- Final wall/floor/door art selections still need visual acceptance.
+- `itembrowser settlement enter` allocates the 64x64 private plot, loads blank Construction land and teleports the player to its center without disturbing normal world state.
+- Existing palette placements for Wooden fence / Floor decoration / Door are accepted inside the settlement and report plot-relative placement coordinates.
+- Same-type occupancy on the same plot tile is rejected cleanly while compatible different object types can coexist where Matrix3 permits.
+- Existing Dev move/duplicate/rotate/delete object actions update both the live projected object and persistent settlement record.
+- `itembrowser settlement status` reports the expected saved-piece count.
+- Exit returns the player to the pre-entry world tile and destroys the transient dynamic map without deleting `SettlementState`.
+- Re-enter allocates a different/temporary runtime region as needed but rebuilds the exact saved plot-relative layout.
+- Logout/relog followed by re-entry preserves the layout through normal Matrix3 player serialization.
+- Classic POH `House` behavior and Dev Mode outside the settlement remain unchanged.
+- Run the full relevant build/start/login/persistence/world-object smoke coverage after the targeted persistence pass.
+- Camera edge diagnostics and full ghost completeness remain recorded carryover, not blockers for this persistence slice.
 
 **Blockers:**
 
-- No camera-owner, movement, smoothing, click-stop or placement-integration blocker remains. Free Build v1 is runtime verified; only edge diagnostics/pre-existing-freecam preservation and the separate ghost completeness checklist remain before view presets.
-- Settlement-state/instance ownership is now locked; the active gate is implementing and runtime-testing the first persistent Bundle 1.2 vertical slice.
+- No settlement ownership/design blocker remains; the first Bundle 1.2 server foundation is implemented and the active gate is runtime persistence/dynamic-instance acceptance.
+- Camera edge diagnostics and the separate ghost completeness checklist remain carryover and do not block the current persistent-runtime test.
 
-**Important remaining uncertainty:** pre-existing-freecam preservation, the complete bounded server-console diagnostic sequence, and the remaining ghost completeness cases. Free Build movement, smoothing, click-stop, planted-player placement and no-Walk-Here integration are runtime verified.
+**Important remaining uncertainty:** runtime behavior of the new 64x64 dynamic settlement projection, cleanup/re-entry timing, and save/reload persistence. The owner boundaries and plot-relative serialization are verified-static; runtime acceptance is still required.
 
 ## Next recommended work
 
-Free Build v1 movement/placement integration is runtime verified. Finish the two camera edge checks (pre-existing-freecam preservation + bounded server-console sequence), complete the remaining ghost checklist, then move to RTS/Top-Down presets on the same Class411 owner.
+Run the Bundle 1.2 persistent settlement acceptance first. If enter/place/edit/exit/re-enter/logout-relog all pass, promote the persistent freeform foundation to runtime VERIFIED and continue Bundle 1.2 with final occupancy/validity rules and player-facing entry/removal polish. Keep camera/ghost edge checks as carryover unless a regression appears.
