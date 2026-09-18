@@ -71,6 +71,7 @@ public class ControlerHandler {
 			handledControlers.put("Falconry", (Class<Controller>) Class.forName(Falconry.class.getCanonicalName()));
 			handledControlers.put("QueenBlackDragonControler", (Class<Controller>) Class.forName(QueenBlackDragonController.class.getCanonicalName()));
 			handledControlers.put("HouseControler", (Class<Controller>) Class.forName(HouseControler.class.getCanonicalName()));
+			handledControlers.put("SettlementControler", SettlementControler.class);
 			handledControlers.put("RuneSpanControler", (Class<Controller>) Class.forName(RunespanControler.class.getCanonicalName()));
 			handledControlers.put("DeathEvent", (Class<Controller>) Class.forName(DeathEvent.class.getCanonicalName()));
 			handledControlers.put("SorceressGarden", (Class<Controller>) Class.forName(SorceressGarden.class.getCanonicalName()));
