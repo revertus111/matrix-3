@@ -241,3 +241,11 @@
 - Legacy saved active-panel ids for moved tools normalize to Test Console for layout compatibility.
 - Added a dedicated Test Console rail glyph and kept Java 8/Swing ownership consistent with the existing Client Console shell.
 - Runtime acceptance required for rail layout, lazy sub-tabs, Con Revamp buttons and existing moved-tool behavior.
+
+
+2026-09-17 - Test Console + settlement runtime acceptance verified
+- User runtime confirmed the consolidated Client Console rail is live with Test Console as a top-level tool and Con Revamp / Construction / Player / Items / Interfaces / Atlas / Boss Research visible as sub-tabs.
+- Con Revamp Enter Settlement successfully queues the existing server bridge and enters the new private settlement runtime.
+- Server runtime reports the expected prepare/load sequence and `Settlement loaded: 0 saved build pieces.` on an empty state.
+- Exit/re-enter is working at the runtime harness level.
+- Placement-count, exact layout rebuild and logout/relog persistence remain pending and are the next Bundle 1.2 acceptance gate.
