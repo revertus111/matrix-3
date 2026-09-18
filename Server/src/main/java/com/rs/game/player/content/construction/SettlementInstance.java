@@ -1,6 +1,5 @@
 package com.rs.game.player.content.construction;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.rs.executor.GameExecutorManager;
@@ -142,6 +141,7 @@ public final class SettlementInstance {
     }
 
     private void failLoad(String message) {
+        player.unlock();
         player.getPackets().sendGameMessage(message);
         leaveToReturn();
     }
