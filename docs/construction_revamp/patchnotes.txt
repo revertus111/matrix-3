@@ -249,3 +249,10 @@
 - Server runtime reports the expected prepare/load sequence and `Settlement loaded: 0 saved build pieces.` on an empty state.
 - Exit/re-enter is working at the runtime harness level.
 - Placement-count, exact layout rebuild and logout/relog persistence remain pending and are the next Bundle 1.2 acceptance gate.
+
+
+2026-09-17 - Bundle 1.2 persistence core runtime verified
+- User runtime confirmed settlement placement/layout survives leaving and re-entering the private settlement instance.
+- User runtime confirmed the same saved settlement state survives logout/relog and rebuilds after entering again.
+- This runtime-verifies the core ownership chain: `Player.settlementState` persists plot-relative build state through Matrix3 player serialization while `SettlementInstance` remains transient and rebuilds the live dynamic-region projection.
+- Bundle 1.2 remains ACTIVE for persistent move/rotate/duplicate/delete acceptance, occupancy/invalid-placement rules, status accounting and regression coverage.
