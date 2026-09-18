@@ -122,3 +122,8 @@
 2026-09-18 - Con Revamp Bundle 1.2 test controls
 - Added `Saved Pieces` and `State Self-Test` buttons to the existing Con Revamp Test Console sub-tab.
 - Both controls reuse `ClientConsoleBridge` and the owner-only settlement server bridge; Client Console still owns no settlement gameplay/persistence state.
+
+
+2026-09-18 - Con Revamp saved-state audit
+- Added the `Saved State Audit` control to the Con Revamp Test Console sub-tab.
+- Updated the Bundle 1.2 card to show the final validity/regression gate; the panel still delegates all game-state checks to the owner-only server bridge.
