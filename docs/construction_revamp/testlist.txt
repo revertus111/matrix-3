@@ -94,12 +94,12 @@ Construction 3D ghost preview v1
 [ ] V1 validity coloring remains deferred until the base ghost interaction/stability checks are complete.
 
 Test Console — Construction Revamp harness
-[ ] Client Console rail shows Client Console/Home, Owner, Commands, Test Console and Settings; moved tool rail buttons are gone.
-[ ] Test Console opens and exposes Con Revamp, Construction, Player, Items, Interfaces, Atlas and Boss Research sub-tabs.
+[x] Client Console rail shows Client Console/Home, Owner, Commands, Test Console and Settings; moved tool rail buttons are gone.
+[x] Test Console opens and exposes Con Revamp, Construction, Player, Items, Interfaces, Atlas and Boss Research sub-tabs.
 [ ] Each moved tool lazy-loads from its Test Console sub-tab without breaking its existing behavior.
-[ ] Con Revamp Enter Settlement queues the existing settlement-enter server bridge.
+[x] Con Revamp Enter Settlement queues the existing settlement-enter server bridge.
 [ ] Con Revamp Settlement Status queues the existing status bridge.
-[ ] Con Revamp Exit Settlement queues the existing exit bridge.
+[x] Con Revamp Exit Settlement queues the existing exit bridge.
 [ ] Con Revamp Open Build Palette opens the existing Construction palette.
 [ ] Old saved panel ids for Player/Items/Interfaces/Construction/Atlas/Boss Research resolve to Test Console instead of an unavailable panel.
 
@@ -110,8 +110,8 @@ Phase 1 Bundle 1.2 — placement foundation
 [x] Existing Dev object spawn/edit behavior is intercepted only inside the active settlement; outside-settlement Dev Mode remains on its prior path.
 [ ] Server and Client clean/build successfully with the new settlement classes and controller registration.
 [ ] `::itembrowser settlement status` reports zero saved pieces on a new/empty settlement state.
-[ ] `::itembrowser settlement enter` allocates the 8x8-chunk / 64x64 private plot and teleports to the plot center.
-[ ] Enter the settlement instance without disturbing normal world state.
+[x] Con Revamp Enter Settlement allocates/loads the 8x8-chunk / 64x64 private plot through the existing server bridge and enters the settlement runtime.
+[x] Enter the settlement instance successfully; runtime reports `Settlement loaded: 0 saved build pieces.` and the player reaches the private grass plot.
 [ ] Wooden wall can be previewed, rotated and placed.
 [ ] Wooden floor can be previewed, rotated where applicable and placed.
 [ ] Doorway can be previewed, rotated and placed.
