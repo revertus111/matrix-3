@@ -610,7 +610,7 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: run the Con Revamp Bundle 1.2 final gate: rerun State Self-Test with validity checks, run Saved State Audit, verify Status count, then smoke-test ordinary Dev Mode outside the settlement and classic POH.
+- Current checklist item: run Con Revamp `Final Auto Check` and expect PASS, then smoke-test ordinary Dev Mode outside the settlement and classic POH. Those two manual regressions are the only remaining Bundle 1.2 completion gate.
 - Current objective: finish Bundle 1.2 behavior around the now-runtime-verified plot-relative persistence core: edit synchronization, placement validity/occupancy, removal, status accounting and regression coverage.
 
 ## Verification classifications
@@ -681,6 +681,7 @@ Later interaction polish after single-piece preview is stable:
 - `SettlementState` now owns plot-bound validity itself: only plane 0 and plot-relative X/Y in 0-63 are accepted by place/move/duplicate, so persistent correctness no longer depends on callers filtering world coordinates first.
 - `SettlementInstance` derives its plot size/plane constants from `SettlementState` and refuses to project any invalid saved record, keeping runtime projection aligned with the saved owner.
 - `SettlementStateAudit` is a read-only real-save invariant check for unique positive piece ids, approved definitions, valid plot location/plane, 0-3 rotation and no same-object-type occupancy collision.
+- `SettlementBundle12FinalCheck` aggregates the disposable state self-test, real-save audit, saved-piece count consistency and definition-registry uniqueness/lookup checks into one non-mutating owner-only PASS/FAIL path.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
@@ -744,7 +745,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** In Test Console -> Con Revamp run `State Self-Test` and `Saved State Audit` and expect PASS, confirm Settlement Status count matches Saved Pieces, then exit the settlement and smoke-test one ordinary Dev placement/edit plus one classic POH enter/build/leave cycle.
+**Next checklist item:** In Test Console -> Con Revamp run `Final Auto Check` and expect PASS. Then exit the settlement and smoke-test one ordinary Dev placement/edit/delete outside the settlement plus one classic POH enter/build/leave cycle. If both regressions pass, mark Bundle 1.2 DONE and activate Bundle 1.3.
 
 **Files/systems already inspected:**
 
@@ -831,7 +832,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - No settlement ownership/design blocker remains; the first Bundle 1.2 server foundation is implemented and the active gate is runtime persistence/dynamic-instance acceptance.
 - Camera edge diagnostics and the separate ghost completeness checklist remain carryover and do not block the current persistent-runtime test.
 
-**Important remaining uncertainty:** runtime acceptance of the newly hardened validity checks/audit, saved-piece status accounting, and regression coverage outside the settlement/classic POH. Core persistence and live edit synchronization are runtime verified.
+**Important remaining uncertainty:** runtime PASS for the new Final Auto Check and the two manual regressions outside the settlement/classic POH. Core persistence and live edit synchronization are runtime verified.
 
 ## Next recommended work
 
