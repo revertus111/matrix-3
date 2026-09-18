@@ -383,11 +383,53 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 - [x] Targeted default-branch search found no indexed `Construction` implementation symbol.
 - [x] Confirm Matrix3 player layer contains its own `ControlerManager`, `Player`, content and controllers packages; legacy 718 paths are not authoritative.
 - [x] Inspect the narrow Matrix3 Construction/player/controller/placement path needed to classify current ownership: classic `House`/`HouseControler` exists, `Player` persists `House`, and the restored tree contains no freeform settlement-state foundation.
-- [ ] Produce the exact persistent Phase 1 Bundle 1.2 settlement-state/instance file plan before modifying server-owned Construction runtime.
+- [x] Produce the exact persistent Phase 1 Bundle 1.2 settlement-state/instance file plan before modifying server-owned Construction runtime.
 
 ### Bundle 1.2 — Freeform placement foundation
 
-**Status:** READY
+**Status:** ACTIVE
+
+#### Exact ownership/file plan — LOCKED
+
+Persistent data owner:
+
+- `Player.settlementState` is the sole saved owner for the new freeform settlement. It is separate from classic POH `House`.
+- `SettlementState` is serializable and stores plot-relative construction state only.
+- `SettlementPlacedPiece` stores stable piece id, stable definition key, plot-relative X/Y/plane and rotation. Temporary dynamic-region/world coordinates are never serialized.
+- `SettlementBuildPiece` is the server definition registry for allowed starter pieces; raw dev object ids are accepted only when they resolve to an approved definition while inside the settlement.
+
+Runtime owner:
+
+- `SettlementInstance` owns the transient dynamic-map allocation, world-coordinate projection, spawned runtime objects, placement/edit validation, rebuild and cleanup.
+- The Phase 1 plot is one Matrix3 dynamic region: 8x8 chunks / 64x64 tiles. Runtime allocation uses `MapBuilder.findEmptyChunkBound(8, 8)`; cleanup uses `MapBuilder.destroyMap(...)`.
+- The blank terrain projection reuses Matrix3's existing `HouseConstants.LAND` source chunk through `MapBuilder.copyChunk(...)`, but does not reuse POH rooms/build hotspots/House state.
+- `SettlementControler` owns enter/exit/logout/teleport lifecycle only and keeps the runtime instance out of saved player state.
+- `ControlerHandler` registers `SettlementControler`.
+
+Development integration for Bundle 1.2 acceptance:
+
+- `ItemBrowserCommandBridge` adds owner-only `itembrowser settlement enter|exit|status` for the first runtime harness.
+- Existing palette `devspawn object` commands are intercepted only when the player is inside `SettlementControler`; approved starter pieces then persist into `SettlementState` and spawn through `SettlementInstance`.
+- Existing Dev move/duplicate/rotate/delete object commands are likewise intercepted inside the active settlement so the persistent piece record and projected runtime object stay synchronized.
+- Outside the settlement, Dev Mode behavior remains unchanged.
+
+Files for the first persistent foundation:
+
+- ADD `Server/src/main/java/com/rs/game/player/content/construction/SettlementState.java`
+- ADD `Server/src/main/java/com/rs/game/player/content/construction/SettlementPlacedPiece.java`
+- ADD `Server/src/main/java/com/rs/game/player/content/construction/SettlementBuildPiece.java`
+- ADD `Server/src/main/java/com/rs/game/player/content/construction/SettlementInstance.java`
+- ADD `Server/src/main/java/com/rs/game/player/controllers/SettlementControler.java`
+- MODIFY `Server/src/main/java/com/rs/game/player/Player.java`
+- MODIFY `Server/src/main/java/com/rs/game/player/controllers/ControlerHandler.java`
+- MODIFY `Server/src/main/java/com/rs/game/player/content/commands/ItemBrowserCommandBridge.java`
+- UPDATE `docs/construction_revamp/PROJECT.md`, `patchnotes.txt`, and `testlist.txt`
+
+Acceptance target for this first server-owned slice:
+
+`enter -> place/rotate/move/remove -> leave -> re-enter -> exact plot-relative layout rebuilds -> logout/relog -> layout still rebuilds`
+
+
 
 - Persistent plot-relative placement state.
 - Matrix3-native dynamic/instanced settlement projection.
@@ -542,7 +584,7 @@ Later interaction polish after single-piece preview is stable:
 
 - Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
-- Persistent-runtime bundle: 1.1 — Matrix3 ownership and foundation discovery
+- Persistent-runtime bundle: 1.2 — Freeform placement foundation
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
@@ -654,7 +696,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
-**Active persistent-runtime bundle:** Bundle 1.1 — Matrix3 ownership and foundation discovery.
+**Active persistent-runtime bundle:** Bundle 1.2 — Freeform placement foundation.
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
@@ -739,7 +781,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 **Blockers:**
 
 - No camera-owner, movement, smoothing, click-stop or placement-integration blocker remains. Free Build v1 is runtime verified; only edge diagnostics/pre-existing-freecam preservation and the separate ghost completeness checklist remain before view presets.
-- Persistent settlement-state/instance ownership remains intentionally separate and unresolved until the exact Bundle 1.2 file plan is produced.
+- Settlement-state/instance ownership is now locked; the active gate is implementing and runtime-testing the first persistent Bundle 1.2 vertical slice.
 
 **Important remaining uncertainty:** pre-existing-freecam preservation, the complete bounded server-console diagnostic sequence, and the remaining ghost completeness cases. Free Build movement, smoothing, click-stop, planted-player placement and no-Walk-Here integration are runtime verified.
 
