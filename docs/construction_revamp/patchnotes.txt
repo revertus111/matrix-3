@@ -218,3 +218,16 @@
 - Free Build action-23 ownership is runtime verified for the tested Paint flow: the player remains planted, the same click does not become Walk Here, and exactly one server-authoritative object is created.
 - The white/translucent ghost remained stable during the smoothed detached-camera acceptance run, with no observed camera/render instability or ghost duplication/flicker.
 - Free Build v1 movement + placement integration is now runtime VERIFIED. Remaining camera-edge checks are limited to pre-existing-freecam preservation and the full bounded server-console diagnostic sequence; the broader ghost completeness checklist remains separate.
+
+
+2026-09-17 - Phase 1 Bundle 1.2 persistent settlement foundation
+- Locked the persistent ownership plan: normal Matrix3 `Player` serialization owns `SettlementState`; classic POH `House` remains separate; `SettlementInstance` owns transient dynamic-map projection only.
+- Added `SettlementBuildPiece` starter definitions, `SettlementPlacedPiece` stable plot-relative records and serializable `SettlementState` with stable ids, old-save normalization, same-type slot occupancy protection and move/duplicate/rotate/remove mutations.
+- Added `Player.settlementState` for new/existing saves without changing the Player serial UID or creating a parallel save system.
+- Added `SettlementInstance`: allocates one 8x8-chunk / 64x64 Matrix3 dynamic region with `MapBuilder.findEmptyChunkBound`, projects the existing blank Construction land chunk, rebuilds saved pieces with `World.spawnObject`, maps live world tiles back to plot-relative state and destroys the runtime map on exit.
+- Added `SettlementControler` and registered it with `ControlerHandler`; controller arguments discard the runtime instance immediately so temporary projection ownership is never serialized. Logout/teleport paths clean the runtime projection; stale-controller login recovery returns to a safe normal-world tile.
+- Added owner-only `itembrowser settlement enter|exit|status` runtime harness.
+- Existing Dev object spawn/move/duplicate/rotate/delete commands are intercepted only inside an active settlement and synchronized with persistent settlement state; outside-settlement Dev behavior is unchanged.
+- Added load-failure unlock/cleanup protection and delayed dynamic-map destruction matching Matrix3's existing House lifecycle pattern.
+- Updated `docs/rs3/SYSTEM_OWNERSHIP.md` for the new saved/runtime owner split.
+- Runtime acceptance required: clean build, enter, place/edit/remove, exit/re-enter exact rebuild, logout/relog persistence, dynamic-map cleanup and classic POH/Dev regressions.
