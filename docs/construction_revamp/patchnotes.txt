@@ -271,3 +271,9 @@
 - This runtime-verifies the real `SettlementState` mutation/serialization API for place, same-layer occupancy rejection, compatible-layer coexistence, rotate, move, duplicate, delete and Java serialize/deserialize.
 - The self-test remains disposable and does not touch the player's real settlement save.
 - Live runtime projection/edit persistence across exit/re-entry remains the next Bundle 1.2 acceptance gate.
+
+
+2026-09-18 - Bundle 1.2 live edit persistence runtime verified
+- User runtime confirmed live settlement object move, rotate, duplicate and delete operations persist through the real `SettlementState` owner.
+- Exit/re-entry rebuild reproduces the edited layout correctly: moved/rotated pieces return in their edited state, duplicates remain present and deleted pieces remain absent.
+- This closes the live edit-synchronization portion of Bundle 1.2; remaining checks are occupancy/invalid placement, status accounting and outside-settlement/classic-POH regressions.
