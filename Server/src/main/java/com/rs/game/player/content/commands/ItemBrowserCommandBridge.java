@@ -10,7 +10,10 @@ import com.rs.game.item.Item;
 import com.rs.game.npc.NPC;
 import com.rs.game.player.CombatDefinitions;
 import com.rs.game.player.Player;
+import com.rs.game.player.content.construction.SettlementBuildPiece;
 import com.rs.game.player.content.construction.SettlementInstance;
+import com.rs.game.player.content.construction.SettlementPlacedPiece;
+import com.rs.game.player.content.construction.SettlementStateSelfTest;
 
 /**
  * Owner-only server authority bridge for Client Console Item Browser,
@@ -125,7 +128,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|selftest>");
             return true;
         }
 
@@ -153,8 +156,40 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("list".equals(operation)) {
+            java.util.List<SettlementPlacedPiece> pieces = player.getSettlementState().snapshotPieces();
+            player.getPackets().sendGameMessage(
+                    "Settlement saved pieces: " + pieces.size() + ".");
+            int shown = 0;
+            for (SettlementPlacedPiece piece : pieces) {
+                if (piece == null) {
+                    continue;
+                }
+                if (shown >= 20) {
+                    player.getPackets().sendGameMessage(
+                            "... " + (pieces.size() - shown) + " more piece(s) not shown.");
+                    break;
+                }
+                SettlementBuildPiece definition = SettlementBuildPiece.forKey(piece.getDefinitionKey());
+                String name = definition == null ? piece.getDefinitionKey() : definition.getDisplayName();
+                player.getPackets().sendGameMessage(
+                        "#" + piece.getPieceId() + " " + name
+                                + " plot=" + piece.getPlotX() + "," + piece.getPlotY()
+                                + "," + piece.getPlane() + " rot=" + piece.getRotation());
+                shown++;
+            }
+            return true;
+        }
+
+        if ("selftest".equals(operation)) {
+            String result = SettlementStateSelfTest.run();
+            System.out.println("[SettlementStateSelfTest] " + result);
+            player.getPackets().sendGameMessage("Settlement state self-test: " + result);
+            return true;
+        }
+
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|selftest>");
         return true;
     }
 
