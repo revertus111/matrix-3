@@ -471,6 +471,11 @@ Implemented under the approved Bundle 1.2 ownership plan:
   - `13684`, type `22` -> `Floor decoration`; placement works as the current floor candidate.
   - `13344`, type `0` -> `Door`; placement and object interaction work as the current doorway candidate.
 - The current editor remains a developer/debug harness; players should not need to enter raw object ids/types in the final Construction workflow.
+- Test Console now consolidates the Client Console's developer/test tooling. Top-level rail ownership is intentionally reduced to Client Console/Home, Owner, Commands, Test Console and Settings.
+- Player, Item Browser, Interface Editor, Construction Editor, Client Atlas and Boss Research now lazy-load as Test Console sub-tabs instead of separate rail panels.
+- Test Console adds a `Con Revamp` sub-tab with one-click Enter Settlement, Settlement Status, Exit Settlement and Open Build Palette actions.
+- `Con Revamp` is UI-only orchestration: settlement buttons queue the existing owner-only server command bridge through `ClientConsoleBridge`; no settlement logic or persistence ownership moved into the client.
+- Legacy saved Client Console panel ids for moved tools normalize to Test Console so old layouts do not break.
 - This tooling track does not satisfy Bundle 1.2 persistence, occupancy, settlement ownership, or final player-facing validity feedback.
 
 ### Next tooling slice — Custom Construction Palette + Preview Foundation
@@ -605,7 +610,7 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: runtime-test the first persistent Bundle 1.2 slice: enter settlement, place/edit/remove approved pieces, leave/re-enter rebuild, then logout/relog and re-enter to verify saved layout.
+- Current checklist item: runtime-test the first persistent Bundle 1.2 slice through Test Console -> Con Revamp: Enter Settlement, build/edit, Status, Exit/re-enter rebuild, then logout/relog and re-enter to verify saved layout.
 - Current objective: verify that plot-relative `SettlementState` survives dynamic-instance destruction and player save/load while `SettlementInstance` cleanly rebuilds/cleans the Matrix3 runtime projection.
 
 ## Verification classifications
@@ -678,6 +683,8 @@ Later interaction polish after single-piece preview is stable:
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
 - `SettlementControler` clears its runtime instance argument immediately in `start()`; unexpected login recovery removes the stale controller instead of trying to persist dynamic-map ownership.
 - `ItemBrowserCommandBridge` intercepts object devspawn/edit operations only while `SettlementControler` is active, keeping ordinary Dev Mode behavior unchanged elsewhere.
+- `TestConsolePanel` is the consolidated lazy-loaded Client Console workspace for developer/test tools; Owner, Commands and Settings remain top-level shell authorities.
+- `ConstructionRevampTestPanel` calls `ClientConsoleBridge.queueConsoleCommand(...)` for settlement enter/status/exit and opens the existing `ConstructionPaletteOverlay`; it owns no server/gameplay state.
 
 ### HYPOTHESIS
 
@@ -723,7 +730,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build and run the first persistent settlement acceptance: `::itembrowser settlement enter`, place and manipulate approved pieces with the existing palette/Dev actions, `::itembrowser settlement exit`, re-enter and confirm exact rebuild, then logout/relog and re-enter to confirm player-save persistence.
+**Next checklist item:** Pull/build, open Client Console -> Test Console -> Con Revamp, use the one-click settlement controls for the first persistent acceptance, manipulate approved pieces with the build palette/Dev actions, exit/re-enter to confirm exact rebuild, then logout/relog and re-enter to confirm player-save persistence.
 
 **Files/systems already inspected:**
 
