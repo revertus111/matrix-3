@@ -610,7 +610,7 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: runtime-test the first persistent Bundle 1.2 slice through Test Console -> Con Revamp: Enter Settlement, build/edit, Status, Exit/re-enter rebuild, then logout/relog and re-enter to verify saved layout.
+- Current checklist item: continue Bundle 1.2 persistence acceptance from the now-verified Test Console -> Con Revamp harness: place/edit at least one approved piece, verify Status count, exit/re-enter exact rebuild, then logout/relog and re-enter to verify saved layout.
 - Current objective: verify that plot-relative `SettlementState` survives dynamic-instance destruction and player save/load while `SettlementInstance` cleanly rebuilds/cleans the Matrix3 runtime projection.
 
 ## Verification classifications
@@ -685,6 +685,7 @@ Later interaction polish after single-piece preview is stable:
 - `ItemBrowserCommandBridge` intercepts object devspawn/edit operations only while `SettlementControler` is active, keeping ordinary Dev Mode behavior unchanged elsewhere.
 - `TestConsolePanel` is the consolidated lazy-loaded Client Console workspace for developer/test tools; Owner, Commands and Settings remain top-level shell authorities.
 - `ConstructionRevampTestPanel` calls `ClientConsoleBridge.queueConsoleCommand(...)` for settlement enter/status/exit and opens the existing `ConstructionPaletteOverlay`; it owns no server/gameplay state.
+- Test Console / Con Revamp is runtime VERIFIED for navigation and settlement enter/exit harness use: the user confirmed the consolidated rail/sub-tabs are visible, Enter Settlement queues successfully, the private settlement loads, and exit/re-entry works.
 
 ### HYPOTHESIS
 
@@ -730,7 +731,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build, open Client Console -> Test Console -> Con Revamp, use the one-click settlement controls for the first persistent acceptance, manipulate approved pieces with the build palette/Dev actions, exit/re-enter to confirm exact rebuild, then logout/relog and re-enter to confirm player-save persistence.
+**Next checklist item:** From Test Console -> Con Revamp, open the build palette and place at least one approved piece. Verify Settlement Status count, exit/re-enter and confirm the exact layout rebuilds, then logout/relog and re-enter to confirm player-save persistence.
 
 **Files/systems already inspected:**
 
