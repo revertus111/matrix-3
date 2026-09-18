@@ -14,6 +14,9 @@ public final class SettlementState implements Serializable {
 
     private static final long serialVersionUID = -3303744987274861157L;
 
+    public static final int PLOT_TILES = 64;
+    public static final int PLOT_PLANE = 0;
+
     private int schemaVersion = 1;
     private long nextPieceId = 1L;
     private List<SettlementPlacedPiece> pieces = new ArrayList<SettlementPlacedPiece>();
@@ -52,7 +55,8 @@ public final class SettlementState implements Serializable {
     public synchronized SettlementPlacedPiece place(SettlementBuildPiece definition,
             int plotX, int plotY, int plane, int rotation) {
         normalize();
-        if (definition == null || isOccupied(plotX, plotY, plane, definition.getObjectType(), -1L)) {
+        if (definition == null || !isValidPlotLocation(plotX, plotY, plane)
+                || isOccupied(plotX, plotY, plane, definition.getObjectType(), -1L)) {
             return null;
         }
         SettlementPlacedPiece piece = new SettlementPlacedPiece(
@@ -84,7 +88,7 @@ public final class SettlementState implements Serializable {
         }
         SettlementPlacedPiece current = pieces.get(index);
         SettlementBuildPiece definition = SettlementBuildPiece.forKey(current.getDefinitionKey());
-        if (definition == null
+        if (definition == null || !isValidPlotLocation(plotX, plotY, plane)
                 || isOccupied(plotX, plotY, plane, definition.getObjectType(), pieceId)) {
             return null;
         }
@@ -113,7 +117,7 @@ public final class SettlementState implements Serializable {
         }
         SettlementPlacedPiece current = pieces.get(index);
         SettlementBuildPiece definition = SettlementBuildPiece.forKey(current.getDefinitionKey());
-        if (definition == null
+        if (definition == null || !isValidPlotLocation(plotX, plotY, plane)
                 || isOccupied(plotX, plotY, plane, definition.getObjectType(), -1L)) {
             return null;
         }
@@ -137,6 +141,12 @@ public final class SettlementState implements Serializable {
             }
         }
         return -1;
+    }
+
+    public static boolean isValidPlotLocation(int plotX, int plotY, int plane) {
+        return plane == PLOT_PLANE
+                && plotX >= 0 && plotX < PLOT_TILES
+                && plotY >= 0 && plotY < PLOT_TILES;
     }
 
     private boolean isOccupied(int plotX, int plotY, int plane, int objectType, long ignoredPieceId) {
