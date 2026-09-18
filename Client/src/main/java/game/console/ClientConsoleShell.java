@@ -30,6 +30,8 @@ public final class ClientConsoleShell extends JPanel {
     public static final String PANEL_SHELL = "shell";
     public static final String PANEL_OWNER = "owner";
     public static final String PANEL_COMMANDS = "commands";
+    public static final String PANEL_TESTS = "tests";
+    // Legacy ids retained so saved console layouts migrate into Test Console.
     public static final String PANEL_PLAYER = "player";
     public static final String PANEL_ITEMS = "items";
     public static final String PANEL_INTERFACE_EDITOR = "interfaceEditor";
@@ -47,23 +49,13 @@ public final class ClientConsoleShell extends JPanel {
     private final JToggleButton consoleButton = new JToggleButton(ConsoleIcons.home());
     private final JToggleButton ownerButton = new JToggleButton(ConsoleIcons.owner());
     private final JToggleButton commandsButton = new JToggleButton(ConsoleIcons.commands());
-    private final JToggleButton playerButton = new JToggleButton(ConsoleIcons.player());
-    private final JToggleButton itemButton = new JToggleButton(ConsoleIcons.items());
-    private final JToggleButton interfaceEditorButton = new JToggleButton(ConsoleIcons.interfaceEditor());
-    private final JToggleButton constructionButton = new JToggleButton(ConsoleIcons.interfaceEditor());
-    private final JToggleButton atlasButton = new JToggleButton(ConsoleIcons.atlas());
-    private final JToggleButton bossResearchButton = new JToggleButton(ConsoleIcons.bossResearch());
+    private final JToggleButton testButton = new JToggleButton(ConsoleIcons.test());
     private final JToggleButton settingsButton = new JToggleButton(ConsoleIcons.settings());
 
     private final DashboardPanel shellPanel;
     private JComponent ownerPanel;
     private JComponent commandsPanel;
-    private JComponent playerPanel;
-    private JComponent itemBrowserPanel;
-    private JComponent interfaceEditorPanel;
-    private JComponent constructionEditorPanel;
-    private JComponent atlasPanel;
-    private JComponent bossResearchPanel;
+    private JComponent testConsolePanel;
     private JComponent settingsPanel;
 
     private boolean consoleOpen = true;
@@ -137,12 +129,7 @@ public final class ClientConsoleShell extends JPanel {
         configureRailButton(consoleButton, "Client Console", PANEL_SHELL);
         configureRailButton(ownerButton, "Owner", PANEL_OWNER);
         configureRailButton(commandsButton, "Commands", PANEL_COMMANDS);
-        configureRailButton(playerButton, "Player", PANEL_PLAYER);
-        configureRailButton(itemButton, "Item Browser", PANEL_ITEMS);
-        configureRailButton(interfaceEditorButton, "Interface Editor", PANEL_INTERFACE_EDITOR);
-        configureRailButton(constructionButton, "Construction Editor", PANEL_CONSTRUCTION);
-        configureRailButton(atlasButton, "Client Atlas", PANEL_ATLAS);
-        configureRailButton(bossResearchButton, "Boss Research", PANEL_BOSS_RESEARCH);
+        configureRailButton(testButton, "Test Console", PANEL_TESTS);
         configureRailButton(settingsButton, "Settings", PANEL_SETTINGS);
 
         rail.add(Box.createVerticalStrut(8));
@@ -154,17 +141,7 @@ public final class ClientConsoleShell extends JPanel {
         rail.add(Box.createVerticalStrut(4));
         rail.add(commandsButton);
         rail.add(Box.createVerticalStrut(4));
-        rail.add(playerButton);
-        rail.add(Box.createVerticalStrut(4));
-        rail.add(itemButton);
-        rail.add(Box.createVerticalStrut(4));
-        rail.add(interfaceEditorButton);
-        rail.add(Box.createVerticalStrut(4));
-        rail.add(constructionButton);
-        rail.add(Box.createVerticalStrut(4));
-        rail.add(atlasButton);
-        rail.add(Box.createVerticalStrut(4));
-        rail.add(bossResearchButton);
+        rail.add(testButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(settingsButton);
         rail.add(Box.createVerticalGlue());
@@ -267,71 +244,16 @@ public final class ClientConsoleShell extends JPanel {
             }
             return commandsPanel;
         }
-        if (PANEL_PLAYER.equals(panelId)) {
-            if (playerPanel == null) {
+        if (PANEL_TESTS.equals(panelId)) {
+            if (testConsolePanel == null) {
                 try {
-                    playerPanel = new PlayerPanel();
+                    testConsolePanel = new TestConsolePanel();
                 } catch (RuntimeException ex) {
                     ex.printStackTrace();
-                    playerPanel = createPanelError("Player panel failed to initialize.");
+                    testConsolePanel = createPanelError("Test Console failed to initialize.");
                 }
             }
-            return playerPanel;
-        }
-        if (PANEL_ITEMS.equals(panelId)) {
-            if (itemBrowserPanel == null) {
-                try {
-                    itemBrowserPanel = new ItemBrowserPanel();
-                } catch (RuntimeException ex) {
-                    ex.printStackTrace();
-                    itemBrowserPanel = createPanelError("Item Browser failed to initialize.");
-                }
-            }
-            return itemBrowserPanel;
-        }
-        if (PANEL_INTERFACE_EDITOR.equals(panelId)) {
-            if (interfaceEditorPanel == null) {
-                try {
-                    interfaceEditorPanel = new InterfaceEditorPanel();
-                } catch (RuntimeException ex) {
-                    ex.printStackTrace();
-                    interfaceEditorPanel = createPanelError("Interface Editor failed to initialize.");
-                }
-            }
-            return interfaceEditorPanel;
-        }
-        if (PANEL_CONSTRUCTION.equals(panelId)) {
-            if (constructionEditorPanel == null) {
-                try {
-                    constructionEditorPanel = new ConstructionEditorPanel();
-                } catch (RuntimeException ex) {
-                    ex.printStackTrace();
-                    constructionEditorPanel = createPanelError("Construction Editor failed to initialize.");
-                }
-            }
-            return constructionEditorPanel;
-        }
-        if (PANEL_ATLAS.equals(panelId)) {
-            if (atlasPanel == null) {
-                try {
-                    atlasPanel = new AtlasWorkspacePanel();
-                } catch (RuntimeException ex) {
-                    ex.printStackTrace();
-                    atlasPanel = createPanelError("Client Atlas panel failed to initialize.");
-                }
-            }
-            return atlasPanel;
-        }
-        if (PANEL_BOSS_RESEARCH.equals(panelId)) {
-            if (bossResearchPanel == null) {
-                try {
-                    bossResearchPanel = new BossResearchPanel();
-                } catch (RuntimeException ex) {
-                    ex.printStackTrace();
-                    bossResearchPanel = createPanelError("Boss Research panel failed to initialize.");
-                }
-            }
-            return bossResearchPanel;
+            return testConsolePanel;
         }
         if (PANEL_SETTINGS.equals(panelId)) {
             if (settingsPanel == null) {
@@ -366,26 +288,17 @@ public final class ClientConsoleShell extends JPanel {
         if (PANEL_COMMANDS.equals(panelId)) {
             return PANEL_COMMANDS;
         }
-        if (PANEL_PLAYER.equals(panelId)) {
-            return PANEL_PLAYER;
-        }
-        if (PANEL_ITEMS.equals(panelId)) {
-            return PANEL_ITEMS;
-        }
-        if (PANEL_INTERFACE_EDITOR.equals(panelId)) {
-            return PANEL_INTERFACE_EDITOR;
-        }
-        if (PANEL_CONSTRUCTION.equals(panelId)) {
-            return PANEL_CONSTRUCTION;
-        }
-        if (PANEL_ATLAS.equals(panelId)) {
-            return PANEL_ATLAS;
-        }
-        if (PANEL_BOSS_RESEARCH.equals(panelId)) {
-            return PANEL_BOSS_RESEARCH;
-        }
         if (PANEL_SETTINGS.equals(panelId)) {
             return PANEL_SETTINGS;
+        }
+        if (PANEL_TESTS.equals(panelId)
+                || PANEL_PLAYER.equals(panelId)
+                || PANEL_ITEMS.equals(panelId)
+                || PANEL_INTERFACE_EDITOR.equals(panelId)
+                || PANEL_CONSTRUCTION.equals(panelId)
+                || PANEL_ATLAS.equals(panelId)
+                || PANEL_BOSS_RESEARCH.equals(panelId)) {
+            return PANEL_TESTS;
         }
         return PANEL_SHELL;
     }
@@ -452,12 +365,7 @@ public final class ClientConsoleShell extends JPanel {
         consoleButton.setSelected(consoleOpen && PANEL_SHELL.equals(activePanelId));
         ownerButton.setSelected(consoleOpen && PANEL_OWNER.equals(activePanelId));
         commandsButton.setSelected(consoleOpen && PANEL_COMMANDS.equals(activePanelId));
-        playerButton.setSelected(consoleOpen && PANEL_PLAYER.equals(activePanelId));
-        itemButton.setSelected(consoleOpen && PANEL_ITEMS.equals(activePanelId));
-        interfaceEditorButton.setSelected(consoleOpen && PANEL_INTERFACE_EDITOR.equals(activePanelId));
-        constructionButton.setSelected(consoleOpen && PANEL_CONSTRUCTION.equals(activePanelId));
-        atlasButton.setSelected(consoleOpen && PANEL_ATLAS.equals(activePanelId));
-        bossResearchButton.setSelected(consoleOpen && PANEL_BOSS_RESEARCH.equals(activePanelId));
+        testButton.setSelected(consoleOpen && PANEL_TESTS.equals(activePanelId));
         settingsButton.setSelected(consoleOpen && PANEL_SETTINGS.equals(activePanelId));
     }
 
