@@ -94,6 +94,13 @@ Construction 3D ghost preview v1
 [ ] V1 validity coloring remains deferred until the base ghost interaction/stability checks are complete.
 
 Phase 1 Bundle 1.2 — placement foundation
+[x] Persistent identity is source-verified as stable definition key + piece id + plot-relative X/Y/plane + rotation; temporary dynamic world/chunk coordinates are not serialized.
+[x] Player owns a serializable `SettlementState`; existing saves initialize/normalize the new field without migrating or replacing classic POH `House`.
+[x] Runtime projection ownership is isolated in transient `SettlementInstance` + `SettlementControler`.
+[x] Existing Dev object spawn/edit behavior is intercepted only inside the active settlement; outside-settlement Dev Mode remains on its prior path.
+[ ] Server and Client clean/build successfully with the new settlement classes and controller registration.
+[ ] `::itembrowser settlement status` reports zero saved pieces on a new/empty settlement state.
+[ ] `::itembrowser settlement enter` allocates the 8x8-chunk / 64x64 private plot and teleports to the plot center.
 [ ] Enter the settlement instance without disturbing normal world state.
 [ ] Wooden wall can be previewed, rotated and placed.
 [ ] Wooden floor can be previewed, rotated where applicable and placed.
@@ -102,8 +109,17 @@ Phase 1 Bundle 1.2 — placement foundation
 [ ] A placed piece can be removed.
 [ ] Leaving and re-entering rebuilds the exact saved layout.
 [ ] Logout/relog preserves the layout.
-[ ] Temporary instance/world coordinates are never serialized as settlement identity.
+[x] Temporary instance/world coordinates are never serialized as settlement identity.
 [ ] Destroying the runtime instance cleans temporary objects/regions without deleting saved state.
+[ ] `::itembrowser settlement status` count matches placements/duplicates/deletes.
+[ ] Existing Dev Move Object updates the saved plot-relative position and survives re-entry.
+[ ] Existing Dev Rotate Left/Right updates saved rotation and survives re-entry.
+[ ] Existing Dev Duplicate Object creates a second persistent piece at the destination.
+[ ] Existing Dev Delete Development Spawn removes the persistent piece and it stays removed after re-entry.
+[ ] Inside the settlement, an unapproved raw object id/type is rejected instead of becoming persistent state.
+[ ] Outside the settlement, ordinary `itembrowser devspawn/devedit` behavior is unchanged.
+[ ] Classic POH House enter/build/leave behavior remains unchanged.
+
 
 Phase 1 Bundle 1.3 — starter resources/storage
 [ ] Wood, food, stone and basic ore are obtainable inside the settlement.
@@ -121,4 +137,4 @@ Phase 1 Bundle 1.4 — first worker
 [ ] Construction XP is awarded only by approved active/passive sources.
 
 Regression coverage
-[ ] Relevant `docs/rs3/SMOKE_TEST.md` build/startup/login/persistence/world-object checks pass after runtime Construction code is introduced.
+[ ] Full relevant `docs/rs3/SMOKE_TEST.md` build/startup/login/persistence/world-object coverage passes after the targeted Bundle 1.2 persistence test.
