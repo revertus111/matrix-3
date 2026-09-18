@@ -62,6 +62,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton exit = new JButton("Exit Settlement");
         JButton palette = new JButton("Open Build Palette");
         JButton savedPieces = new JButton("Saved Pieces");
+        JButton savedStateAudit = new JButton("Saved State Audit");
         JButton stateSelfTest = new JButton("State Self-Test");
 
         ConsoleTheme.styleButton(enter);
@@ -69,6 +70,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(exit);
         ConsoleTheme.styleButton(palette);
         ConsoleTheme.styleButton(savedPieces);
+        ConsoleTheme.styleButton(savedStateAudit);
         ConsoleTheme.styleButton(stateSelfTest);
 
         enter.addActionListener(e -> queue(
@@ -87,19 +89,23 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         savedPieces.addActionListener(e -> queue(
                 "itembrowser settlement list",
                 "Saved Pieces queued. Piece ids / plot coordinates / rotation are in game chat."));
+        savedStateAudit.addActionListener(e -> queue(
+                "itembrowser settlement audit",
+                "Saved State Audit queued. PASS/FAIL will appear in game chat and the server console."));
         stateSelfTest.addActionListener(e -> queue(
                 "itembrowser settlement selftest",
                 "State Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
 
-        JPanel buttons = new JPanel(new GridLayout(3, 2, 7, 7));
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 124));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 166));
         buttons.add(enter);
         buttons.add(settlementStatus);
         buttons.add(exit);
         buttons.add(palette);
         buttons.add(savedPieces);
+        buttons.add(savedStateAudit);
         buttons.add(stateSelfTest);
         card.add(buttons);
 
@@ -111,15 +117,15 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.2 persistence pass");
+        JPanel card = ConsoleTheme.createCard("Bundle 1.2 final gate");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Run State Self-Test; expect PASS.\n"
-                + "2. Enter Settlement and open the Build Palette.\n"
-                + "3. Move/rotate/duplicate/delete a saved piece with the existing Dev actions.\n"
-                + "4. Use Saved Pieces / Settlement Status to verify plot state and count.\n"
-                + "5. Exit and re-enter; confirm edits rebuild exactly.\n"
-                + "6. Persistence core already passed logout/relog; repeat only after persistence-owner changes.",
+                "1. Run State Self-Test again; expect PASS including validity checks.\n"
+                + "2. Run Saved State Audit; expect PASS on your real settlement save.\n"
+                + "3. Use Settlement Status and confirm its count matches Saved Pieces.\n"
+                + "4. Exit Settlement and confirm normal Dev Mode still works outside it.\n"
+                + "5. Enter/build/leave the classic POH once to smoke-test that separate system.\n"
+                + "6. If all five pass, Bundle 1.2 is ready to close and Bundle 1.3 can start.",
                 8));
         return card;
     }
