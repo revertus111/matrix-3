@@ -286,3 +286,9 @@
 - Added `SettlementStateAudit`, a non-mutating audit of the player's real save for unique ids, approved definitions, valid locations/rotations and same-layer occupancy invariants.
 - Added owner-only `itembrowser settlement audit` and a Con Revamp `Saved State Audit` button; updated the Con Revamp card into the final Bundle 1.2 gate.
 - Runtime acceptance remains: expanded self-test PASS, real-save audit PASS, Status count, outside-settlement Dev smoke and classic POH smoke.
+
+
+2026-09-18 - Bundle 1.2 final auto check
+- Added `SettlementBundle12FinalCheck`, a non-mutating aggregate confidence check that runs the expanded disposable state self-test, audits the player's real saved settlement, verifies saved-piece count consistency and validates definition-registry uniqueness/lookups.
+- Added owner-only `itembrowser settlement finalcheck` and a Con Revamp `Final Auto Check` button.
+- Bundle 1.2 now has only three runtime completion checks: Final Auto Check PASS, ordinary Dev Mode smoke outside the settlement, and classic POH enter/build/leave smoke.
