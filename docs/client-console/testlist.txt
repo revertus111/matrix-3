@@ -103,3 +103,12 @@ Matrix3 Client Console - shell + Owner + Commands + Player + Item Browser + Atla
 101. Move/interact in game while repeatedly searching and navigating Atlas. Confirm there is no visible render/input hitch and no Swing/client-thread exception.
 102. Leave Atlas selected, close Matrix3 normally, and relaunch. Confirm Atlas restores as the active panel through the existing generic Client Console active-panel preference path.
 103. Final Phase 4A regression: switch Atlas/Home/Owner/Commands/Player/Items/Settings, perform one safe normal game interaction, and confirm Atlas remains tooling-only with no gameplay/server command/packet behavior change.
+
+
+Test Console consolidation runtime acceptance
+[x] Top-level rail shows Home, Owner, Commands, Test Console and Settings.
+[x] Former top-level Player/Items/Interfaces/Construction/Atlas/Boss Research tools are no longer separate rail buttons.
+[x] Test Console opens and shows Con Revamp, Construction, Player, Items, Interfaces, Atlas and Boss Research sub-tabs.
+[x] Con Revamp is visible and its Enter Settlement button reaches the existing server command bridge.
+[ ] Verify each moved specialist/tool sub-tab still fully behaves as before when opened.
+[ ] Verify active-panel persistence restores Test Console correctly across a clean restart.
