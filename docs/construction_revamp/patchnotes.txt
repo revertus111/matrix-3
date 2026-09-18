@@ -277,3 +277,12 @@
 - User runtime confirmed live settlement object move, rotate, duplicate and delete operations persist through the real `SettlementState` owner.
 - Exit/re-entry rebuild reproduces the edited layout correctly: moved/rotated pieces return in their edited state, duplicates remain present and deleted pieces remain absent.
 - This closes the live edit-synchronization portion of Bundle 1.2; remaining checks are occupancy/invalid placement, status accounting and outside-settlement/classic-POH regressions.
+
+
+2026-09-18 - Bundle 1.2 persistent validity hardening
+- Moved plot-location validity into `SettlementState` itself: place/move/duplicate now reject X/Y outside 0-63 and any plane other than 0 before persistent mutation.
+- `SettlementInstance` now derives plot size/plane from `SettlementState` and skips invalid saved records instead of projecting corrupt coordinates.
+- Extended `SettlementStateSelfTest` with negative/out-of-range coordinate, wrong-plane, unknown-definition, invalid-move and invalid-duplicate rejection checks.
+- Added `SettlementStateAudit`, a non-mutating audit of the player's real save for unique ids, approved definitions, valid locations/rotations and same-layer occupancy invariants.
+- Added owner-only `itembrowser settlement audit` and a Con Revamp `Saved State Audit` button; updated the Con Revamp card into the final Bundle 1.2 gate.
+- Runtime acceptance remains: expanded self-test PASS, real-save audit PASS, Status count, outside-settlement Dev smoke and classic POH smoke.
