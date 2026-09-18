@@ -610,7 +610,7 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: State Self-Test is runtime verified; exercise one saved piece through move/rotate/duplicate/delete and use Saved Pieces/Status to verify the live projected record survives exit/re-entry.
+- Current checklist item: live edit persistence is runtime verified; finish Bundle 1.2 with occupied/invalid placement rejection, Settlement Status count, outside-settlement Dev regression and classic POH regression.
 - Current objective: finish Bundle 1.2 behavior around the now-runtime-verified plot-relative persistence core: edit synchronization, placement validity/occupancy, removal, status accounting and regression coverage.
 
 ## Verification classifications
@@ -690,6 +690,7 @@ Later interaction polish after single-piece preview is stable:
 - Con Revamp now exposes `State Self-Test` and `Saved Pieces`; both queue the existing owner-only server bridge rather than duplicating settlement logic client-side.
 - Test Console / Con Revamp is runtime VERIFIED for navigation and settlement enter/exit harness use: the user confirmed the consolidated rail/sub-tabs are visible, Enter Settlement queues successfully, the private settlement loads, and exit/re-entry works.
 - Settlement persistence core is runtime VERIFIED: the user confirmed a placed settlement piece/layout survives settlement exit/re-entry and normal logout/relog, proving `SettlementState` persists through Matrix3 player save/load and `SettlementInstance` rebuilds from plot-relative saved state.
+- Live settlement edit synchronization is runtime VERIFIED: move, rotate, duplicate and delete operations update the persistent settlement record and rebuild correctly after settlement exit/re-entry.
 
 ### HYPOTHESIS
 
@@ -730,6 +731,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Updated system ownership so classic POH `House` remains separate and Matrix3 persistence/map/world authority remain underneath the new content layer.
 - Runtime-verified the Bundle 1.2 persistence core: placed settlement state survives runtime-instance destruction/re-entry and logout/relog, then rebuilds correctly from player-owned plot-relative state.
 - Added a disposable Bundle 1.2 state self-test plus Saved Pieces inspection to Con Revamp so remaining edit/occupancy verification is cheap and does not require raw commands.
+- Runtime-verified live move/rotate/duplicate/delete synchronization and confirmed those edits rebuild correctly after settlement exit/re-entry.
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
@@ -737,7 +739,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Use the existing Dev actions on one saved object (move, rotate, duplicate, delete), inspect `Saved Pieces` / `Settlement Status`, then exit/re-enter and verify those edits rebuild exactly.
+**Next checklist item:** Finish the remaining Bundle 1.2 validity/regression gate: verify occupied/invalid placement rejection, Settlement Status count, ordinary Dev behavior outside the settlement, and classic POH House behavior.
 
 **Files/systems already inspected:**
 
@@ -824,7 +826,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - No settlement ownership/design blocker remains; the first Bundle 1.2 server foundation is implemented and the active gate is runtime persistence/dynamic-instance acceptance.
 - Camera edge diagnostics and the separate ghost completeness checklist remain carryover and do not block the current persistent-runtime test.
 
-**Important remaining uncertainty:** edit synchronization, occupancy/validity rules, repeated dynamic-instance cleanup and regression coverage. Core exit/re-entry and logout/relog persistence are runtime verified.
+**Important remaining uncertainty:** occupancy/invalid-placement behavior, saved-piece status accounting and regression coverage outside the settlement/classic POH. Core persistence and live edit synchronization are runtime verified.
 
 ## Next recommended work
 
