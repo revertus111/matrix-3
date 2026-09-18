@@ -11,6 +11,7 @@ import com.rs.game.npc.NPC;
 import com.rs.game.player.CombatDefinitions;
 import com.rs.game.player.Player;
 import com.rs.game.player.content.construction.SettlementBuildPiece;
+import com.rs.game.player.content.construction.SettlementBundle12FinalCheck;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementStateAudit;
@@ -129,7 +130,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|audit|selftest>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -189,6 +190,13 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("finalcheck".equals(operation)) {
+            String result = SettlementBundle12FinalCheck.run(player);
+            System.out.println("[SettlementBundle12FinalCheck] " + result);
+            player.getPackets().sendGameMessage("Bundle 1.2 final auto check: " + result);
+            return true;
+        }
+
         if ("selftest".equals(operation)) {
             String result = SettlementStateSelfTest.run();
             System.out.println("[SettlementStateSelfTest] " + result);
@@ -197,7 +205,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|audit|selftest>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|audit|selftest|finalcheck>");
         return true;
     }
 
