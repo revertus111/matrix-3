@@ -10,6 +10,7 @@ import com.rs.game.item.Item;
 import com.rs.game.npc.NPC;
 import com.rs.game.player.CombatDefinitions;
 import com.rs.game.player.Player;
+import com.rs.game.player.content.construction.SettlementInstance;
 
 /**
  * Owner-only server authority bridge for Client Console Item Browser,
@@ -41,6 +42,9 @@ public final class ItemBrowserCommandBridge {
         }
         if (cmd != null && cmd.length >= 2 && "constructioncamera".equalsIgnoreCase(cmd[1])) {
             return processConstructionCamera(player, cmd);
+        }
+        if (cmd != null && cmd.length >= 2 && "settlement".equalsIgnoreCase(cmd[1])) {
+            return processSettlement(player, cmd);
         }
         if (cmd != null && cmd.length >= 2 && "devspawn".equalsIgnoreCase(cmd[1])) {
             return processDevSpawn(player, cmd);
@@ -118,6 +122,42 @@ public final class ItemBrowserCommandBridge {
         return true;
     }
 
+    private static boolean processSettlement(Player player, String[] cmd) {
+        if (cmd == null || cmd.length < 3) {
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser settlement <enter|exit|status>");
+            return true;
+        }
+
+        String operation = cmd[2].toLowerCase();
+        if ("enter".equals(operation)) {
+            player.getPackets().sendGameMessage(SettlementInstance.enter(player));
+            return true;
+        }
+
+        SettlementInstance active = SettlementInstance.getActive(player);
+        if ("exit".equals(operation)) {
+            if (active == null) {
+                player.getPackets().sendGameMessage("You are not inside an active settlement.");
+            } else {
+                active.leaveToReturn();
+                player.getPackets().sendGameMessage("You leave your Construction settlement.");
+            }
+            return true;
+        }
+
+        if ("status".equals(operation)) {
+            player.getPackets().sendGameMessage(
+                    "Settlement: " + player.getSettlementState().size() + " saved piece(s), runtime "
+                            + (active == null ? "inactive." : (active.isLoaded() ? "loaded." : "loading.")));
+            return true;
+        }
+
+        player.getPackets().sendGameMessage(
+                "Use: ::itembrowser settlement <enter|exit|status>");
+        return true;
+    }
+
     private static boolean processDevSpawn(Player player, String[] cmd) {
         if (cmd.length < 7) {
             player.getPackets().sendGameMessage(
@@ -188,6 +228,14 @@ public final class ItemBrowserCommandBridge {
                 player.getPackets().sendGameMessage("Unable to spawn unknown object id " + id + ".");
                 return true;
             }
+
+            SettlementInstance settlement = SettlementInstance.getActive(player);
+            if (settlement != null) {
+                player.getPackets().sendGameMessage(
+                        settlement.placeDevelopmentPiece(id, type, rotation, tile));
+                return true;
+            }
+
             WorldObject object = new WorldObject(id, type, rotation, tile);
             World.spawnObject(object);
             DevModeRuntimeManager.trackObject(player, object);
@@ -285,6 +333,16 @@ public final class ItemBrowserCommandBridge {
                 return true;
             }
             WorldTile destination = new WorldTile(destinationX, destinationY, destinationPlane);
+
+            SettlementInstance settlement = SettlementInstance.getActive(player);
+            if ("object".equals(kind) && settlement != null && settlement.containsWorldTile(source)) {
+                String result = "move".equals(operation)
+                        ? settlement.moveDevelopmentPiece(id, source, destination)
+                        : settlement.duplicateDevelopmentPiece(id, source, destination);
+                player.getPackets().sendGameMessage(result);
+                return true;
+            }
+
             if ("npc".equals(kind)) {
                 if ("move".equals(operation)) {
                     DevModeRuntimeManager.moveNpc(player, runtimeRef, id, source, destination);
@@ -319,6 +377,14 @@ public final class ItemBrowserCommandBridge {
                 player.getPackets().sendGameMessage("Dev rotate direction must be -1 or 1.");
                 return true;
             }
+
+            SettlementInstance settlement = SettlementInstance.getActive(player);
+            if (settlement != null && settlement.containsWorldTile(source)) {
+                player.getPackets().sendGameMessage(
+                        settlement.rotateDevelopmentPiece(id, source, delta));
+                return true;
+            }
+
             DevModeRuntimeManager.rotateObject(player, id, source, delta);
             return true;
         }
@@ -327,6 +393,12 @@ public final class ItemBrowserCommandBridge {
             if ("npc".equals(kind)) {
                 DevModeRuntimeManager.deleteNpc(player, runtimeRef, id, source);
             } else {
+                SettlementInstance settlement = SettlementInstance.getActive(player);
+                if (settlement != null && settlement.containsWorldTile(source)) {
+                    player.getPackets().sendGameMessage(
+                            settlement.deleteDevelopmentPiece(id, source));
+                    return true;
+                }
                 DevModeRuntimeManager.deleteObject(player, id, source);
             }
             return true;
