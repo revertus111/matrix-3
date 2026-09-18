@@ -57,6 +57,7 @@ import com.rs.game.player.content.PrayerBooks;
 import com.rs.game.player.content.SkillCapeCustomizer;
 import com.rs.game.player.content.clans.ClansManager;
 import com.rs.game.player.content.construction.House;
+import com.rs.game.player.content.construction.SettlementState;
 import com.rs.game.player.content.grandExchange.GrandExchange;
 import com.rs.game.player.content.pet.PetManager;
 import com.rs.game.player.controllers.Controller;
@@ -190,6 +191,7 @@ public class Player extends Entity {
     private CoalTrucksManager coalTrucksManager;
     private DungManager dungManager;
     private House house;
+    private SettlementState settlementState;
     private ActionBar actionbar;
     private DoomsayerManager doomsayerManager;
     private TimersManager timersManager;
@@ -386,6 +388,7 @@ public class Player extends Entity {
 	coalTrucksManager = new CoalTrucksManager();
 	dungManager = new DungManager();
 	house = new House();
+	settlementState = new SettlementState();
 	actionbar = new ActionBar();
 	doomsayerManager = new DoomsayerManager();
 	timersManager = new TimersManager();
@@ -481,6 +484,9 @@ public class Player extends Entity {
 	charges.setPlayer(this);
 	questManager.setPlayer(this);
 	petManager.setPlayer(this);
+	if (settlementState == null)
+	    settlementState = new SettlementState();
+	settlementState.normalize();
 	house.setPlayer(this);
 	actionbar.setPlayer(this);
 	doomsayerManager.setPlayer(this);
@@ -2904,6 +2910,10 @@ public class Player extends Entity {
 
     public House getHouse() {
 	return house;
+    }
+
+    public SettlementState getSettlementState() {
+	return settlementState;
     }
 
     public boolean isAcceptingAid() {
