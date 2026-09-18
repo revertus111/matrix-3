@@ -127,3 +127,7 @@
 2026-09-18 - Con Revamp saved-state audit
 - Added the `Saved State Audit` control to the Con Revamp Test Console sub-tab.
 - Updated the Bundle 1.2 card to show the final validity/regression gate; the panel still delegates all game-state checks to the owner-only server bridge.
+
+
+2026-09-18 - Con Revamp final auto check
+- Added the `Final Auto Check` button to Con Revamp and simplified the Bundle 1.2 card to the one automatic PASS plus two remaining manual regression smokes.
