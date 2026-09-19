@@ -344,3 +344,12 @@
 - Real accepted state at completion: 9 walls, 5 floors, 1 doorway, Wood=1, Food=1, Stone=1, Basic ore=1.
 - `Bundle 1.3 Final Check` returned PASS on the live loaded settlement, covering Resource Self-Test, Shelter Self-Test, real saved-state audit, live starter nodes, real resource minimums and the completed starter-shelter milestone.
 - Bundle 1.3 is DONE. Bundle 1.4 first-worker vertical slice is now ACTIVE.
+
+
+2026-09-18 - Bundle 1.4 Worker #1 arrival foundation
+- Added stable `SettlementWorkerDefinition.STARTER_SETTLER` and serializable `SettlementWorkerState` identity using worker id + definition key + custom name + plot-relative home tile.
+- Advanced `SettlementState` to schema v4 with old-save-safe worker-list/next-id normalization and idempotent `ensureStarterWorker()` gated by `STARTER_SHELTER`.
+- Added transient `SettlementWorkerNpc` on Matrix3 NPC authority; the first slice disables random walk/combat interaction until explicit worker AI is added.
+- `SettlementInstance` now auto-creates/rebuilds Worker #1 after the starter milestone, guarantees one live NPC per saved worker id, reserves the arrival tile and cleans runtime workers on instance destroy.
+- Added disposable `SettlementWorkerSelfTest`, real-state `SettlementWorkerArrivalCheck`, owner-only worker status/self-test/check commands and Con Revamp Worker controls.
+- Runtime acceptance required for current NPC presentation, automatic arrival, 1/1 saved/runtime count and same-id rebuild after re-entry.
