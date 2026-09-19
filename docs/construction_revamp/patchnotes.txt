@@ -516,3 +516,12 @@
 - Canonical main-goal status now marks the freeform settlement building foundation and persistence/Construction-XP ownership complete.
 - Added Phase 2 Bundle 2.1 planning for population capacity + additional-worker recruitment; status is READY / NOT STARTED and no Phase-2 gameplay code changed.
 - Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+
+2026-09-19 - Phase 2 Bundle 2.1 population capacity + Worker #2
+- `SettlementState` now derives starter population capacity as 0 before shelter / 2 after the completed starter shelter; existing worker list + nextWorkerId remain the only persistent worker owner.
+- Added stable `RECRUITED_SETTLER` definition/home slot and shelter/capacity-gated Worker #2 recruitment with default Allowed Jobs OFF; third-worker recruitment is rejected at starter capacity.
+- `SettlementInstance` now projects every saved worker exactly once by stable worker id, while preserving automatic Worker #1 arrival and existing Worker AI/needs/progression behavior.
+- Updated Worker #1 Arrival Check so legitimate additional workers do not invalidate the Phase-1 starter-worker regression check.
+- Added disposable/live `SettlementPopulationCheck` coverage for capacity, recruitment, unique ids, serialization and saved=2/runtime=2 projection ownership.
+- Added Con Revamp Population Status / Recruit Worker #2 / Population Self-Test / Population Check controls.
+- Bundle 2.1 is IMPLEMENTED / NEEDS RUNTIME TEST; housing/beds and broader production remain the next Phase-2 work after multi-worker persistence is accepted.

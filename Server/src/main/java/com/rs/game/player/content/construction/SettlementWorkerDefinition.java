@@ -8,7 +8,8 @@ package com.rs.game.player.content.construction;
  */
 public enum SettlementWorkerDefinition {
 
-    STARTER_SETTLER("starter-settler", "Settler", 1, 24, 12, SettlementState.PLOT_PLANE);
+    STARTER_SETTLER("starter-settler", "Settler", 1, 24, 12, SettlementState.PLOT_PLANE),
+    RECRUITED_SETTLER("recruited-settler", "Settler", 1, 26, 12, SettlementState.PLOT_PLANE);
 
     private final String key;
     private final String displayName;

@@ -29,6 +29,7 @@ public final class SettlementState implements Serializable {
     public static final int STARTER_SHELTER_FLOORS = 4;
     public static final int STARTER_SHELTER_DOORS = 1;
     public static final long STARTER_SHELTER_RESOURCE_EACH = 1L;
+    public static final int STARTER_SHELTER_POPULATION_CAPACITY = 2;
 
     private int schemaVersion = CURRENT_SCHEMA_VERSION;
     private long nextPieceId = 1L;
@@ -256,6 +257,72 @@ public final class SettlementState implements Serializable {
                 definition.getArrivalPlane());
         workers.add(worker);
         return worker;
+    }
+
+    /**
+     * Phase-2 starter population owner.
+     *
+     * The completed starter shelter supports two workers: the automatic starter
+     * settler plus one manually recruited settler. Later housing/beds extend
+     * this same capacity owner rather than introducing a parallel population
+     * counter.
+     */
+    public synchronized int getPopulationCapacity() {
+        normalize();
+        return completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())
+                ? STARTER_SHELTER_POPULATION_CAPACITY : 0;
+    }
+
+    public synchronized boolean canRecruitAdditionalWorker() {
+        normalize();
+        if (!completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())) {
+            return false;
+        }
+        if (workers.size() >= getPopulationCapacity()) {
+            return false;
+        }
+        for (SettlementWorkerState worker : workers) {
+            if (worker != null && SettlementWorkerDefinition.RECRUITED_SETTLER.getKey()
+                    .equals(worker.getDefinitionKey())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public synchronized SettlementWorkerState recruitAdditionalWorker() {
+        normalize();
+        if (!canRecruitAdditionalWorker()) {
+            return null;
+        }
+
+        SettlementWorkerDefinition definition = SettlementWorkerDefinition.RECRUITED_SETTLER;
+        SettlementWorkerState worker = new SettlementWorkerState(
+                nextWorkerId++,
+                definition.getKey(),
+                definition.getDisplayName(),
+                definition.getArrivalPlotX(),
+                definition.getArrivalPlotY(),
+                definition.getArrivalPlane());
+        workers.add(worker);
+        return worker;
+    }
+
+    public synchronized String getPopulationSummary() {
+        normalize();
+        int capacity = getPopulationCapacity();
+        String recruitment;
+        if (!completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())) {
+            recruitment = "LOCKED: complete starter shelter";
+        } else if (workers.size() >= capacity) {
+            recruitment = "FULL";
+        } else if (canRecruitAdditionalWorker()) {
+            recruitment = "READY";
+        } else {
+            recruitment = "UNAVAILABLE";
+        }
+        return "workers=" + workers.size() + "/" + capacity
+                + " | recruitment=" + recruitment;
     }
 
     public synchronized int countPieces(SettlementBuildRole role) {

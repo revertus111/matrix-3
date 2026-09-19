@@ -15,7 +15,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 | First worker, Allowed Jobs, gathering and hauling | ✅ Done |
 | Worker needs, storage and settlement recovery | ✅ Done |
 | Persistence and Construction XP ownership | ✅ Done |
-| Population, processing and logistics expansion | ❌ Not started |
+| Population, processing and logistics expansion | 🔵 In Progress |
 | Settlement Wealth, offline production and economy | ❌ Not started |
 | Overworld Construction integration | ❌ Not started |
 
@@ -350,7 +350,7 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ## Phase 1 — MVP Vertical Slice
 
-**Status:** ACTIVE
+**Status:** DONE / RUNTIME ACCEPTED
 
 ### Required behavior
 
@@ -779,19 +779,37 @@ Runtime acceptance target:
 
 ## Phase 2 — Population + broader survival production
 
+**Status:** ACTIVE
+
 ### Bundle 2.1 — Population capacity + additional-worker recruitment
 
-**Status:** READY / NOT STARTED
+**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
 
-- Extend the existing persistent `SettlementState` / `SettlementWorkerState` ownership rather than creating a second worker system.
-- Define the first authoritative population-capacity/recruitment seam around the verified shelter/housing state.
-- Add a second persistent worker vertical slice with a unique stable worker id and one transient NPC projection per saved worker.
-- Preserve Worker #1 Allowed Jobs, needs, progression, gather/haul behavior and save compatibility unchanged.
-- Keep housing/beds and broader food production in the same Phase 2 execution path once population ownership is proven.
+Persistent population owner:
+
+- `SettlementState` remains the single persistent worker owner and now derives starter population capacity from the verified shelter milestone: incomplete shelter = 0 capacity; completed starter shelter = 2 capacity.
+- The first Phase-2 capacity is intentionally derived rather than stored in a second counter. Later beds/housing extend this same owner.
+- Worker #1 remains `STARTER_SETTLER` and still auto-arrives through `ensureStarterWorker()`; no Worker #1 identity/jobs/needs/progression behavior is replaced.
+- `SettlementWorkerDefinition.RECRUITED_SETTLER` provides Worker #2's stable definition key and a separate reserved plot-relative home slot.
+- `SettlementState.recruitAdditionalWorker()` is shelter/capacity gated, allocates the next stable worker id, defaults the new worker's Allowed Jobs OFF through normal `SettlementWorkerState` construction, and refuses a third worker at starter capacity.
+- No save schema bump is required: existing `workers` + `nextWorkerId` already persist the new worker record.
+
+Runtime owner:
+
+- `SettlementInstance.ensureSettlementWorkersRuntime()` preserves automatic Worker #1 creation, then projects every saved worker exactly once by stable worker id.
+- Recruited Worker #2 is projected immediately in the live instance and all saved workers rebuild through the same path after instance destruction/re-entry and player save/load.
+- Existing `SettlementWorkerNpc` AI/needs/progression behavior is reused unchanged; Worker #2 begins idle because its Allowed Jobs default OFF.
+- `SettlementWorkerArrivalCheck` now validates the starter worker without assuming the entire settlement must contain exactly one worker.
+
+Developer acceptance:
+
+- Con Revamp adds Population Status, Recruit Worker #2, Population Self-Test and Population Check.
+- `SettlementPopulationCheck.runSelfTest()` disposably verifies capacity lock/unlock, Worker #2 recruitment, unique ids, default jobs OFF, capacity-full rejection and serialization.
+- `SettlementPopulationCheck.run(player)` verifies the real settlement has starter + recruited workers with unique ids and exactly two live NPC projections.
 
 Acceptance direction:
 
-`population capacity -> recruit Worker #2 -> unique persistent id -> saved=2/runtime=2 -> exit/re-entry -> logout/relog -> both workers rebuild without duplicate identity/projection`
+`Population Self-Test PASS -> status workers=1/2 READY -> recruit Worker #2 -> Population Check PASS saved=2/runtime=2 -> exit/re-entry PASS -> logout/relog + re-entry PASS`
 
 - Additional workers/recruitment.
 - Housing/beds/population capacity.
@@ -840,15 +858,15 @@ Acceptance direction:
 # Current execution state
 
 - Phase: Phase 2 — Population + broader survival production
-- Phase status: READY / NOT STARTED
+- Phase status: ACTIVE
 - Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
 - Persistent-runtime bundle: 2.1 — population capacity + additional-worker recruitment
-- Persistent-runtime bundle status: READY / NOT STARTED
+- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: DONE / runtime accepted for Phase-1 scope; later camera/preset polish is non-blocking
-- Approval state: Phase 1 is closed. Phase 2 is saved as the next execution target; no Phase-2 code is started by this closure update.
-- Current checklist item: on the next explicit SAP AAA for the new Phase-2 bundle, establish population-capacity/recruitment ownership and add the second-worker vertical slice.
-- Current objective: move from one verified worker into a persistent multi-worker settlement without disturbing the completed Phase-1 foundation.
+- Approval state: Phase 2 Bundle 2.1 SAP AAA is active. Population capacity + Worker #2 recruitment/projection + disposable/live checks are implemented.
+- Current checklist item: run the consolidated Bundle 2.1 population acceptance pass: self-test, recruit Worker #2, saved=2/runtime=2 check, exit/re-entry check, logout/relog check.
+- Current objective: runtime-prove stable multi-worker persistence/projection without changing the verified Worker #1 behavior, then continue Phase 2 into housing/beds and broader survival production.
 
 ## Verification classifications
 
@@ -889,6 +907,8 @@ Acceptance direction:
 - Worker #1 exit/re-entry persistence is runtime VERIFIED: re-entering rebuilt the same Worker #1 (`id=1`, `starter-settler`, home `24,12,0`) with `saved=1/runtime=1` and Worker Arrival Check PASS.
 
 ### verified-static
+
+- Bundle 2.1 population ownership is verified-static pending runtime: starter shelter derives capacity 2 in `SettlementState`; `recruitAdditionalWorker()` creates one `RECRUITED_SETTLER` with a unique stable id; `SettlementInstance` projects every saved worker once by id; disposable/live population checks cover gating, serialization and saved/runtime counts.
 
 - `matrix-3` is the correct repository.
 - Protected Matrix3 baseline is `e86851b95e1d2927d58463b67f600153b9166f6a`.
@@ -1025,11 +1045,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 2 — Population + broader survival production.
 
-**Active persistent-runtime bundle:** Bundle 2.1 — population capacity + additional-worker recruitment (READY / NOT STARTED).
+**Active persistent-runtime bundle:** Bundle 2.1 — population capacity + additional-worker recruitment (IMPLEMENTED / NEEDS RUNTIME TEST).
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Phase 1 is DONE / runtime accepted. On the next explicit SAP AAA for Phase 2, start Bundle 2.1 by defining authoritative population capacity/recruitment on the existing settlement/worker owners, then add Worker #2 as the first multi-worker persistence/runtime vertical slice. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Pull once and run Con Revamp Phase 2 Population: Population Self-Test -> Population Status (expect workers=1/2 + READY before recruitment) -> Recruit Worker #2 -> Population Check (expect saved=2/runtime=2) -> exit/re-enter + Population Check -> logout/relog/re-enter + Population Check. Worker #2 should begin with all Allowed Jobs OFF. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 

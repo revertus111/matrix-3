@@ -141,7 +141,7 @@ public final class SettlementInstance {
         }
         spawnStarterResourceNodes();
         checkStarterShelterMilestone();
-        ensureStarterWorkerRuntime();
+        ensureSettlementWorkersRuntime();
 
         player.setForceNextMapLoadRefresh(true);
         player.loadMapRegions();
@@ -417,24 +417,43 @@ public final class SettlementInstance {
                         + "Your settlement is ready to attract its first worker.");
         System.out.println("[Settlement] Starter shelter milestone completed for "
                 + player.getUsername() + ".");
-        ensureStarterWorkerRuntime();
+        ensureSettlementWorkersRuntime();
     }
 
-    private void ensureStarterWorkerRuntime() {
+    private void ensureSettlementWorkersRuntime() {
         if (destroyed || boundChunks == null
                 || !state.isMilestoneComplete(SettlementMilestone.STARTER_SHELTER)) {
             return;
         }
 
         int beforeCount = state.getWorkerCount();
-        SettlementWorkerState worker = state.ensureStarterWorker();
-        if (worker == null) {
+        SettlementWorkerState starter = state.ensureStarterWorker();
+        if (starter == null) {
             return;
         }
+        boolean starterArrived = state.getWorkerCount() > beforeCount;
 
+        for (SettlementWorkerState worker : state.snapshotWorkers()) {
+            spawnWorkerRuntime(worker);
+        }
+
+        if (starterArrived) {
+            player.getPackets().sendGameMessage(
+                    "<col=3CB371>A settler has arrived.</col> "
+                            + starter.getName() + " is ready for work.");
+            System.out.println("[Settlement] Worker #" + starter.getWorkerId()
+                    + " arrived for " + player.getUsername() + ".");
+        }
+    }
+
+    private boolean spawnWorkerRuntime(SettlementWorkerState worker) {
+        if (worker == null || destroyed || boundChunks == null) {
+            return false;
+        }
         for (SettlementWorkerNpc npc : workerNpcs) {
-            if (npc != null && !npc.hasFinished() && npc.getWorkerId() == worker.getWorkerId()) {
-                return;
+            if (npc != null && !npc.hasFinished()
+                    && npc.getWorkerId() == worker.getWorkerId()) {
+                return true;
             }
         }
 
@@ -443,7 +462,7 @@ public final class SettlementInstance {
         if (definition == null
                 || !SettlementState.isValidPlotLocation(
                         worker.getHomePlotX(), worker.getHomePlotY(), worker.getHomePlane())) {
-            return;
+            return false;
         }
 
         WorldTile tile = new WorldTile(
@@ -452,14 +471,35 @@ public final class SettlementInstance {
                 worker.getHomePlane());
         SettlementWorkerNpc npc = new SettlementWorkerNpc(this, definition, worker, tile);
         workerNpcs.add(npc);
+        return true;
+    }
 
-        if (state.getWorkerCount() > beforeCount) {
-            player.getPackets().sendGameMessage(
-                    "<col=3CB371>A settler has arrived.</col> "
-                            + worker.getName() + " is ready for work.");
-            System.out.println("[Settlement] Worker #" + worker.getWorkerId()
-                    + " arrived for " + player.getUsername() + ".");
+    public String recruitAdditionalWorker() {
+        if (!loaded || destroyed) {
+            return "Enter the loaded settlement before recruiting a worker.";
         }
+        if (!state.isMilestoneComplete(SettlementMilestone.STARTER_SHELTER)) {
+            return "Complete the starter shelter before recruiting another worker.";
+        }
+        if (!state.canRecruitAdditionalWorker()) {
+            return "Recruitment unavailable: " + state.getPopulationSummary() + ".";
+        }
+
+        SettlementWorkerState worker = state.recruitAdditionalWorker();
+        if (worker == null) {
+            return "Recruitment failed: " + state.getPopulationSummary() + ".";
+        }
+        if (!spawnWorkerRuntime(worker)) {
+            return "Worker #" + worker.getWorkerId()
+                    + " was saved but its runtime projection could not be created.";
+        }
+
+        player.getPackets().sendGameMessage(
+                "<col=3CB371>A new settler has joined your settlement.</col>");
+        System.out.println("[Settlement] Worker #" + worker.getWorkerId()
+                + " recruited for " + player.getUsername() + ".");
+        return "Recruited Worker #" + worker.getWorkerId() + " " + worker.getName()
+                + ". " + state.getPopulationSummary() + ".";
     }
 
     public int getActiveWorkerCount() {

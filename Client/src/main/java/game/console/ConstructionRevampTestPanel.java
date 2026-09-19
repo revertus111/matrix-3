@@ -43,6 +43,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(16));
         content.add(createRuntimeCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createPopulationCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createAllowedJobsCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createNeedsCard());
@@ -182,6 +184,50 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(ConsoleTheme.createWrappedText(
                 "These buttons use the existing server-authoritative settlement command bridge. No settlement behavior is duplicated in the Client Console.",
                 3));
+        return card;
+    }
+
+    private JPanel createPopulationCard() {
+        JPanel card = ConsoleTheme.createCard("Phase 2 Population");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Starter shelter capacity is 2 workers. Worker #1 remains the automatic starter worker; "
+                + "Recruit Worker #2 uses the new persistent population-capacity owner. New Worker #2 starts with every Allowed Job OFF.",
+                5));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton statusButton = new JButton("Population Status");
+        JButton recruitButton = new JButton("Recruit Worker #2");
+        JButton selfTestButton = new JButton("Population Self-Test");
+        JButton checkButton = new JButton("Population Check");
+
+        ConsoleTheme.styleButton(statusButton);
+        ConsoleTheme.styleButton(recruitButton);
+        ConsoleTheme.styleButton(selfTestButton);
+        ConsoleTheme.styleButton(checkButton);
+
+        statusButton.addActionListener(e -> queue(
+                "itembrowser settlement population",
+                "Population Status queued. Capacity/recruitment state will appear in game chat."));
+        recruitButton.addActionListener(e -> queue(
+                "itembrowser settlement populationrecruit",
+                "Worker #2 recruitment queued. Read the authoritative result in game chat."));
+        selfTestButton.addActionListener(e -> queue(
+                "itembrowser settlement populationselftest",
+                "Population Self-Test queued. Read PASS/FAIL in game chat."));
+        checkButton.addActionListener(e -> queue(
+                "itembrowser settlement populationcheck",
+                "Population Check queued. Expect saved=2/runtime=2 after recruitment."));
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(statusButton);
+        buttons.add(recruitButton);
+        buttons.add(selfTestButton);
+        buttons.add(checkButton);
+        card.add(buttons);
         return card;
     }
 

@@ -281,9 +281,17 @@ Phase 1 final closure gate
 
 
 Phase 2 Bundle 2.1 — population capacity + additional-worker recruitment
-[READY / NOT STARTED]
-[ ] Define authoritative population-capacity ownership on the existing settlement state.
-[ ] Add recruitment eligibility/gating without replacing Worker #1 ownership.
-[ ] Add Worker #2 with a unique stable persistent id and one transient runtime NPC projection.
-[ ] Exit/re-entry rebuilds both workers with saved=2/runtime=2 and no duplicates.
-[ ] Logout/relog preserves both worker identities and their independent saved state.
+[IMPLEMENTED / NEEDS RUNTIME TEST]
+[x] Source ownership: `SettlementState` remains the persistent worker owner and derives starter population capacity as 0 before shelter / 2 after the completed starter shelter.
+[x] Source ownership: Worker #1 remains the automatic `STARTER_SETTLER`; Phase 2 recruitment does not replace its identity, Allowed Jobs, needs, progression or gather/haul owners.
+[x] Source ownership: `RECRUITED_SETTLER` gives Worker #2 a stable definition key + separate reserved plot-relative home slot; normal `nextWorkerId` allocates the unique persistent id.
+[x] Source ownership: `recruitAdditionalWorker()` is shelter/capacity gated, new Worker #2 defaults every Allowed Job OFF, and starter capacity rejects a third worker.
+[x] Source ownership: `SettlementInstance` now projects every saved worker exactly once by stable worker id and cleans all transient worker NPCs with the instance.
+[x] Regression hardening: Worker #1 Arrival Check validates the starter worker/projection without incorrectly requiring the whole settlement to contain only one worker.
+[x] Disposable `SettlementPopulationCheck.runSelfTest()` covers capacity lock/unlock, recruitment, unique ids, default jobs OFF, full-capacity rejection and serialization without touching the real save.
+[ ] Con Revamp Population Self-Test returns PASS.
+[ ] Before recruitment, Population Status reports workers=1/2 and recruitment=READY on the completed settlement.
+[ ] Recruit Worker #2 succeeds once; Worker Status shows unique Worker #1/#2 ids and Worker #2 starts with all Allowed Jobs OFF.
+[ ] Population Check returns PASS with saved=2/runtime=2 and both unique live projections.
+[ ] Exit/re-entry then Population Check returns PASS with the same two persistent worker identities and no duplicate runtime projections.
+[ ] Logout/relog + re-entry then Population Check returns PASS with both worker identities/state preserved.

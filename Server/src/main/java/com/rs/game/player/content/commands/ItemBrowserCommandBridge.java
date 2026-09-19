@@ -18,6 +18,7 @@ import com.rs.game.player.content.construction.SettlementBundle14FinalGate;
 import com.rs.game.player.content.construction.SettlementBundle15FinalCheck;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
+import com.rs.game.player.content.construction.SettlementPopulationCheck;
 import com.rs.game.player.content.construction.SettlementResourceSelfTest;
 import com.rs.game.player.content.construction.SettlementShelterSelfTest;
 import com.rs.game.player.content.construction.SettlementStateAudit;
@@ -144,7 +145,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -265,6 +266,37 @@ public final class ItemBrowserCommandBridge {
             String result = SettlementWorkerSelfTest.run();
             System.out.println("[SettlementWorkerSelfTest] " + result);
             player.getPackets().sendGameMessage("Worker self-test: " + result);
+            return true;
+        }
+
+        if ("population".equals(operation)) {
+            player.getPackets().sendGameMessage(
+                    "Settlement population: "
+                            + player.getSettlementState().getPopulationSummary() + ".");
+            return true;
+        }
+
+        if ("populationrecruit".equals(operation)) {
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before recruiting Worker #2.");
+            } else {
+                player.getPackets().sendGameMessage(active.recruitAdditionalWorker());
+            }
+            return true;
+        }
+
+        if ("populationselftest".equals(operation)) {
+            String result = SettlementPopulationCheck.runSelfTest();
+            System.out.println("[SettlementPopulationCheck] " + result);
+            player.getPackets().sendGameMessage("Population self-test: " + result);
+            return true;
+        }
+
+        if ("populationcheck".equals(operation)) {
+            String result = SettlementPopulationCheck.run(player);
+            System.out.println("[SettlementPopulationCheck] " + result);
+            player.getPackets().sendGameMessage("Population check: " + result);
             return true;
         }
 

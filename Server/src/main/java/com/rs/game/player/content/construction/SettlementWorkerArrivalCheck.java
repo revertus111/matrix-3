@@ -31,12 +31,14 @@ public final class SettlementWorkerArrivalCheck {
         }
 
         List<SettlementWorkerState> workers = state.snapshotWorkers();
-        if (workers.size() != 1) {
-            return "FAIL: expected exactly 1 persistent starter worker, found "
-                    + workers.size() + ".";
+        if (workers.isEmpty()) {
+            return "FAIL: persistent starter worker is missing.";
         }
 
-        SettlementWorkerState worker = workers.get(0);
+        SettlementWorkerState worker = state.getStarterWorker();
+        if (worker == null) {
+            return "FAIL: persistent starter worker is missing.";
+        }
         SettlementWorkerDefinition definition = SettlementWorkerDefinition.forKey(
                 worker.getDefinitionKey());
         if (definition != SettlementWorkerDefinition.STARTER_SETTLER) {
@@ -54,13 +56,13 @@ public final class SettlementWorkerArrivalCheck {
         if (active == null || !active.isLoaded()) {
             return "NOT READY: enter the settlement so Worker #1 can be projected.";
         }
-        if (active.getActiveWorkerCount() != 1
-                || !active.hasActiveWorker(worker.getWorkerId())) {
+        if (!active.hasActiveWorker(worker.getWorkerId())) {
             return "FAIL: persistent Worker #" + worker.getWorkerId()
-                    + " is not represented by exactly one live settlement NPC.";
+                    + " has no live settlement NPC projection.";
         }
 
         return "PASS: Worker #" + worker.getWorkerId() + " " + worker.getName()
-                + " persists and has exactly one live NPC projection.";
+                + " persists and has a live NPC projection; settlement saved="
+                + workers.size() + "/runtime=" + active.getActiveWorkerCount() + ".";
     }
 }
