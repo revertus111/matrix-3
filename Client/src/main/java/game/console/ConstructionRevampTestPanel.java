@@ -28,7 +28,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 1.4 worker needs is active.", 4);
+            "Ready. Bundle 1.4 final persistence gate is active.", 4);
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -340,17 +340,38 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.4 progression acceptance");
+        JPanel card = ConsoleTheme.createCard("Bundle 1.4 Final Gate");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Run Progress Self-Test; expect PASS.\n"
-                + "2. Run Progress Status and note Worker skill XP plus player Construction XP.\n"
-                + "3. Let Worker #1 complete one gather + deposit. The mapped gathering skill and Hauling XP must rise; Construction XP must rise only after the successful deposit.\n"
-                + "4. Disable Haul or all gathers and confirm waiting/idle time does not award Construction XP.\n"
-                + "5. Exit/re-enter: Worker skill XP and needs must remain unchanged.\n"
-                + "6. Logout/relog and re-enter: Worker skill XP and needs must still persist.\n"
-                + "7. Optional carryover: if Food can safely reach 0, critical Hunger must block with No Food and resume after Food returns.",
+                "1. Wait for carried=none, then Disable All Jobs. Let any in-flight action settle.\n"
+                + "2. Click Capture Stable Baseline. It refuses to arm if any job is ON or a need is critical.\n"
+                + "3. Wait a few seconds, then Check Baseline: expect PASS. This proves idle/blocked time awarded no Worker/Construction XP.\n"
+                + "4. Exit/re-enter and Check Baseline again: expect PASS.\n"
+                + "5. Logout/relog without restarting the server, re-enter, and Check Baseline once more: expect PASS.\n"
+                + "6. Re-enable your desired Allowed Jobs after the final PASS.\n"
+                + "Optional carryover: zero-Food Hunger block/resupply may still be checked separately.",
                 10));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton captureGate = new JButton("Capture Stable Baseline");
+        JButton checkGate = new JButton("Check Baseline");
+        ConsoleTheme.styleButton(captureGate);
+        ConsoleTheme.styleButton(checkGate);
+
+        captureGate.addActionListener(e -> queue(
+                "itembrowser settlement bundle14gatebaseline",
+                "Bundle 1.4 baseline capture queued. Read BASELINE/NOT READY in game chat."));
+        checkGate.addActionListener(e -> queue(
+                "itembrowser settlement bundle14gatecheck",
+                "Bundle 1.4 baseline comparison queued. Read PASS/FAIL in game chat."));
+
+        JPanel buttons = new JPanel(new GridLayout(1, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        buttons.add(captureGate);
+        buttons.add(checkGate);
+        card.add(buttons);
         return card;
     }
 
