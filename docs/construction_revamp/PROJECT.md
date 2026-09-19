@@ -11,7 +11,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 | Main-goal area | Status |
 | --- | --- |
 | Freeform settlement building foundation | 🔵 In Progress |
-| Starter resource loop and shelter milestone | ❌ Not started |
+| Starter resource loop and shelter milestone | 🔵 In Progress |
 | First worker, Allowed Jobs, gathering and hauling | ❌ Not started |
 | Worker needs, storage and settlement recovery | ❌ Not started |
 | Persistence and Construction XP ownership | 🔵 In Progress |
@@ -387,7 +387,7 @@ Future direction may include combat as another Allowed Job, guard/patrol areas, 
 
 ### Bundle 1.2 — Freeform placement foundation
 
-**Status:** ACTIVE
+**Status:** DONE
 
 #### Exact ownership/file plan — LOCKED
 
@@ -605,13 +605,13 @@ Later interaction polish after single-piece preview is stable:
 
 - Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
-- Persistent-runtime bundle: 1.2 — Freeform placement foundation
+- Persistent-runtime bundle: 1.3 — starter resources/storage
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: ordinary Dev Mode outside the settlement and classic POH regressions are already runtime verified; only the newly-added Con Revamp `Final Auto Check` remains before Bundle 1.2 can close.
-- Current objective: finish Bundle 1.2 behavior around the now-runtime-verified plot-relative persistence core: edit synchronization, placement validity/occupancy, removal, status accounting and regression coverage.
+- Current checklist item: Bundle 1.2 is complete. Start Bundle 1.3 with Matrix3-native starter resource nodes and isolated settlement storage ownership before implementing the shelter milestone.
+- Current objective: establish Bundle 1.3 starter-resource/storage ownership and implement the first playable wood/food/stone/basic-ore + isolated settlement-storage slice, then wire the starter shelter milestone.
 
 ## Verification classifications
 
@@ -696,6 +696,7 @@ Later interaction polish after single-piece preview is stable:
 - Test Console / Con Revamp is runtime VERIFIED for navigation and settlement enter/exit harness use: the user confirmed the consolidated rail/sub-tabs are visible, Enter Settlement queues successfully, the private settlement loads, and exit/re-entry works.
 - Settlement persistence core is runtime VERIFIED: the user confirmed a placed settlement piece/layout survives settlement exit/re-entry and normal logout/relog, proving `SettlementState` persists through Matrix3 player save/load and `SettlementInstance` rebuilds from plot-relative saved state.
 - Live settlement edit synchronization is runtime VERIFIED: move, rotate, duplicate and delete operations update the persistent settlement record and rebuild correctly after settlement exit/re-entry.
+- Bundle 1.2 final auto check is runtime VERIFIED: expanded state self-test, real saved-state audit, count consistency and definition-registry integrity all pass on the loaded settlement.
 - Outside-settlement ordinary Dev Mode is runtime VERIFIED as unaffected by the settlement interception path.
 - Classic POH `House` enter/build/leave behavior is runtime VERIFIED as unaffected by the separate freeform settlement owner.
 
@@ -743,11 +744,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
-**Active persistent-runtime bundle:** Bundle 1.2 — Freeform placement foundation.
+**Active persistent-runtime bundle:** Bundle 1.3 — starter resources/storage.
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** In Test Console -> Con Revamp run `Final Auto Check` and expect PASS. Do not repeat the already-verified outside-settlement Dev Mode or classic POH regressions. If Final Auto Check passes, mark Bundle 1.2 DONE and activate Bundle 1.3.
+**Next checklist item:** Bundle 1.3: inspect the narrow Matrix3 resource-node/item/storage owners, lock the settlement-resource/storage file plan, then implement wood/food/stone/basic-ore acquisition plus settlement-only storage without allowing normal-bank bypass.
 
 **Files/systems already inspected:**
 
