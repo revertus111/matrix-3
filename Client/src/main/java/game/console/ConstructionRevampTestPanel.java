@@ -69,6 +69,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton resourceSelfTest = new JButton("Resource Self-Test");
         JButton shelterStatus = new JButton("Shelter Status");
         JButton shelterSelfTest = new JButton("Shelter Self-Test");
+        JButton bundle13FinalCheck = new JButton("Bundle 1.3 Final Check");
 
         ConsoleTheme.styleButton(enter);
         ConsoleTheme.styleButton(settlementStatus);
@@ -82,6 +83,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(resourceSelfTest);
         ConsoleTheme.styleButton(shelterStatus);
         ConsoleTheme.styleButton(shelterSelfTest);
+        ConsoleTheme.styleButton(bundle13FinalCheck);
 
         enter.addActionListener(e -> queue(
                 "itembrowser settlement enter",
@@ -120,11 +122,14 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         shelterSelfTest.addActionListener(e -> queue(
                 "itembrowser settlement shelterselftest",
                 "Shelter Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
+        bundle13FinalCheck.addActionListener(e -> queue(
+                "itembrowser settlement bundle13check",
+                "Bundle 1.3 Final Check queued. PASS/NOT READY/FAIL will appear in game chat and the server console."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 292));
         buttons.add(enter);
         buttons.add(settlementStatus);
         buttons.add(exit);
@@ -137,6 +142,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(resourceSelfTest);
         buttons.add(shelterStatus);
         buttons.add(shelterSelfTest);
+        buttons.add(bundle13FinalCheck);
         card.add(buttons);
 
         card.add(Box.createVerticalStrut(10));
@@ -147,14 +153,14 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.3 starter shelter milestone");
+        JPanel card = ConsoleTheme.createCard("Bundle 1.3 final gate");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Run Shelter Self-Test; expect PASS.\n"
-                + "2. Shelter Status shows the real-save requirements: 4 walls, 4 floors, 1 doorway, plus 1 of each starter resource.\n"
-                + "3. Build/gather normally. The milestone completes automatically when the saved state qualifies.\n"
-                + "4. Completion is permanent; later removing a piece or spending supplies does not revoke it.\n"
-                + "5. Once COMPLETE is verified, Bundle 1.4 can use that milestone to trigger Worker #1.",
+                "1. Enter Settlement and run Bundle 1.3 Final Check.\n"
+                + "2. PASS means resource self-test, shelter self-test, real-save audit, all four live nodes and the real starter shelter milestone are valid.\n"
+                + "3. NOT READY shows the exact real-save shelter progress; build/gather only what is missing, then rerun.\n"
+                + "4. The final check never fabricates progress; it can only latch the milestone when the real requirements are already satisfied.\n"
+                + "5. Once PASS is runtime verified, Bundle 1.3 can close and Bundle 1.4 Worker #1 becomes active.",
                 8));
         return card;
     }
