@@ -337,3 +337,10 @@
 - The final check never fabricates settlement progress. If the real state is incomplete it returns `NOT READY` with the exact shelter progress; it may latch completion only after the authoritative requirements are already satisfied.
 - Added owner-only `itembrowser settlement bundle13check` and a Con Revamp `Bundle 1.3 Final Check` button.
 - Bundle 1.3 remains ACTIVE until this real-state final check is runtime verified PASS.
+
+
+2026-09-18 - Bundle 1.3 complete
+- User runtime confirmed the real starter-shelter milestone completed automatically when the final required starter resource was gathered.
+- Real accepted state at completion: 9 walls, 5 floors, 1 doorway, Wood=1, Food=1, Stone=1, Basic ore=1.
+- `Bundle 1.3 Final Check` returned PASS on the live loaded settlement, covering Resource Self-Test, Shelter Self-Test, real saved-state audit, live starter nodes, real resource minimums and the completed starter-shelter milestone.
+- Bundle 1.3 is DONE. Bundle 1.4 first-worker vertical slice is now ACTIVE.
