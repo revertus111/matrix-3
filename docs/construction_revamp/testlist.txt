@@ -84,11 +84,11 @@ Construction 3D ghost preview v1
 [x] Corrected white tint (`weight=128`) and face-alpha path (`faceAlpha=96`) render a visibly white/washed-out translucent ghost at runtime.
 [x] Runtime placement test exposed that preview face alpha leaked into real placed object models when the ghost clone lacked private alpha storage.
 [x] After the `0x100` alpha-copy flag fix and a full client restart, previewing/placing the same object leaves the real placed object at its normal opaque appearance while the ghost remains white/translucent.
-[x] Preview follows hovered world-tile changes without registering a persistent scene object.
-[x] Rotate -, Rotate +, R, Shift+R and mouse-wheel rotation update the preview orientation through 0-3.
-[x] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
-[x] Preview terrain height/alignment remains correct while moving across uneven nearby tiles.
-[x] Cancel, palette close or stale/lost hover removes the preview immediately without leaving a model behind.
+[ ] Preview follows hovered world-tile changes without registering a persistent scene object.
+[ ] Rotate -, Rotate +, R, Shift+R and mouse-wheel rotation update the preview orientation through 0-3.
+[ ] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
+[ ] Preview terrain height/alignment remains correct while moving across uneven nearby tiles.
+[ ] Cancel, palette close or stale/lost hover removes the preview immediately without leaving a model behind.
 [x] Confirmed placement still routes through the existing server-authoritative devspawn path and creates exactly one real object without duplicating the preview.
 [x] Camera movement and normal scene rendering remain stable while the preview is visible.
 [x] V1 validity coloring remains intentionally deferred until the base ghost interaction/stability checks are complete.
@@ -117,10 +117,10 @@ Phase 1 Bundle 1.2 — placement foundation
 [ ] `::itembrowser settlement status` reports zero saved pieces on a new/empty settlement state.
 [x] Con Revamp Enter Settlement allocates/loads the 8x8-chunk / 64x64 private plot through the existing server bridge and enters the settlement runtime.
 [x] Enter the settlement instance successfully; runtime reports `Settlement loaded: 0 saved build pieces.` and the player reaches the private grass plot.
-[x] Wooden wall/provisional wall piece can be previewed, rotated and placed.
-[x] Wooden floor/provisional floor piece can be previewed, rotated where applicable and placed.
-[x] Doorway can be previewed, rotated and placed.
-[x] Invalid/occupied placement is rejected cleanly.
+[ ] Wooden wall can be previewed, rotated and placed.
+[ ] Wooden floor can be previewed, rotated where applicable and placed.
+[ ] Doorway can be previewed, rotated and placed.
+[ ] Invalid/occupied placement is rejected cleanly.
 [x] A placed piece can be removed and remains removed after exit/re-entry.
 [x] Leaving and re-entering rebuilds the exact saved layout.
 [x] Logout/relog preserves the layout.
@@ -131,7 +131,7 @@ Phase 1 Bundle 1.2 — placement foundation
 [x] Existing Dev Rotate Left/Right updates saved rotation and survives re-entry.
 [x] Existing Dev Duplicate Object creates a second persistent piece at the destination and the duplicate survives re-entry.
 [x] Existing Dev Delete Development Spawn removes the persistent piece and it stays removed after re-entry.
-[x] Inside the settlement, an unapproved raw object id/type is rejected instead of becoming persistent state.
+[ ] Inside the settlement, an unapproved raw object id/type is rejected instead of becoming persistent state.
 [x] Outside the settlement, ordinary `itembrowser devspawn/devedit` behavior is unchanged; user confirmed this regression was already tested successfully.
 [x] Classic POH House enter/build/leave behavior remains unchanged; user confirmed this regression was already tested successfully.
 
@@ -153,9 +153,9 @@ Phase 1 Bundle 1.3 — starter resources/storage
 [x] Gathering starter resources does not add/delete normal inventory items and does not alter normal bank stock.
 [x] Starter storage rejects additions past its 200-unit capacity in the verified Resource Self-Test.
 [x] Exit/re-enter preserves settlement resource totals and respawns one clean set of starter nodes.
-[x] Consolidated persistence smoke confirms settlement resource totals survive logout/relog.
-[x] Consolidated world-object smoke confirms reserved starter-node tiles reject settlement placement.
-[x] Consolidated world-object smoke confirms transient starter resource nodes clean up/rebuild without duplication.
+[ ] CARRYOVER: explicit logout/relog resource-total recheck during the next consolidated persistence smoke.
+[ ] CARRYOVER: runtime reserved-node placement rejection check during the next consolidated world-object smoke.
+[ ] CARRYOVER: explicit transient resource-node cleanup check during the next consolidated world-object smoke.
 [x] Current starter node visuals/options are runtime accepted for the prototype.
 [x] Wood, food, stone and basic ore are obtainable inside the settlement.
 [x] Settlement storage is isolated from the normal bank.
@@ -168,12 +168,12 @@ Phase 1 Bundle 1.3 — starter resources/storage
 [x] Bundle 1.3 Final Check accurately reported NOT READY progress, then PASS after the real save reached the required wall/floor/door/resource state.
 [x] Real starter shelter milestone changed from INCOMPLETE to COMPLETE automatically when the final required starter resource was gathered.
 [x] Verified by the runtime-passed Shelter Self-Test: removing a required piece/spending a required resource after completion does not revoke the milestone.
-[x] Consolidated persistence smoke confirms completed shelter state survives exit/re-entry.
-[x] Consolidated persistence smoke confirms completed shelter state survives logout/relog.
+[ ] CARRYOVER: explicit shelter-completion exit/re-enter recheck during the next consolidated persistence smoke.
+[ ] CARRYOVER: explicit shelter-completion logout/relog recheck during the next consolidated persistence smoke.
 [x] Starter shelter milestone detects the required build/resource state.
 
 Phase 1 Bundle 1.4 — first worker
-[DONE]
+[ACTIVE]
 [x] Source ownership: `SettlementState` schema v4 owns persistent worker records and next-worker-id state.
 [x] Source ownership: `SettlementWorkerState` stores stable id/definition/name + plot-relative home coordinates; runtime NPC/world coordinates are not serialized.
 [x] Source ownership: `ensureStarterWorker()` returns null before STARTER_SHELTER and is idempotent after the milestone.
@@ -253,19 +253,4 @@ Phase 1 Bundle 1.4 — first worker
 [x] Construction XP is awarded only by approved active/passive sources for the current Phase-1 slice; productive deposit awards are runtime verified and stable idle time awards none.
 
 Regression coverage
-[x] Relevant Phase-1 build/startup/login/persistence/world-object smoke coverage passes; user confirmed the remaining consolidated persistence/world-object behavior already works.
-
-Phase 1 closure
-[DONE]
-[x] Remaining Construction ghost/placement edge behavior is runtime verified.
-[x] Consolidated settlement persistence/world-object smoke is runtime verified.
-[x] Phase 1 no longer has a blocking runtime gate; zero-Food Hunger block/resupply remains optional carryover.
-
-Phase 2 Bundle 2.1 — population + recruitment foundation
-[ACTIVE]
-[ ] Define population-capacity ownership without replacing existing worker identity/progression persistence.
-[ ] Add an additional-worker recruitment path gated by authoritative settlement population capacity.
-[ ] Rebuild multiple persistent workers as unique transient NPC projections with no duplicate ids.
-[ ] Preserve Worker #1 Allowed Jobs, needs and progression behavior unchanged.
-[ ] Add a compact developer/self-test path for population capacity + recruitment + serialization.
-[ ] Runtime-verify second-worker arrival/re-entry/logout persistence before expanding into beds/housing production.
+[ ] Full relevant `docs/rs3/SMOKE_TEST.md` build/startup/login/persistence/world-object coverage passes after the targeted Bundle 1.2 persistence test.

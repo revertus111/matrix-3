@@ -10,12 +10,12 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 | Main-goal area | Status |
 | --- | --- |
-| Freeform settlement building foundation | ✅ Done |
+| Freeform settlement building foundation | 🔵 In Progress |
 | Starter resource loop and shelter milestone | ✅ Done |
 | First worker, Allowed Jobs, gathering and hauling | ✅ Done |
 | Worker needs, storage and settlement recovery | ✅ Done |
-| Persistence and Construction XP ownership | ✅ Done |
-| Population, processing and logistics expansion | 🔵 In Progress |
+| Persistence and Construction XP ownership | 🔵 In Progress |
+| Population, processing and logistics expansion | ❌ Not started |
 | Settlement Wealth, offline production and economy | ❌ Not started |
 | Overworld Construction integration | ❌ Not started |
 
@@ -23,7 +23,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: Phase 1 MVP is runtime accepted. Construction Editor, custom palette/hover, direct-render white/translucent ghost, preview alpha isolation, detached Class411 Free Build camera, placement ownership, settlement persistence/resources/shelter, Worker #1 gather/haul/needs/progression and Construction XP ownership are runtime VERIFIED. Remaining camera diagnostics/preset polish and zero-Food Hunger resupply are non-blocking carryover. Phase 2 population + broader survival production is now active.
+- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the direct-render 3D ghost, white/translucent styling and preview-vs-placed alpha isolation are runtime verified. Legacy Orb and generic-renderer camera attempts are runtime-rejected. Construction Free Build uses the live Class24/Class411 path, and automatic activation, W/S/A/D, Q/E, Shift/Ctrl, mouse-look, normal-camera restore, close/reopen, time-based smoothing, normalized diagonals, click-to-stop latch, planted-player action-23 ownership, one authoritative Paint placement/no Walk Here and combined camera/render stability are runtime VERIFIED. Only edge diagnostics/pre-existing-freecam preservation and the separate full ghost checklist remain.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
 - Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling and the `0x100` private-alpha isolation fix are also runtime verified after a full client restart.
@@ -548,7 +548,7 @@ Bundle 1.3 non-blocking carryover: explicit logout/relog resource/shelter rechec
 
 ### Next tooling slice — Custom Construction Palette + Preview Foundation
 
-**Status:** PHASE-1 TOOLING RUNTIME ACCEPTED — PALETTE + GHOST + CLASS411 FREE BUILD V1 VERIFIED
+**Status:** PALETTE + WHITE/TRANSLUCENT GHOST + ALPHA ISOLATION RUNTIME VERIFIED — NATIVE FREE BUILD V1 IMPLEMENTED / RUNTIME ACCEPTANCE PENDING
 
 Runtime-verified palette foundation:
 
@@ -797,16 +797,15 @@ Bundle 1.4 closure:
 
 # Current execution state
 
-- Phase: Phase 2 — Population + Broader Survival Production
+- Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
-- Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
-- Persistent-runtime bundle: 2.1 — population + recruitment foundation
-- Persistent-runtime bundle status: ACTIVE
+- Persistent-runtime bundle: 1.4 — first worker vertical slice
+- Persistent-runtime bundle status: DONE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
-- Tooling status: PHASE-1 CORE RUNTIME VERIFIED; later camera presets/diagnostic polish are non-blocking
-- Approval state: Construction Revamp SAP AAA remains approved for the active workstream.
-- Current checklist item: establish the Matrix3-native population-capacity/recruitment seam, then add the first additional-worker vertical slice without disturbing the verified Worker #1 path.
-- Current objective: grow from one verified worker into a real settlement population, then add housing/beds and broader survival production on top of that stable population owner.
+- Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
+- Approval state: Bundle 1.4 SAP AAA workstream is complete. Camera/ghost edge checks and the consolidated persistence/world-object smoke pass remain Phase-1 carryover.
+- Current checklist item: return to the first unfinished Phase-1 tooling carryover: full ghost/placement edge acceptance while detached, then the consolidated persistence/world-object smoke pass.
+- Current objective: close the remaining Phase-1 tooling/smoke gates, then advance the workstream to Phase 2 population + broader survival production.
 
 ## Verification classifications
 
@@ -838,7 +837,6 @@ Bundle 1.4 closure:
 - First Class24 reuse runtime acceptance was partial: opening Construction successfully detached the camera, but W/A/S/D/Q/E did not move it. The movement code had been placed in `Class24.method711()` and was not reached by the current Construction runtime path.
 - Live-tick Free Build controls are runtime VERIFIED: the user's follow-up sweep confirmed automatic activation, W/S/A/D, Q/E, Shift/Ctrl speed modifiers, mouse-look, normal-camera restore and clean close/reopen behavior.
 - Smoothed Free Build integration is runtime VERIFIED: acceleration/deceleration, normalized diagonals, Shift/Ctrl under velocity smoothing, click-to-stop with held-key latch, planted-player action-23 ownership, exactly one authoritative Paint object/no Walk Here, detached ghost stability and combined camera/render stability all passed the user's acceptance run.
-- Phase 1 closure is runtime VERIFIED by the user: the remaining ghost hover/rotation/model-switch/terrain/cancel behavior and consolidated persistence/world-object smoke already work, so those stale documentation gates no longer block progression to Phase 2.
 - Runtime CAM DEBUG captures proved the observed moving view remained mode 1 / `source=CLASS411` while generic camera XYZ stayed `0,0,0`; source tracing separately established `Class24.aClass411_Sub1_158` as the actual developer detached-camera owner.
 - Bundle 1.3 starter resource/storage slice is runtime VERIFIED by the user: Resource Self-Test passes and the current wood/food/stone/ore node + settlement-only storage flow works in the live settlement.
 - Bundle 1.3 starter shelter milestone is runtime VERIFIED: the user's real settlement automatically completed after reaching 9 walls, 5 floors, 1 doorway and 1 Wood/Food/Stone/Basic ore, and `Bundle 1.3 Final Check` returned PASS on the loaded settlement.
@@ -975,13 +973,13 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Runtime-verified live move/rotate/duplicate/delete synchronization and confirmed those edits rebuild correctly after settlement exit/re-entry.
 - Hardened `SettlementState` plot validity, aligned `SettlementInstance` with the saved-owner rules, extended the disposable self-test, and added a non-mutating Saved State Audit + final-gate UI in Con Revamp.
 
-**Current phase:** Phase 2 — Population + Broader Survival Production.
+**Current phase:** Phase 1 — MVP Vertical Slice.
 
-**Active persistent-runtime bundle:** Bundle 2.1 — population + recruitment foundation.
+**Active persistent-runtime bundle:** Bundle 1.4 — first worker vertical slice.
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Phase 1 is DONE and runtime accepted. Start Bundle 2.1 by extending the existing `SettlementState` / `SettlementWorkerState` ownership into population capacity and additional-worker recruitment, preserving stable worker identity and the verified Worker #1 AI/needs/progression path. Housing/bed gameplay and broader food production follow on that population foundation. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Bundle 1.4 is DONE. Resume the first still-unverified Phase-1 tooling carryover: confirm live ghost hover-follow, rotation 0-3, Wooden fence/Floor decoration/Door switching, uneven-terrain alignment and cancel/stale-hover cleanup while detached. One-preview-per-cycle/no-flicker, exactly-one authoritative placement and camera/render stability are already closed from the prior source + runtime evidence. Then run the consolidated persistence/world-object smoke pass. Zero-Food Hunger block/resupply remains optional carryover.
 
 **Files/systems already inspected:**
 
