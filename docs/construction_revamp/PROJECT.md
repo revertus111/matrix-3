@@ -465,7 +465,7 @@ Persistent owner:
 - `SettlementState` owns settlement-only resource totals and starter storage capacity alongside the already-verified placed-piece state.
 - Stable resource identities are `SettlementResource.WOOD`, `FOOD`, `STONE` and `BASIC_ORE`.
 - Storage is not represented by normal `Item` stacks and has no inventory/bank deposit API. Normal bank stock therefore cannot be dumped into settlement storage through this slice.
-- Old player saves repair missing resource storage during `SettlementState.normalize()`; schema version advances to 2.
+- Old player saves repair missing resource storage during `SettlementState.normalize()`. Resource storage was introduced in schema v2; the starter-milestone set advances the same owner to schema v3.
 
 Runtime owner:
 
@@ -481,7 +481,7 @@ Starter v1 node layout:
 - Food: plot `12,8`, fishing-spot NPC `327`.
 - Stone: plot `16,8`, provisional rock object `11933`, type `10`.
 - Basic ore: plot `20,8`, provisional rock object `11936`, type `10`.
-- Node art/cache suitability is runtime acceptance pending and may change without changing resource/storage ownership.
+- Current starter-node visuals/options are runtime accepted for the prototype and may still change for final art direction without changing resource/storage ownership.
 
 Developer acceptance:
 
@@ -492,6 +492,33 @@ Developer acceptance:
 Acceptance target:
 
 `enter -> four nodes visible -> gather each -> settlement-only totals increase -> inventory/bank unchanged -> exit/re-enter -> totals persist`
+
+#### Starter shelter milestone — IMPLEMENTED / NEEDS TEST
+
+Persistent progression owner:
+
+- `SettlementBuildRole` classifies server definitions as WALL, FLOOR or DOOR so milestone semantics do not depend on provisional object ids.
+- `SettlementMilestone.STARTER_SHELTER` is stored as a stable key in `SettlementState.completedMilestones`.
+- The Phase-1 threshold is deliberately freeform/count-based rather than a prefab room: 4 wall pieces, 4 floor pieces, 1 doorway, and at least 1 Wood/Food/Stone/Basic ore in settlement storage.
+- Completion is one-time and permanent. Later removing structures or spending stored resources does not revoke the milestone.
+- `SettlementState` schema v3 repairs missing milestone storage on old saves and removes unknown milestone keys during normalization.
+
+Runtime behavior:
+
+- `SettlementInstance` checks the starter milestone after instance load, successful build placement/duplication and successful starter-resource gathering.
+- Completion is automatic and server-owned; the client has no claim/complete authority.
+- Completing the milestone emits a one-time message that the settlement is ready to attract its first worker.
+- Bundle 1.4 can depend only on `SettlementMilestone.STARTER_SHELTER` instead of re-deriving structure/resource rules.
+
+Developer acceptance:
+
+- `itembrowser settlement shelter` reports the real saved requirement counts and milestone state.
+- `itembrowser settlement shelterselftest` runs a disposable threshold/latch/serialization test.
+- Test Console -> Con Revamp exposes `Shelter Status` and `Shelter Self-Test`.
+
+Acceptance target:
+
+`Shelter Self-Test PASS -> real Shelter Status reaches COMPLETE -> remove/spend after completion -> milestone remains COMPLETE -> save/load preserves completion`
 
 ### Construction Editor developer prototype
 
@@ -648,9 +675,9 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: SAP AAA approved Bundle 1.3 starter-resource/storage scanning and implementation. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: Bundle 1.3 resource/storage foundation is implemented verified-static; runtime-test Resource Self-Test, four starter node visuals/clicks, direct settlement-only storage and exit/re-entry persistence.
-- Current objective: runtime-verify the first playable wood/food/stone/basic-ore + isolated settlement-storage slice, then implement the starter shelter milestone on top of the verified resource owner.
+- Approval state: SAP AAA approved the Bundle 1.3 starter shelter milestone slice. Camera/ghost edge checks remain carryover and do not block this slice.
+- Current checklist item: starter resource/storage slice is runtime verified; run the new Shelter Self-Test and real Shelter Status acceptance to close Bundle 1.3.
+- Current objective: runtime-verify the automatic one-time starter shelter milestone, then close Bundle 1.3 and activate Bundle 1.4 first-worker vertical slice.
 
 ## Verification classifications
 
@@ -683,6 +710,7 @@ Later interaction polish after single-piece preview is stable:
 - Live-tick Free Build controls are runtime VERIFIED: the user's follow-up sweep confirmed automatic activation, W/S/A/D, Q/E, Shift/Ctrl speed modifiers, mouse-look, normal-camera restore and clean close/reopen behavior.
 - Smoothed Free Build integration is runtime VERIFIED: acceleration/deceleration, normalized diagonals, Shift/Ctrl under velocity smoothing, click-to-stop with held-key latch, planted-player action-23 ownership, exactly one authoritative Paint object/no Walk Here, detached ghost stability and combined camera/render stability all passed the user's acceptance run.
 - Runtime CAM DEBUG captures proved the observed moving view remained mode 1 / `source=CLASS411` while generic camera XYZ stayed `0,0,0`; source tracing separately established `Class24.aClass411_Sub1_158` as the actual developer detached-camera owner.
+- Bundle 1.3 starter resource/storage slice is runtime VERIFIED by the user: Resource Self-Test passes and the current wood/food/stone/ore node + settlement-only storage flow works in the live settlement.
 
 ### verified-static
 
@@ -721,11 +749,14 @@ Later interaction polish after single-piece preview is stable:
 - `SettlementInstance` derives its plot size/plane constants from `SettlementState` and refuses to project any invalid saved record, keeping runtime projection aligned with the saved owner.
 - `SettlementStateAudit` is a read-only real-save invariant check for unique positive piece ids, approved definitions, valid plot location/plane, 0-3 rotation and no same-object-type occupancy collision.
 - `SettlementBundle12FinalCheck` aggregates the disposable state self-test, real-save audit, saved-piece count consistency and definition-registry uniqueness/lookup checks into one non-mutating owner-only PASS/FAIL path.
-- `SettlementResource` defines the four stable settlement-only resource identities; `SettlementState` schema v2 owns their persistent totals plus a 200-unit starter storage capacity.
+- `SettlementResource` defines the four stable settlement-only resource identities; `SettlementState` schema v3 owns their persistent totals, 200-unit starter storage capacity and stable completed-milestone keys.
 - `SettlementResourceNode` defines four fixed reserved starter node positions. `SettlementInstance` spawns/cleans their transient objects/NPC and rejects building onto reserved node tiles.
 - `SettlementControler` consumes only exact settlement starter-node clicks; ordinary ObjectHandler/Woodcutting/Mining/Fishing ownership remains unchanged outside those nodes.
 - `SettlementGatherAction` adds resources directly to settlement storage and contains no inventory/bank mutation path.
 - `SettlementResourceSelfTest` disposably verifies storage add/remove/capacity clamping plus unique/valid four-node definitions.
+- `SettlementBuildRole` decouples starter shelter semantics from provisional art ids; current definitions map to WALL/FLOOR/DOOR.
+- `SettlementMilestone.STARTER_SHELTER` is the stable persisted progression key. `SettlementState` requires 4 walls, 4 floors, 1 doorway and 1 of each starter resource, then latches completion permanently.
+- `SettlementShelterSelfTest` disposably verifies threshold gating, one-time completion, permanent latch behavior and Java serialization persistence.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
@@ -793,7 +824,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build, run Test Console -> Con Revamp -> `Resource Self-Test`, enter the settlement and verify all four starter nodes appear and each gathers into `Resource Status` without changing normal inventory/bank stock. Exit/re-enter and verify resource totals persist.
+**Next checklist item:** Pull/build, run Test Console -> Con Revamp -> `Shelter Self-Test` and expect PASS. Then use `Shelter Status`; satisfy any missing 4-wall/4-floor/1-door/1-each-resource requirements and verify the real milestone becomes COMPLETE automatically. Recheck after removing/spending something to confirm the completion latch remains.
 
 **Files/systems already inspected:**
 
