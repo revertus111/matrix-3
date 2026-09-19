@@ -803,8 +803,8 @@ Remaining Bundle 1.4 sequence after progression acceptance:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA remains approved for the active Bundle 1.4 workstream. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: productive worker skill XP + passive Construction XP awards are runtime VERIFIED. Finish the remaining blocked/idle no-XP check plus exit/re-entry and logout/relog persistence.
-- Current objective: close the remaining restart/persistence gate without re-testing already accepted progression awards, then close Bundle 1.4 if those carryover checks pass.
+- Current checklist item: Bundle 1.4 final-gate harness is implemented verified-static. Capture one stable all-jobs-OFF baseline, then compare it while idle, after exit/re-entry, and after logout/relog.
+- Current objective: close blocked/idle no-XP plus actual save/rebuild persistence in one short session without re-testing accepted productive progression.
 
 ## Verification classifications
 
@@ -905,7 +905,8 @@ Remaining Bundle 1.4 sequence after progression acceptance:
 - The explicit zero-Food blocked-state branch and restart persistence checks remain recorded as carryover into the progression/basic-XP runtime pass so they can be covered without another dedicated test launch.
 - Worker progression is runtime VERIFIED for the productive path: `SettlementWorkerProgressionSelfTest` returned PASS and live work increased the expected personal skills. Runtime evidence showed Food Gathering 0 -> 12 XP, Mining 0 -> 24 XP, and Hauling 6 -> 24 XP while work completed.
 - Productive-worker Construction XP is runtime VERIFIED: live Progress Status showed Construction XP 187522810 -> 187522811 after the next successful deposit, then -> 187522814 after additional productive deposits, matching the 1-base-XP-per-stored-resource seam.
-- Source ownership remains verified-static for the negative path: only a successful worker deposit calls `SettlementInstance.recordWorkerDepositProgress(...)`; blocked/idle paths have no award call. The explicit runtime no-XP waiting check remains open.
+- Source ownership remains verified-static for the negative path: only a successful worker deposit calls `SettlementInstance.recordWorkerDepositProgress(...)`; blocked/idle paths have no award call.
+- `SettlementBundle14FinalGate` is a developer-only, non-mutating process-local checkpoint keyed by username. It requires all Worker #1 jobs OFF and no critical need before capture, then compares exact worker identity, Allowed Jobs, Hunger/Thirst/Energy, every personal skill XP total and player Construction XP. The same baseline remains available across settlement exit/re-entry and normal logout/relog as long as the server process is not restarted.
 - Developer Construction placement remains outside XP ownership until the real material-consuming active-build path is implemented.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
@@ -976,7 +977,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Do not re-test productive progression. In one short session, disable Haul or all gathering and confirm Construction XP stays fixed while the worker waits, then exit/re-enter and logout/relog once to verify Worker skill XP + Needs persist. If practical, fold in the zero-Food block/resupply carryover. PASS closes the Bundle 1.4 worker gate.
+**Next checklist item:** Pull/build once. When Worker AI Status shows carried=none, Disable All Jobs, wait for the worker to settle, then Capture Stable Baseline. Check it after a few idle seconds, after exit/re-entry, and after logout/relog/re-entry; all three checks must PASS. Re-enable desired jobs afterward. Those PASS results close the mandatory Bundle 1.4 worker gate; zero-Food remains optional carryover.
 
 **Files/systems already inspected:**
 
