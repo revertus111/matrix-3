@@ -153,3 +153,9 @@
 2026-09-18 - Con Revamp Worker #1 controls
 - Added Worker Status, Worker Self-Test and Worker Arrival Check to Con Revamp for the Bundle 1.4 arrival foundation.
 - Client Console remains orchestration only; persistent worker ownership stays in server-side `SettlementState` and runtime NPC ownership stays in `SettlementInstance`.
+
+
+2026-09-18 - Con Revamp Allowed Jobs controls
+- Added a dedicated Allowed Jobs card for Worker #1 with Gather Wood/Food/Stone/Basic Ore and Haul checkbox controls.
+- Added Jobs Status, Jobs Self-Test, Enable All Jobs and Disable All Jobs controls.
+- Checkbox clicks send explicit server ON/OFF commands; Jobs Status remains the authoritative saved-state readback.
