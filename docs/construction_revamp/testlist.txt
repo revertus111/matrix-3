@@ -184,9 +184,9 @@ Phase 1 Bundle 1.4 — first worker
 [x] Entering a completed settlement automatically creates exactly one persistent Worker #1 if none exists.
 [x] Worker #1 runtime NPC is visible and acceptable with the current provisional NPC definition.
 [x] Con Revamp `Worker Arrival Check` reports PASS for exactly one saved worker and exactly one matching live NPC.
-[ ] Exit/re-enter rebuilds the same worker id and still reports saved=1/runtime=1 with no duplicate.
+[x] Exit/re-enter rebuilds the same Worker #1 id and reports saved=1/runtime=1 with no duplicate.
 [ ] Logout/relog and re-enter preserves the same worker id.
-[ ] Leaving/destroying the settlement removes the transient worker NPC without deleting persistent worker state.
+[x] Leaving/destroying the settlement removes the transient worker projection while persistent Worker #1 remains and rebuilds on re-entry.
 [x] First worker arrival is gated by the already-complete STARTER_SHELTER milestone and runtime arrival succeeded.
 [ ] Allowed Jobs checkbox state persists.
 [ ] Worker gathers only allowed valid jobs.
