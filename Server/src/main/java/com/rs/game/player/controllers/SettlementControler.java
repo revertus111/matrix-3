@@ -1,6 +1,8 @@
 package com.rs.game.player.controllers;
 
 import com.rs.Settings;
+import com.rs.game.WorldObject;
+import com.rs.game.npc.NPC;
 import com.rs.game.player.content.construction.SettlementInstance;
 
 /**
@@ -21,6 +23,22 @@ public final class SettlementControler extends Controller {
 
     public SettlementInstance getInstance() {
         return instance;
+    }
+
+    @Override
+    public boolean processObjectClick1(WorldObject object) {
+        if (instance != null && instance.handleStarterResourceObjectClick(object)) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean processNPCClick1(NPC npc) {
+        if (instance != null && instance.handleStarterResourceNpcClick(npc)) {
+            return false;
+        }
+        return true;
     }
 
     @Override
