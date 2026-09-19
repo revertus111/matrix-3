@@ -1,6 +1,9 @@
 package com.rs.game.player.content.construction;
 
 import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 /**
  * Persistent settlement worker identity/state.
@@ -18,6 +21,7 @@ public final class SettlementWorkerState implements Serializable {
     private int homePlotX;
     private int homePlotY;
     private int homePlane;
+    private Set<String> allowedJobs = new HashSet<String>();
 
     public SettlementWorkerState(long workerId, String definitionKey, String name,
             int homePlotX, int homePlotY, int homePlane) {
@@ -53,6 +57,41 @@ public final class SettlementWorkerState implements Serializable {
         return homePlane;
     }
 
+    public boolean isJobAllowed(SettlementWorkerJob job) {
+        normalizeJobs();
+        return job != null && allowedJobs.contains(job.getKey());
+    }
+
+    public void setJobAllowed(SettlementWorkerJob job, boolean allowed) {
+        normalizeJobs();
+        if (job == null) {
+            return;
+        }
+        if (allowed) {
+            allowedJobs.add(job.getKey());
+        } else {
+            allowedJobs.remove(job.getKey());
+        }
+    }
+
+    public Set<String> snapshotAllowedJobKeys() {
+        normalizeJobs();
+        return new HashSet<String>(allowedJobs);
+    }
+
+    public String getAllowedJobsSummary() {
+        normalizeJobs();
+        StringBuilder summary = new StringBuilder();
+        for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
+            if (summary.length() > 0) {
+                summary.append(", ");
+            }
+            summary.append(job.getDisplayName()).append("=")
+                    .append(isJobAllowed(job) ? "ON" : "OFF");
+        }
+        return summary.toString();
+    }
+
     void normalize(SettlementWorkerDefinition definition) {
         if (definition == null) {
             return;
@@ -64,6 +103,19 @@ public final class SettlementWorkerState implements Serializable {
             homePlotX = definition.getArrivalPlotX();
             homePlotY = definition.getArrivalPlotY();
             homePlane = definition.getArrivalPlane();
+        }
+        normalizeJobs();
+    }
+
+    private void normalizeJobs() {
+        if (allowedJobs == null) {
+            allowedJobs = new HashSet<String>();
+        }
+        Iterator<String> iterator = allowedJobs.iterator();
+        while (iterator.hasNext()) {
+            if (SettlementWorkerJob.forKey(iterator.next()) == null) {
+                iterator.remove();
+            }
         }
     }
 }
