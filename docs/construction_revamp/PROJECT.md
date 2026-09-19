@@ -605,7 +605,7 @@ Later interaction polish after single-piece preview is stable:
 
 ### Bundle 1.3 — Starter resource loop
 
-**Status:** PLANNED
+**Status:** DONE
 
 - Wood, food, stone and ore gathering inside settlement.
 - Settlement-only storage boundary.
@@ -613,9 +613,37 @@ Later interaction polish after single-piece preview is stable:
 
 ### Bundle 1.4 — First worker vertical slice
 
-**Status:** PLANNED
+**Status:** ACTIVE
 
-- First worker arrival.
+#### Worker #1 arrival foundation — IMPLEMENTED / NEEDS TEST
+
+Persistent owner:
+
+- `SettlementState` schema v4 owns settlement worker records and the next stable worker id inside normal Matrix3 player serialization.
+- `SettlementWorkerState` stores stable worker id, stable worker-definition key, custom name and plot-relative home tile only; dynamic world coordinates/NPC instances are never serialized.
+- `SettlementWorkerDefinition.STARTER_SETTLER` is the stable first-worker archetype. Its cache NPC id is presentation data and remains replaceable without changing saved worker identity.
+- `SettlementState.ensureStarterWorker()` is hard-gated by `SettlementMilestone.STARTER_SHELTER` and is idempotent: repeated calls return the same Worker #1 instead of creating duplicates.
+- Old schema-v3 saves repair missing worker storage and next-worker-id state during `SettlementState.normalize()`.
+
+Runtime owner:
+
+- `SettlementWorkerNpc` is a transient Matrix3 `NPC` projection of one persistent worker record.
+- `SettlementInstance` creates/rebuilds Worker #1 only after the verified starter-shelter milestone, tracks exactly one runtime NPC per worker id, and finishes all worker NPCs when the transient settlement instance is destroyed.
+- Worker #1 is intentionally stationary/non-combat in this foundation slice: random walk is disabled, generic interaction/combat is suppressed, and later Bundle 1.4 AI will drive explicit work movement.
+- The starter-worker arrival tile is reserved against new settlement build placement/move/duplicate so the initial runtime projection has a deterministic safe anchor.
+
+Developer acceptance:
+
+- `SettlementWorkerSelfTest` disposably verifies milestone gating, stable identity, duplicate suppression and Java serialization.
+- `SettlementWorkerArrivalCheck` verifies the real save contains exactly one starter worker and the active settlement contains exactly one matching runtime NPC.
+- Test Console -> Con Revamp exposes `Worker Status`, `Worker Self-Test` and `Worker Arrival Check`.
+
+Acceptance target:
+
+`enter completed settlement -> Worker #1 auto-arrives -> Worker Arrival Check PASS -> exit/re-enter -> same worker id, one runtime NPC, no duplicate`
+
+Remaining Bundle 1.4 sequence after arrival acceptance:
+
 - Allowed Jobs.
 - Gathering/hauling.
 - Hunger/thirst/energy.
@@ -675,9 +703,9 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: SAP AAA approved the Bundle 1.3 starter shelter milestone slice. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: Bundle 1.3 is complete. Start Bundle 1.4 with first-worker ownership, persistent worker state and the automatic arrival trigger keyed only to the verified starter-shelter milestone.
-- Current objective: implement the first-worker vertical slice: milestone-gated arrival, persistent worker identity/state, Allowed Jobs, starter gathering/hauling, needs gating and approved Construction XP ownership.
+- Approval state: SAP AAA approved the Bundle 1.4 Worker #1 ownership/arrival foundation. Camera/ghost edge checks remain carryover and do not block this slice.
+- Current checklist item: Worker #1 ownership/arrival foundation is implemented verified-static; runtime-test Worker Self-Test and Worker Arrival Check, then re-enter once to confirm the same worker id rebuilds without duplication.
+- Current objective: runtime-verify milestone-gated Worker #1 persistence/projection, then continue Bundle 1.4 with Allowed Jobs before gathering/hauling.
 
 ## Verification classifications
 
@@ -758,6 +786,10 @@ Later interaction polish after single-piece preview is stable:
 - `SettlementBuildRole` decouples starter shelter semantics from provisional art ids; current definitions map to WALL/FLOOR/DOOR.
 - `SettlementMilestone.STARTER_SHELTER` is the stable persisted progression key. `SettlementState` requires 4 walls, 4 floors, 1 doorway and 1 of each starter resource, then latches completion permanently.
 - `SettlementShelterSelfTest` disposably verifies threshold gating, one-time completion, permanent latch behavior and Java serialization persistence.
+- `SettlementWorkerState` is the serializable worker identity owner under `SettlementState` schema v4; it stores stable id/definition/name and plot-relative home coordinates only.
+- `SettlementState.ensureStarterWorker()` is milestone-gated and idempotent, and normalization repairs old saves plus duplicate/invalid worker ids.
+- `SettlementWorkerNpc` is the transient Matrix3 NPC projection. `SettlementInstance` rebuilds/cleans it and guarantees one live projection per persistent worker id.
+- `SettlementWorkerSelfTest` and `SettlementWorkerArrivalCheck` provide disposable and real-state confidence paths for the first-worker arrival slice.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
@@ -781,6 +813,7 @@ Later interaction polish after single-piece preview is stable:
 - `13684` / `Floor decoration` may be usable as the first floor definition, but its final suitability/material appearance still needs acceptance against the intended Construction art direction.
 - `13344` / `Door` may be usable as the first doorway definition, but its final suitability/material appearance still needs acceptance against the intended Construction art direction.
 - Starter resource-node cache visuals are provisional: object `1276` for wood, objects `11933`/`11936` for stone/ore and NPC `327` for food must be runtime accepted for visibility/options/appearance. Resource/storage ownership does not depend on retaining those art ids.
+- Worker #1 currently uses provisional NPC id `1` as its runtime presentation. Its visibility/appearance must be runtime accepted; persistent identity uses `starter-settler`, not the cache id.
 
 ### UNKNOWN
 
@@ -821,11 +854,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
-**Active persistent-runtime bundle:** Bundle 1.3 — starter resources/storage.
+**Active persistent-runtime bundle:** Bundle 1.4 — first worker vertical slice.
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Bundle 1.4: inspect the narrow Matrix3 NPC/persistence/controller seams needed for a single settlement worker, lock worker ownership, then implement automatic Worker #1 arrival from `SettlementMilestone.STARTER_SHELTER` with persistent identity/state before Allowed Jobs/gathering/hauling.
+**Next checklist item:** Pull/build, enter the completed settlement and run Test Console -> Con Revamp -> `Worker Arrival Check`. Expect PASS with exactly one saved worker and one live NPC. Exit/re-enter and rerun; the worker id must remain identical and counts must stay 1/1. Then proceed to Allowed Jobs.
 
 **Files/systems already inspected:**
 
