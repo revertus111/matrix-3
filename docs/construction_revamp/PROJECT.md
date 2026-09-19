@@ -750,7 +750,7 @@ Remaining Bundle 1.4 sequence after gather/haul acceptance:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA remains approved for the active Bundle 1.4 workstream. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: retest the tree after switching worker node routing from a synthetic fixed tile to Matrix3's native ObjectStrategy/EntityStrategy target semantics; then verify Haul-off carry hold/resume and gathering-disable stop behavior.
+- Current checklist item: retest the tree after adding explicit interaction-ready adjacency recognition; Worker #1 already reaches a valid cutting tile, so the remaining gate is whether it now transitions into GATHERING and completes haul/deposit.
 - Current objective: runtime-verify worker gathering/hauling after the targeted route correction, then continue directly into hunger/thirst/energy under the same Bundle 1.4 workstream.
 
 ## Verification classifications
@@ -845,7 +845,7 @@ Remaining Bundle 1.4 sequence after gather/haul acceptance:
 - First gather/haul runtime acceptance reached the AI state machine but stalled at `MOVING_TO_RESOURCE | No Path to Wood node`; this runtime-rejects the original greedy `Entity.findBasicRoute(...)` movement choice for worker routing.
 - Source inspection verified `Entity.findBasicRoute(...)` greedily steps toward the destination and returns false when a direct step is blocked, while intelligent `calcFollow(...)` selects `ObjectStrategy`, `EntityStrategy` or `FixedTileStrategy` from the runtime target type.
 - The remaining tree-only failure was traced to `SettlementInstance.getWorkerNodeApproachTile(...)`, which converted every resource node into a synthetic fixed tile. That bypassed Matrix3's object-footprint/access strategy for tree id 1276.
-- Worker resource routing now returns the actual live `WorldObject` or starter resource NPC. `walkToward(...)` also treats a successful intelligent route with zero queued steps as "already in interaction range" instead of falsely reporting No Path.
+- Worker resource routing now returns the actual live `WorldObject` or starter resource NPC. Runtime then showed Worker #1 reaching a tile from which the player can cut the tree but remaining stuck there, proving movement succeeded while the AI failed to recognize interaction-ready adjacency. `walkToward(...)` now accepts a no-queued-step target within one tile as reached before/after RouteFinder evaluation, so the gather state can begin from the same valid adjacent tile.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -915,7 +915,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build the tree-target correction, re-enter with Gather Wood + Haul enabled, and confirm Worker #1 routes to tree id 1276 using object interaction range rather than a hardcoded adjacent tile. If Wood now joins the already-working other resources, continue the existing Haul OFF/ON and gathering OFF checks. PASS advances directly to hunger/thirst/energy.
+**Next checklist item:** Pull/build the tree interaction-ready correction, re-enter with Gather Wood + Haul enabled, and confirm the worker now starts GATHERING from the same adjacent tile it already reaches. If Wood then deposits like the other resources, finish the existing Haul OFF/ON and gathering OFF checks. PASS advances directly to hunger/thirst/energy.
 
 **Files/systems already inspected:**
 

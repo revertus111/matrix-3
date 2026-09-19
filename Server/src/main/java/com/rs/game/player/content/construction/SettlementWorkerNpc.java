@@ -240,6 +240,9 @@ public final class SettlementWorkerNpc extends NPC {
             resetWalkSteps();
             return true;
         }
+        if (!hasWalkSteps() && target.withinDistance(this, 1)) {
+            return true;
+        }
         if (!hasWalkSteps()) {
             boolean routed = calcFollow(target, 25, true, true);
             if (!routed) {
@@ -247,7 +250,7 @@ public final class SettlementWorkerNpc extends NPC {
                 return false;
             }
             if (!hasWalkSteps()) {
-                return true;
+                return target.withinDistance(this, 1);
             }
         }
         return false;

@@ -400,3 +400,9 @@
 - Matrix3 `calcFollow(..., intelligent=true)` now selects `ObjectStrategy` for the tree/rocks and `EntityStrategy` for the food NPC.
 - Corrected route completion handling so a successful strategy result with zero queued steps means the worker is already in interaction range rather than `No Path`.
 - No Allowed Jobs, persistence, resource totals, haul semantics, node definitions or force-teleport behavior changed.
+
+2026-09-19 - Bundle 1.4 tree interaction-ready correction
+- Runtime screenshot confirmed Worker #1 now reaches and stands on a valid adjacent tile from which the player can cut tree id 1276; route movement itself is therefore working.
+- The remaining failure was the worker state machine not recognizing that adjacent tile as interaction-ready, so it never advanced from movement into gathering.
+- Updated `walkToward(...)` to treat a live target within one tile as reached whenever no movement steps remain, both before and after intelligent RouteFinder evaluation.
+- This keeps Matrix3 routing ownership intact and changes only the gather-state handoff; no node ids, persistence, resource crediting, haul logic or teleport fallback changed.
