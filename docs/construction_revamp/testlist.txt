@@ -174,6 +174,19 @@ Phase 1 Bundle 1.3 — starter resources/storage
 
 Phase 1 Bundle 1.4 — first worker
 [ACTIVE]
+[x] Source ownership: `SettlementState` schema v4 owns persistent worker records and next-worker-id state.
+[x] Source ownership: `SettlementWorkerState` stores stable id/definition/name + plot-relative home coordinates; runtime NPC/world coordinates are not serialized.
+[x] Source ownership: `ensureStarterWorker()` returns null before STARTER_SHELTER and is idempotent after the milestone.
+[x] Source ownership: `SettlementWorkerNpc` is transient, stationary/non-combat, and owned/cleaned by `SettlementInstance`.
+[x] Source ownership: starter-worker arrival tile is reserved against new build place/move/duplicate.
+[ ] Server and Client clean/build successfully after Worker #1 arrival patch.
+[ ] Con Revamp `Worker Self-Test` reports PASS for milestone gate + stable identity + duplicate suppression + serialization.
+[ ] Entering a completed settlement automatically creates exactly one persistent Worker #1 if none exists.
+[ ] Worker #1 runtime NPC is visible and acceptable with the current provisional NPC definition.
+[ ] Con Revamp `Worker Arrival Check` reports PASS for exactly one saved worker and exactly one matching live NPC.
+[ ] Exit/re-enter rebuilds the same worker id and still reports saved=1/runtime=1 with no duplicate.
+[ ] Logout/relog and re-enter preserves the same worker id.
+[ ] Leaving/destroying the settlement removes the transient worker NPC without deleting persistent worker state.
 [ ] First worker arrives only after the starter milestone.
 [ ] Allowed Jobs checkbox state persists.
 [ ] Worker gathers only allowed valid jobs.
