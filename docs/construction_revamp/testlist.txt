@@ -132,8 +132,8 @@ Phase 1 Bundle 1.2 — placement foundation
 [x] Existing Dev Duplicate Object creates a second persistent piece at the destination and the duplicate survives re-entry.
 [x] Existing Dev Delete Development Spawn removes the persistent piece and it stays removed after re-entry.
 [ ] Inside the settlement, an unapproved raw object id/type is rejected instead of becoming persistent state.
-[ ] Outside the settlement, ordinary `itembrowser devspawn/devedit` behavior is unchanged.
-[ ] Classic POH House enter/build/leave behavior remains unchanged.
+[x] Outside the settlement, ordinary `itembrowser devspawn/devedit` behavior is unchanged; user confirmed this regression was already tested successfully.
+[x] Classic POH House enter/build/leave behavior remains unchanged; user confirmed this regression was already tested successfully.
 
 
 Phase 1 Bundle 1.3 — starter resources/storage
