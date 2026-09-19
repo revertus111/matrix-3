@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 3;
+    private static final int CURRENT_SCHEMA_VERSION = 4;
     public static final int STARTER_STORAGE_CAPACITY = 200;
 
     public static final int STARTER_SHELTER_WALLS = 4;
@@ -36,6 +36,8 @@ public final class SettlementState implements Serializable {
     private Map<String, Long> resources = new HashMap<String, Long>();
     private int storageCapacity = STARTER_STORAGE_CAPACITY;
     private Set<String> completedMilestones = new HashSet<String>();
+    private long nextWorkerId = 1L;
+    private List<SettlementWorkerState> workers = new ArrayList<SettlementWorkerState>();
 
     public synchronized void normalize() {
         if (schemaVersion <= 0) {
@@ -58,6 +60,32 @@ public final class SettlementState implements Serializable {
             if (SettlementMilestone.forKey(milestoneIterator.next()) == null) {
                 milestoneIterator.remove();
             }
+        }
+        if (workers == null) {
+            workers = new ArrayList<SettlementWorkerState>();
+        }
+        long highestWorkerId = 0L;
+        Set<Long> workerIds = new HashSet<Long>();
+        Iterator<SettlementWorkerState> workerIterator = workers.iterator();
+        while (workerIterator.hasNext()) {
+            SettlementWorkerState worker = workerIterator.next();
+            SettlementWorkerDefinition definition = worker == null
+                    ? null : SettlementWorkerDefinition.forKey(worker.getDefinitionKey());
+            if (worker == null || definition == null || worker.getWorkerId() <= 0L
+                    || !workerIds.add(Long.valueOf(worker.getWorkerId()))) {
+                workerIterator.remove();
+                continue;
+            }
+            worker.normalize(definition);
+            if (worker.getWorkerId() > highestWorkerId) {
+                highestWorkerId = worker.getWorkerId();
+            }
+        }
+        if (nextWorkerId <= highestWorkerId) {
+            nextWorkerId = highestWorkerId + 1L;
+        }
+        if (nextWorkerId <= 0L) {
+            nextWorkerId = 1L;
         }
         Iterator<Map.Entry<String, Long>> resourceIterator = resources.entrySet().iterator();
         while (resourceIterator.hasNext()) {
@@ -173,6 +201,50 @@ public final class SettlementState implements Serializable {
         normalize();
         int index = indexOf(pieceId);
         return index < 0 ? null : pieces.remove(index);
+    }
+
+    public synchronized int getWorkerCount() {
+        normalize();
+        return workers.size();
+    }
+
+    public synchronized List<SettlementWorkerState> snapshotWorkers() {
+        normalize();
+        return new ArrayList<SettlementWorkerState>(workers);
+    }
+
+    public synchronized SettlementWorkerState findWorker(long workerId) {
+        normalize();
+        for (SettlementWorkerState worker : workers) {
+            if (worker != null && worker.getWorkerId() == workerId) {
+                return worker;
+            }
+        }
+        return null;
+    }
+
+    public synchronized SettlementWorkerState ensureStarterWorker() {
+        normalize();
+        if (!isMilestoneComplete(SettlementMilestone.STARTER_SHELTER)) {
+            return null;
+        }
+
+        SettlementWorkerDefinition definition = SettlementWorkerDefinition.STARTER_SETTLER;
+        for (SettlementWorkerState worker : workers) {
+            if (worker != null && definition.getKey().equals(worker.getDefinitionKey())) {
+                return worker;
+            }
+        }
+
+        SettlementWorkerState worker = new SettlementWorkerState(
+                nextWorkerId++,
+                definition.getKey(),
+                definition.getDisplayName(),
+                definition.getArrivalPlotX(),
+                definition.getArrivalPlotY(),
+                definition.getArrivalPlane());
+        workers.add(worker);
+        return worker;
     }
 
     public synchronized int countPieces(SettlementBuildRole role) {
