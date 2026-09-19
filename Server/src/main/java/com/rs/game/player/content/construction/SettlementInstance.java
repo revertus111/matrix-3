@@ -137,6 +137,7 @@ public final class SettlementInstance {
             spawnProjectedPiece(piece);
         }
         spawnStarterResourceNodes();
+        checkStarterShelterMilestone();
 
         player.setForceNextMapLoadRefresh(true);
         player.loadMapRegions();
@@ -178,6 +179,7 @@ public final class SettlementInstance {
         }
 
         spawnProjectedPiece(saved);
+        checkStarterShelterMilestone();
         return "Settlement placed " + definition.getDisplayName()
                 + " at plot " + plotX + ", " + plotY + ".";
     }
@@ -240,6 +242,7 @@ public final class SettlementInstance {
         }
 
         spawnProjectedPiece(duplicate);
+        checkStarterShelterMilestone();
         return "Settlement piece duplicated.";
     }
 
@@ -346,7 +349,22 @@ public final class SettlementInstance {
         if (!isStarterResourceNodeAvailable(node)) {
             return 0L;
         }
-        return state.addResource(node.getResource(), 1L);
+        long added = state.addResource(node.getResource(), 1L);
+        if (added > 0L) {
+            checkStarterShelterMilestone();
+        }
+        return added;
+    }
+
+    private void checkStarterShelterMilestone() {
+        if (!state.tryCompleteStarterShelterMilestone()) {
+            return;
+        }
+        player.getPackets().sendGameMessage(
+                "<col=3CB371>Starter shelter milestone complete!</col> "
+                        + "Your settlement is ready to attract its first worker.");
+        System.out.println("[Settlement] Starter shelter milestone completed for "
+                + player.getUsername() + ".");
     }
 
     private void spawnStarterResourceNodes() {
