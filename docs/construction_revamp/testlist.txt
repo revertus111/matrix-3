@@ -163,8 +163,9 @@ Phase 1 Bundle 1.3 — starter resources/storage
 [x] Source ownership: starter piece definitions expose stable WALL/FLOOR/DOOR roles independent of provisional object ids.
 [x] Source ownership: `SettlementMilestone.STARTER_SHELTER` persists in `SettlementState` schema v3 and old saves repair missing milestone storage.
 [x] Source ownership: shelter completion is automatic/server-owned and latches permanently once complete.
+[ ] Con Revamp `Bundle 1.3 Final Check` reports PASS in the active real settlement; this aggregate check covers Resource Self-Test, Shelter Self-Test, real saved-state audit, four live starter nodes, real resource minimums and real shelter completion.
 [ ] Con Revamp `Shelter Self-Test` reports PASS for threshold gating + one-time latch + serialization.
-[ ] Shelter Status accurately reports real-save progress for 4 walls, 4 floors, 1 doorway and 1 of each starter resource.
+[ ] Bundle 1.3 Final Check returns either PASS or NOT READY with accurate real-save progress for 4 walls, 4 floors, 1 doorway and 1 of each starter resource.
 [ ] Real starter shelter milestone changes from INCOMPLETE to COMPLETE automatically when the saved state first satisfies all requirements.
 [ ] After completion, removing a required piece or spending a required resource does not revoke the milestone.
 [ ] Exit/re-enter preserves starter shelter completion.
