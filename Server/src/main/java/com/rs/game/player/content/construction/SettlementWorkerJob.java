@@ -8,20 +8,29 @@ package com.rs.game.player.content.construction;
  */
 public enum SettlementWorkerJob {
 
-    GATHER_WOOD("gather-wood", "Gather Wood", SettlementResource.WOOD),
-    GATHER_FOOD("gather-food", "Gather Food", SettlementResource.FOOD),
-    GATHER_STONE("gather-stone", "Gather Stone", SettlementResource.STONE),
-    GATHER_BASIC_ORE("gather-basic-ore", "Gather Basic Ore", SettlementResource.BASIC_ORE),
-    HAUL("haul", "Haul", null);
+    GATHER_WOOD("gather-wood", "Gather Wood", SettlementResource.WOOD,
+            SettlementWorkerSkill.WOODCUTTING, 12),
+    GATHER_FOOD("gather-food", "Gather Food", SettlementResource.FOOD,
+            SettlementWorkerSkill.FOOD_GATHERING, 12),
+    GATHER_STONE("gather-stone", "Gather Stone", SettlementResource.STONE,
+            SettlementWorkerSkill.MINING, 12),
+    GATHER_BASIC_ORE("gather-basic-ore", "Gather Basic Ore", SettlementResource.BASIC_ORE,
+            SettlementWorkerSkill.MINING, 12),
+    HAUL("haul", "Haul", null, SettlementWorkerSkill.HAULING, 6);
 
     private final String key;
     private final String displayName;
     private final SettlementResource resource;
+    private final SettlementWorkerSkill skill;
+    private final int workerXp;
 
-    SettlementWorkerJob(String key, String displayName, SettlementResource resource) {
+    SettlementWorkerJob(String key, String displayName, SettlementResource resource,
+            SettlementWorkerSkill skill, int workerXp) {
         this.key = key;
         this.displayName = displayName;
         this.resource = resource;
+        this.skill = skill;
+        this.workerXp = workerXp;
     }
 
     public String getKey() {
@@ -34,6 +43,14 @@ public enum SettlementWorkerJob {
 
     public SettlementResource getResource() {
         return resource;
+    }
+
+    public SettlementWorkerSkill getSkill() {
+        return skill;
+    }
+
+    public int getWorkerXp() {
+        return workerXp;
     }
 
     public boolean isGatheringJob() {

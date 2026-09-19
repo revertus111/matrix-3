@@ -1,16 +1,18 @@
 package com.rs.game.player.content.construction;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * Persistent settlement worker identity/state.
  *
  * Runtime NPC/world coordinates and active action/path state do not belong here.
- * Home coordinates are settlement-plot relative. Allowed Jobs and worker needs
- * are persistent policy/progression state and survive dynamic-instance rebuilds.
+ * Home coordinates are settlement-plot relative. Allowed Jobs, needs and worker
+ * skill XP are persistent progression state and survive instance rebuilds.
  */
 public final class SettlementWorkerState implements Serializable {
 
@@ -42,6 +44,9 @@ public final class SettlementWorkerState implements Serializable {
     private int thirst;
     private int energy = MAX_NEED;
     private boolean needsInitialized = true;
+
+    // Stable skill keys -> permanent personal XP.
+    private Map<String, Long> skillXp = new HashMap<String, Long>();
 
     public SettlementWorkerState(long workerId, String definitionKey, String name,
             int homePlotX, int homePlotY, int homePlane) {
@@ -201,6 +206,44 @@ public final class SettlementWorkerState implements Serializable {
                 + ", Energy=" + energy + "/" + MAX_NEED;
     }
 
+    public long getSkillXp(SettlementWorkerSkill skill) {
+        normalizeSkills();
+        if (skill == null) {
+            return 0L;
+        }
+        Long xp = skillXp.get(skill.getKey());
+        return xp == null ? 0L : xp.longValue();
+    }
+
+    public long addSkillXp(SettlementWorkerSkill skill, long amount) {
+        normalizeSkills();
+        if (skill == null || amount <= 0L) {
+            return 0L;
+        }
+        long current = getSkillXp(skill);
+        long next = current > Long.MAX_VALUE - amount ? Long.MAX_VALUE : current + amount;
+        skillXp.put(skill.getKey(), Long.valueOf(next));
+        return next - current;
+    }
+
+    public int getSkillLevel(SettlementWorkerSkill skill) {
+        return SettlementWorkerSkill.getLevelForXp(getSkillXp(skill));
+    }
+
+    public String getSkillsSummary() {
+        normalizeSkills();
+        StringBuilder summary = new StringBuilder();
+        for (SettlementWorkerSkill skill : SettlementWorkerSkill.values()) {
+            if (summary.length() > 0) {
+                summary.append(", ");
+            }
+            summary.append(skill.getDisplayName())
+                    .append(" L").append(getSkillLevel(skill))
+                    .append(" (").append(getSkillXp(skill)).append(" xp)");
+        }
+        return summary.toString();
+    }
+
     void normalize(SettlementWorkerDefinition definition) {
         if (definition == null) {
             return;
@@ -215,6 +258,7 @@ public final class SettlementWorkerState implements Serializable {
         }
         normalizeJobs();
         normalizeNeeds();
+        normalizeSkills();
     }
 
     private void normalizeJobs() {
@@ -239,6 +283,20 @@ public final class SettlementWorkerState implements Serializable {
         hunger = clamp(hunger);
         thirst = clamp(thirst);
         energy = clamp(energy);
+    }
+
+    private void normalizeSkills() {
+        if (skillXp == null) {
+            skillXp = new HashMap<String, Long>();
+        }
+        Iterator<Map.Entry<String, Long>> iterator = skillXp.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, Long> entry = iterator.next();
+            if (SettlementWorkerSkill.forKey(entry.getKey()) == null
+                    || entry.getValue() == null || entry.getValue().longValue() < 0L) {
+                iterator.remove();
+            }
+        }
     }
 
     private static int clamp(int value) {
