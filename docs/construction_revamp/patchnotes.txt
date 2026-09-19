@@ -459,3 +459,10 @@
 - Baseline comparison checks exact worker identity, Allowed Jobs, Hunger/Thirst/Energy, every personal Worker skill XP total and player Construction XP.
 - The same snapshot can be checked before exit, after settlement rebuild, and after normal logout/relog while the server process stays running.
 - Added Con Revamp Capture Stable Baseline / Check Baseline controls so the remaining Bundle 1.4 negative-XP + persistence gate can be completed in one short runtime session.
+
+2026-09-19 - Bundle 1.4 first-worker gate runtime closed
+- Stable-baseline final gate passed while idle, after settlement exit/re-entry, and after normal logout/relog without server restart.
+- Verified no Worker skill XP or player Construction XP changes during stable all-jobs-OFF idle time.
+- Verified Worker #1 identity, Allowed Jobs, Hunger/Thirst/Energy and all personal skill XP survive runtime-instance rebuild and player save/load exactly.
+- Marked Bundle 1.4 DONE and advanced the Phase-1 execution target back to remaining ghost/placement edge acceptance plus the consolidated persistence/world-object smoke pass.
+- Zero-Food Hunger block/resupply remains non-blocking carryover.
