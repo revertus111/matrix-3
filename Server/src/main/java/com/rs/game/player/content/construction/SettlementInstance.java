@@ -440,18 +440,33 @@ public final class SettlementInstance {
         return "Worker #" + workerId + " runtime NPC is not active.";
     }
 
-    public WorldTile getWorkerNodeApproachTile(SettlementResourceNode node) {
+    public WorldTile getWorkerNodeRouteTarget(SettlementResourceNode node) {
         if (!loaded || destroyed || boundChunks == null || node == null) {
             return null;
         }
-        int plotY = node.getPlotY() + 1;
-        if (!SettlementState.isValidPlotLocation(node.getPlotX(), plotY, PLOT_PLANE)) {
-            plotY = node.getPlotY() - 1;
-        }
-        if (!SettlementState.isValidPlotLocation(node.getPlotX(), plotY, PLOT_PLANE)) {
+
+        if (node.getSourceKind() == SettlementResourceNode.SourceKind.OBJECT) {
+            WorldTile tile = new WorldTile(
+                    toWorldX(node.getPlotX()),
+                    toWorldY(node.getPlotY()),
+                    PLOT_PLANE);
+            WorldObject live = World.getObjectWithType(tile, node.getObjectType());
+            if (live != null && live.getId() == node.getRuntimeId()) {
+                return live;
+            }
             return null;
         }
-        return new WorldTile(toWorldX(node.getPlotX()), toWorldY(plotY), PLOT_PLANE);
+
+        for (NPC npc : starterResourceNpcs) {
+            if (npc != null && !npc.hasFinished()
+                    && npc.getId() == node.getRuntimeId()
+                    && toPlotX(npc.getX()) == node.getPlotX()
+                    && toPlotY(npc.getY()) == node.getPlotY()
+                    && npc.getPlane() == PLOT_PLANE) {
+                return npc;
+            }
+        }
+        return null;
     }
 
     public WorldTile getWorkerStorageTile(SettlementWorkerState worker) {

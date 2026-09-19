@@ -96,16 +96,16 @@ public final class SettlementWorkerNpc extends NPC {
             }
         }
 
-        WorldTile approach = settlement.getWorkerNodeApproachTile(targetNode);
-        if (approach == null) {
-            idle("No valid approach tile for " + targetNode.getResource().getDisplayName() + ".");
+        WorldTile routeTarget = settlement.getWorkerNodeRouteTarget(targetNode);
+        if (routeTarget == null) {
+            idle("Resource target unavailable for " + targetNode.getResource().getDisplayName() + ".");
             clearTarget();
             return;
         }
 
         workState = WorkState.MOVING_TO_RESOURCE;
         statusDetail = "Moving to " + targetNode.getResource().getDisplayName() + " node.";
-        if (walkToward(approach, "No Path to " + targetNode.getResource().getDisplayName() + " node.")) {
+        if (walkToward(routeTarget, "No Path to " + targetNode.getResource().getDisplayName() + " node.")) {
             beginGathering();
         }
     }
@@ -242,8 +242,12 @@ public final class SettlementWorkerNpc extends NPC {
         }
         if (!hasWalkSteps()) {
             boolean routed = calcFollow(target, 25, true, true);
-            if (!routed || !hasWalkSteps()) {
+            if (!routed) {
                 statusDetail = noPathReason;
+                return false;
+            }
+            if (!hasWalkSteps()) {
+                return true;
             }
         }
         return false;

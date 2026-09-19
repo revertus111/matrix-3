@@ -674,7 +674,7 @@ Runtime owner:
 
 - `SettlementWorkerNpc` now owns only transient work state: current node target, route, gathering timer, one-unit carried cargo and readable work status.
 - Persistent policy remains `SettlementWorkerState.allowedJobs`; the AI reads the live saved allowlist every cycle and never rewrites it.
-- The first runtime movement attempt exposed a pathing bug: `Entity.findBasicRoute(...)` is Matrix3's greedy/basic stepper and stalled at the Wood route with `No Path to Wood node`. Worker movement now uses the existing intelligent `calcFollow(..., true)` path, which delegates to Matrix3 `RouteFinder` / `FixedTileStrategy`; no parallel movement owner or force-teleport fallback is added.
+- The first runtime movement attempt exposed a pathing bug: `Entity.findBasicRoute(...)` is Matrix3's greedy/basic stepper and stalled at the Wood route with `No Path to Wood node`. A second targeted trace showed the remaining tree-only issue: the worker was still routing to a synthetic adjacent `WorldTile`, forcing `FixedTileStrategy` even for object-backed nodes. Worker routing now passes the actual live `WorldObject` / resource NPC into Matrix3 `calcFollow(..., true)`, so object nodes use `ObjectStrategy` and NPC nodes use `EntityStrategy`; no parallel movement owner or force-teleport fallback is added.
 - A gathering permission maps to its existing `SettlementResourceNode`. The worker walks to the node, performs the node's existing gathering animation, and carries one settlement resource.
 - Carried output is not credited to settlement storage until `HAUL` is allowed and the worker physically returns to its stable home/storage access tile.
 - If Haul is disabled or storage is full, the worker keeps the carried unit and reports why it is waiting. Re-enabling Haul or freeing storage resumes delivery automatically.
@@ -750,7 +750,7 @@ Remaining Bundle 1.4 sequence after gather/haul acceptance:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA remains approved for the active Bundle 1.4 workstream. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: retest the gather/haul movement loop after replacing the rejected greedy basic route with Matrix3's intelligent RouteFinder path; then verify Haul-off carry hold/resume and gathering-disable stop behavior.
+- Current checklist item: retest the tree after switching worker node routing from a synthetic fixed tile to Matrix3's native ObjectStrategy/EntityStrategy target semantics; then verify Haul-off carry hold/resume and gathering-disable stop behavior.
 - Current objective: runtime-verify worker gathering/hauling after the targeted route correction, then continue directly into hunger/thirst/energy under the same Bundle 1.4 workstream.
 
 ## Verification classifications
@@ -843,8 +843,10 @@ Remaining Bundle 1.4 sequence after gather/haul acceptance:
 - `SettlementWorkerJobsSelfTest` verifies default-OFF behavior, per-job independence and serialization without touching the player's real worker.
 - Allowed Jobs controls/self-test/readback are runtime VERIFIED from the user's 2026-09-19 acceptance run.
 - First gather/haul runtime acceptance reached the AI state machine but stalled at `MOVING_TO_RESOURCE | No Path to Wood node`; this runtime-rejects the original greedy `Entity.findBasicRoute(...)` movement choice for worker routing.
-- Source inspection verified `Entity.findBasicRoute(...)` greedily steps toward the destination and returns false when a direct step is blocked, while `calcFollow(..., intelligent=true)` uses Matrix3 `RouteFinder` with `FixedTileStrategy`. Worker routing now uses that existing intelligent path without force-teleport fallback.
-- `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; the route correction is verified-static pending runtime acceptance.
+- Source inspection verified `Entity.findBasicRoute(...)` greedily steps toward the destination and returns false when a direct step is blocked, while intelligent `calcFollow(...)` selects `ObjectStrategy`, `EntityStrategy` or `FixedTileStrategy` from the runtime target type.
+- The remaining tree-only failure was traced to `SettlementInstance.getWorkerNodeApproachTile(...)`, which converted every resource node into a synthetic fixed tile. That bypassed Matrix3's object-footprint/access strategy for tree id 1276.
+- Worker resource routing now returns the actual live `WorldObject` or starter resource NPC. `walkToward(...)` also treats a successful intelligent route with zero queued steps as "already in interaction range" instead of falsely reporting No Path.
+- `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
@@ -913,7 +915,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build the targeted worker-route correction, re-enter the settlement with Gather Wood + Haul enabled, and confirm Worker #1 gets past the previous `No Path to Wood node` stall and completes walk -> gather -> return -> deposit. Then use the existing Haul OFF/ON and gathering OFF checks. PASS advances directly to hunger/thirst/energy.
+**Next checklist item:** Pull/build the tree-target correction, re-enter with Gather Wood + Haul enabled, and confirm Worker #1 routes to tree id 1276 using object interaction range rather than a hardcoded adjacent tile. If Wood now joins the already-working other resources, continue the existing Haul OFF/ON and gathering OFF checks. PASS advances directly to hunger/thirst/energy.
 
 **Files/systems already inspected:**
 

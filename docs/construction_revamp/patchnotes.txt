@@ -392,3 +392,11 @@
 - Replaced only the worker route call with Matrix3's existing intelligent `calcFollow(..., intelligent=true)` path, which delegates to `RouteFinder` / `FixedTileStrategy`.
 - No worker policy, persistence, resource ownership, haul semantics, NPC ownership or force-teleport fallback changed.
 - Runtime retest is required to confirm the Wood route now completes before continuing the existing haul-toggle acceptance.
+
+2026-09-19 - Bundle 1.4 tree-target routing correction
+- User runtime confirmed gather/haul works for the other starter resources while the tree remained the lone failure.
+- Targeted trace found the worker converted every resource node to a synthetic adjacent `WorldTile`; intelligent `calcFollow(...)` therefore still used `FixedTileStrategy` and never received the tree object footprint/access semantics.
+- Replaced the synthetic approach tile with the actual live resource target: object nodes return their live `WorldObject` and NPC nodes return the matching live resource NPC.
+- Matrix3 `calcFollow(..., intelligent=true)` now selects `ObjectStrategy` for the tree/rocks and `EntityStrategy` for the food NPC.
+- Corrected route completion handling so a successful strategy result with zero queued steps means the worker is already in interaction range rather than `No Path`.
+- No Allowed Jobs, persistence, resource totals, haul semantics, node definitions or force-teleport behavior changed.
