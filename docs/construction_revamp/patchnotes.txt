@@ -360,3 +360,10 @@
 - `Worker Self-Test` returned PASS for milestone gating, stable worker identity, duplicate suppression and serialization.
 - `Worker Arrival Check` returned PASS with exactly one persistent Worker #1 and exactly one matching live NPC projection.
 - Exit/re-enter same-id rebuild remains the only unfinished acceptance item for the Worker #1 arrival foundation before Allowed Jobs.
+
+
+2026-09-18 - Worker #1 re-entry persistence runtime verified
+- User runtime confirmed settlement exit/re-entry rebuilds the same persistent Worker #1 rather than creating a duplicate.
+- Worker Status after re-entry reports saved=1/runtime=1 and Worker #1 id 1, definition `starter-settler`, home plot 24,12,0.
+- Worker Arrival Check returns PASS after re-entry, closing the Worker #1 arrival foundation.
+- Bundle 1.4 now advances to Allowed Jobs persistence/controls before gather/haul AI.
