@@ -11,9 +11,9 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 | Main-goal area | Status |
 | --- | --- |
 | Freeform settlement building foundation | 🔵 In Progress |
-| Starter resource loop and shelter milestone | 🔵 In Progress |
-| First worker, Allowed Jobs, gathering and hauling | ❌ Not started |
-| Worker needs, storage and settlement recovery | ❌ Not started |
+| Starter resource loop and shelter milestone | ✅ Done |
+| First worker, Allowed Jobs, gathering and hauling | 🔵 In Progress |
+| Worker needs, storage and settlement recovery | 🔵 In Progress |
 | Persistence and Construction XP ownership | 🔵 In Progress |
 | Population, processing and logistics expansion | ❌ Not started |
 | Settlement Wealth, offline production and economy | ❌ Not started |
@@ -456,7 +456,7 @@ Implemented under the approved Bundle 1.2 ownership plan:
 
 ### Bundle 1.3 — Starter resources and isolated storage
 
-**Status:** ACTIVE
+**Status:** DONE
 
 #### Ownership/file plan — LOCKED
 
@@ -493,7 +493,7 @@ Acceptance target:
 
 `enter -> four nodes visible -> gather each -> settlement-only totals increase -> inventory/bank unchanged -> exit/re-enter -> totals persist`
 
-#### Starter shelter milestone — IMPLEMENTED / NEEDS TEST
+#### Starter shelter milestone — RUNTIME VERIFIED
 
 Persistent progression owner:
 
@@ -671,13 +671,13 @@ Later interaction polish after single-piece preview is stable:
 
 - Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
-- Persistent-runtime bundle: 1.3 — starter resources/storage
+- Persistent-runtime bundle: 1.4 — first worker vertical slice
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the Bundle 1.3 starter shelter milestone slice. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: starter resource/storage slice is runtime verified; run the new one-click Bundle 1.3 Final Check in an active settlement to close the shelter/milestone gate.
-- Current objective: runtime-verify Bundle 1.3 Final Check against the real loaded settlement. PASS closes Bundle 1.3; NOT READY reports the exact missing real-save shelter requirements without fabricating progress.
+- Current checklist item: Bundle 1.3 is complete. Start Bundle 1.4 with first-worker ownership, persistent worker state and the automatic arrival trigger keyed only to the verified starter-shelter milestone.
+- Current objective: implement the first-worker vertical slice: milestone-gated arrival, persistent worker identity/state, Allowed Jobs, starter gathering/hauling, needs gating and approved Construction XP ownership.
 
 ## Verification classifications
 
@@ -711,6 +711,7 @@ Later interaction polish after single-piece preview is stable:
 - Smoothed Free Build integration is runtime VERIFIED: acceleration/deceleration, normalized diagonals, Shift/Ctrl under velocity smoothing, click-to-stop with held-key latch, planted-player action-23 ownership, exactly one authoritative Paint object/no Walk Here, detached ghost stability and combined camera/render stability all passed the user's acceptance run.
 - Runtime CAM DEBUG captures proved the observed moving view remained mode 1 / `source=CLASS411` while generic camera XYZ stayed `0,0,0`; source tracing separately established `Class24.aClass411_Sub1_158` as the actual developer detached-camera owner.
 - Bundle 1.3 starter resource/storage slice is runtime VERIFIED by the user: Resource Self-Test passes and the current wood/food/stone/ore node + settlement-only storage flow works in the live settlement.
+- Bundle 1.3 starter shelter milestone is runtime VERIFIED: the user's real settlement automatically completed after reaching 9 walls, 5 floors, 1 doorway and 1 Wood/Food/Stone/Basic ore, and `Bundle 1.3 Final Check` returned PASS on the loaded settlement.
 
 ### verified-static
 
@@ -824,7 +825,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build, enter the settlement, then run Test Console -> Con Revamp -> `Bundle 1.3 Final Check`. PASS closes Bundle 1.3. NOT READY reports the exact missing wall/floor/door/resource requirement; satisfy only what is missing and rerun. Do not advance to Bundle 1.4 until this returns PASS.
+**Next checklist item:** Bundle 1.4: inspect the narrow Matrix3 NPC/persistence/controller seams needed for a single settlement worker, lock worker ownership, then implement automatic Worker #1 arrival from `SettlementMilestone.STARTER_SHELTER` with persistent identity/state before Allowed Jobs/gathering/hauling.
 
 **Files/systems already inspected:**
 
