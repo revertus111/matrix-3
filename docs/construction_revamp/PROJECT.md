@@ -690,9 +690,34 @@ Acceptance target:
 
 `Gather Wood + Haul -> walk/gather/return/deposit -> Wood rises only -> Haul OFF holds cargo -> Haul ON resumes deposit -> gathering OFF stops new cycles`
 
-Remaining Bundle 1.4 sequence after gather/haul acceptance:
+#### Worker needs vertical slice — IMPLEMENTED / NEEDS TEST
 
-- Hunger/thirst/energy.
+Persistent owner:
+
+- `SettlementWorkerState` now persists Hunger, Thirst and Energy under settlement schema v6. Hunger/Thirst are pressure values (0 satisfied -> 100 critical); Energy is a reserve (100 rested -> 0 exhausted).
+- Older worker saves normalize missing need fields to Hunger 0 / Thirst 0 / Energy 100 without changing worker identity or Allowed Jobs.
+- Each completed gather cycle applies a bounded work cost: Hunger +4, Thirst +5, Energy -6.
+- Critical thresholds are Hunger >= 80, Thirst >= 80 and Energy <= 20.
+
+Runtime recovery:
+
+- A worker finishes a deliverable carried-resource action first when Haul/storage are valid, then checks critical needs before starting another gather cycle.
+- Critical Hunger returns Worker #1 home and consumes exactly 1 settlement Food. If no Food exists, work stops with readable `No Food`; adding Food lets the worker recover/resume automatically.
+- Critical Thirst returns Worker #1 home and uses the Phase-1 basic water supply provided by the completed starter shelter. This is an explicit provisional seam for later physical wells/barrels/tanks; it does not create hidden bank/inventory water.
+- Critical Energy returns Worker #1 home and rests for a bounded recovery delay.
+- Need recovery does not erase carried cargo, Allowed Jobs, worker identity or progression state.
+
+Developer acceptance:
+
+- `workerneeds`, `workerneed <need> <0-100>`, `workerneedsreset` and disposable `SettlementWorkerNeedsSelfTest` provide bounded inspection/forcing without duplicating gameplay ownership.
+- Test Console -> Con Revamp exposes Needs Status/Self-Test plus explicit critical-threshold buttons so gather/haul carryover and needs can be tested in one launch.
+
+Acceptance target:
+
+`Needs Self-Test PASS -> Hunger critical consumes Food / No Food blocks -> Food supplied resumes -> Thirst critical drinks/resumes -> Energy critical rests/resumes -> exit/re-entry + logout/relog preserve need values`
+
+Remaining Bundle 1.4 sequence after needs acceptance:
+
 - Persistence and basic XP.
 
 ## Phase 2 — Population + broader survival production
@@ -750,8 +775,8 @@ Remaining Bundle 1.4 sequence after gather/haul acceptance:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA remains approved for the active Bundle 1.4 workstream. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: tree routing/gather handoff is now runtime VERIFIED. Finish the remaining gather/haul acceptance toggles: Haul OFF holds cargo, Haul ON resumes delivery, gathering OFF prevents a new cycle, and multiple gather jobs rotate across valid nodes.
-- Current objective: close the remaining gather/haul acceptance checks in one short session, then continue directly into hunger/thirst/energy under the same Bundle 1.4 workstream.
+- Current checklist item: worker needs is implemented verified-static and bundled with the remaining gather/haul toggles for one consolidated runtime session.
+- Current objective: runtime-verify the remaining gather/haul toggles plus Hunger/Thirst/Energy recovery/persistence, then continue directly into basic worker progression/Construction XP under Bundle 1.4.
 
 ## Verification classifications
 
@@ -847,6 +872,7 @@ Remaining Bundle 1.4 sequence after gather/haul acceptance:
 - The remaining tree-only failure was traced to `SettlementInstance.getWorkerNodeApproachTile(...)`, which converted every resource node into a synthetic fixed tile. That bypassed Matrix3's object-footprint/access strategy for tree id 1276.
 - Worker resource routing now returns the actual live `WorldObject` or starter resource NPC. Runtime showed Worker #1 reaching a tile from which the player can cut the tree but remaining stuck there. The follow-up one-tile adjacency check was runtime-rejected: tree/object interaction is footprint/access-strategy based, not anchor-distance based. `walkToward(...)` now trusts Matrix3's intelligent `calcFollow(...)` contract directly: success with zero queued steps means `ObjectStrategy` / `EntityStrategy` already considers the current tile interaction-ready, so gathering begins immediately.
 - Runtime retest on 2026-09-19 confirmed the strategy-owned handoff fixes tree id 1276: Worker #1 now reaches the tree and successfully proceeds into the gather/haul loop instead of stalling.
+- Worker needs is verified-static: schema-v6 `SettlementWorkerState` owns persistent Hunger/Thirst/Energy, work cycles charge bounded need costs, and `SettlementWorkerNpc` gates new work through home-based Food/basic-water/rest recovery. `SettlementWorkerNeedsSelfTest` and explicit Test Console controls are ready for runtime acceptance.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -916,7 +942,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Tree gather/haul is runtime VERIFIED. In the next short acceptance pass, verify Haul OFF holds the carried unit, Haul ON resumes delivery, disabling all gathering stops new cycles, and multiple enabled gather jobs rotate across valid nodes. PASS advances directly to hunger/thirst/energy.
+**Next checklist item:** Pull/build once and run the consolidated Bundle 1.4 pass: finish Haul OFF/ON + gather-disable + multi-job rotation, run Needs Self-Test, then force Hunger/Thirst/Energy critical states with the new buttons and verify stop/recovery behavior. Exit/re-enter and logout/relog once to confirm need persistence. PASS advances directly to basic worker progression/Construction XP.
 
 **Files/systems already inspected:**
 

@@ -217,7 +217,21 @@ Phase 1 Bundle 1.4 — first worker
 [ ] Turning Haul OFF causes carried output to be held instead of deposited; turning Haul back ON resumes delivery automatically.
 [ ] Turning Gather Wood OFF with all other gather jobs OFF prevents a new gathering cycle.
 [ ] With multiple gathering jobs ON, Worker #1 rotates across valid starter nodes instead of permanently preferring one resource.
-[ ] Hunger/thirst/energy stop work when unsupported and recover automatically when supplied.
+[x] Source ownership: SettlementState schema v6 persists worker Hunger/Thirst/Energy through SettlementWorkerState; runtime movement/action/recovery timers remain transient.
+[x] Source ownership: completed gather cycles apply bounded need costs; critical needs are checked before a new gathering job begins.
+[x] Source ownership: critical Hunger consumes exactly 1 settlement Food at home; no inventory/bank path is used.
+[x] Source ownership: Phase-1 critical Thirst uses an explicit starter-shelter basic water seam pending later physical water infrastructure.
+[x] Source ownership: critical Energy returns home and uses bounded rest recovery; carried cargo/Allowed Jobs are preserved.
+[x] Con Revamp exposes Needs Status, disposable Needs Self-Test, explicit Hunger/Thirst/Energy critical triggers and Reset Needs.
+[ ] Server and Client clean/build successfully after worker-needs patch.
+[ ] Con Revamp Needs Self-Test reports PASS for defaults + work cost + critical recovery + clamp + serialization.
+[ ] Needs Status shows work increasing Hunger/Thirst and reducing Energy over completed gather cycles.
+[ ] With Food available, critical Hunger returns Worker #1 home, consumes exactly 1 Food and resumes valid work.
+[ ] With no Food available, critical Hunger stops work with No Food; adding Food later recovers and resumes automatically.
+[ ] Critical Thirst returns Worker #1 home, uses the Phase-1 basic shelter water supply and resumes automatically.
+[ ] Critical Energy returns Worker #1 home, rests and resumes automatically.
+[ ] Exit/re-enter preserves Worker #1 Hunger/Thirst/Energy values.
+[ ] Logout/relog preserves Worker #1 Hunger/Thirst/Energy values.
 [ ] Worker progression/state survives logout/relog.
 [ ] Construction XP is awarded only by approved active/passive sources.
 

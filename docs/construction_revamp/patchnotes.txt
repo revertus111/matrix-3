@@ -418,3 +418,12 @@
 - User runtime confirmed the final strategy-owned handoff correction works for tree id 1276.
 - Worker #1 now reaches the valid tree interaction position and proceeds into the gather/haul loop instead of stalling.
 - Tree-specific routing/handoff is closed; remaining Bundle 1.4 gather/haul acceptance is limited to Haul OFF/ON hold-resume, gather-disable stop behavior and multi-job rotation.
+
+2026-09-19 - Bundle 1.4 worker needs vertical slice
+- Advanced SettlementState to schema v6 and added persistent Worker #1 Hunger/Thirst/Energy with old-save normalization to satisfied/rested defaults.
+- Completed gather cycles now apply bounded need costs; critical needs gate new work after sensible carried-resource delivery.
+- Critical Hunger returns home and consumes exactly 1 settlement Food; no Food reports a readable blocked state and automatically retries when Food is supplied.
+- Critical Thirst uses an explicit Phase-1 starter-shelter basic water seam pending later physical wells/barrels/tanks.
+- Critical Energy returns home and rests for a bounded recovery delay.
+- Added disposable SettlementWorkerNeedsSelfTest plus owner-only needs status/set/reset commands and Con Revamp buttons for consolidated runtime acceptance.
+- Runtime carry/action/recovery timers remain transient; persistent identity, Allowed Jobs, needs and settlement resource ownership remain server-authoritative.
