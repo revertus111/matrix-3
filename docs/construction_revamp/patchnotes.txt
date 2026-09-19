@@ -385,3 +385,10 @@
 - Multiple allowed gathering jobs are selected round-robin across available starter nodes to avoid first-job starvation.
 - Added owner-only `itembrowser settlement workerai` plus Con Revamp `Worker AI Status` and a consolidated runtime acceptance checklist.
 - No new persistence schema, inventory/bank path, alternate movement owner, resource-node owner, or client gameplay authority was introduced.
+
+2026-09-19 - Bundle 1.4 worker route correction
+- Runtime test showed the worker AI activated correctly but stalled at `MOVING_TO_RESOURCE | No Path to Wood node`; no gather/haul output occurred.
+- Targeted source inspection verified the original `Entity.findBasicRoute(...)` choice is a greedy/basic stepper that can stop when a direct step is blocked.
+- Replaced only the worker route call with Matrix3's existing intelligent `calcFollow(..., intelligent=true)` path, which delegates to `RouteFinder` / `FixedTileStrategy`.
+- No worker policy, persistence, resource ownership, haul semantics, NPC ownership or force-teleport fallback changed.
+- Runtime retest is required to confirm the Wood route now completes before continuing the existing haul-toggle acceptance.

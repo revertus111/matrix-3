@@ -1,7 +1,6 @@
 package com.rs.game.player.content.construction;
 
 import com.rs.game.Animation;
-import com.rs.game.Entity;
 import com.rs.game.WorldTile;
 import com.rs.game.npc.NPC;
 
@@ -242,8 +241,8 @@ public final class SettlementWorkerNpc extends NPC {
             return true;
         }
         if (!hasWalkSteps()) {
-            Entity.findBasicRoute(this, target, 25, true);
-            if (!hasWalkSteps()) {
+            boolean routed = calcFollow(target, 25, true, true);
+            if (!routed || !hasWalkSteps()) {
                 statusDetail = noPathReason;
             }
         }

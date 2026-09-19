@@ -201,12 +201,14 @@ Phase 1 Bundle 1.4 — first worker
 [x] Enable All / Disable All changes the authoritative saved permissions without changing worker identity.
 [x] Allowed Jobs checkbox/permission controls are runtime accepted.
 [x] Source ownership: `SettlementWorkerNpc` owns transient gather/haul action, route and one-unit carry state only; the saved allowlist remains in `SettlementWorkerState`.
-[x] Source ownership: worker movement reuses Matrix3 `Entity.findBasicRoute(...)`; no parallel movement system or force-teleport fallback is added.
+[x] First gather/haul runtime attempt reached `MOVING_TO_RESOURCE` but stalled with `No Path to Wood node`; Allowed Jobs/AI activation itself was working.
+[x] Source evidence: Matrix3 `Entity.findBasicRoute(...)` is a greedy/basic stepper and can fail when its direct path is blocked.
+[x] Source ownership: worker movement now uses Matrix3 intelligent `calcFollow(..., true)` -> `RouteFinder` / `FixedTileStrategy`; no parallel movement system or force-teleport fallback is added.
 [x] Source ownership: gathered worker output is carried first and reaches `SettlementState` storage only through Haul/deposit.
 [x] Source ownership: Haul disabled/full storage keeps carried output pending and readable instead of silently crediting or discarding it.
 [x] Con Revamp exposes `Worker AI Status` for live work/carry state plus storage totals.
 [ ] Server and Client clean/build successfully after gather/haul patch.
-[ ] With Gather Wood + Haul ON and the other gathers OFF, Worker #1 physically walks to wood, gathers, returns home and deposits Wood only.
+[ ] Retest after route correction: with Gather Wood + Haul ON and the other gathers OFF, Worker #1 gets past the prior No-Path stall, physically walks to wood, gathers, returns home and deposits Wood only.
 [ ] Con Revamp `Worker AI Status` shows sensible MOVING/GATHERING/HAULING/IDLE state during the loop.
 [ ] Turning Haul OFF causes carried output to be held instead of deposited; turning Haul back ON resumes delivery automatically.
 [ ] Turning Gather Wood OFF with all other gather jobs OFF prevents a new gathering cycle.
