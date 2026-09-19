@@ -520,6 +520,8 @@ Acceptance target:
 
 `Shelter Self-Test PASS -> real Shelter Status reaches COMPLETE -> remove/spend after completion -> milestone remains COMPLETE -> save/load preserves completion`
 
+Bundle 1.3 non-blocking carryover: explicit logout/relog resource/shelter recheck, reserved-node placement rejection and transient resource-node cleanup are retained for the next consolidated persistence/world-object smoke pass; they do not change Bundle 1.4 ownership.
+
 ### Construction Editor developer prototype
 
 **Status:** RUNTIME VERIFIED
