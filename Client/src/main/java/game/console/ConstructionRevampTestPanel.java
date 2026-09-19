@@ -27,7 +27,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 1.3 starter shelter milestone is active.", 4);
+            "Ready. Bundle 1.4 Worker #1 arrival is active.", 4);
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -70,6 +70,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton shelterStatus = new JButton("Shelter Status");
         JButton shelterSelfTest = new JButton("Shelter Self-Test");
         JButton bundle13FinalCheck = new JButton("Bundle 1.3 Final Check");
+        JButton workerStatus = new JButton("Worker Status");
+        JButton workerSelfTest = new JButton("Worker Self-Test");
+        JButton workerArrivalCheck = new JButton("Worker Arrival Check");
 
         ConsoleTheme.styleButton(enter);
         ConsoleTheme.styleButton(settlementStatus);
@@ -84,6 +87,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(shelterStatus);
         ConsoleTheme.styleButton(shelterSelfTest);
         ConsoleTheme.styleButton(bundle13FinalCheck);
+        ConsoleTheme.styleButton(workerStatus);
+        ConsoleTheme.styleButton(workerSelfTest);
+        ConsoleTheme.styleButton(workerArrivalCheck);
 
         enter.addActionListener(e -> queue(
                 "itembrowser settlement enter",
@@ -125,11 +131,20 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         bundle13FinalCheck.addActionListener(e -> queue(
                 "itembrowser settlement bundle13check",
                 "Bundle 1.3 Final Check queued. PASS/NOT READY/FAIL will appear in game chat and the server console."));
+        workerStatus.addActionListener(e -> queue(
+                "itembrowser settlement workers",
+                "Worker Status queued. Persistent/runtime worker state will appear in game chat."));
+        workerSelfTest.addActionListener(e -> queue(
+                "itembrowser settlement workerselftest",
+                "Worker Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
+        workerArrivalCheck.addActionListener(e -> queue(
+                "itembrowser settlement workercheck",
+                "Worker Arrival Check queued. PASS/NOT READY/FAIL will appear in game chat and the server console."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 292));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 376));
         buttons.add(enter);
         buttons.add(settlementStatus);
         buttons.add(exit);
@@ -143,6 +158,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(shelterStatus);
         buttons.add(shelterSelfTest);
         buttons.add(bundle13FinalCheck);
+        buttons.add(workerStatus);
+        buttons.add(workerSelfTest);
+        buttons.add(workerArrivalCheck);
         card.add(buttons);
 
         card.add(Box.createVerticalStrut(10));
@@ -153,14 +171,14 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.3 final gate");
+        JPanel card = ConsoleTheme.createCard("Bundle 1.4 Worker #1 arrival");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Enter Settlement and run Bundle 1.3 Final Check.\n"
-                + "2. PASS means resource self-test, shelter self-test, real-save audit, all four live nodes and the real starter shelter milestone are valid.\n"
-                + "3. NOT READY shows the exact real-save shelter progress; build/gather only what is missing, then rerun.\n"
-                + "4. The final check never fabricates progress; it can only latch the milestone when the real requirements are already satisfied.\n"
-                + "5. Once PASS is runtime verified, Bundle 1.3 can close and Bundle 1.4 Worker #1 becomes active.",
+                "1. Enter Settlement. Worker #1 should arrive automatically because Starter Shelter is already COMPLETE.\n"
+                + "2. Run Worker Arrival Check; expect PASS for exactly one persistent worker and exactly one live NPC projection.\n"
+                + "3. Worker Status shows stable id/name/definition/home coordinates plus saved/runtime counts.\n"
+                + "4. Exit and re-enter; the same Worker #1 id must rebuild without creating a duplicate.\n"
+                + "5. This slice intentionally keeps the worker stationary/non-combat; Allowed Jobs and gather/haul AI are the next Bundle 1.4 patch.",
                 8));
         return card;
     }
