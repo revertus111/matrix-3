@@ -471,3 +471,11 @@
 - Reconciled stale Construction test boxes against already-recorded source/runtime evidence; no gameplay behavior changed.
 - Closed one-preview-per-cycle/no-flicker, exactly-one authoritative placement, ghost camera/render stability, worker-id logout/relog persistence and intentional preset/validity-color deferrals.
 - Resume target is now only the still-unverified ghost interaction edges, followed by the consolidated persistence/world-object smoke pass.
+
+2026-09-19 - Phase 1 Bundle 1.5 player build materials + active Construction XP
+- Added definition-owned Phase-1 build costs/XP: Wooden fence 1 Wood/4 XP, Floor decoration 1 Wood/4 XP, Door 2 Wood/8 XP.
+- Added server-owned `SettlementInstance.placePlayerPiece(...)` that validates placement, consumes settlement storage material, persists/projects the piece, then awards active base Construction XP exactly once.
+- Added normal-player `settlementbuild` command gated by an active settlement; the client sends stable build-piece keys rather than raw object ids for Construction gameplay placement.
+- Reused the verified Dev placement input/menu plumbing only on the client; owner-only `itembrowser devspawn` remains a separate no-cost/no-XP development harness.
+- Invalid, occupied, reserved or underfunded player placement changes neither materials nor active Construction XP.
+- Bundle 1.5 is IMPLEMENTED / NEEDS RUNTIME TEST; the two canonical main-goal areas remain In Progress.

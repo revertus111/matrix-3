@@ -8,23 +8,33 @@ package com.rs.game.player.content.construction;
  */
 public enum SettlementBuildPiece {
 
-    WOOD_FENCE_TEST("wood-fence-test", "Wooden fence", SettlementBuildRole.WALL, 13450, 0),
-    FLOOR_DECORATION("floor-decoration", "Floor decoration", SettlementBuildRole.FLOOR, 13684, 22),
-    BASIC_DOOR("basic-door", "Door", SettlementBuildRole.DOOR, 13344, 0);
+    WOOD_FENCE_TEST("wood-fence-test", "Wooden fence", SettlementBuildRole.WALL, 13450, 0,
+            SettlementResource.WOOD, 1L, 4.0),
+    FLOOR_DECORATION("floor-decoration", "Floor decoration", SettlementBuildRole.FLOOR, 13684, 22,
+            SettlementResource.WOOD, 1L, 4.0),
+    BASIC_DOOR("basic-door", "Door", SettlementBuildRole.DOOR, 13344, 0,
+            SettlementResource.WOOD, 2L, 8.0);
 
     private final String key;
     private final String displayName;
     private final SettlementBuildRole role;
     private final int objectId;
     private final int objectType;
+    private final SettlementResource buildResource;
+    private final long buildCost;
+    private final double constructionXp;
 
     SettlementBuildPiece(String key, String displayName, SettlementBuildRole role,
-            int objectId, int objectType) {
+            int objectId, int objectType, SettlementResource buildResource,
+            long buildCost, double constructionXp) {
         this.key = key;
         this.displayName = displayName;
         this.role = role;
         this.objectId = objectId;
         this.objectType = objectType;
+        this.buildResource = buildResource;
+        this.buildCost = buildCost;
+        this.constructionXp = constructionXp;
     }
 
     public String getKey() {
@@ -45,6 +55,18 @@ public enum SettlementBuildPiece {
 
     public int getObjectType() {
         return objectType;
+    }
+
+    public SettlementResource getBuildResource() {
+        return buildResource;
+    }
+
+    public long getBuildCost() {
+        return buildCost;
+    }
+
+    public double getConstructionXp() {
+        return constructionXp;
     }
 
     public static SettlementBuildPiece forKey(String key) {

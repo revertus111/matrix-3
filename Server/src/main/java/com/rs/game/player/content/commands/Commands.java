@@ -48,6 +48,7 @@ import com.rs.game.npc.combat.impl.NexCombat;
 import com.rs.game.npc.randomEvent.CombatEventNPC;
 import com.rs.game.player.Player;
 import com.rs.game.player.Skills;
+import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.SlayerManager;
 import com.rs.game.player.actions.HomeTeleport;
 import com.rs.game.player.content.DonatorZone;
@@ -2936,6 +2937,33 @@ public final class Commands {
 	} else {
 	    String message;
 	    switch (cmd[0].toLowerCase()) {
+	    case "settlementbuild":
+		if (cmd.length < 6) {
+		    player.getPackets().sendGameMessage(
+			    "Use: ::settlementbuild <piece-key> <x> <y> <plane> <rotation>");
+		    return true;
+		}
+		SettlementInstance activeSettlement = SettlementInstance.getActive(player);
+		if (activeSettlement == null) {
+		    player.getPackets().sendGameMessage("You must be inside your settlement to build.");
+		    return true;
+		}
+		final int buildX;
+		final int buildY;
+		final int buildPlane;
+		final int buildRotation;
+		try {
+		    buildX = Integer.parseInt(cmd[2]);
+		    buildY = Integer.parseInt(cmd[3]);
+		    buildPlane = Integer.parseInt(cmd[4]);
+		    buildRotation = Integer.parseInt(cmd[5]);
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Construction tile and rotation must be whole numbers.");
+		    return true;
+		}
+		player.getPackets().sendGameMessage(activeSettlement.placePlayerPiece(
+			cmd[1], buildRotation, new WorldTile(buildX, buildY, buildPlane)));
+		return true;
 	    case "mode":
 		player.setNextForceTalk(new ForceTalk("<col=ff0000>My xp rate mode is: x" + Settings.getXpRate(player)
 			+ " xp, x" + Settings.getCombatXpRate(player) + " combat xp."));

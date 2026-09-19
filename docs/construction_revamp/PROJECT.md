@@ -749,6 +749,28 @@ Bundle 1.4 closure:
 - Productive progression, negative idle/no-XP behavior, runtime-instance rebuild persistence and normal logout/relog persistence are runtime VERIFIED.
 - Explicit zero-Food Hunger blocking/resupply remains non-blocking carryover; it does not invalidate the first-worker Phase-1 gate.
 
+### Bundle 1.5 — Player build materials + active Construction XP
+
+**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
+
+Ownership:
+
+- `SettlementBuildPiece` now owns definition-driven Phase-1 material cost and active Construction XP values.
+- Starter tuning is deliberately simple and configurable: Wooden fence = 1 Wood / 4 base XP, Floor decoration = 1 Wood / 4 base XP, Door = 2 Wood / 8 base XP.
+- `SettlementInstance.placePlayerPiece(...)` is the gameplay placement owner: it validates active plot/reserved tiles/occupancy, consumes the full settlement-storage material cost, persists the piece, projects it, then awards active Construction XP exactly once.
+- Failed/invalid/occupied/insufficient-material placement consumes no material and awards no active Construction XP.
+- The existing owner-only `itembrowser devspawn` path remains available as a development harness and stays no-cost/no-XP.
+
+Client/server seam:
+
+- Construction palette requests now carry the stable build-piece key instead of treating the raw object id as gameplay authority.
+- The client continues to reuse the already-verified placement input/menu plumbing, but Construction requests now send the normal-player `settlementbuild` command.
+- `Commands.processNormalCommand(...)` accepts `settlementbuild <piece-key> <x> <y> <plane> <rotation>` for any player, but the server accepts it only while an active `SettlementInstance` owns the target and all normal settlement validation passes.
+
+Runtime acceptance target:
+
+`gather Wood -> place wall/floor/door -> exact Wood cost decreases -> exact active Construction XP rises once -> insufficient/occupied placement changes neither materials nor XP -> exit/re-enter preserves placed state`
+
 ## Phase 2 — Population + broader survival production
 
 - Additional workers/recruitment.
@@ -799,13 +821,13 @@ Bundle 1.4 closure:
 
 - Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
-- Persistent-runtime bundle: 1.4 — first worker vertical slice
-- Persistent-runtime bundle status: DONE
+- Persistent-runtime bundle: 1.5 — player build materials + active Construction XP
+- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: Bundle 1.4 SAP AAA workstream is complete. Camera/ghost edge checks and the consolidated persistence/world-object smoke pass remain Phase-1 carryover.
-- Current checklist item: return to the first unfinished Phase-1 tooling carryover: full ghost/placement edge acceptance while detached, then the consolidated persistence/world-object smoke pass.
-- Current objective: close the remaining Phase-1 tooling/smoke gates, then advance the workstream to Phase 2 population + broader survival production.
+- Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 is implemented and ready for one consolidated active-build runtime pass; prior camera/ghost edge checks and persistence/world-object smoke remain non-blocking Phase-1 carryover.
+- Current checklist item: runtime-verify Bundle 1.5 material consumption + active Construction XP ownership through the existing palette, then fold any remaining Phase-1 carryover into the same session.
+- Current objective: finish the real player-building/material/active-XP seam that keeps Freeform settlement building foundation and Persistence/Construction XP ownership in progress, then close remaining Phase-1 gates before Phase 2.
 
 ## Verification classifications
 
@@ -909,7 +931,8 @@ Bundle 1.4 closure:
 - Source ownership remains verified-static for the negative path: only a successful worker deposit calls `SettlementInstance.recordWorkerDepositProgress(...)`; blocked/idle paths have no award call.
 - `SettlementBundle14FinalGate` is runtime VERIFIED. The user captured a stable all-jobs-OFF baseline and received exact-match PASS results while idle, after settlement exit/re-entry, and after normal logout/relog without restarting the server.
 - The final gate proved Worker #1 identity, Allowed Jobs, Hunger/Thirst/Energy, all personal skill XP totals and player Construction XP remain unchanged through idle time, runtime-instance rebuild and player save/load.
-- Developer Construction placement remains outside XP ownership until the real material-consuming active-build path is implemented.
+- Developer Construction placement remains outside XP ownership; Bundle 1.5 adds a separate material-consuming player-build path so the dev harness stays no-cost/no-XP.
+- Bundle 1.5 player-build ownership is verified-static: stable piece key -> normal-player `settlementbuild` command -> active `SettlementInstance.placePlayerPiece(...)` -> settlement-material consume -> persistent placement -> one active Construction XP award.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -975,11 +998,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 1 — MVP Vertical Slice.
 
-**Active persistent-runtime bundle:** Bundle 1.4 — first worker vertical slice.
+**Active persistent-runtime bundle:** Bundle 1.5 — player build materials + active Construction XP.
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Bundle 1.4 is DONE. Resume the first still-unverified Phase-1 tooling carryover: confirm live ghost hover-follow, rotation 0-3, Wooden fence/Floor decoration/Door switching, uneven-terrain alignment and cancel/stale-hover cleanup while detached. One-preview-per-cycle/no-flicker, exactly-one authoritative placement and camera/render stability are already closed from the prior source + runtime evidence. Then run the consolidated persistence/world-object smoke pass. Zero-Food Hunger block/resupply remains optional carryover.
+**Next checklist item:** Runtime-test Bundle 1.5 through the Construction palette: confirm 1 Wood/4 XP wall, 1 Wood/4 XP floor, 2 Wood/8 XP door, and zero material/XP change on insufficient or rejected placement. Then cover any remaining Phase-1 carryover in the same launch. Zero-Food Hunger block/resupply remains optional carryover.
 
 **Files/systems already inspected:**
 

@@ -188,6 +188,64 @@ public final class SettlementInstance {
                 + " at plot " + plotX + ", " + plotY + ".";
     }
 
+    /**
+     * Server-authoritative player Construction placement.
+     */
+    public String placePlayerPiece(String definitionKey, int rotation, WorldTile worldTile) {
+        if (!loaded) {
+            return "Settlement is still loading.";
+        }
+        if (!containsWorldTile(worldTile)) {
+            return "That tile is outside the active settlement plot.";
+        }
+        if (rotation < 0 || rotation > 3) {
+            return "Construction rotation must be 0-3.";
+        }
+
+        SettlementBuildPiece definition = SettlementBuildPiece.forKey(definitionKey);
+        if (definition == null) {
+            return "That is not an approved settlement build piece.";
+        }
+
+        int plotX = toPlotX(worldTile.getX());
+        int plotY = toPlotY(worldTile.getY());
+        if (isReservedInfrastructureTile(plotX, plotY, worldTile.getPlane())) {
+            return "That tile is reserved for settlement infrastructure.";
+        }
+
+        SettlementResource resource = definition.getBuildResource();
+        long cost = definition.getBuildCost();
+        SettlementPlacedPiece saved;
+        synchronized (state) {
+            if (resource == null || cost <= 0L || state.getResourceAmount(resource) < cost) {
+                return "You need " + cost + " " + (resource == null ? "material" : resource.getDisplayName())
+                        + " in settlement storage to build " + definition.getDisplayName() + ".";
+            }
+
+            saved = state.place(definition, plotX, plotY, worldTile.getPlane(), rotation);
+            if (saved == null) {
+                return "That settlement slot is already occupied.";
+            }
+
+            long consumed = state.removeResource(resource, cost);
+            if (consumed != cost) {
+                state.remove(saved.getPieceId());
+                return "Settlement materials changed before placement could complete.";
+            }
+        }
+
+        spawnProjectedPiece(saved);
+        checkStarterShelterMilestone();
+
+        double xp = definition.getConstructionXp();
+        if (xp > 0.0) {
+            player.getSkills().addXp(Skills.CONSTRUCTION, xp, true);
+        }
+
+        return "Built " + definition.getDisplayName() + " for " + cost + " "
+                + resource.getDisplayName() + " and earned " + (long) xp + " Construction XP.";
+    }
+
     public String moveDevelopmentPiece(int objectId, WorldTile source, WorldTile destination) {
         if (!loaded || !containsWorldTile(source) || !containsWorldTile(destination)) {
             return "Move target must stay inside the active settlement plot.";

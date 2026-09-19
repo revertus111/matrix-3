@@ -5,9 +5,11 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Client-side Dev Spawn placement state.
  *
- * This class owns only the developer-tool placement session. Matrix3/server
- * world authority remains unchanged: every actual placement is sent through the
- * existing owner-only `itembrowser devspawn` server bridge and validated there.
+ * This class owns the established placement input/session plumbing. Ordinary
+ * developer requests still use the owner-only `itembrowser devspawn` bridge.
+ * Construction requests carry a stable build-piece key and use the normal-player
+ * `settlementbuild` server path instead, keeping gameplay placement separate
+ * from the no-cost developer harness.
  */
 public final class DevSpawnPlacement {
 
@@ -63,15 +65,20 @@ public final class DevSpawnPlacement {
     }
 
     public static Request npc(int id) {
-        return new Request(Kind.NPC, id, 0, 0, RotationMode.FIXED, 1);
+        return new Request(Kind.NPC, id, 0, 0, RotationMode.FIXED, 1, null);
     }
 
     public static Request object(int id, int type, int rotation, RotationMode rotationMode) {
-        return new Request(Kind.OBJECT, id, type, rotation, rotationMode, 1);
+        return new Request(Kind.OBJECT, id, type, rotation, rotationMode, 1, null);
+    }
+
+    public static Request constructionObject(String pieceKey, int id, int type, int rotation,
+            RotationMode rotationMode) {
+        return new Request(Kind.OBJECT, id, type, rotation, rotationMode, 1, pieceKey);
     }
 
     public static Request item(int id, int amount) {
-        return new Request(Kind.ITEM, id, 0, 0, RotationMode.FIXED, amount);
+        return new Request(Kind.ITEM, id, 0, 0, RotationMode.FIXED, amount, null);
     }
 
     public static String placeOnce(Request request, int x, int y, int plane) {
@@ -152,14 +159,19 @@ public final class DevSpawnPlacement {
         if (request == null || mode == null) {
             return null;
         }
+        String owner = request.isConstructionBuild() ? "Build" : "Dev";
         return mode == SpawnMode.PAINT
-                ? "Dev > Paint " + request.menuLabel() + " Here"
-                : "Dev > Place " + request.menuLabel() + " Here";
+                ? owner + " > Paint " + request.menuLabel() + " Here"
+                : owner + " > Place " + request.menuLabel() + " Here";
     }
 
     public static String getLastMenuText() {
         Request request = lastRequest;
-        return request == null ? null : "Dev > Place Last " + request.menuLabel();
+        if (request == null) {
+            return null;
+        }
+        return (request.isConstructionBuild() ? "Build" : "Dev")
+                + " > Place Last " + request.menuLabel();
     }
 
     private static String queue(Request request, int x, int y, int plane) {
@@ -169,15 +181,20 @@ public final class DevSpawnPlacement {
 
         int rotation = request.rotationForNextPlacement();
         StringBuilder command = new StringBuilder(96);
-        command.append("itembrowser devspawn ");
-        if (request.kind == Kind.NPC) {
-            command.append("npc ").append(request.id).append(' ').append(x).append(' ').append(y).append(' ').append(plane);
-        } else if (request.kind == Kind.OBJECT) {
-            command.append("object ").append(request.id).append(' ').append(x).append(' ').append(y).append(' ')
-                    .append(plane).append(' ').append(request.objectType).append(' ').append(rotation);
+        if (request.isConstructionBuild()) {
+            command.append("settlementbuild ").append(request.settlementBuildKey).append(' ')
+                    .append(x).append(' ').append(y).append(' ').append(plane).append(' ').append(rotation);
         } else {
-            command.append("item ").append(request.id).append(' ').append(x).append(' ').append(y).append(' ')
-                    .append(plane).append(' ').append(request.amount);
+            command.append("itembrowser devspawn ");
+            if (request.kind == Kind.NPC) {
+                command.append("npc ").append(request.id).append(' ').append(x).append(' ').append(y).append(' ').append(plane);
+            } else if (request.kind == Kind.OBJECT) {
+                command.append("object ").append(request.id).append(' ').append(x).append(' ').append(y).append(' ')
+                        .append(plane).append(' ').append(request.objectType).append(' ').append(rotation);
+            } else {
+                command.append("item ").append(request.id).append(' ').append(x).append(' ').append(y).append(' ')
+                        .append(plane).append(' ').append(request.amount);
+            }
         }
 
         String error = ClientConsoleBridge.queueConsoleCommand(command.toString());
@@ -198,20 +215,27 @@ public final class DevSpawnPlacement {
         private final int baseRotation;
         private final RotationMode rotationMode;
         private final int amount;
+        private final String settlementBuildKey;
         private int placementCount;
 
         private Request(Kind kind, int id, int objectType, int baseRotation, RotationMode rotationMode,
-                int amount) {
+                int amount, String settlementBuildKey) {
             this.kind = kind;
             this.id = id;
             this.objectType = objectType;
             this.baseRotation = baseRotation & 0x3;
             this.rotationMode = rotationMode == null ? RotationMode.FIXED : rotationMode;
             this.amount = amount;
+            this.settlementBuildKey = settlementBuildKey == null || settlementBuildKey.trim().isEmpty()
+                    ? null : settlementBuildKey.trim();
         }
 
         private Request copy() {
-            return new Request(kind, id, objectType, baseRotation, rotationMode, amount);
+            return new Request(kind, id, objectType, baseRotation, rotationMode, amount, settlementBuildKey);
+        }
+
+        private boolean isConstructionBuild() {
+            return kind == Kind.OBJECT && settlementBuildKey != null;
         }
 
         private int rotationForNextPlacement() {
@@ -232,10 +256,14 @@ public final class DevSpawnPlacement {
         }
 
         private String menuLabel() {
-            return kind.displayName + " " + id;
+            return isConstructionBuild() ? "Construction " + id : kind.displayName + " " + id;
         }
 
         private String describe() {
+            if (isConstructionBuild()) {
+                return "Construction " + settlementBuildKey + " (" + rotationMode.getDisplayName().toLowerCase()
+                        + " rotation)";
+            }
             if (kind == Kind.OBJECT) {
                 return "Object " + id + " (type " + objectType + ", " + rotationMode.getDisplayName().toLowerCase()
                         + " rotation)";

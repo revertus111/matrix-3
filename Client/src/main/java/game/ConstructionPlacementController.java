@@ -2,10 +2,12 @@ package game;
 
 /**
  * Construction build-selection and placement-session state shared by the custom
- * in-game palette and Matrix3's proven Dev placement bridge.
+ * in-game palette and Matrix3's proven placement input bridge.
  *
- * This class never owns world objects. Confirmed placement still routes through
- * DevModeBridge/DevSpawnPlacement and the server-authoritative devspawn command.
+ * This class never owns world objects. Confirmed Construction placement reuses
+ * DevModeBridge/DevSpawnPlacement only for input/menu plumbing, then sends the
+ * stable build-piece key through the server-authoritative normal-player
+ * settlement build command rather than the owner-only devspawn command.
  */
 public final class ConstructionPlacementController {
 
@@ -128,7 +130,7 @@ public final class ConstructionPlacementController {
     /**
      * Free Build paint confirmation consumes the already-resolved hovered tile.
      * It does not perform a second scene pick and still queues the normal
-     * server-authoritative DevSpawnPlacement command.
+     * server-authoritative settlement build command.
      *
      * @return true when the current click was a valid armed Paint placement and
      *         should therefore be consumed instead of becoming Walk Here.
@@ -230,7 +232,8 @@ public final class ConstructionPlacementController {
         }
 
         DevModeBridge.setEnabled(true);
-        DevSpawnPlacement.Request request = DevSpawnPlacement.object(
+        DevSpawnPlacement.Request request = DevSpawnPlacement.constructionObject(
+                piece.getKey(),
                 piece.getObjectId(),
                 piece.getObjectType(),
                 rotation,
