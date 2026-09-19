@@ -138,6 +138,25 @@ Phase 1 Bundle 1.2 — placement foundation
 
 Phase 1 Bundle 1.3 — starter resources/storage
 [ACTIVE]
+[x] Source ownership: settlement resources are stable `SettlementResource` identities stored in `SettlementState`, not normal inventory/bank `Item` stacks.
+[x] Source ownership: old saves normalize missing resource storage and starter capacity under SettlementState schema v2.
+[x] Source ownership: starter node tiles are reserved against build place/move/duplicate overlap.
+[x] Source ownership: node interaction is scoped to `SettlementControler`; normal world gathering owners remain unchanged.
+[x] Source ownership: `SettlementGatherAction` writes directly to settlement storage and has no inventory/bank add/delete path.
+[ ] Server and Client clean/build successfully after Bundle 1.3 resource/storage patch.
+[ ] Con Revamp `Resource Self-Test` reports PASS for add/remove/capacity + four unique valid node definitions.
+[ ] Wood node is visible/clickable at its starter plot location and adds Wood to settlement storage.
+[ ] Food node is visible/clickable at its starter plot location and adds Food to settlement storage.
+[ ] Stone node is visible/clickable at its starter plot location and adds Stone to settlement storage.
+[ ] Basic ore node is visible/clickable at its starter plot location and adds Basic ore to settlement storage.
+[ ] Resource Status reports the expected four resource totals and total/capacity.
+[ ] Gathering starter resources does not add/delete normal inventory items and does not alter normal bank stock.
+[ ] Starter storage rejects additions past its 200-unit capacity cleanly.
+[ ] Exit/re-enter preserves settlement resource totals and respawns one clean set of starter nodes.
+[ ] Logout/relog preserves settlement resource totals.
+[ ] Building/moving/duplicating onto a reserved starter-node tile is rejected cleanly.
+[ ] Starter resource nodes are removed with the transient instance and do not leak into the normal world.
+[ ] Node visual ids/options are accepted or replaced without changing resource/storage ownership.
 [ ] Wood, food, stone and basic ore are obtainable inside the settlement.
 [ ] Settlement storage is isolated from the normal bank.
 [ ] Normal bank stock cannot be dumped directly into settlement storage.
