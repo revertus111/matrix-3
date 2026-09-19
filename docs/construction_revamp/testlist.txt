@@ -68,7 +68,7 @@ Construction build camera v1
 [x] Shift fast and Ctrl precision remain useful under the smoothed velocity system.
 [ ] Server console prints one `STOP click` line on the first Free Build ground click of the session.
 [x] No camera instability, ghost duplication/flicker, interface regression or scene-render regression occurred during the smoothed Free Build acceptance run.
-[ ] RTS/top-down/orbit presets remain deferred until the smoothed Free Build integration pass is accepted.
+[x] Smoothed Free Build integration is accepted; RTS/top-down/orbit presets remain deferred as later tooling work.
 
 Construction 3D ghost preview v1
 [x] First runtime attempt with the pre-scene `Class110.method2071(...)` hook produced no visible ghost; palette/hover/placement remained functional.
@@ -79,7 +79,7 @@ Construction 3D ghost preview v1
 [x] The `SKIP_BOUNDS` diagnostic exposed invalid billion-scale object footprints caused by reading obfuscated `ObjectDefinitions.sizeX/sizeY` with their storage multipliers instead of inverse decode multipliers.
 [x] Corrected footprint decoder advances through model build/tint/draw and visibly renders the Wooden fence preview on the hovered world tile.
 [x] Runtime diagnostic reaches `DRAW_SUBMITTED object=13450 type=0 rot=0 specialBounds=false` while the preview is visible.
-[ ] Active-scene-pass hook renders exactly one preview per client cycle without duplicate/flicker from the retained post-scene fallback.
+[x] Active-scene-pass hook is source-guarded to once per `client.cycles`, and the smoothed Free Build runtime pass showed no duplicate/flicker from the retained post-scene fallback.
 [x] Corrected direct-render path renders the selected real 3D object model on the current hovered world tile while placement is armed.
 [x] Corrected white tint (`weight=128`) and face-alpha path (`faceAlpha=96`) render a visibly white/washed-out translucent ghost at runtime.
 [x] Runtime placement test exposed that preview face alpha leaked into real placed object models when the ghost clone lacked private alpha storage.
@@ -89,9 +89,9 @@ Construction 3D ghost preview v1
 [ ] Switching between Wooden fence, Floor decoration and Door updates the preview model/type correctly.
 [ ] Preview terrain height/alignment remains correct while moving across uneven nearby tiles.
 [ ] Cancel, palette close or stale/lost hover removes the preview immediately without leaving a model behind.
-[ ] Confirmed placement still routes through the existing server-authoritative devspawn path and does not duplicate the preview as a second object.
-[ ] Camera movement and normal scene rendering remain stable while the preview is visible.
-[ ] V1 validity coloring remains deferred until the base ghost interaction/stability checks are complete.
+[x] Confirmed placement still routes through the existing server-authoritative devspawn path and creates exactly one real object without duplicating the preview.
+[x] Camera movement and normal scene rendering remain stable while the preview is visible.
+[x] V1 validity coloring remains intentionally deferred until the base ghost interaction/stability checks are complete.
 
 Test Console — Construction Revamp harness
 [x] Client Console rail shows Client Console/Home, Owner, Commands, Test Console and Settings; moved tool rail buttons are gone.
@@ -185,7 +185,7 @@ Phase 1 Bundle 1.4 — first worker
 [x] Worker #1 runtime NPC is visible and acceptable with the current provisional NPC definition.
 [x] Con Revamp `Worker Arrival Check` reports PASS for exactly one saved worker and exactly one matching live NPC.
 [x] Exit/re-enter rebuilds the same Worker #1 id and reports saved=1/runtime=1 with no duplicate.
-[ ] Logout/relog and re-enter preserves the same worker id.
+[x] Logout/relog and re-enter preserves the same worker id (covered by the Bundle 1.4 stable-baseline save/load gate).
 [x] Leaving/destroying the settlement removes the transient worker projection while persistent Worker #1 remains and rebuilds on re-entry.
 [x] First worker arrival is gated by the already-complete STARTER_SHELTER milestone and runtime arrival succeeded.
 [x] Source ownership: `SettlementWorkerJob` provides stable keys for Gather Wood/Food/Stone/Basic Ore and Haul.

@@ -466,3 +466,8 @@
 - Verified Worker #1 identity, Allowed Jobs, Hunger/Thirst/Energy and all personal skill XP survive runtime-instance rebuild and player save/load exactly.
 - Marked Bundle 1.4 DONE and advanced the Phase-1 execution target back to remaining ghost/placement edge acceptance plus the consolidated persistence/world-object smoke pass.
 - Zero-Food Hunger block/resupply remains non-blocking carryover.
+
+2026-09-19 - Phase 1 acceptance reconciliation
+- Reconciled stale Construction test boxes against already-recorded source/runtime evidence; no gameplay behavior changed.
+- Closed one-preview-per-cycle/no-flicker, exactly-one authoritative placement, ghost camera/render stability, worker-id logout/relog persistence and intentional preset/validity-color deferrals.
+- Resume target is now only the still-unverified ghost interaction edges, followed by the consolidated persistence/world-object smoke pass.

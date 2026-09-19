@@ -979,7 +979,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Bundle 1.4 is DONE. Resume the first unfinished Phase-1 tooling carryover: verify the detached ghost/placement edge checklist (rotation 0-3, model switching, terrain alignment, cancel/stale-hover cleanup and one-preview-per-cycle stability), then run the consolidated persistence/world-object smoke pass. Zero-Food Hunger block/resupply remains optional carryover.
+**Next checklist item:** Bundle 1.4 is DONE. Resume the first still-unverified Phase-1 tooling carryover: confirm live ghost hover-follow, rotation 0-3, Wooden fence/Floor decoration/Door switching, uneven-terrain alignment and cancel/stale-hover cleanup while detached. One-preview-per-cycle/no-flicker, exactly-one authoritative placement and camera/render stability are already closed from the prior source + runtime evidence. Then run the consolidated persistence/world-object smoke pass. Zero-Food Hunger block/resupply remains optional carryover.
 
 **Files/systems already inspected:**
 
