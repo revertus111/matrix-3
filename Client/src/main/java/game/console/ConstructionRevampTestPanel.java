@@ -65,6 +65,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton savedStateAudit = new JButton("Saved State Audit");
         JButton stateSelfTest = new JButton("State Self-Test");
         JButton finalAutoCheck = new JButton("Final Auto Check");
+        JButton resourceStatus = new JButton("Resource Status");
+        JButton resourceSelfTest = new JButton("Resource Self-Test");
 
         ConsoleTheme.styleButton(enter);
         ConsoleTheme.styleButton(settlementStatus);
@@ -74,6 +76,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(savedStateAudit);
         ConsoleTheme.styleButton(stateSelfTest);
         ConsoleTheme.styleButton(finalAutoCheck);
+        ConsoleTheme.styleButton(resourceStatus);
+        ConsoleTheme.styleButton(resourceSelfTest);
 
         enter.addActionListener(e -> queue(
                 "itembrowser settlement enter",
@@ -100,11 +104,17 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         finalAutoCheck.addActionListener(e -> queue(
                 "itembrowser settlement finalcheck",
                 "Final Auto Check queued. PASS/FAIL will appear in game chat and the server console."));
+        resourceStatus.addActionListener(e -> queue(
+                "itembrowser settlement resources",
+                "Resource Status queued. Settlement-only totals will appear in game chat."));
+        resourceSelfTest.addActionListener(e -> queue(
+                "itembrowser settlement resourceselftest",
+                "Resource Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 166));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 208));
         buttons.add(enter);
         buttons.add(settlementStatus);
         buttons.add(exit);
@@ -113,6 +123,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(savedStateAudit);
         buttons.add(stateSelfTest);
         buttons.add(finalAutoCheck);
+        buttons.add(resourceStatus);
+        buttons.add(resourceSelfTest);
         card.add(buttons);
 
         card.add(Box.createVerticalStrut(10));
@@ -123,14 +135,16 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.2 final gate");
+        JPanel card = ConsoleTheme.createCard("Bundle 1.3 starter resources / storage");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Run Final Auto Check; expect PASS. It covers State Self-Test + real-save audit + count + definitions.\n"
-                + "2. Exit Settlement and confirm normal Dev Mode still works outside it.\n"
-                + "3. Enter/build/leave the classic POH once to smoke-test that separate system.\n"
-                + "4. If all three pass, Bundle 1.2 is ready to close and Bundle 1.3 can start.",
-                7));
+                "1. Run Resource Self-Test; expect PASS.\n"
+                + "2. Enter Settlement. Four starter nodes should appear near plot 8-20,8.\n"
+                + "3. Gather once from wood, food, stone and ore; resources go straight to settlement storage.\n"
+                + "4. Use Resource Status and verify each total increased while normal inventory/bank stock did not.\n"
+                + "5. Exit and re-enter; Resource Status should keep the same totals.\n"
+                + "6. Node visuals are provisional; report any missing/wrong-looking node separately from storage behavior.",
+                8));
         return card;
     }
 
