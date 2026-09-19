@@ -17,7 +17,7 @@ Do not add a competing implementation without explicitly changing this record.
 | Item/NPC/object/cache definitions | Revision-830 cache/data consumed by Matrix3 | Data authority does not imply engine ownership. |
 | Animations/models/GFX | Revision-830 cache/data consumed by Matrix3 | Construction visuals should use existing data/definitions where practical. |
 | Interfaces | Matrix3 client/cache path | Construction UI must use Matrix3 interface ownership; 718 interfaces are reference-only. |
-| Construction / settlement gameplay | `Player.settlementState` + `SettlementInstance` in the custom Matrix3 Construction content layer | `SettlementState` is the sole saved freeform-settlement owner inside normal Matrix3 player persistence. `SettlementInstance` is transient runtime projection only and uses Matrix3 `MapBuilder`/`World` authority. Classic POH `House` remains separate. |
+| Construction / settlement gameplay | `Player.settlementState` + `SettlementInstance` in the custom Matrix3 Construction content layer | `SettlementState` is the sole saved freeform-settlement owner, including placed pieces, settlement resources/milestones and persistent worker records. `SettlementInstance` owns transient dynamic-map/object/resource-node/worker-NPC projection and uses Matrix3 `MapBuilder`/`World`/`NPC` authority. Classic POH `House` remains separate. |
 | Historical custom tools/features | Reference documentation only until revalidated | The runtime tree was reset to the protected Matrix3 baseline; preserved docs do not prove current code ownership. |
 | 718 project implementations | Reference only | Ideas/UX/algorithms may be studied; never automatic authority. |
 
@@ -41,3 +41,13 @@ When ownership actually changes, record:
 4. **Compatibility boundary:** Matrix3 player serialization remains the save authority; `MapBuilder`, `World`, object definitions and controller lifecycle remain core authority. Classic `House` is not replaced.
 5. **Migration/rollback risk:** old saves initialize a new empty `SettlementState`; no existing POH data is migrated or rewritten. Runtime dynamic bounds are never serialized.
 6. **Required smoke tests:** build/start/login, enter/exit settlement, object place/edit/remove, leave/re-enter rebuild, logout/relog persistence, dynamic-region cleanup, classic POH unaffected.
+
+
+### 2026-09-18 — Settlement Worker #1 ownership
+
+1. **Old authority:** Bundle 1.3 had persistent settlement layout/resources/milestones but no settlement-worker saved/runtime owner.
+2. **New authority:** `SettlementState.workers` owns persistent worker identity/state; `SettlementInstance` owns transient `SettlementWorkerNpc` projection using Matrix3 NPC/entity authority.
+3. **Why:** Phase 1 requires Worker #1 to arrive from the starter-shelter milestone and survive instance rebuild/save-load without serializing live NPC/world coordinates.
+4. **Compatibility boundary:** Matrix3 player serialization remains persistence authority and Matrix3 `NPC`/`World` remain entity authority. Worker logic stays in the Construction content layer; classic POH and unrelated NPC systems are unchanged.
+5. **Migration/rollback risk:** schema-v3 saves initialize an empty worker list/next id; completed shelters create Worker #1 idempotently on settlement load. Runtime NPCs are never serialized and are explicitly finished on instance destroy.
+6. **Required smoke tests:** build/start/login, milestone-gated first arrival, exactly one saved/live worker, exit/re-enter same-id rebuild, logout/relog persistence, runtime NPC cleanup, unrelated NPC behavior unchanged.
