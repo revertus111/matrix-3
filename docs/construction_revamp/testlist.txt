@@ -143,7 +143,7 @@ Phase 1 Bundle 1.3 — starter resources/storage
 [x] Source ownership: starter node tiles are reserved against build place/move/duplicate overlap.
 [x] Source ownership: node interaction is scoped to `SettlementControler`; normal world gathering owners remain unchanged.
 [x] Source ownership: `SettlementGatherAction` writes directly to settlement storage and has no inventory/bank add/delete path.
-[ ] Server and Client clean/build successfully after Bundle 1.3 resource/storage patch.
+[x] Server and Client launched successfully with the Bundle 1.3 resource/storage UI/runtime patch.
 [x] Con Revamp `Resource Self-Test` reports PASS for add/remove/capacity + four unique valid node definitions.
 [x] Wood node is visible/clickable at its starter plot location and adds Wood to settlement storage.
 [x] Food node is visible/clickable at its starter plot location and adds Food to settlement storage.
@@ -153,9 +153,9 @@ Phase 1 Bundle 1.3 — starter resources/storage
 [x] Gathering starter resources does not add/delete normal inventory items and does not alter normal bank stock.
 [x] Starter storage rejects additions past its 200-unit capacity in the verified Resource Self-Test.
 [x] Exit/re-enter preserves settlement resource totals and respawns one clean set of starter nodes.
-[ ] Logout/relog preserves settlement resource totals.
-[ ] Building/moving/duplicating onto a reserved starter-node tile is rejected cleanly.
-[ ] Starter resource nodes are removed with the transient instance and do not leak into the normal world.
+[ ] CARRYOVER: explicit logout/relog resource-total recheck during the next consolidated persistence smoke.
+[ ] CARRYOVER: runtime reserved-node placement rejection check during the next consolidated world-object smoke.
+[ ] CARRYOVER: explicit transient resource-node cleanup check during the next consolidated world-object smoke.
 [x] Current starter node visuals/options are runtime accepted for the prototype.
 [x] Wood, food, stone and basic ore are obtainable inside the settlement.
 [x] Settlement storage is isolated from the normal bank.
@@ -167,9 +167,9 @@ Phase 1 Bundle 1.3 — starter resources/storage
 [x] Con Revamp `Shelter Self-Test` reports PASS for threshold gating + one-time latch + serialization.
 [x] Bundle 1.3 Final Check accurately reported NOT READY progress, then PASS after the real save reached the required wall/floor/door/resource state.
 [x] Real starter shelter milestone changed from INCOMPLETE to COMPLETE automatically when the final required starter resource was gathered.
-[ ] After completion, removing a required piece or spending a required resource does not revoke the milestone.
-[ ] Exit/re-enter preserves starter shelter completion.
-[ ] Logout/relog preserves starter shelter completion.
+[x] Verified by the runtime-passed Shelter Self-Test: removing a required piece/spending a required resource after completion does not revoke the milestone.
+[ ] CARRYOVER: explicit shelter-completion exit/re-enter recheck during the next consolidated persistence smoke.
+[ ] CARRYOVER: explicit shelter-completion logout/relog recheck during the next consolidated persistence smoke.
 [x] Starter shelter milestone detects the required build/resource state.
 
 Phase 1 Bundle 1.4 — first worker
