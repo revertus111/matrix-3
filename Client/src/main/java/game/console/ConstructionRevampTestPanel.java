@@ -28,7 +28,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 1.4 final persistence gate is active.", 4);
+            "Ready. Bundle 1.5 final gate is active.", 4);
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -48,6 +48,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(createNeedsCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createProgressionCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createBundle15Card());
         content.add(Box.createVerticalStrut(12));
         content.add(createPersistenceCard());
         content.add(Box.createVerticalStrut(12));
@@ -335,6 +337,59 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         buttons.add(progressStatus);
         buttons.add(progressSelfTest);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createBundle15Card() {
+        JPanel card = ConsoleTheme.createCard("Bundle 1.5 Final Gate");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "1. Run Self-Test: expect PASS for exact costs plus insufficient/reserved/invalid/occupied no-mutation.\n"
+                + "2. In the settlement, wait for carried=none, Disable All Jobs and Reset Needs if needed.\n"
+                + "3. Capture Build Baseline.\n"
+                + "4. Exit, re-enter, then Check Build Baseline: expect PASS for exact layout/resources/Construction XP.\n"
+                + "5. After that PASS, click Exit + Outside Rejection: expect 'You must be inside your settlement to build.'",
+                8));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton selfTest = new JButton("Bundle 1.5 Self-Test");
+        JButton capture = new JButton("Capture Build Baseline");
+        JButton check = new JButton("Check Build Baseline");
+        JButton outsideReject = new JButton("Exit + Outside Rejection");
+
+        ConsoleTheme.styleButton(selfTest);
+        ConsoleTheme.styleButton(capture);
+        ConsoleTheme.styleButton(check);
+        ConsoleTheme.styleButton(outsideReject);
+
+        selfTest.addActionListener(e -> queue(
+                "itembrowser settlement bundle15selftest",
+                "Bundle 1.5 Self-Test queued. Read PASS/FAIL in game chat."));
+        capture.addActionListener(e -> queue(
+                "itembrowser settlement bundle15baseline",
+                "Bundle 1.5 baseline capture queued. Read BASELINE/NOT READY in game chat."));
+        check.addActionListener(e -> queue(
+                "itembrowser settlement bundle15check",
+                "Bundle 1.5 baseline comparison queued. Read PASS/FAIL in game chat."));
+        outsideReject.addActionListener(e -> {
+            String error = ClientConsoleBridge.queueConsoleCommands(new String[] {
+                    "itembrowser settlement exit",
+                    "settlementbuild wood-fence-test 0 0 0 0"
+            });
+            setStatus(error == null
+                    ? "Exit + outside build rejection queued. Expect the outside-settlement rejection in game chat."
+                    : error);
+        });
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(selfTest);
+        buttons.add(capture);
+        buttons.add(check);
+        buttons.add(outsideReject);
         card.add(buttons);
         return card;
     }

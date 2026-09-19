@@ -751,14 +751,14 @@ Bundle 1.4 closure:
 
 ### Bundle 1.5 — Player build materials + active Construction XP
 
-**Status:** PARTIAL RUNTIME VERIFIED
+**Status:** FINAL-GATE HARNESS IMPLEMENTED / NEEDS RUNTIME TEST
 
 Ownership:
 
 - `SettlementBuildPiece` now owns definition-driven Phase-1 material cost and active Construction XP values.
 - Starter tuning is deliberately simple and configurable: Wooden fence = 1 Wood / 4 base XP, Floor decoration = 1 Wood / 4 base XP, Door = 2 Wood / 8 base XP.
-- `SettlementInstance.placePlayerPiece(...)` is the gameplay placement owner: it validates active plot/reserved tiles/occupancy, consumes the full settlement-storage material cost, persists the piece, projects it, then awards active Construction XP exactly once.
-- Failed/invalid/occupied/insufficient-material placement consumes no material and awards no active Construction XP.
+- `SettlementPlayerBuildTransaction` now owns the atomic persistent placement + settlement-material mutation used by the real player-build path. `SettlementInstance.placePlayerPiece(...)` owns runtime projection and the one successful active Construction XP award after that transaction succeeds.
+- Failed/invalid/occupied/insufficient-material placement consumes no material and awards no active Construction XP. Short-consume rollback restores both the new piece and any partially removed material before returning failure.
 - The existing owner-only `itembrowser devspawn` path remains available as a development harness and stays no-cost/no-XP.
 
 Client/server seam:
@@ -767,9 +767,15 @@ Client/server seam:
 - The client continues to reuse the already-verified placement input/menu plumbing, but Construction requests now send the normal-player `settlementbuild` command.
 - `Commands.processNormalCommand(...)` accepts `settlementbuild <piece-key> <x> <y> <plane> <rotation>` for any player, but the server accepts it only while an active `SettlementInstance` owns the target and all normal settlement validation passes.
 
+Final-gate harness:
+
+- `SettlementBundle15FinalCheck.runSelfTest()` disposably exercises the exact `SettlementPlayerBuildTransaction` for configured costs plus insufficient/reserved/invalid/occupied no-mutation behavior; it never touches the player's save.
+- `capture/check` stores only a process-local snapshot of exact saved piece signatures, settlement resource totals and Construction XP. With Worker #1 jobs OFF/non-critical, the same snapshot verifies exit/re-entry persistence without modifying the save.
+- Con Revamp exposes Self-Test, Capture Build Baseline, Check Build Baseline and an ordered Exit + Outside Rejection action.
+
 Runtime acceptance target:
 
-`gather Wood -> place wall/floor/door -> exact Wood cost decreases -> exact active Construction XP rises once -> insufficient/occupied placement changes neither materials nor XP -> exit/re-enter preserves placed state`
+`Self-Test PASS -> Capture Build Baseline -> exit/re-enter -> Check PASS -> Exit + Outside Rejection returns the outside-settlement denial`
 
 ## Phase 2 — Population + broader survival production
 
@@ -822,11 +828,11 @@ Runtime acceptance target:
 - Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
 - Persistent-runtime bundle: 1.5 — player build materials + active Construction XP
-- Persistent-runtime bundle status: PARTIAL RUNTIME VERIFIED
+- Persistent-runtime bundle status: FINAL-GATE HARNESS IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 positive active-build costs/XP are runtime verified; remaining negative-path and persistence checks can be bundled into one short pass.
-- Current checklist item: finish Bundle 1.5 negative-path/persistence acceptance: insufficient Wood, invalid/reserved rejection, exit/re-entry persistence and outside-settlement command rejection.
+- Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 positive active-build costs/XP are runtime verified and the final-gate harness is implemented; one short runtime pass remains.
+- Current checklist item: run the Bundle 1.5 final gate: Self-Test PASS -> capture build baseline -> exit/re-enter -> baseline PASS -> Exit + Outside Rejection.
 - Current objective: finish the real player-building/material/active-XP seam that keeps Freeform settlement building foundation and Persistence/Construction XP ownership in progress, then close remaining Phase-1 gates before Phase 2.
 
 ## Verification classifications
@@ -935,6 +941,7 @@ Runtime acceptance target:
 - The final gate proved Worker #1 identity, Allowed Jobs, Hunger/Thirst/Energy, all personal skill XP totals and player Construction XP remain unchanged through idle time, runtime-instance rebuild and player save/load.
 - Developer Construction placement remains outside XP ownership; Bundle 1.5 adds a separate material-consuming player-build path so the dev harness stays no-cost/no-XP.
 - Bundle 1.5 player-build ownership is verified-static: stable piece key -> normal-player `settlementbuild` command -> active `SettlementInstance.placePlayerPiece(...)` -> settlement-material consume -> persistent placement -> one active Construction XP award.
+- Bundle 1.5 final-gate harness is verified-static: gameplay and disposable tests share `SettlementPlayerBuildTransaction`; the self-test uses only a new disposable `SettlementState`, while persistence capture/check stores read-only process-local signatures/totals/XP.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -1004,7 +1011,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Bundle 1.5 positive path is runtime VERIFIED. In one short pass, verify insufficient Wood causes no placement/resource/XP change, invalid/reserved placement causes no resource/XP change, exit/re-entry preserves the newly player-built pieces/reduced totals, and `settlementbuild` is rejected outside the settlement. Zero-Food Hunger block/resupply remains optional carryover.
+**Next checklist item:** Pull once and run the Con Revamp Bundle 1.5 Final Gate: Self-Test -> Disable All Jobs/Reset Needs if required -> Capture Build Baseline -> Exit/Re-enter -> Check Build Baseline -> Exit + Outside Rejection. Zero-Food Hunger block/resupply remains optional carryover.
 
 **Files/systems already inspected:**
 

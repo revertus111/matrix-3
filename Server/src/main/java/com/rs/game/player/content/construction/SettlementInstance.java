@@ -209,41 +209,31 @@ public final class SettlementInstance {
 
         int plotX = toPlotX(worldTile.getX());
         int plotY = toPlotY(worldTile.getY());
-        if (isReservedInfrastructureTile(plotX, plotY, worldTile.getPlane())) {
-            return "That tile is reserved for settlement infrastructure.";
+        SettlementPlayerBuildTransaction.Result result =
+                SettlementPlayerBuildTransaction.apply(
+                        state,
+                        definition,
+                        plotX,
+                        plotY,
+                        worldTile.getPlane(),
+                        rotation,
+                        isReservedInfrastructureTile(plotX, plotY, worldTile.getPlane()));
+        if (!result.isSuccess()) {
+            return result.getMessage();
         }
 
-        SettlementResource resource = definition.getBuildResource();
-        long cost = definition.getBuildCost();
-        SettlementPlacedPiece saved;
-        synchronized (state) {
-            if (resource == null || cost <= 0L || state.getResourceAmount(resource) < cost) {
-                return "You need " + cost + " " + (resource == null ? "material" : resource.getDisplayName())
-                        + " in settlement storage to build " + definition.getDisplayName() + ".";
-            }
-
-            saved = state.place(definition, plotX, plotY, worldTile.getPlane(), rotation);
-            if (saved == null) {
-                return "That settlement slot is already occupied.";
-            }
-
-            long consumed = state.removeResource(resource, cost);
-            if (consumed != cost) {
-                state.remove(saved.getPieceId());
-                return "Settlement materials changed before placement could complete.";
-            }
-        }
-
+        SettlementPlacedPiece saved = result.getPlacedPiece();
         spawnProjectedPiece(saved);
         checkStarterShelterMilestone();
 
-        double xp = definition.getConstructionXp();
+        double xp = result.getConstructionXp();
         if (xp > 0.0) {
             player.getSkills().addXp(Skills.CONSTRUCTION, xp, true);
         }
 
-        return "Built " + definition.getDisplayName() + " for " + cost + " "
-                + resource.getDisplayName() + " and earned " + (long) xp + " Construction XP.";
+        return "Built " + definition.getDisplayName() + " for " + result.getCost() + " "
+                + result.getResource().getDisplayName() + " and earned "
+                + (long) xp + " Construction XP.";
     }
 
     public String moveDevelopmentPiece(int objectId, WorldTile source, WorldTile destination) {

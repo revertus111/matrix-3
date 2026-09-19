@@ -486,3 +486,11 @@
 - User runtime confirmed Door = 2 Wood / 8 base Construction XP.
 - Occupied placement returned the authoritative `That settlement slot is already occupied.` rejection; source order keeps that rejection before material consumption and XP award.
 - Bundle 1.5 is PARTIAL RUNTIME VERIFIED; remaining checks are insufficient Wood, invalid/reserved rejection, exit/re-entry persistence and outside-settlement command rejection.
+
+2026-09-19 - Bundle 1.5 final-gate harness
+- Extracted atomic persistent placement + settlement-material mutation into `SettlementPlayerBuildTransaction`; runtime projection and player XP remain owned by `SettlementInstance`.
+- Added disposable `SettlementBundle15FinalCheck` self-test using the exact gameplay transaction for configured costs and insufficient/reserved/invalid/occupied no-mutation behavior.
+- Added process-local Bundle 1.5 build baseline capture/check for exact saved piece signatures, settlement resource totals and Construction XP across exit/re-entry.
+- Added Con Revamp Bundle 1.5 Self-Test, Capture Build Baseline, Check Build Baseline and ordered Exit + Outside Rejection controls.
+- Short-consume rollback now restores any partial material removal as well as removing the provisional persistent piece before failure.
+- No worker AI, Phase 2 population, inventory/bank material path or devspawn authority changed.

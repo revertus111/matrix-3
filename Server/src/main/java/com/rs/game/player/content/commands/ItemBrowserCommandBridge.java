@@ -15,6 +15,7 @@ import com.rs.game.player.content.construction.SettlementBuildPiece;
 import com.rs.game.player.content.construction.SettlementBundle12FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle13FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle14FinalGate;
+import com.rs.game.player.content.construction.SettlementBundle15FinalCheck;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementResourceSelfTest;
@@ -143,7 +144,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -410,6 +411,27 @@ public final class ItemBrowserCommandBridge {
             String result = SettlementBundle14FinalGate.check(player);
             System.out.println("[SettlementBundle14FinalGate] " + result);
             player.getPackets().sendGameMessage("Bundle 1.4 gate: " + result);
+            return true;
+        }
+
+        if ("bundle15selftest".equals(operation)) {
+            String result = SettlementBundle15FinalCheck.runSelfTest();
+            System.out.println("[SettlementBundle15FinalCheck] " + result);
+            player.getPackets().sendGameMessage("Bundle 1.5 self-test: " + result);
+            return true;
+        }
+
+        if ("bundle15baseline".equals(operation)) {
+            String result = SettlementBundle15FinalCheck.capture(player);
+            System.out.println("[SettlementBundle15FinalCheck] " + result);
+            player.getPackets().sendGameMessage("Bundle 1.5 gate: " + result);
+            return true;
+        }
+
+        if ("bundle15check".equals(operation)) {
+            String result = SettlementBundle15FinalCheck.check(player);
+            System.out.println("[SettlementBundle15FinalCheck] " + result);
+            player.getPackets().sendGameMessage("Bundle 1.5 gate: " + result);
             return true;
         }
 
