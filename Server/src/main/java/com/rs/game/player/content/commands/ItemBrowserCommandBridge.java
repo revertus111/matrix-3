@@ -15,6 +15,7 @@ import com.rs.game.player.content.construction.SettlementBundle12FinalCheck;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementResourceSelfTest;
+import com.rs.game.player.content.construction.SettlementShelterSelfTest;
 import com.rs.game.player.content.construction.SettlementStateAudit;
 import com.rs.game.player.content.construction.SettlementStateSelfTest;
 
@@ -131,7 +132,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -197,6 +198,24 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("shelter".equals(operation)) {
+            boolean newlyCompleted = player.getSettlementState().tryCompleteStarterShelterMilestone();
+            if (newlyCompleted) {
+                player.getPackets().sendGameMessage(
+                        "<col=3CB371>Starter shelter milestone complete!</col>");
+            }
+            player.getPackets().sendGameMessage(
+                    "Starter shelter: " + player.getSettlementState().getStarterShelterStatus());
+            return true;
+        }
+
+        if ("shelterselftest".equals(operation)) {
+            String result = SettlementShelterSelfTest.run();
+            System.out.println("[SettlementShelterSelfTest] " + result);
+            player.getPackets().sendGameMessage("Starter shelter self-test: " + result);
+            return true;
+        }
+
         if ("audit".equals(operation)) {
             String result = SettlementStateAudit.run(player.getSettlementState());
             System.out.println("[SettlementStateAudit] " + result);
@@ -219,7 +238,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|audit|selftest|finalcheck>");
         return true;
     }
 
