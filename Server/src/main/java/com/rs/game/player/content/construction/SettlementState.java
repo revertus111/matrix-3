@@ -3,9 +3,11 @@ package com.rs.game.player.content.construction;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Player-owned persistent settlement data.
@@ -20,14 +22,20 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 2;
+    private static final int CURRENT_SCHEMA_VERSION = 3;
     public static final int STARTER_STORAGE_CAPACITY = 200;
+
+    public static final int STARTER_SHELTER_WALLS = 4;
+    public static final int STARTER_SHELTER_FLOORS = 4;
+    public static final int STARTER_SHELTER_DOORS = 1;
+    public static final long STARTER_SHELTER_RESOURCE_EACH = 1L;
 
     private int schemaVersion = CURRENT_SCHEMA_VERSION;
     private long nextPieceId = 1L;
     private List<SettlementPlacedPiece> pieces = new ArrayList<SettlementPlacedPiece>();
     private Map<String, Long> resources = new HashMap<String, Long>();
     private int storageCapacity = STARTER_STORAGE_CAPACITY;
+    private Set<String> completedMilestones = new HashSet<String>();
 
     public synchronized void normalize() {
         if (schemaVersion <= 0) {
@@ -41,6 +49,15 @@ public final class SettlementState implements Serializable {
         }
         if (storageCapacity <= 0) {
             storageCapacity = STARTER_STORAGE_CAPACITY;
+        }
+        if (completedMilestones == null) {
+            completedMilestones = new HashSet<String>();
+        }
+        Iterator<String> milestoneIterator = completedMilestones.iterator();
+        while (milestoneIterator.hasNext()) {
+            if (SettlementMilestone.forKey(milestoneIterator.next()) == null) {
+                milestoneIterator.remove();
+            }
         }
         Iterator<Map.Entry<String, Long>> resourceIterator = resources.entrySet().iterator();
         while (resourceIterator.hasNext()) {
@@ -156,6 +173,77 @@ public final class SettlementState implements Serializable {
         normalize();
         int index = indexOf(pieceId);
         return index < 0 ? null : pieces.remove(index);
+    }
+
+    public synchronized int countPieces(SettlementBuildRole role) {
+        normalize();
+        if (role == null) {
+            return 0;
+        }
+        int count = 0;
+        for (SettlementPlacedPiece piece : pieces) {
+            if (piece == null) {
+                continue;
+            }
+            SettlementBuildPiece definition = SettlementBuildPiece.forKey(piece.getDefinitionKey());
+            if (definition != null && definition.getRole() == role) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public synchronized boolean isMilestoneComplete(SettlementMilestone milestone) {
+        normalize();
+        return milestone != null && completedMilestones.contains(milestone.getKey());
+    }
+
+    public synchronized boolean meetsStarterShelterRequirements() {
+        normalize();
+        if (countPieces(SettlementBuildRole.WALL) < STARTER_SHELTER_WALLS
+                || countPieces(SettlementBuildRole.FLOOR) < STARTER_SHELTER_FLOORS
+                || countPieces(SettlementBuildRole.DOOR) < STARTER_SHELTER_DOORS) {
+            return false;
+        }
+        for (SettlementResource resource : SettlementResource.values()) {
+            if (getResourceAmount(resource) < STARTER_SHELTER_RESOURCE_EACH) {
+                return false;
+            }
+        }
+        return getStorageCapacity() >= STARTER_STORAGE_CAPACITY;
+    }
+
+    /**
+     * @return true only when this call newly completes the milestone.
+     */
+    public synchronized boolean tryCompleteStarterShelterMilestone() {
+        normalize();
+        if (isMilestoneComplete(SettlementMilestone.STARTER_SHELTER)
+                || !meetsStarterShelterRequirements()) {
+            return false;
+        }
+        completedMilestones.add(SettlementMilestone.STARTER_SHELTER.getKey());
+        return true;
+    }
+
+    public synchronized String getStarterShelterStatus() {
+        normalize();
+        int walls = countPieces(SettlementBuildRole.WALL);
+        int floors = countPieces(SettlementBuildRole.FLOOR);
+        int doors = countPieces(SettlementBuildRole.DOOR);
+
+        StringBuilder status = new StringBuilder();
+        status.append(isMilestoneComplete(SettlementMilestone.STARTER_SHELTER)
+                ? "COMPLETE" : "INCOMPLETE");
+        status.append(" | walls=").append(walls).append("/").append(STARTER_SHELTER_WALLS);
+        status.append(", floors=").append(floors).append("/").append(STARTER_SHELTER_FLOORS);
+        status.append(", doors=").append(doors).append("/").append(STARTER_SHELTER_DOORS);
+        for (SettlementResource resource : SettlementResource.values()) {
+            status.append(", ").append(resource.getDisplayName()).append("=")
+                    .append(getResourceAmount(resource)).append("/")
+                    .append(STARTER_SHELTER_RESOURCE_EACH);
+        }
+        return status.toString();
     }
 
     public synchronized long getResourceAmount(SettlementResource resource) {
