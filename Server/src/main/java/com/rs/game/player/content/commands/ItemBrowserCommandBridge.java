@@ -14,6 +14,7 @@ import com.rs.game.player.Skills;
 import com.rs.game.player.content.construction.SettlementBuildPiece;
 import com.rs.game.player.content.construction.SettlementBundle12FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle13FinalCheck;
+import com.rs.game.player.content.construction.SettlementBundle14FinalGate;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementResourceSelfTest;
@@ -142,7 +143,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -398,6 +399,20 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("bundle14gatebaseline".equals(operation)) {
+            String result = SettlementBundle14FinalGate.capture(player);
+            System.out.println("[SettlementBundle14FinalGate] " + result);
+            player.getPackets().sendGameMessage("Bundle 1.4 gate: " + result);
+            return true;
+        }
+
+        if ("bundle14gatecheck".equals(operation)) {
+            String result = SettlementBundle14FinalGate.check(player);
+            System.out.println("[SettlementBundle14FinalGate] " + result);
+            player.getPackets().sendGameMessage("Bundle 1.4 gate: " + result);
+            return true;
+        }
+
         if ("workerjob".equals(operation)) {
             SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
             if (worker == null) {
@@ -478,7 +493,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|audit|selftest|finalcheck>");
         return true;
     }
 
