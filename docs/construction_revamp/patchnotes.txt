@@ -445,3 +445,10 @@
 - Developer placement still awards no Construction XP; active-build XP is deferred until the material-consuming player build path exists.
 - Added SettlementWorkerProgressionSelfTest, owner-only progression status, and Con Revamp Progress Status/Self-Test controls.
 - Remaining zero-Food and restart-persistence carryover is bundled into the progression runtime acceptance pass.
+
+2026-09-19 - Bundle 1.4 worker progression productive path runtime verified
+- User confirmed the progression slice works in the live settlement.
+- Progress Self-Test returned PASS for stable skills, job mapping, XP gain, level curve and serialization.
+- Live worker progression matched job ownership: Food Gathering increased 0 -> 12 XP, Mining 0 -> 24 XP, and Hauling 6 -> 24 XP while productive work completed.
+- Player Construction XP increased 187522810 -> 187522811 after the next successful stored output and then -> 187522814 after further productive deposits, confirming the 1 base XP per stored resource award seam.
+- Productive progression/XP does not need re-testing. Remaining Bundle 1.4 runtime gate is blocked/idle no-XP behavior plus exit/re-entry and logout/relog persistence; zero-Food block/resupply remains optional carryover.

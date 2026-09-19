@@ -239,10 +239,10 @@ Phase 1 Bundle 1.4 — first worker
 [x] Source ownership: idle/waiting, Haul-disabled, storage-full and failed-deposit paths award no passive Construction XP.
 [x] Source ownership: Dev/Construction palette placement still awards zero Construction XP; active-build XP remains deferred until real material-consuming placement owns it.
 [x] Con Revamp exposes Progress Status and disposable Progress Self-Test.
-[ ] Server and Client clean/build successfully after worker-progression patch.
-[ ] Con Revamp Progress Self-Test reports PASS for stable skills + job mapping + XP gain + level curve + serialization.
-[ ] One completed Wood gather increases Worker #1 Woodcutting XP; Stone/Ore increases Mining; Food increases provisional Food Gathering.
-[ ] Successful deposit increases Worker #1 Hauling XP and player Construction XP by the approved passive amount.
+[x] Server and Client launch successfully after worker-progression patch.
+[x] Con Revamp Progress Self-Test reports PASS for stable skills + job mapping + XP gain + level curve + serialization.
+[x] Productive gathers increase the mapped Worker #1 skill XP at runtime; observed Food Gathering 0 -> 12 and Mining 0 -> 24 while Woodcutting remained independently tracked.
+[x] Successful deposits increase Worker #1 Hauling XP and player Construction XP by the approved passive amount; observed Hauling 6 -> 24 and Construction XP 187522810 -> 187522814 across productive deposits.
 [ ] With Haul OFF or all gathering OFF, waiting/idle time does not increase player Construction XP.
 [ ] Exit/re-enter preserves Worker #1 skill XP and needs exactly.
 [ ] Logout/relog preserves Worker #1 skill XP and needs exactly.

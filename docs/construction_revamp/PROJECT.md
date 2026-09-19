@@ -716,7 +716,7 @@ Acceptance target:
 
 `Needs Self-Test PASS -> Hunger critical consumes Food / No Food blocks -> Food supplied resumes -> Thirst critical drinks/resumes -> Energy critical rests/resumes -> exit/re-entry + logout/relog preserve need values`
 
-#### Worker progression + Construction XP — IMPLEMENTED / NEEDS TEST
+#### Worker progression + Construction XP — RUNTIME VERIFIED / RESTART GATE REMAINS
 
 Persistent worker progression:
 
@@ -803,8 +803,8 @@ Remaining Bundle 1.4 sequence after progression acceptance:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA remains approved for the active Bundle 1.4 workstream. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: persistent worker skill progression + productive-worker Construction XP ownership is implemented verified-static; run the consolidated progression/persistence acceptance pass.
-- Current objective: runtime-verify personal worker XP, passive Construction XP gating and restart persistence, then close Bundle 1.4 if the carryover persistence checks pass.
+- Current checklist item: productive worker skill XP + passive Construction XP awards are runtime VERIFIED. Finish the remaining blocked/idle no-XP check plus exit/re-entry and logout/relog persistence.
+- Current objective: close the remaining restart/persistence gate without re-testing already accepted progression awards, then close Bundle 1.4 if those carryover checks pass.
 
 ## Verification classifications
 
@@ -903,8 +903,9 @@ Remaining Bundle 1.4 sequence after progression acceptance:
 - Worker needs is runtime VERIFIED: the 2026-09-19 acceptance run showed natural work-cycle need changes, `SettlementWorkerNeedsSelfTest PASS`, critical Hunger recovery, critical Thirst recovery, critical Energy recovery and reset controls all functioning in the live settlement.
 - Gather/haul acceptance is runtime VERIFIED from the same consolidated pass: Worker #1 gathers/hauls successfully and the user confirmed the remaining job-toggle behavior works.
 - The explicit zero-Food blocked-state branch and restart persistence checks remain recorded as carryover into the progression/basic-XP runtime pass so they can be covered without another dedicated test launch.
-- Worker progression is verified-static: schema-v7 `SettlementWorkerState.skillXp` persists stable personal skill XP, `SettlementWorkerJob` maps current work to skills/XP, and `SettlementWorkerProgressionSelfTest` verifies stable keys, RuneScape-style levels and serialization.
-- Construction XP ownership is verified-static: only a successful worker deposit calls `SettlementInstance.recordWorkerDepositProgress(...)`, which awards Hauling XP plus exactly 1 base Construction XP per stored resource through Matrix3 `Skills.addXp(..., true)`; blocked/idle paths never call the award seam.
+- Worker progression is runtime VERIFIED for the productive path: `SettlementWorkerProgressionSelfTest` returned PASS and live work increased the expected personal skills. Runtime evidence showed Food Gathering 0 -> 12 XP, Mining 0 -> 24 XP, and Hauling 6 -> 24 XP while work completed.
+- Productive-worker Construction XP is runtime VERIFIED: live Progress Status showed Construction XP 187522810 -> 187522811 after the next successful deposit, then -> 187522814 after additional productive deposits, matching the 1-base-XP-per-stored-resource seam.
+- Source ownership remains verified-static for the negative path: only a successful worker deposit calls `SettlementInstance.recordWorkerDepositProgress(...)`; blocked/idle paths have no award call. The explicit runtime no-XP waiting check remains open.
 - Developer Construction placement remains outside XP ownership until the real material-consuming active-build path is implemented.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
@@ -975,7 +976,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build once, run Progress Self-Test, note Progress Status, allow one gather + successful deposit and confirm mapped worker XP/Hauling XP/Construction XP increase. Then disable Haul/all gathering long enough to confirm Construction XP does not rise. Exit/re-enter and logout/relog once to verify worker skill XP + needs persist. If practical, fold in the zero-Food block/resupply carryover. PASS closes the Bundle 1.4 worker gate.
+**Next checklist item:** Do not re-test productive progression. In one short session, disable Haul or all gathering and confirm Construction XP stays fixed while the worker waits, then exit/re-enter and logout/relog once to verify Worker skill XP + Needs persist. If practical, fold in the zero-Food block/resupply carryover. PASS closes the Bundle 1.4 worker gate.
 
 **Files/systems already inspected:**
 
