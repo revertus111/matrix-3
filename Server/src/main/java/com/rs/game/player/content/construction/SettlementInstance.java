@@ -1,5 +1,7 @@
 package com.rs.game.player.content.construction;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.rs.executor.GameExecutorManager;
@@ -8,6 +10,7 @@ import com.rs.game.World;
 import com.rs.game.WorldObject;
 import com.rs.game.WorldTile;
 import com.rs.game.map.MapBuilder;
+import com.rs.game.npc.NPC;
 import com.rs.game.player.Player;
 import com.rs.game.player.controllers.Controller;
 import com.rs.game.player.controllers.SettlementControler;
@@ -34,6 +37,9 @@ public final class SettlementInstance {
     private volatile int[] boundChunks;
     private volatile boolean loaded;
     private volatile boolean destroyed;
+
+    private final List<WorldObject> starterResourceObjects = new ArrayList<WorldObject>();
+    private final List<NPC> starterResourceNpcs = new ArrayList<NPC>();
 
     private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
         this.player = player;
@@ -130,6 +136,7 @@ public final class SettlementInstance {
         for (SettlementPlacedPiece piece : state.snapshotPieces()) {
             spawnProjectedPiece(piece);
         }
+        spawnStarterResourceNodes();
 
         player.setForceNextMapLoadRefresh(true);
         player.loadMapRegions();
@@ -161,6 +168,9 @@ public final class SettlementInstance {
 
         int plotX = toPlotX(worldTile.getX());
         int plotY = toPlotY(worldTile.getY());
+        if (SettlementResourceNode.occupiesPlotTile(plotX, plotY, worldTile.getPlane())) {
+            return "That tile is reserved for a starter settlement resource node.";
+        }
         SettlementPlacedPiece saved = state.place(
                 definition, plotX, plotY, worldTile.getPlane(), rotation);
         if (saved == null) {
@@ -182,10 +192,17 @@ public final class SettlementInstance {
             return "That object is not owned by the persistent settlement.";
         }
 
+        int destinationPlotX = toPlotX(destination.getX());
+        int destinationPlotY = toPlotY(destination.getY());
+        if (SettlementResourceNode.occupiesPlotTile(
+                destinationPlotX, destinationPlotY, destination.getPlane())) {
+            return "That destination is reserved for a starter settlement resource node.";
+        }
+
         SettlementPlacedPiece moved = state.move(
                 current.getPieceId(),
-                toPlotX(destination.getX()),
-                toPlotY(destination.getY()),
+                destinationPlotX,
+                destinationPlotY,
                 destination.getPlane());
         if (moved == null) {
             return "The destination settlement slot is occupied or invalid.";
@@ -206,10 +223,17 @@ public final class SettlementInstance {
             return "That object is not owned by the persistent settlement.";
         }
 
+        int destinationPlotX = toPlotX(destination.getX());
+        int destinationPlotY = toPlotY(destination.getY());
+        if (SettlementResourceNode.occupiesPlotTile(
+                destinationPlotX, destinationPlotY, destination.getPlane())) {
+            return "That destination is reserved for a starter settlement resource node.";
+        }
+
         SettlementPlacedPiece duplicate = state.duplicate(
                 current.getPieceId(),
-                toPlotX(destination.getX()),
-                toPlotY(destination.getY()),
+                destinationPlotX,
+                destinationPlotY,
                 destination.getPlane());
         if (duplicate == null) {
             return "The destination settlement slot is occupied or invalid.";
@@ -256,6 +280,132 @@ public final class SettlementInstance {
 
         removeProjectedPiece(removed);
         return "Settlement piece removed.";
+    }
+
+    public boolean handleStarterResourceObjectClick(WorldObject object) {
+        if (!loaded || object == null || !containsWorldTile(object)) {
+            return false;
+        }
+        SettlementResourceNode node = SettlementResourceNode.forObject(
+                object.getId(),
+                toPlotX(object.getX()),
+                toPlotY(object.getY()),
+                object.getPlane());
+        if (node == null) {
+            return false;
+        }
+        player.getActionManager().setAction(new SettlementGatherAction(this, node));
+        return true;
+    }
+
+    public boolean handleStarterResourceNpcClick(NPC npc) {
+        if (!loaded || npc == null || boundChunks == null || npc.getPlane() != PLOT_PLANE) {
+            return false;
+        }
+        int plotX = toPlotX(npc.getX());
+        int plotY = toPlotY(npc.getY());
+        if (plotX < 0 || plotX >= PLOT_TILES || plotY < 0 || plotY >= PLOT_TILES) {
+            return false;
+        }
+        SettlementResourceNode node = SettlementResourceNode.forNpc(
+                npc.getId(), plotX, plotY, npc.getPlane());
+        if (node == null) {
+            return false;
+        }
+        player.getActionManager().setAction(new SettlementGatherAction(this, node));
+        return true;
+    }
+
+    public boolean isStarterResourceNodeAvailable(SettlementResourceNode node) {
+        if (!loaded || destroyed || node == null || boundChunks == null) {
+            return false;
+        }
+
+        if (node.getSourceKind() == SettlementResourceNode.SourceKind.OBJECT) {
+            WorldTile tile = new WorldTile(
+                    toWorldX(node.getPlotX()),
+                    toWorldY(node.getPlotY()),
+                    PLOT_PLANE);
+            WorldObject live = World.getObjectWithType(tile, node.getObjectType());
+            return live != null && live.getId() == node.getRuntimeId();
+        }
+
+        for (NPC npc : starterResourceNpcs) {
+            if (npc != null && !npc.hasFinished()
+                    && npc.getId() == node.getRuntimeId()
+                    && toPlotX(npc.getX()) == node.getPlotX()
+                    && toPlotY(npc.getY()) == node.getPlotY()
+                    && npc.getPlane() == PLOT_PLANE) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public long gatherStarterResource(SettlementResourceNode node) {
+        if (!isStarterResourceNodeAvailable(node)) {
+            return 0L;
+        }
+        return state.addResource(node.getResource(), 1L);
+    }
+
+    private void spawnStarterResourceNodes() {
+        if (boundChunks == null || destroyed) {
+            return;
+        }
+        removeStarterResourceNodes();
+
+        for (SettlementResourceNode node : SettlementResourceNode.values()) {
+            WorldTile tile = new WorldTile(
+                    toWorldX(node.getPlotX()),
+                    toWorldY(node.getPlotY()),
+                    PLOT_PLANE);
+            if (node.getSourceKind() == SettlementResourceNode.SourceKind.OBJECT) {
+                WorldObject object = new WorldObject(
+                        node.getRuntimeId(),
+                        node.getObjectType(),
+                        0,
+                        tile.getX(),
+                        tile.getY(),
+                        tile.getPlane());
+                World.spawnObject(object);
+                starterResourceObjects.add(object);
+            } else {
+                NPC npc = World.spawnNPC(
+                        node.getRuntimeId(),
+                        tile,
+                        -1,
+                        false,
+                        true);
+                if (npc != null) {
+                    starterResourceNpcs.add(npc);
+                }
+            }
+        }
+    }
+
+    private void removeStarterResourceNodes() {
+        for (WorldObject resourceObject : starterResourceObjects) {
+            if (resourceObject == null) {
+                continue;
+            }
+            WorldTile tile = new WorldTile(
+                    resourceObject.getX(),
+                    resourceObject.getY(),
+                    resourceObject.getPlane());
+            WorldObject live = World.getObjectWithType(tile, resourceObject.getType());
+            if (live != null && live.getId() == resourceObject.getId()) {
+                World.removeObject(live);
+            }
+        }
+        starterResourceObjects.clear();
+
+        for (NPC npc : starterResourceNpcs) {
+            if (npc != null && !npc.hasFinished()) {
+                npc.finish();
+            }
+        }
+        starterResourceNpcs.clear();
     }
 
     public boolean containsWorldTile(WorldTile tile) {
@@ -381,6 +531,7 @@ public final class SettlementInstance {
         }
         destroyed = true;
         loaded = false;
+        removeStarterResourceNodes();
 
         final int[] bounds = boundChunks;
         boundChunks = null;
