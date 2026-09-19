@@ -10,6 +10,7 @@ import java.awt.Rectangle;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -27,7 +28,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 1.4 Worker #1 arrival is active.", 4);
+            "Ready. Bundle 1.4 Allowed Jobs is active.", 4);
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -41,6 +42,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(ConsoleTheme.subtitleLabel("Construction Revamp runtime harness"));
         content.add(Box.createVerticalStrut(16));
         content.add(createRuntimeCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createAllowedJobsCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createPersistenceCard());
         content.add(Box.createVerticalStrut(12));
@@ -170,15 +173,86 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return card;
     }
 
-    private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.4 Worker #1 arrival");
+    private JPanel createAllowedJobsCard() {
+        JPanel card = ConsoleTheme.createCard("Allowed Jobs — Worker #1");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Enter Settlement. Worker #1 should arrive automatically because Starter Shelter is already COMPLETE.\n"
-                + "2. Run Worker Arrival Check; expect PASS for exactly one persistent worker and exactly one live NPC projection.\n"
-                + "3. Worker Status shows stable id/name/definition/home coordinates plus saved/runtime counts.\n"
-                + "4. Exit and re-enter; the same Worker #1 id must rebuild without creating a duplicate.\n"
-                + "5. This slice intentionally keeps the worker stationary/non-combat; Allowed Jobs and gather/haul AI are the next Bundle 1.4 patch.",
+                "Server-authoritative allowlist. New workers start with every job OFF. "
+                + "Checkbox clicks explicitly set the saved permission; use Jobs Status for authoritative readback.",
+                4));
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel checks = new JPanel(new GridLayout(0, 1, 4, 4));
+        checks.setOpaque(false);
+        checks.setAlignmentX(LEFT_ALIGNMENT);
+        checks.add(createJobCheckBox("Gather Wood", "gather-wood"));
+        checks.add(createJobCheckBox("Gather Food", "gather-food"));
+        checks.add(createJobCheckBox("Gather Stone", "gather-stone"));
+        checks.add(createJobCheckBox("Gather Basic Ore", "gather-basic-ore"));
+        checks.add(createJobCheckBox("Haul", "haul"));
+        card.add(checks);
+
+        card.add(Box.createVerticalStrut(8));
+
+        JButton jobsStatus = new JButton("Jobs Status");
+        JButton jobsSelfTest = new JButton("Jobs Self-Test");
+        JButton enableAll = new JButton("Enable All Jobs");
+        JButton disableAll = new JButton("Disable All Jobs");
+
+        ConsoleTheme.styleButton(jobsStatus);
+        ConsoleTheme.styleButton(jobsSelfTest);
+        ConsoleTheme.styleButton(enableAll);
+        ConsoleTheme.styleButton(disableAll);
+
+        jobsStatus.addActionListener(e -> queue(
+                "itembrowser settlement workerjobs",
+                "Jobs Status queued. Authoritative saved permissions will appear in game chat."));
+        jobsSelfTest.addActionListener(e -> queue(
+                "itembrowser settlement workerjobselftest",
+                "Jobs Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
+        enableAll.addActionListener(e -> queue(
+                "itembrowser settlement workerjobsall on",
+                "Enable All Jobs queued. Use Jobs Status to confirm saved state."));
+        disableAll.addActionListener(e -> queue(
+                "itembrowser settlement workerjobsall off",
+                "Disable All Jobs queued. Use Jobs Status to confirm saved state."));
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(jobsStatus);
+        buttons.add(jobsSelfTest);
+        buttons.add(enableAll);
+        buttons.add(disableAll);
+        card.add(buttons);
+        return card;
+    }
+
+    private JCheckBox createJobCheckBox(String label, String jobKey) {
+        JCheckBox checkBox = new JCheckBox(label);
+        checkBox.setOpaque(false);
+        checkBox.setForeground(ConsoleTheme.TEXT);
+        checkBox.setFont(ConsoleTheme.BODY_FONT);
+        checkBox.setFocusable(false);
+        checkBox.addActionListener(e -> queue(
+                "itembrowser settlement workerjob " + jobKey + " "
+                        + (checkBox.isSelected() ? "on" : "off"),
+                label + "=" + (checkBox.isSelected() ? "ON" : "OFF")
+                        + " queued. Use Jobs Status for authoritative readback."));
+        return checkBox;
+    }
+
+    private JPanel createPersistenceCard() {
+        JPanel card = ConsoleTheme.createCard("Bundle 1.4 Allowed Jobs persistence");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "1. Run Jobs Self-Test; expect PASS.\n"
+                + "2. Enable a mixed set such as Gather Wood + Haul while leaving the other jobs OFF.\n"
+                + "3. Run Jobs Status and verify the authoritative saved ON/OFF values.\n"
+                + "4. Exit/re-enter, then run Jobs Status again; the exact allowlist must persist.\n"
+                + "5. Logout/relog and re-enter; Jobs Status must still match.\n"
+                + "6. Gather/haul AI is intentionally not active yet; this slice locks policy persistence before behavior consumes it.",
                 8));
         return card;
     }
