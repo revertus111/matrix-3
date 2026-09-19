@@ -143,3 +143,8 @@
 - Added Shelter Status and Shelter Self-Test to Con Revamp.
 - Updated the Bundle 1.3 card to show the freeform starter shelter requirements and automatic/permanent milestone behavior.
 - Client Console remains a test/orchestration layer; milestone ownership stays in server-side `SettlementState`.
+
+
+2026-09-18 - Con Revamp Bundle 1.3 final check
+- Added `Bundle 1.3 Final Check` to Con Revamp.
+- The control delegates to the server-owned aggregate acceptance path and reports PASS / NOT READY / FAIL; Client Console does not fabricate or own settlement milestone progress.
