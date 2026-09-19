@@ -158,6 +158,7 @@ public final class SettlementWorkerNpc extends NPC {
         carriedResource = targetNode.getResource();
         carriedAmount = CARRY_CAPACITY;
         workerState.applyWorkCycleCost();
+        workerState.addSkillXp(job.getSkill(), job.getWorkerXp());
         nextGatherIndex = (targetNode.ordinal() + 1) % SettlementResourceNode.values().length;
         statusDetail = "Gathered " + carriedResource.getDisplayName() + "; awaiting haul.";
         targetNode = null;
@@ -197,6 +198,7 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
 
+        settlement.recordWorkerDepositProgress(workerState, added);
         carriedAmount -= (int) added;
         if (carriedAmount <= 0) {
             String deposited = carriedResource.getDisplayName();
@@ -388,6 +390,7 @@ public final class SettlementWorkerNpc extends NPC {
             summary.append(" | target=").append(targetNode.getKey());
         }
         summary.append(" | ").append(workerState.getNeedsSummary());
+        summary.append(" | Skills: ").append(workerState.getSkillsSummary());
         return summary.toString();
     }
 }

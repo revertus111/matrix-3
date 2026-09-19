@@ -10,6 +10,7 @@ import com.rs.game.item.Item;
 import com.rs.game.npc.NPC;
 import com.rs.game.player.CombatDefinitions;
 import com.rs.game.player.Player;
+import com.rs.game.player.Skills;
 import com.rs.game.player.content.construction.SettlementBuildPiece;
 import com.rs.game.player.content.construction.SettlementBundle12FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle13FinalCheck;
@@ -24,6 +25,7 @@ import com.rs.game.player.content.construction.SettlementWorkerJob;
 import com.rs.game.player.content.construction.SettlementWorkerJobsSelfTest;
 import com.rs.game.player.content.construction.SettlementWorkerNeed;
 import com.rs.game.player.content.construction.SettlementWorkerNeedsSelfTest;
+import com.rs.game.player.content.construction.SettlementWorkerProgressionSelfTest;
 import com.rs.game.player.content.construction.SettlementWorkerSelfTest;
 import com.rs.game.player.content.construction.SettlementWorkerState;
 
@@ -140,7 +142,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -251,6 +253,8 @@ public final class ItemBrowserCommandBridge {
                         "Allowed Jobs: " + worker.getAllowedJobsSummary());
                 player.getPackets().sendGameMessage(
                         "Needs: " + worker.getNeedsSummary());
+                player.getPackets().sendGameMessage(
+                        "Skills: " + worker.getSkillsSummary());
             }
             return true;
         }
@@ -372,6 +376,28 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workerprogress".equals(operation)) {
+            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
+            if (worker == null) {
+                player.getPackets().sendGameMessage("No starter worker exists yet.");
+            } else {
+                player.getPackets().sendGameMessage(
+                        "Worker #" + worker.getWorkerId() + " Skills: "
+                                + worker.getSkillsSummary());
+                player.getPackets().sendGameMessage(
+                        "Player Construction XP: "
+                                + (long) player.getSkills().getXp(Skills.CONSTRUCTION) + ".");
+            }
+            return true;
+        }
+
+        if ("workerprogressselftest".equals(operation)) {
+            String result = SettlementWorkerProgressionSelfTest.run();
+            System.out.println("[SettlementWorkerProgressionSelfTest] " + result);
+            player.getPackets().sendGameMessage("Worker Progression self-test: " + result);
+            return true;
+        }
+
         if ("workerjob".equals(operation)) {
             SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
             if (worker == null) {
@@ -452,7 +478,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|audit|selftest|finalcheck>");
         return true;
     }
 

@@ -12,6 +12,7 @@ import com.rs.game.WorldTile;
 import com.rs.game.map.MapBuilder;
 import com.rs.game.npc.NPC;
 import com.rs.game.player.Player;
+import com.rs.game.player.Skills;
 import com.rs.game.player.controllers.Controller;
 import com.rs.game.player.controllers.SettlementControler;
 import com.rs.utils.Logger;
@@ -29,6 +30,7 @@ public final class SettlementInstance {
     public static final int PLOT_PLANE = SettlementState.PLOT_PLANE;
 
     private static final int ENTRY_OFFSET = PLOT_TILES / 2;
+    private static final double PASSIVE_CONSTRUCTION_XP_PER_RESOURCE = 1.0;
 
     private final Player player;
     private final SettlementState state;
@@ -497,6 +499,23 @@ public final class SettlementInstance {
             return 0L;
         }
         return state.removeResource(resource, amount);
+    }
+
+    /**
+     * A productive worker earns personal Hauling XP and modest player
+     * Construction XP only when real output successfully enters settlement
+     * storage. Idle/waiting/blocked workers therefore produce no passive XP.
+     */
+    public void recordWorkerDepositProgress(SettlementWorkerState worker, long depositedAmount) {
+        if (!loaded || destroyed || worker == null || depositedAmount <= 0L) {
+            return;
+        }
+        SettlementWorkerJob haul = SettlementWorkerJob.HAUL;
+        worker.addSkillXp(haul.getSkill(), haul.getWorkerXp() * depositedAmount);
+        player.getSkills().addXp(
+                Skills.CONSTRUCTION,
+                PASSIVE_CONSTRUCTION_XP_PER_RESOURCE * depositedAmount,
+                true);
     }
 
     /**

@@ -47,6 +47,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createNeedsCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createProgressionCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createPersistenceCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createStatusCard());
@@ -307,17 +309,47 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return card;
     }
 
-    private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.4 consolidated acceptance");
+    private JPanel createProgressionCard() {
+        JPanel card = ConsoleTheme.createCard("Worker Progression / Construction XP");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Finish gather/haul toggles: Haul OFF holds cargo; Haul ON resumes; all gathers OFF stops new work; multiple gathers rotate.\n"
-                + "2. Run Needs Self-Test; expect PASS.\n"
-                + "3. With at least 1 Food stored, Set Hunger Critical: worker returns home, consumes exactly 1 Food, then resumes.\n"
-                + "4. With Food at 0, Set Hunger Critical: worker reports No Food and stops; add Food and it resumes automatically.\n"
-                + "5. Set Thirst Critical: worker returns home, drinks from the Phase-1 shelter water supply, then resumes.\n"
-                + "6. Set Energy Critical: worker returns home, rests, then resumes.\n"
-                + "7. Needs Status should change with work/recovery and survive exit/re-entry; logout/relog is the persistence gate.",
+                "Permanent Worker #1 skill XP uses RuneScape-style levels. Gathering awards the mapped worker skill; successful hauling awards Hauling XP and exactly 1 base Construction XP per stored resource. Idle/blocked work awards none.",
+                5));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton progressStatus = new JButton("Progress Status");
+        JButton progressSelfTest = new JButton("Progress Self-Test");
+        ConsoleTheme.styleButton(progressStatus);
+        ConsoleTheme.styleButton(progressSelfTest);
+
+        progressStatus.addActionListener(e -> queue(
+                "itembrowser settlement workerprogress",
+                "Progress Status queued. Worker skill XP/levels and player Construction XP will appear in game chat."));
+        progressSelfTest.addActionListener(e -> queue(
+                "itembrowser settlement workerprogressselftest",
+                "Progress Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
+
+        JPanel buttons = new JPanel(new GridLayout(1, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        buttons.add(progressStatus);
+        buttons.add(progressSelfTest);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createPersistenceCard() {
+        JPanel card = ConsoleTheme.createCard("Bundle 1.4 progression acceptance");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "1. Run Progress Self-Test; expect PASS.\n"
+                + "2. Run Progress Status and note Worker skill XP plus player Construction XP.\n"
+                + "3. Let Worker #1 complete one gather + deposit. The mapped gathering skill and Hauling XP must rise; Construction XP must rise only after the successful deposit.\n"
+                + "4. Disable Haul or all gathers and confirm waiting/idle time does not award Construction XP.\n"
+                + "5. Exit/re-enter: Worker skill XP and needs must remain unchanged.\n"
+                + "6. Logout/relog and re-enter: Worker skill XP and needs must still persist.\n"
+                + "7. Optional carryover: if Food can safely reach 0, critical Hunger must block with No Food and resume after Food returns.",
                 10));
         return card;
     }
