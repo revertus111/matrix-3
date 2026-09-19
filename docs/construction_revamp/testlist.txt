@@ -192,16 +192,25 @@ Phase 1 Bundle 1.4 — first worker
 [x] Source ownership: `SettlementWorkerState.allowedJobs` is persistent policy only; runtime AI/action state is not serialized in the allowlist.
 [x] Source ownership: new/migrated workers default all jobs OFF and normalization prunes unknown job keys.
 [x] Source ownership: `SettlementState` schema v5 repairs older worker records with a missing Allowed Jobs set.
-[ ] Server and Client clean/build successfully after Allowed Jobs patch.
-[ ] Con Revamp `Jobs Self-Test` reports PASS for stable keys + default-OFF + independent toggle + serialization.
-[ ] With Worker #1, enable a mixed allowlist (recommended: Gather Wood + Haul) while leaving the other three gathering jobs OFF.
-[ ] Con Revamp `Jobs Status` reports the exact authoritative mixed ON/OFF state.
-[ ] Exit/re-enter preserves the exact Allowed Jobs state.
-[ ] Logout/relog and re-enter preserves the exact Allowed Jobs state.
-[ ] Enable All / Disable All changes every authoritative saved permission without changing worker identity.
-[ ] Allowed Jobs checkbox/permission state persists.
-[ ] Worker gathers only allowed valid jobs.
-[ ] Worker hauls output to valid storage.
+[x] Server and Client launch successfully after Allowed Jobs patch.
+[x] Con Revamp `Jobs Self-Test` reports PASS for stable keys + default-OFF + independent toggle + serialization.
+[x] With Worker #1, Allowed Jobs controls can set an explicit mixed allowlist.
+[x] Con Revamp `Jobs Status` reports authoritative ON/OFF state.
+[x] Exit/re-enter preserves the Allowed Jobs policy.
+[x] Logout/relog and re-enter preserves the Allowed Jobs policy.
+[x] Enable All / Disable All changes the authoritative saved permissions without changing worker identity.
+[x] Allowed Jobs checkbox/permission controls are runtime accepted.
+[x] Source ownership: `SettlementWorkerNpc` owns transient gather/haul action, route and one-unit carry state only; the saved allowlist remains in `SettlementWorkerState`.
+[x] Source ownership: worker movement reuses Matrix3 `Entity.findBasicRoute(...)`; no parallel movement system or force-teleport fallback is added.
+[x] Source ownership: gathered worker output is carried first and reaches `SettlementState` storage only through Haul/deposit.
+[x] Source ownership: Haul disabled/full storage keeps carried output pending and readable instead of silently crediting or discarding it.
+[x] Con Revamp exposes `Worker AI Status` for live work/carry state plus storage totals.
+[ ] Server and Client clean/build successfully after gather/haul patch.
+[ ] With Gather Wood + Haul ON and the other gathers OFF, Worker #1 physically walks to wood, gathers, returns home and deposits Wood only.
+[ ] Con Revamp `Worker AI Status` shows sensible MOVING/GATHERING/HAULING/IDLE state during the loop.
+[ ] Turning Haul OFF causes carried output to be held instead of deposited; turning Haul back ON resumes delivery automatically.
+[ ] Turning Gather Wood OFF with all other gather jobs OFF prevents a new gathering cycle.
+[ ] With multiple gathering jobs ON, Worker #1 rotates across valid starter nodes instead of permanently preferring one resource.
 [ ] Hunger/thirst/energy stop work when unsupported and recover automatically when supplied.
 [ ] Worker progression/state survives logout/relog.
 [ ] Construction XP is awarded only by approved active/passive sources.

@@ -644,7 +644,7 @@ Acceptance target:
 
 `enter completed settlement -> Worker #1 auto-arrives -> Worker Arrival Check PASS -> exit/re-enter -> same worker id, one runtime NPC, no duplicate`
 
-#### Allowed Jobs foundation — IMPLEMENTED / NEEDS TEST
+#### Allowed Jobs foundation — RUNTIME VERIFIED
 
 Persistent policy owner:
 
@@ -666,9 +666,32 @@ Acceptance target:
 
 `Jobs Self-Test PASS -> enable mixed allowlist -> Jobs Status exact ON/OFF -> exit/re-enter unchanged -> logout/relog unchanged`
 
-Remaining Bundle 1.4 sequence after Allowed Jobs acceptance:
+Runtime acceptance on 2026-09-19 confirmed the Allowed Jobs controls/self-test/readback flow is working and the saved allowlist is ready to be consumed by worker AI.
 
-- Gathering/hauling.
+#### Gather / haul vertical slice — IMPLEMENTED / NEEDS TEST
+
+Runtime owner:
+
+- `SettlementWorkerNpc` now owns only transient work state: current node target, route, gathering timer, one-unit carried cargo and readable work status.
+- Persistent policy remains `SettlementWorkerState.allowedJobs`; the AI reads the live saved allowlist every cycle and never rewrites it.
+- Worker movement reuses Matrix3 `Entity.findBasicRoute(...)`; no parallel movement owner or force-teleport fallback was added.
+- A gathering permission maps to its existing `SettlementResourceNode`. The worker walks to the node, performs the node's existing gathering animation, and carries one settlement resource.
+- Carried output is not credited to settlement storage until `HAUL` is allowed and the worker physically returns to its stable home/storage access tile.
+- If Haul is disabled or storage is full, the worker keeps the carried unit and reports why it is waiting. Re-enabling Haul or freeing storage resumes delivery automatically.
+- With multiple gathering permissions enabled, the worker rotates across available starter nodes instead of permanently preferring the first enum entry.
+- Runtime cargo/action/path state is intentionally discarded with `SettlementInstance`; no new save schema is introduced by this slice.
+
+Developer acceptance:
+
+- `itembrowser settlement workerai` reports live Worker #1 work/carry state plus authoritative settlement storage totals.
+- Test Console -> Con Revamp exposes `Worker AI Status` and a compact gather/haul acceptance checklist.
+
+Acceptance target:
+
+`Gather Wood + Haul -> walk/gather/return/deposit -> Wood rises only -> Haul OFF holds cargo -> Haul ON resumes deposit -> gathering OFF stops new cycles`
+
+Remaining Bundle 1.4 sequence after gather/haul acceptance:
+
 - Hunger/thirst/energy.
 - Persistence and basic XP.
 
@@ -726,9 +749,9 @@ Remaining Bundle 1.4 sequence after Allowed Jobs acceptance:
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: SAP AAA approved the Bundle 1.4 Allowed Jobs persistence/control slice. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: Allowed Jobs persistence/controls are implemented verified-static; run Jobs Self-Test, set a mixed allowlist, verify authoritative status, then confirm the exact permissions survive exit/re-entry and logout/relog.
-- Current objective: runtime-verify persistent Allowed Jobs policy, then wire worker gathering/hauling AI so it consumes only the saved allowlist.
+- Approval state: SAP AAA remains approved for the active Bundle 1.4 workstream. Camera/ghost edge checks remain carryover and do not block this slice.
+- Current checklist item: gather/haul AI is implemented verified-static; runtime-test the Wood + Haul vertical slice, Haul-off carry hold/resume behavior and gathering-disable stop behavior.
+- Current objective: runtime-verify worker gathering/hauling, then continue directly into hunger/thirst/energy under the same Bundle 1.4 workstream.
 
 ## Verification classifications
 
@@ -818,6 +841,8 @@ Remaining Bundle 1.4 sequence after Allowed Jobs acceptance:
 - `SettlementWorkerJob` defines stable per-worker permission keys for four gathering jobs plus Haul; gathering jobs map to stable `SettlementResource` identities.
 - `SettlementWorkerState.allowedJobs` is a schema-v5 persistent allowlist that defaults empty, prunes unknown keys during normalization and exposes explicit server-owned ON/OFF mutation/readback.
 - `SettlementWorkerJobsSelfTest` verifies default-OFF behavior, per-job independence and serialization without touching the player's real worker.
+- Allowed Jobs controls/self-test/readback are runtime VERIFIED from the user's 2026-09-19 acceptance run.
+- `SettlementWorkerNpc` now consumes that persistent allowlist as a transient gather/haul state machine, uses Matrix3 basic routefinding to existing starter nodes, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this gather/haul implementation is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
@@ -886,7 +911,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build, enter the settlement, run Con Revamp -> `Jobs Self-Test` and expect PASS. Enable a mixed set such as Gather Wood + Haul, run `Jobs Status`, exit/re-enter and verify the exact ON/OFF values remain. Then logout/relog, re-enter and verify them once more. PASS advances directly to worker gather/haul AI.
+**Next checklist item:** Pull/build once, enter the settlement with Gather Wood + Haul enabled, note Resource Status, then watch Worker #1 complete the real walk -> gather -> return -> deposit loop. Use `Worker AI Status` for readable state. Then toggle Haul OFF/ON to verify carried-resource hold/resume and disable Gather Wood to verify no new cycle starts. PASS advances directly to hunger/thirst/energy.
 
 **Files/systems already inspected:**
 
@@ -977,4 +1002,4 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 ## Next recommended work
 
-The Bundle 1.2 persistence core is runtime verified. Continue with persistent edit operations, occupancy/validity rules, status accounting and removal/regression coverage; then close Bundle 1.2 and proceed to Bundle 1.3 starter resources/storage. Keep camera/ghost edge checks as carryover unless a regression appears.
+Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated session. If the worker obeys Gather Wood + Haul, holds cargo while Haul is OFF, resumes delivery when Haul returns, and stops starting new work when gathering is disabled, mark gather/haul runtime VERIFIED and continue directly to hunger/thirst/energy. Keep camera/ghost edge checks and older non-blocking persistence/world-object checks as carryover unless a regression appears.

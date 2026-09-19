@@ -376,3 +376,12 @@
 - Added owner-only Worker Jobs status, single-job ON/OFF, enable-all/disable-all and disposable `SettlementWorkerJobsSelfTest` paths.
 - Added a dedicated Con Revamp Allowed Jobs card with five checkbox command controls plus authoritative Jobs Status/Self-Test and all-on/all-off controls.
 - Runtime acceptance required for self-test PASS, mixed allowlist readback, exit/re-entry persistence and logout/relog persistence before gather/haul AI consumes the policy.
+
+2026-09-19 - Bundle 1.4 worker gather/haul vertical slice
+- Runtime-accepted the existing Allowed Jobs controls/self-test/readback as the policy gate for Worker #1.
+- Added transient worker AI on `SettlementWorkerNpc`: persistent Allowed Jobs are read live, while current target/path/gather timer/carried cargo remain runtime-only.
+- Worker #1 now uses Matrix3 basic routefinding to existing starter resource nodes, performs the existing node animation, carries one unit, and deposits only after the Haul permission is allowed and the worker returns to its home/storage access tile.
+- Haul-off and full-storage states retain carried output and expose readable status; re-enabling Haul/freeing storage resumes delivery.
+- Multiple allowed gathering jobs are selected round-robin across available starter nodes to avoid first-job starvation.
+- Added owner-only `itembrowser settlement workerai` plus Con Revamp `Worker AI Status` and a consolidated runtime acceptance checklist.
+- No new persistence schema, inventory/bank path, alternate movement owner, resource-node owner, or client gameplay authority was introduced.

@@ -28,7 +28,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 1.4 Allowed Jobs is active.", 4);
+            "Ready. Bundle 1.4 gather/haul AI is active.", 4);
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -76,6 +76,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton workerStatus = new JButton("Worker Status");
         JButton workerSelfTest = new JButton("Worker Self-Test");
         JButton workerArrivalCheck = new JButton("Worker Arrival Check");
+        JButton workerAiStatus = new JButton("Worker AI Status");
 
         ConsoleTheme.styleButton(enter);
         ConsoleTheme.styleButton(settlementStatus);
@@ -93,6 +94,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(workerStatus);
         ConsoleTheme.styleButton(workerSelfTest);
         ConsoleTheme.styleButton(workerArrivalCheck);
+        ConsoleTheme.styleButton(workerAiStatus);
 
         enter.addActionListener(e -> queue(
                 "itembrowser settlement enter",
@@ -143,11 +145,14 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         workerArrivalCheck.addActionListener(e -> queue(
                 "itembrowser settlement workercheck",
                 "Worker Arrival Check queued. PASS/NOT READY/FAIL will appear in game chat and the server console."));
+        workerAiStatus.addActionListener(e -> queue(
+                "itembrowser settlement workerai",
+                "Worker AI Status queued. Live work/carry state and storage totals will appear in game chat."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 376));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 420));
         buttons.add(enter);
         buttons.add(settlementStatus);
         buttons.add(exit);
@@ -164,6 +169,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(workerStatus);
         buttons.add(workerSelfTest);
         buttons.add(workerArrivalCheck);
+        buttons.add(workerAiStatus);
         card.add(buttons);
 
         card.add(Box.createVerticalStrut(10));
@@ -244,15 +250,15 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.4 Allowed Jobs persistence");
+        JPanel card = ConsoleTheme.createCard("Bundle 1.4 Gather / Haul acceptance");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Run Jobs Self-Test; expect PASS.\n"
-                + "2. Enable a mixed set such as Gather Wood + Haul while leaving the other jobs OFF.\n"
-                + "3. Run Jobs Status and verify the authoritative saved ON/OFF values.\n"
-                + "4. Exit/re-enter, then run Jobs Status again; the exact allowlist must persist.\n"
-                + "5. Logout/relog and re-enter; Jobs Status must still match.\n"
-                + "6. Gather/haul AI is intentionally not active yet; this slice locks policy persistence before behavior consumes it.",
+                "1. Keep Gather Wood + Haul ON and the other gather jobs OFF.\n"
+                + "2. Note Resource Status, then watch Worker #1 walk to wood, gather, return home and deposit.\n"
+                + "3. Worker AI Status should show live movement/gather/haul/carry state; Wood should rise while the other resources stay unchanged.\n"
+                + "4. Turn Haul OFF: Worker #1 may gather one unit but must hold it instead of depositing.\n"
+                + "5. Turn Haul back ON: the held unit should be delivered automatically.\n"
+                + "6. Turn Gather Wood OFF with the other gathers OFF: no new gathering cycle should start.",
                 8));
         return card;
     }

@@ -400,7 +400,7 @@ public final class SettlementInstance {
                 toWorldX(worker.getHomePlotX()),
                 toWorldY(worker.getHomePlotY()),
                 worker.getHomePlane());
-        SettlementWorkerNpc npc = new SettlementWorkerNpc(definition, worker, tile);
+        SettlementWorkerNpc npc = new SettlementWorkerNpc(this, definition, worker, tile);
         workerNpcs.add(npc);
 
         if (state.getWorkerCount() > beforeCount) {
@@ -429,6 +429,52 @@ public final class SettlementInstance {
             }
         }
         return false;
+    }
+
+    public String getWorkerAiSummary(long workerId) {
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc != null && !npc.hasFinished() && npc.getWorkerId() == workerId) {
+                return "Worker #" + workerId + " " + npc.getRuntimeWorkSummary();
+            }
+        }
+        return "Worker #" + workerId + " runtime NPC is not active.";
+    }
+
+    public WorldTile getWorkerNodeApproachTile(SettlementResourceNode node) {
+        if (!loaded || destroyed || boundChunks == null || node == null) {
+            return null;
+        }
+        int plotY = node.getPlotY() + 1;
+        if (!SettlementState.isValidPlotLocation(node.getPlotX(), plotY, PLOT_PLANE)) {
+            plotY = node.getPlotY() - 1;
+        }
+        if (!SettlementState.isValidPlotLocation(node.getPlotX(), plotY, PLOT_PLANE)) {
+            return null;
+        }
+        return new WorldTile(toWorldX(node.getPlotX()), toWorldY(plotY), PLOT_PLANE);
+    }
+
+    public WorldTile getWorkerStorageTile(SettlementWorkerState worker) {
+        if (!loaded || destroyed || boundChunks == null || worker == null
+                || !SettlementState.isValidPlotLocation(
+                        worker.getHomePlotX(), worker.getHomePlotY(), worker.getHomePlane())) {
+            return null;
+        }
+        return new WorldTile(
+                toWorldX(worker.getHomePlotX()),
+                toWorldY(worker.getHomePlotY()),
+                worker.getHomePlane());
+    }
+
+    public long getWorkerStorageRemaining() {
+        return loaded && !destroyed ? state.getStorageRemaining() : 0L;
+    }
+
+    public long depositWorkerResource(SettlementResource resource, long amount) {
+        if (!loaded || destroyed || resource == null || amount <= 0L) {
+            return 0L;
+        }
+        return state.addResource(resource, amount);
     }
 
     private boolean isReservedInfrastructureTile(int plotX, int plotY, int plane) {

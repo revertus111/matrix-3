@@ -138,7 +138,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -284,6 +284,23 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workerai".equals(operation)) {
+            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
+            if (worker == null) {
+                player.getPackets().sendGameMessage("No starter worker exists yet.");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Worker #" + worker.getWorkerId() + " runtime AI is inactive.");
+                return true;
+            }
+            player.getPackets().sendGameMessage(active.getWorkerAiSummary(worker.getWorkerId()));
+            player.getPackets().sendGameMessage(
+                    "Settlement storage: " + player.getSettlementState().getResourceSummary());
+            return true;
+        }
+
         if ("workerjob".equals(operation)) {
             SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
             if (worker == null) {
@@ -364,7 +381,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|audit|selftest|finalcheck>");
         return true;
     }
 
