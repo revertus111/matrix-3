@@ -413,3 +413,8 @@
 - `walkToward(...)` now trusts intelligent `calcFollow(...)`: when the live `WorldObject` / NPC route succeeds and queues zero steps, the worker immediately treats the target as interaction-ready and enters gathering.
 - Added a source comment preserving this Matrix3 route contract so the same regression is not reintroduced.
 - No changes to node ids, Allowed Jobs, persistence, storage accounting, haul behavior or movement ownership.
+
+2026-09-19 - Bundle 1.4 tree gather/haul runtime verified
+- User runtime confirmed the final strategy-owned handoff correction works for tree id 1276.
+- Worker #1 now reaches the valid tree interaction position and proceeds into the gather/haul loop instead of stalling.
+- Tree-specific routing/handoff is closed; remaining Bundle 1.4 gather/haul acceptance is limited to Haul OFF/ON hold-resume, gather-disable stop behavior and multi-job rotation.

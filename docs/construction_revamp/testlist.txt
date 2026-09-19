@@ -212,7 +212,7 @@ Phase 1 Bundle 1.4 — first worker
 [x] Source ownership: Haul disabled/full storage keeps carried output pending and readable instead of silently crediting or discarding it.
 [x] Con Revamp exposes `Worker AI Status` for live work/carry state plus storage totals.
 [ ] Server and Client clean/build successfully after gather/haul patch.
-[ ] Retest tree after strategy-owned handoff correction: Worker #1 reaches the same valid cutting tile, transitions into GATHERING, returns home and deposits Wood only.
+[x] Retest tree after strategy-owned handoff correction: Worker #1 reaches the same valid cutting tile and the Wood gather/haul loop now works at runtime.
 [ ] Con Revamp `Worker AI Status` shows sensible MOVING/GATHERING/HAULING/IDLE state during the loop.
 [ ] Turning Haul OFF causes carried output to be held instead of deposited; turning Haul back ON resumes delivery automatically.
 [ ] Turning Gather Wood OFF with all other gather jobs OFF prevents a new gathering cycle.

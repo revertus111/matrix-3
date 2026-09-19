@@ -750,8 +750,8 @@ Remaining Bundle 1.4 sequence after gather/haul acceptance:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA remains approved for the active Bundle 1.4 workstream. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: retest the tree after removing the incorrect anchor-distance gate and restoring Matrix3 strategy-owned interaction readiness; Worker #1 already reaches a valid cutting tile, so the remaining gate is whether it now transitions into GATHERING and completes haul/deposit.
-- Current objective: runtime-verify worker gathering/hauling after the targeted route correction, then continue directly into hunger/thirst/energy under the same Bundle 1.4 workstream.
+- Current checklist item: tree routing/gather handoff is now runtime VERIFIED. Finish the remaining gather/haul acceptance toggles: Haul OFF holds cargo, Haul ON resumes delivery, gathering OFF prevents a new cycle, and multiple gather jobs rotate across valid nodes.
+- Current objective: close the remaining gather/haul acceptance checks in one short session, then continue directly into hunger/thirst/energy under the same Bundle 1.4 workstream.
 
 ## Verification classifications
 
@@ -846,6 +846,7 @@ Remaining Bundle 1.4 sequence after gather/haul acceptance:
 - Source inspection verified `Entity.findBasicRoute(...)` greedily steps toward the destination and returns false when a direct step is blocked, while intelligent `calcFollow(...)` selects `ObjectStrategy`, `EntityStrategy` or `FixedTileStrategy` from the runtime target type.
 - The remaining tree-only failure was traced to `SettlementInstance.getWorkerNodeApproachTile(...)`, which converted every resource node into a synthetic fixed tile. That bypassed Matrix3's object-footprint/access strategy for tree id 1276.
 - Worker resource routing now returns the actual live `WorldObject` or starter resource NPC. Runtime showed Worker #1 reaching a tile from which the player can cut the tree but remaining stuck there. The follow-up one-tile adjacency check was runtime-rejected: tree/object interaction is footprint/access-strategy based, not anchor-distance based. `walkToward(...)` now trusts Matrix3's intelligent `calcFollow(...)` contract directly: success with zero queued steps means `ObjectStrategy` / `EntityStrategy` already considers the current tile interaction-ready, so gathering begins immediately.
+- Runtime retest on 2026-09-19 confirmed the strategy-owned handoff fixes tree id 1276: Worker #1 now reaches the tree and successfully proceeds into the gather/haul loop instead of stalling.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -915,7 +916,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build the strategy-owned tree handoff correction, re-enter with Gather Wood + Haul enabled, and confirm Worker #1 now starts GATHERING as soon as Matrix3 ObjectStrategy reports the reached tile interaction-ready. If Wood then deposits like the other resources, finish the existing Haul OFF/ON and gathering OFF checks. PASS advances directly to hunger/thirst/energy.
+**Next checklist item:** Tree gather/haul is runtime VERIFIED. In the next short acceptance pass, verify Haul OFF holds the carried unit, Haul ON resumes delivery, disabling all gathering stops new cycles, and multiple enabled gather jobs rotate across valid nodes. PASS advances directly to hunger/thirst/energy.
 
 **Files/systems already inspected:**
 
