@@ -621,7 +621,7 @@ Later interaction polish after single-piece preview is stable:
 
 Persistent owner:
 
-- `SettlementState` schema v4 owns settlement worker records and the next stable worker id inside normal Matrix3 player serialization.
+- `SettlementState` introduced worker records in schema v4; current schema v5 keeps those records and adds persistent per-worker Allowed Jobs inside normal Matrix3 player serialization.
 - `SettlementWorkerState` stores stable worker id, stable worker-definition key, custom name and plot-relative home tile only; dynamic world coordinates/NPC instances are never serialized.
 - `SettlementWorkerDefinition.STARTER_SETTLER` is the stable first-worker archetype. Its cache NPC id is presentation data and remains replaceable without changing saved worker identity.
 - `SettlementState.ensureStarterWorker()` is hard-gated by `SettlementMilestone.STARTER_SHELTER` and is idempotent: repeated calls return the same Worker #1 instead of creating duplicates.
@@ -644,9 +644,30 @@ Acceptance target:
 
 `enter completed settlement -> Worker #1 auto-arrives -> Worker Arrival Check PASS -> exit/re-enter -> same worker id, one runtime NPC, no duplicate`
 
-Remaining Bundle 1.4 sequence after arrival acceptance:
+#### Allowed Jobs foundation — IMPLEMENTED / NEEDS TEST
 
-- Allowed Jobs.
+Persistent policy owner:
+
+- `SettlementWorkerJob` defines stable permission keys for Gather Wood, Gather Food, Gather Stone, Gather Basic Ore and Haul.
+- `SettlementWorkerState.allowedJobs` stores only stable job keys. Runtime pathing/action state is intentionally not serialized here.
+- New and migrated workers default to an empty allowlist: every job is OFF until explicitly enabled.
+- Worker-state normalization repairs a missing allowlist on old saves and removes unknown job keys.
+- `SettlementState` advances to schema v5 for this persistent policy slice.
+
+Control/test boundary:
+
+- Owner-only `workerjobs` reports authoritative saved permissions.
+- `workerjob <key> <on|off>` changes one permission explicitly; `workerjobsall <on|off>` provides bounded developer convenience.
+- `SettlementWorkerJobsSelfTest` disposably verifies stable keys, default-OFF policy, independent toggles, disable behavior and Java serialization.
+- Test Console -> Con Revamp exposes five Allowed Jobs checkboxes plus Jobs Status / Jobs Self-Test / Enable All / Disable All.
+- The checkboxes are command controls, not an independent client owner. Jobs Status is authoritative readback from the server save.
+
+Acceptance target:
+
+`Jobs Self-Test PASS -> enable mixed allowlist -> Jobs Status exact ON/OFF -> exit/re-enter unchanged -> logout/relog unchanged`
+
+Remaining Bundle 1.4 sequence after Allowed Jobs acceptance:
+
 - Gathering/hauling.
 - Hunger/thirst/energy.
 - Persistence and basic XP.
@@ -705,9 +726,9 @@ Remaining Bundle 1.4 sequence after arrival acceptance:
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: SAP AAA approved the Bundle 1.4 Worker #1 ownership/arrival foundation. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: Worker #1 arrival foundation is runtime verified, including same-id exit/re-entry rebuild at saved=1/runtime=1. Next Bundle 1.4 slice is Allowed Jobs persistence/controls.
-- Current objective: implement Allowed Jobs as persistent per-worker state and expose a low-friction control surface before wiring gathering/hauling AI.
+- Approval state: SAP AAA approved the Bundle 1.4 Allowed Jobs persistence/control slice. Camera/ghost edge checks remain carryover and do not block this slice.
+- Current checklist item: Allowed Jobs persistence/controls are implemented verified-static; run Jobs Self-Test, set a mixed allowlist, verify authoritative status, then confirm the exact permissions survive exit/re-entry and logout/relog.
+- Current objective: runtime-verify persistent Allowed Jobs policy, then wire worker gathering/hauling AI so it consumes only the saved allowlist.
 
 ## Verification classifications
 
@@ -794,6 +815,9 @@ Remaining Bundle 1.4 sequence after arrival acceptance:
 - `SettlementState.ensureStarterWorker()` is milestone-gated and idempotent, and normalization repairs old saves plus duplicate/invalid worker ids.
 - `SettlementWorkerNpc` is the transient Matrix3 NPC projection. `SettlementInstance` rebuilds/cleans it and guarantees one live projection per persistent worker id.
 - `SettlementWorkerSelfTest` and `SettlementWorkerArrivalCheck` provide disposable and real-state confidence paths for the first-worker arrival slice.
+- `SettlementWorkerJob` defines stable per-worker permission keys for four gathering jobs plus Haul; gathering jobs map to stable `SettlementResource` identities.
+- `SettlementWorkerState.allowedJobs` is a schema-v5 persistent allowlist that defaults empty, prunes unknown keys during normalization and exposes explicit server-owned ON/OFF mutation/readback.
+- `SettlementWorkerJobsSelfTest` verifies default-OFF behavior, per-job independence and serialization without touching the player's real worker.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
@@ -862,7 +886,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Bundle 1.4 Allowed Jobs: define persistent per-worker job permissions, wire owner-only test controls/Con Revamp toggles, and verify the same permission state survives exit/re-entry and logout/relog before worker gather/haul AI consumes it.
+**Next checklist item:** Pull/build, enter the settlement, run Con Revamp -> `Jobs Self-Test` and expect PASS. Enable a mixed set such as Gather Wood + Haul, run `Jobs Status`, exit/re-enter and verify the exact ON/OFF values remain. Then logout/relog, re-enter and verify them once more. PASS advances directly to worker gather/haul AI.
 
 **Files/systems already inspected:**
 
