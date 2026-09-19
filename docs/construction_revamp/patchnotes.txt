@@ -435,3 +435,13 @@
 - Critical Hunger, Thirst and Energy recovery paths and Reset Needs all worked in the live settlement.
 - Explicit zero-Food blocking and restart-persistence checks remain carryover for the upcoming persistence/basic-XP slice to avoid another dedicated launch.
 - Canonical milestone `First worker, Allowed Jobs, gathering and hauling` is now DONE.
+
+2026-09-19 - Bundle 1.4 persistent worker progression + Construction XP
+- Advanced SettlementState to schema v7 and added persistent Worker skill XP with stable Woodcutting, provisional Food Gathering, Mining and Hauling identities.
+- Current gather jobs award 12 personal XP to their mapped skill; successful stored output awards 6 Hauling XP per deposited resource.
+- Worker levels use the RuneScape-style 1-99 XP curve; this slice does not yet change speed/yield from skill level.
+- Productive worker output now awards exactly 1 base Construction XP per resource only after successful authoritative storage deposit via Matrix3 Skills.addXp(CONSTRUCTION, ..., true).
+- Idle/waiting, Haul-disabled, storage-full and failed-deposit paths award no passive Construction XP.
+- Developer placement still awards no Construction XP; active-build XP is deferred until the material-consuming player build path exists.
+- Added SettlementWorkerProgressionSelfTest, owner-only progression status, and Con Revamp Progress Status/Self-Test controls.
+- Remaining zero-Food and restart-persistence carryover is bundled into the progression runtime acceptance pass.

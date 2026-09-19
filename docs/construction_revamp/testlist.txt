@@ -232,6 +232,21 @@ Phase 1 Bundle 1.4 — first worker
 [x] Critical Energy returns Worker #1 home, rests and resumes automatically.
 [ ] CARRYOVER: exit/re-enter preserves Worker #1 Hunger/Thirst/Energy values.
 [ ] CARRYOVER: logout/relog preserves Worker #1 Hunger/Thirst/Energy values.
+[x] Source ownership: SettlementState schema v7 persists Worker #1 personal skill XP through SettlementWorkerState; transient runtime AI/action state remains outside persistence.
+[x] Source ownership: current starter jobs map to stable Worker skills; gather completion awards mapped skill XP and successful deposit awards Hauling XP.
+[x] Source ownership: successful authoritative settlement-storage deposit is the only current passive-worker Construction XP seam.
+[x] Source ownership: passive worker Construction XP is exactly 1 base XP per deposited resource through Matrix3 Skills.addXp(CONSTRUCTION, ..., true).
+[x] Source ownership: idle/waiting, Haul-disabled, storage-full and failed-deposit paths award no passive Construction XP.
+[x] Source ownership: Dev/Construction palette placement still awards zero Construction XP; active-build XP remains deferred until real material-consuming placement owns it.
+[x] Con Revamp exposes Progress Status and disposable Progress Self-Test.
+[ ] Server and Client clean/build successfully after worker-progression patch.
+[ ] Con Revamp Progress Self-Test reports PASS for stable skills + job mapping + XP gain + level curve + serialization.
+[ ] One completed Wood gather increases Worker #1 Woodcutting XP; Stone/Ore increases Mining; Food increases provisional Food Gathering.
+[ ] Successful deposit increases Worker #1 Hauling XP and player Construction XP by the approved passive amount.
+[ ] With Haul OFF or all gathering OFF, waiting/idle time does not increase player Construction XP.
+[ ] Exit/re-enter preserves Worker #1 skill XP and needs exactly.
+[ ] Logout/relog preserves Worker #1 skill XP and needs exactly.
+[ ] CARRYOVER: with no Food available, critical Hunger blocks with No Food and resumes automatically after Food returns.
 [ ] Worker progression/state survives logout/relog.
 [ ] Construction XP is awarded only by approved active/passive sources.
 
