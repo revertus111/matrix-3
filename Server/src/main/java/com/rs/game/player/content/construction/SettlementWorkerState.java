@@ -8,12 +8,25 @@ import java.util.Set;
 /**
  * Persistent settlement worker identity/state.
  *
- * Runtime NPC/world coordinates do not belong here. Home coordinates are
- * settlement-plot relative and survive dynamic-instance rebuilds.
+ * Runtime NPC/world coordinates and active action/path state do not belong here.
+ * Home coordinates are settlement-plot relative. Allowed Jobs and worker needs
+ * are persistent policy/progression state and survive dynamic-instance rebuilds.
  */
 public final class SettlementWorkerState implements Serializable {
 
     private static final long serialVersionUID = 2699219744107299506L;
+
+    public static final int MAX_NEED = 100;
+    public static final int CRITICAL_HUNGER = 80;
+    public static final int CRITICAL_THIRST = 80;
+    public static final int CRITICAL_ENERGY = 20;
+
+    private static final int WORK_HUNGER_COST = 4;
+    private static final int WORK_THIRST_COST = 5;
+    private static final int WORK_ENERGY_COST = 6;
+    private static final int MEAL_RECOVERY = 60;
+    private static final int DRINK_RECOVERY = 70;
+    private static final int REST_RECOVERY = 70;
 
     private final long workerId;
     private final String definitionKey;
@@ -22,6 +35,13 @@ public final class SettlementWorkerState implements Serializable {
     private int homePlotY;
     private int homePlane;
     private Set<String> allowedJobs = new HashSet<String>();
+
+    // Hunger/thirst are pressure values: 0 = satisfied, 100 = critical.
+    // Energy is reserve: 100 = rested, 0 = exhausted.
+    private int hunger;
+    private int thirst;
+    private int energy = MAX_NEED;
+    private boolean needsInitialized = true;
 
     public SettlementWorkerState(long workerId, String definitionKey, String name,
             int homePlotX, int homePlotY, int homePlane) {
@@ -92,6 +112,95 @@ public final class SettlementWorkerState implements Serializable {
         return summary.toString();
     }
 
+    public int getNeed(SettlementWorkerNeed need) {
+        normalizeNeeds();
+        if (need == null) {
+            return 0;
+        }
+        switch (need) {
+        case HUNGER:
+            return hunger;
+        case THIRST:
+            return thirst;
+        case ENERGY:
+            return energy;
+        default:
+            return 0;
+        }
+    }
+
+    public void setNeed(SettlementWorkerNeed need, int value) {
+        normalizeNeeds();
+        if (need == null) {
+            return;
+        }
+        int clamped = clamp(value);
+        switch (need) {
+        case HUNGER:
+            hunger = clamped;
+            break;
+        case THIRST:
+            thirst = clamped;
+            break;
+        case ENERGY:
+            energy = clamped;
+            break;
+        default:
+            break;
+        }
+    }
+
+    public void resetNeeds() {
+        needsInitialized = true;
+        hunger = 0;
+        thirst = 0;
+        energy = MAX_NEED;
+    }
+
+    public void applyWorkCycleCost() {
+        normalizeNeeds();
+        hunger = clamp(hunger + WORK_HUNGER_COST);
+        thirst = clamp(thirst + WORK_THIRST_COST);
+        energy = clamp(energy - WORK_ENERGY_COST);
+    }
+
+    public boolean needsFood() {
+        normalizeNeeds();
+        return hunger >= CRITICAL_HUNGER;
+    }
+
+    public boolean needsWater() {
+        normalizeNeeds();
+        return thirst >= CRITICAL_THIRST;
+    }
+
+    public boolean needsRest() {
+        normalizeNeeds();
+        return energy <= CRITICAL_ENERGY;
+    }
+
+    public void recoverFromMeal() {
+        normalizeNeeds();
+        hunger = clamp(hunger - MEAL_RECOVERY);
+    }
+
+    public void recoverFromDrink() {
+        normalizeNeeds();
+        thirst = clamp(thirst - DRINK_RECOVERY);
+    }
+
+    public void recoverFromRest() {
+        normalizeNeeds();
+        energy = clamp(energy + REST_RECOVERY);
+    }
+
+    public String getNeedsSummary() {
+        normalizeNeeds();
+        return "Hunger=" + hunger + "/" + MAX_NEED
+                + ", Thirst=" + thirst + "/" + MAX_NEED
+                + ", Energy=" + energy + "/" + MAX_NEED;
+    }
+
     void normalize(SettlementWorkerDefinition definition) {
         if (definition == null) {
             return;
@@ -105,6 +214,7 @@ public final class SettlementWorkerState implements Serializable {
             homePlane = definition.getArrivalPlane();
         }
         normalizeJobs();
+        normalizeNeeds();
     }
 
     private void normalizeJobs() {
@@ -117,5 +227,21 @@ public final class SettlementWorkerState implements Serializable {
                 iterator.remove();
             }
         }
+    }
+
+    private void normalizeNeeds() {
+        if (!needsInitialized) {
+            hunger = 0;
+            thirst = 0;
+            energy = MAX_NEED;
+            needsInitialized = true;
+        }
+        hunger = clamp(hunger);
+        thirst = clamp(thirst);
+        energy = clamp(energy);
+    }
+
+    private static int clamp(int value) {
+        return Math.max(0, Math.min(MAX_NEED, value));
     }
 }
