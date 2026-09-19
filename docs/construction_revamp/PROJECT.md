@@ -751,7 +751,7 @@ Bundle 1.4 closure:
 
 ### Bundle 1.5 — Player build materials + active Construction XP
 
-**Status:** FINAL-GATE HARNESS IMPLEMENTED / NEEDS RUNTIME TEST
+**Status:** DONE / RUNTIME VERIFIED
 
 Ownership:
 
@@ -828,11 +828,11 @@ Runtime acceptance target:
 - Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
 - Persistent-runtime bundle: 1.5 — player build materials + active Construction XP
-- Persistent-runtime bundle status: FINAL-GATE HARNESS IMPLEMENTED / NEEDS RUNTIME TEST
+- Persistent-runtime bundle status: DONE / RUNTIME VERIFIED
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 positive active-build costs/XP are runtime verified and the final-gate harness is implemented; one short runtime pass remains.
-- Current checklist item: run the Bundle 1.5 final gate: Self-Test PASS -> capture build baseline -> exit/re-enter -> baseline PASS -> Exit + Outside Rejection.
+- Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 is fully runtime verified.
+- Current checklist item: Phase 1 closure audit — reconcile stale unchecked acceptance boxes against existing VERIFIED evidence, then run only any genuinely missing smoke coverage.
 - Current objective: finish the real player-building/material/active-XP seam that keeps Freeform settlement building foundation and Persistence/Construction XP ownership in progress, then close remaining Phase-1 gates before Phase 2.
 
 ## Verification classifications
@@ -942,6 +942,7 @@ Runtime acceptance target:
 - Developer Construction placement remains outside XP ownership; Bundle 1.5 adds a separate material-consuming player-build path so the dev harness stays no-cost/no-XP.
 - Bundle 1.5 player-build ownership is verified-static: stable piece key -> normal-player `settlementbuild` command -> active `SettlementInstance.placePlayerPiece(...)` -> settlement-material consume -> persistent placement -> one active Construction XP award.
 - Bundle 1.5 final-gate harness is verified-static: gameplay and disposable tests share `SettlementPlayerBuildTransaction`; the self-test uses only a new disposable `SettlementState`, while persistence capture/check stores read-only process-local signatures/totals/XP.
+- Bundle 1.5 final gate is runtime VERIFIED: disposable Self-Test PASS; baseline captured with 19 saved pieces and Wood=81/Food=12/Stone=18/Basic ore=28 at Construction XP 187522868; after exit/re-entry the exact build layout/resource totals/Construction XP baseline passed; the ordered outside-settlement build was rejected with `You must be inside your settlement to build.`.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -1011,7 +1012,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull once and run the Con Revamp Bundle 1.5 Final Gate: Self-Test -> Disable All Jobs/Reset Needs if required -> Capture Build Baseline -> Exit/Re-enter -> Check Build Baseline -> Exit + Outside Rejection. Zero-Food Hunger block/resupply remains optional carryover.
+**Next checklist item:** Bundle 1.5 is DONE. Reconcile the remaining stale Phase-1 checklist boxes against already-recorded runtime evidence, then isolate only genuinely missing `SMOKE_TEST.md` coverage before deciding whether Phase 1 can close. Zero-Food Hunger block/resupply remains optional carryover.
 
 **Files/systems already inspected:**
 

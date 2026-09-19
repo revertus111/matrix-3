@@ -494,3 +494,10 @@
 - Added Con Revamp Bundle 1.5 Self-Test, Capture Build Baseline, Check Build Baseline and ordered Exit + Outside Rejection controls.
 - Short-consume rollback now restores any partial material removal as well as removing the provisional persistent piece before failure.
 - No worker AI, Phase 2 population, inventory/bank material path or devspawn authority changed.
+
+2026-09-19 - Bundle 1.5 runtime gate complete
+- `Bundle 1.5 Self-Test` returned PASS for exact configured costs and insufficient/reserved/invalid/occupied no-mutation behavior.
+- Build baseline captured 19 saved pieces with Wood=81, Food=12, Stone=18, Basic ore=28 and Construction XP=187522868.
+- After settlement exit/re-entry, `Check Build Baseline` returned PASS with the exact same saved layout, resource totals and Construction XP.
+- `Exit + Outside Rejection` returned `You must be inside your settlement to build.` after leaving the settlement.
+- Bundle 1.5 is DONE / runtime verified. Phase 1 now moves to a stale-checklist/remaining-smoke closure audit rather than new feature work.

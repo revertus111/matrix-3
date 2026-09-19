@@ -253,7 +253,7 @@ Phase 1 Bundle 1.4 — first worker
 [x] Construction XP is awarded only by approved active/passive sources for the current Phase-1 slice; productive deposit awards are runtime verified and stable idle time awards none.
 
 Phase 1 Bundle 1.5 — player build materials + active Construction XP
-[FINAL-GATE HARNESS IMPLEMENTED / NEEDS TEST]
+[DONE / RUNTIME VERIFIED]
 [x] Source ownership: Construction palette sends a stable build-piece key through normal-player `settlementbuild`; gameplay placement no longer depends on raw devspawn object authority.
 [x] Source ownership: existing owner-only devspawn settlement placement remains a separate no-cost/no-XP development harness.
 [x] Source ownership: starter costs/XP are definition-driven: wall 1 Wood/4 XP, floor 1 Wood/4 XP, door 2 Wood/8 XP.
@@ -263,10 +263,10 @@ Phase 1 Bundle 1.5 — player build materials + active Construction XP
 [x] Construction palette floor placement consumes exactly 1 settlement Wood and awards exactly 4 base Construction XP.
 [x] Construction palette door placement consumes exactly 2 settlement Wood and awards exactly 8 base Construction XP.
 [x] Source ownership: gameplay and disposable tests share `SettlementPlayerBuildTransaction`; failed transactions mutate neither persistent pieces nor settlement materials, and short-consume rollback restores both.
-[ ] Con Revamp `Bundle 1.5 Self-Test` reports PASS for exact costs plus insufficient/reserved/invalid/occupied no-mutation behavior on a disposable state.
+[x] Con Revamp `Bundle 1.5 Self-Test` reports PASS for exact costs plus insufficient/reserved/invalid/occupied no-mutation behavior on a disposable state.
 [x] Occupied placement is runtime rejected before material consumption/active XP (`That settlement slot is already occupied.`).
-[ ] Con Revamp `Capture Build Baseline` succeeds with Worker #1 stable, then exit/re-enter + `Check Build Baseline` reports PASS for exact saved layout/resource totals/Construction XP.
-[ ] Con Revamp `Exit + Outside Rejection` exits the settlement and the queued normal-player build returns `You must be inside your settlement to build.`.
+[x] Con Revamp `Capture Build Baseline` succeeded with 19 saved pieces / Wood=81 / Food=12 / Stone=18 / Basic ore=28 / Construction XP=187522868, then exit/re-enter + `Check Build Baseline` returned PASS with the exact same layout/resource totals/XP.
+[x] Con Revamp `Exit + Outside Rejection` exits the settlement and the queued normal-player build returns `You must be inside your settlement to build.`.
 
 Regression coverage
 [ ] Full relevant `docs/rs3/SMOKE_TEST.md` build/startup/login/persistence/world-object coverage passes after the targeted Bundle 1.2 persistence test.
