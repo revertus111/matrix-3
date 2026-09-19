@@ -610,7 +610,7 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: run Con Revamp `Final Auto Check` and expect PASS, then smoke-test ordinary Dev Mode outside the settlement and classic POH. Those two manual regressions are the only remaining Bundle 1.2 completion gate.
+- Current checklist item: ordinary Dev Mode outside the settlement and classic POH regressions are already runtime verified; only the newly-added Con Revamp `Final Auto Check` remains before Bundle 1.2 can close.
 - Current objective: finish Bundle 1.2 behavior around the now-runtime-verified plot-relative persistence core: edit synchronization, placement validity/occupancy, removal, status accounting and regression coverage.
 
 ## Verification classifications
@@ -696,6 +696,8 @@ Later interaction polish after single-piece preview is stable:
 - Test Console / Con Revamp is runtime VERIFIED for navigation and settlement enter/exit harness use: the user confirmed the consolidated rail/sub-tabs are visible, Enter Settlement queues successfully, the private settlement loads, and exit/re-entry works.
 - Settlement persistence core is runtime VERIFIED: the user confirmed a placed settlement piece/layout survives settlement exit/re-entry and normal logout/relog, proving `SettlementState` persists through Matrix3 player save/load and `SettlementInstance` rebuilds from plot-relative saved state.
 - Live settlement edit synchronization is runtime VERIFIED: move, rotate, duplicate and delete operations update the persistent settlement record and rebuild correctly after settlement exit/re-entry.
+- Outside-settlement ordinary Dev Mode is runtime VERIFIED as unaffected by the settlement interception path.
+- Classic POH `House` enter/build/leave behavior is runtime VERIFIED as unaffected by the separate freeform settlement owner.
 
 ### HYPOTHESIS
 
@@ -745,7 +747,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** In Test Console -> Con Revamp run `Final Auto Check` and expect PASS. Then exit the settlement and smoke-test one ordinary Dev placement/edit/delete outside the settlement plus one classic POH enter/build/leave cycle. If both regressions pass, mark Bundle 1.2 DONE and activate Bundle 1.3.
+**Next checklist item:** In Test Console -> Con Revamp run `Final Auto Check` and expect PASS. Do not repeat the already-verified outside-settlement Dev Mode or classic POH regressions. If Final Auto Check passes, mark Bundle 1.2 DONE and activate Bundle 1.3.
 
 **Files/systems already inspected:**
 
@@ -832,7 +834,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - No settlement ownership/design blocker remains; the first Bundle 1.2 server foundation is implemented and the active gate is runtime persistence/dynamic-instance acceptance.
 - Camera edge diagnostics and the separate ghost completeness checklist remain carryover and do not block the current persistent-runtime test.
 
-**Important remaining uncertainty:** runtime PASS for the new Final Auto Check and the two manual regressions outside the settlement/classic POH. Core persistence and live edit synchronization are runtime verified.
+**Important remaining uncertainty:** runtime PASS for the newly-added Final Auto Check only. Outside-settlement Dev Mode and classic POH regressions are already runtime verified, as are core persistence and live edit synchronization.
 
 ## Next recommended work
 
