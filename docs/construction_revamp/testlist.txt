@@ -4,7 +4,7 @@ Legend: `[x]` accepted/verified; `[ ]` active blocking acceptance; `[-]` histori
 
 Current reset/documentation checkpoint
 [x] Current Construction Revamp head was pulled and launched successfully through the Bundle 1.5 final-gate runtime pass.
-[ ] FINAL PHASE-1 GATE: Eclipse clean/build completes for the Matrix3 Client and Server with the protected Java 8 project settings.
+[x] FINAL PHASE-1 GATE: current Matrix3 Client + Server compile and launch without new compile/verifier errors; user confirmed the just-tested Bundle 1.5 code could not have run otherwise.
 [x] Existing Matrix3 server/client startup + login remain functional on the current Bundle 1.5 head.
 
 Construction Editor prototype — HISTORICAL / SUPERSEDED BY PLAYER PALETTE
@@ -271,9 +271,19 @@ Phase 1 Bundle 1.5 — player build materials + active Construction XP
 [x] Con Revamp `Exit + Outside Rejection` exits the settlement and the queued normal-player build returns `You must be inside your settlement to build.`.
 
 Phase 1 final closure gate
+[DONE / RUNTIME ACCEPTED]
 [x] Server starts, Client starts, normal login succeeds and the expected world/settlement loads on the current Bundle 1.5 head.
 [x] Logout/relog persistence is runtime verified for settlement layout, Worker #1 identity/needs/progression, Allowed Jobs and Construction XP ownership.
 [x] World/object coverage is runtime verified for settlement placement, invalid/occupied/reserved rejection, persistent rebuild, starter-node cleanup and doorway/object interaction.
 [x] Client interface/movement coverage is runtime verified through the Construction palette + detached Free Build integration passes.
-[ ] Eclipse clean/build completes for the current Client + Server with the protected Java 8 project settings and no new compile/verifier errors.
+[x] Current Client + Server compile and launch without new compile/verifier errors; successful execution of the newly added Bundle 1.5 runtime path is accepted as sufficient build proof.
 [-] Unrelated bank/combat/drop smoke sections are not Phase-1 Construction blockers because this workstream did not change those ownership paths.
+
+
+Phase 2 Bundle 2.1 — population capacity + additional-worker recruitment
+[READY / NOT STARTED]
+[ ] Define authoritative population-capacity ownership on the existing settlement state.
+[ ] Add recruitment eligibility/gating without replacing Worker #1 ownership.
+[ ] Add Worker #2 with a unique stable persistent id and one transient runtime NPC projection.
+[ ] Exit/re-entry rebuilds both workers with saved=2/runtime=2 and no duplicates.
+[ ] Logout/relog preserves both worker identities and their independent saved state.

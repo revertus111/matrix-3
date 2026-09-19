@@ -509,3 +509,10 @@
 - Updated the obsolete pre-Bundle-1.5 XP note: devspawn remains no-cost/no-XP, while material-consuming player builds own active Construction XP.
 - The only remaining blocking Phase-1 acceptance item is Eclipse clean/build for current Client + Server under the protected Java 8 project settings.
 - Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+
+2026-09-19 - Phase 1 closed / Phase 2 queued
+- Accepted the final build/startup gate from current runtime evidence: Client + Server launched and executed the newly added Bundle 1.5 code with no compile/verifier errors.
+- Phase 1 MVP is DONE / runtime accepted; no blocking Phase-1 acceptance item remains.
+- Canonical main-goal status now marks the freeform settlement building foundation and persistence/Construction-XP ownership complete.
+- Added Phase 2 Bundle 2.1 planning for population capacity + additional-worker recruitment; status is READY / NOT STARTED and no Phase-2 gameplay code changed.
+- Zero-Food Hunger block/resupply remains optional non-blocking carryover.

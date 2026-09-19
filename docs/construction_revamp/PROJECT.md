@@ -10,11 +10,11 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 | Main-goal area | Status |
 | --- | --- |
-| Freeform settlement building foundation | 🔵 In Progress |
+| Freeform settlement building foundation | ✅ Done |
 | Starter resource loop and shelter milestone | ✅ Done |
 | First worker, Allowed Jobs, gathering and hauling | ✅ Done |
 | Worker needs, storage and settlement recovery | ✅ Done |
-| Persistence and Construction XP ownership | 🔵 In Progress |
+| Persistence and Construction XP ownership | ✅ Done |
 | Population, processing and logistics expansion | ❌ Not started |
 | Settlement Wealth, offline production and economy | ❌ Not started |
 | Overworld Construction integration | ❌ Not started |
@@ -23,7 +23,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: ACTIVE — Construction Editor and custom Construction palette/selected-piece/hover foundation are runtime verified; the direct-render 3D ghost, white/translucent styling and preview-vs-placed alpha isolation are runtime verified. Legacy Orb and generic-renderer camera attempts are runtime-rejected. Construction Free Build uses the live Class24/Class411 path, and automatic activation, W/S/A/D, Q/E, Shift/Ctrl, mouse-look, normal-camera restore, close/reopen, time-based smoothing, normalized diagonals, click-to-stop latch, planted-player action-23 ownership, one authoritative Paint placement/no Walk Here and combined camera/render stability are runtime VERIFIED. Only edge diagnostics/pre-existing-freecam preservation and the separate full ghost checklist remain.
+- State: Phase 1 MVP is DONE / runtime accepted. Freeform building, direct-render ghost, detached Free Build camera, settlement persistence/resources/shelter, Worker #1 gather/haul/needs/progression, material-consuming player placement and active/passive Construction XP ownership are runtime VERIFIED. Historical diagnostics and zero-Food Hunger resupply remain non-blocking carryover only. Phase 2 population + broader survival production is the next ready target.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
 - Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling and the `0x100` private-alpha isolation fix are also runtime verified after a full client restart.
@@ -31,7 +31,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 - Construction Free Build activates/reuses `Class24.aClass411_Sub1_158`, but runtime proved the first WASD/Q/E patch location did not execute. Construction controls now run through `ConstructionBuildCamera.tick()` from the live `Class343.method4302(...)` viewport seam immediately before the detached Class411 transform is submitted. Stock `Class24.java` is restored.
 - The current Client Console Construction Editor remains a developer/debug harness; the custom in-game palette is the intended player-facing selection direction.
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
-- First playable target: Phase 1 MVP vertical slice.
+- Phase 1 MVP vertical slice is runtime accepted; next playable target is Phase 2 population + broader survival production.
 
 ## Vision
 
@@ -779,6 +779,20 @@ Runtime acceptance target:
 
 ## Phase 2 — Population + broader survival production
 
+### Bundle 2.1 — Population capacity + additional-worker recruitment
+
+**Status:** READY / NOT STARTED
+
+- Extend the existing persistent `SettlementState` / `SettlementWorkerState` ownership rather than creating a second worker system.
+- Define the first authoritative population-capacity/recruitment seam around the verified shelter/housing state.
+- Add a second persistent worker vertical slice with a unique stable worker id and one transient NPC projection per saved worker.
+- Preserve Worker #1 Allowed Jobs, needs, progression, gather/haul behavior and save compatibility unchanged.
+- Keep housing/beds and broader food production in the same Phase 2 execution path once population ownership is proven.
+
+Acceptance direction:
+
+`population capacity -> recruit Worker #2 -> unique persistent id -> saved=2/runtime=2 -> exit/re-entry -> logout/relog -> both workers rebuild without duplicate identity/projection`
+
 - Additional workers/recruitment.
 - Housing/beds/population capacity.
 - Cooking, farming and hunting.
@@ -825,15 +839,16 @@ Runtime acceptance target:
 
 # Current execution state
 
-- Phase: Phase 1 — MVP Vertical Slice
-- Phase status: ACTIVE
-- Persistent-runtime bundle: 1.5 — player build materials + active Construction XP
-- Persistent-runtime bundle status: DONE / RUNTIME VERIFIED
-- Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
-- Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 is fully runtime verified.
-- Current checklist item: Phase 1 final closure gate — Eclipse clean/build on the current Client + Server with the protected Java 8 project settings.
-- Current objective: complete the final Eclipse/Java 8 clean-build acceptance; all required Phase-1 gameplay/runtime ownership is otherwise verified, with zero-Food Hunger recovery retained as optional non-blocking carryover.
+- Phase: Phase 2 — Population + broader survival production
+- Phase status: READY / NOT STARTED
+- Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
+- Persistent-runtime bundle: 2.1 — population capacity + additional-worker recruitment
+- Persistent-runtime bundle status: READY / NOT STARTED
+- Tooling track: Phase-1 Construction palette + ghost + Free Build camera
+- Tooling status: DONE / runtime accepted for Phase-1 scope; later camera/preset polish is non-blocking
+- Approval state: Phase 1 is closed. Phase 2 is saved as the next execution target; no Phase-2 code is started by this closure update.
+- Current checklist item: on the next explicit SAP AAA for the new Phase-2 bundle, establish population-capacity/recruitment ownership and add the second-worker vertical slice.
+- Current objective: move from one verified worker into a persistent multi-worker settlement without disturbing the completed Phase-1 foundation.
 
 ## Verification classifications
 
@@ -943,7 +958,8 @@ Runtime acceptance target:
 - Bundle 1.5 player-build ownership is verified-static: stable piece key -> normal-player `settlementbuild` command -> active `SettlementInstance.placePlayerPiece(...)` -> settlement-material consume -> persistent placement -> one active Construction XP award.
 - Bundle 1.5 final-gate harness is verified-static: gameplay and disposable tests share `SettlementPlayerBuildTransaction`; the self-test uses only a new disposable `SettlementState`, while persistence capture/check stores read-only process-local signatures/totals/XP.
 - Bundle 1.5 final gate is runtime VERIFIED: disposable Self-Test PASS; baseline captured with 19 saved pieces and Wood=81/Food=12/Stone=18/Basic ore=28 at Construction XP 187522868; after exit/re-entry the exact build layout/resource totals/Construction XP baseline passed; the ordered outside-settlement build was rejected with `You must be inside your settlement to build.`.
-- Phase-1 closure audit is complete: previously unchecked ghost hover/rotation/model-switch/terrain/cancel behavior and consolidated resource/shelter/world-object persistence carryovers were already runtime-confirmed by the user and are no longer blockers. Historical prototype/debug-only diagnostics are explicitly non-blocking. The protected Eclipse/Java 8 clean-build check is the only remaining Phase-1 gate.
+- Phase-1 closure audit is complete: previously unchecked ghost hover/rotation/model-switch/terrain/cancel behavior and consolidated resource/shelter/world-object persistence carryovers were already runtime-confirmed by the user and are no longer blockers. Historical prototype/debug-only diagnostics are explicitly non-blocking.
+- Phase 1 final build/startup gate is accepted from the current runtime evidence: the user confirmed there are no compile errors, and the current Client + Server successfully launched and executed the newly added Bundle 1.5 classes/commands/UI. A failing current build could not have reached that runtime acceptance path.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -1007,13 +1023,13 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 - Runtime-verified live move/rotate/duplicate/delete synchronization and confirmed those edits rebuild correctly after settlement exit/re-entry.
 - Hardened `SettlementState` plot validity, aligned `SettlementInstance` with the saved-owner rules, extended the disposable self-test, and added a non-mutating Saved State Audit + final-gate UI in Con Revamp.
 
-**Current phase:** Phase 1 — MVP Vertical Slice.
+**Current phase:** Phase 2 — Population + broader survival production.
 
-**Active persistent-runtime bundle:** Bundle 1.5 — player build materials + active Construction XP.
+**Active persistent-runtime bundle:** Bundle 2.1 — population capacity + additional-worker recruitment (READY / NOT STARTED).
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Run one Eclipse clean/build of the current Matrix3 Client + Server with the protected Java 8 project settings. If it completes without new compile/verifier errors, Phase 1 has no remaining blocking acceptance item and can close. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Phase 1 is DONE / runtime accepted. On the next explicit SAP AAA for Phase 2, start Bundle 2.1 by defining authoritative population capacity/recruitment on the existing settlement/worker owners, then add Worker #2 as the first multi-worker persistence/runtime vertical slice. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 
