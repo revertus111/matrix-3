@@ -479,3 +479,10 @@
 - Reused the verified Dev placement input/menu plumbing only on the client; owner-only `itembrowser devspawn` remains a separate no-cost/no-XP development harness.
 - Invalid, occupied, reserved or underfunded player placement changes neither materials nor active Construction XP.
 - Bundle 1.5 is IMPLEMENTED / NEEDS RUNTIME TEST; the two canonical main-goal areas remain In Progress.
+
+2026-09-19 - Bundle 1.5 positive active-build path runtime verified
+- User runtime confirmed Wooden fence = 1 Wood / 4 base Construction XP.
+- User runtime confirmed Floor decoration = 1 Wood / 4 base Construction XP.
+- User runtime confirmed Door = 2 Wood / 8 base Construction XP.
+- Occupied placement returned the authoritative `That settlement slot is already occupied.` rejection; source order keeps that rejection before material consumption and XP award.
+- Bundle 1.5 is PARTIAL RUNTIME VERIFIED; remaining checks are insufficient Wood, invalid/reserved rejection, exit/re-entry persistence and outside-settlement command rejection.

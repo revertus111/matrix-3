@@ -751,7 +751,7 @@ Bundle 1.4 closure:
 
 ### Bundle 1.5 — Player build materials + active Construction XP
 
-**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
+**Status:** PARTIAL RUNTIME VERIFIED
 
 Ownership:
 
@@ -822,11 +822,11 @@ Runtime acceptance target:
 - Phase: Phase 1 — MVP Vertical Slice
 - Phase status: ACTIVE
 - Persistent-runtime bundle: 1.5 — player build materials + active Construction XP
-- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
+- Persistent-runtime bundle status: PARTIAL RUNTIME VERIFIED
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 is implemented and ready for one consolidated active-build runtime pass; prior camera/ghost edge checks and persistence/world-object smoke remain non-blocking Phase-1 carryover.
-- Current checklist item: runtime-verify Bundle 1.5 material consumption + active Construction XP ownership through the existing palette, then fold any remaining Phase-1 carryover into the same session.
+- Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 positive active-build costs/XP are runtime verified; remaining negative-path and persistence checks can be bundled into one short pass.
+- Current checklist item: finish Bundle 1.5 negative-path/persistence acceptance: insufficient Wood, invalid/reserved rejection, exit/re-entry persistence and outside-settlement command rejection.
 - Current objective: finish the real player-building/material/active-XP seam that keeps Freeform settlement building foundation and Persistence/Construction XP ownership in progress, then close remaining Phase-1 gates before Phase 2.
 
 ## Verification classifications
@@ -843,6 +843,8 @@ Runtime acceptance target:
 - Object id `13450` with the current wall preset resolves at runtime as `Wooden fence`; it is functional but is not the desired final wall asset.
 - Object id `13684` with the current floor preset resolves at runtime as `Floor decoration` and places successfully.
 - Object id `13344` with the current doorway preset resolves at runtime as `Door` and places/interacts successfully.
+- Bundle 1.5 positive player-build path is runtime VERIFIED: Wooden fence consumed 1 Wood and awarded 4 base Construction XP, Floor decoration consumed 1 Wood and awarded 4 base Construction XP, and Door consumed 2 Wood and awarded 8 base Construction XP through the new palette -> `settlementbuild` path.
+- Occupied player-build placement is runtime VERIFIED to return `That settlement slot is already occupied.`; source ownership verifies this rejection occurs before material consumption and active XP award.
 - Custom Construction palette is runtime verified and stable.
 - Hovered world-tile tracking follows Matrix3's normal scene-tile resolution at runtime.
 - Initial ghost v1 runtime attempt through `Class110.method2071(...)` produced no visible preview while palette/hover/confirmed placement remained functional.
@@ -1002,7 +1004,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Runtime-test Bundle 1.5 through the Construction palette: confirm 1 Wood/4 XP wall, 1 Wood/4 XP floor, 2 Wood/8 XP door, and zero material/XP change on insufficient or rejected placement. Then cover any remaining Phase-1 carryover in the same launch. Zero-Food Hunger block/resupply remains optional carryover.
+**Next checklist item:** Bundle 1.5 positive path is runtime VERIFIED. In one short pass, verify insufficient Wood causes no placement/resource/XP change, invalid/reserved placement causes no resource/XP change, exit/re-entry preserves the newly player-built pieces/reduced totals, and `settlementbuild` is rejected outside the settlement. Zero-Food Hunger block/resupply remains optional carryover.
 
 **Files/systems already inspected:**
 
