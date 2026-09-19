@@ -104,11 +104,11 @@ Test Console — Construction Revamp harness
 [ ] Old saved panel ids for Player/Items/Interfaces/Construction/Atlas/Boss Research resolve to Test Console instead of an unavailable panel.
 
 Phase 1 Bundle 1.2 — placement foundation
-[ ] Con Revamp `Final Auto Check` reports PASS for expanded State Self-Test + real saved-state audit + count consistency + definition-registry integrity.
+[x] Con Revamp `Final Auto Check` reports PASS for expanded State Self-Test + real saved-state audit + count consistency + definition-registry integrity.
 [x] Con Revamp `State Self-Test` previously passed place/occupancy/compatible-layer coexistence/rotate/move/duplicate/delete/serialization.
-[ ] Rerun Con Revamp `State Self-Test`; expanded validity checks must also reject negative/out-of-range X/Y, wrong plane, unknown raw definition, invalid move destination and invalid duplicate destination.
+[x] Expanded State Self-Test passes through Final Auto Check, including invalid coordinate/plane/raw-definition/move/duplicate rejection.
 [x] Con Revamp `Saved Pieces` lists the current saved-piece state used during the live edit verification.
-[ ] Con Revamp `Saved State Audit` reports PASS for the real saved settlement: unique positive ids, approved definitions, valid plot locations/plane, valid rotations and no same-layer collisions.
+[x] Con Revamp `Saved State Audit` passes through Final Auto Check for the real saved settlement.
 [x] Persistent identity is source-verified as stable definition key + piece id + plot-relative X/Y/plane + rotation; temporary dynamic world/chunk coordinates are not serialized.
 [x] Player owns a serializable `SettlementState`; existing saves initialize/normalize the new field without migrating or replacing classic POH `House`.
 [x] Runtime projection ownership is isolated in transient `SettlementInstance` + `SettlementControler`.
@@ -126,7 +126,7 @@ Phase 1 Bundle 1.2 — placement foundation
 [x] Logout/relog preserves the layout.
 [x] Temporary instance/world coordinates are never serialized as settlement identity.
 [x] Runtime instance exit/re-entry does not delete saved settlement state; the saved layout rebuilds after re-entry.
-[ ] `::itembrowser settlement status` count matches placements/duplicates/deletes.
+[x] Saved-piece count consistency passes through Final Auto Check on the real saved settlement.
 [x] Existing Dev Move Object updates the saved plot-relative position and survives re-entry.
 [x] Existing Dev Rotate Left/Right updates saved rotation and survives re-entry.
 [x] Existing Dev Duplicate Object creates a second persistent piece at the destination and the duplicate survives re-entry.
@@ -137,6 +137,7 @@ Phase 1 Bundle 1.2 — placement foundation
 
 
 Phase 1 Bundle 1.3 — starter resources/storage
+[ACTIVE]
 [ ] Wood, food, stone and basic ore are obtainable inside the settlement.
 [ ] Settlement storage is isolated from the normal bank.
 [ ] Normal bank stock cannot be dumped directly into settlement storage.
