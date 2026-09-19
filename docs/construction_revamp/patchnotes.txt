@@ -316,3 +316,17 @@
 - Added disposable `SettlementResourceSelfTest`, owner-only resource status/self-test commands and Con Revamp Resource Status/Resource Self-Test buttons.
 - Provisional node visuals: wood object 1276, food NPC 327, stone object 11933, ore object 11936. Runtime acceptance may replace art ids without changing ownership.
 - Runtime acceptance required for build, node visibility/options, each gather path, storage isolation/persistence, capacity and node cleanup.
+
+
+2026-09-18 - Bundle 1.3 starter resources runtime verified
+- User runtime confirmed the starter resource/storage slice works in the live settlement; Resource Self-Test passes and the current four starter nodes are usable with isolated settlement storage.
+- Current provisional tree/fishing/rock visuals are accepted for the prototype; final art can change independently of resource ownership.
+
+
+2026-09-18 - Bundle 1.3 starter shelter milestone
+- Added stable `SettlementBuildRole` semantics (WALL/FLOOR/DOOR) to keep progression rules independent from provisional object ids.
+- Added generic persisted `SettlementMilestone` keys and advanced `SettlementState` to schema v3 with old-save-safe milestone normalization.
+- Starter shelter requires 4 walls, 4 floors, 1 doorway and at least 1 Wood/Food/Stone/Basic ore; completion is one-time and permanently latched.
+- `SettlementInstance` automatically checks completion after load, build placement/duplication and starter-resource gathering and emits a one-time completion message.
+- Added disposable `SettlementShelterSelfTest`, owner-only shelter status/self-test commands and Con Revamp Shelter Status/Shelter Self-Test controls.
+- Runtime acceptance required for self-test PASS, real automatic completion, latch behavior and save/load persistence.
