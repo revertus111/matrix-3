@@ -452,3 +452,10 @@
 - Live worker progression matched job ownership: Food Gathering increased 0 -> 12 XP, Mining 0 -> 24 XP, and Hauling 6 -> 24 XP while productive work completed.
 - Player Construction XP increased 187522810 -> 187522811 after the next successful stored output and then -> 187522814 after further productive deposits, confirming the 1 base XP per stored resource award seam.
 - Productive progression/XP does not need re-testing. Remaining Bundle 1.4 runtime gate is blocked/idle no-XP behavior plus exit/re-entry and logout/relog persistence; zero-Food block/resupply remains optional carryover.
+
+2026-09-19 - Bundle 1.4 final persistence-gate harness
+- Added non-mutating SettlementBundle14FinalGate process-local snapshots keyed by username; no player/settlement save fields were added.
+- Baseline capture requires a loaded settlement, Worker #1, all Allowed Jobs OFF and no critical need so Worker/Construction XP plus Needs remain stable while idle.
+- Baseline comparison checks exact worker identity, Allowed Jobs, Hunger/Thirst/Energy, every personal Worker skill XP total and player Construction XP.
+- The same snapshot can be checked before exit, after settlement rebuild, and after normal logout/relog while the server process stays running.
+- Added Con Revamp Capture Stable Baseline / Check Baseline controls so the remaining Bundle 1.4 negative-XP + persistence gate can be completed in one short runtime session.
