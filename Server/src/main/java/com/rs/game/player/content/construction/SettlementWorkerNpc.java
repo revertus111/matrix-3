@@ -7,9 +7,9 @@ import com.rs.game.npc.NPC;
 /**
  * Transient Matrix3 NPC projection for one persistent settlement worker.
  *
- * Persistent policy remains in SettlementWorkerState. This runtime projection
- * owns only the worker's current movement/action/carry state and is discarded
- * with the settlement instance.
+ * Persistent policy/needs remain in SettlementWorkerState. This runtime
+ * projection owns only current movement/action/carry/recovery state and is
+ * discarded with the settlement instance.
  */
 public final class SettlementWorkerNpc extends NPC {
 
@@ -17,13 +17,20 @@ public final class SettlementWorkerNpc extends NPC {
 
     private static final int GATHER_TICKS = 3;
     private static final int CARRY_CAPACITY = 1;
+    private static final int EAT_TICKS = 2;
+    private static final int DRINK_TICKS = 2;
+    private static final int REST_TICKS = 4;
 
     private enum WorkState {
         IDLE,
         MOVING_TO_RESOURCE,
         GATHERING,
         MOVING_TO_STORAGE,
-        HAULING
+        HAULING,
+        MOVING_HOME_FOR_NEED,
+        EATING,
+        DRINKING,
+        RESTING
     }
 
     private final long workerId;
@@ -36,6 +43,8 @@ public final class SettlementWorkerNpc extends NPC {
     private int carriedAmount;
     private int gatherTicksRemaining;
     private int nextGatherIndex;
+    private SettlementWorkerNeed activeNeed;
+    private int recoveryTicksRemaining;
     private String statusDetail = "No allowed gathering job.";
 
     public SettlementWorkerNpc(SettlementInstance settlement,
@@ -68,13 +77,24 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
 
-        if (carriedAmount > 0) {
+        if (carriedAmount > 0
+                && workerState.isJobAllowed(SettlementWorkerJob.HAUL)
+                && settlement.getWorkerStorageRemaining() > 0L) {
             processCarriedResource();
             return;
         }
 
         if (gatherTicksRemaining > 0) {
             processGathering();
+            return;
+        }
+
+        if (processNeeds()) {
+            return;
+        }
+
+        if (carriedAmount > 0) {
+            processCarriedResource();
             return;
         }
 
@@ -137,6 +157,7 @@ public final class SettlementWorkerNpc extends NPC {
 
         carriedResource = targetNode.getResource();
         carriedAmount = CARRY_CAPACITY;
+        workerState.applyWorkCycleCost();
         nextGatherIndex = (targetNode.ordinal() + 1) % SettlementResourceNode.values().length;
         statusDetail = "Gathered " + carriedResource.getDisplayName() + "; awaiting haul.";
         targetNode = null;
@@ -184,6 +205,91 @@ public final class SettlementWorkerNpc extends NPC {
             workState = WorkState.IDLE;
             statusDetail = "Deposited " + deposited + ".";
         }
+    }
+
+    private boolean processNeeds() {
+        if (recoveryTicksRemaining > 0) {
+            recoveryTicksRemaining--;
+            if (recoveryTicksRemaining <= 0) {
+                SettlementWorkerNeed recovered = activeNeed;
+                activeNeed = null;
+                workState = WorkState.IDLE;
+                statusDetail = recovered == null
+                        ? "Recovery complete."
+                        : recovered.getDisplayName() + " recovered; resuming work.";
+            }
+            return true;
+        }
+
+        if (activeNeed == null) {
+            SettlementWorkerNeed next = getCriticalNeed();
+            if (next == null) {
+                return false;
+            }
+            activeNeed = next;
+            clearTarget();
+        }
+
+        WorldTile home = settlement.getWorkerStorageTile(workerState);
+        if (home == null) {
+            idle("No valid home tile for " + activeNeed.getDisplayName() + " recovery.");
+            return true;
+        }
+
+        workState = WorkState.MOVING_HOME_FOR_NEED;
+        statusDetail = "Returning home for " + activeNeed.getDisplayName() + ".";
+        if (!walkToward(home, "No Path home for " + activeNeed.getDisplayName() + ".")) {
+            return true;
+        }
+
+        switch (activeNeed) {
+        case HUNGER:
+            if (settlement.consumeWorkerResource(SettlementResource.FOOD, 1L) != 1L) {
+                workState = WorkState.IDLE;
+                statusDetail = "No Food; work stopped at Hunger "
+                        + workerState.getNeed(SettlementWorkerNeed.HUNGER) + ".";
+                return true;
+            }
+            workerState.recoverFromMeal();
+            workState = WorkState.EATING;
+            recoveryTicksRemaining = EAT_TICKS;
+            statusDetail = "Eating 1 Food.";
+            return true;
+        case THIRST:
+            if (!settlement.hasBasicWorkerWaterSupply()) {
+                workState = WorkState.IDLE;
+                statusDetail = "No Water; work stopped at Thirst "
+                        + workerState.getNeed(SettlementWorkerNeed.THIRST) + ".";
+                return true;
+            }
+            workerState.recoverFromDrink();
+            workState = WorkState.DRINKING;
+            recoveryTicksRemaining = DRINK_TICKS;
+            statusDetail = "Drinking from starter shelter water supply.";
+            return true;
+        case ENERGY:
+            workerState.recoverFromRest();
+            workState = WorkState.RESTING;
+            recoveryTicksRemaining = REST_TICKS;
+            statusDetail = "Resting at home.";
+            return true;
+        default:
+            activeNeed = null;
+            return false;
+        }
+    }
+
+    private SettlementWorkerNeed getCriticalNeed() {
+        if (workerState.needsFood()) {
+            return SettlementWorkerNeed.HUNGER;
+        }
+        if (workerState.needsWater()) {
+            return SettlementWorkerNeed.THIRST;
+        }
+        if (workerState.needsRest()) {
+            return SettlementWorkerNeed.ENERGY;
+        }
+        return null;
     }
 
     private void beginGathering() {
@@ -246,12 +352,6 @@ public final class SettlementWorkerNpc extends NPC {
                 statusDetail = noPathReason;
                 return false;
             }
-            /*
-             * Matrix3's intelligent calcFollow uses ObjectStrategy / EntityStrategy
-             * for live targets. A successful route with zero queued steps means
-             * the strategy already considers this tile interaction-ready.
-             * Do not replace that footprint/access result with anchor-tile distance.
-             */
             if (!hasWalkSteps()) {
                 return true;
             }
@@ -287,6 +387,7 @@ public final class SettlementWorkerNpc extends NPC {
         if (targetNode != null) {
             summary.append(" | target=").append(targetNode.getKey());
         }
+        summary.append(" | ").append(workerState.getNeedsSummary());
         return summary.toString();
     }
 }

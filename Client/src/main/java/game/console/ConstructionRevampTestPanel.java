@@ -28,7 +28,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 1.4 gather/haul AI is active.", 4);
+            "Ready. Bundle 1.4 worker needs is active.", 4);
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -44,6 +44,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(createRuntimeCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createAllowedJobsCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createNeedsCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createPersistenceCard());
         content.add(Box.createVerticalStrut(12));
@@ -249,17 +251,74 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return checkBox;
     }
 
-    private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.4 Gather / Haul acceptance");
+    private JPanel createNeedsCard() {
+        JPanel card = ConsoleTheme.createCard("Worker Needs — Worker #1");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Keep Gather Wood + Haul ON and the other gather jobs OFF.\n"
-                + "2. Note Resource Status, then watch Worker #1 walk to wood, gather, return home and deposit.\n"
-                + "3. Worker AI Status should show live movement/gather/haul/carry state; Wood should rise while the other resources stay unchanged.\n"
-                + "4. Turn Haul OFF: Worker #1 may gather one unit but must hold it instead of depositing.\n"
-                + "5. Turn Haul back ON: the held unit should be delivered automatically.\n"
-                + "6. Turn Gather Wood OFF with the other gathers OFF: no new gathering cycle should start.",
-                8));
+                "Persistent server-owned Hunger / Thirst / Energy. Hunger and Thirst rise with work; Energy falls. "
+                + "Critical Hunger consumes settlement Food, critical Thirst uses the Phase-1 starter shelter water supply, and critical Energy rests at home.",
+                5));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton needsStatus = new JButton("Needs Status");
+        JButton needsSelfTest = new JButton("Needs Self-Test");
+        JButton hungerCritical = new JButton("Set Hunger Critical");
+        JButton thirstCritical = new JButton("Set Thirst Critical");
+        JButton energyCritical = new JButton("Set Energy Critical");
+        JButton resetNeeds = new JButton("Reset Needs");
+
+        ConsoleTheme.styleButton(needsStatus);
+        ConsoleTheme.styleButton(needsSelfTest);
+        ConsoleTheme.styleButton(hungerCritical);
+        ConsoleTheme.styleButton(thirstCritical);
+        ConsoleTheme.styleButton(energyCritical);
+        ConsoleTheme.styleButton(resetNeeds);
+
+        needsStatus.addActionListener(e -> queue(
+                "itembrowser settlement workerneeds",
+                "Needs Status queued. Persistent Worker #1 needs will appear in game chat."));
+        needsSelfTest.addActionListener(e -> queue(
+                "itembrowser settlement workerneedselftest",
+                "Needs Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
+        hungerCritical.addActionListener(e -> queue(
+                "itembrowser settlement workerneed hunger 80",
+                "Hunger set to the critical threshold. Worker #1 should return home for Food."));
+        thirstCritical.addActionListener(e -> queue(
+                "itembrowser settlement workerneed thirst 80",
+                "Thirst set to the critical threshold. Worker #1 should return home to drink."));
+        energyCritical.addActionListener(e -> queue(
+                "itembrowser settlement workerneed energy 20",
+                "Energy set to the critical threshold. Worker #1 should return home to rest."));
+        resetNeeds.addActionListener(e -> queue(
+                "itembrowser settlement workerneedsreset",
+                "Worker #1 needs reset to Hunger 0 / Thirst 0 / Energy 100."));
+
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 126));
+        buttons.add(needsStatus);
+        buttons.add(needsSelfTest);
+        buttons.add(hungerCritical);
+        buttons.add(thirstCritical);
+        buttons.add(energyCritical);
+        buttons.add(resetNeeds);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createPersistenceCard() {
+        JPanel card = ConsoleTheme.createCard("Bundle 1.4 consolidated acceptance");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "1. Finish gather/haul toggles: Haul OFF holds cargo; Haul ON resumes; all gathers OFF stops new work; multiple gathers rotate.\n"
+                + "2. Run Needs Self-Test; expect PASS.\n"
+                + "3. With at least 1 Food stored, Set Hunger Critical: worker returns home, consumes exactly 1 Food, then resumes.\n"
+                + "4. With Food at 0, Set Hunger Critical: worker reports No Food and stops; add Food and it resumes automatically.\n"
+                + "5. Set Thirst Critical: worker returns home, drinks from the Phase-1 shelter water supply, then resumes.\n"
+                + "6. Set Energy Critical: worker returns home, rests, then resumes.\n"
+                + "7. Needs Status should change with work/recovery and survive exit/re-entry; logout/relog is the persistence gate.",
+                10));
         return card;
     }
 

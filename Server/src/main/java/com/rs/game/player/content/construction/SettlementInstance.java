@@ -492,6 +492,23 @@ public final class SettlementInstance {
         return state.addResource(resource, amount);
     }
 
+    public long consumeWorkerResource(SettlementResource resource, long amount) {
+        if (!loaded || destroyed || resource == null || amount <= 0L) {
+            return 0L;
+        }
+        return state.removeResource(resource, amount);
+    }
+
+    /**
+     * Phase-1 provisional water support. The completed starter shelter provides
+     * a basic local drinking source until physical wells/barrels/tanks replace
+     * this seam in the broader settlement production phase.
+     */
+    public boolean hasBasicWorkerWaterSupply() {
+        return loaded && !destroyed
+                && state.isMilestoneComplete(SettlementMilestone.STARTER_SHELTER);
+    }
+
     private boolean isReservedInfrastructureTile(int plotX, int plotY, int plane) {
         return SettlementResourceNode.occupiesPlotTile(plotX, plotY, plane)
                 || SettlementWorkerDefinition.isReservedArrivalTile(plotX, plotY, plane);
