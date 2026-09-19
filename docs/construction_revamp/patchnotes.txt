@@ -292,3 +292,9 @@
 - Added `SettlementBundle12FinalCheck`, a non-mutating aggregate confidence check that runs the expanded disposable state self-test, audits the player's real saved settlement, verifies saved-piece count consistency and validates definition-registry uniqueness/lookups.
 - Added owner-only `itembrowser settlement finalcheck` and a Con Revamp `Final Auto Check` button.
 - Bundle 1.2 now has only three runtime completion checks: Final Auto Check PASS, ordinary Dev Mode smoke outside the settlement, and classic POH enter/build/leave smoke.
+
+
+2026-09-18 - Bundle 1.2 duplicate regression cleanup
+- User clarified that ordinary Dev Mode outside the settlement and classic POH enter/build/leave regressions had already been runtime tested successfully.
+- Updated the Bundle 1.2 gate to stop requesting duplicate runtime work.
+- Only the newly-added `Final Auto Check` remains unverified before Bundle 1.2 can close.
