@@ -40,6 +40,7 @@ public final class SettlementInstance {
 
     private final List<WorldObject> starterResourceObjects = new ArrayList<WorldObject>();
     private final List<NPC> starterResourceNpcs = new ArrayList<NPC>();
+    private final List<SettlementWorkerNpc> workerNpcs = new ArrayList<SettlementWorkerNpc>();
 
     private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
         this.player = player;
@@ -138,6 +139,7 @@ public final class SettlementInstance {
         }
         spawnStarterResourceNodes();
         checkStarterShelterMilestone();
+        ensureStarterWorkerRuntime();
 
         player.setForceNextMapLoadRefresh(true);
         player.loadMapRegions();
@@ -169,8 +171,8 @@ public final class SettlementInstance {
 
         int plotX = toPlotX(worldTile.getX());
         int plotY = toPlotY(worldTile.getY());
-        if (SettlementResourceNode.occupiesPlotTile(plotX, plotY, worldTile.getPlane())) {
-            return "That tile is reserved for a starter settlement resource node.";
+        if (isReservedInfrastructureTile(plotX, plotY, worldTile.getPlane())) {
+            return "That tile is reserved for settlement infrastructure.";
         }
         SettlementPlacedPiece saved = state.place(
                 definition, plotX, plotY, worldTile.getPlane(), rotation);
@@ -196,9 +198,9 @@ public final class SettlementInstance {
 
         int destinationPlotX = toPlotX(destination.getX());
         int destinationPlotY = toPlotY(destination.getY());
-        if (SettlementResourceNode.occupiesPlotTile(
+        if (isReservedInfrastructureTile(
                 destinationPlotX, destinationPlotY, destination.getPlane())) {
-            return "That destination is reserved for a starter settlement resource node.";
+            return "That destination is reserved for settlement infrastructure.";
         }
 
         SettlementPlacedPiece moved = state.move(
@@ -227,9 +229,9 @@ public final class SettlementInstance {
 
         int destinationPlotX = toPlotX(destination.getX());
         int destinationPlotY = toPlotY(destination.getY());
-        if (SettlementResourceNode.occupiesPlotTile(
+        if (isReservedInfrastructureTile(
                 destinationPlotX, destinationPlotY, destination.getPlane())) {
-            return "That destination is reserved for a starter settlement resource node.";
+            return "That destination is reserved for settlement infrastructure.";
         }
 
         SettlementPlacedPiece duplicate = state.duplicate(
@@ -365,6 +367,73 @@ public final class SettlementInstance {
                         + "Your settlement is ready to attract its first worker.");
         System.out.println("[Settlement] Starter shelter milestone completed for "
                 + player.getUsername() + ".");
+        ensureStarterWorkerRuntime();
+    }
+
+    private void ensureStarterWorkerRuntime() {
+        if (destroyed || boundChunks == null
+                || !state.isMilestoneComplete(SettlementMilestone.STARTER_SHELTER)) {
+            return;
+        }
+
+        int beforeCount = state.getWorkerCount();
+        SettlementWorkerState worker = state.ensureStarterWorker();
+        if (worker == null) {
+            return;
+        }
+
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc != null && !npc.hasFinished() && npc.getWorkerId() == worker.getWorkerId()) {
+                return;
+            }
+        }
+
+        SettlementWorkerDefinition definition = SettlementWorkerDefinition.forKey(
+                worker.getDefinitionKey());
+        if (definition == null
+                || !SettlementState.isValidPlotLocation(
+                        worker.getHomePlotX(), worker.getHomePlotY(), worker.getHomePlane())) {
+            return;
+        }
+
+        WorldTile tile = new WorldTile(
+                toWorldX(worker.getHomePlotX()),
+                toWorldY(worker.getHomePlotY()),
+                worker.getHomePlane());
+        SettlementWorkerNpc npc = new SettlementWorkerNpc(definition, worker, tile);
+        workerNpcs.add(npc);
+
+        if (state.getWorkerCount() > beforeCount) {
+            player.getPackets().sendGameMessage(
+                    "<col=3CB371>A settler has arrived.</col> "
+                            + worker.getName() + " is ready for work.");
+            System.out.println("[Settlement] Worker #" + worker.getWorkerId()
+                    + " arrived for " + player.getUsername() + ".");
+        }
+    }
+
+    public int getActiveWorkerCount() {
+        int count = 0;
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc != null && !npc.hasFinished()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public boolean hasActiveWorker(long workerId) {
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc != null && !npc.hasFinished() && npc.getWorkerId() == workerId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isReservedInfrastructureTile(int plotX, int plotY, int plane) {
+        return SettlementResourceNode.occupiesPlotTile(plotX, plotY, plane)
+                || SettlementWorkerDefinition.isReservedArrivalTile(plotX, plotY, plane);
     }
 
     private void spawnStarterResourceNodes() {
@@ -424,6 +493,15 @@ public final class SettlementInstance {
             }
         }
         starterResourceNpcs.clear();
+    }
+
+    private void removeSettlementWorkers() {
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc != null && !npc.hasFinished()) {
+                npc.finish();
+            }
+        }
+        workerNpcs.clear();
     }
 
     public boolean containsWorldTile(WorldTile tile) {
@@ -549,6 +627,7 @@ public final class SettlementInstance {
         }
         destroyed = true;
         loaded = false;
+        removeSettlementWorkers();
         removeStarterResourceNodes();
 
         final int[] bounds = boundChunks;
