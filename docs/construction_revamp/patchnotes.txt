@@ -501,3 +501,11 @@
 - After settlement exit/re-entry, `Check Build Baseline` returned PASS with the exact same saved layout, resource totals and Construction XP.
 - `Exit + Outside Rejection` returned `You must be inside your settlement to build.` after leaving the settlement.
 - Bundle 1.5 is DONE / runtime verified. Phase 1 now moves to a stale-checklist/remaining-smoke closure audit rather than new feature work.
+
+2026-09-19 - Phase 1 closure audit
+- Reconciled stale prototype/debug checklist debt against recorded runtime evidence and the user's completed edge/persistence smoke confirmations.
+- Marked ghost hover/rotation/model-switch/terrain/cancel edges and resource/shelter/world-object persistence carryovers accepted; Bundle 1.4 status corrected to DONE / runtime verified.
+- Historical diagnostic-only Console/Camera/Test Console checks are retained as non-blocking archaeology rather than active Phase-1 gates.
+- Updated the obsolete pre-Bundle-1.5 XP note: devspawn remains no-cost/no-XP, while material-consuming player builds own active Construction XP.
+- The only remaining blocking Phase-1 acceptance item is Eclipse clean/build for current Client + Server under the protected Java 8 project settings.
+- Zero-Food Hunger block/resupply remains optional non-blocking carryover.

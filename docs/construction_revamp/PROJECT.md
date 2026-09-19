@@ -832,8 +832,8 @@ Runtime acceptance target:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: Construction Revamp SAP AAA remains approved. Bundle 1.5 is fully runtime verified.
-- Current checklist item: Phase 1 closure audit — reconcile stale unchecked acceptance boxes against existing VERIFIED evidence, then run only any genuinely missing smoke coverage.
-- Current objective: finish the real player-building/material/active-XP seam that keeps Freeform settlement building foundation and Persistence/Construction XP ownership in progress, then close remaining Phase-1 gates before Phase 2.
+- Current checklist item: Phase 1 final closure gate — Eclipse clean/build on the current Client + Server with the protected Java 8 project settings.
+- Current objective: complete the final Eclipse/Java 8 clean-build acceptance; all required Phase-1 gameplay/runtime ownership is otherwise verified, with zero-Food Hunger recovery retained as optional non-blocking carryover.
 
 ## Verification classifications
 
@@ -943,6 +943,7 @@ Runtime acceptance target:
 - Bundle 1.5 player-build ownership is verified-static: stable piece key -> normal-player `settlementbuild` command -> active `SettlementInstance.placePlayerPiece(...)` -> settlement-material consume -> persistent placement -> one active Construction XP award.
 - Bundle 1.5 final-gate harness is verified-static: gameplay and disposable tests share `SettlementPlayerBuildTransaction`; the self-test uses only a new disposable `SettlementState`, while persistence capture/check stores read-only process-local signatures/totals/XP.
 - Bundle 1.5 final gate is runtime VERIFIED: disposable Self-Test PASS; baseline captured with 19 saved pieces and Wood=81/Food=12/Stone=18/Basic ore=28 at Construction XP 187522868; after exit/re-entry the exact build layout/resource totals/Construction XP baseline passed; the ordered outside-settlement build was rejected with `You must be inside your settlement to build.`.
+- Phase-1 closure audit is complete: previously unchecked ghost hover/rotation/model-switch/terrain/cancel behavior and consolidated resource/shelter/world-object persistence carryovers were already runtime-confirmed by the user and are no longer blockers. Historical prototype/debug-only diagnostics are explicitly non-blocking. The protected Eclipse/Java 8 clean-build check is the only remaining Phase-1 gate.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -1012,7 +1013,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Bundle 1.5 is DONE. Reconcile the remaining stale Phase-1 checklist boxes against already-recorded runtime evidence, then isolate only genuinely missing `SMOKE_TEST.md` coverage before deciding whether Phase 1 can close. Zero-Food Hunger block/resupply remains optional carryover.
+**Next checklist item:** Run one Eclipse clean/build of the current Matrix3 Client + Server with the protected Java 8 project settings. If it completes without new compile/verifier errors, Phase 1 has no remaining blocking acceptance item and can close. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 
