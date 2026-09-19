@@ -676,8 +676,8 @@ Later interaction polish after single-piece preview is stable:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the Bundle 1.3 starter shelter milestone slice. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: starter resource/storage slice is runtime verified; run the new Shelter Self-Test and real Shelter Status acceptance to close Bundle 1.3.
-- Current objective: runtime-verify the automatic one-time starter shelter milestone, then close Bundle 1.3 and activate Bundle 1.4 first-worker vertical slice.
+- Current checklist item: starter resource/storage slice is runtime verified; run the new one-click Bundle 1.3 Final Check in an active settlement to close the shelter/milestone gate.
+- Current objective: runtime-verify Bundle 1.3 Final Check against the real loaded settlement. PASS closes Bundle 1.3; NOT READY reports the exact missing real-save shelter requirements without fabricating progress.
 
 ## Verification classifications
 
@@ -824,7 +824,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build, run Test Console -> Con Revamp -> `Shelter Self-Test` and expect PASS. Then use `Shelter Status`; satisfy any missing 4-wall/4-floor/1-door/1-each-resource requirements and verify the real milestone becomes COMPLETE automatically. Recheck after removing/spending something to confirm the completion latch remains.
+**Next checklist item:** Pull/build, enter the settlement, then run Test Console -> Con Revamp -> `Bundle 1.3 Final Check`. PASS closes Bundle 1.3. NOT READY reports the exact missing wall/floor/door/resource requirement; satisfy only what is missing and rerun. Do not advance to Bundle 1.4 until this returns PASS.
 
 **Files/systems already inspected:**
 
