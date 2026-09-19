@@ -353,3 +353,10 @@
 - `SettlementInstance` now auto-creates/rebuilds Worker #1 after the starter milestone, guarantees one live NPC per saved worker id, reserves the arrival tile and cleans runtime workers on instance destroy.
 - Added disposable `SettlementWorkerSelfTest`, real-state `SettlementWorkerArrivalCheck`, owner-only worker status/self-test/check commands and Con Revamp Worker controls.
 - Runtime acceptance required for current NPC presentation, automatic arrival, 1/1 saved/runtime count and same-id rebuild after re-entry.
+
+
+2026-09-18 - Worker #1 first arrival runtime verified
+- User runtime confirmed entering the completed settlement automatically spawns the settler NPC.
+- `Worker Self-Test` returned PASS for milestone gating, stable worker identity, duplicate suppression and serialization.
+- `Worker Arrival Check` returned PASS with exactly one persistent Worker #1 and exactly one matching live NPC projection.
+- Exit/re-enter same-id rebuild remains the only unfinished acceptance item for the Worker #1 arrival foundation before Allowed Jobs.
