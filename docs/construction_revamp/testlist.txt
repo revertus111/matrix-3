@@ -144,22 +144,31 @@ Phase 1 Bundle 1.3 — starter resources/storage
 [x] Source ownership: node interaction is scoped to `SettlementControler`; normal world gathering owners remain unchanged.
 [x] Source ownership: `SettlementGatherAction` writes directly to settlement storage and has no inventory/bank add/delete path.
 [ ] Server and Client clean/build successfully after Bundle 1.3 resource/storage patch.
-[ ] Con Revamp `Resource Self-Test` reports PASS for add/remove/capacity + four unique valid node definitions.
-[ ] Wood node is visible/clickable at its starter plot location and adds Wood to settlement storage.
-[ ] Food node is visible/clickable at its starter plot location and adds Food to settlement storage.
-[ ] Stone node is visible/clickable at its starter plot location and adds Stone to settlement storage.
-[ ] Basic ore node is visible/clickable at its starter plot location and adds Basic ore to settlement storage.
-[ ] Resource Status reports the expected four resource totals and total/capacity.
-[ ] Gathering starter resources does not add/delete normal inventory items and does not alter normal bank stock.
-[ ] Starter storage rejects additions past its 200-unit capacity cleanly.
-[ ] Exit/re-enter preserves settlement resource totals and respawns one clean set of starter nodes.
+[x] Con Revamp `Resource Self-Test` reports PASS for add/remove/capacity + four unique valid node definitions.
+[x] Wood node is visible/clickable at its starter plot location and adds Wood to settlement storage.
+[x] Food node is visible/clickable at its starter plot location and adds Food to settlement storage.
+[x] Stone node is visible/clickable at its starter plot location and adds Stone to settlement storage.
+[x] Basic ore node is visible/clickable at its starter plot location and adds Basic ore to settlement storage.
+[x] Resource Status reports the expected four resource totals and total/capacity.
+[x] Gathering starter resources does not add/delete normal inventory items and does not alter normal bank stock.
+[x] Starter storage rejects additions past its 200-unit capacity in the verified Resource Self-Test.
+[x] Exit/re-enter preserves settlement resource totals and respawns one clean set of starter nodes.
 [ ] Logout/relog preserves settlement resource totals.
 [ ] Building/moving/duplicating onto a reserved starter-node tile is rejected cleanly.
 [ ] Starter resource nodes are removed with the transient instance and do not leak into the normal world.
-[ ] Node visual ids/options are accepted or replaced without changing resource/storage ownership.
-[ ] Wood, food, stone and basic ore are obtainable inside the settlement.
-[ ] Settlement storage is isolated from the normal bank.
-[ ] Normal bank stock cannot be dumped directly into settlement storage.
+[x] Current starter node visuals/options are runtime accepted for the prototype.
+[x] Wood, food, stone and basic ore are obtainable inside the settlement.
+[x] Settlement storage is isolated from the normal bank.
+[x] Normal bank stock cannot be dumped directly into settlement storage through the implemented Bundle 1.3 path.
+[x] Source ownership: starter piece definitions expose stable WALL/FLOOR/DOOR roles independent of provisional object ids.
+[x] Source ownership: `SettlementMilestone.STARTER_SHELTER` persists in `SettlementState` schema v3 and old saves repair missing milestone storage.
+[x] Source ownership: shelter completion is automatic/server-owned and latches permanently once complete.
+[ ] Con Revamp `Shelter Self-Test` reports PASS for threshold gating + one-time latch + serialization.
+[ ] Shelter Status accurately reports real-save progress for 4 walls, 4 floors, 1 doorway and 1 of each starter resource.
+[ ] Real starter shelter milestone changes from INCOMPLETE to COMPLETE automatically when the saved state first satisfies all requirements.
+[ ] After completion, removing a required piece or spending a required resource does not revoke the milestone.
+[ ] Exit/re-enter preserves starter shelter completion.
+[ ] Logout/relog preserves starter shelter completion.
 [ ] Starter shelter milestone detects the required build/resource state.
 
 Phase 1 Bundle 1.4 — first worker
