@@ -243,9 +243,11 @@ Phase 1 Bundle 1.4 — first worker
 [x] Con Revamp Progress Self-Test reports PASS for stable skills + job mapping + XP gain + level curve + serialization.
 [x] Productive gathers increase the mapped Worker #1 skill XP at runtime; observed Food Gathering 0 -> 12 and Mining 0 -> 24 while Woodcutting remained independently tracked.
 [x] Successful deposits increase Worker #1 Hauling XP and player Construction XP by the approved passive amount; observed Hauling 6 -> 24 and Construction XP 187522810 -> 187522814 across productive deposits.
-[ ] With Haul OFF or all gathering OFF, waiting/idle time does not increase player Construction XP.
-[ ] Exit/re-enter preserves Worker #1 skill XP and needs exactly.
-[ ] Logout/relog preserves Worker #1 skill XP and needs exactly.
+[x] Final-gate harness is verified-static and non-mutating: capture requires all jobs OFF + non-critical needs, then snapshots Worker identity/Allowed Jobs/Needs/all personal skill XP/player Construction XP in process memory only.
+[ ] Bundle 1.4 Gate: Capture Stable Baseline succeeds after carried=none + all jobs OFF.
+[ ] Bundle 1.4 Gate: after several idle seconds, Check Baseline PASS proves waiting/idle time did not increase Worker or Construction XP.
+[ ] Bundle 1.4 Gate: after exit/re-entry, Check Baseline PASS proves Worker #1 skill XP and needs survived runtime-instance rebuild exactly.
+[ ] Bundle 1.4 Gate: after logout/relog and re-entry without server restart, Check Baseline PASS proves Worker #1 skill XP and needs survived player save/load exactly.
 [ ] CARRYOVER: with no Food available, critical Hunger blocks with No Food and resumes automatically after Food returns.
 [ ] Worker progression/state survives logout/relog.
 [ ] Construction XP is awarded only by approved active/passive sources.
