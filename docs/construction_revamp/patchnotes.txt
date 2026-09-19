@@ -427,3 +427,11 @@
 - Critical Energy returns home and rests for a bounded recovery delay.
 - Added disposable SettlementWorkerNeedsSelfTest plus owner-only needs status/set/reset commands and Con Revamp buttons for consolidated runtime acceptance.
 - Runtime carry/action/recovery timers remain transient; persistent identity, Allowed Jobs, needs and settlement resource ownership remain server-authoritative.
+
+2026-09-19 - Bundle 1.4 gather/haul + worker needs runtime accepted
+- User confirmed the consolidated runtime pass works.
+- Gather/haul behavior is accepted, including Worker AI state flow, Haul hold/resume, gather-disable stop behavior and multi-job rotation.
+- Worker Needs self-test returned PASS; live work cycles changed Hunger/Thirst/Energy as expected.
+- Critical Hunger, Thirst and Energy recovery paths and Reset Needs all worked in the live settlement.
+- Explicit zero-Food blocking and restart-persistence checks remain carryover for the upcoming persistence/basic-XP slice to avoid another dedicated launch.
+- Canonical milestone `First worker, Allowed Jobs, gathering and hauling` is now DONE.

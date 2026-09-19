@@ -12,7 +12,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 | --- | --- |
 | Freeform settlement building foundation | 🔵 In Progress |
 | Starter resource loop and shelter milestone | ✅ Done |
-| First worker, Allowed Jobs, gathering and hauling | 🔵 In Progress |
+| First worker, Allowed Jobs, gathering and hauling | ✅ Done |
 | Worker needs, storage and settlement recovery | 🔵 In Progress |
 | Persistence and Construction XP ownership | 🔵 In Progress |
 | Population, processing and logistics expansion | ❌ Not started |
@@ -690,7 +690,7 @@ Acceptance target:
 
 `Gather Wood + Haul -> walk/gather/return/deposit -> Wood rises only -> Haul OFF holds cargo -> Haul ON resumes deposit -> gathering OFF stops new cycles`
 
-#### Worker needs vertical slice — IMPLEMENTED / NEEDS TEST
+#### Worker needs vertical slice — RUNTIME VERIFIED
 
 Persistent owner:
 
@@ -775,8 +775,8 @@ Remaining Bundle 1.4 sequence after needs acceptance:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA remains approved for the active Bundle 1.4 workstream. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: worker needs is implemented verified-static and bundled with the remaining gather/haul toggles for one consolidated runtime session.
-- Current objective: runtime-verify the remaining gather/haul toggles plus Hunger/Thirst/Energy recovery/persistence, then continue directly into basic worker progression/Construction XP under Bundle 1.4.
+- Current checklist item: gather/haul + Worker Needs runtime behavior is accepted. Continue with the persistence/basic-XP slice: persistent worker progression plus approved Construction XP ownership.
+- Current objective: add minimal persistent worker skill/XP progression and Construction XP award ownership without changing the now-verified gather/haul/needs behavior.
 
 ## Verification classifications
 
@@ -872,7 +872,9 @@ Remaining Bundle 1.4 sequence after needs acceptance:
 - The remaining tree-only failure was traced to `SettlementInstance.getWorkerNodeApproachTile(...)`, which converted every resource node into a synthetic fixed tile. That bypassed Matrix3's object-footprint/access strategy for tree id 1276.
 - Worker resource routing now returns the actual live `WorldObject` or starter resource NPC. Runtime showed Worker #1 reaching a tile from which the player can cut the tree but remaining stuck there. The follow-up one-tile adjacency check was runtime-rejected: tree/object interaction is footprint/access-strategy based, not anchor-distance based. `walkToward(...)` now trusts Matrix3's intelligent `calcFollow(...)` contract directly: success with zero queued steps means `ObjectStrategy` / `EntityStrategy` already considers the current tile interaction-ready, so gathering begins immediately.
 - Runtime retest on 2026-09-19 confirmed the strategy-owned handoff fixes tree id 1276: Worker #1 now reaches the tree and successfully proceeds into the gather/haul loop instead of stalling.
-- Worker needs is verified-static: schema-v6 `SettlementWorkerState` owns persistent Hunger/Thirst/Energy, work cycles charge bounded need costs, and `SettlementWorkerNpc` gates new work through home-based Food/basic-water/rest recovery. `SettlementWorkerNeedsSelfTest` and explicit Test Console controls are ready for runtime acceptance.
+- Worker needs is runtime VERIFIED: the 2026-09-19 acceptance run showed natural work-cycle need changes, `SettlementWorkerNeedsSelfTest PASS`, critical Hunger recovery, critical Thirst recovery, critical Energy recovery and reset controls all functioning in the live settlement.
+- Gather/haul acceptance is runtime VERIFIED from the same consolidated pass: Worker #1 gathers/hauls successfully and the user confirmed the remaining job-toggle behavior works.
+- The explicit zero-Food blocked-state branch and restart persistence checks remain recorded as carryover into the upcoming persistence/basic-XP slice so they can be covered without another dedicated test launch.
 - `SettlementWorkerNpc` consumes the persistent allowlist as a transient gather/haul state machine, holds one carried resource until Haul/storage are valid, and deposits only through `SettlementState.addResource(...)` via `SettlementInstance`; this tree-specific route correction is verified-static pending runtime acceptance.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
@@ -942,7 +944,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build once and run the consolidated Bundle 1.4 pass: finish Haul OFF/ON + gather-disable + multi-job rotation, run Needs Self-Test, then force Hunger/Thirst/Energy critical states with the new buttons and verify stop/recovery behavior. Exit/re-enter and logout/relog once to confirm need persistence. PASS advances directly to basic worker progression/Construction XP.
+**Next checklist item:** Implement the Bundle 1.4 persistence/basic-XP slice: add minimal persistent worker job progression and define the approved Construction XP award seam. Fold the remaining zero-Food and restart-persistence carryover checks into that slice's one consolidated runtime pass.
 
 **Files/systems already inspected:**
 
