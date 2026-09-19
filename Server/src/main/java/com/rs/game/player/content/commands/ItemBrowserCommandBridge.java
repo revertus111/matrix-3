@@ -20,6 +20,8 @@ import com.rs.game.player.content.construction.SettlementShelterSelfTest;
 import com.rs.game.player.content.construction.SettlementStateAudit;
 import com.rs.game.player.content.construction.SettlementStateSelfTest;
 import com.rs.game.player.content.construction.SettlementWorkerArrivalCheck;
+import com.rs.game.player.content.construction.SettlementWorkerJob;
+import com.rs.game.player.content.construction.SettlementWorkerJobsSelfTest;
 import com.rs.game.player.content.construction.SettlementWorkerSelfTest;
 import com.rs.game.player.content.construction.SettlementWorkerState;
 
@@ -136,7 +138,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -243,6 +245,8 @@ public final class ItemBrowserCommandBridge {
                                 + " [" + worker.getDefinitionKey() + "] home="
                                 + worker.getHomePlotX() + "," + worker.getHomePlotY()
                                 + "," + worker.getHomePlane());
+                player.getPackets().sendGameMessage(
+                        "Allowed Jobs: " + worker.getAllowedJobsSummary());
             }
             return true;
         }
@@ -258,6 +262,83 @@ public final class ItemBrowserCommandBridge {
             String result = SettlementWorkerArrivalCheck.run(player);
             System.out.println("[SettlementWorkerArrivalCheck] " + result);
             player.getPackets().sendGameMessage("Worker arrival check: " + result);
+            return true;
+        }
+
+        if ("workerjobs".equals(operation)) {
+            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
+            if (worker == null) {
+                player.getPackets().sendGameMessage("No starter worker exists yet.");
+            } else {
+                player.getPackets().sendGameMessage(
+                        "Worker #" + worker.getWorkerId() + " Allowed Jobs: "
+                                + worker.getAllowedJobsSummary());
+            }
+            return true;
+        }
+
+        if ("workerjobselftest".equals(operation)) {
+            String result = SettlementWorkerJobsSelfTest.run();
+            System.out.println("[SettlementWorkerJobsSelfTest] " + result);
+            player.getPackets().sendGameMessage("Allowed Jobs self-test: " + result);
+            return true;
+        }
+
+        if ("workerjob".equals(operation)) {
+            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
+            if (worker == null) {
+                player.getPackets().sendGameMessage("No starter worker exists yet.");
+                return true;
+            }
+            if (cmd.length < 5) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerjob <job-key> <on|off>");
+                return true;
+            }
+            SettlementWorkerJob job = SettlementWorkerJob.forKey(cmd[3].toLowerCase());
+            if (job == null) {
+                player.getPackets().sendGameMessage(
+                        "Unknown worker job key: " + cmd[3] + ".");
+                return true;
+            }
+            String state = cmd[4].toLowerCase();
+            if (!"on".equals(state) && !"off".equals(state)) {
+                player.getPackets().sendGameMessage(
+                        "Worker job state must be on or off.");
+                return true;
+            }
+            boolean allowed = "on".equals(state);
+            worker.setJobAllowed(job, allowed);
+            player.getPackets().sendGameMessage(
+                    "Worker #" + worker.getWorkerId() + " "
+                            + job.getDisplayName() + "=" + (allowed ? "ON" : "OFF") + ".");
+            return true;
+        }
+
+        if ("workerjobsall".equals(operation)) {
+            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
+            if (worker == null) {
+                player.getPackets().sendGameMessage("No starter worker exists yet.");
+                return true;
+            }
+            if (cmd.length < 4) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerjobsall <on|off>");
+                return true;
+            }
+            String state = cmd[3].toLowerCase();
+            if (!"on".equals(state) && !"off".equals(state)) {
+                player.getPackets().sendGameMessage(
+                        "Worker jobs state must be on or off.");
+                return true;
+            }
+            boolean allowed = "on".equals(state);
+            for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
+                worker.setJobAllowed(job, allowed);
+            }
+            player.getPackets().sendGameMessage(
+                    "Worker #" + worker.getWorkerId() + " Allowed Jobs: "
+                            + worker.getAllowedJobsSummary());
             return true;
         }
 
@@ -283,7 +364,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|audit|selftest|finalcheck>");
         return true;
     }
 
