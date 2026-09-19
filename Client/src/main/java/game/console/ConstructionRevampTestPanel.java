@@ -27,7 +27,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Use Enter Settlement to start the Bundle 1.2 persistence pass.", 4);
+            "Ready. Bundle 1.3 starter shelter milestone is active.", 4);
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -67,6 +67,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton finalAutoCheck = new JButton("Final Auto Check");
         JButton resourceStatus = new JButton("Resource Status");
         JButton resourceSelfTest = new JButton("Resource Self-Test");
+        JButton shelterStatus = new JButton("Shelter Status");
+        JButton shelterSelfTest = new JButton("Shelter Self-Test");
 
         ConsoleTheme.styleButton(enter);
         ConsoleTheme.styleButton(settlementStatus);
@@ -78,6 +80,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(finalAutoCheck);
         ConsoleTheme.styleButton(resourceStatus);
         ConsoleTheme.styleButton(resourceSelfTest);
+        ConsoleTheme.styleButton(shelterStatus);
+        ConsoleTheme.styleButton(shelterSelfTest);
 
         enter.addActionListener(e -> queue(
                 "itembrowser settlement enter",
@@ -110,11 +114,17 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         resourceSelfTest.addActionListener(e -> queue(
                 "itembrowser settlement resourceselftest",
                 "Resource Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
+        shelterStatus.addActionListener(e -> queue(
+                "itembrowser settlement shelter",
+                "Shelter Status queued. Exact milestone progress will appear in game chat."));
+        shelterSelfTest.addActionListener(e -> queue(
+                "itembrowser settlement shelterselftest",
+                "Shelter Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 208));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
         buttons.add(enter);
         buttons.add(settlementStatus);
         buttons.add(exit);
@@ -125,6 +135,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(finalAutoCheck);
         buttons.add(resourceStatus);
         buttons.add(resourceSelfTest);
+        buttons.add(shelterStatus);
+        buttons.add(shelterSelfTest);
         card.add(buttons);
 
         card.add(Box.createVerticalStrut(10));
@@ -135,15 +147,14 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createPersistenceCard() {
-        JPanel card = ConsoleTheme.createCard("Bundle 1.3 starter resources / storage");
+        JPanel card = ConsoleTheme.createCard("Bundle 1.3 starter shelter milestone");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "1. Run Resource Self-Test; expect PASS.\n"
-                + "2. Enter Settlement. Four starter nodes should appear near plot 8-20,8.\n"
-                + "3. Gather once from wood, food, stone and ore; resources go straight to settlement storage.\n"
-                + "4. Use Resource Status and verify each total increased while normal inventory/bank stock did not.\n"
-                + "5. Exit and re-enter; Resource Status should keep the same totals.\n"
-                + "6. Node visuals are provisional; report any missing/wrong-looking node separately from storage behavior.",
+                "1. Run Shelter Self-Test; expect PASS.\n"
+                + "2. Shelter Status shows the real-save requirements: 4 walls, 4 floors, 1 doorway, plus 1 of each starter resource.\n"
+                + "3. Build/gather normally. The milestone completes automatically when the saved state qualifies.\n"
+                + "4. Completion is permanent; later removing a piece or spending supplies does not revoke it.\n"
+                + "5. Once COMPLETE is verified, Bundle 1.4 can use that milestone to trigger Worker #1.",
                 8));
         return card;
     }
