@@ -19,6 +19,9 @@ import com.rs.game.player.content.construction.SettlementResourceSelfTest;
 import com.rs.game.player.content.construction.SettlementShelterSelfTest;
 import com.rs.game.player.content.construction.SettlementStateAudit;
 import com.rs.game.player.content.construction.SettlementStateSelfTest;
+import com.rs.game.player.content.construction.SettlementWorkerArrivalCheck;
+import com.rs.game.player.content.construction.SettlementWorkerSelfTest;
+import com.rs.game.player.content.construction.SettlementWorkerState;
 
 /**
  * Owner-only server authority bridge for Client Console Item Browser,
@@ -133,7 +136,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -224,6 +227,40 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workers".equals(operation)) {
+            java.util.List<SettlementWorkerState> workers =
+                    player.getSettlementState().snapshotWorkers();
+            SettlementInstance live = SettlementInstance.getActive(player);
+            player.getPackets().sendGameMessage(
+                    "Settlement workers: saved=" + workers.size()
+                            + ", runtime=" + (live == null ? 0 : live.getActiveWorkerCount()) + ".");
+            for (SettlementWorkerState worker : workers) {
+                if (worker == null) {
+                    continue;
+                }
+                player.getPackets().sendGameMessage(
+                        "Worker #" + worker.getWorkerId() + " " + worker.getName()
+                                + " [" + worker.getDefinitionKey() + "] home="
+                                + worker.getHomePlotX() + "," + worker.getHomePlotY()
+                                + "," + worker.getHomePlane());
+            }
+            return true;
+        }
+
+        if ("workerselftest".equals(operation)) {
+            String result = SettlementWorkerSelfTest.run();
+            System.out.println("[SettlementWorkerSelfTest] " + result);
+            player.getPackets().sendGameMessage("Worker self-test: " + result);
+            return true;
+        }
+
+        if ("workercheck".equals(operation)) {
+            String result = SettlementWorkerArrivalCheck.run(player);
+            System.out.println("[SettlementWorkerArrivalCheck] " + result);
+            player.getPackets().sendGameMessage("Worker arrival check: " + result);
+            return true;
+        }
+
         if ("audit".equals(operation)) {
             String result = SettlementStateAudit.run(player.getSettlementState());
             System.out.println("[SettlementStateAudit] " + result);
@@ -246,7 +283,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|audit|selftest|finalcheck>");
         return true;
     }
 
