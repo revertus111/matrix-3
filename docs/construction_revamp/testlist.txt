@@ -230,8 +230,8 @@ Phase 1 Bundle 1.4 — first worker
 [ ] CARRYOVER: with no Food available, critical Hunger stops work with No Food; adding Food later recovers and resumes automatically.
 [x] Critical Thirst returns Worker #1 home, uses the Phase-1 basic shelter water supply and resumes automatically.
 [x] Critical Energy returns Worker #1 home, rests and resumes automatically.
-[ ] CARRYOVER: exit/re-enter preserves Worker #1 Hunger/Thirst/Energy values.
-[ ] CARRYOVER: logout/relog preserves Worker #1 Hunger/Thirst/Energy values.
+[x] Exit/re-enter preserves Worker #1 Hunger/Thirst/Energy values (verified by Bundle 1.4 stable-baseline comparison).
+[x] Logout/relog preserves Worker #1 Hunger/Thirst/Energy values (verified by Bundle 1.4 stable-baseline comparison).
 [x] Source ownership: SettlementState schema v7 persists Worker #1 personal skill XP through SettlementWorkerState; transient runtime AI/action state remains outside persistence.
 [x] Source ownership: current starter jobs map to stable Worker skills; gather completion awards mapped skill XP and successful deposit awards Hauling XP.
 [x] Source ownership: successful authoritative settlement-storage deposit is the only current passive-worker Construction XP seam.
@@ -244,13 +244,13 @@ Phase 1 Bundle 1.4 — first worker
 [x] Productive gathers increase the mapped Worker #1 skill XP at runtime; observed Food Gathering 0 -> 12 and Mining 0 -> 24 while Woodcutting remained independently tracked.
 [x] Successful deposits increase Worker #1 Hauling XP and player Construction XP by the approved passive amount; observed Hauling 6 -> 24 and Construction XP 187522810 -> 187522814 across productive deposits.
 [x] Final-gate harness is verified-static and non-mutating: capture requires all jobs OFF + non-critical needs, then snapshots Worker identity/Allowed Jobs/Needs/all personal skill XP/player Construction XP in process memory only.
-[ ] Bundle 1.4 Gate: Capture Stable Baseline succeeds after carried=none + all jobs OFF.
-[ ] Bundle 1.4 Gate: after several idle seconds, Check Baseline PASS proves waiting/idle time did not increase Worker or Construction XP.
-[ ] Bundle 1.4 Gate: after exit/re-entry, Check Baseline PASS proves Worker #1 skill XP and needs survived runtime-instance rebuild exactly.
-[ ] Bundle 1.4 Gate: after logout/relog and re-entry without server restart, Check Baseline PASS proves Worker #1 skill XP and needs survived player save/load exactly.
+[x] Bundle 1.4 Gate: Capture Stable Baseline succeeds after carried=none + all jobs OFF.
+[x] Bundle 1.4 Gate: after several idle seconds, Check Baseline PASS proves waiting/idle time did not increase Worker or Construction XP.
+[x] Bundle 1.4 Gate: after exit/re-entry, Check Baseline PASS proves Worker #1 skill XP and needs survived runtime-instance rebuild exactly.
+[x] Bundle 1.4 Gate: after logout/relog and re-entry without server restart, Check Baseline PASS proves Worker #1 skill XP and needs survived player save/load exactly.
 [ ] CARRYOVER: with no Food available, critical Hunger blocks with No Food and resumes automatically after Food returns.
-[ ] Worker progression/state survives logout/relog.
-[ ] Construction XP is awarded only by approved active/passive sources.
+[x] Worker progression/state survives logout/relog.
+[x] Construction XP is awarded only by approved active/passive sources for the current Phase-1 slice; productive deposit awards are runtime verified and stable idle time awards none.
 
 Regression coverage
 [ ] Full relevant `docs/rs3/SMOKE_TEST.md` build/startup/login/persistence/world-object coverage passes after the targeted Bundle 1.2 persistence test.
