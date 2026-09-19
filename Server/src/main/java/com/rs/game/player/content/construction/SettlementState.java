@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 4;
+    private static final int CURRENT_SCHEMA_VERSION = 5;
     public static final int STARTER_STORAGE_CAPACITY = 200;
 
     public static final int STARTER_SHELTER_WALLS = 4;
@@ -217,6 +217,17 @@ public final class SettlementState implements Serializable {
         normalize();
         for (SettlementWorkerState worker : workers) {
             if (worker != null && worker.getWorkerId() == workerId) {
+                return worker;
+            }
+        }
+        return null;
+    }
+
+    public synchronized SettlementWorkerState getStarterWorker() {
+        normalize();
+        String starterKey = SettlementWorkerDefinition.STARTER_SETTLER.getKey();
+        for (SettlementWorkerState worker : workers) {
+            if (worker != null && starterKey.equals(worker.getDefinitionKey())) {
                 return worker;
             }
         }
