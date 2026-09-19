@@ -137,3 +137,9 @@
 - Added Resource Status and Resource Self-Test controls to Con Revamp.
 - Updated the current work card for the Bundle 1.3 starter resource/storage runtime pass.
 - Controls continue to delegate to owner-only server APIs; Client Console owns no settlement resources.
+
+
+2026-09-18 - Con Revamp starter shelter controls
+- Added Shelter Status and Shelter Self-Test to Con Revamp.
+- Updated the Bundle 1.3 card to show the freeform starter shelter requirements and automatic/permanent milestone behavior.
+- Client Console remains a test/orchestration layer; milestone ownership stays in server-side `SettlementState`.
