@@ -330,3 +330,10 @@
 - `SettlementInstance` automatically checks completion after load, build placement/duplication and starter-resource gathering and emits a one-time completion message.
 - Added disposable `SettlementShelterSelfTest`, owner-only shelter status/self-test commands and Con Revamp Shelter Status/Shelter Self-Test controls.
 - Runtime acceptance required for self-test PASS, real automatic completion, latch behavior and save/load persistence.
+
+
+2026-09-18 - Bundle 1.3 final one-click gate
+- Added `SettlementBundle13FinalCheck`, aggregating the disposable Resource/Shelter self-tests, real saved-state audit, four live starter-node availability checks, real resource minimums and the real starter-shelter milestone.
+- The final check never fabricates settlement progress. If the real state is incomplete it returns `NOT READY` with the exact shelter progress; it may latch completion only after the authoritative requirements are already satisfied.
+- Added owner-only `itembrowser settlement bundle13check` and a Con Revamp `Bundle 1.3 Final Check` button.
+- Bundle 1.3 remains ACTIVE until this real-state final check is runtime verified PASS.
