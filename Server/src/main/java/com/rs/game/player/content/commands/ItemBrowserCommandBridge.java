@@ -14,6 +14,7 @@ import com.rs.game.player.content.construction.SettlementBuildPiece;
 import com.rs.game.player.content.construction.SettlementBundle12FinalCheck;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
+import com.rs.game.player.content.construction.SettlementResourceSelfTest;
 import com.rs.game.player.content.construction.SettlementStateAudit;
 import com.rs.game.player.content.construction.SettlementStateSelfTest;
 
@@ -130,7 +131,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -183,6 +184,19 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("resources".equals(operation)) {
+            player.getPackets().sendGameMessage(
+                    "Settlement storage: " + player.getSettlementState().getResourceSummary());
+            return true;
+        }
+
+        if ("resourceselftest".equals(operation)) {
+            String result = SettlementResourceSelfTest.run();
+            System.out.println("[SettlementResourceSelfTest] " + result);
+            player.getPackets().sendGameMessage("Bundle 1.3 resource self-test: " + result);
+            return true;
+        }
+
         if ("audit".equals(operation)) {
             String result = SettlementStateAudit.run(player.getSettlementState());
             System.out.println("[SettlementStateAudit] " + result);
@@ -205,7 +219,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|audit|selftest|finalcheck>");
         return true;
     }
 
