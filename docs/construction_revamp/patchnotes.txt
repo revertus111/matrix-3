@@ -367,3 +367,12 @@
 - Worker Status after re-entry reports saved=1/runtime=1 and Worker #1 id 1, definition `starter-settler`, home plot 24,12,0.
 - Worker Arrival Check returns PASS after re-entry, closing the Worker #1 arrival foundation.
 - Bundle 1.4 now advances to Allowed Jobs persistence/controls before gather/haul AI.
+
+
+2026-09-18 - Bundle 1.4 Allowed Jobs foundation
+- Added stable `SettlementWorkerJob` keys for Gather Wood, Gather Food, Gather Stone, Gather Basic Ore and Haul.
+- Added persistent `SettlementWorkerState.allowedJobs`; all jobs default OFF, old worker saves repair a null allowlist and unknown keys are pruned during normalization.
+- Advanced `SettlementState` to schema v5 for the per-worker policy slice.
+- Added owner-only Worker Jobs status, single-job ON/OFF, enable-all/disable-all and disposable `SettlementWorkerJobsSelfTest` paths.
+- Added a dedicated Con Revamp Allowed Jobs card with five checkbox command controls plus authoritative Jobs Status/Self-Test and all-on/all-off controls.
+- Runtime acceptance required for self-test PASS, mixed allowlist readback, exit/re-entry persistence and logout/relog persistence before gather/haul AI consumes the policy.
