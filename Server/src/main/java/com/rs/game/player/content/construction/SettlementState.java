@@ -2,7 +2,10 @@ package com.rs.game.player.content.construction;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Player-owned persistent settlement data.
@@ -17,9 +20,14 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private int schemaVersion = 1;
+    private static final int CURRENT_SCHEMA_VERSION = 2;
+    public static final int STARTER_STORAGE_CAPACITY = 200;
+
+    private int schemaVersion = CURRENT_SCHEMA_VERSION;
     private long nextPieceId = 1L;
     private List<SettlementPlacedPiece> pieces = new ArrayList<SettlementPlacedPiece>();
+    private Map<String, Long> resources = new HashMap<String, Long>();
+    private int storageCapacity = STARTER_STORAGE_CAPACITY;
 
     public synchronized void normalize() {
         if (schemaVersion <= 0) {
@@ -28,6 +36,23 @@ public final class SettlementState implements Serializable {
         if (pieces == null) {
             pieces = new ArrayList<SettlementPlacedPiece>();
         }
+        if (resources == null) {
+            resources = new HashMap<String, Long>();
+        }
+        if (storageCapacity <= 0) {
+            storageCapacity = STARTER_STORAGE_CAPACITY;
+        }
+        Iterator<Map.Entry<String, Long>> resourceIterator = resources.entrySet().iterator();
+        while (resourceIterator.hasNext()) {
+            Map.Entry<String, Long> entry = resourceIterator.next();
+            SettlementResource resource = SettlementResource.forKey(entry.getKey());
+            Long amount = entry.getValue();
+            if (resource == null || amount == null || amount.longValue() <= 0L) {
+                resourceIterator.remove();
+            }
+        }
+        schemaVersion = CURRENT_SCHEMA_VERSION;
+
         long highestId = 0L;
         for (SettlementPlacedPiece piece : pieces) {
             if (piece != null && piece.getPieceId() > highestId) {
@@ -131,6 +156,81 @@ public final class SettlementState implements Serializable {
         normalize();
         int index = indexOf(pieceId);
         return index < 0 ? null : pieces.remove(index);
+    }
+
+    public synchronized long getResourceAmount(SettlementResource resource) {
+        normalize();
+        if (resource == null) {
+            return 0L;
+        }
+        Long amount = resources.get(resource.getKey());
+        return amount == null ? 0L : amount.longValue();
+    }
+
+    public synchronized long getTotalStoredResources() {
+        normalize();
+        long total = 0L;
+        for (Long amount : resources.values()) {
+            if (amount != null && amount.longValue() > 0L) {
+                total += amount.longValue();
+            }
+        }
+        return total;
+    }
+
+    public synchronized int getStorageCapacity() {
+        normalize();
+        return storageCapacity;
+    }
+
+    public synchronized long getStorageRemaining() {
+        normalize();
+        return Math.max(0L, (long) storageCapacity - getTotalStoredResources());
+    }
+
+    public synchronized long addResource(SettlementResource resource, long amount) {
+        normalize();
+        if (resource == null || amount <= 0L) {
+            return 0L;
+        }
+        long accepted = Math.min(amount, getStorageRemaining());
+        if (accepted <= 0L) {
+            return 0L;
+        }
+        long next = getResourceAmount(resource) + accepted;
+        resources.put(resource.getKey(), Long.valueOf(next));
+        return accepted;
+    }
+
+    public synchronized long removeResource(SettlementResource resource, long amount) {
+        normalize();
+        if (resource == null || amount <= 0L) {
+            return 0L;
+        }
+        long current = getResourceAmount(resource);
+        long removed = Math.min(current, amount);
+        long next = current - removed;
+        if (next <= 0L) {
+            resources.remove(resource.getKey());
+        } else {
+            resources.put(resource.getKey(), Long.valueOf(next));
+        }
+        return removed;
+    }
+
+    public synchronized String getResourceSummary() {
+        normalize();
+        StringBuilder summary = new StringBuilder();
+        for (SettlementResource resource : SettlementResource.values()) {
+            if (summary.length() > 0) {
+                summary.append(", ");
+            }
+            summary.append(resource.getDisplayName()).append("=")
+                    .append(getResourceAmount(resource));
+        }
+        summary.append(" | total=").append(getTotalStoredResources())
+                .append("/").append(storageCapacity);
+        return summary.toString();
     }
 
     private int indexOf(long pieceId) {
