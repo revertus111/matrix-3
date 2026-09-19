@@ -206,12 +206,13 @@ Phase 1 Bundle 1.4 — first worker
 [x] Source ownership: worker movement uses Matrix3 intelligent `calcFollow(..., true)` -> `RouteFinder`; live object nodes are passed as `WorldObject` for `ObjectStrategy`, live NPC nodes as NPC for `EntityStrategy`, and no parallel movement system or force-teleport fallback is added.
 [x] Tree-only route diagnosis: the previous synthetic adjacent `WorldTile` forced `FixedTileStrategy` and ignored object footprint/access semantics for tree id 1276.
 [x] Runtime tree evidence: Worker #1 reaches an adjacent tile from which the player can successfully cut tree id 1276, so movement/pathing is no longer the blocker.
-[x] Interaction completion semantics: when no walk steps remain and the live resource target is within one tile, the worker treats the target as reached and may enter GATHERING instead of repeatedly re-routing.
+[x] Runtime-rejected: the manual one-tile anchor-distance completion check still left the tree idle even though the worker stood on a player-valid cutting tile.
+[x] Source evidence: intelligent `calcFollow(...)` returns true with zero queued steps when its `ObjectStrategy` / `EntityStrategy` already considers the current tile interactable; worker handoff now trusts that strategy result instead of re-checking object anchor distance.
 [x] Source ownership: gathered worker output is carried first and reaches `SettlementState` storage only through Haul/deposit.
 [x] Source ownership: Haul disabled/full storage keeps carried output pending and readable instead of silently crediting or discarding it.
 [x] Con Revamp exposes `Worker AI Status` for live work/carry state plus storage totals.
 [ ] Server and Client clean/build successfully after gather/haul patch.
-[ ] Retest tree after interaction-ready correction: Worker #1 reaches the same adjacent cutting tile, transitions into GATHERING, returns home and deposits Wood only.
+[ ] Retest tree after strategy-owned handoff correction: Worker #1 reaches the same valid cutting tile, transitions into GATHERING, returns home and deposits Wood only.
 [ ] Con Revamp `Worker AI Status` shows sensible MOVING/GATHERING/HAULING/IDLE state during the loop.
 [ ] Turning Haul OFF causes carried output to be held instead of deposited; turning Haul back ON resumes delivery automatically.
 [ ] Turning Gather Wood OFF with all other gather jobs OFF prevents a new gathering cycle.

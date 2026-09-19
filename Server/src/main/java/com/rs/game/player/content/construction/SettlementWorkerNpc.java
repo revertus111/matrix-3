@@ -240,17 +240,20 @@ public final class SettlementWorkerNpc extends NPC {
             resetWalkSteps();
             return true;
         }
-        if (!hasWalkSteps() && target.withinDistance(this, 1)) {
-            return true;
-        }
         if (!hasWalkSteps()) {
             boolean routed = calcFollow(target, 25, true, true);
             if (!routed) {
                 statusDetail = noPathReason;
                 return false;
             }
+            /*
+             * Matrix3's intelligent calcFollow uses ObjectStrategy / EntityStrategy
+             * for live targets. A successful route with zero queued steps means
+             * the strategy already considers this tile interaction-ready.
+             * Do not replace that footprint/access result with anchor-tile distance.
+             */
             if (!hasWalkSteps()) {
-                return target.withinDistance(this, 1);
+                return true;
             }
         }
         return false;

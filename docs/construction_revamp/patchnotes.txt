@@ -406,3 +406,10 @@
 - The remaining failure was the worker state machine not recognizing that adjacent tile as interaction-ready, so it never advanced from movement into gathering.
 - Updated `walkToward(...)` to treat a live target within one tile as reached whenever no movement steps remain, both before and after intelligent RouteFinder evaluation.
 - This keeps Matrix3 routing ownership intact and changes only the gather-state handoff; no node ids, persistence, resource crediting, haul logic or teleport fallback changed.
+
+2026-09-19 - Bundle 1.4 tree strategy-handoff correction
+- Runtime retest showed the manual one-tile adjacency handoff still left Worker #1 idle at a tile where the player can cut tree id 1276.
+- Rejected the anchor-distance check for object interaction readiness; multi-tile/object access is owned by Matrix3 routing strategy semantics, not raw target-anchor distance.
+- `walkToward(...)` now trusts intelligent `calcFollow(...)`: when the live `WorldObject` / NPC route succeeds and queues zero steps, the worker immediately treats the target as interaction-ready and enters gathering.
+- Added a source comment preserving this Matrix3 route contract so the same regression is not reintroduced.
+- No changes to node ids, Allowed Jobs, persistence, storage accounting, haul behavior or movement ownership.
