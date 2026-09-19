@@ -454,6 +454,45 @@ Implemented under the approved Bundle 1.2 ownership plan:
 - Minimal entry/exit path for runtime testing.
 - No 718 controller/code transplant.
 
+### Bundle 1.3 — Starter resources and isolated storage
+
+**Status:** ACTIVE
+
+#### Ownership/file plan — LOCKED
+
+Persistent owner:
+
+- `SettlementState` owns settlement-only resource totals and starter storage capacity alongside the already-verified placed-piece state.
+- Stable resource identities are `SettlementResource.WOOD`, `FOOD`, `STONE` and `BASIC_ORE`.
+- Storage is not represented by normal `Item` stacks and has no inventory/bank deposit API. Normal bank stock therefore cannot be dumped into settlement storage through this slice.
+- Old player saves repair missing resource storage during `SettlementState.normalize()`; schema version advances to 2.
+
+Runtime owner:
+
+- `SettlementInstance` owns the transient projection/lifecycle of the four starter resource nodes.
+- `SettlementControler` intercepts only those exact node object/NPC clicks while the settlement instance is active, before normal world Woodcutting/Mining/Fishing handling.
+- `SettlementGatherAction` provides the short gathering action/animation and deposits one unit directly into `SettlementState` storage.
+- Resource nodes occupy reserved plot tiles so freeform build place/move/duplicate cannot overlap them.
+- Instance destroy explicitly removes starter node objects/NPCs; saved resource totals remain in `SettlementState`.
+
+Starter v1 node layout:
+
+- Wood: plot `8,8`, provisional object `1276`, type `10`.
+- Food: plot `12,8`, fishing-spot NPC `327`.
+- Stone: plot `16,8`, provisional rock object `11933`, type `10`.
+- Basic ore: plot `20,8`, provisional rock object `11936`, type `10`.
+- Node art/cache suitability is runtime acceptance pending and may change without changing resource/storage ownership.
+
+Developer acceptance:
+
+- `itembrowser settlement resources` reports real saved settlement-only totals/capacity.
+- `itembrowser settlement resourceselftest` runs a disposable storage/node-definition self-test.
+- Test Console -> Con Revamp exposes `Resource Status` and `Resource Self-Test`.
+
+Acceptance target:
+
+`enter -> four nodes visible -> gather each -> settlement-only totals increase -> inventory/bank unchanged -> exit/re-enter -> totals persist`
+
 ### Construction Editor developer prototype
 
 **Status:** RUNTIME VERIFIED
@@ -609,9 +648,9 @@ Later interaction polish after single-piece preview is stable:
 - Persistent-runtime bundle status: ACTIVE
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
-- Approval state: SAP AAA approved the current Bundle 1.2 persistent settlement foundation and runtime acceptance slice. Camera/ghost edge checks are carryover and are not blocking this persistent-runtime test.
-- Current checklist item: Bundle 1.2 is complete. Start Bundle 1.3 with Matrix3-native starter resource nodes and isolated settlement storage ownership before implementing the shelter milestone.
-- Current objective: establish Bundle 1.3 starter-resource/storage ownership and implement the first playable wood/food/stone/basic-ore + isolated settlement-storage slice, then wire the starter shelter milestone.
+- Approval state: SAP AAA approved Bundle 1.3 starter-resource/storage scanning and implementation. Camera/ghost edge checks remain carryover and do not block this slice.
+- Current checklist item: Bundle 1.3 resource/storage foundation is implemented verified-static; runtime-test Resource Self-Test, four starter node visuals/clicks, direct settlement-only storage and exit/re-entry persistence.
+- Current objective: runtime-verify the first playable wood/food/stone/basic-ore + isolated settlement-storage slice, then implement the starter shelter milestone on top of the verified resource owner.
 
 ## Verification classifications
 
@@ -682,6 +721,11 @@ Later interaction polish after single-piece preview is stable:
 - `SettlementInstance` derives its plot size/plane constants from `SettlementState` and refuses to project any invalid saved record, keeping runtime projection aligned with the saved owner.
 - `SettlementStateAudit` is a read-only real-save invariant check for unique positive piece ids, approved definitions, valid plot location/plane, 0-3 rotation and no same-object-type occupancy collision.
 - `SettlementBundle12FinalCheck` aggregates the disposable state self-test, real-save audit, saved-piece count consistency and definition-registry uniqueness/lookup checks into one non-mutating owner-only PASS/FAIL path.
+- `SettlementResource` defines the four stable settlement-only resource identities; `SettlementState` schema v2 owns their persistent totals plus a 200-unit starter storage capacity.
+- `SettlementResourceNode` defines four fixed reserved starter node positions. `SettlementInstance` spawns/cleans their transient objects/NPC and rejects building onto reserved node tiles.
+- `SettlementControler` consumes only exact settlement starter-node clicks; ordinary ObjectHandler/Woodcutting/Mining/Fishing ownership remains unchanged outside those nodes.
+- `SettlementGatherAction` adds resources directly to settlement storage and contains no inventory/bank mutation path.
+- `SettlementResourceSelfTest` disposably verifies storage add/remove/capacity clamping plus unique/valid four-node definitions.
 - `SettlementPlacedPiece` contains only stable piece identity and plot-relative coordinates/rotation; dynamic chunk/world coordinates are absent from persistent records.
 - `SettlementInstance` is the transient projection owner and uses Matrix3 `MapBuilder.findEmptyChunkBound(8, 8)`, `copyChunk(...)`, `destroyMap(...)` and `World.spawnObject/removeObject`.
 - The Phase 1 runtime plot is one 8x8-chunk / 64x64-tile dynamic region based on `HouseConstants.LAND` terrain only; classic POH room/hotspot state is not reused.
@@ -704,6 +748,7 @@ Later interaction polish after single-piece preview is stable:
 
 - `13684` / `Floor decoration` may be usable as the first floor definition, but its final suitability/material appearance still needs acceptance against the intended Construction art direction.
 - `13344` / `Door` may be usable as the first doorway definition, but its final suitability/material appearance still needs acceptance against the intended Construction art direction.
+- Starter resource-node cache visuals are provisional: object `1276` for wood, objects `11933`/`11936` for stone/ore and NPC `327` for food must be runtime accepted for visibility/options/appearance. Resource/storage ownership does not depend on retaining those art ids.
 
 ### UNKNOWN
 
@@ -748,7 +793,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Bundle 1.3: inspect the narrow Matrix3 resource-node/item/storage owners, lock the settlement-resource/storage file plan, then implement wood/food/stone/basic-ore acquisition plus settlement-only storage without allowing normal-bank bypass.
+**Next checklist item:** Pull/build, run Test Console -> Con Revamp -> `Resource Self-Test`, enter the settlement and verify all four starter nodes appear and each gathers into `Resource Status` without changing normal inventory/bank stock. Exit/re-enter and verify resource totals persist.
 
 **Files/systems already inspected:**
 
