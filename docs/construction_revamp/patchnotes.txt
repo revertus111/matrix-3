@@ -305,3 +305,14 @@
 - This closes expanded state validity, real-save invariants, saved-piece count consistency and definition-registry integrity.
 - Previously verified persistence, live move/rotate/duplicate/delete rebuilds, outside-settlement Dev Mode and classic POH regressions remain accepted.
 - Bundle 1.2 is DONE. Bundle 1.3 starter resources/storage is now ACTIVE.
+
+
+2026-09-18 - Bundle 1.3 starter resource/storage foundation
+- Added stable settlement-only `SettlementResource` identities for Wood, Food, Stone and Basic ore.
+- Upgraded `SettlementState` to schema v2 with old-save-safe persistent resource totals and a 200-unit starter storage capacity; add/remove/capacity APIs never create normal inventory/bank items.
+- Added four fixed starter `SettlementResourceNode` definitions on reserved plot tiles and transient spawning/cleanup through `SettlementInstance`.
+- Added `SettlementGatherAction`; exact resource-node clicks are intercepted by `SettlementControler` and deposit directly into settlement storage after a short action/animation.
+- Build place/move/duplicate rejects reserved resource-node tiles.
+- Added disposable `SettlementResourceSelfTest`, owner-only resource status/self-test commands and Con Revamp Resource Status/Resource Self-Test buttons.
+- Provisional node visuals: wood object 1276, food NPC 327, stone object 11933, ore object 11936. Runtime acceptance may replace art ids without changing ownership.
+- Runtime acceptance required for build, node visibility/options, each gather path, storage isolation/persistence, capacity and node cleanup.
