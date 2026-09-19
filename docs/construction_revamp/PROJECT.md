@@ -706,7 +706,7 @@ Remaining Bundle 1.4 sequence after arrival acceptance:
 - Tooling track: Custom Construction Palette + Preview Foundation + Build Camera
 - Tooling status: CLASS411 FREE BUILD V1 RUNTIME VERIFIED — EDGE CHECKS + FULL GHOST CHECKLIST REMAIN
 - Approval state: SAP AAA approved the Bundle 1.4 Worker #1 ownership/arrival foundation. Camera/ghost edge checks remain carryover and do not block this slice.
-- Current checklist item: Worker #1 ownership/arrival foundation is implemented verified-static; runtime-test Worker Self-Test and Worker Arrival Check, then re-enter once to confirm the same worker id rebuilds without duplication.
+- Current checklist item: Worker #1 first arrival is runtime verified; exit/re-enter once and rerun Worker Arrival Check to confirm the same worker id rebuilds with saved=1/runtime=1 and no duplicate.
 - Current objective: runtime-verify milestone-gated Worker #1 persistence/projection, then continue Bundle 1.4 with Allowed Jobs before gathering/hauling.
 
 ## Verification classifications
@@ -742,6 +742,7 @@ Remaining Bundle 1.4 sequence after arrival acceptance:
 - Runtime CAM DEBUG captures proved the observed moving view remained mode 1 / `source=CLASS411` while generic camera XYZ stayed `0,0,0`; source tracing separately established `Class24.aClass411_Sub1_158` as the actual developer detached-camera owner.
 - Bundle 1.3 starter resource/storage slice is runtime VERIFIED by the user: Resource Self-Test passes and the current wood/food/stone/ore node + settlement-only storage flow works in the live settlement.
 - Bundle 1.3 starter shelter milestone is runtime VERIFIED: the user's real settlement automatically completed after reaching 9 walls, 5 floors, 1 doorway and 1 Wood/Food/Stone/Basic ore, and `Bundle 1.3 Final Check` returned PASS on the loaded settlement.
+- Worker #1 first-arrival path is runtime VERIFIED: entering the completed settlement automatically produced the visible settler NPC, Worker Self-Test passed, and Worker Arrival Check passed with exactly one persistent worker and one live NPC projection.
 
 ### verified-static
 
@@ -860,7 +861,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull/build, enter the completed settlement and run Test Console -> Con Revamp -> `Worker Arrival Check`. Expect PASS with exactly one saved worker and one live NPC. Exit/re-enter and rerun; the worker id must remain identical and counts must stay 1/1. Then proceed to Allowed Jobs.
+**Next checklist item:** Exit the settlement, re-enter it, then rerun `Worker Arrival Check` and `Worker Status`. The worker id must remain identical and counts must remain saved=1/runtime=1. If that passes, mark the Worker #1 arrival slice DONE and continue directly to Allowed Jobs.
 
 **Files/systems already inspected:**
 
