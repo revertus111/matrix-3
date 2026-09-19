@@ -188,7 +188,18 @@ Phase 1 Bundle 1.4 — first worker
 [ ] Logout/relog and re-enter preserves the same worker id.
 [x] Leaving/destroying the settlement removes the transient worker projection while persistent Worker #1 remains and rebuilds on re-entry.
 [x] First worker arrival is gated by the already-complete STARTER_SHELTER milestone and runtime arrival succeeded.
-[ ] Allowed Jobs checkbox state persists.
+[x] Source ownership: `SettlementWorkerJob` provides stable keys for Gather Wood/Food/Stone/Basic Ore and Haul.
+[x] Source ownership: `SettlementWorkerState.allowedJobs` is persistent policy only; runtime AI/action state is not serialized in the allowlist.
+[x] Source ownership: new/migrated workers default all jobs OFF and normalization prunes unknown job keys.
+[x] Source ownership: `SettlementState` schema v5 repairs older worker records with a missing Allowed Jobs set.
+[ ] Server and Client clean/build successfully after Allowed Jobs patch.
+[ ] Con Revamp `Jobs Self-Test` reports PASS for stable keys + default-OFF + independent toggle + serialization.
+[ ] With Worker #1, enable a mixed allowlist (recommended: Gather Wood + Haul) while leaving the other three gathering jobs OFF.
+[ ] Con Revamp `Jobs Status` reports the exact authoritative mixed ON/OFF state.
+[ ] Exit/re-enter preserves the exact Allowed Jobs state.
+[ ] Logout/relog and re-enter preserves the exact Allowed Jobs state.
+[ ] Enable All / Disable All changes every authoritative saved permission without changing worker identity.
+[ ] Allowed Jobs checkbox/permission state persists.
 [ ] Worker gathers only allowed valid jobs.
 [ ] Worker hauls output to valid storage.
 [ ] Hunger/thirst/energy stop work when unsupported and recover automatically when supplied.
