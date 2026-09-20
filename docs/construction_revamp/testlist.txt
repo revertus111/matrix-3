@@ -316,11 +316,14 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Storage patch: disposable Resource Self-Test proves full Wood storage accepts no more Wood while Food can still increase independently; Bundle 2.2 Self-Test now includes that dependency.
 [x] Storage-aware AI patch: workers skip gather targets whose resource storage is full and abort in-flight gathering if capacity fills before cargo creation.
 [x] Storage-aware AI patch: if all allowed gather resources are full, AI reports `Allowed resource storage is full.`; if another allowed gather resource has space, selection can continue there.
+[x] Runtime evidence: with Wood at 100/100, Worker #2 stopped mid-haul holding `Wood x1` because another worker filled the final Wood slot first; classified as an in-flight storage-capacity race.
+[x] Reservation fix source: `SettlementInstance` owns runtime-only per-worker storage reservations; reservation is acquired before gathering and released/consumed on cancel/disable/rebuild/deposit.
+[x] Reservation fix self-test: final Wood slot can be reserved by only one worker while another worker can still reserve Food independently.
 [ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
 [ ] Bundle 2.2 Self-Test returns PASS.
 [ ] Select Worker #1: Disable All, enable Gather Food + Haul. Select Worker #2: Disable All, enable Gather Wood + Haul. Jobs Status confirms independent allowlists.
 [ ] All Worker Status shows both workers actively following their independent jobs; Wood and Food storage increase independently with per-resource `amount/100` readback.
-[ ] Let Wood reach 100/100 and confirm Worker #2 stops before gathering excess Wood (`carried=none`) while Worker #1 can still gather/haul Food; then disable Worker #1 and confirm Worker #2 remains independently blocked only by Wood capacity.
+[ ] Concurrent final-slot retest: as Wood reaches 100/100, no worker becomes stranded mid-haul with excess Wood because another worker consumed its expected slot; the losing worker must fail/skip reservation before creating new cargo, while Food continues independently.
 [ ] Disable all jobs for both workers, reset critical needs if needed, then Capture 2-Worker Baseline succeeds.
 [ ] Exit/re-enter then Check 2-Worker Baseline returns PASS with saved=2/runtime=2.
 [ ] Logout/relog + re-enter then Check 2-Worker Baseline returns PASS with both identities/jobs/needs/progression and Construction XP preserved.

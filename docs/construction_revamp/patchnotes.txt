@@ -565,3 +565,11 @@
 - Multi-job workers may continue with another allowed gather resource that still has capacity; all-full workers report a clear storage-full idle reason.
 - Added `SettlementState.hasStorageSpace(resource)` and reused it through SettlementInstance/WorkerNpc; Resource Self-Test now asserts the per-resource availability helper.
 - Updated Bundle 2.2 runtime instructions to expect `carried=none` after Wood reaches 100/100.
+
+2026-09-20 - Bundle 2.2 in-flight storage reservation race fix
+- Runtime screenshot proved a final-slot concurrency race: Wood reached 100/100 while Worker #2 was already hauling Wood x1, leaving that worker stopped with undepositable cargo.
+- Added transient per-worker/per-resource storage reservations owned by SettlementInstance; reservations are not persisted.
+- Workers reserve capacity before gathering, retain it while carrying, and consume/release it through the authoritative deposit path.
+- Competing workers cannot overbook the same final resource slot; reservations remain resource-specific so Wood never blocks Food/Stone/Ore.
+- Gather cancel/job disable/need interruption/runtime recreation/instance teardown release stale reservations.
+- Strengthened Bundle 2.2 Self-Test with the exact final-slot contention scenario.

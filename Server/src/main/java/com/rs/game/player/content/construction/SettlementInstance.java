@@ -1,7 +1,9 @@
 package com.rs.game.player.content.construction;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.rs.executor.GameExecutorManager;
@@ -43,6 +45,8 @@ public final class SettlementInstance {
     private final List<WorldObject> starterResourceObjects = new ArrayList<WorldObject>();
     private final List<NPC> starterResourceNpcs = new ArrayList<NPC>();
     private final List<SettlementWorkerNpc> workerNpcs = new ArrayList<SettlementWorkerNpc>();
+    private final WorkerStorageReservationBook workerStorageReservations =
+            new WorkerStorageReservationBook();
 
     private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
         this.player = player;
@@ -457,6 +461,8 @@ public final class SettlementInstance {
             }
         }
 
+        workerStorageReservations.release(worker.getWorkerId());
+
         SettlementWorkerDefinition definition = SettlementWorkerDefinition.forKey(
                 worker.getDefinitionKey());
         if (definition == null
@@ -575,14 +581,48 @@ public final class SettlementInstance {
         return loaded && !destroyed ? state.getStorageRemaining(resource) : 0L;
     }
 
-    public boolean hasWorkerStorageSpace(SettlementResource resource) {
-        return loaded && !destroyed && state.hasStorageSpace(resource);
+    public synchronized long getWorkerStorageAvailable(long workerId, SettlementResource resource) {
+        if (!loaded || destroyed || resource == null) {
+            return 0L;
+        }
+        return workerStorageReservations.getAvailable(
+                workerId, resource, state.getStorageRemaining(resource));
     }
 
-    public long depositWorkerResource(SettlementResource resource, long amount) {
+    public boolean hasWorkerStorageSpace(long workerId, SettlementResource resource) {
+        return getWorkerStorageAvailable(workerId, resource) > 0L;
+    }
+
+    public synchronized boolean reserveWorkerStorage(
+            long workerId, SettlementResource resource, long amount) {
+        if (!loaded || destroyed || resource == null || amount <= 0L) {
+            return false;
+        }
+        return workerStorageReservations.reserve(
+                workerId, resource, amount, state.getStorageRemaining(resource));
+    }
+
+    public synchronized boolean hasWorkerStorageReservation(
+            long workerId, SettlementResource resource, long amount) {
+        return workerStorageReservations.has(workerId, resource, amount);
+    }
+
+    public synchronized void releaseWorkerStorageReservation(long workerId) {
+        workerStorageReservations.release(workerId);
+    }
+
+    public synchronized long depositWorkerResource(
+            long workerId, SettlementResource resource, long amount) {
         if (!loaded || destroyed || resource == null || amount <= 0L) {
             return 0L;
         }
+        if (!workerStorageReservations.has(workerId, resource, amount)
+                && !workerStorageReservations.reserve(
+                        workerId, resource, amount, state.getStorageRemaining(resource))) {
+            return 0L;
+        }
+
+        workerStorageReservations.release(workerId);
         return state.addResource(resource, amount);
     }
 
@@ -691,6 +731,119 @@ public final class SettlementInstance {
             }
         }
         workerNpcs.clear();
+        workerStorageReservations.clear();
+    }
+
+    public static String runWorkerStorageReservationSelfTest() {
+        try {
+            WorkerStorageReservationBook book = new WorkerStorageReservationBook();
+
+            if (!book.reserve(1L, SettlementResource.WOOD, 1L, 1L)) {
+                return "FAIL: Worker #1 could not reserve the final Wood slot.";
+            }
+            if (book.reserve(2L, SettlementResource.WOOD, 1L, 1L)) {
+                return "FAIL: Worker #2 overbooked the final Wood slot.";
+            }
+            if (!book.reserve(2L, SettlementResource.FOOD, 1L, 1L)) {
+                return "FAIL: Wood reservation incorrectly blocked Food.";
+            }
+            if (book.getAvailable(2L, SettlementResource.WOOD, 1L) != 0L) {
+                return "FAIL: Worker #2 still sees reserved Wood capacity.";
+            }
+            if (book.getAvailable(1L, SettlementResource.WOOD, 1L) != 1L) {
+                return "FAIL: Worker #1 cannot see its own reserved Wood slot.";
+            }
+
+            book.release(1L);
+            if (!book.reserve(2L, SettlementResource.WOOD, 1L, 1L)) {
+                return "FAIL: released Wood slot was not reusable.";
+            }
+            if (!book.has(2L, SettlementResource.WOOD, 1L)) {
+                return "FAIL: Worker #2 reservation was not retained.";
+            }
+
+            book.clear();
+            if (book.getAvailable(1L, SettlementResource.WOOD, 1L) != 1L) {
+                return "FAIL: reservation clear did not restore availability.";
+            }
+
+            return "PASS: final-slot reservation prevents same-resource overbooking without cross-resource blocking.";
+        } catch (Throwable failure) {
+            String message = failure.getMessage();
+            return "FAIL: " + (message == null ? failure.getClass().getSimpleName() : message);
+        }
+    }
+
+    private static final class WorkerStorageReservationBook {
+        private final Map<Long, WorkerStorageReservation> byWorker =
+                new HashMap<Long, WorkerStorageReservation>();
+
+        private synchronized long getAvailable(
+                long workerId, SettlementResource resource, long storageRemaining) {
+            if (resource == null || storageRemaining <= 0L) {
+                return 0L;
+            }
+            long reservedByOthers = 0L;
+            for (Map.Entry<Long, WorkerStorageReservation> entry : byWorker.entrySet()) {
+                WorkerStorageReservation reservation = entry.getValue();
+                if (reservation == null || reservation.resource != resource
+                        || entry.getKey().longValue() == workerId) {
+                    continue;
+                }
+                reservedByOthers += reservation.amount;
+            }
+            return Math.max(0L, storageRemaining - reservedByOthers);
+        }
+
+        private synchronized boolean reserve(
+                long workerId, SettlementResource resource, long amount, long storageRemaining) {
+            if (workerId <= 0L || resource == null || amount <= 0L) {
+                return false;
+            }
+
+            WorkerStorageReservation existing = byWorker.get(Long.valueOf(workerId));
+            if (existing != null && existing.resource == resource && existing.amount >= amount) {
+                return true;
+            }
+
+            byWorker.remove(Long.valueOf(workerId));
+            if (getAvailable(workerId, resource, storageRemaining) < amount) {
+                if (existing != null) {
+                    byWorker.put(Long.valueOf(workerId), existing);
+                }
+                return false;
+            }
+
+            byWorker.put(Long.valueOf(workerId),
+                    new WorkerStorageReservation(resource, amount));
+            return true;
+        }
+
+        private synchronized boolean has(
+                long workerId, SettlementResource resource, long amount) {
+            WorkerStorageReservation reservation = byWorker.get(Long.valueOf(workerId));
+            return reservation != null
+                    && reservation.resource == resource
+                    && reservation.amount >= amount;
+        }
+
+        private synchronized void release(long workerId) {
+            byWorker.remove(Long.valueOf(workerId));
+        }
+
+        private synchronized void clear() {
+            byWorker.clear();
+        }
+    }
+
+    private static final class WorkerStorageReservation {
+        private final SettlementResource resource;
+        private final long amount;
+
+        private WorkerStorageReservation(SettlementResource resource, long amount) {
+            this.resource = resource;
+            this.amount = amount;
+        }
     }
 
     public boolean containsWorldTile(WorldTile tile) {

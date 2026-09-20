@@ -78,8 +78,7 @@ public final class SettlementWorkerNpc extends NPC {
         }
 
         if (carriedAmount > 0
-                && workerState.isJobAllowed(SettlementWorkerJob.HAUL)
-                && settlement.hasWorkerStorageSpace(carriedResource)) {
+                && workerState.isJobAllowed(SettlementWorkerJob.HAUL)) {
             processCarriedResource();
             return;
         }
@@ -102,7 +101,7 @@ public final class SettlementWorkerNpc extends NPC {
             SettlementWorkerJob job = findGatherJob(targetNode.getResource());
             if (job == null || !workerState.isJobAllowed(job)
                     || !settlement.isStarterResourceNodeAvailable(targetNode)
-                    || !settlement.hasWorkerStorageSpace(targetNode.getResource())) {
+                    || !settlement.hasWorkerStorageSpace(workerId, targetNode.getResource())) {
                 clearTarget();
             }
         }
@@ -152,11 +151,12 @@ public final class SettlementWorkerNpc extends NPC {
             idle("Resource node unavailable.");
             return;
         }
-        if (!settlement.hasWorkerStorageSpace(targetNode.getResource())) {
+        if (!settlement.hasWorkerStorageReservation(
+                workerId, targetNode.getResource(), CARRY_CAPACITY)) {
             String fullResource = targetNode.getResource().getDisplayName();
             gatherTicksRemaining = 0;
             clearTarget();
-            idle(fullResource + " storage is full.");
+            idle(fullResource + " storage reservation was lost.");
             return;
         }
 
@@ -177,15 +177,19 @@ public final class SettlementWorkerNpc extends NPC {
 
     private void processCarriedResource() {
         if (!workerState.isJobAllowed(SettlementWorkerJob.HAUL)) {
+            settlement.releaseWorkerStorageReservation(workerId);
             resetWalkSteps();
             workState = WorkState.IDLE;
             statusDetail = "Haul disabled; holding " + carriedResource.getDisplayName() + ".";
             return;
         }
-        if (!settlement.hasWorkerStorageSpace(carriedResource)) {
+        if (!settlement.reserveWorkerStorage(
+                workerId, carriedResource, Math.max(1, carriedAmount))) {
             resetWalkSteps();
             workState = WorkState.IDLE;
-            statusDetail = carriedResource.getDisplayName() + " storage full; holding " + carriedResource.getDisplayName() + ".";
+            statusDetail = carriedResource.getDisplayName()
+                    + " storage full/reserved; holding "
+                    + carriedResource.getDisplayName() + ".";
             return;
         }
 
@@ -202,9 +206,11 @@ public final class SettlementWorkerNpc extends NPC {
         }
 
         workState = WorkState.HAULING;
-        long added = settlement.depositWorkerResource(carriedResource, carriedAmount);
+        long added = settlement.depositWorkerResource(
+                workerId, carriedResource, carriedAmount);
         if (added <= 0L) {
-            idle("Storage full; holding " + carriedResource.getDisplayName() + ".");
+            resetWalkSteps();
+            idle("Storage unavailable; holding " + carriedResource.getDisplayName() + ".");
             return;
         }
 
@@ -305,10 +311,21 @@ public final class SettlementWorkerNpc extends NPC {
     }
 
     private void beginGathering() {
+        if (targetNode == null) {
+            idle("Gather target was lost.");
+            return;
+        }
+        SettlementResource resource = targetNode.getResource();
+        if (!settlement.reserveWorkerStorage(workerId, resource, CARRY_CAPACITY)) {
+            clearTarget();
+            idle(resource.getDisplayName() + " storage is full or reserved.");
+            return;
+        }
+
         resetWalkSteps();
         workState = WorkState.GATHERING;
         gatherTicksRemaining = GATHER_TICKS;
-        statusDetail = "Gathering " + targetNode.getResource().getDisplayName() + ".";
+        statusDetail = "Gathering " + resource.getDisplayName() + ".";
         setNextAnimation(new Animation(targetNode.getAnimationId()));
     }
 
@@ -322,7 +339,7 @@ public final class SettlementWorkerNpc extends NPC {
             SettlementResourceNode node = nodes[index];
             SettlementWorkerJob job = findGatherJob(node.getResource());
             if (job != null && workerState.isJobAllowed(job)
-                    && settlement.hasWorkerStorageSpace(node.getResource())
+                    && settlement.hasWorkerStorageSpace(workerId, node.getResource())
                     && settlement.isStarterResourceNodeAvailable(node)) {
                 return node;
             }
@@ -342,7 +359,7 @@ public final class SettlementWorkerNpc extends NPC {
     private boolean hasAllowedGatheringStorageSpace() {
         for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
             if (job.isGatheringJob() && workerState.isJobAllowed(job)
-                    && settlement.hasWorkerStorageSpace(job.getResource())) {
+                    && settlement.hasWorkerStorageSpace(workerId, job.getResource())) {
                 return true;
             }
         }
@@ -384,6 +401,9 @@ public final class SettlementWorkerNpc extends NPC {
 
     private void clearTarget() {
         resetWalkSteps();
+        if (carriedAmount <= 0) {
+            settlement.releaseWorkerStorageReservation(workerId);
+        }
         targetNode = null;
         gatherTicksRemaining = 0;
     }

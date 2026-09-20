@@ -38,6 +38,10 @@ public final class SettlementBundle22FinalGate {
             require(resources != null && resources.startsWith("PASS:"),
                     "resource-storage dependency -> " + resources);
 
+            String reservations = SettlementInstance.runWorkerStorageReservationSelfTest();
+            require(reservations != null && reservations.startsWith("PASS:"),
+                    "storage-reservation dependency -> " + reservations);
+
             String population = SettlementPopulationCheck.runSelfTest();
             require(population != null && population.startsWith("PASS:"),
                     "population dependency -> " + population);
@@ -109,7 +113,7 @@ public final class SettlementBundle22FinalGate {
                     && restoredSecond.getSkillXp(SettlementWorkerSkill.WOODCUTTING) == 24L,
                     "independent progression changed after serialization");
 
-            return "PASS: per-resource storage isolation + worker-id targeting + independent jobs/needs/progression + two-worker serialization.";
+            return "PASS: per-resource storage isolation + in-flight reservation race protection + worker-id targeting + independent jobs/needs/progression + two-worker serialization.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }

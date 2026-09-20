@@ -877,6 +877,15 @@ Patch 2.2.10 — storage-aware worker job selection:
 - A worker with multiple allowed gather jobs can skip full-resource jobs and select another allowed resource that still has storage space.
 - When every allowed gather resource is full, AI reports `Allowed resource storage is full.` instead of gathering excess cargo.
 
+Patch 2.2.11 — in-flight storage reservation:
+
+- Runtime evidence exposed a concurrency race at the final per-resource slot: two workers could both see `99/100`, one could deposit first, and the other could stop mid-haul holding cargo after the resource reached `100/100`.
+- `SettlementInstance` now owns transient per-worker/per-resource storage reservations. Reservations are runtime-only and never enter `SettlementState` or player-save serialization.
+- A worker atomically reserves its one carried-resource slot before gathering begins; another worker cannot reserve the same final slot, but can still reserve capacity for a different resource.
+- The reservation follows gathered cargo through hauling and is consumed/released by the authoritative deposit path.
+- Job disable, gather cancellation, need interruption, worker runtime recreation, and settlement-instance destruction release stale reservations.
+- The Bundle 2.2 disposable self-test now reproduces the exact one-slot race: Worker #1 reserves final Wood; Worker #2 must fail Wood reservation but still succeed Food reservation.
+
 Runtime acceptance target:
 
 `Self-Test PASS -> W1 Food+Haul / W2 Wood+Haul -> Wood reaches 100/100 without blocking Food -> W2 stops before creating excess cargo (`carried=none`) -> stop/reset both -> capture baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
@@ -935,7 +944,7 @@ Runtime acceptance target:
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: DONE / runtime accepted for Phase-1 scope; later camera/preset polish is non-blocking
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: rerun the consolidated Bundle 2.2 pass on separated storage: self-test -> Worker #1 Food+Haul / Worker #2 Wood+Haul -> prove Wood-full does not block Food -> stop-one/other-continues -> stable baseline -> exit/re-entry check -> logout/relog check.
+- Current checklist item: runtime-retest Bundle 2.2 after the in-flight storage-reservation race fix. The previously observed `Wood=100/100 + Worker #2 holding Wood x1` state must no longer occur when both workers compete for the last Wood slot.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
@@ -979,6 +988,7 @@ Runtime acceptance target:
 ### verified-static
 
 - Bundle 2.2 separated storage is verified-static pending runtime: resource definitions own 100 starter capacity each; existing saves retain all stored amounts; worker deposit eligibility and `addResource(...)` clamp by carried/target resource; the disposable resource self-test proves full Wood does not block Food.
+- Bundle 2.2 in-flight reservation fix is verified-static pending runtime: `SettlementInstance` transiently reserves per-worker capacity before gathering, reservation-aware availability excludes other workers' in-flight cargo, authoritative deposit consumes/releases the reservation, and the disposable gate reproduces final-slot same-resource contention without cross-resource blocking.
 
 - Bundle 2.2 is verified-static pending runtime: worker management commands resolve optional stable worker ids through `SettlementState.findWorker(...)`; Con Revamp routes selected-worker controls to those commands; both `SettlementWorkerNpc` projections continue using independent persistent worker state against synchronized shared settlement storage; `SettlementBundle22FinalGate` covers independent jobs/needs/progression serialization and exact two-worker persistence snapshots.
 - Bundle 2.2 Con Revamp cleanup is verified-static pending runtime: only active settlement controls, selected-worker management, current Bundle 2.2 gate and Test output remain; button focus is disabled locally and status updates restore the prior JScrollPane viewport position.
@@ -1124,7 +1134,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Do not runtime-test yet if more compatible Phase-2 patches are being stacked. Current combined acceptance when ready: confirm no scroll-jump; Bundle 2.2 Self-Test PASS; W1 Food+Haul / W2 Wood+Haul; per-resource storage readback; Wood 100/100 does not block Food and W2 stops with carried=none; then stable baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** When the current stacked batch is ready for runtime, run Bundle 2.2 Self-Test first; it now includes the exact final-slot reservation race. Then run concurrent workers until Wood approaches 100/100. Expected: only one worker can own the last Wood slot; no second worker may stop mid-haul holding excess Wood because another worker filled the slot first. Food remains independent. Continue with the existing baseline/re-entry/relog checks afterward. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 
