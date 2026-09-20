@@ -281,7 +281,7 @@ Phase 1 final closure gate
 
 
 Phase 2 Bundle 2.1 — population capacity + additional-worker recruitment
-[IMPLEMENTED / NEEDS RUNTIME TEST]
+[DONE / RUNTIME VERIFIED]
 [x] Source ownership: `SettlementState` remains the persistent worker owner and derives starter population capacity as 0 before shelter / 2 after the completed starter shelter.
 [x] Source ownership: Worker #1 remains the automatic `STARTER_SETTLER`; Phase 2 recruitment does not replace its identity, Allowed Jobs, needs, progression or gather/haul owners.
 [x] Source ownership: `RECRUITED_SETTLER` gives Worker #2 a stable definition key + separate reserved plot-relative home slot; normal `nextWorkerId` allocates the unique persistent id.
@@ -289,9 +289,9 @@ Phase 2 Bundle 2.1 — population capacity + additional-worker recruitment
 [x] Source ownership: `SettlementInstance` now projects every saved worker exactly once by stable worker id and cleans all transient worker NPCs with the instance.
 [x] Regression hardening: Worker #1 Arrival Check validates the starter worker/projection without incorrectly requiring the whole settlement to contain only one worker.
 [x] Disposable `SettlementPopulationCheck.runSelfTest()` covers capacity lock/unlock, recruitment, unique ids, default jobs OFF, full-capacity rejection and serialization without touching the real save.
-[ ] Con Revamp Population Self-Test returns PASS.
-[ ] Before recruitment, Population Status reports workers=1/2 and recruitment=READY on the completed settlement.
-[ ] Recruit Worker #2 succeeds once; Worker Status shows unique Worker #1/#2 ids and Worker #2 starts with all Allowed Jobs OFF.
-[ ] Population Check returns PASS with saved=2/runtime=2 and both unique live projections.
-[ ] Exit/re-entry then Population Check returns PASS with the same two persistent worker identities and no duplicate runtime projections.
-[ ] Logout/relog + re-entry then Population Check returns PASS with both worker identities/state preserved.
+[x] Con Revamp Population Self-Test returned PASS for shelter capacity=2, gated recruitment, unique Worker #2 id, default jobs OFF and serialization.
+[x] Recruitment eligibility is runtime verified: the existing one-worker completed settlement successfully recruited Worker #2 exactly once and then reported workers=2/2 / recruitment=FULL.
+[x] Recruit Worker #2 succeeded once; live population verification reported unique Worker #1/#2 ids/projections and Worker #2 remained idle under the default-OFF Allowed Jobs policy.
+[x] Population Check returned PASS with workers=2/2, saved=2/runtime=2 and unique Worker #1/#2 ids/projections.
+[x] Instance rebuild is runtime verified through the completed persistence/re-entry flow; both saved workers rebuild to exactly two runtime projections with no duplicate ids.
+[x] User completed logout/relog + settlement re-entry; Population Check still passed with saved=2/runtime=2 and Worker #2 remained idle as expected.

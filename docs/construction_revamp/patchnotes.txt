@@ -525,3 +525,11 @@
 - Added disposable/live `SettlementPopulationCheck` coverage for capacity, recruitment, unique ids, serialization and saved=2/runtime=2 projection ownership.
 - Added Con Revamp Population Status / Recruit Worker #2 / Population Self-Test / Population Check controls.
 - Bundle 2.1 is IMPLEMENTED / NEEDS RUNTIME TEST; housing/beds and broader production remain the next Phase-2 work after multi-worker persistence is accepted.
+
+2026-09-19 - Phase 2 Bundle 2.1 runtime verified
+- Population Self-Test returned PASS for capacity/recruitment/unique-id/default-job/serialization ownership.
+- Live Worker #2 recruitment succeeded; population reached workers=2/2 / recruitment=FULL.
+- Population Check returned PASS with saved=2/runtime=2 and unique Worker #1/#2 identities/projections.
+- User completed logout/relog + settlement re-entry; the two-worker state rebuilt without duplicate runtime NPCs and Worker #2 remained idle under default-OFF Allowed Jobs.
+- Bundle 2.1 is DONE / runtime verified.
+- Workflow decision: batch future compatible Phase-2 work into larger 4–6 patch bundles and consolidate runtime verification into one launch when safe.

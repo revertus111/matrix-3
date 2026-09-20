@@ -783,7 +783,7 @@ Runtime acceptance target:
 
 ### Bundle 2.1 — Population capacity + additional-worker recruitment
 
-**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
+**Status:** DONE / RUNTIME VERIFIED
 
 Persistent population owner:
 
@@ -861,12 +861,12 @@ Acceptance direction:
 - Phase status: ACTIVE
 - Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
 - Persistent-runtime bundle: 2.1 — population capacity + additional-worker recruitment
-- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
+- Persistent-runtime bundle status: DONE / RUNTIME VERIFIED
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: DONE / runtime accepted for Phase-1 scope; later camera/preset polish is non-blocking
-- Approval state: Phase 2 Bundle 2.1 SAP AAA is active. Population capacity + Worker #2 recruitment/projection + disposable/live checks are implemented.
-- Current checklist item: run the consolidated Bundle 2.1 population acceptance pass: self-test, recruit Worker #2, saved=2/runtime=2 check, exit/re-entry check, logout/relog check.
-- Current objective: runtime-prove stable multi-worker persistence/projection without changing the verified Worker #1 behavior, then continue Phase 2 into housing/beds and broader survival production.
+- Approval state: Phase 2 Bundle 2.1 is closed / runtime verified. Future compatible Phase-2 slices should be grouped into larger 4–6 patch bundles with one consolidated runtime pass where ownership/dependencies allow.
+- Current checklist item: define the next compatible multi-patch Phase-2 bundle before new code changes; do not regress/retest the completed Worker #2 persistence slice.
+- Current objective: continue Phase 2 from the verified two-worker foundation into multi-worker management, housing/capacity and broader survival production while minimizing restart/test cycles.
 
 ## Verification classifications
 
@@ -908,7 +908,7 @@ Acceptance direction:
 
 ### verified-static
 
-- Bundle 2.1 population ownership is verified-static pending runtime: starter shelter derives capacity 2 in `SettlementState`; `recruitAdditionalWorker()` creates one `RECRUITED_SETTLER` with a unique stable id; `SettlementInstance` projects every saved worker once by id; disposable/live population checks cover gating, serialization and saved/runtime counts.
+- Bundle 2.1 population ownership is VERIFIED at runtime: Population Self-Test passed; Worker #2 recruited successfully from the completed shelter capacity; live Population Check reported `workers=2/2`, `saved=2/runtime=2`, unique Worker #1/#2 ids/projections; Worker #2 remained idle under the default-OFF Allowed Jobs policy; logout/relog + settlement re-entry preserved the two-worker population without duplicate runtime projections.
 
 - `matrix-3` is the correct repository.
 - Protected Matrix3 baseline is `e86851b95e1d2927d58463b67f600153b9166f6a`.
@@ -1045,11 +1045,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 2 — Population + broader survival production.
 
-**Active persistent-runtime bundle:** Bundle 2.1 — population capacity + additional-worker recruitment (IMPLEMENTED / NEEDS RUNTIME TEST).
+**Active persistent-runtime bundle:** Bundle 2.1 — population capacity + additional-worker recruitment (DONE / RUNTIME VERIFIED).
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull once and run Con Revamp Phase 2 Population: Population Self-Test -> Population Status (expect workers=1/2 + READY before recruitment) -> Recruit Worker #2 -> Population Check (expect saved=2/runtime=2) -> exit/re-enter + Population Check -> logout/relog/re-enter + Population Check. Worker #2 should begin with all Allowed Jobs OFF. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Bundle 2.1 is DONE. Before the next code patch, define one larger compatible Phase-2 bundle (target 4–6 related patches) and batch its runtime acceptance into one launch. Start from the verified two-worker owner; do not redo Worker #2 recruitment/persistence discovery. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 
