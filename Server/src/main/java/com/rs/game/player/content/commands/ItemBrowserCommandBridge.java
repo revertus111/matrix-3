@@ -16,6 +16,7 @@ import com.rs.game.player.content.construction.SettlementBundle12FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle13FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle14FinalGate;
 import com.rs.game.player.content.construction.SettlementBundle15FinalCheck;
+import com.rs.game.player.content.construction.SettlementBundle22FinalGate;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementPopulationCheck;
@@ -145,7 +146,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -262,6 +263,31 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workerallstatus".equals(operation)) {
+            java.util.List<SettlementWorkerState> workers =
+                    player.getSettlementState().snapshotWorkers();
+            player.getPackets().sendGameMessage(
+                    "All Workers: saved=" + workers.size()
+                            + ", runtime=" + (active == null ? 0 : active.getActiveWorkerCount())
+                            + " | storage=" + player.getSettlementState().getResourceSummary());
+            for (SettlementWorkerState worker : workers) {
+                if (worker == null) {
+                    continue;
+                }
+                player.getPackets().sendGameMessage(
+                        "Worker #" + worker.getWorkerId() + " " + worker.getName()
+                                + " | Jobs: " + worker.getAllowedJobsSummary());
+                player.getPackets().sendGameMessage(
+                        "Needs: " + worker.getNeedsSummary()
+                                + " | Skills: " + worker.getSkillsSummary());
+                if (active != null && active.isLoaded()) {
+                    player.getPackets().sendGameMessage(
+                            active.getWorkerAiSummary(worker.getWorkerId()));
+                }
+            }
+            return true;
+        }
+
         if ("workerselftest".equals(operation)) {
             String result = SettlementWorkerSelfTest.run();
             System.out.println("[SettlementWorkerSelfTest] " + result);
@@ -308,10 +334,8 @@ public final class ItemBrowserCommandBridge {
         }
 
         if ("workerjobs".equals(operation)) {
-            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
-            if (worker == null) {
-                player.getPackets().sendGameMessage("No starter worker exists yet.");
-            } else {
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
+            if (worker != null) {
                 player.getPackets().sendGameMessage(
                         "Worker #" + worker.getWorkerId() + " Allowed Jobs: "
                                 + worker.getAllowedJobsSummary());
@@ -327,9 +351,8 @@ public final class ItemBrowserCommandBridge {
         }
 
         if ("workerai".equals(operation)) {
-            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
             if (worker == null) {
-                player.getPackets().sendGameMessage("No starter worker exists yet.");
                 return true;
             }
             if (active == null || !active.isLoaded()) {
@@ -344,10 +367,8 @@ public final class ItemBrowserCommandBridge {
         }
 
         if ("workerneeds".equals(operation)) {
-            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
-            if (worker == null) {
-                player.getPackets().sendGameMessage("No starter worker exists yet.");
-            } else {
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
+            if (worker != null) {
                 player.getPackets().sendGameMessage(
                         "Worker #" + worker.getWorkerId() + " Needs: "
                                 + worker.getNeedsSummary());
@@ -363,10 +384,8 @@ public final class ItemBrowserCommandBridge {
         }
 
         if ("workerneedsreset".equals(operation)) {
-            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
-            if (worker == null) {
-                player.getPackets().sendGameMessage("No starter worker exists yet.");
-            } else {
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
+            if (worker != null) {
                 worker.resetNeeds();
                 player.getPackets().sendGameMessage(
                         "Worker #" + worker.getWorkerId() + " Needs reset: "
@@ -376,24 +395,26 @@ public final class ItemBrowserCommandBridge {
         }
 
         if ("workerneed".equals(operation)) {
-            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
-            if (worker == null) {
-                player.getPackets().sendGameMessage("No starter worker exists yet.");
-                return true;
-            }
-            if (cmd.length < 5) {
+            boolean targeted = hasWorkerIdArgument(cmd, 3);
+            int needIndex = targeted ? 4 : 3;
+            int valueIndex = targeted ? 5 : 4;
+            if (cmd.length <= valueIndex) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement workerneed <hunger|thirst|energy> <0-100>");
+                        "Use: ::itembrowser settlement workerneed [workerId] <hunger|thirst|energy> <0-100>");
                 return true;
             }
-            SettlementWorkerNeed need = SettlementWorkerNeed.forKey(cmd[3]);
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
+            if (worker == null) {
+                return true;
+            }
+            SettlementWorkerNeed need = SettlementWorkerNeed.forKey(cmd[needIndex]);
             if (need == null) {
-                player.getPackets().sendGameMessage("Unknown worker need: " + cmd[3] + ".");
+                player.getPackets().sendGameMessage("Unknown worker need: " + cmd[needIndex] + ".");
                 return true;
             }
             final int value;
             try {
-                value = Integer.parseInt(cmd[4]);
+                value = Integer.parseInt(cmd[valueIndex]);
             } catch (NumberFormatException ex) {
                 player.getPackets().sendGameMessage("Worker need value must be 0-100.");
                 return true;
@@ -411,10 +432,8 @@ public final class ItemBrowserCommandBridge {
         }
 
         if ("workerprogress".equals(operation)) {
-            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
-            if (worker == null) {
-                player.getPackets().sendGameMessage("No starter worker exists yet.");
-            } else {
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
+            if (worker != null) {
                 player.getPackets().sendGameMessage(
                         "Worker #" + worker.getWorkerId() + " Skills: "
                                 + worker.getSkillsSummary());
@@ -467,24 +486,47 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("bundle22selftest".equals(operation)) {
+            String result = SettlementBundle22FinalGate.runSelfTest();
+            System.out.println("[SettlementBundle22FinalGate] " + result);
+            player.getPackets().sendGameMessage("Bundle 2.2 self-test: " + result);
+            return true;
+        }
+
+        if ("bundle22baseline".equals(operation)) {
+            String result = SettlementBundle22FinalGate.capture(player);
+            System.out.println("[SettlementBundle22FinalGate] " + result);
+            player.getPackets().sendGameMessage("Bundle 2.2 gate: " + result);
+            return true;
+        }
+
+        if ("bundle22check".equals(operation)) {
+            String result = SettlementBundle22FinalGate.check(player);
+            System.out.println("[SettlementBundle22FinalGate] " + result);
+            player.getPackets().sendGameMessage("Bundle 2.2 gate: " + result);
+            return true;
+        }
+
         if ("workerjob".equals(operation)) {
-            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
-            if (worker == null) {
-                player.getPackets().sendGameMessage("No starter worker exists yet.");
-                return true;
-            }
-            if (cmd.length < 5) {
+            boolean targeted = hasWorkerIdArgument(cmd, 3);
+            int jobIndex = targeted ? 4 : 3;
+            int stateIndex = targeted ? 5 : 4;
+            if (cmd.length <= stateIndex) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement workerjob <job-key> <on|off>");
+                        "Use: ::itembrowser settlement workerjob [workerId] <job-key> <on|off>");
                 return true;
             }
-            SettlementWorkerJob job = SettlementWorkerJob.forKey(cmd[3].toLowerCase());
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
+            if (worker == null) {
+                return true;
+            }
+            SettlementWorkerJob job = SettlementWorkerJob.forKey(cmd[jobIndex].toLowerCase());
             if (job == null) {
                 player.getPackets().sendGameMessage(
-                        "Unknown worker job key: " + cmd[3] + ".");
+                        "Unknown worker job key: " + cmd[jobIndex] + ".");
                 return true;
             }
-            String state = cmd[4].toLowerCase();
+            String state = cmd[stateIndex].toLowerCase();
             if (!"on".equals(state) && !"off".equals(state)) {
                 player.getPackets().sendGameMessage(
                         "Worker job state must be on or off.");
@@ -499,17 +541,18 @@ public final class ItemBrowserCommandBridge {
         }
 
         if ("workerjobsall".equals(operation)) {
-            SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
-            if (worker == null) {
-                player.getPackets().sendGameMessage("No starter worker exists yet.");
-                return true;
-            }
-            if (cmd.length < 4) {
+            boolean targeted = hasWorkerIdArgument(cmd, 3);
+            int stateIndex = targeted ? 4 : 3;
+            if (cmd.length <= stateIndex) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement workerjobsall <on|off>");
+                        "Use: ::itembrowser settlement workerjobsall [workerId] <on|off>");
                 return true;
             }
-            String state = cmd[3].toLowerCase();
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
+            if (worker == null) {
+                return true;
+            }
+            String state = cmd[stateIndex].toLowerCase();
             if (!"on".equals(state) && !"off".equals(state)) {
                 player.getPackets().sendGameMessage(
                         "Worker jobs state must be on or off.");
@@ -549,6 +592,45 @@ public final class ItemBrowserCommandBridge {
         player.getPackets().sendGameMessage(
                 "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|audit|selftest|finalcheck>");
         return true;
+    }
+
+    private static SettlementWorkerState resolveSettlementWorker(
+            Player player, String[] cmd, int workerIdIndex) {
+        if (player == null) {
+            return null;
+        }
+        if (hasWorkerIdArgument(cmd, workerIdIndex)) {
+            final long workerId;
+            try {
+                workerId = Long.parseLong(cmd[workerIdIndex]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Worker id must be a whole number.");
+                return null;
+            }
+            SettlementWorkerState worker = player.getSettlementState().findWorker(workerId);
+            if (worker == null) {
+                player.getPackets().sendGameMessage("Worker #" + workerId + " was not found.");
+            }
+            return worker;
+        }
+
+        SettlementWorkerState worker = player.getSettlementState().getStarterWorker();
+        if (worker == null) {
+            player.getPackets().sendGameMessage("No starter worker exists yet.");
+        }
+        return worker;
+    }
+
+    private static boolean hasWorkerIdArgument(String[] cmd, int index) {
+        if (cmd == null || index < 0 || cmd.length <= index) {
+            return false;
+        }
+        try {
+            Long.parseLong(cmd[index]);
+            return true;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
     }
 
     private static boolean processDevSpawn(Player player, String[] cmd) {

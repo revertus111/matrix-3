@@ -13,7 +13,9 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTextArea;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
 
@@ -28,7 +30,11 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 1.5 final gate is active.", 4);
+            "Ready. Bundle 2.2 multi-worker control bundle is active.", 4);
+    private final JSpinner workerSelector =
+            new JSpinner(new SpinnerNumberModel(1, 1, 999999, 1));
+    private final java.util.List<JCheckBox> workerJobCheckBoxes =
+            new java.util.ArrayList<JCheckBox>();
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -45,11 +51,15 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createPopulationCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createWorkerSelectorCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createAllowedJobsCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createNeedsCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createProgressionCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createBundle22Card());
         content.add(Box.createVerticalStrut(12));
         content.add(createBundle15Card());
         content.add(Box.createVerticalStrut(12));
@@ -154,8 +164,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 "itembrowser settlement workercheck",
                 "Worker Arrival Check queued. PASS/NOT READY/FAIL will appear in game chat and the server console."));
         workerAiStatus.addActionListener(e -> queue(
-                "itembrowser settlement workerai",
-                "Worker AI Status queued. Live work/carry state and storage totals will appear in game chat."));
+                "itembrowser settlement workerai " + selectedWorkerId(),
+                "Selected Worker AI Status queued. Live work/carry state and storage totals will appear in game chat."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
@@ -231,8 +241,70 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return card;
     }
 
+    private JPanel createWorkerSelectorCard() {
+        JPanel card = ConsoleTheme.createCard("Multi-worker control");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Select the persistent Worker ID controlled by Allowed Jobs, Needs, AI Status and Progress Status below. "
+                + "Changing selection clears local checkbox visuals so one worker's UI state is never mistaken for another worker's authoritative saved policy.",
+                5));
+        card.add(Box.createVerticalStrut(8));
+
+        workerSelector.setMaximumSize(new Dimension(120, 30));
+        workerSelector.setAlignmentX(LEFT_ALIGNMENT);
+        workerSelector.addChangeListener(e -> {
+            for (JCheckBox checkBox : workerJobCheckBoxes) {
+                checkBox.setSelected(false);
+            }
+            setStatus("Selected Worker #" + selectedWorkerId()
+                    + ". Job checkbox visuals reset; use Jobs Status for authoritative readback.");
+        });
+        card.add(workerSelector);
+        card.add(Box.createVerticalStrut(8));
+
+        JButton selectedJobs = new JButton("Selected Jobs Status");
+        JButton selectedAi = new JButton("Selected AI Status");
+        JButton selectedNeeds = new JButton("Selected Needs");
+        JButton selectedProgress = new JButton("Selected Progress");
+        JButton allWorkers = new JButton("All Worker Status");
+
+        ConsoleTheme.styleButton(selectedJobs);
+        ConsoleTheme.styleButton(selectedAi);
+        ConsoleTheme.styleButton(selectedNeeds);
+        ConsoleTheme.styleButton(selectedProgress);
+        ConsoleTheme.styleButton(allWorkers);
+
+        selectedJobs.addActionListener(e -> queue(
+                "itembrowser settlement workerjobs " + selectedWorkerId(),
+                "Selected worker Jobs Status queued."));
+        selectedAi.addActionListener(e -> queue(
+                "itembrowser settlement workerai " + selectedWorkerId(),
+                "Selected worker AI Status queued."));
+        selectedNeeds.addActionListener(e -> queue(
+                "itembrowser settlement workerneeds " + selectedWorkerId(),
+                "Selected worker Needs Status queued."));
+        selectedProgress.addActionListener(e -> queue(
+                "itembrowser settlement workerprogress " + selectedWorkerId(),
+                "Selected worker Progress Status queued."));
+        allWorkers.addActionListener(e -> queue(
+                "itembrowser settlement workerallstatus",
+                "All Worker Status queued. Jobs, needs, skills, AI and shared storage will appear in game chat."));
+
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 126));
+        buttons.add(selectedJobs);
+        buttons.add(selectedAi);
+        buttons.add(selectedNeeds);
+        buttons.add(selectedProgress);
+        buttons.add(allWorkers);
+        card.add(buttons);
+        return card;
+    }
+
     private JPanel createAllowedJobsCard() {
-        JPanel card = ConsoleTheme.createCard("Allowed Jobs — Worker #1");
+        JPanel card = ConsoleTheme.createCard("Allowed Jobs — Selected Worker");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
                 "Server-authoritative allowlist. New workers start with every job OFF. "
@@ -263,17 +335,20 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(disableAll);
 
         jobsStatus.addActionListener(e -> queue(
-                "itembrowser settlement workerjobs",
-                "Jobs Status queued. Authoritative saved permissions will appear in game chat."));
+                "itembrowser settlement workerjobs " + selectedWorkerId(),
+                "Jobs Status queued for Worker #" + selectedWorkerId()
+                        + ". Authoritative saved permissions will appear in game chat."));
         jobsSelfTest.addActionListener(e -> queue(
                 "itembrowser settlement workerjobselftest",
                 "Jobs Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
         enableAll.addActionListener(e -> queue(
-                "itembrowser settlement workerjobsall on",
-                "Enable All Jobs queued. Use Jobs Status to confirm saved state."));
+                "itembrowser settlement workerjobsall " + selectedWorkerId() + " on",
+                "Enable All Jobs queued for Worker #" + selectedWorkerId()
+                        + ". Use Jobs Status to confirm saved state."));
         disableAll.addActionListener(e -> queue(
-                "itembrowser settlement workerjobsall off",
-                "Disable All Jobs queued. Use Jobs Status to confirm saved state."));
+                "itembrowser settlement workerjobsall " + selectedWorkerId() + " off",
+                "Disable All Jobs queued for Worker #" + selectedWorkerId()
+                        + ". Use Jobs Status to confirm saved state."));
 
         JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
         buttons.setOpaque(false);
@@ -293,16 +368,18 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         checkBox.setForeground(ConsoleTheme.TEXT);
         checkBox.setFont(ConsoleTheme.BODY_FONT);
         checkBox.setFocusable(false);
+        workerJobCheckBoxes.add(checkBox);
         checkBox.addActionListener(e -> queue(
-                "itembrowser settlement workerjob " + jobKey + " "
-                        + (checkBox.isSelected() ? "on" : "off"),
-                label + "=" + (checkBox.isSelected() ? "ON" : "OFF")
+                "itembrowser settlement workerjob " + selectedWorkerId() + " "
+                        + jobKey + " " + (checkBox.isSelected() ? "on" : "off"),
+                "Worker #" + selectedWorkerId() + " " + label + "="
+                        + (checkBox.isSelected() ? "ON" : "OFF")
                         + " queued. Use Jobs Status for authoritative readback."));
         return checkBox;
     }
 
     private JPanel createNeedsCard() {
-        JPanel card = ConsoleTheme.createCard("Worker Needs — Worker #1");
+        JPanel card = ConsoleTheme.createCard("Worker Needs — Selected Worker");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
                 "Persistent server-owned Hunger / Thirst / Energy. Hunger and Thirst rise with work; Energy falls. "
@@ -325,23 +402,24 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(resetNeeds);
 
         needsStatus.addActionListener(e -> queue(
-                "itembrowser settlement workerneeds",
-                "Needs Status queued. Persistent Worker #1 needs will appear in game chat."));
+                "itembrowser settlement workerneeds " + selectedWorkerId(),
+                "Needs Status queued for Worker #" + selectedWorkerId() + "."));
         needsSelfTest.addActionListener(e -> queue(
                 "itembrowser settlement workerneedselftest",
                 "Needs Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
         hungerCritical.addActionListener(e -> queue(
-                "itembrowser settlement workerneed hunger 80",
-                "Hunger set to the critical threshold. Worker #1 should return home for Food."));
+                "itembrowser settlement workerneed " + selectedWorkerId() + " hunger 80",
+                "Hunger set critical for Worker #" + selectedWorkerId() + "."));
         thirstCritical.addActionListener(e -> queue(
-                "itembrowser settlement workerneed thirst 80",
-                "Thirst set to the critical threshold. Worker #1 should return home to drink."));
+                "itembrowser settlement workerneed " + selectedWorkerId() + " thirst 80",
+                "Thirst set critical for Worker #" + selectedWorkerId() + "."));
         energyCritical.addActionListener(e -> queue(
-                "itembrowser settlement workerneed energy 20",
-                "Energy set to the critical threshold. Worker #1 should return home to rest."));
+                "itembrowser settlement workerneed " + selectedWorkerId() + " energy 20",
+                "Energy set critical for Worker #" + selectedWorkerId() + "."));
         resetNeeds.addActionListener(e -> queue(
-                "itembrowser settlement workerneedsreset",
-                "Worker #1 needs reset to Hunger 0 / Thirst 0 / Energy 100."));
+                "itembrowser settlement workerneedsreset " + selectedWorkerId(),
+                "Worker #" + selectedWorkerId()
+                        + " needs reset to Hunger 0 / Thirst 0 / Energy 100."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
@@ -361,7 +439,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Worker Progression / Construction XP");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Permanent Worker #1 skill XP uses RuneScape-style levels. Gathering awards the mapped worker skill; successful hauling awards Hauling XP and exactly 1 base Construction XP per stored resource. Idle/blocked work awards none.",
+                "Permanent per-worker skill XP uses RuneScape-style levels. Gathering awards the selected worker's mapped skill; successful hauling awards Hauling XP and exactly 1 base Construction XP per stored resource. Idle/blocked work awards none.",
                 5));
         card.add(Box.createVerticalStrut(8));
 
@@ -371,8 +449,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         ConsoleTheme.styleButton(progressSelfTest);
 
         progressStatus.addActionListener(e -> queue(
-                "itembrowser settlement workerprogress",
-                "Progress Status queued. Worker skill XP/levels and player Construction XP will appear in game chat."));
+                "itembrowser settlement workerprogress " + selectedWorkerId(),
+                "Progress Status queued for Worker #" + selectedWorkerId()
+                        + ". Worker skill XP/levels and player Construction XP will appear in game chat."));
         progressSelfTest.addActionListener(e -> queue(
                 "itembrowser settlement workerprogressselftest",
                 "Progress Self-Test queued. PASS/FAIL will appear in game chat and the server console."));
@@ -383,6 +462,55 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         buttons.add(progressStatus);
         buttons.add(progressSelfTest);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createBundle22Card() {
+        JPanel card = ConsoleTheme.createCard("Bundle 2.2 Final Gate");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "One-launch acceptance:\n"
+                + "1. Bundle 2.2 Self-Test -> PASS.\n"
+                + "2. Worker #1: Disable All, then Food + Haul ON. Worker #2: Disable All, then Wood + Haul ON.\n"
+                + "3. All Worker Status until both workers show independent work/deposits and shared storage rises.\n"
+                + "4. Disable Worker #1 jobs; Worker #2 must continue.\n"
+                + "5. Disable both workers + Reset Needs, then Capture 2-Worker Baseline.\n"
+                + "6. Exit/re-enter -> Check Baseline PASS; logout/relog/re-enter -> Check Baseline PASS.",
+                10));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton selfTest = new JButton("Bundle 2.2 Self-Test");
+        JButton allStatus = new JButton("All Worker Status");
+        JButton capture = new JButton("Capture 2-Worker Baseline");
+        JButton check = new JButton("Check 2-Worker Baseline");
+
+        ConsoleTheme.styleButton(selfTest);
+        ConsoleTheme.styleButton(allStatus);
+        ConsoleTheme.styleButton(capture);
+        ConsoleTheme.styleButton(check);
+
+        selfTest.addActionListener(e -> queue(
+                "itembrowser settlement bundle22selftest",
+                "Bundle 2.2 Self-Test queued. Expect PASS for independent worker targeting/state."));
+        allStatus.addActionListener(e -> queue(
+                "itembrowser settlement workerallstatus",
+                "All Worker Status queued."));
+        capture.addActionListener(e -> queue(
+                "itembrowser settlement bundle22baseline",
+                "Bundle 2.2 baseline capture queued. Disable jobs for both workers first."));
+        check.addActionListener(e -> queue(
+                "itembrowser settlement bundle22check",
+                "Bundle 2.2 baseline check queued. Expect PASS after re-entry/relog."));
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(selfTest);
+        buttons.add(allStatus);
+        buttons.add(capture);
+        buttons.add(check);
         card.add(buttons);
         return card;
     }
@@ -482,6 +610,11 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         status.setForeground(ConsoleTheme.ACCENT);
         card.add(status);
         return card;
+    }
+
+    private long selectedWorkerId() {
+        Object value = workerSelector.getValue();
+        return value instanceof Number ? ((Number) value).longValue() : 1L;
     }
 
     private void queue(String command, String success) {

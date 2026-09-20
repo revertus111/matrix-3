@@ -23,7 +23,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: Phase 1 MVP is DONE / runtime accepted. Freeform building, direct-render ghost, detached Free Build camera, settlement persistence/resources/shelter, Worker #1 gather/haul/needs/progression, material-consuming player placement and active/passive Construction XP ownership are runtime VERIFIED. Historical diagnostics and zero-Food Hunger resupply remain non-blocking carryover only. Phase 2 population + broader survival production is the next ready target.
+- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 is ACTIVE: Bundle 2.1 population capacity + Worker #2 persistence is runtime VERIFIED; Bundle 2.2 multi-worker targeting/control/concurrent-work management is implemented and awaiting one consolidated runtime pass. Historical diagnostics and zero-Food Hunger resupply remain non-blocking carryover only.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
 - Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling and the `0x100` private-alpha isolation fix are also runtime verified after a full client restart.
@@ -811,6 +811,49 @@ Acceptance direction:
 
 `Population Self-Test PASS -> status workers=1/2 READY -> recruit Worker #2 -> Population Check PASS saved=2/runtime=2 -> exit/re-entry PASS -> logout/relog + re-entry PASS`
 
+### Bundle 2.2 — Multi-worker control + concurrent work
+
+**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
+
+Patch 2.2.1 — worker-id targeting:
+
+- Existing owner-only worker commands now accept an optional stable worker id while preserving the old no-id Worker #1 syntax for compatibility.
+- Jobs status/toggle/all, Needs status/set/reset, AI status and Progress status resolve the requested persistent `SettlementWorkerState` through `SettlementState.findWorker(...)`.
+- Missing worker ids are rejected explicitly instead of falling back to another worker.
+
+Patch 2.2.2 — Con Revamp worker selector:
+
+- Con Revamp now has a numeric persistent Worker ID selector used by Allowed Jobs, Needs, AI and Progress controls.
+- Switching selected workers clears local Allowed Jobs checkbox visuals so stale Worker #1 UI state cannot be mistaken for Worker #2's authoritative saved state.
+- Server readback remains authoritative; the client selector owns no worker policy.
+
+Patch 2.2.3 — Worker #2 real work control:
+
+- No second AI implementation was added. Targeted Allowed Jobs simply expose the already-verified `SettlementWorkerNpc` gather/haul/needs/progression loop for Worker #2's own persistent state.
+- Worker #2 can therefore be independently assigned gathering + Haul while Worker #1 retains a different allowlist.
+
+Patch 2.2.4 — concurrent workers:
+
+- Both runtime NPCs already execute independently against their own `SettlementWorkerState`; shared settlement resource mutation remains in the synchronized `SettlementState` resource owner.
+- Bundle acceptance deliberately uses different resource jobs (Worker #1 Food + Haul, Worker #2 Wood + Haul) to prove simultaneous independent work without relying on same-node contention.
+- Disabling one worker's jobs must not stop the other worker.
+
+Patch 2.2.5 — all-worker status:
+
+- `workerallstatus` reports saved/runtime counts, shared storage, and each worker's authoritative jobs, needs, skills and live AI summary in one bounded command.
+- Con Revamp exposes this readout alongside selected-worker controls.
+
+Patch 2.2.6 — final gate:
+
+- `SettlementBundle22FinalGate.runSelfTest()` disposably verifies two-worker id targeting, independent Allowed Jobs, Needs, progression and serialization through the real persistent worker-state APIs.
+- Live baseline capture is read-only/process-local and requires exactly two runtime workers with all jobs OFF and no critical needs.
+- Baseline check compares both worker ids/definitions, Allowed Jobs, Needs, all personal skill XP and player Construction XP across instance rebuild/relog.
+- Con Revamp exposes Bundle 2.2 Self-Test, All Worker Status, Capture 2-Worker Baseline and Check 2-Worker Baseline.
+
+Runtime acceptance target:
+
+`Self-Test PASS -> W1 Food+Haul / W2 Wood+Haul -> both work/deposit -> stop W1 while W2 continues -> stop/reset both -> capture baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
+
 - Additional workers/recruitment.
 - Housing/beds/population capacity.
 - Cooking, farming and hunting.
@@ -860,13 +903,13 @@ Acceptance direction:
 - Phase: Phase 2 — Population + broader survival production
 - Phase status: ACTIVE
 - Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
-- Persistent-runtime bundle: 2.1 — population capacity + additional-worker recruitment
-- Persistent-runtime bundle status: DONE / RUNTIME VERIFIED
+- Persistent-runtime bundle: 2.2 — multi-worker control + concurrent work
+- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: DONE / runtime accepted for Phase-1 scope; later camera/preset polish is non-blocking
-- Approval state: Phase 2 Bundle 2.1 is closed / runtime verified. Future compatible Phase-2 slices should be grouped into larger 4–6 patch bundles with one consolidated runtime pass where ownership/dependencies allow.
-- Current checklist item: define the next compatible multi-patch Phase-2 bundle before new code changes; do not regress/retest the completed Worker #2 persistence slice.
-- Current objective: continue Phase 2 from the verified two-worker foundation into multi-worker management, housing/capacity and broader survival production while minimizing restart/test cycles.
+- Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
+- Current checklist item: run Bundle 2.2 in one launch: self-test -> independently assign Worker #1 Food+Haul and Worker #2 Wood+Haul -> prove both work -> stop Worker #1 while Worker #2 continues -> stable baseline -> exit/re-entry check -> logout/relog check.
+- Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
 
@@ -907,6 +950,8 @@ Acceptance direction:
 - Worker #1 exit/re-entry persistence is runtime VERIFIED: re-entering rebuilt the same Worker #1 (`id=1`, `starter-settler`, home `24,12,0`) with `saved=1/runtime=1` and Worker Arrival Check PASS.
 
 ### verified-static
+
+- Bundle 2.2 is verified-static pending runtime: worker management commands resolve optional stable worker ids through `SettlementState.findWorker(...)`; Con Revamp routes selected-worker controls to those commands; both `SettlementWorkerNpc` projections continue using independent persistent worker state against synchronized shared settlement storage; `SettlementBundle22FinalGate` covers independent jobs/needs/progression serialization and exact two-worker persistence snapshots.
 
 - Bundle 2.1 population ownership is VERIFIED at runtime: Population Self-Test passed; Worker #2 recruited successfully from the completed shelter capacity; live Population Check reported `workers=2/2`, `saved=2/runtime=2`, unique Worker #1/#2 ids/projections; Worker #2 remained idle under the default-OFF Allowed Jobs policy; logout/relog + settlement re-entry preserved the two-worker population without duplicate runtime projections.
 
@@ -1045,11 +1090,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 2 — Population + broader survival production.
 
-**Active persistent-runtime bundle:** Bundle 2.1 — population capacity + additional-worker recruitment (DONE / RUNTIME VERIFIED).
+**Active persistent-runtime bundle:** Bundle 2.2 — multi-worker control + concurrent work (IMPLEMENTED / NEEDS RUNTIME TEST).
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Bundle 2.1 is DONE. Before the next code patch, define one larger compatible Phase-2 bundle (target 4–6 related patches) and batch its runtime acceptance into one launch. Start from the verified two-worker owner; do not redo Worker #2 recruitment/persistence discovery. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Pull once and run the Con Revamp Bundle 2.2 Final Gate. Use selected Worker #1 -> Disable All -> Gather Food + Haul ON; selected Worker #2 -> Disable All -> Gather Wood + Haul ON; confirm both work/deposit with All Worker Status; disable Worker #1 and confirm Worker #2 continues; then disable/reset both, capture the 2-worker baseline, exit/re-enter + Check PASS, logout/relog/re-enter + Check PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 

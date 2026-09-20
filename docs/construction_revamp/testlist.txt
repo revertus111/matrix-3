@@ -295,3 +295,23 @@ Phase 2 Bundle 2.1 — population capacity + additional-worker recruitment
 [x] Population Check returned PASS with workers=2/2, saved=2/runtime=2 and unique Worker #1/#2 ids/projections.
 [x] Instance rebuild is runtime verified through the completed persistence/re-entry flow; both saved workers rebuild to exactly two runtime projections with no duplicate ids.
 [x] User completed logout/relog + settlement re-entry; Population Check still passed with saved=2/runtime=2 and Worker #2 remained idle as expected.
+
+
+Phase 2 Bundle 2.2 — multi-worker control + concurrent work
+[IMPLEMENTED / NEEDS RUNTIME TEST]
+[x] Patch 2.2.1: worker Jobs/Needs/AI/Progress commands accept an optional stable worker id while preserving legacy Worker #1 syntax.
+[x] Patch 2.2.1: nonexistent worker ids are rejected explicitly and do not fall back to another worker.
+[x] Patch 2.2.2: Con Revamp has a selected Worker ID control used by Allowed Jobs, Needs, AI Status and Progress Status.
+[x] Patch 2.2.2: switching selected workers clears local checkbox visuals; server Jobs Status remains authoritative.
+[x] Patch 2.2.3: Worker #2 uses the existing SettlementWorkerNpc gather/haul/needs/progression loop through its own persistent Allowed Jobs state; no second AI owner was introduced.
+[x] Patch 2.2.4: concurrent workers remain independent runtime NPCs against their own SettlementWorkerState records while shared settlement storage remains synchronized in SettlementState.
+[x] Patch 2.2.5: workerallstatus reports saved/runtime counts, shared storage and each worker's jobs/needs/skills/live AI summary.
+[x] Patch 2.2.6: disposable Bundle 2.2 Self-Test exercises independent Worker #1/#2 jobs, needs, progression and serialization through real persistent worker-state APIs.
+[x] Patch 2.2.6: read-only process-local two-worker baseline/check compares ids/definitions/jobs/needs/skill XP/player Construction XP across instance rebuild/relog.
+[ ] Bundle 2.2 Self-Test returns PASS.
+[ ] Select Worker #1: Disable All, enable Gather Food + Haul. Select Worker #2: Disable All, enable Gather Wood + Haul. Jobs Status confirms independent allowlists.
+[ ] All Worker Status shows both workers actively following their independent jobs and shared Food/Wood storage increases from real deposits.
+[ ] Disable all jobs for Worker #1 while Worker #2 remains Wood+Haul; Worker #2 continues working/depositing independently.
+[ ] Disable all jobs for both workers, reset critical needs if needed, then Capture 2-Worker Baseline succeeds.
+[ ] Exit/re-enter then Check 2-Worker Baseline returns PASS with saved=2/runtime=2.
+[ ] Logout/relog + re-enter then Check 2-Worker Baseline returns PASS with both identities/jobs/needs/progression and Construction XP preserved.

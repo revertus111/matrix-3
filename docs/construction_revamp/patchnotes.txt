@@ -533,3 +533,12 @@
 - User completed logout/relog + settlement re-entry; the two-worker state rebuilt without duplicate runtime NPCs and Worker #2 remained idle under default-OFF Allowed Jobs.
 - Bundle 2.1 is DONE / runtime verified.
 - Workflow decision: batch future compatible Phase-2 work into larger 4–6 patch bundles and consolidate runtime verification into one launch when safe.
+
+2026-09-19 - Phase 2 Bundle 2.2 multi-worker control + concurrent work
+- Extended owner-only worker commands with optional stable worker-id targeting for Jobs, Needs, AI and Progress while preserving legacy Worker #1 syntax.
+- Added Con Revamp selected Worker ID control; Allowed Jobs, Needs, AI and Progress controls now target the selected persistent worker, and worker changes clear local checkbox visuals to avoid stale cross-worker UI state.
+- Worker #2 uses the existing SettlementWorkerNpc gather/haul/needs/progression loop through its own persistent policy; no duplicate AI owner was introduced.
+- Added workerallstatus for bounded all-worker jobs/needs/skills/live-AI/shared-storage readback.
+- Added SettlementBundle22FinalGate disposable targeting/serialization self-test plus read-only process-local two-worker persistence baseline/check.
+- Bundle 2.2 runtime target is one consolidated launch: W1 Food+Haul + W2 Wood+Haul concurrent work, stop-one/other-continues, then exit/re-entry and logout/relog baseline PASS.
+- No housing/capacity expansion, resource-node ownership, save-schema format or Phase-1 building behavior changed.
