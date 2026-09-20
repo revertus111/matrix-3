@@ -542,3 +542,4 @@
 - Added SettlementBundle22FinalGate disposable targeting/serialization self-test plus read-only process-local two-worker persistence baseline/check.
 - Bundle 2.2 runtime target is one consolidated launch: W1 Food+Haul + W2 Wood+Haul concurrent work, stop-one/other-continues, then exit/re-entry and logout/relog baseline PASS.
 - No housing/capacity expansion, resource-node ownership, save-schema format or Phase-1 building behavior changed.
+- Post-review: synchronized the fallback settlement command help string with the active Bundle 1.5/2.1/2.2 command surface; no runtime ownership changed.

@@ -590,7 +590,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
         return true;
     }
 
