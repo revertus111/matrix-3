@@ -600,3 +600,8 @@
 - Zoom is constrained to a safe -5600..-1400 relative travel band so normal wheel input cannot drive the camera back into the terrain plane.
 - Free Build ownership and controls are unchanged; RTS requires one focused runtime retest.
 2026-09-20 - RWS-2 release cleanup: the large radial reticule now renders only during an active mouse drag; releasing commits origin/radius data for later worker resolution but hides the area ring immediately.
+
+2026-09-20 - RTS vertical sign correction
+- Runtime clarification confirmed the RTS camera was below the map looking through terrain, not merely intersecting the near plane at ground height.
+- Corrected the fixed RTS pitch sign for Class658_Sub2.method8927(...), which negates its Y target internally.
+- Existing real-view-vector backoff/zoom correction remains in place; RTS should now initialize above the terrain and look downward.
