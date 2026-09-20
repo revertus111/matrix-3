@@ -42,9 +42,10 @@ public final class ConstructionBuildCamera {
     private static final float RTS_PITCH_RADIANS = (float) Math.toRadians(52.0);
     private static final float RTS_ROTATE_SPEED = (float) Math.toRadians(90.0);
     private static final float RTS_LOOK_DISTANCE = 4096.0F;
+    private static final float RTS_INITIAL_BACKOFF = 3600.0F;
     private static final float RTS_ZOOM_STEP = 450.0F;
-    private static final float RTS_MIN_ZOOM_TRAVEL = -5400.0F;
-    private static final float RTS_MAX_ZOOM_TRAVEL = 2700.0F;
+    private static final float RTS_MIN_ZOOM_TRAVEL = -5600.0F;
+    private static final float RTS_MAX_ZOOM_TRAVEL = -1400.0F;
     private static final int RTS_MAX_QUEUED_WHEEL_STEPS = 8;
 
     private static volatile boolean active;
@@ -354,24 +355,32 @@ public final class ConstructionBuildCamera {
         boolean panning = localX != 0.0F || localZ != 0.0F;
         float targetX = 0.0F;
         float targetZ = 0.0F;
+        Class240 viewDirection = getViewDirection(lookController, position);
 
-        if (panning) {
-            float speed = movementSpeed();
-            float sinYaw = (float) Math.sin(rtsYawRadians);
-            float cosYaw = (float) Math.cos(rtsYawRadians);
+        if (panning && viewDirection != null) {
+            float planarLength = (float) Math.sqrt(
+                    viewDirection.aFloat2653 * viewDirection.aFloat2653
+                            + viewDirection.aFloat2657 * viewDirection.aFloat2657);
+            if (planarLength > 0.001F) {
+                float forwardX = viewDirection.aFloat2653 / planarLength;
+                float forwardZ = viewDirection.aFloat2657 / planarLength;
+                float rightX = forwardZ;
+                float rightZ = -forwardX;
+                float speed = movementSpeed();
 
-            targetX = (localX * cosYaw + localZ * sinYaw) * speed;
-            targetZ = (-localX * sinYaw + localZ * cosYaw) * speed;
+                targetX = (localX * rightX + localZ * forwardX) * speed;
+                targetZ = (localX * rightZ + localZ * forwardZ) * speed;
+            }
         }
 
-        updateVelocity(targetX, 0.0F, targetZ, panning, dt);
+        updateVelocity(targetX, 0.0F, targetZ, panning && viewDirection != null, dt);
 
         position.aFloat2653 += velocityX * dt;
         position.aFloat2657 += velocityZ * dt;
 
         int wheelSteps = consumeRtsZoomSteps();
-        if (wheelSteps != 0) {
-            applyRtsZoom(position, wheelSteps);
+        if (wheelSteps != 0 && viewDirection != null) {
+            applyRtsZoom(position, viewDirection, wheelSteps);
         }
     }
 
@@ -387,9 +396,16 @@ public final class ConstructionBuildCamera {
             rtsYawRadians = 0.0F;
         }
 
-        rtsZoomTravel = 0.0F;
         rtsOrientationInitialized = true;
         applyRtsOrientation(lookController);
+
+        Class240 viewDirection = getViewDirection(lookController, position);
+        if (viewDirection != null) {
+            moveAlongView(position, viewDirection, -RTS_INITIAL_BACKOFF);
+            rtsZoomTravel = -RTS_INITIAL_BACKOFF;
+        } else {
+            rtsZoomTravel = RTS_MAX_ZOOM_TRAVEL;
+        }
     }
 
     private static void applyRtsOrientation(Class658_Sub2 lookController) {
@@ -400,7 +416,7 @@ public final class ConstructionBuildCamera {
         lookController.method8927(x, y, z, 0);
     }
 
-    private static void applyRtsZoom(Class240 position, int wheelSteps) {
+    private static void applyRtsZoom(Class240 position, Class240 viewDirection, int wheelSteps) {
         float requestedTravel = -wheelSteps * RTS_ZOOM_STEP;
         float nextTravel = clamp(
                 rtsZoomTravel + requestedTravel,
@@ -410,15 +426,34 @@ public final class ConstructionBuildCamera {
         if (acceptedTravel == 0.0F) {
             return;
         }
+
+        moveAlongView(position, viewDirection, acceptedTravel);
         rtsZoomTravel = nextTravel;
+    }
 
-        float horizontal = (float) Math.cos(RTS_PITCH_RADIANS);
-        float sinYaw = (float) Math.sin(rtsYawRadians);
-        float cosYaw = (float) Math.cos(rtsYawRadians);
+    /**
+     * Matrix3's detached camera uses obfuscated coordinate/sign conventions.
+     * Derive movement from the real Class411 look vector instead of assuming
+     * world-axis signs so RTS pan/zoom stay aligned with the rendered view.
+     */
+    private static Class240 getViewDirection(Class658_Sub2 lookController, Class240 position) {
+        Class240 forwardPoint = lookController.method7736(0);
+        float x = forwardPoint.aFloat2653 - position.aFloat2653;
+        float y = forwardPoint.aFloat2656 - position.aFloat2656;
+        float z = forwardPoint.aFloat2657 - position.aFloat2657;
+        float length = (float) Math.sqrt(x * x + y * y + z * z);
 
-        position.aFloat2653 += sinYaw * horizontal * acceptedTravel;
-        position.aFloat2656 -= (float) Math.sin(RTS_PITCH_RADIANS) * acceptedTravel;
-        position.aFloat2657 += cosYaw * horizontal * acceptedTravel;
+        if (Float.isNaN(length) || length < 0.001F) {
+            return null;
+        }
+
+        return Class240.method3316(x / length, y / length, z / length);
+    }
+
+    private static void moveAlongView(Class240 position, Class240 viewDirection, float distance) {
+        position.aFloat2653 += viewDirection.aFloat2653 * distance;
+        position.aFloat2656 += viewDirection.aFloat2656 * distance;
+        position.aFloat2657 += viewDirection.aFloat2657 * distance;
     }
 
     private static void updateVelocity(float targetX, float targetY, float targetZ,
