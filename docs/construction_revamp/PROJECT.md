@@ -595,7 +595,7 @@ Construction Build Camera v1 state:
 - Camera ownership remains client-side; confirmed object placement remains server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
 - Smooth acceleration/deceleration and click-to-stop are now implemented on the live controller: normalized input feeds time-based world-space velocity; action 23 clears velocity, latches movement off until key release, optionally confirms Paint placement and is consumed so the player remains planted. Runtime feel/integration acceptance is pending.
 - RTS camera side-slice is IMPLEMENTED / NEEDS RUNTIME RETEST on the same verified detached Class411 owner: Free/RTS selector, ground-plane W/A/S/D + arrow pan, Q/E yaw, wheel zoom, Shift fast and Ctrl precision.
-- First runtime revealed the deterministic RTS pitch was being applied while the detached camera was still effectively at player/terrain height, producing near-plane terrain slicing/triangle artifacts.
+- First runtime showed the detached RTS camera below the terrain looking through the underside; Matrix3's Class658_Sub2.method8927(...) negates its Y target internally, so the initial deterministic pitch sign was inverted.
 - Corrective patch now backs the camera 3600 Matrix3 units away from the real rendered look vector on RTS entry and constrains zoom to a safe backoff band; pan/zoom direction is derived from Class658_Sub2.method7736(...) instead of guessed obfuscated axis signs.
 - Input ownership remains mode-specific: RTS consumes world wheel for camera zoom; Free Build preserves the accepted wheel-to-piece-rotation behavior. R / Shift+R remains piece rotation in both modes.
 - Top Down, Orbit/Focus and Player View remain accepted later views; deterministic presets beyond RTS remain deferred.
