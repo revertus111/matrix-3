@@ -351,6 +351,19 @@ Status: RUNTIME VERIFIED
 Goal:
 Create the world-space drag interaction.
 
+Implementation:
+
+- dedicated client-side Worker Control mode
+- configurable Left mouse / Right mouse drag ownership
+- press captures the current Matrix3-resolved world ground tile as the fixed origin
+- AWT drag movement updates the radius continuously between tile boundaries
+- later action-23 world-hover changes recalibrate pixels-per-tile against exact world distance so the visual remains world-scale based rather than a pure screen-space circle
+- release commits origin + radius
+- Escape cancels only the active drag and preserves the previous committed radius
+- committed radius remains visible while Worker Control is enabled
+- disabling Worker Control stops owning the configured mouse button without deleting the committed radius
+- no worker detection, server selection, combat target state or cache mutation is included in RWS-2
+
 Requirements:
 
 - mouse down captures origin
@@ -359,7 +372,7 @@ Requirements:
 - Escape cancels
 - ring grows/shrinks smoothly
 
-Status: PLANNED
+Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
 ---
 
@@ -474,6 +487,7 @@ Runtime acceptance should be consolidated into one client/server launch.
 - The same reticule model runtime-scaled cleanly from 25% through at least 725% without switching GFX IDs.
 - The reticule remained world/terrain anchored across visibly different camera framing/zoom during the runtime test.
 - Runtime scaling therefore proves the intended single-asset radial-selection foundation is viable.
+- RWS-2 input architecture reuses Matrix3's already-resolved action-23 ground tile for the world anchor and the proven global AWT event-listener pattern for temporary mouse ownership; no second scene picker is introduced.
 
 ### verified-static
 

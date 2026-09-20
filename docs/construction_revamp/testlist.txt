@@ -343,3 +343,20 @@ Phase 2 side slice — Radial Worker Selection RWS-1
 [x] Runtime screenshots with different camera framing/zoom verify the ring remains world/terrain anchored while preserving its selected visual scale.
 [ ] Proof Status reports DRAW_SUBMITTED with gfx=4171, selected scale and hovered world tile while visible.
 [ ] Hide Reticule Proof removes the ring cleanly and normal RuneScape mouse/combat/Construction behavior remains unchanged.
+
+Phase 2 side slice — Radial Worker Selection RWS-2
+[IMPLEMENTED / NEEDS RUNTIME TEST]
+[x] Source ownership: Worker Control is client-only and owns only temporary radial input/visual state; worker identity, AI, commands, persistence and combat remain untouched.
+[x] Input ownership: only the configured Left/Right mouse button is consumed, only while Worker Control is enabled and a valid-ground drag starts on the Matrix3 game Canvas.
+[x] Ground ownership: drag origin reuses the current action-23 Matrix3-resolved world tile; no second scene/world picker is introduced.
+[x] Radius math: mouse movement is continuous; subsequent resolved world-tile changes recalibrate pixels-per-tile against exact origin-to-hover world distance, keeping the committed radius expressed in world tiles.
+[x] Escape cancels only the active drag and preserves the previous committed radius; Disable Worker Control stops input ownership.
+[ ] Con Revamp -> RWS-2: choose Left mouse, Enable Worker Control, press valid ground and drag outward; ring stays fixed at press origin and expands smoothly with mouse movement.
+[ ] Drag inward before release; ring shrinks smoothly and remains centered on the original press point.
+[ ] Release commits the radius and leaves the ring visible at the committed origin/size.
+[ ] Radial Status reports COMMITTED with sensible origin, world-tile radius and matching scale percentage.
+[ ] Start a second drag, change its size, press Escape before release; second drag disappears and the previous committed radius is restored unchanged.
+[ ] Switch to Right mouse and repeat a short drag; right-click context behavior is suppressed only for the owned drag while Worker Control is enabled.
+[ ] Disable Worker Control; radial input stops owning the configured mouse button and normal RuneScape ground interaction/context behavior returns.
+[ ] Camera framing/zoom after commit does not change the committed world radius.
+

@@ -13,6 +13,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
@@ -34,8 +35,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
             "Ready. Bundle 2.2 multi-worker control bundle is active.", 4);
-    private final JSpinner radialScaleSelector =
-            new JSpinner(new SpinnerNumberModel(100, 25, 1200, 25));
+    private final JComboBox<ConstructionRadialSelection.DragButton> radialDragButton =
+            new JComboBox<ConstructionRadialSelection.DragButton>(ConstructionRadialSelection.DragButton.values());
     private final JSpinner workerSelector =
             new JSpinner(new SpinnerNumberModel(1, 1, 999999, 1));
     private final java.util.List<JCheckBox> workerJobCheckBoxes =
@@ -122,59 +123,71 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createRadialSelectionCard() {
-        JPanel card = ConsoleTheme.createCard("Radial Worker Selection — RWS-1");
+        JPanel card = ConsoleTheme.createCard("Radial Worker Selection — RWS-2");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Client-only scale proof. GFX 4171 is direct-rendered on the current world hover tile, "
-                + "then X/Z-scaled per instance without changing combat state or cache data. "
-                + "Move the mouse over game ground after enabling it.",
-                5));
+                "Worker Control drag primitive. Hold the configured mouse button on valid game ground, "
+                + "drag outward/inward to resize the world-space reticule, then release to commit the radius. "
+                + "Escape cancels only the active drag and preserves the previous committed radius.",
+                6));
         card.add(Box.createVerticalStrut(8));
 
-        radialScaleSelector.setMaximumSize(new Dimension(120, 30));
-        radialScaleSelector.setAlignmentX(LEFT_ALIGNMENT);
-        card.add(ConsoleTheme.createWrappedText(
-                "Scale % (100 = stock size; range 25-1200):", 2));
+        radialDragButton.setMaximumSize(new Dimension(150, 30));
+        radialDragButton.setAlignmentX(LEFT_ALIGNMENT);
+        radialDragButton.setFocusable(false);
+        radialDragButton.setSelectedItem(ConstructionRadialSelection.DragButton.LEFT);
+        radialDragButton.addActionListener(e -> {
+            Object selected = radialDragButton.getSelectedItem();
+            if (selected instanceof ConstructionRadialSelection.DragButton) {
+                ConstructionRadialSelection.setDragButton(
+                        (ConstructionRadialSelection.DragButton) selected);
+                setStatus("RWS-2 drag button: " + selected + ".");
+            }
+        });
+
+        card.add(ConsoleTheme.createWrappedText("Drag button:", 2));
         card.add(Box.createVerticalStrut(4));
-        card.add(radialScaleSelector);
+        card.add(radialDragButton);
         card.add(Box.createVerticalStrut(8));
 
-        JButton show = new JButton("Show Reticule Proof");
-        JButton applyScale = new JButton("Apply Scale");
-        JButton proofStatus = new JButton("Proof Status");
-        JButton hide = new JButton("Hide Reticule Proof");
+        JButton enable = new JButton("Enable Worker Control");
+        JButton disable = new JButton("Disable Worker Control");
+        JButton radialStatus = new JButton("Radial Status");
+        JButton clear = new JButton("Clear Radius");
 
-        styleButton(show);
-        styleButton(applyScale);
-        styleButton(proofStatus);
-        styleButton(hide);
+        styleButton(enable);
+        styleButton(disable);
+        styleButton(radialStatus);
+        styleButton(clear);
 
-        show.addActionListener(e -> {
-            ConstructionRadialSelection.setScalePercent(selectedRadialScalePercent());
-            ConstructionRadialSelection.setProofEnabled(true);
-            setStatus("RWS-1 proof ON at " + selectedRadialScalePercent()
-                    + "%. Move the mouse over world ground.");
+        enable.addActionListener(e -> {
+            Object selected = radialDragButton.getSelectedItem();
+            if (selected instanceof ConstructionRadialSelection.DragButton) {
+                ConstructionRadialSelection.setDragButton(
+                        (ConstructionRadialSelection.DragButton) selected);
+            }
+            ConstructionRadialSelection.setWorkerControlEnabled(true);
+            setStatus(ConstructionRadialSelection.getStatus());
         });
-        applyScale.addActionListener(e -> {
-            ConstructionRadialSelection.setScalePercent(selectedRadialScalePercent());
-            setStatus("RWS-1 scale set to " + selectedRadialScalePercent()
-                    + "%. The active reticule should resize on the next world hover/render.");
+        disable.addActionListener(e -> {
+            ConstructionRadialSelection.setWorkerControlEnabled(false);
+            setStatus(ConstructionRadialSelection.getStatus());
         });
-        proofStatus.addActionListener(e ->
+        radialStatus.addActionListener(e ->
                 setStatus(ConstructionRadialSelection.getStatus()));
-        hide.addActionListener(e -> {
-            ConstructionRadialSelection.setProofEnabled(false);
-            setStatus("RWS-1 proof OFF.");
+        clear.addActionListener(e -> {
+            ConstructionRadialSelection.clearCommittedRadius();
+            setStatus(ConstructionRadialSelection.getStatus());
         });
 
         JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
         buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
-        buttons.add(show);
-        buttons.add(applyScale);
-        buttons.add(proofStatus);
-        buttons.add(hide);
+        buttons.add(enable);
+        buttons.add(disable);
+        buttons.add(radialStatus);
+        buttons.add(clear);
         card.add(buttons);
         return card;
     }
@@ -441,11 +454,6 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         status.setForeground(ConsoleTheme.ACCENT);
         card.add(status);
         return card;
-    }
-
-    private int selectedRadialScalePercent() {
-        Object value = radialScaleSelector.getValue();
-        return value instanceof Number ? ((Number) value).intValue() : 100;
     }
 
     private long selectedWorkerId() {
