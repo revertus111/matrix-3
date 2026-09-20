@@ -580,3 +580,11 @@
 - Resume reuses the unchanged saved Allowed Jobs policy.
 - Added worker-id-targeted workerpause command plus Con Revamp Pause Worker / Resume Worker controls and pause readback in all-worker/live-AI status.
 - Extended Bundle 2.2 disposable serialization and live baseline/check to cover independent worker pause state.
+
+2026-09-20 - Construction RTS camera mode
+- Extended the verified detached Class24/Class411 Construction camera with explicit Free Build and RTS modes; the live Class343 viewport hook and Matrix3 camera ownership remain unchanged.
+- RTS preserves the current horizontal heading on mode entry, applies a deterministic 52-degree downward pitch, pans on the ground plane with WASD/arrow keys, rotates with Q/E, and retains Shift fast / Ctrl precision speed modifiers.
+- Added bounded mouse-wheel zoom along the RTS viewing line; world wheel is consumed for zoom only in RTS mode.
+- Preserved Free Build controls and wheel-to-piece rotation; R / Shift+R continues to rotate build pieces in either camera mode.
+- Added Free/RTS selector buttons and mode-specific control hints to the Construction palette.
+- Static changed-file checks passed; RTS camera feel/orientation/zoom and Free Build regression remain pending one consolidated client runtime pass.
