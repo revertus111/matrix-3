@@ -342,7 +342,7 @@ Test:
 - verify camera rotation/zoom
 - verify removal/cleanup
 
-Status: IMPLEMENTED / NEEDS RUNTIME TEST
+Status: RUNTIME VERIFIED
 
 ---
 
@@ -470,6 +470,10 @@ Runtime acceptance should be consolidated into one client/server launch.
 ### VERIFIED
 
 - Existing combat target reticule is visible in live Matrix3 runtime.
+- RWS-1 direct-rendered target-reticule GFX 4171 successfully outside combat.
+- The same reticule model runtime-scaled cleanly from 25% through at least 725% without switching GFX IDs.
+- The reticule remained world/terrain anchored across visibly different camera framing/zoom during the runtime test.
+- Runtime scaling therefore proves the intended single-asset radial-selection foundation is viable.
 
 ### verified-static
 
@@ -483,7 +487,7 @@ Runtime acceptance should be consolidated into one client/server launch.
 
 ### HYPOTHESIS
 
-- GFX 4171 will remain visually correct across the full desired arbitrary radial scale range at runtime.
+- Very large radii beyond the currently tested 725% range will remain visually acceptable.
 - The static/frozen reticule frame will be sufficient for persistent Construction selection, or its animation controller will need to be added after visual acceptance.
 
 These must be proven before the implementation depends on them.
