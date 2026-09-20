@@ -79,7 +79,7 @@ public final class SettlementWorkerNpc extends NPC {
 
         if (carriedAmount > 0
                 && workerState.isJobAllowed(SettlementWorkerJob.HAUL)
-                && settlement.getWorkerStorageRemaining() > 0L) {
+                && settlement.getWorkerStorageRemaining(carriedResource) > 0L) {
             processCarriedResource();
             return;
         }
@@ -172,10 +172,10 @@ public final class SettlementWorkerNpc extends NPC {
             statusDetail = "Haul disabled; holding " + carriedResource.getDisplayName() + ".";
             return;
         }
-        if (settlement.getWorkerStorageRemaining() <= 0L) {
+        if (settlement.getWorkerStorageRemaining(carriedResource) <= 0L) {
             resetWalkSteps();
             workState = WorkState.IDLE;
-            statusDetail = "Storage full; holding " + carriedResource.getDisplayName() + ".";
+            statusDetail = carriedResource.getDisplayName() + " storage full; holding " + carriedResource.getDisplayName() + ".";
             return;
         }
 

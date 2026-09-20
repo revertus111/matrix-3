@@ -34,6 +34,10 @@ public final class SettlementBundle22FinalGate {
     public static String runSelfTest() {
         String stage = "population";
         try {
+            String resources = SettlementResourceSelfTest.run();
+            require(resources != null && resources.startsWith("PASS:"),
+                    "resource-storage dependency -> " + resources);
+
             String population = SettlementPopulationCheck.runSelfTest();
             require(population != null && population.startsWith("PASS:"),
                     "population dependency -> " + population);
@@ -105,7 +109,7 @@ public final class SettlementBundle22FinalGate {
                     && restoredSecond.getSkillXp(SettlementWorkerSkill.WOODCUTTING) == 24L,
                     "independent progression changed after serialization");
 
-            return "PASS: worker-id targeting + independent jobs/needs/progression + two-worker serialization.";
+            return "PASS: per-resource storage isolation + worker-id targeting + independent jobs/needs/progression + two-worker serialization.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }

@@ -852,9 +852,27 @@ Patch 2.2.6 — final gate:
 - Con Revamp was pruned to the active Phase-2 workflow: completed Phase-1/Bundle-2.1 test cards and redundant self-test buttons are removed from the tab while their server commands remain available for regression use.
 - Con Revamp action buttons are non-focusable and `setStatus(...)` preserves/restores the current viewport position, preventing status-output updates from jumping the scroll position to the bottom.
 
+Patch 2.2.7 — per-resource storage ownership:
+
+- Replaced the active shared `200/200` storage bucket with definition-owned starter capacities per `SettlementResource`: Wood 100, Food 100, Stone 100, Basic ore 100.
+- Existing saved resource totals are preserved exactly; the legacy serialized shared-cap field remains only for old-save compatibility and no longer controls deposits.
+- `SettlementState.getStorageCapacity(resource)` / `getStorageRemaining(resource)` are now the single capacity seam. Future storage buildings should extend this owner rather than adding another counter.
+
+Patch 2.2.8 — resource-isolated hauling:
+
+- `SettlementWorkerNpc` now checks remaining capacity for its carried resource, not aggregate storage.
+- Full Wood storage blocks only Wood deposits; Food/Stone/Ore workers continue independently while their own storage has room.
+- `SettlementState.addResource(...)` clamps against the target resource's capacity.
+
+Patch 2.2.9 — storage readback + gate:
+
+- Resource summaries now render `amount/capacity` for each resource plus aggregate `total/totalCapacity`.
+- Existing `All Worker Status` therefore exposes the new separated storage model without adding another temporary UI owner.
+- `SettlementResourceSelfTest` now proves a full Wood store cannot block Food; Bundle 2.2 Self-Test consumes that real resource-storage self-test before worker targeting checks.
+
 Runtime acceptance target:
 
-`Self-Test PASS -> W1 Food+Haul / W2 Wood+Haul -> both work/deposit -> stop W1 while W2 continues -> stop/reset both -> capture baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
+`Self-Test PASS -> W1 Food+Haul / W2 Wood+Haul -> Wood reaches its own cap without blocking Food -> both independent deposit paths verified -> stop W1 while W2 continues until Wood full -> stop/reset both -> capture baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
 
 - Additional workers/recruitment.
 - Housing/beds/population capacity.
@@ -910,7 +928,7 @@ Runtime acceptance target:
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: DONE / runtime accepted for Phase-1 scope; later camera/preset polish is non-blocking
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: run Bundle 2.2 in one launch: self-test -> independently assign Worker #1 Food+Haul and Worker #2 Wood+Haul -> prove both work -> stop Worker #1 while Worker #2 continues -> stable baseline -> exit/re-entry check -> logout/relog check.
+- Current checklist item: rerun the consolidated Bundle 2.2 pass on separated storage: self-test -> Worker #1 Food+Haul / Worker #2 Wood+Haul -> prove Wood-full does not block Food -> stop-one/other-continues -> stable baseline -> exit/re-entry check -> logout/relog check.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
@@ -952,6 +970,8 @@ Runtime acceptance target:
 - Worker #1 exit/re-entry persistence is runtime VERIFIED: re-entering rebuilt the same Worker #1 (`id=1`, `starter-settler`, home `24,12,0`) with `saved=1/runtime=1` and Worker Arrival Check PASS.
 
 ### verified-static
+
+- Bundle 2.2 separated storage is verified-static pending runtime: resource definitions own 100 starter capacity each; existing saves retain all stored amounts; worker deposit eligibility and `addResource(...)` clamp by carried/target resource; the disposable resource self-test proves full Wood does not block Food.
 
 - Bundle 2.2 is verified-static pending runtime: worker management commands resolve optional stable worker ids through `SettlementState.findWorker(...)`; Con Revamp routes selected-worker controls to those commands; both `SettlementWorkerNpc` projections continue using independent persistent worker state against synchronized shared settlement storage; `SettlementBundle22FinalGate` covers independent jobs/needs/progression serialization and exact two-worker persistence snapshots.
 - Bundle 2.2 Con Revamp cleanup is verified-static pending runtime: only active settlement controls, selected-worker management, current Bundle 2.2 gate and Test output remain; button focus is disabled locally and status updates restore the prior JScrollPane viewport position.
@@ -1097,7 +1117,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull once and run the Con Revamp Bundle 2.2 Final Gate. First confirm the cleaned tab no longer jumps its scroll position when any action button updates Test output. Then use selected Worker #1 -> Disable All -> Gather Food + Haul ON; selected Worker #2 -> Disable All -> Gather Wood + Haul ON; confirm both work/deposit with All Worker Status; disable Worker #1 and confirm Worker #2 continues; then disable/reset both, capture the 2-worker baseline, exit/re-enter + Check PASS, logout/relog/re-enter + Check PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Pull once and rerun Bundle 2.2 with separated storage. Confirm the cleaned tab no longer scroll-jumps; Self-Test must PASS; set Worker #1 to Food+Haul and Worker #2 to Wood+Haul; All Worker Status should show `Wood=.../100, Food=.../100, Stone=.../100, Basic ore=.../100`. Let Wood fill to 100/100 and confirm Worker #1 can still deposit Food. Then disable/reset both, capture the 2-worker baseline, exit/re-enter + Check PASS, logout/relog/re-enter + Check PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 

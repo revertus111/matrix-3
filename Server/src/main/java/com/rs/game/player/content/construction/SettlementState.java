@@ -22,7 +22,14 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 7;
+    private static final int CURRENT_SCHEMA_VERSION = 8;
+
+    /**
+     * Legacy shared-cap field value retained only for Java-save compatibility.
+     * Storage authority is now per SettlementResource through
+     * getStorageCapacity(SettlementResource).
+     */
+    @Deprecated
     public static final int STARTER_STORAGE_CAPACITY = 200;
 
     public static final int STARTER_SHELTER_WALLS = 4;
@@ -35,6 +42,10 @@ public final class SettlementState implements Serializable {
     private long nextPieceId = 1L;
     private List<SettlementPlacedPiece> pieces = new ArrayList<SettlementPlacedPiece>();
     private Map<String, Long> resources = new HashMap<String, Long>();
+    /**
+     * Legacy serialized shared-cap field. Kept so existing player saves remain
+     * deserializable; active storage capacity is resource-specific.
+     */
     private int storageCapacity = STARTER_STORAGE_CAPACITY;
     private Set<String> completedMilestones = new HashSet<String>();
     private long nextWorkerId = 1L;
@@ -356,11 +367,12 @@ public final class SettlementState implements Serializable {
             return false;
         }
         for (SettlementResource resource : SettlementResource.values()) {
-            if (getResourceAmount(resource) < STARTER_SHELTER_RESOURCE_EACH) {
+            if (getResourceAmount(resource) < STARTER_SHELTER_RESOURCE_EACH
+                    || getStorageCapacity(resource) < resource.getStarterStorageCapacity()) {
                 return false;
             }
         }
-        return getStorageCapacity() >= STARTER_STORAGE_CAPACITY;
+        return true;
     }
 
     /**
@@ -416,14 +428,54 @@ public final class SettlementState implements Serializable {
         return total;
     }
 
-    public synchronized int getStorageCapacity() {
+    /**
+     * Resource-specific storage owner.
+     *
+     * The starter profile is definition-owned by SettlementResource. Future
+     * storage buildings should extend capacity through this single method rather
+     * than adding another storage counter.
+     */
+    public synchronized int getStorageCapacity(SettlementResource resource) {
         normalize();
-        return storageCapacity;
+        return resource == null ? 0 : resource.getStarterStorageCapacity();
     }
 
+    public synchronized long getStorageRemaining(SettlementResource resource) {
+        normalize();
+        if (resource == null) {
+            return 0L;
+        }
+        return Math.max(0L,
+                (long) getStorageCapacity(resource) - getResourceAmount(resource));
+    }
+
+    public synchronized int getTotalStorageCapacity() {
+        normalize();
+        int total = 0;
+        for (SettlementResource resource : SettlementResource.values()) {
+            total += getStorageCapacity(resource);
+        }
+        return total;
+    }
+
+    /**
+     * Aggregate compatibility/readback helper. Runtime hauling must use the
+     * resource-specific remaining-capacity overload instead.
+     */
     public synchronized long getStorageRemaining() {
         normalize();
-        return Math.max(0L, (long) storageCapacity - getTotalStoredResources());
+        long remaining = 0L;
+        for (SettlementResource resource : SettlementResource.values()) {
+            remaining += getStorageRemaining(resource);
+        }
+        return remaining;
+    }
+
+    /**
+     * Aggregate compatibility/readback helper.
+     */
+    public synchronized int getStorageCapacity() {
+        return getTotalStorageCapacity();
     }
 
     public synchronized long addResource(SettlementResource resource, long amount) {
@@ -431,7 +483,7 @@ public final class SettlementState implements Serializable {
         if (resource == null || amount <= 0L) {
             return 0L;
         }
-        long accepted = Math.min(amount, getStorageRemaining());
+        long accepted = Math.min(amount, getStorageRemaining(resource));
         if (accepted <= 0L) {
             return 0L;
         }
@@ -464,10 +516,11 @@ public final class SettlementState implements Serializable {
                 summary.append(", ");
             }
             summary.append(resource.getDisplayName()).append("=")
-                    .append(getResourceAmount(resource));
+                    .append(getResourceAmount(resource)).append("/")
+                    .append(getStorageCapacity(resource));
         }
         summary.append(" | total=").append(getTotalStoredResources())
-                .append("/").append(storageCapacity);
+                .append("/").append(getTotalStorageCapacity());
         return summary.toString();
     }
 

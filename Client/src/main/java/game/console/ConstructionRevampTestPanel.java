@@ -163,7 +163,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 "Selected worker Progress Status queued."));
         allWorkers.addActionListener(e -> queue(
                 "itembrowser settlement workerallstatus",
-                "All Worker Status queued. Jobs, needs, skills, AI and shared storage will appear in game chat."));
+                "All Worker Status queued. Jobs, needs, skills, AI and per-resource storage will appear in game chat."));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
@@ -330,8 +330,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 "One-launch acceptance:\n"
                 + "1. Bundle 2.2 Self-Test -> PASS.\n"
                 + "2. Worker #1: Disable All, then Food + Haul ON. Worker #2: Disable All, then Wood + Haul ON.\n"
-                + "3. All Worker Status until both workers show independent work/deposits and shared storage rises.\n"
-                + "4. Disable Worker #1 jobs; Worker #2 must continue.\n"
+                + "3. All Worker Status until Food/Wood rise independently. Wood may fill first; that must not block Food.\n"
+                + "4. Disable Worker #1 jobs; Worker #2 must continue until its own Wood storage is full.\n"
                 + "5. Disable both workers + Reset Needs, then Capture 2-Worker Baseline.\n"
                 + "6. Exit/re-enter -> Check Baseline PASS; logout/relog/re-enter -> Check Baseline PASS.",
                 10));

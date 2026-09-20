@@ -310,11 +310,15 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Patch 2.2.6: read-only process-local two-worker baseline/check compares ids/definitions/jobs/needs/skill XP/player Construction XP across instance rebuild/relog.
 [x] UI cleanup: removed completed Phase-1 / Bundle-2.1 cards and proven Jobs/Needs/Progress self-test controls from Con Revamp without removing their server-side regression commands.
 [x] Scroll fix source: active Con Revamp action buttons no longer take focus, and Test output updates preserve/restore the current viewport position.
+[x] Storage patch: active storage capacity is separated by resource at Wood=100, Food=100, Stone=100, Basic ore=100; legacy shared-cap serialization is retained only for old-save compatibility.
+[x] Storage patch: `addResource` and worker hauling clamp/check the target carried resource's remaining capacity rather than aggregate settlement storage.
+[x] Storage patch: resource summary reports amount/capacity per resource plus aggregate total capacity.
+[x] Storage patch: disposable Resource Self-Test proves full Wood storage accepts no more Wood while Food can still increase independently; Bundle 2.2 Self-Test now includes that dependency.
 [ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
 [ ] Bundle 2.2 Self-Test returns PASS.
 [ ] Select Worker #1: Disable All, enable Gather Food + Haul. Select Worker #2: Disable All, enable Gather Wood + Haul. Jobs Status confirms independent allowlists.
-[ ] All Worker Status shows both workers actively following their independent jobs and shared Food/Wood storage increases from real deposits.
-[ ] Disable all jobs for Worker #1 while Worker #2 remains Wood+Haul; Worker #2 continues working/depositing independently.
+[ ] All Worker Status shows both workers actively following their independent jobs; Wood and Food storage increase independently with per-resource `amount/100` readback.
+[ ] Let Wood reach 100/100 and confirm it blocks only Worker #2's Wood deposit while Worker #1 can still gather/haul Food; then disable Worker #1 and confirm Worker #2 behavior remains independent.
 [ ] Disable all jobs for both workers, reset critical needs if needed, then Capture 2-Worker Baseline succeeds.
 [ ] Exit/re-enter then Check 2-Worker Baseline returns PASS with saved=2/runtime=2.
 [ ] Logout/relog + re-enter then Check 2-Worker Baseline returns PASS with both identities/jobs/needs/progression and Construction XP preserved.

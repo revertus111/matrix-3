@@ -8,17 +8,19 @@ package com.rs.game.player.content.construction;
  */
 public enum SettlementResource {
 
-    WOOD("wood", "Wood"),
-    FOOD("food", "Food"),
-    STONE("stone", "Stone"),
-    BASIC_ORE("basic-ore", "Basic ore");
+    WOOD("wood", "Wood", 100),
+    FOOD("food", "Food", 100),
+    STONE("stone", "Stone", 100),
+    BASIC_ORE("basic-ore", "Basic ore", 100);
 
     private final String key;
     private final String displayName;
+    private final int starterStorageCapacity;
 
-    SettlementResource(String key, String displayName) {
+    SettlementResource(String key, String displayName, int starterStorageCapacity) {
         this.key = key;
         this.displayName = displayName;
+        this.starterStorageCapacity = starterStorageCapacity;
     }
 
     public String getKey() {
@@ -27,6 +29,10 @@ public enum SettlementResource {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public int getStarterStorageCapacity() {
+        return starterStorageCapacity;
     }
 
     public static SettlementResource forKey(String key) {

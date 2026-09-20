@@ -18,8 +18,18 @@ public final class SettlementResourceSelfTest {
             SettlementState state = new SettlementState();
             state.normalize();
 
-            require(state.getStorageCapacity() == SettlementState.STARTER_STORAGE_CAPACITY,
-                    "starter storage capacity mismatch");
+            int expectedTotalCapacity = 0;
+            for (SettlementResource resource : SettlementResource.values()) {
+                require(state.getStorageCapacity(resource)
+                        == resource.getStarterStorageCapacity(),
+                        "starter storage capacity mismatch for " + resource.getKey());
+                require(state.getStorageRemaining(resource)
+                        == resource.getStarterStorageCapacity(),
+                        "starter storage remaining mismatch for " + resource.getKey());
+                expectedTotalCapacity += resource.getStarterStorageCapacity();
+            }
+            require(state.getTotalStorageCapacity() == expectedTotalCapacity,
+                    "aggregate starter storage capacity mismatch");
             require(state.getTotalStoredResources() == 0L, "new storage is not empty");
 
             for (SettlementResource resource : SettlementResource.values()) {
@@ -39,14 +49,22 @@ public final class SettlementResourceSelfTest {
             require(state.getResourceAmount(SettlementResource.WOOD) == 0L,
                     "wood should be empty");
 
-            long remaining = state.getStorageRemaining();
-            require(remaining > 0L, "storage unexpectedly full");
-            require(state.addResource(SettlementResource.STONE, remaining + 50L) == remaining,
-                    "storage capacity clamp failed");
-            require(state.getTotalStoredResources() == state.getStorageCapacity(),
-                    "storage did not reach exact capacity");
-            require(state.addResource(SettlementResource.FOOD, 1L) == 0L,
-                    "full storage accepted extra resource");
+            long woodCapacity = state.getStorageCapacity(SettlementResource.WOOD);
+            require(state.addResource(SettlementResource.WOOD, woodCapacity + 50L)
+                    == woodCapacity,
+                    "Wood storage capacity clamp failed");
+            require(state.getStorageRemaining(SettlementResource.WOOD) == 0L,
+                    "Wood storage should be full");
+            require(state.addResource(SettlementResource.WOOD, 1L) == 0L,
+                    "full Wood storage accepted extra Wood");
+
+            long foodBefore = state.getResourceAmount(SettlementResource.FOOD);
+            require(state.addResource(SettlementResource.FOOD, 1L) == 1L,
+                    "full Wood storage incorrectly blocked Food");
+            require(state.getResourceAmount(SettlementResource.FOOD) == foodBefore + 1L,
+                    "Food amount did not increase independently");
+            require(state.getStorageRemaining(SettlementResource.FOOD) > 0L,
+                    "Food storage unexpectedly full");
 
             stage = "nodes";
             Set<String> tiles = new HashSet<String>();
@@ -69,7 +87,7 @@ public final class SettlementResourceSelfTest {
             require(SettlementResourceNode.values().length == SettlementResource.values().length,
                     "starter node/resource count mismatch");
 
-            return "PASS: storage add/remove/capacity + 4 starter-node definitions.";
+            return "PASS: per-resource storage add/remove/capacity isolation + 4 starter-node definitions.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }

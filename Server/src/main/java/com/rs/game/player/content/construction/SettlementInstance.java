@@ -571,8 +571,8 @@ public final class SettlementInstance {
                 worker.getHomePlane());
     }
 
-    public long getWorkerStorageRemaining() {
-        return loaded && !destroyed ? state.getStorageRemaining() : 0L;
+    public long getWorkerStorageRemaining(SettlementResource resource) {
+        return loaded && !destroyed ? state.getStorageRemaining(resource) : 0L;
     }
 
     public long depositWorkerResource(SettlementResource resource, long amount) {

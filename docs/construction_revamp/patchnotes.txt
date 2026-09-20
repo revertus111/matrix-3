@@ -550,3 +550,11 @@
 - Removed proven Jobs/Needs/Progress self-test buttons while keeping active selected-worker status/control actions needed by Bundle 2.2.
 - Made active panel buttons non-focusable and preserve/restore JScrollPane viewport position around Test output updates to stop click-induced downward scrolling.
 - No settlement gameplay, worker AI, persistence, command authority or save data changed.
+
+2026-09-20 - Bundle 2.2 separated resource storage
+- Replaced active shared 200-cap deposit logic with per-resource starter capacities: Wood/Food/Stone/Basic ore = 100 each; existing stored totals are preserved without truncation.
+- Kept the legacy serialized shared-cap field for old-save compatibility, but runtime capacity now comes from `SettlementResource` through `SettlementState.getStorageCapacity(resource)`.
+- Worker hauling now checks the carried resource's remaining capacity; full Wood no longer blocks Food/Stone/Ore hauling.
+- Resource summaries now report amount/capacity per resource and aggregate total/total-capacity.
+- Updated Resource Self-Test and Bundle 2.2 Self-Test to prove full Wood storage does not block Food.
+- Updated Con Revamp Bundle 2.2 instructions for the separated-storage acceptance path.
