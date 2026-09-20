@@ -589,7 +589,11 @@ Construction Build Camera v1 state:
 - Runtime VERIFIED in the user's acceptance sweep: automatic activation, W/S/A/D movement, Shift fast, Ctrl precision, Q/E vertical movement, mouse-look, normal-camera restore on close, and clean reopen.
 - Camera ownership remains client-side; confirmed object placement remains server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
 - Smooth acceleration/deceleration and click-to-stop are now implemented on the live controller: normalized input feeds time-based world-space velocity; action 23 clears velocity, latches movement off until key release, optionally confirms Paint placement and is consumed so the player remains planted. Runtime feel/integration acceptance is pending.
-- RTS, Top Down, Orbit/Focus and Player View remain accepted next views; deterministic preset values are deferred until the current Free Build integration gate closes.
+- RTS camera side-slice is IMPLEMENTED / NEEDS RUNTIME TEST on the same verified detached Class411 owner: Free/RTS selector, ground-plane W/A/S/D + arrow pan, Q/E yaw, wheel zoom, Shift fast and Ctrl precision.
+- RTS preserves the current horizontal heading when selected, then applies a deterministic 52-degree downward pitch; wheel zoom travels along that view line with bounded relative travel instead of taking over Matrix3 camera ownership.
+- Input ownership is mode-specific: RTS consumes world wheel for camera zoom; Free Build preserves the accepted wheel-to-piece-rotation behavior. R / Shift+R remains piece rotation in both modes.
+- Top Down, Orbit/Focus and Player View remain accepted later views; deterministic presets beyond RTS remain deferred.
+- RTS runtime acceptance (single client pass): Free Build controls/regression -> switch RTS -> W/A/S/D + arrows pan -> Q/E rotate -> wheel zoom in/out -> Shift/Ctrl speeds -> R piece rotation -> placement/click-stop remains planted -> switch back to Free and confirm mouse-look + Q/E height + wheel piece rotation.
 
 Still pending in this slice:
 
@@ -952,7 +956,7 @@ Runtime acceptance target:
 - Persistent-runtime bundle: 2.2 — multi-worker control + concurrent work
 - Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
-- Tooling status: DONE / runtime accepted for Phase-1 scope; later camera/preset polish is non-blocking
+- Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS camera mode IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
 - Current checklist item: continue stacking only compatible Bundle 2.2 work before the next launch. Current runtime pass must cover the final-slot reservation fix plus selected-worker Pause/Resume without altering Allowed Jobs.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
