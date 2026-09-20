@@ -575,6 +575,10 @@ public final class SettlementInstance {
         return loaded && !destroyed ? state.getStorageRemaining(resource) : 0L;
     }
 
+    public boolean hasWorkerStorageSpace(SettlementResource resource) {
+        return loaded && !destroyed && state.hasStorageSpace(resource);
+    }
+
     public long depositWorkerResource(SettlementResource resource, long amount) {
         if (!loaded || destroyed || resource == null || amount <= 0L) {
             return 0L;

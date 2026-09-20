@@ -79,7 +79,7 @@ public final class SettlementWorkerNpc extends NPC {
 
         if (carriedAmount > 0
                 && workerState.isJobAllowed(SettlementWorkerJob.HAUL)
-                && settlement.getWorkerStorageRemaining(carriedResource) > 0L) {
+                && settlement.hasWorkerStorageSpace(carriedResource)) {
             processCarriedResource();
             return;
         }
@@ -101,7 +101,8 @@ public final class SettlementWorkerNpc extends NPC {
         if (targetNode != null) {
             SettlementWorkerJob job = findGatherJob(targetNode.getResource());
             if (job == null || !workerState.isJobAllowed(job)
-                    || !settlement.isStarterResourceNodeAvailable(targetNode)) {
+                    || !settlement.isStarterResourceNodeAvailable(targetNode)
+                    || !settlement.hasWorkerStorageSpace(targetNode.getResource())) {
                 clearTarget();
             }
         }
@@ -110,7 +111,9 @@ public final class SettlementWorkerNpc extends NPC {
             targetNode = selectNextGatherNode();
             if (targetNode == null) {
                 idle(hasAllowedGatheringJob()
-                        ? "No allowed resource node is currently available."
+                        ? (hasAllowedGatheringStorageSpace()
+                                ? "No allowed resource node is currently available."
+                                : "Allowed resource storage is full.")
                         : "No allowed gathering job.");
                 return;
             }
@@ -149,6 +152,13 @@ public final class SettlementWorkerNpc extends NPC {
             idle("Resource node unavailable.");
             return;
         }
+        if (!settlement.hasWorkerStorageSpace(targetNode.getResource())) {
+            String fullResource = targetNode.getResource().getDisplayName();
+            gatherTicksRemaining = 0;
+            clearTarget();
+            idle(fullResource + " storage is full.");
+            return;
+        }
 
         gatherTicksRemaining--;
         if (gatherTicksRemaining > 0) {
@@ -172,7 +182,7 @@ public final class SettlementWorkerNpc extends NPC {
             statusDetail = "Haul disabled; holding " + carriedResource.getDisplayName() + ".";
             return;
         }
-        if (settlement.getWorkerStorageRemaining(carriedResource) <= 0L) {
+        if (!settlement.hasWorkerStorageSpace(carriedResource)) {
             resetWalkSteps();
             workState = WorkState.IDLE;
             statusDetail = carriedResource.getDisplayName() + " storage full; holding " + carriedResource.getDisplayName() + ".";
@@ -312,6 +322,7 @@ public final class SettlementWorkerNpc extends NPC {
             SettlementResourceNode node = nodes[index];
             SettlementWorkerJob job = findGatherJob(node.getResource());
             if (job != null && workerState.isJobAllowed(job)
+                    && settlement.hasWorkerStorageSpace(node.getResource())
                     && settlement.isStarterResourceNodeAvailable(node)) {
                 return node;
             }
@@ -322,6 +333,16 @@ public final class SettlementWorkerNpc extends NPC {
     private boolean hasAllowedGatheringJob() {
         for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
             if (job.isGatheringJob() && workerState.isJobAllowed(job)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasAllowedGatheringStorageSpace() {
+        for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
+            if (job.isGatheringJob() && workerState.isJobAllowed(job)
+                    && settlement.hasWorkerStorageSpace(job.getResource())) {
                 return true;
             }
         }

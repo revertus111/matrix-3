@@ -870,9 +870,16 @@ Patch 2.2.9 — storage readback + gate:
 - Existing `All Worker Status` therefore exposes the new separated storage model without adding another temporary UI owner.
 - `SettlementResourceSelfTest` now proves a full Wood store cannot block Food; Bundle 2.2 Self-Test consumes that real resource-storage self-test before worker targeting checks.
 
+Patch 2.2.10 — storage-aware worker job selection:
+
+- Workers no longer select or continue a gather target when that resource's own storage has no remaining capacity.
+- If storage becomes full while a worker is moving/gathering, the gather action is canceled before new cargo is created.
+- A worker with multiple allowed gather jobs can skip full-resource jobs and select another allowed resource that still has storage space.
+- When every allowed gather resource is full, AI reports `Allowed resource storage is full.` instead of gathering excess cargo.
+
 Runtime acceptance target:
 
-`Self-Test PASS -> W1 Food+Haul / W2 Wood+Haul -> Wood reaches its own cap without blocking Food -> both independent deposit paths verified -> stop W1 while W2 continues until Wood full -> stop/reset both -> capture baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
+`Self-Test PASS -> W1 Food+Haul / W2 Wood+Haul -> Wood reaches 100/100 without blocking Food -> W2 stops before creating excess cargo (`carried=none`) -> stop/reset both -> capture baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
 
 - Additional workers/recruitment.
 - Housing/beds/population capacity.
@@ -1117,7 +1124,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull once and rerun Bundle 2.2 with separated storage. Confirm the cleaned tab no longer scroll-jumps; Self-Test must PASS; set Worker #1 to Food+Haul and Worker #2 to Wood+Haul; All Worker Status should show `Wood=.../100, Food=.../100, Stone=.../100, Basic ore=.../100`. Let Wood fill to 100/100 and confirm Worker #1 can still deposit Food. Then disable/reset both, capture the 2-worker baseline, exit/re-enter + Check PASS, logout/relog/re-enter + Check PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Do not runtime-test yet if more compatible Phase-2 patches are being stacked. Current combined acceptance when ready: confirm no scroll-jump; Bundle 2.2 Self-Test PASS; W1 Food+Haul / W2 Wood+Haul; per-resource storage readback; Wood 100/100 does not block Food and W2 stops with carried=none; then stable baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 

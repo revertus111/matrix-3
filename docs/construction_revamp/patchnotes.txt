@@ -558,3 +558,10 @@
 - Resource summaries now report amount/capacity per resource and aggregate total/total-capacity.
 - Updated Resource Self-Test and Bundle 2.2 Self-Test to prove full Wood storage does not block Food.
 - Updated Con Revamp Bundle 2.2 instructions for the separated-storage acceptance path.
+
+2026-09-20 - Bundle 2.2 storage-aware gather selection
+- Workers now skip gather jobs whose target resource storage is already full.
+- In-flight gather is canceled before cargo creation if that resource storage fills while the worker is moving/gathering.
+- Multi-job workers may continue with another allowed gather resource that still has capacity; all-full workers report a clear storage-full idle reason.
+- Added `SettlementState.hasStorageSpace(resource)` and reused it through SettlementInstance/WorkerNpc; Resource Self-Test now asserts the per-resource availability helper.
+- Updated Bundle 2.2 runtime instructions to expect `carried=none` after Wood reaches 100/100.

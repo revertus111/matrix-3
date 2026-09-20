@@ -449,6 +449,10 @@ public final class SettlementState implements Serializable {
                 (long) getStorageCapacity(resource) - getResourceAmount(resource));
     }
 
+    public synchronized boolean hasStorageSpace(SettlementResource resource) {
+        return getStorageRemaining(resource) > 0L;
+    }
+
     public synchronized int getTotalStorageCapacity() {
         normalize();
         int total = 0;

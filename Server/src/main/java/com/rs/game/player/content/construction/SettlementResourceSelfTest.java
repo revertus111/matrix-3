@@ -55,10 +55,14 @@ public final class SettlementResourceSelfTest {
                     "Wood storage capacity clamp failed");
             require(state.getStorageRemaining(SettlementResource.WOOD) == 0L,
                     "Wood storage should be full");
+            require(!state.hasStorageSpace(SettlementResource.WOOD),
+                    "Wood storage incorrectly reports free space");
             require(state.addResource(SettlementResource.WOOD, 1L) == 0L,
                     "full Wood storage accepted extra Wood");
 
             long foodBefore = state.getResourceAmount(SettlementResource.FOOD);
+            require(state.hasStorageSpace(SettlementResource.FOOD),
+                    "Food storage incorrectly reports full");
             require(state.addResource(SettlementResource.FOOD, 1L) == 1L,
                     "full Wood storage incorrectly blocked Food");
             require(state.getResourceAmount(SettlementResource.FOOD) == foodBefore + 1L,

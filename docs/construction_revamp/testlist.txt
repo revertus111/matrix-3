@@ -314,11 +314,13 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Storage patch: `addResource` and worker hauling clamp/check the target carried resource's remaining capacity rather than aggregate settlement storage.
 [x] Storage patch: resource summary reports amount/capacity per resource plus aggregate total capacity.
 [x] Storage patch: disposable Resource Self-Test proves full Wood storage accepts no more Wood while Food can still increase independently; Bundle 2.2 Self-Test now includes that dependency.
+[x] Storage-aware AI patch: workers skip gather targets whose resource storage is full and abort in-flight gathering if capacity fills before cargo creation.
+[x] Storage-aware AI patch: if all allowed gather resources are full, AI reports `Allowed resource storage is full.`; if another allowed gather resource has space, selection can continue there.
 [ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
 [ ] Bundle 2.2 Self-Test returns PASS.
 [ ] Select Worker #1: Disable All, enable Gather Food + Haul. Select Worker #2: Disable All, enable Gather Wood + Haul. Jobs Status confirms independent allowlists.
 [ ] All Worker Status shows both workers actively following their independent jobs; Wood and Food storage increase independently with per-resource `amount/100` readback.
-[ ] Let Wood reach 100/100 and confirm it blocks only Worker #2's Wood deposit while Worker #1 can still gather/haul Food; then disable Worker #1 and confirm Worker #2 behavior remains independent.
+[ ] Let Wood reach 100/100 and confirm Worker #2 stops before gathering excess Wood (`carried=none`) while Worker #1 can still gather/haul Food; then disable Worker #1 and confirm Worker #2 remains independently blocked only by Wood capacity.
 [ ] Disable all jobs for both workers, reset critical needs if needed, then Capture 2-Worker Baseline succeeds.
 [ ] Exit/re-enter then Check 2-Worker Baseline returns PASS with saved=2/runtime=2.
 [ ] Logout/relog + re-enter then Check 2-Worker Baseline returns PASS with both identities/jobs/needs/progression and Construction XP preserved.
