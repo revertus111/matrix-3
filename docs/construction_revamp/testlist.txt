@@ -308,6 +308,9 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Patch 2.2.5: workerallstatus reports saved/runtime counts, shared storage and each worker's jobs/needs/skills/live AI summary.
 [x] Patch 2.2.6: disposable Bundle 2.2 Self-Test exercises independent Worker #1/#2 jobs, needs, progression and serialization through real persistent worker-state APIs.
 [x] Patch 2.2.6: read-only process-local two-worker baseline/check compares ids/definitions/jobs/needs/skill XP/player Construction XP across instance rebuild/relog.
+[x] UI cleanup: removed completed Phase-1 / Bundle-2.1 cards and proven Jobs/Needs/Progress self-test controls from Con Revamp without removing their server-side regression commands.
+[x] Scroll fix source: active Con Revamp action buttons no longer take focus, and Test output updates preserve/restore the current viewport position.
+[ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
 [ ] Bundle 2.2 Self-Test returns PASS.
 [ ] Select Worker #1: Disable All, enable Gather Food + Haul. Select Worker #2: Disable All, enable Gather Wood + Haul. Jobs Status confirms independent allowlists.
 [ ] All Worker Status shows both workers actively following their independent jobs and shared Food/Wood storage increases from real deposits.

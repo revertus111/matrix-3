@@ -849,6 +849,8 @@ Patch 2.2.6 — final gate:
 - Live baseline capture is read-only/process-local and requires exactly two runtime workers with all jobs OFF and no critical needs.
 - Baseline check compares both worker ids/definitions, Allowed Jobs, Needs, all personal skill XP and player Construction XP across instance rebuild/relog.
 - Con Revamp exposes Bundle 2.2 Self-Test, All Worker Status, Capture 2-Worker Baseline and Check 2-Worker Baseline.
+- Con Revamp was pruned to the active Phase-2 workflow: completed Phase-1/Bundle-2.1 test cards and redundant self-test buttons are removed from the tab while their server commands remain available for regression use.
+- Con Revamp action buttons are non-focusable and `setStatus(...)` preserves/restores the current viewport position, preventing status-output updates from jumping the scroll position to the bottom.
 
 Runtime acceptance target:
 
@@ -952,6 +954,7 @@ Runtime acceptance target:
 ### verified-static
 
 - Bundle 2.2 is verified-static pending runtime: worker management commands resolve optional stable worker ids through `SettlementState.findWorker(...)`; Con Revamp routes selected-worker controls to those commands; both `SettlementWorkerNpc` projections continue using independent persistent worker state against synchronized shared settlement storage; `SettlementBundle22FinalGate` covers independent jobs/needs/progression serialization and exact two-worker persistence snapshots.
+- Bundle 2.2 Con Revamp cleanup is verified-static pending runtime: only active settlement controls, selected-worker management, current Bundle 2.2 gate and Test output remain; button focus is disabled locally and status updates restore the prior JScrollPane viewport position.
 
 - Bundle 2.1 population ownership is VERIFIED at runtime: Population Self-Test passed; Worker #2 recruited successfully from the completed shelter capacity; live Population Check reported `workers=2/2`, `saved=2/runtime=2`, unique Worker #1/#2 ids/projections; Worker #2 remained idle under the default-OFF Allowed Jobs policy; logout/relog + settlement re-entry preserved the two-worker population without duplicate runtime projections.
 
@@ -1094,7 +1097,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
 
-**Next checklist item:** Pull once and run the Con Revamp Bundle 2.2 Final Gate. Use selected Worker #1 -> Disable All -> Gather Food + Haul ON; selected Worker #2 -> Disable All -> Gather Wood + Haul ON; confirm both work/deposit with All Worker Status; disable Worker #1 and confirm Worker #2 continues; then disable/reset both, capture the 2-worker baseline, exit/re-enter + Check PASS, logout/relog/re-enter + Check PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Pull once and run the Con Revamp Bundle 2.2 Final Gate. First confirm the cleaned tab no longer jumps its scroll position when any action button updates Test output. Then use selected Worker #1 -> Disable All -> Gather Food + Haul ON; selected Worker #2 -> Disable All -> Gather Wood + Haul ON; confirm both work/deposit with All Worker Status; disable Worker #1 and confirm Worker #2 continues; then disable/reset both, capture the 2-worker baseline, exit/re-enter + Check PASS, logout/relog/re-enter + Check PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
 
 **Files/systems already inspected:**
 

@@ -543,3 +543,10 @@
 - Bundle 2.2 runtime target is one consolidated launch: W1 Food+Haul + W2 Wood+Haul concurrent work, stop-one/other-continues, then exit/re-entry and logout/relog baseline PASS.
 - No housing/capacity expansion, resource-node ownership, save-schema format or Phase-1 building behavior changed.
 - Post-review: synchronized the fallback settlement command help string with the active Bundle 1.5/2.1/2.2 command surface; no runtime ownership changed.
+
+2026-09-19 - Con Revamp active-workflow cleanup + scroll fix
+- Removed completed Phase-1 Bundle 1.4/1.5 and Phase-2 Bundle 2.1 cards from the Con Revamp tab; retained server commands for future regression use.
+- Slimmed Settlement controls to Enter/Exit/Status/Open Build Palette and removed already-proven state/resource/shelter/Worker #1 self-test clutter.
+- Removed proven Jobs/Needs/Progress self-test buttons while keeping active selected-worker status/control actions needed by Bundle 2.2.
+- Made active panel buttons non-focusable and preserve/restore JScrollPane viewport position around Test output updates to stop click-induced downward scrolling.
+- No settlement gameplay, worker AI, persistence, command authority or save data changed.
