@@ -128,6 +128,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(ConsoleTheme.createWrappedText(
                 "Worker Control drag primitive. Hold the configured mouse button on valid game ground, "
                 + "drag outward/inward to resize the world-space reticule, then release to commit the radius. "
+                + "The area ring is visible only while held; release hides it immediately. "
                 + "Escape cancels only the active drag and preserves the previous committed radius.",
                 6));
         card.add(Box.createVerticalStrut(8));

@@ -360,8 +360,9 @@ Implementation:
 - later action-23 world-hover changes recalibrate pixels-per-tile against exact world distance so the visual remains world-scale based rather than a pure screen-space circle
 - release commits origin + radius
 - Escape cancels only the active drag and preserves the previous committed radius
-- committed radius remains visible while Worker Control is enabled
-- disabling Worker Control stops owning the configured mouse button without deleting the committed radius
+- release commits origin + radius data but immediately hides the large area reticule; only active drag renders the area ring
+- committed radius remains available internally for RWS-3 worker resolution even though the area ring is hidden after release
+- disabling Worker Control stops owning the configured mouse button without deleting the committed radius data
 - no worker detection, server selection, combat target state or cache mutation is included in RWS-2
 
 Requirements:
@@ -369,6 +370,7 @@ Requirements:
 - mouse down captures origin
 - mouse movement updates radius
 - mouse release commits
+- release hides the large area reticule immediately
 - Escape cancels
 - ring grows/shrinks smoothly
 

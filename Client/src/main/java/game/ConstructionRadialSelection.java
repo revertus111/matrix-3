@@ -150,6 +150,7 @@ public final class ConstructionRadialSelection {
         committedPlane = -1;
         committedRadiusTiles = MIN_RADIUS_TILES;
         lastRenderedCycle = Integer.MIN_VALUE;
+        lastRenderState = "not rendered";
         lastEventState = "RWS-2 committed radius cleared.";
     }
 
@@ -219,28 +220,15 @@ public final class ConstructionRadialSelection {
      *   RWS-1 and ConstructionGhostPreview.
      */
     static void render(Class523 scene, Class106 renderer) {
-        if (!workerControlEnabled || scene == null || renderer == null || client.aClass613_8605 == null) {
+        if (!workerControlEnabled || !dragging || scene == null || renderer == null
+                || client.aClass613_8605 == null) {
             return;
         }
 
-        int drawWorldX;
-        int drawWorldY;
-        int drawPlane;
-        float drawRadius;
-
-        if (dragging) {
-            drawWorldX = originWorldX;
-            drawWorldY = originWorldY;
-            drawPlane = originPlane;
-            drawRadius = liveRadiusTiles;
-        } else if (committed) {
-            drawWorldX = committedWorldX;
-            drawWorldY = committedWorldY;
-            drawPlane = committedPlane;
-            drawRadius = committedRadiusTiles;
-        } else {
-            return;
-        }
+        int drawWorldX = originWorldX;
+        int drawWorldY = originWorldY;
+        int drawPlane = originPlane;
+        float drawRadius = liveRadiusTiles;
 
         Class613 region = client.aClass613_8605;
         if (region.method7285(0) != scene) {
@@ -449,8 +437,9 @@ public final class ConstructionRadialSelection {
         committed = true;
         dragging = false;
         lastRenderedCycle = Integer.MIN_VALUE;
+        lastRenderState = "hidden after release";
         lastEventState = "RWS-2 radius committed at " + formatRadius(committedRadiusTiles)
-                + " tiles. Start another drag to replace it.";
+                + " tiles; area reticule hidden after release.";
     }
 
     private static void cancelActiveDrag() {

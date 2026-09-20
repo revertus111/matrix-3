@@ -599,3 +599,4 @@
 - Replaced guessed RTS pan/zoom axis signs with the real Class658_Sub2.method7736(...) view direction.
 - Zoom is constrained to a safe -5600..-1400 relative travel band so normal wheel input cannot drive the camera back into the terrain plane.
 - Free Build ownership and controls are unchanged; RTS requires one focused runtime retest.
+2026-09-20 - RWS-2 release cleanup: the large radial reticule now renders only during an active mouse drag; releasing commits origin/radius data for later worker resolution but hides the area ring immediately.
