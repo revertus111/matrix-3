@@ -24,6 +24,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
 - State: Phase 1 MVP is DONE / runtime accepted. Phase 2 is ACTIVE: Bundle 2.1 population capacity + Worker #2 persistence is runtime VERIFIED; Bundle 2.2 multi-worker targeting/control/concurrent-work management is implemented and awaiting one consolidated runtime pass. Historical diagnostics and zero-Food Hunger resupply remain non-blocking carryover only.
+- Current user-prioritized side slice: Radial Worker Selection RWS-1 reticule-scale proof is IMPLEMENTED / NEEDS RUNTIME TEST. It is client-only and does not change Bundle 2.2 server/runtime ownership.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
 - Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling and the `0x100` private-alpha isolation fix are also runtime verified after a full client restart.
@@ -1151,9 +1152,9 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active persistent-runtime bundle:** Bundle 2.2 — multi-worker control + concurrent work (IMPLEMENTED / NEEDS RUNTIME TEST).
 
-**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera.
+**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-1 proof.
 
-**Next checklist item:** Do not require a launch yet if more compatible Bundle 2.2 patches are being stacked. When ready: Bundle 2.2 Self-Test PASS -> concurrent Food/Wood workers -> final-slot reservation race absent -> Pause Worker #1 and verify Worker #2 continues while Worker #1 keeps its Allowed Jobs -> Resume Worker #1 -> stable baseline -> exit/re-entry PASS -> logout/relog/re-entry PASS. Zero-Food Hunger block/resupply remains optional non-blocking carryover.
+**Next checklist item:** Runtime-test Radial Worker Selection RWS-1 from Con Revamp: Show Reticule Proof -> confirm GFX 4171 appears on hovered world ground without combat -> change 100% to larger/smaller scales -> rotate/zoom camera -> Hide and confirm clean removal. If PASS, mark RWS-1 DONE and continue to RWS-2 radial drag input. Bundle 2.2 remains IMPLEMENTED / NEEDS RUNTIME TEST and should be included in a later consolidated launch when practical.
 
 **Files/systems already inspected:**
 

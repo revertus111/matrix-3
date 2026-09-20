@@ -323,6 +323,17 @@ Target cost should be negligible even with dozens of settlement workers.
 Goal:
 Prove an existing target reticule can be rendered independently and runtime-scaled.
 
+Implementation:
+
+- client-only `ConstructionRadialSelection` proof renderer
+- uses target-reticule GFX `4171`
+- mirrors Matrix3's already-resolved world hover tile; no second picker
+- obtains a per-call GFX model clone through `GraphicsDefinition.method7764(...)`
+- applies a second per-instance X/Z `Model.method1464(...)` scale while leaving Y at stock scale
+- direct-renders through the already-proven `Class578.method6834(...)` Construction scene seam
+- does not mutate cache definitions, combat targets, server state, scene registration, collision or persistence
+- Con Revamp exposes Show / Apply Scale / Status / Hide controls with 25%-1200% proof range
+
 Test:
 
 - spawn/display reticule without combat
@@ -331,7 +342,7 @@ Test:
 - verify camera rotation/zoom
 - verify removal/cleanup
 
-Status: PLANNED
+Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
 ---
 
@@ -466,11 +477,14 @@ Runtime acceptance should be consolidated into one client/server launch.
 - `CombatDefinitions.getTargetReticule(Entity)` selects reticule GFX.
 - `LocalNPCUpdate` and `LocalPlayerUpdate` contain dedicated target-reticule masks.
 - Existing system uses separate GFX IDs for predefined entity sizes.
+- `GraphicsDefinition.method7762(...)` clones the cached model before instance transforms.
+- `GraphicsDefinition` already uses `Model.method1464(...)` for definition scale.
+- RWS-1 applies an additional X/Z-only `Model.method1464(...)` transform to the per-call clone, so the proof does not mutate the cache definition or cached base model.
 
 ### HYPOTHESIS
 
-- Existing reticule model can be cleanly runtime-scaled per Construction instance.
-- Existing GFX model can be reused for arbitrary large radial visualization without cache modification.
+- GFX 4171 will remain visually correct across the full desired arbitrary radial scale range at runtime.
+- The static/frozen reticule frame will be sufficient for persistent Construction selection, or its animation controller will need to be added after visual acceptance.
 
 These must be proven before the implementation depends on them.
 

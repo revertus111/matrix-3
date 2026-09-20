@@ -589,3 +589,4 @@
 - Added Free/RTS selector buttons and mode-specific control hints to the Construction palette.
 - Static changed-file checks passed; RTS camera feel/orientation/zoom and Free Build regression remain pending one consolidated client runtime pass.
 2026-09-20 - Added RADIAL_WORKER_SELECTION.md design spec for world-space drag-scaled worker selection and linked it from PROJECT.md.
+2026-09-20 - RWS-1 reticule scale proof: added client-only GFX 4171 direct-render preview with per-instance X/Z scaling, world-hover anchoring, Con Revamp controls and targeted runtime checks; combat/cache/server ownership remains unchanged.

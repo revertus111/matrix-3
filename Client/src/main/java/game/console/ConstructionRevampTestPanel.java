@@ -2,6 +2,7 @@ package game.console;
 
 import game.ClientConsoleBridge;
 import game.ConstructionPaletteOverlay;
+import game.ConstructionRadialSelection;
 
 import java.awt.Dimension;
 import java.awt.GridLayout;
@@ -33,6 +34,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
             "Ready. Bundle 2.2 multi-worker control bundle is active.", 4);
+    private final JSpinner radialScaleSelector =
+            new JSpinner(new SpinnerNumberModel(100, 25, 1200, 25));
     private final JSpinner workerSelector =
             new JSpinner(new SpinnerNumberModel(1, 1, 999999, 1));
     private final java.util.List<JCheckBox> workerJobCheckBoxes =
@@ -50,6 +53,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(ConsoleTheme.subtitleLabel("Construction Revamp runtime harness"));
         content.add(Box.createVerticalStrut(16));
         content.add(createRuntimeCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createRadialSelectionCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createWorkerSelectorCard());
         content.add(Box.createVerticalStrut(12));
@@ -113,6 +118,64 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 "Completed Phase-1 and Bundle-2.1 verification controls were removed from this tab. "
                 + "Their server-side commands remain available if a future regression needs them.",
                 3));
+        return card;
+    }
+
+    private JPanel createRadialSelectionCard() {
+        JPanel card = ConsoleTheme.createCard("Radial Worker Selection — RWS-1");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Client-only scale proof. GFX 4171 is direct-rendered on the current world hover tile, "
+                + "then X/Z-scaled per instance without changing combat state or cache data. "
+                + "Move the mouse over game ground after enabling it.",
+                5));
+        card.add(Box.createVerticalStrut(8));
+
+        radialScaleSelector.setMaximumSize(new Dimension(120, 30));
+        radialScaleSelector.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(ConsoleTheme.createWrappedText(
+                "Scale % (100 = stock size; range 25-1200):", 2));
+        card.add(Box.createVerticalStrut(4));
+        card.add(radialScaleSelector);
+        card.add(Box.createVerticalStrut(8));
+
+        JButton show = new JButton("Show Reticule Proof");
+        JButton applyScale = new JButton("Apply Scale");
+        JButton proofStatus = new JButton("Proof Status");
+        JButton hide = new JButton("Hide Reticule Proof");
+
+        styleButton(show);
+        styleButton(applyScale);
+        styleButton(proofStatus);
+        styleButton(hide);
+
+        show.addActionListener(e -> {
+            ConstructionRadialSelection.setScalePercent(selectedRadialScalePercent());
+            ConstructionRadialSelection.setProofEnabled(true);
+            setStatus("RWS-1 proof ON at " + selectedRadialScalePercent()
+                    + "%. Move the mouse over world ground.");
+        });
+        applyScale.addActionListener(e -> {
+            ConstructionRadialSelection.setScalePercent(selectedRadialScalePercent());
+            setStatus("RWS-1 scale set to " + selectedRadialScalePercent()
+                    + "%. The active reticule should resize on the next world hover/render.");
+        });
+        proofStatus.addActionListener(e ->
+                setStatus(ConstructionRadialSelection.getStatus()));
+        hide.addActionListener(e -> {
+            ConstructionRadialSelection.setProofEnabled(false);
+            setStatus("RWS-1 proof OFF.");
+        });
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(show);
+        buttons.add(applyScale);
+        buttons.add(proofStatus);
+        buttons.add(hide);
+        card.add(buttons);
         return card;
     }
 
@@ -378,6 +441,11 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         status.setForeground(ConsoleTheme.ACCENT);
         card.add(status);
         return card;
+    }
+
+    private int selectedRadialScalePercent() {
+        Object value = radialScaleSelector.getValue();
+        return value instanceof Number ? ((Number) value).intValue() : 100;
     }
 
     private long selectedWorkerId() {

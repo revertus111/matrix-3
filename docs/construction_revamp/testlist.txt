@@ -332,3 +332,14 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [ ] Disable all jobs for both workers, reset critical needs if needed, then Capture 2-Worker Baseline succeeds.
 [ ] Exit/re-enter then Check 2-Worker Baseline returns PASS with saved=2/runtime=2.
 [ ] Logout/relog + re-enter then Check 2-Worker Baseline returns PASS with both identities/jobs/needs/progression and Construction XP preserved.
+
+Phase 2 side slice — Radial Worker Selection RWS-1
+[IMPLEMENTED / NEEDS RUNTIME TEST]
+[x] Source ownership: RWS-1 is client-only and does not alter combat target state, server worker AI, persistence, collision, scene registration or cache definitions.
+[x] Source ownership: GFX 4171 is loaded through GraphicsDefinition and a per-call model clone receives an additional X/Z-only Model.method1464(...) runtime scale.
+[x] Source ownership: the proof reuses Matrix3's already-resolved action-23 world hover tile and the proven Class578 Construction scene-pass hook; no second world picker is introduced.
+[ ] Open Test Console -> Con Revamp -> Radial Worker Selection RWS-1, set 100%, click Show Reticule Proof, then move the mouse over valid world ground; the target-reticule ring appears at the hovered world tile without entering combat.
+[ ] Apply a smaller scale (for example 50%) and larger scales (for example 200%, 400% and 800%); the same ring shrinks/grows by model transform rather than switching GFX ids.
+[ ] Rotate and zoom the camera while the proof is visible; the ring remains world-anchored on terrain and preserves the chosen visual scale.
+[ ] Proof Status reports DRAW_SUBMITTED with gfx=4171, selected scale and hovered world tile while visible.
+[ ] Hide Reticule Proof removes the ring cleanly and normal RuneScape mouse/combat/Construction behavior remains unchanged.
