@@ -411,7 +411,8 @@ public final class ConstructionBuildCamera {
     private static void applyRtsOrientation(Class658_Sub2 lookController) {
         float horizontal = (float) Math.cos(RTS_PITCH_RADIANS) * RTS_LOOK_DISTANCE;
         int x = Math.round((float) Math.sin(rtsYawRadians) * horizontal);
-        int y = Math.round((float) Math.sin(RTS_PITCH_RADIANS) * RTS_LOOK_DISTANCE);
+        // method8927 negates its Y target internally; negative here means look down in world space.
+        int y = -Math.round((float) Math.sin(RTS_PITCH_RADIANS) * RTS_LOOK_DISTANCE);
         int z = Math.round((float) Math.cos(rtsYawRadians) * horizontal);
         lookController.method8927(x, y, z, 0);
     }
