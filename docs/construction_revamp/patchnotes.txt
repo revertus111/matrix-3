@@ -592,3 +592,10 @@
 2026-09-20 - RWS-1 reticule scale proof: added client-only GFX 4171 direct-render preview with per-instance X/Z scaling, world-hover anchoring, Con Revamp controls and targeted runtime checks; combat/cache/server ownership remains unchanged.
 2026-09-20 - RWS-1 runtime verified: GFX 4171 direct-rendered outside combat and the same reticule model scaled cleanly at 25%, 200% and 725% while remaining world/terrain anchored; single-asset radial selection foundation is proven.
 2026-09-20 - RWS-2 radial drag input: replaced the RWS-1 proof UI with configurable Left/Right Worker Control; ground press captures the action-23 world origin, live AWT drag scales the proven GFX 4171 radius with world-distance calibration, release commits, Escape cancels while preserving the prior commit, and Disable returns mouse ownership.
+
+2026-09-20 - RTS camera ground-clipping correction
+- First runtime showed RTS pitch activating at player/terrain height, causing near-plane terrain triangle artifacts.
+- RTS entry now backs the detached camera 3600 units opposite the actual Class411 look vector before normal input begins.
+- Replaced guessed RTS pan/zoom axis signs with the real Class658_Sub2.method7736(...) view direction.
+- Zoom is constrained to a safe -5600..-1400 relative travel band so normal wheel input cannot drive the camera back into the terrain plane.
+- Free Build ownership and controls are unchanged; RTS requires one focused runtime retest.
