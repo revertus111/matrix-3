@@ -77,6 +77,11 @@ public final class SettlementBundle22FinalGate {
             require(!second.isJobAllowed(SettlementWorkerJob.GATHER_FOOD),
                     "Worker #2 Food changed unexpectedly");
 
+            first.setPaused(true);
+            second.setPaused(false);
+            require(first.isPaused() && !second.isPaused(),
+                    "independent pause targeting failed");
+
             first.setNeed(SettlementWorkerNeed.HUNGER, 33);
             second.setNeed(SettlementWorkerNeed.HUNGER, 11);
             require(first.getNeed(SettlementWorkerNeed.HUNGER) == 33,
@@ -106,6 +111,8 @@ public final class SettlementBundle22FinalGate {
                     && restoredSecond.isJobAllowed(SettlementWorkerJob.HAUL)
                     && !restoredSecond.isJobAllowed(SettlementWorkerJob.GATHER_FOOD),
                     "Worker #2 job policy changed after serialization");
+            require(restoredFirst.isPaused() && !restoredSecond.isPaused(),
+                    "independent pause state changed after serialization");
             require(restoredFirst.getNeed(SettlementWorkerNeed.HUNGER) == 33
                     && restoredSecond.getNeed(SettlementWorkerNeed.HUNGER) == 11,
                     "independent needs changed after serialization");
@@ -113,7 +120,7 @@ public final class SettlementBundle22FinalGate {
                     && restoredSecond.getSkillXp(SettlementWorkerSkill.WOODCUTTING) == 24L,
                     "independent progression changed after serialization");
 
-            return "PASS: per-resource storage isolation + in-flight reservation race protection + worker-id targeting + independent jobs/needs/progression + two-worker serialization.";
+            return "PASS: per-resource storage isolation + in-flight reservation race protection + worker-id targeting + independent pause/jobs/needs/progression + two-worker serialization.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }
@@ -185,6 +192,9 @@ public final class SettlementBundle22FinalGate {
         if (!current.workerDefinitions.equals(baseline.workerDefinitions)) {
             addMismatch(mismatch, "worker definitions changed");
         }
+        if (!current.workerPaused.equals(baseline.workerPaused)) {
+            addMismatch(mismatch, "worker pause state changed");
+        }
         if (!current.workerJobs.equals(baseline.workerJobs)) {
             addMismatch(mismatch, "Allowed Jobs changed");
         }
@@ -201,7 +211,7 @@ public final class SettlementBundle22FinalGate {
         if (mismatch.length() > 0) {
             return "FAIL: " + mismatch.toString() + ".";
         }
-        return "PASS: two-worker identities + jobs + needs + progression + Construction XP survived rebuild; saved=2/runtime=2.";
+        return "PASS: two-worker identities + pause + jobs + needs + progression + Construction XP survived rebuild; saved=2/runtime=2.";
     }
 
     private static SettlementState createTwoWorkerState() {
@@ -284,6 +294,7 @@ public final class SettlementBundle22FinalGate {
     private static final class Snapshot {
         private final List<Long> workerIds;
         private final Map<Long, String> workerDefinitions;
+        private final Map<Long, Boolean> workerPaused;
         private final Map<Long, Set<String>> workerJobs;
         private final Map<Long, String> workerNeeds;
         private final Map<Long, Map<String, Long>> workerSkills;
@@ -291,12 +302,14 @@ public final class SettlementBundle22FinalGate {
 
         private Snapshot(List<Long> workerIds,
                 Map<Long, String> workerDefinitions,
+                Map<Long, Boolean> workerPaused,
                 Map<Long, Set<String>> workerJobs,
                 Map<Long, String> workerNeeds,
                 Map<Long, Map<String, Long>> workerSkills,
                 long constructionXp) {
             this.workerIds = workerIds;
             this.workerDefinitions = workerDefinitions;
+            this.workerPaused = workerPaused;
             this.workerJobs = workerJobs;
             this.workerNeeds = workerNeeds;
             this.workerSkills = workerSkills;
@@ -306,6 +319,7 @@ public final class SettlementBundle22FinalGate {
         private static Snapshot capture(Player player) {
             List<Long> ids = new ArrayList<Long>();
             Map<Long, String> definitions = new HashMap<Long, String>();
+            Map<Long, Boolean> paused = new HashMap<Long, Boolean>();
             Map<Long, Set<String>> jobs = new HashMap<Long, Set<String>>();
             Map<Long, String> needs = new HashMap<Long, String>();
             Map<Long, Map<String, Long>> skills =
@@ -319,6 +333,7 @@ public final class SettlementBundle22FinalGate {
                 Long id = Long.valueOf(worker.getWorkerId());
                 ids.add(id);
                 definitions.put(id, worker.getDefinitionKey());
+                paused.put(id, Boolean.valueOf(worker.isPaused()));
                 jobs.put(id, new HashSet<String>(worker.snapshotAllowedJobKeys()));
                 needs.put(id, worker.getNeedsSummary());
 
@@ -333,6 +348,7 @@ public final class SettlementBundle22FinalGate {
             return new Snapshot(
                     ids,
                     definitions,
+                    paused,
                     jobs,
                     needs,
                     skills,

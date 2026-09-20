@@ -573,3 +573,10 @@
 - Competing workers cannot overbook the same final resource slot; reservations remain resource-specific so Wood never blocks Food/Stone/Ore.
 - Gather cancel/job disable/need interruption/runtime recreation/instance teardown release stale reservations.
 - Strengthened Bundle 2.2 Self-Test with the exact final-slot contention scenario.
+
+2026-09-20 - Bundle 2.2 persistent worker Pause/Resume
+- Added persistent per-worker paused policy independent of Allowed Jobs; existing saves default false without a schema migration.
+- Paused workers stop productive gather/haul work, cancel active gather reservations, retain carried cargo without holding a storage reservation, and continue needs/recovery processing.
+- Resume reuses the unchanged saved Allowed Jobs policy.
+- Added worker-id-targeted workerpause command plus Con Revamp Pause Worker / Resume Worker controls and pause readback in all-worker/live-AI status.
+- Extended Bundle 2.2 disposable serialization and live baseline/check to cover independent worker pause state.

@@ -37,6 +37,7 @@ public final class SettlementWorkerState implements Serializable {
     private int homePlotY;
     private int homePlane;
     private Set<String> allowedJobs = new HashSet<String>();
+    private boolean paused;
 
     // Hunger/thirst are pressure values: 0 = satisfied, 100 = critical.
     // Energy is reserve: 100 = rested, 0 = exhausted.
@@ -102,6 +103,14 @@ public final class SettlementWorkerState implements Serializable {
     public Set<String> snapshotAllowedJobKeys() {
         normalizeJobs();
         return new HashSet<String>(allowedJobs);
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public void setPaused(boolean paused) {
+        this.paused = paused;
     }
 
     public String getAllowedJobsSummary() {

@@ -79,6 +79,8 @@ public final class SettlementPopulationCheck {
                 require(!recruited.isJobAllowed(job),
                         "new Worker #2 did not default " + job.getKey() + " OFF");
             }
+            require(!recruited.isPaused(),
+                    "new Worker #2 unexpectedly defaulted paused");
 
             stage = "serialize";
             byte[] encoded = serialize(state);
@@ -109,6 +111,10 @@ public final class SettlementPopulationCheck {
                     "worker definitions changed after serialization");
             require(!restored.canRecruitAdditionalWorker(),
                     "restored full population reopened recruitment");
+            SettlementWorkerState restoredRecruited =
+                    restored.findWorker(recruited.getWorkerId());
+            require(restoredRecruited != null && !restoredRecruited.isPaused(),
+                    "Worker #2 default pause state changed after serialization");
             require(restored.ensureStarterWorker().getWorkerId()
                     == starter.getWorkerId(),
                     "restored state duplicated/replaced Worker #1");

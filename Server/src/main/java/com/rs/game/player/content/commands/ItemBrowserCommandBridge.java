@@ -254,7 +254,8 @@ public final class ItemBrowserCommandBridge {
                                 + worker.getHomePlotX() + "," + worker.getHomePlotY()
                                 + "," + worker.getHomePlane());
                 player.getPackets().sendGameMessage(
-                        "Allowed Jobs: " + worker.getAllowedJobsSummary());
+                        "Paused=" + (worker.isPaused() ? "YES" : "NO")
+                                + " | Allowed Jobs: " + worker.getAllowedJobsSummary());
                 player.getPackets().sendGameMessage(
                         "Needs: " + worker.getNeedsSummary());
                 player.getPackets().sendGameMessage(
@@ -276,6 +277,7 @@ public final class ItemBrowserCommandBridge {
                 }
                 player.getPackets().sendGameMessage(
                         "Worker #" + worker.getWorkerId() + " " + worker.getName()
+                                + " | Paused=" + (worker.isPaused() ? "YES" : "NO")
                                 + " | Jobs: " + worker.getAllowedJobsSummary());
                 player.getPackets().sendGameMessage(
                         "Needs: " + worker.getNeedsSummary()
@@ -330,6 +332,34 @@ public final class ItemBrowserCommandBridge {
             String result = SettlementWorkerArrivalCheck.run(player);
             System.out.println("[SettlementWorkerArrivalCheck] " + result);
             player.getPackets().sendGameMessage("Worker arrival check: " + result);
+            return true;
+        }
+
+        if ("workerpause".equals(operation)) {
+            boolean targeted = hasWorkerIdArgument(cmd, 3);
+            int stateIndex = targeted ? 4 : 3;
+            if (cmd.length <= stateIndex) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerpause [workerId] <on|off>");
+                return true;
+            }
+            SettlementWorkerState worker = resolveSettlementWorker(player, cmd, 3);
+            if (worker == null) {
+                return true;
+            }
+            String state = cmd[stateIndex].toLowerCase();
+            if (!"on".equals(state) && !"off".equals(state)) {
+                player.getPackets().sendGameMessage(
+                        "Worker pause state must be on or off.");
+                return true;
+            }
+            boolean paused = "on".equals(state);
+            worker.setPaused(paused);
+            player.getPackets().sendGameMessage(
+                    "Worker #" + worker.getWorkerId() + " Paused="
+                            + (paused ? "YES" : "NO")
+                            + " | Allowed Jobs unchanged: "
+                            + worker.getAllowedJobsSummary());
             return true;
         }
 
@@ -590,7 +620,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
         return true;
     }
 

@@ -331,7 +331,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 + "1. Bundle 2.2 Self-Test -> PASS.\n"
                 + "2. Worker #1: Disable All, then Food + Haul ON. Worker #2: Disable All, then Wood + Haul ON.\n"
                 + "3. All Worker Status until Food/Wood rise independently. Wood may fill first; that must not block Food.\n"
-                + "4. When Wood reaches 100/100, Worker #2 should stop before gathering excess Wood (carried=none); disable Worker #1 and confirm the workers remain independent.\n"
+                + "4. Pause Worker #1 without changing its jobs; Worker #2 must keep following its own policy. Resume Worker #1 afterward.\n"
                 + "5. Disable both workers + Reset Needs, then Capture 2-Worker Baseline.\n"
                 + "6. Exit/re-enter -> Check Baseline PASS; logout/relog/re-enter -> Check Baseline PASS.",
                 10));

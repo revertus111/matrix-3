@@ -319,11 +319,16 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Runtime evidence: with Wood at 100/100, Worker #2 stopped mid-haul holding `Wood x1` because another worker filled the final Wood slot first; classified as an in-flight storage-capacity race.
 [x] Reservation fix source: `SettlementInstance` owns runtime-only per-worker storage reservations; reservation is acquired before gathering and released/consumed on cancel/disable/rebuild/deposit.
 [x] Reservation fix self-test: final Wood slot can be reserved by only one worker while another worker can still reserve Food independently.
+[x] Pause/Resume source: `SettlementWorkerState.paused` is persistent per-worker policy independent of Allowed Jobs and defaults false for existing/new workers.
+[x] Pause/Resume AI: pausing cancels active gathering and transient reservations, retains already-carried cargo without reserving capacity, and still permits needs/recovery processing.
+[x] Pause/Resume control: selected-worker Con Revamp buttons and `workerpause [workerId] <on|off>` target stable worker ids; All Worker Status/live AI report pause state.
+[x] Pause/Resume persistence: Bundle 2.2 disposable serialization and live baseline/check now compare each worker's pause state.
 [ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
 [ ] Bundle 2.2 Self-Test returns PASS.
 [ ] Select Worker #1: Disable All, enable Gather Food + Haul. Select Worker #2: Disable All, enable Gather Wood + Haul. Jobs Status confirms independent allowlists.
 [ ] All Worker Status shows both workers actively following their independent jobs; Wood and Food storage increase independently with per-resource `amount/100` readback.
 [ ] Concurrent final-slot retest: as Wood reaches 100/100, no worker becomes stranded mid-haul with excess Wood because another worker consumed its expected slot; the losing worker must fail/skip reservation before creating new cargo, while Food continues independently.
+[ ] Pause Worker #1 while its Food+Haul policy remains ON; Worker #1 stops productive work, Worker #2 continues independently, All Worker Status shows Paused=YES, then Resume Worker #1 and confirm its unchanged Food+Haul policy resumes.
 [ ] Disable all jobs for both workers, reset critical needs if needed, then Capture 2-Worker Baseline succeeds.
 [ ] Exit/re-enter then Check 2-Worker Baseline returns PASS with saved=2/runtime=2.
 [ ] Logout/relog + re-enter then Check 2-Worker Baseline returns PASS with both identities/jobs/needs/progression and Construction XP preserved.

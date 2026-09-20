@@ -77,6 +77,24 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
 
+        if (workerState.isPaused()) {
+            if (gatherTicksRemaining > 0 || targetNode != null) {
+                clearTarget();
+            }
+            if (carriedAmount > 0) {
+                settlement.releaseWorkerStorageReservation(workerId);
+                resetWalkSteps();
+            }
+            if (processNeeds()) {
+                return;
+            }
+            workState = WorkState.IDLE;
+            statusDetail = carriedAmount > 0 && carriedResource != null
+                    ? "Paused; holding " + carriedResource.getDisplayName() + "."
+                    : "Paused.";
+            return;
+        }
+
         if (carriedAmount > 0
                 && workerState.isJobAllowed(SettlementWorkerJob.HAUL)) {
             processCarriedResource();
@@ -420,6 +438,7 @@ public final class SettlementWorkerNpc extends NPC {
     public String getRuntimeWorkSummary() {
         StringBuilder summary = new StringBuilder();
         summary.append("state=").append(workState);
+        summary.append(" | paused=").append(workerState.isPaused() ? "YES" : "NO");
         summary.append(" | ").append(statusDetail);
         summary.append(" | carried=");
         if (carriedResource == null || carriedAmount <= 0) {
