@@ -33,6 +33,10 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - Phase 1 MVP vertical slice is runtime accepted; next playable target is Phase 2 population + broader survival production.
 
+## Supporting design specs
+
+- `RADIAL_WORKER_SELECTION.md` — planned RuneScape-native world-space radial drag selection for settlement workers, including runtime-scaled ground reticule, live preview, server validation, and future work-area reuse.
+
 ## Vision
 
 Construction becomes both a RuneScape skill and a persistent settlement-management system.
