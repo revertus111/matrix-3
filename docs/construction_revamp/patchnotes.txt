@@ -675,3 +675,10 @@
 - Exact model-bounds scaling remains in place, so rendered visual radius matches the world-space geometric radius.
 - Current updates occur at Matrix3 resolved-tile granularity; optional sub-tile smoothing is deferred until the A/B geometry is runtime accepted.
 - Client-only scope retained; RWS-3 remains blocked on this focused acceptance.
+
+2026-09-20 - Bundle 2.2 storage developer/test controls
+- Added owner-only `storagereset` and capacity-bounded `storageset <resource> <amount>` using the existing SettlementState add/remove resource APIs.
+- Added Con Revamp Storage Status, Reset All Storage, Prime Wood 99/100 and Storage Self-Test controls.
+- Prime Wood 99/100 provides a fast setup for the final-slot reservation regression; deterministic use expects workers paused/idle before priming.
+- Storage Self-Test reuses the existing disposable SettlementResourceSelfTest and does not mutate persistent player storage.
+- Runtime verification remains deferred to the consolidated Bundle 2.2 pass.
