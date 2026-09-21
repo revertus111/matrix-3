@@ -1182,7 +1182,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry. RWS-4 visual preflight now includes the GFX 4187 double-ring recolor probe (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling: Object / Automation Asset Probe IMPLEMENTED / NEEDS RUNTIME TEST for track/cart asset discovery.
 
-**Next checklist item:** Run the GFX 4187 visual probe first: Show Original -> move over world ground -> Highlight Color A -> Highlight Color B -> Probe Status. Determine whether A/B visibly isolate the outer and inner rings. Then resume the existing RWS-2 pure world-space A/B geometry retest; no worker detection/server-selection work starts until RWS-2 is accepted.
+**Next checklist item:** Retest RWS-2 ring-body calibration first: press edge A -> drag across several tiles -> confirm the circular ring circumference, not the decorative diamonds, keeps A fixed while the opposite ring edge tracks B. If PASS, close RWS-2 and continue RWS-3. The GFX 4187 Original/Color A/Color B probe remains queued as separate RWS-4 visual preflight.
 
 **Files/systems already inspected:**
 
