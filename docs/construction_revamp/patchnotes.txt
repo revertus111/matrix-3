@@ -689,3 +689,12 @@
 - Selected RTS speed persists for the current client session across Construction close/reopen and is not reset with camera orbit state.
 - Normal, Shift-fast and Ctrl-precision RTS pan speeds all scale from the selected multiplier; Free Build movement remains unchanged.
 - Static changed-file checks passed; runtime feel, preset clamping, modifier scaling and session retention remain to verify.
+
+
+2026-09-20 - RWS-2 reticule model-origin correction
+- Runtime feedback showed the A-side still moved even after switching to pure world-space A/B geometry.
+- Root cause isolated to the render asset: GFX 4171's cloned model-space origin is not guaranteed to match the center of its horizontal X/Z bounds.
+- RWS-2 now recenters the per-call model clone on the midpoint of its actual X/Z bounds with `Model.method1358(...)` before applying exact radius scale.
+- Runtime scale now uses the centered half-width/half-depth instead of max absolute coordinates from the original off-center origin.
+- This keeps cache definitions untouched and should align the visual center with midpoint(A,B), eliminating scale-induced A-edge drift.
+- Pure world-space A/B geometry, release-hide, Escape and RWS-3 boundary remain unchanged.
