@@ -765,3 +765,9 @@
 - User confirmed the Con Revamp Prime Wood 99/100 control works correctly at runtime.
 - Storage Self-Test, Reset All Storage and Prime Wood 99/100 are now all runtime VERIFIED.
 - Bundle 2.2 consolidated runtime pass advances to Bundle 2.2 Self-Test, then role-preset/concurrent-production acceptance.
+
+2026-09-21 - Bundle 2.2 Self-Test runtime verified
+- Runtime screenshot confirms Bundle 2.2 Self-Test PASS.
+- PASS covered per-resource storage isolation, in-flight reservation race protection, all worker role presets, stable worker-id targeting, independent pause/jobs/needs/progression and two-worker serialization.
+- Final gate correctly remained NOT READY because Worker #1 still had jobs enabled and no Bundle 2.2 baseline existed for the login; this is expected pre-baseline state.
+- Consolidated runtime pass advances to role-preset/concurrent-production acceptance, then baseline capture/persistence checks.
