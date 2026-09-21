@@ -139,7 +139,17 @@ Current target. Detached Class411 render carrier with Construction-owned modern 
 
 ### RTS
 
-Elevated angled settlement overview with panning and controlled zoom.
+Default Construction camera.
+
+- Opening the Construction palette explicitly selects RTS before entering the detached Class411 camera; closing and reopening therefore returns to RTS even if Free Build was selected previously.
+- Initial activation preserves the current horizontal heading, applies the accepted fixed downward pitch, stores the pre-backoff world position as the RTS pivot, then places the camera on a 3600-unit orbit radius.
+- W/A/S/D and arrow keys pan on the view-relative ground plane and translate both the camera and pivot together.
+- Q/E changes yaw and repositions the camera around the stored pivot at the current orbit distance; this is an orbital turn like the vanilla player camera rather than first-person in-place rotation.
+- Mouse wheel changes orbit distance inside the accepted safe range while keeping the same pivot.
+- Shift fast / Ctrl precision modifiers remain active.
+- Free Build remains an explicit palette option for close-up detached movement and mouse-look.
+
+The original RTS base view/orientation is runtime VERIFIED. The default-open and pivot-orbit revision is IMPLEMENTED / NEEDS RUNTIME TEST.
 
 ### Top Down
 
