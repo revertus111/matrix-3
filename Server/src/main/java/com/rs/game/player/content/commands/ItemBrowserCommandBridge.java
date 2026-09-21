@@ -18,6 +18,7 @@ import com.rs.game.player.content.construction.SettlementBundle14FinalGate;
 import com.rs.game.player.content.construction.SettlementBundle15FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle22FinalGate;
 import com.rs.game.player.content.construction.SettlementInstance;
+import com.rs.game.player.content.construction.SettlementObjectProbe;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementPopulationCheck;
 import com.rs.game.player.content.construction.SettlementResource;
@@ -68,6 +69,9 @@ public final class ItemBrowserCommandBridge {
         }
         if (cmd != null && cmd.length >= 2 && "settlement".equalsIgnoreCase(cmd[1])) {
             return processSettlement(player, cmd);
+        }
+        if (cmd != null && cmd.length >= 2 && "objectprobe".equalsIgnoreCase(cmd[1])) {
+            return processObjectProbe(player, cmd);
         }
         if (cmd != null && cmd.length >= 2 && "devspawn".equalsIgnoreCase(cmd[1])) {
             return processDevSpawn(player, cmd);
@@ -124,6 +128,47 @@ public final class ItemBrowserCommandBridge {
             player.getPackets().sendGameMessage(bank
                     ? "Unable to add that item to your bank (bank may be full)."
                     : "Unable to add that item to your inventory (inventory may be full or restricted)." );
+        }
+        return true;
+    }
+
+    private static boolean processObjectProbe(Player player, String[] cmd) {
+        if (cmd == null || cmd.length < 3) {
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser objectprobe <tile|nearby|logtile|lognearby>");
+            return true;
+        }
+
+        String operation = cmd[2].toLowerCase();
+        int radius;
+        boolean log;
+        if ("tile".equals(operation)) {
+            radius = 0;
+            log = false;
+        } else if ("nearby".equals(operation)) {
+            radius = 1;
+            log = false;
+        } else if ("logtile".equals(operation)) {
+            radius = 0;
+            log = true;
+        } else if ("lognearby".equals(operation)) {
+            radius = 1;
+            log = true;
+        } else {
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser objectprobe <tile|nearby|logtile|lognearby>");
+            return true;
+        }
+
+        WorldTile center = new WorldTile(player.getX(), player.getY(), player.getPlane());
+        if (log) {
+            player.getPackets().sendGameMessage(
+                    SettlementObjectProbe.appendToCatalog(center, radius));
+            return true;
+        }
+
+        for (String line : SettlementObjectProbe.scan(center, radius)) {
+            player.getPackets().sendGameMessage(line);
         }
         return true;
     }

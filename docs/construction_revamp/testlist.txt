@@ -403,3 +403,12 @@ Construction RTS adjustable pan speed
 [-] Shift-fast and Ctrl-precision remain relative to the selected RTS multiplier.
 [-] Closing/reopening Construction preserves the selected multiplier for the current client session.
 [-] Free Build movement speed remains unchanged by the RTS multiplier.
+
+Object / Automation Asset Probe — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Stand directly on a known world object and use Con Revamp -> Scan Current Tile; game chat reports its effective slot, ID, name, type, rotation and tile.
+[ ] Probe output also reports definition size, clip type, animation, map icon/sprite metadata and cached interaction options.
+[ ] If the object origin is adjacent/multi-tile, Scan Nearby 3x3 finds the candidate without modifying it.
+[ ] Runtime-spawned/replaced objects are reported through the effective Region slot instead of stale raw map data.
+[ ] Log Current Tile appends the complete result to Server/data/construction/object_catalog.txt.
+[ ] Log Nearby 3x3 appends all discovered candidates to the same catalog with timestamp/scope/center metadata.
+[ ] Scanning/logging ordinary world objects does not move, rotate, delete, replace or otherwise mutate them.

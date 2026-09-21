@@ -703,3 +703,10 @@
 - User confirmed selected-worker Pause Worker / Resume Worker works correctly in the live settlement.
 - Pause/Resume preserves the worker's existing Allowed Jobs policy and is promoted from verified-static to runtime VERIFIED.
 - Bundle 2.2 consolidated runtime pass now advances to Storage Self-Test, Reset All Storage and Prime Wood 99/100.
+
+2026-09-20 - Object / Automation Asset Probe
+- Added admin-only `itembrowser objectprobe` current-tile and nearby-3x3 scans using Matrix3's effective Region object slots, including runtime replacements/removals.
+- Probe readback reports slot, object id/name/type/rotation/tile, definition size/clipping/animation/map metadata and cached interaction options without mutating world objects.
+- Added read-only catalog logging to `Server/data/construction/object_catalog.txt`; full scans append while in-game chat remains bounded.
+- Added Con Revamp Scan Current Tile / Scan Nearby 3x3 / Log Current Tile / Log Nearby 3x3 controls for track/cart/automation asset discovery.
+- Static implementation complete; runtime scan/log acceptance remains pending.

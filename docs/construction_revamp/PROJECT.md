@@ -944,6 +944,9 @@ Runtime acceptance target:
 
 ## Phase 4 — Logistics automation
 
+Early asset-discovery tooling is intentionally pulled forward without advancing the Phase-4 gameplay gate:
+- Object / Automation Asset Probe is IMPLEMENTED / NEEDS RUNTIME TEST. It reads effective live object slots from the player's current tile or nearby 3x3 area and can append candidate IDs/types/rotations/definition metadata to `Server/data/construction/object_catalog.txt`. It is read-only and exists to identify track/cart/loading assets before persistent rail gameplay is defined.
+
 - Minecart tracks.
 - Loading/unloading points.
 - Junctions/routes.
@@ -982,7 +985,8 @@ Runtime acceptance target:
 - Persistent-runtime bundle: 2.2 — multi-worker control + concurrent work
 - Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
-- Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
+- Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Object / Automation Asset Probe IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
+- Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
 - Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. Pause/Resume passed at runtime; next unfinished gate is Con Revamp `Storage Self-Test`, followed by Reset All Storage and Prime Wood 99/100.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
@@ -1176,7 +1180,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active persistent-runtime bundle:** Bundle 2.2 — multi-worker control + concurrent work (IMPLEMENTED / NEEDS RUNTIME TEST).
 
-**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry.
+**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry. Side tooling: Object / Automation Asset Probe IMPLEMENTED / NEEDS RUNTIME TEST for track/cart asset discovery.
 
 **Next checklist item:** Retest RWS-2 with pure world-space A/B geometry: press at edge A -> drag across multiple world tiles -> confirm A stays pinned and the opposite circumference tracks the current resolved world tile B -> verify midpoint movement and natural shrink/reposition -> release and confirm committed edge A/center/radius remain. Tile-step updates are acceptable for this geometry pass; smooth sub-tile interpolation can be polished afterward without changing ownership.
 

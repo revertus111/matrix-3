@@ -61,6 +61,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createStorageTestCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createObjectProbeCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createRadialSelectionCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createWorkerSelectorCard());
@@ -168,6 +170,52 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(resetStorage);
         buttons.add(primeWood);
         buttons.add(storageSelfTest);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createObjectProbeCard() {
+        JPanel card = ConsoleTheme.createCard("Object / Automation Asset Probe");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Stand on or beside a world object to inspect Matrix3's effective live object slots. "
+                + "Scans report ID, name, object type, rotation, tile, size, clipping, animation, map metadata "
+                + "and cached interaction options. Logging is read-only and appends the full result to "
+                + "Server/data/construction/object_catalog.txt.",
+                6));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton scanTile = new JButton("Scan Current Tile");
+        JButton scanNearby = new JButton("Scan Nearby 3x3");
+        JButton logTile = new JButton("Log Current Tile");
+        JButton logNearby = new JButton("Log Nearby 3x3");
+
+        styleButton(scanTile);
+        styleButton(scanNearby);
+        styleButton(logTile);
+        styleButton(logNearby);
+
+        scanTile.addActionListener(e -> queue(
+                "itembrowser objectprobe tile",
+                "Current-tile object probe queued. Check game chat for object details."));
+        scanNearby.addActionListener(e -> queue(
+                "itembrowser objectprobe nearby",
+                "Nearby 3x3 object probe queued. Check game chat for object details."));
+        logTile.addActionListener(e -> queue(
+                "itembrowser objectprobe logtile",
+                "Current-tile object catalog append queued."));
+        logNearby.addActionListener(e -> queue(
+                "itembrowser objectprobe lognearby",
+                "Nearby 3x3 object catalog append queued."));
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(scanTile);
+        buttons.add(scanNearby);
+        buttons.add(logTile);
+        buttons.add(logNearby);
         card.add(buttons);
         return card;
     }
