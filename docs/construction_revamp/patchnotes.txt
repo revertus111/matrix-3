@@ -715,3 +715,13 @@
 - Probe samples the per-call clone's most frequent non-sentinel packed face colours and can recolor Color A or Color B independently through Model.method1393(...).
 - Existing 0x80000 model flags isolate face-colour storage on the clone; cache definitions, combat target state, worker AI and server persistence remain unchanged.
 - Con Revamp now exposes Original / Color A / Color B / Status / Hide controls; runtime must determine whether A/B map cleanly to the outer and inner rings.
+
+
+2026-09-21 - RWS-2 circular-ring body calibration
+- New runtime video proved the remaining drift was visual calibration, not A/B world geometry: GFX 4171's four decorative cardinal diamonds reached the geometric endpoints while the circular ring stopped short.
+- Full-model X/Z bounds are therefore not a valid radius for the selectable circle.
+- On AbstractModel renderer clones, RWS-2 now computes every centered vertex's X/Z radial distance, sorts those radii and detects the large outer gap separating the dense ring-body cluster from the decorative diamond cluster.
+- The last radius before that outer gap becomes the ring-body base radius used for exact world-space scaling.
+- Non-AbstractModel renderer models use a bounded 0.80 GFX-4171 ring/body fallback instead of the full decorative-marker extent.
+- World A/B midpoint geometry, model recentering, cache isolation, release-hide and Escape behavior are unchanged.
+- Acceptance now explicitly checks the circular ring circumference against A/B; decorative diamonds are allowed to extend outside that radius.
