@@ -281,6 +281,16 @@ public final class ConstructionPaletteOverlay {
             repaintSurface();
             return;
         }
+        if (layout.rtsSpeedDown.contains(x, y)) {
+            ConstructionBuildCamera.adjustRtsMoveSpeed(-1);
+            repaintSurface();
+            return;
+        }
+        if (layout.rtsSpeedUp.contains(x, y)) {
+            ConstructionBuildCamera.adjustRtsMoveSpeed(1);
+            repaintSurface();
+            return;
+        }
 
         for (int i = 0; i < layout.tabs.length; i++) {
             if (layout.tabs[i].contains(x, y)) {
@@ -406,8 +416,10 @@ public final class ConstructionPaletteOverlay {
     private static LayoutSnapshot buildLayout(int width, int height) {
         Rectangle panel = new Rectangle(0, 0, width, height);
         Rectangle close = new Rectangle(width - 36, 10, 24, 24);
-        Rectangle cameraFree = new Rectangle(width - 164, 10, 58, 24);
-        Rectangle cameraRts = new Rectangle(width - 100, 10, 58, 24);
+        Rectangle cameraFree = new Rectangle(width - 218, 10, 44, 24);
+        Rectangle cameraRts = new Rectangle(width - 170, 10, 68, 24);
+        Rectangle rtsSpeedDown = new Rectangle(width - 96, 10, 24, 24);
+        Rectangle rtsSpeedUp = new Rectangle(width - 66, 10, 24, 24);
         Rectangle searchBox = new Rectangle(14, 48, width - 28, 32);
 
         Rectangle[] tabs = new Rectangle[Category.values().length];
@@ -437,8 +449,8 @@ public final class ConstructionPaletteOverlay {
         Rectangle paintMode = new Rectangle(202, controlsY, 66, 30);
         Rectangle continuous = new Rectangle(274, controlsY, Math.max(1, width - 288), 30);
         Rectangle cancel = new Rectangle(width - 86, height - 38, 72, 26);
-        return new LayoutSnapshot(panel, close, cameraFree, cameraRts, searchBox, tabs,
-                cards.toArray(new CardHitbox[cards.size()]),
+        return new LayoutSnapshot(panel, close, cameraFree, cameraRts, rtsSpeedDown, rtsSpeedUp,
+                searchBox, tabs, cards.toArray(new CardHitbox[cards.size()]),
                 rotateLeft, rotateRight, paintMode, continuous, cancel, matches.size());
     }
 
@@ -468,8 +480,10 @@ public final class ConstructionPaletteOverlay {
         centerText(g, "X", layout.close);
         paintButton(g, layout.cameraFree, "Free",
                 ConstructionBuildCamera.getMode() == ConstructionBuildCamera.CameraMode.FREE_BUILD);
-        paintButton(g, layout.cameraRts, "RTS",
+        paintButton(g, layout.cameraRts, "RTS " + ConstructionBuildCamera.getRtsMoveSpeedLabel(),
                 ConstructionBuildCamera.getMode() == ConstructionBuildCamera.CameraMode.RTS);
+        paintButton(g, layout.rtsSpeedDown, "-", false);
+        paintButton(g, layout.rtsSpeedUp, "+", false);
 
         paintSearch(g, layout.search);
         paintTabs(g, layout.tabs);
@@ -553,7 +567,8 @@ public final class ConstructionPaletteOverlay {
 
         String state;
         if (ConstructionBuildCamera.isRtsMode()) {
-            state = "RTS • WASD/arrows pan • Q/E rotate • wheel zoom • R rotates piece";
+            state = "RTS " + ConstructionBuildCamera.getRtsMoveSpeedLabel()
+                    + " • WASD/arrows pan • Q/E rotate • wheel zoom • R rotates piece";
         } else if (ConstructionPlacementController.isArmed()) {
             state = "Free • click world to place • R / Shift+R or wheel rotates";
         } else {
@@ -633,6 +648,8 @@ public final class ConstructionPaletteOverlay {
         private final Rectangle close;
         private final Rectangle cameraFree;
         private final Rectangle cameraRts;
+        private final Rectangle rtsSpeedDown;
+        private final Rectangle rtsSpeedUp;
         private final Rectangle search;
         private final Rectangle[] tabs;
         private final CardHitbox[] cards;
@@ -644,13 +661,15 @@ public final class ConstructionPaletteOverlay {
         private final int totalMatchingPieces;
 
         private LayoutSnapshot(Rectangle panel, Rectangle close, Rectangle cameraFree, Rectangle cameraRts,
-                Rectangle search, Rectangle[] tabs, CardHitbox[] cards, Rectangle rotateLeft,
-                Rectangle rotateRight, Rectangle paintMode, Rectangle continuousMode, Rectangle cancel,
-                int totalMatchingPieces) {
+                Rectangle rtsSpeedDown, Rectangle rtsSpeedUp, Rectangle search, Rectangle[] tabs,
+                CardHitbox[] cards, Rectangle rotateLeft, Rectangle rotateRight, Rectangle paintMode,
+                Rectangle continuousMode, Rectangle cancel, int totalMatchingPieces) {
             this.panel = panel;
             this.close = close;
             this.cameraFree = cameraFree;
             this.cameraRts = cameraRts;
+            this.rtsSpeedDown = rtsSpeedDown;
+            this.rtsSpeedUp = rtsSpeedUp;
             this.search = search;
             this.tabs = tabs;
             this.cards = cards;
@@ -664,8 +683,8 @@ public final class ConstructionPaletteOverlay {
 
         private static LayoutSnapshot empty() {
             Rectangle zero = new Rectangle();
-            return new LayoutSnapshot(zero, zero, zero, zero, zero, new Rectangle[0], new CardHitbox[0],
-                    zero, zero, zero, zero, zero, 0);
+            return new LayoutSnapshot(zero, zero, zero, zero, zero, zero, zero,
+                    new Rectangle[0], new CardHitbox[0], zero, zero, zero, zero, zero, 0);
         }
     }
 }
