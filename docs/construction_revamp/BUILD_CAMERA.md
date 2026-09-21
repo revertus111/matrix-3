@@ -149,7 +149,7 @@ Default Construction camera.
 - Shift fast / Ctrl precision modifiers remain active.
 - Free Build remains an explicit palette option for close-up detached movement and mouse-look.
 
-The original RTS base view/orientation is runtime VERIFIED. The default-open and pivot-orbit revision is IMPLEMENTED / NEEDS RUNTIME TEST.
+The RTS base view/orientation and the default-open + pivot-orbit revision are runtime VERIFIED.
 
 ### Top Down
 
