@@ -24,7 +24,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
 - State: Phase 1 MVP is DONE / runtime accepted. Phase 2 is ACTIVE: Bundle 2.1 population capacity + Worker #2 persistence is runtime VERIFIED; Bundle 2.2 multi-worker targeting/control/concurrent-work management is implemented and awaiting one consolidated runtime pass. Historical diagnostics and zero-Food Hunger resupply remain non-blocking carryover only.
-- Current user-prioritized side slice: Radial Worker Selection RWS-1 is RUNTIME VERIFIED; RWS-2 hold/drag scaling is runtime verified, with the release-visual cleanup patched and awaiting a quick retest. It remains client-only and does not change Bundle 2.2 server/runtime ownership.
+- Current user-prioritized side slice: Radial Worker Selection RWS-1 is RUNTIME VERIFIED; RWS-2 input/scaling foundation is runtime proven, and the RTS midpoint/half-span geometry revision is implemented / awaiting runtime acceptance before RWS-3. It remains client-only and does not change Bundle 2.2 server/runtime ownership.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
 - Visible 3D ghost base-render fix is runtime verified after `014a133f02c6e72c3bac08ea26f5c6bd98ebeb3d`; white/translucent styling and the `0x100` private-alpha isolation fix are also runtime verified after a full client restart.
@@ -1166,9 +1166,9 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active persistent-runtime bundle:** Bundle 2.2 — multi-worker control + concurrent work (IMPLEMENTED / NEEDS RUNTIME TEST).
 
-**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 drag input.
+**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry.
 
-**Next checklist item:** Quick RWS-2 cleanup retest: Enable Worker Control -> hold/drag and confirm the area ring scales -> release and confirm the large ring disappears immediately while Radial Status still reports the committed origin/radius internally. If PASS, mark RWS-2 DONE and continue to RWS-3 worker detection/live preview.
+**Next checklist item:** Focused RWS-2 geometry acceptance: Enable Worker Control -> press at edge A -> drag across the settlement and confirm the reticule midpoint moves while its diameter spans A to the current edge B -> continue past the former 12-tile stop -> drag back to confirm natural shrink/reposition -> release and confirm the large ring disappears while Radial Status preserves committed edge A/center/radius. If PASS, mark RWS-2 DONE and continue to RWS-3 worker detection/live preview.
 
 **Files/systems already inspected:**
 
