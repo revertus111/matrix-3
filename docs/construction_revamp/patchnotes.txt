@@ -771,3 +771,10 @@
 - PASS covered per-resource storage isolation, in-flight reservation race protection, all worker role presets, stable worker-id targeting, independent pause/jobs/needs/progression and two-worker serialization.
 - Final gate correctly remained NOT READY because Worker #1 still had jobs enabled and no Bundle 2.2 baseline existed for the login; this is expected pre-baseline state.
 - Consolidated runtime pass advances to role-preset/concurrent-production acceptance, then baseline capture/persistence checks.
+
+2026-09-21 - Bundle 2.2 zero-Food hunger bootstrap recovery
+- Runtime role/concurrency setup reproduced the historical deadlock where critical Hunger + Food=0 stopped the Forager before it could gather recovery Food.
+- Added emergency Food foraging only for unpaused workers with critical Hunger, Gather Food + Haul enabled, Food storage room and an available Food node.
+- Emergency selection forces the Food node and ends after deposit; normal Hunger recovery then consumes stored Food on the following cycle.
+- Non-food workers retain the existing no-Food stop behavior. No save/schema, role-policy, reservation or progression ownership changed.
+- Runtime retest required before resuming the Bundle 2.2 concurrency gate.
