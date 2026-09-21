@@ -20,6 +20,7 @@ import com.rs.game.player.content.construction.SettlementBundle22FinalGate;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementPopulationCheck;
+import com.rs.game.player.content.construction.SettlementResource;
 import com.rs.game.player.content.construction.SettlementResourceSelfTest;
 import com.rs.game.player.content.construction.SettlementShelterSelfTest;
 import com.rs.game.player.content.construction.SettlementStateAudit;
@@ -147,7 +148,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -203,6 +204,60 @@ public final class ItemBrowserCommandBridge {
         if ("resources".equals(operation)) {
             player.getPackets().sendGameMessage(
                     "Settlement storage: " + player.getSettlementState().getResourceSummary());
+            return true;
+        }
+
+        if ("storagereset".equals(operation)) {
+            for (SettlementResource resource : SettlementResource.values()) {
+                long current = player.getSettlementState().getResourceAmount(resource);
+                if (current > 0L) {
+                    player.getSettlementState().removeResource(resource, current);
+                }
+            }
+            player.getPackets().sendGameMessage(
+                    "Settlement storage reset: " + player.getSettlementState().getResourceSummary());
+            return true;
+        }
+
+        if ("storageset".equals(operation)) {
+            if (cmd.length < 5) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement storageset <wood|food|stone|basic-ore> <amount>");
+                return true;
+            }
+            SettlementResource resource = SettlementResource.forKey(cmd[3].toLowerCase());
+            if (resource == null) {
+                player.getPackets().sendGameMessage(
+                        "Unknown settlement resource: " + cmd[3] + ".");
+                return true;
+            }
+            final long targetAmount;
+            try {
+                targetAmount = Long.parseLong(cmd[4]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Storage amount must be a whole number.");
+                return true;
+            }
+            int capacity = player.getSettlementState().getStorageCapacity(resource);
+            if (targetAmount < 0L || targetAmount > capacity) {
+                player.getPackets().sendGameMessage(
+                        resource.getDisplayName() + " storage amount must be between 0 and "
+                                + capacity + ".");
+                return true;
+            }
+
+            long current = player.getSettlementState().getResourceAmount(resource);
+            if (current > targetAmount) {
+                player.getSettlementState().removeResource(resource, current - targetAmount);
+            } else if (current < targetAmount) {
+                player.getSettlementState().addResource(resource, targetAmount - current);
+            }
+
+            long actual = player.getSettlementState().getResourceAmount(resource);
+            player.getPackets().sendGameMessage(
+                    "Settlement storage set: " + resource.getDisplayName() + "="
+                            + actual + "/" + capacity + " | "
+                            + player.getSettlementState().getResourceSummary());
             return true;
         }
 
@@ -656,7 +711,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerpreset|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerpreset|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
         return true;
     }
 
