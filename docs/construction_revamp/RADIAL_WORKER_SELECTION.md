@@ -509,6 +509,8 @@ Runtime acceptance should be consolidated into one client/server launch.
 ### verified-static
 
 - RWS-2 press/release remain consumed by Worker Control, while allowing `MOUSE_DRAGGED` through preserves Matrix3's existing cursor/menu update path needed to refresh edge B without adding a second picker.
+- `AbstractModel.method10016()` proves `method1380/method1381` expose horizontal X min/max and `method1384/method1508` expose horizontal Z min/max; RWS-2 now derives the cloned reticule's real base horizontal radius from those bounds before applying instance scale.
+- Desired visual radius is `liveRadiusTiles * tileSize` world units, so the resulting runtime scale makes visual radius equal the A-to-midpoint distance instead of relying on a guessed percent-per-tile mapping.
 - Target reticule uses `Graphics`.
 - `CombatDefinitions.getTargetReticule(Entity)` selects reticule GFX.
 - `LocalNPCUpdate` and `LocalPlayerUpdate` contain dedicated target-reticule masks.
