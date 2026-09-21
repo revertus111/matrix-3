@@ -371,6 +371,8 @@ Phase 2 side slice — Radial Worker Selection RWS-2
 [x] Exact visual-radius source fix: RWS-2 reads the cloned GFX model's real X/Z bounds and computes runtime scale from desired world radius; the former arbitrary `100% per tile` mapping is removed.
 [-] Runtime follow-up: edge A improved, but edge B visibly trailed the cursor because A-to-B span still depended on perspective-sensitive screen-pixel calibration.
 [x] Exact world-geometry source fix: removed pixel-distance/pixels-per-tile selection math; live center/radius now come directly from Matrix3-resolved world A/B coordinates.
+[-] Runtime follow-up: A-side still visibly drifted even with exact world geometry, indicating the GFX mesh origin itself was offset from its horizontal bounds center.
+[x] Model-origin source fix: per-call GFX 4171 clone is recentered on its real X/Z bounds before scaling, eliminating off-center scale drift without changing cache data.
 [ ] Hold/drag across the settlement: mouse-down remains edge A, current resolved world tile acts as edge B, and the reticule center tracks the midpoint so its diameter spans A -> B.
 [ ] Critical edge-pin check: once drag begins, the circumference at edge A never moves backward away from the original mouse-down world point as the circle grows.
 [ ] Continue dragging beyond the old 12-tile radius threshold; the ring continues expanding/repositioning instead of stopping.
