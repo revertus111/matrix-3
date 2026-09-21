@@ -372,12 +372,12 @@ Phase 2 side slice — Radial Worker Selection RWS-2
 
 
 Construction RTS default + pivot orbit
-[-] Opening Construction defaults directly to RTS even after the previous session was switched to Free Build.
-[-] RTS still initializes above terrain with the accepted downward view and no underside/terrain clipping.
-[-] Q/E physically moves the camera around a stable focus pivot instead of rotating orientation in place.
-[-] During a full Q/E orbit, the camera continues looking toward the same pivot and maintains stable pitch/radius without spiraling or height drift.
-[-] W/A/S/D and arrow-key pan move the camera and pivot together; Q/E afterward circles the newly panned area rather than the original pivot.
-[-] Mouse wheel changes orbit distance without shifting the focus pivot or crossing the safe terrain-clipping range.
-[-] Shift fast and Ctrl precision remain useful for RTS pan.
-[-] R / Shift+R still rotate the armed build piece while RTS owns the mouse wheel for zoom.
-[-] Switching to Free Build still restores its accepted mouse-look/Q-E-height behavior; closing/reopening returns to RTS.
+[x] Opening Construction defaults directly to RTS even after the previous session was switched to Free Build.
+[x] RTS still initializes above terrain with the accepted downward view and no underside/terrain clipping.
+[x] Q/E physically moves the camera around a stable focus pivot instead of rotating orientation in place.
+[x] During a full Q/E orbit, the camera continues looking toward the same pivot and maintains stable pitch/radius without spiraling or height drift.
+[x] W/A/S/D and arrow-key pan move the camera and pivot together; Q/E afterward circles the newly panned area rather than the original pivot.
+[x] Mouse wheel changes orbit distance without shifting the focus pivot or crossing the safe terrain-clipping range.
+[x] Shift fast and Ctrl precision remain useful for RTS pan.
+[x] R / Shift+R still rotate the armed build piece while RTS owns the mouse wheel for zoom.
+[x] Switching to Free Build still restores its accepted mouse-look/Q-E-height behavior; closing/reopening returns to RTS.
