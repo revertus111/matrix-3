@@ -16,9 +16,9 @@ import java.awt.event.MouseEvent;
  * registration.
  *
  * Edge A comes from Matrix3's already-resolved action-23 ground tile at mouse
- * press. During the drag, mouse-pixel movement is calibrated against subsequent
- * resolved world-tile changes. The selector renders at the midpoint between
- * edge A and the live edge B, while radius is half of the A-to-B span.
+ * press. Edge B is the current Matrix3-resolved action-23 ground tile while
+ * dragging. Selection geometry is therefore pure world-space geometry: the
+ * selector renders at midpoint(A, B), with radius distance(A, B) / 2.
  */
 public final class ConstructionRadialSelection {
 
@@ -47,11 +47,8 @@ public final class ConstructionRadialSelection {
     private static final int MATRIX3_TILE_ACTION = 23;
     private static final int RETICULE_GFX_ID = 4171;
     private static final int BASE_MODEL_SCALE = 128;
-    private static final float MIN_RADIUS_TILES = 0.25F;
+    private static final float MIN_RADIUS_TILES = 0.0F;
     private static final float MAX_RADIUS_TILES = 64.0F;
-    private static final float DEFAULT_PIXELS_PER_TILE = 48.0F;
-    private static final float MIN_PIXELS_PER_TILE = 8.0F;
-    private static final float MAX_PIXELS_PER_TILE = 320.0F;
     private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x5;
     private static final long HOVER_STALE_MS = 1250L;
 
@@ -83,12 +80,6 @@ public final class ConstructionRadialSelection {
     private static volatile float committedCenterWorldY = -1.0F;
     private static volatile int committedPlane = -1;
     private static volatile float committedRadiusTiles = MIN_RADIUS_TILES;
-
-    private static volatile int anchorMouseX;
-    private static volatile int anchorMouseY;
-    private static volatile int currentMouseX;
-    private static volatile int currentMouseY;
-    private static volatile float pixelsPerTileEstimate = DEFAULT_PIXELS_PER_TILE;
 
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile int lastRenderedScalePercent;
@@ -221,8 +212,7 @@ public final class ConstructionRadialSelection {
         hoveredAtMillis = System.currentTimeMillis();
 
         if (dragging && plane == originPlane) {
-            updateLiveWorldDirection(worldX, worldY);
-            calibratePixelsPerTile(worldX, worldY);
+            updateLiveGeometryFromWorld(worldX, worldY);
         }
     }
 
@@ -377,25 +367,20 @@ public final class ConstructionRadialSelection {
         }
 
         if (mouse.getID() == MouseEvent.MOUSE_DRAGGED && dragging) {
-            currentMouseX = mouse.getX();
-            currentMouseY = mouse.getY();
-            updateLiveRadiusFromMouse();
-
             /*
              * Do not consume drag motion here. Matrix3's existing mouse/menu
-             * path must still see the live cursor position so action-23 ground
-             * hover can keep edge B/world direction current. Press/release
-             * remain consumed, so Worker Control still owns the configured
-             * drag gesture without creating a normal ground click.
+             * path must see the cursor movement and resolve the live action-23
+             * ground tile. observeSceneMenuTile(...) then updates edge B and
+             * all selection geometry directly in world space.
              */
             return;
         }
 
         if (mouse.getID() == MouseEvent.MOUSE_RELEASED && dragging
                 && mouse.getButton() == dragButton.getAwtButton()) {
-            currentMouseX = mouse.getX();
-            currentMouseY = mouse.getY();
-            updateLiveRadiusFromMouse();
+            if (hoveredPlane == originPlane && hoveredWorldX >= 0 && hoveredWorldY >= 0) {
+                updateLiveGeometryFromWorld(hoveredWorldX, hoveredWorldY);
+            }
             commitActiveDrag();
             mouse.consume();
         }
@@ -422,11 +407,6 @@ public final class ConstructionRadialSelection {
         originWorldX = hoveredWorldX;
         originWorldY = hoveredWorldY;
         originPlane = hoveredPlane;
-        anchorMouseX = mouseX;
-        anchorMouseY = mouseY;
-        currentMouseX = mouseX;
-        currentMouseY = mouseY;
-        pixelsPerTileEstimate = DEFAULT_PIXELS_PER_TILE;
         liveCenterWorldX = originWorldX;
         liveCenterWorldY = originWorldY;
         liveRadiusTiles = MIN_RADIUS_TILES;
@@ -438,69 +418,36 @@ public final class ConstructionRadialSelection {
         return true;
     }
 
-    private static void updateLiveWorldDirection(int hoverX, int hoverY) {
-        float worldDx = hoverX - originWorldX;
-        float worldDy = hoverY - originWorldY;
-        float worldDistance = (float) Math.sqrt(worldDx * worldDx + worldDy * worldDy);
-        if (worldDistance < 0.25F) {
-            return;
-        }
-
-        liveDirectionWorldX = worldDx / worldDistance;
-        liveDirectionWorldY = worldDy / worldDistance;
-    }
-
-    private static void calibratePixelsPerTile(int hoverX, int hoverY) {
-        float worldDx = hoverX - originWorldX;
-        float worldDy = hoverY - originWorldY;
-        float worldDistance = (float) Math.sqrt(worldDx * worldDx + worldDy * worldDy);
-        if (worldDistance < 0.75F) {
-            return;
-        }
-
-        int mouseDx = currentMouseX - anchorMouseX;
-        int mouseDy = currentMouseY - anchorMouseY;
-        float pixelDistance = (float) Math.sqrt((float) mouseDx * mouseDx + (float) mouseDy * mouseDy);
-        if (pixelDistance < 4.0F) {
-            return;
-        }
-
-        float estimate = pixelDistance / worldDistance;
-        if (estimate < MIN_PIXELS_PER_TILE) {
-            estimate = MIN_PIXELS_PER_TILE;
-        } else if (estimate > MAX_PIXELS_PER_TILE) {
-            estimate = MAX_PIXELS_PER_TILE;
-        }
-
-        pixelsPerTileEstimate = estimate;
-        updateLiveRadiusFromMouse();
-    }
-
-    private static void updateLiveRadiusFromMouse() {
-        int dx = currentMouseX - anchorMouseX;
-        int dy = currentMouseY - anchorMouseY;
-        float pixelDistance = (float) Math.sqrt((float) dx * dx + (float) dy * dy);
-        float estimate = pixelsPerTileEstimate <= 0.0F ? DEFAULT_PIXELS_PER_TILE : pixelsPerTileEstimate;
-        float spanTiles = pixelDistance / estimate;
+    private static void updateLiveGeometryFromWorld(int edgeBWorldX, int edgeBWorldY) {
+        float worldDx = edgeBWorldX - originWorldX;
+        float worldDy = edgeBWorldY - originWorldY;
+        float spanTiles = (float) Math.sqrt(worldDx * worldDx + worldDy * worldDy);
         float radius = spanTiles * 0.5F;
 
-        if (radius < MIN_RADIUS_TILES) {
-            radius = MIN_RADIUS_TILES;
-        } else if (radius > MAX_RADIUS_TILES) {
+        if (radius > MAX_RADIUS_TILES) {
             radius = MAX_RADIUS_TILES;
         }
 
         liveRadiusTiles = radius;
-        if (liveDirectionWorldX != 0.0F || liveDirectionWorldY != 0.0F) {
-            liveCenterWorldX = originWorldX + liveDirectionWorldX * radius;
-            liveCenterWorldY = originWorldY + liveDirectionWorldY * radius;
+        if (spanTiles > 0.0F) {
+            float directionX = worldDx / spanTiles;
+            float directionY = worldDy / spanTiles;
+            liveDirectionWorldX = directionX;
+            liveDirectionWorldY = directionY;
+            liveCenterWorldX = originWorldX + directionX * radius;
+            liveCenterWorldY = originWorldY + directionY * radius;
         } else {
+            liveDirectionWorldX = 0.0F;
+            liveDirectionWorldY = 0.0F;
             liveCenterWorldX = originWorldX;
             liveCenterWorldY = originWorldY;
         }
+
         lastRenderedCycle = Integer.MIN_VALUE;
-        lastEventState = "RWS-2 dragging center="
-                + formatWorld(liveCenterWorldX) + "," + formatWorld(liveCenterWorldY)
+        lastEventState = "RWS-2 dragging edgeB="
+                + edgeBWorldX + "," + edgeBWorldY
+                + " center=" + formatWorld(liveCenterWorldX) + ","
+                + formatWorld(liveCenterWorldY)
                 + " radius=" + formatRadius(radius) + " tiles.";
     }
 
