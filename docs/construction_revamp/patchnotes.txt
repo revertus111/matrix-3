@@ -698,3 +698,8 @@
 - Runtime scale now uses the centered half-width/half-depth instead of max absolute coordinates from the original off-center origin.
 - This keeps cache definitions untouched and should align the visual center with midpoint(A,B), eliminating scale-induced A-edge drift.
 - Pure world-space A/B geometry, release-hide, Escape and RWS-3 boundary remain unchanged.
+
+2026-09-20 - Bundle 2.2 Pause/Resume runtime verified
+- User confirmed selected-worker Pause Worker / Resume Worker works correctly in the live settlement.
+- Pause/Resume preserves the worker's existing Allowed Jobs policy and is promoted from verified-static to runtime VERIFIED.
+- Bundle 2.2 consolidated runtime pass now advances to Storage Self-Test, Reset All Storage and Prime Wood 99/100.
