@@ -1,0 +1,6 @@
+2026-09-21 - Bundle 1.1 Visual Explorer foundation
+- Added a lazy Visual Explorer Test Console workspace rather than creating another standalone Interface Viewer.
+- Added client-only VisualExplorerCapture with opt-in one-click canvas picking and a bounded 1,024-record current-frame draw registry.
+- Candidate resolution preserves overlapping visuals and returns top-most draw order without changing renderer/cache/gameplay authority.
+- Added Interface Browser reuse and Interface Editor cross-link as the first real asset-family integration.
+- Recorded cursor/interaction icons as the next provider priority so the Goblin hover/Attack visual can be identified without guessing its asset family.

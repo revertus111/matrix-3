@@ -159,3 +159,8 @@
 - Added a dedicated Allowed Jobs card for Worker #1 with Gather Wood/Food/Stone/Basic Ore and Haul checkbox controls.
 - Added Jobs Status, Jobs Self-Test, Enable All Jobs and Disable All Jobs controls.
 - Checkbox clicks send explicit server ON/OFF commands; Jobs Status remains the authoritative saved-state readback.
+
+2026-09-21 - Visual Explorer specialist workspace
+- Added Visual Explorer as a lazy Test Console sub-tab with failure isolation preserved.
+- Specialist ownership lives in docs/visual-explorer/PROJECT.md; Client Console remains only the host/navigation shell.
+- Existing Interface Browser/Editor authority is reused through Visual Explorer rather than duplicated.

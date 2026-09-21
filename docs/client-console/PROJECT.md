@@ -21,7 +21,7 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 ### In scope
 
 - Client Console shell, rail, Dashboard, Owner, Commands, Player, Item Browser, Settings, and small specialist-tool navigation/launch surfaces.
-- Dedicated Client Console navigation for specialist developer workflows such as Client Atlas and Boss Research while preserving their own authorities.
+- Dedicated Client Console navigation for specialist developer workflows such as Client Atlas, Boss Research, and Visual Explorer while preserving their own authorities.
 - Shared Client Console visual primitives and responsive Swing presentation.
 - Client-side bridges that expose existing Matrix3 state/actions without taking ownership from Matrix3 systems.
 - Consolidated developer runtime verification optimized for limited PC time.
@@ -63,6 +63,7 @@ Finish the existing Matrix3 Client Console as a professional, fast, coherent dev
 - Commands uses a search-first `JList` palette while preserving `ClientConsoleBridge.queueConsoleCommand(...)` and dangerous-command confirmation.
 - Client Atlas remains registered through its existing `atlas` panel ID and icon.
 - Boss Research is now a dedicated lazy panel with its own icon/panel ID. It combines the pre-existing brother transform/animation/GFX/finding workflow with the pre-existing RoTS Scan/Deep Scan/Copy/Clear cache-evidence workflow.
+- Test Console now hosts a lazy Visual Explorer specialist tab. Visual Explorer owns its separate docs/visual-explorer/PROJECT.md workstream and reuses Interface Browser/Editor authority rather than expanding Client Console into a renderer/cache owner.
 - Owner no longer imports or hosts boss research/RoTS cache research.
 - `ConsoleTheme` now centralizes title/subtitle/card/value-row/wrapped-text/combo/status/popup/menu primitives in addition to the existing button/text-field/scroll styling.
 - Dashboard, Owner, Player, Settings, and Boss Research use the shared visual primitives. Settings explicitly tracks viewport width for narrow-sidebar wrapping.

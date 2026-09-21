@@ -1,0 +1,33 @@
+Matrix3 Visual Explorer
+
+Phase 1 Bundle 1.1 — workspace + capture contract
+[IMPLEMENTED / NEEDS RUNTIME TEST]
+[x] Test Console contains a lazy Visual Explorer tab.
+[x] Visual Explorer exposes Interfaces, Sprites, Cursors/interaction icons, Overlays, GFX, Models, Textures/Materials and Fonts/Text as one workspace.
+[x] Existing Interface Browser is reused rather than duplicated.
+[x] Open Interface Editor cross-link selects the existing Interfaces tab.
+[x] VisualExplorerCapture is client-only and no-ops while disabled.
+[x] Current-frame capture is bounded to 1,024 records and preserves draw order.
+[x] One-click pick resolves all registered bounds under the picked canvas pixel, top-most first.
+[x] Escape cancels an armed pick.
+[ ] Open Test Console -> Visual Explorer; panel loads and existing Test Console tabs remain usable.
+[ ] Browse All Interfaces opens the current Interface Browser and selecting an ID requests its snapshot.
+[ ] Open Interface Editor switches to the existing Interfaces tab.
+[ ] Enable Capture -> Arm One-Click Pick -> click world ground; PICK x/y is recorded.
+[ ] The armed pick click does not execute the normal world/game action.
+[ ] Arm another pick -> press Escape; pick disarms without a game action.
+[ ] Disable Capture; normal mouse interaction behaves exactly as before.
+[ ] Repeated enable/disable/arm cycles produce one pick each and no duplicate listener behavior.
+
+Phase 1 Bundle 1.2 — cursor / interaction visual attribution
+[READY]
+[ ] Trace the active NPC hover/interaction visual owner from the existing menu/interaction path.
+[ ] Register the smallest proven provider through VisualExplorerCapture.recordDraw(...).
+[ ] Live Pick the Goblin hover/Attack graphic and identify its concrete asset/type/source.
+[ ] Confirm capture-disabled behavior is unchanged.
+
+Phase 1 Bundle 1.3 — sprite browser + generic sprite provider
+[READY]
+[ ] Add sprite ID browse/search/preview.
+[ ] Add copy-ID/open-preview/trace actions.
+[ ] Add only proven shared sprite draw providers; avoid broad renderer instrumentation.

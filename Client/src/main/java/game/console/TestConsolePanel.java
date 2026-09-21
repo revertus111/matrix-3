@@ -23,8 +23,9 @@ public final class TestConsolePanel extends JPanel {
     private static final int TAB_PLAYER = 2;
     private static final int TAB_ITEMS = 3;
     private static final int TAB_INTERFACES = 4;
-    private static final int TAB_ATLAS = 5;
-    private static final int TAB_BOSS_RESEARCH = 6;
+    private static final int TAB_VISUAL_EXPLORER = 5;
+    private static final int TAB_ATLAS = 6;
+    private static final int TAB_BOSS_RESEARCH = 7;
 
     private final JTabbedPane tabs = new JTabbedPane();
 
@@ -33,6 +34,7 @@ public final class TestConsolePanel extends JPanel {
     private JComponent playerPanel;
     private JComponent itemPanel;
     private JComponent interfacePanel;
+    private JComponent visualExplorerPanel;
     private JComponent atlasPanel;
     private JComponent bossResearchPanel;
 
@@ -54,6 +56,7 @@ public final class TestConsolePanel extends JPanel {
         tabs.addTab("Player", placeholder());
         tabs.addTab("Items", placeholder());
         tabs.addTab("Interfaces", placeholder());
+        tabs.addTab("Visual Explorer", placeholder());
         tabs.addTab("Atlas", placeholder());
         tabs.addTab("Boss Research", placeholder());
 
@@ -126,6 +129,16 @@ public final class TestConsolePanel extends JPanel {
                     interfacePanel = new InterfaceEditorPanel();
                 }
                 return interfacePanel;
+            case TAB_VISUAL_EXPLORER:
+                if (visualExplorerPanel == null) {
+                    visualExplorerPanel = new VisualExplorerPanel(new Runnable() {
+                        @Override
+                        public void run() {
+                            tabs.setSelectedIndex(TAB_INTERFACES);
+                        }
+                    });
+                }
+                return visualExplorerPanel;
             case TAB_ATLAS:
                 if (atlasPanel == null) {
                     atlasPanel = new AtlasWorkspacePanel();
