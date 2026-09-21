@@ -437,3 +437,7 @@ Object Lab OBJLAB-1/2 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Save Captured Object appends ID/name/type/rotation/tag/source tile/notes to Server/data/construction/object_lab_catalog.tsv.
 [ ] List Recent Catalog reports newest saved Object Lab entries in game chat.
 [ ] Capture/preview/catalog actions never move, rotate, delete, replace or change collision for ordinary world objects.
+
+Object Lab compile regression follow-up
+[x] Source fix: ObjectLabPreview now defines getPreviewX()/getPreviewY() as source coordinate + preview offset.
+[ ] Eclipse Problems no longer reports undefined getPreviewX()/getPreviewY() methods after pull/refresh.

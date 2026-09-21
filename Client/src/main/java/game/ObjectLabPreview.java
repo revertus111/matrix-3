@@ -194,6 +194,14 @@ public final class ObjectLabPreview {
                 + " preview=" + worldX + "," + worldY + "," + renderPlane;
     }
 
+    private static int getPreviewX() {
+        return sourceX + offsetX;
+    }
+
+    private static int getPreviewY() {
+        return sourceY + offsetY;
+    }
+
     private static int clamp(int value, int min, int max) {
         return value < min ? min : value > max ? max : value;
     }

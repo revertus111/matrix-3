@@ -733,3 +733,8 @@
 - Exact live type/rotation are intentionally not guessed from the existing Dev target payload; Object Probe remains the evidence source for those fields.
 - Added tagged/annotated server-side Object Lab catalog saves to Server/data/construction/object_lab_catalog.tsv plus recent-entry listing.
 - Runtime capture/preview/catalog/non-mutation acceptance remains pending.
+
+2026-09-21 - Object Lab preview coordinate helper compile fix
+- Fixed OBJLAB-1/2 compile regression where preview status paths referenced omitted getPreviewX()/getPreviewY() helpers.
+- Helpers now resolve Source Tile + configured preview offset, matching the existing render-path coordinate math.
+- No renderer, catalog, world-object or Construction gameplay behavior changed.
