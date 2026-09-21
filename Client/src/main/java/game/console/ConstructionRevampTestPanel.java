@@ -59,6 +59,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(16));
         content.add(createRuntimeCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createStorageTestCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createRadialSelectionCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createWorkerSelectorCard());
@@ -123,6 +125,50 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 "Completed Phase-1 and Bundle-2.1 verification controls were removed from this tab. "
                 + "Their server-side commands remain available if a future regression needs them.",
                 3));
+        return card;
+    }
+
+    private JPanel createStorageTestCard() {
+        JPanel card = ConsoleTheme.createCard("Storage Test Controls — Bundle 2.2");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Developer-only controls for the real persistent settlement storage. "
+                + "Reset/Prime mutate the current save; Storage Self-Test is disposable and does not mutate it.",
+                4));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton storageStatus = new JButton("Storage Status");
+        JButton resetStorage = new JButton("Reset All Storage");
+        JButton primeWood = new JButton("Prime Wood 99/100");
+        JButton storageSelfTest = new JButton("Storage Self-Test");
+
+        styleButton(storageStatus);
+        styleButton(resetStorage);
+        styleButton(primeWood);
+        styleButton(storageSelfTest);
+
+        storageStatus.addActionListener(e -> queue(
+                "itembrowser settlement resources",
+                "Storage Status queued. Check game chat for per-resource amounts."));
+        resetStorage.addActionListener(e -> queue(
+                "itembrowser settlement storagereset",
+                "Storage reset queued. Wood/Food/Stone/Basic ore should all become 0."));
+        primeWood.addActionListener(e -> queue(
+                "itembrowser settlement storageset wood 99",
+                "Wood 99/100 prime queued. Pause/idle workers first for a deterministic final-slot retest."));
+        storageSelfTest.addActionListener(e -> queue(
+                "itembrowser settlement resourceselftest",
+                "Storage Self-Test queued. Expect PASS; this test is disposable."));
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(storageStatus);
+        buttons.add(resetStorage);
+        buttons.add(primeWood);
+        buttons.add(storageSelfTest);
+        card.add(buttons);
         return card;
     }
 
