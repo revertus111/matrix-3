@@ -904,7 +904,7 @@ Patch 2.2.12 — persistent worker Pause/Resume:
 - Pausing cancels any in-progress gather target and releases its transient storage reservation. Already-carried cargo remains with the worker, but its reservation is released until work resumes.
 - Needs/recovery remain active while paused so Pause cannot freeze Hunger/Thirst/Energy recovery behavior.
 - Resume continues from the same persistent Allowed Jobs policy.
-- Owner-only `workerpause` command and all-worker/live-AI status expose Pause/Resume server ownership. The later radial UI edits dropped the Con Revamp Pause/Resume buttons; restoring those buttons is recorded as a non-blocking UI carryover rather than being silently treated as present.
+- Owner-only `workerpause` command and restored Con Revamp selected-worker controls expose Pause/Resume; all-worker/live-AI status report pause state. Pause/Resume remains independent of Allowed Jobs.
 - Bundle 2.2 disposable serialization and live persistence snapshots now include independent pause state for both workers.
 
 Patch 2.2.13 — selected-worker role presets:
@@ -976,7 +976,7 @@ Runtime acceptance target:
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; later Top Down/Orbit/Player presets remain non-blocking
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: continue stacking only compatible Bundle 2.2 work before the next launch. Worker Role Presets are now stacked; eventual runtime setup should use Worker #1 Forager / Worker #2 Lumberjack instead of manual checkbox setup. Pause server ownership remains stacked, with its missing Con Revamp buttons recorded as non-blocking UI carryover.
+- Current checklist item: continue stacking only compatible Bundle 2.2 work before the next launch. Worker Role Presets and restored selected-worker Pause/Resume controls are now stacked; eventual runtime setup should use Worker #1 Forager / Worker #2 Lumberjack instead of manual checkbox setup.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
@@ -1021,7 +1021,7 @@ Runtime acceptance target:
 
 - Bundle 2.2 separated storage is verified-static pending runtime: resource definitions own 100 starter capacity each; existing saves retain all stored amounts; worker deposit eligibility and `addResource(...)` clamp by carried/target resource; the disposable resource self-test proves full Wood does not block Food.
 - Bundle 2.2 in-flight reservation fix is verified-static pending runtime: `SettlementInstance` transiently reserves per-worker capacity before gathering, reservation-aware availability excludes other workers' in-flight cargo, authoritative deposit consumes/releases the reservation, and the disposable gate reproduces final-slot same-resource contention without cross-resource blocking.
-- Bundle 2.2 worker Pause/Resume is verified-static pending runtime: pause is persistent worker policy independent of Allowed Jobs; runtime AI cancels productive gathering/reservations while paused but still processes needs; the server command targets stable worker ids and Bundle 2.2 serialization/live snapshots include pause state. Con Revamp Pause/Resume buttons are currently UI carryover after later radial edits.
+- Bundle 2.2 worker Pause/Resume is verified-static pending runtime: pause is persistent worker policy independent of Allowed Jobs; runtime AI cancels productive gathering/reservations while paused but still processes needs; the server command and restored Con Revamp selected-worker controls target stable worker ids; Bundle 2.2 serialization/live snapshots include pause state.
 - Bundle 2.2 Worker Role Presets are verified-static pending runtime: server enum definitions atomically rewrite only the existing Allowed Jobs policy; command/UI target the selected stable worker; matching status is inferred from the allowlist; Bundle 2.2 Self-Test exercises every preset and proves presets do not alter pause state.
 
 - Bundle 2.2 is verified-static pending runtime: worker management commands resolve optional stable worker ids through `SettlementState.findWorker(...)`; Con Revamp routes selected-worker controls to those commands; both `SettlementWorkerNpc` projections continue using independent persistent worker state against synchronized shared settlement storage; `SettlementBundle22FinalGate` covers independent jobs/needs/progression serialization and exact two-worker persistence snapshots.
