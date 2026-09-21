@@ -29,6 +29,13 @@ public final class ConstructionBuildCamera {
     private static final float FAST_SPEED = 3000.0F;
     private static final float PRECISION_SPEED = 400.0F;
 
+    // RTS pan-speed presets are client-session state and intentionally do not
+    // reset when the Construction palette closes/reopens.
+    private static final float[] RTS_MOVE_SPEED_MULTIPLIERS = {
+            0.50F, 0.75F, 1.00F, 1.25F, 1.50F, 2.00F, 2.50F, 3.00F
+    };
+    private static int rtsMoveSpeedIndex = 2;
+
     // Exponential response rates: higher = more immediate.
     private static final float ACCEL_RESPONSE = 10.0F;
     private static final float DECEL_RESPONSE = 7.0F;
@@ -94,6 +101,33 @@ public final class ConstructionBuildCamera {
 
     public static boolean isRtsMode() {
         return cameraMode == CameraMode.RTS;
+    }
+
+    public static float getRtsMoveSpeedMultiplier() {
+        return RTS_MOVE_SPEED_MULTIPLIERS[rtsMoveSpeedIndex];
+    }
+
+    public static String getRtsMoveSpeedLabel() {
+        float multiplier = getRtsMoveSpeedMultiplier();
+        return multiplier == (int) multiplier
+                ? Integer.toString((int) multiplier) + ".0x"
+                : Float.toString(multiplier) + "x";
+    }
+
+    public static void adjustRtsMoveSpeed(int delta) {
+        if (delta == 0) {
+            return;
+        }
+        int next = clamp(rtsMoveSpeedIndex + (delta > 0 ? 1 : -1),
+                0, RTS_MOVE_SPEED_MULTIPLIERS.length - 1);
+        if (next == rtsMoveSpeedIndex) {
+            return;
+        }
+        rtsMoveSpeedIndex = next;
+        clearVelocity();
+        if (active && cameraMode == CameraMode.RTS) {
+            reportToServer("RTS_SPEED " + getRtsMoveSpeedLabel());
+        }
     }
 
     public static void setMode(CameraMode nextMode) {
@@ -375,7 +409,7 @@ public final class ConstructionBuildCamera {
                 float forwardZ = viewDirection.aFloat2657 / planarLength;
                 float rightX = forwardZ;
                 float rightZ = -forwardX;
-                float speed = movementSpeed();
+                float speed = rtsMovementSpeed();
 
                 targetX = (localX * rightX + localZ * forwardX) * speed;
                 targetZ = (localX * rightZ + localZ * forwardZ) * speed;
@@ -583,6 +617,10 @@ public final class ConstructionBuildCamera {
             return FAST_SPEED;
         }
         return NORMAL_SPEED;
+    }
+
+    private static float rtsMovementSpeed() {
+        return movementSpeed() * getRtsMoveSpeedMultiplier();
     }
 
     private static float normalizeRadians(float value) {
