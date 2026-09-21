@@ -177,46 +177,47 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createObjectProbeCard() {
-        JPanel card = ConsoleTheme.createCard("Object / Automation Asset Probe");
+        JPanel card = ConsoleTheme.createCard("Asset Studio / Object Probe");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Stand on or beside a world object to inspect Matrix3's effective live object slots. "
-                + "Scans report ID, name, object type, rotation, tile, size, clipping, animation, map metadata "
-                + "and cached interaction options. Logging is read-only and appends the full result to "
-                + "Server/data/construction/object_catalog.txt.",
+                "Asset Studio is the primary rail/content discovery workflow: capture the live client scene "
+                + "around the player, browse exact ID/type/rotation/slot/tile values, preview a selected object, "
+                + "filter rail candidates and export the whole session without writing values down. "
+                + "The original server Object Probe remains as a diagnostic fallback.",
                 6));
         card.add(Box.createVerticalStrut(8));
 
-        JButton scanTile = new JButton("Scan Current Tile");
-        JButton scanNearby = new JButton("Scan Nearby 3x3");
-        JButton logTile = new JButton("Log Current Tile");
-        JButton logNearby = new JButton("Log Nearby 3x3");
+        JButton studio = new JButton("Open Asset Studio");
+        JButton scanTile = new JButton("Probe Current Tile");
+        JButton scanNearby = new JButton("Probe Nearby 3x3");
+        JButton logNearby = new JButton("Log Probe 3x3");
 
+        styleButton(studio);
         styleButton(scanTile);
         styleButton(scanNearby);
-        styleButton(logTile);
         styleButton(logNearby);
 
+        studio.addActionListener(e -> {
+            ObjectLabWindow.openEmpty();
+            setStatus("Matrix3 Asset Studio opened.");
+        });
         scanTile.addActionListener(e -> queue(
                 "itembrowser objectprobe tile",
-                "Current-tile object probe queued. Check game chat for object details."));
+                "Current-tile diagnostic probe queued."));
         scanNearby.addActionListener(e -> queue(
                 "itembrowser objectprobe nearby",
-                "Nearby 3x3 object probe queued. Check game chat for object details."));
-        logTile.addActionListener(e -> queue(
-                "itembrowser objectprobe logtile",
-                "Current-tile object catalog append queued."));
+                "Nearby 3x3 diagnostic probe queued."));
         logNearby.addActionListener(e -> queue(
                 "itembrowser objectprobe lognearby",
-                "Nearby 3x3 object catalog append queued."));
+                "Nearby 3x3 diagnostic probe log queued."));
 
         JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
         buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(studio);
         buttons.add(scanTile);
         buttons.add(scanNearby);
-        buttons.add(logTile);
         buttons.add(logNearby);
         card.add(buttons);
         return card;

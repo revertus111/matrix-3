@@ -749,3 +749,14 @@
 - User confirmed the Con Revamp Reset All Storage control works correctly at runtime.
 - Persistent Wood/Food/Stone/Basic ore storage clears through the authoritative SettlementState resource APIs.
 - Bundle 2.2 consolidated runtime pass advances to Prime Wood 99/100.
+
+2026-09-21 - Matrix3 Asset Studio v1 capture/session workflow
+- Replaced the manual Object Lab debug-form workflow with a professional capture/session browser while preserving the proven direct-render preview and curated server catalog.
+- Added client-scene capture for Current Tile, +X Tile, 3x3 and 9x9 areas without requiring object interaction or right-click options.
+- Capture reads live Matrix3 Class523 cells and Interface65 identity/type/rotation, deduplicates repeated multi-tile scene references, and records slot/tile/size metadata.
+- Session browser auto-populates the selected object's exact ID/type/rotation into the viewer; manual ID/type transcription is no longer required.
+- Added rail-candidate filtering and automatic suggested tags for track/rail, buffer, cart/truck, signal and loading assets.
+- Added one-click full-session TSV export under Client/data/construction/asset_studio/captures/; notes remain optional.
+- Con Revamp now opens Asset Studio directly; server Object Probe remains a diagnostic fallback.
+- Locked rail UX ownership: captured 1x1 pieces are future auto-tiling primitives; player-facing rail construction will drag Point A -> Point B rather than place rails tile-by-tile.
+- Runtime capture accuracy, multi-tile dedupe, viewer preview, filtering and export remain pending.

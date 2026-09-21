@@ -441,3 +441,19 @@ Object Lab OBJLAB-1/2 — IMPLEMENTED / NEEDS RUNTIME TEST
 Object Lab compile regression follow-up
 [x] Source fix: ObjectLabPreview now defines getPreviewX()/getPreviewY() as source coordinate + preview offset.
 [ ] Eclipse Problems no longer reports undefined getPreviewX()/getPreviewY() methods after pull/refresh.
+
+Matrix3 Asset Studio v1 — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Con Revamp -> Open Asset Studio opens the new wide session-browser UI without requiring Dev Mode or an object right-click.
+[ ] Capture Current Tile lists every live scene object on the player's tile with exact ID/type/rotation/slot/tile values.
+[ ] Capture +X Tile captures the world-X+1 tile for quick adjacent-object testing.
+[ ] Capture 3x3 around the coal-truck rail area returns rail floor-decoration pieces plus overlapping cart/floor objects in one session.
+[ ] Capture 9x9 gathers the surrounding switch/curve area in one action without chat-log/manual transcription.
+[ ] Multi-tile floor objects appear once per live object rather than once per occupied scene cell.
+[ ] Selecting a session row auto-populates exact ID/type/captured rotation and direct-renders the selected object at the configured preview offset.
+[ ] Previous/Next browses the current filtered table; Hide Preview removes the direct-render model.
+[ ] Rail candidates only hides unrelated objects while retaining type-22 floor-decoration/rail/track candidates.
+[ ] Suggested tags classify obvious rail candidate/buffer/cart/signal/loading names without requiring notes.
+[ ] Export Session writes the full current session to Client/data/construction/asset_studio/captures/capture_*.tsv.
+[ ] Save Selected to Catalog still queues the existing server-side curated catalog using the exact captured type/rotation/tile.
+[ ] Capture/session/preview/export actions do not move, rotate, replace, attach, delete or alter collision for live world objects.
+[ ] Architecture acceptance: the tool is used to author/verify a rail kit; future player rail construction remains Point-A-to-Point-B drag with auto-tiling, not manual tile placement.

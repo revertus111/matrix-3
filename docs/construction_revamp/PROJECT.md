@@ -946,7 +946,8 @@ Runtime acceptance target:
 
 Early asset-discovery tooling is intentionally pulled forward without advancing the Phase-4 gameplay gate:
 - Object / Automation Asset Probe is IMPLEMENTED / NEEDS RUNTIME TEST. It reads effective live object slots from the player's current tile or nearby 3x3 area and can append candidate IDs/types/rotations/definition metadata to `Server/data/construction/object_catalog.txt`. It is read-only and exists to identify track/cart/loading assets before persistent rail gameplay is defined.
-- Object Lab OBJLAB-1/2 is IMPLEMENTED / NEEDS RUNTIME TEST. Dev-inspected object identity can be captured into a dedicated viewer, direct-rendered through Matrix3's normal object model factory at an adjustable nearby tile without scene registration, and saved with tags/notes to `Server/data/construction/object_lab_catalog.tsv`. Exact live map type/rotation remains owned by Object Probe evidence rather than guessed from the current Dev target payload.
+- Matrix3 Asset Studio v1 (superseding the debug-form Object Lab workflow) is IMPLEMENTED / NEEDS RUNTIME TEST. It captures live client-scene objects around the player without requiring object interaction, reads exact ID/type/rotation from Matrix3 scene objects, deduplicates multi-tile scene references, browses the capture as a session table, auto-populates the direct-render viewer, filters rail candidates and exports the entire session to `Client/data/construction/asset_studio/captures/`. The server Object Probe remains a diagnostic cross-check rather than the primary workflow.
+- Rail build UX decision: individual 1x1 rail objects are internal authoring/auto-tiling primitives, not the intended player-facing placement unit. The future Construction rail tool will drag Point A -> Point B and choose/place the required straight/curve/switch primitives automatically from the verified Asset Studio rail kit.
 
 - Minecart tracks.
 - Loading/unloading points.
@@ -986,7 +987,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Persistent-runtime bundle: 2.2 — multi-worker control + concurrent work
 - Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
-- Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Object / Automation Asset Probe IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
+- Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
 - Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. Pause/Resume, Storage Self-Test and Reset All Storage passed at runtime; next unfinished gate is `Prime Wood 99/100`.
@@ -1183,7 +1184,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active persistent-runtime bundle:** Bundle 2.2 — multi-worker control + concurrent work (IMPLEMENTED / NEEDS RUNTIME TEST).
 
-**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry. RWS-4 visual preflight now includes the GFX 4187 double-ring recolor probe (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling: Object / Automation Asset Probe and Object Lab OBJLAB-1/2 are IMPLEMENTED / NEEDS RUNTIME TEST for track/cart asset discovery and tagged preview/catalog capture.
+**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry. RWS-4 visual preflight now includes the GFX 4187 double-ring recolor probe (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling: Matrix3 Asset Studio v1 is IMPLEMENTED / NEEDS RUNTIME TEST for interaction-free scene capture, session browsing, rail-candidate filtering, direct-render preview and bulk session export; the older Object Probe remains a diagnostic fallback. Future rail gameplay remains A-to-B drag/auto-tiling, not manual 1x1 placement.
 
 **Next checklist item:** Retest RWS-2 ring-body calibration first: press edge A -> drag across several tiles -> confirm the circular ring circumference, not the decorative diamonds, keeps A fixed while the opposite ring edge tracks B. If PASS, close RWS-2 and continue RWS-3. The GFX 4187 Original/Color A/Color B probe remains queued as separate RWS-4 visual preflight.
 
