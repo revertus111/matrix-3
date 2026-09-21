@@ -106,6 +106,9 @@ public final class ConstructionPlacementController {
         hoverTracking = true;
         clearHoveredTile();
         ConstructionGhostPreview.beginDebugSession();
+        // Construction always opens in RTS management view. Free Build remains
+        // available as an explicit palette switch for close-up placement work.
+        ConstructionBuildCamera.setMode(ConstructionBuildCamera.CameraMode.RTS);
         ConstructionBuildCamera.enter();
         status = DevModeBridge.cancelPlacement();
         if ("No placement is armed.".equals(status)) {
