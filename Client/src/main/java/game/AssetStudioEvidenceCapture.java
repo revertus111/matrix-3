@@ -100,13 +100,14 @@ public final class AssetStudioEvidenceCapture {
             try {
                 ImageIO.write(annotated, "png", pngTemp.toFile());
                 Files.write(tsvTemp, lines, StandardCharsets.UTF_8);
-                Files.move(pngTemp, png, StandardCopyOption.ATOMIC_MOVE);
-                Files.move(tsvTemp, tsv, StandardCopyOption.ATOMIC_MOVE);
-            } catch (Exception atomicFailure) {
-                Files.deleteIfExists(png);
-                Files.deleteIfExists(tsv);
                 Files.move(pngTemp, png, StandardCopyOption.REPLACE_EXISTING);
                 Files.move(tsvTemp, tsv, StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception writeFailure) {
+                // Never leave a half-pair behind. A failed evidence transaction
+                // is cleaned up and the next click receives a fresh sequence id.
+                Files.deleteIfExists(png);
+                Files.deleteIfExists(tsv);
+                throw writeFailure;
             } finally {
                 Files.deleteIfExists(pngTemp);
                 Files.deleteIfExists(tsvTemp);

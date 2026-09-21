@@ -786,3 +786,7 @@
 - Asset Studio hides during the desktop capture and restores afterward; direct-render preview is hidden so it cannot contaminate the evidence image.
 - Capture remains read-only: no scene registration, object mutation, collision, cache, server, save-schema or rail gameplay changes.
 - Runtime acceptance must verify paired filenames, screenshot visibility/scaling and index mapping on the known rail area.
+
+2026-09-21 - Asset Studio evidence pair write hardening
+- Replaced the partial atomic-move fallback with fail-clean pair finalization: if either PNG/TSV final move fails, both final outputs are removed and temp files are cleaned.
+- Prevents a rare half-pair/missing-temp state while preserving deterministic capture numbering and read-only scene ownership.
