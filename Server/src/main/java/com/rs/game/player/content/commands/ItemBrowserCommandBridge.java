@@ -18,6 +18,7 @@ import com.rs.game.player.content.construction.SettlementBundle14FinalGate;
 import com.rs.game.player.content.construction.SettlementBundle15FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle22FinalGate;
 import com.rs.game.player.content.construction.SettlementInstance;
+import com.rs.game.player.content.construction.SettlementObjectCatalog;
 import com.rs.game.player.content.construction.SettlementObjectProbe;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementPopulationCheck;
@@ -72,6 +73,9 @@ public final class ItemBrowserCommandBridge {
         }
         if (cmd != null && cmd.length >= 2 && "objectprobe".equalsIgnoreCase(cmd[1])) {
             return processObjectProbe(player, cmd);
+        }
+        if (cmd != null && cmd.length >= 2 && "objectlab".equalsIgnoreCase(cmd[1])) {
+            return processObjectLab(player, cmd);
         }
         if (cmd != null && cmd.length >= 2 && "devspawn".equalsIgnoreCase(cmd[1])) {
             return processDevSpawn(player, cmd);
@@ -129,6 +133,54 @@ public final class ItemBrowserCommandBridge {
                     ? "Unable to add that item to your bank (bank may be full)."
                     : "Unable to add that item to your inventory (inventory may be full or restricted)." );
         }
+        return true;
+    }
+
+    private static boolean processObjectLab(Player player, String[] cmd) {
+        if (cmd == null || cmd.length < 3) {
+            player.getPackets().sendGameMessage("Use: ::itembrowser objectlab <save|list> ...");
+            return true;
+        }
+        String operation = cmd[2].toLowerCase();
+        if ("list".equals(operation)) {
+            for (String line : SettlementObjectCatalog.listRecent(12))
+                player.getPackets().sendGameMessage(line);
+            return true;
+        }
+        if ("save".equals(operation)) {
+            if (cmd.length < 11) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser objectlab save <id> <type> <rotation> <tag> <x> <y> <plane> <notes64>");
+                return true;
+            }
+            final int id, type, rotation, x, y, plane;
+            try {
+                id = Integer.parseInt(cmd[3]);
+                type = Integer.parseInt(cmd[4]);
+                rotation = Integer.parseInt(cmd[5]);
+                x = Integer.parseInt(cmd[7]);
+                y = Integer.parseInt(cmd[8]);
+                plane = Integer.parseInt(cmd[9]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage(
+                        "Object Lab id/type/rotation/source tile values must be whole numbers.");
+                return true;
+            }
+            String notes = "";
+            if (!"-".equals(cmd[10])) {
+                try {
+                    notes = new String(java.util.Base64.getUrlDecoder().decode(cmd[10]),
+                            java.nio.charset.StandardCharsets.UTF_8);
+                } catch (IllegalArgumentException ex) {
+                    player.getPackets().sendGameMessage("Object Lab notes payload is invalid.");
+                    return true;
+                }
+            }
+            player.getPackets().sendGameMessage(
+                    SettlementObjectCatalog.save(id, type, rotation, cmd[6], x, y, plane, notes));
+            return true;
+        }
+        player.getPackets().sendGameMessage("Use: ::itembrowser objectlab <save|list> ...");
         return true;
     }
 

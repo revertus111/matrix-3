@@ -946,6 +946,7 @@ Runtime acceptance target:
 
 Early asset-discovery tooling is intentionally pulled forward without advancing the Phase-4 gameplay gate:
 - Object / Automation Asset Probe is IMPLEMENTED / NEEDS RUNTIME TEST. It reads effective live object slots from the player's current tile or nearby 3x3 area and can append candidate IDs/types/rotations/definition metadata to `Server/data/construction/object_catalog.txt`. It is read-only and exists to identify track/cart/loading assets before persistent rail gameplay is defined.
+- Object Lab OBJLAB-1/2 is IMPLEMENTED / NEEDS RUNTIME TEST. Dev-inspected object identity can be captured into a dedicated viewer, direct-rendered through Matrix3's normal object model factory at an adjustable nearby tile without scene registration, and saved with tags/notes to `Server/data/construction/object_lab_catalog.tsv`. Exact live map type/rotation remains owned by Object Probe evidence rather than guessed from the current Dev target payload.
 
 - Minecart tracks.
 - Loading/unloading points.
@@ -1180,7 +1181,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active persistent-runtime bundle:** Bundle 2.2 — multi-worker control + concurrent work (IMPLEMENTED / NEEDS RUNTIME TEST).
 
-**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry. RWS-4 visual preflight now includes the GFX 4187 double-ring recolor probe (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling: Object / Automation Asset Probe IMPLEMENTED / NEEDS RUNTIME TEST for track/cart asset discovery.
+**Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry. RWS-4 visual preflight now includes the GFX 4187 double-ring recolor probe (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling: Object / Automation Asset Probe and Object Lab OBJLAB-1/2 are IMPLEMENTED / NEEDS RUNTIME TEST for track/cart asset discovery and tagged preview/catalog capture.
 
 **Next checklist item:** Retest RWS-2 ring-body calibration first: press edge A -> drag across several tiles -> confirm the circular ring circumference, not the decorative diamonds, keeps A fixed while the opposite ring edge tracks B. If PASS, close RWS-2 and continue RWS-3. The GFX 4187 Original/Color A/Color B probe remains queued as separate RWS-4 visual preflight.
 

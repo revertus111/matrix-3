@@ -58,6 +58,7 @@ public class Class578 {
 					ConstructionGhostPreview.debugClass578RenderCall();
 				ConstructionGhostPreview.render(scene, Class272_Sub2.aClass106_9517);
 				ConstructionRadialSelection.render(scene, Class272_Sub2.aClass106_9517);
+				ObjectLabPreview.render(scene, Class272_Sub2.aClass106_9517);
 			}
 		}
 		class531.aClass456_Sub1_5929 = null;

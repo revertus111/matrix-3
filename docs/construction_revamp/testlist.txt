@@ -427,3 +427,13 @@ Phase 2 side slice — GFX 4187 worker-status recolor probe
 [ ] Visual classification: record whether A/B correspond cleanly to outer ring vs inner ring; if not, classify the asset as unsuitable for independent selection/needs recolor instead of guessing.
 [ ] 4187 Probe Status reports sampled A/B packed colours with face counts plus DRAW gfx=4187 and the active recolor mapping.
 [ ] Hide 4187 Probe removes the visual; enabling Worker Control afterward restores normal RWS-2 drag ownership and GFX 4171 behavior.
+
+Object Lab OBJLAB-1/2 — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Dev Mode -> Inspect Object -> Capture in Object Lab opens the viewer with the same object ID/name/source tile.
+[ ] Enter Object Probe-confirmed type/rotation and Show Preview; the selected model direct-renders at Source Tile + Offset.
+[ ] Rotate 0-3 and change X/Y offsets; only the client preview changes and the real source object remains unchanged.
+[ ] Hide Preview removes the model immediately.
+[ ] Wrong/unsupported type reports MODEL_NULL/unsupported state instead of mutating world/cache state; the correct type restores rendering.
+[ ] Save Captured Object appends ID/name/type/rotation/tag/source tile/notes to Server/data/construction/object_lab_catalog.tsv.
+[ ] List Recent Catalog reports newest saved Object Lab entries in game chat.
+[ ] Capture/preview/catalog actions never move, rotate, delete, replace or change collision for ordinary world objects.

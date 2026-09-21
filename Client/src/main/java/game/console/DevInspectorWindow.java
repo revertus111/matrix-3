@@ -46,6 +46,7 @@ public final class DevInspectorWindow {
     private final JButton cancelPlacementButton = new JButton("Cancel placement");
     private final JButton copyIdButton = new JButton("Copy ID");
     private final JButton copyTileButton = new JButton("Copy tile coordinates");
+    private final JButton objectLabButton = new JButton("Capture in Object Lab");
 
     private DevTarget target;
 
@@ -237,11 +238,24 @@ public final class DevInspectorWindow {
                 copyTile();
             }
         });
+        configureActionButton(objectLabButton, new Runnable() {
+            @Override
+            public void run() {
+                if (target == null || target.getType() != TargetType.OBJECT) {
+                    statusLabel.setText("Object Lab capture requires an object target.");
+                    return;
+                }
+                ObjectLabWindow.open(target);
+                statusLabel.setText("Captured object in Object Lab.");
+            }
+        });
 
         card.add(Box.createVerticalStrut(9));
         card.add(copyIdButton);
         card.add(Box.createVerticalStrut(7));
         card.add(copyTileButton);
+        card.add(Box.createVerticalStrut(7));
+        card.add(objectLabButton);
         return card;
     }
 
@@ -308,6 +322,7 @@ public final class DevInspectorWindow {
         cancelPlacementButton.setEnabled(true);
         copyIdButton.setEnabled(validId);
         copyTileButton.setEnabled(true);
+        objectLabButton.setEnabled(validId && object);
         statusLabel.setText("Target updated from the live Matrix3 right-click menu.");
     }
 

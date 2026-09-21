@@ -725,3 +725,11 @@
 - Non-AbstractModel renderer models use a bounded 0.80 GFX-4171 ring/body fallback instead of the full decorative-marker extent.
 - World A/B midpoint geometry, model recentering, cache isolation, release-hide and Escape behavior are unchanged.
 - Acceptance now explicitly checks the circular ring circumference against A/B; decorative diamonds are allowed to extend outside that radius.
+
+2026-09-21 - Object Lab OBJLAB-1/2
+- Added Dev Inspector -> Capture in Object Lab for live object ID/name/source-tile capture without mutating normal map objects.
+- Added a dedicated Object Lab viewer with explicit object type/rotation and X/Y preview-offset controls.
+- Added client-only direct-render preview through Matrix3 ObjectDefinitions.method6057(...) / Model.method1375(...); previews never register with Class523 and own no collision/persistence.
+- Exact live type/rotation are intentionally not guessed from the existing Dev target payload; Object Probe remains the evidence source for those fields.
+- Added tagged/annotated server-side Object Lab catalog saves to Server/data/construction/object_lab_catalog.tsv plus recent-entry listing.
+- Runtime capture/preview/catalog/non-mutation acceptance remains pending.
