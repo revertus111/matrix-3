@@ -1168,7 +1168,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry.
 
-**Next checklist item:** Retest RWS-2 after exact model-bounds scaling: Enable Worker Control -> press at edge A -> drag diagonally across the settlement and confirm the circumference at edge A does not move backward at all while the opposite side follows edge B -> verify midpoint/diameter behavior across short and long drags -> continue past the former 12-tile stop -> drag back -> release and confirm the ring hides while committed edge A/center/radius remain. If PASS, mark RWS-2 DONE and continue to RWS-3 worker detection/live preview.
+**Next checklist item:** Retest RWS-2 with pure world-space A/B geometry: press at edge A -> drag across multiple world tiles -> confirm A stays pinned and the opposite circumference tracks the current resolved world tile B -> verify midpoint movement and natural shrink/reposition -> release and confirm committed edge A/center/radius remain. Tile-step updates are acceptable for this geometry pass; smooth sub-tile interpolation can be polished afterward without changing ownership.
 
 **Files/systems already inspected:**
 
