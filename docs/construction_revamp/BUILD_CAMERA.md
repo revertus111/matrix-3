@@ -147,6 +147,8 @@ Default Construction camera.
 - Q/E changes yaw and repositions the camera around the stored pivot at the current orbit distance; this is an orbital turn like the vanilla player camera rather than first-person in-place rotation.
 - Mouse wheel changes orbit distance inside the accepted safe range while keeping the same pivot.
 - Shift fast / Ctrl precision modifiers remain active.
+- Palette header `- / +` controls select RTS pan multipliers `0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x, 2.5x, 3.0x`; `1.0x` is default and the selection survives Construction close/reopen for the current client session.
+- The multiplier applies only to RTS pan and scales normal, Shift-fast and Ctrl-precision speeds together; Free Build movement constants remain unchanged.
 - Free Build remains an explicit palette option for close-up detached movement and mouse-look.
 
 The RTS base view/orientation and the default-open + pivot-orbit revision are runtime VERIFIED.
