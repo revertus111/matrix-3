@@ -358,8 +358,8 @@ Implementation:
 - dedicated client-side Worker Control mode
 - configurable Left mouse / Right mouse drag ownership
 - press captures the current Matrix3-resolved world ground tile as fixed edge A and is consumed by Worker Control
-- AWT drag movement estimates the live A-to-B world span continuously between tile boundaries
-- drag-motion events are intentionally NOT consumed so Matrix3's existing mouse/menu path can keep resolving the action-23 ground hover used as edge B/world direction
+- drag-motion events are intentionally NOT consumed so Matrix3's existing mouse/menu path can keep resolving the action-23 ground hover used as edge B
+- selection span no longer uses AWT pixel distance or pixels-per-tile calibration; live A-to-B distance comes directly from the resolved world coordinates
 - release remains consumed by Worker Control, preventing the owned gesture from becoming a normal ground click
 - later action-23 world-hover changes recalibrate pixels-per-tile against exact world distance and update the live world direction
 - the reticule center is a fractional world-space midpoint and moves continuously along the A-to-B line
