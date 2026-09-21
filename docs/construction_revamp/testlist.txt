@@ -336,7 +336,7 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Reset All Storage reports Wood=0/100, Food=0/100, Stone=0/100 and Basic ore=0/100. User confirmed the control works correctly at runtime.
 [x] With workers paused/idle, Prime Wood 99/100 reports Wood=99/100 without changing Food/Stone/Basic ore. User confirmed the control works correctly at runtime.
 [ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
-[ ] Bundle 2.2 Self-Test returns PASS.
+[x] Bundle 2.2 Self-Test returns PASS. Runtime PASS covered per-resource storage isolation, in-flight reservation race protection, all worker role presets, worker-id targeting, independent pause/jobs/needs/progression and two-worker serialization.
 [ ] Select Worker #1 -> apply Forager; select Worker #2 -> apply Lumberjack. Jobs Status reports Preset=Forager / Preset=Lumberjack with the exact Food+Haul / Wood+Haul allowlists.
 [ ] All Worker Status shows both workers actively following their independent jobs; Wood and Food storage increase independently with per-resource `amount/100` readback.
 [ ] Concurrent final-slot retest: as Wood reaches 100/100, no worker becomes stranded mid-haul with excess Wood because another worker consumed its expected slot; the losing worker must fail/skip reservation before creating new cargo, while Food continues independently.
