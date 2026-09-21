@@ -357,8 +357,10 @@ Implementation:
 
 - dedicated client-side Worker Control mode
 - configurable Left mouse / Right mouse drag ownership
-- press captures the current Matrix3-resolved world ground tile as fixed edge A
+- press captures the current Matrix3-resolved world ground tile as fixed edge A and is consumed by Worker Control
 - AWT drag movement estimates the live A-to-B world span continuously between tile boundaries
+- drag-motion events are intentionally NOT consumed so Matrix3's existing mouse/menu path can keep resolving the action-23 ground hover used as edge B/world direction
+- release remains consumed by Worker Control, preventing the owned gesture from becoming a normal ground click
 - later action-23 world-hover changes recalibrate pixels-per-tile against exact world distance and update the live world direction
 - the reticule center is a fractional world-space midpoint and moves continuously along the A-to-B line
 - the reticule radius is half of the live A-to-B span
@@ -500,9 +502,11 @@ Runtime acceptance should be consolidated into one client/server launch.
 - The reticule remained world/terrain anchored across visibly different camera framing/zoom during the runtime test.
 - Runtime scaling therefore proves the intended single-asset radial-selection foundation is viable.
 - RWS-2 input architecture reuses Matrix3's already-resolved action-23 ground tile for edge A/world-direction calibration and the proven global AWT event-listener pattern for temporary mouse ownership; no second scene picker is introduced.
+- Runtime video of the first midpoint implementation verified a failure mode: radius changed with cursor distance, but the ring center stayed nearly fixed because the global listener consumed `MOUSE_DRAGGED` before Matrix3 could refresh the action-23 hover tile.
 
 ### verified-static
 
+- RWS-2 press/release remain consumed by Worker Control, while allowing `MOUSE_DRAGGED` through preserves Matrix3's existing cursor/menu update path needed to refresh edge B without adding a second picker.
 - Target reticule uses `Graphics`.
 - `CombatDefinitions.getTargetReticule(Entity)` selects reticule GFX.
 - `LocalNPCUpdate` and `LocalPlayerUpdate` contain dedicated target-reticule masks.
