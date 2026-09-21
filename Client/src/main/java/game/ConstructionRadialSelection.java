@@ -293,21 +293,30 @@ public final class ConstructionRadialSelection {
         }
 
         /*
-         * Scale from the reticule model's real horizontal bounds instead of
-         * assuming an arbitrary percent-per-tile ratio. The desired visual
-         * radius is drawRadius * tileSize world units. Because the transform
-         * center already sits drawRadius tiles from edge A, matching these two
-         * distances guarantees the rendered circumference at edge A stays
-         * pinned while edge B moves outward.
+         * GFX 4171 is not guaranteed to be centered on its model-space origin.
+         * Scaling an off-center clone around (0, 0, 0) makes one visual edge
+         * drift even when the world-space midpoint/radius math is exact.
+         *
+         * Recenter the per-call clone on its real X/Z bounds first, then scale
+         * from the centered half-extents. This keeps the model's visual center
+         * aligned with midpoint(A, B), so the circumference at edge A remains
+         * fixed while edge B moves.
          */
         int minX = model.method1380();
         int maxX = model.method1381();
         int minZ = model.method1384();
         int maxZ = model.method1508();
-        int baseRadiusUnits = Math.max(
-                Math.max(Math.abs(minX), Math.abs(maxX)),
-                Math.max(Math.abs(minZ), Math.abs(maxZ)));
-        if (baseRadiusUnits <= 0) {
+
+        int modelCenterX = (minX + maxX) / 2;
+        int modelCenterZ = (minZ + maxZ) / 2;
+        if (modelCenterX != 0 || modelCenterZ != 0) {
+            model.method1358(-modelCenterX, 0, -modelCenterZ);
+        }
+
+        float halfWidthX = (maxX - minX) * 0.5F;
+        float halfWidthZ = (maxZ - minZ) * 0.5F;
+        float baseRadiusUnits = Math.max(halfWidthX, halfWidthZ);
+        if (baseRadiusUnits <= 0.0F) {
             lastRenderState = "FAIL GFX " + RETICULE_GFX_ID + " zero horizontal bounds";
             return;
         }
@@ -325,7 +334,8 @@ public final class ConstructionRadialSelection {
         lastRenderState = "DRAW gfx=" + RETICULE_GFX_ID
                 + " radius=" + formatRadius(drawRadius)
                 + " scale=" + lastRenderedScalePercent + "%"
-                + " baseRadiusUnits=" + baseRadiusUnits
+                + " baseRadiusUnits=" + formatRadius(baseRadiusUnits)
+                + " modelOffset=" + modelCenterX + "," + modelCenterZ
                 + " center=" + formatWorld(drawWorldX) + "," + formatWorld(drawWorldY)
                 + "," + drawPlane;
     }
