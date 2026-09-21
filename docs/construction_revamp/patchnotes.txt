@@ -760,3 +760,8 @@
 - Con Revamp now opens Asset Studio directly; server Object Probe remains a diagnostic fallback.
 - Locked rail UX ownership: captured 1x1 pieces are future auto-tiling primitives; player-facing rail construction will drag Point A -> Point B rather than place rails tile-by-tile.
 - Runtime capture accuracy, multi-tile dedupe, viewer preview, filtering and export remain pending.
+
+2026-09-21 - Bundle 2.2 Prime Wood 99/100 runtime verified
+- User confirmed the Con Revamp Prime Wood 99/100 control works correctly at runtime.
+- Storage Self-Test, Reset All Storage and Prime Wood 99/100 are now all runtime VERIFIED.
+- Bundle 2.2 consolidated runtime pass advances to Bundle 2.2 Self-Test, then role-preset/concurrent-production acceptance.
