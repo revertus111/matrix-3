@@ -45,6 +45,7 @@ public final class SettlementWorkerNpc extends NPC {
     private int nextGatherIndex;
     private SettlementWorkerNeed activeNeed;
     private int recoveryTicksRemaining;
+    private boolean emergencyFoodForage;
     private String statusDetail = "No allowed gathering job.";
 
     public SettlementWorkerNpc(SettlementInstance settlement,
@@ -236,6 +237,9 @@ public final class SettlementWorkerNpc extends NPC {
         carriedAmount -= (int) added;
         if (carriedAmount <= 0) {
             String deposited = carriedResource.getDisplayName();
+            if (emergencyFoodForage && carriedResource == SettlementResource.FOOD) {
+                emergencyFoodForage = false;
+            }
             carriedResource = null;
             carriedAmount = 0;
             workState = WorkState.IDLE;
@@ -244,6 +248,15 @@ public final class SettlementWorkerNpc extends NPC {
     }
 
     private boolean processNeeds() {
+        if (emergencyFoodForage) {
+            if (canEmergencyForageFood()) {
+                activeNeed = null;
+                recoveryTicksRemaining = 0;
+                return false;
+            }
+            emergencyFoodForage = false;
+        }
+
         if (recoveryTicksRemaining > 0) {
             recoveryTicksRemaining--;
             if (recoveryTicksRemaining <= 0) {
@@ -281,11 +294,19 @@ public final class SettlementWorkerNpc extends NPC {
         switch (activeNeed) {
         case HUNGER:
             if (settlement.consumeWorkerResource(SettlementResource.FOOD, 1L) != 1L) {
+                if (canEmergencyForageFood()) {
+                    activeNeed = null;
+                    emergencyFoodForage = true;
+                    workState = WorkState.IDLE;
+                    statusDetail = "No stored Food; emergency foraging.";
+                    return false;
+                }
                 workState = WorkState.IDLE;
                 statusDetail = "No Food; work stopped at Hunger "
                         + workerState.getNeed(SettlementWorkerNeed.HUNGER) + ".";
                 return true;
             }
+            emergencyFoodForage = false;
             workerState.recoverFromMeal();
             workState = WorkState.EATING;
             recoveryTicksRemaining = EAT_TICKS;
@@ -352,6 +373,17 @@ public final class SettlementWorkerNpc extends NPC {
         if (nodes.length == 0) {
             return null;
         }
+        if (emergencyFoodForage) {
+            for (SettlementResourceNode node : nodes) {
+                if (node.getResource() == SettlementResource.FOOD
+                        && workerState.isJobAllowed(SettlementWorkerJob.GATHER_FOOD)
+                        && settlement.hasWorkerStorageSpace(workerId, SettlementResource.FOOD)
+                        && settlement.isStarterResourceNodeAvailable(node)) {
+                    return node;
+                }
+            }
+            return null;
+        }
         for (int offset = 0; offset < nodes.length; offset++) {
             int index = (nextGatherIndex + offset) % nodes.length;
             SettlementResourceNode node = nodes[index];
@@ -363,6 +395,23 @@ public final class SettlementWorkerNpc extends NPC {
             }
         }
         return null;
+    }
+
+    private boolean canEmergencyForageFood() {
+        if (workerState.isPaused()
+                || !workerState.needsFood()
+                || !workerState.isJobAllowed(SettlementWorkerJob.GATHER_FOOD)
+                || !workerState.isJobAllowed(SettlementWorkerJob.HAUL)
+                || !settlement.hasWorkerStorageSpace(workerId, SettlementResource.FOOD)) {
+            return false;
+        }
+        for (SettlementResourceNode node : SettlementResourceNode.values()) {
+            if (node.getResource() == SettlementResource.FOOD
+                    && settlement.isStarterResourceNodeAvailable(node)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean hasAllowedGatheringJob() {
