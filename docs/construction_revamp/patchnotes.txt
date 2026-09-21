@@ -682,3 +682,10 @@
 - Prime Wood 99/100 provides a fast setup for the final-slot reservation regression; deterministic use expects workers paused/idle before priming.
 - Storage Self-Test reuses the existing disposable SettlementResourceSelfTest and does not mutate persistent player storage.
 - Runtime verification remains deferred to the consolidated Bundle 2.2 pass.
+
+2026-09-20 - Adjustable RTS pan speed
+- Added RTS-only movement-speed presets: 0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x.
+- Added compact -/+ controls to the Construction palette header; the RTS button displays the active multiplier.
+- Selected RTS speed persists for the current client session across Construction close/reopen and is not reset with camera orbit state.
+- Normal, Shift-fast and Ctrl-precision RTS pan speeds all scale from the selected multiplier; Free Build movement remains unchanged.
+- Static changed-file checks passed; runtime feel, preset clamping, modifier scaling and session retention remain to verify.
