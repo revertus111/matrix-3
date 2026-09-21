@@ -362,7 +362,9 @@ Phase 2 side slice — Radial Worker Selection RWS-2
 [-] Historical pre-midpoint runtime proof: dragging inward shrank smoothly while remaining centered on the original press point; this geometry is intentionally superseded.
 [-] First midpoint runtime video: radius grew correctly but the center stayed nearly fixed while the cursor moved diagonally; this exposed stale edge-B direction because RWS-2 consumed drag motion before Matrix3 could refresh action-23 hover.
 [x] Follow-up source fix: drag-motion is no longer consumed; press/release remain owned so the existing Matrix3 hover resolver can receive cursor movement without creating a second picker.
+[x] Exact visual-radius source fix: RWS-2 reads the cloned GFX model's real X/Z bounds and computes runtime scale from desired world radius; the former arbitrary `100% per tile` mapping is removed.
 [ ] Hold/drag across the settlement: mouse-down remains edge A, current drag location acts as edge B, and the reticule center visibly tracks the midpoint so its diameter spans A -> B.
+[ ] Critical edge-pin check: once drag begins, the circumference at edge A never moves backward away from the original mouse-down world point as the circle grows.
 [ ] Continue dragging beyond the old 12-tile radius threshold; the ring continues expanding/repositioning instead of stopping.
 [ ] Drag back toward edge A and around it; the ring shrinks/repositions naturally without snapping back to the old fixed-center behavior.
 [ ] Release commits the final center/radius data and hides the large area ring immediately; Radial Status still reports the committed edge A/center/radius for RWS-3.
