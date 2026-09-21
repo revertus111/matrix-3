@@ -47,7 +47,6 @@ public final class ConstructionRadialSelection {
     private static final int MATRIX3_TILE_ACTION = 23;
     private static final int RETICULE_GFX_ID = 4171;
     private static final int BASE_MODEL_SCALE = 128;
-    private static final float SCALE_PERCENT_PER_TILE = 100.0F;
     private static final float MIN_RADIUS_TILES = 0.25F;
     private static final float MAX_RADIUS_TILES = 64.0F;
     private static final float DEFAULT_PIXELS_PER_TILE = 48.0F;
@@ -92,6 +91,7 @@ public final class ConstructionRadialSelection {
     private static volatile float pixelsPerTileEstimate = DEFAULT_PIXELS_PER_TILE;
 
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
+    private static volatile int lastRenderedScalePercent;
     private static volatile String lastEventState = "RWS-2 Worker Control disabled.";
     private static volatile String lastRenderState = "not rendered";
     private static boolean inputListenerInstalled;
@@ -174,7 +174,7 @@ public final class ConstructionRadialSelection {
                     .append(" center=").append(formatWorld(liveCenterWorldX)).append(',')
                     .append(formatWorld(liveCenterWorldY))
                     .append(" radius=").append(formatRadius(liveRadiusTiles)).append(" tiles")
-                    .append(" scale=").append(radiusToScalePercent(liveRadiusTiles)).append('%');
+                    .append(" scale=").append(lastRenderedScalePercent).append('%');
         } else if (committed) {
             status.append(" | COMMITTED edgeA=")
                     .append(committedStartWorldX).append(',').append(committedStartWorldY)
@@ -182,7 +182,7 @@ public final class ConstructionRadialSelection {
                     .append(" center=").append(formatWorld(committedCenterWorldX)).append(',')
                     .append(formatWorld(committedCenterWorldY))
                     .append(" radius=").append(formatRadius(committedRadiusTiles)).append(" tiles")
-                    .append(" scale=").append(radiusToScalePercent(committedRadiusTiles)).append('%');
+                    .append(" scale=").append(lastRenderedScalePercent).append('%');
         } else {
             status.append(" | no committed radius");
         }
@@ -302,16 +302,40 @@ public final class ConstructionRadialSelection {
             return;
         }
 
+        /*
+         * Scale from the reticule model's real horizontal bounds instead of
+         * assuming an arbitrary percent-per-tile ratio. The desired visual
+         * radius is drawRadius * tileSize world units. Because the transform
+         * center already sits drawRadius tiles from edge A, matching these two
+         * distances guarantees the rendered circumference at edge A stays
+         * pinned while edge B moves outward.
+         */
+        int minX = model.method1380();
+        int maxX = model.method1381();
+        int minZ = model.method1384();
+        int maxZ = model.method1508();
+        int baseRadiusUnits = Math.max(
+                Math.max(Math.abs(minX), Math.abs(maxX)),
+                Math.max(Math.abs(minZ), Math.abs(maxZ)));
+        if (baseRadiusUnits <= 0) {
+            lastRenderState = "FAIL GFX " + RETICULE_GFX_ID + " zero horizontal bounds";
+            return;
+        }
+
+        float desiredRadiusUnits = drawRadius * tileSize;
         int runtimeScale = Math.max(1,
-                Math.round(BASE_MODEL_SCALE * (radiusToScalePercent(drawRadius) / 100.0F)));
+                Math.round(BASE_MODEL_SCALE * desiredRadiusUnits / baseRadiusUnits));
         model.method1464(runtimeScale, BASE_MODEL_SCALE, runtimeScale);
+        lastRenderedScalePercent = Math.max(1,
+                Math.round(runtimeScale * 100.0F / BASE_MODEL_SCALE));
 
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
 
         lastRenderState = "DRAW gfx=" + RETICULE_GFX_ID
                 + " radius=" + formatRadius(drawRadius)
-                + " scale=" + radiusToScalePercent(drawRadius) + "%"
+                + " scale=" + lastRenderedScalePercent + "%"
+                + " baseRadiusUnits=" + baseRadiusUnits
                 + " center=" + formatWorld(drawWorldX) + "," + formatWorld(drawWorldY)
                 + "," + drawPlane;
     }
@@ -509,10 +533,6 @@ public final class ConstructionRadialSelection {
         lastEventState = committed
                 ? "RWS-2 drag cancelled; previous committed radius preserved."
                 : "RWS-2 drag cancelled.";
-    }
-
-    private static int radiusToScalePercent(float radiusTiles) {
-        return Math.max(25, Math.round(radiusTiles * SCALE_PERCENT_PER_TILE));
     }
 
     private static String formatRadius(float radius) {
