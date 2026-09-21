@@ -356,7 +356,14 @@ public final class ConstructionRadialSelection {
             currentMouseX = mouse.getX();
             currentMouseY = mouse.getY();
             updateLiveRadiusFromMouse();
-            mouse.consume();
+
+            /*
+             * Do not consume drag motion here. Matrix3's existing mouse/menu
+             * path must still see the live cursor position so action-23 ground
+             * hover can keep edge B/world direction current. Press/release
+             * remain consumed, so Worker Control still owns the configured
+             * drag gesture without creating a normal ground click.
+             */
             return;
         }
 
