@@ -361,8 +361,8 @@ Implementation:
 - drag-motion events are intentionally NOT consumed so Matrix3's existing mouse/menu path can keep resolving the action-23 ground hover used as edge B
 - selection span no longer uses AWT pixel distance or pixels-per-tile calibration; live A-to-B distance comes directly from the resolved world coordinates
 - release remains consumed by Worker Control, preventing the owned gesture from becoming a normal ground click
-- later action-23 world-hover changes recalibrate pixels-per-tile against exact world distance and update the live world direction
-- the reticule center is a fractional world-space midpoint and moves continuously along the A-to-B line
+- action-23 world-hover changes update live edge B directly; there is no remaining pixels-per-tile calibration in RWS-2 geometry
+- the reticule center is a fractional world-space midpoint and moves along the A-to-B line at resolved-world-tile granularity
 - the reticule radius is half of the live A-to-B span
 - runtime model scale is derived from the cloned GFX model's actual X/Z bounds (`method1380/method1381/method1384/method1508`), converting the desired world radius into an exact `Model.method1464(...)` scale
 - before scaling, the per-call GFX clone is recentered with `Model.method1358(...)` using the midpoint of its real X/Z bounds; this removes model-origin bias that otherwise makes one visual edge drift during scale
