@@ -328,7 +328,13 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Role Preset ownership: applying a preset changes only Allowed Jobs and leaves Pause, Needs, identity and progression untouched.
 [x] Role Preset command/UI: `workerpreset [workerId] <preset-key>` targets the stable worker id; Con Revamp exposes a selected-worker preset dropdown + Apply button and Jobs/All Worker Status infer Preset=<name> or Custom.
 [x] Role Preset self-test: Bundle 2.2 cycles through all six definitions, verifies exact round-trip matching, then serializes Worker #1 as Forager and Worker #2 as Lumberjack without changing independent pause/needs/progression.
+[x] Storage test command source: owner-only `storagereset` empties all four resources through `removeResource`; `storageset <resource> <amount>` adjusts exactly through existing add/remove APIs and rejects values outside that resource's capacity.
+[x] Storage test UI: Con Revamp exposes Storage Status, Reset All Storage, Prime Wood 99/100 and Storage Self-Test; buttons are non-focusable through existing styling.
+[x] Storage Self-Test button reuses disposable `SettlementResourceSelfTest` and does not mutate the player's persistent storage.
 
+[ ] Storage Self-Test returns PASS from the Con Revamp button.
+[ ] Reset All Storage reports Wood=0/100, Food=0/100, Stone=0/100 and Basic ore=0/100.
+[ ] With workers paused/idle, Prime Wood 99/100 reports Wood=99/100 without changing Food/Stone/Basic ore.
 [ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
 [ ] Bundle 2.2 Self-Test returns PASS.
 [ ] Select Worker #1 -> apply Forager; select Worker #2 -> apply Lumberjack. Jobs Status reports Preset=Forager / Preset=Lumberjack with the exact Food+Haul / Wood+Haul allowlists.
