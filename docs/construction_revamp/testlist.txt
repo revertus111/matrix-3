@@ -361,7 +361,7 @@ Phase 2 side slice — Radial Worker Selection RWS-2
 [x] Source ownership: Worker Control is client-only and owns only temporary radial input/visual state; worker identity, AI, commands, persistence and combat remain untouched.
 [x] Input ownership: configured press/release are consumed only while Worker Control owns a valid-ground drag; `MOUSE_DRAGGED` is deliberately passed through so Matrix3 can keep its action-23 ground hover current.
 [x] Ground ownership: drag origin reuses the current action-23 Matrix3-resolved world tile; no second scene/world picker is introduced.
-[x] Geometry source: mouse-down is edge A; calibrated AWT drag length is the A-to-B diameter, live radius is half that span, and the reticule renders at a fractional world-space midpoint derived from the resolved hover direction.
+[x] Geometry source: mouse-down is edge A, current action-23 world tile is edge B, live radius is exact world distance(A,B)/2, and the reticule renders at midpoint(A,B); no screen-pixel calibration remains.
 [x] Geometry source: the old 12-tile radius stop is replaced by a 64-tile safety cap, large enough to be non-limiting across the 64x64 starter settlement.
 [x] Escape cancels only the active drag and preserves the previous committed center/radius; Disable Worker Control stops input ownership.
 [-] Historical pre-midpoint runtime proof: Left-mouse hold/drag input and smooth scaling worked, but the press point incorrectly acted as the circle center.
