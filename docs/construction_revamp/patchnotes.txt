@@ -666,3 +666,12 @@
 - Because center offset from edge A and rendered visual radius now represent the same world-space distance, the starting circumference is pinned by construction instead of moving backward.
 - Existing midpoint/half-span geometry, drag passthrough, 64-tile safety cap, release-hide and Escape behavior remain unchanged.
 - Client-only scope retained; focused runtime acceptance still gates RWS-3.
+
+
+2026-09-20 - RWS-2 pure world-space A/B geometry
+- Runtime clip showed edge A pinning improved but edge B still lagged the cursor because selection span was still estimated from AWT pixel distance.
+- Removed pixels-per-tile calibration and all screen-distance ownership from radial selection geometry.
+- Edge A is the mouse-down Matrix3-resolved world tile; edge B is the current Matrix3-resolved world tile; center is midpoint(A,B); radius is distance(A,B)/2.
+- Exact model-bounds scaling remains in place, so rendered visual radius matches the world-space geometric radius.
+- Current updates occur at Matrix3 resolved-tile granularity; optional sub-tile smoothing is deferred until the A/B geometry is runtime accepted.
+- Client-only scope retained; RWS-3 remains blocked on this focused acceptance.
