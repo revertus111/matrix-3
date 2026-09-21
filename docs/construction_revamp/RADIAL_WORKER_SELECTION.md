@@ -411,6 +411,29 @@ Status: PLANNED
 Goal:
 Show selected workers using RuneScape-native visual feedback.
 
+#### GFX 4187 double-ring visual preflight
+
+User-selected candidate: GFX `4187`, a visible red/yellow double-ring reticule.
+
+Implemented probe:
+
+- client-only; does not enter combat or mutate the cache definition
+- reuses the proven Construction immediate-render seam
+- loads a per-call GFX 4187 model clone with `0x80000` colour-copy isolation
+- samples the clone's packed face-colour array when the active renderer exposes `AbstractModel`
+- ignores `0xFFFF` sentinel faces and ranks the remaining colours by face count
+- `Color A` and `Color B` independently call `Model.method1393(...)` on the two most frequent sampled colours
+- A/B use deliberately obvious diagnostic replacement colours only; they are not final hunger/thirst/energy colours
+- Probe Status reports the sampled packed colours/counts and render/recolor state
+
+Runtime question:
+
+- Do Color A and Color B map cleanly enough to the visible outer/inner rings that those rings can be independently recolored?
+- If yes, GFX 4187 can remain the base visual candidate for selection + worker-needs presentation.
+- If not, do not force the asset; retain the proven custom-render fallback for independent status arcs.
+
+Probe status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
 Requirements:
 
 - preview marker during drag

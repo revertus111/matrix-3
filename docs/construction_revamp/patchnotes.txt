@@ -710,3 +710,8 @@
 - Added read-only catalog logging to `Server/data/construction/object_catalog.txt`; full scans append while in-game chat remains bounded.
 - Added Con Revamp Scan Current Tile / Scan Nearby 3x3 / Log Current Tile / Log Nearby 3x3 controls for track/cart/automation asset discovery.
 - Static implementation complete; runtime scan/log acceptance remains pending.
+2026-09-20 - GFX 4187 worker-status recolor probe
+- Added a client-only RWS-4 visual preflight for the user-selected red/yellow double-ring GFX 4187.
+- Probe samples the per-call clone's most frequent non-sentinel packed face colours and can recolor Color A or Color B independently through Model.method1393(...).
+- Existing 0x80000 model flags isolate face-colour storage on the clone; cache definitions, combat target state, worker AI and server persistence remain unchanged.
+- Con Revamp now exposes Original / Color A / Color B / Status / Hide controls; runtime must determine whether A/B map cleanly to the outer and inner rings.

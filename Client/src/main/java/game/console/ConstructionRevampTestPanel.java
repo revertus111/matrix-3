@@ -65,6 +65,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createRadialSelectionCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createReticule4187ProbeCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createWorkerSelectorCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createAllowedJobsCard());
@@ -287,6 +289,66 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(disable);
         buttons.add(radialStatus);
         buttons.add(clear);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createReticule4187ProbeCard() {
+        JPanel card = ConsoleTheme.createCard("GFX 4187 Worker Status Recolor Probe");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Client-only RWS-4 preflight for the red/yellow double-ring candidate. "
+                + "Original samples the cloned model's visible packed face colours. "
+                + "Color A and Color B independently replace the two most frequent non-sentinel colours "
+                + "on the isolated per-call clone so we can see whether the inner and outer rings are independently addressable. "
+                + "The probe temporarily disables Worker Control while visible; move the mouse over valid world ground.",
+                7));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton original = new JButton("Show 4187 Original");
+        JButton colorA = new JButton("Highlight Color A");
+        JButton colorB = new JButton("Highlight Color B");
+        JButton probeStatus = new JButton("4187 Probe Status");
+        JButton hide = new JButton("Hide 4187 Probe");
+
+        styleButton(original);
+        styleButton(colorA);
+        styleButton(colorB);
+        styleButton(probeStatus);
+        styleButton(hide);
+
+        original.addActionListener(e -> {
+            ConstructionRadialSelection.setReticule4187ProbeMode(
+                    ConstructionRadialSelection.Reticule4187ProbeMode.ORIGINAL);
+            setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus());
+        });
+        colorA.addActionListener(e -> {
+            ConstructionRadialSelection.setReticule4187ProbeMode(
+                    ConstructionRadialSelection.Reticule4187ProbeMode.COLOR_A);
+            setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus());
+        });
+        colorB.addActionListener(e -> {
+            ConstructionRadialSelection.setReticule4187ProbeMode(
+                    ConstructionRadialSelection.Reticule4187ProbeMode.COLOR_B);
+            setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus());
+        });
+        probeStatus.addActionListener(e ->
+                setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus()));
+        hide.addActionListener(e -> {
+            ConstructionRadialSelection.setReticule4187ProbeMode(
+                    ConstructionRadialSelection.Reticule4187ProbeMode.OFF);
+            setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus());
+        });
+
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 126));
+        buttons.add(original);
+        buttons.add(colorA);
+        buttons.add(colorB);
+        buttons.add(probeStatus);
+        buttons.add(hide);
         card.add(buttons);
         return card;
     }
