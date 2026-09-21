@@ -23,7 +23,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 is ACTIVE: Bundle 2.1 population capacity + Worker #2 persistence is runtime VERIFIED; Bundle 2.2 multi-worker targeting/control/concurrent-work management is implemented and awaiting one consolidated runtime pass. Historical diagnostics and zero-Food Hunger resupply remain non-blocking carryover only.
+- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 is ACTIVE: Bundle 2.1 population capacity + Worker #2 persistence is runtime VERIFIED; Bundle 2.2 multi-worker targeting/control/concurrent-work management is in its consolidated runtime pass. Selected-worker Pause/Resume is runtime VERIFIED; remaining storage/preset/concurrency/persistence gates are still pending. Historical diagnostics and zero-Food Hunger resupply remain non-blocking carryover only.
 - Current user-prioritized side slice: Radial Worker Selection RWS-1 is RUNTIME VERIFIED; RWS-2 input/scaling foundation is runtime proven. Pure world-space A/B geometry is now in place, and the remaining visual A-edge drift was traced to GFX 4171's model-space origin not matching its horizontal bounds center. The per-call clone is now recentered on its real X/Z bounds before exact-radius scaling; focused runtime acceptance remains before RWS-3.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
@@ -984,12 +984,14 @@ Runtime acceptance target:
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: continue stacking only compatible Bundle 2.2 work before the next launch. Worker Role Presets, restored selected-worker Pause/Resume controls, and Storage Test Controls are stacked; the eventual runtime pass can reset/prime storage directly instead of waiting for resource totals.
+- Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. Pause/Resume passed at runtime; next unfinished gate is Con Revamp `Storage Self-Test`, followed by Reset All Storage and Prime Wood 99/100.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
 
 ### VERIFIED
+
+- Bundle 2.2 selected-worker Pause/Resume is runtime VERIFIED: Pause Worker stops the selected worker's productive work, Resume Worker restarts it, and the worker retains its existing Allowed Jobs policy; the user confirmed the controls work correctly in the live settlement.
 
 - Construction Editor implementation commit is `09cd35fec87defd0f49ef8000f49eca3523f112e` on Matrix3 `main`.
 - Construction Editor opens and functions in the live Matrix3 Client Console.
@@ -1029,7 +1031,6 @@ Runtime acceptance target:
 
 - Bundle 2.2 separated storage is verified-static pending runtime: resource definitions own 100 starter capacity each; existing saves retain all stored amounts; worker deposit eligibility and `addResource(...)` clamp by carried/target resource; the disposable resource self-test proves full Wood does not block Food.
 - Bundle 2.2 in-flight reservation fix is verified-static pending runtime: `SettlementInstance` transiently reserves per-worker capacity before gathering, reservation-aware availability excludes other workers' in-flight cargo, authoritative deposit consumes/releases the reservation, and the disposable gate reproduces final-slot same-resource contention without cross-resource blocking.
-- Bundle 2.2 worker Pause/Resume is verified-static pending runtime: pause is persistent worker policy independent of Allowed Jobs; runtime AI cancels productive gathering/reservations while paused but still processes needs; the server command and restored Con Revamp selected-worker controls target stable worker ids; Bundle 2.2 serialization/live snapshots include pause state.
 - Bundle 2.2 Worker Role Presets are verified-static pending runtime: server enum definitions atomically rewrite only the existing Allowed Jobs policy; command/UI target the selected stable worker; matching status is inferred from the allowlist; Bundle 2.2 Self-Test exercises every preset and proves presets do not alter pause state.
 - Bundle 2.2 storage test controls are verified-static pending runtime: owner-only reset/set commands mutate only the existing SettlementState resource APIs with exact capacity bounds; Con Revamp exposes status/reset/99-Wood prime plus the disposable real Resource Self-Test.
 
