@@ -393,3 +393,11 @@ Construction RTS default + pivot orbit
 [x] Shift fast and Ctrl precision remain useful for RTS pan.
 [x] R / Shift+R still rotate the armed build piece while RTS owns the mouse wheel for zoom.
 [x] Switching to Free Build still restores its accepted mouse-look/Q-E-height behavior; closing/reopening returns to RTS.
+
+Construction RTS adjustable pan speed
+[-] Palette header shows the current RTS speed multiplier with -/+ controls.
+[-] RTS speed steps clamp correctly across 0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x.
+[-] Changing the multiplier immediately changes WASD/arrow pan speed without affecting Q/E orbit radius/pitch or wheel zoom.
+[-] Shift-fast and Ctrl-precision remain relative to the selected RTS multiplier.
+[-] Closing/reopening Construction preserves the selected multiplier for the current client session.
+[-] Free Build movement speed remains unchanged by the RTS multiplier.
