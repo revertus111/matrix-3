@@ -14,11 +14,11 @@ This system should feel native to RuneScape/Matrix3 rather than like a detached 
 
 1. Player enters Worker Control mode.
 2. Player presses and holds the configured mouse button on valid ground.
-3. The initial world position becomes the selection origin.
-4. Moving the mouse away from the origin changes the selection radius continuously.
-5. A circular ground reticule expands/shrinks with the cursor.
-6. Workers currently inside the radius receive live selection feedback.
-7. Releasing the mouse commits the selection.
+3. The initial world position becomes selection edge A.
+4. The current dragged world position becomes edge B.
+5. The circular reticule continuously moves to the midpoint between A and B while its radius becomes half of the A-to-B distance.
+6. Workers currently inside the live circle receive selection feedback.
+7. Releasing the mouse commits the final center/radius selection geometry.
 8. Escape/cancel aborts the drag without changing the current selection.
 
 Conceptually:
@@ -26,17 +26,17 @@ Conceptually:
 ```text
 Mouse Down
     ↓
-Selection origin
+Edge A
 
 Drag
     ↓
-World-space distance from origin to hovered ground position
+Edge B
 
-Radius
+Midpoint(A, B) + distance(A, B) / 2
     ↓
-Scale ground reticule
+Move + scale ground reticule
 
-Workers inside radius
+Workers inside live circle
     ↓
 Preview as selected
 
@@ -53,23 +53,25 @@ Selection must be calculated in WORLD SPACE, not screen pixels.
 
 Required values:
 
-- selectionOriginX
-- selectionOriginY
-- currentHoverX
-- currentHoverY
+- startWorldX / startWorldY (edge A)
+- currentWorldX / currentWorldY (edge B)
+- centerWorldX / centerWorldY
 - radius
 
 Example:
 
 ```text
-radius = distance(selectionOrigin, currentHover)
+center = midpoint(startWorld, currentWorld)
+radius = distance(startWorld, currentWorld) / 2
 ```
 
 Worker membership:
 
 ```text
-distance(selectionOrigin, workerPosition) <= radius
+distance(center, workerPosition) <= radius
 ```
+
+The press point is therefore one edge of the circular selection, not the center. Dragging across the settlement makes the circle span from the press location to the current dragged location.
 
 This ensures the selection radius remains correct regardless of:
 
@@ -355,10 +357,13 @@ Implementation:
 
 - dedicated client-side Worker Control mode
 - configurable Left mouse / Right mouse drag ownership
-- press captures the current Matrix3-resolved world ground tile as the fixed origin
-- AWT drag movement updates the radius continuously between tile boundaries
-- later action-23 world-hover changes recalibrate pixels-per-tile against exact world distance so the visual remains world-scale based rather than a pure screen-space circle
-- release commits origin + radius
+- press captures the current Matrix3-resolved world ground tile as fixed edge A
+- AWT drag movement estimates the live A-to-B world span continuously between tile boundaries
+- later action-23 world-hover changes recalibrate pixels-per-tile against exact world distance and update the live world direction
+- the reticule center is a fractional world-space midpoint and moves continuously along the A-to-B line
+- the reticule radius is half of the live A-to-B span
+- the former 12-tile radius stop is replaced by a 64-tile safety cap, which is non-limiting for the 64x64 starter settlement
+- release commits edge A + final center + radius
 - Escape cancels only the active drag and preserves the previous committed radius
 - release commits origin + radius data but immediately hides the large area reticule; only active drag renders the area ring
 - committed radius remains available internally for RWS-3 worker resolution even though the area ring is hidden after release
@@ -367,12 +372,14 @@ Implementation:
 
 Requirements:
 
-- mouse down captures origin
-- mouse movement updates radius
-- mouse release commits
+- mouse down captures edge A
+- mouse movement updates edge B, midpoint and half-span radius
+- the ring spans from A to B rather than expanding equally around A
+- long normal settlement drags do not stop at the old 12-tile radius
+- mouse release commits final center/radius data
 - release hides the large area reticule immediately
 - Escape cancels
-- ring grows/shrinks smoothly
+- dragging back shrinks/repositions the ring naturally
 
 Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
@@ -462,8 +469,11 @@ Runtime acceptance should be consolidated into one client/server launch.
 - [ ] Worker Control mode activates safely
 - [ ] Ground press establishes selection origin
 - [ ] Reticule appears at correct world location
-- [ ] Dragging outward expands reticule smoothly
-- [ ] Dragging inward shrinks reticule smoothly
+- [ ] Mouse-down point remains edge A while current drag point acts as edge B
+- [ ] Reticule center tracks the A/B midpoint and diameter spans A -> B
+- [ ] Dragging outward expands/repositions reticule smoothly
+- [ ] Dragging inward shrinks/repositions reticule smoothly
+- [ ] Dragging beyond the old 12-tile radius continues normally
 - [ ] Camera rotation does not change world radius
 - [ ] Camera zoom does not change world radius
 - [ ] Workers entering radius preview as selected
@@ -489,7 +499,7 @@ Runtime acceptance should be consolidated into one client/server launch.
 - The same reticule model runtime-scaled cleanly from 25% through at least 725% without switching GFX IDs.
 - The reticule remained world/terrain anchored across visibly different camera framing/zoom during the runtime test.
 - Runtime scaling therefore proves the intended single-asset radial-selection foundation is viable.
-- RWS-2 input architecture reuses Matrix3's already-resolved action-23 ground tile for the world anchor and the proven global AWT event-listener pattern for temporary mouse ownership; no second scene picker is introduced.
+- RWS-2 input architecture reuses Matrix3's already-resolved action-23 ground tile for edge A/world-direction calibration and the proven global AWT event-listener pattern for temporary mouse ownership; no second scene picker is introduced.
 
 ### verified-static
 
