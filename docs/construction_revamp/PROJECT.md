@@ -990,13 +990,14 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. Pause/Resume and all Storage Test Controls are runtime VERIFIED; next unfinished gate is the Bundle 2.2 Self-Test, followed by role-preset/concurrent-production acceptance.
+- Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. Pause/Resume, all Storage Test Controls, and the Bundle 2.2 Self-Test are runtime VERIFIED; next unfinished gate is role-preset/concurrent-production acceptance, then baseline capture/persistence checks.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
 
 ### VERIFIED
 
+- Bundle 2.2 Self-Test is runtime VERIFIED: runtime PASS covered per-resource storage isolation, in-flight reservation race protection, all worker role presets, stable worker-id targeting, independent pause/jobs/needs/progression, and two-worker serialization.
 - Bundle 2.2 Prime Wood 99/100 is runtime VERIFIED: the Con Revamp developer control sets Wood to 99/100 correctly without requiring manual gathering, completing runtime acceptance of the storage test-control slice.
 - Bundle 2.2 Reset All Storage is runtime VERIFIED: the Con Revamp control successfully clears persistent Wood/Food/Stone/Basic ore storage through the existing authoritative SettlementState resource APIs.
 - Bundle 2.2 Storage Self-Test is runtime VERIFIED: Con Revamp `Storage Self-Test` returned PASS for per-resource storage add/remove/capacity isolation plus the four starter-node definitions. The disposable test does not mutate the player's persistent settlement storage.
