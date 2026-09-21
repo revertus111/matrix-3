@@ -295,6 +295,29 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(presetRow);
         card.add(Box.createVerticalStrut(8));
 
+        JButton pauseWorker = new JButton("Pause Worker");
+        JButton resumeWorker = new JButton("Resume Worker");
+        styleButton(pauseWorker);
+        styleButton(resumeWorker);
+
+        pauseWorker.addActionListener(e -> queue(
+                "itembrowser settlement workerpause " + selectedWorkerId() + " on",
+                "Pause queued for Worker #" + selectedWorkerId()
+                        + ". Allowed Jobs remain unchanged."));
+        resumeWorker.addActionListener(e -> queue(
+                "itembrowser settlement workerpause " + selectedWorkerId() + " off",
+                "Resume queued for Worker #" + selectedWorkerId()
+                        + ". Existing Allowed Jobs will resume."));
+
+        JPanel pauseRow = new JPanel(new GridLayout(1, 2, 7, 7));
+        pauseRow.setOpaque(false);
+        pauseRow.setAlignmentX(LEFT_ALIGNMENT);
+        pauseRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        pauseRow.add(pauseWorker);
+        pauseRow.add(resumeWorker);
+        card.add(pauseRow);
+        card.add(Box.createVerticalStrut(8));
+
         JPanel checks = new JPanel(new GridLayout(0, 1, 4, 4));
         checks.setOpaque(false);
         checks.setAlignmentX(LEFT_ALIGNMENT);
