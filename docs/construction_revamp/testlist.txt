@@ -355,12 +355,16 @@ Phase 2 side slice — Radial Worker Selection RWS-2
 [x] Source ownership: Worker Control is client-only and owns only temporary radial input/visual state; worker identity, AI, commands, persistence and combat remain untouched.
 [x] Input ownership: only the configured Left/Right mouse button is consumed, only while Worker Control is enabled and a valid-ground drag starts on the Matrix3 game Canvas.
 [x] Ground ownership: drag origin reuses the current action-23 Matrix3-resolved world tile; no second scene/world picker is introduced.
-[x] Radius math: mouse movement is continuous; subsequent resolved world-tile changes recalibrate pixels-per-tile against exact origin-to-hover world distance, keeping the committed radius expressed in world tiles.
-[x] Escape cancels only the active drag and preserves the previous committed radius; Disable Worker Control stops input ownership.
-[x] Runtime verified: Left-mouse Worker Control drag stays fixed at press origin and expands smoothly with mouse movement.
-[x] Runtime verified: dragging inward before release shrinks smoothly while remaining centered on the original press point.
-[ ] Release commits the radius data and hides the large area ring immediately; Radial Status still reports the committed origin/radius for the next selection phase.
-[ ] Radial Status reports COMMITTED with sensible origin, world-tile radius and matching scale percentage.
+[x] Geometry source: mouse-down is edge A; calibrated AWT drag length is the A-to-B diameter, live radius is half that span, and the reticule renders at a fractional world-space midpoint derived from the resolved hover direction.
+[x] Geometry source: the old 12-tile radius stop is replaced by a 64-tile safety cap, large enough to be non-limiting across the 64x64 starter settlement.
+[x] Escape cancels only the active drag and preserves the previous committed center/radius; Disable Worker Control stops input ownership.
+[-] Historical pre-midpoint runtime proof: Left-mouse hold/drag input and smooth scaling worked, but the press point incorrectly acted as the circle center.
+[-] Historical pre-midpoint runtime proof: dragging inward shrank smoothly while remaining centered on the original press point; this geometry is intentionally superseded.
+[ ] Hold/drag across the settlement: mouse-down remains edge A, current drag location acts as edge B, and the reticule center visibly tracks the midpoint so its diameter spans A -> B.
+[ ] Continue dragging beyond the old 12-tile radius threshold; the ring continues expanding/repositioning instead of stopping.
+[ ] Drag back toward edge A and around it; the ring shrinks/repositions naturally without snapping back to the old fixed-center behavior.
+[ ] Release commits the final center/radius data and hides the large area ring immediately; Radial Status still reports the committed edge A/center/radius for RWS-3.
+[ ] Radial Status reports COMMITTED with sensible edge A, midpoint center, world-tile radius and matching scale percentage.
 [ ] Start a second drag, change its size, press Escape before release; second drag disappears and the previous committed radius is restored unchanged.
 [ ] Switch to Right mouse and repeat a short drag; right-click context behavior is suppressed only for the owned drag while Worker Control is enabled.
 [ ] Disable Worker Control; radial input stops owning the configured mouse button and normal RuneScape ground interaction/context behavior returns.
