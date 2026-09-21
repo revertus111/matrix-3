@@ -657,3 +657,12 @@
 - Drag-motion is now passed through to Matrix3; Worker Control still consumes the configured press and release, so the owned drag cannot become a normal ground click.
 - Existing midpoint/half-span math, fractional world rendering, 64-tile safety cap, release-hide and Escape behavior are unchanged.
 - Client-only scope retained; requires one focused runtime retest before RWS-3.
+
+
+2026-09-20 - RWS-2 exact edge-A visual pinning
+- Runtime clarification showed edge A still drifted backward, meaning the reticule was still visually scaling around its center despite midpoint movement.
+- Removed the arbitrary 100%-per-tile scale assumption.
+- RWS-2 now reads the cloned GFX 4171 model's actual horizontal X/Z bounds and converts desired world radius (`radiusTiles * tileSize`) into the exact per-instance `Model.method1464(...)` scale.
+- Because center offset from edge A and rendered visual radius now represent the same world-space distance, the starting circumference is pinned by construction instead of moving backward.
+- Existing midpoint/half-span geometry, drag passthrough, 64-tile safety cap, release-hide and Escape behavior remain unchanged.
+- Client-only scope retained; focused runtime acceptance still gates RWS-3.
