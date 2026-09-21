@@ -333,7 +333,7 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Storage Self-Test button reuses disposable `SettlementResourceSelfTest` and does not mutate the player's persistent storage.
 
 [x] Storage Self-Test returns PASS from the Con Revamp button. Runtime result: `PASS: per-resource storage add/remove/capacity isolation + 4 starter-node definitions.`
-[ ] Reset All Storage reports Wood=0/100, Food=0/100, Stone=0/100 and Basic ore=0/100.
+[x] Reset All Storage reports Wood=0/100, Food=0/100, Stone=0/100 and Basic ore=0/100. User confirmed the control works correctly at runtime.
 [ ] With workers paused/idle, Prime Wood 99/100 reports Wood=99/100 without changing Food/Stone/Basic ore.
 [ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
 [ ] Bundle 2.2 Self-Test returns PASS.
