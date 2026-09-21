@@ -738,3 +738,9 @@
 - Fixed OBJLAB-1/2 compile regression where preview status paths referenced omitted getPreviewX()/getPreviewY() helpers.
 - Helpers now resolve Source Tile + configured preview offset, matching the existing render-path coordinate math.
 - No renderer, catalog, world-object or Construction gameplay behavior changed.
+
+2026-09-21 - Bundle 2.2 Storage Self-Test runtime verified
+- Con Revamp Storage Self-Test returned PASS at runtime.
+- PASS covered per-resource storage add/remove/capacity isolation plus the four starter-node definitions.
+- The disposable self-test did not mutate persistent settlement storage.
+- Consolidated Bundle 2.2 runtime pass advances to Reset All Storage, then Prime Wood 99/100.
