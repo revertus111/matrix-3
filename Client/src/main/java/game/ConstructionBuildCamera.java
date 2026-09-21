@@ -321,8 +321,8 @@ public final class ConstructionBuildCamera {
         boolean backward = keyDown(99) || keyDown(49); // Down or S
         boolean left = keyDown(96) || keyDown(48); // Left or A
         boolean right = keyDown(97) || keyDown(50); // Right or D
-        boolean rotateLeft = keyDown(32); // Q
-        boolean rotateRight = keyDown(34); // E
+        boolean rotateLeft = keyDown(34); // E
+        boolean rotateRight = keyDown(32); // Q
 
         boolean anyCameraKey = forward || backward || left || right || rotateLeft || rotateRight;
         reportInputOnce(anyCameraKey);
