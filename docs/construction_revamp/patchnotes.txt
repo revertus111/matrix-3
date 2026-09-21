@@ -610,3 +610,11 @@
 - User confirmed the corrected RTS camera works after the Class658_Sub2 vertical-sign fix.
 - RTS now initializes above the terrain with the intended downward view; the prior under-map/underside rendering failure is closed.
 - Camera mode is accepted as runtime VERIFIED for the current Free/RTS Construction scope.
+
+2026-09-20 - RTS default + pivot-orbit camera revision
+- Construction palette sessions now explicitly select RTS before camera entry, so RTS is the default on every open; Free Build remains manually selectable.
+- Replaced RTS Q/E in-place yaw with pivot-orbit behavior: activation stores the pre-backoff world point as the focus pivot, Q/E changes yaw and moves the camera around that pivot at the current orbit distance.
+- RTS WASD/arrow pan now translates both camera and pivot together so subsequent orbit rotation follows the newly managed area.
+- Mouse-wheel zoom now changes bounded orbit distance relative to the pivot instead of accumulating free travel.
+- Preserved the runtime-verified Class411 camera owner, fixed RTS pitch, safe above-terrain initialization, Shift/Ctrl speed modifiers, Free Build controls and mode-specific wheel ownership.
+- Static changed-file checks passed; default-open, full-orbit stability, pan-then-orbit, zoom-pivot stability and Free Build regression require one focused client runtime pass.
