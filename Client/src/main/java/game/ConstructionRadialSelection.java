@@ -10,14 +10,15 @@ import java.awt.event.MouseEvent;
 /**
  * Client-owned world-space radial selection input/visual primitive.
  *
- * RWS-2 owns only input state, a world anchor/radius and the temporary radial
- * visualization. It does not own worker identity, AI, commands, persistence,
- * combat target state, cache definitions, collision or scene registration.
+ * RWS-2 owns only input state, world-space drag geometry and the temporary
+ * radial visualization. It does not own worker identity, AI, commands,
+ * persistence, combat target state, cache definitions, collision or scene
+ * registration.
  *
- * The world anchor comes from Matrix3's already-resolved action-23 ground tile.
- * During a drag, mouse-pixel movement is calibrated against subsequent resolved
- * world-tile changes so the ring follows the mouse smoothly between tile
- * boundaries while the committed radius remains expressed in world tiles.
+ * Edge A comes from Matrix3's already-resolved action-23 ground tile at mouse
+ * press. During the drag, mouse-pixel movement is calibrated against subsequent
+ * resolved world-tile changes. The selector renders at the midpoint between
+ * edge A and the live edge B, while radius is half of the A-to-B span.
  */
 public final class ConstructionRadialSelection {
 
@@ -48,7 +49,7 @@ public final class ConstructionRadialSelection {
     private static final int BASE_MODEL_SCALE = 128;
     private static final float SCALE_PERCENT_PER_TILE = 100.0F;
     private static final float MIN_RADIUS_TILES = 0.25F;
-    private static final float MAX_RADIUS_TILES = 12.0F;
+    private static final float MAX_RADIUS_TILES = 64.0F;
     private static final float DEFAULT_PIXELS_PER_TILE = 48.0F;
     private static final float MIN_PIXELS_PER_TILE = 8.0F;
     private static final float MAX_PIXELS_PER_TILE = 320.0F;
@@ -71,10 +72,16 @@ public final class ConstructionRadialSelection {
     private static volatile int originWorldX = -1;
     private static volatile int originWorldY = -1;
     private static volatile int originPlane = -1;
+    private static volatile float liveCenterWorldX = -1.0F;
+    private static volatile float liveCenterWorldY = -1.0F;
     private static volatile float liveRadiusTiles = MIN_RADIUS_TILES;
+    private static volatile float liveDirectionWorldX;
+    private static volatile float liveDirectionWorldY;
 
-    private static volatile int committedWorldX = -1;
-    private static volatile int committedWorldY = -1;
+    private static volatile int committedStartWorldX = -1;
+    private static volatile int committedStartWorldY = -1;
+    private static volatile float committedCenterWorldX = -1.0F;
+    private static volatile float committedCenterWorldY = -1.0F;
     private static volatile int committedPlane = -1;
     private static volatile float committedRadiusTiles = MIN_RADIUS_TILES;
 
@@ -145,8 +152,10 @@ public final class ConstructionRadialSelection {
 
     public static void clearCommittedRadius() {
         committed = false;
-        committedWorldX = -1;
-        committedWorldY = -1;
+        committedStartWorldX = -1;
+        committedStartWorldY = -1;
+        committedCenterWorldX = -1.0F;
+        committedCenterWorldY = -1.0F;
         committedPlane = -1;
         committedRadiusTiles = MIN_RADIUS_TILES;
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -159,14 +168,19 @@ public final class ConstructionRadialSelection {
         status.append(workerControlEnabled ? "RWS-2 ON" : "RWS-2 OFF");
         status.append(" | button=").append(dragButton);
         if (dragging) {
-            status.append(" | DRAGGING origin=")
+            status.append(" | DRAGGING edgeA=")
                     .append(originWorldX).append(',').append(originWorldY).append(',').append(originPlane)
-                    .append(" hover=").append(hoveredWorldX).append(',').append(hoveredWorldY)
+                    .append(" edgeB=").append(hoveredWorldX).append(',').append(hoveredWorldY)
+                    .append(" center=").append(formatWorld(liveCenterWorldX)).append(',')
+                    .append(formatWorld(liveCenterWorldY))
                     .append(" radius=").append(formatRadius(liveRadiusTiles)).append(" tiles")
                     .append(" scale=").append(radiusToScalePercent(liveRadiusTiles)).append('%');
         } else if (committed) {
-            status.append(" | COMMITTED origin=")
-                    .append(committedWorldX).append(',').append(committedWorldY).append(',').append(committedPlane)
+            status.append(" | COMMITTED edgeA=")
+                    .append(committedStartWorldX).append(',').append(committedStartWorldY)
+                    .append(',').append(committedPlane)
+                    .append(" center=").append(formatWorld(committedCenterWorldX)).append(',')
+                    .append(formatWorld(committedCenterWorldY))
                     .append(" radius=").append(formatRadius(committedRadiusTiles)).append(" tiles")
                     .append(" scale=").append(radiusToScalePercent(committedRadiusTiles)).append('%');
         } else {
@@ -207,6 +221,7 @@ public final class ConstructionRadialSelection {
         hoveredAtMillis = System.currentTimeMillis();
 
         if (dragging && plane == originPlane) {
+            updateLiveWorldDirection(worldX, worldY);
             calibratePixelsPerTile(worldX, worldY);
         }
     }
@@ -225,8 +240,8 @@ public final class ConstructionRadialSelection {
             return;
         }
 
-        int drawWorldX = originWorldX;
-        int drawWorldY = originWorldY;
+        float drawWorldX = liveCenterWorldX;
+        float drawWorldY = liveCenterWorldY;
         int drawPlane = originPlane;
         float drawRadius = liveRadiusTiles;
 
@@ -247,8 +262,10 @@ public final class ConstructionRadialSelection {
             return;
         }
 
-        int localX = drawWorldX - sceneBase.localX * -2109597897;
-        int localY = drawWorldY - sceneBase.localY * 417324155;
+        int sceneBaseWorldX = sceneBase.localX * -2109597897;
+        int sceneBaseWorldY = sceneBase.localY * 417324155;
+        float localX = drawWorldX - sceneBaseWorldX;
+        float localY = drawWorldY - sceneBaseWorldY;
         if (drawPlane < 0 || drawPlane >= scene.aClass174Array5838.length) {
             lastRenderState = "SKIP invalid plane " + drawPlane;
             return;
@@ -262,14 +279,14 @@ public final class ConstructionRadialSelection {
 
         int sceneWidth = scene.anInt5833 * -1396185127;
         int sceneHeight = scene.anInt5834 * -1519623925;
-        if (localX < 0 || localY < 0 || localX >= sceneWidth || localY >= sceneHeight) {
-            lastRenderState = "SKIP origin outside scene";
+        if (localX < 0.0F || localY < 0.0F || localX >= sceneWidth || localY >= sceneHeight) {
+            lastRenderState = "SKIP center outside scene";
             return;
         }
 
         int tileSize = ground.anInt2087 * 2129890771;
-        int sceneX = localX * tileSize + tileSize / 2;
-        int sceneZ = localY * tileSize + tileSize / 2;
+        int sceneX = Math.round((localX + 0.5F) * tileSize);
+        int sceneZ = Math.round((localY + 0.5F) * tileSize);
         int sceneY = ground.method2718(sceneX, sceneZ, 0);
 
         GraphicsDefinition definition = (GraphicsDefinition) Class667.aClass639_Sub10_8509
@@ -295,7 +312,8 @@ public final class ConstructionRadialSelection {
         lastRenderState = "DRAW gfx=" + RETICULE_GFX_ID
                 + " radius=" + formatRadius(drawRadius)
                 + " scale=" + radiusToScalePercent(drawRadius) + "%"
-                + " world=" + drawWorldX + "," + drawWorldY + "," + drawPlane;
+                + " center=" + formatWorld(drawWorldX) + "," + formatWorld(drawWorldY)
+                + "," + drawPlane;
     }
 
     private static synchronized void ensureInputListener() {
@@ -378,11 +396,27 @@ public final class ConstructionRadialSelection {
         currentMouseX = mouseX;
         currentMouseY = mouseY;
         pixelsPerTileEstimate = DEFAULT_PIXELS_PER_TILE;
+        liveCenterWorldX = originWorldX;
+        liveCenterWorldY = originWorldY;
         liveRadiusTiles = MIN_RADIUS_TILES;
+        liveDirectionWorldX = 0.0F;
+        liveDirectionWorldY = 0.0F;
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
         lastEventState = "RWS-2 drag started at " + originWorldX + "," + originWorldY + "," + originPlane + ".";
         return true;
+    }
+
+    private static void updateLiveWorldDirection(int hoverX, int hoverY) {
+        float worldDx = hoverX - originWorldX;
+        float worldDy = hoverY - originWorldY;
+        float worldDistance = (float) Math.sqrt(worldDx * worldDx + worldDy * worldDy);
+        if (worldDistance < 0.25F) {
+            return;
+        }
+
+        liveDirectionWorldX = worldDx / worldDistance;
+        liveDirectionWorldY = worldDy / worldDistance;
     }
 
     private static void calibratePixelsPerTile(int hoverX, int hoverY) {
@@ -416,7 +450,8 @@ public final class ConstructionRadialSelection {
         int dy = currentMouseY - anchorMouseY;
         float pixelDistance = (float) Math.sqrt((float) dx * dx + (float) dy * dy);
         float estimate = pixelsPerTileEstimate <= 0.0F ? DEFAULT_PIXELS_PER_TILE : pixelsPerTileEstimate;
-        float radius = pixelDistance / estimate;
+        float spanTiles = pixelDistance / estimate;
+        float radius = spanTiles * 0.5F;
 
         if (radius < MIN_RADIUS_TILES) {
             radius = MIN_RADIUS_TILES;
@@ -425,13 +460,24 @@ public final class ConstructionRadialSelection {
         }
 
         liveRadiusTiles = radius;
+        if (liveDirectionWorldX != 0.0F || liveDirectionWorldY != 0.0F) {
+            liveCenterWorldX = originWorldX + liveDirectionWorldX * radius;
+            liveCenterWorldY = originWorldY + liveDirectionWorldY * radius;
+        } else {
+            liveCenterWorldX = originWorldX;
+            liveCenterWorldY = originWorldY;
+        }
         lastRenderedCycle = Integer.MIN_VALUE;
-        lastEventState = "RWS-2 dragging radius=" + formatRadius(radius) + " tiles.";
+        lastEventState = "RWS-2 dragging center="
+                + formatWorld(liveCenterWorldX) + "," + formatWorld(liveCenterWorldY)
+                + " radius=" + formatRadius(radius) + " tiles.";
     }
 
     private static void commitActiveDrag() {
-        committedWorldX = originWorldX;
-        committedWorldY = originWorldY;
+        committedStartWorldX = originWorldX;
+        committedStartWorldY = originWorldY;
+        committedCenterWorldX = liveCenterWorldX;
+        committedCenterWorldY = liveCenterWorldY;
         committedPlane = originPlane;
         committedRadiusTiles = liveRadiusTiles;
         committed = true;
@@ -447,7 +493,11 @@ public final class ConstructionRadialSelection {
         originWorldX = -1;
         originWorldY = -1;
         originPlane = -1;
+        liveCenterWorldX = -1.0F;
+        liveCenterWorldY = -1.0F;
         liveRadiusTiles = MIN_RADIUS_TILES;
+        liveDirectionWorldX = 0.0F;
+        liveDirectionWorldY = 0.0F;
         lastRenderedCycle = Integer.MIN_VALUE;
         lastEventState = committed
                 ? "RWS-2 drag cancelled; previous committed radius preserved."
@@ -460,5 +510,9 @@ public final class ConstructionRadialSelection {
 
     private static String formatRadius(float radius) {
         return String.format(java.util.Locale.US, "%.2f", radius);
+    }
+
+    private static String formatWorld(float coordinate) {
+        return String.format(java.util.Locale.US, "%.2f", coordinate);
     }
 }
