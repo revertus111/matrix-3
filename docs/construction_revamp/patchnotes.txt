@@ -639,3 +639,7 @@
 - User confirmed the revised RTS camera works with RTS as the default Construction view.
 - Q/E pivot-orbit behavior, pan-moving-pivot behavior and pivot-relative zoom are accepted for the current Construction camera scope.
 - Free Build remains available as the alternate close-up camera mode.
+
+2026-09-20 - RTS Q/E orbit direction swap
+- Swapped the RTS orbit key mapping so Q and E rotate around the pivot in the opposite directions requested at runtime.
+- Orbit pivot ownership, radius, pitch, zoom, pan and Free Build behavior are unchanged.
