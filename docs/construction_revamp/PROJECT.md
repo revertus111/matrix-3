@@ -594,13 +594,13 @@ Construction Build Camera v1 state:
 - Runtime VERIFIED in the user's acceptance sweep: automatic activation, W/S/A/D movement, Shift fast, Ctrl precision, Q/E vertical movement, mouse-look, normal-camera restore on close, and clean reopen.
 - Camera ownership remains client-side; confirmed object placement remains server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
 - Smooth acceleration/deceleration and click-to-stop are now implemented on the live controller: normalized input feeds time-based world-space velocity; action 23 clears velocity, latches movement off until key release, optionally confirms Paint placement and is consumed so the player remains planted. Runtime feel/integration acceptance is pending.
-- RTS camera base is runtime VERIFIED; the new default-RTS + pivot-orbit revision is IMPLEMENTED / NEEDS RUNTIME TEST on the same detached Class411 owner: Construction now opens in RTS, W/A/S/D + arrows pan camera and pivot together, Q/E orbits the camera around the pivot, wheel changes orbit distance, Shift fast and Ctrl precision remain.
+- RTS camera default + pivot-orbit revision is DONE / runtime VERIFIED on the same detached Class411 owner: Construction opens in RTS, W/A/S/D + arrows pan camera and pivot together, Q/E orbits the camera around the pivot, wheel changes orbit distance, Shift fast and Ctrl precision remain.
 - First runtime showed the detached RTS camera below the terrain looking through the underside; Matrix3's Class658_Sub2.method8927(...) negates its Y target internally, so the initial deterministic pitch sign was inverted.
 - Corrective patch now backs the camera 3600 Matrix3 units away from the real rendered look vector on RTS entry and constrains zoom to a safe backoff band; pan/zoom direction is derived from Class658_Sub2.method7736(...) instead of guessed obfuscated axis signs.
 - Input ownership remains mode-specific: RTS consumes world wheel for camera zoom; Free Build preserves the accepted wheel-to-piece-rotation behavior. R / Shift+R remains piece rotation in both modes.
 - Orbit ownership is pivot-relative: the initial pivot is the pre-backoff detached-camera/player-area point; Q/E changes yaw then repositions the camera on the same radius around that pivot while keeping the fixed RTS pitch; pan translates the pivot and camera together so later rotation circles the new managed area rather than an old location.
 - Top Down, Orbit/Focus and Player View remain accepted later views; deterministic presets beyond RTS remain deferred.
-- Runtime VERIFIED: corrected RTS camera initializes above the terrain with a normal downward view and the user confirmed the mode works after the vertical-sign correction.
+- Runtime VERIFIED: corrected RTS camera initializes above the terrain with a normal downward view; the later default-open + pivot-orbit revision is also user-confirmed working.
 
 Still pending in this slice:
 
@@ -974,7 +974,7 @@ Runtime acceptance target:
 - Persistent-runtime bundle: 2.2 — multi-worker control + concurrent work
 - Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
-- Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS base runtime VERIFIED, default-RTS + pivot-orbit revision IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
+- Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; later Top Down/Orbit/Player presets remain non-blocking
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
 - Current checklist item: continue stacking only compatible Bundle 2.2 work before the next launch. Worker Role Presets are now stacked; eventual runtime setup should use Worker #1 Forager / Worker #2 Lumberjack instead of manual checkbox setup. Pause server ownership remains stacked, with its missing Con Revamp buttons recorded as non-blocking UI carryover.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
