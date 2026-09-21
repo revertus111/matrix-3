@@ -778,3 +778,11 @@
 - Emergency selection forces the Food node and ends after deposit; normal Hunger recovery then consumes stored Food on the following cycle.
 - Non-food workers retain the existing no-Food stop behavior. No save/schema, role-policy, reservation or progression ownership changed.
 - Runtime retest required before resuming the Bundle 2.2 concurrency gate.
+
+2026-09-21 - Asset Studio one-click paired evidence capture
+- Added Capture / Log Rail Evidence: one click performs a fresh 9x9 live-scene capture and saves matching capture_YYYYMMDD_NNN.png + .tsv evidence files.
+- Evidence rows use deterministic plane/Y/X/slot/ID/type/rotation ordering and include index, exact object identity, rotation, tile, relative tile offset, size and candidate tag data.
+- PNG capture reads the real Matrix3 game Canvas (Class584.aCanvas7745) without changing renderer ownership, then adds a numbered 9x9 tile-grid and row legend matching TSV indexes.
+- Asset Studio hides during the desktop capture and restores afterward; direct-render preview is hidden so it cannot contaminate the evidence image.
+- Capture remains read-only: no scene registration, object mutation, collision, cache, server, save-schema or rail gameplay changes.
+- Runtime acceptance must verify paired filenames, screenshot visibility/scaling and index mapping on the known rail area.

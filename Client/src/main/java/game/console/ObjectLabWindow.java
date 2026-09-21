@@ -1,6 +1,7 @@
 package game.console;
 
 import game.AssetStudioCapture;
+import game.AssetStudioEvidenceCapture;
 import game.AssetStudioCapture.CaptureBatch;
 import game.AssetStudioCapture.CaptureEntry;
 import game.ClientConsoleBridge;
@@ -42,6 +43,7 @@ import javax.swing.JTextArea;
 import javax.swing.RowFilter;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.AbstractTableModel;
@@ -92,6 +94,7 @@ public final class ObjectLabWindow {
             new JLabel("Open a capture session. No object interaction is required.");
 
     private CaptureEntry selectedEntry;
+    private volatile boolean evidenceCaptureActive;
 
     private ObjectLabWindow() {
         buildUi();
@@ -222,10 +225,13 @@ public final class ObjectLabWindow {
 
         JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         row2.setOpaque(false);
+        JButton evidence = button("Capture / Log Rail Evidence");
         JButton export = button("Export Session");
         JButton clear = button("Clear Session");
+        evidence.addActionListener(e -> captureEvidence());
         export.addActionListener(e -> exportSession());
         clear.addActionListener(e -> clearSession());
+        row2.add(evidence);
         row2.add(export);
         row2.add(clear);
         row2.add(railOnly);
@@ -330,6 +336,61 @@ public final class ObjectLabWindow {
         inspector.add(Box.createVerticalStrut(10));
         inspector.add(catalog);
         return inspector;
+    }
+
+    private void captureEvidence() {
+        if (evidenceCaptureActive) {
+            setStatus("An evidence capture is already in progress.");
+            return;
+        }
+
+        final CaptureBatch batch = AssetStudioCapture.capturePlayerArea(4);
+        if (batch == null || !batch.isSuccess()) {
+            setStatus("Evidence capture failed: "
+                    + (batch == null ? "unknown error" : batch.getError()));
+            return;
+        }
+        if (batch.getEntries().isEmpty()) {
+            setStatus("Evidence capture found no live scene objects in the 9x9 area.");
+            return;
+        }
+
+        addBatch(batch, "Evidence 9x9");
+        ObjectLabPreview.hide();
+        evidenceCaptureActive = true;
+        setStatus("Capturing paired Matrix3 PNG + TSV evidence...");
+
+        final boolean restoreWindow = frame != null && frame.isVisible();
+        if (frame != null) {
+            frame.setVisible(false);
+        }
+
+        Thread worker = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final AssetStudioEvidenceCapture.Result result =
+                        AssetStudioEvidenceCapture.capture(batch);
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        evidenceCaptureActive = false;
+                        if (restoreWindow && frame != null) {
+                            showWindow();
+                        }
+                        if (result.isSuccess()) {
+                            setStatus("Evidence " + result.getCaptureId() + " saved: "
+                                    + result.getObjectCount() + " object(s), "
+                                    + result.getPng().toString() + " + "
+                                    + result.getTsv().toString() + ".");
+                        } else {
+                            setStatus(result.getError());
+                        }
+                    }
+                });
+            }
+        }, "matrix3-asset-evidence");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     private void capture(CaptureBatch batch, String label) {

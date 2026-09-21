@@ -460,3 +460,16 @@ Matrix3 Asset Studio v1 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Save Selected to Catalog still queues the existing server-side curated catalog using the exact captured type/rotation/tile.
 [ ] Capture/session/preview/export actions do not move, rotate, replace, attach, delete or alter collision for live world objects.
 [ ] Architecture acceptance: the tool is used to author/verify a rail kit; future player rail construction remains Point-A-to-Point-B drag with auto-tiling, not manual tile placement.
+
+Matrix3 Asset Studio paired evidence capture — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Stand near the known rail kit and click Capture / Log Rail Evidence once; no manual row selection, ID entry, type entry or rotation entry is required.
+[ ] Asset Studio performs a fresh 9x9 live-scene capture, briefly hides for the screenshot, then restores automatically.
+[ ] A matching capture_YYYYMMDD_NNN.png and capture_YYYYMMDD_NNN.tsv pair is written under Client/data/construction/asset_studio/captures/.
+[ ] Repeating evidence capture increments NNN instead of overwriting an earlier pair, including after restarting the client.
+[ ] TSV rows are deterministically numbered by plane -> Y -> X -> slot -> ID -> type -> rotation and contain exact ID/name/type/rotation/slot/tile/size plus dx/dy, railCandidate and suggestedTag.
+[ ] PNG contains the untouched Matrix3 game-canvas screenshot plus the same capture ID, a numbered 9x9 tile-grid inset and numbered object-row legend matching TSV index values.
+[ ] Multi-object tiles show every matching evidence index in the tile-grid inset; TSV retains a separate row for every captured live object.
+[ ] Asset Studio's direct-render preview is hidden before screenshot capture and does not appear as false rail evidence.
+[ ] Screenshot capture works at the user's normal Windows display scaling/monitor setup and captures the Matrix3 canvas rather than the Asset Studio window or entire desktop.
+[ ] Evidence capture does not move, rotate, replace, attach, delete or change collision/cache/persistence for any world object.
+[ ] Uploading the paired PNG + TSV is sufficient to identify/classify rail primitives without manually transcribing IDs, rotations or object types.
