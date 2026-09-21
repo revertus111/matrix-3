@@ -364,9 +364,11 @@ Implementation:
 - action-23 world-hover changes update live edge B directly; there is no remaining pixels-per-tile calibration in RWS-2 geometry
 - the reticule center is a fractional world-space midpoint and moves along the A-to-B line at resolved-world-tile granularity
 - the reticule radius is half of the live A-to-B span
-- runtime model scale is derived from the cloned GFX model's actual X/Z bounds (`method1380/method1381/method1384/method1508`), converting the desired world radius into an exact `Model.method1464(...)` scale
-- before scaling, the per-call GFX clone is recentered with `Model.method1358(...)` using the midpoint of its real X/Z bounds; this removes model-origin bias that otherwise makes one visual edge drift during scale
-- after recentering, rendered visual radius equals the midpoint offset, so edge A can remain visually pinned while B moves
+- the per-call GFX clone is recentered with `Model.method1358(...)` using the midpoint of its real X/Z bounds, removing model-origin bias
+- GFX 4171's four decorative cardinal diamonds extend beyond the circular ring, so full-model X/Z bounds are not the circle radius
+- when the renderer exposes `AbstractModel`, RWS-2 sorts cloned vertex radial distances and detects the large outer gap separating the dense circular-ring cluster from the decorative diamond cluster; the last radius before that gap becomes the ring-body radius
+- non-`AbstractModel` renderer models use a bounded GFX-4171 fallback fraction rather than reverting to the incorrect full-marker extent
+- runtime scale converts the resolved ring-body radius to the exact world-space selection radius through `Model.method1464(...)`, so the circular ring itself—not the outer diamonds—owns A/B
 - the former 12-tile radius stop is replaced by a 64-tile safety cap, which is non-limiting for the 64x64 starter settlement
 - release commits edge A + final center + radius
 - Escape cancels only the active drag and preserves the previous committed radius
