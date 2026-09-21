@@ -73,6 +73,7 @@ public final class ConstructionRadialSelection {
     private static final int WORKER_STATUS_GFX_ID = 4187;
     private static final int BASE_MODEL_SCALE = 128;
     private static final int PROBE_MAX_REPORTED_COLORS = 8;
+    private static final float RETICULE_RING_FALLBACK_FRACTION = 0.80F;
     private static final short PROBE_COLOR_A_REPLACEMENT = packHsl(32, 7, 88);
     private static final short PROBE_COLOR_B_REPLACEMENT = packHsl(52, 7, 88);
     private static final float MIN_RADIUS_TILES = 0.0F;
@@ -388,15 +389,32 @@ public final class ConstructionRadialSelection {
 
         float halfWidthX = (maxX - minX) * 0.5F;
         float halfWidthZ = (maxZ - minZ) * 0.5F;
-        float baseRadiusUnits = Math.max(halfWidthX, halfWidthZ);
-        if (baseRadiusUnits <= 0.0F) {
+        float fullModelRadiusUnits = Math.max(halfWidthX, halfWidthZ);
+        if (fullModelRadiusUnits <= 0.0F) {
             lastRenderState = "FAIL GFX " + RETICULE_GFX_ID + " zero horizontal bounds";
             return;
         }
 
+        /*
+         * GFX 4171's four decorative diamonds extend farther than the actual
+         * circular ring. The previous exact-bounds patch therefore pinned the
+         * DIAMONDS to A/B while the visible ring still slid inward.
+         *
+         * On AbstractModel we can inspect the cloned vertex radii directly.
+         * The ring is the dense inner radial cluster; the marker diamonds are
+         * separated by a large outer radial gap. Use the last radius before
+         * that gap as the visual ring radius. Other renderer model types use a
+         * bounded GFX-4171 fallback ratio until runtime proves a better generic
+         * seam.
+         */
+        float ringBodyRadiusUnits = resolveReticuleRingRadiusUnits(model, fullModelRadiusUnits);
+        if (ringBodyRadiusUnits <= 0.0F) {
+            ringBodyRadiusUnits = fullModelRadiusUnits * RETICULE_RING_FALLBACK_FRACTION;
+        }
+
         float desiredRadiusUnits = drawRadius * tileSize;
         int runtimeScale = Math.max(1,
-                Math.round(BASE_MODEL_SCALE * desiredRadiusUnits / baseRadiusUnits));
+                Math.round(BASE_MODEL_SCALE * desiredRadiusUnits / ringBodyRadiusUnits));
         model.method1464(runtimeScale, BASE_MODEL_SCALE, runtimeScale);
         lastRenderedScalePercent = Math.max(1,
                 Math.round(runtimeScale * 100.0F / BASE_MODEL_SCALE));
@@ -407,7 +425,8 @@ public final class ConstructionRadialSelection {
         lastRenderState = "DRAW gfx=" + RETICULE_GFX_ID
                 + " radius=" + formatRadius(drawRadius)
                 + " scale=" + lastRenderedScalePercent + "%"
-                + " baseRadiusUnits=" + formatRadius(baseRadiusUnits)
+                + " ringRadiusUnits=" + formatRadius(ringBodyRadiusUnits)
+                + " fullRadiusUnits=" + formatRadius(fullModelRadiusUnits)
                 + " modelOffset=" + modelCenterX + "," + modelCenterZ
                 + " center=" + formatWorld(drawWorldX) + "," + formatWorld(drawWorldY)
                 + "," + drawPlane;
@@ -617,6 +636,52 @@ public final class ConstructionRadialSelection {
 
     private static String formatPackedColor(int packed) {
         return String.format(java.util.Locale.US, "0x%04X", packed & 0xffff);
+    }
+
+    /**
+     * Returns the radius of the circular ring body, excluding GFX 4171's four
+     * decorative outer diamonds when the active renderer exposes AbstractModel
+     * vertex data.
+     */
+    private static float resolveReticuleRingRadiusUnits(Model model, float fallbackBoundsRadius) {
+        if (!(model instanceof AbstractModel)) {
+            return fallbackBoundsRadius * RETICULE_RING_FALLBACK_FRACTION;
+        }
+
+        AbstractModel abstractModel = (AbstractModel) model;
+        int vertexCount = abstractModel.maxVertexUsed;
+        if (vertexCount < 8 || abstractModel.vertexX == null || abstractModel.vertexZ == null) {
+            return fallbackBoundsRadius * RETICULE_RING_FALLBACK_FRACTION;
+        }
+
+        float[] radii = new float[vertexCount];
+        for (int i = 0; i < vertexCount; i++) {
+            float x = abstractModel.vertexX[i];
+            float z = abstractModel.vertexZ[i];
+            radii[i] = (float) Math.sqrt(x * x + z * z);
+        }
+        java.util.Arrays.sort(radii);
+
+        int start = Math.max(1, Math.round(vertexCount * 0.55F));
+        int end = Math.min(vertexCount - 2, Math.round(vertexCount * 0.98F));
+        float largestGap = 0.0F;
+        int largestGapIndex = -1;
+
+        for (int i = start; i <= end; i++) {
+            float gap = radii[i + 1] - radii[i];
+            if (gap > largestGap) {
+                largestGap = gap;
+                largestGapIndex = i;
+            }
+        }
+
+        float fullVertexRadius = radii[vertexCount - 1];
+        float meaningfulGap = Math.max(4.0F, fullVertexRadius * 0.05F);
+        if (largestGapIndex >= start && largestGap >= meaningfulGap) {
+            return radii[largestGapIndex];
+        }
+
+        return fallbackBoundsRadius * RETICULE_RING_FALLBACK_FRACTION;
     }
 
     private static synchronized void ensureInputListener() {
