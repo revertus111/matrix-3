@@ -634,3 +634,8 @@
 - Replaced the artificial 12-tile radius stop with a 64-tile safety cap, which does not constrain normal use across the 64x64 starter settlement.
 - Release commits edge A + final center/radius internally and still hides the large area ring; Escape/Disable ownership behavior is unchanged.
 - Client-only scope retained; worker detection/highlighting remains RWS-3.
+
+2026-09-20 - RTS default + pivot orbit runtime verified
+- User confirmed the revised RTS camera works with RTS as the default Construction view.
+- Q/E pivot-orbit behavior, pan-moving-pivot behavior and pivot-relative zoom are accepted for the current Construction camera scope.
+- Free Build remains available as the alternate close-up camera mode.
