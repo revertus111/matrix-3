@@ -625,3 +625,12 @@
 - Added Con Revamp selected-worker Role Preset dropdown + Apply button with local checkbox mirroring; server command remains authoritative.
 - Strengthened Bundle 2.2 Self-Test to round-trip all six preset definitions and serialize W1 Forager / W2 Lumberjack while preserving independent pause/needs/progression.
 - Static branch audit found later radial UI edits dropped the previously documented Con Revamp Pause/Resume buttons; server Pause/Resume remains intact and UI restoration is recorded as non-blocking carryover.
+
+
+2026-09-20 - RWS-2 RTS midpoint drag geometry
+- Changed radial selection from press-point-centered radius growth to RTS edge-A/edge-B geometry: center is the live world-space midpoint and radius is half of the calibrated A-to-B span.
+- Reused the existing action-23 world-hover direction plus AWT pixel/world calibration so midpoint movement remains smooth between tile-boundary recalibrations; no new scene picker was added.
+- Reticule rendering now accepts fractional world-tile centers and samples terrain at that moving midpoint.
+- Replaced the artificial 12-tile radius stop with a 64-tile safety cap, which does not constrain normal use across the 64x64 starter settlement.
+- Release commits edge A + final center/radius internally and still hides the large area ring; Escape/Disable ownership behavior is unchanged.
+- Client-only scope retained; worker detection/highlighting remains RWS-3.
