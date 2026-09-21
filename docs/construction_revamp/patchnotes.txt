@@ -605,3 +605,8 @@
 - Runtime clarification confirmed the RTS camera was below the map looking through terrain, not merely intersecting the near plane at ground height.
 - Corrected the fixed RTS pitch sign for Class658_Sub2.method8927(...), which negates its Y target internally.
 - Existing real-view-vector backoff/zoom correction remains in place; RTS should now initialize above the terrain and look downward.
+
+2026-09-20 - RTS camera runtime verified
+- User confirmed the corrected RTS camera works after the Class658_Sub2 vertical-sign fix.
+- RTS now initializes above the terrain with the intended downward view; the prior under-map/underside rendering failure is closed.
+- Camera mode is accepted as runtime VERIFIED for the current Free/RTS Construction scope.
