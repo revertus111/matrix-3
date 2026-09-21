@@ -643,3 +643,9 @@
 2026-09-20 - RTS Q/E orbit direction swap
 - Swapped the RTS orbit key mapping so Q and E rotate around the pivot in the opposite directions requested at runtime.
 - Orbit pivot ownership, radius, pitch, zoom, pan and Free Build behavior are unchanged.
+
+2026-09-20 - Bundle 2.2 selected-worker Pause/Resume UI restoration
+- Restored Con Revamp Pause Worker / Resume Worker controls lost during later radial UI edits.
+- Controls target the existing server-authoritative `workerpause [workerId] on|off` path and do not modify Allowed Jobs, presets, Needs or progression.
+- Kept buttons non-focusable through the existing panel styling so the current scroll-preservation behavior remains intact.
+- Runtime verification remains deferred to the consolidated Bundle 2.2 pass.
