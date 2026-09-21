@@ -744,3 +744,8 @@
 - PASS covered per-resource storage add/remove/capacity isolation plus the four starter-node definitions.
 - The disposable self-test did not mutate persistent settlement storage.
 - Consolidated Bundle 2.2 runtime pass advances to Reset All Storage, then Prime Wood 99/100.
+
+2026-09-21 - Bundle 2.2 Reset All Storage runtime verified
+- User confirmed the Con Revamp Reset All Storage control works correctly at runtime.
+- Persistent Wood/Food/Stone/Basic ore storage clears through the authoritative SettlementState resource APIs.
+- Bundle 2.2 consolidated runtime pass advances to Prime Wood 99/100.
