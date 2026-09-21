@@ -44,13 +44,13 @@ public final class ConstructionBuildCamera {
     private static final float RTS_LOOK_DISTANCE = 4096.0F;
     private static final float RTS_INITIAL_BACKOFF = 3600.0F;
     private static final float RTS_ZOOM_STEP = 450.0F;
-    private static final float RTS_MIN_ZOOM_TRAVEL = -5600.0F;
-    private static final float RTS_MAX_ZOOM_TRAVEL = -1400.0F;
+    private static final float RTS_MIN_ORBIT_DISTANCE = 1400.0F;
+    private static final float RTS_MAX_ORBIT_DISTANCE = 5600.0F;
     private static final int RTS_MAX_QUEUED_WHEEL_STEPS = 8;
 
     private static volatile boolean active;
     private static volatile boolean ownsFreeCamera;
-    private static volatile CameraMode cameraMode = CameraMode.FREE_BUILD;
+    private static volatile CameraMode cameraMode = CameraMode.RTS;
 
     private static int lastTickCycle = Integer.MIN_VALUE;
     private static int lastMouseX;
@@ -62,11 +62,14 @@ public final class ConstructionBuildCamera {
     private static float velocityY;
     private static float velocityZ;
 
-    // RTS keeps deterministic heading/pitch state instead of inheriting arbitrary
-    // Free Build mouse-look pitch.
+    // RTS keeps deterministic heading/pitch plus a world-space orbit pivot.
+    // Q/E moves the camera around this pivot instead of turning in place.
     private static boolean rtsOrientationInitialized;
     private static float rtsYawRadians;
-    private static float rtsZoomTravel;
+    private static float rtsOrbitDistance;
+    private static float rtsPivotX;
+    private static float rtsPivotY;
+    private static float rtsPivotZ;
     private static int pendingRtsZoomSteps;
 
     // A placement click should stop motion even if a key is still physically held.
@@ -342,7 +345,14 @@ public final class ConstructionBuildCamera {
         if (rotationInput != 0.0F) {
             rtsYawRadians = normalizeRadians(rtsYawRadians + rotationInput * RTS_ROTATE_SPEED * dt);
         }
+
+        // Apply the requested heading first, then use Matrix3's real rendered look
+        // vector to place the camera on the orbit circle around the stored pivot.
         applyRtsOrientation(lookController);
+        Class240 viewDirection = getViewDirection(lookController, position);
+        if (rotationInput != 0.0F && viewDirection != null) {
+            setPositionFromRtsPivot(position, viewDirection);
+        }
 
         float localX = (right ? 1.0F : 0.0F) - (left ? 1.0F : 0.0F);
         float localZ = (forward ? 1.0F : 0.0F) - (backward ? 1.0F : 0.0F);
@@ -355,7 +365,6 @@ public final class ConstructionBuildCamera {
         boolean panning = localX != 0.0F || localZ != 0.0F;
         float targetX = 0.0F;
         float targetZ = 0.0F;
-        Class240 viewDirection = getViewDirection(lookController, position);
 
         if (panning && viewDirection != null) {
             float planarLength = (float) Math.sqrt(
@@ -375,8 +384,12 @@ public final class ConstructionBuildCamera {
 
         updateVelocity(targetX, 0.0F, targetZ, panning && viewDirection != null, dt);
 
-        position.aFloat2653 += velocityX * dt;
-        position.aFloat2657 += velocityZ * dt;
+        float panX = velocityX * dt;
+        float panZ = velocityZ * dt;
+        position.aFloat2653 += panX;
+        position.aFloat2657 += panZ;
+        rtsPivotX += panX;
+        rtsPivotZ += panZ;
 
         int wheelSteps = consumeRtsZoomSteps();
         if (wheelSteps != 0 && viewDirection != null) {
@@ -399,12 +412,17 @@ public final class ConstructionBuildCamera {
         rtsOrientationInitialized = true;
         applyRtsOrientation(lookController);
 
+        // The detached camera begins at the point we want to manage. Preserve that
+        // point as the RTS pivot, then move the camera backward along the verified
+        // Class411 look vector to establish the initial orbit radius.
+        rtsPivotX = position.aFloat2653;
+        rtsPivotY = position.aFloat2656;
+        rtsPivotZ = position.aFloat2657;
+        rtsOrbitDistance = RTS_INITIAL_BACKOFF;
+
         Class240 viewDirection = getViewDirection(lookController, position);
         if (viewDirection != null) {
-            moveAlongView(position, viewDirection, -RTS_INITIAL_BACKOFF);
-            rtsZoomTravel = -RTS_INITIAL_BACKOFF;
-        } else {
-            rtsZoomTravel = RTS_MAX_ZOOM_TRAVEL;
+            setPositionFromRtsPivot(position, viewDirection);
         }
     }
 
@@ -418,18 +436,22 @@ public final class ConstructionBuildCamera {
     }
 
     private static void applyRtsZoom(Class240 position, Class240 viewDirection, int wheelSteps) {
-        float requestedTravel = -wheelSteps * RTS_ZOOM_STEP;
-        float nextTravel = clamp(
-                rtsZoomTravel + requestedTravel,
-                RTS_MIN_ZOOM_TRAVEL,
-                RTS_MAX_ZOOM_TRAVEL);
-        float acceptedTravel = nextTravel - rtsZoomTravel;
-        if (acceptedTravel == 0.0F) {
+        float nextDistance = clamp(
+                rtsOrbitDistance + wheelSteps * RTS_ZOOM_STEP,
+                RTS_MIN_ORBIT_DISTANCE,
+                RTS_MAX_ORBIT_DISTANCE);
+        if (nextDistance == rtsOrbitDistance) {
             return;
         }
 
-        moveAlongView(position, viewDirection, acceptedTravel);
-        rtsZoomTravel = nextTravel;
+        rtsOrbitDistance = nextDistance;
+        setPositionFromRtsPivot(position, viewDirection);
+    }
+
+    private static void setPositionFromRtsPivot(Class240 position, Class240 viewDirection) {
+        position.aFloat2653 = rtsPivotX - viewDirection.aFloat2653 * rtsOrbitDistance;
+        position.aFloat2656 = rtsPivotY - viewDirection.aFloat2656 * rtsOrbitDistance;
+        position.aFloat2657 = rtsPivotZ - viewDirection.aFloat2657 * rtsOrbitDistance;
     }
 
     /**
@@ -449,12 +471,6 @@ public final class ConstructionBuildCamera {
         }
 
         return Class240.method3316(x / length, y / length, z / length);
-    }
-
-    private static void moveAlongView(Class240 position, Class240 viewDirection, float distance) {
-        position.aFloat2653 += viewDirection.aFloat2653 * distance;
-        position.aFloat2656 += viewDirection.aFloat2656 * distance;
-        position.aFloat2657 += viewDirection.aFloat2657 * distance;
     }
 
     private static void updateVelocity(float targetX, float targetY, float targetZ,
@@ -593,7 +609,10 @@ public final class ConstructionBuildCamera {
     private static synchronized void resetRtsState() {
         rtsOrientationInitialized = false;
         rtsYawRadians = 0.0F;
-        rtsZoomTravel = 0.0F;
+        rtsOrbitDistance = 0.0F;
+        rtsPivotX = 0.0F;
+        rtsPivotY = 0.0F;
+        rtsPivotZ = 0.0F;
         pendingRtsZoomSteps = 0;
     }
 
