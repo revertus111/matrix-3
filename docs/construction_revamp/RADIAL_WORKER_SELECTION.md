@@ -364,6 +364,8 @@ Implementation:
 - later action-23 world-hover changes recalibrate pixels-per-tile against exact world distance and update the live world direction
 - the reticule center is a fractional world-space midpoint and moves continuously along the A-to-B line
 - the reticule radius is half of the live A-to-B span
+- runtime model scale is derived from the cloned GFX model's actual X/Z bounds (`method1380/method1381/method1384/method1508`), converting the desired world radius into an exact `Model.method1464(...)` scale
+- this removes the old arbitrary percent-per-tile assumption and makes rendered visual radius equal the midpoint offset, so edge A is pinned by construction instead of drifting backward
 - the former 12-tile radius stop is replaced by a 64-tile safety cap, which is non-limiting for the 64x64 starter settlement
 - release commits edge A + final center + radius
 - Escape cancels only the active drag and preserves the previous committed radius
