@@ -322,7 +322,7 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Pause/Resume source: `SettlementWorkerState.paused` is persistent per-worker policy independent of Allowed Jobs and defaults false for existing/new workers.
 [x] Pause/Resume AI: pausing cancels active gathering and transient reservations, retains already-carried cargo without reserving capacity, and still permits needs/recovery processing.
 [x] Pause/Resume server control: `workerpause [workerId] <on|off>` targets stable worker ids and All Worker Status/live AI report pause state.
-[-] UI CARRYOVER: later radial Con Revamp edits dropped the Pause Worker / Resume Worker buttons; server Pause/Resume ownership remains intact and this does not block the role-preset patch.
+[x] Pause/Resume UI restored: selected-worker Con Revamp Pause Worker / Resume Worker buttons target `workerpause [workerId] on|off` without altering Allowed Jobs.
 [x] Pause/Resume persistence: Bundle 2.2 disposable serialization and live baseline/check now compare each worker's pause state.
 [x] Role Preset source: `SettlementWorkerRolePreset` defines Lumberjack, Forager, Stone Miner, Ore Miner, Hauler Only and Idle as exact writes into the existing Allowed Jobs policy; no persistent role field is added.
 [x] Role Preset ownership: applying a preset changes only Allowed Jobs and leaves Pause, Needs, identity and progression untouched.
