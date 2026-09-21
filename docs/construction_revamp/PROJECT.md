@@ -904,12 +904,23 @@ Patch 2.2.12 — persistent worker Pause/Resume:
 - Pausing cancels any in-progress gather target and releases its transient storage reservation. Already-carried cargo remains with the worker, but its reservation is released until work resumes.
 - Needs/recovery remain active while paused so Pause cannot freeze Hunger/Thirst/Energy recovery behavior.
 - Resume continues from the same persistent Allowed Jobs policy.
-- Owner-only worker commands and Con Revamp selected-worker controls expose Pause/Resume; all-worker and live-AI status report pause state.
+- Owner-only `workerpause` command and all-worker/live-AI status expose Pause/Resume server ownership. The later radial UI edits dropped the Con Revamp Pause/Resume buttons; restoring those buttons is recorded as a non-blocking UI carryover rather than being silently treated as present.
 - Bundle 2.2 disposable serialization and live persistence snapshots now include independent pause state for both workers.
+
+Patch 2.2.13 — selected-worker role presets:
+
+- Added server-authoritative `SettlementWorkerRolePreset` definitions for Lumberjack, Forager, Stone Miner, Ore Miner, Hauler Only and Idle.
+- Presets are convenience writes into the existing persistent Allowed Jobs set only; there is no second persistent role field or AI owner.
+- Applying a preset never changes Pause, Needs, identity or worker progression.
+- `workerpreset [workerId] <preset-key>` resolves the same stable worker-id owner used by the existing selected-worker commands and rewrites the complete allowlist atomically.
+- Jobs Status / All Worker Status infer and display the matching preset when the exact allowlist matches; otherwise they report `Custom`.
+- Con Revamp adds a compact selected-worker Role Preset dropdown + Apply button inside the existing Allowed Jobs card and locally mirrors the selected preset checkboxes after the authoritative command is queued.
+- Bundle 2.2 Self-Test cycles through all six preset definitions, verifies exact round-trip matching, then uses Worker #1 Forager / Worker #2 Lumberjack for the existing independent-state serialization gate.
+
 
 Runtime acceptance target:
 
-`Self-Test PASS -> W1 Food+Haul / W2 Wood+Haul -> Wood reaches 100/100 without blocking Food -> W2 stops before creating excess cargo (`carried=none`) -> stop/reset both -> capture baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
+`Self-Test PASS -> W1 Forager preset / W2 Lumberjack preset -> Wood reaches 100/100 without blocking Food -> final-slot reservation remains race-safe -> stable baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
 
 - Additional workers/recruitment.
 - Housing/beds/population capacity.
@@ -965,7 +976,7 @@ Runtime acceptance target:
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS base runtime VERIFIED, default-RTS + pivot-orbit revision IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: continue stacking only compatible Bundle 2.2 work before the next launch. Current runtime pass must cover the final-slot reservation fix plus selected-worker Pause/Resume without altering Allowed Jobs.
+- Current checklist item: continue stacking only compatible Bundle 2.2 work before the next launch. Worker Role Presets are now stacked; eventual runtime setup should use Worker #1 Forager / Worker #2 Lumberjack instead of manual checkbox setup. Pause server ownership remains stacked, with its missing Con Revamp buttons recorded as non-blocking UI carryover.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
@@ -1010,7 +1021,8 @@ Runtime acceptance target:
 
 - Bundle 2.2 separated storage is verified-static pending runtime: resource definitions own 100 starter capacity each; existing saves retain all stored amounts; worker deposit eligibility and `addResource(...)` clamp by carried/target resource; the disposable resource self-test proves full Wood does not block Food.
 - Bundle 2.2 in-flight reservation fix is verified-static pending runtime: `SettlementInstance` transiently reserves per-worker capacity before gathering, reservation-aware availability excludes other workers' in-flight cargo, authoritative deposit consumes/releases the reservation, and the disposable gate reproduces final-slot same-resource contention without cross-resource blocking.
-- Bundle 2.2 worker Pause/Resume is verified-static pending runtime: pause is persistent worker policy independent of Allowed Jobs; runtime AI cancels productive gathering/reservations while paused but still processes needs; commands/UI target stable worker ids; Bundle 2.2 serialization and live snapshots include pause state.
+- Bundle 2.2 worker Pause/Resume is verified-static pending runtime: pause is persistent worker policy independent of Allowed Jobs; runtime AI cancels productive gathering/reservations while paused but still processes needs; the server command targets stable worker ids and Bundle 2.2 serialization/live snapshots include pause state. Con Revamp Pause/Resume buttons are currently UI carryover after later radial edits.
+- Bundle 2.2 Worker Role Presets are verified-static pending runtime: server enum definitions atomically rewrite only the existing Allowed Jobs policy; command/UI target the selected stable worker; matching status is inferred from the allowlist; Bundle 2.2 Self-Test exercises every preset and proves presets do not alter pause state.
 
 - Bundle 2.2 is verified-static pending runtime: worker management commands resolve optional stable worker ids through `SettlementState.findWorker(...)`; Con Revamp routes selected-worker controls to those commands; both `SettlementWorkerNpc` projections continue using independent persistent worker state against synchronized shared settlement storage; `SettlementBundle22FinalGate` covers independent jobs/needs/progression serialization and exact two-worker persistence snapshots.
 - Bundle 2.2 Con Revamp cleanup is verified-static pending runtime: only active settlement controls, selected-worker management, current Bundle 2.2 gate and Test output remain; button focus is disabled locally and status updates restore the prior JScrollPane viewport position.

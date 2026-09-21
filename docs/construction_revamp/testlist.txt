@@ -321,11 +321,17 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Reservation fix self-test: final Wood slot can be reserved by only one worker while another worker can still reserve Food independently.
 [x] Pause/Resume source: `SettlementWorkerState.paused` is persistent per-worker policy independent of Allowed Jobs and defaults false for existing/new workers.
 [x] Pause/Resume AI: pausing cancels active gathering and transient reservations, retains already-carried cargo without reserving capacity, and still permits needs/recovery processing.
-[x] Pause/Resume control: selected-worker Con Revamp buttons and `workerpause [workerId] <on|off>` target stable worker ids; All Worker Status/live AI report pause state.
+[x] Pause/Resume server control: `workerpause [workerId] <on|off>` targets stable worker ids and All Worker Status/live AI report pause state.
+[-] UI CARRYOVER: later radial Con Revamp edits dropped the Pause Worker / Resume Worker buttons; server Pause/Resume ownership remains intact and this does not block the role-preset patch.
 [x] Pause/Resume persistence: Bundle 2.2 disposable serialization and live baseline/check now compare each worker's pause state.
+[x] Role Preset source: `SettlementWorkerRolePreset` defines Lumberjack, Forager, Stone Miner, Ore Miner, Hauler Only and Idle as exact writes into the existing Allowed Jobs policy; no persistent role field is added.
+[x] Role Preset ownership: applying a preset changes only Allowed Jobs and leaves Pause, Needs, identity and progression untouched.
+[x] Role Preset command/UI: `workerpreset [workerId] <preset-key>` targets the stable worker id; Con Revamp exposes a selected-worker preset dropdown + Apply button and Jobs/All Worker Status infer Preset=<name> or Custom.
+[x] Role Preset self-test: Bundle 2.2 cycles through all six definitions, verifies exact round-trip matching, then serializes Worker #1 as Forager and Worker #2 as Lumberjack without changing independent pause/needs/progression.
+
 [ ] Con Revamp stays at the same scroll position when clicking active buttons/checkboxes instead of jumping downward.
 [ ] Bundle 2.2 Self-Test returns PASS.
-[ ] Select Worker #1: Disable All, enable Gather Food + Haul. Select Worker #2: Disable All, enable Gather Wood + Haul. Jobs Status confirms independent allowlists.
+[ ] Select Worker #1 -> apply Forager; select Worker #2 -> apply Lumberjack. Jobs Status reports Preset=Forager / Preset=Lumberjack with the exact Food+Haul / Wood+Haul allowlists.
 [ ] All Worker Status shows both workers actively following their independent jobs; Wood and Food storage increase independently with per-resource `amount/100` readback.
 [ ] Concurrent final-slot retest: as Wood reaches 100/100, no worker becomes stranded mid-haul with excess Wood because another worker consumed its expected slot; the losing worker must fail/skip reservation before creating new cargo, while Food continues independently.
 [ ] Pause Worker #1 while its Food+Haul policy remains ON; Worker #1 stops productive work, Worker #2 continues independently, All Worker Status shows Paused=YES, then Resume Worker #1 and confirm its unchanged Food+Haul policy resumes.

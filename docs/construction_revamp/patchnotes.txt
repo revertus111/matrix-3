@@ -618,3 +618,10 @@
 - Mouse-wheel zoom now changes bounded orbit distance relative to the pivot instead of accumulating free travel.
 - Preserved the runtime-verified Class411 camera owner, fixed RTS pitch, safe above-terrain initialization, Shift/Ctrl speed modifiers, Free Build controls and mode-specific wheel ownership.
 - Static changed-file checks passed; default-open, full-orbit stability, pan-then-orbit, zoom-pivot stability and Free Build regression require one focused client runtime pass.
+
+2026-09-20 - Bundle 2.2 selected-worker role presets
+- Added server-authoritative Lumberjack, Forager, Stone Miner, Ore Miner, Hauler Only and Idle presets as exact writes into existing Allowed Jobs state; no persistent role field or second AI owner added.
+- Added worker-id-targeted `workerpreset` command plus inferred Preset=<name>/Custom readback in Jobs Status and All Worker Status.
+- Added Con Revamp selected-worker Role Preset dropdown + Apply button with local checkbox mirroring; server command remains authoritative.
+- Strengthened Bundle 2.2 Self-Test to round-trip all six preset definitions and serialize W1 Forager / W2 Lumberjack while preserving independent pause/needs/progression.
+- Static branch audit found later radial UI edits dropped the previously documented Con Revamp Pause/Resume buttons; server Pause/Resume remains intact and UI restoration is recorded as non-blocking carryover.

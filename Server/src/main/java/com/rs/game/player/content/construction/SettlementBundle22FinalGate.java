@@ -63,24 +63,42 @@ public final class SettlementBundle22FinalGate {
                     "worker ids are not unique");
 
             stage = "targeting";
-            first.setJobAllowed(SettlementWorkerJob.GATHER_FOOD, true);
-            first.setJobAllowed(SettlementWorkerJob.HAUL, true);
-            second.setJobAllowed(SettlementWorkerJob.GATHER_WOOD, true);
-            second.setJobAllowed(SettlementWorkerJob.HAUL, true);
-
-            require(first.isJobAllowed(SettlementWorkerJob.GATHER_FOOD),
-                    "Worker #1 Food was not enabled");
-            require(!first.isJobAllowed(SettlementWorkerJob.GATHER_WOOD),
-                    "Worker #1 Wood changed unexpectedly");
-            require(second.isJobAllowed(SettlementWorkerJob.GATHER_WOOD),
-                    "Worker #2 Wood was not enabled");
-            require(!second.isJobAllowed(SettlementWorkerJob.GATHER_FOOD),
-                    "Worker #2 Food changed unexpectedly");
-
             first.setPaused(true);
             second.setPaused(false);
+
+            for (SettlementWorkerRolePreset preset :
+                    SettlementWorkerRolePreset.values()) {
+                preset.applyTo(second);
+                require(SettlementWorkerRolePreset.findMatching(second) == preset,
+                        "preset round-trip failed for " + preset.getKey());
+            }
+
+            SettlementWorkerRolePreset.FORAGER.applyTo(first);
+            SettlementWorkerRolePreset.LUMBERJACK.applyTo(second);
+
             require(first.isPaused() && !second.isPaused(),
-                    "independent pause targeting failed");
+                    "role preset changed independent pause state");
+            require(SettlementWorkerRolePreset.findMatching(first)
+                    == SettlementWorkerRolePreset.FORAGER,
+                    "Worker #1 Forager preset did not match");
+            require(SettlementWorkerRolePreset.findMatching(second)
+                    == SettlementWorkerRolePreset.LUMBERJACK,
+                    "Worker #2 Lumberjack preset did not match");
+
+            require(first.isJobAllowed(SettlementWorkerJob.GATHER_FOOD)
+                    && first.isJobAllowed(SettlementWorkerJob.HAUL),
+                    "Worker #1 Forager jobs were not enabled");
+            require(!first.isJobAllowed(SettlementWorkerJob.GATHER_WOOD)
+                    && !first.isJobAllowed(SettlementWorkerJob.GATHER_STONE)
+                    && !first.isJobAllowed(SettlementWorkerJob.GATHER_BASIC_ORE),
+                    "Worker #1 Forager preset left unrelated gather jobs enabled");
+            require(second.isJobAllowed(SettlementWorkerJob.GATHER_WOOD)
+                    && second.isJobAllowed(SettlementWorkerJob.HAUL),
+                    "Worker #2 Lumberjack jobs were not enabled");
+            require(!second.isJobAllowed(SettlementWorkerJob.GATHER_FOOD)
+                    && !second.isJobAllowed(SettlementWorkerJob.GATHER_STONE)
+                    && !second.isJobAllowed(SettlementWorkerJob.GATHER_BASIC_ORE),
+                    "Worker #2 Lumberjack preset left unrelated gather jobs enabled");
 
             first.setNeed(SettlementWorkerNeed.HUNGER, 33);
             second.setNeed(SettlementWorkerNeed.HUNGER, 11);
@@ -120,7 +138,7 @@ public final class SettlementBundle22FinalGate {
                     && restoredSecond.getSkillXp(SettlementWorkerSkill.WOODCUTTING) == 24L,
                     "independent progression changed after serialization");
 
-            return "PASS: per-resource storage isolation + in-flight reservation race protection + worker-id targeting + independent pause/jobs/needs/progression + two-worker serialization.";
+            return "PASS: per-resource storage isolation + in-flight reservation race protection + all worker role presets + worker-id targeting + independent pause/jobs/needs/progression + two-worker serialization.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }

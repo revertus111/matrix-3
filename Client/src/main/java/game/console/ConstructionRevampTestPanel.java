@@ -39,8 +39,12 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             new JComboBox<ConstructionRadialSelection.DragButton>(ConstructionRadialSelection.DragButton.values());
     private final JSpinner workerSelector =
             new JSpinner(new SpinnerNumberModel(1, 1, 999999, 1));
+    private final JComboBox<WorkerPresetChoice> workerRolePreset =
+            new JComboBox<WorkerPresetChoice>(WorkerPresetChoice.values());
     private final java.util.List<JCheckBox> workerJobCheckBoxes =
             new java.util.ArrayList<JCheckBox>();
+    private final java.util.Map<String, JCheckBox> workerJobCheckBoxByKey =
+            new java.util.HashMap<String, JCheckBox>();
 
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -259,9 +263,36 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Allowed Jobs — Selected Worker");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Server-authoritative allowlist. New workers start with every job OFF. "
-                + "Checkbox clicks explicitly set the saved permission; use Jobs Status for authoritative readback.",
+                "Server-authoritative allowlist. Role presets are convenience writes into this same saved policy; "
+                + "they do not create a second role system or change Pause, Needs or Progression.",
                 4));
+        card.add(Box.createVerticalStrut(8));
+
+        workerRolePreset.setMaximumSize(new Dimension(180, 30));
+        workerRolePreset.setAlignmentX(LEFT_ALIGNMENT);
+        workerRolePreset.setFocusable(false);
+
+        JButton applyPreset = new JButton("Apply Role Preset");
+        styleButton(applyPreset);
+        applyPreset.addActionListener(e -> {
+            WorkerPresetChoice choice = (WorkerPresetChoice) workerRolePreset.getSelectedItem();
+            if (choice == null) {
+                return;
+            }
+            applyPresetVisual(choice);
+            queue("itembrowser settlement workerpreset " + selectedWorkerId()
+                    + " " + choice.key,
+                    choice.displayName + " preset queued for Worker #" + selectedWorkerId()
+                            + ". Allowed Jobs updated atomically.");
+        });
+
+        JPanel presetRow = new JPanel(new GridLayout(1, 2, 7, 7));
+        presetRow.setOpaque(false);
+        presetRow.setAlignmentX(LEFT_ALIGNMENT);
+        presetRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        presetRow.add(workerRolePreset);
+        presetRow.add(applyPreset);
+        card.add(presetRow);
         card.add(Box.createVerticalStrut(8));
 
         JPanel checks = new JPanel(new GridLayout(0, 1, 4, 4));
@@ -315,6 +346,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         checkBox.setFont(ConsoleTheme.BODY_FONT);
         checkBox.setFocusable(false);
         workerJobCheckBoxes.add(checkBox);
+        workerJobCheckBoxByKey.put(jobKey, checkBox);
         checkBox.addActionListener(e -> queue(
                 "itembrowser settlement workerjob " + selectedWorkerId() + " "
                         + jobKey + " " + (checkBox.isSelected() ? "on" : "off"),
@@ -457,6 +489,16 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return card;
     }
 
+    private void applyPresetVisual(WorkerPresetChoice choice) {
+        if (choice == null) {
+            return;
+        }
+        for (java.util.Map.Entry<String, JCheckBox> entry :
+                workerJobCheckBoxByKey.entrySet()) {
+            entry.getValue().setSelected(choice.allows(entry.getKey()));
+        }
+    }
+
     private long selectedWorkerId() {
         Object value = workerSelector.getValue();
         return value instanceof Number ? ((Number) value).longValue() : 1L;
@@ -480,6 +522,46 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 getViewport().setViewPosition(viewPosition);
             }
         });
+    }
+
+    private enum WorkerPresetChoice {
+        LUMBERJACK("Lumberjack", "lumberjack",
+                "gather-wood", "haul"),
+        FORAGER("Forager", "forager",
+                "gather-food", "haul"),
+        STONE_MINER("Stone Miner", "stone-miner",
+                "gather-stone", "haul"),
+        ORE_MINER("Ore Miner", "ore-miner",
+                "gather-basic-ore", "haul"),
+        HAULER_ONLY("Hauler Only", "hauler-only",
+                "haul"),
+        IDLE("Idle", "idle");
+
+        private final String displayName;
+        private final String key;
+        private final java.util.Set<String> jobs =
+                new java.util.HashSet<String>();
+
+        WorkerPresetChoice(String displayName, String key, String... jobs) {
+            this.displayName = displayName;
+            this.key = key;
+            if (jobs != null) {
+                for (String job : jobs) {
+                    if (job != null) {
+                        this.jobs.add(job);
+                    }
+                }
+            }
+        }
+
+        private boolean allows(String jobKey) {
+            return jobs.contains(jobKey);
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
     }
 
     private static final class ViewportWidthPanel extends JPanel implements Scrollable {
