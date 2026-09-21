@@ -649,3 +649,11 @@
 - Controls target the existing server-authoritative `workerpause [workerId] on|off` path and do not modify Allowed Jobs, presets, Needs or progression.
 - Kept buttons non-focusable through the existing panel styling so the current scroll-preservation behavior remains intact.
 - Runtime verification remains deferred to the consolidated Bundle 2.2 pass.
+
+
+2026-09-20 - RWS-2 live edge-B hover correction
+- Runtime video showed the midpoint revision still scaling around a nearly fixed center while the cursor moved diagonally.
+- Root cause: the global RWS-2 listener consumed `MOUSE_DRAGGED`, preventing Matrix3's normal mouse/menu path from refreshing the action-23 ground hover used for live edge-B direction.
+- Drag-motion is now passed through to Matrix3; Worker Control still consumes the configured press and release, so the owned drag cannot become a normal ground click.
+- Existing midpoint/half-span math, fractional world rendering, 64-tile safety cap, release-hide and Escape behavior are unchanged.
+- Client-only scope retained; requires one focused runtime retest before RWS-3.
