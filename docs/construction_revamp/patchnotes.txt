@@ -803,3 +803,9 @@
 2026-09-21 - Rail Kit Classifier static review cleanup
 - Evidence-seeded ids no longer fabricate observed rotation 0; observedRotations remains '-' until a live Asset Studio session supplies actual captured rotations.
 - Reopening/reselecting a previously reviewed rail restores its persisted lastPreviewRotation; unreviewed rails still default to the first live observed rotation or 0 when none is available.
+
+2026-09-21 - Bundle 2.2 zero-Food recovery runtime verified
+- User confirmed the emergency Food recovery fix works at runtime.
+- A critical-Hunger Forager can now break the Food=0 bootstrap deadlock and resume productive work.
+- The unchanged non-food worker path still uses the normal no-Food stop behavior.
+- Bundle 2.2 runtime acceptance returns to Forager + Lumberjack concurrent production and final-slot reservation verification.
