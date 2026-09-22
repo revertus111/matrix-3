@@ -1301,3 +1301,10 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 ## Next recommended work
 
 Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated session. If the worker obeys Gather Wood + Haul, holds cargo while Haul is OFF, resumes delivery when Haul returns, and stops starting new work when gathering is disabled, mark gather/haul runtime VERIFIED and continue directly to hunger/thirst/energy. Keep camera/ghost edge checks and older non-blocking persistence/world-object checks as carryover unless a regression appears.
+
+## Rail composite authoring follow-up — 2026-09-22
+- Runtime VERIFIED: Object Explorer same-tile overlay can direct-render multiple stock object models on one logical tile; the user's A/B proof visibly rendered both type-22 rail models simultaneously.
+- Latest rail evidence confirms the stock mine curve is a multi-tile assembly, not a single curve primitive. Verified captured family for the shown curve: 46360/R2, 46361/R0, 46353/R2, 46377/R0, 46379/R0, 46382/R0, 46381/R0, with 46353/R3 continuing north/south.
+- The single-object V1 curve assumption is superseded for final rail design.
+- Same-tile Rail Composite Builder is IMPLEMENTED / NEEDS RUNTIME TEST in Test -> Object Explorer. It can assemble up to eight arbitrary stock object/type/rotation components into one logical tile, preview the composite, and save named roles to Client/data/construction/asset_studio/rail_composites.tsv.
+- A->B Rail Route Preview V2 is IMPLEMENTED / NEEDS RUNTIME TEST. The bend now prefers the first saved CURVE composite and rotates every component together for the four corner quadrants; the old single-object curve remains fallback only.

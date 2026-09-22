@@ -91,7 +91,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
     private final JComboBox<RailRoutePreview.RouteOrder> routeOrder =
             new JComboBox<RailRoutePreview.RouteOrder>(RailRoutePreview.RouteOrder.values());
     private final JLabel routePieceLabel = valueLabel("Straight rail: not configured");
-    private final JLabel routeCurveLabel = valueLabel("Curve rail: not configured");
+    private final JLabel routeCurveLabel = valueLabel("Curve composite: not loaded");
     private final JSpinner curveMapOffset =
             new JSpinner(new SpinnerNumberModel(0, 0, 3, 1));
 
@@ -274,11 +274,12 @@ public final class RailKitClassifierPanel extends JScrollPane {
     }
 
     private JPanel createRoutePreviewCard() {
-        JPanel card = ConsoleTheme.createCard("A -> B Rail Route Preview V1");
+        JPanel card = ConsoleTheme.createCard("A -> B Rail Route Preview V2");
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createWrappedText(
                 "Drag Point A to Point B. Straight sections use the checked Straight rail; "
-                + "the bend uses the first checked Curve rail and auto-rotates for the corner quadrant.",
+                + "the bend prefers the first saved CURVE composite from Object Explorer. "
+                + "A checked single Curve rail remains fallback only.",
                 5));
         card.add(Box.createVerticalStrut(7));
 
@@ -294,11 +295,11 @@ public final class RailKitClassifierPanel extends JScrollPane {
         useButtons.setAlignmentX(LEFT_ALIGNMENT);
         useButtons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         JButton useSelectedStraight = button("Use Selected Straight");
-        JButton useSelectedCurve = button("Use Selected Curve");
+        JButton reloadComposite = button("Reload CURVE Composite");
         useSelectedStraight.addActionListener(e -> configureSelectedRouteRail());
-        useSelectedCurve.addActionListener(e -> configureSelectedCurveRail());
+        reloadComposite.addActionListener(e -> reloadCurveComposite());
         useButtons.add(useSelectedStraight);
-        useButtons.add(useSelectedCurve);
+        useButtons.add(reloadComposite);
         card.add(useButtons);
         card.add(Box.createVerticalStrut(7));
 
@@ -427,6 +428,14 @@ public final class RailKitClassifierPanel extends JScrollPane {
         setStatus(RailRoutePreview.getStatus());
     }
 
+    private void reloadCurveComposite() {
+        boolean loaded = RailRoutePreview.reloadCurveComposite();
+        routeCurveLabel.setText(loaded
+                ? "Curve composite: " + RailRoutePreview.getConfiguredCurveCompositeName()
+                : "Curve composite: none [single-object fallback]");
+        setStatus(RailRoutePreview.getStatus());
+    }
+
     private void configureSelectedCurveRail() {
         Candidate candidate = selected;
         if (candidate == null) {
@@ -458,13 +467,16 @@ public final class RailKitClassifierPanel extends JScrollPane {
             }
         }
 
-        if (RailRoutePreview.getConfiguredCurveObjectId() < 0) {
+        reloadCurveComposite();
+
+        if ("none".equals(RailRoutePreview.getConfiguredCurveCompositeName())
+                && RailRoutePreview.getConfiguredCurveObjectId() < 0) {
             for (Candidate candidate : candidates) {
                 ClassificationRecord record = records.get(candidate.key());
                 if (record != null && record.curve) {
                     RailRoutePreview.configureCurve(candidate.name, candidate.id, candidate.type,
                             record.lastPreviewRotation);
-                    routeCurveLabel.setText("Curve rail: ID " + candidate.id
+                    routeCurveLabel.setText("Curve fallback: ID " + candidate.id
                             + " type " + candidate.type + " base rot "
                             + (record.lastPreviewRotation & 0x3) + " [first checked Curve]");
                     break;

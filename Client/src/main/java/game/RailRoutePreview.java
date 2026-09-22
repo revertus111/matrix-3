@@ -10,10 +10,11 @@ import java.awt.event.MouseEvent;
 /**
  * Client-only Point-A -> Point-B rail route visual proof.
  *
- * V1 proves drag UX, Manhattan path generation, straight-axis orientation and
- * one classified curve primitive at the route bend. It does not place real
- * world objects, own collision, persist anything, consume settlement resources,
- * or attempt switch/junction auto-tiling.
+ * V2 proves drag UX, Manhattan routing, straight-axis orientation and a saved
+ * same-tile CURVE composite at the bend. A single-object curve remains only as
+ * fallback authoring support. It does not place real world objects, own
+ * collision, persist gameplay state, consume settlement resources, or attempt
+ * switch/junction auto-tiling.
  */
 public final class RailRoutePreview {
 
@@ -57,6 +58,7 @@ public final class RailRoutePreview {
     private static volatile int curveBaseRotation;
     private static volatile int curveRotationOffset;
     private static volatile String curveObjectName = "Curve";
+    private static volatile RailCompositeLibrary.CompositeDefinition curveComposite;
 
     private static volatile RouteOrder routeOrder = RouteOrder.X_THEN_Y;
 
@@ -114,6 +116,20 @@ public final class RailRoutePreview {
     public static int getConfiguredCurveObjectId() {
         return curveObjectId;
     }
+    public static boolean reloadCurveComposite() {
+        curveComposite = RailCompositeLibrary.findFirst(RailCompositeLibrary.Role.CURVE);
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = curveComposite == null
+                ? "No saved CURVE composite found; single-object curve fallback remains available."
+                : "Loaded curve composite: " + curveComposite.describe() + ".";
+        return curveComposite != null;
+    }
+
+    public static String getConfiguredCurveCompositeName() {
+        RailCompositeLibrary.CompositeDefinition composite = curveComposite;
+        return composite == null ? "none" : composite.getName();
+    }
+
 
     public static void setCurveRotationOffset(int offset) {
         curveRotationOffset = offset & 0x3;
@@ -155,6 +171,8 @@ public final class RailRoutePreview {
             ConstructionRadialSelection.setReticule4187ProbeMode(
                     ConstructionRadialSelection.Reticule4187ProbeMode.OFF);
             ObjectLabPreview.hide();
+            ObjectCompositePreview.hide();
+            reloadCurveComposite();
 
             enabled = true;
             eventState = "A->B rail preview ON. Move over ground, then hold Left mouse and drag.";
@@ -193,13 +211,14 @@ public final class RailRoutePreview {
 
     public static String getStatus() {
         StringBuilder status = new StringBuilder(192);
-        status.append(enabled ? "RAIL V1 ON" : "RAIL V1 OFF");
+        status.append(enabled ? "RAIL V2 ON" : "RAIL V2 OFF");
         status.append(" | straight=").append(objectId < 0 ? "none" : objectId + "/" + objectType)
                 .append(" nsRot=").append(horizontalRotation)
                 .append(" ewRot=").append(eastWestRotation())
                 .append(" | curve=").append(curveObjectId < 0
                         ? "none" : curveObjectId + "/" + curveObjectType)
                 .append(" baseRot=").append(curveBaseRotation)
+                .append(" | composite=").append(getConfiguredCurveCompositeName())
                 .append(" mapOffset=R").append(curveRotationOffset)
                 .append(" | order=").append(routeOrder);
 
@@ -314,11 +333,11 @@ public final class RailRoutePreview {
 
         int rendered;
         if (routeOrder == RouteOrder.Y_THEN_X) {
-            rendered = renderYThenX(scene, renderer, sceneBase, definition, curveDefinition,
-                    startX, startY, endX, endY, plane);
+            rendered = renderYThenX(scene, renderer, sceneBase, definitions,
+                    definition, curveDefinition, startX, startY, endX, endY, plane);
         } else {
-            rendered = renderXThenY(scene, renderer, sceneBase, definition, curveDefinition,
-                    startX, startY, endX, endY, plane);
+            rendered = renderXThenY(scene, renderer, sceneBase, definitions,
+                    definition, curveDefinition, startX, startY, endX, endY, plane);
         }
 
         int requested = routeTileCount(startX, startY, endX, endY);
@@ -326,11 +345,16 @@ public final class RailRoutePreview {
         renderState = "DRAW " + rendered + "/" + requested + " tile(s)"
                 + (requested > MAX_ROUTE_TILES ? " [capped " + MAX_ROUTE_TILES + "]" : "")
                 + (hasCorner
-                        ? (curveDefinition != null ? " V1 curve corner" : " V1 curve missing -> straight fallback")
+                        ? (curveComposite != null
+                                ? " V2 composite curve=" + curveComposite.getName()
+                                : (curveDefinition != null
+                                        ? " V2 single-curve fallback"
+                                        : " V2 curve missing -> straight fallback"))
                         : " straight route");
     }
 
     private static int renderXThenY(Class523 scene, Class106 renderer, Class497 sceneBase,
+            Class639_Sub16 definitions,
             ObjectDefinitions straightDefinition, ObjectDefinitions curveDefinition,
             int startX, int startY, int endX, int endY, int plane) {
         if (startY == endY) {
@@ -364,7 +388,13 @@ public final class RailRoutePreview {
         attempted++;
         int horizontalNeighborDirection = -xStep;
         int verticalNeighborDirection = yStep;
-        if (curveDefinition != null) {
+        if (curveComposite != null) {
+            if (renderCurveComposite(scene, renderer, sceneBase, definitions,
+                    endX, startY, plane,
+                    horizontalNeighborDirection, verticalNeighborDirection)) {
+                rendered++;
+            }
+        } else if (curveDefinition != null) {
             if (renderPiece(scene, renderer, sceneBase, curveDefinition, curveObjectType,
                     endX, startY, plane,
                     curveRotationFor(horizontalNeighborDirection, verticalNeighborDirection))) {
@@ -391,6 +421,7 @@ public final class RailRoutePreview {
     }
 
     private static int renderYThenX(Class523 scene, Class106 renderer, Class497 sceneBase,
+            Class639_Sub16 definitions,
             ObjectDefinitions straightDefinition, ObjectDefinitions curveDefinition,
             int startX, int startY, int endX, int endY, int plane) {
         if (startY == endY) {
@@ -424,7 +455,13 @@ public final class RailRoutePreview {
         attempted++;
         int horizontalNeighborDirection = xStep;
         int verticalNeighborDirection = -yStep;
-        if (curveDefinition != null) {
+        if (curveComposite != null) {
+            if (renderCurveComposite(scene, renderer, sceneBase, definitions,
+                    startX, endY, plane,
+                    horizontalNeighborDirection, verticalNeighborDirection)) {
+                rendered++;
+            }
+        } else if (curveDefinition != null) {
             if (renderPiece(scene, renderer, sceneBase, curveDefinition, curveObjectType,
                     startX, endY, plane,
                     curveRotationFor(horizontalNeighborDirection, verticalNeighborDirection))) {
@@ -684,6 +721,45 @@ public final class RailRoutePreview {
         return (horizontalRotation + 1) & 0x3;
     }
 
+    private static boolean renderCurveComposite(Class523 scene, Class106 renderer,
+            Class497 sceneBase, Class639_Sub16 definitions,
+            int worldX, int worldY, int plane,
+            int horizontalDirection, int verticalDirection) {
+        RailCompositeLibrary.CompositeDefinition composite = curveComposite;
+        if (composite == null) {
+            return false;
+        }
+
+        int quarterTurns = curveQuarterTurnsFor(horizontalDirection, verticalDirection);
+        boolean any = false;
+        for (RailCompositeLibrary.Component component : composite.getComponents()) {
+            ObjectDefinitions definition = (ObjectDefinitions) definitions.getDefinition(
+                    component.getId(), -1356282071);
+            if (definition == null) {
+                continue;
+            }
+            int rotation = (component.getRotation() + curveRotationOffset + quarterTurns) & 0x3;
+            if (renderPiece(scene, renderer, sceneBase, definition, component.getType(),
+                    worldX, worldY, plane, rotation)) {
+                any = true;
+            }
+        }
+        return any;
+    }
+
+    private static int curveQuarterTurnsFor(int horizontalDirection, int verticalDirection) {
+        if (horizontalDirection > 0 && verticalDirection > 0) {
+            return 0;
+        }
+        if (horizontalDirection > 0 && verticalDirection < 0) {
+            return 1;
+        }
+        if (horizontalDirection < 0 && verticalDirection < 0) {
+            return 2;
+        }
+        return 3;
+    }
+
     private static int curveRotationFor(int horizontalDirection, int verticalDirection) {
         /*
          * V1 canonical mapping:
@@ -696,16 +772,7 @@ public final class RailRoutePreview {
          * cache model's saved preview rotation is visual evidence, not yet a
          * runtime-verified canonical EN orientation.
          */
-        int quarterTurns;
-        if (horizontalDirection > 0 && verticalDirection > 0) {
-            quarterTurns = 0;
-        } else if (horizontalDirection > 0 && verticalDirection < 0) {
-            quarterTurns = 1;
-        } else if (horizontalDirection < 0 && verticalDirection < 0) {
-            quarterTurns = 2;
-        } else {
-            quarterTurns = 3;
-        }
+        int quarterTurns = curveQuarterTurnsFor(horizontalDirection, verticalDirection);
         return (curveBaseRotation + curveRotationOffset + quarterTurns) & 0x3;
     }
 

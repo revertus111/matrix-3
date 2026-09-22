@@ -4,6 +4,7 @@ import game.AssetStudioCapture;
 import game.AssetStudioCapture.CaptureBatch;
 import game.DevDefinitionBridge;
 import game.ObjectCompositePreview;
+import game.RailCompositeLibrary;
 
 import java.awt.Dimension;
 import java.awt.GridLayout;
@@ -20,13 +21,17 @@ import java.util.List;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.DefaultListModel;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
+import javax.swing.ListSelectionModel;
 
 /**
  * Generic client-only Matrix3 object definition browser/preview tool.
@@ -53,16 +58,18 @@ public final class ObjectExplorerPanel extends JScrollPane {
             new JSpinner(new SpinnerNumberModel(0, -12, 12, 1));
 
     private final JLabel selectedName = valueLabel("No object selected");
-    private final JLabel slotALabel = valueLabel("A: not set");
-    private final JLabel slotBLabel = valueLabel("B: not set");
     private final JLabel status =
             ConsoleTheme.subtitleLabel("Search by name/ID or browse definitions.");
 
     private final JTextField tagField = new JTextField("OBJECT_RESEARCH");
+    private final JTextField compositeNameField = new JTextField("CURVE_1X1");
+    private final JComboBox<RailCompositeLibrary.Role> compositeRole =
+            new JComboBox<RailCompositeLibrary.Role>(RailCompositeLibrary.Role.values());
+    private final DefaultListModel<String> compositeModel = new DefaultListModel<String>();
+    private final JList<String> compositeList = new JList<String>(compositeModel);
+    private final List<Snapshot> compositeParts = new ArrayList<Snapshot>();
 
     private String currentName = "id-0";
-    private Snapshot slotA;
-    private Snapshot slotB;
 
     private final DevSpawnSearchPanel search =
             new DevSpawnSearchPanel(DevSpawnSearchPanel.OBJECT,
@@ -104,7 +111,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(10));
         content.add(createPreviewCard());
         content.add(Box.createVerticalStrut(10));
-        content.add(createOverlayCard());
+        content.add(createCompositeCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createResearchCard());
         content.add(Box.createVerticalStrut(10));
@@ -210,48 +217,79 @@ public final class ObjectExplorerPanel extends JScrollPane {
         return card;
     }
 
-    private JPanel createOverlayCard() {
-        JPanel card = ConsoleTheme.createCard("Same-tile overlay proof");
+    private JPanel createCompositeCard() {
+        JPanel card = ConsoleTheme.createCard("Same-tile Rail Composite Builder");
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createWrappedText(
-                "Snapshot two object/type/rotation combinations, then direct-render both at the exact "
-                + "same tile. This tests visual composability only; normal scene-slot ownership is separate.",
+                "Build one logical rail tile from up to 8 stock object models. Add the current ID/type/rotation, "
+                + "preview every component on the exact same tile, then save a named role for the A->B router.",
+                5));
+        card.add(Box.createVerticalStrut(5));
+        card.add(ConsoleTheme.createWrappedText(
+                "Verified curve-assembly evidence includes: 46360/R2, 46361/R0, 46353/R2, "
+                + "46377/R0, 46379/R0, 46382/R0, 46381/R0. These are candidates, not a prebuilt 1x1 curve.",
                 4));
         card.add(Box.createVerticalStrut(7));
 
-        slotALabel.setAlignmentX(LEFT_ALIGNMENT);
-        slotBLabel.setAlignmentX(LEFT_ALIGNMENT);
-        card.add(slotALabel);
-        card.add(Box.createVerticalStrut(3));
-        card.add(slotBLabel);
+        compositeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        compositeList.setBackground(ConsoleTheme.PANEL);
+        compositeList.setForeground(ConsoleTheme.TEXT);
+        compositeList.setSelectionBackground(ConsoleTheme.CARD_HOVER);
+        JScrollPane listScroll = new JScrollPane(compositeList);
+        listScroll.setAlignmentX(LEFT_ALIGNMENT);
+        listScroll.setPreferredSize(new Dimension(240, 135));
+        listScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 155));
+        ConsoleTheme.styleScrollPane(listScroll);
+        card.add(listScroll);
         card.add(Box.createVerticalStrut(7));
 
-        JButton setA = button("Set A = Current");
-        JButton setB = button("Set B = Current");
-        JButton show = button("Preview A + B Same Tile");
-        JButton clear = button("Clear Overlay");
-
-        setA.addActionListener(e -> setOverlaySlot(true));
-        setB.addActionListener(e -> setOverlaySlot(false));
-        show.addActionListener(e -> previewOverlay());
-        clear.addActionListener(e -> {
-            slotA = null;
-            slotB = null;
-            slotALabel.setText("A: not set");
-            slotBLabel.setText("B: not set");
-            ObjectCompositePreview.hide();
-            setStatus("Overlay slots cleared.");
-        });
+        JButton add = button("Add Current Component");
+        JButton remove = button("Remove Selected");
+        JButton preview = button("Preview Composite");
+        JButton clear = button("Clear Components");
+        add.addActionListener(e -> addCompositePart());
+        remove.addActionListener(e -> removeCompositePart());
+        preview.addActionListener(e -> previewComposite());
+        clear.addActionListener(e -> clearComposite());
 
         JPanel actions = new JPanel(new GridLayout(2, 2, 6, 6));
         actions.setOpaque(false);
         actions.setAlignmentX(LEFT_ALIGNMENT);
         actions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
-        actions.add(setA);
-        actions.add(setB);
-        actions.add(show);
+        actions.add(add);
+        actions.add(remove);
+        actions.add(preview);
         actions.add(clear);
         card.add(actions);
+        card.add(Box.createVerticalStrut(8));
+
+        ConsoleTheme.styleTextField(compositeNameField);
+        compositeNameField.setAlignmentX(LEFT_ALIGNMENT);
+        compositeNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        card.add(smallLabel("Composite name"));
+        card.add(Box.createVerticalStrut(3));
+        card.add(compositeNameField);
+        card.add(Box.createVerticalStrut(6));
+
+        compositeRole.setFocusable(false);
+        compositeRole.setAlignmentX(LEFT_ALIGNMENT);
+        compositeRole.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        compositeRole.setSelectedItem(RailCompositeLibrary.Role.CURVE);
+        card.add(smallLabel("Role"));
+        card.add(Box.createVerticalStrut(3));
+        card.add(compositeRole);
+        card.add(Box.createVerticalStrut(6));
+
+        JButton save = button("Save Composite");
+        save.setAlignmentX(LEFT_ALIGNMENT);
+        save.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        save.addActionListener(e -> saveComposite());
+        card.add(save);
+        card.add(Box.createVerticalStrut(5));
+        card.add(ConsoleTheme.createWrappedText(
+                "Saved to Client/data/construction/asset_studio/rail_composites.tsv. "
+                + "The A->B preview prefers the first saved CURVE composite at its bend.",
+                3));
         return card;
     }
 
@@ -344,37 +382,94 @@ public final class ObjectExplorerPanel extends JScrollPane {
         setStatus(ObjectCompositePreview.getStatus());
     }
 
-    private void setOverlaySlot(boolean first) {
-        Snapshot snapshot = currentSnapshot();
-        if (first) {
-            slotA = snapshot;
-            slotALabel.setText("A: " + snapshot.describe());
-        } else {
-            slotB = snapshot;
-            slotBLabel.setText("B: " + snapshot.describe());
+    private void addCompositePart() {
+        if (compositeParts.size() >= 8) {
+            setStatus("Composite is capped at 8 visual components for this authoring proof.");
+            return;
         }
-        setStatus((first ? "Overlay A" : "Overlay B") + " captured from current object controls.");
+        Snapshot snapshot = currentSnapshot();
+        compositeParts.add(snapshot);
+        refreshCompositeList();
+        compositeList.setSelectedIndex(compositeParts.size() - 1);
+        setStatus("Added component " + compositeParts.size() + ": " + snapshot.describe());
     }
 
-    private void previewOverlay() {
-        if (slotA == null || slotB == null) {
-            setStatus("Set both overlay A and B first.");
+    private void removeCompositePart() {
+        int index = compositeList.getSelectedIndex();
+        if (index < 0 || index >= compositeParts.size()) {
+            setStatus("Select a composite component to remove.");
+            return;
+        }
+        Snapshot removed = compositeParts.remove(index);
+        refreshCompositeList();
+        setStatus("Removed composite component: " + removed.describe());
+    }
+
+    private void clearComposite() {
+        compositeParts.clear();
+        refreshCompositeList();
+        ObjectCompositePreview.hide();
+        setStatus("Composite components cleared.");
+    }
+
+    private void refreshCompositeList() {
+        compositeModel.clear();
+        for (int i = 0; i < compositeParts.size(); i++) {
+            compositeModel.addElement("#" + (i + 1) + "  " + compositeParts.get(i).describe());
+        }
+    }
+
+    private void previewComposite() {
+        if (compositeParts.isEmpty()) {
+            setStatus("Add at least one component first.");
             return;
         }
 
         CaptureBatch anchor = AssetStudioCapture.capturePlayerArea(0);
         if (anchor == null || !anchor.isSuccess()) {
-            setStatus("Overlay failed: "
+            setStatus("Composite preview failed: "
                     + (anchor == null ? "live player/scene unavailable" : anchor.getError()));
             return;
         }
 
-        ObjectCompositePreview.showOverlay(
-                slotA.name, slotA.id, slotA.type, slotA.rotation,
-                slotB.name, slotB.id, slotB.type, slotB.rotation,
+        List<RailCompositeLibrary.Component> components =
+                new ArrayList<RailCompositeLibrary.Component>();
+        for (Snapshot snapshot : compositeParts) {
+            components.add(new RailCompositeLibrary.Component(
+                    snapshot.id, snapshot.type, snapshot.rotation));
+        }
+
+        String name = compositeNameField.getText() == null
+                ? "Composite" : compositeNameField.getText().trim();
+        ObjectCompositePreview.showComposite(name, components,
                 anchor.getCenterX(), anchor.getCenterY(), anchor.getPlane(),
                 number(offsetXSpinner), number(offsetYSpinner));
         setStatus(ObjectCompositePreview.getStatus());
+    }
+
+    private void saveComposite() {
+        if (compositeParts.isEmpty()) {
+            setStatus("Add at least one component before saving.");
+            return;
+        }
+
+        List<RailCompositeLibrary.Component> components =
+                new ArrayList<RailCompositeLibrary.Component>();
+        for (Snapshot snapshot : compositeParts) {
+            components.add(new RailCompositeLibrary.Component(
+                    snapshot.id, snapshot.type, snapshot.rotation));
+        }
+
+        Object selectedRole = compositeRole.getSelectedItem();
+        RailCompositeLibrary.Role role = selectedRole instanceof RailCompositeLibrary.Role
+                ? (RailCompositeLibrary.Role) selectedRole
+                : RailCompositeLibrary.Role.CUSTOM;
+        String error = RailCompositeLibrary.saveComposite(
+                compositeNameField.getText(), role, components);
+        setStatus(error == null
+                ? "Saved " + compositeNameField.getText().trim() + " [" + role + "] with "
+                        + components.size() + " component(s)."
+                : error);
     }
 
     private Snapshot currentSnapshot() {

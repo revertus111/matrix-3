@@ -1,11 +1,14 @@
 package game;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Client-only generic object preview used by Test -> Object Explorer.
+ * Client-only generic object/composite preview used by Test -> Object Explorer.
  *
- * It can draw one or two object models on exactly the same world tile without
- * registering either object in Class523. This proves visual composability only;
- * it does not prove that two objects can coexist in the same normal scene slot.
+ * Any number of stock object models can be direct-rendered on exactly the same
+ * logical world tile without registering them in Class523. This proves visual
+ * composability only; normal scene-slot ownership remains unchanged.
  */
 public final class ObjectCompositePreview {
 
@@ -17,8 +20,8 @@ public final class ObjectCompositePreview {
     private static final Class90 RENDER_BOUNDS = new Class90();
 
     private static volatile boolean active;
-    private static volatile PreviewSpec a;
-    private static volatile PreviewSpec b;
+    private static volatile PreviewSpec[] specs = new PreviewSpec[0];
+    private static volatile String previewName = "Preview";
     private static volatile int sourceX;
     private static volatile int sourceY;
     private static volatile int plane;
@@ -32,41 +35,59 @@ public final class ObjectCompositePreview {
 
     public static void showSingle(String name, int id, int type, int rotation,
             int worldX, int worldY, int worldPlane, int xOffset, int yOffset) {
-        show(new PreviewSpec(name, id, type, rotation), null,
-                worldX, worldY, worldPlane, xOffset, yOffset);
+        List<PreviewSpec> entries = new ArrayList<PreviewSpec>();
+        entries.add(new PreviewSpec(name, id, type, rotation));
+        show("Single", entries, worldX, worldY, worldPlane, xOffset, yOffset);
     }
 
     public static void showOverlay(
             String nameA, int idA, int typeA, int rotationA,
             String nameB, int idB, int typeB, int rotationB,
             int worldX, int worldY, int worldPlane, int xOffset, int yOffset) {
-        show(new PreviewSpec(nameA, idA, typeA, rotationA),
-                new PreviewSpec(nameB, idB, typeB, rotationB),
-                worldX, worldY, worldPlane, xOffset, yOffset);
+        List<PreviewSpec> entries = new ArrayList<PreviewSpec>();
+        entries.add(new PreviewSpec(nameA, idA, typeA, rotationA));
+        entries.add(new PreviewSpec(nameB, idB, typeB, rotationB));
+        show("Overlay", entries, worldX, worldY, worldPlane, xOffset, yOffset);
     }
 
-    private static void show(PreviewSpec first, PreviewSpec second,
+    public static void showComposite(String name,
+            List<RailCompositeLibrary.Component> components,
             int worldX, int worldY, int worldPlane, int xOffset, int yOffset) {
-        a = first;
-        b = second;
+        List<PreviewSpec> entries = new ArrayList<PreviewSpec>();
+        if (components != null) {
+            for (RailCompositeLibrary.Component component : components) {
+                if (component != null) {
+                    entries.add(new PreviewSpec("component", component.getId(),
+                            component.getType(), component.getRotation()));
+                }
+            }
+        }
+        show(name == null ? "Composite" : name,
+                entries, worldX, worldY, worldPlane, xOffset, yOffset);
+    }
+
+    private static void show(String name, List<PreviewSpec> entries,
+            int worldX, int worldY, int worldPlane, int xOffset, int yOffset) {
+        specs = entries == null
+                ? new PreviewSpec[0]
+                : entries.toArray(new PreviewSpec[entries.size()]);
+        previewName = name == null || name.trim().isEmpty() ? "Preview" : name;
         sourceX = worldX;
         sourceY = worldY;
         plane = clamp(worldPlane, 0, 3);
         offsetX = clamp(xOffset, -12, 12);
         offsetY = clamp(yOffset, -12, 12);
-        active = first != null && first.id >= 0;
+        active = specs.length > 0;
         lastRenderedCycle = Integer.MIN_VALUE;
         status = active
-                ? "READY " + describe(first)
-                        + (second == null ? "" : " + " + describe(second))
+                ? "READY " + previewName + " components=" + specs.length
                         + " sameTile=" + getPreviewX() + "," + getPreviewY() + "," + plane
                 : "INVALID preview";
     }
 
     public static void hide() {
         active = false;
-        a = null;
-        b = null;
+        specs = new PreviewSpec[0];
         lastRenderedCycle = Integer.MIN_VALUE;
         status = "HIDDEN";
     }
@@ -76,7 +97,8 @@ public final class ObjectCompositePreview {
     }
 
     static void render(Class523 scene, Class106 renderer) {
-        if (!active || a == null || scene == null || renderer == null) {
+        PreviewSpec[] current = specs;
+        if (!active || current.length == 0 || scene == null || renderer == null) {
             return;
         }
 
@@ -101,28 +123,20 @@ public final class ObjectCompositePreview {
         int worldX = getPreviewX();
         int worldY = getPreviewY();
         int rendered = 0;
-        StringBuilder failures = new StringBuilder();
+        int failed = 0;
 
-        if (renderOne(a, scene, renderer, sceneBase, definitions, worldX, worldY, plane)) {
-            rendered++;
-        } else {
-            failures.append(" A_FAIL");
-        }
-
-        PreviewSpec second = b;
-        if (second != null && second.id >= 0) {
-            if (renderOne(second, scene, renderer, sceneBase, definitions,
+        for (PreviewSpec spec : current) {
+            if (renderOne(spec, scene, renderer, sceneBase, definitions,
                     worldX, worldY, plane)) {
                 rendered++;
             } else {
-                failures.append(" B_FAIL");
+                failed++;
             }
         }
 
-        int requested = second == null || second.id < 0 ? 1 : 2;
-        status = "DRAW " + rendered + "/" + requested
+        status = "DRAW " + rendered + "/" + current.length
                 + " sameTile=" + worldX + "," + worldY + "," + plane
-                + failures.toString();
+                + (failed == 0 ? "" : " failed=" + failed);
     }
 
     private static boolean renderOne(PreviewSpec spec, Class523 scene, Class106 renderer,
@@ -202,10 +216,6 @@ public final class ObjectCompositePreview {
         return true;
     }
 
-    private static String describe(PreviewSpec spec) {
-        return spec.name + " id=" + spec.id + " type=" + spec.type + " rot=" + spec.rotation;
-    }
-
     private static int getPreviewX() {
         return sourceX + offsetX;
     }
@@ -219,13 +229,11 @@ public final class ObjectCompositePreview {
     }
 
     private static final class PreviewSpec {
-        private final String name;
         private final int id;
         private final int type;
         private final int rotation;
 
         private PreviewSpec(String name, int id, int type, int rotation) {
-            this.name = name == null || name.trim().isEmpty() ? "Object" : name;
             this.id = id;
             this.type = clamp(type, 0, 22);
             this.rotation = rotation & 0x3;

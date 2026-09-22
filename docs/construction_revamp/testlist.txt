@@ -560,8 +560,27 @@ Matrix3 same-tile object overlay proof — IMPLEMENTED / NEEDS RUNTIME TEST
 [x] Source ownership: A+B overlay draws two independent ObjectDefinitions models at the same world coordinate without Class523 registration.
 [x] Scene-slot caveat: this does not claim two type-22 floor decorations can coexist as ordinary registered objects; AssetStudioCapture confirms one floor-decoration field per tile plus separate wall/decor/floor-object ownership.
 [ ] Configure object A and click Set A = Current; configure a different ID/type/rotation and Set B = Current.
-[ ] Preview A + B Same Tile draws both models at exactly one world tile beside the player.
+[x] Runtime VERIFIED: Preview A + B Same Tile draws both models simultaneously at exactly one world tile beside the player (user screenshot, 2026-09-22).
 [ ] Use two rail fragments that appear complementary; determine whether the combined visual can form a compact 1x1 curve/turnout component without unacceptable clipping/z-fighting.
 [ ] Rotate either component and re-snapshot it; overlay proves whether a useful composite can be built from stock cache models.
 [ ] Clear Overlay removes both visual components and resets A/B slots.
 [ ] Overlay preview creates no collision, interaction, persistence, server object or cache mutation.
+
+Matrix3 same-tile Rail Composite Builder — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Architecture: one saved composite represents one logical rail tile with 1-8 stock visual components; no additional Class523 scene slots are claimed.
+[x] Evidence seed recorded from capture_20260922_001: 46360/R2, 46361/R0, 46353/R2, 46377/R0, 46379/R0, 46382/R0, 46381/R0, plus straight continuation 46353/R3.
+[ ] Test -> Object Explorer -> Same-tile Rail Composite Builder: add two or more current ID/type/rotation components and verify the list preserves each snapshot exactly.
+[ ] Preview Composite direct-renders every listed component on the same tile and reports the rendered/total component count.
+[ ] Remove Selected removes only that component; Clear Components removes all composite visuals/list rows.
+[ ] Save Composite with role CURVE writes/replaces the named definition in Client/data/construction/asset_studio/rail_composites.tsv with one row per component.
+[ ] Saving a second composite name preserves the first; saving the same name replaces only that composite.
+
+Matrix3 A->B Rail Route Preview V2 — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] V1 single-object curve is retained only as fallback; the preferred bend source is the first saved RailCompositeLibrary role CURVE.
+[x] Composite corner ownership: every component is rendered at one logical bend tile and receives the same quadrant quarter-turn in addition to its saved component rotation.
+[x] Existing Curve map offset R0-R3 applies to the complete composite, allowing one saved canonical orientation to be calibrated without rewriting component rows.
+[ ] Build/save a visually clean CURVE composite in Object Explorer, return to Rail Classifier, click Reload CURVE Composite and verify its name appears in route status.
+[ ] Enable A->B Preview and drag an L route; the bend uses all saved composite components, not the old single object.
+[ ] If the canonical saved composite faces the wrong bend quadrant, adjust Curve map offset once; all components rotate together.
+[ ] Test the other three corner quadrants plus X-then-Y/Y-then-X and confirm the composite remains one logical tile.
+[ ] Parallel one-tile-spaced routes remain possible because the bend no longer requires stamping the stock multi-tile mine curve footprint.

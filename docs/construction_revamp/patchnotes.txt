@@ -884,3 +884,13 @@
 - The same baseline passed again after logout/relog/re-entry, preserving worker identities, pause state, Allowed Jobs, Needs, progression and player Construction XP.
 - Bundle 2.2 multi-worker control + concurrent work is DONE / RUNTIME VERIFIED.
 - Persistent-runtime work advances to Bundle 2.3 housing, beds + population capacity.
+
+2026-09-22 - Same-tile Rail Composite Builder + A->B V2
+- Promoted the runtime-verified A+B overlay proof into a reusable rail-composite authoring system.
+- Added RailCompositeLibrary with named roles STRAIGHT/CURVE/TURNOUT/CROSSING/END/CUSTOM stored at Client/data/construction/asset_studio/rail_composites.tsv.
+- Object Explorer can now add up to eight current ID/type/rotation snapshots, remove/reorder-by-rebuild, preview all components on one exact tile, clear the set, and save/replace a named composite role.
+- ObjectCompositePreview now renders an arbitrary component list instead of only A+B.
+- Documented the latest verified stock curve family from capture_20260922_001: 46360/R2, 46361/R0, 46353/R2, 46377/R0, 46379/R0, 46382/R0, 46381/R0; 46353/R3 is the north/south continuation.
+- RailRoutePreview is now V2: on enable/reload it reads the first saved CURVE composite and uses that at the Manhattan bend, rotating every component together by the corner quadrant plus the existing R0-R3 calibration offset.
+- The previous single-object Curve classification remains a safe fallback only; it is no longer the preferred rail architecture.
+- RailRoutePreview hides Object Explorer composite previews when enabling route mode so developer visuals do not stack accidentally.
