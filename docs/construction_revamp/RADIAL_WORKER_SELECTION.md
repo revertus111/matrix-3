@@ -388,7 +388,7 @@ Requirements:
 - Escape cancels
 - dragging back shrinks/repositions the ring naturally
 
-Status: IMPLEMENTED / NEEDS RUNTIME TEST
+Status: RUNTIME VERIFIED
 
 ---
 
@@ -397,14 +397,28 @@ Status: IMPLEMENTED / NEEDS RUNTIME TEST
 Goal:
 Detect settlement workers inside the radius.
 
+Implementation:
+
+- client-only live preview; persistent worker IDs/server authority remain deferred to RWS-5
+- iterates Matrix3's bounded active-local NPC list (`client.anIntArray8626` / `anInt8625`) rather than scanning definitions or the whole world
+- filters to same-plane NPC definition 1 with the server-overridden display name `Settler`
+- converts each active worker's scene tile to world coordinates through the current scene base
+- tests worker center membership with exact `distanceSquared <= liveRadiusSquared`
+- while dragging, every detected worker receives a temporary small GFX 4171 direct-render marker
+- Radial Status reports `workersInCircle=<count>` plus detected runtime NPC indexes
+- preview state clears on a new drag/cancel; release hides the drag-time visualization
+- no server command, worker AI, combat target, persistence or cache definition is changed
+
 Requirements:
 
 - active NPC list only
 - settlement workers only
 - distance calculated in world space
 - live preview updates while dragging
+- workers outside the circle are not preview-marked
+- preview markers disappear when the active drag ends
 
-Status: PLANNED
+Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
 ---
 
