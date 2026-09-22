@@ -18,6 +18,7 @@ import com.rs.game.player.content.construction.SettlementBundle14FinalGate;
 import com.rs.game.player.content.construction.SettlementBundle15FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle22FinalGate;
 import com.rs.game.player.content.construction.SettlementInstance;
+import com.rs.game.player.content.construction.SettlementHousingCheck;
 import com.rs.game.player.content.construction.SettlementObjectCatalog;
 import com.rs.game.player.content.construction.SettlementObjectProbe;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
@@ -464,10 +465,62 @@ public final class ItemBrowserCommandBridge {
         if ("populationrecruit".equals(operation)) {
             if (active == null || !active.isLoaded()) {
                 player.getPackets().sendGameMessage(
-                        "Enter the loaded settlement before recruiting Worker #2.");
+                        "Enter the loaded settlement before recruiting another worker.");
             } else {
                 player.getPackets().sendGameMessage(active.recruitAdditionalWorker());
             }
+            return true;
+        }
+
+        if ("housing".equals(operation)) {
+            player.getPackets().sendGameMessage(
+                    "Settlement housing: " + player.getSettlementState().getHousingSummary() + ".");
+            return true;
+        }
+
+        if ("housingbedadd".equals(operation)) {
+            boolean added = player.getSettlementState().addHousingBed();
+            player.getPackets().sendGameMessage(
+                    (added ? "Added one persistent housing bed capacity unit. "
+                            : "Unable to add housing bed capacity. ")
+                            + player.getSettlementState().getHousingSummary() + ".");
+            return true;
+        }
+
+        if ("housingbedremove".equals(operation)) {
+            boolean removed = player.getSettlementState().removeHousingBed();
+            player.getPackets().sendGameMessage(
+                    (removed ? "Removed one persistent housing bed capacity unit. "
+                            : "Unable to remove housing bed capacity (it may be occupied). ")
+                            + player.getSettlementState().getHousingSummary() + ".");
+            return true;
+        }
+
+        if ("housing23selftest".equals(operation)) {
+            String result = SettlementHousingCheck.runSelfTest();
+            System.out.println("[SettlementHousingCheck] " + result);
+            player.getPackets().sendGameMessage("Bundle 2.3 housing self-test: " + result);
+            return true;
+        }
+
+        if ("housing23check".equals(operation)) {
+            String result = SettlementHousingCheck.run(player);
+            System.out.println("[SettlementHousingCheck] " + result);
+            player.getPackets().sendGameMessage("Bundle 2.3 housing check: " + result);
+            return true;
+        }
+
+        if ("housing23baseline".equals(operation)) {
+            String result = SettlementHousingCheck.capture(player);
+            System.out.println("[SettlementHousingCheck] " + result);
+            player.getPackets().sendGameMessage("Bundle 2.3 housing gate: " + result);
+            return true;
+        }
+
+        if ("housing23baselinecheck".equals(operation)) {
+            String result = SettlementHousingCheck.check(player);
+            System.out.println("[SettlementHousingCheck] " + result);
+            player.getPackets().sendGameMessage("Bundle 2.3 housing gate: " + result);
             return true;
         }
 
