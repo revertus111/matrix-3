@@ -56,6 +56,7 @@ public final class ConstructionRadialSelection {
     private static final float MIN_RADIUS_TILES = 0.0F;
     private static final float MAX_RADIUS_TILES = 64.0F;
     private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x5;
+    private static final long HOVER_STALE_MS = 1250L;
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
