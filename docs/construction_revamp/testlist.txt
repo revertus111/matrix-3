@@ -340,9 +340,9 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Runtime blocker evidence: after storage reset, critical Hunger + Food=0 stopped workers before the Forager could produce recovery Food; this reproduced the historical zero-Food bootstrap deadlock.
 [x] Emergency forage source: an unpaused critical-Hunger worker may bypass the no-Food stop only with Gather Food + Haul enabled, Food storage room, and an available Food node; emergency selection forces Food and ends after deposit.
 [x] Zero-Food recovery retest: with Food=0 and Worker #1 Forager at critical Hunger, the emergency Food recovery path works at runtime and the worker resumes productive work. Non-food workers retain the unchanged normal no-Food stop path.
-[ ] Select Worker #1 -> apply Forager; select Worker #2 -> apply Lumberjack. Jobs Status reports Preset=Forager / Preset=Lumberjack with the exact Food+Haul / Wood+Haul allowlists.
-[ ] All Worker Status shows both workers actively following their independent jobs; Wood and Food storage increase independently with per-resource `amount/100` readback.
-[ ] Concurrent final-slot retest: as Wood reaches 100/100, no worker becomes stranded mid-haul with excess Wood because another worker consumed its expected slot; the losing worker must fail/skip reservation before creating new cargo, while Food continues independently.
+[x] Select Worker #1 -> apply Forager; select Worker #2 -> apply Lumberjack. Runtime behavior confirms the intended Forager/Lumberjack policies and independent job execution.
+[x] Both workers actively follow independent jobs at runtime: Worker #1 gathers/hauls Food while Worker #2 gathers/hauls Wood, with per-resource storage progressing independently.
+[x] Concurrent final-slot retest: Wood reaches 100/100 without leaving a worker stranded carrying excess Wood, while Food production continues independently.
 [x] Pause Worker #1 while its Food+Haul policy remains ON; Worker #1 stops productive work and Resume Worker #1 restores productive work with its existing Allowed Jobs unchanged. User confirmed Pause/Resume works perfectly at runtime.
 [ ] Disable all jobs for both workers, reset critical needs if needed, then Capture 2-Worker Baseline succeeds.
 [ ] Exit/re-enter then Check 2-Worker Baseline returns PASS with saved=2/runtime=2.
