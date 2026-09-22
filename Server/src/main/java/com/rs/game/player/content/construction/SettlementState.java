@@ -150,6 +150,9 @@ public final class SettlementState implements Serializable {
                 || isOccupied(plotX, plotY, plane, definition.getObjectType(), -1L)) {
             return null;
         }
+        if (definition.getRole() == SettlementBuildRole.BED && !addHousingBed()) {
+            return null;
+        }
         SettlementPlacedPiece piece = new SettlementPlacedPiece(
                 nextPieceId++, definition.getKey(), plotX, plotY, plane, rotation);
         pieces.add(piece);
@@ -212,6 +215,9 @@ public final class SettlementState implements Serializable {
                 || isOccupied(plotX, plotY, plane, definition.getObjectType(), -1L)) {
             return null;
         }
+        if (definition.getRole() == SettlementBuildRole.BED && !addHousingBed()) {
+            return null;
+        }
         SettlementPlacedPiece duplicate = new SettlementPlacedPiece(
                 nextPieceId++, current.getDefinitionKey(), plotX, plotY, plane, current.getRotation());
         pieces.add(duplicate);
@@ -221,7 +227,17 @@ public final class SettlementState implements Serializable {
     public synchronized SettlementPlacedPiece remove(long pieceId) {
         normalize();
         int index = indexOf(pieceId);
-        return index < 0 ? null : pieces.remove(index);
+        if (index < 0) {
+            return null;
+        }
+        SettlementPlacedPiece piece = pieces.get(index);
+        SettlementBuildPiece definition = piece == null
+                ? null : SettlementBuildPiece.forKey(piece.getDefinitionKey());
+        if (definition != null && definition.getRole() == SettlementBuildRole.BED
+                && !removeHousingBed()) {
+            return null;
+        }
+        return pieces.remove(index);
     }
 
     public synchronized int getWorkerCount() {
@@ -301,24 +317,34 @@ public final class SettlementState implements Serializable {
         return housingBedCount;
     }
 
+    public synchronized boolean canAddHousingBed() {
+        normalize();
+        return completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())
+                && housingBedCount < getMaximumHousingBedCount();
+    }
+
     public synchronized boolean addHousingBed() {
         normalize();
-        if (!completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())
-                || housingBedCount >= getMaximumHousingBedCount()) {
+        if (!canAddHousingBed()) {
             return false;
         }
         housingBedCount++;
         return true;
     }
 
-    public synchronized boolean removeHousingBed() {
+    public synchronized boolean canRemoveHousingBed() {
         normalize();
         if (housingBedCount <= 0) {
             return false;
         }
         int nextCapacity = STARTER_SHELTER_POPULATION_CAPACITY
                 + ((housingBedCount - 1) * HOUSING_CAPACITY_PER_BED);
-        if (workers.size() > nextCapacity) {
+        return workers.size() <= nextCapacity;
+    }
+
+    public synchronized boolean removeHousingBed() {
+        normalize();
+        if (!canRemoveHousingBed()) {
             return false;
         }
         housingBedCount--;
