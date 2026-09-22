@@ -345,9 +345,15 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Concurrent final-slot retest: Wood reaches 100/100 without leaving a worker stranded carrying excess Wood, while Food production continues independently.
 [x] Pause Worker #1 while its Food+Haul policy remains ON; Worker #1 stops productive work and Resume Worker #1 restores productive work with its existing Allowed Jobs unchanged. User confirmed Pause/Resume works perfectly at runtime.
 [x] Prepared baseline source: one owner-only action disables all jobs and resets Needs for exactly two saved/runtime workers before calling the existing authoritative Bundle 2.2 capture; pause/identity/progression/Construction XP remain untouched.
-[ ] Prepare + Capture Baseline returns `PREPARED + BASELINE SAVED` for saved=2/runtime=2.
-[ ] Exit/re-enter then Check 2-Worker Baseline returns PASS with saved=2/runtime=2.
-[ ] Logout/relog + re-enter then Check 2-Worker Baseline returns PASS with both identities/jobs/needs/progression and Construction XP preserved.
+[x] Prepare + Capture Baseline returned `PREPARED + BASELINE SAVED` for workers=2.
+[x] Exit/re-enter then Check 2-Worker Baseline returned PASS with saved=2/runtime=2.
+[x] Logout/relog + re-enter then Check 2-Worker Baseline returned PASS with both identities/jobs/needs/progression and Construction XP preserved.
+
+Phase 2 Bundle 2.3 — housing, beds + population capacity
+[READY / NEXT]
+[ ] Define persistent housing/bed capacity ownership without replacing existing worker identity/state owners.
+[ ] Prove a minimal housing/bed addition can raise population capacity above the starter cap of 2.
+[ ] Recruit/project one additional worker through the expanded capacity and verify stable-id persistence across re-entry/relog.
 
 Phase 2 side slice — Radial Worker Selection RWS-1
 [RUNTIME VERIFIED]
