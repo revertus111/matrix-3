@@ -235,9 +235,12 @@ public final class SettlementInstance {
             player.getSkills().addXp(Skills.CONSTRUCTION, xp, true);
         }
 
-        return "Built " + definition.getDisplayName() + " for " + result.getCost() + " "
+        String built = "Built " + definition.getDisplayName() + " for " + result.getCost() + " "
                 + result.getResource().getDisplayName() + " and earned "
                 + (long) xp + " Construction XP.";
+        return definition.getRole() == SettlementBuildRole.BED
+                ? built + " Housing: " + state.getHousingSummary()
+                : built;
     }
 
     public String moveDevelopmentPiece(int objectId, WorldTile source, WorldTile destination) {
