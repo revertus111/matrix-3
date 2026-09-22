@@ -4,6 +4,7 @@ import game.AssetStudioCapture;
 import game.AssetStudioCapture.CaptureBatch;
 import game.AssetStudioCapture.CaptureEntry;
 import game.ObjectLabPreview;
+import game.RailRoutePreview;
 
 import java.awt.Component;
 import java.awt.Dimension;
@@ -32,6 +33,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -86,6 +88,9 @@ public final class RailKitClassifierPanel extends JScrollPane {
 
     private final JSpinner previewRotation =
             new JSpinner(new SpinnerNumberModel(0, 0, 3, 1));
+    private final JComboBox<RailRoutePreview.RouteOrder> routeOrder =
+            new JComboBox<RailRoutePreview.RouteOrder>(RailRoutePreview.RouteOrder.values());
+    private final JLabel routePieceLabel = valueLabel("Route rail: not configured");
 
     private final JCheckBox straight = check("Straight");
     private final JCheckBox curve = check("Curve");
@@ -134,6 +139,8 @@ public final class RailKitClassifierPanel extends JScrollPane {
         content.add(createSelectedCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createPreviewCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createRoutePreviewCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createClassificationCard());
         content.add(Box.createVerticalStrut(10));
@@ -263,6 +270,79 @@ public final class RailKitClassifierPanel extends JScrollPane {
         return card;
     }
 
+    private JPanel createRoutePreviewCard() {
+        JPanel card = ConsoleTheme.createCard("A -> B Rail Route Preview V0");
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createWrappedText(
+                "Proof only: drag Point A to Point B and Matrix3 tiles the configured straight rail "
+                + "along an X/Y Manhattan route. Corners intentionally use a straight placeholder in V0.",
+                5));
+        card.add(Box.createVerticalStrut(7));
+
+        routePieceLabel.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(routePieceLabel);
+        card.add(Box.createVerticalStrut(6));
+
+        JButton useSelected = button("Use Selected as Route Rail");
+        useSelected.setAlignmentX(LEFT_ALIGNMENT);
+        useSelected.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        useSelected.addActionListener(e -> configureSelectedRouteRail());
+        card.add(useSelected);
+        card.add(Box.createVerticalStrut(7));
+
+        routeOrder.setFocusable(false);
+        routeOrder.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        routeOrder.setAlignmentX(LEFT_ALIGNMENT);
+        routeOrder.setSelectedItem(RailRoutePreview.getRouteOrder());
+        routeOrder.addActionListener(e -> {
+            Object selectedOrder = routeOrder.getSelectedItem();
+            if (selectedOrder instanceof RailRoutePreview.RouteOrder) {
+                RailRoutePreview.setRouteOrder((RailRoutePreview.RouteOrder) selectedOrder);
+                setStatus(RailRoutePreview.getStatus());
+            }
+        });
+        card.add(smallLabel("Route order"));
+        card.add(Box.createVerticalStrut(3));
+        card.add(routeOrder);
+        card.add(Box.createVerticalStrut(7));
+
+        JButton enable = button("Enable A->B Preview");
+        JButton disable = button("Disable Preview");
+        JButton clear = button("Clear Route");
+        JButton routeStatus = button("Route Status");
+
+        enable.addActionListener(e -> {
+            ensureRouteRailConfigured();
+            RailRoutePreview.setEnabled(true);
+            setStatus(RailRoutePreview.getStatus());
+        });
+        disable.addActionListener(e -> {
+            RailRoutePreview.setEnabled(false);
+            setStatus(RailRoutePreview.getStatus());
+        });
+        clear.addActionListener(e -> {
+            RailRoutePreview.clearRoute();
+            setStatus(RailRoutePreview.getStatus());
+        });
+        routeStatus.addActionListener(e -> setStatus(RailRoutePreview.getStatus()));
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 5, 5));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
+        buttons.add(enable);
+        buttons.add(disable);
+        buttons.add(clear);
+        buttons.add(routeStatus);
+        card.add(buttons);
+        card.add(Box.createVerticalStrut(6));
+        card.add(ConsoleTheme.createWrappedText(
+                "Usage: Enable -> move over valid ground -> hold Left mouse at A -> drag to B -> release. "
+                + "Escape cancels only the active drag and preserves the prior committed preview.",
+                4));
+        return card;
+    }
+
     private JPanel createClassificationCard() {
         JPanel card = ConsoleTheme.createCard("Geometry classification");
         card.add(Box.createVerticalStrut(8));
@@ -295,6 +375,50 @@ public final class RailKitClassifierPanel extends JScrollPane {
         statusLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(statusLabel);
         return card;
+    }
+
+    private void configureSelectedRouteRail() {
+        Candidate candidate = selected;
+        if (candidate == null) {
+            setStatus("Select a rail candidate first.");
+            return;
+        }
+
+        RailRoutePreview.RouteOrder order = selectedRouteOrder();
+        RailRoutePreview.configure(candidate.name, candidate.id, candidate.type,
+                number(previewRotation), order);
+        routePieceLabel.setText("Route rail: ID " + candidate.id
+                + " type " + candidate.type + " horizontal rot " + number(previewRotation));
+        setStatus(RailRoutePreview.getStatus());
+    }
+
+    private void ensureRouteRailConfigured() {
+        if (RailRoutePreview.getConfiguredObjectId() >= 0) {
+            return;
+        }
+
+        for (Candidate candidate : candidates) {
+            ClassificationRecord record = records.get(candidate.key());
+            if (record != null && record.straight) {
+                RailRoutePreview.configure(candidate.name, candidate.id, candidate.type,
+                        record.lastPreviewRotation, selectedRouteOrder());
+                routePieceLabel.setText("Route rail: ID " + candidate.id
+                        + " type " + candidate.type + " horizontal rot "
+                        + (record.lastPreviewRotation & 0x3) + " [first checked Straight]");
+                return;
+            }
+        }
+
+        if (selected != null) {
+            configureSelectedRouteRail();
+        }
+    }
+
+    private RailRoutePreview.RouteOrder selectedRouteOrder() {
+        Object value = routeOrder.getSelectedItem();
+        return value instanceof RailRoutePreview.RouteOrder
+                ? (RailRoutePreview.RouteOrder) value
+                : RailRoutePreview.RouteOrder.X_THEN_Y;
     }
 
     private void refreshLiveRails() {

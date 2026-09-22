@@ -1,0 +1,557 @@
+package game;
+
+import java.awt.AWTEvent;
+import java.awt.Canvas;
+import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+
+/**
+ * Client-only Point-A -> Point-B rail route visual proof.
+ *
+ * V0 deliberately proves only drag UX, Manhattan path generation, per-tile
+ * orientation and multi-object direct rendering. It does not place real world
+ * objects, own collision, persist anything, consume settlement resources, or
+ * attempt final curve/switch auto-tiling.
+ */
+public final class RailRoutePreview {
+
+    public enum RouteOrder {
+        X_THEN_Y("X then Y"),
+        Y_THEN_X("Y then X");
+
+        private final String displayName;
+
+        RouteOrder(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
+    private static final int MATRIX3_TILE_ACTION = 23;
+    private static final int MODEL_FLAGS = 2048;
+    private static final int OBJECT_SIZE_X_DECODE = -876498849;
+    private static final int OBJECT_SIZE_Y_DECODE = 1922784011;
+    private static final int MAX_ROUTE_TILES = 64;
+    private static final long HOVER_STALE_MS = 1250L;
+
+    private static final Class261 TRANSFORM = new Class261();
+    private static final Class90 RENDER_BOUNDS = new Class90();
+
+    private static volatile boolean enabled;
+    private static volatile boolean dragging;
+    private static volatile boolean committed;
+
+    private static volatile int objectId = -1;
+    private static volatile int objectType = 22;
+    private static volatile int horizontalRotation;
+    private static volatile String objectName = "Rail";
+    private static volatile RouteOrder routeOrder = RouteOrder.X_THEN_Y;
+
+    private static volatile int hoveredWorldX = -1;
+    private static volatile int hoveredWorldY = -1;
+    private static volatile int hoveredPlane = -1;
+    private static volatile long hoveredAtMillis;
+
+    private static volatile int liveStartX = -1;
+    private static volatile int liveStartY = -1;
+    private static volatile int liveEndX = -1;
+    private static volatile int liveEndY = -1;
+    private static volatile int livePlane = -1;
+
+    private static volatile int committedStartX = -1;
+    private static volatile int committedStartY = -1;
+    private static volatile int committedEndX = -1;
+    private static volatile int committedEndY = -1;
+    private static volatile int committedPlane = -1;
+
+    private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
+    private static volatile String eventState = "A->B rail preview disabled.";
+    private static volatile String renderState = "hidden";
+    private static boolean inputListenerInstalled;
+
+    private RailRoutePreview() {
+    }
+
+    public static void configure(String name, int id, int type, int baseHorizontalRotation,
+            RouteOrder order) {
+        objectName = name == null || name.trim().isEmpty() ? "Rail" : name;
+        objectId = id;
+        objectType = clamp(type, 0, 22);
+        horizontalRotation = baseHorizontalRotation & 0x3;
+        if (order != null) {
+            routeOrder = order;
+        }
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = "Route rail configured: " + objectName + " id=" + objectId
+                + " type=" + objectType + " horizontalRot=" + horizontalRotation + ".";
+    }
+
+    public static void setRouteOrder(RouteOrder order) {
+        if (order == null) {
+            return;
+        }
+        routeOrder = order;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = "Route order: " + routeOrder + ".";
+    }
+
+    public static RouteOrder getRouteOrder() {
+        return routeOrder;
+    }
+
+    public static int getConfiguredObjectId() {
+        return objectId;
+    }
+
+    public static void setEnabled(boolean value) {
+        if (value) {
+            if (objectId < 0) {
+                eventState = "Choose/configure a straight rail before enabling A->B preview.";
+                return;
+            }
+            ensureInputListener();
+
+            // Prevent two developer drag systems from owning the same mouse gesture.
+            ConstructionRadialSelection.setWorkerControlEnabled(false);
+            ConstructionRadialSelection.setReticule4187ProbeMode(
+                    ConstructionRadialSelection.Reticule4187ProbeMode.OFF);
+            ObjectLabPreview.hide();
+
+            enabled = true;
+            eventState = "A->B rail preview ON. Move over ground, then hold Left mouse and drag.";
+        } else {
+            if (dragging) {
+                cancelActiveDrag();
+            }
+            enabled = false;
+            lastRenderedCycle = Integer.MIN_VALUE;
+            renderState = "hidden";
+            eventState = "A->B rail preview OFF.";
+        }
+    }
+
+    public static boolean isEnabled() {
+        return enabled;
+    }
+
+    public static void clearRoute() {
+        dragging = false;
+        committed = false;
+        liveStartX = -1;
+        liveStartY = -1;
+        liveEndX = -1;
+        liveEndY = -1;
+        livePlane = -1;
+        committedStartX = -1;
+        committedStartY = -1;
+        committedEndX = -1;
+        committedEndY = -1;
+        committedPlane = -1;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        renderState = "cleared";
+        eventState = "A->B route cleared.";
+    }
+
+    public static String getStatus() {
+        StringBuilder status = new StringBuilder(192);
+        status.append(enabled ? "RAIL V0 ON" : "RAIL V0 OFF");
+        status.append(" | piece=").append(objectId < 0 ? "none" : objectId + "/" + objectType)
+                .append(" hRot=").append(horizontalRotation)
+                .append(" | order=").append(routeOrder);
+
+        if (dragging) {
+            status.append(" | DRAG A=")
+                    .append(liveStartX).append(',').append(liveStartY)
+                    .append(" B=").append(liveEndX).append(',').append(liveEndY)
+                    .append(" tiles=").append(routeTileCount(
+                            liveStartX, liveStartY, liveEndX, liveEndY));
+        } else if (committed) {
+            status.append(" | COMMITTED A=")
+                    .append(committedStartX).append(',').append(committedStartY)
+                    .append(" B=").append(committedEndX).append(',').append(committedEndY)
+                    .append(" tiles=").append(routeTileCount(
+                            committedStartX, committedStartY, committedEndX, committedEndY));
+        } else {
+            status.append(" | no route");
+        }
+
+        status.append(" | ").append(eventState);
+        status.append(" | render=").append(renderState);
+        return status.toString();
+    }
+
+    /**
+     * Mirrors Matrix3's already-resolved action-23 world tile.
+     * No second picker is introduced.
+     */
+    static void observeSceneMenuTile(int sourceAction, int localX, int localY) {
+        if (!enabled) {
+            return;
+        }
+
+        int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
+        if (normalizedAction != MATRIX3_TILE_ACTION || client.aClass613_8605 == null
+                || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
+            return;
+        }
+
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
+        if (sceneBase == null) {
+            return;
+        }
+
+        hoveredWorldX = sceneBase.localX * -2109597897 + localX;
+        hoveredWorldY = sceneBase.localY * 417324155 + localY;
+        hoveredPlane = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff;
+        hoveredAtMillis = System.currentTimeMillis();
+
+        if (dragging && hoveredPlane == livePlane) {
+            liveEndX = hoveredWorldX;
+            liveEndY = hoveredWorldY;
+            lastRenderedCycle = Integer.MIN_VALUE;
+            eventState = "Dragging route to " + liveEndX + "," + liveEndY + ".";
+        }
+    }
+
+    static void render(Class523 scene, Class106 renderer) {
+        if (!enabled || objectId < 0 || scene == null || renderer == null) {
+            return;
+        }
+
+        int startX;
+        int startY;
+        int endX;
+        int endY;
+        int plane;
+
+        if (dragging) {
+            startX = liveStartX;
+            startY = liveStartY;
+            endX = liveEndX;
+            endY = liveEndY;
+            plane = livePlane;
+        } else if (committed) {
+            startX = committedStartX;
+            startY = committedStartY;
+            endX = committedEndX;
+            endY = committedEndY;
+            plane = committedPlane;
+        } else {
+            return;
+        }
+
+        Class613 region = client.aClass613_8605;
+        if (region == null || region.method7285(0) != scene) {
+            return;
+        }
+
+        int cycle = client.cycles;
+        if (lastRenderedCycle == cycle) {
+            return;
+        }
+        lastRenderedCycle = cycle;
+
+        Class497 sceneBase = region.method7280((byte) -102);
+        Class639_Sub16 definitions = region.method7288(0);
+        if (sceneBase == null || definitions == null) {
+            renderState = "WAIT scene/object definitions";
+            return;
+        }
+
+        ObjectDefinitions definition =
+                (ObjectDefinitions) definitions.getDefinition(objectId, -1356282071);
+        if (definition == null) {
+            renderState = "UNKNOWN object id " + objectId;
+            return;
+        }
+
+        int rendered;
+        if (routeOrder == RouteOrder.Y_THEN_X) {
+            rendered = renderYThenX(scene, renderer, sceneBase, definition,
+                    startX, startY, endX, endY, plane);
+        } else {
+            rendered = renderXThenY(scene, renderer, sceneBase, definition,
+                    startX, startY, endX, endY, plane);
+        }
+
+        int requested = routeTileCount(startX, startY, endX, endY);
+        renderState = "DRAW " + rendered + "/" + requested + " tile(s)"
+                + (requested > MAX_ROUTE_TILES ? " [capped " + MAX_ROUTE_TILES + "]" : "")
+                + " V0 straight-only corner placeholder";
+    }
+
+    private static int renderXThenY(Class523 scene, Class106 renderer, Class497 sceneBase,
+            ObjectDefinitions definition, int startX, int startY, int endX, int endY, int plane) {
+        int rendered = 0;
+        int xStep = Integer.compare(endX, startX);
+        int yStep = Integer.compare(endY, startY);
+
+        int x = startX;
+        while (true) {
+            int rotation = x == endX && startY != endY
+                    ? verticalRotation() : horizontalRotation;
+            if (renderPiece(scene, renderer, sceneBase, definition, x, startY, plane, rotation)) {
+                rendered++;
+            }
+            if (rendered >= MAX_ROUTE_TILES || x == endX) {
+                break;
+            }
+            x += xStep;
+        }
+
+        if (rendered >= MAX_ROUTE_TILES || startY == endY) {
+            return rendered;
+        }
+
+        int y = startY + yStep;
+        while (true) {
+            if (renderPiece(scene, renderer, sceneBase, definition,
+                    endX, y, plane, verticalRotation())) {
+                rendered++;
+            }
+            if (rendered >= MAX_ROUTE_TILES || y == endY) {
+                break;
+            }
+            y += yStep;
+        }
+        return rendered;
+    }
+
+    private static int renderYThenX(Class523 scene, Class106 renderer, Class497 sceneBase,
+            ObjectDefinitions definition, int startX, int startY, int endX, int endY, int plane) {
+        int rendered = 0;
+        int xStep = Integer.compare(endX, startX);
+        int yStep = Integer.compare(endY, startY);
+
+        int y = startY;
+        while (true) {
+            int rotation = y == endY && startX != endX
+                    ? horizontalRotation : verticalRotation();
+            if (renderPiece(scene, renderer, sceneBase, definition,
+                    startX, y, plane, rotation)) {
+                rendered++;
+            }
+            if (rendered >= MAX_ROUTE_TILES || y == endY) {
+                break;
+            }
+            y += yStep;
+        }
+
+        if (rendered >= MAX_ROUTE_TILES || startX == endX) {
+            return rendered;
+        }
+
+        int x = startX + xStep;
+        while (true) {
+            if (renderPiece(scene, renderer, sceneBase, definition,
+                    x, endY, plane, horizontalRotation)) {
+                rendered++;
+            }
+            if (rendered >= MAX_ROUTE_TILES || x == endX) {
+                break;
+            }
+            x += xStep;
+        }
+        return rendered;
+    }
+
+    private static boolean renderPiece(Class523 scene, Class106 renderer, Class497 sceneBase,
+            ObjectDefinitions definition, int worldX, int worldY, int plane, int rotation) {
+        if (plane < 0 || plane >= scene.aClass174Array5838.length) {
+            return false;
+        }
+
+        Class174 ground = scene.aClass174Array5838[plane];
+        if (ground == null) {
+            return false;
+        }
+
+        int localX = worldX - sceneBase.localX * -2109597897;
+        int localY = worldY - sceneBase.localY * 417324155;
+        int renderRotation = rotation & 0x3;
+
+        int sizeX = definition.sizeX * OBJECT_SIZE_X_DECODE;
+        int sizeY = definition.sizeY * OBJECT_SIZE_Y_DECODE;
+        if ((renderRotation & 0x1) != 0) {
+            int swap = sizeX;
+            sizeX = sizeY;
+            sizeY = swap;
+        }
+
+        int sceneWidth = scene.anInt5833 * -1396185127;
+        int sceneHeight = scene.anInt5834 * -1519623925;
+        if (localX < 0 || localY < 0
+                || localX + sizeX > sceneWidth || localY + sizeY > sceneHeight) {
+            return false;
+        }
+
+        int tileSize = ground.anInt2087 * 2129890771;
+        int sceneX = localX * tileSize + sizeX * tileSize / 2;
+        int sceneZ = localY * tileSize + sizeY * tileSize / 2;
+        int sceneY = ground.method2718(sceneX, sceneZ, 0);
+        Class174 upperGround = plane + 1 < scene.aClass174Array5838.length
+                ? scene.aClass174Array5838[plane + 1]
+                : null;
+
+        Class647 built = definition.method6057(renderer, MODEL_FLAGS, objectType, renderRotation,
+                ground, upperGround, sceneX, sceneY, sceneZ, false, null, -272661735);
+        if (built == null || !(built.anObject8324 instanceof Model)) {
+            return false;
+        }
+
+        if (scene.aClass174Array5840 == scene.aClass174Array5875
+                && scene.aClass174Array5838[0] != null) {
+            Class86 environment = new Class86();
+            environment.anInt1193 = scene.method6231(localX, localY, 1258315415) * 1368828903;
+            environment.anInt1190 = scene.method6230(localX, localY, -981999643) * 1765263439;
+            environment.anInt1191 = scene.method6283(localX, localY, 775342000) * 628738217;
+            environment.anInt1189 = scene.method6233(localX, localY, -1042067865) * -233369847;
+            environment.anInt1194 = scene.method6234(localX, localY, (byte) 16) * -223776263;
+            environment.anInt1195 = scene.method6235(localX, localY, (byte) 95) * -963547665;
+            renderer.method1790(scene.aClass174Array5838[0]
+                    .method2726(sceneX, sceneZ, 358769667), environment);
+        }
+
+        Model model = (Model) built.anObject8324;
+        TRANSFORM.method3588(sceneX, sceneY, sceneZ);
+        Class326 bounds = definition.aClass326_5684;
+        if (bounds != null) {
+            model.method1375(TRANSFORM, null, 0);
+            renderer.method1738(TRANSFORM, RENDER_BOUNDS, bounds);
+        } else {
+            model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        }
+        return true;
+    }
+
+    private static synchronized void ensureInputListener() {
+        if (inputListenerInstalled) {
+            return;
+        }
+
+        Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
+            @Override
+            public void eventDispatched(AWTEvent event) {
+                if (event instanceof MouseEvent) {
+                    handleMouseEvent((MouseEvent) event);
+                } else if (event instanceof KeyEvent) {
+                    handleKeyEvent((KeyEvent) event);
+                }
+            }
+        }, AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
+
+        inputListenerInstalled = true;
+    }
+
+    private static void handleMouseEvent(MouseEvent mouse) {
+        if (!enabled) {
+            return;
+        }
+
+        Canvas canvas = Class584.aCanvas7745;
+        if (canvas == null || mouse.getSource() != canvas) {
+            return;
+        }
+
+        if (mouse.getID() == MouseEvent.MOUSE_PRESSED && mouse.getButton() == MouseEvent.BUTTON1) {
+            if (beginDrag()) {
+                mouse.consume();
+            }
+            return;
+        }
+
+        if (mouse.getID() == MouseEvent.MOUSE_DRAGGED && dragging) {
+            // Keep Matrix3's normal mouse/menu path live so action-23 hover updates B.
+            return;
+        }
+
+        if (mouse.getID() == MouseEvent.MOUSE_RELEASED && dragging
+                && mouse.getButton() == MouseEvent.BUTTON1) {
+            if (hoveredPlane == livePlane && hoveredWorldX >= 0 && hoveredWorldY >= 0) {
+                liveEndX = hoveredWorldX;
+                liveEndY = hoveredWorldY;
+            }
+            commitActiveDrag();
+            mouse.consume();
+        }
+    }
+
+    private static void handleKeyEvent(KeyEvent key) {
+        if (!enabled || !dragging || key.getID() != KeyEvent.KEY_PRESSED
+                || key.getKeyCode() != KeyEvent.VK_ESCAPE) {
+            return;
+        }
+        cancelActiveDrag();
+        key.consume();
+    }
+
+    private static boolean beginDrag() {
+        long age = System.currentTimeMillis() - hoveredAtMillis;
+        if (objectId < 0) {
+            eventState = "No route rail configured.";
+            return false;
+        }
+        if (hoveredWorldX < 0 || hoveredWorldY < 0 || hoveredPlane < 0
+                || hoveredAtMillis == 0L || age > HOVER_STALE_MS) {
+            eventState = "WAIT: move over valid world ground before pressing Left mouse.";
+            return false;
+        }
+
+        liveStartX = hoveredWorldX;
+        liveStartY = hoveredWorldY;
+        liveEndX = hoveredWorldX;
+        liveEndY = hoveredWorldY;
+        livePlane = hoveredPlane;
+        dragging = true;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = "Route drag started at " + liveStartX + "," + liveStartY + "," + livePlane + ".";
+        return true;
+    }
+
+    private static void commitActiveDrag() {
+        committedStartX = liveStartX;
+        committedStartY = liveStartY;
+        committedEndX = liveEndX;
+        committedEndY = liveEndY;
+        committedPlane = livePlane;
+        committed = true;
+        dragging = false;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = "Route committed A=" + committedStartX + "," + committedStartY
+                + " B=" + committedEndX + "," + committedEndY + ".";
+    }
+
+    private static void cancelActiveDrag() {
+        dragging = false;
+        liveStartX = -1;
+        liveStartY = -1;
+        liveEndX = -1;
+        liveEndY = -1;
+        livePlane = -1;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = committed
+                ? "Active route drag cancelled; previous committed preview preserved."
+                : "Active route drag cancelled.";
+    }
+
+    private static int verticalRotation() {
+        return (horizontalRotation + 1) & 0x3;
+    }
+
+    private static int routeTileCount(int startX, int startY, int endX, int endY) {
+        if (startX < 0 || startY < 0 || endX < 0 || endY < 0) {
+            return 0;
+        }
+        return Math.abs(endX - startX) + Math.abs(endY - startY) + 1;
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return value < min ? min : value > max ? max : value;
+    }
+}

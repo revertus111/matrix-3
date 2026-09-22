@@ -842,3 +842,12 @@
 - Pause state, worker identity, progression and Construction XP remain untouched and are still compared by the baseline.
 - Pruned already-verified self-test/concurrency instructions and buttons from the Con Revamp Final Gate card; only Prepare + Capture and Check Baseline remain.
 - Runtime verification required: prepared capture -> exit/re-enter PASS -> logout/relog/re-enter PASS.
+
+2026-09-22 - A->B Rail Route Preview V0
+- Added client-only RailRoutePreview using the established Class592 action-23 hover mirror and Class578 direct-render scene seam.
+- Rail Classifier now includes Use Selected as Route Rail, X-then-Y / Y-then-X route order, Enable/Disable, Clear Route and Route Status controls.
+- Enable automatically prefers the first rail checked Straight in rail_kit.tsv; otherwise the currently selected candidate can be configured manually, using its current preview rotation as horizontal.
+- Left mouse captures Point A, live drag follows Matrix3's already-resolved ground tile as Point B, release commits the preview, and Escape cancels only the active drag while preserving the previous commit.
+- V0 tiles the chosen straight object across a bounded 64-tile Manhattan path and uses horizontal rotation + 1 for vertical segments.
+- The bend intentionally uses a straight placeholder in V0; curve/turnout selection is deferred until the user accepts the basic drag/path/tiling feel.
+- Preview is direct-render only: no real object spawn, collision, cache mutation, persistence, resources or server rail gameplay.

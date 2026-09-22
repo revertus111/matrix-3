@@ -505,3 +505,19 @@ Matrix3 Test Console Rail Kit Classifier — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] rail_kit.tsv retains id/type/name/observedRotations plus all eight geometry flags, lastPreviewRotation and updatedAt.
 [ ] Asset Studio no longer contains an Open Rail Classifier button; the Test Console sub-tab is the canonical classifier UI.
 [ ] Preview/classification/refresh actions do not attach, move, rotate, replace, delete, clip or persist any live world object.
+
+Matrix3 A->B Rail Route Preview V0 — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Source ownership: client-only developer proof; no world-object registration, collision, settlement resources, persistence, cache mutation or server rail state.
+[x] Ground ownership: reuses Matrix3's existing action-23 resolved world tile through Class592; no second scene picker.
+[x] Render ownership: reuses the proven Class578 immediate scene-pass and ObjectDefinitions.method6057/model direct-render path.
+[x] Path V0: Manhattan X-then-Y / Y-then-X only, bounded to 64 rendered tiles; straight rail rotates horizontal/vertical automatically.
+[x] Input ownership: only Left press/release is consumed after a valid-ground route drag starts; drag motion remains visible to Matrix3 so Point B hover keeps updating.
+[ ] Test -> Rail Classifier: ensure one known rail is checked Straight, then Enable A->B Preview; Route Status identifies that rail as the configured route piece.
+[ ] Move over valid ground, hold Left at Point A, drag several tiles horizontally and vertically to Point B; ghost rails update live along the chosen X/Y route while the game remains visible beside the docked console.
+[ ] Release commits the ghost route and leaves it visible; no real objects/collision appear.
+[ ] Switch Route Order between X then Y and Y then X; the same A/B endpoints reroute around the opposite Manhattan corner.
+[ ] Horizontal sections use the configured preview rotation and vertical sections use +1 quarter-turn.
+[ ] The V0 corner is visibly a straight placeholder; treat that as expected, not a curve-classification failure.
+[ ] Start a second drag, press Escape before release; active route cancels and the previous committed preview remains.
+[ ] Clear Route removes the committed ghosts; Disable Preview returns normal Left-click ground input.
+[ ] A route longer than 64 tiles is safely capped rather than creating unbounded per-frame model work.

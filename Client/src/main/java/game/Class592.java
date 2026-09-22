@@ -60,6 +60,7 @@ public class Class592 {
 			Class412.method5075(class572_sub12_sub10, 722976984);
 			ConstructionPlacementController.observeSceneMenuTile(i_1_, i_3_, i_4_);
 			ConstructionRadialSelection.observeSceneMenuTile(i_1_, i_3_, i_4_);
+			RailRoutePreview.observeSceneMenuTile(i_1_, i_3_, i_4_);
 			DevModeBridge.mirrorTileSpawnEntry(i_1_, i_3_, i_4_);
 			DevModeBridge.mirrorEntityEntries(string_0_, i, i_1_, i_2_, l, i_3_, i_4_, bool, bool_5_, l_6_, bool_7_);
 		}
