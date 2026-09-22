@@ -854,3 +854,8 @@
 
 2026-09-22 - A->B Rail Route Preview V0 cap hardening
 - The 64-tile safety bound now counts attempted path positions rather than successful draws, so off-scene/failed model tiles cannot bypass the per-frame work cap on very long A->B drags.
+
+2026-09-22 - Rail Route Preview V0 axis orientation fix
+- Runtime video proved the route/path generation was correct but straight rail geometry was rotated 90 degrees relative to travel direction.
+- Reclassified the stored classifier preview rotation as the straight rail's north/south orientation; east/west now derives as +1 quarter-turn.
+- X/Y route logic is unchanged; only the direct-render orientation mapping changed.

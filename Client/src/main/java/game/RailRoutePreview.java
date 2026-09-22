@@ -89,7 +89,8 @@ public final class RailRoutePreview {
         }
         lastRenderedCycle = Integer.MIN_VALUE;
         eventState = "Route rail configured: " + objectName + " id=" + objectId
-                + " type=" + objectType + " horizontalRot=" + horizontalRotation + ".";
+                + " type=" + objectType + " northSouthRot=" + horizontalRotation
+                + " eastWestRot=" + eastWestRotation() + ".";
     }
 
     public static void setRouteOrder(RouteOrder order) {
@@ -162,7 +163,8 @@ public final class RailRoutePreview {
         StringBuilder status = new StringBuilder(192);
         status.append(enabled ? "RAIL V0 ON" : "RAIL V0 OFF");
         status.append(" | piece=").append(objectId < 0 ? "none" : objectId + "/" + objectType)
-                .append(" hRot=").append(horizontalRotation)
+                .append(" nsRot=").append(horizontalRotation)
+                .append(" ewRot=").append(eastWestRotation())
                 .append(" | order=").append(routeOrder);
 
         if (dragging) {
@@ -296,7 +298,7 @@ public final class RailRoutePreview {
         int x = startX;
         while (true) {
             int rotation = x == endX && startY != endY
-                    ? verticalRotation() : horizontalRotation;
+                    ? verticalRotation() : eastWestRotation();
             attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition, x, startY, plane, rotation)) {
                 rendered++;
@@ -336,7 +338,7 @@ public final class RailRoutePreview {
         int y = startY;
         while (true) {
             int rotation = y == endY && startX != endX
-                    ? horizontalRotation : verticalRotation();
+                    ? eastWestRotation() : verticalRotation();
             attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition,
                     startX, y, plane, rotation)) {
@@ -356,7 +358,7 @@ public final class RailRoutePreview {
         while (true) {
             attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition,
-                    x, endY, plane, horizontalRotation)) {
+                    x, endY, plane, eastWestRotation())) {
                 rendered++;
             }
             if (attempted >= MAX_ROUTE_TILES || x == endX) {
@@ -547,6 +549,16 @@ public final class RailRoutePreview {
     }
 
     private static int verticalRotation() {
+        /*
+         * Runtime V0 proof showed the classifier's selected preview rotation
+         * represented the rail model's north/south axis, not east/west.
+         * Keep the persisted/UI value as the canonical N/S orientation and
+         * derive E/W by a quarter-turn.
+         */
+        return horizontalRotation;
+    }
+
+    private static int eastWestRotation() {
         return (horizontalRotation + 1) & 0x3;
     }
 

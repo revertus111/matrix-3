@@ -516,7 +516,8 @@ Matrix3 A->B Rail Route Preview V0 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Move over valid ground, hold Left at Point A, drag several tiles horizontally and vertically to Point B; ghost rails update live along the chosen X/Y route while the game remains visible beside the docked console.
 [ ] Release commits the ghost route and leaves it visible; no real objects/collision appear.
 [ ] Switch Route Order between X then Y and Y then X; the same A/B endpoints reroute around the opposite Manhattan corner.
-[ ] Horizontal sections use the configured preview rotation and vertical sections use +1 quarter-turn.
+[ ] Orientation regression: east/west route sections visually run east/west and north/south route sections visually run north/south; runtime V0 previously showed these axes swapped by 90 degrees.
+[ ] The classifier-selected preview rotation is treated as the north/south rail orientation; east/west derives as +1 quarter-turn.
 [ ] The V0 corner is visibly a straight placeholder; treat that as expected, not a curve-classification failure.
 [ ] Start a second drag, press Escape before release; active route cancels and the previous committed preview remains.
 [ ] Clear Route removes the committed ghosts; Disable Preview returns normal Left-click ground input.
