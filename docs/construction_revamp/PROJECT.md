@@ -956,14 +956,16 @@ Patch 2.3.1 — persistent bed capacity + Worker #3 foundation:
 - Recruitment skips occupied saved-piece/home slots and refuses when no valid home slot or population capacity remains.
 - Runtime placement reserves actual saved worker home tiles in addition to the original starter/recruited arrival anchors.
 - `SettlementHousingCheck.runSelfTest()` disposably proves capacity 2 -> 3, unique Worker #3 id/home, default jobs OFF, default unpaused state, removal guard and Java serialization.
-- Live housing check requires one saved bed, capacity 3 and exactly saved=3/runtime=3 with unique ids/home slots/projections.
-- A process-local Worker #3 housing baseline compares persistent bed count, capacity and exact worker id/definition/home signatures across instance rebuild and logout/relog.
+- Live housing check requires at least one saved bed and at least three persistent workers, verifies capacity exactly equals starter 2 + saved beds, and requires runtime projection count to match the full saved population with unique ids/home slots.
+- The process-local Bundle 2.3 housing baseline captures the full current worker set, persistent bed count, capacity and exact worker id/definition/home signatures across instance rebuild and logout/relog; populations beyond Worker #3 are valid and must round-trip exactly.
 - Con Revamp replaces the completed Bundle 2.2 gate card with Bundle 2.3 Housing controls: status, Add/Remove Bed Capacity, Recruit Next Worker, Self-Test, live Check and Worker #3 baseline/check.
 - **Art boundary:** Add/Remove Bed Capacity are developer harness controls only. No bed object id was guessed. Normal Construction placement hookup remains Patch 2.3.2 after a bed asset is verified.
 
 Runtime acceptance target:
 
-`Self-Test PASS -> Housing Status workers=2/2 beds=0 -> Add Bed -> capacity=3 READY -> Recruit Worker #3 -> live Check PASS saved=3/runtime=3 -> Capture W3 Baseline -> exit/re-enter Check PASS -> logout/relog/re-enter Check PASS`
+`Self-Test PASS -> Housing Status workers>=3 with beds>=1 -> live Check PASS with saved/runtime counts equal -> Capture housing baseline -> exit/re-enter Check PASS -> logout/relog/re-enter Check PASS`
+
+Runtime evidence already observed before the scalable-gate patch: beds=3, capacity=5 and workers=5/5 survived settlement re-entry. The prior exact-three developer gate rejected this valid state, so the gate is now population-scalable and needs one focused retest.
 
 Next Patch 2.3.2:
 - Verify a real bed object asset and bind normal Construction placement/removal to the existing persistent bed-capacity owner without introducing a second housing system.
@@ -1028,9 +1030,9 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
-- Approval state: Bundle 2.3 Patch 2.3.1 persistent bed-capacity + Worker #3 foundation is SAP AAA approved and implemented; runtime acceptance remains.
-- Current checklist item: runtime-test Bundle 2.3 Patch 2.3.1: Self-Test -> add one bed-capacity unit -> recruit Worker #3 -> live Check -> Worker #3 baseline re-entry/relog checks.
-- Current objective: runtime-prove persistent bed capacity and Worker #3 recruitment/persistence, then wire a verified real bed object into normal Construction placement/removal.
+- Approval state: Bundle 2.3 Patch 2.3.1 persistent bed-capacity + Worker #3 foundation is SAP AAA approved and implemented. The housing gate has been hardened to accept any valid population >=3 while preserving exact full-population baseline comparison; runtime acceptance remains.
+- Current checklist item: runtime-test the scalable Bundle 2.3 gate against the existing beds=3, capacity=5, workers=5/5 settlement -> live Check -> capture housing baseline -> exit/re-entry Check -> logout/relog/re-entry Check.
+- Current objective: runtime-prove the scalable housing baseline with the current five-worker settlement, then wire a verified real bed object into normal Construction placement/removal.
 
 ## Verification classifications
 
@@ -1081,7 +1083,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 
 ### verified-static
 
-- Bundle 2.3 bed-capacity foundation is verified-static pending runtime: SettlementState schema v9 persists housingBedCount; base shelter capacity 2 gains +1 per bed; recruitment supports multiple recruited-settler records with unique free saved home slots; occupied capacity cannot be removed; live Worker #3 projection continues through existing SettlementInstance ownership; no bed art id is assumed.
+- Bundle 2.3 bed-capacity foundation is verified-static pending final runtime gate: SettlementState schema v9 persists housingBedCount; base shelter capacity 2 gains +1 per bed; recruitment supports multiple recruited-settler records with unique free saved home slots; occupied capacity cannot be removed; live projection continues through existing SettlementInstance ownership for Worker #3+; the developer gate now validates any population >=3, exact capacity=2+beds, saved/runtime count equality, unique ids/homes and exact full-population baseline signatures; no bed art id is assumed.
 
 
 - Bundle 2.1 population ownership is VERIFIED at runtime: Population Self-Test passed; Worker #2 recruited successfully from the completed shelter capacity; live Population Check reported `workers=2/2`, `saved=2/runtime=2`, unique Worker #1/#2 ids/projections; Worker #2 remained idle under the default-OFF Allowed Jobs policy; logout/relog + settlement re-entry preserved the two-worker population without duplicate runtime projections.
