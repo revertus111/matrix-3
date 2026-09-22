@@ -90,7 +90,10 @@ public final class RailKitClassifierPanel extends JScrollPane {
             new JSpinner(new SpinnerNumberModel(0, 0, 3, 1));
     private final JComboBox<RailRoutePreview.RouteOrder> routeOrder =
             new JComboBox<RailRoutePreview.RouteOrder>(RailRoutePreview.RouteOrder.values());
-    private final JLabel routePieceLabel = valueLabel("Route rail: not configured");
+    private final JLabel routePieceLabel = valueLabel("Straight rail: not configured");
+    private final JLabel routeCurveLabel = valueLabel("Curve rail: not configured");
+    private final JSpinner curveMapOffset =
+            new JSpinner(new SpinnerNumberModel(0, 0, 3, 1));
 
     private final JCheckBox straight = check("Straight");
     private final JCheckBox curve = check("Curve");
@@ -271,23 +274,32 @@ public final class RailKitClassifierPanel extends JScrollPane {
     }
 
     private JPanel createRoutePreviewCard() {
-        JPanel card = ConsoleTheme.createCard("A -> B Rail Route Preview V0");
+        JPanel card = ConsoleTheme.createCard("A -> B Rail Route Preview V1");
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createWrappedText(
-                "Proof only: drag Point A to Point B and Matrix3 tiles the configured straight rail "
-                + "along an X/Y Manhattan route. Corners intentionally use a straight placeholder in V0.",
+                "Drag Point A to Point B. Straight sections use the checked Straight rail; "
+                + "the bend uses the first checked Curve rail and auto-rotates for the corner quadrant.",
                 5));
         card.add(Box.createVerticalStrut(7));
 
         routePieceLabel.setAlignmentX(LEFT_ALIGNMENT);
+        routeCurveLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(routePieceLabel);
+        card.add(Box.createVerticalStrut(3));
+        card.add(routeCurveLabel);
         card.add(Box.createVerticalStrut(6));
 
-        JButton useSelected = button("Use Selected as Route Rail");
-        useSelected.setAlignmentX(LEFT_ALIGNMENT);
-        useSelected.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        useSelected.addActionListener(e -> configureSelectedRouteRail());
-        card.add(useSelected);
+        JPanel useButtons = new JPanel(new GridLayout(1, 2, 5, 0));
+        useButtons.setOpaque(false);
+        useButtons.setAlignmentX(LEFT_ALIGNMENT);
+        useButtons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        JButton useSelectedStraight = button("Use Selected Straight");
+        JButton useSelectedCurve = button("Use Selected Curve");
+        useSelectedStraight.addActionListener(e -> configureSelectedRouteRail());
+        useSelectedCurve.addActionListener(e -> configureSelectedCurveRail());
+        useButtons.add(useSelectedStraight);
+        useButtons.add(useSelectedCurve);
+        card.add(useButtons);
         card.add(Box.createVerticalStrut(7));
 
         routeOrder.setFocusable(false);
@@ -306,6 +318,26 @@ public final class RailKitClassifierPanel extends JScrollPane {
         card.add(routeOrder);
         card.add(Box.createVerticalStrut(7));
 
+        JPanel curveMapRow = new JPanel(new GridLayout(1, 2, 6, 0));
+        curveMapRow.setOpaque(false);
+        curveMapRow.setAlignmentX(LEFT_ALIGNMENT);
+        curveMapRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        curveMapRow.add(smallLabel("Curve map offset R0-R3"));
+        curveMapOffset.setValue(Integer.valueOf(RailRoutePreview.getCurveRotationOffset()));
+        curveMapRow.add(curveMapOffset);
+        card.add(curveMapRow);
+        card.add(Box.createVerticalStrut(5));
+
+        JButton applyCurveMap = button("Apply Curve Rotation Offset");
+        applyCurveMap.setAlignmentX(LEFT_ALIGNMENT);
+        applyCurveMap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        applyCurveMap.addActionListener(e -> {
+            RailRoutePreview.setCurveRotationOffset(number(curveMapOffset));
+            setStatus(RailRoutePreview.getStatus());
+        });
+        card.add(applyCurveMap);
+        card.add(Box.createVerticalStrut(7));
+
         JButton enable = button("Enable A->B Preview");
         JButton disable = button("Disable Preview");
         JButton clear = button("Clear Route");
@@ -313,6 +345,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
 
         enable.addActionListener(e -> {
             ensureRouteRailConfigured();
+            RailRoutePreview.setCurveRotationOffset(number(curveMapOffset));
             RailRoutePreview.setEnabled(true);
             setStatus(RailRoutePreview.getStatus());
         });
@@ -337,8 +370,8 @@ public final class RailKitClassifierPanel extends JScrollPane {
         card.add(buttons);
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Usage: Enable -> move over valid ground -> hold Left mouse at A -> drag to B -> release. "
-                + "Escape cancels only the active drag and preserves the prior committed preview.",
+                "If the curve bends into the wrong quadrant, change Curve map offset R0-R3 and Apply. "
+                + "That rotates the complete four-corner mapping without changing the saved classifier data.",
                 4));
         return card;
     }
@@ -384,32 +417,62 @@ public final class RailKitClassifierPanel extends JScrollPane {
             return;
         }
 
-        RailRoutePreview.RouteOrder order = selectedRouteOrder();
+        ClassificationRecord record = recordFor(candidate);
+        int rotation = number(previewRotation);
         RailRoutePreview.configure(candidate.name, candidate.id, candidate.type,
-                number(previewRotation), order);
-        routePieceLabel.setText("Route rail: ID " + candidate.id
-                + " type " + candidate.type + " horizontal rot " + number(previewRotation));
+                rotation, selectedRouteOrder());
+        routePieceLabel.setText("Straight rail: ID " + candidate.id
+                + " type " + candidate.type + " N/S rot " + rotation
+                + (record.straight ? " [checked Straight]" : " [manual]"));
+        setStatus(RailRoutePreview.getStatus());
+    }
+
+    private void configureSelectedCurveRail() {
+        Candidate candidate = selected;
+        if (candidate == null) {
+            setStatus("Select a rail candidate first.");
+            return;
+        }
+
+        ClassificationRecord record = recordFor(candidate);
+        int rotation = number(previewRotation);
+        RailRoutePreview.configureCurve(candidate.name, candidate.id, candidate.type, rotation);
+        routeCurveLabel.setText("Curve rail: ID " + candidate.id
+                + " type " + candidate.type + " base rot " + rotation
+                + (record.curve ? " [checked Curve]" : " [manual]"));
         setStatus(RailRoutePreview.getStatus());
     }
 
     private void ensureRouteRailConfigured() {
-        if (RailRoutePreview.getConfiguredObjectId() >= 0) {
-            return;
-        }
-
-        for (Candidate candidate : candidates) {
-            ClassificationRecord record = records.get(candidate.key());
-            if (record != null && record.straight) {
-                RailRoutePreview.configure(candidate.name, candidate.id, candidate.type,
-                        record.lastPreviewRotation, selectedRouteOrder());
-                routePieceLabel.setText("Route rail: ID " + candidate.id
-                        + " type " + candidate.type + " horizontal rot "
-                        + (record.lastPreviewRotation & 0x3) + " [first checked Straight]");
-                return;
+        if (RailRoutePreview.getConfiguredObjectId() < 0) {
+            for (Candidate candidate : candidates) {
+                ClassificationRecord record = records.get(candidate.key());
+                if (record != null && record.straight) {
+                    RailRoutePreview.configure(candidate.name, candidate.id, candidate.type,
+                            record.lastPreviewRotation, selectedRouteOrder());
+                    routePieceLabel.setText("Straight rail: ID " + candidate.id
+                            + " type " + candidate.type + " N/S rot "
+                            + (record.lastPreviewRotation & 0x3) + " [first checked Straight]");
+                    break;
+                }
             }
         }
 
-        if (selected != null) {
+        if (RailRoutePreview.getConfiguredCurveObjectId() < 0) {
+            for (Candidate candidate : candidates) {
+                ClassificationRecord record = records.get(candidate.key());
+                if (record != null && record.curve) {
+                    RailRoutePreview.configureCurve(candidate.name, candidate.id, candidate.type,
+                            record.lastPreviewRotation);
+                    routeCurveLabel.setText("Curve rail: ID " + candidate.id
+                            + " type " + candidate.type + " base rot "
+                            + (record.lastPreviewRotation & 0x3) + " [first checked Curve]");
+                    break;
+                }
+            }
+        }
+
+        if (RailRoutePreview.getConfiguredObjectId() < 0 && selected != null) {
             configureSelectedRouteRail();
         }
     }

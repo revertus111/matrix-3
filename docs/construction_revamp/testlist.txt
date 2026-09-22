@@ -522,3 +522,18 @@ Matrix3 A->B Rail Route Preview V0 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Start a second drag, press Escape before release; active route cancels and the previous committed preview remains.
 [ ] Clear Route removes the committed ghosts; Disable Preview returns normal Left-click ground input.
 [ ] A route longer than 64 tiles is safely capped rather than creating unbounded per-frame model work.
+
+Matrix3 A->B Rail Route Preview V1 — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Source ownership remains client-only direct render; no real rail objects, collision, resources, persistence or server rail state.
+[x] Route ownership: an orthogonal X/Y route has one explicit corner tile; straight primitives no longer overlap the curve at that tile.
+[x] Classifier integration: Enable auto-selects the first saved Straight and first saved Curve classifications; manual Use Selected Straight/Curve remains available.
+[x] Curve geometry mapping: the corner's two neighboring cardinal directions select one of four quarter-turn curve rotations.
+[x] Calibration: Curve map offset R0-R3 rotates the complete quadrant mapping without changing rail_kit.tsv or the saved curve classification.
+[ ] Pull once and verify the V0 axis fix first: east/west straight runs along east/west and north/south runs north/south.
+[ ] With 46376 (or another accepted piece) checked Straight and 46381 (or another accepted piece) checked Curve, Enable A->B Preview and drag an L-shaped route.
+[ ] Exactly one curve object occupies the bend tile; no straight object overlaps the corner.
+[ ] The curve visually connects both straight legs. If it points into the wrong quadrant, change Curve map offset R0-R3 until the current corner connects cleanly.
+[ ] After one offset is calibrated, test the other three bend quadrants; each auto-rotation connects the same curve primitive to both straight legs.
+[ ] Switch X then Y / Y then X for the same endpoints; the bend moves to the opposite Manhattan corner and receives the corresponding curve orientation.
+[ ] Pure horizontal or pure vertical routes use only straight rails and do not inject a curve.
+[ ] Clear/Disable/Escape behavior from V0 remains unchanged.

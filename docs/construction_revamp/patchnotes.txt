@@ -859,3 +859,11 @@
 - Runtime video proved the route/path generation was correct but straight rail geometry was rotated 90 degrees relative to travel direction.
 - Reclassified the stored classifier preview rotation as the straight rail's north/south orientation; east/west now derives as +1 quarter-turn.
 - X/Y route logic is unchanged; only the direct-render orientation mapping changed.
+
+2026-09-22 - A->B Rail Route Preview V1 curve corner
+- Route preview now auto-configures the first rail checked Curve in rail_kit.tsv in addition to the first checked Straight.
+- Orthogonal Manhattan routes reserve exactly one bend tile for the curve object; straight objects render only before/after that corner instead of overlapping it.
+- Curve rotation is derived from the two neighboring route directions for all four east/west + north/south corner quadrants.
+- Added Use Selected Curve plus a runtime-only Curve map offset R0-R3 control; the offset rotates the whole quadrant mapping without rewriting classifier evidence.
+- If no Curve rail is configured, V1 safely falls back to the previous straight-corner placeholder.
+- Straight-only horizontal/vertical routes remain unchanged and no server/world/collision/persistence ownership is added.

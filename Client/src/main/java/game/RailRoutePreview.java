@@ -10,10 +10,10 @@ import java.awt.event.MouseEvent;
 /**
  * Client-only Point-A -> Point-B rail route visual proof.
  *
- * V0 deliberately proves only drag UX, Manhattan path generation, per-tile
- * orientation and multi-object direct rendering. It does not place real world
- * objects, own collision, persist anything, consume settlement resources, or
- * attempt final curve/switch auto-tiling.
+ * V1 proves drag UX, Manhattan path generation, straight-axis orientation and
+ * one classified curve primitive at the route bend. It does not place real
+ * world objects, own collision, persist anything, consume settlement resources,
+ * or attempt switch/junction auto-tiling.
  */
 public final class RailRoutePreview {
 
@@ -51,6 +51,13 @@ public final class RailRoutePreview {
     private static volatile int objectType = 22;
     private static volatile int horizontalRotation;
     private static volatile String objectName = "Rail";
+
+    private static volatile int curveObjectId = -1;
+    private static volatile int curveObjectType = 22;
+    private static volatile int curveBaseRotation;
+    private static volatile int curveRotationOffset;
+    private static volatile String curveObjectName = "Curve";
+
     private static volatile RouteOrder routeOrder = RouteOrder.X_THEN_Y;
 
     private static volatile int hoveredWorldX = -1;
@@ -91,6 +98,31 @@ public final class RailRoutePreview {
         eventState = "Route rail configured: " + objectName + " id=" + objectId
                 + " type=" + objectType + " northSouthRot=" + horizontalRotation
                 + " eastWestRot=" + eastWestRotation() + ".";
+    }
+
+    public static void configureCurve(String name, int id, int type, int baseRotation) {
+        curveObjectName = name == null || name.trim().isEmpty() ? "Curve" : name;
+        curveObjectId = id;
+        curveObjectType = clamp(type, 0, 22);
+        curveBaseRotation = baseRotation & 0x3;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = "Curve rail configured: " + curveObjectName + " id=" + curveObjectId
+                + " type=" + curveObjectType + " baseRot=" + curveBaseRotation
+                + " mapOffset=" + curveRotationOffset + ".";
+    }
+
+    public static int getConfiguredCurveObjectId() {
+        return curveObjectId;
+    }
+
+    public static void setCurveRotationOffset(int offset) {
+        curveRotationOffset = offset & 0x3;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = "Curve rotation map offset set to R" + curveRotationOffset + ".";
+    }
+
+    public static int getCurveRotationOffset() {
+        return curveRotationOffset;
     }
 
     public static void setRouteOrder(RouteOrder order) {
@@ -161,10 +193,14 @@ public final class RailRoutePreview {
 
     public static String getStatus() {
         StringBuilder status = new StringBuilder(192);
-        status.append(enabled ? "RAIL V0 ON" : "RAIL V0 OFF");
-        status.append(" | piece=").append(objectId < 0 ? "none" : objectId + "/" + objectType)
+        status.append(enabled ? "RAIL V1 ON" : "RAIL V1 OFF");
+        status.append(" | straight=").append(objectId < 0 ? "none" : objectId + "/" + objectType)
                 .append(" nsRot=").append(horizontalRotation)
                 .append(" ewRot=").append(eastWestRotation())
+                .append(" | curve=").append(curveObjectId < 0
+                        ? "none" : curveObjectId + "/" + curveObjectType)
+                .append(" baseRot=").append(curveBaseRotation)
+                .append(" mapOffset=R").append(curveRotationOffset)
                 .append(" | order=").append(routeOrder);
 
         if (dragging) {
@@ -269,58 +305,84 @@ public final class RailRoutePreview {
         ObjectDefinitions definition =
                 (ObjectDefinitions) definitions.getDefinition(objectId, -1356282071);
         if (definition == null) {
-            renderState = "UNKNOWN object id " + objectId;
+            renderState = "UNKNOWN straight object id " + objectId;
             return;
         }
 
+        ObjectDefinitions curveDefinition = curveObjectId < 0 ? null
+                : (ObjectDefinitions) definitions.getDefinition(curveObjectId, -1356282071);
+
         int rendered;
         if (routeOrder == RouteOrder.Y_THEN_X) {
-            rendered = renderYThenX(scene, renderer, sceneBase, definition,
+            rendered = renderYThenX(scene, renderer, sceneBase, definition, curveDefinition,
                     startX, startY, endX, endY, plane);
         } else {
-            rendered = renderXThenY(scene, renderer, sceneBase, definition,
+            rendered = renderXThenY(scene, renderer, sceneBase, definition, curveDefinition,
                     startX, startY, endX, endY, plane);
         }
 
         int requested = routeTileCount(startX, startY, endX, endY);
+        boolean hasCorner = startX != endX && startY != endY;
         renderState = "DRAW " + rendered + "/" + requested + " tile(s)"
                 + (requested > MAX_ROUTE_TILES ? " [capped " + MAX_ROUTE_TILES + "]" : "")
-                + " V0 straight-only corner placeholder";
+                + (hasCorner
+                        ? (curveDefinition != null ? " V1 curve corner" : " V1 curve missing -> straight fallback")
+                        : " straight route");
     }
 
     private static int renderXThenY(Class523 scene, Class106 renderer, Class497 sceneBase,
-            ObjectDefinitions definition, int startX, int startY, int endX, int endY, int plane) {
+            ObjectDefinitions straightDefinition, ObjectDefinitions curveDefinition,
+            int startX, int startY, int endX, int endY, int plane) {
+        if (startY == endY) {
+            return renderHorizontalLine(scene, renderer, sceneBase, straightDefinition,
+                    startX, endX, startY, plane);
+        }
+        if (startX == endX) {
+            return renderVerticalLine(scene, renderer, sceneBase, straightDefinition,
+                    startY, endY, startX, plane);
+        }
+
         int rendered = 0;
         int attempted = 0;
         int xStep = Integer.compare(endX, startX);
         int yStep = Integer.compare(endY, startY);
 
         int x = startX;
-        while (true) {
-            int rotation = x == endX && startY != endY
-                    ? verticalRotation() : eastWestRotation();
+        while (x != endX && attempted < MAX_ROUTE_TILES) {
             attempted++;
-            if (renderPiece(scene, renderer, sceneBase, definition, x, startY, plane, rotation)) {
+            if (renderPiece(scene, renderer, sceneBase, straightDefinition,
+                    objectType, x, startY, plane, eastWestRotation())) {
                 rendered++;
-            }
-            if (attempted >= MAX_ROUTE_TILES || x == endX) {
-                break;
             }
             x += xStep;
         }
 
-        if (attempted >= MAX_ROUTE_TILES || startY == endY) {
+        if (attempted >= MAX_ROUTE_TILES) {
             return rendered;
         }
 
-        int y = startY + yStep;
-        while (true) {
-            attempted++;
-            if (renderPiece(scene, renderer, sceneBase, definition,
-                    endX, y, plane, verticalRotation())) {
+        attempted++;
+        int horizontalNeighborDirection = -xStep;
+        int verticalNeighborDirection = yStep;
+        if (curveDefinition != null) {
+            if (renderPiece(scene, renderer, sceneBase, curveDefinition, curveObjectType,
+                    endX, startY, plane,
+                    curveRotationFor(horizontalNeighborDirection, verticalNeighborDirection))) {
                 rendered++;
             }
-            if (attempted >= MAX_ROUTE_TILES || y == endY) {
+        } else if (renderPiece(scene, renderer, sceneBase, straightDefinition, objectType,
+                endX, startY, plane, verticalRotation())) {
+            rendered++;
+        }
+
+        int y = startY + yStep;
+        while (attempted < MAX_ROUTE_TILES) {
+            attempted++;
+            if (renderPiece(scene, renderer, sceneBase, straightDefinition,
+                    objectType, endX, y, plane, verticalRotation())) {
+                rendered++;
+            }
+            if (y == endY) {
                 break;
             }
             y += yStep;
@@ -329,39 +391,58 @@ public final class RailRoutePreview {
     }
 
     private static int renderYThenX(Class523 scene, Class106 renderer, Class497 sceneBase,
-            ObjectDefinitions definition, int startX, int startY, int endX, int endY, int plane) {
+            ObjectDefinitions straightDefinition, ObjectDefinitions curveDefinition,
+            int startX, int startY, int endX, int endY, int plane) {
+        if (startY == endY) {
+            return renderHorizontalLine(scene, renderer, sceneBase, straightDefinition,
+                    startX, endX, startY, plane);
+        }
+        if (startX == endX) {
+            return renderVerticalLine(scene, renderer, sceneBase, straightDefinition,
+                    startY, endY, startX, plane);
+        }
+
         int rendered = 0;
         int attempted = 0;
         int xStep = Integer.compare(endX, startX);
         int yStep = Integer.compare(endY, startY);
 
         int y = startY;
-        while (true) {
-            int rotation = y == endY && startX != endX
-                    ? eastWestRotation() : verticalRotation();
+        while (y != endY && attempted < MAX_ROUTE_TILES) {
             attempted++;
-            if (renderPiece(scene, renderer, sceneBase, definition,
-                    startX, y, plane, rotation)) {
+            if (renderPiece(scene, renderer, sceneBase, straightDefinition,
+                    objectType, startX, y, plane, verticalRotation())) {
                 rendered++;
-            }
-            if (attempted >= MAX_ROUTE_TILES || y == endY) {
-                break;
             }
             y += yStep;
         }
 
-        if (attempted >= MAX_ROUTE_TILES || startX == endX) {
+        if (attempted >= MAX_ROUTE_TILES) {
             return rendered;
         }
 
-        int x = startX + xStep;
-        while (true) {
-            attempted++;
-            if (renderPiece(scene, renderer, sceneBase, definition,
-                    x, endY, plane, eastWestRotation())) {
+        attempted++;
+        int horizontalNeighborDirection = xStep;
+        int verticalNeighborDirection = -yStep;
+        if (curveDefinition != null) {
+            if (renderPiece(scene, renderer, sceneBase, curveDefinition, curveObjectType,
+                    startX, endY, plane,
+                    curveRotationFor(horizontalNeighborDirection, verticalNeighborDirection))) {
                 rendered++;
             }
-            if (attempted >= MAX_ROUTE_TILES || x == endX) {
+        } else if (renderPiece(scene, renderer, sceneBase, straightDefinition, objectType,
+                startX, endY, plane, eastWestRotation())) {
+            rendered++;
+        }
+
+        int x = startX + xStep;
+        while (attempted < MAX_ROUTE_TILES) {
+            attempted++;
+            if (renderPiece(scene, renderer, sceneBase, straightDefinition,
+                    objectType, x, endY, plane, eastWestRotation())) {
+                rendered++;
+            }
+            if (x == endX) {
                 break;
             }
             x += xStep;
@@ -369,8 +450,49 @@ public final class RailRoutePreview {
         return rendered;
     }
 
+    private static int renderHorizontalLine(Class523 scene, Class106 renderer, Class497 sceneBase,
+            ObjectDefinitions definition, int startX, int endX, int y, int plane) {
+        int rendered = 0;
+        int attempted = 0;
+        int step = Integer.compare(endX, startX);
+        int x = startX;
+        while (attempted < MAX_ROUTE_TILES) {
+            attempted++;
+            if (renderPiece(scene, renderer, sceneBase, definition,
+                    objectType, x, y, plane, eastWestRotation())) {
+                rendered++;
+            }
+            if (x == endX) {
+                break;
+            }
+            x += step;
+        }
+        return rendered;
+    }
+
+    private static int renderVerticalLine(Class523 scene, Class106 renderer, Class497 sceneBase,
+            ObjectDefinitions definition, int startY, int endY, int x, int plane) {
+        int rendered = 0;
+        int attempted = 0;
+        int step = Integer.compare(endY, startY);
+        int y = startY;
+        while (attempted < MAX_ROUTE_TILES) {
+            attempted++;
+            if (renderPiece(scene, renderer, sceneBase, definition,
+                    objectType, x, y, plane, verticalRotation())) {
+                rendered++;
+            }
+            if (y == endY) {
+                break;
+            }
+            y += step;
+        }
+        return rendered;
+    }
+
     private static boolean renderPiece(Class523 scene, Class106 renderer, Class497 sceneBase,
-            ObjectDefinitions definition, int worldX, int worldY, int plane, int rotation) {
+            ObjectDefinitions definition, int pieceType,
+            int worldX, int worldY, int plane, int rotation) {
         if (plane < 0 || plane >= scene.aClass174Array5838.length) {
             return false;
         }
@@ -407,7 +529,7 @@ public final class RailRoutePreview {
                 ? scene.aClass174Array5838[plane + 1]
                 : null;
 
-        Class647 built = definition.method6057(renderer, MODEL_FLAGS, objectType, renderRotation,
+        Class647 built = definition.method6057(renderer, MODEL_FLAGS, pieceType, renderRotation,
                 ground, upperGround, sceneX, sceneY, sceneZ, false, null, -272661735);
         if (built == null || !(built.anObject8324 instanceof Model)) {
             return false;
@@ -560,6 +682,31 @@ public final class RailRoutePreview {
 
     private static int eastWestRotation() {
         return (horizontalRotation + 1) & 0x3;
+    }
+
+    private static int curveRotationFor(int horizontalDirection, int verticalDirection) {
+        /*
+         * V1 canonical mapping:
+         *   base rotation = curve connecting EAST + NORTH
+         *   +1 = EAST + SOUTH
+         *   +2 = WEST + SOUTH
+         *   +3 = WEST + NORTH
+         *
+         * The UI exposes a global R0-R3 mapping offset because the classified
+         * cache model's saved preview rotation is visual evidence, not yet a
+         * runtime-verified canonical EN orientation.
+         */
+        int quarterTurns;
+        if (horizontalDirection > 0 && verticalDirection > 0) {
+            quarterTurns = 0;
+        } else if (horizontalDirection > 0 && verticalDirection < 0) {
+            quarterTurns = 1;
+        } else if (horizontalDirection < 0 && verticalDirection < 0) {
+            quarterTurns = 2;
+        } else {
+            quarterTurns = 3;
+        }
+        return (curveBaseRotation + curveRotationOffset + quarterTurns) & 0x3;
     }
 
     private static int routeTileCount(int startX, int startY, int endX, int endY) {
