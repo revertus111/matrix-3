@@ -324,7 +324,6 @@ public final class SettlementState implements Serializable {
     }
 
     public synchronized boolean addHousingBed() {
-        normalize();
         if (!canAddHousingBed()) {
             return false;
         }
@@ -343,7 +342,6 @@ public final class SettlementState implements Serializable {
     }
 
     public synchronized boolean removeHousingBed() {
-        normalize();
         if (!canRemoveHousingBed()) {
             return false;
         }
