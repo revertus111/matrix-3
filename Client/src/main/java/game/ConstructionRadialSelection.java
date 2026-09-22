@@ -71,6 +71,9 @@ public final class ConstructionRadialSelection {
     private static final int MATRIX3_TILE_ACTION = 23;
     private static final int RETICULE_GFX_ID = 4171;
     private static final int WORKER_STATUS_GFX_ID = 4187;
+    private static final int SETTLEMENT_WORKER_NPC_ID = 1;
+    private static final String SETTLEMENT_WORKER_NAME = "Settler";
+    private static final int WORKER_PREVIEW_SCALE = 96;
     private static final int BASE_MODEL_SCALE = 128;
     private static final int PROBE_MAX_REPORTED_COLORS = 8;
     private static final float RETICULE_RING_FALLBACK_FRACTION = 0.80F;
@@ -112,6 +115,8 @@ public final class ConstructionRadialSelection {
 
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile int lastRenderedScalePercent;
+    private static volatile int liveDetectedWorkerCount;
+    private static volatile String lastDetectedWorkers = "none";
     private static volatile String lastEventState = "RWS-2 Worker Control disabled.";
     private static volatile String lastRenderState = "not rendered";
 
@@ -246,6 +251,8 @@ public final class ConstructionRadialSelection {
         } else {
             status.append(" | no committed radius");
         }
+        status.append(" | workersInCircle=").append(liveDetectedWorkerCount);
+        status.append(" [").append(lastDetectedWorkers).append(']');
         status.append(" | ").append(lastEventState);
         status.append(" | render=").append(lastRenderState);
         return status.toString();
@@ -422,6 +429,10 @@ public final class ConstructionRadialSelection {
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
 
+        int detectedWorkers = renderLiveWorkerPreview(
+                scene, renderer, sceneBase, ground, drawPlane, drawWorldX, drawWorldY, drawRadius);
+        liveDetectedWorkerCount = detectedWorkers;
+
         lastRenderState = "DRAW gfx=" + RETICULE_GFX_ID
                 + " radius=" + formatRadius(drawRadius)
                 + " scale=" + lastRenderedScalePercent + "%"
@@ -430,6 +441,122 @@ public final class ConstructionRadialSelection {
                 + " modelOffset=" + modelCenterX + "," + modelCenterZ
                 + " center=" + formatWorld(drawWorldX) + "," + formatWorld(drawWorldY)
                 + "," + drawPlane;
+    }
+
+    /**
+     * RWS-3 client-only live worker detection/preview.
+     *
+     * Scope is intentionally narrow until RWS-5:
+     * - iterate Matrix3's bounded active-local NPC index list only
+     * - require the settlement worker NPC definition + server-overridden name
+     * - require same plane
+     * - test NPC tile-center distance against the live world-space circle
+     * - render a temporary small 4171 marker while the drag is active
+     *
+     * Persistent worker IDs and final authority remain server-owned in RWS-5.
+     */
+    private static int renderLiveWorkerPreview(Class523 scene, Class106 renderer,
+            Class497 sceneBase, Class174 ground, int plane,
+            float centerWorldX, float centerWorldY, float radiusTiles) {
+        if (client.aClass676_8622 == null || client.anIntArray8626 == null
+                || client.aClass572_Sub9Array8623 == null || sceneBase == null || ground == null) {
+            lastDetectedWorkers = "none";
+            return 0;
+        }
+
+        int activeCount = client.anInt8625 * 765313669;
+        if (activeCount < 0) {
+            activeCount = 0;
+        } else if (activeCount > client.anIntArray8626.length) {
+            activeCount = client.anIntArray8626.length;
+        }
+
+        int sceneBaseWorldX = sceneBase.localX * -2109597897;
+        int sceneBaseWorldY = sceneBase.localY * 417324155;
+        float radiusSquared = radiusTiles * radiusTiles;
+        int detected = 0;
+        StringBuilder ids = new StringBuilder();
+
+        GraphicsDefinition markerDefinition = (GraphicsDefinition) Class667.aClass639_Sub10_8509
+                .getDefinition(RETICULE_GFX_ID, 235749166);
+        if (markerDefinition == null) {
+            lastDetectedWorkers = "marker-def-missing";
+            return 0;
+        }
+
+        for (int i = 0; i < activeCount; i++) {
+            int npcIndex = client.anIntArray8626[i];
+            LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+            if (link == null || !(link.anObject9081 instanceof NPC)) {
+                continue;
+            }
+
+            NPC npc = (NPC) link.anObject9081;
+            if (!isSettlementWorkerPreviewNpc(npc, plane)) {
+                continue;
+            }
+
+            float workerWorldX = sceneBaseWorldX + npc.screenX[0];
+            float workerWorldY = sceneBaseWorldY + npc.screenY[0];
+            float dx = workerWorldX - centerWorldX;
+            float dy = workerWorldY - centerWorldY;
+            if (dx * dx + dy * dy > radiusSquared) {
+                continue;
+            }
+
+            detected++;
+            if (ids.length() > 0) {
+                ids.append(',');
+            }
+            ids.append(npcIndex);
+
+            Class240 position = npc.method5394().aClass240_2647;
+            if (position == null) {
+                continue;
+            }
+
+            int markerSceneX = Math.round(position.aFloat2653);
+            int markerSceneZ = Math.round(position.aFloat2657);
+            int markerSceneY = ground.method2718(markerSceneX, markerSceneZ, 0);
+
+            Model marker = markerDefinition.method7764(
+                    renderer, MODEL_FLAGS, 0, 0, 0, 0, null, (byte) 2, 1913622280);
+            if (marker == null) {
+                continue;
+            }
+
+            int minX = marker.method1380();
+            int maxX = marker.method1381();
+            int minZ = marker.method1384();
+            int maxZ = marker.method1508();
+            int markerCenterX = (minX + maxX) / 2;
+            int markerCenterZ = (minZ + maxZ) / 2;
+            if (markerCenterX != 0 || markerCenterZ != 0) {
+                marker.method1358(-markerCenterX, 0, -markerCenterZ);
+            }
+            marker.method1464(WORKER_PREVIEW_SCALE, BASE_MODEL_SCALE, WORKER_PREVIEW_SCALE);
+
+            TRANSFORM.method3588(markerSceneX, markerSceneY, markerSceneZ);
+            marker.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        }
+
+        lastDetectedWorkers = ids.length() == 0 ? "none" : ids.toString();
+        return detected;
+    }
+
+    private static boolean isSettlementWorkerPreviewNpc(NPC npc, int plane) {
+        if (npc == null || npc.aClass410_11803 == null
+                || (npc.aByte9009 & 0xff) != plane) {
+            return false;
+        }
+
+        int definitionId = npc.aClass410_11803.anInt4819 * 1355909985;
+        if (definitionId != SETTLEMENT_WORKER_NPC_ID) {
+            return false;
+        }
+
+        return npc.aString11807 != null
+                && SETTLEMENT_WORKER_NAME.equalsIgnoreCase(npc.aString11807.trim());
     }
 
     /**
@@ -766,6 +893,8 @@ public final class ConstructionRadialSelection {
         liveRadiusTiles = MIN_RADIUS_TILES;
         liveDirectionWorldX = 0.0F;
         liveDirectionWorldY = 0.0F;
+        liveDetectedWorkerCount = 0;
+        lastDetectedWorkers = "none";
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
         lastEventState = "RWS-2 drag started at " + originWorldX + "," + originWorldY + "," + originPlane + ".";
@@ -830,6 +959,8 @@ public final class ConstructionRadialSelection {
         liveRadiusTiles = MIN_RADIUS_TILES;
         liveDirectionWorldX = 0.0F;
         liveDirectionWorldY = 0.0F;
+        liveDetectedWorkerCount = 0;
+        lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
         lastEventState = committed
                 ? "RWS-2 drag cancelled; previous committed radius preserved."
