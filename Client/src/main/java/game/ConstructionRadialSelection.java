@@ -100,6 +100,7 @@ public final class ConstructionRadialSelection {
      */
     private static volatile int workerOuterRingScalePercent = 100;
     private static volatile int workerInnerRingScalePercent = 70;
+    private static volatile int dragRingRgb = -1;
     private static volatile int workerOuterRingRgb = -1;
     private static volatile int workerInnerRingRgb = -1;
 
@@ -161,6 +162,15 @@ public final class ConstructionRadialSelection {
         lastRenderedCycle = Integer.MIN_VALUE;
     }
 
+    public static Color getDragRingColor() {
+        return dragRingRgb < 0 ? null : new Color(dragRingRgb);
+    }
+
+    public static void setDragRingColor(Color color) {
+        dragRingRgb = color == null ? -1 : color.getRGB() & 0xffffff;
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
     public static Color getWorkerOuterRingColor() {
         return workerOuterRingRgb < 0 ? null : new Color(workerOuterRingRgb);
     }
@@ -179,7 +189,8 @@ public final class ConstructionRadialSelection {
         lastRenderedCycle = Integer.MIN_VALUE;
     }
 
-    public static void resetWorkerRingColors() {
+    public static void resetRingColors() {
+        dragRingRgb = -1;
         workerOuterRingRgb = -1;
         workerInnerRingRgb = -1;
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -187,8 +198,9 @@ public final class ConstructionRadialSelection {
 
     public static String getWorkerRingStyleStatus() {
         return "RWS-4 GFX " + RETICULE_GFX_ID
-                + " outer=" + workerOuterRingScalePercent + "%/" + formatRgb(workerOuterRingRgb)
-                + " inner=" + workerInnerRingScalePercent + "%/" + formatRgb(workerInnerRingRgb)
+                + " drag=" + formatRgb(dragRingRgb)
+                + " | outer=" + workerOuterRingScalePercent + "%/" + formatRgb(workerOuterRingRgb)
+                + " | inner=" + workerInnerRingScalePercent + "%/" + formatRgb(workerInnerRingRgb)
                 + " | tint isolation=0x80000";
     }
 
@@ -413,6 +425,7 @@ public final class ConstructionRadialSelection {
         model.method1464(runtimeScale, BASE_MODEL_SCALE, runtimeScale);
         lastRenderedScalePercent = Math.max(1,
                 Math.round(runtimeScale * 100.0F / BASE_MODEL_SCALE));
+        applyRingTint(model, dragRingRgb);
 
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
@@ -541,13 +554,18 @@ public final class ConstructionRadialSelection {
                 Math.round(BASE_MODEL_SCALE * (clampWorkerRingScale(scalePercent) / 100.0F)));
         marker.method1464(runtimeScale, BASE_MODEL_SCALE, runtimeScale);
 
-        if (rgb >= 0) {
-            int[] hsl = rgbToModelHsl(rgb);
-            marker.method1396(hsl[0], hsl[1], hsl[2], 128);
-        }
+        applyRingTint(marker, rgb);
 
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         marker.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+    }
+
+    private static void applyRingTint(Model model, int rgb) {
+        if (model == null || rgb < 0) {
+            return;
+        }
+        int[] hsl = rgbToModelHsl(rgb);
+        model.method1396(hsl[0], hsl[1], hsl[2], 128);
     }
 
     private static int clampWorkerRingScale(int percent) {
