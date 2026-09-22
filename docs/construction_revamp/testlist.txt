@@ -454,18 +454,22 @@ Object / Automation Asset Probe — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Log Nearby 3x3 appends all discovered candidates to the same catalog with timestamp/scope/center metadata.
 [ ] Scanning/logging ordinary world objects does not move, rotate, delete, replace or otherwise mutate them.
 
-Phase 2 side slice — GFX 4187 worker-status recolor probe
+Phase 2 side slice — Radial Worker Selection RWS-4 layered GFX 4171 style
 [IMPLEMENTED / NEEDS RUNTIME TEST]
-[x] Source ownership: probe is client-only and direct-renders GFX 4187 through the existing Construction scene seam without entering combat or mutating cache definitions.
-[x] Clone isolation: MODEL_FLAGS retains 0x80000 so the per-call model clone owns copied face-colour storage before method1393(...) recolor.
-[x] Probe sampling: when the renderer exposes AbstractModel, the probe ranks non-0xFFFF packed face colours by face count and assigns the top two as Color A / Color B candidates.
-[x] Con Revamp exposes Show 4187 Original / Highlight Color A / Highlight Color B / 4187 Probe Status / Hide 4187 Probe.
-[ ] Show 4187 Original -> move over valid ground: the expected red/yellow double-ring asset renders at the hovered world tile outside combat.
-[ ] Highlight Color A changes only a coherent visible portion of GFX 4187 rather than recoloring the whole asset or unrelated world models.
-[ ] Highlight Color B changes a second coherent visible portion independently of Color A.
-[ ] Visual classification: record whether A/B correspond cleanly to outer ring vs inner ring; if not, classify the asset as unsuitable for independent selection/needs recolor instead of guessing.
-[ ] 4187 Probe Status reports sampled A/B packed colours with face counts plus DRAW gfx=4187 and the active recolor mapping.
-[ ] Hide 4187 Probe removes the visual; enabling Worker Control afterward restores normal RWS-2 drag ownership and GFX 4171 behavior.
+[x] Decision: GFX 4187 is dropped; RWS-4 reuses only the already-proven GFX 4171.
+[x] Source ownership: drag/outer/inner visuals are isolated per-call 4171 model clones; cache definitions and combat reticules are untouched.
+[x] Layering source: each RWS-3-detected worker receives independent outer + inner 4171 clones at the same world position.
+[x] Scale source: outer defaults to 100%, inner defaults to 70%, each adjustable independently from 25%-300%.
+[x] Color source: drag/outer/inner colors are independent RGB selections converted to Matrix3 H/S/L and applied with Model.method1396(..., 128).
+[x] Clone isolation: existing MODEL_FLAGS retains 0x80000 so recolor stays on the per-call face-colour copy.
+[x] Con Revamp replaces the 4187 probe card with RWS-4 Worker Ring Style controls: outer/inner scale, Drag Ring Color, Outer Color Picker, Inner Color Picker, Use Original Colors and Ring Style Status.
+[ ] Enable Worker Control and detect at least one worker; verify both outer and inner 4171 layers are visible simultaneously.
+[ ] Change Outer scale while dragging; outer ring resizes while inner ring remains unchanged.
+[ ] Change Inner scale while dragging; inner ring resizes while outer ring remains unchanged.
+[ ] Pick a drag-ring color; only the large active drag ring changes color.
+[ ] Pick separate outer and inner colors; each detected worker shows the two chosen colors on the correct layers.
+[ ] Use Original Colors restores native 4171 coloring for drag/outer/inner without resetting scale.
+[ ] Shrink/reposition/release the drag; layered worker previews still follow RWS-3 membership and disappear when preview ends.
 
 Object Lab OBJLAB-1/2 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Dev Mode -> Inspect Object -> Capture in Object Lab opens the viewer with the same object ID/name/source tile.
