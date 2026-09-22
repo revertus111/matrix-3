@@ -360,7 +360,7 @@ Phase 2 side slice — Radial Worker Selection RWS-1
 [ ] Hide Reticule Proof removes the ring cleanly and normal RuneScape mouse/combat/Construction behavior remains unchanged.
 
 Phase 2 side slice — Radial Worker Selection RWS-2
-[IMPLEMENTED / NEEDS RUNTIME TEST]
+[RUNTIME VERIFIED]
 [x] Source ownership: Worker Control is client-only and owns only temporary radial input/visual state; worker identity, AI, commands, persistence and combat remain untouched.
 [x] Input ownership: configured press/release are consumed only while Worker Control owns a valid-ground drag; `MOUSE_DRAGGED` is deliberately passed through so Matrix3 can keep its action-23 ground hover current.
 [x] Ground ownership: drag origin reuses the current action-23 Matrix3-resolved world tile; no second scene/world picker is introduced.
@@ -378,8 +378,8 @@ Phase 2 side slice — Radial Worker Selection RWS-2
 [x] Model-origin source fix: per-call GFX 4171 clone is recentered on its real X/Z bounds before scaling, eliminating off-center scale drift without changing cache data.
 [-] Latest runtime video: the decorative red diamonds tracked the geometric A/B extent while the circular ring stopped short, proving full-model bounds were calibrating the marker tips instead of the ring body.
 [x] Ring-body source fix: AbstractModel vertex radii are sorted and the large outer gap is used to separate the dense circular ring from decorative diamond geometry; a bounded 0.80 fallback covers other renderer model types.
-[ ] Hold/drag across the settlement: mouse-down remains edge A, current resolved world tile acts as edge B, and the CIRCULAR RING circumference spans A -> B; decorative diamonds may extend beyond the selection radius.
-[ ] Critical edge-pin check: once drag begins, the circumference at edge A never moves backward away from the original mouse-down world point as the circle grows.
+[x] Runtime acceptance: user confirmed the final ring-body calibrated drag works; the circular ring spans A -> B with edge A fixed while B owns expansion.
+[x] Critical edge-pin check: the circular-ring circumference at edge A remains fixed as the selection grows; decorative diamonds may extend beyond the selection radius.
 [ ] Continue dragging beyond the old 12-tile radius threshold; the ring continues expanding/repositioning instead of stopping.
 [ ] Drag back toward edge A and around it; the ring shrinks/repositions naturally without snapping back to the old fixed-center behavior.
 [ ] Release commits the final center/radius data and hides the large area ring immediately; Radial Status still reports the committed edge A/center/radius for RWS-3.
@@ -388,6 +388,22 @@ Phase 2 side slice — Radial Worker Selection RWS-2
 [ ] Switch to Right mouse and repeat a short drag; right-click context behavior is suppressed only for the owned drag while Worker Control is enabled.
 [ ] Disable Worker Control; radial input stops owning the configured mouse button and normal RuneScape ground interaction/context behavior returns.
 [ ] Camera framing/zoom after commit does not change the committed world radius.
+
+
+Phase 2 side slice — Radial Worker Selection RWS-3
+[IMPLEMENTED / NEEDS RUNTIME TEST]
+[x] Source ownership: client-only preview; no server worker-selection state, persistent worker IDs, worker AI, combat targets or cache definitions are modified.
+[x] Active-list ownership: scans Matrix3's bounded active-local NPC index list (`anIntArray8626` / `anInt8625`) only.
+[x] Worker filter: same-plane NPC definition 1 + server-overridden `Settler` name; unrelated NPC definitions and players are ignored.
+[x] Membership math: exact world-space worker center distance is compared with the current live RWS-2 radius.
+[x] Preview render: detected workers receive a temporary small per-call GFX 4171 marker during active drag only.
+[x] Status: Radial Status reports `workersInCircle=<count>` and detected runtime NPC indexes.
+[ ] Start a drag that contains neither worker; expect workersInCircle=0 and no worker preview marker.
+[ ] Expand across Worker #1 only; expect workersInCircle=1 and only that worker marked.
+[ ] Expand across both workers; expect workersInCircle=2 and both workers marked.
+[ ] Shrink/reposition so a worker leaves the circle; its marker disappears immediately and count decrements.
+[ ] Release/cancel the drag; temporary worker preview markers disappear with the live area ring.
+[ ] Unrelated NPCs/players remain unmarked.
 
 
 Construction RTS default + pivot orbit
