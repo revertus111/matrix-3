@@ -911,3 +911,14 @@
 - Added disposable SettlementHousingCheck for capacity 2->3, Worker #3 id/home/default policy and serialization, plus live saved=3/runtime=3 verification and a process-local rebuild/relog baseline.
 - Replaced the completed Bundle 2.2 Con Revamp gate card with Bundle 2.3 Housing controls for status, developer bed-capacity mutation, recruitment, self-test/live check and Worker #3 baseline.
 - No bed object id was guessed. Developer Add/Remove Bed Capacity is an architecture/runtime harness only; normal Construction bed placement/removal hookup is Patch 2.3.2 after asset verification.
+
+
+2026-09-22 - RWS-4 layered GFX 4171 styling
+- User rejected GFX 4187 for worker selection/status visuals; the 4187 probe and Test Console card were removed.
+- RWS-4 now reuses only the proven GFX 4171: one large drag ring plus two independent worker-centered clones for outer and inner layers.
+- Outer/inner worker scales default to 100% / 70% and are independently adjustable from 25%-300%.
+- Added independent Drag Ring / Outer / Inner color pickers through Swing JColorChooser.
+- Picker RGB is converted to Matrix3 H/S/L and applied to each isolated clone through Model.method1396(..., weight 128).
+- Existing 0x80000 clone-colour isolation remains authoritative; no cache definition or combat-reticule mutation is introduced.
+- Use Original Colors resets all three tint overrides while preserving worker-ring scale settings.
+- RWS-3 detection remains the preview owner during active drag; server-authoritative persistent selection remains RWS-5.
