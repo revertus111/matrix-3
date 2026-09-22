@@ -835,3 +835,10 @@
 - Preserved double-click preview, Left/Up previous+spawn, Right/Down next+spawn, R0-R3, Spawn/Hide Preview, independent geometry checkboxes and immediate rail_kit.tsv persistence.
 - Layout is rebuilt for the narrow resizable Client Console dock so the game stays visible beside the classifier on smaller monitors.
 - No server, collision, cache, scene-registration, save-schema or gameplay rail-placement ownership changed.
+
+2026-09-22 - Bundle 2.2 prepared baseline capture
+- Added one-click Prepare + Capture Baseline for the only remaining Bundle 2.2 persistence gate.
+- The action requires saved=2/runtime=2, disables all Allowed Jobs and resets Needs for both workers, then uses the existing authoritative baseline capture.
+- Pause state, worker identity, progression and Construction XP remain untouched and are still compared by the baseline.
+- Pruned already-verified self-test/concurrency instructions and buttons from the Con Revamp Final Gate card; only Prepare + Capture and Check Baseline remain.
+- Runtime verification required: prepared capture -> exit/re-enter PASS -> logout/relog/re-enter PASS.
