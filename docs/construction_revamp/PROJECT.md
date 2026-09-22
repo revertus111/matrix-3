@@ -1041,8 +1041,8 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Bundle 2.3 Patch 2.3.1 is RUNTIME VERIFIED. Patch 2.3.2 physical Bed 14872 placement/capacity hookup was explicitly AAA approved and is implemented.
-- Current checklist item: runtime-test Patch 2.3.2 in one launch: Self-Test -> palette Furniture/Bed ghost -> place Bed -> verify 3 Wood / 12 XP / +1 capacity -> rebuild persistence -> removal guard -> logout/relog persistence.
-- Current objective: runtime-accept the physical Bed 14872 path, including the initial type-10 object mapping, then close Bundle 2.3 and continue broader Phase-2 production/logistics work.
+- Current checklist item: Patch 2.3.2 live placement/removal mutation is runtime VERIFIED: two Bed 14872 placements each consumed 3 Wood, awarded 12 base Construction XP and raised housing capacity by 1; deleting one spare-capacity Bed reduced beds/capacity by 1. Remaining gate: physical-bed rebuild persistence, occupied-capacity live rejection, logout/relog persistence, plus visual/type-10 acceptance if not already explicitly confirmed.
+- Current objective: finish the remaining physical Bed 14872 persistence/removal-guard checks, then close Bundle 2.3 and continue broader Phase-2 production/logistics work.
 
 ## Verification classifications
 
