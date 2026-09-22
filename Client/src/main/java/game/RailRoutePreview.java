@@ -289,6 +289,7 @@ public final class RailRoutePreview {
     private static int renderXThenY(Class523 scene, Class106 renderer, Class497 sceneBase,
             ObjectDefinitions definition, int startX, int startY, int endX, int endY, int plane) {
         int rendered = 0;
+        int attempted = 0;
         int xStep = Integer.compare(endX, startX);
         int yStep = Integer.compare(endY, startY);
 
@@ -296,26 +297,28 @@ public final class RailRoutePreview {
         while (true) {
             int rotation = x == endX && startY != endY
                     ? verticalRotation() : horizontalRotation;
+            attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition, x, startY, plane, rotation)) {
                 rendered++;
             }
-            if (rendered >= MAX_ROUTE_TILES || x == endX) {
+            if (attempted >= MAX_ROUTE_TILES || x == endX) {
                 break;
             }
             x += xStep;
         }
 
-        if (rendered >= MAX_ROUTE_TILES || startY == endY) {
+        if (attempted >= MAX_ROUTE_TILES || startY == endY) {
             return rendered;
         }
 
         int y = startY + yStep;
         while (true) {
+            attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition,
                     endX, y, plane, verticalRotation())) {
                 rendered++;
             }
-            if (rendered >= MAX_ROUTE_TILES || y == endY) {
+            if (attempted >= MAX_ROUTE_TILES || y == endY) {
                 break;
             }
             y += yStep;
@@ -326,6 +329,7 @@ public final class RailRoutePreview {
     private static int renderYThenX(Class523 scene, Class106 renderer, Class497 sceneBase,
             ObjectDefinitions definition, int startX, int startY, int endX, int endY, int plane) {
         int rendered = 0;
+        int attempted = 0;
         int xStep = Integer.compare(endX, startX);
         int yStep = Integer.compare(endY, startY);
 
@@ -333,27 +337,29 @@ public final class RailRoutePreview {
         while (true) {
             int rotation = y == endY && startX != endX
                     ? horizontalRotation : verticalRotation();
+            attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition,
                     startX, y, plane, rotation)) {
                 rendered++;
             }
-            if (rendered >= MAX_ROUTE_TILES || y == endY) {
+            if (attempted >= MAX_ROUTE_TILES || y == endY) {
                 break;
             }
             y += yStep;
         }
 
-        if (rendered >= MAX_ROUTE_TILES || startX == endX) {
+        if (attempted >= MAX_ROUTE_TILES || startX == endX) {
             return rendered;
         }
 
         int x = startX + xStep;
         while (true) {
+            attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition,
                     x, endY, plane, horizontalRotation)) {
                 rendered++;
             }
-            if (rendered >= MAX_ROUTE_TILES || x == endX) {
+            if (attempted >= MAX_ROUTE_TILES || x == endX) {
                 break;
             }
             x += xStep;

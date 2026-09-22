@@ -851,3 +851,6 @@
 - V0 tiles the chosen straight object across a bounded 64-tile Manhattan path and uses horizontal rotation + 1 for vertical segments.
 - The bend intentionally uses a straight placeholder in V0; curve/turnout selection is deferred until the user accepts the basic drag/path/tiling feel.
 - Preview is direct-render only: no real object spawn, collision, cache mutation, persistence, resources or server rail gameplay.
+
+2026-09-22 - A->B Rail Route Preview V0 cap hardening
+- The 64-tile safety bound now counts attempted path positions rather than successful draws, so off-scene/failed model tiles cannot bypass the per-frame work cap on very long A->B drags.
