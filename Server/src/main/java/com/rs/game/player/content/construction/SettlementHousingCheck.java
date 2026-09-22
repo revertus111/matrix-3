@@ -48,11 +48,38 @@ public final class SettlementHousingCheck {
                     "third worker opened before housing bed");
 
             stage = "bed-capacity";
-            require(state.addHousingBed(), "housing bed could not be added");
-            require(state.getHousingBedCount() == 1, "housing bed count mismatch");
-            require(state.getPopulationCapacity() == 3, "one bed did not raise capacity to three");
+            long bedCost = SettlementBuildPiece.BASIC_BED.getBuildCost();
+            require(state.addResource(SettlementResource.WOOD, bedCost) == bedCost,
+                    "failed to seed Wood for physical bed");
+            SettlementPlayerBuildTransaction.Result firstBedBuild =
+                    SettlementPlayerBuildTransaction.apply(
+                            state,
+                            SettlementBuildPiece.BASIC_BED,
+                            40, 40, SettlementState.PLOT_PLANE, 0, false);
+            require(firstBedBuild.isSuccess(), "physical bed placement failed: "
+                    + firstBedBuild.getMessage());
+            SettlementPlacedPiece firstBed = firstBedBuild.getPlacedPiece();
+            require(firstBed != null, "physical bed placement returned no saved piece");
+            require(state.getHousingBedCount() == 1, "physical bed did not add housing capacity");
+            require(state.getPopulationCapacity() == 3, "one physical bed did not raise capacity to three");
             require(state.canRecruitAdditionalWorker(),
-                    "third worker did not open after housing bed");
+                    "third worker did not open after physical bed");
+
+            SettlementPlacedPiece removedBed = state.remove(firstBed.getPieceId());
+            require(removedBed != null, "unoccupied physical bed could not be removed");
+            require(state.getHousingBedCount() == 0, "physical bed removal did not reduce housing capacity");
+            require(state.getPopulationCapacity() == 2, "physical bed removal did not restore capacity two");
+
+            require(state.addResource(SettlementResource.WOOD, bedCost) == bedCost,
+                    "failed to reseed Wood for physical bed");
+            SettlementPlayerBuildTransaction.Result secondBedBuild =
+                    SettlementPlayerBuildTransaction.apply(
+                            state,
+                            SettlementBuildPiece.BASIC_BED,
+                            40, 40, SettlementState.PLOT_PLANE, 1, false);
+            require(secondBedBuild.isSuccess(), "physical bed replacement failed: "
+                    + secondBedBuild.getMessage());
+            SettlementPlacedPiece occupiedBed = secondBedBuild.getPlacedPiece();
 
             stage = "worker-three";
             SettlementWorkerState third = state.recruitAdditionalWorker();
@@ -70,8 +97,9 @@ public final class SettlementHousingCheck {
                     "fourth worker bypassed capacity=3");
             require(state.recruitAdditionalWorker() == null,
                     "fourth worker recruited at capacity=3");
-            require(!state.removeHousingBed(),
-                    "occupied bed capacity was removable below live population");
+            require(occupiedBed != null, "occupied physical bed is missing");
+            require(state.remove(occupiedBed.getPieceId()) == null,
+                    "occupied physical bed was removable below live population");
 
             for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
                 require(!third.isJobAllowed(job),
@@ -88,6 +116,10 @@ public final class SettlementHousingCheck {
                     "population capacity changed after serialization");
             require(restored.getWorkerCount() == 3,
                     "worker count changed after serialization");
+            require(restored.find(
+                    SettlementBuildPiece.BASIC_BED.getObjectId(),
+                    40, 40, SettlementState.PLOT_PLANE) != null,
+                    "physical bed placement changed after serialization");
 
             Set<Long> ids = new HashSet<Long>();
             Set<String> homes = new HashSet<String>();
@@ -107,7 +139,7 @@ public final class SettlementHousingCheck {
                     restoredThird.getHomePlane()),
                     "Worker #3 home ownership lost after serialization");
 
-            return "PASS: persistent bed capacity 2->3 + unique Worker #3 id/home + default policy + serialization.";
+            return "PASS: physical Bed 14872 placement/removal + capacity 2->3 + occupied-removal guard + Worker #3 serialization.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }
