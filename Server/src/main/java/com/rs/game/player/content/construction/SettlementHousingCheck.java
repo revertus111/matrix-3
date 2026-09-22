@@ -17,8 +17,8 @@ import com.rs.game.player.Player;
 /**
  * Phase-2 Bundle 2.3 housing/bed capacity confidence check.
  *
- * runSelfTest() is disposable. run(Player) verifies the live three-worker
- * capacity/projection after one persistent housing bed has been added.
+ * runSelfTest() is disposable. run(Player) verifies the live expanded
+ * population/capacity projection once at least one housing bed has been added.
  */
 public final class SettlementHousingCheck {
 
@@ -132,9 +132,15 @@ public final class SettlementHousingCheck {
         }
 
         List<SettlementWorkerState> workers = state.snapshotWorkers();
-        if (workers.size() != 3) {
-            return "NOT READY: expected 3 persistent workers, found "
+        if (workers.size() < 3) {
+            return "NOT READY: expected at least 3 persistent workers, found "
                     + workers.size() + ". " + state.getHousingSummary();
+        }
+        int expectedCapacity = 2 + state.getHousingBedCount();
+        if (state.getPopulationCapacity() != expectedCapacity) {
+            return "FAIL: population capacity is " + state.getPopulationCapacity()
+                    + ", expected starter 2 + beds " + state.getHousingBedCount()
+                    + " = " + expectedCapacity + ".";
         }
 
         Set<Long> ids = new HashSet<Long>();
@@ -155,9 +161,10 @@ public final class SettlementHousingCheck {
         if (active == null || !active.isLoaded()) {
             return "NOT READY: enter the settlement so all workers can be projected.";
         }
-        if (active.getActiveWorkerCount() != 3) {
+        if (active.getActiveWorkerCount() != workers.size()) {
             return "FAIL: runtime worker count is "
-                    + active.getActiveWorkerCount() + ", expected 3.";
+                    + active.getActiveWorkerCount() + ", expected saved count "
+                    + workers.size() + ".";
         }
         for (SettlementWorkerState worker : workers) {
             if (!active.hasActiveWorker(worker.getWorkerId())) {
@@ -167,7 +174,9 @@ public final class SettlementHousingCheck {
         }
 
         return "PASS: " + state.getHousingSummary()
-                + " | saved=3/runtime=3 | unique worker ids + home slots + projections.";
+                + " | saved=" + workers.size()
+                + "/runtime=" + active.getActiveWorkerCount()
+                + " | unique worker ids + home slots + projections.";
     }
 
     public static String capture(Player player) {
@@ -209,7 +218,9 @@ public final class SettlementHousingCheck {
         if (!current.workerSignatures.equals(baseline.workerSignatures)) {
             return "FAIL: worker ids/definitions/home slots changed.";
         }
-        return "PASS: housing beds + capacity + Worker #1/#2/#3 identities/home slots survived rebuild; saved=3/runtime=3.";
+        return "PASS: housing beds + capacity + all captured worker identities/home slots survived rebuild; saved="
+                + current.workerSignatures.size() + "/runtime="
+                + SettlementInstance.getActive(player).getActiveWorkerCount() + ".";
     }
 
     private static String key(Player player) {
