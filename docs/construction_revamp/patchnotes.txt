@@ -922,3 +922,8 @@
 - Existing 0x80000 clone-colour isolation remains authoritative; no cache definition or combat-reticule mutation is introduced.
 - Use Original Colors resets all three tint overrides while preserving worker-ring scale settings.
 - RWS-3 detection remains the preview owner during active drag; server-authoritative persistent selection remains RWS-5.
+
+2026-09-22 - RWS/Rail compile regression fix
+- Restored ConstructionRadialSelection HOVER_STALE_MS used by the existing drag-start validity guard after the RWS-4 ring-style refactor removed its declaration.
+- Removed RailRoutePreview's obsolete dependency on the retired GFX-4187 probe API; enabling rail preview still disables Worker Control and hides conflicting developer previews.
+- Current ConstructionRevampTestPanel already uses the replacement layered GFX-4171 ring-style API, so pulling current main clears the stale local Reticule4187ProbeMode/getReticule4187ProbeStatus errors without reintroducing the old probe.
