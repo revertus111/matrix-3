@@ -332,13 +332,21 @@ public final class SettlementInstance {
             return "That object is not owned by the persistent settlement.";
         }
 
+        SettlementBuildPiece definition =
+                SettlementBuildPiece.forKey(current.getDefinitionKey());
         SettlementPlacedPiece removed = state.remove(current.getPieceId());
         if (removed == null) {
+            if (definition != null && definition.getRole() == SettlementBuildRole.BED
+                    && !state.canRemoveHousingBed()) {
+                return "That bed is required by the current settlement population and cannot be removed.";
+            }
             return "Settlement piece could not be removed.";
         }
 
         removeProjectedPiece(removed);
-        return "Settlement piece removed.";
+        return definition != null && definition.getRole() == SettlementBuildRole.BED
+                ? "Settlement bed removed. " + state.getHousingSummary()
+                : "Settlement piece removed.";
     }
 
     public boolean handleStarterResourceObjectClick(WorldObject object) {
