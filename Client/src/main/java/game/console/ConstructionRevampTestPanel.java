@@ -4,6 +4,7 @@ import game.ClientConsoleBridge;
 import game.ConstructionPaletteOverlay;
 import game.ConstructionRadialSelection;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Point;
@@ -13,6 +14,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -39,6 +41,10 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             new JComboBox<ConstructionRadialSelection.DragButton>(ConstructionRadialSelection.DragButton.values());
     private final JSpinner workerSelector =
             new JSpinner(new SpinnerNumberModel(1, 1, 999999, 1));
+    private final JSpinner workerOuterRingScale =
+            new JSpinner(new SpinnerNumberModel(100, 25, 300, 5));
+    private final JSpinner workerInnerRingScale =
+            new JSpinner(new SpinnerNumberModel(70, 25, 300, 5));
     private final JComboBox<WorkerPresetChoice> workerRolePreset =
             new JComboBox<WorkerPresetChoice>(WorkerPresetChoice.values());
     private final java.util.List<JCheckBox> workerJobCheckBoxes =
@@ -65,7 +71,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createRadialSelectionCard());
         content.add(Box.createVerticalStrut(12));
-        content.add(createReticule4187ProbeCard());
+        content.add(createWorkerRingStyleCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createWorkerSelectorCard());
         content.add(Box.createVerticalStrut(12));
@@ -294,62 +300,93 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return card;
     }
 
-    private JPanel createReticule4187ProbeCard() {
-        JPanel card = ConsoleTheme.createCard("GFX 4187 Worker Status Recolor Probe");
+    private JPanel createWorkerRingStyleCard() {
+        JPanel card = ConsoleTheme.createCard("RWS-4 Worker Ring Style — GFX 4171");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Client-only RWS-4 preflight for the red/yellow double-ring candidate. "
-                + "Original samples the cloned model's visible packed face colours. "
-                + "Color A and Color B independently replace the two most frequent non-sentinel colours "
-                + "on the isolated per-call clone so we can see whether the inner and outer rings are independently addressable. "
-                + "The probe temporarily disables Worker Control while visible; move the mouse over valid world ground.",
-                7));
+                "Selected-worker visuals now reuse the proven GFX 4171 twice. "
+                + "Outer and inner layers are independent per-call clones, so each can be resized and recolored "
+                + "without changing the cache definition. During RWS-3 drag preview, detected workers immediately "
+                + "show the current two-layer style.",
+                6));
         card.add(Box.createVerticalStrut(8));
 
-        JButton original = new JButton("Show 4187 Original");
-        JButton colorA = new JButton("Highlight Color A");
-        JButton colorB = new JButton("Highlight Color B");
-        JButton probeStatus = new JButton("4187 Probe Status");
-        JButton hide = new JButton("Hide 4187 Probe");
+        workerOuterRingScale.setMaximumSize(new Dimension(110, 30));
+        workerInnerRingScale.setMaximumSize(new Dimension(110, 30));
+        workerOuterRingScale.setFocusable(false);
+        workerInnerRingScale.setFocusable(false);
 
-        styleButton(original);
-        styleButton(colorA);
-        styleButton(colorB);
-        styleButton(probeStatus);
-        styleButton(hide);
-
-        original.addActionListener(e -> {
-            ConstructionRadialSelection.setReticule4187ProbeMode(
-                    ConstructionRadialSelection.Reticule4187ProbeMode.ORIGINAL);
-            setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus());
+        workerOuterRingScale.addChangeListener(e -> {
+            int percent = ((Number) workerOuterRingScale.getValue()).intValue();
+            ConstructionRadialSelection.setWorkerOuterRingScalePercent(percent);
+            setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus());
         });
-        colorA.addActionListener(e -> {
-            ConstructionRadialSelection.setReticule4187ProbeMode(
-                    ConstructionRadialSelection.Reticule4187ProbeMode.COLOR_A);
-            setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus());
-        });
-        colorB.addActionListener(e -> {
-            ConstructionRadialSelection.setReticule4187ProbeMode(
-                    ConstructionRadialSelection.Reticule4187ProbeMode.COLOR_B);
-            setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus());
-        });
-        probeStatus.addActionListener(e ->
-                setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus()));
-        hide.addActionListener(e -> {
-            ConstructionRadialSelection.setReticule4187ProbeMode(
-                    ConstructionRadialSelection.Reticule4187ProbeMode.OFF);
-            setStatus(ConstructionRadialSelection.getReticule4187ProbeStatus());
+        workerInnerRingScale.addChangeListener(e -> {
+            int percent = ((Number) workerInnerRingScale.getValue()).intValue();
+            ConstructionRadialSelection.setWorkerInnerRingScalePercent(percent);
+            setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus());
         });
 
-        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
+        JPanel scales = new JPanel(new GridLayout(2, 2, 7, 7));
+        scales.setOpaque(false);
+        scales.setAlignmentX(LEFT_ALIGNMENT);
+        scales.setMaximumSize(new Dimension(Integer.MAX_VALUE, 68));
+        scales.add(ConsoleTheme.createWrappedText("Outer scale %", 1));
+        scales.add(workerOuterRingScale);
+        scales.add(ConsoleTheme.createWrappedText("Inner scale %", 1));
+        scales.add(workerInnerRingScale);
+        card.add(scales);
+        card.add(Box.createVerticalStrut(8));
+
+        JButton outerColor = new JButton("Outer Color Picker");
+        JButton innerColor = new JButton("Inner Color Picker");
+        JButton resetColors = new JButton("Use Original Colors");
+        JButton styleStatus = new JButton("Ring Style Status");
+
+        styleButton(outerColor);
+        styleButton(innerColor);
+        styleButton(resetColors);
+        styleButton(styleStatus);
+
+        outerColor.addActionListener(e -> {
+            Color initial = ConstructionRadialSelection.getWorkerOuterRingColor();
+            if (initial == null) {
+                initial = Color.RED;
+            }
+            Color chosen = JColorChooser.showDialog(
+                    this, "Choose outer worker-ring color", initial);
+            if (chosen != null) {
+                ConstructionRadialSelection.setWorkerOuterRingColor(chosen);
+                setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus());
+            }
+        });
+        innerColor.addActionListener(e -> {
+            Color initial = ConstructionRadialSelection.getWorkerInnerRingColor();
+            if (initial == null) {
+                initial = Color.YELLOW;
+            }
+            Color chosen = JColorChooser.showDialog(
+                    this, "Choose inner worker-ring color", initial);
+            if (chosen != null) {
+                ConstructionRadialSelection.setWorkerInnerRingColor(chosen);
+                setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus());
+            }
+        });
+        resetColors.addActionListener(e -> {
+            ConstructionRadialSelection.resetWorkerRingColors();
+            setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus());
+        });
+        styleStatus.addActionListener(e ->
+                setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus()));
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 126));
-        buttons.add(original);
-        buttons.add(colorA);
-        buttons.add(colorB);
-        buttons.add(probeStatus);
-        buttons.add(hide);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(outerColor);
+        buttons.add(innerColor);
+        buttons.add(resetColors);
+        buttons.add(styleStatus);
         card.add(buttons);
         return card;
     }
