@@ -2,6 +2,7 @@ package game;
 
 import java.awt.AWTEvent;
 import java.awt.Canvas;
+import java.awt.Color;
 import java.awt.Toolkit;
 import java.awt.event.AWTEventListener;
 import java.awt.event.KeyEvent;
@@ -44,45 +45,17 @@ public final class ConstructionRadialSelection {
         }
     }
 
-    /**
-     * Developer-only visual probe for the double-ring GFX 4187 candidate.
-     *
-     * COLOR_A / COLOR_B recolor only one sampled packed face colour on the
-     * per-call model clone. They are diagnostic modes, not final worker colours.
-     */
-    public enum Reticule4187ProbeMode {
-        OFF("Off"),
-        ORIGINAL("Original"),
-        COLOR_A("Highlight Color A"),
-        COLOR_B("Highlight Color B");
-
-        private final String displayName;
-
-        Reticule4187ProbeMode(String displayName) {
-            this.displayName = displayName;
-        }
-
-        @Override
-        public String toString() {
-            return displayName;
-        }
-    }
-
     private static final int MATRIX3_TILE_ACTION = 23;
     private static final int RETICULE_GFX_ID = 4171;
-    private static final int WORKER_STATUS_GFX_ID = 4187;
     private static final int SETTLEMENT_WORKER_NPC_ID = 1;
     private static final String SETTLEMENT_WORKER_NAME = "Settler";
-    private static final int WORKER_PREVIEW_SCALE = 96;
     private static final int BASE_MODEL_SCALE = 128;
-    private static final int PROBE_MAX_REPORTED_COLORS = 8;
+    private static final int MIN_WORKER_RING_SCALE_PERCENT = 25;
+    private static final int MAX_WORKER_RING_SCALE_PERCENT = 300;
     private static final float RETICULE_RING_FALLBACK_FRACTION = 0.80F;
-    private static final short PROBE_COLOR_A_REPLACEMENT = packHsl(32, 7, 88);
-    private static final short PROBE_COLOR_B_REPLACEMENT = packHsl(52, 7, 88);
     private static final float MIN_RADIUS_TILES = 0.0F;
     private static final float MAX_RADIUS_TILES = 64.0F;
     private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x5;
-    private static final long HOVER_STALE_MS = 1250L;
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
@@ -120,12 +93,15 @@ public final class ConstructionRadialSelection {
     private static volatile String lastEventState = "RWS-2 Worker Control disabled.";
     private static volatile String lastRenderState = "not rendered";
 
-    private static volatile Reticule4187ProbeMode reticule4187ProbeMode = Reticule4187ProbeMode.OFF;
-    private static volatile boolean reticule4187ColorsSampled;
-    private static volatile int reticule4187ColorA = Integer.MIN_VALUE;
-    private static volatile int reticule4187ColorB = Integer.MIN_VALUE;
-    private static volatile String reticule4187ColorSummary = "not sampled";
-    private static volatile String reticule4187RenderState = "hidden";
+    /*
+     * RWS-4 worker visual style. -1 RGB means preserve the native 4171 colour.
+     * Two independent clones let the same proven ring asset act as outer +
+     * inner layers without depending on a second GFX definition.
+     */
+    private static volatile int workerOuterRingScalePercent = 100;
+    private static volatile int workerInnerRingScalePercent = 70;
+    private static volatile int workerOuterRingRgb = -1;
+    private static volatile int workerInnerRingRgb = -1;
 
     private static boolean inputListenerInstalled;
 
@@ -167,41 +143,58 @@ public final class ConstructionRadialSelection {
         lastEventState = "RWS-2 drag button set to " + button + ".";
     }
 
-    public static Reticule4187ProbeMode getReticule4187ProbeMode() {
-        return reticule4187ProbeMode;
+    public static int getWorkerOuterRingScalePercent() {
+        return workerOuterRingScalePercent;
     }
 
-    public static void setReticule4187ProbeMode(Reticule4187ProbeMode mode) {
-        if (mode == null) {
-            mode = Reticule4187ProbeMode.OFF;
-        }
+    public static int getWorkerInnerRingScalePercent() {
+        return workerInnerRingScalePercent;
+    }
 
-        if (mode != Reticule4187ProbeMode.OFF) {
-            if (dragging) {
-                cancelActiveDrag();
-            }
-            workerControlEnabled = false;
-            reticule4187RenderState = "waiting for valid world hover";
-        } else {
-            reticule4187RenderState = "hidden";
-        }
-
-        reticule4187ProbeMode = mode;
+    public static void setWorkerOuterRingScalePercent(int percent) {
+        workerOuterRingScalePercent = clampWorkerRingScale(percent);
         lastRenderedCycle = Integer.MIN_VALUE;
     }
 
-    public static String getReticule4187ProbeStatus() {
-        return "GFX 4187 probe=" + reticule4187ProbeMode
-                + " | candidates=" + reticule4187ColorSummary
-                + " | render=" + reticule4187RenderState
-                + " | clone-color-isolation=0x80000";
+    public static void setWorkerInnerRingScalePercent(int percent) {
+        workerInnerRingScalePercent = clampWorkerRingScale(percent);
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    public static Color getWorkerOuterRingColor() {
+        return workerOuterRingRgb < 0 ? null : new Color(workerOuterRingRgb);
+    }
+
+    public static Color getWorkerInnerRingColor() {
+        return workerInnerRingRgb < 0 ? null : new Color(workerInnerRingRgb);
+    }
+
+    public static void setWorkerOuterRingColor(Color color) {
+        workerOuterRingRgb = color == null ? -1 : color.getRGB() & 0xffffff;
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    public static void setWorkerInnerRingColor(Color color) {
+        workerInnerRingRgb = color == null ? -1 : color.getRGB() & 0xffffff;
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    public static void resetWorkerRingColors() {
+        workerOuterRingRgb = -1;
+        workerInnerRingRgb = -1;
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    public static String getWorkerRingStyleStatus() {
+        return "RWS-4 GFX " + RETICULE_GFX_ID
+                + " outer=" + workerOuterRingScalePercent + "%/" + formatRgb(workerOuterRingRgb)
+                + " inner=" + workerInnerRingScalePercent + "%/" + formatRgb(workerInnerRingRgb)
+                + " | tint isolation=0x80000";
     }
 
     public static void setWorkerControlEnabled(boolean enabled) {
         if (enabled) {
             ensureInputListener();
-            reticule4187ProbeMode = Reticule4187ProbeMode.OFF;
-            reticule4187RenderState = "hidden";
             workerControlEnabled = true;
             lastEventState = "RWS-2 Worker Control ON. Hold " + dragButton
                     + " on valid ground and drag.";
@@ -263,7 +256,7 @@ public final class ConstructionRadialSelection {
      * second picker and does not alter the menu entry.
      */
     static void observeSceneMenuTile(int sourceAction, int localX, int localY) {
-        if (!workerControlEnabled && reticule4187ProbeMode == Reticule4187ProbeMode.OFF) {
+        if (!workerControlEnabled) {
             return;
         }
 
@@ -301,11 +294,6 @@ public final class ConstructionRadialSelection {
      *   RWS-1 and ConstructionGhostPreview.
      */
     static void render(Class523 scene, Class106 renderer) {
-        if (reticule4187ProbeMode != Reticule4187ProbeMode.OFF) {
-            renderReticule4187Probe(scene, renderer);
-            return;
-        }
-
         if (!workerControlEnabled || !dragging || scene == null || renderer == null
                 || client.aClass613_8605 == null) {
             return;
@@ -519,29 +507,92 @@ public final class ConstructionRadialSelection {
             int markerSceneZ = Math.round(position.aFloat2657);
             int markerSceneY = ground.method2718(markerSceneX, markerSceneZ, 0);
 
-            Model marker = markerDefinition.method7764(
-                    renderer, MODEL_FLAGS, 0, 0, 0, 0, null, (byte) 2, 1913622280);
-            if (marker == null) {
-                continue;
-            }
-
-            int minX = marker.method1380();
-            int maxX = marker.method1381();
-            int minZ = marker.method1384();
-            int maxZ = marker.method1508();
-            int markerCenterX = (minX + maxX) / 2;
-            int markerCenterZ = (minZ + maxZ) / 2;
-            if (markerCenterX != 0 || markerCenterZ != 0) {
-                marker.method1358(-markerCenterX, 0, -markerCenterZ);
-            }
-            marker.method1464(WORKER_PREVIEW_SCALE, BASE_MODEL_SCALE, WORKER_PREVIEW_SCALE);
-
-            TRANSFORM.method3588(markerSceneX, markerSceneY, markerSceneZ);
-            marker.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+            renderWorkerRingLayer(
+                    markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                    workerOuterRingScalePercent, workerOuterRingRgb);
+            renderWorkerRingLayer(
+                    markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                    workerInnerRingScalePercent, workerInnerRingRgb);
         }
 
         lastDetectedWorkers = ids.length() == 0 ? "none" : ids.toString();
         return detected;
+    }
+
+    private static void renderWorkerRingLayer(GraphicsDefinition definition, Class106 renderer,
+            int sceneX, int sceneY, int sceneZ, int scalePercent, int rgb) {
+        Model marker = definition.method7764(
+                renderer, MODEL_FLAGS, 0, 0, 0, 0, null, (byte) 2, 1913622280);
+        if (marker == null) {
+            return;
+        }
+
+        int minX = marker.method1380();
+        int maxX = marker.method1381();
+        int minZ = marker.method1384();
+        int maxZ = marker.method1508();
+        int markerCenterX = (minX + maxX) / 2;
+        int markerCenterZ = (minZ + maxZ) / 2;
+        if (markerCenterX != 0 || markerCenterZ != 0) {
+            marker.method1358(-markerCenterX, 0, -markerCenterZ);
+        }
+
+        int runtimeScale = Math.max(1,
+                Math.round(BASE_MODEL_SCALE * (clampWorkerRingScale(scalePercent) / 100.0F)));
+        marker.method1464(runtimeScale, BASE_MODEL_SCALE, runtimeScale);
+
+        if (rgb >= 0) {
+            int[] hsl = rgbToModelHsl(rgb);
+            marker.method1396(hsl[0], hsl[1], hsl[2], 128);
+        }
+
+        TRANSFORM.method3588(sceneX, sceneY, sceneZ);
+        marker.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+    }
+
+    private static int clampWorkerRingScale(int percent) {
+        return Math.max(MIN_WORKER_RING_SCALE_PERCENT,
+                Math.min(MAX_WORKER_RING_SCALE_PERCENT, percent));
+    }
+
+    private static int[] rgbToModelHsl(int rgb) {
+        float r = ((rgb >> 16) & 0xff) / 255.0F;
+        float g = ((rgb >> 8) & 0xff) / 255.0F;
+        float b = (rgb & 0xff) / 255.0F;
+
+        float max = Math.max(r, Math.max(g, b));
+        float min = Math.min(r, Math.min(g, b));
+        float hue = 0.0F;
+        float saturation = 0.0F;
+        float lightness = (max + min) * 0.5F;
+
+        if (max != min) {
+            float delta = max - min;
+            saturation = lightness > 0.5F
+                    ? delta / (2.0F - max - min)
+                    : delta / (max + min);
+
+            if (max == r) {
+                hue = (g - b) / delta + (g < b ? 6.0F : 0.0F);
+            } else if (max == g) {
+                hue = (b - r) / delta + 2.0F;
+            } else {
+                hue = (r - g) / delta + 4.0F;
+            }
+            hue /= 6.0F;
+        }
+
+        return new int[] {
+                Math.max(0, Math.min(63, Math.round(hue * 63.0F))),
+                Math.max(0, Math.min(7, Math.round(saturation * 7.0F))),
+                Math.max(0, Math.min(127, Math.round(lightness * 127.0F)))
+        };
+    }
+
+    private static String formatRgb(int rgb) {
+        return rgb < 0
+                ? "original"
+                : String.format(java.util.Locale.US, "#%06X", rgb & 0xffffff);
     }
 
     private static boolean isSettlementWorkerPreviewNpc(NPC npc, int plane) {
@@ -557,212 +608,6 @@ public final class ConstructionRadialSelection {
 
         return npc.aString11807 != null
                 && SETTLEMENT_WORKER_NAME.equalsIgnoreCase(npc.aString11807.trim());
-    }
-
-    /**
-     * RWS-4 preflight probe. GFX 4187 is rendered independently of combat and
-     * only mutates the per-call clone returned by GraphicsDefinition.
-     *
-     * verified-static:
-     * - MODEL_FLAGS includes 0x80000.
-     * - AbstractModel.method10013(...) deep-copies aShortArray10793 when
-     *   Class368.method4501(...) accepts that flag.
-     * - Model.method1393(...) replaces only faces whose packed colour exactly
-     *   matches the requested source colour.
-     *
-     * Runtime must still prove whether sampled colour A/B map cleanly to the
-     * outer and inner rings of GFX 4187.
-     */
-    private static void renderReticule4187Probe(Class523 scene, Class106 renderer) {
-        if (scene == null || renderer == null || client.aClass613_8605 == null) {
-            reticule4187RenderState = "WAIT renderer/scene";
-            return;
-        }
-
-        long age = System.currentTimeMillis() - hoveredAtMillis;
-        if (hoveredWorldX < 0 || hoveredWorldY < 0 || hoveredPlane < 0
-                || hoveredAtMillis == 0L || age > HOVER_STALE_MS) {
-            reticule4187RenderState = "WAIT move mouse over valid ground";
-            return;
-        }
-
-        Class613 region = client.aClass613_8605;
-        if (region.method7285(0) != scene) {
-            reticule4187RenderState = "WAIT active scene";
-            return;
-        }
-
-        int cycle = client.cycles;
-        if (lastRenderedCycle == cycle) {
-            return;
-        }
-        lastRenderedCycle = cycle;
-
-        Class497 sceneBase = region.method7280((byte) -102);
-        if (sceneBase == null) {
-            reticule4187RenderState = "WAIT scene base";
-            return;
-        }
-
-        int sceneBaseWorldX = sceneBase.localX * -2109597897;
-        int sceneBaseWorldY = sceneBase.localY * 417324155;
-        int localX = hoveredWorldX - sceneBaseWorldX;
-        int localY = hoveredWorldY - sceneBaseWorldY;
-        int plane = hoveredPlane;
-
-        if (plane < 0 || plane >= scene.aClass174Array5838.length) {
-            reticule4187RenderState = "SKIP invalid plane " + plane;
-            return;
-        }
-
-        Class174 ground = scene.aClass174Array5838[plane];
-        if (ground == null) {
-            reticule4187RenderState = "WAIT terrain";
-            return;
-        }
-
-        int sceneWidth = scene.anInt5833 * -1396185127;
-        int sceneHeight = scene.anInt5834 * -1519623925;
-        if (localX < 0 || localY < 0 || localX >= sceneWidth || localY >= sceneHeight) {
-            reticule4187RenderState = "SKIP hover outside scene";
-            return;
-        }
-
-        int tileSize = ground.anInt2087 * 2129890771;
-        int sceneX = localX * tileSize + tileSize / 2;
-        int sceneZ = localY * tileSize + tileSize / 2;
-        int sceneY = ground.method2718(sceneX, sceneZ, 0);
-
-        GraphicsDefinition definition = (GraphicsDefinition) Class667.aClass639_Sub10_8509
-                .getDefinition(WORKER_STATUS_GFX_ID, 235749166);
-        if (definition == null) {
-            reticule4187RenderState = "FAIL GFX " + WORKER_STATUS_GFX_ID + " definition";
-            return;
-        }
-
-        Model model = definition.method7764(renderer, MODEL_FLAGS, 0, 0, 0, 0, null, (byte) 2, 1913622280);
-        if (model == null) {
-            reticule4187RenderState = "FAIL GFX " + WORKER_STATUS_GFX_ID + " model";
-            return;
-        }
-
-        sampleReticule4187Colors(model);
-
-        Reticule4187ProbeMode mode = reticule4187ProbeMode;
-        if (mode == Reticule4187ProbeMode.COLOR_A) {
-            if (reticule4187ColorA == Integer.MIN_VALUE) {
-                reticule4187RenderState = "FAIL no Color A candidate";
-                return;
-            }
-            model.method1393((short) reticule4187ColorA, PROBE_COLOR_A_REPLACEMENT);
-        } else if (mode == Reticule4187ProbeMode.COLOR_B) {
-            if (reticule4187ColorB == Integer.MIN_VALUE) {
-                reticule4187RenderState = "FAIL no Color B candidate";
-                return;
-            }
-            model.method1393((short) reticule4187ColorB, PROBE_COLOR_B_REPLACEMENT);
-        }
-
-        TRANSFORM.method3588(sceneX, sceneY, sceneZ);
-        model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
-
-        String recolor = "none";
-        if (mode == Reticule4187ProbeMode.COLOR_A) {
-            recolor = formatPackedColor(reticule4187ColorA) + "->"
-                    + formatPackedColor(PROBE_COLOR_A_REPLACEMENT & 0xffff);
-        } else if (mode == Reticule4187ProbeMode.COLOR_B) {
-            recolor = formatPackedColor(reticule4187ColorB) + "->"
-                    + formatPackedColor(PROBE_COLOR_B_REPLACEMENT & 0xffff);
-        }
-
-        reticule4187RenderState = "DRAW gfx=" + WORKER_STATUS_GFX_ID
-                + " mode=" + mode
-                + " recolor=" + recolor
-                + " world=" + hoveredWorldX + "," + hoveredWorldY + "," + plane;
-    }
-
-    private static synchronized void sampleReticule4187Colors(Model model) {
-        if (reticule4187ColorsSampled) {
-            return;
-        }
-
-        reticule4187ColorsSampled = true;
-        if (!(model instanceof AbstractModel)) {
-            reticule4187ColorSummary = "face colours unavailable on " + model.getClass().getSimpleName();
-            return;
-        }
-
-        AbstractModel abstractModel = (AbstractModel) model;
-        short[] faceColors = abstractModel.aShortArray10793;
-        if (faceColors == null || abstractModel.anInt10833 <= 0) {
-            reticule4187ColorSummary = "no face-colour array";
-            return;
-        }
-
-        int faceCount = Math.min(abstractModel.anInt10833, faceColors.length);
-        java.util.Map<Integer, Integer> counts = new java.util.HashMap<Integer, Integer>();
-        for (int index = 0; index < faceCount; index++) {
-            int packed = faceColors[index] & 0xffff;
-            if (packed == 0xffff) {
-                continue;
-            }
-            Integer count = counts.get(Integer.valueOf(packed));
-            counts.put(Integer.valueOf(packed), Integer.valueOf(count == null ? 1 : count.intValue() + 1));
-        }
-
-        java.util.List<java.util.Map.Entry<Integer, Integer>> entries =
-                new java.util.ArrayList<java.util.Map.Entry<Integer, Integer>>(counts.entrySet());
-        java.util.Collections.sort(entries, new java.util.Comparator<java.util.Map.Entry<Integer, Integer>>() {
-            @Override
-            public int compare(java.util.Map.Entry<Integer, Integer> left,
-                    java.util.Map.Entry<Integer, Integer> right) {
-                int byCount = right.getValue().intValue() - left.getValue().intValue();
-                if (byCount != 0) {
-                    return byCount;
-                }
-                return left.getKey().intValue() - right.getKey().intValue();
-            }
-        });
-
-        if (!entries.isEmpty()) {
-            reticule4187ColorA = entries.get(0).getKey().intValue();
-        }
-        if (entries.size() > 1) {
-            reticule4187ColorB = entries.get(1).getKey().intValue();
-        }
-
-        StringBuilder summary = new StringBuilder(160);
-        int reportCount = Math.min(PROBE_MAX_REPORTED_COLORS, entries.size());
-        for (int index = 0; index < reportCount; index++) {
-            if (index > 0) {
-                summary.append(", ");
-            }
-            java.util.Map.Entry<Integer, Integer> entry = entries.get(index);
-            if (index == 0) {
-                summary.append("A=");
-            } else if (index == 1) {
-                summary.append("B=");
-            } else {
-                summary.append("#").append(index + 1).append("=");
-            }
-            summary.append(formatPackedColor(entry.getKey().intValue()))
-                    .append("(").append(entry.getValue().intValue()).append(" faces)");
-        }
-        if (entries.isEmpty()) {
-            summary.append("no non-sentinel packed colours");
-        }
-        reticule4187ColorSummary = summary.toString();
-    }
-
-    private static short packHsl(int hue, int saturation, int lightness) {
-        hue = Math.max(0, Math.min(63, hue));
-        saturation = Math.max(0, Math.min(7, saturation));
-        lightness = Math.max(0, Math.min(127, lightness));
-        return (short) (hue << 10 | saturation << 7 | lightness);
-    }
-
-    private static String formatPackedColor(int packed) {
-        return String.format(java.util.Locale.US, "0x%04X", packed & 0xffff);
     }
 
     /**
