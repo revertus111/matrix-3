@@ -304,10 +304,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("RWS-4 Worker Ring Style — GFX 4171");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Selected-worker visuals now reuse the proven GFX 4171 twice. "
-                + "Outer and inner layers are independent per-call clones, so each can be resized and recolored "
-                + "without changing the cache definition. During RWS-3 drag preview, detected workers immediately "
-                + "show the current two-layer style.",
+                "RWS-4 reuses the proven GFX 4171 for every selection ring. "
+                + "The large drag ring has its own color, while detected-worker outer/inner layers are independent "
+                + "per-call clones with separate scale and color. All changes are client-only and leave the cache definition untouched.",
                 6));
         card.add(Box.createVerticalStrut(8));
 
@@ -338,16 +337,30 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(scales);
         card.add(Box.createVerticalStrut(8));
 
+        JButton dragColor = new JButton("Drag Ring Color");
         JButton outerColor = new JButton("Outer Color Picker");
         JButton innerColor = new JButton("Inner Color Picker");
         JButton resetColors = new JButton("Use Original Colors");
         JButton styleStatus = new JButton("Ring Style Status");
 
+        styleButton(dragColor);
         styleButton(outerColor);
         styleButton(innerColor);
         styleButton(resetColors);
         styleButton(styleStatus);
 
+        dragColor.addActionListener(e -> {
+            Color initial = ConstructionRadialSelection.getDragRingColor();
+            if (initial == null) {
+                initial = Color.RED;
+            }
+            Color chosen = JColorChooser.showDialog(
+                    this, "Choose drag-ring color", initial);
+            if (chosen != null) {
+                ConstructionRadialSelection.setDragRingColor(chosen);
+                setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus());
+            }
+        });
         outerColor.addActionListener(e -> {
             Color initial = ConstructionRadialSelection.getWorkerOuterRingColor();
             if (initial == null) {
@@ -373,16 +386,17 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             }
         });
         resetColors.addActionListener(e -> {
-            ConstructionRadialSelection.resetWorkerRingColors();
+            ConstructionRadialSelection.resetRingColors();
             setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus());
         });
         styleStatus.addActionListener(e ->
                 setStatus(ConstructionRadialSelection.getWorkerRingStyleStatus()));
 
-        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 126));
+        buttons.add(dragColor);
         buttons.add(outerColor);
         buttons.add(innerColor);
         buttons.add(resetColors);
