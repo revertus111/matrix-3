@@ -14,7 +14,8 @@ public final class ConstructionPlacementController {
     public enum Category {
         WALLS("Walls"),
         FLOORS("Floors"),
-        DOORS("Doors");
+        DOORS("Doors"),
+        FURNITURE("Furniture");
 
         private final String displayName;
 
@@ -58,7 +59,9 @@ public final class ConstructionPlacementController {
             new BuildPiece("floor-decoration", "Floor decoration", Category.FLOORS, 13684, 22,
                     "Current floor candidate; final Construction art acceptance is pending."),
             new BuildPiece("basic-door", "Door", Category.DOORS, 13344, 0,
-                    "Current doorway candidate; final Construction art acceptance is pending.")
+                    "Current doorway candidate; final Construction art acceptance is pending."),
+            new BuildPiece("basic-bed", "Bed", Category.FURNITURE, 14872, 10,
+                    "Verified Matrix3 bed object; each placed bed adds one settlement population capacity.")
     };
 
     private static volatile BuildPiece selectedPiece;
