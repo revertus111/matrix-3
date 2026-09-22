@@ -144,6 +144,37 @@ public final class SettlementBundle22FinalGate {
         }
     }
 
+    public static String prepareAndCapture(Player player) {
+        if (player == null) {
+            return "FAIL: player unavailable.";
+        }
+        SettlementInstance active = SettlementInstance.getActive(player);
+        if (active == null || !active.isLoaded()) {
+            return "NOT READY: enter the loaded settlement first.";
+        }
+
+        SettlementState state = player.getSettlementState();
+        if (state.getWorkerCount() != 2 || active.getActiveWorkerCount() != 2) {
+            return "NOT READY: Bundle 2.2 baseline requires saved=2/runtime=2.";
+        }
+
+        for (SettlementWorkerState worker : state.snapshotWorkers()) {
+            if (worker == null) {
+                continue;
+            }
+            for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
+                worker.setJobAllowed(job, false);
+            }
+            worker.resetNeeds();
+        }
+
+        String result = capture(player);
+        if (result != null && result.startsWith("BASELINE SAVED:")) {
+            return "PREPARED + " + result;
+        }
+        return result;
+    }
+
     public static String capture(Player player) {
         if (player == null) {
             return "FAIL: player unavailable.";
