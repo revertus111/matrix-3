@@ -613,49 +613,34 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createBundle22Card() {
-        JPanel card = ConsoleTheme.createCard("Bundle 2.2 Final Gate");
+        JPanel card = ConsoleTheme.createCard("Bundle 2.2 — Remaining Persistence Gate");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "One-launch acceptance:\n"
-                + "1. Bundle 2.2 Self-Test -> PASS.\n"
-                + "2. Worker #1: Disable All, then Food + Haul ON. Worker #2: Disable All, then Wood + Haul ON.\n"
-                + "3. All Worker Status until Food/Wood rise independently. Wood may fill first; that must not block Food.\n"
-                + "4. Pause Worker #1 without changing its jobs; Worker #2 must keep following its own policy. Resume Worker #1 afterward.\n"
-                + "5. Disable both workers + Reset Needs, then Capture 2-Worker Baseline.\n"
-                + "6. Exit/re-enter -> Check Baseline PASS; logout/relog/re-enter -> Check Baseline PASS.",
-                10));
+                "All worker-control/concurrency checks are already runtime verified. Remaining gate:\n"
+                + "1. Prepare + Capture Baseline disables all jobs for both workers, resets their Needs, and captures the live two-worker snapshot.\n"
+                + "2. Exit/re-enter -> Check Baseline must PASS.\n"
+                + "3. Logout/relog/re-enter -> Check Baseline must PASS.",
+                7));
         card.add(Box.createVerticalStrut(8));
 
-        JButton selfTest = new JButton("Bundle 2.2 Self-Test");
-        JButton allStatus = new JButton("All Worker Status");
-        JButton capture = new JButton("Capture 2-Worker Baseline");
+        JButton prepareCapture = new JButton("Prepare + Capture Baseline");
         JButton check = new JButton("Check 2-Worker Baseline");
 
-        styleButton(selfTest);
-        styleButton(allStatus);
-        styleButton(capture);
+        styleButton(prepareCapture);
         styleButton(check);
 
-        selfTest.addActionListener(e -> queue(
-                "itembrowser settlement bundle22selftest",
-                "Bundle 2.2 Self-Test queued. Expect PASS for independent worker targeting/state."));
-        allStatus.addActionListener(e -> queue(
-                "itembrowser settlement workerallstatus",
-                "All Worker Status queued."));
-        capture.addActionListener(e -> queue(
-                "itembrowser settlement bundle22baseline",
-                "Bundle 2.2 baseline capture queued. Disable jobs for both workers first."));
+        prepareCapture.addActionListener(e -> queue(
+                "itembrowser settlement bundle22preparebaseline",
+                "Preparing both workers and capturing the Bundle 2.2 baseline. Expect PREPARED + BASELINE SAVED."));
         check.addActionListener(e -> queue(
                 "itembrowser settlement bundle22check",
                 "Bundle 2.2 baseline check queued. Expect PASS after re-entry/relog."));
 
-        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        JPanel buttons = new JPanel(new GridLayout(1, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
-        buttons.add(selfTest);
-        buttons.add(allStatus);
-        buttons.add(capture);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        buttons.add(prepareCapture);
         buttons.add(check);
         card.add(buttons);
         return card;
