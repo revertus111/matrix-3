@@ -6,9 +6,13 @@ import game.DevDefinitionBridge;
 import game.ObjectCompositePreview;
 import game.RailCompositeLibrary;
 
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
+import java.awt.event.KeyEvent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +25,7 @@ import java.util.List;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.DefaultListModel;
 import javax.swing.JLabel;
@@ -31,6 +36,7 @@ import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.ListSelectionModel;
 
 /**
@@ -62,12 +68,19 @@ public final class ObjectExplorerPanel extends JScrollPane {
             ConsoleTheme.subtitleLabel("Search by name/ID or browse definitions.");
 
     private final JTextField tagField = new JTextField("OBJECT_RESEARCH");
-    private final JTextField compositeNameField = new JTextField("CURVE_1X1");
+    private final JTextField compositeNameField = new JTextField("RAIL_LAYOUT_01");
     private final JComboBox<RailCompositeLibrary.Role> compositeRole =
             new JComboBox<RailCompositeLibrary.Role>(RailCompositeLibrary.Role.values());
     private final DefaultListModel<String> compositeModel = new DefaultListModel<String>();
     private final JList<String> compositeList = new JList<String>(compositeModel);
-    private final List<Snapshot> compositeParts = new ArrayList<Snapshot>();
+    private final List<LayoutPart> compositeParts = new ArrayList<LayoutPart>();
+    private final JCheckBox layoutHotkeys = new JCheckBox(
+            "Layout hotkeys: [ / ] select, arrows move, R rotate, Del remove, Ctrl+D duplicate", true);
+
+    private int layoutAnchorX = Integer.MIN_VALUE;
+    private int layoutAnchorY = Integer.MIN_VALUE;
+    private int layoutAnchorPlane = -1;
+    private boolean layoutHotkeysInstalled;
 
     private String currentName = "id-0";
 
@@ -87,6 +100,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
 
     public ObjectExplorerPanel() {
         buildUi();
+        installLayoutHotkeys();
     }
 
     private void buildUi() {
@@ -218,16 +232,17 @@ public final class ObjectExplorerPanel extends JScrollPane {
     }
 
     private JPanel createCompositeCard() {
-        JPanel card = ConsoleTheme.createCard("Same-tile Rail Composite Builder");
+        JPanel card = ConsoleTheme.createCard("Rail Layout Lab");
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createWrappedText(
-                "Build one logical rail tile from up to 8 stock object models. Add the current ID/type/rotation, "
-                + "preview every component on the exact same tile, then save a named role for the A->B router.",
-                5));
+                "Assemble stock rail pieces in a live client-only work area. Each piece keeps its own "
+                + "ID/type/rotation and relative X/Y tile position. Arrange the geometry visually first, "
+                + "then save the exact layout evidence for reuse or upload.",
+                6));
         card.add(Box.createVerticalStrut(5));
         card.add(ConsoleTheme.createWrappedText(
-                "Verified curve-assembly evidence includes: 46360/R2, 46361/R0, 46353/R2, "
-                + "46377/R0, 46379/R0, 46382/R0, 46381/R0. These are candidates, not a prebuilt 1x1 curve.",
+                "Known curve-family evidence: 46360/R2, 46361/R0, 46353/R2, 46377/R0, "
+                + "46379/R0, 46382/R0, 46381/R0. Do not assume all belong in the final curve.",
                 4));
         card.add(Box.createVerticalStrut(7));
 
@@ -237,36 +252,79 @@ public final class ObjectExplorerPanel extends JScrollPane {
         compositeList.setSelectionBackground(ConsoleTheme.CARD_HOVER);
         JScrollPane listScroll = new JScrollPane(compositeList);
         listScroll.setAlignmentX(LEFT_ALIGNMENT);
-        listScroll.setPreferredSize(new Dimension(240, 135));
-        listScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 155));
+        listScroll.setPreferredSize(new Dimension(240, 170));
+        listScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 190));
         ConsoleTheme.styleScrollPane(listScroll);
         card.add(listScroll);
         card.add(Box.createVerticalStrut(7));
 
-        JButton add = button("Add Current Component");
-        JButton remove = button("Remove Selected");
-        JButton preview = button("Preview Composite");
-        JButton clear = button("Clear Components");
+        JButton add = button("Add Current Piece");
+        JButton duplicate = button("Duplicate Selected");
+        JButton remove = button("Delete Selected");
+        JButton preview = button("Preview Layout");
         add.addActionListener(e -> addCompositePart());
+        duplicate.addActionListener(e -> duplicateSelectedLayoutPart());
         remove.addActionListener(e -> removeCompositePart());
         preview.addActionListener(e -> previewComposite());
+
+        JPanel primary = new JPanel(new GridLayout(2, 2, 6, 6));
+        primary.setOpaque(false);
+        primary.setAlignmentX(LEFT_ALIGNMENT);
+        primary.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
+        primary.add(add);
+        primary.add(duplicate);
+        primary.add(remove);
+        primary.add(preview);
+        card.add(primary);
+        card.add(Box.createVerticalStrut(7));
+
+        JButton previous = button("[ Previous Piece");
+        JButton up = button("Up +Y");
+        JButton next = button("Next Piece ]");
+        JButton left = button("Left -X");
+        JButton rotate = button("Rotate R");
+        JButton right = button("Right +X");
+        JButton resetAnchor = button("Reset Anchor");
+        JButton down = button("Down -Y");
+        JButton clear = button("Clear Layout");
+
+        previous.addActionListener(e -> selectLayoutPart(-1));
+        next.addActionListener(e -> selectLayoutPart(1));
+        up.addActionListener(e -> moveSelectedLayoutPart(0, 1));
+        down.addActionListener(e -> moveSelectedLayoutPart(0, -1));
+        left.addActionListener(e -> moveSelectedLayoutPart(-1, 0));
+        right.addActionListener(e -> moveSelectedLayoutPart(1, 0));
+        rotate.addActionListener(e -> rotateSelectedLayoutPart());
+        resetAnchor.addActionListener(e -> resetLayoutAnchor());
         clear.addActionListener(e -> clearComposite());
 
-        JPanel actions = new JPanel(new GridLayout(2, 2, 6, 6));
-        actions.setOpaque(false);
-        actions.setAlignmentX(LEFT_ALIGNMENT);
-        actions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
-        actions.add(add);
-        actions.add(remove);
-        actions.add(preview);
-        actions.add(clear);
-        card.add(actions);
+        JPanel placement = new JPanel(new GridLayout(3, 3, 6, 6));
+        placement.setOpaque(false);
+        placement.setAlignmentX(LEFT_ALIGNMENT);
+        placement.setMaximumSize(new Dimension(Integer.MAX_VALUE, 108));
+        placement.add(previous);
+        placement.add(up);
+        placement.add(next);
+        placement.add(left);
+        placement.add(rotate);
+        placement.add(right);
+        placement.add(resetAnchor);
+        placement.add(down);
+        placement.add(clear);
+        card.add(placement);
+        card.add(Box.createVerticalStrut(7));
+
+        layoutHotkeys.setOpaque(false);
+        layoutHotkeys.setForeground(ConsoleTheme.TEXT);
+        layoutHotkeys.setFocusable(false);
+        layoutHotkeys.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(layoutHotkeys);
         card.add(Box.createVerticalStrut(8));
 
         ConsoleTheme.styleTextField(compositeNameField);
         compositeNameField.setAlignmentX(LEFT_ALIGNMENT);
         compositeNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        card.add(smallLabel("Composite name"));
+        card.add(smallLabel("Layout / composite name"));
         card.add(Box.createVerticalStrut(3));
         card.add(compositeNameField);
         card.add(Box.createVerticalStrut(6));
@@ -274,22 +332,23 @@ public final class ObjectExplorerPanel extends JScrollPane {
         compositeRole.setFocusable(false);
         compositeRole.setAlignmentX(LEFT_ALIGNMENT);
         compositeRole.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
-        compositeRole.setSelectedItem(RailCompositeLibrary.Role.CURVE);
+        compositeRole.setSelectedItem(RailCompositeLibrary.Role.CUSTOM);
         card.add(smallLabel("Role"));
         card.add(Box.createVerticalStrut(3));
         card.add(compositeRole);
         card.add(Box.createVerticalStrut(6));
 
-        JButton save = button("Save Composite");
+        JButton save = button("Save Layout Evidence");
         save.setAlignmentX(LEFT_ALIGNMENT);
         save.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         save.addActionListener(e -> saveComposite());
         card.add(save);
         card.add(Box.createVerticalStrut(5));
         card.add(ConsoleTheme.createWrappedText(
-                "Saved to Client/data/construction/asset_studio/rail_composites.tsv. "
-                + "The A->B preview prefers the first saved CURVE composite at its bend.",
-                3));
+                "Saved TSV records every piece as ID/type/rotation + relative dX/dY. "
+                + "Use CUSTOM while experimenting; switch to CURVE only after the layout is visually accepted. "
+                + "File: Client/data/construction/asset_studio/rail_composites.tsv.",
+                4));
         return card;
     }
 
@@ -383,33 +442,65 @@ public final class ObjectExplorerPanel extends JScrollPane {
     }
 
     private void addCompositePart() {
-        if (compositeParts.size() >= 8) {
-            setStatus("Composite is capped at 8 visual components for this authoring proof.");
+        if (compositeParts.size() >= 32) {
+            setStatus("Rail Layout Lab is capped at 32 visual pieces.");
             return;
         }
         Snapshot snapshot = currentSnapshot();
-        compositeParts.add(snapshot);
+        LayoutPart part = new LayoutPart(
+                snapshot.name, snapshot.id, snapshot.type, snapshot.rotation, 0, 0);
+        compositeParts.add(part);
         refreshCompositeList();
         compositeList.setSelectedIndex(compositeParts.size() - 1);
-        setStatus("Added component " + compositeParts.size() + ": " + snapshot.describe());
+        if (ensureLayoutAnchor()) {
+            refreshLayoutPreview();
+        }
+        setStatus("Added layout piece " + compositeParts.size() + ": " + part.describe());
+    }
+
+    private void duplicateSelectedLayoutPart() {
+        int index = selectedLayoutIndex();
+        if (index < 0) {
+            setStatus("Select a layout piece to duplicate.");
+            return;
+        }
+        if (compositeParts.size() >= 32) {
+            setStatus("Rail Layout Lab is capped at 32 visual pieces.");
+            return;
+        }
+        LayoutPart source = compositeParts.get(index);
+        LayoutPart copy = new LayoutPart(
+                source.name, source.id, source.type, source.rotation,
+                source.offsetX + 1, source.offsetY);
+        compositeParts.add(copy);
+        refreshCompositeList();
+        compositeList.setSelectedIndex(compositeParts.size() - 1);
+        refreshLayoutPreview();
+        setStatus("Duplicated selected piece to dX " + copy.offsetX + ", dY " + copy.offsetY + ".");
     }
 
     private void removeCompositePart() {
-        int index = compositeList.getSelectedIndex();
-        if (index < 0 || index >= compositeParts.size()) {
-            setStatus("Select a composite component to remove.");
+        int index = selectedLayoutIndex();
+        if (index < 0) {
+            setStatus("Select a layout piece to remove.");
             return;
         }
-        Snapshot removed = compositeParts.remove(index);
+        LayoutPart removed = compositeParts.remove(index);
         refreshCompositeList();
-        setStatus("Removed composite component: " + removed.describe());
+        if (!compositeParts.isEmpty()) {
+            compositeList.setSelectedIndex(Math.min(index, compositeParts.size() - 1));
+            refreshLayoutPreview();
+        } else {
+            ObjectCompositePreview.hide();
+        }
+        setStatus("Removed layout piece: " + removed.describe());
     }
 
     private void clearComposite() {
         compositeParts.clear();
         refreshCompositeList();
         ObjectCompositePreview.hide();
-        setStatus("Composite components cleared.");
+        setStatus("Rail layout cleared.");
     }
 
     private void refreshCompositeList() {
@@ -419,45 +510,121 @@ public final class ObjectExplorerPanel extends JScrollPane {
         }
     }
 
-    private void previewComposite() {
+    private int selectedLayoutIndex() {
+        int index = compositeList.getSelectedIndex();
+        return index >= 0 && index < compositeParts.size() ? index : -1;
+    }
+
+    private void selectLayoutPart(int delta) {
         if (compositeParts.isEmpty()) {
-            setStatus("Add at least one component first.");
             return;
         }
+        int index = selectedLayoutIndex();
+        if (index < 0) {
+            index = delta < 0 ? compositeParts.size() - 1 : 0;
+        } else {
+            index = (index + delta + compositeParts.size()) % compositeParts.size();
+        }
+        compositeList.setSelectedIndex(index);
+        compositeList.ensureIndexIsVisible(index);
+        setStatus("Selected layout piece #" + (index + 1) + ": " + compositeParts.get(index).describe());
+    }
 
+    private void moveSelectedLayoutPart(int dx, int dy) {
+        int index = selectedLayoutIndex();
+        if (index < 0) {
+            setStatus("Select a layout piece to move.");
+            return;
+        }
+        LayoutPart part = compositeParts.get(index);
+        part.offsetX = clamp(part.offsetX + dx, -12, 12);
+        part.offsetY = clamp(part.offsetY + dy, -12, 12);
+        refreshCompositeList();
+        compositeList.setSelectedIndex(index);
+        refreshLayoutPreview();
+        setStatus("Moved #" + (index + 1) + " to dX " + part.offsetX + ", dY " + part.offsetY + ".");
+    }
+
+    private void rotateSelectedLayoutPart() {
+        int index = selectedLayoutIndex();
+        if (index < 0) {
+            setStatus("Select a layout piece to rotate.");
+            return;
+        }
+        LayoutPart part = compositeParts.get(index);
+        part.rotation = (part.rotation + 1) & 0x3;
+        refreshCompositeList();
+        compositeList.setSelectedIndex(index);
+        refreshLayoutPreview();
+        setStatus("Rotated #" + (index + 1) + " to R" + part.rotation + ".");
+    }
+
+    private boolean ensureLayoutAnchor() {
+        if (layoutAnchorPlane >= 0) {
+            return true;
+        }
         CaptureBatch anchor = AssetStudioCapture.capturePlayerArea(0);
         if (anchor == null || !anchor.isSuccess()) {
-            setStatus("Composite preview failed: "
+            setStatus("Layout anchor failed: "
                     + (anchor == null ? "live player/scene unavailable" : anchor.getError()));
+            return false;
+        }
+        layoutAnchorX = anchor.getCenterX();
+        layoutAnchorY = anchor.getCenterY();
+        layoutAnchorPlane = anchor.getPlane();
+        return true;
+    }
+
+    private void resetLayoutAnchor() {
+        layoutAnchorPlane = -1;
+        if (ensureLayoutAnchor()) {
+            refreshLayoutPreview();
+            setStatus("Layout anchor reset beside the current player position.");
+        }
+    }
+
+    private void previewComposite() {
+        if (compositeParts.isEmpty()) {
+            setStatus("Add at least one layout piece first.");
+            return;
+        }
+        if (!ensureLayoutAnchor()) {
+            return;
+        }
+        refreshLayoutPreview();
+        setStatus(ObjectCompositePreview.getStatus());
+    }
+
+    private void refreshLayoutPreview() {
+        if (compositeParts.isEmpty() || !ensureLayoutAnchor()) {
             return;
         }
 
         List<RailCompositeLibrary.Component> components =
                 new ArrayList<RailCompositeLibrary.Component>();
-        for (Snapshot snapshot : compositeParts) {
+        for (LayoutPart part : compositeParts) {
             components.add(new RailCompositeLibrary.Component(
-                    snapshot.id, snapshot.type, snapshot.rotation));
+                    part.id, part.type, part.rotation, part.offsetX, part.offsetY));
         }
 
         String name = compositeNameField.getText() == null
-                ? "Composite" : compositeNameField.getText().trim();
+                ? "Rail Layout" : compositeNameField.getText().trim();
         ObjectCompositePreview.showComposite(name, components,
-                anchor.getCenterX(), anchor.getCenterY(), anchor.getPlane(),
+                layoutAnchorX, layoutAnchorY, layoutAnchorPlane,
                 number(offsetXSpinner), number(offsetYSpinner));
-        setStatus(ObjectCompositePreview.getStatus());
     }
 
     private void saveComposite() {
         if (compositeParts.isEmpty()) {
-            setStatus("Add at least one component before saving.");
+            setStatus("Add at least one layout piece before saving.");
             return;
         }
 
         List<RailCompositeLibrary.Component> components =
                 new ArrayList<RailCompositeLibrary.Component>();
-        for (Snapshot snapshot : compositeParts) {
+        for (LayoutPart part : compositeParts) {
             components.add(new RailCompositeLibrary.Component(
-                    snapshot.id, snapshot.type, snapshot.rotation));
+                    part.id, part.type, part.rotation, part.offsetX, part.offsetY));
         }
 
         Object selectedRole = compositeRole.getSelectedItem();
@@ -468,8 +635,76 @@ public final class ObjectExplorerPanel extends JScrollPane {
                 compositeNameField.getText(), role, components);
         setStatus(error == null
                 ? "Saved " + compositeNameField.getText().trim() + " [" + role + "] with "
-                        + components.size() + " component(s)."
+                        + components.size() + " piece(s), including relative X/Y offsets."
                 : error);
+    }
+
+    private void installLayoutHotkeys() {
+        if (layoutHotkeysInstalled) {
+            return;
+        }
+        layoutHotkeysInstalled = true;
+        KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                .addKeyEventDispatcher(new KeyEventDispatcher() {
+                    @Override
+                    public boolean dispatchKeyEvent(KeyEvent event) {
+                        if (event.getID() != KeyEvent.KEY_PRESSED
+                                || !layoutHotkeys.isSelected()
+                                || !ObjectExplorerPanel.this.isShowing()
+                                || compositeParts.isEmpty()) {
+                            return false;
+                        }
+
+                        Component focus = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                                .getFocusOwner();
+                        if (focus instanceof JTextField
+                                || focus != null && SwingUtilities.getAncestorOfClass(
+                                        JSpinner.class, focus) != null
+                                || focus != null && SwingUtilities.getAncestorOfClass(
+                                        JComboBox.class, focus) != null) {
+                            return false;
+                        }
+
+                        int key = event.getKeyCode();
+                        if (event.isControlDown() && key == KeyEvent.VK_D) {
+                            duplicateSelectedLayoutPart();
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_OPEN_BRACKET) {
+                            selectLayoutPart(-1);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_CLOSE_BRACKET) {
+                            selectLayoutPart(1);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_R) {
+                            rotateSelectedLayoutPart();
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_LEFT) {
+                            moveSelectedLayoutPart(-1, 0);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_RIGHT) {
+                            moveSelectedLayoutPart(1, 0);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_UP) {
+                            moveSelectedLayoutPart(0, 1);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_DOWN) {
+                            moveSelectedLayoutPart(0, -1);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_DELETE) {
+                            removeCompositePart();
+                            return true;
+                        }
+                        return false;
+                    }
+                });
     }
 
     private Snapshot currentSnapshot() {
@@ -539,6 +774,34 @@ public final class ObjectExplorerPanel extends JScrollPane {
 
     private static String timestamp() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return value < min ? min : value > max ? max : value;
+    }
+
+    private static final class LayoutPart {
+        private final String name;
+        private final int id;
+        private final int type;
+        private int rotation;
+        private int offsetX;
+        private int offsetY;
+
+        private LayoutPart(String name, int id, int type, int rotation,
+                int offsetX, int offsetY) {
+            this.name = name == null || name.trim().isEmpty() ? "id-" + id : name;
+            this.id = id;
+            this.type = type;
+            this.rotation = rotation & 0x3;
+            this.offsetX = clamp(offsetX, -12, 12);
+            this.offsetY = clamp(offsetY, -12, 12);
+        }
+
+        private String describe() {
+            return name + " | ID " + id + " | T" + type + " | R" + rotation
+                    + " | dX " + offsetX + " | dY " + offsetY;
+        }
     }
 
     private static final class Snapshot {

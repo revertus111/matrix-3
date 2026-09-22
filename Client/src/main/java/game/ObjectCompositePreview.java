@@ -6,9 +6,10 @@ import java.util.List;
 /**
  * Client-only generic object/composite preview used by Test -> Object Explorer.
  *
- * Any number of stock object models can be direct-rendered on exactly the same
- * logical world tile without registering them in Class523. This proves visual
- * composability only; normal scene-slot ownership remains unchanged.
+ * Any number of stock object models can be direct-rendered around one layout
+ * origin, including multiple models on the exact same tile, without registering
+ * them in Class523. This is visual authoring only; normal scene-slot ownership
+ * remains unchanged.
  */
 public final class ObjectCompositePreview {
 
@@ -58,7 +59,8 @@ public final class ObjectCompositePreview {
             for (RailCompositeLibrary.Component component : components) {
                 if (component != null) {
                     entries.add(new PreviewSpec("component", component.getId(),
-                            component.getType(), component.getRotation()));
+                            component.getType(), component.getRotation(),
+                            component.getOffsetX(), component.getOffsetY()));
                 }
             }
         }
@@ -127,7 +129,7 @@ public final class ObjectCompositePreview {
 
         for (PreviewSpec spec : current) {
             if (renderOne(spec, scene, renderer, sceneBase, definitions,
-                    worldX, worldY, plane)) {
+                    worldX + spec.offsetX, worldY + spec.offsetY, plane)) {
                 rendered++;
             } else {
                 failed++;
@@ -232,11 +234,20 @@ public final class ObjectCompositePreview {
         private final int id;
         private final int type;
         private final int rotation;
+        private final int offsetX;
+        private final int offsetY;
 
         private PreviewSpec(String name, int id, int type, int rotation) {
+            this(name, id, type, rotation, 0, 0);
+        }
+
+        private PreviewSpec(String name, int id, int type, int rotation,
+                int offsetX, int offsetY) {
             this.id = id;
             this.type = clamp(type, 0, 22);
             this.rotation = rotation & 0x3;
+            this.offsetX = clamp(offsetX, -12, 12);
+            this.offsetY = clamp(offsetY, -12, 12);
         }
     }
 }

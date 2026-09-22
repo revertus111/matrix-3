@@ -729,6 +729,7 @@ public final class RailRoutePreview {
         }
 
         int quarterTurns = curveQuarterTurnsFor(horizontalDirection, verticalDirection);
+        int layoutTurns = (curveRotationOffset + quarterTurns) & 0x3;
         boolean any = false;
         for (RailCompositeLibrary.Component component : composite.getComponents()) {
             ObjectDefinitions definition = (ObjectDefinitions) definitions.getDefinition(
@@ -736,13 +737,28 @@ public final class RailRoutePreview {
             if (definition == null) {
                 continue;
             }
-            int rotation = (component.getRotation() + curveRotationOffset + quarterTurns) & 0x3;
+            int rotation = (component.getRotation() + layoutTurns) & 0x3;
+            int[] rotatedOffset = rotateLayoutOffset(
+                    component.getOffsetX(), component.getOffsetY(), layoutTurns);
             if (renderPiece(scene, renderer, sceneBase, definition, component.getType(),
-                    worldX, worldY, plane, rotation)) {
+                    worldX + rotatedOffset[0], worldY + rotatedOffset[1], plane, rotation)) {
                 any = true;
             }
         }
         return any;
+    }
+
+    private static int[] rotateLayoutOffset(int offsetX, int offsetY, int quarterTurns) {
+        switch (quarterTurns & 0x3) {
+        case 1:
+            return new int[] { offsetY, -offsetX };
+        case 2:
+            return new int[] { -offsetX, -offsetY };
+        case 3:
+            return new int[] { -offsetY, offsetX };
+        default:
+            return new int[] { offsetX, offsetY };
+        }
     }
 
     private static int curveQuarterTurnsFor(int horizontalDirection, int verticalDirection) {

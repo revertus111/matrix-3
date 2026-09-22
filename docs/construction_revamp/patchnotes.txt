@@ -933,3 +933,12 @@
 - Live acceptance now verifies population capacity equals starter 2 + persistent bed count, runtime worker count matches the full saved population, and every saved worker has a live projection with unique id/home ownership.
 - Housing baseline capture/check now preserves and compares the complete current worker set, so valid populations beyond Worker #3 no longer fail the developer gate.
 - No SettlementState, recruitment, worker AI or save ownership changed; this is a test-harness hardening patch after runtime evidence showed beds=3, capacity=5, workers=5/5 surviving settlement re-entry.
+
+2026-09-22 - Rail Layout Lab + placement hotkeys
+- Replaced the same-tile-only composite authoring workflow with a client-only Rail Layout Lab in Test -> Object Explorer.
+- Layout pieces now retain independent relative dX/dY offsets in addition to object id/type/rotation; up to 32 pieces can be arranged, overlapped, rotated, duplicated and deleted around a stable preview anchor.
+- Added live authoring hotkeys while Object Explorer is visible: [ / ] select previous/next piece, arrows move one tile, R rotates, Delete removes and Ctrl+D duplicates; text/spinner/combo editing is excluded and hotkeys can be disabled.
+- Save Layout Evidence persists name/role/index/id/type/rotation/offset_x/offset_y to rail_composites.tsv. Legacy six-column rows remain readable as zero-offset layouts.
+- ObjectCompositePreview now honors each component's relative tile offset while retaining same-tile overlap support.
+- RailRoutePreview V2 rotates saved component offsets together with their model rotations at curve bends, so an accepted authored layout can be reused in all four corner quadrants.
+- No real world objects, collision, server state, cache definitions or settlement persistence are mutated by the authoring lab.

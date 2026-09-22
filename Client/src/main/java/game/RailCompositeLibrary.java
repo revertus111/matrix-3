@@ -14,11 +14,12 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Local authoring store for same-tile rail composites.
+ * Local authoring store for rail layouts/composites.
  *
- * A composite is one logical rail tile backed by one or more direct-rendered
- * stock Matrix3 object models. This is developer authoring data only; it does
- * not register extra Class523 scene objects or alter cache definitions.
+ * Each component keeps a stock Matrix3 object id/type/rotation plus a relative
+ * tile offset from the layout origin. Old six-column same-tile rows remain
+ * readable and default to offset 0,0. This is developer authoring data only; it
+ * does not register extra Class523 scene objects or alter cache definitions.
  */
 public final class RailCompositeLibrary {
 
@@ -72,9 +73,9 @@ public final class RailCompositeLibrary {
         try {
             Files.createDirectories(FILE.getParent());
             List<String> lines = new ArrayList<String>();
-            lines.add("# Matrix3 same-tile rail composite library");
-            lines.add("# One row per visual component; all components in a composite share one logical world tile.");
-            lines.add("name\trole\tindex\tid\ttype\trotation");
+            lines.add("# Matrix3 rail layout/composite library");
+            lines.add("# One row per visual component; offset_x/offset_y are relative tiles from the saved layout origin.");
+            lines.add("name\trole\tindex\tid\ttype\trotation\toffset_x\toffset_y");
             for (CompositeDefinition definition : next) {
                 for (int i = 0; i < definition.components.size(); i++) {
                     Component component = definition.components.get(i);
@@ -82,7 +83,9 @@ public final class RailCompositeLibrary {
                             + "\t" + (i + 1)
                             + "\t" + component.id
                             + "\t" + component.type
-                            + "\t" + component.rotation);
+                            + "\t" + component.rotation
+                            + "\t" + component.offsetX
+                            + "\t" + component.offsetY);
                 }
             }
             Files.write(FILE, lines, StandardCharsets.UTF_8,
@@ -119,6 +122,8 @@ public final class RailCompositeLibrary {
                     int id = Integer.parseInt(parts[3]);
                     int type = Integer.parseInt(parts[4]);
                     int rotation = Integer.parseInt(parts[5]);
+                    int offsetX = parts.length >= 8 ? Integer.parseInt(parts[6]) : 0;
+                    int offsetY = parts.length >= 8 ? Integer.parseInt(parts[7]) : 0;
 
                     String key = name.toLowerCase(Locale.ENGLISH);
                     MutableComposite mutable = grouped.get(key);
@@ -127,7 +132,7 @@ public final class RailCompositeLibrary {
                         grouped.put(key, mutable);
                     }
                     mutable.components.add(new IndexedComponent(index,
-                            new Component(id, type, rotation)));
+                            new Component(id, type, rotation, offsetX, offsetY)));
                 } catch (Exception ignored) {
                     // Keep valid rows if the local authoring TSV was hand-edited badly.
                 }
@@ -186,11 +191,19 @@ public final class RailCompositeLibrary {
         private final int id;
         private final int type;
         private final int rotation;
+        private final int offsetX;
+        private final int offsetY;
 
         public Component(int id, int type, int rotation) {
+            this(id, type, rotation, 0, 0);
+        }
+
+        public Component(int id, int type, int rotation, int offsetX, int offsetY) {
             this.id = Math.max(0, id);
             this.type = clamp(type, 0, 22);
             this.rotation = rotation & 0x3;
+            this.offsetX = clamp(offsetX, -12, 12);
+            this.offsetY = clamp(offsetY, -12, 12);
         }
 
         public int getId() {
@@ -205,8 +218,17 @@ public final class RailCompositeLibrary {
             return rotation;
         }
 
+        public int getOffsetX() {
+            return offsetX;
+        }
+
+        public int getOffsetY() {
+            return offsetY;
+        }
+
         public String describe() {
-            return "ID " + id + " | T" + type + " | R" + rotation;
+            return "ID " + id + " | T" + type + " | R" + rotation
+                    + " | dX " + offsetX + " | dY " + offsetY;
         }
     }
 

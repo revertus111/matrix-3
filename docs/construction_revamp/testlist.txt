@@ -583,20 +583,25 @@ Matrix3 same-tile object overlay proof — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Clear Overlay removes both visual components and resets A/B slots.
 [ ] Overlay preview creates no collision, interaction, persistence, server object or cache mutation.
 
-Matrix3 same-tile Rail Composite Builder — IMPLEMENTED / NEEDS RUNTIME TEST
-[x] Architecture: one saved composite represents one logical rail tile with 1-8 stock visual components; no additional Class523 scene slots are claimed.
+Matrix3 Rail Layout Lab — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Architecture: one saved layout keeps 1-32 stock visual components with independent ID/type/rotation and relative dX/dY; no Class523 scene slots are claimed.
+[x] Backward compatibility: legacy six-column rail_composites.tsv rows load as dX=0/dY=0.
 [x] Evidence seed recorded from capture_20260922_001: 46360/R2, 46361/R0, 46353/R2, 46377/R0, 46379/R0, 46382/R0, 46381/R0, plus straight continuation 46353/R3.
-[ ] Test -> Object Explorer -> Same-tile Rail Composite Builder: add two or more current ID/type/rotation components and verify the list preserves each snapshot exactly.
-[ ] Preview Composite direct-renders every listed component on the same tile and reports the rendered/total component count.
-[ ] Remove Selected removes only that component; Clear Components removes all composite visuals/list rows.
-[ ] Save Composite with role CURVE writes/replaces the named definition in Client/data/construction/asset_studio/rail_composites.tsv with one row per component.
-[ ] Saving a second composite name preserves the first; saving the same name replaces only that composite.
+[x] Hotkey ownership: while Object Explorer is visible and Layout hotkeys are enabled, [ / ] select, arrows move, R rotates, Delete removes and Ctrl+D duplicates; text/spinner/combo editing is excluded.
+[ ] Test -> Object Explorer -> Rail Layout Lab: Add Current Piece for two or more rail candidates and verify each row preserves ID/type/rotation/dX/dY.
+[ ] Select pieces with [ / ] and verify the highlighted list row changes without moving another piece.
+[ ] Arrow keys move only the selected piece one relative tile per step and the live preview updates immediately.
+[ ] R rotates only the selected piece; Ctrl+D duplicates it at +1 X; Delete removes only the selected piece.
+[ ] Reset Anchor moves the complete authoring layout beside the current player without changing saved relative offsets.
+[ ] Overlapping pieces at the same dX/dY still direct-render simultaneously; separated pieces render at their independent offsets.
+[ ] Save Layout Evidence writes/replaces name/role/index/id/type/rotation/offset_x/offset_y rows in Client/data/construction/asset_studio/rail_composites.tsv.
+[ ] Saving a second layout name preserves the first; saving the same name replaces only that layout.
 
 Matrix3 A->B Rail Route Preview V2 — IMPLEMENTED / NEEDS RUNTIME TEST
 [x] V1 single-object curve is retained only as fallback; the preferred bend source is the first saved RailCompositeLibrary role CURVE.
-[x] Composite corner ownership: every component is rendered at one logical bend tile and receives the same quadrant quarter-turn in addition to its saved component rotation.
-[x] Existing Curve map offset R0-R3 applies to the complete composite, allowing one saved canonical orientation to be calibrated without rewriting component rows.
-[ ] Build/save a visually clean CURVE composite in Object Explorer, return to Rail Classifier, click Reload CURVE Composite and verify its name appears in route status.
+[x] Composite corner ownership: every component receives the same quadrant quarter-turn in addition to its saved component rotation; saved relative dX/dY rotates with the layout around the bend origin.
+[x] Existing Curve map offset R0-R3 applies to the complete composite, rotating both model orientations and component offsets without rewriting saved rows.
+[ ] Build/save a visually clean CURVE layout in Object Explorer, return to Rail Classifier, click Reload CURVE Composite and verify its name appears in route status.
 [ ] Enable A->B Preview and drag an L route; the bend uses all saved composite components, not the old single object.
 [ ] If the canonical saved composite faces the wrong bend quadrant, adjust Curve map offset once; all components rotate together.
 [ ] Test the other three corner quadrants plus X-then-Y/Y-then-X and confirm the composite remains one logical tile.
