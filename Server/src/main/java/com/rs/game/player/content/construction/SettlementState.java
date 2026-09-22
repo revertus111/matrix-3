@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 8;
+    private static final int CURRENT_SCHEMA_VERSION = 9;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -37,6 +37,7 @@ public final class SettlementState implements Serializable {
     public static final int STARTER_SHELTER_DOORS = 1;
     public static final long STARTER_SHELTER_RESOURCE_EACH = 1L;
     public static final int STARTER_SHELTER_POPULATION_CAPACITY = 2;
+    public static final int HOUSING_CAPACITY_PER_BED = 1;
 
     private int schemaVersion = CURRENT_SCHEMA_VERSION;
     private long nextPieceId = 1L;
@@ -50,6 +51,7 @@ public final class SettlementState implements Serializable {
     private Set<String> completedMilestones = new HashSet<String>();
     private long nextWorkerId = 1L;
     private List<SettlementWorkerState> workers = new ArrayList<SettlementWorkerState>();
+    private int housingBedCount;
 
     public synchronized void normalize() {
         if (schemaVersion <= 0) {
@@ -75,6 +77,13 @@ public final class SettlementState implements Serializable {
         }
         if (workers == null) {
             workers = new ArrayList<SettlementWorkerState>();
+        }
+        if (housingBedCount < 0) {
+            housingBedCount = 0;
+        }
+        int maxBeds = getMaximumHousingBedCount();
+        if (housingBedCount > maxBeds) {
+            housingBedCount = maxBeds;
         }
         long highestWorkerId = 0L;
         Set<Long> workerIds = new HashSet<Long>();
@@ -271,34 +280,65 @@ public final class SettlementState implements Serializable {
     }
 
     /**
-     * Phase-2 starter population owner.
+     * Phase-2 population owner.
      *
-     * The completed starter shelter supports two workers: the automatic starter
-     * settler plus one manually recruited settler. Later housing/beds extend
-     * this same capacity owner rather than introducing a parallel population
-     * counter.
+     * The completed starter shelter supports two workers. Persistent housing
+     * beds extend this same owner by one worker each. Visual bed placement will
+     * later mutate this owner through the normal Construction transaction path;
+     * the capacity state itself is intentionally independent of provisional art.
      */
     public synchronized int getPopulationCapacity() {
         normalize();
-        return completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())
-                ? STARTER_SHELTER_POPULATION_CAPACITY : 0;
+        if (!completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())) {
+            return 0;
+        }
+        return STARTER_SHELTER_POPULATION_CAPACITY
+                + (housingBedCount * HOUSING_CAPACITY_PER_BED);
+    }
+
+    public synchronized int getHousingBedCount() {
+        normalize();
+        return housingBedCount;
+    }
+
+    public synchronized boolean addHousingBed() {
+        normalize();
+        if (!completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())
+                || housingBedCount >= getMaximumHousingBedCount()) {
+            return false;
+        }
+        housingBedCount++;
+        return true;
+    }
+
+    public synchronized boolean removeHousingBed() {
+        normalize();
+        if (housingBedCount <= 0) {
+            return false;
+        }
+        int nextCapacity = STARTER_SHELTER_POPULATION_CAPACITY
+                + ((housingBedCount - 1) * HOUSING_CAPACITY_PER_BED);
+        if (workers.size() > nextCapacity) {
+            return false;
+        }
+        housingBedCount--;
+        return true;
+    }
+
+    public synchronized String getHousingSummary() {
+        normalize();
+        return "beds=" + housingBedCount
+                + " | capacity=" + getPopulationCapacity()
+                + " | " + getPopulationSummary();
     }
 
     public synchronized boolean canRecruitAdditionalWorker() {
         normalize();
-        if (!completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())) {
+        if (!completedMilestones.contains(SettlementMilestone.STARTER_SHELTER.getKey())
+                || workers.size() >= getPopulationCapacity()) {
             return false;
         }
-        if (workers.size() >= getPopulationCapacity()) {
-            return false;
-        }
-        for (SettlementWorkerState worker : workers) {
-            if (worker != null && SettlementWorkerDefinition.RECRUITED_SETTLER.getKey()
-                    .equals(worker.getDefinitionKey())) {
-                return false;
-            }
-        }
-        return true;
+        return findAvailableRecruitedHomePlotX() >= 0;
     }
 
     public synchronized SettlementWorkerState recruitAdditionalWorker() {
@@ -308,15 +348,77 @@ public final class SettlementState implements Serializable {
         }
 
         SettlementWorkerDefinition definition = SettlementWorkerDefinition.RECRUITED_SETTLER;
+        int homePlotX = findAvailableRecruitedHomePlotX();
+        if (homePlotX < 0) {
+            return null;
+        }
         SettlementWorkerState worker = new SettlementWorkerState(
                 nextWorkerId++,
                 definition.getKey(),
                 definition.getDisplayName(),
-                definition.getArrivalPlotX(),
+                homePlotX,
                 definition.getArrivalPlotY(),
                 definition.getArrivalPlane());
         workers.add(worker);
         return worker;
+    }
+
+    public synchronized boolean hasWorkerHomeAt(int plotX, int plotY, int plane) {
+        normalize();
+        for (SettlementWorkerState worker : workers) {
+            if (worker != null
+                    && worker.getHomePlotX() == plotX
+                    && worker.getHomePlotY() == plotY
+                    && worker.getHomePlane() == plane) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int findAvailableRecruitedHomePlotX() {
+        SettlementWorkerDefinition definition = SettlementWorkerDefinition.RECRUITED_SETTLER;
+        int y = definition.getArrivalPlotY();
+        int plane = definition.getArrivalPlane();
+        for (int x = definition.getArrivalPlotX(); x < PLOT_TILES; x += 2) {
+            if (!hasWorkerHomeAtInternal(x, y, plane) && !hasPlacedPieceAtInternal(x, y, plane)) {
+                return x;
+            }
+        }
+        return -1;
+    }
+
+    private int getMaximumHousingBedCount() {
+        SettlementWorkerDefinition definition = SettlementWorkerDefinition.RECRUITED_SETTLER;
+        int recruitSlots = 0;
+        for (int x = definition.getArrivalPlotX(); x < PLOT_TILES; x += 2) {
+            recruitSlots++;
+        }
+        return Math.max(0, recruitSlots - 1);
+    }
+
+    private boolean hasWorkerHomeAtInternal(int plotX, int plotY, int plane) {
+        for (SettlementWorkerState worker : workers) {
+            if (worker != null
+                    && worker.getHomePlotX() == plotX
+                    && worker.getHomePlotY() == plotY
+                    && worker.getHomePlane() == plane) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasPlacedPieceAtInternal(int plotX, int plotY, int plane) {
+        for (SettlementPlacedPiece piece : pieces) {
+            if (piece != null
+                    && piece.getPlotX() == plotX
+                    && piece.getPlotY() == plotY
+                    && piece.getPlane() == plane) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public synchronized String getPopulationSummary() {
