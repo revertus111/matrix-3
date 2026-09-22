@@ -30,6 +30,10 @@ public final class SettlementPlayerBuildTransaction {
             return Result.fail("That tile is reserved for settlement infrastructure.");
         }
 
+        if (definition.getRole() == SettlementBuildRole.BED && !state.canAddHousingBed()) {
+            return Result.fail("Complete the starter shelter and free housing capacity before placing another bed.");
+        }
+
         SettlementResource resource = definition.getBuildResource();
         long cost = definition.getBuildCost();
         if (resource == null || cost <= 0L) {
