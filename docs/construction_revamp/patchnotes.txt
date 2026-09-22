@@ -902,3 +902,12 @@
 - RWS-3 is promoted to RUNTIME VERIFIED.
 - RWS-2 large-ring geometry remains intact; no server selection or persistent worker-selection state was introduced.
 - Active radial workstream advances to RWS-4 selected-worker visual feedback / GFX 4187 double-ring preflight.
+
+2026-09-22 - Bundle 2.3 persistent housing-bed capacity + Worker #3 foundation
+- SettlementState schema v9 now persists housingBedCount; completed starter shelter capacity stays 2 and each saved bed adds +1 population capacity.
+- Bed capacity is shelter-gated and cannot be removed when doing so would place the live saved population over capacity.
+- Generalized recruitment beyond Worker #2: multiple recruited-settler records keep stable ids and receive unique free plot-relative home slots; saved pieces and existing worker homes are skipped.
+- Settlement runtime now reserves every actual saved worker home tile, including Worker #3+ homes.
+- Added disposable SettlementHousingCheck for capacity 2->3, Worker #3 id/home/default policy and serialization, plus live saved=3/runtime=3 verification and a process-local rebuild/relog baseline.
+- Replaced the completed Bundle 2.2 Con Revamp gate card with Bundle 2.3 Housing controls for status, developer bed-capacity mutation, recruitment, self-test/live check and Worker #3 baseline.
+- No bed object id was guessed. Developer Add/Remove Bed Capacity is an architecture/runtime harness only; normal Construction bed placement/removal hookup is Patch 2.3.2 after asset verification.
