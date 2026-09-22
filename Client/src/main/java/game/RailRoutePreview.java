@@ -168,8 +168,6 @@ public final class RailRoutePreview {
 
             // Prevent two developer drag systems from owning the same mouse gesture.
             ConstructionRadialSelection.setWorkerControlEnabled(false);
-            ConstructionRadialSelection.setReticule4187ProbeMode(
-                    ConstructionRadialSelection.Reticule4187ProbeMode.OFF);
             ObjectLabPreview.hide();
             ObjectCompositePreview.hide();
             reloadCurveComposite();
