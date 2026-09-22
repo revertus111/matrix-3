@@ -955,5 +955,6 @@
 - Bed removal is blocked when the resulting capacity would be below the saved worker population; the persistent object remains in place.
 - Player build transaction rejects housing-bed placement before the starter shelter/no available housing slot and preserves atomic piece/material/capacity rollback.
 - Bundle 2.3 Self-Test now exercises pre-shelter physical-bed rejection, real transaction placement, capacity 2->3, unoccupied removal, occupied-removal guard and serialization.
+- Static review removed recursive normalize/helper re-entry from addHousingBed/removeHousingBed; canAdd/canRemove remain the normalized guard owners.
 - Existing Add/Remove Bed Capacity controls remain developer harnesses only. Bed object type 10 requires live ghost/model acceptance before being promoted from provisional mapping.
 - Bunk bed object 24339 is retained as a future space-efficient housing upgrade candidate after the single-bed path is accepted.
