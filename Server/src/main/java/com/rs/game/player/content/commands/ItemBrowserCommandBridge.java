@@ -711,6 +711,13 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("bundle22preparebaseline".equals(operation)) {
+            String result = SettlementBundle22FinalGate.prepareAndCapture(player);
+            System.out.println("[SettlementBundle22FinalGate] " + result);
+            player.getPackets().sendGameMessage("Bundle 2.2 gate: " + result);
+            return true;
+        }
+
         if ("bundle22baseline".equals(operation)) {
             String result = SettlementBundle22FinalGate.capture(player);
             System.out.println("[SettlementBundle22FinalGate] " + result);
