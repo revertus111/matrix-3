@@ -946,12 +946,27 @@ Runtime acceptance target:
 
 ### Bundle 2.3 — Housing, beds + population capacity
 
-**Status:** READY / NEXT
+**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
 
-Direction:
-- Make population capacity derive from settlement housing/bed ownership instead of remaining fixed at the starter-shelter capacity of 2.
-- Preserve stable worker ids, existing worker persistence, Allowed Jobs, Needs, progression and runtime projection ownership established in Bundles 2.1–2.2.
-- Add the smallest housing/bed vertical slice first: persistent capacity owner -> build/placement requirement -> recruitable capacity readback -> one additional worker acceptance.
+Patch 2.3.1 — persistent bed capacity + Worker #3 foundation:
+
+- `SettlementState` schema v9 owns persistent `housingBedCount`; the completed starter shelter remains base capacity 2 and each saved housing bed adds +1 capacity through the same population owner.
+- Bed capacity cannot be added before the starter shelter, and occupied capacity cannot be removed below the current worker count.
+- Recruitment is no longer hardcoded to a single `RECRUITED_SETTLER`. Additional recruited settlers keep the same stable definition key but receive unique free plot-relative home slots from the recruited-worker arrival row.
+- Recruitment skips occupied saved-piece/home slots and refuses when no valid home slot or population capacity remains.
+- Runtime placement reserves actual saved worker home tiles in addition to the original starter/recruited arrival anchors.
+- `SettlementHousingCheck.runSelfTest()` disposably proves capacity 2 -> 3, unique Worker #3 id/home, default jobs OFF, default unpaused state, removal guard and Java serialization.
+- Live housing check requires one saved bed, capacity 3 and exactly saved=3/runtime=3 with unique ids/home slots/projections.
+- A process-local Worker #3 housing baseline compares persistent bed count, capacity and exact worker id/definition/home signatures across instance rebuild and logout/relog.
+- Con Revamp replaces the completed Bundle 2.2 gate card with Bundle 2.3 Housing controls: status, Add/Remove Bed Capacity, Recruit Next Worker, Self-Test, live Check and Worker #3 baseline/check.
+- **Art boundary:** Add/Remove Bed Capacity are developer harness controls only. No bed object id was guessed. Normal Construction placement hookup remains Patch 2.3.2 after a bed asset is verified.
+
+Runtime acceptance target:
+
+`Self-Test PASS -> Housing Status workers=2/2 beds=0 -> Add Bed -> capacity=3 READY -> Recruit Worker #3 -> live Check PASS saved=3/runtime=3 -> Capture W3 Baseline -> exit/re-enter Check PASS -> logout/relog/re-enter Check PASS`
+
+Next Patch 2.3.2:
+- Verify a real bed object asset and bind normal Construction placement/removal to the existing persistent bed-capacity owner without introducing a second housing system.
 - Keep cooking, farming/hunting and broader worker-management UI as later Phase-2 work after capacity expansion is proven.
 
 ## Phase 3 — Processing chains + better materials
@@ -1009,13 +1024,13 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Phase status: ACTIVE
 - Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
 - Persistent-runtime bundle: 2.3 — housing, beds + population capacity
-- Persistent-runtime bundle status: READY / NEXT
+- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
-- Approval state: Bundle 2.2 SAP AAA work is complete and runtime accepted. Bundle 2.3 is the next persistent-runtime target; implementation scope is not yet patched.
-- Current checklist item: Bundle 2.2 is closed. Next persistent-runtime item is Bundle 2.3 housing/beds/population-capacity foundation.
-- Current objective: expand population capacity through persistent housing/bed ownership while preserving the verified two-worker control, needs, progression and persistence owners.
+- Approval state: Bundle 2.3 Patch 2.3.1 persistent bed-capacity + Worker #3 foundation is SAP AAA approved and implemented; runtime acceptance remains.
+- Current checklist item: runtime-test Bundle 2.3 Patch 2.3.1: Self-Test -> add one bed-capacity unit -> recruit Worker #3 -> live Check -> Worker #3 baseline re-entry/relog checks.
+- Current objective: runtime-prove persistent bed capacity and Worker #3 recruitment/persistence, then wire a verified real bed object into normal Construction placement/removal.
 
 ## Verification classifications
 
@@ -1066,6 +1081,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 
 ### verified-static
 
+- Bundle 2.3 bed-capacity foundation is verified-static pending runtime: SettlementState schema v9 persists housingBedCount; base shelter capacity 2 gains +1 per bed; recruitment supports multiple recruited-settler records with unique free saved home slots; occupied capacity cannot be removed; live Worker #3 projection continues through existing SettlementInstance ownership; no bed art id is assumed.
 
 
 - Bundle 2.1 population ownership is VERIFIED at runtime: Population Self-Test passed; Worker #2 recruited successfully from the completed shelter capacity; live Population Check reported `workers=2/2`, `saved=2/runtime=2`, unique Worker #1/#2 ids/projections; Worker #2 remained idle under the default-OFF Allowed Jobs policy; logout/relog + settlement re-entry preserved the two-worker population without duplicate runtime projections.
@@ -1205,11 +1221,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 2 — Population + broader survival production.
 
-**Active persistent-runtime bundle:** Bundle 2.3 — housing, beds + population capacity (READY / NEXT).
+**Active persistent-runtime bundle:** Bundle 2.3 — housing, beds + population capacity (IMPLEMENTED / NEEDS RUNTIME TEST).
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry. RWS-4 visual preflight now includes the GFX 4187 double-ring recolor probe (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling: Matrix3 Asset Studio v1 + paired evidence capture + docked Rail Classifier + Object Explorer/same-tile overlay proof + A->B Rail Route Preview V1 are IMPLEMENTED / NEEDS RUNTIME TEST. Object Explorer broadens research beyond rails and can test two stock models visually composited on one logical tile; normal scene-slot constraints remain unchanged. Future rail gameplay remains A-to-B drag/auto-tiling, not manual 1x1 placement.
 
-**Next checklist item:** Persistent-runtime track: scope Bundle 2.3 housing/bed capacity ownership and implement the smallest vertical slice that raises population capacity beyond 2 without changing verified worker identity/persistence owners. Side tooling remains independently resumable from its own RWS/rail checklist.
+**Next checklist item:** Runtime-test Patch 2.3.1 in one session: Bundle 2.3 Self-Test PASS -> Add Bed Capacity -> Recruit Worker #3 -> Bundle 2.3 Check PASS -> Capture W3 Baseline -> exit/re-enter Check W3 Baseline PASS -> logout/relog/re-enter Check W3 Baseline PASS. If accepted, proceed to Patch 2.3.2 verified bed asset + normal build/remove hookup.
 
 **Files/systems already inspected:**
 
