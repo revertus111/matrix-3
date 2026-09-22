@@ -999,13 +999,14 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. Patch 2.2.15 zero-Food Hunger bootstrap recovery is runtime VERIFIED; next unfinished gate is role-preset/concurrent-production acceptance, including the final-slot Wood reservation behavior.
+- Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. Role presets, independent concurrent production, final-slot reservation behavior, Pause/Resume, storage controls, Bundle 2.2 Self-Test and zero-Food recovery are runtime VERIFIED. Remaining required gate is the two-worker baseline persistence check: capture -> exit/re-enter -> logout/relog/re-enter.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
 
 ### VERIFIED
 
+- Bundle 2.2 role-preset + concurrent-production acceptance is runtime VERIFIED: Worker #1 Forager and Worker #2 Lumberjack operate independently, Food and Wood production proceed concurrently, and Wood reaching 100/100 does not leave a worker stranded carrying excess Wood.
 - Bundle 2.2 zero-Food Hunger bootstrap recovery is runtime VERIFIED: with Food storage empty and Hunger critical, a Forager with Gather Food + Haul enabled successfully escapes the starvation deadlock and resumes productive work after emergency Food recovery.
 - Bundle 2.2 Self-Test is runtime VERIFIED: runtime PASS covered per-resource storage isolation, in-flight reservation race protection, all worker role presets, stable worker-id targeting, independent pause/jobs/needs/progression, and two-worker serialization.
 - Bundle 2.2 Prime Wood 99/100 is runtime VERIFIED: the Con Revamp developer control sets Wood to 99/100 correctly without requiring manual gathering, completing runtime acceptance of the storage test-control slice.
