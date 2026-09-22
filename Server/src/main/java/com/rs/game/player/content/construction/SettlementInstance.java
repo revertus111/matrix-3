@@ -662,7 +662,8 @@ public final class SettlementInstance {
 
     private boolean isReservedInfrastructureTile(int plotX, int plotY, int plane) {
         return SettlementResourceNode.occupiesPlotTile(plotX, plotY, plane)
-                || SettlementWorkerDefinition.isReservedArrivalTile(plotX, plotY, plane);
+                || SettlementWorkerDefinition.isReservedArrivalTile(plotX, plotY, plane)
+                || state.hasWorkerHomeAt(plotX, plotY, plane);
     }
 
     private void spawnStarterResourceNodes() {
