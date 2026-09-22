@@ -431,39 +431,37 @@ Runtime evidence:
 ### RWS-4 — Selection Reticules
 
 Goal:
-Show selected workers using RuneScape-native visual feedback.
+Show selected workers using RuneScape-native visual feedback with the same proven reticule asset.
 
-#### GFX 4187 double-ring visual preflight
+Decision:
+GFX `4187` is no longer part of the RWS-4 plan. Do not continue the double-ring probe.
 
-User-selected candidate: GFX `4187`, a visible red/yellow double-ring reticule.
+Implementation:
 
-Implemented probe:
+- reuse GFX `4171` for all radial-selection visuals
+- the large drag ring remains one independently tinted 4171 clone
+- each detected worker renders two additional independent 4171 clones at the same world position
+- outer worker ring default scale: 100%
+- inner worker ring default scale: 70%
+- outer and inner worker scales are independently adjustable from 25%-300% in Con Revamp
+- drag, outer and inner ring colors are independently configurable through Swing `JColorChooser` pickers
+- selected RGB is converted to Matrix3 packed-model H/S/L targets and applied through `Model.method1396(..., weight=128)`
+- existing `0x80000` model flags keep face-colour mutation on the per-call clone instead of the cached source model
+- choosing Use Original Colors restores native GFX 4171 colors without touching scale
+- RWS-3 live detection immediately previews the current two-layer worker style during drag
+- no cache definition, combat reticule, worker AI, server selection or persistence owner changes
 
-- client-only; does not enter combat or mutate the cache definition
-- reuses the proven Construction immediate-render seam
-- loads a per-call GFX 4187 model clone with `0x80000` colour-copy isolation
-- samples the clone's packed face-colour array when the active renderer exposes `AbstractModel`
-- ignores `0xFFFF` sentinel faces and ranks the remaining colours by face count
-- `Color A` and `Color B` independently call `Model.method1393(...)` on the two most frequent sampled colours
-- A/B use deliberately obvious diagnostic replacement colours only; they are not final hunger/thirst/energy colours
-- Probe Status reports the sampled packed colours/counts and render/recolor state
+Runtime acceptance:
 
-Runtime question:
+- drag-ring color can change independently
+- outer and inner worker rings render simultaneously on each detected worker
+- changing outer scale does not change inner scale
+- changing inner scale does not change outer scale
+- outer/inner color pickers recolor only their own cloned layer
+- Use Original Colors restores native 4171 appearance
+- layered rings remain terrain anchored and disappear with RWS-3 preview when the drag ends
 
-- Do Color A and Color B map cleanly enough to the visible outer/inner rings that those rings can be independently recolored?
-- If yes, GFX 4187 can remain the base visual candidate for selection + worker-needs presentation.
-- If not, do not force the asset; retain the proven custom-render fallback for independent status arcs.
-
-Probe status: IMPLEMENTED / NEEDS RUNTIME TEST.
-
-Requirements:
-
-- preview marker during drag
-- persistent marker after commit
-- removed when deselected
-- no interference with combat reticules
-
-Status: PLANNED
+Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
 ---
 
