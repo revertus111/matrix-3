@@ -4,9 +4,13 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 import com.rs.game.player.Player;
 
@@ -17,6 +21,9 @@ import com.rs.game.player.Player;
  * capacity/projection after one persistent housing bed has been added.
  */
 public final class SettlementHousingCheck {
+
+    private static final Map<String, Snapshot> SNAPSHOTS =
+            new ConcurrentHashMap<String, Snapshot>();
 
     private SettlementHousingCheck() {
     }
@@ -161,6 +168,84 @@ public final class SettlementHousingCheck {
 
         return "PASS: " + state.getHousingSummary()
                 + " | saved=3/runtime=3 | unique worker ids + home slots + projections.";
+    }
+
+    public static String capture(Player player) {
+        if (player == null) {
+            return "FAIL: player is null.";
+        }
+        String live = run(player);
+        if (live == null || !live.startsWith("PASS:")) {
+            return "NOT READY: " + live;
+        }
+        Snapshot snapshot = Snapshot.capture(player.getSettlementState());
+        SNAPSHOTS.put(key(player), snapshot);
+        return "BASELINE SAVED: beds=" + snapshot.bedCount
+                + " | capacity=" + snapshot.capacity
+                + " | workers=" + snapshot.workerSignatures.size() + ".";
+    }
+
+    public static String check(Player player) {
+        if (player == null) {
+            return "FAIL: player is null.";
+        }
+        Snapshot baseline = SNAPSHOTS.get(key(player));
+        if (baseline == null) {
+            return "NOT READY: no Bundle 2.3 housing baseline exists for this login.";
+        }
+
+        String live = run(player);
+        if (live == null || !live.startsWith("PASS:")) {
+            return live;
+        }
+
+        Snapshot current = Snapshot.capture(player.getSettlementState());
+        if (current.bedCount != baseline.bedCount) {
+            return "FAIL: housing bed count changed.";
+        }
+        if (current.capacity != baseline.capacity) {
+            return "FAIL: population capacity changed.";
+        }
+        if (!current.workerSignatures.equals(baseline.workerSignatures)) {
+            return "FAIL: worker ids/definitions/home slots changed.";
+        }
+        return "PASS: housing beds + capacity + Worker #1/#2/#3 identities/home slots survived rebuild; saved=3/runtime=3.";
+    }
+
+    private static String key(Player player) {
+        String username = player.getUsername();
+        return username == null ? "" : username.toLowerCase();
+    }
+
+    private static final class Snapshot {
+        private final int bedCount;
+        private final int capacity;
+        private final List<String> workerSignatures;
+
+        private Snapshot(int bedCount, int capacity, List<String> workerSignatures) {
+            this.bedCount = bedCount;
+            this.capacity = capacity;
+            this.workerSignatures = workerSignatures;
+        }
+
+        private static Snapshot capture(SettlementState state) {
+            List<String> signatures = new ArrayList<String>();
+            for (SettlementWorkerState worker : state.snapshotWorkers()) {
+                if (worker == null) {
+                    continue;
+                }
+                signatures.add(worker.getWorkerId() + ":"
+                        + worker.getDefinitionKey() + ":"
+                        + worker.getHomePlotX() + ":"
+                        + worker.getHomePlotY() + ":"
+                        + worker.getHomePlane());
+            }
+            Collections.sort(signatures);
+            return new Snapshot(
+                    state.getHousingBedCount(),
+                    state.getPopulationCapacity(),
+                    signatures);
+        }
     }
 
     private static void satisfyStarterShelter(SettlementState state) {
