@@ -946,7 +946,7 @@ Runtime acceptance target:
 
 ### Bundle 2.3 — Housing, beds + population capacity
 
-**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
+**Status:** ACTIVE — Patch 2.3.1 RUNTIME VERIFIED; Patch 2.3.2 next
 
 Patch 2.3.1 — persistent bed capacity + Worker #3 foundation:
 
@@ -965,7 +965,7 @@ Runtime acceptance target:
 
 `Self-Test PASS -> Housing Status workers>=3 with beds>=1 -> live Check PASS with saved/runtime counts equal -> Capture housing baseline -> exit/re-enter Check PASS -> logout/relog/re-enter Check PASS`
 
-Runtime evidence already observed before the scalable-gate patch: beds=3, capacity=5 and workers=5/5 survived settlement re-entry. The prior exact-three developer gate rejected this valid state, so the gate is now population-scalable and needs one focused retest.
+Runtime acceptance: VERIFIED. The live settlement persisted beds=3, capacity=5 and workers=5/5 through settlement exit/re-entry and full logout/relog. The scalable gate passed with saved=5/runtime=5 and exact captured worker identities/home slots preserved.
 
 Next Patch 2.3.2:
 - Verify a real bed object asset and bind normal Construction placement/removal to the existing persistent bed-capacity owner without introducing a second housing system.
@@ -1026,13 +1026,13 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Phase status: ACTIVE
 - Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
 - Persistent-runtime bundle: 2.3 — housing, beds + population capacity
-- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
+- Persistent-runtime bundle status: Patch 2.3.1 RUNTIME VERIFIED; Patch 2.3.2 READY
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
-- Approval state: Bundle 2.3 Patch 2.3.1 persistent bed-capacity + Worker #3 foundation is SAP AAA approved and implemented. The housing gate has been hardened to accept any valid population >=3 while preserving exact full-population baseline comparison; runtime acceptance remains.
-- Current checklist item: runtime-test the scalable Bundle 2.3 gate against the existing beds=3, capacity=5, workers=5/5 settlement -> live Check -> capture housing baseline -> exit/re-entry Check -> logout/relog/re-entry Check.
-- Current objective: runtime-prove the scalable housing baseline with the current five-worker settlement, then wire a verified real bed object into normal Construction placement/removal.
+- Approval state: Bundle 2.3 Patch 2.3.1 persistent bed-capacity + Worker #3 foundation is SAP AAA approved and RUNTIME VERIFIED.
+- Current checklist item: Patch 2.3.2 — verify a real bed object asset and bind normal Construction placement/removal to the existing persistent bed-capacity owner.
+- Current objective: wire a verified real bed object into the normal Construction build palette so physical bed placement/removal drives the already-verified housing capacity system.
 
 ## Verification classifications
 
@@ -1083,7 +1083,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 
 ### verified-static
 
-- Bundle 2.3 bed-capacity foundation is verified-static pending final runtime gate: SettlementState schema v9 persists housingBedCount; base shelter capacity 2 gains +1 per bed; recruitment supports multiple recruited-settler records with unique free saved home slots; occupied capacity cannot be removed; live projection continues through existing SettlementInstance ownership for Worker #3+; the developer gate now validates any population >=3, exact capacity=2+beds, saved/runtime count equality, unique ids/homes and exact full-population baseline signatures; no bed art id is assumed.
+- Bundle 2.3 Patch 2.3.1 housing-capacity foundation is VERIFIED at runtime: SettlementState schema v9 persists housingBedCount; base shelter capacity 2 gains +1 per bed; recruitment supports multiple recruited-settler records with unique free saved home slots; occupied capacity cannot be removed; the live five-worker settlement persisted beds=3, capacity=5 and workers=5/5 across exit/re-entry and logout/relog; saved/runtime projection counts remained 5/5 and exact captured worker identities/home slots survived. No bed art id is assumed; normal physical bed placement remains Patch 2.3.2.
 
 
 - Bundle 2.1 population ownership is VERIFIED at runtime: Population Self-Test passed; Worker #2 recruited successfully from the completed shelter capacity; live Population Check reported `workers=2/2`, `saved=2/runtime=2`, unique Worker #1/#2 ids/projections; Worker #2 remained idle under the default-OFF Allowed Jobs policy; logout/relog + settlement re-entry preserved the two-worker population without duplicate runtime projections.
