@@ -927,3 +927,9 @@
 - Restored ConstructionRadialSelection HOVER_STALE_MS used by the existing drag-start validity guard after the RWS-4 ring-style refactor removed its declaration.
 - Removed RailRoutePreview's obsolete dependency on the retired GFX-4187 probe API; enabling rail preview still disables Worker Control and hides conflicting developer previews.
 - Current ConstructionRevampTestPanel already uses the replacement layered GFX-4171 ring-style API, so pulling current main clears the stale local Reticule4187ProbeMode/getReticule4187ProbeStatus errors without reintroducing the old probe.
+
+2026-09-22 - Bundle 2.3 scalable housing acceptance gate
+- Relaxed the live housing check from exactly three workers to any valid population of three or more.
+- Live acceptance now verifies population capacity equals starter 2 + persistent bed count, runtime worker count matches the full saved population, and every saved worker has a live projection with unique id/home ownership.
+- Housing baseline capture/check now preserves and compares the complete current worker set, so valid populations beyond Worker #3 no longer fail the developer gate.
+- No SettlementState, recruitment, worker AI or save ownership changed; this is a test-harness hardening patch after runtime evidence showed beds=3, capacity=5, workers=5/5 surviving settlement re-entry.
