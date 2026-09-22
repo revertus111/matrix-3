@@ -947,3 +947,13 @@
 - Five-worker housing state passed settlement rebuild and full logout/relog persistence with beds=3, capacity=5 and workers=5/5.
 - Scalable housing gate returned PASS with saved=5/runtime=5 and preserved all captured worker identities/home slots.
 - Bundle 2.3 Patch 2.3.1 is runtime VERIFIED; next patch is real bed asset verification plus normal Construction palette placement/removal hookup.
+
+2026-09-22 - Bundle 2.3 physical Bed 14872 placement
+- Added BED as a stable settlement build role and BASIC_BED/basic-bed using runtime-identified object 14872, provisional standard object type 10, 3 Wood cost and 12 base Construction XP.
+- Added Furniture -> Bed to the normal in-game Construction palette; placement reuses the existing ghost/rotation/settlementbuild path.
+- SettlementState now centrally couples persistent BED place/duplicate/remove to the existing housingBedCount owner: physical placement adds +1 capacity and successful removal subtracts it.
+- Bed removal is blocked when the resulting capacity would be below the saved worker population; the persistent object remains in place.
+- Player build transaction rejects housing-bed placement before the starter shelter/no available housing slot and preserves atomic piece/material/capacity rollback.
+- Bundle 2.3 Self-Test now exercises pre-shelter physical-bed rejection, real transaction placement, capacity 2->3, unoccupied removal, occupied-removal guard and serialization.
+- Existing Add/Remove Bed Capacity controls remain developer harnesses only. Bed object type 10 requires live ghost/model acceptance before being promoted from provisional mapping.
+- Bunk bed object 24339 is retained as a future space-efficient housing upgrade candidate after the single-bed path is accepted.
