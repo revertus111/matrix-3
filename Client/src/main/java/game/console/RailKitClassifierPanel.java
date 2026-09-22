@@ -5,12 +5,11 @@ import game.AssetStudioCapture.CaptureBatch;
 import game.AssetStudioCapture.CaptureEntry;
 import game.ObjectLabPreview;
 
-import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.KeyboardFocusManager;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -29,44 +28,41 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.AbstractAction;
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
-import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.AbstractTableModel;
 
 /**
- * Small client-only rail primitive review tool.
+ * Docked Test Console rail primitive review tool.
  *
- * It previews captured/evidence-seeded rail objects through ObjectLabPreview,
- * stores independent visual classifications as checkboxes, and writes the
- * resulting rail kit to a local TSV for later auto-tiler authoring.
+ * The panel is intentionally client-only. It uses ObjectLabPreview for temporary
+ * visual inspection, stores user-reviewed geometry flags locally, and never
+ * registers or mutates a real world object.
  */
-public final class RailKitClassifierWindow {
+public final class RailKitClassifierPanel extends JScrollPane {
+
+    private static final long serialVersionUID = 1L;
 
     private static final Path RAIL_KIT_FILE =
             Paths.get("data/construction/asset_studio/rail_kit.tsv");
 
     /**
-     * VERIFIED from the user's 2026-09-21 Asset Studio evidence captures as
-     * type-22 floor-decoration rail candidates. Exact geometry remains user-
-     * classified by this tool rather than guessed from ids.
+     * VERIFIED from the 2026-09-21 Asset Studio evidence captures as type-22
+     * floor-decoration rail candidates. Geometry is deliberately left for visual
+     * classification rather than inferred from object ids.
      */
     private static final int[] EVIDENCE_SEED_IDS = {
         4770, 4796, 14500, 14501, 14502,
@@ -75,10 +71,6 @@ public final class RailKitClassifierWindow {
         46376, 46378, 46380, 46381, 46382
     };
 
-    private static JFrame frame;
-    private static RailKitClassifierWindow instance;
-
-    private final JPanel root = new JPanel(new BorderLayout());
     private final List<Candidate> candidates = new ArrayList<Candidate>();
     private final Map<String, ClassificationRecord> records =
             new LinkedHashMap<String, ClassificationRecord>();
@@ -86,13 +78,11 @@ public final class RailKitClassifierWindow {
     private final CandidateTableModel tableModel = new CandidateTableModel();
     private final JTable table = new JTable(tableModel);
 
-    private final JLabel progressLabel = valueLabel("0 / 0");
+    private final JLabel progressLabel = valueLabel("0 / 0 classified");
     private final JLabel idLabel = valueLabel("-");
     private final JLabel typeLabel = valueLabel("-");
     private final JLabel nameLabel = valueLabel("-");
     private final JLabel rotationsLabel = valueLabel("-");
-    private final JLabel statusLabel =
-            new JLabel("Double-click a row or use the arrow keys to spawn a preview.");
 
     private final JSpinner previewRotation =
             new JSpinner(new SpinnerNumberModel(0, 0, 3, 1));
@@ -106,68 +96,88 @@ public final class RailKitClassifierWindow {
     private final JCheckBox notRail = check("Not Rail");
     private final JCheckBox unsure = check("Unsure");
 
+    private final JLabel statusLabel =
+            ConsoleTheme.subtitleLabel("Double-click or use arrow keys to spawn the selected preview.");
+
     private Candidate selected;
     private boolean loadingChecks;
 
-    private RailKitClassifierWindow() {
+    public RailKitClassifierPanel() {
         loadRecords();
         buildUi();
-    }
-
-    public static void open(List<CaptureEntry> sourceEntries) {
-        ensureWindow();
-        instance.loadRecords();
-        instance.replaceCandidates(sourceEntries);
-        frame.setVisible(true);
-        frame.toFront();
-        frame.requestFocus();
-        instance.table.requestFocusInWindow();
-    }
-
-    private static void ensureWindow() {
-        if (frame != null) {
-            return;
-        }
-        instance = new RailKitClassifierWindow();
-        frame = new JFrame("Matrix3 Rail Kit Classifier");
-        frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
-        frame.setContentPane(instance.root);
-        frame.setMinimumSize(new Dimension(820, 560));
-        frame.setSize(new Dimension(980, 660));
-        frame.setLocationByPlatform(true);
+        replaceCandidates(null, false);
     }
 
     private void buildUi() {
-        root.setBackground(ConsoleTheme.WINDOW);
-        root.setBorder(ConsoleTheme.panelPadding(14, 14, 14, 14));
+        ViewportWidthPanel content = new ViewportWidthPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(ConsoleTheme.PANEL);
+        content.setBorder(ConsoleTheme.panelPadding(16, 14, 16, 14));
+        content.setMinimumSize(new Dimension(0, 0));
 
-        JPanel header = new JPanel(new BorderLayout());
+        JPanel header = new JPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         header.setOpaque(false);
-        JPanel titles = new JPanel();
-        titles.setOpaque(false);
-        titles.setLayout(new BoxLayout(titles, BoxLayout.Y_AXIS));
-        JLabel title = new JLabel("RAIL KIT CLASSIFIER");
-        title.setFont(ConsoleTheme.TITLE_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        JLabel subtitle = new JLabel(
-                "Double-click / arrow-key browse -> spawn preview -> check every geometry that applies");
-        subtitle.setFont(ConsoleTheme.SMALL_FONT);
-        subtitle.setForeground(ConsoleTheme.ACCENT);
-        titles.add(title);
-        titles.add(Box.createVerticalStrut(3));
-        titles.add(subtitle);
-        header.add(titles, BorderLayout.WEST);
-        progressLabel.setHorizontalAlignment(JLabel.RIGHT);
-        header.add(progressLabel, BorderLayout.EAST);
-        header.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
-        root.add(header, BorderLayout.NORTH);
+        header.setAlignmentX(LEFT_ALIGNMENT);
+        header.add(ConsoleTheme.titleLabel("RAIL CLASSIFIER"));
+        header.add(Box.createVerticalStrut(3));
+        header.add(ConsoleTheme.subtitleLabel(
+                "Review rails beside the game: refresh -> double-click/arrow -> classify."));
+        header.add(Box.createVerticalStrut(4));
+        progressLabel.setAlignmentX(LEFT_ALIGNMENT);
+        header.add(progressLabel);
+        content.add(header);
+        content.add(Box.createVerticalStrut(12));
+
+        content.add(createCandidateCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createSelectedCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createPreviewCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createClassificationCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createStatusCard());
+        content.add(Box.createVerticalGlue());
+
+        bindCheckbox(straight);
+        bindCheckbox(curve);
+        bindCheckbox(merge);
+        bindCheckbox(split);
+        bindCheckbox(endBuffer);
+        bindCheckbox(crossing);
+        bindCheckbox(notRail);
+        bindCheckbox(unsure);
+        installNavigationBindings();
+
+        setViewportView(content);
+        setHorizontalScrollBarPolicy(HORIZONTAL_SCROLLBAR_NEVER);
+        setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_AS_NEEDED);
+        ConsoleTheme.styleScrollPane(this);
+    }
+
+    private JPanel createCandidateCard() {
+        JPanel card = ConsoleTheme.createCard("Rail candidates");
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createWrappedText(
+                "27 evidence-seeded rail ids are always available. Refresh Live 9x9 Rails merges exact "
+                + "ids/types/rotations from the scene around your player without opening Asset Studio.",
+                4));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton refresh = button("Refresh Live 9x9 Rails");
+        refresh.addActionListener(e -> refreshLiveRails());
+        refresh.setAlignmentX(LEFT_ALIGNMENT);
+        refresh.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        card.add(refresh);
+        card.add(Box.createVerticalStrut(8));
 
         table.setFillsViewportHeight(true);
         table.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         table.setBackground(ConsoleTheme.CARD);
         table.setForeground(ConsoleTheme.TEXT);
         table.setGridColor(ConsoleTheme.BORDER);
-        table.setRowHeight(25);
+        table.setRowHeight(24);
         table.getSelectionModel().addListSelectionListener(this::selectionChanged);
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -178,66 +188,51 @@ public final class RailKitClassifierWindow {
             }
         });
 
-        JScrollPane scroll = new JScrollPane(table);
-        ConsoleTheme.styleScrollPane(scroll);
-
-        JPanel listCard = ConsoleTheme.createCard("Rail candidates");
-        listCard.setLayout(new BorderLayout(0, 8));
-        JLabel help = smallLabel(
-                "Seeded from captured evidence; new Asset Studio rail candidates are merged automatically.");
-        listCard.add(help, BorderLayout.NORTH);
-        listCard.add(scroll, BorderLayout.CENTER);
-
-        JPanel detail = buildDetailPanel();
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listCard, detail);
-        splitPane.setResizeWeight(0.57);
-        splitPane.setDividerLocation(520);
-        splitPane.setBorder(null);
-        root.add(splitPane, BorderLayout.CENTER);
-
-        statusLabel.setFont(ConsoleTheme.SMALL_FONT);
-        statusLabel.setForeground(ConsoleTheme.MUTED_TEXT);
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(8, 2, 0, 2));
-        root.add(statusLabel, BorderLayout.SOUTH);
-
-        bindCheckbox(straight);
-        bindCheckbox(curve);
-        bindCheckbox(merge);
-        bindCheckbox(split);
-        bindCheckbox(endBuffer);
-        bindCheckbox(crossing);
-        bindCheckbox(notRail);
-        bindCheckbox(unsure);
-
-        installNavigationBindings();
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setAlignmentX(LEFT_ALIGNMENT);
+        tableScroll.setPreferredSize(new Dimension(240, 210));
+        tableScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 230));
+        ConsoleTheme.styleScrollPane(tableScroll);
+        card.add(tableScroll);
+        card.add(Box.createVerticalStrut(6));
+        card.add(ConsoleTheme.createWrappedText(
+                "Double-click = spawn preview.  Left/Up = previous + spawn.  Right/Down = next + spawn.",
+                3));
+        return card;
     }
 
-    private JPanel buildDetailPanel() {
-        JPanel detail = new JPanel();
-        detail.setLayout(new BoxLayout(detail, BoxLayout.Y_AXIS));
-        detail.setBackground(ConsoleTheme.WINDOW);
+    private JPanel createSelectedCard() {
+        JPanel card = ConsoleTheme.createCard("Selected rail");
+        card.add(Box.createVerticalStrut(8));
 
-        JPanel identity = ConsoleTheme.createCard("Selected rail");
-        identity.add(Box.createVerticalStrut(8));
-        JPanel identityGrid = new JPanel(new GridLayout(4, 2, 8, 6));
-        identityGrid.setOpaque(false);
-        addRow(identityGrid, "ID", idLabel);
-        addRow(identityGrid, "Type", typeLabel);
-        addRow(identityGrid, "Name", nameLabel);
-        addRow(identityGrid, "Observed rotations", rotationsLabel);
-        identity.add(identityGrid);
+        JPanel grid = new JPanel(new GridLayout(4, 2, 6, 5));
+        grid.setOpaque(false);
+        grid.setAlignmentX(LEFT_ALIGNMENT);
+        addRow(grid, "ID", idLabel);
+        addRow(grid, "Type", typeLabel);
+        addRow(grid, "Name", nameLabel);
+        addRow(grid, "Seen rot", rotationsLabel);
+        card.add(grid);
+        return card;
+    }
 
-        JPanel preview = ConsoleTheme.createCard("Spawn preview");
-        preview.add(Box.createVerticalStrut(8));
-        JPanel rotationRow = new JPanel(new BorderLayout(7, 0));
+    private JPanel createPreviewCard() {
+        JPanel card = ConsoleTheme.createCard("Spawn preview");
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel rotationRow = new JPanel(new GridLayout(1, 2, 6, 0));
         rotationRow.setOpaque(false);
-        rotationRow.add(smallLabel("Preview rotation"), BorderLayout.WEST);
-        rotationRow.add(previewRotation, BorderLayout.CENTER);
-        preview.add(rotationRow);
-        preview.add(Box.createVerticalStrut(7));
+        rotationRow.setAlignmentX(LEFT_ALIGNMENT);
+        rotationRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        rotationRow.add(smallLabel("Rotation"));
+        rotationRow.add(previewRotation);
+        card.add(rotationRow);
+        card.add(Box.createVerticalStrut(7));
 
-        JPanel rotationButtons = new JPanel(new GridLayout(1, 4, 6, 0));
+        JPanel rotationButtons = new JPanel(new GridLayout(1, 4, 5, 0));
         rotationButtons.setOpaque(false);
+        rotationButtons.setAlignmentX(LEFT_ALIGNMENT);
+        rotationButtons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         for (int rotation = 0; rotation < 4; rotation++) {
             final int value = rotation;
             JButton button = button("R" + rotation);
@@ -247,8 +242,8 @@ public final class RailKitClassifierWindow {
             });
             rotationButtons.add(button);
         }
-        preview.add(rotationButtons);
-        preview.add(Box.createVerticalStrut(7));
+        card.add(rotationButtons);
+        card.add(Box.createVerticalStrut(7));
 
         JButton spawn = button("Spawn Preview");
         JButton hide = button("Hide Preview");
@@ -257,22 +252,28 @@ public final class RailKitClassifierWindow {
             ObjectLabPreview.hide();
             setStatus("Preview hidden.");
         });
-        JPanel previewActions = new JPanel(new GridLayout(1, 2, 7, 0));
-        previewActions.setOpaque(false);
-        previewActions.add(spawn);
-        previewActions.add(hide);
-        preview.add(previewActions);
 
-        JPanel classify = ConsoleTheme.createCard("Geometry classification");
-        classify.add(Box.createVerticalStrut(8));
-        JLabel instruction = smallLabel(
-                "Independent checkboxes: check every role that visually applies. Changes save instantly.");
-        instruction.setAlignmentX(Component.LEFT_ALIGNMENT);
-        classify.add(instruction);
-        classify.add(Box.createVerticalStrut(8));
+        JPanel actions = new JPanel(new GridLayout(1, 2, 6, 0));
+        actions.setOpaque(false);
+        actions.setAlignmentX(LEFT_ALIGNMENT);
+        actions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        actions.add(spawn);
+        actions.add(hide);
+        card.add(actions);
+        return card;
+    }
 
-        JPanel checks = new JPanel(new GridLayout(4, 2, 8, 6));
+    private JPanel createClassificationCard() {
+        JPanel card = ConsoleTheme.createCard("Geometry classification");
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createWrappedText(
+                "Independent checkboxes. Check every role that visually applies; check/uncheck saves instantly.",
+                3));
+        card.add(Box.createVerticalStrut(7));
+
+        JPanel checks = new JPanel(new GridLayout(0, 2, 5, 5));
         checks.setOpaque(false);
+        checks.setAlignmentX(LEFT_ALIGNMENT);
         checks.add(straight);
         checks.add(curve);
         checks.add(merge);
@@ -281,45 +282,63 @@ public final class RailKitClassifierWindow {
         checks.add(crossing);
         checks.add(notRail);
         checks.add(unsure);
-        classify.add(checks);
-
-        classify.add(Box.createVerticalStrut(8));
-        JLabel savePath = smallLabel("Auto-saves: Client/data/construction/asset_studio/rail_kit.tsv");
-        savePath.setAlignmentX(Component.LEFT_ALIGNMENT);
-        classify.add(savePath);
-
-        JPanel navigation = ConsoleTheme.createCard("Browse");
-        navigation.add(Box.createVerticalStrut(8));
-        JButton previous = button("< Previous");
-        JButton next = button("Next >");
-        previous.addActionListener(e -> moveSelection(-1, true));
-        next.addActionListener(e -> moveSelection(1, true));
-        JPanel browseButtons = new JPanel(new GridLayout(1, 2, 7, 0));
-        browseButtons.setOpaque(false);
-        browseButtons.add(previous);
-        browseButtons.add(next);
-        navigation.add(browseButtons);
-        navigation.add(Box.createVerticalStrut(6));
-        JLabel keyHelp = smallLabel("Arrow keys: Left/Up = previous, Right/Down = next + spawn.");
-        keyHelp.setAlignmentX(Component.LEFT_ALIGNMENT);
-        navigation.add(keyHelp);
-
-        detail.add(identity);
-        detail.add(Box.createVerticalStrut(10));
-        detail.add(preview);
-        detail.add(Box.createVerticalStrut(10));
-        detail.add(classify);
-        detail.add(Box.createVerticalStrut(10));
-        detail.add(navigation);
-        return detail;
+        card.add(checks);
+        card.add(Box.createVerticalStrut(7));
+        card.add(ConsoleTheme.createWrappedText(
+                "Auto-save: Client/data/construction/asset_studio/rail_kit.tsv", 2));
+        return card;
     }
 
-    private void replaceCandidates(List<CaptureEntry> sourceEntries) {
+    private JPanel createStatusCard() {
+        JPanel card = ConsoleTheme.createCard("Rail classifier status");
+        card.add(Box.createVerticalStrut(8));
+        statusLabel.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(statusLabel);
+        return card;
+    }
+
+    private void refreshLiveRails() {
+        CaptureBatch batch = AssetStudioCapture.capturePlayerArea(4);
+        if (batch == null || !batch.isSuccess()) {
+            setStatus("9x9 rail refresh failed: "
+                    + (batch == null ? "live player/scene unavailable" : batch.getError()));
+            return;
+        }
+
+        int before = candidates.size();
+        replaceCandidates(batch.getEntries(), true);
+        int railRows = 0;
+        for (CaptureEntry entry : batch.getEntries()) {
+            if (entry != null && entry.isRailCandidate()) {
+                railRows++;
+            }
+        }
+        setStatus("Live 9x9 refresh: " + railRows + " rail candidate row(s), "
+                + Math.max(0, candidates.size() - before) + " new id/type candidate(s).");
+    }
+
+    private void replaceCandidates(List<CaptureEntry> sourceEntries, boolean preserveSelection) {
+        String selectedKey = selected == null ? null : selected.key();
         Map<String, Candidate> merged = new LinkedHashMap<String, Candidate>();
 
         for (int id : EVIDENCE_SEED_IDS) {
             Candidate candidate = new Candidate(id, 22, "id-" + id);
+            ClassificationRecord saved = records.get(candidate.key());
+            if (saved != null) {
+                candidate.name = saved.name == null || saved.name.trim().isEmpty()
+                        ? candidate.name : saved.name;
+                candidate.addRotationText(saved.observedRotations);
+            }
             merged.put(candidate.key(), candidate);
+        }
+
+        for (ClassificationRecord saved : records.values()) {
+            String key = saved.key();
+            if (!merged.containsKey(key)) {
+                Candidate candidate = new Candidate(saved.id, saved.type, saved.name);
+                candidate.addRotationText(saved.observedRotations);
+                merged.put(key, candidate);
+            }
         }
 
         if (sourceEntries != null) {
@@ -361,9 +380,18 @@ public final class RailKitClassifierWindow {
         tableModel.fireTableDataChanged();
         updateProgress();
 
+        int rowToSelect = 0;
+        if (preserveSelection && selectedKey != null) {
+            for (int i = 0; i < candidates.size(); i++) {
+                if (selectedKey.equals(candidates.get(i).key())) {
+                    rowToSelect = i;
+                    break;
+                }
+            }
+        }
         if (!candidates.isEmpty()) {
-            table.setRowSelectionInterval(0, 0);
-            table.scrollRectToVisible(table.getCellRect(0, 0, true));
+            table.setRowSelectionInterval(rowToSelect, rowToSelect);
+            table.scrollRectToVisible(table.getCellRect(rowToSelect, 0, true));
         } else {
             setSelected(null);
         }
@@ -402,6 +430,7 @@ public final class RailKitClassifierWindow {
             typeLabel.setText(Integer.toString(candidate.type));
             nameLabel.setText(candidate.name);
             rotationsLabel.setText(candidate.rotationsText());
+
             int restoredRotation = record.updatedAt == null || record.updatedAt.length() == 0
                     ? candidate.preferredRotation()
                     : record.lastPreviewRotation;
@@ -447,7 +476,8 @@ public final class RailKitClassifierWindow {
         tableModel.fireTableDataChanged();
         updateProgress();
         setStatus(error == null
-                ? "Saved " + selected.id + ": " + record.summary()
+                ? "Saved ID " + selected.id + ": "
+                        + (record.summary().length() == 0 ? "no classifications" : record.summary())
                 : error);
     }
 
@@ -472,23 +502,26 @@ public final class RailKitClassifierWindow {
         ClassificationRecord record = recordFor(candidate);
         record.lastPreviewRotation = rotation;
         record.updatedAt = timestamp();
-        saveRecords();
+        String saveError = saveRecords();
 
-        setStatus("Spawned client-only preview: ID " + candidate.id
-                + " type " + candidate.type + " rot " + rotation
-                + " at player +3 X. " + ObjectLabPreview.getStatus());
+        setStatus(saveError == null
+                ? "Preview ID " + candidate.id + " type " + candidate.type + " rot " + rotation
+                        + " at player +3 X. " + ObjectLabPreview.getStatus()
+                : saveError);
     }
 
     private void moveSelection(int delta, boolean preview) {
         if (candidates.isEmpty()) {
             return;
         }
+
         int row = table.getSelectedRow();
         if (row < 0) {
             row = delta < 0 ? candidates.size() - 1 : 0;
         } else {
             row = Math.max(0, Math.min(candidates.size() - 1, row + delta));
         }
+
         table.setRowSelectionInterval(row, row);
         table.scrollRectToVisible(table.getCellRect(row, 0, true));
         if (preview) {
@@ -504,9 +537,13 @@ public final class RailKitClassifierWindow {
     }
 
     private void bindNavigation(String actionKey, int keyCode, final int delta) {
-        root.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-                .put(KeyStroke.getKeyStroke(keyCode, 0), actionKey);
-        root.getActionMap().put(actionKey, new AbstractAction() {
+        KeyStroke keyStroke = KeyStroke.getKeyStroke(keyCode, 0);
+
+        getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+                .put(keyStroke, actionKey);
+        table.getInputMap(JComponent.WHEN_FOCUSED).put(keyStroke, actionKey);
+
+        AbstractAction action = new AbstractAction() {
             private static final long serialVersionUID = 1L;
 
             @Override
@@ -519,17 +556,19 @@ public final class RailKitClassifierWindow {
                 }
                 moveSelection(delta, true);
             }
-        });
+        };
+
+        getActionMap().put(actionKey, action);
+        table.getActionMap().put(actionKey, action);
     }
 
     private ClassificationRecord recordFor(Candidate candidate) {
-        String key = candidate.key();
-        ClassificationRecord record = records.get(key);
+        ClassificationRecord record = records.get(candidate.key());
         if (record == null) {
             record = new ClassificationRecord(candidate.id, candidate.type);
             record.name = candidate.name;
             record.observedRotations = candidate.rotationsText();
-            records.put(key, record);
+            records.put(record.key(), record);
         }
         return record;
     }
@@ -539,6 +578,7 @@ public final class RailKitClassifierWindow {
         if (!Files.exists(RAIL_KIT_FILE)) {
             return;
         }
+
         try {
             List<String> lines = Files.readAllLines(RAIL_KIT_FILE, StandardCharsets.UTF_8);
             for (String line : lines) {
@@ -546,10 +586,12 @@ public final class RailKitClassifierWindow {
                         || line.startsWith("#") || line.startsWith("id\t")) {
                     continue;
                 }
+
                 String[] parts = line.split("\t", -1);
                 if (parts.length < 14) {
                     continue;
                 }
+
                 try {
                     int id = Integer.parseInt(parts[0]);
                     int type = Integer.parseInt(parts[1]);
@@ -568,7 +610,7 @@ public final class RailKitClassifierWindow {
                     record.updatedAt = parts[13];
                     records.put(record.key(), record);
                 } catch (NumberFormatException ignored) {
-                    // Skip malformed user-edited rows while retaining valid rows.
+                    // Skip malformed user-edited rows while preserving valid rows.
                 }
             }
         } catch (Exception ex) {
@@ -579,6 +621,7 @@ public final class RailKitClassifierWindow {
     private String saveRecords() {
         try {
             Files.createDirectories(RAIL_KIT_FILE.getParent());
+
             List<ClassificationRecord> ordered =
                     new ArrayList<ClassificationRecord>(records.values());
             Collections.sort(ordered, new Comparator<ClassificationRecord>() {
@@ -592,7 +635,7 @@ public final class RailKitClassifierWindow {
             });
 
             List<String> lines = new ArrayList<String>();
-            lines.add("# Matrix3 Asset Studio rail kit classifier");
+            lines.add("# Matrix3 Test Console rail kit classifier");
             lines.add("# Independent geometry flags are user-reviewed visual evidence.");
             lines.add("id\ttype\tname\tobservedRotations\tstraight\tcurve\tmerge\tsplit"
                     + "\tendBuffer\tcrossing\tnotRail\tunsure\tlastPreviewRotation\tupdatedAt");
@@ -605,6 +648,7 @@ public final class RailKitClassifierWindow {
                         + record.notRail + "\t" + record.unsure + "\t"
                         + record.lastPreviewRotation + "\t" + safe(record.updatedAt));
             }
+
             Files.write(RAIL_KIT_FILE, lines, StandardCharsets.UTF_8);
             return null;
         } catch (Exception ex) {
@@ -623,15 +667,16 @@ public final class RailKitClassifierWindow {
         progressLabel.setText(classified + " / " + candidates.size() + " classified");
     }
 
-    private void setStatus(String text) {
-        statusLabel.setText(text == null ? "" : text);
+    private void setStatus(String message) {
+        statusLabel.setText(message == null ? "" : message);
     }
 
     private static JCheckBox check(String text) {
         JCheckBox box = new JCheckBox(text);
         box.setOpaque(false);
         box.setForeground(ConsoleTheme.TEXT);
-        box.setFocusable(true);
+        box.setFont(ConsoleTheme.BODY_FONT);
+        box.setFocusable(false);
         return box;
     }
 
@@ -689,7 +734,7 @@ public final class RailKitClassifierWindow {
 
     private final class CandidateTableModel extends AbstractTableModel {
         private static final long serialVersionUID = 1L;
-        private final String[] columns = {"ID", "Type", "Seen rot", "Classification"};
+        private final String[] columns = {"ID", "Rot", "Class"};
 
         @Override
         public int getRowCount() {
@@ -711,17 +756,20 @@ public final class RailKitClassifierWindow {
             Candidate candidate = candidates.get(rowIndex);
             ClassificationRecord record = records.get(candidate.key());
             switch (columnIndex) {
-            case 0: return Integer.valueOf(candidate.id);
-            case 1: return Integer.valueOf(candidate.type);
-            case 2: return candidate.rotationsText();
-            case 3: return record == null ? "" : record.summary();
-            default: return "";
+            case 0:
+                return Integer.valueOf(candidate.id);
+            case 1:
+                return candidate.rotationsText();
+            case 2:
+                return record == null ? "" : record.summary();
+            default:
+                return "";
             }
         }
 
         @Override
         public Class<?> getColumnClass(int columnIndex) {
-            return columnIndex == 0 || columnIndex == 1 ? Integer.class : String.class;
+            return columnIndex == 0 ? Integer.class : String.class;
         }
     }
 
@@ -738,11 +786,24 @@ public final class RailKitClassifierWindow {
         }
 
         private String key() {
-            return RailKitClassifierWindow.key(id, type);
+            return RailKitClassifierPanel.key(id, type);
         }
 
         private void addRotation(int rotation) {
             rotationMask |= 1 << (rotation & 0x3);
+        }
+
+        private void addRotationText(String rotations) {
+            if (rotations == null || rotations.trim().isEmpty() || "-".equals(rotations.trim())) {
+                return;
+            }
+            String[] values = rotations.split(",");
+            for (String value : values) {
+                try {
+                    addRotation(Integer.parseInt(value.trim()));
+                } catch (NumberFormatException ignored) {
+                }
+            }
         }
 
         private int preferredRotation() {
@@ -791,7 +852,7 @@ public final class RailKitClassifierWindow {
         }
 
         private String key() {
-            return RailKitClassifierWindow.key(id, type);
+            return RailKitClassifierPanel.key(id, type);
         }
 
         private boolean hasAnyClassification() {
@@ -809,9 +870,7 @@ public final class RailKitClassifierWindow {
             if (crossing) values.add("CROSSING");
             if (notRail) values.add("NOT_RAIL");
             if (unsure) values.add("UNSURE");
-            if (values.isEmpty()) {
-                return "";
-            }
+
             StringBuilder builder = new StringBuilder();
             for (String value : values) {
                 if (builder.length() > 0) {
@@ -820,6 +879,41 @@ public final class RailKitClassifierWindow {
                 builder.append(value);
             }
             return builder.toString();
+        }
+    }
+
+    private static final class ViewportWidthPanel extends JPanel
+            implements javax.swing.Scrollable {
+
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(
+                Rectangle visibleRect, int orientation, int direction) {
+            return 16;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(
+                Rectangle visibleRect, int orientation, int direction) {
+            int extent = orientation == SwingConstants.VERTICAL
+                    ? visibleRect.height : visibleRect.width;
+            return Math.max(16, extent - 16);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
         }
     }
 }

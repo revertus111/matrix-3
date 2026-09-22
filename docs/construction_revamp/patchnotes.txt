@@ -826,3 +826,12 @@
 - Worker #1 Forager and Worker #2 Lumberjack operate independently against separate Food/Wood storage.
 - Wood reaches 100/100 without a worker becoming stranded carrying excess Wood; Food continues independently.
 - This closes role-preset/concurrent-production/final-slot runtime acceptance. Remaining Bundle 2.2 gate is baseline capture plus rebuild/relog persistence.
+
+2026-09-21 - Dock Rail Classifier inside Client Console Test tab
+- Replaced the standalone RailKitClassifierWindow with a narrow RailKitClassifierPanel owned by Client Console -> Test -> Rail Classifier.
+- Added Rail Classifier as a lazy-loaded Test Console sub-tab directly after Con Revamp; no classifier JFrame opens anymore.
+- Removed Open Rail Classifier from the external Asset Studio window so the classification workflow has one canonical UI owner.
+- Added Refresh Live 9x9 Rails inside the docked classifier; it uses the existing read-only AssetStudioCapture path and merges exact live rail id/type/rotation evidence without opening Asset Studio.
+- Preserved double-click preview, Left/Up previous+spawn, Right/Down next+spawn, R0-R3, Spawn/Hide Preview, independent geometry checkboxes and immediate rail_kit.tsv persistence.
+- Layout is rebuilt for the narrow resizable Client Console dock so the game stays visible beside the classifier on smaller monitors.
+- No server, collision, cache, scene-registration, save-schema or gameplay rail-placement ownership changed.
