@@ -820,3 +820,9 @@
 - Detected workers receive a temporary small GFX 4171 marker while the drag is active; Radial Status reports count + runtime NPC indexes.
 - Persistent worker-ID mapping, final selection state and server validation remain deferred to RWS-5.
 - No server, worker AI, combat target, persistence or cache-definition behavior changed.
+
+2026-09-21 - Bundle 2.2 concurrent production + final-slot runtime verified
+- User confirmed the Forager/Lumberjack concurrent-production scenario works correctly at runtime.
+- Worker #1 Forager and Worker #2 Lumberjack operate independently against separate Food/Wood storage.
+- Wood reaches 100/100 without a worker becoming stranded carrying excess Wood; Food continues independently.
+- This closes role-preset/concurrent-production/final-slot runtime acceptance. Remaining Bundle 2.2 gate is baseline capture plus rebuild/relog persistence.
