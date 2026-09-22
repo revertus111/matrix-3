@@ -418,7 +418,13 @@ Requirements:
 - workers outside the circle are not preview-marked
 - preview markers disappear when the active drag ends
 
-Status: IMPLEMENTED / NEEDS RUNTIME TEST
+Status: RUNTIME VERIFIED
+
+Runtime evidence:
+
+- live screenshot verified both active settlement workers detected simultaneously inside the large RWS-2 circle
+- each detected worker received the temporary small GFX 4171 preview marker
+- the large radial selector and per-worker preview markers rendered together correctly
 
 ---
 
