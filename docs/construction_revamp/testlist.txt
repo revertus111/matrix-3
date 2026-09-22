@@ -473,3 +473,16 @@ Matrix3 Asset Studio paired evidence capture — IMPLEMENTED / NEEDS RUNTIME TES
 [ ] Screenshot capture works at the user's normal Windows display scaling/monitor setup and captures the Matrix3 canvas rather than the Asset Studio window or entire desktop.
 [ ] Evidence capture does not move, rotate, replace, attach, delete or change collision/cache/persistence for any world object.
 [ ] Uploading the paired PNG + TSV is sufficient to identify/classify rail primitives without manually transcribing IDs, rotations or object types.
+
+Matrix3 Asset Studio Rail Kit Classifier — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Asset Studio -> Open Rail Classifier opens a compact classifier with the 27 evidence-seeded rail ids even if the current Asset Studio session is empty.
+[ ] Any additional current-session rail candidate not already in the seed list appears once by id/type and contributes its observed rotations.
+[ ] Double-click a candidate row: that exact id/type direct-renders as a client-only preview three tiles +X from the live player.
+[ ] With the classifier focused, Left/Up moves to the previous candidate and Right/Down moves to the next candidate; every arrow navigation immediately spawns the selected preview.
+[ ] Arrow navigation does not hijack the preview-rotation spinner while its editor has focus.
+[ ] R0/R1/R2/R3 redraw the selected candidate at the requested rotation; Spawn Preview and Hide Preview work independently.
+[ ] Straight, Curve, Merge, Split, End/Buffer, Crossing, Not Rail and Unsure are independent checkboxes and can be checked/unchecked in any combination.
+[ ] Every checkbox change immediately updates Client/data/construction/asset_studio/rail_kit.tsv without requiring a separate Save action.
+[ ] Closing/reopening the classifier restores saved checkbox state and last preview rotation from rail_kit.tsv.
+[ ] rail_kit.tsv retains id/type/name/observedRotations plus all eight geometry flags, lastPreviewRotation and updatedAt.
+[ ] Preview/classification actions do not attach, move, rotate, replace, delete, clip or persist any live world object.

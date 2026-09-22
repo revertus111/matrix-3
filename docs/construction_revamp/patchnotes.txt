@@ -790,3 +790,12 @@
 2026-09-21 - Asset Studio evidence pair write hardening
 - Replaced the partial atomic-move fallback with fail-clean pair finalization: if either PNG/TSV final move fails, both final outputs are removed and temp files are cleaned.
 - Prevents a rare half-pair/missing-temp state while preserving deterministic capture numbering and read-only scene ownership.
+
+2026-09-21 - Asset Studio Rail Kit Classifier
+- Added Open Rail Classifier to Asset Studio.
+- Classifier seeds the 27 type-22 rail candidate ids established by the 2026-09-21 evidence captures and merges any additional rail candidates present in the current Asset Studio session.
+- Double-clicking a candidate spawns a client-only ObjectLabPreview beside the live player; Left/Up and Right/Down arrow keys move previous/next and immediately spawn the new selection.
+- Added rotation 0-3 preview buttons plus explicit Spawn Preview / Hide Preview controls; no world object, collision, cache or server mutation is used.
+- Geometry is recorded through independent Straight, Curve, Merge, Split, End/Buffer, Crossing, Not Rail and Unsure checkboxes; checking or unchecking any box saves immediately.
+- Classifications persist locally to Client/data/construction/asset_studio/rail_kit.tsv with id/type/name/observed rotations, every geometry flag, last preview rotation and update timestamp.
+- Merge and Split are intentionally independent flags so a visually symmetric turnout can be marked for both roles without forcing premature topology semantics.

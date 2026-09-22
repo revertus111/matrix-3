@@ -226,12 +226,16 @@ public final class ObjectLabWindow {
         JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         row2.setOpaque(false);
         JButton evidence = button("Capture / Log Rail Evidence");
+        JButton classifier = button("Open Rail Classifier");
         JButton export = button("Export Session");
         JButton clear = button("Clear Session");
         evidence.addActionListener(e -> captureEvidence());
+        classifier.addActionListener(e ->
+                RailKitClassifierWindow.open(new ArrayList<CaptureEntry>(entries)));
         export.addActionListener(e -> exportSession());
         clear.addActionListener(e -> clearSession());
         row2.add(evidence);
+        row2.add(classifier);
         row2.add(export);
         row2.add(clear);
         row2.add(railOnly);
