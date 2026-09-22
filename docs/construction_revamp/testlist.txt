@@ -350,10 +350,23 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Logout/relog + re-enter then Check 2-Worker Baseline returned PASS with both identities/jobs/needs/progression and Construction XP preserved.
 
 Phase 2 Bundle 2.3 — housing, beds + population capacity
-[READY / NEXT]
-[ ] Define persistent housing/bed capacity ownership without replacing existing worker identity/state owners.
-[ ] Prove a minimal housing/bed addition can raise population capacity above the starter cap of 2.
-[ ] Recruit/project one additional worker through the expanded capacity and verify stable-id persistence across re-entry/relog.
+[IMPLEMENTED / NEEDS RUNTIME TEST]
+[x] Persistent owner: SettlementState schema v9 owns housingBedCount; starter shelter capacity remains 2 and each housing bed adds +1 through getPopulationCapacity().
+[x] Removal guard: occupied bed capacity cannot be removed below the current persistent worker count.
+[x] Recruitment generalization: multiple RECRUITED_SETTLER workers are allowed up to capacity and receive unique free plot-relative home slots instead of reusing Worker #2's slot.
+[x] Runtime reservation source: actual saved worker home tiles are protected from later settlement placement/move/duplicate operations.
+[x] Disposable Bundle 2.3 Self-Test covers locked-before-shelter, capacity 2 -> 3, Worker #3 unique id/home, default jobs OFF/unpaused, removal guard and serialization.
+[x] Live Bundle 2.3 Check requires beds>=1, capacity>=3, exactly saved=3/runtime=3 and unique worker ids/home slots/projections.
+[x] Worker #3 baseline/check compares bed count, population capacity and exact worker id/definition/home signatures across rebuild/relog.
+[-] Art boundary: Add/Remove Bed Capacity are developer harness controls. No unverified bed object id is stored in SettlementBuildPiece.
+[ ] Bundle 2.3 Self-Test returns PASS.
+[ ] Housing Status before adding a bed reports beds=0, workers=2/2 and recruitment=FULL.
+[ ] Add Bed Capacity reports beds=1, capacity=3, workers=2/3 and recruitment=READY.
+[ ] Recruit Next Worker creates Worker #3; Bundle 2.3 Check returns PASS with saved=3/runtime=3 and unique homes.
+[ ] Capture W3 Baseline succeeds.
+[ ] Exit/re-enter then Check W3 Baseline returns PASS with saved=3/runtime=3.
+[ ] Logout/relog + re-enter then Check W3 Baseline returns PASS with the same Worker #1/#2/#3 identity/home signatures and bed capacity.
+[ ] Patch 2.3.2: verify a real bed asset and bind normal Construction placement/removal to the existing bed-capacity owner.
 
 Phase 2 side slice — Radial Worker Selection RWS-1
 [RUNTIME VERIFIED]
