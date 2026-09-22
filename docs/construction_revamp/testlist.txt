@@ -537,3 +537,25 @@ Matrix3 A->B Rail Route Preview V1 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Switch X then Y / Y then X for the same endpoints; the bend moves to the opposite Manhattan corner and receives the corresponding curve orientation.
 [ ] Pure horizontal or pure vertical routes use only straight rails and do not inject a curve.
 [ ] Clear/Disable/Escape behavior from V0 remains unchanged.
+
+Matrix3 Test Console Object Explorer — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] UI ownership: Object Explorer is a lazy-loaded Client Console -> Test sub-tab; no standalone JFrame is introduced.
+[x] Definition ownership: named search reuses Matrix3 DevDefinitionBridge; Prev/Next Definition uses getObjectInfoAny so unnamed cache definitions remain browsable.
+[x] Preview ownership: ObjectCompositePreview uses the proven ObjectDefinitions.method6057 direct-render path and never registers a world object.
+[ ] Test -> Object Explorer opens beside the live game and named search (for example "rail", "track", "wall") returns matching named object definitions as indexing completes.
+[ ] Enter a known unnamed rail ID directly or use Prev/Next Definition around the known 463xx range; unnamed definitions display as id-<id> rather than being skipped.
+[ ] Double-click a search result: the selected object direct-renders at player + configured X/Y offset.
+[ ] Change Type and R0-R3; valid object/type combinations redraw, unsupported combinations fail visually/status-only without mutating the scene.
+[ ] Prev/Next Definition walks the full cache definition range and immediately previews the discovered definition.
+[ ] Add Current to Research TSV appends timestamp/id/name/type/rotation/tag to Client/data/tools/object_explorer.tsv.
+[ ] Hide Preview removes all Object Explorer direct-render geometry.
+
+Matrix3 same-tile object overlay proof — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Source ownership: A+B overlay draws two independent ObjectDefinitions models at the same world coordinate without Class523 registration.
+[x] Scene-slot caveat: this does not claim two type-22 floor decorations can coexist as ordinary registered objects; AssetStudioCapture confirms one floor-decoration field per tile plus separate wall/decor/floor-object ownership.
+[ ] Configure object A and click Set A = Current; configure a different ID/type/rotation and Set B = Current.
+[ ] Preview A + B Same Tile draws both models at exactly one world tile beside the player.
+[ ] Use two rail fragments that appear complementary; determine whether the combined visual can form a compact 1x1 curve/turnout component without unacceptable clipping/z-fighting.
+[ ] Rotate either component and re-snapshot it; overlay proves whether a useful composite can be built from stock cache models.
+[ ] Clear Overlay removes both visual components and resets A/B slots.
+[ ] Overlay preview creates no collision, interaction, persistence, server object or cache mutation.

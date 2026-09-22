@@ -77,6 +77,33 @@ public final class DevDefinitionBridge {
         }
     }
 
+    /**
+     * Object Explorer lookup that preserves unnamed cache definitions.
+     *
+     * The normal Dev Spawn search intentionally filters null/blank names.
+     * Object Explorer must still be able to browse those definitions by ID
+     * because many rail primitives have no useful cache name.
+     */
+    public static DefinitionInfo getObjectInfoAny(int id) {
+        Interface18 definitions = objectDefinitions;
+        if (definitions == null || id < 0 || id >= definitions.method45()) {
+            return null;
+        }
+        try {
+            Interface17 value = definitions.getDefinition(id, 0);
+            if (!(value instanceof ObjectDefinitions)) {
+                return null;
+            }
+            String name = cleanName(((ObjectDefinitions) value).name);
+            if (name == null) {
+                name = "id-" + id;
+            }
+            return new DefinitionInfo(id, name);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
     private static int count(Interface18 definitions) {
         if (definitions == null) {
             return 0;

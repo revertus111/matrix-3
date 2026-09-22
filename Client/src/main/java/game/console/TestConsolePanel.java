@@ -20,18 +20,20 @@ public final class TestConsolePanel extends JPanel {
 
     private static final int TAB_CON_REVAMP = 0;
     private static final int TAB_RAIL_CLASSIFIER = 1;
-    private static final int TAB_CONSTRUCTION = 2;
-    private static final int TAB_PLAYER = 3;
-    private static final int TAB_ITEMS = 4;
-    private static final int TAB_INTERFACES = 5;
-    private static final int TAB_VISUAL_EXPLORER = 6;
-    private static final int TAB_ATLAS = 7;
-    private static final int TAB_BOSS_RESEARCH = 8;
+    private static final int TAB_OBJECT_EXPLORER = 2;
+    private static final int TAB_CONSTRUCTION = 3;
+    private static final int TAB_PLAYER = 4;
+    private static final int TAB_ITEMS = 5;
+    private static final int TAB_INTERFACES = 6;
+    private static final int TAB_VISUAL_EXPLORER = 7;
+    private static final int TAB_ATLAS = 8;
+    private static final int TAB_BOSS_RESEARCH = 9;
 
     private final JTabbedPane tabs = new JTabbedPane();
 
     private JComponent conRevampPanel;
     private JComponent railClassifierPanel;
+    private JComponent objectExplorerPanel;
     private JComponent constructionPanel;
     private JComponent playerPanel;
     private JComponent itemPanel;
@@ -55,6 +57,7 @@ public final class TestConsolePanel extends JPanel {
 
         tabs.addTab("Con Revamp", placeholder());
         tabs.addTab("Rail Classifier", placeholder());
+        tabs.addTab("Object Explorer", placeholder());
         tabs.addTab("Construction", placeholder());
         tabs.addTab("Player", placeholder());
         tabs.addTab("Items", placeholder());
@@ -117,6 +120,11 @@ public final class TestConsolePanel extends JPanel {
                     railClassifierPanel = new RailKitClassifierPanel();
                 }
                 return railClassifierPanel;
+            case TAB_OBJECT_EXPLORER:
+                if (objectExplorerPanel == null) {
+                    objectExplorerPanel = new ObjectExplorerPanel();
+                }
+                return objectExplorerPanel;
             case TAB_CONSTRUCTION:
                 if (constructionPanel == null) {
                     constructionPanel = new ConstructionEditorPanel();

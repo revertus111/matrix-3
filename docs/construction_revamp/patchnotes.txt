@@ -867,3 +867,13 @@
 - Added Use Selected Curve plus a runtime-only Curve map offset R0-R3 control; the offset rotates the whole quadrant mapping without rewriting classifier evidence.
 - If no Curve rail is configured, V1 safely falls back to the previous straight-corner placeholder.
 - Straight-only horizontal/vertical routes remain unchanged and no server/world/collision/persistence ownership is added.
+
+2026-09-22 - Test Console Object Explorer + same-tile overlay proof
+- Added lazy-loaded Test -> Object Explorer for generic Matrix3 object research without opening another window.
+- Reused DevSpawnSearchPanel object-name/ID indexing; double-click now exposes a backward-compatible activation callback so Object Explorer can spawn immediately while existing Spawn Browser consumers remain unchanged.
+- Added DevDefinitionBridge.getObjectInfoAny(...) so Prev/Next Definition can browse unnamed object definitions such as many rail primitives instead of filtering them out because their cache name is blank/null.
+- Object Explorer exposes arbitrary object ID, type 0-22, rotation 0-3 and preview X/Y offset, with R0-R3 quick-spawn buttons and client-only direct rendering.
+- Added research tagging/export to Client/data/tools/object_explorer.tsv.
+- Added ObjectCompositePreview: snapshot A and B from the current controls and direct-render both models on exactly the same world tile.
+- Overlay proof is visual-only and deliberately bypasses Class523 registration/collision/persistence. Matrix3's live scene still has distinct wall/wall-decoration/floor-object slots and one ordinary floor-decoration field per tile; two type-22 floor decorations therefore cannot both occupy that normal slot simultaneously.
+- Rail implication: if two stock fragments visually form a compact one-tile curve in overlay mode, a later settlement-owned logical rail tile can render the composite while preserving parallel one-tile lane spacing, avoiding an immediate custom-cache-model requirement.

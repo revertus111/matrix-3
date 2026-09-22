@@ -175,6 +175,10 @@ public final class DevSpawnSearchPanel extends JPanel {
                 if (index >= 0) {
                     list.setSelectedIndex(index);
                     selectionChanged();
+                    Entry entry = list.getSelectedValue();
+                    if (listener != null && entry != null) {
+                        listener.activated(entry.id, entry.name);
+                    }
                 }
             }
         });
@@ -515,5 +519,10 @@ public final class DevSpawnSearchPanel extends JPanel {
 
     public interface SelectionListener {
         void selected(int id, String name);
+
+        default void activated(int id, String name) {
+            // Existing search consumers only need selection. Object Explorer
+            // overrides this to make double-click spawn the selected object.
+        }
     }
 }
