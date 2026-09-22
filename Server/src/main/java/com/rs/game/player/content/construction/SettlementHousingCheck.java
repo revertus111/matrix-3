@@ -35,6 +35,9 @@ public final class SettlementHousingCheck {
             state.normalize();
             require(state.getHousingBedCount() == 0, "new state bed count is not zero");
             require(!state.addHousingBed(), "bed capacity opened before starter shelter");
+            require(state.place(SettlementBuildPiece.BASIC_BED,
+                    40, 40, SettlementState.PLOT_PLANE, 0) == null,
+                    "physical bed placement opened before starter shelter");
 
             stage = "starter";
             satisfyStarterShelter(state);
