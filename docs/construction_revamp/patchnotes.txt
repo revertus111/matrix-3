@@ -894,3 +894,11 @@
 - RailRoutePreview is now V2: on enable/reload it reads the first saved CURVE composite and uses that at the Manhattan bend, rotating every component together by the corner quadrant plus the existing R0-R3 calibration offset.
 - The previous single-object Curve classification remains a safe fallback only; it is no longer the preferred rail architecture.
 - RailRoutePreview hides Object Explorer composite previews when enabling route mode so developer visuals do not stack accidentally.
+
+
+2026-09-22 - RWS-3 runtime verified
+- User runtime screenshot verified the live radial worker detector with both active settlers inside the large RWS-2 ring.
+- Both detected workers displayed the temporary small GFX 4171 preview marker simultaneously.
+- RWS-3 is promoted to RUNTIME VERIFIED.
+- RWS-2 large-ring geometry remains intact; no server selection or persistent worker-selection state was introduced.
+- Active radial workstream advances to RWS-4 selected-worker visual feedback / GFX 4187 double-ring preflight.
