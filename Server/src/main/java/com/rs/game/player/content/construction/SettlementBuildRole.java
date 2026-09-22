@@ -8,5 +8,6 @@ package com.rs.game.player.content.construction;
 public enum SettlementBuildRole {
     WALL,
     FLOOR,
-    DOOR
+    DOOR,
+    BED
 }
