@@ -319,7 +319,6 @@ public final class RailKitClassifierWindow {
 
         for (int id : EVIDENCE_SEED_IDS) {
             Candidate candidate = new Candidate(id, 22, "id-" + id);
-            candidate.addRotation(0);
             merged.put(candidate.key(), candidate);
         }
 
@@ -403,7 +402,10 @@ public final class RailKitClassifierWindow {
             typeLabel.setText(Integer.toString(candidate.type));
             nameLabel.setText(candidate.name);
             rotationsLabel.setText(candidate.rotationsText());
-            previewRotation.setValue(Integer.valueOf(candidate.preferredRotation()));
+            int restoredRotation = record.updatedAt == null || record.updatedAt.length() == 0
+                    ? candidate.preferredRotation()
+                    : record.lastPreviewRotation;
+            previewRotation.setValue(Integer.valueOf(restoredRotation & 0x3));
 
             straight.setSelected(record.straight);
             curve.setSelected(record.curve);
@@ -763,7 +765,7 @@ public final class RailKitClassifierWindow {
                 }
                 builder.append(rotation);
             }
-            return builder.length() == 0 ? "0" : builder.toString();
+            return builder.length() == 0 ? "-" : builder.toString();
         }
     }
 

@@ -799,3 +799,7 @@
 - Geometry is recorded through independent Straight, Curve, Merge, Split, End/Buffer, Crossing, Not Rail and Unsure checkboxes; checking or unchecking any box saves immediately.
 - Classifications persist locally to Client/data/construction/asset_studio/rail_kit.tsv with id/type/name/observed rotations, every geometry flag, last preview rotation and update timestamp.
 - Merge and Split are intentionally independent flags so a visually symmetric turnout can be marked for both roles without forcing premature topology semantics.
+
+2026-09-21 - Rail Kit Classifier static review cleanup
+- Evidence-seeded ids no longer fabricate observed rotation 0; observedRotations remains '-' until a live Asset Studio session supplies actual captured rotations.
+- Reopening/reselecting a previously reviewed rail restores its persisted lastPreviewRotation; unreviewed rails still default to the first live observed rotation or 0 when none is available.
