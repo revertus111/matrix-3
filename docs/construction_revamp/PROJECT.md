@@ -933,6 +933,13 @@ Patch 2.2.15 — zero-Food hunger bootstrap recovery:
 - Emergency mode forces the Food node instead of rotating through other allowed gather jobs, then ends after the gathered Food is deposited so normal Hunger recovery consumes stored Food on the next cycle.
 - Workers without the Food+Haul policy still stop normally at critical Hunger with no stored Food; Pause, Allowed Jobs ownership, storage reservations, progression and persistence are unchanged.
 
+Patch 2.2.16 — prepared baseline capture:
+
+- Added `SettlementBundle22FinalGate.prepareAndCapture(...)` for the remaining persistence gate.
+- It requires exactly saved=2/runtime=2, then explicitly disables every Allowed Job and resets Needs for both persistent workers before calling the existing authoritative baseline capture.
+- Pause state, identity, progression and Construction XP are not rewritten; they remain part of the captured persistence snapshot.
+- Con Revamp removes already-completed Bundle 2.2 runtime instructions/buttons from the Final Gate card and now exposes only Prepare + Capture Baseline and Check 2-Worker Baseline.
+
 Runtime acceptance target:
 
 `Storage Self-Test PASS -> Reset Storage -> Prime Wood 99/100 -> W1 Forager preset / W2 Lumberjack preset -> final-slot reservation remains race-safe while Food stays independent -> stable baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
@@ -999,7 +1006,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. Role presets, independent concurrent production, final-slot reservation behavior, Pause/Resume, storage controls, Bundle 2.2 Self-Test and zero-Food recovery are runtime VERIFIED. Remaining required gate is the two-worker baseline persistence check: capture -> exit/re-enter -> logout/relog/re-enter.
+- Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. All worker-control/concurrency behavior is runtime VERIFIED. Prepared baseline capture is implemented; remaining required gate is Prepare + Capture -> exit/re-enter Check PASS -> logout/relog/re-enter Check PASS.
 - Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
 
 ## Verification classifications
