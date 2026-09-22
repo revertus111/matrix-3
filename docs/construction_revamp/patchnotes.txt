@@ -942,3 +942,8 @@
 - ObjectCompositePreview now honors each component's relative tile offset while retaining same-tile overlap support.
 - RailRoutePreview V2 rotates saved component offsets together with their model rotations at curve bends, so an accepted authored layout can be reused in all four corner quadrants.
 - No real world objects, collision, server state, cache definitions or settlement persistence are mutated by the authoring lab.
+
+2026-09-22 - Bundle 2.3 housing foundation runtime verified
+- Five-worker housing state passed settlement rebuild and full logout/relog persistence with beds=3, capacity=5 and workers=5/5.
+- Scalable housing gate returned PASS with saved=5/runtime=5 and preserved all captured worker identities/home slots.
+- Bundle 2.3 Patch 2.3.1 is runtime VERIFIED; next patch is real bed asset verification plus normal Construction palette placement/removal hookup.
