@@ -958,3 +958,9 @@
 - Static review removed recursive normalize/helper re-entry from addHousingBed/removeHousingBed; canAdd/canRemove remain the normalized guard owners.
 - Existing Add/Remove Bed Capacity controls remain developer harnesses only. Bed object type 10 requires live ghost/model acceptance before being promoted from provisional mapping.
 - Bunk bed object 24339 is retained as a future space-efficient housing upgrade candidate after the single-bed path is accepted.
+
+2026-09-22 - Bundle 2.3 physical Bed placement/removal runtime pass
+- Runtime screenshot verified two normal Bed 14872 placements through the player build path.
+- Each placement consumed 3 Wood, awarded 12 base Construction XP and increased housing beds/capacity by one: beds 3->4->5, capacity 5->6->7, workers stayed 5.
+- Spare-capacity Bed removal succeeded and reduced beds 5->4 / capacity 7->6 while workers remained 5.
+- Remaining Patch 2.3.2 acceptance is physical-bed rebuild persistence, occupied-capacity live removal rejection, logout/relog persistence and explicit visual/type-10 acceptance if still unconfirmed.
