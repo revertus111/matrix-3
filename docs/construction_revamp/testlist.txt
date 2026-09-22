@@ -368,9 +368,9 @@ Phase 2 Bundle 2.3 — housing, beds + population capacity
 [ ] Pull/start once; Bundle 2.3 Self-Test returns PASS with physical Bed 14872 placement/removal wording.
 [ ] Open the Construction palette -> Furniture; Bed appears and arms the existing white/translucent ghost.
 [ ] Runtime asset/type acceptance: Bed 14872 ghost/model renders correctly with the provisional type-10 mapping at rotations 0-3. If MODEL_NULL/wrong geometry appears, capture the live type instead of guessing a replacement.
-[ ] Place one Bed with at least 3 Wood available; exactly 3 Wood is consumed, 12 base Construction XP is awarded and housing beds/capacity increase by 1.
+[x] Runtime VERIFIED: placing Bed 14872 consumes exactly 3 Wood, awards 12 base Construction XP and increases housing beds/capacity by 1. User placed two consecutively: beds 3->4->5 and capacity 5->6->7 while workers remained 5.
 [ ] Exit/re-enter; the physical Bed remains at the exact tile/rotation and housing capacity remains increased.
-[ ] With spare capacity, Delete Development Spawn on the persistent Bed removes the physical object and decreases beds/capacity by 1.
+[x] Runtime VERIFIED: with spare capacity, deleting a persistent Bed succeeds and decreases housing beds/capacity by 1; screenshot shows beds 5->4 and capacity 7->6 with workers=5.
 [ ] At full occupied capacity, attempting to delete a required Bed is rejected and leaves both the physical Bed and capacity unchanged.
 [ ] Logout/relog + re-enter preserves the physical Bed and its housing-capacity contribution.
 
