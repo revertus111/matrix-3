@@ -23,7 +23,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 is ACTIVE: Bundle 2.1 population capacity + Worker #2 persistence is runtime VERIFIED; Bundle 2.2 multi-worker targeting/control/concurrent-work management is in its consolidated runtime pass. Selected-worker Pause/Resume is runtime VERIFIED; remaining storage/preset/concurrency/persistence gates are still pending. Historical diagnostics and zero-Food Hunger resupply remain non-blocking carryover only.
+- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 is ACTIVE: Bundle 2.1 population capacity + Worker #2 persistence is runtime VERIFIED and Bundle 2.2 multi-worker control + concurrent work is DONE / RUNTIME VERIFIED, including the two-worker rebuild and logout/relog persistence gate. The next persistent-runtime target is housing/beds/population-capacity expansion.
 - Current user-prioritized side slice: Radial Worker Selection RWS-1 and RWS-2 are RUNTIME VERIFIED. The user confirmed the circular ring now keeps edge A fixed while edge B owns the expansion after ring-body calibration. RWS-3 is IMPLEMENTED / NEEDS RUNTIME TEST: while dragging, the client scans Matrix3's bounded active-local NPC list, filters settlement worker projections (NPC 1 + name Settler + same plane), tests exact world-space circle membership, and renders a temporary small 4171 preview marker on detected workers. No persistent selection/server authority is added yet. The GFX 4187 double-ring recolor probe remains IMPLEMENTED / NEEDS RUNTIME TEST as separate RWS-4 visual preflight.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
@@ -825,7 +825,7 @@ Acceptance direction:
 
 ### Bundle 2.2 — Multi-worker control + concurrent work
 
-**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
+**Status:** DONE / RUNTIME VERIFIED
 
 Patch 2.2.1 — worker-id targeting:
 
@@ -942,12 +942,17 @@ Patch 2.2.16 — prepared baseline capture:
 
 Runtime acceptance target:
 
-`Storage Self-Test PASS -> Reset Storage -> Prime Wood 99/100 -> W1 Forager preset / W2 Lumberjack preset -> final-slot reservation remains race-safe while Food stays independent -> stable baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
+`ACCEPTED: Storage Self-Test PASS -> Reset Storage -> Prime Wood 99/100 -> W1 Forager / W2 Lumberjack concurrent production -> final-slot reservation race-safe -> prepared two-worker baseline -> exit/re-enter PASS -> logout/relog/re-enter PASS`
 
-- Additional workers/recruitment.
-- Housing/beds/population capacity.
-- Cooking, farming and hunting.
-- Worker management/status UI.
+### Bundle 2.3 — Housing, beds + population capacity
+
+**Status:** READY / NEXT
+
+Direction:
+- Make population capacity derive from settlement housing/bed ownership instead of remaining fixed at the starter-shelter capacity of 2.
+- Preserve stable worker ids, existing worker persistence, Allowed Jobs, Needs, progression and runtime projection ownership established in Bundles 2.1–2.2.
+- Add the smallest housing/bed vertical slice first: persistent capacity owner -> build/placement requirement -> recruitable capacity readback -> one additional worker acceptance.
+- Keep cooking, farming/hunting and broader worker-management UI as later Phase-2 work after capacity expansion is proven.
 
 ## Phase 3 — Processing chains + better materials
 
@@ -1003,19 +1008,20 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Phase: Phase 2 — Population + broader survival production
 - Phase status: ACTIVE
 - Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
-- Persistent-runtime bundle: 2.2 — multi-worker control + concurrent work
-- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
+- Persistent-runtime bundle: 2.3 — housing, beds + population capacity
+- Persistent-runtime bundle status: READY / NEXT
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
-- Approval state: Phase 2 Bundle 2.2 SAP AAA covers the six related multi-worker control/concurrency/final-gate patches. Implementation is complete; one consolidated runtime session remains.
-- Current checklist item: Bundle 2.2 consolidated runtime pass is ACTIVE. All worker-control/concurrency behavior is runtime VERIFIED. Prepared baseline capture is implemented; remaining required gate is Prepare + Capture -> exit/re-enter Check PASS -> logout/relog/re-enter Check PASS.
-- Current objective: runtime-prove independent multi-worker management and concurrent production on the verified two-worker persistence owner, then continue into housing/beds/capacity expansion.
+- Approval state: Bundle 2.2 SAP AAA work is complete and runtime accepted. Bundle 2.3 is the next persistent-runtime target; implementation scope is not yet patched.
+- Current checklist item: Bundle 2.2 is closed. Next persistent-runtime item is Bundle 2.3 housing/beds/population-capacity foundation.
+- Current objective: expand population capacity through persistent housing/bed ownership while preserving the verified two-worker control, needs, progression and persistence owners.
 
 ## Verification classifications
 
 ### VERIFIED
 
+- Bundle 2.2 final persistence gate is runtime VERIFIED: `Prepare + Capture Baseline` saved a two-worker baseline, the baseline passed after settlement exit/re-entry with saved=2/runtime=2, and it passed again after logout/relog/re-entry with worker identities, pause state, Allowed Jobs, Needs, progression and player Construction XP preserved.
 - Bundle 2.2 role-preset + concurrent-production acceptance is runtime VERIFIED: Worker #1 Forager and Worker #2 Lumberjack operate independently, Food and Wood production proceed concurrently, and Wood reaching 100/100 does not leave a worker stranded carrying excess Wood.
 - Bundle 2.2 zero-Food Hunger bootstrap recovery is runtime VERIFIED: with Food storage empty and Hunger critical, a Forager with Gather Food + Haul enabled successfully escapes the starvation deadlock and resumes productive work after emergency Food recovery.
 - Bundle 2.2 Self-Test is runtime VERIFIED: runtime PASS covered per-resource storage isolation, in-flight reservation race protection, all worker role presets, stable worker-id targeting, independent pause/jobs/needs/progression, and two-worker serialization.
@@ -1060,13 +1066,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 
 ### verified-static
 
-- Bundle 2.2 separated storage is verified-static pending runtime: resource definitions own 100 starter capacity each; existing saves retain all stored amounts; worker deposit eligibility and `addResource(...)` clamp by carried/target resource; the disposable resource self-test proves full Wood does not block Food.
-- Bundle 2.2 in-flight reservation fix is verified-static pending runtime: `SettlementInstance` transiently reserves per-worker capacity before gathering, reservation-aware availability excludes other workers' in-flight cargo, authoritative deposit consumes/releases the reservation, and the disposable gate reproduces final-slot same-resource contention without cross-resource blocking.
-- Bundle 2.2 Worker Role Presets are verified-static pending runtime: server enum definitions atomically rewrite only the existing Allowed Jobs policy; command/UI target the selected stable worker; matching status is inferred from the allowlist; Bundle 2.2 Self-Test exercises every preset and proves presets do not alter pause state.
-- Bundle 2.2 storage test controls are verified-static pending runtime: owner-only reset/set commands mutate only the existing SettlementState resource APIs with exact capacity bounds; Con Revamp exposes status/reset/99-Wood prime plus the disposable real Resource Self-Test.
 
-- Bundle 2.2 is verified-static pending runtime: worker management commands resolve optional stable worker ids through `SettlementState.findWorker(...)`; Con Revamp routes selected-worker controls to those commands; both `SettlementWorkerNpc` projections continue using independent persistent worker state against synchronized shared settlement storage; `SettlementBundle22FinalGate` covers independent jobs/needs/progression serialization and exact two-worker persistence snapshots.
-- Bundle 2.2 Con Revamp cleanup is verified-static pending runtime: only active settlement controls, selected-worker management, current Bundle 2.2 gate and Test output remain; button focus is disabled locally and status updates restore the prior JScrollPane viewport position.
 
 - Bundle 2.1 population ownership is VERIFIED at runtime: Population Self-Test passed; Worker #2 recruited successfully from the completed shelter capacity; live Population Check reported `workers=2/2`, `saved=2/runtime=2`, unique Worker #1/#2 ids/projections; Worker #2 remained idle under the default-OFF Allowed Jobs policy; logout/relog + settlement re-entry preserved the two-worker population without duplicate runtime projections.
 
@@ -1205,11 +1205,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 2 — Population + broader survival production.
 
-**Active persistent-runtime bundle:** Bundle 2.2 — multi-worker control + concurrent work (IMPLEMENTED / NEEDS RUNTIME TEST).
+**Active persistent-runtime bundle:** Bundle 2.3 — housing, beds + population capacity (READY / NEXT).
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-2 RTS midpoint drag geometry. RWS-4 visual preflight now includes the GFX 4187 double-ring recolor probe (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling: Matrix3 Asset Studio v1 + paired evidence capture + docked Rail Classifier + Object Explorer/same-tile overlay proof + A->B Rail Route Preview V1 are IMPLEMENTED / NEEDS RUNTIME TEST. Object Explorer broadens research beyond rails and can test two stock models visually composited on one logical tile; normal scene-slot constraints remain unchanged. Future rail gameplay remains A-to-B drag/auto-tiling, not manual 1x1 placement.
 
-**Next checklist item:** Focused RWS-3 acceptance: Enable Worker Control -> start a drag excluding both workers -> expand across Worker #1 and Worker #2 one at a time -> each included Settler should gain a temporary small 4171 marker immediately while outside workers remain unmarked -> shrink/reposition the circle and confirm markers update live -> release and confirm temporary preview markers disappear with the large ring. Radial Status should report workersInCircle and runtime NPC indexes. If PASS, mark RWS-3 DONE and proceed to RWS-4/persistent selection visuals.
+**Next checklist item:** Persistent-runtime track: scope Bundle 2.3 housing/bed capacity ownership and implement the smallest vertical slice that raises population capacity beyond 2 without changing verified worker identity/persistence owners. Side tooling remains independently resumable from its own RWS/rail checklist.
 
 **Files/systems already inspected:**
 
