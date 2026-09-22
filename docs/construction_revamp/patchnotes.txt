@@ -809,3 +809,14 @@
 - A critical-Hunger Forager can now break the Food=0 bootstrap deadlock and resume productive work.
 - The unchanged non-food worker path still uses the normal no-Food stop behavior.
 - Bundle 2.2 runtime acceptance returns to Forager + Lumberjack concurrent production and final-slot reservation verification.
+
+
+2026-09-21 - RWS-2 runtime accepted + RWS-3 live worker preview
+- User confirmed the final RWS-2 ring-body calibrated RTS drag works: the circular ring keeps edge A fixed while edge B owns expansion.
+- RWS-2 is promoted to RUNTIME VERIFIED.
+- Added RWS-3 client-only live worker detection using Matrix3's bounded active-local NPC index list instead of a world/definition scan.
+- Preview candidates are restricted to same-plane NPC definition 1 with the server-overridden name `Settler`; players and unrelated NPC definitions are ignored.
+- Worker center membership uses exact world-space distance against the current live RWS-2 circle.
+- Detected workers receive a temporary small GFX 4171 marker while the drag is active; Radial Status reports count + runtime NPC indexes.
+- Persistent worker-ID mapping, final selection state and server validation remain deferred to RWS-5.
+- No server, worker AI, combat target, persistence or cache-definition behavior changed.
