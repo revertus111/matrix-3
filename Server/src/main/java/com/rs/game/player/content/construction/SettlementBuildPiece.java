@@ -13,7 +13,9 @@ public enum SettlementBuildPiece {
     FLOOR_DECORATION("floor-decoration", "Floor decoration", SettlementBuildRole.FLOOR, 13684, 22,
             SettlementResource.WOOD, 1L, 4.0),
     BASIC_DOOR("basic-door", "Door", SettlementBuildRole.DOOR, 13344, 0,
-            SettlementResource.WOOD, 2L, 8.0);
+            SettlementResource.WOOD, 2L, 8.0),
+    BASIC_BED("basic-bed", "Bed", SettlementBuildRole.BED, 14872, 10,
+            SettlementResource.WOOD, 3L, 12.0);
 
     private final String key;
     private final String displayName;
