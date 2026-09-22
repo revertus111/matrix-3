@@ -34,7 +34,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 2.2 multi-worker control bundle is active.", 4);
+            "Ready. Bundle 2.3 housing/population capacity is active.", 4);
     private final JComboBox<ConstructionRadialSelection.DragButton> radialDragButton =
             new JComboBox<ConstructionRadialSelection.DragButton>(ConstructionRadialSelection.DragButton.values());
     private final JSpinner workerSelector =
@@ -75,7 +75,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createProgressionCard());
         content.add(Box.createVerticalStrut(12));
-        content.add(createBundle22Card());
+        content.add(createHousingCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createStatusCard());
         content.add(Box.createVerticalGlue());
@@ -612,35 +612,69 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return card;
     }
 
-    private JPanel createBundle22Card() {
-        JPanel card = ConsoleTheme.createCard("Bundle 2.2 — Remaining Persistence Gate");
+    private JPanel createHousingCard() {
+        JPanel card = ConsoleTheme.createCard("Bundle 2.3 — Housing + Population Capacity");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "All worker-control/concurrency checks are already runtime verified. Remaining gate:\n"
-                + "1. Prepare + Capture Baseline disables all jobs for both workers, resets their Needs, and captures the live two-worker snapshot.\n"
-                + "2. Exit/re-enter -> Check Baseline must PASS.\n"
-                + "3. Logout/relog/re-enter -> Check Baseline must PASS.",
-                7));
+                "Persistent capacity foundation. Each saved housing bed adds +1 population capacity after the starter shelter. "
+                + "The current Add/Remove Bed controls are developer harnesses until a verified bed object is wired into normal Construction placement.",
+                5));
         card.add(Box.createVerticalStrut(8));
 
-        JButton prepareCapture = new JButton("Prepare + Capture Baseline");
-        JButton check = new JButton("Check 2-Worker Baseline");
+        JButton housingStatus = new JButton("Housing Status");
+        JButton addBed = new JButton("Add Bed Capacity");
+        JButton removeBed = new JButton("Remove Bed Capacity");
+        JButton recruit = new JButton("Recruit Next Worker");
+        JButton selfTest = new JButton("Bundle 2.3 Self-Test");
+        JButton liveCheck = new JButton("Bundle 2.3 Check");
+        JButton capture = new JButton("Capture W3 Baseline");
+        JButton check = new JButton("Check W3 Baseline");
 
-        styleButton(prepareCapture);
+        styleButton(housingStatus);
+        styleButton(addBed);
+        styleButton(removeBed);
+        styleButton(recruit);
+        styleButton(selfTest);
+        styleButton(liveCheck);
+        styleButton(capture);
         styleButton(check);
 
-        prepareCapture.addActionListener(e -> queue(
-                "itembrowser settlement bundle22preparebaseline",
-                "Preparing both workers and capturing the Bundle 2.2 baseline. Expect PREPARED + BASELINE SAVED."));
+        housingStatus.addActionListener(e -> queue(
+                "itembrowser settlement housing",
+                "Housing Status queued. Bed count, capacity and population will appear in game chat."));
+        addBed.addActionListener(e -> queue(
+                "itembrowser settlement housingbedadd",
+                "Add Bed Capacity queued. One persistent bed should raise population capacity by 1."));
+        removeBed.addActionListener(e -> queue(
+                "itembrowser settlement housingbedremove",
+                "Remove Bed Capacity queued. Occupied capacity cannot be removed."));
+        recruit.addActionListener(e -> queue(
+                "itembrowser settlement populationrecruit",
+                "Recruit Next Worker queued. With one bed and two existing workers, expect Worker #3."));
+        selfTest.addActionListener(e -> queue(
+                "itembrowser settlement housing23selftest",
+                "Bundle 2.3 Self-Test queued. Expect PASS for persistent bed capacity and Worker #3 serialization."));
+        liveCheck.addActionListener(e -> queue(
+                "itembrowser settlement housing23check",
+                "Bundle 2.3 live check queued. Expect PASS at beds=1, capacity=3, saved=3/runtime=3."));
+        capture.addActionListener(e -> queue(
+                "itembrowser settlement housing23baseline",
+                "Worker #3 housing baseline capture queued."));
         check.addActionListener(e -> queue(
-                "itembrowser settlement bundle22check",
-                "Bundle 2.2 baseline check queued. Expect PASS after re-entry/relog."));
+                "itembrowser settlement housing23baselinecheck",
+                "Worker #3 housing baseline check queued. Expect PASS after re-entry/relog."));
 
-        JPanel buttons = new JPanel(new GridLayout(1, 2, 7, 7));
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        buttons.add(prepareCapture);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 170));
+        buttons.add(housingStatus);
+        buttons.add(addBed);
+        buttons.add(removeBed);
+        buttons.add(recruit);
+        buttons.add(selfTest);
+        buttons.add(liveCheck);
+        buttons.add(capture);
         buttons.add(check);
         card.add(buttons);
         return card;
