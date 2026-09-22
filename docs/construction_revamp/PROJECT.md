@@ -946,7 +946,7 @@ Runtime acceptance target:
 
 ### Bundle 2.3 — Housing, beds + population capacity
 
-**Status:** ACTIVE — Patch 2.3.1 RUNTIME VERIFIED; Patch 2.3.2 next
+**Status:** ACTIVE — Patch 2.3.1 RUNTIME VERIFIED; Patch 2.3.2 IMPLEMENTED / NEEDS RUNTIME TEST
 
 Patch 2.3.1 — persistent bed capacity + Worker #3 foundation:
 
@@ -967,9 +967,19 @@ Runtime acceptance target:
 
 Runtime acceptance: VERIFIED. The live settlement persisted beds=3, capacity=5 and workers=5/5 through settlement exit/re-entry and full logout/relog. The scalable gate passed with saved=5/runtime=5 and exact captured worker identities/home slots preserved.
 
-Next Patch 2.3.2:
-- Verify a real bed object asset and bind normal Construction placement/removal to the existing persistent bed-capacity owner without introducing a second housing system.
-- Keep cooking, farming/hunting and broader worker-management UI as later Phase-2 work after capacity expansion is proven.
+Patch 2.3.2 — physical bed placement + housing-capacity hookup:
+
+- Runtime asset evidence: Matrix3 Dev Inspector identifies object definition `14872` as `Bed`. The initial palette mapping uses standard game-object type `10`; that type mapping remains a runtime acceptance point rather than being treated as independently verified.
+- Added stable `BASIC_BED` / `basic-bed` as a `BED` build role with 3 Wood cost and 12 base Construction XP.
+- Client Construction palette now exposes a `Furniture` category with Bed and routes it through the existing ghost/rotation/`settlementbuild` player-build path.
+- `SettlementState.place(...)` is now the central physical-bed capacity seam: successful persistent Bed placement adds one existing housing-capacity unit. `duplicate(...)` follows the same rule.
+- `SettlementState.remove(...)` removes the corresponding housing-capacity unit only when doing so would not put saved worker population over capacity; otherwise the physical Bed remains.
+- `SettlementPlayerBuildTransaction` rejects Bed placement before the starter shelter / when no housing slot can be added and rolls persistent piece + capacity back together if material consumption cannot complete.
+- Existing developer Add/Remove Bed Capacity controls remain test harnesses only; normal gameplay capacity is now reachable through physical Bed placement.
+- Bundle 2.3 Self-Test now exercises the real Bed transaction, pre-shelter rejection, unoccupied removal, occupied-removal guard and serialization.
+- Runtime acceptance remains: verify Bed 14872 renders correctly with the initial type-10 mapping, place it through the palette, confirm Wood/XP/capacity mutation, persistence, removable-spare-capacity behavior and occupied-capacity rejection.
+- Bunk bed `24339` is recorded as a future space-efficient housing upgrade candidate; capacity >1 per furniture piece is intentionally deferred until the basic single-bed path is runtime accepted.
+- Keep cooking, farming/hunting and broader worker-management UI as later Phase-2 work after this physical housing gate is accepted.
 
 ## Phase 3 — Processing chains + better materials
 
@@ -1026,13 +1036,13 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Phase status: ACTIVE
 - Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
 - Persistent-runtime bundle: 2.3 — housing, beds + population capacity
-- Persistent-runtime bundle status: Patch 2.3.1 RUNTIME VERIFIED; Patch 2.3.2 READY
+- Persistent-runtime bundle status: Patch 2.3.1 RUNTIME VERIFIED; Patch 2.3.2 IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
-- Approval state: Bundle 2.3 Patch 2.3.1 persistent bed-capacity + Worker #3 foundation is SAP AAA approved and RUNTIME VERIFIED.
-- Current checklist item: Patch 2.3.2 — verify a real bed object asset and bind normal Construction placement/removal to the existing persistent bed-capacity owner.
-- Current objective: wire a verified real bed object into the normal Construction build palette so physical bed placement/removal drives the already-verified housing capacity system.
+- Approval state: Bundle 2.3 Patch 2.3.1 is RUNTIME VERIFIED. Patch 2.3.2 physical Bed 14872 placement/capacity hookup was explicitly AAA approved and is implemented.
+- Current checklist item: runtime-test Patch 2.3.2 in one launch: Self-Test -> palette Furniture/Bed ghost -> place Bed -> verify 3 Wood / 12 XP / +1 capacity -> rebuild persistence -> removal guard -> logout/relog persistence.
+- Current objective: runtime-accept the physical Bed 14872 path, including the initial type-10 object mapping, then close Bundle 2.3 and continue broader Phase-2 production/logistics work.
 
 ## Verification classifications
 
@@ -1083,6 +1093,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 
 ### verified-static
 
+- Bundle 2.3 Patch 2.3.2 physical-bed path is verified-static pending runtime: object definition 14872 was runtime identified as Bed; `BASIC_BED` is wired into the Furniture palette and existing player `settlementbuild` path; SettlementState centrally couples persistent BED place/duplicate/remove to the existing housing-capacity owner with occupied-population removal protection. The initial object-type 10 mapping is provisional until the live ghost/model is accepted.
 - Bundle 2.3 Patch 2.3.1 housing-capacity foundation is VERIFIED at runtime: SettlementState schema v9 persists housingBedCount; base shelter capacity 2 gains +1 per bed; recruitment supports multiple recruited-settler records with unique free saved home slots; occupied capacity cannot be removed; the live five-worker settlement persisted beds=3, capacity=5 and workers=5/5 across exit/re-entry and logout/relog; saved/runtime projection counts remained 5/5 and exact captured worker identities/home slots survived. No bed art id is assumed; normal physical bed placement remains Patch 2.3.2.
 
 
