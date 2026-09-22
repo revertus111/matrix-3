@@ -398,7 +398,7 @@ Phase 2 side slice — Radial Worker Selection RWS-2
 
 
 Phase 2 side slice — Radial Worker Selection RWS-3
-[IMPLEMENTED / NEEDS RUNTIME TEST]
+[RUNTIME VERIFIED]
 [x] Source ownership: client-only preview; no server worker-selection state, persistent worker IDs, worker AI, combat targets or cache definitions are modified.
 [x] Active-list ownership: scans Matrix3's bounded active-local NPC index list (`anIntArray8626` / `anInt8625`) only.
 [x] Worker filter: same-plane NPC definition 1 + server-overridden `Settler` name; unrelated NPC definitions and players are ignored.
@@ -407,7 +407,7 @@ Phase 2 side slice — Radial Worker Selection RWS-3
 [x] Status: Radial Status reports `workersInCircle=<count>` and detected runtime NPC indexes.
 [ ] Start a drag that contains neither worker; expect workersInCircle=0 and no worker preview marker.
 [ ] Expand across Worker #1 only; expect workersInCircle=1 and only that worker marked.
-[ ] Expand across both workers; expect workersInCircle=2 and both workers marked.
+[x] Expand across both workers; runtime screenshot verified both settlers inside the large circle with both temporary worker markers visible.
 [ ] Shrink/reposition so a worker leaves the circle; its marker disappears immediately and count decrements.
 [ ] Release/cancel the drag; temporary worker preview markers disappear with the live area ring.
 [ ] Unrelated NPCs/players remain unmarked.
