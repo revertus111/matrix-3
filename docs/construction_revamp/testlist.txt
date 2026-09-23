@@ -384,7 +384,9 @@ Phase 2 Bundle 2.4 — RTS radial multi-worker control
 [x] Batch Role Preset reuses SettlementWorkerRolePreset and rewrites only existing Allowed Jobs for every selected worker.
 [x] Batch Pause/Resume reuses each selected worker's existing persistent paused flag and leaves Allowed Jobs unchanged.
 [x] Con Revamp RWS-5 exposes Selection Status, Clear Selection, Role Preset -> Apply to Selection, Pause Selected and Resume Selected.
-[ ] Enable Worker Control and drag around exactly two of the current five workers; release chat reports the exact two persistent Worker IDs committed by the server.
+[x] Failed first runtime release attempt classified: live drag/ring preview still worked, but release did not produce a useful committed selection.
+[x] Fix source: render-thread worker preview now caches the exact detected/ringed runtime NPC indexes; AWT release copies that cache instead of traversing Matrix3 live NPC collections again.
+[ ] Focused retest: Enable Worker Control and drag around exactly two visibly ringed workers; release chat reports the exact two persistent Worker IDs committed by the server.
 [ ] Selection Status reports the same two Worker IDs and does not include workers outside the circle.
 [ ] Apply Lumberjack (or another preset) to Selection; All Worker Status shows only those two workers changed while the other three retain their prior policies.
 [ ] Pause Selected; only the committed workers stop productive work and Allowed Jobs remain unchanged. Resume Selected restores them.
