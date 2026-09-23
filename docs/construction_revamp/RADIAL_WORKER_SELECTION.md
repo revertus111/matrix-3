@@ -446,7 +446,9 @@ Implementation:
 - outer and inner worker scales are independently adjustable from 25%-300% in Con Revamp
 - drag, outer and inner ring colors are independently configurable through Swing `JColorChooser` pickers
 - selected RGB is converted to Matrix3 packed-model H/S/L targets and applied through `Model.method1396(..., weight=128)`
-- existing `0x80000` model flags keep face-colour mutation on the per-call clone instead of the cached source model
+- runtime proved GFX 4171's visible red artwork is texture-driven enough that face-HSL tint alone is not visibly effective
+- custom-color mode therefore uses clone flag `0x8000` to own a private face-texture ID array, detaches the clone's textures to `-1`, then applies HSL to the exposed face colours
+- native/original mode never strips textures; `0x80000` still isolates face colours and `0x8000` isolates texture IDs from the cached source model
 - choosing Use Original Colors restores native GFX 4171 colors without touching scale
 - RWS-3 live detection immediately previews the current two-layer worker style during drag
 - no cache definition, combat reticule, worker AI, server selection or persistence owner changes
@@ -460,6 +462,13 @@ Runtime acceptance:
 - outer/inner color pickers recolor only their own cloned layer
 - Use Original Colors restores native 4171 appearance
 - layered rings remain terrain anchored and disappear with RWS-3 preview when the drag ends
+
+Runtime evidence:
+
+- layered outer + inner GFX 4171 rings render simultaneously on multiple detected workers
+- independent outer/inner scale controls work at runtime
+- first color-picker runtime test produced no visible recolor; classified as texture-driven material dominance, not a picker/state failure
+- texture-isolated custom-color correction is implemented and awaits focused runtime retest
 
 Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
