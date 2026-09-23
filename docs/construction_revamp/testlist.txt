@@ -486,9 +486,10 @@ Phase 2 side slice — Radial Worker Selection RWS-4 layered GFX 4171 style
 [x] Color source: drag/outer/inner colors are independent RGB selections converted to Matrix3 H/S/L and applied with Model.method1396(..., 128).
 [x] Clone isolation: existing MODEL_FLAGS retains 0x80000 so recolor stays on the per-call face-colour copy.
 [x] Con Revamp replaces the 4187 probe card with RWS-4 Worker Ring Style controls: outer/inner scale, Drag Ring Color, Outer Color Picker, Inner Color Picker, Use Original Colors and Ring Style Status.
-[ ] Enable Worker Control and detect at least one worker; verify both outer and inner 4171 layers are visible simultaneously.
-[ ] Change Outer scale while dragging; outer ring resizes while inner ring remains unchanged.
-[ ] Change Inner scale while dragging; inner ring resizes while outer ring remains unchanged.
+[x] Runtime screenshot: multiple detected workers render both outer and inner 4171 layers simultaneously.
+[x] Runtime acceptance: independent ring scaling works; layered worker rings visibly use different sizes without breaking detection.
+[-] First color-picker runtime test: chosen colors had no visible effect even though scaling/state updates worked; GFX 4171 is texture-driven and face-HSL alone was visually ineffective.
+[x] Recolor source fix: MODEL_FLAGS now includes 0x8000 for private per-call face-texture IDs; custom-color mode detaches only the clone's textures before applying HSL.
 [ ] Pick a drag-ring color; only the large active drag ring changes color.
 [ ] Pick separate outer and inner colors; each detected worker shows the two chosen colors on the correct layers.
 [ ] Use Original Colors restores native 4171 coloring for drag/outer/inner without resetting scale.
