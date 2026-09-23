@@ -350,7 +350,7 @@ Phase 2 Bundle 2.2 — multi-worker control + concurrent work
 [x] Logout/relog + re-enter then Check 2-Worker Baseline returned PASS with both identities/jobs/needs/progression and Construction XP preserved.
 
 Phase 2 Bundle 2.3 — housing, beds + population capacity
-[ACTIVE — PATCH 2.3.1 RUNTIME VERIFIED; PATCH 2.3.2 IMPLEMENTED / NEEDS RUNTIME TEST]
+[DONE / RUNTIME VERIFIED]
 [x] Persistent owner: SettlementState schema v9 owns housingBedCount; starter shelter capacity remains 2 and each housing bed adds +1 through getPopulationCapacity().
 [x] Removal guard: occupied bed capacity cannot be removed below the current persistent worker count.
 [x] Recruitment generalization: multiple RECRUITED_SETTLER workers are allowed up to capacity and receive unique free plot-relative home slots instead of reusing Worker #2's slot.
@@ -365,14 +365,14 @@ Phase 2 Bundle 2.3 — housing, beds + population capacity
 [x] Patch 2.3.2 ownership: SettlementState.place/duplicate/remove are the single physical-bed capacity seam; persistent bed placement adds +1 capacity and successful removal subtracts it.
 [x] Patch 2.3.2 rollback/removal safety: failed player-build material transaction rolls the bed/capacity back together; a bed required by current population cannot be removed.
 [x] Patch 2.3.2 self-test now exercises pre-shelter physical-bed rejection, real player-build transaction placement, capacity 2->3, unoccupied removal 3->2, replacement, occupied-removal guard and serialization.
-[ ] Pull/start once; Bundle 2.3 Self-Test returns PASS with physical Bed 14872 placement/removal wording.
-[ ] Open the Construction palette -> Furniture; Bed appears and arms the existing white/translucent ghost.
-[ ] Runtime asset/type acceptance: Bed 14872 ghost/model renders correctly with the provisional type-10 mapping at rotations 0-3. If MODEL_NULL/wrong geometry appears, capture the live type instead of guessing a replacement.
+[x] Bundle 2.3 Self-Test returns PASS with the physical Bed 14872 placement/removal path.
+[x] Construction palette -> Furniture exposes Bed and arms the existing white/translucent ghost correctly.
+[x] Runtime asset/type acceptance: Bed 14872 renders correctly through the palette/ghost path with object type 10 and rotation behavior accepted.
 [x] Runtime VERIFIED: placing Bed 14872 consumes exactly 3 Wood, awards 12 base Construction XP and increases housing beds/capacity by 1. User placed two consecutively: beds 3->4->5 and capacity 5->6->7 while workers remained 5.
-[ ] Exit/re-enter; the physical Bed remains at the exact tile/rotation and housing capacity remains increased.
+[x] Exit/re-entry preserves the physical Bed placement/rotation and its housing-capacity contribution.
 [x] Runtime VERIFIED: with spare capacity, deleting a persistent Bed succeeds and decreases housing beds/capacity by 1; screenshot shows beds 5->4 and capacity 7->6 with workers=5.
-[ ] At full occupied capacity, attempting to delete a required Bed is rejected and leaves both the physical Bed and capacity unchanged.
-[ ] Logout/relog + re-enter preserves the physical Bed and its housing-capacity contribution.
+[x] Full occupied-capacity removal guard is runtime VERIFIED: a required Bed cannot be deleted and both the physical Bed and housing capacity remain unchanged.
+[x] Logout/relog + settlement re-entry preserves the physical Bed and its housing-capacity contribution.
 
 Phase 2 side slice — Radial Worker Selection RWS-1
 [RUNTIME VERIFIED]
