@@ -979,3 +979,13 @@
 - Added server-owned selection status/clear plus batch role-preset and Pause/Resume commands; batch preset rewrites only existing Allowed Jobs and batch pause leaves Allowed Jobs unchanged.
 - Con Revamp RWS-5 now exposes Selection Status, Clear Selection, Apply to Selection, Pause Selected and Resume Selected.
 - No new persistent worker identity, role, selection or save-schema owner was added. Exit/re-entry drops the transient selection and requires a fresh drag.
+
+
+2026-09-23 - RWS-4 textured 4171 recolor correction
+- Runtime screenshot verified the layered GFX 4171 worker visual across multiple detected settlers and confirmed independent ring scaling works.
+- Color-picker state changed but produced no visible recolor; source inspection established GFX 4171's visible material is texture-driven, so face-HSL changes alone were being visually overridden.
+- Added clone capability flag 0x8000, which Matrix3 uses to deep-copy the per-face texture-ID array.
+- Custom-color mode now gathers the clone's active texture IDs and retextures those faces to -1 on that isolated clone only before applying the selected HSL through Model.method1396(..., 128).
+- Original-color mode leaves textures untouched.
+- Existing 0x80000 face-colour isolation remains in place; cached GFX 4171 and combat reticules are not mutated.
+- Focused runtime retest is now only the three color controls: drag ring, outer worker ring and inner worker ring.
