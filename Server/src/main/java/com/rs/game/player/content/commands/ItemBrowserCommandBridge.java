@@ -545,15 +545,15 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
-        if ("workerbatchstatus".equals(operation)) {
+        if ("workerselectionset".equals(operation)) {
             if (cmd.length < 4) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement workerbatchstatus <runtimeNpcIndexCsv>");
+                        "Use: ::itembrowser settlement workerselectionset <runtimeNpcIndexCsv>");
                 return true;
             }
             if (active == null || !active.isLoaded()) {
                 player.getPackets().sendGameMessage(
-                        "Enter the loaded settlement before using radial worker commands.");
+                        "Enter the loaded settlement before committing a radial worker selection.");
                 return true;
             }
             int[] npcIndexes = parseRuntimeNpcIndexes(cmd[3]);
@@ -562,16 +562,34 @@ public final class ItemBrowserCommandBridge {
                         "Radial worker selection must be a comma-separated list of valid runtime NPC indexes.");
                 return true;
             }
+            player.getPackets().sendGameMessage(
+                    active.setRuntimeWorkerSelection(npcIndexes));
+            return true;
+        }
+
+        if ("workerselectionclear".equals(operation)) {
+            if (active != null) {
+                active.clearRuntimeWorkerSelection();
+            }
+            player.getPackets().sendGameMessage("Radial worker selection cleared.");
+            return true;
+        }
+
+        if ("workerselectionstatus".equals(operation)) {
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using radial worker commands.");
+                return true;
+            }
             java.util.List<SettlementWorkerState> selected =
-                    active.resolveRuntimeWorkerSelection(npcIndexes);
+                    active.snapshotRuntimeWorkerSelection();
             if (selected.isEmpty()) {
                 player.getPackets().sendGameMessage(
-                        "Radial selection resolved no active settlement workers. Re-drag the selection.");
+                        "No server-owned radial worker selection is active. Drag-select workers again.");
                 return true;
             }
             player.getPackets().sendGameMessage(
-                    "Radial selection resolved " + selected.size()
-                            + " worker(s): " + formatWorkerIds(selected) + ".");
+                    "Radial selection: " + formatWorkerIds(selected) + ".");
             for (SettlementWorkerState worker : selected) {
                 SettlementWorkerRolePreset matchingPreset =
                         SettlementWorkerRolePreset.findMatching(worker);
@@ -585,10 +603,10 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
-        if ("workerbatchpause".equals(operation)) {
-            if (cmd.length < 5) {
+        if ("workerselectionpause".equals(operation)) {
+            if (cmd.length < 4) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement workerbatchpause <runtimeNpcIndexCsv> <on|off>");
+                        "Use: ::itembrowser settlement workerselectionpause <on|off>");
                 return true;
             }
             if (active == null || !active.isLoaded()) {
@@ -596,23 +614,17 @@ public final class ItemBrowserCommandBridge {
                         "Enter the loaded settlement before using radial worker commands.");
                 return true;
             }
-            int[] npcIndexes = parseRuntimeNpcIndexes(cmd[3]);
-            if (npcIndexes == null) {
-                player.getPackets().sendGameMessage(
-                        "Radial worker selection must be a comma-separated list of valid runtime NPC indexes.");
-                return true;
-            }
-            String state = cmd[4].toLowerCase();
+            String state = cmd[3].toLowerCase();
             if (!"on".equals(state) && !"off".equals(state)) {
                 player.getPackets().sendGameMessage(
                         "Selected worker pause state must be on or off.");
                 return true;
             }
             java.util.List<SettlementWorkerState> selected =
-                    active.resolveRuntimeWorkerSelection(npcIndexes);
+                    active.snapshotRuntimeWorkerSelection();
             if (selected.isEmpty()) {
                 player.getPackets().sendGameMessage(
-                        "Radial selection resolved no active settlement workers. Re-drag the selection.");
+                        "No server-owned radial worker selection is active. Drag-select workers again.");
                 return true;
             }
             boolean paused = "on".equals(state);
@@ -626,10 +638,10 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
-        if ("workerbatchpreset".equals(operation)) {
-            if (cmd.length < 5) {
+        if ("workerselectionpreset".equals(operation)) {
+            if (cmd.length < 4) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement workerbatchpreset <runtimeNpcIndexCsv> "
+                        "Use: ::itembrowser settlement workerselectionpreset "
                                 + "<lumberjack|forager|stone-miner|ore-miner|hauler-only|idle>");
                 return true;
             }
@@ -638,24 +650,18 @@ public final class ItemBrowserCommandBridge {
                         "Enter the loaded settlement before using radial worker commands.");
                 return true;
             }
-            int[] npcIndexes = parseRuntimeNpcIndexes(cmd[3]);
-            if (npcIndexes == null) {
-                player.getPackets().sendGameMessage(
-                        "Radial worker selection must be a comma-separated list of valid runtime NPC indexes.");
-                return true;
-            }
             SettlementWorkerRolePreset preset =
-                    SettlementWorkerRolePreset.forKey(cmd[4]);
+                    SettlementWorkerRolePreset.forKey(cmd[3]);
             if (preset == null) {
                 player.getPackets().sendGameMessage(
-                        "Unknown worker preset: " + cmd[4] + ".");
+                        "Unknown worker preset: " + cmd[3] + ".");
                 return true;
             }
             java.util.List<SettlementWorkerState> selected =
-                    active.resolveRuntimeWorkerSelection(npcIndexes);
+                    active.snapshotRuntimeWorkerSelection();
             if (selected.isEmpty()) {
                 player.getPackets().sendGameMessage(
-                        "Radial selection resolved no active settlement workers. Re-drag the selection.");
+                        "No server-owned radial worker selection is active. Drag-select workers again.");
                 return true;
             }
             for (SettlementWorkerState worker : selected) {
@@ -991,7 +997,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerpreset|workerbatchstatus|workerbatchpause|workerbatchpreset|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerpreset|workerselectionset|workerselectionclear|workerselectionstatus|workerselectionpause|workerselectionpreset|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
         return true;
     }
 
