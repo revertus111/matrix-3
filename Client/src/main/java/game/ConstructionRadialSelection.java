@@ -55,7 +55,7 @@ public final class ConstructionRadialSelection {
     private static final float RETICULE_RING_FALLBACK_FRACTION = 0.80F;
     private static final float MIN_RADIUS_TILES = 0.0F;
     private static final float MAX_RADIUS_TILES = 64.0F;
-    private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x5;
+    private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x8000 | 0x5;
     private static final long HOVER_STALE_MS = 1250L;
 
     private static final Class261 TRANSFORM = new Class261();
@@ -215,7 +215,7 @@ public final class ConstructionRadialSelection {
                 + " drag=" + formatRgb(dragRingRgb)
                 + " | outer=" + workerOuterRingScalePercent + "%/" + formatRgb(workerOuterRingRgb)
                 + " | inner=" + workerInnerRingScalePercent + "%/" + formatRgb(workerInnerRingRgb)
-                + " | tint isolation=0x80000";
+                + " | color-isolation=0x80000 texture-isolation=0x8000";
     }
 
     public static void setWorkerControlEnabled(boolean enabled) {
@@ -582,6 +582,32 @@ public final class ConstructionRadialSelection {
         if (model == null || rgb < 0) {
             return;
         }
+
+        /*
+         * GFX 4171 is visibly texture-driven. Face-HSL tint alone therefore
+         * leaves the red artwork intact. MODEL_FLAGS includes 0x8000 so this
+         * per-call clone owns a private face-texture array; custom-color mode
+         * can safely detach those textures from the clone only, then tint the
+         * exposed face colours. Native/original mode never enters this path.
+         */
+        if (model instanceof AbstractModel) {
+            AbstractModel abstractModel = (AbstractModel) model;
+            short[] textures = abstractModel.aShortArray10821;
+            if (textures != null) {
+                java.util.Set<Short> textureIds = new java.util.HashSet<Short>();
+                int faceCount = Math.min(abstractModel.anInt10833, textures.length);
+                for (int i = 0; i < faceCount; i++) {
+                    short textureId = textures[i];
+                    if (textureId != (short) -1) {
+                        textureIds.add(Short.valueOf(textureId));
+                    }
+                }
+                for (Short textureId : textureIds) {
+                    model.method1475(textureId.shortValue(), (short) -1);
+                }
+            }
+        }
+
         int[] hsl = rgbToModelHsl(rgb);
         model.method1396(hsl[0], hsl[1], hsl[2], 128);
     }
