@@ -36,7 +36,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private static final long serialVersionUID = -8031161601344297457L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. Bundle 2.3 housing/population capacity is active.", 4);
+            "Ready. Bundle 2.4 radial multi-worker control is active.", 4);
     private final JComboBox<ConstructionRadialSelection.DragButton> radialDragButton =
             new JComboBox<ConstructionRadialSelection.DragButton>(ConstructionRadialSelection.DragButton.values());
     private final JSpinner workerSelector =
@@ -46,6 +46,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private final JSpinner workerInnerRingScale =
             new JSpinner(new SpinnerNumberModel(70, 25, 300, 5));
     private final JComboBox<WorkerPresetChoice> workerRolePreset =
+            new JComboBox<WorkerPresetChoice>(WorkerPresetChoice.values());
+    private final JComboBox<WorkerPresetChoice> radialRolePreset =
             new JComboBox<WorkerPresetChoice>(WorkerPresetChoice.values());
     private final java.util.List<JCheckBox> workerJobCheckBoxes =
             new java.util.ArrayList<JCheckBox>();
@@ -230,14 +232,14 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createRadialSelectionCard() {
-        JPanel card = ConsoleTheme.createCard("Radial Worker Selection — RWS-2");
+        JPanel card = ConsoleTheme.createCard("Radial Worker Selection — RWS-5");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Worker Control drag primitive. Hold the configured mouse button on valid game ground, "
-                + "drag outward/inward to resize the world-space reticule, then release to commit the radius. "
-                + "The area ring is visible only while held; release hides it immediately. "
-                + "Escape cancels only the active drag and preserves the previous committed radius.",
-                6));
+                "Drag-select live settlement workers in world space. Release commits the exact runtime NPC indexes "
+                + "inside the circle; server batch commands then resolve those transient indexes back to this "
+                + "settlement's persistent Worker IDs before changing any saved policy. "
+                + "Escape cancels only the active drag and preserves the previous committed selection.",
+                7));
         card.add(Box.createVerticalStrut(8));
 
         radialDragButton.setMaximumSize(new Dimension(150, 30));
@@ -249,7 +251,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             if (selected instanceof ConstructionRadialSelection.DragButton) {
                 ConstructionRadialSelection.setDragButton(
                         (ConstructionRadialSelection.DragButton) selected);
-                setStatus("RWS-2 drag button: " + selected + ".");
+                setStatus("RWS-5 drag button: " + selected + ".");
             }
         });
 
@@ -260,8 +262,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
 
         JButton enable = new JButton("Enable Worker Control");
         JButton disable = new JButton("Disable Worker Control");
-        JButton radialStatus = new JButton("Radial Status");
-        JButton clear = new JButton("Clear Radius");
+        JButton radialStatus = new JButton("Selection Status");
+        JButton clear = new JButton("Clear Selection");
 
         styleButton(enable);
         styleButton(disable);
@@ -281,8 +283,16 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             ConstructionRadialSelection.setWorkerControlEnabled(false);
             setStatus(ConstructionRadialSelection.getStatus());
         });
-        radialStatus.addActionListener(e ->
-                setStatus(ConstructionRadialSelection.getStatus()));
+        radialStatus.addActionListener(e -> {
+            if (ConstructionRadialSelection.hasCommittedWorkerSelection()) {
+                queueRadialBatch("workerbatchstatus", null,
+                        "Selected-worker Status queued for "
+                                + ConstructionRadialSelection.getCommittedWorkerCount()
+                                + " radial worker(s). Check game chat for persistent Worker IDs.");
+            } else {
+                setStatus(ConstructionRadialSelection.getStatus());
+            }
+        });
         clear.addActionListener(e -> {
             ConstructionRadialSelection.clearCommittedRadius();
             setStatus(ConstructionRadialSelection.getStatus());
@@ -297,6 +307,57 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(radialStatus);
         buttons.add(clear);
         card.add(buttons);
+
+        card.add(Box.createVerticalStrut(10));
+        card.add(ConsoleTheme.createWrappedText(
+                "Batch actions target only the workers in the last committed drag selection. "
+                + "Role presets still rewrite only Allowed Jobs; batch Pause/Resume leaves those jobs unchanged.",
+                4));
+        card.add(Box.createVerticalStrut(6));
+
+        radialRolePreset.setMaximumSize(new Dimension(180, 30));
+        radialRolePreset.setAlignmentX(LEFT_ALIGNMENT);
+        radialRolePreset.setFocusable(false);
+
+        JButton applySelectedPreset = new JButton("Apply to Selection");
+        styleButton(applySelectedPreset);
+        applySelectedPreset.addActionListener(e -> {
+            WorkerPresetChoice choice =
+                    (WorkerPresetChoice) radialRolePreset.getSelectedItem();
+            if (choice == null) {
+                return;
+            }
+            queueRadialBatch("workerbatchpreset", choice.key,
+                    choice.displayName + " queued for the committed radial selection.");
+        });
+
+        JPanel presetRow = new JPanel(new GridLayout(1, 2, 7, 7));
+        presetRow.setOpaque(false);
+        presetRow.setAlignmentX(LEFT_ALIGNMENT);
+        presetRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        presetRow.add(radialRolePreset);
+        presetRow.add(applySelectedPreset);
+        card.add(presetRow);
+        card.add(Box.createVerticalStrut(7));
+
+        JButton pauseSelected = new JButton("Pause Selected");
+        JButton resumeSelected = new JButton("Resume Selected");
+        styleButton(pauseSelected);
+        styleButton(resumeSelected);
+        pauseSelected.addActionListener(e ->
+                queueRadialBatch("workerbatchpause", "on",
+                        "Pause queued for the committed radial selection. Allowed Jobs unchanged."));
+        resumeSelected.addActionListener(e ->
+                queueRadialBatch("workerbatchpause", "off",
+                        "Resume queued for the committed radial selection."));
+
+        JPanel batchButtons = new JPanel(new GridLayout(1, 2, 7, 7));
+        batchButtons.setOpaque(false);
+        batchButtons.setAlignmentX(LEFT_ALIGNMENT);
+        batchButtons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        batchButtons.add(pauseSelected);
+        batchButtons.add(resumeSelected);
+        card.add(batchButtons);
         return card;
     }
 
@@ -762,6 +823,20 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private void queue(String command, String success) {
         String error = ClientConsoleBridge.queueConsoleCommand(command);
         setStatus(error == null ? success : error);
+    }
+
+    private void queueRadialBatch(String operation, String argument, String success) {
+        if (!ConstructionRadialSelection.hasCommittedWorkerSelection()) {
+            setStatus("RWS-5: drag over one or more live settlement workers and release first.");
+            return;
+        }
+        String npcIndexes = ConstructionRadialSelection.getCommittedWorkerNpcIndexesCsv();
+        StringBuilder command = new StringBuilder("itembrowser settlement ")
+                .append(operation).append(' ').append(npcIndexes);
+        if (argument != null && argument.trim().length() > 0) {
+            command.append(' ').append(argument.trim());
+        }
+        queue(command.toString(), success + " Runtime NPC selection=" + npcIndexes + ".");
     }
 
     private void setStatus(String message) {
