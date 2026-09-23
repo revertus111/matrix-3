@@ -920,6 +920,7 @@ public final class ConstructionRadialSelection {
         liveRadiusTiles = MIN_RADIUS_TILES;
         liveDirectionWorldX = 0.0F;
         liveDirectionWorldY = 0.0F;
+        liveDetectedWorkerNpcIndexes = new int[0];
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
