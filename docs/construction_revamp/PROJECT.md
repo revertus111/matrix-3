@@ -981,6 +981,31 @@ Patch 2.3.2 — physical bed placement + housing-capacity hookup:
 - Bunk bed `24339` is recorded as a future space-efficient housing upgrade candidate; capacity >1 per furniture piece is intentionally deferred until the basic single-bed path is runtime accepted.
 - Keep cooking, farming/hunting and broader worker-management UI as later Phase-2 work after this physical housing gate is accepted.
 
+### Bundle 2.4 — RTS radial multi-worker control
+
+**Status:** IMPLEMENTED / NEEDS RUNTIME TEST
+
+Ownership:
+
+- RWS-5 promotes the already-proven radial drag/detection tool into a real worker-management command seam without creating a second worker identity system.
+- On mouse release, the client snapshots only the active runtime NPC indexes inside the accepted world-space drag circle.
+- The client immediately sends that one-time runtime-index snapshot to the active settlement.
+- `SettlementInstance` resolves those transient NPC indexes only against its own live `SettlementWorkerNpc` projections, converts them to authoritative persistent Worker IDs, and stores the committed selection only for the lifetime of that settlement instance.
+- Batch actions never trust client NPC indexes after the commit step. Re-entry creates a new `SettlementInstance` with no stale server selection, so the player must drag-select again.
+- The committed radial selection is transient management state only; no selection list is added to `SettlementState` or player-save serialization.
+
+Batch worker actions:
+
+- `workerselectionstatus` reports the server-owned selected Worker IDs plus current preset, Pause state and Allowed Jobs.
+- `workerselectionpreset` applies one existing `SettlementWorkerRolePreset` to every selected persistent worker. It changes only the existing Allowed Jobs policy and leaves Pause, Needs, identity and progression untouched.
+- `workerselectionpause on|off` applies the existing persistent Pause flag to every selected worker without rewriting Allowed Jobs.
+- `workerselectionclear` clears only the transient active-instance selection.
+- Con Revamp RWS-5 exposes Selection Status, Clear Selection, a batch Role Preset picker and Pause/Resume Selected controls. Existing single-worker controls remain available for precise inspection/editing.
+
+Runtime acceptance target:
+
+`Enable Worker Control -> drag around a subset of the five workers -> release -> chat resolves exact persistent Worker IDs -> Selection Status matches that subset -> Apply Lumberjack/Forager/Idle to selection -> only selected workers change -> Pause Selected stops only selected workers -> Resume Selected restores them -> clear/re-drag different subset -> exit/re-entry requires a fresh selection while the selected workers' saved policies remain persistent`
+
 ## Phase 3 — Processing chains + better materials
 
 - Smithing/crafting.
@@ -1035,14 +1060,14 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Phase: Phase 2 — Population + broader survival production
 - Phase status: ACTIVE
 - Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
-- Persistent-runtime bundle: 2.3 — housing, beds + population capacity
-- Persistent-runtime bundle status: DONE / RUNTIME VERIFIED
+- Persistent-runtime bundle: 2.4 — RTS radial multi-worker control
+- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
 - Tooling track: Phase-1 Construction palette + ghost + Free Build camera
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
-- Approval state: Bundle 2.3 is fully RUNTIME VERIFIED. Patch 2.3.1 persistent capacity/population and Patch 2.3.2 physical Bed 14872 placement/removal are accepted.
-- Current checklist item: Bundle 2.3 complete. Do not repeat housing/bed persistence tests unless new evidence indicates a regression.
-- Current objective: continue Phase 2 with the next broader survival-production/logistics bundle; cooking, farming/hunting and broader worker-management remain the immediate unimplemented Phase-2 areas.
+- Approval state: Bundle 2.3 is fully RUNTIME VERIFIED. Bundle 2.4 RWS-5 radial multi-worker control is SAP AAA approved and implemented.
+- Current checklist item: runtime-test Bundle 2.4 RWS-5 against the current five-worker settlement: drag-select a subset -> confirm server-resolved Worker IDs -> batch preset -> batch Pause/Resume -> clear/reselect -> exit/re-entry stale-selection rejection.
+- Current objective: runtime-accept radial multi-worker control, then continue Phase 2 into cooking and farming/hunting production chains.
 
 ## Verification classifications
 
@@ -1093,6 +1118,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 
 ### verified-static
 
+- Bundle 2.4 RWS-5 is verified-static pending runtime: the client commits a world-space detected runtime-NPC set once on drag release; the active `SettlementInstance` validates only its own live `SettlementWorkerNpc` indexes, converts them to persistent Worker IDs and owns the transient selection; batch preset/pause/status commands then operate only on those server-owned Worker IDs. No new persistent selection state or worker identity owner was added.
 - Bundle 2.3 Patch 2.3.2 physical-bed path is VERIFIED at runtime: object definition 14872 renders correctly as Bed through the Furniture palette and existing player `settlementbuild` path using object type 10; each physical Bed consumes 3 Wood, awards 12 base Construction XP and adds +1 housing capacity; spare-capacity removal subtracts that capacity; required-bed removal is rejected; physical placement and capacity survive exit/re-entry and logout/relog.
 - Bundle 2.3 Patch 2.3.1 housing-capacity foundation is VERIFIED at runtime: SettlementState schema v9 persists housingBedCount; base shelter capacity 2 gains +1 per bed; recruitment supports multiple recruited-settler records with unique free saved home slots; occupied capacity cannot be removed; the live five-worker settlement persisted beds=3, capacity=5 and workers=5/5 across exit/re-entry and logout/relog; saved/runtime projection counts remained 5/5 and exact captured worker identities/home slots survived. No bed art id is assumed; normal physical bed placement remains Patch 2.3.2.
 
