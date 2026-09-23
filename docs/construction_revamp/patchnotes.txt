@@ -964,3 +964,10 @@
 - Each placement consumed 3 Wood, awarded 12 base Construction XP and increased housing beds/capacity by one: beds 3->4->5, capacity 5->6->7, workers stayed 5.
 - Spare-capacity Bed removal succeeded and reduced beds 5->4 / capacity 7->6 while workers remained 5.
 - Remaining Patch 2.3.2 acceptance is physical-bed rebuild persistence, occupied-capacity live removal rejection, logout/relog persistence and explicit visual/type-10 acceptance if still unconfirmed.
+
+2026-09-22 - Bundle 2.3 physical housing runtime closure
+- User confirmed all remaining Bed 14872 acceptance checks work.
+- Furniture palette/ghost/type-10 rendering, physical placement, rotation, 3 Wood cost, 12 base Construction XP and +1 housing capacity are runtime VERIFIED.
+- Physical Bed placement/capacity survives settlement exit/re-entry and full logout/relog.
+- Spare-capacity Bed removal decreases housing capacity; required-bed removal at occupied capacity is rejected without deleting the Bed or reducing capacity.
+- Bundle 2.3 housing, beds + population capacity is DONE / RUNTIME VERIFIED.
