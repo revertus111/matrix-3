@@ -545,6 +545,129 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workerbatchstatus".equals(operation)) {
+            if (cmd.length < 4) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerbatchstatus <runtimeNpcIndexCsv>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using radial worker commands.");
+                return true;
+            }
+            int[] npcIndexes = parseRuntimeNpcIndexes(cmd[3]);
+            if (npcIndexes == null) {
+                player.getPackets().sendGameMessage(
+                        "Radial worker selection must be a comma-separated list of valid runtime NPC indexes.");
+                return true;
+            }
+            java.util.List<SettlementWorkerState> selected =
+                    active.resolveRuntimeWorkerSelection(npcIndexes);
+            if (selected.isEmpty()) {
+                player.getPackets().sendGameMessage(
+                        "Radial selection resolved no active settlement workers. Re-drag the selection.");
+                return true;
+            }
+            player.getPackets().sendGameMessage(
+                    "Radial selection resolved " + selected.size()
+                            + " worker(s): " + formatWorkerIds(selected) + ".");
+            for (SettlementWorkerState worker : selected) {
+                SettlementWorkerRolePreset matchingPreset =
+                        SettlementWorkerRolePreset.findMatching(worker);
+                player.getPackets().sendGameMessage(
+                        "Worker #" + worker.getWorkerId()
+                                + " Preset="
+                                + (matchingPreset == null ? "Custom" : matchingPreset.getDisplayName())
+                                + " | Paused=" + (worker.isPaused() ? "YES" : "NO")
+                                + " | Jobs: " + worker.getAllowedJobsSummary());
+            }
+            return true;
+        }
+
+        if ("workerbatchpause".equals(operation)) {
+            if (cmd.length < 5) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerbatchpause <runtimeNpcIndexCsv> <on|off>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using radial worker commands.");
+                return true;
+            }
+            int[] npcIndexes = parseRuntimeNpcIndexes(cmd[3]);
+            if (npcIndexes == null) {
+                player.getPackets().sendGameMessage(
+                        "Radial worker selection must be a comma-separated list of valid runtime NPC indexes.");
+                return true;
+            }
+            String state = cmd[4].toLowerCase();
+            if (!"on".equals(state) && !"off".equals(state)) {
+                player.getPackets().sendGameMessage(
+                        "Selected worker pause state must be on or off.");
+                return true;
+            }
+            java.util.List<SettlementWorkerState> selected =
+                    active.resolveRuntimeWorkerSelection(npcIndexes);
+            if (selected.isEmpty()) {
+                player.getPackets().sendGameMessage(
+                        "Radial selection resolved no active settlement workers. Re-drag the selection.");
+                return true;
+            }
+            boolean paused = "on".equals(state);
+            for (SettlementWorkerState worker : selected) {
+                worker.setPaused(paused);
+            }
+            player.getPackets().sendGameMessage(
+                    "Radial selection " + formatWorkerIds(selected)
+                            + " Paused=" + (paused ? "YES" : "NO")
+                            + ". Allowed Jobs unchanged.");
+            return true;
+        }
+
+        if ("workerbatchpreset".equals(operation)) {
+            if (cmd.length < 5) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerbatchpreset <runtimeNpcIndexCsv> "
+                                + "<lumberjack|forager|stone-miner|ore-miner|hauler-only|idle>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using radial worker commands.");
+                return true;
+            }
+            int[] npcIndexes = parseRuntimeNpcIndexes(cmd[3]);
+            if (npcIndexes == null) {
+                player.getPackets().sendGameMessage(
+                        "Radial worker selection must be a comma-separated list of valid runtime NPC indexes.");
+                return true;
+            }
+            SettlementWorkerRolePreset preset =
+                    SettlementWorkerRolePreset.forKey(cmd[4]);
+            if (preset == null) {
+                player.getPackets().sendGameMessage(
+                        "Unknown worker preset: " + cmd[4] + ".");
+                return true;
+            }
+            java.util.List<SettlementWorkerState> selected =
+                    active.resolveRuntimeWorkerSelection(npcIndexes);
+            if (selected.isEmpty()) {
+                player.getPackets().sendGameMessage(
+                        "Radial selection resolved no active settlement workers. Re-drag the selection.");
+                return true;
+            }
+            for (SettlementWorkerState worker : selected) {
+                preset.applyTo(worker);
+            }
+            player.getPackets().sendGameMessage(
+                    "Applied " + preset.getDisplayName() + " to radial selection "
+                            + formatWorkerIds(selected)
+                            + ". Pause/Needs/Progression unchanged.");
+            return true;
+        }
+
         if ("workerpause".equals(operation)) {
             boolean targeted = hasWorkerIdArgument(cmd, 3);
             int stateIndex = targeted ? 4 : 3;
@@ -868,8 +991,62 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerpreset|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerpreset|workerbatchstatus|workerbatchpause|workerbatchpreset|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
         return true;
+    }
+
+    private static int[] parseRuntimeNpcIndexes(String csv) {
+        if (csv == null || csv.trim().isEmpty() || "none".equalsIgnoreCase(csv.trim())) {
+            return null;
+        }
+        String[] parts = csv.split(",");
+        if (parts.length == 0 || parts.length > 64) {
+            return null;
+        }
+
+        int[] parsed = new int[parts.length];
+        java.util.HashSet<Integer> seen = new java.util.HashSet<Integer>();
+        int count = 0;
+        for (String part : parts) {
+            if (part == null || part.trim().isEmpty()) {
+                return null;
+            }
+            final int npcIndex;
+            try {
+                npcIndex = Integer.parseInt(part.trim());
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+            if (npcIndex < 0 || npcIndex > 32767) {
+                return null;
+            }
+            if (seen.add(Integer.valueOf(npcIndex))) {
+                parsed[count++] = npcIndex;
+            }
+        }
+        if (count == 0) {
+            return null;
+        }
+        return count == parsed.length
+                ? parsed : java.util.Arrays.copyOf(parsed, count);
+    }
+
+    private static String formatWorkerIds(
+            java.util.List<SettlementWorkerState> workers) {
+        if (workers == null || workers.isEmpty()) {
+            return "none";
+        }
+        StringBuilder result = new StringBuilder();
+        for (SettlementWorkerState worker : workers) {
+            if (worker == null) {
+                continue;
+            }
+            if (result.length() > 0) {
+                result.append(',');
+            }
+            result.append('#').append(worker.getWorkerId());
+        }
+        return result.length() == 0 ? "none" : result.toString();
     }
 
     private static SettlementWorkerState resolveSettlementWorker(
