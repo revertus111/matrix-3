@@ -989,3 +989,11 @@
 - Original-color mode leaves textures untouched.
 - Existing 0x80000 face-colour isolation remains in place; cached GFX 4171 and combat reticules are not mutated.
 - Focused runtime retest is now only the three color controls: drag ring, outer worker ring and inner worker ring.
+
+2026-09-23 - RWS-5 release selection handoff fix
+- Runtime test showed the existing drag/ring preview still worked but mouse release produced no useful committed worker selection.
+- Removed the release-time live NPC rescan from the AWT event handler.
+- The proven render-thread worker preview now caches the exact runtime NPC indexes it detects/rings each frame.
+- Mouse release copies that cached selection and queues the existing server-owned workerselectionset handoff.
+- Cancel/start/clear paths reset the cached preview selection to prevent stale carryover.
+- No worker AI, persistence, jobs, housing, or server selection ownership changed; focused runtime retest is required.
