@@ -285,7 +285,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         });
         radialStatus.addActionListener(e -> {
             if (ConstructionRadialSelection.hasCommittedWorkerSelection()) {
-                queueRadialBatch("workerbatchstatus", null,
+                queueRadialBatch("workerselectionstatus", null,
                         "Selected-worker Status queued for "
                                 + ConstructionRadialSelection.getCommittedWorkerCount()
                                 + " radial worker(s). Check game chat for persistent Worker IDs.");
@@ -327,7 +327,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             if (choice == null) {
                 return;
             }
-            queueRadialBatch("workerbatchpreset", choice.key,
+            queueRadialBatch("workerselectionpreset", choice.key,
                     choice.displayName + " queued for the committed radial selection.");
         });
 
@@ -345,10 +345,10 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         styleButton(pauseSelected);
         styleButton(resumeSelected);
         pauseSelected.addActionListener(e ->
-                queueRadialBatch("workerbatchpause", "on",
+                queueRadialBatch("workerselectionpause", "on",
                         "Pause queued for the committed radial selection. Allowed Jobs unchanged."));
         resumeSelected.addActionListener(e ->
-                queueRadialBatch("workerbatchpause", "off",
+                queueRadialBatch("workerselectionpause", "off",
                         "Resume queued for the committed radial selection."));
 
         JPanel batchButtons = new JPanel(new GridLayout(1, 2, 7, 7));
@@ -830,13 +830,13 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             setStatus("RWS-5: drag over one or more live settlement workers and release first.");
             return;
         }
-        String npcIndexes = ConstructionRadialSelection.getCommittedWorkerNpcIndexesCsv();
         StringBuilder command = new StringBuilder("itembrowser settlement ")
-                .append(operation).append(' ').append(npcIndexes);
+                .append(operation);
         if (argument != null && argument.trim().length() > 0) {
             command.append(' ').append(argument.trim());
         }
-        queue(command.toString(), success + " Runtime NPC selection=" + npcIndexes + ".");
+        queue(command.toString(), success + " Server-owned selection contains "
+                + ConstructionRadialSelection.getCommittedWorkerCount() + " worker(s).");
     }
 
     private void setStatus(String message) {
