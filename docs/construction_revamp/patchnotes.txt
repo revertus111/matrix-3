@@ -971,3 +971,11 @@
 - Physical Bed placement/capacity survives settlement exit/re-entry and full logout/relog.
 - Spare-capacity Bed removal decreases housing capacity; required-bed removal at occupied capacity is rejected without deleting the Bed or reducing capacity.
 - Bundle 2.3 housing, beds + population capacity is DONE / RUNTIME VERIFIED.
+
+2026-09-22 - Bundle 2.4 RWS-5 radial multi-worker control
+- Promoted the proven radial drag/detection path into a real multi-worker management seam.
+- Client release snapshots only live settlement-worker runtime NPC indexes inside the world-space circle and immediately commits them to the active settlement.
+- SettlementInstance validates those transient NPC indexes against its own SettlementWorkerNpc projections, converts them to persistent Worker IDs, and owns the selection only for that instance lifetime.
+- Added server-owned selection status/clear plus batch role-preset and Pause/Resume commands; batch preset rewrites only existing Allowed Jobs and batch pause leaves Allowed Jobs unchanged.
+- Con Revamp RWS-5 now exposes Selection Status, Clear Selection, Apply to Selection, Pause Selected and Resume Selected.
+- No new persistent worker identity, role, selection or save-schema owner was added. Exit/re-entry drops the transient selection and requires a fresh drag.
