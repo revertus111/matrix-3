@@ -91,6 +91,7 @@ public final class ConstructionRadialSelection {
     private static volatile int lastRenderedScalePercent;
     private static volatile int liveDetectedWorkerCount;
     private static volatile String lastDetectedWorkers = "none";
+    private static volatile int[] liveDetectedWorkerNpcIndexes = new int[0];
     private static volatile int[] committedWorkerNpcIndexes = new int[0];
     private static volatile String lastEventState = "RWS-5 Worker Control disabled.";
     private static volatile String lastRenderState = "not rendered";
@@ -243,6 +244,8 @@ public final class ConstructionRadialSelection {
         committedPlane = -1;
         committedRadiusTiles = MIN_RADIUS_TILES;
         committedWorkerNpcIndexes = new int[0];
+        liveDetectedWorkerNpcIndexes = new int[0];
+        liveDetectedWorkerNpcIndexes = new int[0];
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -479,6 +482,7 @@ public final class ConstructionRadialSelection {
             float centerWorldX, float centerWorldY, float radiusTiles) {
         if (client.aClass676_8622 == null || client.anIntArray8626 == null
                 || client.aClass572_Sub9Array8623 == null || sceneBase == null || ground == null) {
+            liveDetectedWorkerNpcIndexes = new int[0];
             lastDetectedWorkers = "none";
             return 0;
         }
@@ -494,11 +498,12 @@ public final class ConstructionRadialSelection {
         int sceneBaseWorldY = sceneBase.localY * 417324155;
         float radiusSquared = radiusTiles * radiusTiles;
         int detected = 0;
-        StringBuilder ids = new StringBuilder();
+        int[] detectedNpcIndexes = new int[activeCount];
 
         GraphicsDefinition markerDefinition = (GraphicsDefinition) Class667.aClass639_Sub10_8509
                 .getDefinition(RETICULE_GFX_ID, 235749166);
         if (markerDefinition == null) {
+            liveDetectedWorkerNpcIndexes = new int[0];
             lastDetectedWorkers = "marker-def-missing";
             return 0;
         }
@@ -523,11 +528,7 @@ public final class ConstructionRadialSelection {
                 continue;
             }
 
-            detected++;
-            if (ids.length() > 0) {
-                ids.append(',');
-            }
-            ids.append(npcIndex);
+            detectedNpcIndexes[detected++] = npcIndex;
 
             Class240 position = npc.method5394().aClass240_2647;
             if (position == null) {
@@ -546,7 +547,10 @@ public final class ConstructionRadialSelection {
                     workerInnerRingScalePercent, workerInnerRingRgb);
         }
 
-        lastDetectedWorkers = ids.length() == 0 ? "none" : ids.toString();
+        liveDetectedWorkerNpcIndexes = detected == detectedNpcIndexes.length
+                ? detectedNpcIndexes
+                : java.util.Arrays.copyOf(detectedNpcIndexes, detected);
+        lastDetectedWorkers = formatNpcIndexes(liveDetectedWorkerNpcIndexes);
         return detected;
     }
 
@@ -674,62 +678,9 @@ public final class ConstructionRadialSelection {
 
 
     /**
-     * RWS-5 selection snapshot.
-     *
-     * The client stores only active runtime NPC indexes. Persistent worker
-     * identity remains server-owned; batch commands must resolve these indexes
-     * against the player's active SettlementInstance before mutating policy.
+     * RWS-5 selection snapshot is cached by the render-thread worker preview.
+     * The AWT release handler only copies that already-proven set.
      */
-    private static int[] collectDetectedWorkerNpcIndexes(
-            float centerWorldX, float centerWorldY, int plane, float radiusTiles) {
-        if (client.aClass676_8622 == null || client.anIntArray8626 == null
-                || client.aClass613_8605 == null || plane < 0) {
-            return new int[0];
-        }
-
-        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
-        if (sceneBase == null) {
-            return new int[0];
-        }
-
-        int activeCount = client.anInt8625 * 765313669;
-        if (activeCount < 0) {
-            activeCount = 0;
-        } else if (activeCount > client.anIntArray8626.length) {
-            activeCount = client.anIntArray8626.length;
-        }
-
-        int sceneBaseWorldX = sceneBase.localX * -2109597897;
-        int sceneBaseWorldY = sceneBase.localY * 417324155;
-        float radiusSquared = radiusTiles * radiusTiles;
-        int[] detected = new int[activeCount];
-        int count = 0;
-
-        for (int i = 0; i < activeCount; i++) {
-            int npcIndex = client.anIntArray8626[i];
-            LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
-            if (link == null || !(link.anObject9081 instanceof NPC)) {
-                continue;
-            }
-
-            NPC npc = (NPC) link.anObject9081;
-            if (!isSettlementWorkerPreviewNpc(npc, plane)) {
-                continue;
-            }
-
-            float workerWorldX = sceneBaseWorldX + npc.screenX[0];
-            float workerWorldY = sceneBaseWorldY + npc.screenY[0];
-            float dx = workerWorldX - centerWorldX;
-            float dy = workerWorldY - centerWorldY;
-            if (dx * dx + dy * dy <= radiusSquared) {
-                detected[count++] = npcIndex;
-            }
-        }
-
-        return count == detected.length
-                ? detected : java.util.Arrays.copyOf(detected, count);
-    }
-
     private static String formatNpcIndexes(int[] npcIndexes) {
         if (npcIndexes == null || npcIndexes.length == 0) {
             return "none";
@@ -887,6 +838,7 @@ public final class ConstructionRadialSelection {
         liveRadiusTiles = MIN_RADIUS_TILES;
         liveDirectionWorldX = 0.0F;
         liveDirectionWorldY = 0.0F;
+        liveDetectedWorkerNpcIndexes = new int[0];
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         dragging = true;
@@ -935,9 +887,15 @@ public final class ConstructionRadialSelection {
         committedCenterWorldY = liveCenterWorldY;
         committedPlane = originPlane;
         committedRadiusTiles = liveRadiusTiles;
-        committedWorkerNpcIndexes = collectDetectedWorkerNpcIndexes(
-                committedCenterWorldX, committedCenterWorldY,
-                committedPlane, committedRadiusTiles);
+
+        /*
+         * RWS-5 authority handoff:
+         * Commit exactly the worker set produced by the proven render-thread
+         * detection/preview pass. Do not traverse Matrix3's live NPC
+         * collections again from this AWT release handler.
+         */
+        committedWorkerNpcIndexes = java.util.Arrays.copyOf(
+                liveDetectedWorkerNpcIndexes, liveDetectedWorkerNpcIndexes.length);
         liveDetectedWorkerCount = committedWorkerNpcIndexes.length;
         lastDetectedWorkers = formatNpcIndexes(committedWorkerNpcIndexes);
         committed = true;
