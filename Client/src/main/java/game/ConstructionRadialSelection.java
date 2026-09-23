@@ -92,7 +92,7 @@ public final class ConstructionRadialSelection {
     private static volatile int liveDetectedWorkerCount;
     private static volatile String lastDetectedWorkers = "none";
     private static volatile int[] committedWorkerNpcIndexes = new int[0];
-    private static volatile String lastEventState = "RWS-2 Worker Control disabled.";
+    private static volatile String lastEventState = "RWS-5 Worker Control disabled.";
     private static volatile String lastRenderState = "not rendered";
 
     /*
@@ -155,7 +155,7 @@ public final class ConstructionRadialSelection {
             cancelActiveDrag();
         }
         dragButton = button;
-        lastEventState = "RWS-2 drag button set to " + button + ".";
+        lastEventState = "RWS-5 drag button set to " + button + ".";
     }
 
     public static int getWorkerOuterRingScalePercent() {
@@ -222,14 +222,14 @@ public final class ConstructionRadialSelection {
         if (enabled) {
             ensureInputListener();
             workerControlEnabled = true;
-            lastEventState = "RWS-2 Worker Control ON. Hold " + dragButton
+            lastEventState = "RWS-5 Worker Control ON. Hold " + dragButton
                     + " on valid ground and drag.";
         } else {
             if (dragging) {
                 cancelActiveDrag();
             }
             workerControlEnabled = false;
-            lastEventState = "RWS-2 Worker Control OFF.";
+            lastEventState = "RWS-5 Worker Control OFF.";
         }
         lastRenderedCycle = Integer.MIN_VALUE;
     }
@@ -247,12 +247,13 @@ public final class ConstructionRadialSelection {
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
         lastRenderState = "not rendered";
-        lastEventState = "RWS-2 committed radius cleared.";
+        lastEventState = "RWS-5 committed selection cleared.";
+        syncCommittedSelectionToServer();
     }
 
     public static String getStatus() {
         StringBuilder status = new StringBuilder(192);
-        status.append(workerControlEnabled ? "RWS-2 ON" : "RWS-2 OFF");
+        status.append(workerControlEnabled ? "RWS-5 ON" : "RWS-5 OFF");
         status.append(" | button=").append(dragButton);
         if (dragging) {
             status.append(" | DRAGGING edgeA=")
@@ -717,6 +718,21 @@ public final class ConstructionRadialSelection {
         return csv.toString();
     }
 
+
+    private static void syncCommittedSelectionToServer() {
+        String command;
+        if (committedWorkerNpcIndexes.length == 0) {
+            command = "itembrowser settlement workerselectionclear";
+        } else {
+            command = "itembrowser settlement workerselectionset "
+                    + formatNpcIndexes(committedWorkerNpcIndexes);
+        }
+        String error = ClientConsoleBridge.queueConsoleCommand(command);
+        if (error != null) {
+            lastEventState += " | server selection sync failed: " + error;
+        }
+    }
+
     /**
      * Returns the radius of the circular ring body, excluding GFX 4171's four
      * decorative outer diamonds when the active renderer exposes AbstractModel
@@ -833,7 +849,7 @@ public final class ConstructionRadialSelection {
         long age = System.currentTimeMillis() - hoveredAtMillis;
         if (hoveredWorldX < 0 || hoveredWorldY < 0 || hoveredPlane < 0
                 || hoveredAtMillis == 0L || age > HOVER_STALE_MS) {
-            lastEventState = "RWS-2 WAIT: move over valid ground before pressing " + dragButton + ".";
+            lastEventState = "RWS-5 WAIT: move over valid ground before pressing " + dragButton + ".";
             return false;
         }
 
@@ -849,7 +865,7 @@ public final class ConstructionRadialSelection {
         lastDetectedWorkers = "none";
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
-        lastEventState = "RWS-2 drag started at " + originWorldX + "," + originWorldY + "," + originPlane + ".";
+        lastEventState = "RWS-5 drag started at " + originWorldX + "," + originWorldY + "," + originPlane + ".";
         return true;
     }
 
@@ -879,7 +895,7 @@ public final class ConstructionRadialSelection {
         }
 
         lastRenderedCycle = Integer.MIN_VALUE;
-        lastEventState = "RWS-2 dragging edgeB="
+        lastEventState = "RWS-5 dragging edgeB="
                 + edgeBWorldX + "," + edgeBWorldY
                 + " center=" + formatWorld(liveCenterWorldX) + ","
                 + formatWorld(liveCenterWorldY)
@@ -907,6 +923,7 @@ public final class ConstructionRadialSelection {
                 + lastDetectedWorkers + "] in radius "
                 + formatRadius(committedRadiusTiles)
                 + " tiles; area reticule hidden after release.";
+        syncCommittedSelectionToServer();
     }
 
     private static void cancelActiveDrag() {
@@ -923,8 +940,8 @@ public final class ConstructionRadialSelection {
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
         lastEventState = committed
-                ? "RWS-2 drag cancelled; previous committed radius preserved."
-                : "RWS-2 drag cancelled.";
+                ? "RWS-5 drag cancelled; previous committed selection preserved."
+                : "RWS-5 drag cancelled.";
     }
 
     private static String formatRadius(float radius) {
