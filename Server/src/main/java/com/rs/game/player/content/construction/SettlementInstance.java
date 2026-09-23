@@ -45,6 +45,7 @@ public final class SettlementInstance {
     private final List<WorldObject> starterResourceObjects = new ArrayList<WorldObject>();
     private final List<NPC> starterResourceNpcs = new ArrayList<NPC>();
     private final List<SettlementWorkerNpc> workerNpcs = new ArrayList<SettlementWorkerNpc>();
+    private final List<Long> radialSelectedWorkerIds = new ArrayList<Long>();
     private final WorkerStorageReservationBook workerStorageReservations =
             new WorkerStorageReservationBook();
 
@@ -537,7 +538,7 @@ public final class SettlementInstance {
      * Only live SettlementWorkerNpc instances owned by this active instance are
      * accepted, so arbitrary/non-settlement NPC indexes cannot mutate workers.
      */
-    public List<SettlementWorkerState> resolveRuntimeWorkerSelection(int[] npcIndexes) {
+    public synchronized List<SettlementWorkerState> resolveRuntimeWorkerSelection(int[] npcIndexes) {
         List<SettlementWorkerState> selected = new ArrayList<SettlementWorkerState>();
         if (!loaded || destroyed || npcIndexes == null || npcIndexes.length == 0) {
             return selected;
@@ -564,6 +565,62 @@ public final class SettlementInstance {
             }
         }
         return selected;
+    }
+
+    /**
+     * Server-owned transient radial selection.
+     *
+     * Runtime NPC indexes are accepted only long enough to resolve the active
+     * SettlementWorkerNpc projections. The committed selection is then stored
+     * as persistent worker IDs for the lifetime of this SettlementInstance, so
+     * later batch actions never trust stale client NPC indexes.
+     */
+    public synchronized String setRuntimeWorkerSelection(int[] npcIndexes) {
+        List<SettlementWorkerState> resolved = resolveRuntimeWorkerSelection(npcIndexes);
+        radialSelectedWorkerIds.clear();
+        for (SettlementWorkerState worker : resolved) {
+            radialSelectedWorkerIds.add(Long.valueOf(worker.getWorkerId()));
+        }
+        if (radialSelectedWorkerIds.isEmpty()) {
+            return "Radial worker selection cleared; no active settlement workers were inside the drag.";
+        }
+        return "Radial worker selection committed: " + formatWorkerIds(resolved) + ".";
+    }
+
+    public synchronized void clearRuntimeWorkerSelection() {
+        radialSelectedWorkerIds.clear();
+    }
+
+    public synchronized List<SettlementWorkerState> snapshotRuntimeWorkerSelection() {
+        List<SettlementWorkerState> selected = new ArrayList<SettlementWorkerState>();
+        java.util.Iterator<Long> iterator = radialSelectedWorkerIds.iterator();
+        while (iterator.hasNext()) {
+            Long workerId = iterator.next();
+            SettlementWorkerState worker = workerId == null
+                    ? null : state.findWorker(workerId.longValue());
+            if (worker == null || !hasActiveWorker(worker.getWorkerId())) {
+                iterator.remove();
+                continue;
+            }
+            selected.add(worker);
+        }
+        return selected;
+    }
+
+    private static String formatWorkerIds(List<SettlementWorkerState> workers) {
+        StringBuilder ids = new StringBuilder();
+        if (workers != null) {
+            for (SettlementWorkerState worker : workers) {
+                if (worker == null) {
+                    continue;
+                }
+                if (ids.length() > 0) {
+                    ids.append(',');
+                }
+                ids.append('#').append(worker.getWorkerId());
+            }
+        }
+        return ids.length() == 0 ? "none" : ids.toString();
     }
 
     public boolean hasActiveWorker(long workerId) {
