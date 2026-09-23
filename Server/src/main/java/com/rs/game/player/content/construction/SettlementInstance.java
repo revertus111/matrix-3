@@ -529,6 +529,43 @@ public final class SettlementInstance {
         return count;
     }
 
+    /**
+     * Resolve client-selected runtime NPC indexes back to this settlement's
+     * authoritative persistent worker records.
+     *
+     * NPC indexes are transient and are never persisted as worker identity.
+     * Only live SettlementWorkerNpc instances owned by this active instance are
+     * accepted, so arbitrary/non-settlement NPC indexes cannot mutate workers.
+     */
+    public List<SettlementWorkerState> resolveRuntimeWorkerSelection(int[] npcIndexes) {
+        List<SettlementWorkerState> selected = new ArrayList<SettlementWorkerState>();
+        if (!loaded || destroyed || npcIndexes == null || npcIndexes.length == 0) {
+            return selected;
+        }
+
+        java.util.HashSet<Long> seenWorkerIds = new java.util.HashSet<Long>();
+        for (int npcIndex : npcIndexes) {
+            if (npcIndex < 0) {
+                continue;
+            }
+            for (SettlementWorkerNpc npc : workerNpcs) {
+                if (npc == null || npc.hasFinished() || npc.getIndex() != npcIndex) {
+                    continue;
+                }
+                long workerId = npc.getWorkerId();
+                if (!seenWorkerIds.add(Long.valueOf(workerId))) {
+                    break;
+                }
+                SettlementWorkerState worker = state.findWorker(workerId);
+                if (worker != null) {
+                    selected.add(worker);
+                }
+                break;
+            }
+        }
+        return selected;
+    }
+
     public boolean hasActiveWorker(long workerId) {
         for (SettlementWorkerNpc npc : workerNpcs) {
             if (npc != null && !npc.hasFinished() && npc.getWorkerId() == workerId) {
