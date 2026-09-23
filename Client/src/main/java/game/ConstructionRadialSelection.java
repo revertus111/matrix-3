@@ -91,6 +91,7 @@ public final class ConstructionRadialSelection {
     private static volatile int lastRenderedScalePercent;
     private static volatile int liveDetectedWorkerCount;
     private static volatile String lastDetectedWorkers = "none";
+    private static volatile int[] committedWorkerNpcIndexes = new int[0];
     private static volatile String lastEventState = "RWS-2 Worker Control disabled.";
     private static volatile String lastRenderState = "not rendered";
 
@@ -128,6 +129,18 @@ public final class ConstructionRadialSelection {
 
     public static float getCommittedRadiusTiles() {
         return committedRadiusTiles;
+    }
+
+    public static int getCommittedWorkerCount() {
+        return committedWorkerNpcIndexes.length;
+    }
+
+    public static String getCommittedWorkerNpcIndexesCsv() {
+        return formatNpcIndexes(committedWorkerNpcIndexes);
+    }
+
+    public static boolean hasCommittedWorkerSelection() {
+        return committed && committedWorkerNpcIndexes.length > 0;
     }
 
     public static DragButton getDragButton() {
@@ -229,6 +242,9 @@ public final class ConstructionRadialSelection {
         committedCenterWorldY = -1.0F;
         committedPlane = -1;
         committedRadiusTiles = MIN_RADIUS_TILES;
+        committedWorkerNpcIndexes = new int[0];
+        liveDetectedWorkerCount = 0;
+        lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
         lastRenderState = "not rendered";
         lastEventState = "RWS-2 committed radius cleared.";
@@ -629,6 +645,78 @@ public final class ConstructionRadialSelection {
                 && SETTLEMENT_WORKER_NAME.equalsIgnoreCase(npc.aString11807.trim());
     }
 
+
+    /**
+     * RWS-5 selection snapshot.
+     *
+     * The client stores only active runtime NPC indexes. Persistent worker
+     * identity remains server-owned; batch commands must resolve these indexes
+     * against the player's active SettlementInstance before mutating policy.
+     */
+    private static int[] collectDetectedWorkerNpcIndexes(
+            float centerWorldX, float centerWorldY, int plane, float radiusTiles) {
+        if (client.aClass676_8622 == null || client.anIntArray8626 == null
+                || client.aClass613_8605 == null || plane < 0) {
+            return new int[0];
+        }
+
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
+        if (sceneBase == null) {
+            return new int[0];
+        }
+
+        int activeCount = client.anInt8625 * 765313669;
+        if (activeCount < 0) {
+            activeCount = 0;
+        } else if (activeCount > client.anIntArray8626.length) {
+            activeCount = client.anIntArray8626.length;
+        }
+
+        int sceneBaseWorldX = sceneBase.localX * -2109597897;
+        int sceneBaseWorldY = sceneBase.localY * 417324155;
+        float radiusSquared = radiusTiles * radiusTiles;
+        int[] detected = new int[activeCount];
+        int count = 0;
+
+        for (int i = 0; i < activeCount; i++) {
+            int npcIndex = client.anIntArray8626[i];
+            LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+            if (link == null || !(link.anObject9081 instanceof NPC)) {
+                continue;
+            }
+
+            NPC npc = (NPC) link.anObject9081;
+            if (!isSettlementWorkerPreviewNpc(npc, plane)) {
+                continue;
+            }
+
+            float workerWorldX = sceneBaseWorldX + npc.screenX[0];
+            float workerWorldY = sceneBaseWorldY + npc.screenY[0];
+            float dx = workerWorldX - centerWorldX;
+            float dy = workerWorldY - centerWorldY;
+            if (dx * dx + dy * dy <= radiusSquared) {
+                detected[count++] = npcIndex;
+            }
+        }
+
+        return count == detected.length
+                ? detected : java.util.Arrays.copyOf(detected, count);
+    }
+
+    private static String formatNpcIndexes(int[] npcIndexes) {
+        if (npcIndexes == null || npcIndexes.length == 0) {
+            return "none";
+        }
+        StringBuilder csv = new StringBuilder();
+        for (int npcIndex : npcIndexes) {
+            if (csv.length() > 0) {
+                csv.append(',');
+            }
+            csv.append(npcIndex);
+        }
+        return csv.toString();
+    }
+
     /**
      * Returns the radius of the circular ring body, excluding GFX 4171's four
      * decorative outer diamonds when the active renderer exposes AbstractModel
@@ -805,11 +893,19 @@ public final class ConstructionRadialSelection {
         committedCenterWorldY = liveCenterWorldY;
         committedPlane = originPlane;
         committedRadiusTiles = liveRadiusTiles;
+        committedWorkerNpcIndexes = collectDetectedWorkerNpcIndexes(
+                committedCenterWorldX, committedCenterWorldY,
+                committedPlane, committedRadiusTiles);
+        liveDetectedWorkerCount = committedWorkerNpcIndexes.length;
+        lastDetectedWorkers = formatNpcIndexes(committedWorkerNpcIndexes);
         committed = true;
         dragging = false;
         lastRenderedCycle = Integer.MIN_VALUE;
         lastRenderState = "hidden after release";
-        lastEventState = "RWS-2 radius committed at " + formatRadius(committedRadiusTiles)
+        lastEventState = "RWS-5 selection committed: "
+                + committedWorkerNpcIndexes.length + " worker(s) ["
+                + lastDetectedWorkers + "] in radius "
+                + formatRadius(committedRadiusTiles)
                 + " tiles; area reticule hidden after release.";
     }
 
