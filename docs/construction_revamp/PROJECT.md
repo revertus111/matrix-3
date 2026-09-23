@@ -1006,6 +1006,12 @@ Runtime acceptance target:
 
 `Enable Worker Control -> drag around a subset of the five workers -> release -> chat resolves exact persistent Worker IDs -> Selection Status matches that subset -> Apply Lumberjack/Forager/Idle to selection -> only selected workers change -> Pause Selected stops only selected workers -> Resume Selected restores them -> clear/re-drag different subset -> exit/re-entry requires a fresh selection while the selected workers' saved policies remain persistent`
 
+Runtime defect/fix note:
+- First RWS-5 runtime attempt: drag preview worked, but mouse release produced no useful selection action.
+- Root seam isolated verified-static: the initial implementation re-traversed Matrix3 live NPC collections from the AWT mouse-release handler even though the proven worker detection runs in the Matrix3 render/game path.
+- Fix implemented: the render-thread preview now caches the exact runtime NPC indexes it already detected/ringed. Mouse release only copies that cached array and queues the existing server-owned selection commit; it no longer traverses live NPC collections from AWT.
+- This preserves exact visual-selection parity: the workers ringed by the last rendered drag frame are the workers committed on release. Focused runtime retest remains required.
+
 ## Phase 3 — Processing chains + better materials
 
 - Smithing/crafting.
@@ -1066,7 +1072,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Bundle 2.3 is fully RUNTIME VERIFIED. Bundle 2.4 RWS-5 radial multi-worker control is SAP AAA approved and implemented.
-- Current checklist item: runtime-test Bundle 2.4 RWS-5 against the current five-worker settlement: drag-select a subset -> confirm server-resolved Worker IDs -> batch preset -> batch Pause/Resume -> clear/reselect -> exit/re-entry stale-selection rejection.
+- Current checklist item: focused RWS-5 release retest after the render-thread cache fix: drag-select a visibly ringed subset -> release must emit server-resolved Worker IDs; only after that passes continue batch preset/Pause/Resume/clear/re-entry checks.
 - Current objective: runtime-accept radial multi-worker control, then continue Phase 2 into cooking and farming/hunting production chains.
 
 ## Verification classifications
