@@ -536,6 +536,9 @@ public final class ConstructionPaletteOverlay {
         paintSearch(g, layout.search);
         paintTabs(g, layout.tabs);
         paintCards(g, layout.cards);
+        if (ConstructionPlacementController.isRailRouteSelected() && RailRoutePreview.isDebugEnabled()) {
+            paintRailDebugEvidence(g, layout);
+        }
         paintControls(g, layout);
     }
 
@@ -582,6 +585,40 @@ public final class ConstructionPaletteOverlay {
                     card.bounds.x + 10, card.bounds.y + 35);
             String note = trimToWidth(g, card.piece.getNote(), card.bounds.width - 20);
             g.drawString(note, card.bounds.x + 10, card.bounds.y + 52);
+        }
+    }
+
+    private static void paintRailDebugEvidence(Graphics2D g, LayoutSnapshot layout) {
+        java.util.List<String> lines = RailRoutePreview.getDebugOverlayLines();
+        int x = layout.panel.x + 8;
+        int y = layout.panel.y + 128;
+        int width = layout.panel.width - 16;
+        int bottom = layout.panel.y + layout.panel.height - 112;
+        int height = Math.max(90, bottom - y);
+
+        g.setColor(new Color(4, 9, 14, 238));
+        g.fillRoundRect(x, y, width, height, 8, 8);
+        g.setColor(ACCENT);
+        g.drawRoundRect(x, y, width - 1, height - 1, 8, 8);
+
+        g.setFont(new Font("Monospaced", Font.BOLD, 10));
+        g.setColor(new Color(150, 210, 255));
+        g.drawString("RAIL DEBUG - LATEST ROUTE INTENT", x + 8, y + 15);
+
+        g.setFont(new Font("Monospaced", Font.PLAIN, 9));
+        g.setColor(TEXT);
+        int lineY = y + 29;
+        int maxChars = Math.max(28, (width - 16) / 6);
+        for (String line : lines) {
+            String shown = line;
+            if (shown.length() > maxChars) {
+                shown = shown.substring(0, Math.max(1, maxChars - 3)) + "...";
+            }
+            g.drawString(shown, x + 8, lineY);
+            lineY += 12;
+            if (lineY > y + height - 7) {
+                break;
+            }
         }
     }
 
