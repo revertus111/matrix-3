@@ -1254,3 +1254,12 @@
 - Settlement RTS now temporarily expands Class523's visibility radius to the loaded scene extents while method6240 renders, with visibility-grid buffers expanded to match, then restores the stock player radius before returning.
 - This intentionally makes the detached settlement RTS camera render loaded settlement terrain like a player positioned at that camera while leaving ordinary/player rendering radius unchanged.
 - Runtime gate: zoom/pan/rotate across the settlement and confirm the beige hard terrain cutoff is gone. Watch FPS because the RTS pass can now draw the full loaded settlement scene.
+
+
+2026-09-24 - Tighten Worker Needs HUD arc face mask
+- Follow-up review of the malformed needs arches showed that ring-body filtering still accepted faces by centroid radius only.
+- GFX 4171 decorative spike/diamond triangles can straddle the circular ring band while keeping their centroid inside it, so decorative chunks survived.
+- Needs arc masking now computes radial distance for all three original X/Z vertices of each OpenGL face.
+- A face is eligible for an arch only when every vertex remains inside the calibrated circular annulus; faces crossing inward/outward from the ring strip are made fully transparent before angular-slot masking.
+- Needs HUD Status now reports the strict ring-body band alongside visible/body-hidden/arc-hidden face counts.
+- Hunger/Thirst/Energy values, colors, slot ownership, shared scale, selection visuals and server needs ownership are unchanged.
