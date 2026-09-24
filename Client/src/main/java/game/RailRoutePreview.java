@@ -80,6 +80,8 @@ public final class RailRoutePreview {
     private static volatile int committedEndX = -1;
     private static volatile int committedEndY = -1;
     private static volatile int committedPlane = -1;
+    private static volatile int continuationHorizontalDirection;
+    private static volatile int continuationVerticalDirection;
 
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String eventState = "A->B rail preview disabled.";
@@ -685,6 +687,30 @@ public final class RailRoutePreview {
     }
 
     private static void commitActiveDrag() {
+        int previousEndX = committedEndX;
+        int previousEndY = committedEndY;
+        int previousStartX = committedStartX;
+        int previousStartY = committedStartY;
+        int previousPlane = committedPlane;
+        boolean hadCommitted = committed;
+
+        continuationHorizontalDirection = 0;
+        continuationVerticalDirection = 0;
+        if (hadCommitted && previousPlane == livePlane
+                && previousEndX == liveStartX && previousEndY == liveStartY) {
+            int[] incoming = finalTravelDirection(
+                    previousStartX, previousStartY, previousEndX, previousEndY);
+            int[] outgoing = firstTravelDirection(
+                    liveStartX, liveStartY, liveEndX, liveEndY);
+            if ((incoming[0] != 0 && outgoing[1] != 0)
+                    || (incoming[1] != 0 && outgoing[0] != 0)) {
+                continuationHorizontalDirection =
+                        incoming[0] != 0 ? -incoming[0] : outgoing[0];
+                continuationVerticalDirection =
+                        incoming[1] != 0 ? -incoming[1] : outgoing[1];
+            }
+        }
+
         committedStartX = liveStartX;
         committedStartY = liveStartY;
         committedEndX = liveEndX;
@@ -705,7 +731,57 @@ public final class RailRoutePreview {
         }
         appendRoutePieces(pieces, committedStartX, committedStartY,
                 committedEndX, committedEndY, committedPlane);
+        if (continuationHorizontalDirection != 0 && continuationVerticalDirection != 0) {
+            CurvePlacement continuation = createCurvePlacement(
+                    committedStartX, committedStartY,
+                    continuationHorizontalDirection, continuationVerticalDirection);
+            if (continuation != null) {
+                removePiecesOccupiedByCurve(pieces, continuation);
+                java.util.List<RoutePiece> curvePieces = new java.util.ArrayList<RoutePiece>();
+                appendCurvePieces(curvePieces, continuation,
+                        committedStartX, committedStartY, committedPlane);
+                curvePieces.addAll(pieces);
+                pieces = curvePieces;
+            }
+        }
         return pieces;
+    }
+
+    private static int[] finalTravelDirection(
+            int startX, int startY, int endX, int endY) {
+        int dx = Integer.compare(endX, startX);
+        int dy = Integer.compare(endY, startY);
+        if (routeOrder == RouteOrder.X_THEN_Y && dy != 0) {
+            return new int[] { 0, dy };
+        }
+        if (routeOrder == RouteOrder.Y_THEN_X && dx != 0) {
+            return new int[] { dx, 0 };
+        }
+        return dx != 0 ? new int[] { dx, 0 } : new int[] { 0, dy };
+    }
+
+    private static int[] firstTravelDirection(
+            int startX, int startY, int endX, int endY) {
+        int dx = Integer.compare(endX, startX);
+        int dy = Integer.compare(endY, startY);
+        if (routeOrder == RouteOrder.X_THEN_Y && dx != 0) {
+            return new int[] { dx, 0 };
+        }
+        if (routeOrder == RouteOrder.Y_THEN_X && dy != 0) {
+            return new int[] { 0, dy };
+        }
+        return dx != 0 ? new int[] { dx, 0 } : new int[] { 0, dy };
+    }
+
+    private static void removePiecesOccupiedByCurve(
+            java.util.List<RoutePiece> pieces, CurvePlacement curve) {
+        java.util.Iterator<RoutePiece> iterator = pieces.iterator();
+        while (iterator.hasNext()) {
+            RoutePiece piece = iterator.next();
+            if (curveOccupies(curve, piece.getWorldX(), piece.getWorldY())) {
+                iterator.remove();
+            }
+        }
     }
 
     private static void appendRoutePieces(java.util.List<RoutePiece> pieces,
