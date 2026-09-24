@@ -26,6 +26,8 @@ public final class RailCompositeLibrary {
     private static final Path FILE =
             Paths.get("data/construction/asset_studio/rail_composites.tsv");
 
+    public static final String ACCEPTED_CURVE_NAME = "CURVE_RAIL_LAYOUT_01";
+
     public enum Role {
         STRAIGHT,
         CURVE,
@@ -168,6 +170,38 @@ public final class RailCompositeLibrary {
             }
         }
         return null;
+    }
+
+    public static CompositeDefinition findByName(String name) {
+        String target = cleanName(name);
+        if (target.length() == 0) {
+            return null;
+        }
+        for (CompositeDefinition definition : loadAll()) {
+            if (definition.name.equalsIgnoreCase(target)) {
+                return definition;
+            }
+        }
+        return null;
+    }
+
+    public static CompositeDefinition findAcceptedCurveForRoute() {
+        CompositeDefinition accepted = findByName(ACCEPTED_CURVE_NAME);
+        if (accepted != null) {
+            return new CompositeDefinition(accepted.name, Role.CURVE,
+                    new ArrayList<Component>(accepted.components));
+        }
+
+        CompositeDefinition classified = findFirst(Role.CURVE);
+        if (classified != null) {
+            return classified;
+        }
+
+        List<Component> components = new ArrayList<Component>();
+        components.add(new Component(46377, 22, 0, 2, -1));
+        components.add(new Component(46379, 22, 0, 3, -1));
+        components.add(new Component(46381, 22, 0, 3, 0));
+        return new CompositeDefinition(ACCEPTED_CURVE_NAME, Role.CURVE, components);
     }
 
     private static Role parseRole(String value) {
