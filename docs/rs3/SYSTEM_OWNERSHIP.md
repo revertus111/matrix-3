@@ -51,3 +51,12 @@ When ownership actually changes, record:
 4. **Compatibility boundary:** Matrix3 player serialization remains persistence authority and Matrix3 `NPC`/`World` remain entity authority. Worker logic stays in the Construction content layer; classic POH and unrelated NPC systems are unchanged.
 5. **Migration/rollback risk:** schema-v3 saves initialize an empty worker list/next id; completed shelters create Worker #1 idempotently on settlement load. Runtime NPCs are never serialized and are explicitly finished on instance destroy.
 6. **Required smoke tests:** build/start/login, milestone-gated first arrival, exactly one saved/live worker, exit/re-enter same-id rebuild, logout/relog persistence, runtime NPC cleanup, unrelated NPC behavior unchanged.
+
+### 2026-09-24 — Settlement worker command-selection ownership
+
+1. **Old authority:** Con Revamp exposed two mutation targets: the RWS-5 committed drag selection for batch preset/Pause commands and a separate numeric single-worker selector for Role Preset, Pause/Resume and Allowed Jobs writes.
+2. **New authority:** the committed RWS-5 drag selection is the sole worker-command target for Role Preset, Pause/Resume and Allowed Jobs mutations. The numeric Worker Inspector is read-only for per-worker Jobs/AI/Needs/Progress inspection.
+3. **Why:** runtime testing proved the split UI could select multiple workers with RWS-5 while the lower mutation card silently targeted only spinner Worker #1.
+4. **Compatibility boundary:** persistent worker identity, Allowed Jobs, Pause, Needs and progression remain owned by `SettlementWorkerState`; `SettlementInstance` still owns only the transient committed selection. This change consolidates command targeting and does not change save schema or worker AI.
+5. **Migration/rollback risk:** none for saved data. Existing single-worker server commands remain available for diagnostics/legacy tooling, but the Con Revamp mutation UI no longer routes through them.
+6. **Required smoke tests:** drag-select 2+ workers; verify preset, individual Allowed Job toggle, Enable/Disable All Jobs and Pause/Resume affect only that set; Worker Inspector changes no command target; clear/reselect works; exit/re-entry clears transient command selection while saved policies persist.
