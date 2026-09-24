@@ -695,6 +695,163 @@ public final class RailRoutePreview {
         lastRenderedCycle = Integer.MIN_VALUE;
         eventState = "Route committed A=" + committedStartX + "," + committedStartY
                 + " B=" + committedEndX + "," + committedEndY + ".";
+        ConstructionPlacementController.onRailRouteCommitted(snapshotCommittedRoutePieces());
+    }
+
+    public static java.util.List<RoutePiece> snapshotCommittedRoutePieces() {
+        java.util.List<RoutePiece> pieces = new java.util.ArrayList<RoutePiece>();
+        if (!committed || committedPlane < 0) {
+            return pieces;
+        }
+        appendRoutePieces(pieces, committedStartX, committedStartY,
+                committedEndX, committedEndY, committedPlane);
+        return pieces;
+    }
+
+    private static void appendRoutePieces(java.util.List<RoutePiece> pieces,
+            int startX, int startY, int endX, int endY, int plane) {
+        if (startX < 0 || startY < 0 || endX < 0 || endY < 0 || objectId < 0) {
+            return;
+        }
+        if (startY == endY) {
+            appendHorizontalPieces(pieces, startX, endX, startY, plane, null);
+            return;
+        }
+        if (startX == endX) {
+            appendVerticalPieces(pieces, startY, endY, startX, plane, null);
+            return;
+        }
+
+        int xStep = Integer.compare(endX, startX);
+        int yStep = Integer.compare(endY, startY);
+        CurvePlacement curve;
+        if (routeOrder == RouteOrder.Y_THEN_X) {
+            curve = createCurvePlacement(startX, endY, xStep, -yStep);
+            int y = startY;
+            int attempted = 0;
+            while (y != endY && attempted++ < MAX_ROUTE_TILES) {
+                if (!curveOccupies(curve, startX, y)) {
+                    pieces.add(new RoutePiece(objectId, objectType, verticalRotation(),
+                            startX, y, plane));
+                }
+                y += yStep;
+            }
+            appendCurvePieces(pieces, curve, startX, endY, plane);
+            int x = startX + xStep;
+            while (pieces.size() < MAX_ROUTE_TILES) {
+                if (!curveOccupies(curve, x, endY)) {
+                    pieces.add(new RoutePiece(objectId, objectType, eastWestRotation(),
+                            x, endY, plane));
+                }
+                if (x == endX) {
+                    break;
+                }
+                x += xStep;
+            }
+        } else {
+            curve = createCurvePlacement(endX, startY, -xStep, yStep);
+            int x = startX;
+            int attempted = 0;
+            while (x != endX && attempted++ < MAX_ROUTE_TILES) {
+                if (!curveOccupies(curve, x, startY)) {
+                    pieces.add(new RoutePiece(objectId, objectType, eastWestRotation(),
+                            x, startY, plane));
+                }
+                x += xStep;
+            }
+            appendCurvePieces(pieces, curve, endX, startY, plane);
+            int y = startY + yStep;
+            while (pieces.size() < MAX_ROUTE_TILES) {
+                if (!curveOccupies(curve, endX, y)) {
+                    pieces.add(new RoutePiece(objectId, objectType, verticalRotation(),
+                            endX, y, plane));
+                }
+                if (y == endY) {
+                    break;
+                }
+                y += yStep;
+            }
+        }
+    }
+
+    private static void appendHorizontalPieces(java.util.List<RoutePiece> pieces,
+            int startX, int endX, int y, int plane, CurvePlacement curve) {
+        int step = Integer.compare(endX, startX);
+        int x = startX;
+        while (pieces.size() < MAX_ROUTE_TILES) {
+            if (!curveOccupies(curve, x, y)) {
+                pieces.add(new RoutePiece(objectId, objectType, eastWestRotation(), x, y, plane));
+            }
+            if (x == endX) {
+                break;
+            }
+            x += step;
+        }
+    }
+
+    private static void appendVerticalPieces(java.util.List<RoutePiece> pieces,
+            int startY, int endY, int x, int plane, CurvePlacement curve) {
+        int step = Integer.compare(endY, startY);
+        int y = startY;
+        while (pieces.size() < MAX_ROUTE_TILES) {
+            if (!curveOccupies(curve, x, y)) {
+                pieces.add(new RoutePiece(objectId, objectType, verticalRotation(), x, y, plane));
+            }
+            if (y == endY) {
+                break;
+            }
+            y += step;
+        }
+    }
+
+    private static void appendCurvePieces(java.util.List<RoutePiece> pieces,
+            CurvePlacement placement, int cornerX, int cornerY, int plane) {
+        if (placement != null) {
+            for (RailCompositeLibrary.Component component : placement.composite.getComponents()) {
+                if (pieces.size() >= MAX_ROUTE_TILES) {
+                    return;
+                }
+                int[] offset = rotateLayoutOffset(
+                        component.getOffsetX() - placement.anchorX,
+                        component.getOffsetY() - placement.anchorY,
+                        placement.layoutTurns);
+                pieces.add(new RoutePiece(component.getId(), component.getType(),
+                        (component.getRotation() + placement.layoutTurns) & 0x3,
+                        placement.cornerX + offset[0], placement.cornerY + offset[1], plane));
+            }
+        } else if (curveObjectId >= 0) {
+            pieces.add(new RoutePiece(curveObjectId, curveObjectType, curveBaseRotation,
+                    cornerX, cornerY, plane));
+        } else {
+            pieces.add(new RoutePiece(objectId, objectType, verticalRotation(),
+                    cornerX, cornerY, plane));
+        }
+    }
+
+    public static final class RoutePiece {
+        private final int objectId;
+        private final int objectType;
+        private final int rotation;
+        private final int worldX;
+        private final int worldY;
+        private final int plane;
+
+        private RoutePiece(int objectId, int objectType, int rotation,
+                int worldX, int worldY, int plane) {
+            this.objectId = objectId;
+            this.objectType = objectType;
+            this.rotation = rotation & 0x3;
+            this.worldX = worldX;
+            this.worldY = worldY;
+            this.plane = plane;
+        }
+
+        public int getObjectId() { return objectId; }
+        public int getObjectType() { return objectType; }
+        public int getRotation() { return rotation; }
+        public int getWorldX() { return worldX; }
+        public int getWorldY() { return worldY; }
+        public int getPlane() { return plane; }
     }
 
     private static void cancelActiveDrag() {
