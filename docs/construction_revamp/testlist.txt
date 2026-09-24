@@ -804,3 +804,15 @@ RTS full-scene terrain rendering — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Confirm placed objects/rails no longer appear floating beyond a missing-terrain boundary.
 [ ] Confirm ordinary non-settlement/player camera rendering is unchanged after exiting the settlement.
 [ ] Note FPS while fully zoomed out; report any material regression.
+
+
+Rail Diagnostic Safety Freeze — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Different rail visual on an occupied persistent rail tile preserves the existing track.
+[x] Identical rail reuse remains idempotent.
+[x] Debug button shows a visible evidence panel inside the Construction palette.
+[x] Copy Debug retains the complete route report.
+[ ] Enable Debug and confirm RAIL DEBUG - LATEST ROUTE INTENT is visibly rendered in the palette.
+[ ] Build fresh straight A->B, then exact-B perpendicular B->C.
+[ ] Capture one screenshot containing both the rail result and visible debug evidence.
+[ ] Use Copy and paste the complete report if visible rows are truncated.
+[ ] Confirm unrelated existing rails no longer change while reproducing the connection failure.
