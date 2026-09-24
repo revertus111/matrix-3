@@ -387,8 +387,13 @@ Phase 2 Bundle 2.4 — RTS radial multi-worker control
 [x] Failed first runtime release attempt classified: live drag/ring preview still worked, but release did not produce a useful committed selection.
 [x] Fix source: render-thread worker preview now caches the exact detected/ringed runtime NPC indexes; AWT release copies that cache instead of traversing Matrix3 live NPC collections again.
 [x] Runtime VERIFIED: dragging around two visibly ringed workers and releasing committed the exact server-owned persistent selection; game chat reported `Radial worker selection committed: #1,#2.`
+[x] Runtime defect classified: after selecting #1,#2, the legacy Allowed Jobs card still targeted the numeric Worker Inspector and changed only Worker #1.
+[x] Ownership fix source: Role Preset, Pause/Resume, individual Allowed Job toggles and Enable/Disable All Jobs in Con Revamp now route only through the committed RWS-5 server-owned selection.
+[x] Numeric Worker Inspector is inspection-only and no longer clears or owns Allowed Jobs command visuals.
 [ ] Selection Status reports the same two Worker IDs and does not include workers outside the circle.
-[ ] Apply Lumberjack (or another preset) to Selection; All Worker Status shows only those two workers changed while the other three retain their prior policies.
+[ ] Apply Lumberjack (or another preset) from either RWS-5 command surface; All Worker Status shows only those two workers changed while the other three retain their prior policies.
+[ ] Toggle one individual Allowed Job on/off; the change applies to both selected workers only.
+[ ] Enable All / Disable All Selected Jobs applies to both selected workers only.
 [ ] Pause Selected; only the committed workers stop productive work and Allowed Jobs remain unchanged. Resume Selected restores them.
 [ ] Clear Selection; batch actions no longer have a server-owned target. Re-drag a different subset and confirm the new subset replaces the old one.
 [ ] Exit/re-enter the settlement; Selection Status requires a fresh drag, while any preset/Pause policy applied before exit remains persistent on the workers.
