@@ -746,7 +746,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             spinner.addChangeListener(needsPreviewChange);
         }
 
-        JPanel needGrid = new JPanel(new GridLayout(3, 3, 7, 7));
+        JPanel needGrid = new JPanel(new GridLayout(4, 3, 7, 7));
         needGrid.setOpaque(false);
         needGrid.setAlignmentX(LEFT_ALIGNMENT);
         needGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 102));
