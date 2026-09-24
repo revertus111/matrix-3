@@ -1290,3 +1290,11 @@
 - Hunger/Thirst/Energy arches now default to 70% scale, matching the former inner-ring radius rather than the old 95% third circumference.
 - When Needs HUD is disabled, legacy two-layer RWS-4 selection rendering remains unchanged.
 - No worker detection, committed selection, server needs ownership, persistence or AI behavior changed.
+
+
+2026-09-24 - Atomic Rail Endpoint Replacement V1
+- Runtime video proved the client-calculated replacement route was being applied as many independent erase/build commands, allowing the live settlement to expose and retain partial route states.
+- Endpoint edits now send one bounded settlementrailreplace command containing the complete old route and complete replacement route.
+- SettlementInstance owns the replacement transaction: validates the old route, validates the replacement footprint against the simulated post-removal state, removes the old route, installs the new route, and rolls back to the old route if replacement placement unexpectedly fails.
+- Exact old-route validation remains rail-only. Unrelated persistent builds block the replacement instead of being overwritten.
+- Normal first-time A-to-B placement is unchanged. Curve geometry is unchanged.
