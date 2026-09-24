@@ -227,6 +227,34 @@ public final class RailRoutePreview {
         return debugReport;
     }
 
+
+    public static java.util.List<String> getDebugOverlayLines() {
+        java.util.List<String> lines = new java.util.ArrayList<String>();
+        if (!debugEnabled) {
+            return lines;
+        }
+        String[] reportLines = debugReport.split("\\n");
+        for (String line : reportLines) {
+            if (line == null || line.length() == 0) {
+                continue;
+            }
+            String compact = line.replace('\t', ' ');
+            if (compact.startsWith("RAIL_DEBUG")
+                    || compact.startsWith("CURRENT")
+                    || compact.startsWith("PREVIOUS")
+                    || compact.startsWith("SEAM")
+                    || compact.startsWith("SEAM_CURVE")
+                    || compact.startsWith("FOOTPRINT")
+                    || compact.startsWith("PIECE")) {
+                lines.add(compact);
+            }
+            if (lines.size() >= 14) {
+                break;
+            }
+        }
+        return lines;
+    }
+
     public static void clearRoute() {
         dragging = false;
         committed = false;
