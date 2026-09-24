@@ -1459,3 +1459,10 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - RTS scene-visibility focus correction is IMPLEMENTED / NEEDS RUNTIME TEST. It re-anchors Class523.method6240 visibility focus to the detached RTS camera rather than the stationary player.
 - RTS minimap heading remains UNRESOLVED. A targeted source search did not establish the current Matrix3 minimap-angle owner, so no speculative obfuscated-field patch was made.
 - Consolidated next runtime gate: erase one normal build, erase one rail component, verify Clear requires confirmation then clears persistent builds, exit/re-enter to confirm removals persist, and pan RTS far enough to check the prior fog/scene wall.
+
+
+## Rail diagnostic safety freeze — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Runtime video established that broad rail-on-rail replacement could mutate previously correct track while continuation intent was wrong. That replacement path is frozen: non-identical occupied rail tiles are preserved and reported as debug conflicts.
+- Rail Debug now visibly renders the latest authored-intent evidence inside the Construction palette; Copy Debug retains the complete report.
+- Geometry remains frozen. Next gate is one fresh A->B then exact-B perpendicular B->C screenshot with the visible evidence panel. Use that evidence to decide whether the client route plan or persistent server result is wrong before changing geometry again.
