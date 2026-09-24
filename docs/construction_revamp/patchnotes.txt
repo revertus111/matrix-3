@@ -1025,3 +1025,12 @@
 - RWS-4 custom-color mode now enumerates texture IDs from either AbstractModel or Class89_Sub2, retextures those isolated clone faces to -1, then applies the selected HSL through the active renderer's own Model.method1396 implementation.
 - Existing 0x80000 face-color isolation and 0x8000 texture-ID isolation remain unchanged.
 - Scaling logic is untouched; focused runtime retest is color-only.
+
+
+2026-09-24 - RWS-4 OpenGL 4171 recolor path
+- Third runtime color retest still showed no visible change.
+- Source trace identified the missing renderer: Class106_Sub1 creates OpenGLModel, and the user's client is using this OpenGL model path.
+- OpenGLModel keeps per-face texture IDs in aShortArray10306 and face colors in aShortArray10281; prior custom-color texture enumeration covered only AbstractModel and Class89_Sub2.
+- RWS-4 custom-color mode now enumerates OpenGLModel texture IDs as well, retextures those isolated clone faces to -1, then applies the selected HSL through OpenGLModel.method1396(...).
+- Clone flag 0x8000 is verified-static to deep-copy OpenGLModel texture IDs through Class140.method2374(...); 0x80000 continues to isolate face colors.
+- Scaling and worker-detection logic remain untouched; focused runtime retest is color-only.
