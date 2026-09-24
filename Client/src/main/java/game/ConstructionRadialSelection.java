@@ -100,6 +100,9 @@ public final class ConstructionRadialSelection {
     private static volatile int dragPressMouseX;
     private static volatile int dragPressMouseY;
     private static volatile boolean dragThresholdPassed;
+    // A completed selection drag must not fall through as Matrix3 Walk Here.
+    // The next real mouse press clears this latch, so it cannot eat a later click.
+    private static volatile boolean selectionDragJustCommitted;
     private static volatile String lastEventState = "RWS-5 Worker Control disabled.";
     private static volatile String lastRenderState = "not rendered";
 
@@ -271,6 +274,7 @@ public final class ConstructionRadialSelection {
         livePlayerSelected = false;
         committedPlayerSelected = false;
         dragThresholdPassed = false;
+        selectionDragJustCommitted = false;
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -1056,6 +1060,7 @@ public final class ConstructionRadialSelection {
         dragPressMouseX = mouseX;
         dragPressMouseY = mouseY;
         dragThresholdPassed = false;
+        selectionDragJustCommitted = false;
         liveCenterWorldX = originWorldX;
         liveCenterWorldY = originWorldY;
         liveRadiusTiles = MIN_RADIUS_TILES;
@@ -1125,6 +1130,7 @@ public final class ConstructionRadialSelection {
         lastDetectedWorkers = formatNpcIndexes(committedWorkerNpcIndexes);
         committed = true;
         dragging = false;
+        selectionDragJustCommitted = true;
         lastRenderedCycle = Integer.MIN_VALUE;
         lastRenderState = "committed worker rings pending";
         lastEventState = "RWS-5 selection committed: "
@@ -1173,6 +1179,18 @@ public final class ConstructionRadialSelection {
             return false;
         }
         int normalizedAction = action >= 2000 ? action - 2000 : action;
+
+        /*
+         * Mouse release after a real radial drag can still produce Matrix3's
+         * action-23 Walk Here. That release belongs to selection, not an RTS
+         * move order. Consume it once; a later click starts with a fresh latch.
+         */
+        if (normalizedAction == MATRIX3_TILE_ACTION && selectionDragJustCommitted) {
+            selectionDragJustCommitted = false;
+            lastEventState = "RWS-5 selection drag release consumed; no Walk Here order issued.";
+            return true;
+        }
+
         WorldPoint point = resolveWorldPoint(localX, localY);
         if (point == null) {
             return false;
