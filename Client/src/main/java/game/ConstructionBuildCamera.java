@@ -236,7 +236,6 @@ public final class ConstructionBuildCamera {
      * submitted. Guarded to one update per client cycle.
      */
     public static void tick() {
-        updateSettlementAutoLifecycle();
         if (!active || lastTickCycle == client.cycles) {
             return;
         }
@@ -290,32 +289,6 @@ public final class ConstructionBuildCamera {
                 reportToServer("FAIL tick-exception-" + ex.getClass().getSimpleName());
                 ex.printStackTrace();
             }
-        }
-    }
-
-    /**
-     * Explicit settlement lifecycle bridge. Server finishLoad/leave sends CSVar
-     * 2835 as a private Matrix3 construction signal. Reading the live CSVar
-     * cache here keeps camera ownership on the already-proven viewport seam.
-     */
-    private static void updateSettlementAutoLifecycle() {
-        int signal = client.anIntArray8873 != null && client.anIntArray8873.length > 2835
-                ? client.anIntArray8873[2835] : 0;
-        if (signal == 1) {
-            settlementExitStableTicks = 0;
-            if (!settlementAutoMode && !active) {
-                cameraMode = CameraMode.RTS;
-                String result = enter();
-                settlementAutoMode = active;
-                if (settlementAutoMode) {
-                    reportToServer("SETTLEMENT_AUTO_ENTER " + result);
-                }
-            }
-            return;
-        }
-        if (settlementAutoMode) {
-            exit();
-            settlementAutoMode = false;
         }
     }
 
