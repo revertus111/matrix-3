@@ -716,3 +716,14 @@ Rail Logistics V1 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Break/disconnect the route and rebuild/re-enter; no cart dispatches across the gap.
 [ ] Exit/re-enter with a valid route; topology is rebuilt from persistent pieces and a new V1 cart can dispatch.
 [ ] Existing rail A->B placement and non-rail Construction placement still work.
+
+
+Rail Auto-Connect V1 — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Persistent SettlementState owns exact rail-tile lookup.
+[x] Reusing an identical existing rail tile is idempotent: no duplicate piece, no material/XP charge and no occupied-slot failure.
+[x] Conflicting same-tile rail orientation/definition is rejected with an explicit junction/switch-art requirement instead of rendering a false connection.
+[ ] Drag a straight route so Point A overlaps the end tile of an existing same-axis straight; extension builds with no occupied-slot message.
+[ ] Repeat with Point B overlapping an existing same-axis straight; the two authored routes become one persistent cardinal network.
+[ ] Connect two existing routes using an A->B path containing the accepted three-piece curve; the curve remains visually correct and Rail Logistics sees one connected topology.
+[ ] Exit/re-enter; joined track persists without duplicate rail pieces.
+[ ] Attempt a perpendicular branch directly on an occupied straight; verify it is not visually overwritten and the server reports junction/switch art is required.
