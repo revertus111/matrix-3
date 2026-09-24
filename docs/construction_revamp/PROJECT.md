@@ -1434,3 +1434,10 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Runtime evidence proved the continuation-turn trigger worked but the accepted three-piece curve was anchored one seam too far forward, creating the crossed visual.
 - The continuation path now retains the previous route's incoming travel vector, shifts the composite one tile back along that vector, and suppresses the new B straight so the accepted curve owns the A->B / B->C seam.
 - Next focused check: fresh A->B then exact-B perpendicular B->C in both turn directions; if clean, expand to all four quadrants.
+
+
+## Rail continuation correction after runtime regression — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under active AAA.
+- The one-tile-back curve seam offset was reverted after runtime video showed it worsened the visual result.
+- B is restored as the accepted elbow-normalized curve anchor. The key ownership correction is server-side: authored rail components/rotations may replace existing persistent RAIL visuals inside the continuation footprint rather than being rejected by the prior conflict guard.
+- No further guessed geometry offsets were added. Focused gate is one fresh straight A->B followed by exact-B perpendicular B->C; only expand after that case is visually clean.
