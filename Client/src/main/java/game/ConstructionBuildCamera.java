@@ -57,6 +57,9 @@ public final class ConstructionBuildCamera {
 
     private static volatile boolean active;
     private static volatile boolean ownsFreeCamera;
+    private static volatile boolean settlementAutoMode;
+    private static volatile int settlementEntryStableTicks;
+    private static volatile int settlementExitStableTicks;
     private static volatile CameraMode cameraMode = CameraMode.RTS;
 
     private static int lastTickCycle = Integer.MIN_VALUE;
@@ -165,6 +168,9 @@ public final class ConstructionBuildCamera {
     }
 
     public static String enter() {
+        settlementAutoMode = false;
+        settlementEntryStableTicks = 0;
+        settlementExitStableTicks = 0;
         // Every fresh Construction/settlement camera session starts in RTS.
         // Free Build remains an explicit in-session palette choice.
         cameraMode = CameraMode.RTS;
@@ -230,6 +236,7 @@ public final class ConstructionBuildCamera {
      * submitted. Guarded to one update per client cycle.
      */
     public static void tick() {
+        updateSettlementAutoLifecycle();
         if (!active || lastTickCycle == client.cycles) {
             return;
         }
@@ -283,6 +290,55 @@ public final class ConstructionBuildCamera {
                 reportToServer("FAIL tick-exception-" + ex.getClass().getSimpleName());
                 ex.printStackTrace();
             }
+        }
+    }
+
+    /**
+     * Settlement entry does not open the Construction palette, so palette-session
+     * ownership cannot activate RTS for normal settlement entry. Detect the
+     * established dynamic settlement plot shape at the live scene seam instead.
+     * The plot is exactly SettlementState.PLOT_TILES (64) square; requiring
+     * several stable frames avoids reacting to transient map rebuild dimensions.
+     */
+    private static void updateSettlementAutoLifecycle() {
+        if (client.aClass613_8605 == null || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
+            settlementEntryStableTicks = 0;
+            settlementExitStableTicks = 0;
+            return;
+        }
+
+        Class523 scene = client.aClass613_8605.method7285(0);
+        boolean settlementScene = scene != null
+                && scene.anInt5833 * -1396185127 == 64
+                && scene.anInt5834 * -1519623925 == 64;
+
+        if (settlementScene) {
+            settlementExitStableTicks = 0;
+            if (settlementAutoMode || active) {
+                settlementEntryStableTicks = 0;
+                return;
+            }
+            if (++settlementEntryStableTicks >= 3) {
+                cameraMode = CameraMode.RTS;
+                String result = enter();
+                settlementAutoMode = active;
+                settlementEntryStableTicks = 0;
+                if (settlementAutoMode) {
+                    reportToServer("SETTLEMENT_AUTO_ENTER " + result);
+                }
+            }
+            return;
+        }
+
+        settlementEntryStableTicks = 0;
+        if (!settlementAutoMode) {
+            settlementExitStableTicks = 0;
+            return;
+        }
+        if (++settlementExitStableTicks >= 3) {
+            exit();
+            settlementAutoMode = false;
+            settlementExitStableTicks = 0;
         }
     }
 
