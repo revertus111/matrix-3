@@ -1222,3 +1222,11 @@
 - Corrected the detached RTS renderer visibility focus: Class523.method6240 no longer receives the stationary player's tile during settlement RTS and instead receives the detached camera's current local scene tile.
 - This targets the visible long-range fog/scene-culling wall without changing ordinary gameplay rendering; runtime verification is still required.
 - Eraser palette UX, destructive Clear Builds confirmation, and RTS minimap heading remain unfinished and must not be marked complete.
+
+
+2026-09-24 - Rail route debug instrumentation
+- Froze rail geometry changes after repeated continuation visual regressions. This patch adds diagnostics only; it does not change route placement, curve anchoring, replacement or topology behavior.
+- RailRoutePreview now records a monotonically numbered debug report for every committed A->B operation.
+- The report captures current A/B/plane, previous A/B/plane, whether the new A equals the previous B, calculated incoming/outgoing cardinal directions, continuation H/V values, accepted curve composite name, calculated seam-curve corner/anchor/layout turns, every calculated curve footprint tile, and every final physical route piece with world tile/object id/type/rotation/logical role.
+- Construction -> Rails now exposes Rail Debug and Copy Debug controls. Copy Debug puts the latest tab-separated report on the system clipboard for direct paste into chat alongside a screenshot/video.
+- Debug is intentionally client route-intent evidence; persistent server actual/replacement evidence is a follow-up only if this report proves the client intent is correct but runtime objects differ.
