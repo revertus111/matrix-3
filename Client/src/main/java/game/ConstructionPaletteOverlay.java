@@ -159,7 +159,7 @@ public final class ConstructionPaletteOverlay {
                         }
                         return;
                     }
-                    if (visible && event instanceof KeyEvent) {
+                    if ((visible || ConstructionBuildCamera.isSettlementAutoMode()) && event instanceof KeyEvent) {
                         handleKey((KeyEvent) event);
                     }
                 }
@@ -373,6 +373,16 @@ public final class ConstructionPaletteOverlay {
 
     private static void handleKey(KeyEvent event) {
         if (event.getID() == KeyEvent.KEY_PRESSED) {
+            if (event.getKeyCode() == KeyEvent.VK_Z && event.isControlDown()
+                    && ConstructionBuildCamera.isSettlementAutoMode()) {
+                ClientConsoleBridge.queueConsoleCommand("itembrowser settlement undo");
+                event.consume();
+                repaintSurface();
+                return;
+            }
+            if (!visible) {
+                return;
+            }
             if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
                 if (searchFocused) {
                     searchFocused = false;
