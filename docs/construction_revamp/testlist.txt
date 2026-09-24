@@ -851,3 +851,14 @@ RTS terrain fog bypass — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Reproduce the exact high/zoomed-out RTS view from the 2026-09-24 screenshots; the beige terrain fog wall must be gone.
 [ ] Pan/rotate through the settlement and confirm ground remains visible out to the loaded-scene boundary.
 [ ] Exit settlement and confirm normal player camera fog/rendering is unchanged.
+
+
+Rail Endpoint Old/New Ownership Diagnostic — IMPLEMENTED / NEEDS RUNTIME EVIDENCE
+[x] Debug report states endpointEdit=true/false and fixedA=true/false.
+[x] Debug report captures exact OLD_PIECE route before B movement.
+[x] Debug report captures exact replacement PIECE route after B movement.
+[x] Palette evidence panel surfaces old/new route rows without clipboard dependency.
+[ ] Enable Debug -> fresh A-to-B -> grab exact B -> drag 90 degrees -> release.
+[ ] Capture one screenshot showing malformed rails plus RAIL DEBUG panel.
+[ ] Confirm MODE says endpointEdit=true fixedA=true. If false, fix endpoint-hit ownership.
+[ ] Compare OLD_PIECE vs PIECE coordinates/rotations. If PIECE is already malformed, fix appendRoutePieces/createCurvePlacement. If PIECE is correct but world is malformed, instrument server replacement actual state.
