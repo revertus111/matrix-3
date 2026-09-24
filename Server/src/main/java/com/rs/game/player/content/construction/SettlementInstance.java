@@ -441,6 +441,118 @@ public final class SettlementInstance {
                 : "Removed " + removedCount + " settlement build(s).";
     }
 
+    /**
+     * Atomically replaces one authored rail route. Validation happens against a
+     * simulated post-removal footprint before live SettlementState/world objects
+     * are touched, so an edit cannot leave a half-erased/half-built route.
+     */
+    public synchronized String replaceRailRoute(
+            int[] oldObjectIds, int[] oldWorldXs, int[] oldWorldYs, int[] oldPlanes,
+            String[] newKeys, int[] newWorldXs, int[] newWorldYs, int[] newPlanes, int[] newRotations) {
+        if (!loaded || oldObjectIds == null || oldWorldXs == null || oldWorldYs == null || oldPlanes == null
+                || newKeys == null || newWorldXs == null || newWorldYs == null
+                || newPlanes == null || newRotations == null) {
+            return "Rail route edit data is incomplete.";
+        }
+        int oldCount = oldObjectIds.length;
+        int newCount = newKeys.length;
+        if (oldWorldXs.length != oldCount || oldWorldYs.length != oldCount || oldPlanes.length != oldCount
+                || newWorldXs.length != newCount || newWorldYs.length != newCount
+                || newPlanes.length != newCount || newRotations.length != newCount) {
+            return "Rail route edit data lengths do not match.";
+        }
+        if (oldCount > 64 || newCount <= 0 || newCount > 64) {
+            return "Rail route edit exceeds the 64-piece route limit.";
+        }
+
+        java.util.List<SettlementPlacedPiece> oldPieces =
+                new java.util.ArrayList<SettlementPlacedPiece>();
+        for (int i = 0; i < oldCount; i++) {
+            WorldTile tile = new WorldTile(oldWorldXs[i], oldWorldYs[i], oldPlanes[i]);
+            if (!containsWorldTile(tile)) {
+                return "Old rail route contains a tile outside the active plot.";
+            }
+            SettlementPlacedPiece existing = findSavedPiece(oldObjectIds[i], tile);
+            if (existing == null) {
+                return "Rail route changed before edit; old piece " + i + " is missing.";
+            }
+            SettlementBuildPiece definition = SettlementBuildPiece.forKey(existing.getDefinitionKey());
+            if (definition == null || definition.getRole() != SettlementBuildRole.RAIL) {
+                return "Rail route edit refused a non-rail old piece.";
+            }
+            if (!oldPieces.contains(existing)) {
+                oldPieces.add(existing);
+            }
+        }
+
+        java.util.List<SettlementPlacedPiece> snapshot = state.snapshotPieces();
+        for (int i = 0; i < newCount; i++) {
+            WorldTile tile = new WorldTile(newWorldXs[i], newWorldYs[i], newPlanes[i]);
+            if (!containsWorldTile(tile) || newRotations[i] < 0 || newRotations[i] > 3) {
+                return "New rail route contains an invalid tile or rotation.";
+            }
+            SettlementBuildPiece definition = SettlementBuildPiece.forKey(newKeys[i]);
+            if (definition == null || definition.getRole() != SettlementBuildRole.RAIL) {
+                return "New rail route contains an unapproved rail piece.";
+            }
+            int plotX = toPlotX(tile.getX());
+            int plotY = toPlotY(tile.getY());
+            for (SettlementPlacedPiece occupied : snapshot) {
+                if (occupied == null || oldPieces.contains(occupied)
+                        || occupied.getPlotX() != plotX || occupied.getPlotY() != plotY
+                        || occupied.getPlane() != tile.getPlane()) {
+                    continue;
+                }
+                SettlementBuildPiece occupiedDefinition =
+                        SettlementBuildPiece.forKey(occupied.getDefinitionKey());
+                if (occupiedDefinition != null
+                        && occupiedDefinition.getObjectType() == definition.getObjectType()) {
+                    return "Rail route edit blocked by another persistent build.";
+                }
+            }
+        }
+
+        java.util.List<SettlementPlacedPiece> removed =
+                new java.util.ArrayList<SettlementPlacedPiece>();
+        for (SettlementPlacedPiece oldPiece : oldPieces) {
+            SettlementPlacedPiece value = state.remove(oldPiece.getPieceId());
+            if (value != null) {
+                removed.add(value);
+                removeProjectedPiece(value);
+            }
+        }
+
+        java.util.List<SettlementPlacedPiece> placed =
+                new java.util.ArrayList<SettlementPlacedPiece>();
+        for (int i = 0; i < newCount; i++) {
+            SettlementBuildPiece definition = SettlementBuildPiece.forKey(newKeys[i]);
+            SettlementPlacedPiece value = state.place(definition,
+                    toPlotX(newWorldXs[i]), toPlotY(newWorldYs[i]), newPlanes[i], newRotations[i]);
+            if (value == null) {
+                for (SettlementPlacedPiece added : placed) {
+                    SettlementPlacedPiece rollback = state.remove(added.getPieceId());
+                    if (rollback != null) {
+                        removeProjectedPiece(rollback);
+                    }
+                }
+                for (SettlementPlacedPiece restore : removed) {
+                    SettlementBuildPiece restoreDefinition =
+                            SettlementBuildPiece.forKey(restore.getDefinitionKey());
+                    SettlementPlacedPiece restored = state.place(restoreDefinition,
+                            restore.getPlotX(), restore.getPlotY(), restore.getPlane(), restore.getRotation());
+                    spawnProjectedPiece(restored);
+                }
+                refreshRailLogistics();
+                return "Rail route edit rolled back because replacement placement failed.";
+            }
+            placed.add(value);
+            spawnProjectedPiece(value);
+        }
+        refreshRailLogistics();
+        return "Rail route replaced atomically: " + removed.size()
+                + " old, " + placed.size() + " new piece(s).";
+    }
+
     public String eraseRailPiece(int objectId, WorldTile source) {
         if (!loaded || source == null || !containsWorldTile(source)) {
             return "Rail edit target must be inside the active settlement plot.";
