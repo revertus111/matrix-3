@@ -1034,3 +1034,9 @@
 - RWS-4 custom-color mode now enumerates OpenGLModel texture IDs as well, retextures those isolated clone faces to -1, then applies the selected HSL through OpenGLModel.method1396(...).
 - Clone flag 0x8000 is verified-static to deep-copy OpenGLModel texture IDs through Class140.method2374(...); 0x80000 continues to isolate face colors.
 - Scaling and worker-detection logic remain untouched; focused runtime retest is color-only.
+
+2026-09-24 - Rail Layout Lab curve-scan recall + screenshot IDs
+- Added a large ACTIVE OBJECT ID banner and changed layout rows to lead with OBJECT ID/T/R/dX/dY so screenshots identify the selected stock piece unambiguously.
+- Added Load Last Curve Scan using the verified 2026-09-22 capture geometry: 46360/R2@(-4,0), 46361/R0@(-3,0), 46377/R0@(-1,0), 46379/R0@(0,0), 46382/R0@(-1,+1), 46381/R0@(0,+1).
+- Added Load 2x2 Bend Core for only 46377/46379/46382/46381; 46353 remains a separate straight connector (R2 east/west, R3 north/south).
+- Seeded layouts stay CUSTOM so reference/testing geometry cannot become the A->B CURVE automatically until the user explicitly promotes a saved layout.

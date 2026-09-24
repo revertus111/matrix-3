@@ -52,6 +52,23 @@ public final class ObjectExplorerPanel extends JScrollPane {
     private static final Path RESEARCH_FILE =
             Paths.get("data/tools/object_explorer.tsv");
 
+    /*
+     * VERIFIED from the 2026-09-22 uploaded curve capture.
+     * Coordinates are normalized to object 46379 at layout origin 0,0.
+     * 46360/46361 are approach/transition pieces; 46377/46379/46382/46381
+     * are the captured 2x2 bend core. 46353 is a separate straight connector:
+     * R2 east/west, R3 north/south.
+     */
+    private static final int[][] LAST_CURVE_SCAN = {
+        {46360, 22, 2, -4, 0},
+        {46361, 22, 0, -3, 0},
+        {46377, 22, 0, -1, 0},
+        {46379, 22, 0,  0, 0},
+        {46382, 22, 0, -1, 1},
+        {46381, 22, 0,  0, 1}
+    };
+    private static final int LAST_CURVE_CORE_START = 2;
+
     private final JSpinner idSpinner =
             new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
     private final JSpinner typeSpinner =
@@ -74,6 +91,8 @@ public final class ObjectExplorerPanel extends JScrollPane {
     private final DefaultListModel<String> compositeModel = new DefaultListModel<String>();
     private final JList<String> compositeList = new JList<String>(compositeModel);
     private final List<LayoutPart> compositeParts = new ArrayList<LayoutPart>();
+    private final JLabel activeLayoutPiece =
+            ConsoleTheme.titleLabel("ACTIVE OBJECT ID: none");
     private final JCheckBox layoutHotkeys = new JCheckBox(
             "Layout hotkeys: [ / ] select, arrows move, R rotate, Del remove, Ctrl+D duplicate", true);
 
@@ -241,12 +260,36 @@ public final class ObjectExplorerPanel extends JScrollPane {
                 6));
         card.add(Box.createVerticalStrut(5));
         card.add(ConsoleTheme.createWrappedText(
-                "Known curve-family evidence: 46360/R2, 46361/R0, 46353/R2, 46377/R0, "
-                + "46379/R0, 46382/R0, 46381/R0. Do not assume all belong in the final curve.",
+                "Last uploaded curve scan: approach 46360/R2 + 46361/R0; bend core "
+                + "46377/R0, 46379/R0, 46382/R0, 46381/R0. Straight connector 46353 "
+                + "was R2 east/west and R3 north/south.",
                 4));
         card.add(Box.createVerticalStrut(7));
 
+        JButton loadLastCurve = button("Load Last Curve Scan");
+        JButton loadCurveCore = button("Load 2x2 Bend Core");
+        loadLastCurve.addActionListener(e -> loadCapturedCurveScan(false));
+        loadCurveCore.addActionListener(e -> loadCapturedCurveScan(true));
+
+        JPanel scanActions = new JPanel(new GridLayout(1, 2, 6, 0));
+        scanActions.setOpaque(false);
+        scanActions.setAlignmentX(LEFT_ALIGNMENT);
+        scanActions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        scanActions.add(loadLastCurve);
+        scanActions.add(loadCurveCore);
+        card.add(scanActions);
+        card.add(Box.createVerticalStrut(8));
+
+        activeLayoutPiece.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(activeLayoutPiece);
+        card.add(Box.createVerticalStrut(7));
+
         compositeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        compositeList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                refreshActiveLayoutLabel();
+            }
+        });
         compositeList.setBackground(ConsoleTheme.PANEL);
         compositeList.setForeground(ConsoleTheme.TEXT);
         compositeList.setSelectionBackground(ConsoleTheme.CARD_HOVER);
@@ -452,6 +495,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
         compositeParts.add(part);
         refreshCompositeList();
         compositeList.setSelectedIndex(compositeParts.size() - 1);
+        refreshActiveLayoutLabel();
         if (ensureLayoutAnchor()) {
             refreshLayoutPreview();
         }
@@ -475,6 +519,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
         compositeParts.add(copy);
         refreshCompositeList();
         compositeList.setSelectedIndex(compositeParts.size() - 1);
+        refreshActiveLayoutLabel();
         refreshLayoutPreview();
         setStatus("Duplicated selected piece to dX " + copy.offsetX + ", dY " + copy.offsetY + ".");
     }
@@ -489,8 +534,10 @@ public final class ObjectExplorerPanel extends JScrollPane {
         refreshCompositeList();
         if (!compositeParts.isEmpty()) {
             compositeList.setSelectedIndex(Math.min(index, compositeParts.size() - 1));
+            refreshActiveLayoutLabel();
             refreshLayoutPreview();
         } else {
+            refreshActiveLayoutLabel();
             ObjectCompositePreview.hide();
         }
         setStatus("Removed layout piece: " + removed.describe());
@@ -499,6 +546,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
     private void clearComposite() {
         compositeParts.clear();
         refreshCompositeList();
+        refreshActiveLayoutLabel();
         ObjectCompositePreview.hide();
         setStatus("Rail layout cleared.");
     }
@@ -508,6 +556,44 @@ public final class ObjectExplorerPanel extends JScrollPane {
         for (int i = 0; i < compositeParts.size(); i++) {
             compositeModel.addElement("#" + (i + 1) + "  " + compositeParts.get(i).describe());
         }
+    }
+
+    private void loadCapturedCurveScan(boolean coreOnly) {
+        compositeParts.clear();
+        int start = coreOnly ? LAST_CURVE_CORE_START : 0;
+        for (int i = start; i < LAST_CURVE_SCAN.length; i++) {
+            int[] row = LAST_CURVE_SCAN[i];
+            compositeParts.add(new LayoutPart(
+                    "captured-curve-" + row[0], row[0], row[1], row[2], row[3], row[4]));
+        }
+        compositeNameField.setText(coreOnly ? "CURVE_SCAN_CORE_2X2" : "CURVE_SCAN_FULL");
+        compositeRole.setSelectedItem(RailCompositeLibrary.Role.CUSTOM);
+        refreshCompositeList();
+        if (!compositeParts.isEmpty()) {
+            compositeList.setSelectedIndex(0);
+        }
+        refreshActiveLayoutLabel();
+        if (ensureLayoutAnchor()) {
+            refreshLayoutPreview();
+        }
+        setStatus(coreOnly
+                ? "Loaded verified 2x2 bend core: 46377, 46379, 46382, 46381."
+                : "Loaded last curve scan: 46360, 46361 + 2x2 bend core. 46353 remains the separate straight connector.");
+    }
+
+    private void refreshActiveLayoutLabel() {
+        int index = selectedLayoutIndex();
+        if (index < 0) {
+            activeLayoutPiece.setText("ACTIVE OBJECT ID: none");
+            return;
+        }
+        LayoutPart part = compositeParts.get(index);
+        activeLayoutPiece.setText("ACTIVE #" + (index + 1)
+                + "  |  OBJECT ID " + part.id
+                + "  |  T" + part.type
+                + "  |  R" + part.rotation
+                + "  |  dX " + part.offsetX
+                + "  |  dY " + part.offsetY);
     }
 
     private int selectedLayoutIndex() {
@@ -527,6 +613,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
         }
         compositeList.setSelectedIndex(index);
         compositeList.ensureIndexIsVisible(index);
+        refreshActiveLayoutLabel();
         setStatus("Selected layout piece #" + (index + 1) + ": " + compositeParts.get(index).describe());
     }
 
@@ -541,6 +628,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
         part.offsetY = clamp(part.offsetY + dy, -12, 12);
         refreshCompositeList();
         compositeList.setSelectedIndex(index);
+        refreshActiveLayoutLabel();
         refreshLayoutPreview();
         setStatus("Moved #" + (index + 1) + " to dX " + part.offsetX + ", dY " + part.offsetY + ".");
     }
@@ -555,6 +643,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
         part.rotation = (part.rotation + 1) & 0x3;
         refreshCompositeList();
         compositeList.setSelectedIndex(index);
+        refreshActiveLayoutLabel();
         refreshLayoutPreview();
         setStatus("Rotated #" + (index + 1) + " to R" + part.rotation + ".");
     }
@@ -799,8 +888,10 @@ public final class ObjectExplorerPanel extends JScrollPane {
         }
 
         private String describe() {
-            return name + " | ID " + id + " | T" + type + " | R" + rotation
-                    + " | dX " + offsetX + " | dY " + offsetY;
+            return "OBJECT ID " + id + " | T" + type + " | R" + rotation
+                    + " | dX " + offsetX + " | dY " + offsetY
+                    + (name.startsWith("id-") || name.startsWith("captured-curve-")
+                            ? "" : " | " + name);
         }
     }
 

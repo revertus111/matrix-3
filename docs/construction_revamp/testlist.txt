@@ -627,6 +627,9 @@ Matrix3 Rail Layout Lab — IMPLEMENTED / NEEDS RUNTIME TEST
 [x] Backward compatibility: legacy six-column rail_composites.tsv rows load as dX=0/dY=0.
 [x] Evidence seed recorded from capture_20260922_001: 46360/R2, 46361/R0, 46353/R2, 46377/R0, 46379/R0, 46382/R0, 46381/R0, plus straight continuation 46353/R3.
 [x] Hotkey ownership: while Object Explorer is visible and Layout hotkeys are enabled, [ / ] select, arrows move, R rotates, Delete removes and Ctrl+D duplicates; text/spinner/combo editing is excluded.
+[x] Last-curve-scan seed is encoded from verified capture evidence: full = 46360/R2@(-4,0), 46361/R0@(-3,0), 46377/R0@(-1,0), 46379/R0@(0,0), 46382/R0@(-1,+1), 46381/R0@(0,+1); core = 46377/46379/46382/46381; 46353 is connector-only R2 E/W, R3 N/S.
+[ ] ACTIVE OBJECT ID banner and list rows remain readable in a normal screenshot and match the selected piece's ID/rotation/dX/dY.
+[ ] Load Last Curve Scan reproduces the captured six-piece reference layout; Load 2x2 Bend Core reproduces only the four captured bend-core pieces.
 [ ] Test -> Object Explorer -> Rail Layout Lab: Add Current Piece for two or more rail candidates and verify each row preserves ID/type/rotation/dX/dY.
 [ ] Select pieces with [ / ] and verify the highlighted list row changes without moving another piece.
 [ ] Arrow keys move only the selected piece one relative tile per step and the live preview updates immediately.
