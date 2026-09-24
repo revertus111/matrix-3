@@ -1101,3 +1101,13 @@
 - Settlement enter signal now invokes ConstructionPlacementController.beginPaletteSession(), the same runtime-proven path used by the existing Construction RTS camera.
 - Settlement exit invokes the matching endPaletteSession path when the Construction camera is active.
 - No second RTS implementation, scene-size inference, or delayed camera bootstrap remains.
+
+
+2026-09-24 - Rail Logistics V1 vertical slice
+- Added material-free Rail Loader and Rail Unloader persistent build roles/pieces to the Rails palette. V1 reuses the verified fence/door visuals as explicit placeholder endpoint art; stable definition keys own gameplay identity.
+- Added SettlementRailNetwork as a server-side derived topology over persistent plot-relative RAIL pieces. V1 finds cardinal adjacency, loader/unloader endpoints and a BFS path without scanning live WorldObjects.
+- Added one transient SettlementRailCartNpc runtime projection. A connected Loader -> rail path -> Unloader with stored Wood dispatches one cart and moves it through the derived rail path.
+- Successful arrival performs a Wood payload round-trip through SettlementState and reports delivery. This intentionally proves physical transport ownership without inventing a second machine inventory before processing/logistics storage is designed.
+- Broken/disconnected routes do not dispatch. V1 intentionally excludes switches, intersections policy, multiple carts, signals, offline simulation and polished cart art/motion.
+- Fixed free-build completion messaging so material-free rail/endpoints no longer dereference a null resource while reporting successful placement.
+- Runtime acceptance required before expanding rail logistics.
