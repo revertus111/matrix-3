@@ -159,9 +159,24 @@ public final class SettlementInstance {
         player.lock(2);
         player.setNextWorldTile(entryTile);
         loaded = true;
-        player.getPackets().sendCSVarInteger(2835, 1);
         player.getPackets().sendGameMessage(
                 "Settlement loaded: " + state.size() + " saved build piece" + (state.size() == 1 ? "." : "s."));
+
+        /*
+         * setNextWorldTile/loadMapRegions queues the client's dynamic-region rebuild.
+         * The RTS signal must not arrive in that same server tick or the already-
+         * proven detached camera starts against the outgoing scene and the viewport
+         * goes flat. Fire the existing RTS entry only after the player's two-tick
+         * settlement transfer lock has elapsed.
+         */
+        GameExecutorManager.slowExecutor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (!destroyed && loaded && getActive(player) == SettlementInstance.this) {
+                    player.getPackets().sendCSVarInteger(2835, 1);
+                }
+            }
+        }, 1800L, TimeUnit.MILLISECONDS);
     }
 
     private void failLoad(String message) {
