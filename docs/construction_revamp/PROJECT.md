@@ -1008,7 +1008,7 @@ Batch worker actions:
 
 Runtime acceptance target:
 
-`Enable Worker Control -> drag around a subset of the five workers -> release -> chat resolves exact persistent Worker IDs -> Selection Status matches that subset -> Apply Lumberjack/Forager/Idle to selection -> only selected workers change -> Pause Selected stops only selected workers -> Resume Selected restores them -> clear/re-drag different subset -> exit/re-entry requires a fresh selection while the selected workers' saved policies remain persistent`
+`Enable Worker Control -> drag-select workers and optionally self -> release -> selected-unit rings persist -> normal click preserves selection -> Walk Here moves selected workers and also self only when self is selected -> right-click starter tree / Chop commands selected workers to physically path into range before chopping and also lets selected self perform normal player Chop -> manual order completes -> worker policy resumes -> Clear/reselect updates rings -> settlement exit/re-entry requires a fresh selection`
 
 Runtime defect/fix note:
 - First RWS-5 runtime attempt: drag preview worked, but mouse release produced no useful selection action.
@@ -1019,7 +1019,13 @@ Runtime defect/fix note:
 - Follow-up runtime exposed a UI ownership mismatch: after selecting #1,#2, the legacy lower Allowed Jobs card still sent `workerpreset <spinnerWorkerId>`, so only Worker #1 changed.
 - Ownership fix implemented: the lower Role Preset, Pause/Resume, individual Allowed Job and Enable/Disable All controls now target the committed RWS-5 selection. The numeric spinner is explicitly inspection-only.
 - Runtime confirmation: user reports all multi-worker command behavior now works; the only remaining Bundle 2.4 issue was that selected-worker rings disappeared on release.
-- Persistent-ring patch implemented: the scene pass now renders the committed selected-worker ring layers after release without re-rendering the large drag circle. If the committed runtime NPC set disappears, the local visual selection clears so stale rings do not survive instance rebuild/exit.
+- Persistent-ring patch implemented: the scene pass now renders the committed selected-worker ring layers after release without re-rendering the large drag circle.
+- Follow-up runtime clarified that ordinary clicks were replacing the selection because every mouse press/release counted as a drag. RWS now requires a 6px drag threshold; a normal click preserves the committed group and continues into Matrix3's normal context action.
+- RWS self-selection is now part of the transient active selection: the local player can be inside the drag circle, receives the same layered 4171 ring, and the active SettlementInstance records transient `self` membership alongside persistent Worker IDs without adding save-schema state.
+- Matrix3's existing context actions are the RTS command surface rather than a second custom menu: action 23 (Walk Here) mirrors a transient Move order to selected workers; if self is selected, vanilla Walk Here continues for the player. Starter-tree first object action (Chop, object 1276) mirrors a transient gather order to selected workers and also continues the player's normal Chop when self is selected.
+- Worker manual Move/Gather orders are runtime-only overrides owned by `SettlementWorkerNpc`; after the order completes, normal Allowed Jobs AI resumes. Pause remains authoritative.
+- The worker arrival seam is hardened: resource gathering now requires explicit physical interaction range (adjacent for resource nodes). A `calcFollow(...)` success with zero queued steps no longer means the worker has arrived, preventing the remote-chop behavior seen in runtime video.
+- Persistent rings no longer clear merely because one render pass cannot resolve a selected NPC. Local selection clears when explicitly replaced/cleared or when the committed selection center leaves the active scene, covering settlement exit/rebuild without transient-frame flicker.
 
 ## Phase 3 — Processing chains + better materials
 
@@ -1133,6 +1139,8 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 
 ### verified-static
 
+- RWS context-command ownership is verified-static pending runtime: Class319 dispatch now gives `ConstructionRadialSelection` first refusal on Matrix3 action 23 and first-object action 3; worker Move/Gather orders are sent through the existing owner bridge to the active SettlementInstance, while selected-self actions fall through to vanilla Matrix3 player movement/interaction.
+- Worker gather-arrival hardening is verified-static pending runtime: `SettlementWorkerNpc.walkToward(..., interactionRange)` requires explicit tile range after `calcFollow`; zero queued steps outside range no longer starts gathering.
 - Bundle 2.4 RWS-5 is verified-static pending runtime: the client commits a world-space detected runtime-NPC set once on drag release; the active `SettlementInstance` validates only its own live `SettlementWorkerNpc` indexes, converts them to persistent Worker IDs and owns the transient selection; batch preset/pause/status commands then operate only on those server-owned Worker IDs. No new persistent selection state or worker identity owner was added.
 - Bundle 2.3 Patch 2.3.2 physical-bed path is VERIFIED at runtime: object definition 14872 renders correctly as Bed through the Furniture palette and existing player `settlementbuild` path using object type 10; each physical Bed consumes 3 Wood, awards 12 base Construction XP and adds +1 housing capacity; spare-capacity removal subtracts that capacity; required-bed removal is rejected; physical placement and capacity survive exit/re-entry and logout/relog.
 - Bundle 2.3 Patch 2.3.1 housing-capacity foundation is VERIFIED at runtime: SettlementState schema v9 persists housingBedCount; base shelter capacity 2 gains +1 per bed; recruitment supports multiple recruited-settler records with unique free saved home slots; occupied capacity cannot be removed; the live five-worker settlement persisted beds=3, capacity=5 and workers=5/5 across exit/re-entry and logout/relog; saved/runtime projection counts remained 5/5 and exact captured worker identities/home slots survived. No bed art id is assumed; normal physical bed placement remains Patch 2.3.2.
@@ -1275,11 +1283,11 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 2 — Population + broader survival production.
 
-**Active persistent-runtime bundle:** Bundle 2.3 — housing, beds + population capacity (IMPLEMENTED / NEEDS RUNTIME TEST).
+**Active persistent-runtime bundle:** Bundle 2.4 — RTS radial multi-worker control (IMPLEMENTED / NEEDS RUNTIME TEST).
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-4 layered GFX 4171 worker-ring styling (IMPLEMENTED / NEEDS RUNTIME TEST). RWS-2 drag geometry and RWS-3 worker detection are RUNTIME VERIFIED. Side tooling: Matrix3 Asset Studio v1 + paired evidence capture + docked Rail Classifier + Object Explorer/Rail Layout Lab + A->B Rail Route Preview V2 are IMPLEMENTED / NEEDS RUNTIME TEST. Object Explorer broadens research beyond rails and can test two stock models visually composited on one logical tile; normal scene-slot constraints remain unchanged. Future rail gameplay remains A-to-B drag/auto-tiling, not manual 1x1 placement.
 
-**Next checklist item:** Runtime-test Patch 2.3.1 in one session: Bundle 2.3 Self-Test PASS -> Add Bed Capacity -> Recruit Worker #3 -> Bundle 2.3 Check PASS -> Capture W3 Baseline -> exit/re-enter Check W3 Baseline PASS -> logout/relog/re-enter Check W3 Baseline PASS. If accepted, proceed to Patch 2.3.2 verified bed asset + normal build/remove hookup.
+**Next checklist item:** One consolidated RWS runtime pass: drag-select workers + self and confirm persistent rings -> normal click preserves selection -> Walk Here moves only selected workers unless self is selected -> starter-tree Chop makes workers physically reach the tree before gathering -> self + workers can Chop together -> Clear/reselect works -> exit/re-entry clears transient selection. If PASS, close Bundle 2.4 and continue Phase 2 production chains.
 
 **Files/systems already inspected:**
 
