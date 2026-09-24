@@ -575,6 +575,62 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workerselectionmove".equals(operation)) {
+            if (cmd.length < 6) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectionmove <worldX> <worldY> <plane>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using RTS move orders.");
+                return true;
+            }
+            final int worldX;
+            final int worldY;
+            final int plane;
+            try {
+                worldX = Integer.parseInt(cmd[3]);
+                worldY = Integer.parseInt(cmd[4]);
+                plane = Integer.parseInt(cmd[5]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("RTS move target coordinates are invalid.");
+                return true;
+            }
+            player.getPackets().sendGameMessage(
+                    active.orderRuntimeSelectionMove(new WorldTile(worldX, worldY, plane)));
+            return true;
+        }
+
+        if ("workerselectiongather".equals(operation)) {
+            if (cmd.length < 7) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectiongather <objectId> <worldX> <worldY> <plane>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using RTS gather orders.");
+                return true;
+            }
+            final int objectId;
+            final int worldX;
+            final int worldY;
+            final int plane;
+            try {
+                objectId = Integer.parseInt(cmd[3]);
+                worldX = Integer.parseInt(cmd[4]);
+                worldY = Integer.parseInt(cmd[5]);
+                plane = Integer.parseInt(cmd[6]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("RTS gather target is invalid.");
+                return true;
+            }
+            player.getPackets().sendGameMessage(
+                    active.orderRuntimeSelectionGather(objectId, worldX, worldY, plane));
+            return true;
+        }
+
         if ("workerselectionstatus".equals(operation)) {
             if (active == null || !active.isLoaded()) {
                 player.getPackets().sendGameMessage(
