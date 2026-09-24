@@ -760,3 +760,12 @@ Settlement RTS World View Bundle — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Leave settlement; vanilla camera and ordinary NPC update radius return normally.
 [ ] Fog range is still visibly limiting at long RTS zoom; requires a verified renderer/environment seam before changing.
 [ ] Minimap heading remains vanilla-coupled; requires a verified minimap camera-heading seam before changing.
+
+
+Rail Continuation Ownership Correction — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Removed failed one-tile seam-offset experiment.
+[x] B again anchors the accepted elbow-normalized three-piece curve.
+[x] Rail-on-rail conflicts inside the authored auto-tile footprint replace the existing persistent visual instead of rejecting/stacking it.
+[ ] Use a fresh simple straight A->B, then exact-B perpendicular B->C.
+[ ] Verify old B/neighbor straight visuals are replaced by one accepted three-piece curve with no duplicate/crossed track.
+[ ] Repeat opposite turn only after the first simple case passes.
