@@ -316,6 +316,37 @@ public final class ConstructionPlacementController {
                 : "Rail route queued " + queued + " piece(s); " + failure;
     }
 
+    public static void onRailRouteEdited(
+            java.util.List<RailRoutePreview.RoutePiece> previousRoute,
+            java.util.List<RailRoutePreview.RoutePiece> replacementRoute) {
+        if (!isRailRouteSelected() || replacementRoute == null || replacementRoute.isEmpty()) {
+            return;
+        }
+        java.util.List<String> commands = new java.util.ArrayList<String>();
+        if (previousRoute != null) {
+            for (RailRoutePreview.RoutePiece piece : previousRoute) {
+                commands.add("settlementrailerase " + piece.getObjectId() + " "
+                        + piece.getWorldX() + " " + piece.getWorldY() + " " + piece.getPlane());
+            }
+        }
+        for (RailRoutePreview.RoutePiece piece : replacementRoute) {
+            String key = railBuildKey(piece.getObjectId());
+            if (key == null) {
+                status = "Unsupported rail object " + piece.getObjectId() + " in edited route.";
+                return;
+            }
+            commands.add("settlementbuild " + key + " "
+                    + piece.getWorldX() + " " + piece.getWorldY() + " " + piece.getPlane()
+                    + " " + piece.getRotation());
+        }
+        String error = ClientConsoleBridge.queueConsoleCommands(
+                commands.toArray(new String[commands.size()]));
+        status = error == null
+                ? "Rail endpoint B edit queued: removed " + (previousRoute == null ? 0 : previousRoute.size())
+                        + ", rebuilt " + replacementRoute.size() + " piece(s)."
+                : "Rail endpoint edit failed to queue: " + error;
+    }
+
     private static String railBuildKey(int objectId) {
         switch (objectId) {
         case 46353:
