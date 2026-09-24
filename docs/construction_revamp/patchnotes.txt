@@ -1238,3 +1238,12 @@
 - Kept rail Debug/Copy and Cancel controls available on the same bottom utility row.
 - Ctrl+Z remains runtime VERIFIED by user report.
 - RTS visibility/fog-anchor correction remains NEEDS RUNTIME TEST; minimap RTS heading remains unresolved and no guessed obfuscated mapping was patched.
+
+
+2026-09-24 - Worker Needs HUD ring-body arc correction
+- Runtime video confirmed the new Hunger/Thirst/Energy angular masking was executing, but it was cutting sectors from the entire GFX 4171 mesh.
+- Because 4171 includes decorative outer diamonds/spikes, the needs HUD appeared as chunky cyan/yellow fragments rather than clean circular arches.
+- Generalized the existing 4171 ring-body radius resolver to support OpenGLModel vertices in addition to AbstractModel.
+- Needs arc masking now applies two filters in order: keep only face centroids inside the calibrated circular ring-body radial band, then keep only faces inside that need's angular slot.
+- Added focused mask diagnostics to Needs HUD Status: visible face count, radial-body hidden count, angular hidden count and calibrated ring radius.
+- Existing selection rings, need colors, demo values, server needs ownership, worker AI and persistence remain unchanged.
