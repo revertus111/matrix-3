@@ -137,7 +137,7 @@ public final class ConstructionRadialSelection {
     private static volatile int demoHunger = 65;
     private static volatile int demoThirst = 35;
     private static volatile int demoEnergy = 70;
-    private static volatile int needsArcScalePercent = 95;
+    private static volatile int needsArcScalePercent = 70;
     private static volatile String needsArcMaskState = "not rendered";
 
     private static boolean inputListenerInstalled;
@@ -676,9 +676,11 @@ public final class ConstructionRadialSelection {
             renderWorkerRingLayer(
                     markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
                     workerOuterRingScalePercent, workerOuterRingRgb);
-            renderWorkerRingLayer(
-                    markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
-                    workerInnerRingScalePercent, workerInnerRingRgb);
+            if (!workerNeedsPreviewEnabled) {
+                renderWorkerRingLayer(
+                        markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                        workerInnerRingScalePercent, workerInnerRingRgb);
+            }
         }
 
         liveDetectedWorkerNpcIndexes = detected == detectedNpcIndexes.length
@@ -703,9 +705,11 @@ public final class ConstructionRadialSelection {
                     renderWorkerRingLayer(
                             markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
                             workerOuterRingScalePercent, workerOuterRingRgb);
-                    renderWorkerRingLayer(
-                            markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
-                            workerInnerRingScalePercent, workerInnerRingRgb);
+                    if (!workerNeedsPreviewEnabled) {
+                        renderWorkerRingLayer(
+                                markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                                workerInnerRingScalePercent, workerInnerRingRgb);
+                    }
                 }
             }
         }
@@ -861,9 +865,11 @@ public final class ConstructionRadialSelection {
             renderWorkerRingLayer(
                     markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
                     workerOuterRingScalePercent, workerOuterRingRgb);
-            renderWorkerRingLayer(
-                    markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
-                    workerInnerRingScalePercent, workerInnerRingRgb);
+            if (!workerNeedsPreviewEnabled) {
+                renderWorkerRingLayer(
+                        markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                        workerInnerRingScalePercent, workerInnerRingRgb);
+            }
             rendered++;
         }
         return rendered;
@@ -900,9 +906,11 @@ public final class ConstructionRadialSelection {
         renderWorkerRingLayer(
                 markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
                 workerOuterRingScalePercent, workerOuterRingRgb);
-        renderWorkerRingLayer(
-                markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
-                workerInnerRingScalePercent, workerInnerRingRgb);
+        if (!workerNeedsPreviewEnabled) {
+            renderWorkerRingLayer(
+                    markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                    workerInnerRingScalePercent, workerInnerRingRgb);
+        }
         return true;
     }
 
