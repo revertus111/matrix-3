@@ -52,7 +52,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private final JSpinner demoEnergyValue =
             new JSpinner(new SpinnerNumberModel(70, 0, 100, 5));
     private final JSpinner needsArcScale =
-            new JSpinner(new SpinnerNumberModel(95, 25, 300, 5));
+            new JSpinner(new SpinnerNumberModel(70, 25, 300, 5));
     private final JComboBox<WorkerPresetChoice> workerRolePreset =
             new JComboBox<WorkerPresetChoice>(WorkerPresetChoice.values());
     private final JComboBox<WorkerPresetChoice> radialRolePreset =
@@ -757,7 +757,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         scaleRow.setOpaque(false);
         scaleRow.setAlignmentX(LEFT_ALIGNMENT);
         scaleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        scaleRow.add(ConsoleTheme.createWrappedText("Shared arch scale %", 1));
+        scaleRow.add(ConsoleTheme.createWrappedText("Inner needs/status scale %", 1));
         scaleRow.add(needsArcScale);
         card.add(scaleRow);
         card.add(Box.createVerticalStrut(8));
