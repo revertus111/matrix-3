@@ -998,9 +998,12 @@ Batch worker actions:
 
 - `workerselectionstatus` reports the server-owned selected Worker IDs plus current preset, Pause state and Allowed Jobs.
 - `workerselectionpreset` applies one existing `SettlementWorkerRolePreset` to every selected persistent worker. It changes only the existing Allowed Jobs policy and leaves Pause, Needs, identity and progression untouched.
+- `workerselectionjob <job> <on|off>` applies one Allowed Job toggle to every worker in the committed drag selection.
+- `workerselectionjobsall <on|off>` enables/disables every existing Allowed Job for every worker in the committed drag selection.
 - `workerselectionpause on|off` applies the existing persistent Pause flag to every selected worker without rewriting Allowed Jobs.
 - `workerselectionclear` clears only the transient active-instance selection.
-- Con Revamp RWS-5 exposes Selection Status, Clear Selection, a batch Role Preset picker and Pause/Resume Selected controls. Existing single-worker controls remain available for precise inspection/editing.
+- **Command ownership:** RWS-5 committed drag selection is now the sole Con Revamp mutation target for Role Preset, Pause/Resume and Allowed Jobs. The numeric Worker Inspector is inspection-only for per-worker Jobs/AI/Needs/Progress readback; it cannot redirect worker commands.
+- Both RWS-5 quick controls and the Allowed Jobs card route to the same server-owned committed selection, eliminating the prior split ownership.
 
 Runtime acceptance target:
 
@@ -1012,6 +1015,8 @@ Runtime defect/fix note:
 - Fix implemented: the render-thread preview now caches the exact runtime NPC indexes it already detected/ringed. Mouse release only copies that cached array and queues the existing server-owned selection commit; it no longer traverses live NPC collections from AWT.
 - This preserves exact visual-selection parity: the workers ringed by the last rendered drag frame are the workers committed on release.
 - Runtime VERIFIED: after the fix, a two-worker drag released successfully and game chat reported `Radial worker selection committed: #1,#2.`
+- Follow-up runtime exposed a UI ownership mismatch: after selecting #1,#2, the legacy lower Allowed Jobs card still sent `workerpreset <spinnerWorkerId>`, so only Worker #1 changed.
+- Ownership fix implemented: the lower Role Preset, Pause/Resume, individual Allowed Job and Enable/Disable All controls now target the committed RWS-5 selection. The numeric spinner is explicitly inspection-only.
 
 ## Phase 3 — Processing chains + better materials
 
@@ -1073,7 +1078,7 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Bundle 2.3 is fully RUNTIME VERIFIED. Bundle 2.4 RWS-5 radial multi-worker control is SAP AAA approved and implemented.
-- Current checklist item: RWS-5 release handoff is runtime VERIFIED: a visibly ringed two-worker drag committed server-owned persistent Worker IDs #1,#2. Continue batch preset/Pause/Resume/clear/re-entry acceptance on committed subsets.
+- Current checklist item: runtime-test consolidated RWS-5 command ownership: drag-select #1,#2 -> apply preset -> individual job toggle -> Enable/Disable All -> Pause/Resume; verify only the committed workers mutate. Confirm changing the Worker Inspector spinner does not redirect commands, then clear/reselect and exit/re-entry test.
 - Current objective: runtime-accept radial multi-worker control, then continue Phase 2 into cooking and farming/hunting production chains.
 
 ## Verification classifications
