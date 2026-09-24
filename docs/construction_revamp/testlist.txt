@@ -541,7 +541,9 @@ Worker Needs HUD visual prototype — IMPLEMENTED / NEEDS RUNTIME TEST
 [-] Follow-up diagnosis: centroid-only radial filtering can still retain decorative triangles that straddle the circular band.
 [x] Strict ring-body correction: all three vertices of each face must remain inside the calibrated annulus before angular-slot masking; decorative cross-band spike/diamond triangles are rejected.
 [x] Con Revamp now exposes demo Hunger / Thirst / Energy values plus one shared arch-scale control.
-[ ] Enable Needs HUD Preview; every active Settler shows three clean separated partial ring-body arches and no decorative diamond/spike chunks.
+[-] Runtime screenshot: worker HUD showed three circumferences because RWS-4 still rendered both full selection rings while needs arches added a third level.
+[x] Two-level ownership fix: outer full ring remains selection; full inner selection ring is suppressed whenever Needs HUD is enabled; needs arches now default to the former inner-ring 70% radius.
+[ ] Enable Needs HUD Preview; selected workers show exactly two visual levels (outer selection ring + inner needs/status arches), with no third full ring.
 [ ] Hunger 0 -> 80 shortens only Hunger's arch and trends orange -> red.
 [ ] Thirst 0 -> 80 shortens only Thirst's arch and trends cyan -> red.
 [ ] Energy 100 -> 20 shortens only Energy's arch and trends yellow -> red.
