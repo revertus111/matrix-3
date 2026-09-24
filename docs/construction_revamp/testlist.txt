@@ -390,13 +390,17 @@ Phase 2 Bundle 2.4 — RTS radial multi-worker control
 [x] Runtime defect classified: after selecting #1,#2, the legacy Allowed Jobs card still targeted the numeric Worker Inspector and changed only Worker #1.
 [x] Ownership fix source: Role Preset, Pause/Resume, individual Allowed Job toggles and Enable/Disable All Jobs in Con Revamp now route only through the committed RWS-5 server-owned selection.
 [x] Numeric Worker Inspector is inspection-only and no longer clears or owns Allowed Jobs command visuals.
-[ ] Selection Status reports the same two Worker IDs and does not include workers outside the circle.
-[ ] Apply Lumberjack (or another preset) from either RWS-5 command surface; All Worker Status shows only those two workers changed while the other three retain their prior policies.
-[ ] Toggle one individual Allowed Job on/off; the change applies to both selected workers only.
-[ ] Enable All / Disable All Selected Jobs applies to both selected workers only.
-[ ] Pause Selected; only the committed workers stop productive work and Allowed Jobs remain unchanged. Resume Selected restores them.
-[ ] Clear Selection; batch actions no longer have a server-owned target. Re-drag a different subset and confirm the new subset replaces the old one.
-[ ] Exit/re-enter the settlement; Selection Status requires a fresh drag, while any preset/Pause policy applied before exit remains persistent on the workers.
+[x] Persistent-ring source: released committed selections render only the existing layered worker GFX 4171 rings; the large drag circle remains temporary.
+[x] Persistent-ring lifecycle source: Clear Selection/new committed drag updates the client selection; if committed runtime NPCs disappear during instance rebuild/exit, stale local rings are dropped.
+[ ] Runtime: drag-select one or more workers and release; the large drag circle disappears while every committed worker keeps its small layered selection rings visible and following movement.
+[ ] Runtime: Clear Selection removes the persistent worker rings; committing a different subset moves the rings to only the new selection.
+[x] Runtime VERIFIED by user: Selection Status and committed multi-worker targeting behave correctly; only the selected worker set is owned by RWS-5.
+[x] Runtime VERIFIED by user: role preset mutations apply through the committed RWS-5 selection rather than the inspection spinner.
+[x] Runtime VERIFIED by user: individual Allowed Job mutation works on the committed multi-worker selection.
+[x] Runtime VERIFIED by user: Enable All / Disable All jobs works on the committed multi-worker selection.
+[x] Runtime VERIFIED by user: Pause/Resume Selected works on the committed multi-worker selection without changing Allowed Jobs.
+[x] Runtime VERIFIED by user: Clear/reselect and replacement multi-worker selection behavior works.
+[x] Runtime VERIFIED by user: selection/worker-command behavior is otherwise working; settlement instance ownership remains transient while saved worker policy persists.
 
 Phase 2 side slice — Radial Worker Selection RWS-1
 [RUNTIME VERIFIED]
