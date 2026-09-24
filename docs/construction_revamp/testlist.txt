@@ -816,3 +816,18 @@ Rail Diagnostic Safety Freeze — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Capture one screenshot containing both the rail result and visible debug evidence.
 [ ] Use Copy and paste the complete report if visible rows are truncated.
 [ ] Confirm unrelated existing rails no longer change while reproducing the connection failure.
+
+
+Rail Endpoint Editing V1 — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Existing committed B is an edit handle: starting the next drag exactly on B keeps original A fixed.
+[x] Dragging B recalculates one complete A-to-B route; no player-facing C endpoint exists.
+[x] Old continuation H/V curve injection no longer changes committed geometry.
+[x] Endpoint edit removes only the exact previous persistent RAIL object IDs/tiles, then rebuilds the recalculated route.
+[x] Full 64-piece old + 64-piece replacement route fits the bounded 128-command client transaction queue.
+[ ] Build one straight A-to-B.
+[ ] Start exactly on B and drag farther along the same axis; verify A stays fixed and the same rail extends cleanly.
+[ ] Start exactly on the new B and drag 90 degrees; verify the same route becomes one clean L with the accepted three-piece curve.
+[ ] Repeat by moving B again; old obsolete rail pieces disappear and the recalculated route is the only remaining route.
+[ ] Verify unrelated nearby rails/builds are not removed.
+[ ] Exit/re-enter: physical edited rail layout persists.
+[ ] V1 limitation: after client/relog state loss, existing persisted rails do not yet expose persistent endpoint metadata for editing.
