@@ -528,19 +528,22 @@ Phase 2 side slice — Radial Worker Selection RWS-4 layered GFX 4171 style
 
 Worker Needs HUD visual prototype — IMPLEMENTED / NEEDS RUNTIME TEST
 [x] Server semantics: Hunger/Thirst are 0-100 pressure with critical threshold 80; Energy is 100-0 reserve with critical threshold 20.
-[x] Ownership: authoritative need values remain server-owned in SettlementWorkerState; this patch does not fake live synchronization through NPC names, combat levels or configs.
-[x] Renderer: reuses the runtime-verified GFX 4171 recolor/scale path.
-[x] Preview population: all active same-plane Settler NPCs are eligible, independent of current radial selection.
-[x] Default layout: Hunger 125%, Thirst 95%, Energy 65%.
-[x] Default identity colors: Hunger orange, Thirst cyan, Energy yellow.
-[x] Severity color: Hunger/Thirst blend to red toward 80; Energy blends to red as it falls toward 20.
-[x] Con Revamp exposes Enable/Disable/Status plus live demo value and ring-scale controls for all three needs.
-[ ] Enable Needs HUD Preview; every active Settler shows exactly three concentric needs rings.
-[ ] Adjust Hunger demo value 0 -> 80 and confirm orange trends to red without changing Thirst/Energy.
-[ ] Adjust Thirst demo value 0 -> 80 and confirm cyan trends to red without changing Hunger/Energy.
-[ ] Adjust Energy demo value 100 -> 20 and confirm yellow trends to red without changing Hunger/Thirst.
-[ ] Adjust Hunger/Thirst/Energy scales independently and find a readable spacing alongside committed selection rings.
-[ ] Disable Needs HUD Preview; all needs rings disappear immediately while normal selection visuals remain intact.
+[x] Ownership: authoritative need values remain server-owned in SettlementWorkerState; this patch does not fake live synchronization.
+[-] Runtime screenshot: three concentric full 4171 needs rings rendered, but user rejected that layout as the wrong design / too visually busy.
+[x] Design correction: needs HUD now uses three partial arches on one shared circumference; the concentric-ring layout is removed.
+[x] OpenGL alpha isolation: MODEL_FLAGS includes 0x100 so per-face alpha masking stays on the per-call clone.
+[x] Arc ownership: Hunger / Thirst / Energy each own a separate ~100-degree slot with gaps.
+[x] Arc value semantics: Hunger/Thirst arch length = 100-value wellbeing; Energy arch length = current Energy reserve.
+[x] Identity colors: Hunger orange, Thirst cyan, Energy yellow; severity still trends toward red at the authoritative critical threshold.
+[x] OpenGL mask source: face render vertices are mapped back to original X/Z vertices through anIntArray10329/aShortArray10330, then hidden outside each angular span via Model.method1473(...).
+[x] Con Revamp now exposes demo Hunger / Thirst / Energy values plus one shared arch-scale control.
+[ ] Enable Needs HUD Preview; every active Settler shows three separated partial arches and no full needs circle.
+[ ] Hunger 0 -> 80 shortens only Hunger's arch and trends orange -> red.
+[ ] Thirst 0 -> 80 shortens only Thirst's arch and trends cyan -> red.
+[ ] Energy 100 -> 20 shortens only Energy's arch and trends yellow -> red.
+[ ] Shared arch scale resizes all three need arches together without changing their angular slots.
+[ ] Commit/select workers while Needs HUD is enabled; selection rings remain visually distinct from needs arches.
+[ ] Disable Needs HUD Preview; all needs arches disappear immediately while selection visuals remain intact.
 [ ] After visual acceptance, implement a clean server -> client per-worker needs metadata seam and replace only the demo values.
 
 Object Lab OBJLAB-1/2 — IMPLEMENTED / NEEDS RUNTIME TEST
