@@ -501,6 +501,8 @@ Phase 2 side slice — Radial Worker Selection RWS-4 layered GFX 4171 style
 [x] Runtime acceptance: independent ring scaling works; layered worker rings visibly use different sizes without breaking detection.
 [-] First color-picker runtime test: chosen colors had no visible effect even though scaling/state updates worked; GFX 4171 is texture-driven and face-HSL alone was visually ineffective.
 [x] Recolor source fix: MODEL_FLAGS now includes 0x8000 for private per-call face-texture IDs; custom-color mode detaches only the clone's textures before applying HSL.
+[-] Second runtime color test: chosen colors still had no visible effect because the first detach implementation enumerated textures only for AbstractModel.
+[x] Renderer-aware source fix: custom-color mode now enumerates texture IDs from either AbstractModel or Class89_Sub2 before detaching them and applying HSL.
 [ ] Pick a drag-ring color; only the large active drag ring changes color.
 [ ] Pick separate outer and inner colors; each detected worker shows the two chosen colors on the correct layers.
 [ ] Use Original Colors restores native 4171 coloring for drag/outer/inner without resetting scale.
