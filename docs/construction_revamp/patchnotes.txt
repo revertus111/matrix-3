@@ -1247,3 +1247,10 @@
 - Needs arc masking now applies two filters in order: keep only face centroids inside the calibrated circular ring-body radial band, then keep only faces inside that need's angular slot.
 - Added focused mask diagnostics to Needs HUD Status: visible face count, radial-body hidden count, angular hidden count and calibrated ring radius.
 - Existing selection rings, need colors, demo values, server needs ownership, worker AI and persistence remain unchanged.
+
+2026-09-24 - Full settlement RTS terrain render radius
+- Runtime screenshot rejected the previous visibility-focus-only correction: objects could remain visible beyond a hard beige terrain cutoff, proving the symptom was the scene terrain visibility radius rather than merely stale camera focus.
+- Verified-static Class523.method6240 builds terrain visibility from Class523.anInt5865 around the render focus. Class613 constructs that radius from the normal player graphics/view-distance preference.
+- Settlement RTS now temporarily expands Class523's visibility radius to the loaded scene extents while method6240 renders, with visibility-grid buffers expanded to match, then restores the stock player radius before returning.
+- This intentionally makes the detached settlement RTS camera render loaded settlement terrain like a player positioned at that camera while leaving ordinary/player rendering radius unchanged.
+- Runtime gate: zoom/pan/rotate across the settlement and confirm the beige hard terrain cutoff is gone. Watch FPS because the RTS pass can now draw the full loaded settlement scene.
