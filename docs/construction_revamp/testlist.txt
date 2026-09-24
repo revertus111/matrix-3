@@ -671,3 +671,17 @@ Matrix3 A->B Rail Route Preview V2 — ACCEPTED 3-PIECE CURVE IMPLEMENTED / NEED
 [ ] Pure horizontal and pure vertical routes remain straight-only.
 [ ] Curve map offset R0-R3 still applies as an explicit whole-pattern calibration override if runtime art alignment needs it.
 [ ] Remove/rename the local rail_composites.tsv temporarily and verify the built-in accepted three-piece fallback still previews the same geometry.
+
+Construction Palette A->B Rail Build — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Source ownership: palette route mode reuses RailRoutePreview V2 for A/B input, Manhattan routing, accepted three-piece curve rotation and straight suppression.
+[x] Server ownership: release queues stable settlementbuild keys; client preview still never registers persistent world objects directly.
+[x] Persistent definitions: 46353 straight plus 46377/46379/46381 accepted curve components are RAIL build pieces, type 22, currently 1 Basic ore + 4 base Construction XP per physical component.
+[ ] Open Construction palette; a fifth Rails tab is visible and Rail route appears with object 46353/type 22.
+[ ] Select Rail route; footer changes to A->B rail drag instructions and the route preview arms without requiring Test -> Rail Classifier.
+[ ] Hold Left on valid ground, drag a pure straight route and release; real persistent 46353 rails appear with the correct axis rotation.
+[ ] Drag an L route; 46379 owns the elbow and 46377/46381 occupy the accepted neighboring curve tiles with no overlapping straight pieces.
+[ ] Test at least two opposite bend quadrants; the complete three-piece curve rotates with the route.
+[ ] Basic ore decreases by exactly one per physical rail component placed and Construction XP is awarded through the existing build transaction.
+[ ] Exit/re-enter the settlement; all placed rail components rebuild in the same tiles/rotations.
+[ ] Logout/relog; the rail route remains persistent.
+[ ] Select Walls/Floors/Doors/Furniture afterward; rail route mode disables and ordinary Paint/Continuous placement still works.
