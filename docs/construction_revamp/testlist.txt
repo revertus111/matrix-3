@@ -772,3 +772,12 @@ Rail Continuation Ownership Correction — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Use a fresh simple straight A->B, then exact-B perpendicular B->C.
 [ ] Verify old B/neighbor straight visuals are replaced by one accepted three-piece curve with no duplicate/crossed track.
 [ ] Repeat opposite turn only after the first simple case passes.
+
+RTS Loaded-Scene Camera Clamp — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Reject saved RTS pivot when a rebuilt dynamic settlement uses a different loaded scene.
+[x] Clamp RTS pan pivot to current Matrix3 loaded-scene height-grid bounds.
+[x] Preserve 700..10000 orbit range while keeping the look target on loaded terrain.
+[ ] Enter settlement and pan hard in all four directions; viewport must stop at loaded terrain instead of becoming blank beige.
+[ ] Zoom fully out near each scene edge and rotate Q/E; view remains anchored on settlement terrain.
+[ ] Exit/re-enter after settlement rebuild; stale absolute pivot must not restore into blank space.
+[ ] Confirm palette-closed wheel zoom and worker visibility still operate.
