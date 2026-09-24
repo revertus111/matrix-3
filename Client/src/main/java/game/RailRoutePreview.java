@@ -82,6 +82,7 @@ public final class RailRoutePreview {
     private static volatile int committedPlane = -1;
     private static volatile int continuationHorizontalDirection;
     private static volatile int continuationVerticalDirection;
+    private static volatile boolean editingEndpointB;
 
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String eventState = "A->B rail preview disabled.";
@@ -257,6 +258,7 @@ public final class RailRoutePreview {
 
     public static void clearRoute() {
         dragging = false;
+        editingEndpointB = false;
         committed = false;
         liveStartX = -1;
         liveStartY = -1;
@@ -736,14 +738,26 @@ public final class RailRoutePreview {
             return false;
         }
 
-        liveStartX = hoveredWorldX;
-        liveStartY = hoveredWorldY;
-        liveEndX = hoveredWorldX;
-        liveEndY = hoveredWorldY;
-        livePlane = hoveredPlane;
+        editingEndpointB = committed && committedPlane == hoveredPlane
+                && committedEndX == hoveredWorldX && committedEndY == hoveredWorldY;
+        if (editingEndpointB) {
+            liveStartX = committedStartX;
+            liveStartY = committedStartY;
+            liveEndX = committedEndX;
+            liveEndY = committedEndY;
+            livePlane = committedPlane;
+            eventState = "Editing endpoint B from " + committedEndX + "," + committedEndY
+                    + "; A stays fixed at " + committedStartX + "," + committedStartY + ".";
+        } else {
+            liveStartX = hoveredWorldX;
+            liveStartY = hoveredWorldY;
+            liveEndX = hoveredWorldX;
+            liveEndY = hoveredWorldY;
+            livePlane = hoveredPlane;
+            eventState = "New route drag started at A=" + liveStartX + "," + liveStartY + ".";
+        }
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
-        eventState = "Route drag started at " + liveStartX + "," + liveStartY + "," + livePlane + ".";
         return true;
     }
 
@@ -754,23 +768,14 @@ public final class RailRoutePreview {
         int previousStartY = committedStartY;
         int previousPlane = committedPlane;
         boolean hadCommitted = committed;
+        boolean endpointEdit = editingEndpointB && hadCommitted;
+
+        java.util.List<RoutePiece> previousPieces = endpointEdit
+                ? snapshotCommittedRoutePieces()
+                : new java.util.ArrayList<RoutePiece>();
 
         continuationHorizontalDirection = 0;
         continuationVerticalDirection = 0;
-        if (hadCommitted && previousPlane == livePlane
-                && previousEndX == liveStartX && previousEndY == liveStartY) {
-            int[] incoming = finalTravelDirection(
-                    previousStartX, previousStartY, previousEndX, previousEndY);
-            int[] outgoing = firstTravelDirection(
-                    liveStartX, liveStartY, liveEndX, liveEndY);
-            if ((incoming[0] != 0 && outgoing[1] != 0)
-                    || (incoming[1] != 0 && outgoing[0] != 0)) {
-                continuationHorizontalDirection =
-                        incoming[0] != 0 ? -incoming[0] : outgoing[0];
-                continuationVerticalDirection =
-                        incoming[1] != 0 ? -incoming[1] : outgoing[1];
-            }
-        }
 
         committedStartX = liveStartX;
         committedStartY = liveStartY;
@@ -779,15 +784,25 @@ public final class RailRoutePreview {
         committedPlane = livePlane;
         committed = true;
         dragging = false;
+        editingEndpointB = false;
         lastRenderedCycle = Integer.MIN_VALUE;
-        eventState = "Route committed A=" + committedStartX + "," + committedStartY
-                + " B=" + committedEndX + "," + committedEndY + ".";
+
         java.util.List<RoutePiece> committedPieces = snapshotCommittedRoutePieces();
+        eventState = endpointEdit
+                ? "Endpoint B moved. Route recalculated A=" + committedStartX + "," + committedStartY
+                        + " B=" + committedEndX + "," + committedEndY + "."
+                : "Route committed A=" + committedStartX + "," + committedStartY
+                        + " B=" + committedEndX + "," + committedEndY + ".";
+
         debugOperationId++;
         debugReport = buildDebugReport(debugOperationId, hadCommitted,
                 previousStartX, previousStartY, previousEndX, previousEndY, previousPlane,
                 committedPieces);
-        ConstructionPlacementController.onRailRouteCommitted(committedPieces);
+        if (endpointEdit) {
+            ConstructionPlacementController.onRailRouteEdited(previousPieces, committedPieces);
+        } else {
+            ConstructionPlacementController.onRailRouteCommitted(committedPieces);
+        }
     }
 
     private static String buildDebugReport(long operationId, boolean hadPrevious,
@@ -900,24 +915,6 @@ public final class RailRoutePreview {
         }
         appendRoutePieces(pieces, committedStartX, committedStartY,
                 committedEndX, committedEndY, committedPlane);
-        if (continuationHorizontalDirection != 0 && continuationVerticalDirection != 0) {
-            /*
-             * B is the logical corner seam. CURVE_RAIL_LAYOUT_01 is already
-             * elbow-anchored, so use B directly and let its accepted footprint
-             * replace the old endpoint/neighboring rail visuals server-side.
-             */
-            CurvePlacement continuation = createCurvePlacement(
-                    committedStartX, committedStartY,
-                    continuationHorizontalDirection, continuationVerticalDirection);
-            if (continuation != null) {
-                removePiecesOccupiedByCurve(pieces, continuation);
-                java.util.List<RoutePiece> curvePieces = new java.util.ArrayList<RoutePiece>();
-                appendCurvePieces(curvePieces, continuation,
-                        committedStartX, committedStartY, committedPlane);
-                curvePieces.addAll(pieces);
-                pieces = curvePieces;
-            }
-        }
         return pieces;
     }
 
