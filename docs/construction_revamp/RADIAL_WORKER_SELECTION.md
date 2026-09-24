@@ -505,7 +505,7 @@ Active arch prototype:
 - OpenGL GFX clones use isolated per-face alpha (`0x100` clone capability) to hide faces outside each angular span
 - OpenGL face masking inverts `anIntArray10329/aShortArray10330` to map render vertices back to original X/Z model vertices
 - first arch runtime video proved angular masking alone still included 4171's outer decorative diamond/spike geometry, producing chunky colored fragments
-- corrected mask now resolves the same ring-body radius seam used by the working drag ring, rejects face centroids outside the circular ring-body radial band, then applies the angular need slot
+- corrected mask resolves the same ring-body radius seam used by the working drag ring, then requires every vertex of a candidate face to remain inside the circular ring-body annulus before applying the angular need slot; centroid-only radial acceptance was too permissive for decorative spike/diamond triangles
 - visible ring-body faces retain the already runtime-verified recolor path; all decorative/out-of-slot faces are alpha 255
 - Con Revamp exposes live demo Hunger / Thirst / Energy values plus one shared arch-scale control
 - preview can render with Worker Control disabled
