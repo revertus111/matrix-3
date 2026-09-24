@@ -45,6 +45,18 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             new JSpinner(new SpinnerNumberModel(100, 25, 300, 5));
     private final JSpinner workerInnerRingScale =
             new JSpinner(new SpinnerNumberModel(70, 25, 300, 5));
+    private final JSpinner demoHungerValue =
+            new JSpinner(new SpinnerNumberModel(65, 0, 100, 5));
+    private final JSpinner demoThirstValue =
+            new JSpinner(new SpinnerNumberModel(35, 0, 100, 5));
+    private final JSpinner demoEnergyValue =
+            new JSpinner(new SpinnerNumberModel(70, 0, 100, 5));
+    private final JSpinner hungerRingScale =
+            new JSpinner(new SpinnerNumberModel(125, 25, 300, 5));
+    private final JSpinner thirstRingScale =
+            new JSpinner(new SpinnerNumberModel(95, 25, 300, 5));
+    private final JSpinner energyRingScale =
+            new JSpinner(new SpinnerNumberModel(65, 25, 300, 5));
     private final JComboBox<WorkerPresetChoice> workerRolePreset =
             new JComboBox<WorkerPresetChoice>(WorkerPresetChoice.values());
     private final JComboBox<WorkerPresetChoice> radialRolePreset =
@@ -653,12 +665,12 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createNeedsCard() {
-        JPanel card = ConsoleTheme.createCard("Worker Needs — Selected Worker");
+        JPanel card = ConsoleTheme.createCard("Worker Needs — Selected Worker + HUD Prototype");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
                 "Persistent server-owned Hunger / Thirst / Energy. Hunger and Thirst rise with work; Energy falls. "
-                + "Critical Hunger consumes settlement Food, critical Thirst uses the Phase-1 starter shelter water supply, and critical Energy rests at home.",
-                5));
+                + "The HUD section below is deliberately DEMO ONLY until a clean per-worker server-to-client needs metadata seam is added.",
+                6));
         card.add(Box.createVerticalStrut(8));
 
         JButton needsStatus = new JButton("Needs Status");
@@ -700,6 +712,86 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(energyCritical);
         buttons.add(resetNeeds);
         card.add(buttons);
+
+        card.add(Box.createVerticalStrut(12));
+        card.add(ConsoleTheme.createWrappedText(
+                "Needs HUD visual prototype — same proven GFX 4171, three concentric rings on every active Settler. "
+                + "Hunger is orange, Thirst is cyan, Energy is yellow; each blends toward red as it approaches its real critical threshold. "
+                + "Value and scale controls update live so we can decide whether this is readable before wiring server sync.",
+                7));
+        card.add(Box.createVerticalStrut(8));
+
+        JSpinner[] needsSpinners = {
+                demoHungerValue, hungerRingScale,
+                demoThirstValue, thirstRingScale,
+                demoEnergyValue, energyRingScale
+        };
+        for (JSpinner spinner : needsSpinners) {
+            spinner.setMaximumSize(new Dimension(100, 30));
+            spinner.setFocusable(false);
+        }
+
+        javax.swing.event.ChangeListener needsPreviewChange = e -> {
+            ConstructionRadialSelection.setWorkerNeedsPreviewValues(
+                    ((Number) demoHungerValue.getValue()).intValue(),
+                    ((Number) demoThirstValue.getValue()).intValue(),
+                    ((Number) demoEnergyValue.getValue()).intValue());
+            ConstructionRadialSelection.setWorkerNeedsPreviewScales(
+                    ((Number) hungerRingScale.getValue()).intValue(),
+                    ((Number) thirstRingScale.getValue()).intValue(),
+                    ((Number) energyRingScale.getValue()).intValue());
+            setStatus(ConstructionRadialSelection.getWorkerNeedsPreviewStatus());
+        };
+        for (JSpinner spinner : needsSpinners) {
+            spinner.addChangeListener(needsPreviewChange);
+        }
+
+        JPanel needGrid = new JPanel(new GridLayout(3, 3, 7, 7));
+        needGrid.setOpaque(false);
+        needGrid.setAlignmentX(LEFT_ALIGNMENT);
+        needGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 102));
+        needGrid.add(ConsoleTheme.createWrappedText("Need", 1));
+        needGrid.add(ConsoleTheme.createWrappedText("Demo value", 1));
+        needGrid.add(ConsoleTheme.createWrappedText("Ring scale %", 1));
+        needGrid.add(ConsoleTheme.createWrappedText("Hunger", 1));
+        needGrid.add(demoHungerValue);
+        needGrid.add(hungerRingScale);
+        needGrid.add(ConsoleTheme.createWrappedText("Thirst", 1));
+        needGrid.add(demoThirstValue);
+        needGrid.add(thirstRingScale);
+        needGrid.add(ConsoleTheme.createWrappedText("Energy", 1));
+        needGrid.add(demoEnergyValue);
+        needGrid.add(energyRingScale);
+        card.add(needGrid);
+        card.add(Box.createVerticalStrut(8));
+
+        JButton enableHud = new JButton("Enable Needs HUD Preview");
+        JButton disableHud = new JButton("Disable Needs HUD Preview");
+        JButton hudStatus = new JButton("Needs HUD Status");
+        styleButton(enableHud);
+        styleButton(disableHud);
+        styleButton(hudStatus);
+
+        enableHud.addActionListener(e -> {
+            needsPreviewChange.stateChanged(null);
+            ConstructionRadialSelection.setWorkerNeedsPreviewEnabled(true);
+            setStatus(ConstructionRadialSelection.getWorkerNeedsPreviewStatus());
+        });
+        disableHud.addActionListener(e -> {
+            ConstructionRadialSelection.setWorkerNeedsPreviewEnabled(false);
+            setStatus(ConstructionRadialSelection.getWorkerNeedsPreviewStatus());
+        });
+        hudStatus.addActionListener(e ->
+                setStatus(ConstructionRadialSelection.getWorkerNeedsPreviewStatus()));
+
+        JPanel hudButtons = new JPanel(new GridLayout(0, 2, 7, 7));
+        hudButtons.setOpaque(false);
+        hudButtons.setAlignmentX(LEFT_ALIGNMENT);
+        hudButtons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        hudButtons.add(enableHud);
+        hudButtons.add(disableHud);
+        hudButtons.add(hudStatus);
+        card.add(hudButtons);
         return card;
     }
 
