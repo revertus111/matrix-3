@@ -1048,3 +1048,12 @@
 - X-then-Y and Y-then-X straight legs now skip any tile occupied by the curve pattern, so the two approach components replace rather than overlap straight rails.
 - Same-tile overlay is no longer required for the accepted curve; all three accepted type-22 origins occupy distinct neighboring tiles. Overlay remains research-only for future geometry.
 - Single-object curve fallback and the existing whole-pattern Curve map offset remain available.
+
+2026-09-24 - RWS context orders + self selection
+- Added a 6px selection-drag threshold so ordinary clicks preserve the committed RTS group instead of replacing it with an empty selection.
+- Local player can now be included in the radial drag, receives the same layered GFX 4171 selection ring, and is tracked as transient self membership in the active SettlementInstance without save-schema changes.
+- Reused Matrix3 context actions instead of adding a second menu system: Walk Here mirrors transient Move orders to selected workers; selected self continues through vanilla player movement.
+- Starter tree object 1276 first action mirrors a transient Gather order to selected workers; selected self continues through vanilla player Chop.
+- Added runtime-only worker manual Move/Gather orders that resume normal worker policy after completion.
+- Hardened worker arrival checks so gathering requires explicit physical interaction range; calcFollow success with zero queued steps outside range no longer starts remote gathering.
+- Persistent selected rings no longer clear on one empty render frame; scene exit remains the explicit stale-selection cleanup boundary.
