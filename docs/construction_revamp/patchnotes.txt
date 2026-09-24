@@ -1271,3 +1271,12 @@
 - Rail Debug now renders the latest route-intent report visibly inside the Construction palette, including route, seam, curve-footprint and final-piece rows.
 - Copy Debug remains available for the complete report.
 - No route geometry, curve anchoring or routing math changed in this patch.
+
+
+2026-09-24 - Rail Endpoint Editing V1
+- Replaced the failed B-to-C continuation model with endpoint editing: pressing the existing committed B endpoint keeps A fixed and moves B.
+- The complete A-to-new-B route is recalculated through the already-accepted A-to-B router, so a 90-degree endpoint move produces the normal multi-piece curve instead of trying to splice two independent routes.
+- Removed continuation-curve injection from committed route snapshots. The old continuation H/V seam system no longer owns placement geometry.
+- Endpoint edits queue exact rail-only removal of the previous route pieces followed by the complete recalculated replacement route. Server removal refuses non-RAIL targets.
+- Client command transaction capacity raised from 32 to 128 so the existing 64-tile route cap can replace a full old route plus full new route in one validated queue operation.
+- V1 route editing identity is the currently committed client route. Physical rail pieces remain server-persistent; persistent route metadata/re-edit-after-relog is intentionally deferred until this interaction model passes runtime.
