@@ -64,7 +64,11 @@ public final class ConstructionPlacementController {
             new BuildPiece("basic-bed", "Bed", Category.FURNITURE, 14872, 10,
                     "Verified Matrix3 bed object; each placed bed adds one settlement population capacity."),
             new BuildPiece("basic-rail", "Rail route", Category.RAILS, 46353, 22,
-                    "Drag Point A to Point B; straights and accepted three-piece curves auto-tile.")
+                    "Drag Point A to Point B; straights and accepted three-piece curves auto-tile."),
+            new BuildPiece("rail-loader", "Rail Loader", Category.RAILS, 13450, 0,
+                    "V1 logistics endpoint; place cardinally adjacent to a rail."),
+            new BuildPiece("rail-unloader", "Rail Unloader", Category.RAILS, 13344, 0,
+                    "V1 logistics endpoint; place cardinally adjacent to the destination rail.")
     };
 
     private static volatile BuildPiece selectedPiece;
