@@ -505,7 +505,7 @@ Object / Automation Asset Probe — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Scanning/logging ordinary world objects does not move, rotate, delete, replace or otherwise mutate them.
 
 Phase 2 side slice — Radial Worker Selection RWS-4 layered GFX 4171 style
-[IMPLEMENTED / NEEDS RUNTIME TEST]
+[RUNTIME VERIFIED]
 [x] Decision: GFX 4187 is dropped; RWS-4 reuses only the already-proven GFX 4171.
 [x] Source ownership: drag/outer/inner visuals are isolated per-call 4171 model clones; cache definitions and combat reticules are untouched.
 [x] Layering source: each RWS-3-detected worker receives independent outer + inner 4171 clones at the same world position.
@@ -521,10 +521,27 @@ Phase 2 side slice — Radial Worker Selection RWS-4 layered GFX 4171 style
 [x] Renderer-aware source fix: custom-color mode now enumerates texture IDs from either AbstractModel or Class89_Sub2 before detaching them and applying HSL.
 [-] Third runtime color test: still no visible change. Source trace found an unhandled OpenGLModel path, which owns texture IDs in aShortArray10306; active-renderer ownership remains a runtime hypothesis.
 [x] OpenGL source fix: custom-color mode now also enumerates OpenGLModel.aShortArray10306 before detaching textures and applying HSL.
-[ ] Pick a drag-ring color; only the large active drag ring changes color.
-[ ] Pick separate outer and inner colors; each detected worker shows the two chosen colors on the correct layers.
+[x] Runtime acceptance: user confirmed ring recoloring now visibly works after renderer-aware OpenGL coverage.
+[x] Runtime acceptance: layered worker rings render at independent scales and chosen colors across multiple detected workers.
 [ ] Use Original Colors restores native 4171 coloring for drag/outer/inner without resetting scale.
 [ ] Shrink/reposition/release the drag; layered worker previews still follow RWS-3 membership and disappear when preview ends.
+
+Worker Needs HUD visual prototype — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Server semantics: Hunger/Thirst are 0-100 pressure with critical threshold 80; Energy is 100-0 reserve with critical threshold 20.
+[x] Ownership: authoritative need values remain server-owned in SettlementWorkerState; this patch does not fake live synchronization through NPC names, combat levels or configs.
+[x] Renderer: reuses the runtime-verified GFX 4171 recolor/scale path.
+[x] Preview population: all active same-plane Settler NPCs are eligible, independent of current radial selection.
+[x] Default layout: Hunger 125%, Thirst 95%, Energy 65%.
+[x] Default identity colors: Hunger orange, Thirst cyan, Energy yellow.
+[x] Severity color: Hunger/Thirst blend to red toward 80; Energy blends to red as it falls toward 20.
+[x] Con Revamp exposes Enable/Disable/Status plus live demo value and ring-scale controls for all three needs.
+[ ] Enable Needs HUD Preview; every active Settler shows exactly three concentric needs rings.
+[ ] Adjust Hunger demo value 0 -> 80 and confirm orange trends to red without changing Thirst/Energy.
+[ ] Adjust Thirst demo value 0 -> 80 and confirm cyan trends to red without changing Hunger/Energy.
+[ ] Adjust Energy demo value 100 -> 20 and confirm yellow trends to red without changing Hunger/Thirst.
+[ ] Adjust Hunger/Thirst/Energy scales independently and find a readable spacing alongside committed selection rings.
+[ ] Disable Needs HUD Preview; all needs rings disappear immediately while normal selection visuals remain intact.
+[ ] After visual acceptance, implement a clean server -> client per-worker needs metadata seam and replace only the demo values.
 
 Object Lab OBJLAB-1/2 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Dev Mode -> Inspect Object -> Capture in Object Lab opens the viewer with the same object ID/name/source tile.
