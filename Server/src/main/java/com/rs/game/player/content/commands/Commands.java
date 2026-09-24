@@ -2937,6 +2937,57 @@ public final class Commands {
 	} else {
 	    String message;
 	    switch (cmd[0].toLowerCase()) {
+	    case "settlementrailreplace":
+		SettlementInstance railReplaceSettlement = SettlementInstance.getActive(player);
+		if (railReplaceSettlement == null) {
+		    player.getPackets().sendGameMessage("You must be inside your settlement to edit rails.");
+		    return true;
+		}
+		if (cmd.length < 3) {
+		    player.getPackets().sendGameMessage("Rail replacement command is incomplete.");
+		    return true;
+		}
+		try {
+		    int cursor = 1;
+		    int oldCount = Integer.parseInt(cmd[cursor++]);
+		    if (oldCount < 0 || oldCount > 64 || cmd.length < cursor + oldCount * 4 + 1) {
+			player.getPackets().sendGameMessage("Rail replacement old-route data is invalid.");
+			return true;
+		    }
+		    int[] oldIds = new int[oldCount];
+		    int[] oldXs = new int[oldCount];
+		    int[] oldYs = new int[oldCount];
+		    int[] oldPlanes = new int[oldCount];
+		    for (int i = 0; i < oldCount; i++) {
+			oldIds[i] = Integer.parseInt(cmd[cursor++]);
+			oldXs[i] = Integer.parseInt(cmd[cursor++]);
+			oldYs[i] = Integer.parseInt(cmd[cursor++]);
+			oldPlanes[i] = Integer.parseInt(cmd[cursor++]);
+		    }
+		    int newCount = Integer.parseInt(cmd[cursor++]);
+		    if (newCount <= 0 || newCount > 64 || cmd.length != cursor + newCount * 5) {
+			player.getPackets().sendGameMessage("Rail replacement new-route data is invalid.");
+			return true;
+		    }
+		    String[] newKeys = new String[newCount];
+		    int[] newXs = new int[newCount];
+		    int[] newYs = new int[newCount];
+		    int[] newPlanes = new int[newCount];
+		    int[] newRotations = new int[newCount];
+		    for (int i = 0; i < newCount; i++) {
+			newKeys[i] = cmd[cursor++];
+			newXs[i] = Integer.parseInt(cmd[cursor++]);
+			newYs[i] = Integer.parseInt(cmd[cursor++]);
+			newPlanes[i] = Integer.parseInt(cmd[cursor++]);
+			newRotations[i] = Integer.parseInt(cmd[cursor++]);
+		    }
+		    player.getPackets().sendGameMessage(railReplaceSettlement.replaceRailRoute(
+			    oldIds, oldXs, oldYs, oldPlanes,
+			    newKeys, newXs, newYs, newPlanes, newRotations));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Rail replacement numeric data is invalid.");
+		}
+		return true;
 	    case "settlementrailerase":
 		if (cmd.length < 5) {
 		    player.getPackets().sendGameMessage(
