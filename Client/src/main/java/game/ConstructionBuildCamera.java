@@ -192,7 +192,6 @@ public final class ConstructionBuildCamera {
     }
 
     public static String enter() {
-        settlementAutoMode = false;
         settlementEntryStableTicks = 0;
         settlementExitStableTicks = 0;
         // Every fresh Construction/settlement camera session starts in RTS.
