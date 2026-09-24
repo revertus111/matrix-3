@@ -1026,6 +1026,7 @@ Runtime defect/fix note:
 - Worker manual Move/Gather orders are runtime-only overrides owned by `SettlementWorkerNpc`; after the order completes, normal Allowed Jobs AI resumes. Pause remains authoritative.
 - The worker arrival seam is hardened: resource gathering now requires explicit physical interaction range (adjacent for resource nodes). A `calcFollow(...)` success with zero queued steps no longer means the worker has arrived, preventing the remote-chop behavior seen in runtime video.
 - Persistent rings no longer clear merely because one render pass cannot resolve a selected NPC. Local selection clears when explicitly replaced/cleared or when the committed selection center leaves the active scene, covering settlement exit/rebuild without transient-frame flicker.
+- Runtime video exposed action arbitration after a successful selection: releasing a second radial drag could immediately fall through as Matrix3 Walk Here and move the newly selected self/workers. The client now consumes that release-side action 23 once; the next genuine click remains a normal RTS order. Fresh Construction camera sessions also force RTS mode on entry.
 
 ## Phase 3 — Processing chains + better materials
 
