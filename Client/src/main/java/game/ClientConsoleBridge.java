@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public final class ClientConsoleBridge {
 
     private static final int RIGHTS_MULTIPLIER = -1550439133;
-    private static final int MAX_QUEUED_COMMANDS = 32;
+    private static final int MAX_QUEUED_COMMANDS = 128;
     private static final int MAX_COMMANDS_PER_CLIENT_CYCLE = 4;
     private static final int MAX_COMMAND_LENGTH = 252;
 
