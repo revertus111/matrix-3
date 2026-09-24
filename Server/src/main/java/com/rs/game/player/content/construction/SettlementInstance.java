@@ -847,8 +847,7 @@ public final class SettlementInstance {
         if (!route.isValid()) {
             return;
         }
-        if (state.getResourceAmount(SettlementResource.WOOD) < RAIL_WOOD_PAYLOAD
-                || state.getStorageRemaining(SettlementResource.WOOD) < RAIL_WOOD_PAYLOAD) {
+        if (state.getResourceAmount(SettlementResource.WOOD) < RAIL_WOOD_PAYLOAD) {
             return;
         }
 
