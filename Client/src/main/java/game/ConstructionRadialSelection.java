@@ -358,7 +358,7 @@ public final class ConstructionRadialSelection {
 
         boolean renderDragSelection = dragging;
         boolean renderCommittedSelection =
-                !dragging && committedWorkerNpcIndexes.length > 0;
+                !dragging && (committedWorkerNpcIndexes.length > 0 || committedPlayerSelected);
         if (!renderDragSelection && !renderCommittedSelection) {
             return;
         }
