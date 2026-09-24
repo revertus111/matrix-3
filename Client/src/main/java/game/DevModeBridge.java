@@ -241,6 +241,9 @@ public final class DevModeBridge {
         int normalizedAction = normalizeAction(action);
         if (normalizedAction == MATRIX3_TILE_ACTION && ConstructionBuildCamera.isRequested()) {
             ConstructionBuildCamera.stopMovement();
+            if (ConstructionPlacementController.eraseAtLocalTile(payloadA, payloadB)) {
+                return true;
+            }
             if (enabled && isOwnerSession() && DevSpawnPlacement.isPaintActive()) {
                 notifyPlacementStatus(placeActiveSpawnAtLocal(payloadA, payloadB));
                 return true;
