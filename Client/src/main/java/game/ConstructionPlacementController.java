@@ -135,7 +135,11 @@ public final class ConstructionPlacementController {
         hoverTracking = false;
         clearHoveredTile();
         ConstructionGhostPreview.endDebugSession();
-        ConstructionBuildCamera.exit();
+        // The palette no longer owns camera lifetime while the settlement lifecycle
+        // owns the always-on RTS session. Closing build UI must not restore vanilla.
+        if (!ConstructionBuildCamera.isSettlementAutoMode()) {
+            ConstructionBuildCamera.exit();
+        }
         RailRoutePreview.setEnabled(false);
         if (cancelPlacement) {
             status = DevModeBridge.cancelPlacement();
