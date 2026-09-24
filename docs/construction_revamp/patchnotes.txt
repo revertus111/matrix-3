@@ -1057,3 +1057,9 @@
 - Added runtime-only worker manual Move/Gather orders that resume normal worker policy after completion.
 - Hardened worker arrival checks so gathering requires explicit physical interaction range; calcFollow success with zero queued steps outside range no longer starts remote gathering.
 - Persistent selected rings no longer clear on one empty render frame; scene exit remains the explicit stale-selection cleanup boundary.
+
+
+2026-09-24 - RWS drag/order arbitration + RTS entry default
+- A completed radial selection drag now consumes its release-side Matrix3 Walk Here once, preventing the newly selected player/workers from immediately moving when the user was only expanding/replacing selection.
+- A fresh mouse press clears the one-shot suppression latch, so ordinary post-selection clicks still issue the existing RTS Walk Here order.
+- Fresh Construction camera sessions now force RTS mode on entry; Free Build remains an explicit in-session palette switch.
