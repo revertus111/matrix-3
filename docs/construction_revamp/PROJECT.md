@@ -1475,3 +1475,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Endpoint replacement removes the exact old persistent RAIL object IDs/tiles and then rebuilds the complete recalculated route. The server refuses the edit-removal command for non-RAIL targets, and the prior broad rail replacement remains frozen.
 - Physical rail layout remains persistent through SettlementState. V1 endpoint identity itself is client-session state; persistent route metadata/re-edit-after-relog is CARRYOVER until the new A/B interaction passes runtime. Do not add route-schema complexity before that acceptance gate.
 - Focused runtime gate: fresh straight A-to-B -> grab exact B and extend straight -> grab B again and drag 90 degrees -> verify one clean recalculated route with one accepted curve and no obsolete old pieces.
+
+
+## Atomic Rail Endpoint Replacement V1 — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under active AAA.
+- Runtime video proved Rail Endpoint Editing V1 had the correct A/B interaction but the wrong application boundary: many independent erase/build commands exposed partial old/new routes and produced parallel/disconnected remnants.
+- Endpoint edits now cross the client/server boundary as one complete old-route -> replacement-route transaction. SettlementInstance validates both sides before mutation, removes the exact old RAIL route, installs the complete recalculated route, and restores the old route if an unexpected replacement placement fails.
+- Unrelated persistent builds are never overwritten; they reject the edit before mutation.
+- Geometry remains unchanged. Focused gate is straight A-to-B -> move B farther -> move B 90 degrees -> move B again, with exactly one final route visible after each release.
