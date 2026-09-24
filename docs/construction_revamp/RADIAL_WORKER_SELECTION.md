@@ -496,7 +496,9 @@ Rejected prototype:
 Active arch prototype:
 
 - reuses the proven GFX `4171` recolor/scale renderer
-- all three needs share one circumference at a default 95% worker-relative scale
+- the HUD has exactly two visual levels while Needs HUD is enabled: outer full ring = selection, inner/status circumference = needs arches
+- the old full inner selection ring is suppressed while Needs HUD is enabled
+- all three needs share the former inner-ring circumference at a default 70% worker-relative scale
 - each need owns a separate ~100-degree angular slot with ~20-degree gaps
 - Hunger slot: orange -> red as pressure rises; arch length uses `(100 - hunger)%`
 - Thirst slot: cyan -> red as pressure rises; arch length uses `(100 - thirst)%`
