@@ -174,19 +174,18 @@ public final class ConstructionBuildCamera {
         }
         if (value == 1) {
             /*
-             * The proven RTS camera is owned by ConstructionPaletteOverlay.show().
-             * Do not call only beginPaletteSession() here: that skips the palette's
-             * world input listener/timer setup that the working RTS session uses.
+             * Settlement RTS is camera-only. The build palette must remain an
+             * independent UI: closing it must not tear down the settlement camera.
+             * Reuse the proven RTS camera session directly without showing palette.
              */
-            if (!ConstructionPaletteOverlay.isVisible()) {
-                ConstructionPaletteOverlay.show();
-            }
+            setMode(CameraMode.RTS);
+            enter();
+            settlementAutoMode = active;
             reportToServer("SETTLEMENT_SIGNAL enter-existing-rts");
             return;
         }
-        if (ConstructionPaletteOverlay.isVisible()) {
-            ConstructionPaletteOverlay.hide();
-        } else if (active) {
+        settlementAutoMode = false;
+        if (active) {
             exit();
         }
         reportToServer("SETTLEMENT_SIGNAL exit-existing-rts");
