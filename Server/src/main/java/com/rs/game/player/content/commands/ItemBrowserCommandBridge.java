@@ -267,6 +267,30 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("erasetile".equals(operation)) {
+            if (active == null) {
+                player.getPackets().sendGameMessage("You are not inside an active settlement.");
+                return true;
+            }
+            if (cmd.length < 6) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement erasetile <worldX> <worldY> <plane>");
+                return true;
+            }
+            final int worldX, worldY, plane;
+            try {
+                worldX = Integer.parseInt(cmd[3]);
+                worldY = Integer.parseInt(cmd[4]);
+                plane = Integer.parseInt(cmd[5]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Erase tile coordinates must be whole numbers.");
+                return true;
+            }
+            player.getPackets().sendGameMessage(
+                    active.eraseDevelopmentTile(new WorldTile(worldX, worldY, plane)));
+            return true;
+        }
+
         if ("undo".equals(operation)) {
             player.getPackets().sendGameMessage(active == null
                     ? "You are not inside an active settlement."
