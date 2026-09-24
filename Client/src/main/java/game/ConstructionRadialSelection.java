@@ -892,11 +892,13 @@ public final class ConstructionRadialSelection {
 
     private static void syncCommittedSelectionToServer() {
         String command;
-        if (committedWorkerNpcIndexes.length == 0) {
+        if (committedWorkerNpcIndexes.length == 0 && !committedPlayerSelected) {
             command = "itembrowser settlement workerselectionclear";
         } else {
             command = "itembrowser settlement workerselectionset "
-                    + formatNpcIndexes(committedWorkerNpcIndexes);
+                    + (committedWorkerNpcIndexes.length == 0
+                            ? "none" : formatNpcIndexes(committedWorkerNpcIndexes))
+                    + " " + (committedPlayerSelected ? "self" : "noself");
         }
         String error = ClientConsoleBridge.queueConsoleCommand(command);
         if (error != null) {
