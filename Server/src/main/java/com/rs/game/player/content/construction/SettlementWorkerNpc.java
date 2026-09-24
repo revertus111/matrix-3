@@ -46,6 +46,9 @@ public final class SettlementWorkerNpc extends NPC {
     private SettlementWorkerNeed activeNeed;
     private int recoveryTicksRemaining;
     private boolean emergencyFoodForage;
+    private WorldTile manualMoveTarget;
+    private SettlementResourceNode manualGatherNode;
+    private boolean manualGatherActive;
     private String statusDetail = "No allowed gathering job.";
 
     public SettlementWorkerNpc(SettlementInstance settlement,
@@ -93,6 +96,16 @@ public final class SettlementWorkerNpc extends NPC {
             statusDetail = carriedAmount > 0 && carriedResource != null
                     ? "Paused; holding " + carriedResource.getDisplayName() + "."
                     : "Paused.";
+            return;
+        }
+
+        if (manualMoveTarget != null) {
+            processManualMoveOrder();
+            return;
+        }
+
+        if (manualGatherNode != null && carriedAmount <= 0 && gatherTicksRemaining <= 0) {
+            processManualGatherOrder();
             return;
         }
 
@@ -146,7 +159,8 @@ public final class SettlementWorkerNpc extends NPC {
 
         workState = WorkState.MOVING_TO_RESOURCE;
         statusDetail = "Moving to " + targetNode.getResource().getDisplayName() + " node.";
-        if (walkToward(routeTarget, "No Path to " + targetNode.getResource().getDisplayName() + " node.")) {
+        if (walkToward(routeTarget,
+                "No Path to " + targetNode.getResource().getDisplayName() + " node.", 1)) {
             beginGathering();
         }
     }
@@ -158,14 +172,16 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
         SettlementWorkerJob job = findGatherJob(targetNode.getResource());
-        if (job == null || !workerState.isJobAllowed(job)) {
+        if (job == null || (!manualGatherActive && !workerState.isJobAllowed(job))) {
             gatherTicksRemaining = 0;
+            manualGatherActive = false;
             clearTarget();
             idle("Gather job disabled.");
             return;
         }
         if (!settlement.isStarterResourceNodeAvailable(targetNode)) {
             gatherTicksRemaining = 0;
+            manualGatherActive = false;
             clearTarget();
             idle("Resource node unavailable.");
             return;
@@ -174,6 +190,7 @@ public final class SettlementWorkerNpc extends NPC {
                 workerId, targetNode.getResource(), CARRY_CAPACITY)) {
             String fullResource = targetNode.getResource().getDisplayName();
             gatherTicksRemaining = 0;
+            manualGatherActive = false;
             clearTarget();
             idle(fullResource + " storage reservation was lost.");
             return;
@@ -191,6 +208,7 @@ public final class SettlementWorkerNpc extends NPC {
         nextGatherIndex = (targetNode.ordinal() + 1) % SettlementResourceNode.values().length;
         statusDetail = "Gathered " + carriedResource.getDisplayName() + "; awaiting haul.";
         targetNode = null;
+        manualGatherActive = false;
         workState = WorkState.IDLE;
     }
 
@@ -349,6 +367,78 @@ public final class SettlementWorkerNpc extends NPC {
         return null;
     }
 
+    public void assignManualMoveOrder(WorldTile target) {
+        if (target == null) {
+            return;
+        }
+        manualGatherNode = null;
+        manualGatherActive = false;
+        clearTarget();
+        manualMoveTarget = new WorldTile(target.getX(), target.getY(), target.getPlane());
+        resetWalkSteps();
+        workState = WorkState.MOVING_TO_RESOURCE;
+        statusDetail = "Manual order: moving to " + target.getX() + "," + target.getY() + ".";
+    }
+
+    public void assignManualGatherOrder(SettlementResourceNode node) {
+        if (node == null) {
+            return;
+        }
+        manualMoveTarget = null;
+        manualGatherActive = false;
+        clearTarget();
+        manualGatherNode = node;
+        resetWalkSteps();
+        workState = WorkState.MOVING_TO_RESOURCE;
+        statusDetail = "Manual order: moving to " + node.getResource().getDisplayName() + " node.";
+    }
+
+    private void processManualMoveOrder() {
+        if (manualMoveTarget == null) {
+            return;
+        }
+        WorldTile destination = manualMoveTarget;
+        workState = WorkState.MOVING_TO_RESOURCE;
+        statusDetail = "Manual order: moving to selected tile.";
+        if (!walkToward(destination, "No Path to manual destination.", 0)) {
+            return;
+        }
+        manualMoveTarget = null;
+        resetWalkSteps();
+        workState = WorkState.IDLE;
+        statusDetail = "Manual move complete; resuming worker policy.";
+    }
+
+    private void processManualGatherOrder() {
+        if (manualGatherNode == null) {
+            return;
+        }
+        SettlementResourceNode node = manualGatherNode;
+        if (!settlement.isStarterResourceNodeAvailable(node)) {
+            manualGatherNode = null;
+            idle("Manual resource target unavailable.");
+            return;
+        }
+        WorldTile routeTarget = settlement.getWorkerNodeRouteTarget(node);
+        if (routeTarget == null) {
+            manualGatherNode = null;
+            idle("Manual resource target unavailable.");
+            return;
+        }
+
+        workState = WorkState.MOVING_TO_RESOURCE;
+        statusDetail = "Manual order: moving to " + node.getResource().getDisplayName() + " node.";
+        if (!walkToward(routeTarget,
+                "No Path to manual " + node.getResource().getDisplayName() + " node.", 1)) {
+            return;
+        }
+
+        targetNode = node;
+        manualGatherNode = null;
+        manualGatherActive = true;
+        beginGathering();
+    }
+
     private void beginGathering() {
         if (targetNode == null) {
             idle("Gather target was lost.");
@@ -446,10 +536,14 @@ public final class SettlementWorkerNpc extends NPC {
     }
 
     private boolean walkToward(WorldTile target, String noPathReason) {
+        return walkToward(target, noPathReason, 0);
+    }
+
+    private boolean walkToward(WorldTile target, String noPathReason, int interactionRange) {
         if (target == null) {
             return false;
         }
-        if (getPlane() == target.getPlane() && getX() == target.getX() && getY() == target.getY()) {
+        if (isWithinInteractionRange(target, interactionRange)) {
             resetWalkSteps();
             return true;
         }
@@ -459,11 +553,27 @@ public final class SettlementWorkerNpc extends NPC {
                 statusDetail = noPathReason;
                 return false;
             }
-            if (!hasWalkSteps()) {
-                return true;
+            /*
+             * calcFollow(...) may legitimately return success without queuing
+             * steps when its own follow heuristics consider a target reached.
+             * Settlement gathering must not treat that as arrival unless the
+             * worker is physically inside the explicit interaction range.
+             */
+            if (!hasWalkSteps() && !isWithinInteractionRange(target, interactionRange)) {
+                statusDetail = noPathReason;
+                return false;
             }
         }
-        return false;
+        return isWithinInteractionRange(target, interactionRange);
+    }
+
+    private boolean isWithinInteractionRange(WorldTile target, int range) {
+        if (target == null || getPlane() != target.getPlane()) {
+            return false;
+        }
+        int allowed = Math.max(0, range);
+        return Math.abs(getX() - target.getX()) <= allowed
+                && Math.abs(getY() - target.getY()) <= allowed;
     }
 
     private void clearTarget() {
@@ -497,6 +607,15 @@ public final class SettlementWorkerNpc extends NPC {
         }
         if (targetNode != null) {
             summary.append(" | target=").append(targetNode.getKey());
+        }
+        if (manualMoveTarget != null) {
+            summary.append(" | manualMove=")
+                    .append(manualMoveTarget.getX()).append(',').append(manualMoveTarget.getY());
+        }
+        if (manualGatherNode != null || manualGatherActive) {
+            summary.append(" | manualGather=")
+                    .append(manualGatherNode != null ? manualGatherNode.getKey()
+                            : targetNode != null ? targetNode.getKey() : "active");
         }
         summary.append(" | ").append(workerState.getNeedsSummary());
         summary.append(" | Skills: ").append(workerState.getSkillsSummary());
