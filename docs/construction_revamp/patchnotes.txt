@@ -1263,3 +1263,11 @@
 - A face is eligible for an arch only when every vertex remains inside the calibrated circular annulus; faces crossing inward/outward from the ring strip are made fully transparent before angular-slot masking.
 - Needs HUD Status now reports the strict ring-body band alongside visible/body-hidden/arc-hidden face counts.
 - Hunger/Thirst/Energy values, colors, slot ownership, shared scale, selection visuals and server needs ownership are unchanged.
+
+
+2026-09-24 - Rail diagnostic safety freeze and visible evidence panel
+- Disabled broad server rail-on-rail replacement while continuation geometry is under diagnosis; previously placed track is preserved when a different rail component reaches the same tile.
+- Identical rail reuse remains idempotent.
+- Rail Debug now renders the latest route-intent report visibly inside the Construction palette, including route, seam, curve-footprint and final-piece rows.
+- Copy Debug remains available for the complete report.
+- No route geometry, curve anchoring or routing math changed in this patch.
