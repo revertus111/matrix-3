@@ -51,8 +51,8 @@ public final class ConstructionBuildCamera {
     private static final float RTS_LOOK_DISTANCE = 4096.0F;
     private static final float RTS_INITIAL_BACKOFF = 3600.0F;
     private static final float RTS_ZOOM_STEP = 450.0F;
-    private static final float RTS_MIN_ORBIT_DISTANCE = 1400.0F;
-    private static final float RTS_MAX_ORBIT_DISTANCE = 5600.0F;
+    private static final float RTS_MIN_ORBIT_DISTANCE = 700.0F;
+    private static final float RTS_MAX_ORBIT_DISTANCE = 10000.0F;
     private static final int RTS_MAX_QUEUED_WHEEL_STEPS = 8;
 
     private static volatile boolean active;
@@ -183,6 +183,7 @@ public final class ConstructionBuildCamera {
              * Reuse the proven RTS camera session directly without showing palette.
              */
             setMode(CameraMode.RTS);
+            ConstructionPaletteOverlay.installRtsInputListener();
             enter();
             settlementAutoMode = active;
             reportToServer("SETTLEMENT_SIGNAL enter-existing-rts");
