@@ -1150,3 +1150,11 @@
 - Added explicit settlement camera ownership state exposed to the placement controller.
 - Closing the build palette no longer exits the camera while settlement RTS owns it.
 - Leaving the settlement still clears settlement ownership and exits RTS back to vanilla camera.
+
+
+2026-09-24 - Palette-independent RTS wheel input + wider zoom
+- Root cause: the global AWT listener returned immediately whenever ConstructionPaletteOverlay was hidden, so settlement-owned RTS never received mouse-wheel events.
+- RTS settlement startup now installs the existing wheel listener without opening the build palette.
+- World-wheel events are accepted while either the palette is visible or settlement RTS owns the camera; palette keyboard handling remains palette-only.
+- Extended RTS orbit range from 1400..5600 to 700..10000 camera units. Existing 450-unit wheel step retained.
+- NPC/scene streaming, minimap camera coupling, and RTS state persistence remain separate follow-up work; this patch does not fake them by moving the player.
