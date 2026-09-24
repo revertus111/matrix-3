@@ -57,6 +57,8 @@ public final class ConstructionRadialSelection {
     private static final float MAX_RADIUS_TILES = 64.0F;
     private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x8000 | 0x5;
     private static final long HOVER_STALE_MS = 1250L;
+    private static final int MIN_SELECTION_DRAG_PIXELS = 6;
+    private static final int STARTER_TREE_OBJECT_ID = 1276;
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
@@ -93,6 +95,11 @@ public final class ConstructionRadialSelection {
     private static volatile String lastDetectedWorkers = "none";
     private static volatile int[] liveDetectedWorkerNpcIndexes = new int[0];
     private static volatile int[] committedWorkerNpcIndexes = new int[0];
+    private static volatile boolean livePlayerSelected;
+    private static volatile boolean committedPlayerSelected;
+    private static volatile int dragPressMouseX;
+    private static volatile int dragPressMouseY;
+    private static volatile boolean dragThresholdPassed;
     private static volatile String lastEventState = "RWS-5 Worker Control disabled.";
     private static volatile String lastRenderState = "not rendered";
 
@@ -142,6 +149,14 @@ public final class ConstructionRadialSelection {
 
     public static boolean hasCommittedWorkerSelection() {
         return committed && committedWorkerNpcIndexes.length > 0;
+    }
+
+    public static boolean hasCommittedSelection() {
+        return committed && (committedWorkerNpcIndexes.length > 0 || committedPlayerSelected);
+    }
+
+    public static boolean isLocalPlayerSelected() {
+        return committed && committedPlayerSelected;
     }
 
     public static DragButton getDragButton() {
@@ -253,6 +268,9 @@ public final class ConstructionRadialSelection {
         committedRadiusTiles = MIN_RADIUS_TILES;
         committedWorkerNpcIndexes = new int[0];
         liveDetectedWorkerNpcIndexes = new int[0];
+        livePlayerSelected = false;
+        committedPlayerSelected = false;
+        dragThresholdPassed = false;
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -284,6 +302,7 @@ public final class ConstructionRadialSelection {
         }
         status.append(" | workersInCircle=").append(liveDetectedWorkerCount);
         status.append(" [").append(lastDetectedWorkers).append(']');
+        status.append(" | self=").append((dragging ? livePlayerSelected : committedPlayerSelected) ? "YES" : "NO");
         status.append(" | ").append(lastEventState);
         status.append(" | render=").append(lastRenderState);
         return status.toString();
@@ -363,14 +382,13 @@ public final class ConstructionRadialSelection {
 
         if (renderCommittedSelection) {
             int renderedWorkers = renderCommittedWorkerSelection(scene, renderer);
-            if (renderedWorkers == 0) {
-                clearCommittedSelectionLocal();
-                lastRenderState = "COMMITTED selection cleared after runtime workers disappeared.";
-            } else if (renderedWorkers > 0) {
+            boolean renderedSelf = renderCommittedPlayerSelection(scene, renderer);
+            if (renderedWorkers >= 0) {
                 lastRenderState = "COMMITTED worker rings=" + renderedWorkers
-                        + " [" + formatNpcIndexes(committedWorkerNpcIndexes) + "]";
+                        + " [" + formatNpcIndexes(committedWorkerNpcIndexes) + "]"
+                        + " self=" + (renderedSelf ? "YES" : (committedPlayerSelected ? "WAIT" : "NO"));
             } else {
-                lastRenderState = "WAIT committed worker ring render";
+                lastRenderState = "WAIT committed selection render";
             }
             return;
         }
@@ -577,6 +595,30 @@ public final class ConstructionRadialSelection {
                 ? detectedNpcIndexes
                 : java.util.Arrays.copyOf(detectedNpcIndexes, detected);
         lastDetectedWorkers = formatNpcIndexes(liveDetectedWorkerNpcIndexes);
+
+        livePlayerSelected = false;
+        Player localPlayer = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
+        if (localPlayer != null && (localPlayer.aByte9009 & 0xff) == plane) {
+            float playerWorldX = sceneBaseWorldX + localPlayer.screenX[0];
+            float playerWorldY = sceneBaseWorldY + localPlayer.screenY[0];
+            float playerDx = playerWorldX - centerWorldX;
+            float playerDy = playerWorldY - centerWorldY;
+            if (playerDx * playerDx + playerDy * playerDy <= radiusSquared) {
+                livePlayerSelected = true;
+                Class240 playerPosition = localPlayer.method5394().aClass240_2647;
+                if (playerPosition != null) {
+                    int markerSceneX = Math.round(playerPosition.aFloat2653);
+                    int markerSceneZ = Math.round(playerPosition.aFloat2657);
+                    int markerSceneY = ground.method2718(markerSceneX, markerSceneZ, 0);
+                    renderWorkerRingLayer(
+                            markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                            workerOuterRingScalePercent, workerOuterRingRgb);
+                    renderWorkerRingLayer(
+                            markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                            workerInnerRingScalePercent, workerInnerRingRgb);
+                }
+            }
+        }
         return detected;
     }
 
@@ -641,6 +683,43 @@ public final class ConstructionRadialSelection {
             rendered++;
         }
         return rendered;
+    }
+
+    private static boolean renderCommittedPlayerSelection(Class523 scene, Class106 renderer) {
+        if (!committedPlayerSelected || scene == null || renderer == null
+                || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null
+                || committedPlane < 0 || committedPlane >= scene.aClass174Array5838.length) {
+            return false;
+        }
+
+        Player localPlayer = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
+        if ((localPlayer.aByte9009 & 0xff) != committedPlane) {
+            return false;
+        }
+        Class174 ground = scene.aClass174Array5838[committedPlane];
+        if (ground == null) {
+            return false;
+        }
+        GraphicsDefinition markerDefinition = (GraphicsDefinition) Class667.aClass639_Sub10_8509
+                .getDefinition(RETICULE_GFX_ID, 235749166);
+        if (markerDefinition == null) {
+            return false;
+        }
+        Class240 position = localPlayer.method5394().aClass240_2647;
+        if (position == null) {
+            return false;
+        }
+
+        int markerSceneX = Math.round(position.aFloat2653);
+        int markerSceneZ = Math.round(position.aFloat2657);
+        int markerSceneY = ground.method2718(markerSceneX, markerSceneZ, 0);
+        renderWorkerRingLayer(
+                markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                workerOuterRingScalePercent, workerOuterRingRgb);
+        renderWorkerRingLayer(
+                markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                workerInnerRingScalePercent, workerInnerRingRgb);
+        return true;
     }
 
     private static void renderWorkerRingLayer(GraphicsDefinition definition, Class106 renderer,
@@ -901,13 +980,17 @@ public final class ConstructionRadialSelection {
         }
 
         if (mouse.getID() == MouseEvent.MOUSE_PRESSED && mouse.getButton() == dragButton.getAwtButton()) {
-            if (beginDrag(mouse.getX(), mouse.getY())) {
-                mouse.consume();
-            }
+            beginDrag(mouse.getX(), mouse.getY());
             return;
         }
 
         if (mouse.getID() == MouseEvent.MOUSE_DRAGGED && dragging) {
+            int dx = mouse.getX() - dragPressMouseX;
+            int dy = mouse.getY() - dragPressMouseY;
+            if (!dragThresholdPassed
+                    && dx * dx + dy * dy >= MIN_SELECTION_DRAG_PIXELS * MIN_SELECTION_DRAG_PIXELS) {
+                dragThresholdPassed = true;
+            }
             /*
              * Do not consume drag motion here. Matrix3's existing mouse/menu
              * path must see the cursor movement and resolve the live action-23
@@ -919,6 +1002,13 @@ public final class ConstructionRadialSelection {
 
         if (mouse.getID() == MouseEvent.MOUSE_RELEASED && dragging
                 && mouse.getButton() == dragButton.getAwtButton()) {
+            if (!dragThresholdPassed) {
+                cancelActiveDrag();
+                lastEventState = committed
+                        ? "RWS-5 click preserved the previous committed selection."
+                        : "RWS-5 click ignored; drag to select.";
+                return;
+            }
             if (hoveredPlane == originPlane && hoveredWorldX >= 0 && hoveredWorldY >= 0) {
                 updateLiveGeometryFromWorld(hoveredWorldX, hoveredWorldY);
             }
@@ -948,12 +1038,16 @@ public final class ConstructionRadialSelection {
         originWorldX = hoveredWorldX;
         originWorldY = hoveredWorldY;
         originPlane = hoveredPlane;
+        dragPressMouseX = mouseX;
+        dragPressMouseY = mouseY;
+        dragThresholdPassed = false;
         liveCenterWorldX = originWorldX;
         liveCenterWorldY = originWorldY;
         liveRadiusTiles = MIN_RADIUS_TILES;
         liveDirectionWorldX = 0.0F;
         liveDirectionWorldY = 0.0F;
         liveDetectedWorkerNpcIndexes = new int[0];
+        livePlayerSelected = false;
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         dragging = true;
@@ -1011,6 +1105,7 @@ public final class ConstructionRadialSelection {
          */
         committedWorkerNpcIndexes = java.util.Arrays.copyOf(
                 liveDetectedWorkerNpcIndexes, liveDetectedWorkerNpcIndexes.length);
+        committedPlayerSelected = livePlayerSelected;
         liveDetectedWorkerCount = committedWorkerNpcIndexes.length;
         lastDetectedWorkers = formatNpcIndexes(committedWorkerNpcIndexes);
         committed = true;
@@ -1021,7 +1116,8 @@ public final class ConstructionRadialSelection {
                 + committedWorkerNpcIndexes.length + " worker(s) ["
                 + lastDetectedWorkers + "] in radius "
                 + formatRadius(committedRadiusTiles)
-                + " tiles; drag circle hidden, selected-worker rings remain visible.";
+                + " tiles; self=" + (committedPlayerSelected ? "YES" : "NO")
+                + "; drag circle hidden, selected-unit rings remain visible.";
         syncCommittedSelectionToServer();
     }
 
@@ -1036,12 +1132,87 @@ public final class ConstructionRadialSelection {
         liveDirectionWorldX = 0.0F;
         liveDirectionWorldY = 0.0F;
         liveDetectedWorkerNpcIndexes = new int[0];
+        livePlayerSelected = false;
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
         lastEventState = committed
                 ? "RWS-5 drag cancelled; previous committed selection preserved."
                 : "RWS-5 drag cancelled.";
+    }
+
+    /**
+     * RWS-6 command bridge over Matrix3's existing context actions.
+     *
+     * Action 23 remains Matrix3 Walk Here. Selected workers receive the same
+     * destination as a transient server order. If self is selected, vanilla
+     * Walk Here is allowed to continue for the local player; otherwise it is
+     * consumed so only the selected workers move.
+     *
+     * Object action 3 is Matrix3's first object option. For the starter tree
+     * (1276), the same Chop action is mirrored to selected workers. If self is
+     * selected, vanilla Chop continues for the player too.
+     */
+    static boolean handleMenuAction(int action, int localX, int localY, long targetUid) {
+        if (!workerControlEnabled || !hasCommittedSelection()) {
+            return false;
+        }
+        int normalizedAction = action >= 2000 ? action - 2000 : action;
+        WorldPoint point = resolveWorldPoint(localX, localY);
+        if (point == null) {
+            return false;
+        }
+
+        if (normalizedAction == MATRIX3_TILE_ACTION) {
+            if (committedWorkerNpcIndexes.length > 0) {
+                queueSelectionOrder("workerselectionmove "
+                        + point.worldX + " " + point.worldY + " " + point.plane);
+            }
+            return !committedPlayerSelected;
+        }
+
+        if (normalizedAction == 3) {
+            int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
+            if (objectId == STARTER_TREE_OBJECT_ID && committedWorkerNpcIndexes.length > 0) {
+                queueSelectionOrder("workerselectiongather " + objectId + " "
+                        + point.worldX + " " + point.worldY + " " + point.plane);
+                return !committedPlayerSelected;
+            }
+        }
+        return false;
+    }
+
+    private static void queueSelectionOrder(String suffix) {
+        String error = ClientConsoleBridge.queueConsoleCommand("itembrowser settlement " + suffix);
+        if (error != null) {
+            lastEventState = "RWS command failed: " + error;
+        }
+    }
+
+    private static WorldPoint resolveWorldPoint(int localX, int localY) {
+        if (client.aClass613_8605 == null || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
+            return null;
+        }
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
+        if (sceneBase == null) {
+            return null;
+        }
+        return new WorldPoint(
+                sceneBase.localX * -2109597897 + localX,
+                sceneBase.localY * 417324155 + localY,
+                Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff);
+    }
+
+    private static final class WorldPoint {
+        private final int worldX;
+        private final int worldY;
+        private final int plane;
+
+        private WorldPoint(int worldX, int worldY, int plane) {
+            this.worldX = worldX;
+            this.worldY = worldY;
+            this.plane = plane;
+        }
     }
 
     private static String formatRadius(float radius) {
