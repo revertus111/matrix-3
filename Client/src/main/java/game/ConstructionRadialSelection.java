@@ -705,17 +705,6 @@ public final class ConstructionRadialSelection {
     }
 
     /**
-     * RWS-5 released-selection visualization.
-     *
-     * The large drag circle is temporary. Once selection is committed, the
-     * small layered rings remain attached to the exact runtime NPC indexes
-     * that were committed on release, so the player can always see the active
-     * command group. Persistent command authority remains server-owned.
-     *
-     * @return rendered selected-worker count; 0 when the old runtime selection
-     *         no longer exists; -1 when rendering prerequisites are unavailable.
-     */
-    /**
      * Worker-needs HUD visual prototype.
      *
      * Server ownership is intentionally untouched here. The current persistent
@@ -796,6 +785,17 @@ public final class ConstructionRadialSelection {
         return rendered;
     }
 
+    /**
+     * RWS-5 released-selection visualization.
+     *
+     * The large drag circle is temporary. Once selection is committed, the
+     * small layered rings remain attached to the exact runtime NPC indexes
+     * that were committed on release, so the player can always see the active
+     * command group. Persistent command authority remains server-owned.
+     *
+     * @return rendered selected-worker count; 0 when the old runtime selection
+     *         no longer exists; -1 when rendering prerequisites are unavailable.
+     */
     private static int renderCommittedWorkerSelection(Class523 scene, Class106 renderer) {
         if (scene == null || renderer == null || client.aClass676_8622 == null
                 || committedWorkerNpcIndexes.length == 0) {
