@@ -266,27 +266,35 @@ public final class SettlementInstance {
                 }
 
                 /*
-                 * A continued B->C turn re-authors the old endpoint footprint
-                 * into the accepted three-piece curve. Curve components are
-                 * therefore allowed to replace an existing RAIL visual at the
-                 * same persistent tile. Straight-on-straight perpendicular
-                 * conflicts remain reserved for future T/cross/switch art.
+                 * Rail visual auto-tiling owns the affected footprint. If the
+                 * newly authored route says this occupied rail tile needs a
+                 * different rail component/rotation, replace that persistent
+                 * visual in place. This is what lets A->B followed by B->C
+                 * re-author B and the accepted curve footprint instead of
+                 * stacking/rejecting independent route visuals.
                  */
-                if (definition.getObjectId() != 46353) {
-                    SettlementPlacedPiece removed = state.remove(existingRail.getPieceId());
-                    if (removed != null) {
-                        removeProjectedPiece(removed);
-                        SettlementPlacedPiece replacement = state.place(
-                                definition, plotX, plotY, worldTile.getPlane(), rotation);
-                        if (replacement != null) {
-                            spawnProjectedPiece(replacement);
-                            refreshRailLogistics();
-                            return "Rail endpoint auto-tiled into connected curve.";
-                        }
-                    }
-                    return "Rail endpoint could not be re-tiled.";
+                SettlementPlacedPiece removed = state.remove(existingRail.getPieceId());
+                if (removed == null) {
+                    return "Rail connection could not replace the existing visual.";
                 }
-                return "Rail connection reached existing track; junction/switch visual is required here.";
+                removeProjectedPiece(removed);
+                SettlementPlacedPiece replacement = state.place(
+                        definition, plotX, plotY, worldTile.getPlane(), rotation);
+                if (replacement == null) {
+                    // Defensive rollback: never leave a hole if replacement fails.
+                    SettlementBuildPiece oldDefinition =
+                            SettlementBuildPiece.forKey(removed.getDefinitionKey());
+                    if (oldDefinition != null) {
+                        SettlementPlacedPiece restored = state.place(
+                                oldDefinition, removed.getPlotX(), removed.getPlotY(),
+                                removed.getPlane(), removed.getRotation());
+                        spawnProjectedPiece(restored);
+                    }
+                    return "Rail connection could not apply the replacement visual.";
+                }
+                spawnProjectedPiece(replacement);
+                refreshRailLogistics();
+                return "Rail visual auto-connected.";
             }
         }
 
