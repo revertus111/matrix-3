@@ -332,6 +332,16 @@ public final class ConstructionPaletteOverlay {
             repaintSurface();
             return;
         }
+        if (layout.railDebug.contains(x, y) && ConstructionPlacementController.isRailRouteSelected()) {
+            RailRoutePreview.setDebugEnabled(!RailRoutePreview.isDebugEnabled());
+            repaintSurface();
+            return;
+        }
+        if (layout.copyRailDebug.contains(x, y) && ConstructionPlacementController.isRailRouteSelected()) {
+            RailRoutePreview.copyDebugReportToClipboard();
+            repaintSurface();
+            return;
+        }
         if (layout.cancel.contains(x, y)) {
             ConstructionPlacementController.cancel();
             repaintSurface();
@@ -463,10 +473,13 @@ public final class ConstructionPaletteOverlay {
         Rectangle rotateRight = new Rectangle(106, controlsY, 86, 30);
         Rectangle paintMode = new Rectangle(202, controlsY, 66, 30);
         Rectangle continuous = new Rectangle(274, controlsY, Math.max(1, width - 288), 30);
+        Rectangle railDebug = new Rectangle(14, height - 38, 82, 26);
+        Rectangle copyRailDebug = new Rectangle(102, height - 38, 92, 26);
         Rectangle cancel = new Rectangle(width - 86, height - 38, 72, 26);
         return new LayoutSnapshot(panel, close, cameraFree, cameraRts, rtsSpeedDown, rtsSpeedUp,
                 searchBox, tabs, cards.toArray(new CardHitbox[cards.size()]),
-                rotateLeft, rotateRight, paintMode, continuous, cancel, matches.size());
+                rotateLeft, rotateRight, paintMode, continuous,
+                railDebug, copyRailDebug, cancel, matches.size());
     }
 
     private static List<BuildPiece> matchingPieces() {
@@ -595,6 +608,10 @@ public final class ConstructionPaletteOverlay {
         g.setColor(MUTED);
         g.drawString(trimToWidth(g, state, Math.max(1, layout.panel.width - 112)),
                 layout.panel.x + 14, layout.panel.y + layout.panel.height - 14);
+        if (ConstructionPlacementController.isRailRouteSelected()) {
+            paintButton(g, layout.railDebug, "Rail Debug", RailRoutePreview.isDebugEnabled());
+            paintButton(g, layout.copyRailDebug, "Copy Debug", false);
+        }
         paintButton(g, layout.cancel, "Cancel", false);
     }
 
@@ -674,13 +691,16 @@ public final class ConstructionPaletteOverlay {
         private final Rectangle rotateRight;
         private final Rectangle paintMode;
         private final Rectangle continuousMode;
+        private final Rectangle railDebug;
+        private final Rectangle copyRailDebug;
         private final Rectangle cancel;
         private final int totalMatchingPieces;
 
         private LayoutSnapshot(Rectangle panel, Rectangle close, Rectangle cameraFree, Rectangle cameraRts,
                 Rectangle rtsSpeedDown, Rectangle rtsSpeedUp, Rectangle search, Rectangle[] tabs,
                 CardHitbox[] cards, Rectangle rotateLeft, Rectangle rotateRight, Rectangle paintMode,
-                Rectangle continuousMode, Rectangle cancel, int totalMatchingPieces) {
+                Rectangle continuousMode, Rectangle railDebug, Rectangle copyRailDebug,
+                Rectangle cancel, int totalMatchingPieces) {
             this.panel = panel;
             this.close = close;
             this.cameraFree = cameraFree;
@@ -694,6 +714,8 @@ public final class ConstructionPaletteOverlay {
             this.rotateRight = rotateRight;
             this.paintMode = paintMode;
             this.continuousMode = continuousMode;
+            this.railDebug = railDebug;
+            this.copyRailDebug = copyRailDebug;
             this.cancel = cancel;
             this.totalMatchingPieces = totalMatchingPieces;
         }
@@ -701,7 +723,8 @@ public final class ConstructionPaletteOverlay {
         private static LayoutSnapshot empty() {
             Rectangle zero = new Rectangle();
             return new LayoutSnapshot(zero, zero, zero, zero, zero, zero, zero,
-                    new Rectangle[0], new CardHitbox[0], zero, zero, zero, zero, zero, 0);
+                    new Rectangle[0], new CardHitbox[0], zero, zero, zero, zero,
+                    zero, zero, zero, 0);
         }
     }
 }
