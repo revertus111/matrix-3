@@ -727,3 +727,15 @@ Rail Auto-Connect V1 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Connect two existing routes using an A->B path containing the accepted three-piece curve; the curve remains visually correct and Rail Logistics sees one connected topology.
 [ ] Exit/re-enter; joined track persists without duplicate rail pieces.
 [ ] Attempt a perpendicular branch directly on an occupied straight; verify it is not visually overwritten and the server reports junction/switch art is required.
+
+
+Continued Endpoint Visual Auto-Tiling — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] A->B then B->C remains the input model; no new connect mode was introduced.
+[x] If C continues on the same axis, B remains ordinary straight track.
+[x] If B->C leaves perpendicular to A->B, the client commits the accepted three-piece curve at B and suppresses new straight pieces under its footprint.
+[x] Accepted curve components may replace old persistent RAIL visuals in their footprint; straight-on-straight perpendicular conflicts remain protected for future T/cross art.
+[ ] Build a straight A->B.
+[ ] Start the next drag exactly on B and extend straight to C; verify the visual remains one continuous straight.
+[ ] Repeat A->B, then start exactly on B and drag perpendicular to C; verify B and its curve footprint visually become the accepted three-piece bend with no gap/double straight.
+[ ] Repeat the perpendicular continuation in all four turn directions.
+[ ] Exit/re-enter and verify the re-tiled curve persists exactly.
