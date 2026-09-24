@@ -1280,3 +1280,13 @@
 - Endpoint edits queue exact rail-only removal of the previous route pieces followed by the complete recalculated replacement route. Server removal refuses non-RAIL targets.
 - Client command transaction capacity raised from 32 to 128 so the existing 64-tile route cap can replace a full old route plus full new route in one validated queue operation.
 - V1 route editing identity is the currently committed client route. Physical rail pieces remain server-persistent; persistent route metadata/re-edit-after-relog is intentionally deferred until this interaction model passes runtime.
+
+
+2026-09-24 - Collapse worker HUD to two visual levels
+- Runtime screenshot exposed an extra circumference: RWS-4 still rendered both outer and inner full selection rings while Worker Needs HUD added its own arch circumference.
+- Needs HUD now owns the inner/status visual level instead of adding a third ring.
+- Outer full GFX 4171 ring remains the selection indicator.
+- While Needs HUD is enabled, the old full inner selection ring is suppressed for live worker preview, committed worker selection and player selection.
+- Hunger/Thirst/Energy arches now default to 70% scale, matching the former inner-ring radius rather than the old 95% third circumference.
+- When Needs HUD is disabled, legacy two-layer RWS-4 selection rendering remains unchanged.
+- No worker detection, committed selection, server needs ownership, persistence or AI behavior changed.
