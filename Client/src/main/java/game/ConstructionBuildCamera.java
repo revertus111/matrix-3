@@ -165,6 +165,9 @@ public final class ConstructionBuildCamera {
     }
 
     public static String enter() {
+        // Every fresh Construction/settlement camera session starts in RTS.
+        // Free Build remains an explicit in-session palette choice.
+        cameraMode = CameraMode.RTS;
         if (active) {
             return "Construction " + cameraMode.getDisplayName() + " camera is already active.";
         }
