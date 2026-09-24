@@ -80,6 +80,14 @@ public final class ConstructionBuildCamera {
     private static float rtsPivotZ;
     private static int pendingRtsZoomSteps;
 
+    // Preserve the last accepted RTS view for the lifetime of this client.
+    private static boolean savedRtsView;
+    private static float savedRtsYawRadians;
+    private static float savedRtsOrbitDistance;
+    private static float savedRtsPivotX;
+    private static float savedRtsPivotY;
+    private static float savedRtsPivotZ;
+
     // A placement click should stop motion even if a key is still physically held.
     // Movement can resume only after all camera movement keys are released once.
     private static boolean clickStopLatched;
@@ -413,6 +421,7 @@ public final class ConstructionBuildCamera {
         float rotationInput = (rotateRight ? 1.0F : 0.0F) - (rotateLeft ? 1.0F : 0.0F);
         if (rotationInput != 0.0F) {
             rtsYawRadians = normalizeRadians(rtsYawRadians + rotationInput * RTS_ROTATE_SPEED * dt);
+            rememberRtsView();
         }
 
         // Apply the requested heading first, then use Matrix3's real rendered look
@@ -459,14 +468,31 @@ public final class ConstructionBuildCamera {
         position.aFloat2657 += panZ;
         rtsPivotX += panX;
         rtsPivotZ += panZ;
+        rememberRtsView();
 
         int wheelSteps = consumeRtsZoomSteps();
         if (wheelSteps != 0 && viewDirection != null) {
             applyRtsZoom(position, viewDirection, wheelSteps);
+            rememberRtsView();
         }
     }
 
     private static void initializeRtsHeading(Class658_Sub2 lookController, Class240 position) {
+        if (savedRtsView) {
+            rtsYawRadians = savedRtsYawRadians;
+            rtsOrbitDistance = clamp(savedRtsOrbitDistance, RTS_MIN_ORBIT_DISTANCE, RTS_MAX_ORBIT_DISTANCE);
+            rtsPivotX = savedRtsPivotX;
+            rtsPivotY = savedRtsPivotY;
+            rtsPivotZ = savedRtsPivotZ;
+            rtsOrientationInitialized = true;
+            applyRtsOrientation(lookController);
+            Class240 savedDirection = getViewDirection(lookController, position);
+            if (savedDirection != null) {
+                setPositionFromRtsPivot(position, savedDirection);
+            }
+            return;
+        }
+
         Class240 forwardPoint = lookController.method7736(0);
         float deltaX = forwardPoint.aFloat2653 - position.aFloat2653;
         float deltaZ = forwardPoint.aFloat2657 - position.aFloat2657;
@@ -488,6 +514,7 @@ public final class ConstructionBuildCamera {
         rtsPivotY = position.aFloat2656;
         rtsPivotZ = position.aFloat2657;
         rtsOrbitDistance = RTS_INITIAL_BACKOFF;
+        rememberRtsView();
 
         Class240 viewDirection = getViewDirection(lookController, position);
         if (viewDirection != null) {
@@ -677,6 +704,18 @@ public final class ConstructionBuildCamera {
         velocityX = 0.0F;
         velocityY = 0.0F;
         velocityZ = 0.0F;
+    }
+
+    private static synchronized void rememberRtsView() {
+        if (!rtsOrientationInitialized || rtsOrbitDistance <= 0.0F) {
+            return;
+        }
+        savedRtsView = true;
+        savedRtsYawRadians = rtsYawRadians;
+        savedRtsOrbitDistance = rtsOrbitDistance;
+        savedRtsPivotX = rtsPivotX;
+        savedRtsPivotY = rtsPivotY;
+        savedRtsPivotZ = rtsPivotZ;
     }
 
     private static synchronized void resetRtsState() {
