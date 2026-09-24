@@ -236,6 +236,33 @@ public final class SettlementInstance {
 
         int plotX = toPlotX(worldTile.getX());
         int plotY = toPlotY(worldTile.getY());
+
+        /*
+         * Rail Auto-Connect V1: dragging a new route onto an existing rail is
+         * an idempotent connection operation, not an occupied-slot failure.
+         * The existing persistent rail remains the owner of that tile; the
+         * remainder of the queued A->B route can continue building normally.
+         *
+         * We intentionally do not replace perpendicular/branch visuals here.
+         * T/cross/switch art needs an accepted cache asset before it can be
+         * represented honestly.
+         */
+        if (definition.getRole() == SettlementBuildRole.RAIL) {
+            SettlementPlacedPiece existingRail = state.findRailAt(
+                    plotX, plotY, worldTile.getPlane());
+            if (existingRail != null) {
+                SettlementBuildPiece existingDefinition =
+                        SettlementBuildPiece.forKey(existingRail.getDefinitionKey());
+                if (existingDefinition != null
+                        && existingDefinition.getObjectId() == definition.getObjectId()
+                        && existingRail.getRotation() == rotation) {
+                    refreshRailLogistics();
+                    return "Rail auto-connected to existing track.";
+                }
+                return "Rail connection reached existing track; junction/switch visual is required here.";
+            }
+        }
+
         SettlementPlayerBuildTransaction.Result result =
                 SettlementPlayerBuildTransaction.apply(
                         state,
