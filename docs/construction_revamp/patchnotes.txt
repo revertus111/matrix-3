@@ -1180,3 +1180,12 @@
 - Pan, rotate and zoom operations update the saved RTS view; resetRtsState now resets transient controller state without erasing the saved view.
 - Movement-speed selection was already persistent static client state and remains unchanged.
 - Narrow source searches did not establish a verified fog/minimap/NPC-streaming ownership seam. Per AGENTS scan discipline, no speculative obfuscated-core patch was made for those systems; they remain the active follow-up rather than moving the player or globally changing renderer behavior.
+
+
+2026-09-24 - Bundled settlement RTS world-view pass
+- Server LocalNPCUpdate trace verified the missing-worker cause: ordinary local NPC packets are player-centered at 14 tiles, while Matrix3 already has a large-scene packet using 8-bit offsets and a 64-tile radius.
+- Settlement entry now enables Player.largeSceneView and resets the local NPC list so workers within the settlement's large-scene radius can be supplied without moving the player's actual WorldTile.
+- All three settlement leave paths restore ordinary largeSceneView=false and reset the local NPC list.
+- This stacks with the same bundle's already-landed palette-independent wheel input, 700..10000 orbit range, and RTS pivot/yaw/zoom persistence.
+- Renderer trace confirmed detached RTS world rendering already receives detached-camera coordinates through Class343 -> scene method6240; fog remains environment/renderer-owned and is not changed until its exact distance control is verified.
+- Minimap heading is still separately vanilla-coupled; no guessed obfuscated angle write was added.
