@@ -1197,3 +1197,15 @@
 - Removed the old server conflict guard from rail-on-rail visual updates. When an A->B / B->C auto-tile footprint reaches an existing persistent RAIL tile with a different rail component or rotation, that rail visual is now replaced in place instead of rejected or stacked.
 - Replacement is persistent and projected immediately; a defensive rollback restores the old rail if the replacement save fails.
 - No new route geometry or guessed offsets were introduced in this correction.
+
+
+2026-09-24 - Replace worker needs concentric rings with arch HUD
+- Runtime screenshot proved the first Worker Needs HUD prototype rendered, but the user rejected the three-concentric-ring layout as the wrong visual direction.
+- Replaced the three full needs circles with three partial GFX 4171 arches on one shared circumference.
+- Hunger, Thirst and Energy each own a separate ~100-degree slot with gaps; current slot centers are 30/150/270 degrees.
+- Arc length now encodes wellbeing remaining: Hunger=(100-hunger)%, Thirst=(100-thirst)%, Energy=energy%.
+- Existing identity/severity colors remain: Hunger orange->red, Thirst cyan->red, Energy yellow->red.
+- Added clone alpha capability 0x100 and OpenGL per-face arc masking through Model.method1473(...). OpenGL render-vertex indexes are mapped back to original model X/Z coordinates through anIntArray10329/aShortArray10330, then faces outside each arc span are made fully transparent.
+- Con Revamp now uses one shared needs-arch scale instead of three independent concentric-ring scales.
+- Selection/drag rings, worker detection, server needs ownership, persistence and AI are unchanged.
+- Needs values remain demo-only until visual acceptance; a clean per-worker server->client metadata seam is still the next production step.
