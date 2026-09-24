@@ -1016,3 +1016,12 @@
 - Persistent rings resolve the exact committed runtime NPC indexes each scene pass, so they follow selected workers as they move.
 - Clear Selection or a replacement drag updates the visual selection; if the committed runtime NPC set disappears during settlement exit/rebuild, stale local rings are cleared.
 - No server selection authority, worker AI, jobs, persistence, housing or radial drag geometry changed.
+
+
+2026-09-24 - RWS-4 renderer-aware 4171 recolor
+- Runtime retest still showed no visible color change after the first texture-isolated recolor patch.
+- The failure boundary was implementation-specific: texture enumeration only handled AbstractModel.aShortArray10821.
+- Matrix3 also renders models through Class89_Sub2, where face textures live in aShortArray10591 and face colors in aShortArray10592.
+- RWS-4 custom-color mode now enumerates texture IDs from either AbstractModel or Class89_Sub2, retextures those isolated clone faces to -1, then applies the selected HSL through the active renderer's own Model.method1396 implementation.
+- Existing 0x80000 face-color isolation and 0x8000 texture-ID isolation remain unchanged.
+- Scaling logic is untouched; focused runtime retest is color-only.
