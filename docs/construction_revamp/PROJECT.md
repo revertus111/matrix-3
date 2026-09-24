@@ -1419,3 +1419,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Same-axis extension and joining authored routes through the accepted A->B straight/three-piece-curve router can now share an existing endpoint without the prior occupied-slot failure.
 - Conflicting same-tile rail visuals are intentionally rejected rather than silently replacing/overlaying them. Proper T junction, crossing and switch visuals require accepted cache art before branch auto-tiling can be enabled.
 - Rail topology remains derived from persistent SettlementState pieces; no second topology owner was added.
+
+
+## Continued endpoint visual auto-tiling — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under the approved AAA continuation.
+- Correct target: preserve the existing A->B then B->C workflow. If the new B->C leaves B on a perpendicular axis, the previous route's final direction plus the new route's first direction select/rotate CURVE_RAIL_LAYOUT_01 around B.
+- Curve footprint pieces replace old persistent RAIL visuals at those exact tiles, so the connection is represented by the already-accepted three-piece bend rather than two visually disconnected authored routes.
+- Same-axis continuation remains straight/idempotent. T/cross/switch cases are still separate because they require accepted junction art rather than the ordinary two-direction curve.
+- Runtime gate: straight continuation, four turn quadrants, no gap/double straight at B, then exit/re-entry persistence.
