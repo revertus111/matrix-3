@@ -36,7 +36,9 @@ public final class SettlementPlayerBuildTransaction {
 
         SettlementResource resource = definition.getBuildResource();
         long cost = definition.getBuildCost();
-        boolean freePlacement = definition.getRole() == SettlementBuildRole.RAIL
+        boolean freePlacement = (definition.getRole() == SettlementBuildRole.RAIL
+                || definition.getRole() == SettlementBuildRole.RAIL_LOADER
+                || definition.getRole() == SettlementBuildRole.RAIL_UNLOADER)
                 && resource == null && cost == 0L;
         if (!freePlacement && (resource == null || cost <= 0L)) {
             return Result.fail("That build piece has no valid material cost.");
