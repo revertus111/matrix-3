@@ -154,6 +154,7 @@ public final class SettlementInstance {
         player.lock(2);
         player.setNextWorldTile(entryTile);
         loaded = true;
+        player.getPackets().sendCSVarInteger(2835, 1);
         player.getPackets().sendGameMessage(
                 "Settlement loaded: " + state.size() + " saved build piece" + (state.size() == 1 ? "." : "s."));
     }
@@ -1072,6 +1073,7 @@ public final class SettlementInstance {
         if (destroyed) {
             return;
         }
+        player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
         player.setForceNextMapLoadRefresh(true);
         player.setNextWorldTile(returnTile);
@@ -1082,6 +1084,7 @@ public final class SettlementInstance {
         if (destroyed) {
             return;
         }
+        player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
         player.setLocation(returnTile);
         destroy();
@@ -1091,6 +1094,7 @@ public final class SettlementInstance {
         if (destroyed) {
             return;
         }
+        player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
         destroy();
     }
