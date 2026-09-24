@@ -259,6 +259,28 @@ public final class SettlementInstance {
                     refreshRailLogistics();
                     return "Rail auto-connected to existing track.";
                 }
+
+                /*
+                 * A continued B->C turn re-authors the old endpoint footprint
+                 * into the accepted three-piece curve. Curve components are
+                 * therefore allowed to replace an existing RAIL visual at the
+                 * same persistent tile. Straight-on-straight perpendicular
+                 * conflicts remain reserved for future T/cross/switch art.
+                 */
+                if (definition.getObjectId() != 46353) {
+                    SettlementPlacedPiece removed = state.remove(existingRail.getPieceId());
+                    if (removed != null) {
+                        removeProjectedPiece(removed);
+                        SettlementPlacedPiece replacement = state.place(
+                                definition, plotX, plotY, worldTile.getPlane(), rotation);
+                        if (replacement != null) {
+                            spawnProjectedPiece(replacement);
+                            refreshRailLogistics();
+                            return "Rail endpoint auto-tiled into connected curve.";
+                        }
+                    }
+                    return "Rail endpoint could not be re-tiled.";
+                }
                 return "Rail connection reached existing track; junction/switch visual is required here.";
             }
         }
