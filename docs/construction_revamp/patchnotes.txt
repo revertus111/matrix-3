@@ -1079,3 +1079,11 @@
 - Added persistent server definitions for 46353 straight and accepted curve components 46377/46379/46381 under the new RAIL semantic role. Each physical rail component currently costs 1 Basic ore and awards 4 base Construction XP; balancing remains provisional.
 - Palette footer identifies rail drag controls while route mode is selected. Normal Walls/Floors/Doors/Furniture Paint/Continuous behavior remains unchanged.
 - Runtime acceptance required: Rails tab visibility, straight drag placement, L-route accepted three-piece curve placement/rotation, Basic ore consumption/XP, persistence after settlement rebuild/relog, and no regression to ordinary placement.
+
+
+2026-09-24 - Deterministic settlement RTS lifecycle bridge
+- Replaced failed scene-size inference with explicit server/client lifecycle ownership.
+- SettlementInstance.finishLoad sends private CSVar 2835=1 only after the dynamic settlement is loaded and the player is moved to its entry tile.
+- Settlement leave-to-return/logout/teleport paths send CSVar 2835=0.
+- PacketsDecoder forwards both small/big CSVar packets to ConstructionBuildCamera; only id 2835 is consumed by the construction bridge.
+- Signal 1 enters RTS automatically when no Construction camera is active. Signal 0 releases only a camera session auto-owned by settlement lifecycle.
