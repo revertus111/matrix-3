@@ -82,8 +82,6 @@ public final class RailRoutePreview {
     private static volatile int committedPlane = -1;
     private static volatile int continuationHorizontalDirection;
     private static volatile int continuationVerticalDirection;
-    private static volatile int continuationIncomingX;
-    private static volatile int continuationIncomingY;
 
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String eventState = "A->B rail preview disabled.";
@@ -698,8 +696,6 @@ public final class RailRoutePreview {
 
         continuationHorizontalDirection = 0;
         continuationVerticalDirection = 0;
-        continuationIncomingX = 0;
-        continuationIncomingY = 0;
         if (hadCommitted && previousPlane == livePlane
                 && previousEndX == liveStartX && previousEndY == liveStartY) {
             int[] incoming = finalTravelDirection(
@@ -708,8 +704,6 @@ public final class RailRoutePreview {
                     liveStartX, liveStartY, liveEndX, liveEndY);
             if ((incoming[0] != 0 && outgoing[1] != 0)
                     || (incoming[1] != 0 && outgoing[0] != 0)) {
-                continuationIncomingX = incoming[0];
-                continuationIncomingY = incoming[1];
                 continuationHorizontalDirection =
                         incoming[0] != 0 ? -incoming[0] : outgoing[0];
                 continuationVerticalDirection =
@@ -739,22 +733,18 @@ public final class RailRoutePreview {
                 committedEndX, committedEndY, committedPlane);
         if (continuationHorizontalDirection != 0 && continuationVerticalDirection != 0) {
             /*
-             * CURVE_RAIL_LAYOUT_01 is a three-tile footprint whose elbow is not
-             * the authored A/B seam. Shift the curve one tile back along the
-             * incoming route so its approach component replaces the old B
-             * straight and its exit lands on the new B->C leg.
+             * B is the logical corner seam. CURVE_RAIL_LAYOUT_01 is already
+             * elbow-anchored, so use B directly and let its accepted footprint
+             * replace the old endpoint/neighboring rail visuals server-side.
              */
-            int curveCornerX = committedStartX - continuationIncomingX;
-            int curveCornerY = committedStartY - continuationIncomingY;
             CurvePlacement continuation = createCurvePlacement(
-                    curveCornerX, curveCornerY,
+                    committedStartX, committedStartY,
                     continuationHorizontalDirection, continuationVerticalDirection);
             if (continuation != null) {
                 removePiecesOccupiedByCurve(pieces, continuation);
-                removeRoutePieceAt(pieces, committedStartX, committedStartY);
                 java.util.List<RoutePiece> curvePieces = new java.util.ArrayList<RoutePiece>();
                 appendCurvePieces(curvePieces, continuation,
-                        curveCornerX, curveCornerY, committedPlane);
+                        committedStartX, committedStartY, committedPlane);
                 curvePieces.addAll(pieces);
                 pieces = curvePieces;
             }
@@ -786,17 +776,6 @@ public final class RailRoutePreview {
             return new int[] { 0, dy };
         }
         return dx != 0 ? new int[] { dx, 0 } : new int[] { 0, dy };
-    }
-
-    private static void removeRoutePieceAt(
-            java.util.List<RoutePiece> pieces, int worldX, int worldY) {
-        java.util.Iterator<RoutePiece> iterator = pieces.iterator();
-        while (iterator.hasNext()) {
-            RoutePiece piece = iterator.next();
-            if (piece.getWorldX() == worldX && piece.getWorldY() == worldY) {
-                iterator.remove();
-            }
-        }
     }
 
     private static void removePiecesOccupiedByCurve(
