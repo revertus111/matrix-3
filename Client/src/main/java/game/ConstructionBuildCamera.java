@@ -54,6 +54,7 @@ public final class ConstructionBuildCamera {
     private static final float RTS_MIN_ORBIT_DISTANCE = 700.0F;
     private static final float RTS_MAX_ORBIT_DISTANCE = 10000.0F;
     private static final int RTS_MAX_QUEUED_WHEEL_STEPS = 8;
+    private static final float RTS_SCENE_EDGE_MARGIN = 768.0F;
 
     private static volatile boolean active;
     private static volatile boolean ownsFreeCamera;
@@ -464,10 +465,12 @@ public final class ConstructionBuildCamera {
 
         float panX = velocityX * dt;
         float panZ = velocityZ * dt;
-        position.aFloat2653 += panX;
-        position.aFloat2657 += panZ;
         rtsPivotX += panX;
         rtsPivotZ += panZ;
+        clampRtsPivotToLoadedScene();
+        if (viewDirection != null) {
+            setPositionFromRtsPivot(position, viewDirection);
+        }
         rememberRtsView();
 
         int wheelSteps = consumeRtsZoomSteps();
@@ -478,13 +481,14 @@ public final class ConstructionBuildCamera {
     }
 
     private static void initializeRtsHeading(Class658_Sub2 lookController, Class240 position) {
-        if (savedRtsView) {
+        if (savedRtsView && isSavedRtsPivotInLoadedScene()) {
             rtsYawRadians = savedRtsYawRadians;
             rtsOrbitDistance = clamp(savedRtsOrbitDistance, RTS_MIN_ORBIT_DISTANCE, RTS_MAX_ORBIT_DISTANCE);
             rtsPivotX = savedRtsPivotX;
             rtsPivotY = savedRtsPivotY;
             rtsPivotZ = savedRtsPivotZ;
             rtsOrientationInitialized = true;
+            clampRtsPivotToLoadedScene();
             applyRtsOrientation(lookController);
             Class240 savedDirection = getViewDirection(lookController, position);
             if (savedDirection != null) {
@@ -492,6 +496,9 @@ public final class ConstructionBuildCamera {
             }
             return;
         }
+        // Dynamic settlement regions can be rebuilt at a different scene base.
+        // Never restore absolute camera coordinates from the previous loaded scene.
+        savedRtsView = false;
 
         Class240 forwardPoint = lookController.method7736(0);
         float deltaX = forwardPoint.aFloat2653 - position.aFloat2653;
@@ -513,6 +520,7 @@ public final class ConstructionBuildCamera {
         rtsPivotX = position.aFloat2653;
         rtsPivotY = position.aFloat2656;
         rtsPivotZ = position.aFloat2657;
+        clampRtsPivotToLoadedScene();
         rtsOrbitDistance = RTS_INITIAL_BACKOFF;
         rememberRtsView();
 
@@ -704,6 +712,52 @@ public final class ConstructionBuildCamera {
         velocityX = 0.0F;
         velocityY = 0.0F;
         velocityZ = 0.0F;
+    }
+
+    private static boolean isSavedRtsPivotInLoadedScene() {
+        float[] bounds = getLoadedSceneBounds();
+        return bounds != null
+                && savedRtsPivotX >= bounds[0] && savedRtsPivotX <= bounds[1]
+                && savedRtsPivotZ >= bounds[2] && savedRtsPivotZ <= bounds[3];
+    }
+
+    private static void clampRtsPivotToLoadedScene() {
+        float[] bounds = getLoadedSceneBounds();
+        if (bounds == null) {
+            return;
+        }
+        rtsPivotX = clamp(rtsPivotX, bounds[0], bounds[1]);
+        rtsPivotZ = clamp(rtsPivotZ, bounds[2], bounds[3]);
+    }
+
+    /**
+     * Keep the RTS look pivot inside Matrix3's currently loaded scene. Detached
+     * camera position may sit outside this rectangle at long orbit distances; the
+     * important invariant is that its look target remains on loaded terrain.
+     */
+    private static float[] getLoadedSceneBounds() {
+        try {
+            Class497 sceneBase = client.aClass613_8605.method7280((byte) -115);
+            int[][][] heights = client.aClass613_8605.method7293(1134705460).anIntArrayArrayArray3141;
+            if (sceneBase == null || heights == null || heights.length == 0
+                    || heights[0] == null || heights[0].length < 2
+                    || heights[0][0] == null || heights[0][0].length < 2) {
+                return null;
+            }
+
+            float baseX = (sceneBase.localX * -2109597897) << 9;
+            float baseZ = (sceneBase.localY * 417324155) << 9;
+            float maxX = baseX + (heights[0].length - 1) * 512.0F;
+            float maxZ = baseZ + (heights[0][0].length - 1) * 512.0F;
+            float marginX = Math.min(RTS_SCENE_EDGE_MARGIN, Math.max(0.0F, (maxX - baseX) * 0.25F));
+            float marginZ = Math.min(RTS_SCENE_EDGE_MARGIN, Math.max(0.0F, (maxZ - baseZ) * 0.25F));
+            return new float[] {
+                    baseX + marginX, maxX - marginX,
+                    baseZ + marginZ, maxZ - marginZ
+            };
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 
     private static synchronized void rememberRtsView() {
