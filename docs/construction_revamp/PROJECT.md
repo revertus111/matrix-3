@@ -1004,6 +1004,7 @@ Batch worker actions:
 - `workerselectionclear` clears only the transient active-instance selection.
 - **Command ownership:** RWS-5 committed drag selection is now the sole Con Revamp mutation target for Role Preset, Pause/Resume and Allowed Jobs. The numeric Worker Inspector is inspection-only for per-worker Jobs/AI/Needs/Progress readback; it cannot redirect worker commands.
 - Both RWS-5 quick controls and the Allowed Jobs card route to the same server-owned committed selection, eliminating the prior split ownership.
+- **Selection visibility:** after release, the large drag circle disappears but the selected workers retain their existing layered GFX 4171 rings. The rings follow the committed runtime NPCs until Clear Selection, replacement by a new committed drag, Worker Control is disabled, or the runtime NPC set disappears during settlement instance rebuild/exit.
 
 Runtime acceptance target:
 
@@ -1017,6 +1018,8 @@ Runtime defect/fix note:
 - Runtime VERIFIED: after the fix, a two-worker drag released successfully and game chat reported `Radial worker selection committed: #1,#2.`
 - Follow-up runtime exposed a UI ownership mismatch: after selecting #1,#2, the legacy lower Allowed Jobs card still sent `workerpreset <spinnerWorkerId>`, so only Worker #1 changed.
 - Ownership fix implemented: the lower Role Preset, Pause/Resume, individual Allowed Job and Enable/Disable All controls now target the committed RWS-5 selection. The numeric spinner is explicitly inspection-only.
+- Runtime confirmation: user reports all multi-worker command behavior now works; the only remaining Bundle 2.4 issue was that selected-worker rings disappeared on release.
+- Persistent-ring patch implemented: the scene pass now renders the committed selected-worker ring layers after release without re-rendering the large drag circle. If the committed runtime NPC set disappears, the local visual selection clears so stale rings do not survive instance rebuild/exit.
 
 ## Phase 3 — Processing chains + better materials
 
@@ -1078,8 +1081,8 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
 - Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
 - Approval state: Bundle 2.3 is fully RUNTIME VERIFIED. Bundle 2.4 RWS-5 radial multi-worker control is SAP AAA approved and implemented.
-- Current checklist item: runtime-test consolidated RWS-5 command ownership: drag-select #1,#2 -> apply preset -> individual job toggle -> Enable/Disable All -> Pause/Resume; verify only the committed workers mutate. Confirm changing the Worker Inspector spinner does not redirect commands, then clear/reselect and exit/re-entry test.
-- Current objective: runtime-accept radial multi-worker control, then continue Phase 2 into cooking and farming/hunting production chains.
+- Current checklist item: focused RWS-5 persistent-selection-ring retest: drag-select one or more workers, release, verify the large drag circle disappears while the selected workers' small rings remain attached/following them; Clear Selection and a replacement drag must update/remove the rings cleanly.
+- Current objective: runtime-accept persistent selected-worker ring visibility, then close Bundle 2.4 and continue Phase 2 into cooking and farming/hunting production chains.
 
 ## Verification classifications
 
