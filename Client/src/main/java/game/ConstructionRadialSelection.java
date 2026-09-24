@@ -236,6 +236,12 @@ public final class ConstructionRadialSelection {
     }
 
     public static void clearCommittedRadius() {
+        clearCommittedSelectionLocal();
+        lastEventState = "RWS-5 committed selection cleared.";
+        syncCommittedSelectionToServer();
+    }
+
+    private static void clearCommittedSelectionLocal() {
         committed = false;
         committedStartWorldX = -1;
         committedStartWorldY = -1;
@@ -245,13 +251,10 @@ public final class ConstructionRadialSelection {
         committedRadiusTiles = MIN_RADIUS_TILES;
         committedWorkerNpcIndexes = new int[0];
         liveDetectedWorkerNpcIndexes = new int[0];
-        liveDetectedWorkerNpcIndexes = new int[0];
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
         lastRenderState = "not rendered";
-        lastEventState = "RWS-5 committed selection cleared.";
-        syncCommittedSelectionToServer();
     }
 
     public static String getStatus() {
@@ -327,15 +330,17 @@ public final class ConstructionRadialSelection {
      *   RWS-1 and ConstructionGhostPreview.
      */
     static void render(Class523 scene, Class106 renderer) {
-        if (!workerControlEnabled || !dragging || scene == null || renderer == null
+        if (!workerControlEnabled || scene == null || renderer == null
                 || client.aClass613_8605 == null) {
             return;
         }
 
-        float drawWorldX = liveCenterWorldX;
-        float drawWorldY = liveCenterWorldY;
-        int drawPlane = originPlane;
-        float drawRadius = liveRadiusTiles;
+        boolean renderDragSelection = dragging;
+        boolean renderCommittedSelection =
+                !dragging && committedWorkerNpcIndexes.length > 0;
+        if (!renderDragSelection && !renderCommittedSelection) {
+            return;
+        }
 
         Class613 region = client.aClass613_8605;
         if (region.method7285(0) != scene) {
@@ -353,6 +358,25 @@ public final class ConstructionRadialSelection {
             lastRenderState = "WAIT scene base";
             return;
         }
+
+        if (renderCommittedSelection) {
+            int renderedWorkers = renderCommittedWorkerSelection(scene, renderer);
+            if (renderedWorkers == 0) {
+                clearCommittedSelectionLocal();
+                lastRenderState = "COMMITTED selection cleared after runtime workers disappeared.";
+            } else if (renderedWorkers > 0) {
+                lastRenderState = "COMMITTED worker rings=" + renderedWorkers
+                        + " [" + formatNpcIndexes(committedWorkerNpcIndexes) + "]";
+            } else {
+                lastRenderState = "WAIT committed worker ring render";
+            }
+            return;
+        }
+
+        float drawWorldX = liveCenterWorldX;
+        float drawWorldY = liveCenterWorldY;
+        int drawPlane = originPlane;
+        float drawRadius = liveRadiusTiles;
 
         int sceneBaseWorldX = sceneBase.localX * -2109597897;
         int sceneBaseWorldY = sceneBase.localY * 417324155;
@@ -552,6 +576,69 @@ public final class ConstructionRadialSelection {
                 : java.util.Arrays.copyOf(detectedNpcIndexes, detected);
         lastDetectedWorkers = formatNpcIndexes(liveDetectedWorkerNpcIndexes);
         return detected;
+    }
+
+    /**
+     * RWS-5 released-selection visualization.
+     *
+     * The large drag circle is temporary. Once selection is committed, the
+     * small layered rings remain attached to the exact runtime NPC indexes
+     * that were committed on release, so the player can always see the active
+     * command group. Persistent command authority remains server-owned.
+     *
+     * @return rendered selected-worker count; 0 when the old runtime selection
+     *         no longer exists; -1 when rendering prerequisites are unavailable.
+     */
+    private static int renderCommittedWorkerSelection(Class523 scene, Class106 renderer) {
+        if (scene == null || renderer == null || client.aClass676_8622 == null
+                || committedWorkerNpcIndexes.length == 0) {
+            return -1;
+        }
+        if (committedPlane < 0 || committedPlane >= scene.aClass174Array5838.length) {
+            return 0;
+        }
+
+        Class174 ground = scene.aClass174Array5838[committedPlane];
+        if (ground == null) {
+            return -1;
+        }
+
+        GraphicsDefinition markerDefinition = (GraphicsDefinition) Class667.aClass639_Sub10_8509
+                .getDefinition(RETICULE_GFX_ID, 235749166);
+        if (markerDefinition == null) {
+            return -1;
+        }
+
+        int rendered = 0;
+        for (int npcIndex : committedWorkerNpcIndexes) {
+            LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+            if (link == null || !(link.anObject9081 instanceof NPC)) {
+                continue;
+            }
+
+            NPC npc = (NPC) link.anObject9081;
+            if (!isSettlementWorkerPreviewNpc(npc, committedPlane)) {
+                continue;
+            }
+
+            Class240 position = npc.method5394().aClass240_2647;
+            if (position == null) {
+                continue;
+            }
+
+            int markerSceneX = Math.round(position.aFloat2653);
+            int markerSceneZ = Math.round(position.aFloat2657);
+            int markerSceneY = ground.method2718(markerSceneX, markerSceneZ, 0);
+
+            renderWorkerRingLayer(
+                    markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                    workerOuterRingScalePercent, workerOuterRingRgb);
+            renderWorkerRingLayer(
+                    markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
+                    workerInnerRingScalePercent, workerInnerRingRgb);
+            rendered++;
+        }
+        return rendered;
     }
 
     private static void renderWorkerRingLayer(GraphicsDefinition definition, Class106 renderer,
@@ -901,12 +988,12 @@ public final class ConstructionRadialSelection {
         committed = true;
         dragging = false;
         lastRenderedCycle = Integer.MIN_VALUE;
-        lastRenderState = "hidden after release";
+        lastRenderState = "committed worker rings pending";
         lastEventState = "RWS-5 selection committed: "
                 + committedWorkerNpcIndexes.length + " worker(s) ["
                 + lastDetectedWorkers + "] in radius "
                 + formatRadius(committedRadiusTiles)
-                + " tiles; area reticule hidden after release.";
+                + " tiles; drag circle hidden, selected-worker rings remain visible.";
         syncCommittedSelectionToServer();
     }
 
