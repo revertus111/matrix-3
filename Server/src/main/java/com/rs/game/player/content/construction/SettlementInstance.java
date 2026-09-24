@@ -463,6 +463,34 @@ public final class SettlementInstance {
                 : "Removed " + removedCount + " settlement build(s).";
     }
 
+    public String eraseDevelopmentTile(WorldTile source) {
+        if (!loaded || source == null || !containsWorldTile(source)) {
+            return "Erase target must be inside the active settlement plot.";
+        }
+        int plotX = toPlotX(source.getX());
+        int plotY = toPlotY(source.getY());
+        int removedCount = 0;
+        java.util.List<SettlementPlacedPiece> pieces = state.snapshotPieces();
+        for (int i = pieces.size() - 1; i >= 0; i--) {
+            SettlementPlacedPiece piece = pieces.get(i);
+            if (piece == null || piece.getPlotX() != plotX || piece.getPlotY() != plotY
+                    || piece.getPlane() != source.getPlane()) {
+                continue;
+            }
+            SettlementPlacedPiece removed = state.remove(piece.getPieceId());
+            if (removed != null) {
+                removeProjectedPiece(removed);
+                removedCount++;
+            }
+        }
+        if (removedCount > 0) {
+            refreshRailLogistics();
+        }
+        return removedCount == 0
+                ? "No removable settlement build found on that tile."
+                : "Erased " + removedCount + " settlement build(s) from that tile.";
+    }
+
     public String deleteDevelopmentPiece(int objectId, WorldTile source) {
         if (!loaded || !containsWorldTile(source)) {
             return "Delete target must be inside the active settlement plot.";
