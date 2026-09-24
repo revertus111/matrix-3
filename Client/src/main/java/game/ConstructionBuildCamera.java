@@ -173,15 +173,16 @@ public final class ConstructionBuildCamera {
             return;
         }
         if (value == 1) {
-            // The server lifecycle signal is authoritative, but camera activation is
-            // deliberately NOT performed here. Runtime proved that detaching the
-            // Matrix3 camera during/just after the dynamic-region rebuild can blank
-            // the world viewport. Keep the signal for diagnostics only until a
-            // region-rebuild-complete seam is explicitly verified.
-            reportToServer("SETTLEMENT_SIGNAL enter");
+            // Reuse the exact RTS activation sequence already runtime-proven by the
+            // Construction palette instead of maintaining a second camera path.
+            ConstructionPlacementController.beginPaletteSession();
+            reportToServer("SETTLEMENT_SIGNAL enter-existing-rts");
             return;
         }
-        reportToServer("SETTLEMENT_SIGNAL exit");
+        if (active) {
+            ConstructionPlacementController.endPaletteSession(true);
+        }
+        reportToServer("SETTLEMENT_SIGNAL exit-existing-rts");
     }
 
     public static String enter() {
