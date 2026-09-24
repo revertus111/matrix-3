@@ -441,6 +441,27 @@ public final class SettlementInstance {
                 : "Removed " + removedCount + " settlement build(s).";
     }
 
+    public String eraseRailPiece(int objectId, WorldTile source) {
+        if (!loaded || source == null || !containsWorldTile(source)) {
+            return "Rail edit target must be inside the active settlement plot.";
+        }
+        SettlementPlacedPiece current = findSavedPiece(objectId, source);
+        if (current == null) {
+            return "Rail edit skipped: old rail piece already absent.";
+        }
+        SettlementBuildPiece definition = SettlementBuildPiece.forKey(current.getDefinitionKey());
+        if (definition == null || definition.getRole() != SettlementBuildRole.RAIL) {
+            return "Rail edit refused: target is not a persistent rail.";
+        }
+        SettlementPlacedPiece removed = state.remove(current.getPieceId());
+        if (removed == null) {
+            return "Rail edit could not remove the old rail piece.";
+        }
+        removeProjectedPiece(removed);
+        refreshRailLogistics();
+        return "Rail edit removed old route piece.";
+    }
+
     public String eraseDevelopmentTile(WorldTile source) {
         if (!loaded || source == null || !containsWorldTile(source)) {
             return "Erase target must be inside the active settlement plot.";
