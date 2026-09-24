@@ -1304,3 +1304,10 @@
 - verified-static: GPU terrain owner Class174_Sub1.method2715 applies the renderer fog transform when Class106_Sub3.anInt10448 > 0, using aFloat10503/aFloat10504 as the fog depth range.
 - Settlement RTS now bypasses that terrain fog transform only while the settlement-owned RTS camera is active. Ordinary player/vanilla rendering keeps the stock renderer fog path unchanged.
 - This stacks with the detached-camera scene focus and settlement scene-radius work; runtime acceptance is the same zoom/view that previously showed the beige horizontal wall.
+
+
+2026-09-24 - Rail endpoint old/new ownership diagnostics
+- Runtime retest showed atomic server replacement did not change the malformed endpoint-edit result, rejecting the transaction-boundary hypothesis.
+- Rail debug now records MODE endpointEdit/fixedA plus the complete OLD_PIECE list captured before B moves and the complete replacement PIECE list calculated after B moves.
+- Visible palette diagnostics now include MODE, OLD_PIECES/OLD_PIECE and PIECES rows and allow up to 22 compact evidence lines.
+- No rail geometry, curve rotation, persistence mutation, or replacement behavior changed. This isolates whether the malformed route already exists in client A-to-new-B intent or appears after server application.
