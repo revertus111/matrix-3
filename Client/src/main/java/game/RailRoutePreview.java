@@ -795,9 +795,9 @@ public final class RailRoutePreview {
                         + " B=" + committedEndX + "," + committedEndY + ".";
 
         debugOperationId++;
-        debugReport = buildDebugReport(debugOperationId, hadCommitted,
+        debugReport = buildDebugReport(debugOperationId, hadCommitted, endpointEdit,
                 previousStartX, previousStartY, previousEndX, previousEndY, previousPlane,
-                committedPieces);
+                previousPieces, committedPieces);
         if (endpointEdit) {
             ConstructionPlacementController.onRailRouteEdited(previousPieces, committedPieces);
         } else {
@@ -805,13 +805,17 @@ public final class RailRoutePreview {
         }
     }
 
-    private static String buildDebugReport(long operationId, boolean hadPrevious,
+    private static String buildDebugReport(long operationId, boolean hadPrevious, boolean endpointEdit,
             int previousStartX, int previousStartY, int previousEndX, int previousEndY,
-            int previousPlane, java.util.List<RoutePiece> pieces) {
+            int previousPlane, java.util.List<RoutePiece> oldPieces,
+            java.util.List<RoutePiece> pieces) {
         StringBuilder out = new StringBuilder(2048);
         out.append("RAIL_DEBUG\top=").append(operationId)
                 .append("\torder=").append(routeOrder)
                 .append("\tcomposite=").append(getConfiguredCurveCompositeName())
+                .append("\n");
+        out.append("MODE\tendpointEdit=").append(endpointEdit)
+                .append("\tfixedA=").append(endpointEdit)
                 .append("\n");
         out.append("CURRENT\tA=").append(committedStartX).append(',').append(committedStartY)
                 .append("\tB=").append(committedEndX).append(',').append(committedEndY)
@@ -846,6 +850,21 @@ public final class RailRoutePreview {
             appendCurveDebug(out, "SEAM_CURVE", placement);
         }
 
+        out.append("OLD_PIECES\tcount=").append(oldPieces == null ? 0 : oldPieces.size()).append("\n");
+        if (oldPieces != null) {
+            int oldIndex = 0;
+            for (RoutePiece piece : oldPieces) {
+                out.append("OLD_PIECE\t").append(oldIndex++)
+                        .append("\tx=").append(piece.getWorldX())
+                        .append("\ty=").append(piece.getWorldY())
+                        .append("\tplane=").append(piece.getPlane())
+                        .append("\tid=").append(piece.getObjectId())
+                        .append("\ttype=").append(piece.getObjectType())
+                        .append("\trot=").append(piece.getRotation())
+                        .append("\trole=").append(debugRole(piece.getObjectId()))
+                        .append("\n");
+            }
+        }
         out.append("PIECES\tcount=").append(pieces == null ? 0 : pieces.size()).append("\n");
         if (pieces != null) {
             int index = 0;
