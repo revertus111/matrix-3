@@ -1135,3 +1135,11 @@
 - Preview rendering is independent of Worker Control so needs readability can be tested without an active radial selection.
 - Persistent values remain server-owned in SettlementWorkerState. This slice intentionally does not encode needs into NPC names, combat level or arbitrary configs; demo values are visual-only until a clean per-worker server->client metadata seam is added.
 - Existing radial selection, committed selection rings, worker AI, persistence and server need logic are unchanged.
+
+
+2026-09-24 - Rail Auto-Connect V1
+- Added persistent rail-tile lookup to SettlementState so route placement can recognize already-owned track without scanning runtime WorldObjects.
+- A->B route placement may now terminate on / extend from an existing identical rail tile without producing an occupied-slot failure or duplicating the persistent piece. The existing rail remains authoritative and the rest of the queued route continues normally.
+- Same-axis route extension therefore connects cleanly to existing track while preserving the accepted straight/curve visuals and persistent topology.
+- A conflicting rail visual on the exact same tile is deliberately not overwritten. The server reports that a junction/switch visual is required rather than creating a visually false branch/crossing.
+- T junctions, crossings and switch replacement remain gated on accepting the correct cache art/model. No fake overlay junction was introduced.
