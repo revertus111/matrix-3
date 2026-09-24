@@ -167,6 +167,30 @@ public final class ConstructionBuildCamera {
         return true;
     }
 
+    private static final int SETTLEMENT_LIFECYCLE_CS_VAR = 2835;
+
+    /** VERIFIED-STATIC packet seam: PacketsDecoder forwards server CSVar 2835 here. */
+    public static void handleSettlementLifecycleSignal(int id, int value) {
+        if (id != SETTLEMENT_LIFECYCLE_CS_VAR) {
+            return;
+        }
+        if (value == 1) {
+            if (!active) {
+                cameraMode = CameraMode.RTS;
+                String result = enter();
+                settlementAutoMode = active;
+                if (settlementAutoMode) {
+                    reportToServer("SETTLEMENT_AUTO_ENTER " + result);
+                }
+            }
+            return;
+        }
+        if (settlementAutoMode) {
+            exit();
+            settlementAutoMode = false;
+        }
+    }
+
     public static String enter() {
         settlementAutoMode = false;
         settlementEntryStableTicks = 0;
