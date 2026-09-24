@@ -10,9 +10,11 @@ import java.awt.event.MouseEvent;
 /**
  * Client-only Point-A -> Point-B rail route visual proof.
  *
- * V2 proves drag UX, Manhattan routing, straight-axis orientation and a saved
- * same-tile CURVE composite at the bend. A single-object curve remains only as
- * fallback authoring support. It does not place real world objects, own
+ * V2 proves drag UX, Manhattan routing, straight-axis orientation and an
+ * authored multi-tile CURVE pattern at the bend. The accepted three-piece curve
+ * uses ordinary neighboring type-22 object origins, so same-tile overlay is not
+ * required for the current route. A single-object curve remains fallback
+ * authoring support. It does not place real world objects, own
  * collision, persist gameplay state, consume settlement resources, or attempt
  * switch/junction auto-tiling.
  */
@@ -117,11 +119,12 @@ public final class RailRoutePreview {
         return curveObjectId;
     }
     public static boolean reloadCurveComposite() {
-        curveComposite = RailCompositeLibrary.findFirst(RailCompositeLibrary.Role.CURVE);
+        curveComposite = RailCompositeLibrary.findAcceptedCurveForRoute();
         lastRenderedCycle = Integer.MIN_VALUE;
         eventState = curveComposite == null
-                ? "No saved CURVE composite found; single-object curve fallback remains available."
-                : "Loaded curve composite: " + curveComposite.describe() + ".";
+                ? "No authored curve pattern found; single-object curve fallback remains available."
+                : "Loaded curve pattern: " + curveComposite.describe()
+                        + " (accepted elbow-anchored layout).";
         return curveComposite != null;
     }
 
@@ -344,7 +347,7 @@ public final class RailRoutePreview {
                 + (requested > MAX_ROUTE_TILES ? " [capped " + MAX_ROUTE_TILES + "]" : "")
                 + (hasCorner
                         ? (curveComposite != null
-                                ? " V2 composite curve=" + curveComposite.getName()
+                                ? " V2 multi-tile curve=" + curveComposite.getName()
                                 : (curveDefinition != null
                                         ? " V2 single-curve fallback"
                                         : " V2 curve missing -> straight fallback"))
@@ -368,12 +371,17 @@ public final class RailRoutePreview {
         int attempted = 0;
         int xStep = Integer.compare(endX, startX);
         int yStep = Integer.compare(endY, startY);
+        int horizontalNeighborDirection = -xStep;
+        int verticalNeighborDirection = yStep;
+        CurvePlacement curvePlacement = createCurvePlacement(
+                endX, startY, horizontalNeighborDirection, verticalNeighborDirection);
 
         int x = startX;
         while (x != endX && attempted < MAX_ROUTE_TILES) {
             attempted++;
-            if (renderPiece(scene, renderer, sceneBase, straightDefinition,
-                    objectType, x, startY, plane, eastWestRotation())) {
+            if (!curveOccupies(curvePlacement, x, startY)
+                    && renderPiece(scene, renderer, sceneBase, straightDefinition,
+                            objectType, x, startY, plane, eastWestRotation())) {
                 rendered++;
             }
             x += xStep;
@@ -384,14 +392,9 @@ public final class RailRoutePreview {
         }
 
         attempted++;
-        int horizontalNeighborDirection = -xStep;
-        int verticalNeighborDirection = yStep;
-        if (curveComposite != null) {
-            if (renderCurveComposite(scene, renderer, sceneBase, definitions,
-                    endX, startY, plane,
-                    horizontalNeighborDirection, verticalNeighborDirection)) {
-                rendered++;
-            }
+        if (curvePlacement != null) {
+            rendered += renderCurveComposite(
+                    scene, renderer, sceneBase, definitions, curvePlacement, plane);
         } else if (curveDefinition != null) {
             if (renderPiece(scene, renderer, sceneBase, curveDefinition, curveObjectType,
                     endX, startY, plane,
@@ -406,8 +409,9 @@ public final class RailRoutePreview {
         int y = startY + yStep;
         while (attempted < MAX_ROUTE_TILES) {
             attempted++;
-            if (renderPiece(scene, renderer, sceneBase, straightDefinition,
-                    objectType, endX, y, plane, verticalRotation())) {
+            if (!curveOccupies(curvePlacement, endX, y)
+                    && renderPiece(scene, renderer, sceneBase, straightDefinition,
+                            objectType, endX, y, plane, verticalRotation())) {
                 rendered++;
             }
             if (y == endY) {
@@ -435,12 +439,17 @@ public final class RailRoutePreview {
         int attempted = 0;
         int xStep = Integer.compare(endX, startX);
         int yStep = Integer.compare(endY, startY);
+        int horizontalNeighborDirection = xStep;
+        int verticalNeighborDirection = -yStep;
+        CurvePlacement curvePlacement = createCurvePlacement(
+                startX, endY, horizontalNeighborDirection, verticalNeighborDirection);
 
         int y = startY;
         while (y != endY && attempted < MAX_ROUTE_TILES) {
             attempted++;
-            if (renderPiece(scene, renderer, sceneBase, straightDefinition,
-                    objectType, startX, y, plane, verticalRotation())) {
+            if (!curveOccupies(curvePlacement, startX, y)
+                    && renderPiece(scene, renderer, sceneBase, straightDefinition,
+                            objectType, startX, y, plane, verticalRotation())) {
                 rendered++;
             }
             y += yStep;
@@ -451,14 +460,9 @@ public final class RailRoutePreview {
         }
 
         attempted++;
-        int horizontalNeighborDirection = xStep;
-        int verticalNeighborDirection = -yStep;
-        if (curveComposite != null) {
-            if (renderCurveComposite(scene, renderer, sceneBase, definitions,
-                    startX, endY, plane,
-                    horizontalNeighborDirection, verticalNeighborDirection)) {
-                rendered++;
-            }
+        if (curvePlacement != null) {
+            rendered += renderCurveComposite(
+                    scene, renderer, sceneBase, definitions, curvePlacement, plane);
         } else if (curveDefinition != null) {
             if (renderPiece(scene, renderer, sceneBase, curveDefinition, curveObjectType,
                     startX, endY, plane,
@@ -473,8 +477,9 @@ public final class RailRoutePreview {
         int x = startX + xStep;
         while (attempted < MAX_ROUTE_TILES) {
             attempted++;
-            if (renderPiece(scene, renderer, sceneBase, straightDefinition,
-                    objectType, x, endY, plane, eastWestRotation())) {
+            if (!curveOccupies(curvePlacement, x, endY)
+                    && renderPiece(scene, renderer, sceneBase, straightDefinition,
+                            objectType, x, endY, plane, eastWestRotation())) {
                 rendered++;
             }
             if (x == endX) {
@@ -719,33 +724,97 @@ public final class RailRoutePreview {
         return (horizontalRotation + 1) & 0x3;
     }
 
-    private static boolean renderCurveComposite(Class523 scene, Class106 renderer,
-            Class497 sceneBase, Class639_Sub16 definitions,
-            int worldX, int worldY, int plane,
-            int horizontalDirection, int verticalDirection) {
+    private static CurvePlacement createCurvePlacement(
+            int cornerX, int cornerY, int horizontalDirection, int verticalDirection) {
         RailCompositeLibrary.CompositeDefinition composite = curveComposite;
         if (composite == null) {
-            return false;
+            return null;
         }
 
-        int quarterTurns = curveQuarterTurnsFor(horizontalDirection, verticalDirection);
-        int layoutTurns = (curveRotationOffset + quarterTurns) & 0x3;
-        boolean any = false;
-        for (RailCompositeLibrary.Component component : composite.getComponents()) {
+        java.util.List<RailCompositeLibrary.Component> components = composite.getComponents();
+        if (components.isEmpty()) {
+            return null;
+        }
+
+        CurveAnchor anchor = findCurveAnchor(components);
+        int targetQuarterTurns = curveQuarterTurnsFor(horizontalDirection, verticalDirection);
+        int layoutTurns = (targetQuarterTurns - anchor.baseQuarterTurns
+                + curveRotationOffset) & 0x3;
+        return new CurvePlacement(
+                composite, cornerX, cornerY, anchor.offsetX, anchor.offsetY, layoutTurns);
+    }
+
+    private static CurveAnchor findCurveAnchor(
+            java.util.List<RailCompositeLibrary.Component> components) {
+        RailCompositeLibrary.Component first = components.get(0);
+        for (RailCompositeLibrary.Component candidate : components) {
+            int horizontalDirection = 0;
+            int verticalDirection = 0;
+            for (RailCompositeLibrary.Component other : components) {
+                if (other == candidate) {
+                    continue;
+                }
+                int dx = other.getOffsetX() - candidate.getOffsetX();
+                int dy = other.getOffsetY() - candidate.getOffsetY();
+                if (dy == 0 && Math.abs(dx) == 1) {
+                    horizontalDirection = dx;
+                } else if (dx == 0 && Math.abs(dy) == 1) {
+                    verticalDirection = dy;
+                }
+            }
+            if (horizontalDirection != 0 && verticalDirection != 0) {
+                return new CurveAnchor(
+                        candidate.getOffsetX(), candidate.getOffsetY(),
+                        curveQuarterTurnsFor(horizontalDirection, verticalDirection));
+            }
+        }
+        return new CurveAnchor(first.getOffsetX(), first.getOffsetY(), 0);
+    }
+
+    private static boolean curveOccupies(CurvePlacement placement, int worldX, int worldY) {
+        if (placement == null) {
+            return false;
+        }
+        for (RailCompositeLibrary.Component component : placement.composite.getComponents()) {
+            int[] rotatedOffset = rotateLayoutOffset(
+                    component.getOffsetX() - placement.anchorX,
+                    component.getOffsetY() - placement.anchorY,
+                    placement.layoutTurns);
+            if (placement.cornerX + rotatedOffset[0] == worldX
+                    && placement.cornerY + rotatedOffset[1] == worldY) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int renderCurveComposite(Class523 scene, Class106 renderer,
+            Class497 sceneBase, Class639_Sub16 definitions,
+            CurvePlacement placement, int plane) {
+        if (placement == null) {
+            return 0;
+        }
+
+        int rendered = 0;
+        for (RailCompositeLibrary.Component component : placement.composite.getComponents()) {
             ObjectDefinitions definition = (ObjectDefinitions) definitions.getDefinition(
                     component.getId(), -1356282071);
             if (definition == null) {
                 continue;
             }
-            int rotation = (component.getRotation() + layoutTurns) & 0x3;
+            int rotation = (component.getRotation() + placement.layoutTurns) & 0x3;
             int[] rotatedOffset = rotateLayoutOffset(
-                    component.getOffsetX(), component.getOffsetY(), layoutTurns);
+                    component.getOffsetX() - placement.anchorX,
+                    component.getOffsetY() - placement.anchorY,
+                    placement.layoutTurns);
             if (renderPiece(scene, renderer, sceneBase, definition, component.getType(),
-                    worldX + rotatedOffset[0], worldY + rotatedOffset[1], plane, rotation)) {
-                any = true;
+                    placement.cornerX + rotatedOffset[0],
+                    placement.cornerY + rotatedOffset[1],
+                    plane, rotation)) {
+                rendered++;
             }
         }
-        return any;
+        return rendered;
     }
 
     private static int[] rotateLayoutOffset(int offsetX, int offsetY, int quarterTurns) {
@@ -758,6 +827,37 @@ public final class RailRoutePreview {
             return new int[] { -offsetY, offsetX };
         default:
             return new int[] { offsetX, offsetY };
+        }
+    }
+
+    private static final class CurveAnchor {
+        private final int offsetX;
+        private final int offsetY;
+        private final int baseQuarterTurns;
+
+        private CurveAnchor(int offsetX, int offsetY, int baseQuarterTurns) {
+            this.offsetX = offsetX;
+            this.offsetY = offsetY;
+            this.baseQuarterTurns = baseQuarterTurns & 0x3;
+        }
+    }
+
+    private static final class CurvePlacement {
+        private final RailCompositeLibrary.CompositeDefinition composite;
+        private final int cornerX;
+        private final int cornerY;
+        private final int anchorX;
+        private final int anchorY;
+        private final int layoutTurns;
+
+        private CurvePlacement(RailCompositeLibrary.CompositeDefinition composite,
+                int cornerX, int cornerY, int anchorX, int anchorY, int layoutTurns) {
+            this.composite = composite;
+            this.cornerX = cornerX;
+            this.cornerY = cornerY;
+            this.anchorX = anchorX;
+            this.anchorY = anchorY;
+            this.layoutTurns = layoutTurns & 0x3;
         }
     }
 
