@@ -327,6 +327,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             if (choice == null) {
                 return;
             }
+            applyPresetVisual(choice);
+            workerRolePreset.setSelectedItem(choice);
             queueRadialBatch("workerselectionpreset", choice.key,
                     choice.displayName + " queued for the committed radial selection.");
         });
@@ -467,23 +469,19 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createWorkerSelectorCard() {
-        JPanel card = ConsoleTheme.createCard("Multi-worker control");
+        JPanel card = ConsoleTheme.createCard("Worker Inspector — Single Worker");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Select the persistent Worker ID controlled by Allowed Jobs, Needs, AI Status and Progress Status below. "
-                + "Changing selection clears local checkbox visuals so one worker's UI state is never mistaken for another worker's authoritative saved policy.",
+                "Inspection-only persistent Worker ID selector for Jobs Status, AI Status, Needs and Progress. "
+                + "Worker command ownership belongs to the committed RWS-5 drag selection; changing this spinner does not change who receives commands.",
                 5));
         card.add(Box.createVerticalStrut(8));
 
         workerSelector.setMaximumSize(new Dimension(120, 30));
         workerSelector.setAlignmentX(LEFT_ALIGNMENT);
-        workerSelector.addChangeListener(e -> {
-            for (JCheckBox checkBox : workerJobCheckBoxes) {
-                checkBox.setSelected(false);
-            }
-            setStatus("Selected Worker #" + selectedWorkerId()
-                    + ". Job checkbox visuals reset; use Jobs Status for authoritative readback.");
-        });
+        workerSelector.addChangeListener(e ->
+                setStatus("Inspecting Worker #" + selectedWorkerId()
+                        + ". RWS-5 drag selection remains the command target."));
         card.add(workerSelector);
         card.add(Box.createVerticalStrut(8));
 
@@ -529,19 +527,19 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createAllowedJobsCard() {
-        JPanel card = ConsoleTheme.createCard("Allowed Jobs — Selected Worker");
+        JPanel card = ConsoleTheme.createCard("Allowed Jobs — RWS-5 Drag Selection");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Server-authoritative allowlist. Role presets are convenience writes into this same saved policy; "
-                + "they do not create a second role system or change Pause, Needs or Progression.",
-                4));
+                "Command surface for the last committed drag selection. Role presets, Pause/Resume and Allowed Jobs changes apply to every selected worker. "
+                + "The single-worker spinner above is inspection-only and never changes this command target.",
+                5));
         card.add(Box.createVerticalStrut(8));
 
         workerRolePreset.setMaximumSize(new Dimension(180, 30));
         workerRolePreset.setAlignmentX(LEFT_ALIGNMENT);
         workerRolePreset.setFocusable(false);
 
-        JButton applyPreset = new JButton("Apply Role Preset");
+        JButton applyPreset = new JButton("Apply to Drag Selection");
         styleButton(applyPreset);
         applyPreset.addActionListener(e -> {
             WorkerPresetChoice choice = (WorkerPresetChoice) workerRolePreset.getSelectedItem();
@@ -549,10 +547,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 return;
             }
             applyPresetVisual(choice);
-            queue("itembrowser settlement workerpreset " + selectedWorkerId()
-                    + " " + choice.key,
-                    choice.displayName + " preset queued for Worker #" + selectedWorkerId()
-                            + ". Allowed Jobs updated atomically.");
+            radialRolePreset.setSelectedItem(choice);
+            queueRadialBatch("workerselectionpreset", choice.key,
+                    choice.displayName + " queued for the committed RWS-5 selection.");
         });
 
         JPanel presetRow = new JPanel(new GridLayout(1, 2, 7, 7));
@@ -564,19 +561,17 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(presetRow);
         card.add(Box.createVerticalStrut(8));
 
-        JButton pauseWorker = new JButton("Pause Worker");
-        JButton resumeWorker = new JButton("Resume Worker");
+        JButton pauseWorker = new JButton("Pause Drag Selection");
+        JButton resumeWorker = new JButton("Resume Drag Selection");
         styleButton(pauseWorker);
         styleButton(resumeWorker);
 
-        pauseWorker.addActionListener(e -> queue(
-                "itembrowser settlement workerpause " + selectedWorkerId() + " on",
-                "Pause queued for Worker #" + selectedWorkerId()
-                        + ". Allowed Jobs remain unchanged."));
-        resumeWorker.addActionListener(e -> queue(
-                "itembrowser settlement workerpause " + selectedWorkerId() + " off",
-                "Resume queued for Worker #" + selectedWorkerId()
-                        + ". Existing Allowed Jobs will resume."));
+        pauseWorker.addActionListener(e ->
+                queueRadialBatch("workerselectionpause", "on",
+                        "Pause queued for the committed RWS-5 selection. Allowed Jobs remain unchanged."));
+        resumeWorker.addActionListener(e ->
+                queueRadialBatch("workerselectionpause", "off",
+                        "Resume queued for the committed RWS-5 selection."));
 
         JPanel pauseRow = new JPanel(new GridLayout(1, 2, 7, 7));
         pauseRow.setOpaque(false);
@@ -586,6 +581,11 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         pauseRow.add(resumeWorker);
         card.add(pauseRow);
         card.add(Box.createVerticalStrut(8));
+
+        card.add(ConsoleTheme.createWrappedText(
+                "Checkboxes are batch command toggles for the current drag selection. Use Selection Status to read the authoritative saved policies when selected workers may differ.",
+                4));
+        card.add(Box.createVerticalStrut(6));
 
         JPanel checks = new JPanel(new GridLayout(0, 1, 4, 4));
         checks.setOpaque(false);
@@ -599,26 +599,31 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
 
         card.add(Box.createVerticalStrut(8));
 
-        JButton jobsStatus = new JButton("Jobs Status");
-        JButton enableAll = new JButton("Enable All Jobs");
-        JButton disableAll = new JButton("Disable All Jobs");
+        JButton jobsStatus = new JButton("Selection Jobs Status");
+        JButton enableAll = new JButton("Enable All Selected Jobs");
+        JButton disableAll = new JButton("Disable All Selected Jobs");
 
         styleButton(jobsStatus);
         styleButton(enableAll);
         styleButton(disableAll);
 
-        jobsStatus.addActionListener(e -> queue(
-                "itembrowser settlement workerjobs " + selectedWorkerId(),
-                "Jobs Status queued for Worker #" + selectedWorkerId()
-                        + ". Authoritative saved permissions will appear in game chat."));
-        enableAll.addActionListener(e -> queue(
-                "itembrowser settlement workerjobsall " + selectedWorkerId() + " on",
-                "Enable All Jobs queued for Worker #" + selectedWorkerId()
-                        + ". Use Jobs Status to confirm saved state."));
-        disableAll.addActionListener(e -> queue(
-                "itembrowser settlement workerjobsall " + selectedWorkerId() + " off",
-                "Disable All Jobs queued for Worker #" + selectedWorkerId()
-                        + ". Use Jobs Status to confirm saved state."));
+        jobsStatus.addActionListener(e ->
+                queueRadialBatch("workerselectionstatus", null,
+                        "Selection Jobs Status queued. Authoritative worker policies will appear in game chat."));
+        enableAll.addActionListener(e -> {
+            for (JCheckBox checkBox : workerJobCheckBoxes) {
+                checkBox.setSelected(true);
+            }
+            queueRadialBatch("workerselectionjobsall", "on",
+                    "Enable All Jobs queued for the committed RWS-5 selection.");
+        });
+        disableAll.addActionListener(e -> {
+            for (JCheckBox checkBox : workerJobCheckBoxes) {
+                checkBox.setSelected(false);
+            }
+            queueRadialBatch("workerselectionjobsall", "off",
+                    "Disable All Jobs queued for the committed RWS-5 selection.");
+        });
 
         JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
         buttons.setOpaque(false);
@@ -639,12 +644,11 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         checkBox.setFocusable(false);
         workerJobCheckBoxes.add(checkBox);
         workerJobCheckBoxByKey.put(jobKey, checkBox);
-        checkBox.addActionListener(e -> queue(
-                "itembrowser settlement workerjob " + selectedWorkerId() + " "
-                        + jobKey + " " + (checkBox.isSelected() ? "on" : "off"),
-                "Worker #" + selectedWorkerId() + " " + label + "="
-                        + (checkBox.isSelected() ? "ON" : "OFF")
-                        + " queued. Use Jobs Status for authoritative readback."));
+        checkBox.addActionListener(e ->
+                queueRadialBatch("workerselectionjob",
+                        jobKey + " " + (checkBox.isSelected() ? "on" : "off"),
+                        label + "=" + (checkBox.isSelected() ? "ON" : "OFF")
+                                + " queued for the committed RWS-5 selection."));
         return checkBox;
     }
 
