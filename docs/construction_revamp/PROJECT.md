@@ -1451,3 +1451,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Construction -> Rails now has Rail Debug + Copy Debug. Every committed route records current/previous A/B, continuation detection, in/out direction, H/V continuation values, accepted curve corner/anchor/layout turns, exact footprint tiles and final physical object/type/rotation/world-tile plan.
 - Next focused gate: enable debug -> fresh straight A->B -> exact-B perpendicular B->C reproducer -> Copy Debug -> compare the pasted intent report with one runtime screenshot before any further geometry change.
 - If client intent is correct but runtime differs, instrument persistent server before/replace/after state next. If client intent itself is wrong, fix the route calculation from the captured coordinates rather than guessing offsets.
+
+## RTS build-control follow-up — 2026-09-24
+- Ctrl+Z persistent build undo is RUNTIME VERIFIED by user report.
+- Construction palette Erase mode and guarded Clear Builds control are IMPLEMENTED / NEEDS RUNTIME TEST.
+- Erase owns exact clicked settlement tile origins through server-authoritative SettlementState removal; Clear requires a second click within 3.5 seconds before invoking clearPlayerBuilds().
+- RTS scene-visibility focus correction is IMPLEMENTED / NEEDS RUNTIME TEST. It re-anchors Class523.method6240 visibility focus to the detached RTS camera rather than the stationary player.
+- RTS minimap heading remains UNRESOLVED. A targeted source search did not establish the current Matrix3 minimap-angle owner, so no speculative obfuscated-field patch was made.
+- Consolidated next runtime gate: erase one normal build, erase one rail component, verify Clear requires confirmation then clears persistent builds, exit/re-enter to confirm removals persist, and pan RTS far enough to check the prior fog/scene wall.
