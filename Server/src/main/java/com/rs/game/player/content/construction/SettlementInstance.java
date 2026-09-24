@@ -421,6 +421,48 @@ public final class SettlementInstance {
         return "Settlement piece rotated.";
     }
 
+    public String undoLastBuild() {
+        if (!loaded) {
+            return "Settlement is still loading.";
+        }
+        java.util.List<SettlementPlacedPiece> pieces = state.snapshotPieces();
+        if (pieces.isEmpty()) {
+            return "Nothing to undo.";
+        }
+        SettlementPlacedPiece last = pieces.get(pieces.size() - 1);
+        SettlementBuildPiece definition = SettlementBuildPiece.forKey(last.getDefinitionKey());
+        SettlementPlacedPiece removed = state.remove(last.getPieceId());
+        if (removed == null) {
+            return definition != null && definition.getRole() == SettlementBuildRole.BED
+                    && !state.canRemoveHousingBed()
+                    ? "The last build is a bed required by the current settlement population."
+                    : "Last settlement build could not be undone.";
+        }
+        removeProjectedPiece(removed);
+        refreshRailLogistics();
+        return "Undid last settlement build.";
+    }
+
+    public String clearPlayerBuilds() {
+        if (!loaded) {
+            return "Settlement is still loading.";
+        }
+        int removedCount = 0;
+        java.util.List<SettlementPlacedPiece> pieces = state.snapshotPieces();
+        for (int i = pieces.size() - 1; i >= 0; i--) {
+            SettlementPlacedPiece piece = pieces.get(i);
+            SettlementPlacedPiece removed = state.remove(piece.getPieceId());
+            if (removed != null) {
+                removeProjectedPiece(removed);
+                removedCount++;
+            }
+        }
+        refreshRailLogistics();
+        return removedCount == 0
+                ? "No removable settlement builds found."
+                : "Removed " + removedCount + " settlement build(s).";
+    }
+
     public String deleteDevelopmentPiece(int objectId, WorldTile source) {
         if (!loaded || !containsWorldTile(source)) {
             return "Delete target must be inside the active settlement plot.";
