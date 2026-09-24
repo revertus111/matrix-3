@@ -639,12 +639,19 @@ Matrix3 Rail Layout Lab — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Save Layout Evidence writes/replaces name/role/index/id/type/rotation/offset_x/offset_y rows in Client/data/construction/asset_studio/rail_composites.tsv.
 [ ] Saving a second layout name preserves the first; saving the same name replaces only that layout.
 
-Matrix3 A->B Rail Route Preview V2 — IMPLEMENTED / NEEDS RUNTIME TEST
-[x] V1 single-object curve is retained only as fallback; the preferred bend source is the first saved RailCompositeLibrary role CURVE.
-[x] Composite corner ownership: every component receives the same quadrant quarter-turn in addition to its saved component rotation; saved relative dX/dY rotates with the layout around the bend origin.
-[x] Existing Curve map offset R0-R3 applies to the complete composite, rotating both model orientations and component offsets without rewriting saved rows.
-[ ] Build/save a visually clean CURVE layout in Object Explorer, return to Rail Classifier, click Reload CURVE Composite and verify its name appears in route status.
-[ ] Enable A->B Preview and drag an L route; the bend uses all saved composite components, not the old single object.
-[ ] If the canonical saved composite faces the wrong bend quadrant, adjust Curve map offset once; all components rotate together.
-[ ] Test the other three corner quadrants plus X-then-Y/Y-then-X and confirm the composite remains one logical tile.
-[ ] Parallel one-tile-spaced routes remain possible because the bend no longer requires stamping the stock multi-tile mine curve footprint.
+Matrix3 A->B Rail Route Preview V2 — ACCEPTED 3-PIECE CURVE IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Uploaded evidence accepted: CURVE_RAIL_LAYOUT_01 = 46377/T22/R0@(2,-1), 46379/T22/R0@(3,-1), 46381/T22/R0@(3,0).
+[x] Route lookup prefers exact-name CURVE_RAIL_LAYOUT_01 even while its local TSV role is CUSTOM; a saved CURVE role is secondary and the same three-piece definition is the deterministic built-in fallback.
+[x] Elbow anchor is geometry-derived from the component that has one cardinal horizontal and one cardinal vertical neighbor; for the accepted layout this is 46379.
+[x] Accepted layout normalizes around 46379 to 46377@(-1,0), 46379@(0,0), 46381@(0,+1).
+[x] Target bend orientation is derived from the route's two cardinal neighbor directions; both component rotations and normalized offsets rotate around the elbow.
+[x] Straight route pieces are suppressed on every tile occupied by the rotated curve pattern, preventing duplicate straight/curve objects on the two approach tiles.
+[x] Same-tile overlay is not required for this accepted curve because the three origins are separate neighboring tiles; overlay remains available for future research.
+[ ] Reload CURVE Composite reports CURVE_RAIL_LAYOUT_01 even if the local saved row remains CUSTOM.
+[ ] X-then-Y L route places 46379 on the Manhattan corner and 46377/46381 on the two adjacent leg tiles with no straight overlap.
+[ ] Y-then-X L route places the same three-piece pattern around its opposite Manhattan corner with no straight overlap.
+[ ] Test all four bend quadrants; the three object IDs remain connected after automatic pattern/model rotation.
+[ ] One-tile horizontal or vertical leg is handled cleanly: the endpoint may be owned by the curve footprint but no duplicate straight is drawn there.
+[ ] Pure horizontal and pure vertical routes remain straight-only.
+[ ] Curve map offset R0-R3 still applies as an explicit whole-pattern calibration override if runtime art alignment needs it.
+[ ] Remove/rename the local rail_composites.tsv temporarily and verify the built-in accepted three-piece fallback still previews the same geometry.
