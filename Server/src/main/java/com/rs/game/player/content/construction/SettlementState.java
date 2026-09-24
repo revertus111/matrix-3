@@ -159,6 +159,21 @@ public final class SettlementState implements Serializable {
         return piece;
     }
 
+    public synchronized SettlementPlacedPiece findRailAt(int plotX, int plotY, int plane) {
+        normalize();
+        for (SettlementPlacedPiece piece : pieces) {
+            if (piece == null || piece.getPlotX() != plotX || piece.getPlotY() != plotY
+                    || piece.getPlane() != plane) {
+                continue;
+            }
+            SettlementBuildPiece definition = SettlementBuildPiece.forKey(piece.getDefinitionKey());
+            if (definition != null && definition.getRole() == SettlementBuildRole.RAIL) {
+                return piece;
+            }
+        }
+        return null;
+    }
+
     public synchronized SettlementPlacedPiece find(int objectId, int plotX, int plotY, int plane) {
         normalize();
         for (SettlementPlacedPiece piece : pieces) {
