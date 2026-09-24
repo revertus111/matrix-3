@@ -1288,7 +1288,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-4 layered GFX 4171 worker-ring styling (IMPLEMENTED / NEEDS RUNTIME TEST). RWS-2 drag geometry and RWS-3 worker detection are RUNTIME VERIFIED. The user-prioritized rail slice is now wired into the player-facing Construction palette: Rails -> Rail route reuses RailRoutePreview V2 A-to-B drag/auto-tiling and release queues stable server-authoritative settlementbuild pieces for straight 46353 plus accepted curve 46377/46379/46381 (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling remains Matrix3 Asset Studio v1 + paired evidence capture + docked Rail Classifier + Object Explorer/Rail Layout Lab. Object Explorer broadens research beyond rails and can test two stock models visually composited on one logical tile; normal scene-slot constraints remain unchanged.
 
-**Next checklist item:** User-prioritized rail acceptance first: open Construction -> Rails, select Rail route, drag one straight route and one L route, then verify real placement, accepted three-piece curve orientation, Basic ore/XP ownership and settlement rebuild persistence. After that focused pass, return to the consolidated RWS Bundle 2.4 runtime gate without redoing already-verified worker-selection behavior.
+**Next checklist item:** User-prioritized rail acceptance first: open Construction -> Rails, select Rail route, drag one straight route and one L route, then verify real placement, accepted three-piece curve orientation, material-free placement/XP ownership and settlement rebuild persistence. After that focused pass, return to the consolidated RWS Bundle 2.4 runtime gate without redoing already-verified worker-selection behavior.
 
 **Files/systems already inspected:**
 
@@ -1400,5 +1400,5 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - IMPLEMENTED / NEEDS RUNTIME TEST: the player-facing palette now owns the entry point for A-to-B rail building.
 - Rails -> Rail route configures straight 46353/T22 with R3 north/south and derives east/west by quarter-turn through the existing RailRoutePreview V2 owner.
 - Route release snapshots the same physical pieces used by the preview and queues stable settlementbuild keys for 46353, 46377, 46379 and 46381; no client-side persistent object owner was introduced.
-- Server SettlementBuildPiece now owns those four rail definitions under SettlementBuildRole.RAIL. Provisional balance is 1 Basic ore and 4 base Construction XP per physical component.
-- Runtime gate is intentionally consolidated into one pull/start/login session: palette visibility -> straight route -> L curve -> material/XP feedback -> exit/re-entry persistence -> ordinary non-rail placement regression.
+- Server SettlementBuildPiece now owns those four rail definitions under SettlementBuildRole.RAIL. Rails are intentionally material-free for the current build workflow and retain 4 base Construction XP per physical component.
+- Runtime gate is intentionally consolidated into one pull/start/login session: palette visibility -> straight route -> L curve -> no-material placement/XP feedback -> exit/re-entry persistence -> ordinary non-rail placement regression.
