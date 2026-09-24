@@ -1124,3 +1124,14 @@
 - Settlement finishLoad no longer sends CSVar 2835 in the same tick as loadMapRegions/setNextWorldTile.
 - RTS startup signal is sent after the existing two-tick settlement transfer lock has elapsed, guarded by the same active SettlementInstance still being loaded.
 - The client continues to use ConstructionPaletteOverlay.show(), i.e. the existing proven RTS camera path.
+
+
+2026-09-24 - Worker Needs HUD visual prototype
+- RWS-4 layered GFX 4171 recolor/scaling is now runtime verified by user screenshot/confirmation.
+- Added a client-only Worker Needs HUD prototype that reuses GFX 4171 for three concentric rings on every active same-plane Settler.
+- Default scales: Hunger 125%, Thirst 95%, Energy 65%.
+- Hunger uses orange, Thirst cyan and Energy yellow; each blends toward red as it approaches the real server critical threshold (Hunger/Thirst 80, Energy 20).
+- Con Revamp Worker Needs now includes Enable/Disable/Status plus live demo value and per-need scale controls.
+- Preview rendering is independent of Worker Control so needs readability can be tested without an active radial selection.
+- Persistent values remain server-owned in SettlementWorkerState. This slice intentionally does not encode needs into NPC names, combat level or arbitrary configs; demo values are visual-only until a clean per-worker server->client metadata seam is added.
+- Existing radial selection, committed selection rings, worker AI, persistence and server need logic are unchanged.
