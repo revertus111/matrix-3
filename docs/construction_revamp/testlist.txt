@@ -846,3 +846,8 @@ Atomic Rail Endpoint Replacement V1 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Move B again: no parallel leftovers, disconnected remnants, or partial old/new route state.
 [ ] Place an unrelated build in the proposed replacement footprint: edit is rejected and original route remains intact.
 [ ] Exit/re-enter: final physical rail layout persists.
+
+RTS terrain fog bypass — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Reproduce the exact high/zoomed-out RTS view from the 2026-09-24 screenshots; the beige terrain fog wall must be gone.
+[ ] Pan/rotate through the settlement and confirm ground remains visible out to the loaded-scene boundary.
+[ ] Exit settlement and confirm normal player camera fog/rendering is unchanged.
