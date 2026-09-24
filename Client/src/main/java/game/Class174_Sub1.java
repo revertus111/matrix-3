@@ -833,7 +833,9 @@ public class Class174_Sub1 extends Class174 {
 				((Class174_Sub1) this).aClass106_Sub3_10688.method9674(0, ((Class174_Sub1) this).anInterface44_10686);
 				((Class174_Sub1) this).aClass106_Sub3_10688.method9693(interface46);
 				class340.method4279(Class250.aClass250_2727);
-				if (((Class174_Sub1) this).aClass106_Sub3_10688.anInt10448 > 0) {
+				if (((Class174_Sub1) this).aClass106_Sub3_10688.anInt10448 > 0
+						&& !(ConstructionBuildCamera.isSettlementAutoMode()
+								&& ConstructionBuildCamera.isRtsMode())) {
 					class340.aClass240_4339.method3268((float) ((((Class174_Sub1) this).aClass106_Sub3_10688.anInt10500) >> 16 & 0xff) / 255.0F, (float) ((((Class174_Sub1) this).aClass106_Sub3_10688.anInt10500) >> 8 & 0xff) / 255.0F, (float) ((((Class174_Sub1) this).aClass106_Sub3_10688.anInt10500) >> 0 & 0xff) / 255.0F);
 					class340.aClass209_4338.method3040(0.0F, 0.0F, 1.0F, -(((Class174_Sub1) this).aClass106_Sub3_10688.aFloat10503));
 					class340.aClass209_4338.method3045(((Class106_Sub3) ((Class174_Sub1) this).aClass106_Sub3_10688).aClass250_10394);
