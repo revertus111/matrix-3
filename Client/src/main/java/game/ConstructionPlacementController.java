@@ -319,31 +319,38 @@ public final class ConstructionPlacementController {
     public static void onRailRouteEdited(
             java.util.List<RailRoutePreview.RoutePiece> previousRoute,
             java.util.List<RailRoutePreview.RoutePiece> replacementRoute) {
-        if (!isRailRouteSelected() || replacementRoute == null || replacementRoute.isEmpty()) {
+        if (!isRailRouteSelected() || previousRoute == null || previousRoute.isEmpty()
+                || replacementRoute == null || replacementRoute.isEmpty()) {
+            status = "Rail endpoint edit requires both the old and replacement route.";
             return;
         }
-        java.util.List<String> commands = new java.util.ArrayList<String>();
-        if (previousRoute != null) {
-            for (RailRoutePreview.RoutePiece piece : previousRoute) {
-                commands.add("settlementrailerase " + piece.getObjectId() + " "
-                        + piece.getWorldX() + " " + piece.getWorldY() + " " + piece.getPlane());
-            }
+
+        StringBuilder command = new StringBuilder(4096);
+        command.append("settlementrailreplace ").append(previousRoute.size());
+        for (RailRoutePreview.RoutePiece piece : previousRoute) {
+            command.append(' ').append(piece.getObjectId())
+                    .append(' ').append(piece.getWorldX())
+                    .append(' ').append(piece.getWorldY())
+                    .append(' ').append(piece.getPlane());
         }
+        command.append(' ').append(replacementRoute.size());
         for (RailRoutePreview.RoutePiece piece : replacementRoute) {
             String key = railBuildKey(piece.getObjectId());
             if (key == null) {
                 status = "Unsupported rail object " + piece.getObjectId() + " in edited route.";
                 return;
             }
-            commands.add("settlementbuild " + key + " "
-                    + piece.getWorldX() + " " + piece.getWorldY() + " " + piece.getPlane()
-                    + " " + piece.getRotation());
+            command.append(' ').append(key)
+                    .append(' ').append(piece.getWorldX())
+                    .append(' ').append(piece.getWorldY())
+                    .append(' ').append(piece.getPlane())
+                    .append(' ').append(piece.getRotation());
         }
-        String error = ClientConsoleBridge.queueConsoleCommands(
-                commands.toArray(new String[commands.size()]));
+
+        String error = ClientConsoleBridge.queueConsoleCommand(command.toString());
         status = error == null
-                ? "Rail endpoint B edit queued: removed " + (previousRoute == null ? 0 : previousRoute.size())
-                        + ", rebuilt " + replacementRoute.size() + " piece(s)."
+                ? "Atomic rail endpoint edit queued: " + previousRoute.size()
+                        + " old -> " + replacementRoute.size() + " new piece(s)."
                 : "Rail endpoint edit failed to queue: " + error;
     }
 
