@@ -566,7 +566,9 @@ public final class ConstructionPaletteOverlay {
         g.drawString(ghostState, layout.panel.x + 14, textY + 36);
 
         String state;
-        if (ConstructionBuildCamera.isRtsMode()) {
+        if (ConstructionPlacementController.isRailRouteSelected()) {
+            state = "Rail route • hold Left at A • drag to B • release to build • Esc cancels drag";
+        } else if (ConstructionBuildCamera.isRtsMode()) {
             state = "RTS " + ConstructionBuildCamera.getRtsMoveSpeedLabel()
                     + " • WASD/arrows pan • Q/E rotate • wheel zoom • R rotates piece";
         } else if (ConstructionPlacementController.isArmed()) {
