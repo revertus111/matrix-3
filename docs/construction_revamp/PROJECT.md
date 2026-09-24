@@ -1466,3 +1466,12 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Runtime video established that broad rail-on-rail replacement could mutate previously correct track while continuation intent was wrong. That replacement path is frozen: non-identical occupied rail tiles are preserved and reported as debug conflicts.
 - Rail Debug now visibly renders the latest authored-intent evidence inside the Construction palette; Copy Debug retains the complete report.
 - Geometry remains frozen. Next gate is one fresh A->B then exact-B perpendicular B->C screenshot with the visible evidence panel. Use that evidence to decide whether the client route plan or persistent server result is wrong before changing geometry again.
+
+
+## Rail Endpoint Editing V1 — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Correct interaction model is now one route with two endpoints only: A is fixed and B is movable. There is no player-facing C. Starting a drag exactly on the currently committed B edits that endpoint and recalculates the complete A-to-new-B route through the accepted router.
+- The failed independent-route continuation/seam geometry is no longer injected into committed route pieces.
+- Endpoint replacement removes the exact old persistent RAIL object IDs/tiles and then rebuilds the complete recalculated route. The server refuses the edit-removal command for non-RAIL targets, and the prior broad rail replacement remains frozen.
+- Physical rail layout remains persistent through SettlementState. V1 endpoint identity itself is client-session state; persistent route metadata/re-edit-after-relog is CARRYOVER until the new A/B interaction passes runtime. Do not add route-schema complexity before that acceptance gate.
+- Focused runtime gate: fresh straight A-to-B -> grab exact B and extend straight -> grab B again and drag 90 degrees -> verify one clean recalculated route with one accepted curve and no obsolete old pieces.
