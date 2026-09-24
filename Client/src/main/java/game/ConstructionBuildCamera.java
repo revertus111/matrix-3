@@ -175,14 +175,14 @@ public final class ConstructionBuildCamera {
             return;
         }
         if (value == 1) {
-            if (!active) {
-                cameraMode = CameraMode.RTS;
-                String result = enter();
-                settlementAutoMode = active;
-                if (settlementAutoMode) {
-                    reportToServer("SETTLEMENT_AUTO_ENTER " + result);
-                }
-            }
+            // finishLoad fires immediately after the server moves the player into the
+            // dynamic plot. Do not detach the camera in the same packet tick: the
+            // client's region rebuild can still be using the pre-settlement camera
+            // controllers at this point. Arm RTS and let the normal viewport seam
+            // enter it once the local scene/player are live.
+            cameraMode = CameraMode.RTS;
+            settlementAutoMode = true;
+            settlementEntryStableTicks = 3;
             return;
         }
         if (settlementAutoMode) {
@@ -259,6 +259,18 @@ public final class ConstructionBuildCamera {
      * submitted. Guarded to one update per client cycle.
      */
     public static void tick() {
+        if (settlementAutoMode && !active && settlementEntryStableTicks > 0) {
+            if (client.aClass613_8605 != null && Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 != null) {
+                settlementEntryStableTicks--;
+                if (settlementEntryStableTicks == 0) {
+                    String result = enter();
+                    settlementAutoMode = active;
+                    if (settlementAutoMode) {
+                        reportToServer("SETTLEMENT_AUTO_ENTER " + result);
+                    }
+                }
+            }
+        }
         if (!active || lastTickCycle == client.cycles) {
             return;
         }
