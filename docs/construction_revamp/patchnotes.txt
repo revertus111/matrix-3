@@ -1230,3 +1230,11 @@
 - The report captures current A/B/plane, previous A/B/plane, whether the new A equals the previous B, calculated incoming/outgoing cardinal directions, continuation H/V values, accepted curve composite name, calculated seam-curve corner/anchor/layout turns, every calculated curve footprint tile, and every final physical route piece with world tile/object id/type/rotation/logical role.
 - Construction -> Rails now exposes Rail Debug and Copy Debug controls. Copy Debug puts the latest tab-separated report on the system clipboard for direct paste into chat alongside a screenshot/video.
 - Debug is intentionally client route-intent evidence; persistent server actual/replacement evidence is a follow-up only if this report proves the client intent is correct but runtime objects differ.
+
+2026-09-24 - Construction eraser + destructive clear controls
+- Added a persistent Erase mode to the Construction palette. While armed, normal settlement tile clicks are consumed and routed to SettlementInstance.eraseDevelopmentTile(...) instead of Walk Here/build placement.
+- Tile erase removes persistent settlement pieces whose saved origin occupies the clicked tile, removes their live projected objects, and refreshes rail logistics.
+- Added a compact Clear control with a 3.5-second second-click confirmation; confirmed clear routes to the existing persistent clearPlayerBuilds() authority.
+- Kept rail Debug/Copy and Cancel controls available on the same bottom utility row.
+- Ctrl+Z remains runtime VERIFIED by user report.
+- RTS visibility/fog-anchor correction remains NEEDS RUNTIME TEST; minimap RTS heading remains unresolved and no guessed obfuscated mapping was patched.
