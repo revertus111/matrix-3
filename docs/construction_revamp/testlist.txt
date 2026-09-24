@@ -536,8 +536,10 @@ Worker Needs HUD visual prototype — IMPLEMENTED / NEEDS RUNTIME TEST
 [x] Arc value semantics: Hunger/Thirst arch length = 100-value wellbeing; Energy arch length = current Energy reserve.
 [x] Identity colors: Hunger orange, Thirst cyan, Energy yellow; severity still trends toward red at the authoritative critical threshold.
 [x] OpenGL mask source: face render vertices are mapped back to original X/Z vertices through anIntArray10329/aShortArray10330, then hidden outside each angular span via Model.method1473(...).
+[-] Runtime video: angular slots/colors rendered, but 4171's decorative outer diamond/spike faces were still inside the angular sectors, producing chunky fragments instead of clean ring arches.
+[x] Ring-body correction: OpenGL ring radius now uses the same outer-gap calibration seam as the working drag ring; arc masking first rejects face centroids outside the circular ring-body band, then applies the angular slot.
 [x] Con Revamp now exposes demo Hunger / Thirst / Energy values plus one shared arch-scale control.
-[ ] Enable Needs HUD Preview; every active Settler shows three separated partial arches and no full needs circle.
+[ ] Enable Needs HUD Preview; every active Settler shows three clean separated partial ring-body arches and no decorative diamond/spike chunks.
 [ ] Hunger 0 -> 80 shortens only Hunger's arch and trends orange -> red.
 [ ] Thirst 0 -> 80 shortens only Thirst's arch and trends cyan -> red.
 [ ] Energy 100 -> 20 shortens only Energy's arch and trends yellow -> red.
