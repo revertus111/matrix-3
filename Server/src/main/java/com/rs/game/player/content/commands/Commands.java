@@ -2937,6 +2937,28 @@ public final class Commands {
 	} else {
 	    String message;
 	    switch (cmd[0].toLowerCase()) {
+	    case "settlementrailerase":
+		if (cmd.length < 5) {
+		    player.getPackets().sendGameMessage(
+			    "Use: ::settlementrailerase <object-id> <x> <y> <plane>");
+		    return true;
+		}
+		SettlementInstance railEditSettlement = SettlementInstance.getActive(player);
+		if (railEditSettlement == null) {
+		    player.getPackets().sendGameMessage("You must be inside your settlement to edit rails.");
+		    return true;
+		}
+		try {
+		    int railObjectId = Integer.parseInt(cmd[1]);
+		    int railX = Integer.parseInt(cmd[2]);
+		    int railY = Integer.parseInt(cmd[3]);
+		    int railPlane = Integer.parseInt(cmd[4]);
+		    player.getPackets().sendGameMessage(railEditSettlement.eraseRailPiece(
+			    railObjectId, new WorldTile(railX, railY, railPlane)));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Rail edit id/tile values must be whole numbers.");
+		}
+		return true;
 	    case "settlementbuild":
 		if (cmd.length < 6) {
 		    player.getPackets().sendGameMessage(
