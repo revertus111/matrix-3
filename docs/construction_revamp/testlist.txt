@@ -739,3 +739,11 @@ Continued Endpoint Visual Auto-Tiling — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Repeat A->B, then start exactly on B and drag perpendicular to C; verify B and its curve footprint visually become the accepted three-piece bend with no gap/double straight.
 [ ] Repeat the perpendicular continuation in all four turn directions.
 [ ] Exit/re-enter and verify the re-tiled curve persists exactly.
+
+
+Continued Endpoint Curve Seam Fix — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Runtime failure isolated: turn detection passed; direct-B composite anchoring caused the crossed/overlap visual.
+[x] Curve corner is shifted one tile back along the incoming A->B travel vector.
+[x] New-route B straight is suppressed so the accepted composite owns the connection seam.
+[ ] Build fresh A->B, then start exactly on B and drag 90 degrees B->C; verify one clean bend with no crossing/parallel overlap.
+[ ] Repeat opposite turn direction before broader quadrant testing.
