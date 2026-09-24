@@ -1166,3 +1166,10 @@
 - The server now permits accepted non-straight rail components to replace existing persistent RAIL visuals on the same tile. It removes the old projected/persistent rail piece, saves the curve component, respawns it and refreshes rail logistics topology.
 - Perpendicular straight-on-straight conflicts are still not faked as T/cross junctions; those remain gated on accepted switch/junction art.
 - This slice intentionally changes visuals/topology only. The player's A->B then B->C drag workflow is unchanged.
+
+
+2026-09-24 - Continued rail curve seam alignment fix
+- Runtime screenshot confirmed continuation-turn detection fired but CURVE_RAIL_LAYOUT_01 was anchored directly on B, producing an overlapping/crossed visual.
+- Continuation turns now retain the incoming travel vector and shift the accepted three-piece curve corner one tile back along that incoming leg before rotating the saved composite.
+- The new B->C route suppresses its authored B straight while the shifted curve footprint owns the approach/elbow/exit seam.
+- Scope is deliberately narrow: no route UX, topology, endpoint, junction or cart behavior changed.
