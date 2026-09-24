@@ -391,9 +391,23 @@ Phase 2 Bundle 2.4 — RTS radial multi-worker control
 [x] Ownership fix source: Role Preset, Pause/Resume, individual Allowed Job toggles and Enable/Disable All Jobs in Con Revamp now route only through the committed RWS-5 server-owned selection.
 [x] Numeric Worker Inspector is inspection-only and no longer clears or owns Allowed Jobs command visuals.
 [x] Persistent-ring source: released committed selections render only the existing layered worker GFX 4171 rings; the large drag circle remains temporary.
-[x] Persistent-ring lifecycle source: Clear Selection/new committed drag updates the client selection; if committed runtime NPCs disappear during instance rebuild/exit, stale local rings are dropped.
+[x] Persistent-ring lifecycle source: Clear Selection/new committed drag updates the client selection; scene exit clears stale local selection while a temporary zero-render frame no longer destroys it.
+[x] Click semantics source: RWS requires at least a 6px mouse drag before replacing the committed selection; an ordinary click preserves the current group and falls through to Matrix3 interaction.
+[x] Self-selection source: local player inclusion is detected by the same world-space circle, rendered with the same layered GFX 4171 ring and mirrored to SettlementInstance as transient self membership only.
+[x] RTS Move source: Matrix3 action 23 (Walk Here) mirrors a transient move order to the server-owned selected workers; if self is selected the normal player Walk Here continues, otherwise the player remains planted.
+[x] RTS Gather source: starter tree object 1276 first object action mirrors a transient gather order to selected workers; if self is selected the normal player Chop continues too.
+[x] Manual order ownership: transient Move/Gather state lives only in SettlementWorkerNpc and resumes normal worker policy after completion; no save schema or Allowed Jobs rewrite is introduced.
+[x] Gather range guard: resource arrival requires explicit adjacency after calcFollow; zero queued route steps outside physical interaction range can no longer start gathering.
 [ ] Runtime: drag-select one or more workers and release; the large drag circle disappears while every committed worker keeps its small layered selection rings visible and following movement.
-[ ] Runtime: Clear Selection removes the persistent worker rings; committing a different subset moves the rings to only the new selection.
+[ ] Runtime: normal left-click after selection does not clear the rings/selection.
+[ ] Runtime: include the local player in the drag; self receives the same persistent selected ring and Selection Status reports self alongside any Worker IDs.
+[ ] Runtime: with workers selected but self NOT selected, Walk Here moves the selected workers to the clicked tile while the player stays planted.
+[ ] Runtime: with workers + self selected, Walk Here moves both the player (vanilla Matrix3 movement) and selected workers toward the same destination.
+[ ] Runtime: with selected workers, right-click starter tree -> Chop; workers path all the way into adjacent interaction range before the chop animation/resource gather starts.
+[ ] Runtime: repeat tree Chop with self also selected; normal player Woodcutting continues while selected workers receive the same gather order.
+[ ] Runtime regression: autonomous Lumberjack no longer chops a distant tree after only one step; it physically reaches interaction range before gathering and then hauls normally.
+[ ] Runtime: Clear Selection removes the persistent unit rings; committing a different subset moves the rings to only the new selection.
+[ ] Runtime: settlement exit/re-entry clears transient selection and requires a fresh drag; saved worker policies remain unchanged.
 [x] Runtime VERIFIED by user: Selection Status and committed multi-worker targeting behave correctly; only the selected worker set is owned by RWS-5.
 [x] Runtime VERIFIED by user: role preset mutations apply through the committed RWS-5 selection rather than the inspection spinner.
 [x] Runtime VERIFIED by user: individual Allowed Job mutation works on the committed multi-worker selection.
