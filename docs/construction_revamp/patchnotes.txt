@@ -1173,3 +1173,10 @@
 - Continuation turns now retain the incoming travel vector and shift the accepted three-piece curve corner one tile back along that incoming leg before rotating the saved composite.
 - The new B->C route suppresses its authored B straight while the shifted curve footprint owns the approach/elbow/exit seam.
 - Scope is deliberately narrow: no route UX, topology, endpoint, junction or cart behavior changed.
+
+
+2026-09-24 - RTS view persistence foundation
+- RTS now retains its last accepted pivot, yaw and orbit distance for the lifetime of the client and restores that view when the detached RTS session is recreated.
+- Pan, rotate and zoom operations update the saved RTS view; resetRtsState now resets transient controller state without erasing the saved view.
+- Movement-speed selection was already persistent static client state and remains unchanged.
+- Narrow source searches did not establish a verified fog/minimap/NPC-streaming ownership seam. Per AGENTS scan discipline, no speculative obfuscated-core patch was made for those systems; they remain the active follow-up rather than moving the player or globally changing renderer behavior.
