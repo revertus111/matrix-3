@@ -80,6 +80,11 @@ public final class SettlementInstance {
         }
 
         player.lock();
+        // Settlement RTS can pan well beyond vanilla's 14-tile NPC update radius.
+        // Use the protocol's existing large-scene NPC packet (8-bit offsets / 64-tile
+        // local radius) for the lifetime of the settlement.
+        player.setLargeSceneView(true);
+        player.getLocalNPCUpdate().reset();
         player.getPackets().sendGameMessage("Preparing your Construction settlement...");
 
         GameExecutorManager.slowExecutor.execute(new Runnable() {
