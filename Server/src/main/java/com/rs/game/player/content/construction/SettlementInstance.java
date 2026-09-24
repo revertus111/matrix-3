@@ -46,6 +46,7 @@ public final class SettlementInstance {
     private final List<NPC> starterResourceNpcs = new ArrayList<NPC>();
     private final List<SettlementWorkerNpc> workerNpcs = new ArrayList<SettlementWorkerNpc>();
     private final List<Long> radialSelectedWorkerIds = new ArrayList<Long>();
+    private boolean radialPlayerSelected;
     private final WorkerStorageReservationBook workerStorageReservations =
             new WorkerStorageReservationBook();
 
@@ -576,19 +577,39 @@ public final class SettlementInstance {
      * later batch actions never trust stale client NPC indexes.
      */
     public synchronized String setRuntimeWorkerSelection(int[] npcIndexes) {
+        return setRuntimeSelection(npcIndexes, false);
+    }
+
+    public synchronized String setRuntimeSelection(int[] npcIndexes, boolean playerSelected) {
         List<SettlementWorkerState> resolved = resolveRuntimeWorkerSelection(npcIndexes);
         radialSelectedWorkerIds.clear();
+        radialPlayerSelected = playerSelected;
         for (SettlementWorkerState worker : resolved) {
             radialSelectedWorkerIds.add(Long.valueOf(worker.getWorkerId()));
         }
-        if (radialSelectedWorkerIds.isEmpty()) {
-            return "Radial worker selection cleared; no active settlement workers were inside the drag.";
+        if (radialSelectedWorkerIds.isEmpty() && !radialPlayerSelected) {
+            return "Radial selection cleared; no active units were inside the drag.";
         }
-        return "Radial worker selection committed: " + formatWorkerIds(resolved) + ".";
+        StringBuilder message = new StringBuilder("Radial selection committed: ");
+        if (!radialSelectedWorkerIds.isEmpty()) {
+            message.append(formatWorkerIds(resolved));
+        }
+        if (radialPlayerSelected) {
+            if (!radialSelectedWorkerIds.isEmpty()) {
+                message.append(" + ");
+            }
+            message.append("self");
+        }
+        return message.append('.').toString();
     }
 
     public synchronized void clearRuntimeWorkerSelection() {
         radialSelectedWorkerIds.clear();
+        radialPlayerSelected = false;
+    }
+
+    public synchronized boolean isRuntimePlayerSelected() {
+        return radialPlayerSelected;
     }
 
     public synchronized List<SettlementWorkerState> snapshotRuntimeWorkerSelection() {
