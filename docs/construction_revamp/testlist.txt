@@ -399,7 +399,9 @@ Phase 2 Bundle 2.4 — RTS radial multi-worker control
 [x] Manual order ownership: transient Move/Gather state lives only in SettlementWorkerNpc and resumes normal worker policy after completion; no save schema or Allowed Jobs rewrite is introduced.
 [x] Gather range guard: resource arrival requires explicit adjacency after calcFollow; zero queued route steps outside physical interaction range can no longer start gathering.
 [ ] Runtime: drag-select one or more workers and release; the large drag circle disappears while every committed worker keeps its small layered selection rings visible and following movement.
-[ ] Runtime: normal left-click after selection does not clear the rings/selection.
+[ ] Runtime: after a committed selection, normal left-click does not clear the rings/selection and still issues the intended RTS Walk Here order.
+[ ] Runtime regression: while a selection already exists, start another >6px radial drag around more/different units; releasing commits the new selection without moving self/workers to the drag-release tile.
+[ ] Runtime: exit/re-enter the settlement/Construction camera session; camera starts in RTS mode automatically. Free Build can still be selected manually for that session.
 [ ] Runtime: include the local player in the drag; self receives the same persistent selected ring and Selection Status reports self alongside any Worker IDs.
 [ ] Runtime: with workers selected but self NOT selected, Walk Here moves the selected workers to the clicked tile while the player stays planted.
 [ ] Runtime: with workers + self selected, Walk Here moves both the player (vanilla Matrix3 movement) and selected workers toward the same destination.
