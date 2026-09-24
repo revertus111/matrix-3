@@ -537,7 +537,9 @@ Worker Needs HUD visual prototype — IMPLEMENTED / NEEDS RUNTIME TEST
 [x] Identity colors: Hunger orange, Thirst cyan, Energy yellow; severity still trends toward red at the authoritative critical threshold.
 [x] OpenGL mask source: face render vertices are mapped back to original X/Z vertices through anIntArray10329/aShortArray10330, then hidden outside each angular span via Model.method1473(...).
 [-] Runtime video: angular slots/colors rendered, but 4171's decorative outer diamond/spike faces were still inside the angular sectors, producing chunky fragments instead of clean ring arches.
-[x] Ring-body correction: OpenGL ring radius now uses the same outer-gap calibration seam as the working drag ring; arc masking first rejects face centroids outside the circular ring-body band, then applies the angular slot.
+[x] Ring-body correction: OpenGL ring radius now uses the same outer-gap calibration seam as the working drag ring.
+[-] Follow-up diagnosis: centroid-only radial filtering can still retain decorative triangles that straddle the circular band.
+[x] Strict ring-body correction: all three vertices of each face must remain inside the calibrated annulus before angular-slot masking; decorative cross-band spike/diamond triangles are rejected.
 [x] Con Revamp now exposes demo Hunger / Thirst / Energy values plus one shared arch-scale control.
 [ ] Enable Needs HUD Preview; every active Settler shows three clean separated partial ring-body arches and no decorative diamond/spike chunks.
 [ ] Hunger 0 -> 80 shortens only Hunger's arch and trends orange -> red.
