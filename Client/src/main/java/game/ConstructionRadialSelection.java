@@ -60,6 +60,8 @@ public final class ConstructionRadialSelection {
     private static final float HUNGER_ARC_CENTER_DEGREES = 30.0F;
     private static final float THIRST_ARC_CENTER_DEGREES = 150.0F;
     private static final float ENERGY_ARC_CENTER_DEGREES = 270.0F;
+    private static final float NEED_ARC_RING_INNER_FRACTION = 0.55F;
+    private static final float NEED_ARC_RING_OUTER_FRACTION = 1.04F;
     private static final float RETICULE_RING_FALLBACK_FRACTION = 0.80F;
     private static final float MIN_RADIUS_TILES = 0.0F;
     private static final float MAX_RADIUS_TILES = 64.0F;
@@ -940,7 +942,6 @@ public final class ConstructionRadialSelection {
 
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         marker.method1375(TRANSFORM, RENDER_BOUNDS, 0);
-        needsArcMaskState = "OpenGL face-alpha arc";
         return true;
     }
 
@@ -1002,7 +1003,22 @@ public final class ConstructionRadialSelection {
                     Math.min(sourceAlpha.length, arcAlpha.length));
         }
 
+        float minX = gl.method1380();
+        float maxX = gl.method1381();
+        float minZ = gl.method1384();
+        float maxZ = gl.method1508();
+        float fallbackRadius = Math.max((maxX - minX) * 0.5F, (maxZ - minZ) * 0.5F);
+        float ringBodyRadius = resolveReticuleRingRadiusUnits(gl, fallbackRadius);
+        if (ringBodyRadius <= 0.0F) {
+            ringBodyRadius = fallbackRadius * RETICULE_RING_FALLBACK_FRACTION;
+        }
+        float minimumRingRadius = ringBodyRadius * NEED_ARC_RING_INNER_FRACTION;
+        float maximumRingRadius = ringBodyRadius * NEED_ARC_RING_OUTER_FRACTION;
+
         float halfSpan = Math.max(0.0F, Math.min(180.0F, visibleSpanDegrees * 0.5F));
+        int visibleFaces = 0;
+        int hiddenOutsideArc = 0;
+        int hiddenOutsideRingBody = 0;
         for (int face = 0; face < faceCount; face++) {
             int renderA = gl.aShortArray10303[face] & 0xffff;
             int renderB = gl.aShortArray10327[face] & 0xffff;
@@ -1035,6 +1051,13 @@ public final class ConstructionRadialSelection {
                     + gl.anIntArray10331[originalB]
                     + gl.anIntArray10331[originalC]) / 3.0F;
 
+            float radius = (float) Math.sqrt(x * x + z * z);
+            if (radius < minimumRingRadius || radius > maximumRingRadius) {
+                arcAlpha[face] = (byte) 255;
+                hiddenOutsideRingBody++;
+                continue;
+            }
+
             float angle = (float) Math.toDegrees(Math.atan2(z, x));
             if (angle < 0.0F) {
                 angle += 360.0F;
@@ -1046,10 +1069,18 @@ public final class ConstructionRadialSelection {
             }
             if (delta > halfSpan) {
                 arcAlpha[face] = (byte) 255;
+                hiddenOutsideArc++;
+            } else {
+                visibleFaces++;
             }
         }
 
         model.method1473((byte) 0, arcAlpha);
+        needsArcMaskState = "OpenGL ring-body arc"
+                + " visible=" + visibleFaces
+                + " bodyHidden=" + hiddenOutsideRingBody
+                + " arcHidden=" + hiddenOutsideArc
+                + " ringR=" + formatRadius(ringBodyRadius);
         return true;
     }
 
@@ -1276,26 +1307,44 @@ public final class ConstructionRadialSelection {
      * vertex data.
      */
     private static float resolveReticuleRingRadiusUnits(Model model, float fallbackBoundsRadius) {
-        if (!(model instanceof AbstractModel)) {
+        float[] radii = null;
+
+        if (model instanceof AbstractModel) {
+            AbstractModel abstractModel = (AbstractModel) model;
+            int vertexCount = abstractModel.maxVertexUsed;
+            if (vertexCount >= 8 && abstractModel.vertexX != null && abstractModel.vertexZ != null) {
+                radii = new float[vertexCount];
+                for (int i = 0; i < vertexCount; i++) {
+                    float x = abstractModel.vertexX[i];
+                    float z = abstractModel.vertexZ[i];
+                    radii[i] = (float) Math.sqrt(x * x + z * z);
+                }
+            }
+        } else if (model instanceof OpenGLModel) {
+            OpenGLModel openGLModel = (OpenGLModel) model;
+            int vertexCount = openGLModel.anInt10285;
+            if (vertexCount >= 8 && openGLModel.anIntArray10336 != null
+                    && openGLModel.anIntArray10331 != null) {
+                vertexCount = Math.min(vertexCount,
+                        Math.min(openGLModel.anIntArray10336.length,
+                                openGLModel.anIntArray10331.length));
+                radii = new float[vertexCount];
+                for (int i = 0; i < vertexCount; i++) {
+                    float x = openGLModel.anIntArray10336[i];
+                    float z = openGLModel.anIntArray10331[i];
+                    radii[i] = (float) Math.sqrt(x * x + z * z);
+                }
+            }
+        }
+
+        if (radii == null || radii.length < 8) {
             return fallbackBoundsRadius * RETICULE_RING_FALLBACK_FRACTION;
         }
 
-        AbstractModel abstractModel = (AbstractModel) model;
-        int vertexCount = abstractModel.maxVertexUsed;
-        if (vertexCount < 8 || abstractModel.vertexX == null || abstractModel.vertexZ == null) {
-            return fallbackBoundsRadius * RETICULE_RING_FALLBACK_FRACTION;
-        }
-
-        float[] radii = new float[vertexCount];
-        for (int i = 0; i < vertexCount; i++) {
-            float x = abstractModel.vertexX[i];
-            float z = abstractModel.vertexZ[i];
-            radii[i] = (float) Math.sqrt(x * x + z * z);
-        }
         java.util.Arrays.sort(radii);
 
-        int start = Math.max(1, Math.round(vertexCount * 0.55F));
-        int end = Math.min(vertexCount - 2, Math.round(vertexCount * 0.98F));
+        int start = Math.max(1, Math.round(radii.length * 0.55F));
+        int end = Math.min(radii.length - 2, Math.round(radii.length * 0.98F));
         float largestGap = 0.0F;
         int largestGapIndex = -1;
 
@@ -1307,7 +1356,7 @@ public final class ConstructionRadialSelection {
             }
         }
 
-        float fullVertexRadius = radii[vertexCount - 1];
+        float fullVertexRadius = radii[radii.length - 1];
         float meaningfulGap = Math.max(4.0F, fullVertexRadius * 0.05F);
         if (largestGapIndex >= start && largestGap >= meaningfulGap) {
             return radii[largestGapIndex];
