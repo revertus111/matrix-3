@@ -1069,3 +1069,13 @@
 - Runtime proved the prior RTS default only covered Construction palette sessions; ordinary SettlementInstance entry never opens that palette lifecycle.
 - ConstructionBuildCamera now detects the loaded 64x64 settlement scene at the already-live viewport seam, waits three stable frames, and auto-enters RTS without requiring the palette.
 - Auto-owned RTS releases after three stable frames outside the settlement scene so normal Matrix3 camera ownership returns on exit; manually/palette-owned camera sessions are not claimed by this lifecycle.
+
+
+2026-09-24 - Construction palette A->B rail build integration
+- Added Rails to the player-facing Construction palette with a Rail route entry using straight 46353/T22 (R3 north/south, R0 east/west).
+- Selecting Rail route enables the proven RailRoutePreview V2 drag owner directly from the palette; hold Left at Point A, drag to Point B, release to commit.
+- RailRoutePreview now exposes the exact committed physical route pieces after its existing straight/curve/rotation/curve-footprint logic runs, avoiding a second world picker or a separate route geometry owner.
+- Release queues each physical route component through the existing server-authoritative settlementbuild path using stable build keys; no client-only object registration was added.
+- Added persistent server definitions for 46353 straight and accepted curve components 46377/46379/46381 under the new RAIL semantic role. Each physical rail component currently costs 1 Basic ore and awards 4 base Construction XP; balancing remains provisional.
+- Palette footer identifies rail drag controls while route mode is selected. Normal Walls/Floors/Doors/Furniture Paint/Continuous behavior remains unchanged.
+- Runtime acceptance required: Rails tab visibility, straight drag placement, L-route accepted three-piece curve placement/rotation, Basic ore consumption/XP, persistence after settlement rebuild/relog, and no regression to ordinary placement.
