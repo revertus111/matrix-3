@@ -340,6 +340,39 @@ public class Class523 {
 	}
 
 	public void method6240(int i, int i_60_, int i_61_, int i_62_, byte[][][] is, int[] is_63_, int[] is_64_, int[] is_65_, int[] is_66_, int[] is_67_, int i_68_, byte i_69_, int i_70_, int i_71_, boolean bool, boolean bool_72_, int i_73_, boolean bool_74_) {
+		/*
+		 * Settlement RTS needs the same terrain around the detached camera that a
+		 * player receives around their physical position. Matrix3's scene radius is
+		 * anInt5865; ordinary rendering builds its visibility grid from that radius.
+		 * The settlement is a 64x64 dynamic plot, so expand only this RTS render pass
+		 * to the loaded scene extents. Restore the stock radius before returning so
+		 * vanilla/player rendering remains untouched.
+		 */
+		int stockSceneRadius = ((Class523) this).anInt5865 * 131560129;
+		boolean settlementRtsRadius = ConstructionBuildCamera.isSettlementAutoMode()
+				&& ConstructionBuildCamera.isRtsMode();
+		if (settlementRtsRadius) {
+			int fullSceneRadius = Math.max(anInt5833 * -1396185127, anInt5834 * -1519623925);
+			if (fullSceneRadius > stockSceneRadius) {
+				((Class523) this).anInt5865 = fullSceneRadius * -917758655;
+				int diameter = fullSceneRadius + fullSceneRadius + 2;
+				if (((Class523) this).aBoolArrayArray5844 == null
+						|| ((Class523) this).aBoolArrayArray5844.length < diameter
+						|| ((Class523) this).aBoolArrayArray5844[0].length < diameter) {
+					((Class523) this).aBoolArrayArray5844 = new boolean[diameter][diameter];
+				}
+				if (((Class523) this).aBoolArrayArray5883 == null
+						|| ((Class523) this).aBoolArrayArray5883.length < diameter
+						|| ((Class523) this).aBoolArrayArray5883[0].length < diameter) {
+					((Class523) this).aBoolArrayArray5883 = new boolean[diameter][diameter];
+					((Class523) this).aBoolArrayArray5885 = new boolean[diameter][diameter];
+				}
+				if (((Class523) this).anIntArray5884 == null
+						|| ((Class523) this).anIntArray5884.length < diameter) {
+					((Class523) this).anIntArray5884 = new int[diameter];
+				}
+			}
+		}
 		((Class533) aClass533_5828).aBool5939 = true;
 		((Class523) this).aBool5886 = bool_72_;
 		((Class523) this).anInt5859 = (i_60_ >> 406704825 * anInt5858) * 1525283009;
@@ -445,6 +478,9 @@ public class Class523 {
 		if (!((Class523) this).aBool5886) {
 			((Class523) this).aBoolArrayArray5885 = bools;
 			((Class523) this).aBoolArrayArray5883 = bools_75_;
+		}
+		if (settlementRtsRadius) {
+			((Class523) this).anInt5865 = stockSceneRadius * -917758655;
 		}
 	}
 
