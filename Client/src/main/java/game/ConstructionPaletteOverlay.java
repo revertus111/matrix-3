@@ -93,6 +93,10 @@ public final class ConstructionPaletteOverlay {
         return visible;
     }
 
+    public static void installRtsInputListener() {
+        ensureInputListener();
+    }
+
     public static void show() {
         visible = true;
         searchFocused = false;
@@ -149,12 +153,13 @@ public final class ConstructionPaletteOverlay {
             Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
                 @Override
                 public void eventDispatched(AWTEvent event) {
-                    if (!visible) {
+                    if (event instanceof MouseWheelEvent) {
+                        if (visible || ConstructionBuildCamera.isSettlementAutoMode()) {
+                            handleWorldWheel((MouseWheelEvent) event);
+                        }
                         return;
                     }
-                    if (event instanceof MouseWheelEvent) {
-                        handleWorldWheel((MouseWheelEvent) event);
-                    } else if (event instanceof KeyEvent) {
+                    if (visible && event instanceof KeyEvent) {
                         handleKey((KeyEvent) event);
                     }
                 }
