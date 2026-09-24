@@ -267,6 +267,20 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("undo".equals(operation)) {
+            player.getPackets().sendGameMessage(active == null
+                    ? "You are not inside an active settlement."
+                    : active.undoLastBuild());
+            return true;
+        }
+
+        if ("clearbuilds".equals(operation)) {
+            player.getPackets().sendGameMessage(active == null
+                    ? "You are not inside an active settlement."
+                    : active.clearPlayerBuilds());
+            return true;
+        }
+
         if ("status".equals(operation)) {
             player.getPackets().sendGameMessage(
                     "Settlement: " + player.getSettlementState().size() + " saved piece(s), runtime "
