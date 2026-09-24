@@ -216,7 +216,8 @@ public final class ConstructionRadialSelection {
                 + " drag=" + formatRgb(dragRingRgb)
                 + " | outer=" + workerOuterRingScalePercent + "%/" + formatRgb(workerOuterRingRgb)
                 + " | inner=" + workerInnerRingScalePercent + "%/" + formatRgb(workerInnerRingRgb)
-                + " | color-isolation=0x80000 texture-isolation=0x8000";
+                + " | color-isolation=0x80000 texture-isolation=0x8000"
+                + " | renderer-aware texture detach";
     }
 
     public static void setWorkerControlEnabled(boolean enabled) {
@@ -681,11 +682,12 @@ public final class ConstructionRadialSelection {
          * can safely detach those textures from the clone only, then tint the
          * exposed face colours. Native/original mode never enters this path.
          */
+        java.util.Set<Short> textureIds = new java.util.HashSet<Short>();
+
         if (model instanceof AbstractModel) {
             AbstractModel abstractModel = (AbstractModel) model;
             short[] textures = abstractModel.aShortArray10821;
             if (textures != null) {
-                java.util.Set<Short> textureIds = new java.util.HashSet<Short>();
                 int faceCount = Math.min(abstractModel.anInt10833, textures.length);
                 for (int i = 0; i < faceCount; i++) {
                     short textureId = textures[i];
@@ -693,10 +695,23 @@ public final class ConstructionRadialSelection {
                         textureIds.add(Short.valueOf(textureId));
                     }
                 }
-                for (Short textureId : textureIds) {
-                    model.method1475(textureId.shortValue(), (short) -1);
+            }
+        } else if (model instanceof Class89_Sub2) {
+            Class89_Sub2 softwareModel = (Class89_Sub2) model;
+            short[] textures = softwareModel.aShortArray10591;
+            if (textures != null) {
+                int faceCount = Math.min(softwareModel.anInt10573, textures.length);
+                for (int i = 0; i < faceCount; i++) {
+                    short textureId = textures[i];
+                    if (textureId != (short) -1) {
+                        textureIds.add(Short.valueOf(textureId));
+                    }
                 }
             }
+        }
+
+        for (Short textureId : textureIds) {
+            model.method1475(textureId.shortValue(), (short) -1);
         }
 
         int[] hsl = rgbToModelHsl(rgb);
