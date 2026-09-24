@@ -1063,3 +1063,9 @@
 - A completed radial selection drag now consumes its release-side Matrix3 Walk Here once, preventing the newly selected player/workers from immediately moving when the user was only expanding/replacing selection.
 - A fresh mouse press clears the one-shot suppression latch, so ordinary post-selection clicks still issue the existing RTS Walk Here order.
 - Fresh Construction camera sessions now force RTS mode on entry; Free Build remains an explicit in-session palette switch.
+
+
+2026-09-24 - Settlement-entry RTS lifecycle correction
+- Runtime proved the prior RTS default only covered Construction palette sessions; ordinary SettlementInstance entry never opens that palette lifecycle.
+- ConstructionBuildCamera now detects the loaded 64x64 settlement scene at the already-live viewport seam, waits three stable frames, and auto-enters RTS without requiring the palette.
+- Auto-owned RTS releases after three stable frames outside the settlement scene so normal Matrix3 camera ownership returns on exit; manually/palette-owned camera sessions are not claimed by this lifecycle.
