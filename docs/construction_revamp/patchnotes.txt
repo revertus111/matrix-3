@@ -1158,3 +1158,11 @@
 - World-wheel events are accepted while either the palette is visible or settlement RTS owns the camera; palette keyboard handling remains palette-only.
 - Extended RTS orbit range from 1400..5600 to 700..10000 camera units. Existing 450-unit wheel step retained.
 - NPC/scene streaming, minimap camera coupling, and RTS state persistence remain separate follow-up work; this patch does not fake them by moving the player.
+
+
+2026-09-24 - Continued-endpoint rail visual auto-tiling
+- Corrected the Rail Auto-Connect target after runtime/user visual review: A->B then B->C already had the desired placement UX; the missing behavior was re-authoring B's visuals when the continuation changes direction.
+- RailRoutePreview now remembers the previous committed route's final travel direction. When the next drag begins exactly at the previous B on the same plane and leaves on the perpendicular axis, commit inserts the accepted CURVE_RAIL_LAYOUT_01 at B and suppresses new straight pieces under that curve footprint.
+- The server now permits accepted non-straight rail components to replace existing persistent RAIL visuals on the same tile. It removes the old projected/persistent rail piece, saves the curve component, respawns it and refreshes rail logistics topology.
+- Perpendicular straight-on-straight conflicts are still not faked as T/cross junctions; those remain gated on accepted switch/junction art.
+- This slice intentionally changes visuals/topology only. The player's A->B then B->C drag workflow is unchanged.
