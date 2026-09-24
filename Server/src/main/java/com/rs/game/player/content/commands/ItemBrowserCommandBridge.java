@@ -548,22 +548,28 @@ public final class ItemBrowserCommandBridge {
         if ("workerselectionset".equals(operation)) {
             if (cmd.length < 4) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement workerselectionset <runtimeNpcIndexCsv>");
+                        "Use: ::itembrowser settlement workerselectionset <runtimeNpcIndexCsv|none> [self|noself]");
                 return true;
             }
             if (active == null || !active.isLoaded()) {
                 player.getPackets().sendGameMessage(
-                        "Enter the loaded settlement before committing a radial worker selection.");
+                        "Enter the loaded settlement before committing a radial selection.");
                 return true;
             }
-            int[] npcIndexes = parseRuntimeNpcIndexes(cmd[3]);
-            if (npcIndexes == null) {
-                player.getPackets().sendGameMessage(
-                        "Radial worker selection must be a comma-separated list of valid runtime NPC indexes.");
-                return true;
+            boolean playerSelected = cmd.length >= 5 && "self".equalsIgnoreCase(cmd[4]);
+            int[] npcIndexes;
+            if ("none".equalsIgnoreCase(cmd[3])) {
+                npcIndexes = new int[0];
+            } else {
+                npcIndexes = parseRuntimeNpcIndexes(cmd[3]);
+                if (npcIndexes == null) {
+                    player.getPackets().sendGameMessage(
+                            "Radial worker selection must be a comma-separated list of valid runtime NPC indexes.");
+                    return true;
+                }
             }
             player.getPackets().sendGameMessage(
-                    active.setRuntimeWorkerSelection(npcIndexes));
+                    active.setRuntimeSelection(npcIndexes, playerSelected));
             return true;
         }
 
@@ -639,13 +645,17 @@ public final class ItemBrowserCommandBridge {
             }
             java.util.List<SettlementWorkerState> selected =
                     active.snapshotRuntimeWorkerSelection();
-            if (selected.isEmpty()) {
+            boolean selfSelected = active.isRuntimePlayerSelected();
+            if (selected.isEmpty() && !selfSelected) {
                 player.getPackets().sendGameMessage(
-                        "No server-owned radial worker selection is active. Drag-select workers again.");
+                        "No server-owned radial selection is active. Drag-select units again.");
                 return true;
             }
             player.getPackets().sendGameMessage(
-                    "Radial selection: " + formatWorkerIds(selected) + ".");
+                    "Radial selection: "
+                            + (selected.isEmpty() ? "" : formatWorkerIds(selected))
+                            + (selfSelected ? (selected.isEmpty() ? "self" : " + self") : "")
+                            + ".");
             for (SettlementWorkerState worker : selected) {
                 SettlementWorkerRolePreset matchingPreset =
                         SettlementWorkerRolePreset.findMatching(worker);
