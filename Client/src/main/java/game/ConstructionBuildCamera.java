@@ -173,14 +173,21 @@ public final class ConstructionBuildCamera {
             return;
         }
         if (value == 1) {
-            // Reuse the exact RTS activation sequence already runtime-proven by the
-            // Construction palette instead of maintaining a second camera path.
-            ConstructionPlacementController.beginPaletteSession();
+            /*
+             * The proven RTS camera is owned by ConstructionPaletteOverlay.show().
+             * Do not call only beginPaletteSession() here: that skips the palette's
+             * world input listener/timer setup that the working RTS session uses.
+             */
+            if (!ConstructionPaletteOverlay.isVisible()) {
+                ConstructionPaletteOverlay.show();
+            }
             reportToServer("SETTLEMENT_SIGNAL enter-existing-rts");
             return;
         }
-        if (active) {
-            ConstructionPlacementController.endPaletteSession(true);
+        if (ConstructionPaletteOverlay.isVisible()) {
+            ConstructionPaletteOverlay.hide();
+        } else if (active) {
+            exit();
         }
         reportToServer("SETTLEMENT_SIGNAL exit-existing-rts");
     }
