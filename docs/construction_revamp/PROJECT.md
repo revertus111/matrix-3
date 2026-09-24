@@ -1443,3 +1443,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - The one-tile-back curve seam offset was reverted after runtime video showed it worsened the visual result.
 - B is restored as the accepted elbow-normalized curve anchor. The key ownership correction is server-side: authored rail components/rotations may replace existing persistent RAIL visuals inside the continuation footprint rather than being rejected by the prior conflict guard.
 - No further guessed geometry offsets were added. Focused gate is one fresh straight A->B followed by exact-B perpendicular B->C; only expand after that case is visually clean.
+
+
+## Rail route debug instrumentation — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Rail geometry is frozen until evidence identifies the failing ownership/math seam.
+- Construction -> Rails now has Rail Debug + Copy Debug. Every committed route records current/previous A/B, continuation detection, in/out direction, H/V continuation values, accepted curve corner/anchor/layout turns, exact footprint tiles and final physical object/type/rotation/world-tile plan.
+- Next focused gate: enable debug -> fresh straight A->B -> exact-B perpendicular B->C reproducer -> Copy Debug -> compare the pasted intent report with one runtime screenshot before any further geometry change.
+- If client intent is correct but runtime differs, instrument persistent server before/replace/after state next. If client intent itself is wrong, fix the route calculation from the captured coordinates rather than guessing offsets.
