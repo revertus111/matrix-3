@@ -607,6 +607,74 @@ public final class SettlementInstance {
         return selected;
     }
 
+    public synchronized String orderRuntimeSelectionMove(WorldTile destination) {
+        if (!loaded || destroyed || boundChunks == null || destination == null) {
+            return "RTS move order unavailable; settlement runtime is not ready.";
+        }
+        int plotX = toPlotX(destination.getX());
+        int plotY = toPlotY(destination.getY());
+        if (!SettlementState.isValidPlotLocation(plotX, plotY, destination.getPlane())) {
+            return "RTS move target is outside the active settlement plot.";
+        }
+
+        List<SettlementWorkerState> selected = snapshotRuntimeWorkerSelection();
+        if (selected.isEmpty()) {
+            return "No server-owned radial worker selection is active.";
+        }
+
+        int ordered = 0;
+        for (SettlementWorkerState worker : selected) {
+            SettlementWorkerNpc npc = findActiveWorkerNpc(worker.getWorkerId());
+            if (npc == null) {
+                continue;
+            }
+            npc.assignManualMoveOrder(destination);
+            ordered++;
+        }
+        return "RTS move order: " + ordered + " worker(s) -> "
+                + destination.getX() + "," + destination.getY() + "," + destination.getPlane() + ".";
+    }
+
+    public synchronized String orderRuntimeSelectionGather(
+            int objectId, int worldX, int worldY, int plane) {
+        if (!loaded || destroyed || boundChunks == null) {
+            return "RTS gather order unavailable; settlement runtime is not ready.";
+        }
+        int plotX = toPlotX(worldX);
+        int plotY = toPlotY(worldY);
+        SettlementResourceNode node =
+                SettlementResourceNode.forObject(objectId, plotX, plotY, plane);
+        if (node == null || !isStarterResourceNodeAvailable(node)) {
+            return "RTS gather target is not an active settlement resource node.";
+        }
+
+        List<SettlementWorkerState> selected = snapshotRuntimeWorkerSelection();
+        if (selected.isEmpty()) {
+            return "No server-owned radial worker selection is active.";
+        }
+
+        int ordered = 0;
+        for (SettlementWorkerState worker : selected) {
+            SettlementWorkerNpc npc = findActiveWorkerNpc(worker.getWorkerId());
+            if (npc == null) {
+                continue;
+            }
+            npc.assignManualGatherOrder(node);
+            ordered++;
+        }
+        return "RTS gather order: " + ordered + " worker(s) -> "
+                + node.getResource().getDisplayName() + " node.";
+    }
+
+    private SettlementWorkerNpc findActiveWorkerNpc(long workerId) {
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc != null && !npc.hasFinished() && npc.getWorkerId() == workerId) {
+                return npc;
+            }
+        }
+        return null;
+    }
+
     private static String formatWorkerIds(List<SettlementWorkerState> workers) {
         StringBuilder ids = new StringBuilder();
         if (workers != null) {
