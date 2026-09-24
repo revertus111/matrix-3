@@ -1189,3 +1189,11 @@
 - This stacks with the same bundle's already-landed palette-independent wheel input, 700..10000 orbit range, and RTS pivot/yaw/zoom persistence.
 - Renderer trace confirmed detached RTS world rendering already receives detached-camera coordinates through Class343 -> scene method6240; fog remains environment/renderer-owned and is not changed until its exact distance control is verified.
 - Minimap heading is still separately vanilla-coupled; no guessed obfuscated angle write was added.
+
+
+2026-09-24 - Rail continuation correction after worsening runtime result
+- Reverted the one-tile-back continuation seam offset experiment; runtime video showed it made the visual connection materially worse.
+- Restored B as the accepted CURVE_RAIL_LAYOUT_01 elbow anchor. The accepted composite was authored/elbow-normalized around 46379, so arbitrary seam offsets are no longer applied.
+- Removed the old server conflict guard from rail-on-rail visual updates. When an A->B / B->C auto-tile footprint reaches an existing persistent RAIL tile with a different rail component or rotation, that rail visual is now replaced in place instead of rejected or stacked.
+- Replacement is persistent and projected immediately; a defensive rollback restores the old rail if the replacement save fails.
+- No new route geometry or guessed offsets were introduced in this correction.
