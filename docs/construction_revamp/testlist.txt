@@ -833,3 +833,16 @@ Rail Endpoint Editing V1 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Verify unrelated nearby rails/builds are not removed.
 [ ] Exit/re-enter: physical edited rail layout persists.
 [ ] V1 limitation: after client/relog state loss, existing persisted rails do not yet expose persistent endpoint metadata for editing.
+
+
+Atomic Rail Endpoint Replacement V1 — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Endpoint edit is one server-owned replacement operation, not independent erase/build commands.
+[x] Complete old route is validated before mutation.
+[x] Complete replacement footprint is validated against the post-old-route footprint before mutation.
+[x] Replacement failure rolls back the previous route.
+[x] Non-route persistent builds are never overwritten by the route edit.
+[ ] Fresh straight A-to-B -> grab exact B -> extend straight: only one final route remains.
+[ ] Grab B -> drag 90 degrees: old route disappears and one clean recalculated L route remains.
+[ ] Move B again: no parallel leftovers, disconnected remnants, or partial old/new route state.
+[ ] Place an unrelated build in the proposed replacement footprint: edit is rejected and original route remains intact.
+[ ] Exit/re-enter: final physical rail layout persists.
