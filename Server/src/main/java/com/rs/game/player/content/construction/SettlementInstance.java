@@ -266,35 +266,13 @@ public final class SettlementInstance {
                 }
 
                 /*
-                 * Rail visual auto-tiling owns the affected footprint. If the
-                 * newly authored route says this occupied rail tile needs a
-                 * different rail component/rotation, replace that persistent
-                 * visual in place. This is what lets A->B followed by B->C
-                 * re-author B and the accepted curve footprint instead of
-                 * stacking/rejecting independent route visuals.
+                 * DIAGNOSTIC SAFETY FREEZE:
+                 * Never mutate a previously good rail while continuation
+                 * geometry is under investigation. Identical rails above are
+                 * idempotent; any different component/rotation on an occupied
+                 * rail tile is reported and left untouched.
                  */
-                SettlementPlacedPiece removed = state.remove(existingRail.getPieceId());
-                if (removed == null) {
-                    return "Rail connection could not replace the existing visual.";
-                }
-                removeProjectedPiece(removed);
-                SettlementPlacedPiece replacement = state.place(
-                        definition, plotX, plotY, worldTile.getPlane(), rotation);
-                if (replacement == null) {
-                    // Defensive rollback: never leave a hole if replacement fails.
-                    SettlementBuildPiece oldDefinition =
-                            SettlementBuildPiece.forKey(removed.getDefinitionKey());
-                    if (oldDefinition != null) {
-                        SettlementPlacedPiece restored = state.place(
-                                oldDefinition, removed.getPlotX(), removed.getPlotY(),
-                                removed.getPlane(), removed.getRotation());
-                        spawnProjectedPiece(restored);
-                    }
-                    return "Rail connection could not apply the replacement visual.";
-                }
-                spawnProjectedPiece(replacement);
-                refreshRailLogistics();
-                return "Rail visual auto-connected.";
+                return "Rail debug conflict: existing track preserved.";
             }
         }
 
