@@ -294,51 +294,28 @@ public final class ConstructionBuildCamera {
     }
 
     /**
-     * Settlement entry does not open the Construction palette, so palette-session
-     * ownership cannot activate RTS for normal settlement entry. Detect the
-     * established dynamic settlement plot shape at the live scene seam instead.
-     * The plot is exactly SettlementState.PLOT_TILES (64) square; requiring
-     * several stable frames avoids reacting to transient map rebuild dimensions.
+     * Explicit settlement lifecycle bridge. Server finishLoad/leave sends CSVar
+     * 2835 as a private Matrix3 construction signal. Reading the live CSVar
+     * cache here keeps camera ownership on the already-proven viewport seam.
      */
     private static void updateSettlementAutoLifecycle() {
-        if (client.aClass613_8605 == null || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
-            settlementEntryStableTicks = 0;
+        int signal = client.anIntArray8873 != null && client.anIntArray8873.length > 2835
+                ? client.anIntArray8873[2835] : 0;
+        if (signal == 1) {
             settlementExitStableTicks = 0;
-            return;
-        }
-
-        Class523 scene = client.aClass613_8605.method7285(0);
-        boolean settlementScene = scene != null
-                && scene.anInt5833 * -1396185127 == 64
-                && scene.anInt5834 * -1519623925 == 64;
-
-        if (settlementScene) {
-            settlementExitStableTicks = 0;
-            if (settlementAutoMode || active) {
-                settlementEntryStableTicks = 0;
-                return;
-            }
-            if (++settlementEntryStableTicks >= 3) {
+            if (!settlementAutoMode && !active) {
                 cameraMode = CameraMode.RTS;
                 String result = enter();
                 settlementAutoMode = active;
-                settlementEntryStableTicks = 0;
                 if (settlementAutoMode) {
                     reportToServer("SETTLEMENT_AUTO_ENTER " + result);
                 }
             }
             return;
         }
-
-        settlementEntryStableTicks = 0;
-        if (!settlementAutoMode) {
-            settlementExitStableTicks = 0;
-            return;
-        }
-        if (++settlementExitStableTicks >= 3) {
+        if (settlementAutoMode) {
             exit();
             settlementAutoMode = false;
-            settlementExitStableTicks = 0;
         }
     }
 
