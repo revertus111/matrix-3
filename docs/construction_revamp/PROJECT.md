@@ -1427,3 +1427,10 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Curve footprint pieces replace old persistent RAIL visuals at those exact tiles, so the connection is represented by the already-accepted three-piece bend rather than two visually disconnected authored routes.
 - Same-axis continuation remains straight/idempotent. T/cross/switch cases are still separate because they require accepted junction art rather than the ordinary two-direction curve.
 - Runtime gate: straight continuation, four turn quadrants, no gap/double straight at B, then exit/re-entry persistence.
+
+
+## Continued endpoint curve seam correction — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST.
+- Runtime evidence proved the continuation-turn trigger worked but the accepted three-piece curve was anchored one seam too far forward, creating the crossed visual.
+- The continuation path now retains the previous route's incoming travel vector, shifts the composite one tile back along that vector, and suppresses the new B straight so the accepted curve owns the A->B / B->C seam.
+- Next focused check: fresh A->B then exact-B perpendicular B->C in both turn directions; if clean, expand to all four quadrants.
