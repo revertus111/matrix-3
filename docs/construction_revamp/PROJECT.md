@@ -1483,3 +1483,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Endpoint edits now cross the client/server boundary as one complete old-route -> replacement-route transaction. SettlementInstance validates both sides before mutation, removes the exact old RAIL route, installs the complete recalculated route, and restores the old route if an unexpected replacement placement fails.
 - Unrelated persistent builds are never overwritten; they reject the edit before mutation.
 - Geometry remains unchanged. Focused gate is straight A-to-B -> move B farther -> move B 90 degrees -> move B again, with exactly one final route visible after each release.
+
+
+## Rail Endpoint Old/New Ownership Diagnostic — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME EVIDENCE under active AAA.
+- Runtime retest rejected the atomic-command hypothesis: the malformed result is unchanged even when endpoint replacement is server-atomic.
+- The next evidence boundary is now explicit in the visible Rail Debug panel: MODE endpointEdit/fixedA, complete OLD_PIECE route before B movement, and complete replacement PIECE route after B movement.
+- No geometry guess was made. One screenshot after fresh A-to-B -> exact-B 90-degree edit decides the owner: endpointEdit=false means endpoint-hit ownership is wrong; malformed replacement PIECE rows mean the client router is wrong; correct replacement PIECE rows with malformed world objects mean the server application/state path is wrong.
+- Resume here: obtain that single visible screenshot, classify the failing owner, then patch only that owner.
