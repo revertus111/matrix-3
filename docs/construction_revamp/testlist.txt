@@ -747,3 +747,16 @@ Continued Endpoint Curve Seam Fix — IMPLEMENTED / NEEDS RUNTIME TEST
 [x] New-route B straight is suppressed so the accepted composite owns the connection seam.
 [ ] Build fresh A->B, then start exactly on B and drag 90 degrees B->C; verify one clean bend with no crossing/parallel overlap.
 [ ] Repeat opposite turn direction before broader quadrant testing.
+
+
+Settlement RTS World View Bundle — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Settlement entry owns RTS independently of the build palette; closing palette does not restore vanilla camera.
+[x] RTS wheel input remains installed while palette is closed; orbit range is 700..10000.
+[x] RTS pivot/yaw/orbit distance persist across detached-camera recreation for the client lifetime.
+[x] Settlement server enables Matrix3's existing large-scene NPC update protocol and resets the local NPC list on enter/leave.
+[ ] Enter settlement with palette closed; wheel zoom works across the expanded range.
+[ ] Pan from entry toward workers without moving the player; workers remain visible/arrive in the local NPC list up to the large-scene 64-tile protocol radius.
+[ ] Exit/re-enter or recreate RTS; prior pivot/yaw/zoom restores cleanly without blank viewport.
+[ ] Leave settlement; vanilla camera and ordinary NPC update radius return normally.
+[ ] Fog range is still visibly limiting at long RTS zoom; requires a verified renderer/environment seam before changing.
+[ ] Minimap heading remains vanilla-coupled; requires a verified minimap camera-heading seam before changing.
