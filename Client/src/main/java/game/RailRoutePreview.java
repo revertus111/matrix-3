@@ -86,6 +86,9 @@ public final class RailRoutePreview {
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String eventState = "A->B rail preview disabled.";
     private static volatile String renderState = "hidden";
+    private static volatile boolean debugEnabled;
+    private static volatile long debugOperationId;
+    private static volatile String debugReport = "Rail debug: no committed route yet.";
     private static boolean inputListenerInstalled;
 
     private RailRoutePreview() {
@@ -192,6 +195,36 @@ public final class RailRoutePreview {
 
     public static boolean isEnabled() {
         return enabled;
+    }
+
+
+    public static boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    public static String setDebugEnabled(boolean value) {
+        debugEnabled = value;
+        eventState = value
+                ? "Rail debug ON. Commit A->B routes, then use Copy Debug."
+                : "Rail debug OFF.";
+        return eventState;
+    }
+
+    public static String copyDebugReportToClipboard() {
+        String report = debugReport;
+        try {
+            java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(
+                    new java.awt.datatransfer.StringSelection(report), null);
+            eventState = "Rail debug copied to clipboard.";
+            return eventState;
+        } catch (Throwable t) {
+            eventState = "Rail debug copy failed: " + t.getClass().getSimpleName();
+            return eventState;
+        }
+    }
+
+    public static String getDebugReport() {
+        return debugReport;
     }
 
     public static void clearRoute() {
@@ -721,7 +754,115 @@ public final class RailRoutePreview {
         lastRenderedCycle = Integer.MIN_VALUE;
         eventState = "Route committed A=" + committedStartX + "," + committedStartY
                 + " B=" + committedEndX + "," + committedEndY + ".";
-        ConstructionPlacementController.onRailRouteCommitted(snapshotCommittedRoutePieces());
+        java.util.List<RoutePiece> committedPieces = snapshotCommittedRoutePieces();
+        debugOperationId++;
+        debugReport = buildDebugReport(debugOperationId, hadCommitted,
+                previousStartX, previousStartY, previousEndX, previousEndY, previousPlane,
+                committedPieces);
+        ConstructionPlacementController.onRailRouteCommitted(committedPieces);
+    }
+
+    private static String buildDebugReport(long operationId, boolean hadPrevious,
+            int previousStartX, int previousStartY, int previousEndX, int previousEndY,
+            int previousPlane, java.util.List<RoutePiece> pieces) {
+        StringBuilder out = new StringBuilder(2048);
+        out.append("RAIL_DEBUG\top=").append(operationId)
+                .append("\torder=").append(routeOrder)
+                .append("\tcomposite=").append(getConfiguredCurveCompositeName())
+                .append("\n");
+        out.append("CURRENT\tA=").append(committedStartX).append(',').append(committedStartY)
+                .append("\tB=").append(committedEndX).append(',').append(committedEndY)
+                .append("\tplane=").append(committedPlane).append("\n");
+        if (hadPrevious) {
+            out.append("PREVIOUS\tA=").append(previousStartX).append(',').append(previousStartY)
+                    .append("\tB=").append(previousEndX).append(',').append(previousEndY)
+                    .append("\tplane=").append(previousPlane).append("\n");
+        } else {
+            out.append("PREVIOUS\tnone\n");
+        }
+
+        boolean continuation = hadPrevious && previousPlane == committedPlane
+                && previousEndX == committedStartX && previousEndY == committedStartY;
+        int[] incoming = continuation
+                ? finalTravelDirection(previousStartX, previousStartY, previousEndX, previousEndY)
+                : new int[] { 0, 0 };
+        int[] outgoing = firstTravelDirection(
+                committedStartX, committedStartY, committedEndX, committedEndY);
+        out.append("SEAM\tcontinuation=").append(continuation)
+                .append("\tB=").append(committedStartX).append(',').append(committedStartY)
+                .append("\tin=").append(directionName(incoming[0], incoming[1]))
+                .append("\tout=").append(directionName(outgoing[0], outgoing[1]))
+                .append("\tcontinuationH=").append(continuationHorizontalDirection)
+                .append("\tcontinuationV=").append(continuationVerticalDirection)
+                .append("\n");
+
+        if (continuationHorizontalDirection != 0 && continuationVerticalDirection != 0) {
+            CurvePlacement placement = createCurvePlacement(
+                    committedStartX, committedStartY,
+                    continuationHorizontalDirection, continuationVerticalDirection);
+            appendCurveDebug(out, "SEAM_CURVE", placement);
+        }
+
+        out.append("PIECES\tcount=").append(pieces == null ? 0 : pieces.size()).append("\n");
+        if (pieces != null) {
+            int index = 0;
+            for (RoutePiece piece : pieces) {
+                out.append("PIECE\t").append(index++)
+                        .append("\tx=").append(piece.getWorldX())
+                        .append("\ty=").append(piece.getWorldY())
+                        .append("\tplane=").append(piece.getPlane())
+                        .append("\tid=").append(piece.getObjectId())
+                        .append("\ttype=").append(piece.getObjectType())
+                        .append("\trot=").append(piece.getRotation())
+                        .append("\trole=").append(debugRole(piece.getObjectId()))
+                        .append("\n");
+            }
+        }
+        return out.toString();
+    }
+
+    private static void appendCurveDebug(StringBuilder out, String label,
+            CurvePlacement placement) {
+        if (placement == null) {
+            out.append(label).append("\tnone\n");
+            return;
+        }
+        out.append(label)
+                .append("\tcorner=").append(placement.cornerX).append(',').append(placement.cornerY)
+                .append("\tanchorOffset=").append(placement.anchorX).append(',').append(placement.anchorY)
+                .append("\tlayoutTurns=").append(placement.layoutTurns)
+                .append("\n");
+        for (RailCompositeLibrary.Component component : placement.composite.getComponents()) {
+            int[] offset = rotateLayoutOffset(
+                    component.getOffsetX() - placement.anchorX,
+                    component.getOffsetY() - placement.anchorY,
+                    placement.layoutTurns);
+            out.append("FOOTPRINT")
+                    .append("\tx=").append(placement.cornerX + offset[0])
+                    .append("\ty=").append(placement.cornerY + offset[1])
+                    .append("\tid=").append(component.getId())
+                    .append("\ttype=").append(component.getType())
+                    .append("\trot=").append((component.getRotation() + placement.layoutTurns) & 0x3)
+                    .append("\tdx=").append(offset[0])
+                    .append("\tdy=").append(offset[1])
+                    .append("\n");
+        }
+    }
+
+    private static String debugRole(int id) {
+        if (id == 46353) return "STRAIGHT";
+        if (id == 46377) return "CURVE_APPROACH";
+        if (id == 46379) return "CURVE_ELBOW";
+        if (id == 46381) return "CURVE_EXIT";
+        return "RAIL_OTHER";
+    }
+
+    private static String directionName(int dx, int dy) {
+        if (dx > 0) return "E";
+        if (dx < 0) return "W";
+        if (dy > 0) return "N";
+        if (dy < 0) return "S";
+        return "NONE";
     }
 
     public static java.util.List<RoutePiece> snapshotCommittedRoutePieces() {
