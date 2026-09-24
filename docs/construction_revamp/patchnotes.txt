@@ -1002,3 +1002,10 @@
 - Focused runtime retest passed after the render-thread selection-cache fix.
 - Dragging around two visibly ringed workers and releasing produced server feedback: Radial worker selection committed: #1,#2.
 - Release/selection handoff is runtime VERIFIED; remaining Bundle 2.4 acceptance is batch Status, role preset, Pause/Resume, clear/reselect and instance-rebuild selection reset.
+
+2026-09-24 - RWS-5 sole worker-command ownership
+- Runtime test showed a committed #1,#2 radial selection while the legacy Allowed Jobs card still targeted numeric Worker #1, causing only one worker to change.
+- Made the RWS-5 committed server-owned selection the sole Con Revamp mutation target for Role Preset, Pause/Resume and Allowed Jobs.
+- Added batch individual-job and all-jobs server commands over the existing selected Worker IDs.
+- Renamed the numeric selector to Worker Inspector and made its role inspection-only; it no longer clears or redirects command controls.
+- Persistent worker policy ownership, AI, identity and save schema are unchanged.
