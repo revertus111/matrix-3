@@ -52,6 +52,10 @@ public final class ConstructionRadialSelection {
     private static final int BASE_MODEL_SCALE = 128;
     private static final int MIN_WORKER_RING_SCALE_PERCENT = 25;
     private static final int MAX_WORKER_RING_SCALE_PERCENT = 300;
+    private static final int HUNGER_BASE_RGB = 0xFF8C00;
+    private static final int THIRST_BASE_RGB = 0x00BFFF;
+    private static final int ENERGY_BASE_RGB = 0xFFD700;
+    private static final int CRITICAL_NEED_RGB = 0xFF2020;
     private static final float RETICULE_RING_FALLBACK_FRACTION = 0.80F;
     private static final float MIN_RADIUS_TILES = 0.0F;
     private static final float MAX_RADIUS_TILES = 64.0F;
@@ -116,6 +120,20 @@ public final class ConstructionRadialSelection {
     private static volatile int dragRingRgb = -1;
     private static volatile int workerOuterRingRgb = -1;
     private static volatile int workerInnerRingRgb = -1;
+
+    /*
+     * Worker-needs HUD visual prototype.
+     * These are deliberately demo values until a clean server -> client needs
+     * metadata seam is approved. Rendering ownership is production-shaped so
+     * the eventual live values can replace only these numbers.
+     */
+    private static volatile boolean workerNeedsPreviewEnabled;
+    private static volatile int demoHunger = 65;
+    private static volatile int demoThirst = 35;
+    private static volatile int demoEnergy = 70;
+    private static volatile int hungerRingScalePercent = 125;
+    private static volatile int thirstRingScalePercent = 95;
+    private static volatile int energyRingScalePercent = 65;
 
     private static boolean inputListenerInstalled;
 
@@ -239,6 +257,41 @@ public final class ConstructionRadialSelection {
                 + " | AbstractModel/Class89_Sub2/OpenGLModel";
     }
 
+    public static boolean isWorkerNeedsPreviewEnabled() {
+        return workerNeedsPreviewEnabled;
+    }
+
+    public static void setWorkerNeedsPreviewEnabled(boolean enabled) {
+        workerNeedsPreviewEnabled = enabled;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        lastEventState = enabled
+                ? "Worker Needs HUD preview ON (demo values)."
+                : "Worker Needs HUD preview OFF.";
+    }
+
+    public static void setWorkerNeedsPreviewValues(int hunger, int thirst, int energy) {
+        demoHunger = clampNeedValue(hunger);
+        demoThirst = clampNeedValue(thirst);
+        demoEnergy = clampNeedValue(energy);
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    public static void setWorkerNeedsPreviewScales(int hungerScale, int thirstScale, int energyScale) {
+        hungerRingScalePercent = clampWorkerRingScale(hungerScale);
+        thirstRingScalePercent = clampWorkerRingScale(thirstScale);
+        energyRingScalePercent = clampWorkerRingScale(energyScale);
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    public static String getWorkerNeedsPreviewStatus() {
+        return "Needs HUD " + (workerNeedsPreviewEnabled ? "ON" : "OFF")
+                + " | DEMO ONLY"
+                + " | Hunger=" + demoHunger + "/100 @" + hungerRingScalePercent + "%"
+                + " | Thirst=" + demoThirst + "/100 @" + thirstRingScalePercent + "%"
+                + " | Energy=" + demoEnergy + "/100 @" + energyRingScalePercent + "%"
+                + " | colors: hunger orange->red, thirst cyan->red, energy yellow->red";
+    }
+
     public static void setWorkerControlEnabled(boolean enabled) {
         if (enabled) {
             ensureInputListener();
@@ -355,15 +408,16 @@ public final class ConstructionRadialSelection {
      *   RWS-1 and ConstructionGhostPreview.
      */
     static void render(Class523 scene, Class106 renderer) {
-        if (!workerControlEnabled || scene == null || renderer == null
-                || client.aClass613_8605 == null) {
+        if ((!workerControlEnabled && !workerNeedsPreviewEnabled)
+                || scene == null || renderer == null || client.aClass613_8605 == null) {
             return;
         }
 
-        boolean renderDragSelection = dragging;
-        boolean renderCommittedSelection =
-                !dragging && (committedWorkerNpcIndexes.length > 0 || committedPlayerSelected);
-        if (!renderDragSelection && !renderCommittedSelection) {
+        boolean renderDragSelection = workerControlEnabled && dragging;
+        boolean renderCommittedSelection = workerControlEnabled
+                && !dragging && (committedWorkerNpcIndexes.length > 0 || committedPlayerSelected);
+        boolean renderNeedsPreview = workerNeedsPreviewEnabled;
+        if (!renderDragSelection && !renderCommittedSelection && !renderNeedsPreview) {
             return;
         }
 
@@ -381,6 +435,16 @@ public final class ConstructionRadialSelection {
         Class497 sceneBase = region.method7280((byte) -102);
         if (sceneBase == null) {
             lastRenderState = "WAIT scene base";
+            return;
+        }
+
+        int renderedNeedsWorkers = renderNeedsPreview
+                ? renderWorkerNeedsPreview(scene, renderer) : 0;
+
+        if (!renderDragSelection && !renderCommittedSelection) {
+            lastRenderState = renderedNeedsWorkers >= 0
+                    ? "NEEDS preview workers=" + renderedNeedsWorkers
+                    : "WAIT needs preview";
             return;
         }
 
@@ -403,7 +467,8 @@ public final class ConstructionRadialSelection {
             if (renderedWorkers >= 0) {
                 lastRenderState = "COMMITTED worker rings=" + renderedWorkers
                         + " [" + formatNpcIndexes(committedWorkerNpcIndexes) + "]"
-                        + " self=" + (renderedSelf ? "YES" : (committedPlayerSelected ? "WAIT" : "NO"));
+                        + " self=" + (renderedSelf ? "YES" : (committedPlayerSelected ? "WAIT" : "NO"))
+                        + (renderNeedsPreview ? " needsHUD=" + renderedNeedsWorkers : "");
             } else {
                 lastRenderState = "WAIT committed selection render";
             }
@@ -650,6 +715,87 @@ public final class ConstructionRadialSelection {
      * @return rendered selected-worker count; 0 when the old runtime selection
      *         no longer exists; -1 when rendering prerequisites are unavailable.
      */
+    /**
+     * Worker-needs HUD visual prototype.
+     *
+     * Server ownership is intentionally untouched here. The current persistent
+     * needs live in SettlementWorkerState, but no clean per-worker client
+     * metadata channel exists yet. This prototype validates ring density,
+     * ordering, scale and severity colours on every active Settler using demo
+     * values controlled from Con Revamp.
+     */
+    private static int renderWorkerNeedsPreview(Class523 scene, Class106 renderer) {
+        if (!workerNeedsPreviewEnabled || scene == null || renderer == null
+                || client.aClass676_8622 == null || client.anIntArray8626 == null
+                || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
+            return -1;
+        }
+
+        int plane = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff;
+        if (plane < 0 || plane >= scene.aClass174Array5838.length) {
+            return -1;
+        }
+        Class174 ground = scene.aClass174Array5838[plane];
+        if (ground == null) {
+            return -1;
+        }
+
+        GraphicsDefinition definition = (GraphicsDefinition) Class667.aClass639_Sub10_8509
+                .getDefinition(RETICULE_GFX_ID, 235749166);
+        if (definition == null) {
+            return -1;
+        }
+
+        int activeCount = client.anInt8625 * 765313669;
+        if (activeCount < 0) {
+            activeCount = 0;
+        } else if (activeCount > client.anIntArray8626.length) {
+            activeCount = client.anIntArray8626.length;
+        }
+
+        int hungerRgb = needSeverityColor(
+                HUNGER_BASE_RGB, demoHunger / 80.0F);
+        int thirstRgb = needSeverityColor(
+                THIRST_BASE_RGB, demoThirst / 80.0F);
+        int energyRgb = needSeverityColor(
+                ENERGY_BASE_RGB, (100 - demoEnergy) / 80.0F);
+
+        int rendered = 0;
+        for (int i = 0; i < activeCount; i++) {
+            int npcIndex = client.anIntArray8626[i];
+            LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+            if (link == null || !(link.anObject9081 instanceof NPC)) {
+                continue;
+            }
+
+            NPC npc = (NPC) link.anObject9081;
+            if (!isSettlementWorkerPreviewNpc(npc, plane)) {
+                continue;
+            }
+
+            Class240 position = npc.method5394().aClass240_2647;
+            if (position == null) {
+                continue;
+            }
+
+            int sceneX = Math.round(position.aFloat2653);
+            int sceneZ = Math.round(position.aFloat2657);
+            int sceneY = ground.method2718(sceneX, sceneZ, 0);
+
+            renderWorkerRingLayer(
+                    definition, renderer, sceneX, sceneY, sceneZ,
+                    hungerRingScalePercent, hungerRgb);
+            renderWorkerRingLayer(
+                    definition, renderer, sceneX, sceneY, sceneZ,
+                    thirstRingScalePercent, thirstRgb);
+            renderWorkerRingLayer(
+                    definition, renderer, sceneX, sceneY, sceneZ,
+                    energyRingScalePercent, energyRgb);
+            rendered++;
+        }
+        return rendered;
+    }
+
     private static int renderCommittedWorkerSelection(Class523 scene, Class106 renderer) {
         if (scene == null || renderer == null || client.aClass676_8622 == null
                 || committedWorkerNpcIndexes.length == 0) {
@@ -825,6 +971,34 @@ public final class ConstructionRadialSelection {
 
         int[] hsl = rgbToModelHsl(rgb);
         model.method1396(hsl[0], hsl[1], hsl[2], 128);
+    }
+
+    private static int clampNeedValue(int value) {
+        return Math.max(0, Math.min(100, value));
+    }
+
+    private static int needSeverityColor(int baseRgb, float criticalProgress) {
+        float severity = Math.max(0.0F, Math.min(1.0F, criticalProgress));
+        if (severity <= 0.5F) {
+            return baseRgb;
+        }
+        float blend = (severity - 0.5F) / 0.5F;
+        return blendRgb(baseRgb, CRITICAL_NEED_RGB, blend);
+    }
+
+    private static int blendRgb(int fromRgb, int toRgb, float amount) {
+        float t = Math.max(0.0F, Math.min(1.0F, amount));
+        int fromR = fromRgb >> 16 & 0xff;
+        int fromG = fromRgb >> 8 & 0xff;
+        int fromB = fromRgb & 0xff;
+        int toR = toRgb >> 16 & 0xff;
+        int toG = toRgb >> 8 & 0xff;
+        int toB = toRgb & 0xff;
+
+        int r = Math.round(fromR + (toR - fromR) * t);
+        int g = Math.round(fromG + (toG - fromG) * t);
+        int b = Math.round(fromB + (toB - fromB) * t);
+        return r << 16 | g << 8 | b;
     }
 
     private static int clampWorkerRingScale(int percent) {
