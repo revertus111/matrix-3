@@ -448,7 +448,7 @@ Implementation:
 - selected RGB is converted to Matrix3 packed-model H/S/L targets and applied through `Model.method1396(..., weight=128)`
 - runtime proved GFX 4171's visible red artwork is texture-driven enough that face-HSL tint alone is not visibly effective
 - custom-color mode therefore uses clone flag `0x8000` to own a private face-texture ID array, detaches the clone's textures to `-1`, then applies HSL to the exposed face colours
-- renderer-aware texture enumeration now supports `AbstractModel.aShortArray10821`, `Class89_Sub2.aShortArray10591`, and `OpenGLModel.aShortArray10306`; runtime proved the user's active client path is OpenGL, which explained why the first two fixes had no visible effect
+- renderer-aware texture enumeration now supports `AbstractModel.aShortArray10821`, `Class89_Sub2.aShortArray10591`, and `OpenGLModel.aShortArray10306`; OpenGL was previously unhandled and is the strongest remaining renderer hypothesis after the first two fixes had no visible effect; active-renderer ownership remains pending runtime confirmation
 - native/original mode never strips textures; `0x80000` still isolates face colours and `0x8000` isolates texture IDs from the cached source model
 - choosing Use Original Colors restores native GFX 4171 colors without touching scale
 - RWS-3 live detection immediately previews the current two-layer worker style during drag
