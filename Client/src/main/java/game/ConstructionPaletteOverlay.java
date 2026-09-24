@@ -79,6 +79,7 @@ public final class ConstructionPaletteOverlay {
     private static volatile boolean searchFocused;
     private static volatile int scrollOffset;
     private static volatile LayoutSnapshot latestLayout = LayoutSnapshot.empty();
+    private static volatile long clearBuildsConfirmUntil;
 
     private static Timer paintTimer;
     private static boolean inputListenerInstalled;
@@ -332,6 +333,23 @@ public final class ConstructionPaletteOverlay {
             repaintSurface();
             return;
         }
+        if (layout.eraser.contains(x, y)) {
+            ConstructionPlacementController.setEraserMode(!ConstructionPlacementController.isEraserMode());
+            clearBuildsConfirmUntil = 0L;
+            repaintSurface();
+            return;
+        }
+        if (layout.clearBuilds.contains(x, y)) {
+            long now = System.currentTimeMillis();
+            if (now <= clearBuildsConfirmUntil) {
+                ClientConsoleBridge.queueConsoleCommand("itembrowser settlement clearbuilds");
+                clearBuildsConfirmUntil = 0L;
+            } else {
+                clearBuildsConfirmUntil = now + 3500L;
+            }
+            repaintSurface();
+            return;
+        }
         if (layout.railDebug.contains(x, y) && ConstructionPlacementController.isRailRouteSelected()) {
             RailRoutePreview.setDebugEnabled(!RailRoutePreview.isDebugEnabled());
             repaintSurface();
@@ -473,13 +491,15 @@ public final class ConstructionPaletteOverlay {
         Rectangle rotateRight = new Rectangle(106, controlsY, 86, 30);
         Rectangle paintMode = new Rectangle(202, controlsY, 66, 30);
         Rectangle continuous = new Rectangle(274, controlsY, Math.max(1, width - 288), 30);
-        Rectangle railDebug = new Rectangle(14, height - 38, 82, 26);
-        Rectangle copyRailDebug = new Rectangle(102, height - 38, 92, 26);
-        Rectangle cancel = new Rectangle(width - 86, height - 38, 72, 26);
+        Rectangle eraser = new Rectangle(14, height - 38, 52, 26);
+        Rectangle clearBuilds = new Rectangle(70, height - 38, 58, 26);
+        Rectangle railDebug = new Rectangle(132, height - 38, 58, 26);
+        Rectangle copyRailDebug = new Rectangle(194, height - 38, 58, 26);
+        Rectangle cancel = new Rectangle(width - 72, height - 38, 58, 26);
         return new LayoutSnapshot(panel, close, cameraFree, cameraRts, rtsSpeedDown, rtsSpeedUp,
                 searchBox, tabs, cards.toArray(new CardHitbox[cards.size()]),
                 rotateLeft, rotateRight, paintMode, continuous,
-                railDebug, copyRailDebug, cancel, matches.size());
+                eraser, clearBuilds, railDebug, copyRailDebug, cancel, matches.size());
     }
 
     private static List<BuildPiece> matchingPieces() {
@@ -608,9 +628,15 @@ public final class ConstructionPaletteOverlay {
         g.setColor(MUTED);
         g.drawString(trimToWidth(g, state, Math.max(1, layout.panel.width - 112)),
                 layout.panel.x + 14, layout.panel.y + layout.panel.height - 14);
+        paintButton(g, layout.eraser, "Erase", ConstructionPlacementController.isEraserMode());
+        paintButton(g, layout.clearBuilds,
+                System.currentTimeMillis() <= clearBuildsConfirmUntil ? "SURE?" : "Clear", false);
         if (ConstructionPlacementController.isRailRouteSelected()) {
-            paintButton(g, layout.railDebug, "Rail Debug", RailRoutePreview.isDebugEnabled());
-            paintButton(g, layout.copyRailDebug, "Copy Debug", false);
+            paintButton(g, layout.railDebug, "Debug", RailRoutePreview.isDebugEnabled());
+            paintButton(g, layout.copyRailDebug, "Copy", false);
+        } else {
+            paintButton(g, layout.railDebug, "-", false);
+            paintButton(g, layout.copyRailDebug, "-", false);
         }
         paintButton(g, layout.cancel, "Cancel", false);
     }
@@ -691,6 +717,8 @@ public final class ConstructionPaletteOverlay {
         private final Rectangle rotateRight;
         private final Rectangle paintMode;
         private final Rectangle continuousMode;
+        private final Rectangle eraser;
+        private final Rectangle clearBuilds;
         private final Rectangle railDebug;
         private final Rectangle copyRailDebug;
         private final Rectangle cancel;
@@ -699,8 +727,9 @@ public final class ConstructionPaletteOverlay {
         private LayoutSnapshot(Rectangle panel, Rectangle close, Rectangle cameraFree, Rectangle cameraRts,
                 Rectangle rtsSpeedDown, Rectangle rtsSpeedUp, Rectangle search, Rectangle[] tabs,
                 CardHitbox[] cards, Rectangle rotateLeft, Rectangle rotateRight, Rectangle paintMode,
-                Rectangle continuousMode, Rectangle railDebug, Rectangle copyRailDebug,
-                Rectangle cancel, int totalMatchingPieces) {
+                Rectangle continuousMode, Rectangle eraser, Rectangle clearBuilds,
+                Rectangle railDebug, Rectangle copyRailDebug, Rectangle cancel,
+                int totalMatchingPieces) {
             this.panel = panel;
             this.close = close;
             this.cameraFree = cameraFree;
@@ -714,6 +743,8 @@ public final class ConstructionPaletteOverlay {
             this.rotateRight = rotateRight;
             this.paintMode = paintMode;
             this.continuousMode = continuousMode;
+            this.eraser = eraser;
+            this.clearBuilds = clearBuilds;
             this.railDebug = railDebug;
             this.copyRailDebug = copyRailDebug;
             this.cancel = cancel;
@@ -724,7 +755,7 @@ public final class ConstructionPaletteOverlay {
             Rectangle zero = new Rectangle();
             return new LayoutSnapshot(zero, zero, zero, zero, zero, zero, zero,
                     new Rectangle[0], new CardHitbox[0], zero, zero, zero, zero,
-                    zero, zero, zero, 0);
+                    zero, zero, zero, zero, zero, 0);
         }
     }
 }
