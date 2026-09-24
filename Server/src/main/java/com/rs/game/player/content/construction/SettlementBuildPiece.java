@@ -23,7 +23,11 @@ public enum SettlementBuildPiece {
     RAIL_CURVE_ELBOW("rail-curve-elbow", "Rail curve elbow", SettlementBuildRole.RAIL, 46379, 22,
             null, 0L, 4.0),
     RAIL_CURVE_B("rail-curve-b", "Rail curve exit", SettlementBuildRole.RAIL, 46381, 22,
-            null, 0L, 4.0);
+            null, 0L, 4.0),
+    RAIL_LOADER("rail-loader", "Rail Loader", SettlementBuildRole.RAIL_LOADER, 13450, 0,
+            null, 0L, 0.0),
+    RAIL_UNLOADER("rail-unloader", "Rail Unloader", SettlementBuildRole.RAIL_UNLOADER, 13344, 0,
+            null, 0L, 0.0);
 
     private final String key;
     private final String displayName;
