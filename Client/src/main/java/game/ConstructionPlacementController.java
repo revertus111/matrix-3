@@ -15,7 +15,8 @@ public final class ConstructionPlacementController {
         WALLS("Walls"),
         FLOORS("Floors"),
         DOORS("Doors"),
-        FURNITURE("Furniture");
+        FURNITURE("Furniture"),
+        RAILS("Rails");
 
         private final String displayName;
 
@@ -61,7 +62,9 @@ public final class ConstructionPlacementController {
             new BuildPiece("basic-door", "Door", Category.DOORS, 13344, 0,
                     "Current doorway candidate; final Construction art acceptance is pending."),
             new BuildPiece("basic-bed", "Bed", Category.FURNITURE, 14872, 10,
-                    "Verified Matrix3 bed object; each placed bed adds one settlement population capacity.")
+                    "Verified Matrix3 bed object; each placed bed adds one settlement population capacity."),
+            new BuildPiece("basic-rail", "Rail route", Category.RAILS, 46353, 22,
+                    "Drag Point A to Point B; straights and accepted three-piece curves auto-tile.")
     };
 
     private static volatile BuildPiece selectedPiece;
@@ -102,7 +105,12 @@ public final class ConstructionPlacementController {
     }
 
     public static boolean isArmed() {
-        return DevSpawnPlacement.hasActive();
+        return DevSpawnPlacement.hasActive() || isRailRouteSelected();
+    }
+
+    public static boolean isRailRouteSelected() {
+        BuildPiece piece = selectedPiece;
+        return piece != null && "basic-rail".equals(piece.getKey()) && RailRoutePreview.isEnabled();
     }
 
     public static void beginPaletteSession() {
@@ -124,6 +132,7 @@ public final class ConstructionPlacementController {
         clearHoveredTile();
         ConstructionGhostPreview.endDebugSession();
         ConstructionBuildCamera.exit();
+        RailRoutePreview.setEnabled(false);
         if (cancelPlacement) {
             status = DevModeBridge.cancelPlacement();
         }
@@ -226,8 +235,52 @@ public final class ConstructionPlacementController {
     }
 
     public static String cancel() {
+        RailRoutePreview.setEnabled(false);
         status = DevModeBridge.cancelPlacement();
         return status;
+    }
+
+    public static void onRailRouteCommitted(java.util.List<RailRoutePreview.RoutePiece> route) {
+        if (!isRailRouteSelected() || route == null || route.isEmpty()) {
+            return;
+        }
+        int queued = 0;
+        String failure = null;
+        for (RailRoutePreview.RoutePiece piece : route) {
+            String key = railBuildKey(piece.getObjectId());
+            if (key == null) {
+                failure = "Unsupported rail object " + piece.getObjectId() + " in route.";
+                break;
+            }
+            DevSpawnPlacement.Request request = DevSpawnPlacement.constructionObject(
+                    key, piece.getObjectId(), piece.getObjectType(), piece.getRotation(),
+                    DevSpawnPlacement.RotationMode.FIXED);
+            String result = DevSpawnPlacement.placeOnce(
+                    request, piece.getWorldX(), piece.getWorldY(), piece.getPlane());
+            if (result == null || !result.startsWith("Spawn queued")) {
+                failure = result;
+                break;
+            }
+            queued++;
+        }
+        status = failure == null
+                ? "Rail route queued: " + queued + " piece(s)."
+                : "Rail route queued " + queued + " piece(s); " + failure;
+    }
+
+    private static String railBuildKey(int objectId) {
+        switch (objectId) {
+        case 46353:
+            return "basic-rail";
+        case 46377:
+            return "rail-curve-a";
+        case 46379:
+            return "rail-curve-elbow";
+        case 46381:
+            return "rail-curve-b";
+        default:
+            return null;
+        }
     }
 
     private static String armSelected() {
@@ -238,6 +291,16 @@ public final class ConstructionPlacementController {
         }
 
         DevModeBridge.setEnabled(true);
+        if ("basic-rail".equals(piece.getKey())) {
+            DevModeBridge.cancelPlacement();
+            RailRoutePreview.configure("Settlement rail", 46353, 22, 3,
+                    RailRoutePreview.RouteOrder.X_THEN_Y);
+            RailRoutePreview.reloadCurveComposite();
+            RailRoutePreview.setEnabled(true);
+            status = "Rail route armed. Hold Left at Point A, drag to Point B, then release to build.";
+            return status;
+        }
+        RailRoutePreview.setEnabled(false);
         DevSpawnPlacement.Request request = DevSpawnPlacement.constructionObject(
                 piece.getKey(),
                 piece.getObjectId(),
