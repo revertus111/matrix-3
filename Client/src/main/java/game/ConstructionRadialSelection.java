@@ -1044,20 +1044,35 @@ public final class ConstructionRadialSelection {
                 continue;
             }
 
-            float x = (gl.anIntArray10336[originalA]
-                    + gl.anIntArray10336[originalB]
-                    + gl.anIntArray10336[originalC]) / 3.0F;
-            float z = (gl.anIntArray10331[originalA]
-                    + gl.anIntArray10331[originalB]
-                    + gl.anIntArray10331[originalC]) / 3.0F;
+            float ax = gl.anIntArray10336[originalA];
+            float az = gl.anIntArray10331[originalA];
+            float bx = gl.anIntArray10336[originalB];
+            float bz = gl.anIntArray10331[originalB];
+            float cx = gl.anIntArray10336[originalC];
+            float cz = gl.anIntArray10331[originalC];
 
-            float radius = (float) Math.sqrt(x * x + z * z);
-            if (radius < minimumRingRadius || radius > maximumRingRadius) {
+            float radiusA = (float) Math.sqrt(ax * ax + az * az);
+            float radiusB = (float) Math.sqrt(bx * bx + bz * bz);
+            float radiusC = (float) Math.sqrt(cx * cx + cz * cz);
+
+            /*
+             * A centroid-only radius test is too permissive for 4171. Its
+             * decorative diamonds/spikes can straddle the circular band while
+             * still placing their triangle centroid inside it. Require every
+             * vertex of the face to live in the calibrated ring-body annulus.
+             * This preserves actual ring strip triangles and rejects decorative
+             * geometry that crosses inward/outward from the strip.
+             */
+            float faceMinRadius = Math.min(radiusA, Math.min(radiusB, radiusC));
+            float faceMaxRadius = Math.max(radiusA, Math.max(radiusB, radiusC));
+            if (faceMinRadius < minimumRingRadius || faceMaxRadius > maximumRingRadius) {
                 arcAlpha[face] = (byte) 255;
                 hiddenOutsideRingBody++;
                 continue;
             }
 
+            float x = (ax + bx + cx) / 3.0F;
+            float z = (az + bz + cz) / 3.0F;
             float angle = (float) Math.toDegrees(Math.atan2(z, x));
             if (angle < 0.0F) {
                 angle += 360.0F;
@@ -1076,10 +1091,12 @@ public final class ConstructionRadialSelection {
         }
 
         model.method1473((byte) 0, arcAlpha);
-        needsArcMaskState = "OpenGL ring-body arc"
+        needsArcMaskState = "OpenGL strict ring-body arc"
                 + " visible=" + visibleFaces
                 + " bodyHidden=" + hiddenOutsideRingBody
                 + " arcHidden=" + hiddenOutsideArc
+                + " band=" + formatRadius(minimumRingRadius)
+                + ".." + formatRadius(maximumRingRadius)
                 + " ringR=" + formatRadius(ringBodyRadius);
         return true;
     }
