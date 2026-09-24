@@ -51,12 +51,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             new JSpinner(new SpinnerNumberModel(35, 0, 100, 5));
     private final JSpinner demoEnergyValue =
             new JSpinner(new SpinnerNumberModel(70, 0, 100, 5));
-    private final JSpinner hungerRingScale =
-            new JSpinner(new SpinnerNumberModel(125, 25, 300, 5));
-    private final JSpinner thirstRingScale =
+    private final JSpinner needsArcScale =
             new JSpinner(new SpinnerNumberModel(95, 25, 300, 5));
-    private final JSpinner energyRingScale =
-            new JSpinner(new SpinnerNumberModel(65, 25, 300, 5));
     private final JComboBox<WorkerPresetChoice> workerRolePreset =
             new JComboBox<WorkerPresetChoice>(WorkerPresetChoice.values());
     private final JComboBox<WorkerPresetChoice> radialRolePreset =
@@ -715,16 +711,14 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
 
         card.add(Box.createVerticalStrut(12));
         card.add(ConsoleTheme.createWrappedText(
-                "Needs HUD visual prototype — same proven GFX 4171, three concentric rings on every active Settler. "
-                + "Hunger is orange, Thirst is cyan, Energy is yellow; each blends toward red as it approaches its real critical threshold. "
-                + "Value and scale controls update live so we can decide whether this is readable before wiring server sync.",
+                "Needs HUD visual prototype — same proven GFX 4171 cut into three arches on one shared circumference. "
+                + "Hunger is orange, Thirst is cyan, Energy is yellow; each shortens and trends red as wellbeing is lost. "
+                + "Demo values and one shared HUD scale update live so we can judge readability before wiring server sync.",
                 7));
         card.add(Box.createVerticalStrut(8));
 
         JSpinner[] needsSpinners = {
-                demoHungerValue, hungerRingScale,
-                demoThirstValue, thirstRingScale,
-                demoEnergyValue, energyRingScale
+                demoHungerValue, demoThirstValue, demoEnergyValue, needsArcScale
         };
         for (JSpinner spinner : needsSpinners) {
             spinner.setMaximumSize(new Dimension(100, 30));
@@ -736,33 +730,36 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                     ((Number) demoHungerValue.getValue()).intValue(),
                     ((Number) demoThirstValue.getValue()).intValue(),
                     ((Number) demoEnergyValue.getValue()).intValue());
-            ConstructionRadialSelection.setWorkerNeedsPreviewScales(
-                    ((Number) hungerRingScale.getValue()).intValue(),
-                    ((Number) thirstRingScale.getValue()).intValue(),
-                    ((Number) energyRingScale.getValue()).intValue());
+            ConstructionRadialSelection.setWorkerNeedsArcScalePercent(
+                    ((Number) needsArcScale.getValue()).intValue());
             setStatus(ConstructionRadialSelection.getWorkerNeedsPreviewStatus());
         };
         for (JSpinner spinner : needsSpinners) {
             spinner.addChangeListener(needsPreviewChange);
         }
 
-        JPanel needGrid = new JPanel(new GridLayout(4, 3, 7, 7));
+        JPanel needGrid = new JPanel(new GridLayout(4, 2, 7, 7));
         needGrid.setOpaque(false);
         needGrid.setAlignmentX(LEFT_ALIGNMENT);
         needGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 102));
         needGrid.add(ConsoleTheme.createWrappedText("Need", 1));
         needGrid.add(ConsoleTheme.createWrappedText("Demo value", 1));
-        needGrid.add(ConsoleTheme.createWrappedText("Ring scale %", 1));
         needGrid.add(ConsoleTheme.createWrappedText("Hunger", 1));
         needGrid.add(demoHungerValue);
-        needGrid.add(hungerRingScale);
         needGrid.add(ConsoleTheme.createWrappedText("Thirst", 1));
         needGrid.add(demoThirstValue);
-        needGrid.add(thirstRingScale);
         needGrid.add(ConsoleTheme.createWrappedText("Energy", 1));
         needGrid.add(demoEnergyValue);
-        needGrid.add(energyRingScale);
         card.add(needGrid);
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel scaleRow = new JPanel(new GridLayout(1, 2, 7, 7));
+        scaleRow.setOpaque(false);
+        scaleRow.setAlignmentX(LEFT_ALIGNMENT);
+        scaleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        scaleRow.add(ConsoleTheme.createWrappedText("Shared arch scale %", 1));
+        scaleRow.add(needsArcScale);
+        card.add(scaleRow);
         card.add(Box.createVerticalStrut(8));
 
         JButton enableHud = new JButton("Enable Needs HUD Preview");
