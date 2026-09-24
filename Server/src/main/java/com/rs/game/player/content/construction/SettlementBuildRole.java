@@ -9,5 +9,6 @@ public enum SettlementBuildRole {
     WALL,
     FLOOR,
     DOOR,
-    BED
+    BED,
+    RAIL
 }
