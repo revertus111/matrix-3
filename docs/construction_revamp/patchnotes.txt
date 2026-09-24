@@ -1215,3 +1215,10 @@
 - RTS pan now clamps the world-space look pivot to the live Matrix3 scene height-grid bounds with a small edge margin, then recomputes detached camera position from that valid pivot.
 - Long orbit distance remains available; the camera itself may sit outside the scene, but its look target can no longer pan into unloaded blank terrain.
 - No player movement, NPC protocol, fog, minimap, or vanilla camera behavior changed.
+
+2026-09-24 - RTS visibility anchor + Ctrl-Z wiring
+- Wired Ctrl+Z during settlement RTS (palette open or closed) to the persistent SettlementInstance.undoLastBuild() path through the existing console command bridge.
+- Exposed settlement undo and clearbuilds server operations; both mutate persistent SettlementState and projected runtime pieces.
+- Corrected the detached RTS renderer visibility focus: Class523.method6240 no longer receives the stationary player's tile during settlement RTS and instead receives the detached camera's current local scene tile.
+- This targets the visible long-range fog/scene-culling wall without changing ordinary gameplay rendering; runtime verification is still required.
+- Eraser palette UX, destructive Clear Builds confirmation, and RTS minimap heading remain unfinished and must not be marked complete.
