@@ -1209,3 +1209,9 @@
 - Con Revamp now uses one shared needs-arch scale instead of three independent concentric-ring scales.
 - Selection/drag rings, worker detection, server needs ownership, persistence and AI are unchanged.
 - Needs values remain demo-only until visual acceptance; a clean per-worker server->client metadata seam is still the next production step.
+
+2026-09-24 - RTS loaded-scene camera clamp
+- Fixed stale absolute RTS pivot restoration across rebuilt dynamic settlement scenes; saved view is restored only when its pivot belongs to the currently loaded scene.
+- RTS pan now clamps the world-space look pivot to the live Matrix3 scene height-grid bounds with a small edge margin, then recomputes detached camera position from that valid pivot.
+- Long orbit distance remains available; the camera itself may sit outside the scene, but its look target can no longer pan into unloaded blank terrain.
+- No player movement, NPC protocol, fog, minimap, or vanilla camera behavior changed.
