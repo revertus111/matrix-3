@@ -1087,3 +1087,10 @@
 - Settlement leave-to-return/logout/teleport paths send CSVar 2835=0.
 - PacketsDecoder forwards both small/big CSVar packets to ConstructionBuildCamera; only id 2835 is consumed by the construction bridge.
 - Signal 1 enters RTS automatically when no Construction camera is active. Signal 0 releases only a camera session auto-owned by settlement lifecycle.
+
+
+2026-09-24 - Material-free rail placement
+- Runtime test confirmed the Construction palette A->B rail route reaches the authoritative settlement build transaction, but the provisional 1 Basic ore cost blocked placement.
+- Removed settlement-material cost from straight 46353 and accepted curve components 46377/46379/46381.
+- SettlementPlayerBuildTransaction now permits zero-cost placement only for the explicit RAIL semantic role; all existing wall/floor/door/bed material validation is unchanged.
+- Rails remain persistent server-owned settlement pieces and retain 4 base Construction XP per physical component for now.
