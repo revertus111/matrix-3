@@ -58,8 +58,6 @@ public final class ConstructionBuildCamera {
     private static volatile boolean active;
     private static volatile boolean ownsFreeCamera;
     private static volatile boolean settlementAutoMode;
-    private static volatile int settlementEntryStableTicks;
-    private static volatile int settlementExitStableTicks;
     private static volatile CameraMode cameraMode = CameraMode.RTS;
 
     private static int lastTickCycle = Integer.MIN_VALUE;
@@ -175,25 +173,18 @@ public final class ConstructionBuildCamera {
             return;
         }
         if (value == 1) {
-            // finishLoad fires immediately after the server moves the player into the
-            // dynamic plot. Do not detach the camera in the same packet tick: the
-            // client's region rebuild can still be using the pre-settlement camera
-            // controllers at this point. Arm RTS and let the normal viewport seam
-            // enter it once the local scene/player are live.
-            cameraMode = CameraMode.RTS;
-            settlementAutoMode = true;
-            settlementEntryStableTicks = 3;
+            // The server lifecycle signal is authoritative, but camera activation is
+            // deliberately NOT performed here. Runtime proved that detaching the
+            // Matrix3 camera during/just after the dynamic-region rebuild can blank
+            // the world viewport. Keep the signal for diagnostics only until a
+            // region-rebuild-complete seam is explicitly verified.
+            reportToServer("SETTLEMENT_SIGNAL enter");
             return;
         }
-        if (settlementAutoMode) {
-            exit();
-            settlementAutoMode = false;
-        }
+        reportToServer("SETTLEMENT_SIGNAL exit");
     }
 
     public static String enter() {
-        settlementEntryStableTicks = 0;
-        settlementExitStableTicks = 0;
         // Every fresh Construction/settlement camera session starts in RTS.
         // Free Build remains an explicit in-session palette choice.
         cameraMode = CameraMode.RTS;
@@ -259,18 +250,6 @@ public final class ConstructionBuildCamera {
      * submitted. Guarded to one update per client cycle.
      */
     public static void tick() {
-        if (settlementAutoMode && !active && settlementEntryStableTicks > 0) {
-            if (client.aClass613_8605 != null && Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 != null) {
-                settlementEntryStableTicks--;
-                if (settlementEntryStableTicks == 0) {
-                    String result = enter();
-                    settlementAutoMode = active;
-                    if (settlementAutoMode) {
-                        reportToServer("SETTLEMENT_AUTO_ENTER " + result);
-                    }
-                }
-            }
-        }
         if (!active || lastTickCycle == client.cycles) {
             return;
         }
