@@ -1040,3 +1040,11 @@
 - Added Load Last Curve Scan using the verified 2026-09-22 capture geometry: 46360/R2@(-4,0), 46361/R0@(-3,0), 46377/R0@(-1,0), 46379/R0@(0,0), 46382/R0@(-1,+1), 46381/R0@(0,+1).
 - Added Load 2x2 Bend Core for only 46377/46379/46382/46381; 46353 remains a separate straight connector (R2 east/west, R3 north/south).
 - Seeded layouts stay CUSTOM so reference/testing geometry cannot become the A->B CURVE automatically until the user explicitly promotes a saved layout.
+
+2026-09-24 - Accepted three-piece rail curve routing
+- Promoted uploaded CURVE_RAIL_LAYOUT_01 evidence into the A->B route path: 46377/T22/R0@(2,-1), 46379/T22/R0@(3,-1), 46381/T22/R0@(3,0).
+- RailCompositeLibrary now prefers that exact saved name even while its local role remains CUSTOM, then falls back to a saved CURVE role, then to the same built-in three-piece definition.
+- RailRoutePreview detects 46379 as the authored elbow by cardinal neighbor geometry, normalizes offsets around it, and rotates the complete pattern to all four route quadrants.
+- X-then-Y and Y-then-X straight legs now skip any tile occupied by the curve pattern, so the two approach components replace rather than overlap straight rails.
+- Same-tile overlay is no longer required for the accepted curve; all three accepted type-22 origins occupy distinct neighboring tiles. Overlay remains research-only for future geometry.
+- Single-object curve fallback and the existing whole-pattern Curve map offset remain available.
