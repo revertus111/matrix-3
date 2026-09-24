@@ -674,6 +674,82 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workerselectionjob".equals(operation)) {
+            if (cmd.length < 5) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectionjob <job-key> <on|off>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using radial worker commands.");
+                return true;
+            }
+            SettlementWorkerJob job = SettlementWorkerJob.forKey(cmd[3].toLowerCase());
+            if (job == null) {
+                player.getPackets().sendGameMessage(
+                        "Unknown worker job key: " + cmd[3] + ".");
+                return true;
+            }
+            String state = cmd[4].toLowerCase();
+            if (!"on".equals(state) && !"off".equals(state)) {
+                player.getPackets().sendGameMessage(
+                        "Selected worker job state must be on or off.");
+                return true;
+            }
+            java.util.List<SettlementWorkerState> selected =
+                    active.snapshotRuntimeWorkerSelection();
+            if (selected.isEmpty()) {
+                player.getPackets().sendGameMessage(
+                        "No server-owned radial worker selection is active. Drag-select workers again.");
+                return true;
+            }
+            boolean allowed = "on".equals(state);
+            for (SettlementWorkerState worker : selected) {
+                worker.setJobAllowed(job, allowed);
+            }
+            player.getPackets().sendGameMessage(
+                    "Radial selection " + formatWorkerIds(selected) + " "
+                            + job.getDisplayName() + "=" + (allowed ? "ON" : "OFF") + ".");
+            return true;
+        }
+
+        if ("workerselectionjobsall".equals(operation)) {
+            if (cmd.length < 4) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectionjobsall <on|off>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using radial worker commands.");
+                return true;
+            }
+            String state = cmd[3].toLowerCase();
+            if (!"on".equals(state) && !"off".equals(state)) {
+                player.getPackets().sendGameMessage(
+                        "Selected worker jobs state must be on or off.");
+                return true;
+            }
+            java.util.List<SettlementWorkerState> selected =
+                    active.snapshotRuntimeWorkerSelection();
+            if (selected.isEmpty()) {
+                player.getPackets().sendGameMessage(
+                        "No server-owned radial worker selection is active. Drag-select workers again.");
+                return true;
+            }
+            boolean allowed = "on".equals(state);
+            for (SettlementWorkerState worker : selected) {
+                for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
+                    worker.setJobAllowed(job, allowed);
+                }
+            }
+            player.getPackets().sendGameMessage(
+                    "Radial selection " + formatWorkerIds(selected)
+                            + " Allowed Jobs=" + (allowed ? "ALL ON" : "ALL OFF") + ".");
+            return true;
+        }
+
         if ("workerpause".equals(operation)) {
             boolean targeted = hasWorkerIdArgument(cmd, 3);
             int stateIndex = targeted ? 4 : 3;
@@ -997,7 +1073,7 @@ public final class ItemBrowserCommandBridge {
         }
 
         player.getPackets().sendGameMessage(
-                "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerpreset|workerselectionset|workerselectionclear|workerselectionstatus|workerselectionpause|workerselectionpreset|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerallstatus|workerselftest|workercheck|workerpause|workerpreset|workerselectionset|workerselectionclear|workerselectionstatus|workerselectionpause|workerselectionpreset|workerselectionjob|workerselectionjobsall|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
         return true;
     }
 
