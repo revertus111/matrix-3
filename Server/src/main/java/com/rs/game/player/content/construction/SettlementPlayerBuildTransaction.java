@@ -36,11 +36,22 @@ public final class SettlementPlayerBuildTransaction {
 
         SettlementResource resource = definition.getBuildResource();
         long cost = definition.getBuildCost();
-        if (resource == null || cost <= 0L) {
+        boolean freePlacement = definition.getRole() == SettlementBuildRole.RAIL
+                && resource == null && cost == 0L;
+        if (!freePlacement && (resource == null || cost <= 0L)) {
             return Result.fail("That build piece has no valid material cost.");
         }
 
         synchronized (state) {
+            if (freePlacement) {
+                SettlementPlacedPiece saved = state.place(
+                        definition, plotX, plotY, plane, rotation);
+                if (saved == null) {
+                    return Result.fail("That settlement slot is already occupied.");
+                }
+                return Result.success(saved, null, 0L, definition.getConstructionXp());
+            }
+
             if (state.getResourceAmount(resource) < cost) {
                 return Result.fail("You need " + cost + " " + resource.getDisplayName()
                         + " in settlement storage to build " + definition.getDisplayName() + ".");
