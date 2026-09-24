@@ -15,7 +15,15 @@ public enum SettlementBuildPiece {
     BASIC_DOOR("basic-door", "Door", SettlementBuildRole.DOOR, 13344, 0,
             SettlementResource.WOOD, 2L, 8.0),
     BASIC_BED("basic-bed", "Bed", SettlementBuildRole.BED, 14872, 10,
-            SettlementResource.WOOD, 3L, 12.0);
+            SettlementResource.WOOD, 3L, 12.0),
+    BASIC_RAIL("basic-rail", "Rail", SettlementBuildRole.RAIL, 46353, 22,
+            SettlementResource.BASIC_ORE, 1L, 4.0),
+    RAIL_CURVE_A("rail-curve-a", "Rail curve approach", SettlementBuildRole.RAIL, 46377, 22,
+            SettlementResource.BASIC_ORE, 1L, 4.0),
+    RAIL_CURVE_ELBOW("rail-curve-elbow", "Rail curve elbow", SettlementBuildRole.RAIL, 46379, 22,
+            SettlementResource.BASIC_ORE, 1L, 4.0),
+    RAIL_CURVE_B("rail-curve-b", "Rail curve exit", SettlementBuildRole.RAIL, 46381, 22,
+            SettlementResource.BASIC_ORE, 1L, 4.0);
 
     private final String key;
     private final String displayName;
