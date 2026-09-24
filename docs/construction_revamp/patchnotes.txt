@@ -1298,3 +1298,9 @@
 - SettlementInstance owns the replacement transaction: validates the old route, validates the replacement footprint against the simulated post-removal state, removes the old route, installs the new route, and rolls back to the old route if replacement placement unexpectedly fails.
 - Exact old-route validation remains rail-only. Unrelated persistent builds block the replacement instead of being overwritten.
 - Normal first-time A-to-B placement is unchanged. Curve geometry is unchanged.
+
+2026-09-24 - Settlement RTS terrain fog bypass
+- Runtime screenshots rejected both prior scene-focus and scene-radius-only fixes: terrain remained present near-camera but faded to the environment/beige color while placed objects remained visible beyond it.
+- verified-static: GPU terrain owner Class174_Sub1.method2715 applies the renderer fog transform when Class106_Sub3.anInt10448 > 0, using aFloat10503/aFloat10504 as the fog depth range.
+- Settlement RTS now bypasses that terrain fog transform only while the settlement-owned RTS camera is active. Ordinary player/vanilla rendering keeps the stock renderer fog path unchanged.
+- This stacks with the detached-camera scene focus and settlement scene-radius work; runtime acceptance is the same zoom/view that previously showed the beige horizontal wall.
