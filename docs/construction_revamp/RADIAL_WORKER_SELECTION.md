@@ -478,7 +478,7 @@ Status: RUNTIME VERIFIED
 ### Worker Needs HUD — Visual Prototype
 
 Goal:
-Find a readable ground-ring language for persistent worker Hunger / Thirst / Energy before adding a new server-to-client metadata channel.
+Find a readable ground HUD for persistent worker Hunger / Thirst / Energy before adding a new server-to-client metadata channel.
 
 Server semantics already VERIFIED:
 
@@ -487,31 +487,43 @@ Server semantics already VERIFIED:
 - Energy is reserve: 100 = rested, 0 = exhausted; current critical threshold = 20
 - persistent values remain owned by `SettlementWorkerState`
 
-Prototype implementation:
+Rejected prototype:
+
+- three concentric full GFX 4171 rings rendered successfully
+- user runtime screenshot showed the result was too busy / visually wrong for the intended HUD
+- do not return to the three-full-ring layout
+
+Active arch prototype:
 
 - reuses the proven GFX `4171` recolor/scale renderer
-- every active same-plane `Settler` can show three additional concentric rings
-- default Hunger ring: 125% scale, orange
-- default Thirst ring: 95% scale, cyan
-- default Energy ring: 65% scale, yellow
-- Hunger/Thirst blend toward red as pressure approaches their real critical threshold
-- Energy blends toward red as reserve falls toward its real critical threshold
-- Con Revamp exposes live 0-100 demo values and independent ring-scale controls for all three needs
-- preview can render even with Worker Control disabled, so HUD readability can be tested independently
-- selection/drag ring ownership is unchanged
-- values are DEMO ONLY in this patch; no NPC name/combat-level/config abuse and no fake live synchronization
+- all three needs share one circumference at a default 95% worker-relative scale
+- each need owns a separate ~100-degree angular slot with ~20-degree gaps
+- Hunger slot: orange -> red as pressure rises; arch length uses `(100 - hunger)%`
+- Thirst slot: cyan -> red as pressure rises; arch length uses `(100 - thirst)%`
+- Energy slot: yellow -> red as reserve falls; arch length uses `energy%`
+- current slot centers are 30 / 150 / 270 degrees so the three arches are separated evenly
+- OpenGL GFX clones use isolated per-face alpha (`0x100` clone capability) to hide faces outside each angular span
+- OpenGL face masking inverts `anIntArray10329/aShortArray10330` to map render vertices back to original X/Z model vertices, then classifies each face by centroid angle
+- visible faces retain the already runtime-verified recolor path; hidden faces are alpha 255
+- Con Revamp exposes live demo Hunger / Thirst / Energy values plus one shared arch-scale control
+- preview can render with Worker Control disabled
+- selection / drag rings are unchanged
+- values remain DEMO ONLY; no NPC-name/combat-level/config encoding and no fake live sync
+- non-OpenGL arc masking is intentionally not guessed in this slice; the current runtime target is the renderer path already proven by the 4171 recolor fix
 
 Runtime acceptance:
 
-- all active workers receive exactly three needs rings when preview is enabled
-- Hunger / Thirst / Energy are distinguishable by radius and color
-- changing demo values updates severity color live
-- changing each scale affects only the corresponding need ring
-- selected-worker rings remain readable when layered with needs rings
-- disabling preview removes all needs rings immediately
+- every active Settler shows three separated arches rather than concentric full rings
+- no need produces a full 360-degree ring
+- Hunger / Thirst / Energy are distinguishable by both angular slot and color
+- lowering wellbeing shortens only that need's arch
+- severity color still trends red near the authoritative threshold
+- shared scale resizes the whole needs HUD without changing slot ownership
+- committed selection rings remain readable with the needs arches
+- disabling preview removes all needs arches immediately
 
 Next architectural step after visual acceptance:
-Add a clean per-worker server -> client needs metadata seam, then replace only the demo numbers with authoritative values.
+Add a clean per-worker server -> client needs metadata seam and replace only the demo values.
 
 Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
