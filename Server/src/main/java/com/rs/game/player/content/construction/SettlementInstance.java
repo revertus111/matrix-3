@@ -33,6 +33,9 @@ public final class SettlementInstance {
 
     private static final int ENTRY_OFFSET = PLOT_TILES / 2;
     private static final double PASSIVE_CONSTRUCTION_XP_PER_RESOURCE = 1.0;
+    // V1 presentation placeholder until a dedicated mine-cart NPC/model is accepted.
+    private static final int RAIL_CART_NPC_ID = 1;
+    private static final long RAIL_WOOD_PAYLOAD = 1L;
 
     private final Player player;
     private final SettlementState state;
@@ -45,6 +48,7 @@ public final class SettlementInstance {
     private final List<WorldObject> starterResourceObjects = new ArrayList<WorldObject>();
     private final List<NPC> starterResourceNpcs = new ArrayList<NPC>();
     private final List<SettlementWorkerNpc> workerNpcs = new ArrayList<SettlementWorkerNpc>();
+    private final List<SettlementRailCartNpc> railCarts = new ArrayList<SettlementRailCartNpc>();
     private final List<Long> radialSelectedWorkerIds = new ArrayList<Long>();
     private boolean radialPlayerSelected;
     private final WorkerStorageReservationBook workerStorageReservations =
@@ -147,6 +151,7 @@ public final class SettlementInstance {
         }
         spawnStarterResourceNodes();
         checkStarterShelterMilestone();
+        refreshRailLogistics();
         ensureSettlementWorkersRuntime();
 
         player.setForceNextMapLoadRefresh(true);
@@ -232,15 +237,26 @@ public final class SettlementInstance {
         SettlementPlacedPiece saved = result.getPlacedPiece();
         spawnProjectedPiece(saved);
         checkStarterShelterMilestone();
+        if (definition.getRole() == SettlementBuildRole.RAIL
+                || definition.getRole() == SettlementBuildRole.RAIL_LOADER
+                || definition.getRole() == SettlementBuildRole.RAIL_UNLOADER) {
+            refreshRailLogistics();
+        }
 
         double xp = result.getConstructionXp();
         if (xp > 0.0) {
             player.getSkills().addXp(Skills.CONSTRUCTION, xp, true);
         }
 
-        String built = "Built " + definition.getDisplayName() + " for " + result.getCost() + " "
-                + result.getResource().getDisplayName() + " and earned "
-                + (long) xp + " Construction XP.";
+        String built;
+        if (result.getResource() == null || result.getCost() <= 0L) {
+            built = "Built " + definition.getDisplayName() + " for free and earned "
+                    + (long) xp + " Construction XP.";
+        } else {
+            built = "Built " + definition.getDisplayName() + " for " + result.getCost() + " "
+                    + result.getResource().getDisplayName() + " and earned "
+                    + (long) xp + " Construction XP.";
+        }
         return definition.getRole() == SettlementBuildRole.BED
                 ? built + " Housing: " + state.getHousingSummary()
                 : built;
@@ -821,6 +837,81 @@ public final class SettlementInstance {
         return state.addResource(resource, amount);
     }
 
+    private synchronized void refreshRailLogistics() {
+        if (!loaded || destroyed || boundChunks == null) {
+            return;
+        }
+        removeRailCarts();
+
+        SettlementRailNetwork.Route route = SettlementRailNetwork.findLoaderToUnloader(state);
+        if (!route.isValid()) {
+            return;
+        }
+        if (state.getResourceAmount(SettlementResource.WOOD) < RAIL_WOOD_PAYLOAD
+                || state.getStorageRemaining(SettlementResource.WOOD) < RAIL_WOOD_PAYLOAD) {
+            return;
+        }
+
+        List<WorldTile> worldRoute = new ArrayList<WorldTile>();
+        for (SettlementPlacedPiece rail : route.getRails()) {
+            worldRoute.add(new WorldTile(
+                    toWorldX(rail.getPlotX()), toWorldY(rail.getPlotY()), rail.getPlane()));
+        }
+        SettlementPlacedPiece unloader = route.getUnloader();
+        worldRoute.add(new WorldTile(
+                toWorldX(unloader.getPlotX()), toWorldY(unloader.getPlotY()), unloader.getPlane()));
+
+        SettlementPlacedPiece loader = route.getLoader();
+        WorldTile start = new WorldTile(
+                toWorldX(loader.getPlotX()), toWorldY(loader.getPlotY()), loader.getPlane());
+        SettlementRailCartNpc cart = new SettlementRailCartNpc(
+                this, RAIL_CART_NPC_ID, start, worldRoute);
+        railCarts.add(cart);
+        player.getPackets().sendGameMessage(
+                "<col=3CB371>Rail Logistics:</col> Wood cart dispatched.");
+    }
+
+    public synchronized void completeRailWoodShipment(SettlementRailCartNpc cart) {
+        if (cart == null || !railCarts.remove(cart)) {
+            return;
+        }
+        /*
+         * V1 uses existing settlement Wood as the payload source and returns it
+         * through storage at the destination. This proves physical transport
+         * without inventing a second inventory owner before processing machines.
+         */
+        long removed = state.removeResource(SettlementResource.WOOD, RAIL_WOOD_PAYLOAD);
+        if (removed == RAIL_WOOD_PAYLOAD) {
+            state.addResource(SettlementResource.WOOD, removed);
+            player.getPackets().sendGameMessage(
+                    "<col=3CB371>Rail Logistics:</col> Wood shipment reached the Unloader.");
+        }
+        if (!cart.hasFinished()) {
+            cart.finish();
+        }
+    }
+
+    public synchronized void failRailWoodShipment(SettlementRailCartNpc cart, String reason) {
+        if (cart != null) {
+            railCarts.remove(cart);
+            if (!cart.hasFinished()) {
+                cart.finish();
+            }
+        }
+        if (reason != null) {
+            player.getPackets().sendGameMessage("<col=FF8C00>Rail Logistics:</col> " + reason);
+        }
+    }
+
+    private void removeRailCarts() {
+        for (SettlementRailCartNpc cart : railCarts) {
+            if (cart != null && !cart.hasFinished()) {
+                cart.finish();
+            }
+        }
+        railCarts.clear();
+    }
+
     public long consumeWorkerResource(SettlementResource resource, long amount) {
         if (!loaded || destroyed || resource == null || amount <= 0L) {
             return 0L;
@@ -1169,6 +1260,7 @@ public final class SettlementInstance {
         destroyed = true;
         loaded = false;
         removeSettlementWorkers();
+        removeRailCarts();
         removeStarterResourceNodes();
 
         final int[] bounds = boundChunks;
