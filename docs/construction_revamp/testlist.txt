@@ -685,3 +685,17 @@ Construction Palette A->B Rail Build — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Exit/re-enter the settlement; all placed rail components rebuild in the same tiles/rotations.
 [ ] Logout/relog; the rail route remains persistent.
 [ ] Select Walls/Floors/Doors/Furniture afterward; rail route mode disables and ordinary Paint/Continuous placement still works.
+
+
+Rail Logistics V1 — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Persistent topology derives from SettlementState RAIL pieces, not live object scans.
+[x] Rail Loader / Rail Unloader use stable persistent keys and material-free placement.
+[x] One transient cart follows the derived cardinal rail path; no cart state is serialized.
+[ ] Rails palette shows Rail Loader and Rail Unloader in addition to Rail route.
+[ ] Place Loader cardinally adjacent to one end of a connected route and Unloader adjacent to the other.
+[ ] With at least 1 stored Wood, a Rail Logistics dispatch message appears and one cart starts at the Loader.
+[ ] Cart visibly follows the connected rail tiles, including an accepted multi-piece curve, and reaches the Unloader.
+[ ] Arrival reports Wood shipment reached the Unloader; stored Wood is not lost by the V1 proof shipment.
+[ ] Break/disconnect the route and rebuild/re-enter; no cart dispatches across the gap.
+[ ] Exit/re-enter with a valid route; topology is rebuilt from persistent pieces and a new V1 cart can dispatch.
+[ ] Existing rail A->B placement and non-rail Construction placement still work.
