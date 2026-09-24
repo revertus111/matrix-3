@@ -217,7 +217,8 @@ public final class ConstructionRadialSelection {
                 + " | outer=" + workerOuterRingScalePercent + "%/" + formatRgb(workerOuterRingRgb)
                 + " | inner=" + workerInnerRingScalePercent + "%/" + formatRgb(workerInnerRingRgb)
                 + " | color-isolation=0x80000 texture-isolation=0x8000"
-                + " | renderer-aware texture detach";
+                + " | renderer-aware texture detach"
+                + " | AbstractModel/Class89_Sub2/OpenGLModel";
     }
 
     public static void setWorkerControlEnabled(boolean enabled) {
@@ -701,6 +702,18 @@ public final class ConstructionRadialSelection {
             short[] textures = softwareModel.aShortArray10591;
             if (textures != null) {
                 int faceCount = Math.min(softwareModel.anInt10573, textures.length);
+                for (int i = 0; i < faceCount; i++) {
+                    short textureId = textures[i];
+                    if (textureId != (short) -1) {
+                        textureIds.add(Short.valueOf(textureId));
+                    }
+                }
+            }
+        } else if (model instanceof OpenGLModel) {
+            OpenGLModel openGLModel = (OpenGLModel) model;
+            short[] textures = openGLModel.aShortArray10306;
+            if (textures != null) {
+                int faceCount = Math.min(openGLModel.anInt10299, textures.length);
                 for (int i = 0; i < faceCount; i++) {
                     short textureId = textures[i];
                     if (textureId != (short) -1) {
