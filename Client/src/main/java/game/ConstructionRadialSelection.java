@@ -381,6 +381,19 @@ public final class ConstructionRadialSelection {
         }
 
         if (renderCommittedSelection) {
+            int sceneBaseWorldX = sceneBase.localX * -2109597897;
+            int sceneBaseWorldY = sceneBase.localY * 417324155;
+            int sceneWidth = scene.anInt5833 * -1396185127;
+            int sceneHeight = scene.anInt5834 * -1519623925;
+            if (committedCenterWorldX < sceneBaseWorldX
+                    || committedCenterWorldY < sceneBaseWorldY
+                    || committedCenterWorldX >= sceneBaseWorldX + sceneWidth
+                    || committedCenterWorldY >= sceneBaseWorldY + sceneHeight) {
+                clearCommittedSelectionLocal();
+                lastEventState = "RWS-5 committed selection cleared after leaving its scene.";
+                return;
+            }
+
             int renderedWorkers = renderCommittedWorkerSelection(scene, renderer);
             boolean renderedSelf = renderCommittedPlayerSelection(scene, renderer);
             if (renderedWorkers >= 0) {
