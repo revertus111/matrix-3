@@ -241,15 +241,19 @@ public final class RailRoutePreview {
             }
             String compact = line.replace('\t', ' ');
             if (compact.startsWith("RAIL_DEBUG")
+                    || compact.startsWith("MODE")
                     || compact.startsWith("CURRENT")
                     || compact.startsWith("PREVIOUS")
+                    || compact.startsWith("OLD_PIECES")
+                    || compact.startsWith("OLD_PIECE")
                     || compact.startsWith("SEAM")
                     || compact.startsWith("SEAM_CURVE")
                     || compact.startsWith("FOOTPRINT")
+                    || compact.startsWith("PIECES")
                     || compact.startsWith("PIECE")) {
                 lines.add(compact);
             }
-            if (lines.size() >= 14) {
+            if (lines.size() >= 22) {
                 break;
             }
         }
