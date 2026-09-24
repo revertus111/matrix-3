@@ -243,9 +243,16 @@ public final class DevModeBridge {
             ConstructionBuildCamera.stopMovement();
             if (enabled && isOwnerSession() && DevSpawnPlacement.isPaintActive()) {
                 notifyPlacementStatus(placeActiveSpawnAtLocal(payloadA, payloadB));
+                return true;
             }
-            // Free Build owns intentional ground clicks: stop the camera and keep
-            // the player planted instead of forwarding the same click to Walk Here.
+            /*
+             * RTS self-selection intentionally restores vanilla Walk Here for
+             * the selected player while the Construction camera remains active.
+             * Without self selection, Free Build keeps the player planted.
+             */
+            if (ConstructionRadialSelection.isLocalPlayerSelected()) {
+                return false;
+            }
             return true;
         }
         if (normalizedAction == MATRIX3_TILE_ACTION && enabled && isOwnerSession()
