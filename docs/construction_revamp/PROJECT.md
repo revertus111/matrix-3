@@ -1288,7 +1288,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-4 layered GFX 4171 worker-ring styling (IMPLEMENTED / NEEDS RUNTIME TEST). RWS-2 drag geometry and RWS-3 worker detection are RUNTIME VERIFIED. The user-prioritized rail slice is now wired into the player-facing Construction palette: Rails -> Rail route reuses RailRoutePreview V2 A-to-B drag/auto-tiling and release queues stable server-authoritative settlementbuild pieces for straight 46353 plus accepted curve 46377/46379/46381 (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling remains Matrix3 Asset Studio v1 + paired evidence capture + docked Rail Classifier + Object Explorer/Rail Layout Lab. Object Explorer broadens research beyond rails and can test two stock models visually composited on one logical tile; normal scene-slot constraints remain unchanged.
 
-**Next checklist item:** User-prioritized rail acceptance first: open Construction -> Rails, select Rail route, drag one straight route and one L route, then verify real placement, accepted three-piece curve orientation, material-free placement/XP ownership and settlement rebuild persistence. After that focused pass, return to the consolidated RWS Bundle 2.4 runtime gate without redoing already-verified worker-selection behavior.
+**Next checklist item:** Rail Logistics V1 runtime gate: place the new Loader and Unloader cardinally adjacent to the runtime-verified A->B rail network, ensure at least 1 Wood is stored, confirm one cart physically traverses the derived persistent rail path and reports arrival, then verify a disconnected route does not dispatch. After this focused pass, return to the consolidated RWS Bundle 2.4 runtime gate without redoing already-verified worker-selection behavior.
 
 **Files/systems already inspected:**
 
@@ -1402,3 +1402,12 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Route release snapshots the same physical pieces used by the preview and queues stable settlementbuild keys for 46353, 46377, 46379 and 46381; no client-side persistent object owner was introduced.
 - Server SettlementBuildPiece now owns those four rail definitions under SettlementBuildRole.RAIL. Rails are intentionally material-free for the current build workflow and retain 4 base Construction XP per physical component.
 - Runtime gate is intentionally consolidated into one pull/start/login session: palette visibility -> straight route -> L curve -> no-material placement/XP feedback -> exit/re-entry persistence -> ordinary non-rail placement regression.
+
+
+## Rail Logistics V1 handoff — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under the approved SAP/AAA rail-logistics slice.
+- Server topology owner: SettlementRailNetwork derives cardinal connectivity directly from persistent plot-relative SettlementState RAIL pieces and BFS-routes Loader -> Unloader.
+- Player-facing endpoints: Rails palette now includes material-free rail-loader and rail-unloader stable definitions. Their current fence/door visuals are deliberate V1 placeholders, not accepted final machine art.
+- Runtime cart: SettlementRailCartNpc is transient and follows the derived rail tiles. It is never serialized and is destroyed with the SettlementInstance.
+- V1 payload proof: requires at least 1 stored Wood; arrival round-trips that Wood through SettlementState and reports success without changing the stored total. This proves physical logistics before machine-local inventories/processing outputs are introduced.
+- Intentionally deferred: final cart model, endpoint art, local machine inventories, switches/intersection policy, multiple carts, signals, offline rail simulation, acceleration/curve animation polish.
