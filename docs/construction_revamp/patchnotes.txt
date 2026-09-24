@@ -1009,3 +1009,10 @@
 - Added batch individual-job and all-jobs server commands over the existing selected Worker IDs.
 - Renamed the numeric selector to Worker Inspector and made its role inspection-only; it no longer clears or redirects command controls.
 - Persistent worker policy ownership, AI, identity and save schema are unchanged.
+
+2026-09-24 - RWS-5 persistent selected-worker rings
+- User confirmed the RWS-5 multi-worker command flow works; remaining UX gap was selected-worker rings disappearing immediately after release.
+- Scene rendering now continues the existing layered GFX 4171 worker rings for the committed selection after release while keeping the large drag circle temporary.
+- Persistent rings resolve the exact committed runtime NPC indexes each scene pass, so they follow selected workers as they move.
+- Clear Selection or a replacement drag updates the visual selection; if the committed runtime NPC set disappears during settlement exit/rebuild, stale local rings are cleared.
+- No server selection authority, worker AI, jobs, persistence, housing or radial drag geometry changed.
