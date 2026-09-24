@@ -468,8 +468,50 @@ Runtime evidence:
 
 - layered outer + inner GFX 4171 rings render simultaneously on multiple detected workers
 - independent outer/inner scale controls work at runtime
-- first color-picker runtime test produced no visible recolor; classified as texture-driven material dominance, not a picker/state failure
-- texture-isolated custom-color correction is implemented and awaits focused runtime retest
+- renderer-aware recolor now covers AbstractModel, Class89_Sub2 and OpenGLModel
+- user runtime screenshot/confirmation verified the chosen colors visibly apply to the layered worker rings
+
+Status: RUNTIME VERIFIED
+
+---
+
+### Worker Needs HUD — Visual Prototype
+
+Goal:
+Find a readable ground-ring language for persistent worker Hunger / Thirst / Energy before adding a new server-to-client metadata channel.
+
+Server semantics already VERIFIED:
+
+- Hunger is pressure: 0 = satisfied, 100 = critical; current critical threshold = 80
+- Thirst is pressure: 0 = satisfied, 100 = critical; current critical threshold = 80
+- Energy is reserve: 100 = rested, 0 = exhausted; current critical threshold = 20
+- persistent values remain owned by `SettlementWorkerState`
+
+Prototype implementation:
+
+- reuses the proven GFX `4171` recolor/scale renderer
+- every active same-plane `Settler` can show three additional concentric rings
+- default Hunger ring: 125% scale, orange
+- default Thirst ring: 95% scale, cyan
+- default Energy ring: 65% scale, yellow
+- Hunger/Thirst blend toward red as pressure approaches their real critical threshold
+- Energy blends toward red as reserve falls toward its real critical threshold
+- Con Revamp exposes live 0-100 demo values and independent ring-scale controls for all three needs
+- preview can render even with Worker Control disabled, so HUD readability can be tested independently
+- selection/drag ring ownership is unchanged
+- values are DEMO ONLY in this patch; no NPC name/combat-level/config abuse and no fake live synchronization
+
+Runtime acceptance:
+
+- all active workers receive exactly three needs rings when preview is enabled
+- Hunger / Thirst / Energy are distinguishable by radius and color
+- changing demo values updates severity color live
+- changing each scale affects only the corresponding need ring
+- selected-worker rings remain readable when layered with needs rings
+- disabling preview removes all needs rings immediately
+
+Next architectural step after visual acceptance:
+Add a clean per-worker server -> client needs metadata seam, then replace only the demo numbers with authoritative values.
 
 Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
