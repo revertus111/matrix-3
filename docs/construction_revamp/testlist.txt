@@ -795,3 +795,10 @@ Rail Route Debug Instrumentation — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Start exactly on B and build one perpendicular B->C that reproduces the bad visual.
 [ ] Click Copy Debug and paste the clipboard report into chat with one screenshot.
 [ ] Compare intended PIECE/FOOTPRINT coordinates against runtime visuals before making any further geometry patch.
+
+RTS full-scene terrain rendering — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Enter settlement RTS and zoom to the view that previously showed the beige hard cutoff.
+[ ] Pan and rotate Q/E across all settlement directions; loaded terrain should render around the detached camera like it does around the player.
+[ ] Confirm placed objects/rails no longer appear floating beyond a missing-terrain boundary.
+[ ] Confirm ordinary non-settlement/player camera rendering is unchanged after exiting the settlement.
+[ ] Note FPS while fully zoomed out; report any material regression.
