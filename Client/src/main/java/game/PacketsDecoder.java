@@ -647,6 +647,7 @@ public class PacketsDecoder implements Interface52 {
 			int i_95_ = buf.readUnsignedShort(647518597);
 			Class565_Sub1.method8259(925920188);
 			Class263.method3612(i_95_, i_94_, 2093494524);
+			ConstructionBuildCamera.handleSettlementLifecycleSignal(i_95_, i_94_);
 			class195.currentPacket = null;
 			return true;
 		}
@@ -939,6 +940,7 @@ public class PacketsDecoder implements Interface52 {
 			int i_147_ = buf.readUnsignedShortLE128((byte) 81);
 			Class565_Sub1.method8259(83297441);
 			Class263.method3612(i_147_, i_146_, 2098853126);
+			ConstructionBuildCamera.handleSettlementLifecycleSignal(i_147_, i_146_);
 			class195.currentPacket = null;
 			return true;
 		}
