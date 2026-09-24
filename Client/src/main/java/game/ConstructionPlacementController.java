@@ -75,6 +75,7 @@ public final class ConstructionPlacementController {
     private static volatile int rotation;
     private static volatile PlacementMode placementMode = PlacementMode.PAINT;
     private static volatile String status = "Choose a build piece.";
+    private static volatile boolean eraserMode;
 
     private static volatile boolean hoverTracking;
     private static volatile int hoveredWorldX = -1;
@@ -106,6 +107,43 @@ public final class ConstructionPlacementController {
 
     public static String getStatus() {
         return status;
+    }
+
+    public static boolean isEraserMode() {
+        return eraserMode;
+    }
+
+    public static String setEraserMode(boolean enabled) {
+        eraserMode = enabled;
+        if (enabled) {
+            RailRoutePreview.setEnabled(false);
+            DevModeBridge.cancelPlacement();
+            status = "Eraser armed. Click a settlement build tile to remove it.";
+        } else {
+            status = selectedPiece == null ? "Choose a build piece." : armSelected();
+        }
+        return status;
+    }
+
+    public static boolean eraseAtLocalTile(int localX, int localY) {
+        if (!eraserMode || client.aClass613_8605 == null
+                || Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
+            return false;
+        }
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
+        if (sceneBase == null) {
+            status = "Eraser target could not resolve the current scene.";
+            return true;
+        }
+        int worldX = sceneBase.localX * -2109597897 + localX;
+        int worldY = sceneBase.localY * 417324155 + localY;
+        int plane = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff;
+        String error = ClientConsoleBridge.queueConsoleCommand(
+                "itembrowser settlement erasetile " + worldX + " " + worldY + " " + plane);
+        status = error == null
+                ? "Erase queued for " + worldX + ", " + worldY + ", " + plane + "."
+                : error;
+        return true;
     }
 
     public static boolean isArmed() {
@@ -213,6 +251,7 @@ public final class ConstructionPlacementController {
             status = "Choose a valid Construction piece.";
             return status;
         }
+        eraserMode = false;
         selectedPiece = piece;
         rotation = 0;
         return armSelected();
@@ -243,6 +282,7 @@ public final class ConstructionPlacementController {
     }
 
     public static String cancel() {
+        eraserMode = false;
         RailRoutePreview.setEnabled(false);
         status = DevModeBridge.cancelPlacement();
         return status;
