@@ -1117,3 +1117,10 @@
 - Corrected settlement lifecycle startup to call ConstructionPaletteOverlay.show(), not only ConstructionPlacementController.beginPaletteSession().
 - This reuses the complete existing RTS startup path including palette input-listener and timer setup.
 - Settlement exit uses the matching palette hide path, with direct camera exit only as a fallback.
+
+
+2026-09-24 - Fix RTS startup ordering against dynamic-region transfer
+- Runtime screenshot proved the existing RTS palette path was invoked, but it was invoked before the client had consumed the settlement map-region/teleport transition.
+- Settlement finishLoad no longer sends CSVar 2835 in the same tick as loadMapRegions/setNextWorldTile.
+- RTS startup signal is sent after the existing two-tick settlement transfer lock has elapsed, guarded by the same active SettlementInstance still being loaded.
+- The client continues to use ConstructionPaletteOverlay.show(), i.e. the existing proven RTS camera path.
