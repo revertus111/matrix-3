@@ -1111,3 +1111,9 @@
 - Broken/disconnected routes do not dispatch. V1 intentionally excludes switches, intersections policy, multiple carts, signals, offline simulation and polished cart art/motion.
 - Fixed free-build completion messaging so material-free rail/endpoints no longer dereference a null resource while reporting successful placement.
 - Runtime acceptance required before expanding rail logistics.
+
+
+2026-09-24 - Settlement RTS uses full proven palette entrypoint
+- Corrected settlement lifecycle startup to call ConstructionPaletteOverlay.show(), not only ConstructionPlacementController.beginPaletteSession().
+- This reuses the complete existing RTS startup path including palette input-listener and timer setup.
+- Settlement exit uses the matching palette hide path, with direct camera exit only as a fallback.
