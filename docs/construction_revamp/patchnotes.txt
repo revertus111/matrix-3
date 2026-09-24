@@ -1143,3 +1143,10 @@
 - Same-axis route extension therefore connects cleanly to existing track while preserving the accepted straight/curve visuals and persistent topology.
 - A conflicting rail visual on the exact same tile is deliberately not overwritten. The server reports that a junction/switch visual is required rather than creating a visually false branch/crossing.
 - T junctions, crossings and switch replacement remain gated on accepting the correct cache art/model. No fake overlay junction was introduced.
+
+
+2026-09-24 - Decouple always-on settlement RTS from build palette
+- Settlement lifecycle now starts the existing RTS camera directly without opening ConstructionPaletteOverlay.
+- Added explicit settlement camera ownership state exposed to the placement controller.
+- Closing the build palette no longer exits the camera while settlement RTS owns it.
+- Leaving the settlement still clears settlement ownership and exits RTS back to vanilla camera.
