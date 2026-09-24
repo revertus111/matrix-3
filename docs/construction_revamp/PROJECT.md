@@ -1288,7 +1288,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Custom Construction Palette + Preview Foundation + Build Camera + Radial Worker Selection RWS-4 layered GFX 4171 worker-ring styling (IMPLEMENTED / NEEDS RUNTIME TEST). RWS-2 drag geometry and RWS-3 worker detection are RUNTIME VERIFIED. The user-prioritized rail slice is now wired into the player-facing Construction palette: Rails -> Rail route reuses RailRoutePreview V2 A-to-B drag/auto-tiling and release queues stable server-authoritative settlementbuild pieces for straight 46353 plus accepted curve 46377/46379/46381 (IMPLEMENTED / NEEDS RUNTIME TEST). Side tooling remains Matrix3 Asset Studio v1 + paired evidence capture + docked Rail Classifier + Object Explorer/Rail Layout Lab. Object Explorer broadens research beyond rails and can test two stock models visually composited on one logical tile; normal scene-slot constraints remain unchanged.
 
-**Next checklist item:** Worker Needs HUD visual acceptance: Con Revamp -> Worker Needs -> Enable Needs HUD Preview. Confirm every active Settler receives three concentric 4171 rings; adjust demo Hunger/Thirst/Energy and ring scales live until the layout is readable alongside selection rings. Verify Hunger trends orange->red toward 80, Thirst cyan->red toward 80, and Energy yellow->red as it falls toward 20. This is visual-only/demo data; after acceptance, add a clean server->client per-worker needs sync seam. Then resume the Rail Logistics V1 runtime gate.
+**Next checklist item:** Rail Auto-Connect V1 runtime gate: extend an existing same-axis straight by overlapping its end tile, then join two existing authored routes with an A->B path containing one accepted curve. Verify no duplicate/occupied failure, correct existing straight/curve visuals, one persistent topology after re-entry, and explicit rejection rather than fake art when attempting a perpendicular same-tile branch. Proper T/cross/switch visuals remain gated on accepting the correct cache asset. Cart topology detection is runtime verified; cart traversal still needs Rail Cart Movement V2 after topology/visual ownership is settled.
 
 **Files/systems already inspected:**
 
@@ -1411,3 +1411,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Runtime cart: SettlementRailCartNpc is transient and follows the derived rail tiles. It is never serialized and is destroyed with the SettlementInstance.
 - V1 payload proof: requires at least 1 stored Wood; arrival round-trips that Wood through SettlementState and reports success without changing the stored total. This proves physical logistics before machine-local inventories/processing outputs are introduced.
 - Intentionally deferred: final cart model, endpoint art, local machine inventories, switches/intersection policy, multiple carts, signals, offline rail simulation, acceleration/curve animation polish.
+
+
+## Rail Auto-Connect V1 handoff — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Existing identical rail tiles are valid A/B connection anchors. Placement is idempotent: the persistent existing piece remains authoritative and no duplicate XP/material transaction occurs.
+- Same-axis extension and joining authored routes through the accepted A->B straight/three-piece-curve router can now share an existing endpoint without the prior occupied-slot failure.
+- Conflicting same-tile rail visuals are intentionally rejected rather than silently replacing/overlaying them. Proper T junction, crossing and switch visuals require accepted cache art before branch auto-tiling can be enabled.
+- Rail topology remains derived from persistent SettlementState pieces; no second topology owner was added.
