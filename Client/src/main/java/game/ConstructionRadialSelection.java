@@ -56,10 +56,14 @@ public final class ConstructionRadialSelection {
     private static final int THIRST_BASE_RGB = 0x00BFFF;
     private static final int ENERGY_BASE_RGB = 0xFFD700;
     private static final int CRITICAL_NEED_RGB = 0xFF2020;
+    private static final float NEED_ARC_SLOT_DEGREES = 100.0F;
+    private static final float HUNGER_ARC_CENTER_DEGREES = 30.0F;
+    private static final float THIRST_ARC_CENTER_DEGREES = 150.0F;
+    private static final float ENERGY_ARC_CENTER_DEGREES = 270.0F;
     private static final float RETICULE_RING_FALLBACK_FRACTION = 0.80F;
     private static final float MIN_RADIUS_TILES = 0.0F;
     private static final float MAX_RADIUS_TILES = 64.0F;
-    private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x8000 | 0x5;
+    private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x8000 | 0x100 | 0x5;
     private static final long HOVER_STALE_MS = 1250L;
     private static final int MIN_SELECTION_DRAG_PIXELS = 6;
     private static final int STARTER_TREE_OBJECT_ID = 1276;
@@ -131,9 +135,8 @@ public final class ConstructionRadialSelection {
     private static volatile int demoHunger = 65;
     private static volatile int demoThirst = 35;
     private static volatile int demoEnergy = 70;
-    private static volatile int hungerRingScalePercent = 125;
-    private static volatile int thirstRingScalePercent = 95;
-    private static volatile int energyRingScalePercent = 65;
+    private static volatile int needsArcScalePercent = 95;
+    private static volatile String needsArcMaskState = "not rendered";
 
     private static boolean inputListenerInstalled;
 
@@ -276,20 +279,23 @@ public final class ConstructionRadialSelection {
         lastRenderedCycle = Integer.MIN_VALUE;
     }
 
-    public static void setWorkerNeedsPreviewScales(int hungerScale, int thirstScale, int energyScale) {
-        hungerRingScalePercent = clampWorkerRingScale(hungerScale);
-        thirstRingScalePercent = clampWorkerRingScale(thirstScale);
-        energyRingScalePercent = clampWorkerRingScale(energyScale);
+    public static void setWorkerNeedsArcScalePercent(int percent) {
+        needsArcScalePercent = clampWorkerRingScale(percent);
         lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    public static int getWorkerNeedsArcScalePercent() {
+        return needsArcScalePercent;
     }
 
     public static String getWorkerNeedsPreviewStatus() {
         return "Needs HUD " + (workerNeedsPreviewEnabled ? "ON" : "OFF")
-                + " | DEMO ONLY"
-                + " | Hunger=" + demoHunger + "/100 @" + hungerRingScalePercent + "%"
-                + " | Thirst=" + demoThirst + "/100 @" + thirstRingScalePercent + "%"
-                + " | Energy=" + demoEnergy + "/100 @" + energyRingScalePercent + "%"
-                + " | colors: hunger orange->red, thirst cyan->red, energy yellow->red";
+                + " | DEMO ONLY | ARCS"
+                + " | Hunger=" + demoHunger + "/100"
+                + " | Thirst=" + demoThirst + "/100"
+                + " | Energy=" + demoEnergy + "/100"
+                + " | sharedScale=" + needsArcScalePercent + "%"
+                + " | mask=" + needsArcMaskState;
     }
 
     public static void setWorkerControlEnabled(boolean enabled) {
@@ -749,6 +755,10 @@ public final class ConstructionRadialSelection {
         int energyRgb = needSeverityColor(
                 ENERGY_BASE_RGB, (100 - demoEnergy) / 80.0F);
 
+        float hungerWellbeing = (100 - demoHunger) / 100.0F;
+        float thirstWellbeing = (100 - demoThirst) / 100.0F;
+        float energyWellbeing = demoEnergy / 100.0F;
+
         int rendered = 0;
         for (int i = 0; i < activeCount; i++) {
             int npcIndex = client.anIntArray8626[i];
@@ -771,16 +781,25 @@ public final class ConstructionRadialSelection {
             int sceneZ = Math.round(position.aFloat2657);
             int sceneY = ground.method2718(sceneX, sceneZ, 0);
 
-            renderWorkerRingLayer(
+            boolean hungerArc = renderWorkerArcLayer(
                     definition, renderer, sceneX, sceneY, sceneZ,
-                    hungerRingScalePercent, hungerRgb);
-            renderWorkerRingLayer(
+                    needsArcScalePercent, hungerRgb,
+                    HUNGER_ARC_CENTER_DEGREES,
+                    NEED_ARC_SLOT_DEGREES * hungerWellbeing);
+            boolean thirstArc = renderWorkerArcLayer(
                     definition, renderer, sceneX, sceneY, sceneZ,
-                    thirstRingScalePercent, thirstRgb);
-            renderWorkerRingLayer(
+                    needsArcScalePercent, thirstRgb,
+                    THIRST_ARC_CENTER_DEGREES,
+                    NEED_ARC_SLOT_DEGREES * thirstWellbeing);
+            boolean energyArc = renderWorkerArcLayer(
                     definition, renderer, sceneX, sceneY, sceneZ,
-                    energyRingScalePercent, energyRgb);
-            rendered++;
+                    needsArcScalePercent, energyRgb,
+                    ENERGY_ARC_CENTER_DEGREES,
+                    NEED_ARC_SLOT_DEGREES * energyWellbeing);
+
+            if (hungerArc || thirstArc || energyArc) {
+                rendered++;
+            }
         }
         return rendered;
     }
@@ -883,6 +902,160 @@ public final class ConstructionRadialSelection {
                 markerDefinition, renderer, markerSceneX, markerSceneY, markerSceneZ,
                 workerInnerRingScalePercent, workerInnerRingRgb);
         return true;
+    }
+
+    private static boolean renderWorkerArcLayer(GraphicsDefinition definition, Class106 renderer,
+            int sceneX, int sceneY, int sceneZ, int scalePercent, int rgb,
+            float centerDegrees, float visibleSpanDegrees) {
+        if (visibleSpanDegrees <= 0.5F) {
+            return false;
+        }
+
+        Model marker = definition.method7764(
+                renderer, MODEL_FLAGS, 0, 0, 0, 0, null, (byte) 2, 1913622280);
+        if (marker == null) {
+            needsArcMaskState = "model-null";
+            return false;
+        }
+
+        int minX = marker.method1380();
+        int maxX = marker.method1381();
+        int minZ = marker.method1384();
+        int maxZ = marker.method1508();
+        int markerCenterX = (minX + maxX) / 2;
+        int markerCenterZ = (minZ + maxZ) / 2;
+        if (markerCenterX != 0 || markerCenterZ != 0) {
+            marker.method1358(-markerCenterX, 0, -markerCenterZ);
+        }
+
+        int runtimeScale = Math.max(1,
+                Math.round(BASE_MODEL_SCALE * (clampWorkerRingScale(scalePercent) / 100.0F)));
+        marker.method1464(runtimeScale, BASE_MODEL_SCALE, runtimeScale);
+        applyRingTint(marker, rgb);
+
+        if (!maskOpenGlModelToArc(marker, centerDegrees, visibleSpanDegrees)) {
+            needsArcMaskState = marker.getClass().getSimpleName() + " unsupported";
+            return false;
+        }
+
+        TRANSFORM.method3588(sceneX, sceneY, sceneZ);
+        marker.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        needsArcMaskState = "OpenGL face-alpha arc";
+        return true;
+    }
+
+    /**
+     * Cuts an isolated GFX 4171 OpenGL clone into one angular arch.
+     *
+     * OpenGL faces reference duplicated render vertices. anIntArray10329 /
+     * aShortArray10330 provide the original-vertex -> render-vertex mapping, so
+     * invert it once per tiny clone and classify each face by the X/Z centroid
+     * of its original model vertices. Faces outside the requested angular span
+     * are made fully transparent through Model.method1473(...).
+     *
+     * MODEL_FLAGS includes 0x100 so face alpha is isolated on the clone.
+     */
+    private static boolean maskOpenGlModelToArc(
+            Model model, float centerDegrees, float visibleSpanDegrees) {
+        if (!(model instanceof OpenGLModel)) {
+            return false;
+        }
+
+        OpenGLModel gl = (OpenGLModel) model;
+        if (gl.anInt10299 <= 0 || gl.anInt10291 <= 0 || gl.anInt10285 <= 0
+                || gl.aShortArray10303 == null || gl.aShortArray10327 == null
+                || gl.aShortArray10305 == null || gl.anIntArray10329 == null
+                || gl.aShortArray10330 == null || gl.anIntArray10336 == null
+                || gl.anIntArray10331 == null) {
+            return false;
+        }
+
+        int[] originalByRenderVertex = new int[gl.anInt10291];
+        java.util.Arrays.fill(originalByRenderVertex, -1);
+
+        int originalVertexCount = Math.min(gl.anInt10285, gl.anIntArray10329.length - 1);
+        for (int originalVertex = 0; originalVertex < originalVertexCount; originalVertex++) {
+            int start = gl.anIntArray10329[originalVertex];
+            int end = gl.anIntArray10329[originalVertex + 1];
+            start = Math.max(0, Math.min(start, gl.aShortArray10330.length));
+            end = Math.max(start, Math.min(end, gl.aShortArray10330.length));
+
+            for (int index = start; index < end; index++) {
+                int encoded = gl.aShortArray10330[index] & 0xffff;
+                if (encoded == 0) {
+                    break;
+                }
+                int renderVertex = encoded - 1;
+                if (renderVertex >= 0 && renderVertex < originalByRenderVertex.length) {
+                    originalByRenderVertex[renderVertex] = originalVertex;
+                }
+            }
+        }
+
+        int faceCount = Math.min(gl.anInt10299,
+                Math.min(gl.aShortArray10303.length,
+                        Math.min(gl.aShortArray10327.length, gl.aShortArray10305.length)));
+        byte[] sourceAlpha = model.method1392();
+        byte[] arcAlpha = new byte[gl.anInt10299];
+        if (sourceAlpha != null) {
+            System.arraycopy(sourceAlpha, 0, arcAlpha, 0,
+                    Math.min(sourceAlpha.length, arcAlpha.length));
+        }
+
+        float halfSpan = Math.max(0.0F, Math.min(180.0F, visibleSpanDegrees * 0.5F));
+        for (int face = 0; face < faceCount; face++) {
+            int renderA = gl.aShortArray10303[face] & 0xffff;
+            int renderB = gl.aShortArray10327[face] & 0xffff;
+            int renderC = gl.aShortArray10305[face] & 0xffff;
+            if (renderA >= originalByRenderVertex.length
+                    || renderB >= originalByRenderVertex.length
+                    || renderC >= originalByRenderVertex.length) {
+                arcAlpha[face] = (byte) 255;
+                continue;
+            }
+
+            int originalA = originalByRenderVertex[renderA];
+            int originalB = originalByRenderVertex[renderB];
+            int originalC = originalByRenderVertex[renderC];
+            if (originalA < 0 || originalB < 0 || originalC < 0
+                    || originalA >= gl.anIntArray10336.length
+                    || originalB >= gl.anIntArray10336.length
+                    || originalC >= gl.anIntArray10336.length
+                    || originalA >= gl.anIntArray10331.length
+                    || originalB >= gl.anIntArray10331.length
+                    || originalC >= gl.anIntArray10331.length) {
+                arcAlpha[face] = (byte) 255;
+                continue;
+            }
+
+            float x = (gl.anIntArray10336[originalA]
+                    + gl.anIntArray10336[originalB]
+                    + gl.anIntArray10336[originalC]) / 3.0F;
+            float z = (gl.anIntArray10331[originalA]
+                    + gl.anIntArray10331[originalB]
+                    + gl.anIntArray10331[originalC]) / 3.0F;
+
+            float angle = (float) Math.toDegrees(Math.atan2(z, x));
+            if (angle < 0.0F) {
+                angle += 360.0F;
+            }
+
+            float delta = Math.abs(angle - normalizeDegrees(centerDegrees));
+            if (delta > 180.0F) {
+                delta = 360.0F - delta;
+            }
+            if (delta > halfSpan) {
+                arcAlpha[face] = (byte) 255;
+            }
+        }
+
+        model.method1473((byte) 0, arcAlpha);
+        return true;
+    }
+
+    private static float normalizeDegrees(float degrees) {
+        float normalized = degrees % 360.0F;
+        return normalized < 0.0F ? normalized + 360.0F : normalized;
     }
 
     private static void renderWorkerRingLayer(GraphicsDefinition definition, Class106 renderer,
