@@ -96,6 +96,10 @@ public final class ConstructionBuildCamera {
         return active;
     }
 
+    public static boolean isSettlementAutoMode() {
+        return settlementAutoMode;
+    }
+
     public static CameraMode getMode() {
         return cameraMode;
     }
