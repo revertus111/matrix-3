@@ -28,6 +28,7 @@ final class LiveModelEditorParts {
     private final List<PartState> duplicates = new ArrayList<PartState>();
     private final ArrayDeque<Snapshot> undo = new ArrayDeque<Snapshot>();
     private int selected = -1;
+    private int hovered = -1;
     private boolean isolate;
     private int revision;
 
@@ -40,6 +41,7 @@ final class LiveModelEditorParts {
         duplicates.clear();
         undo.clear();
         selected = -1;
+        hovered = -1;
         isolate = false;
         revision++;
         if (loaded == null) return 0;
@@ -53,6 +55,7 @@ final class LiveModelEditorParts {
         duplicates.clear();
         undo.clear();
         selected = -1;
+        hovered = -1;
         isolate = false;
         revision++;
     }
@@ -64,7 +67,16 @@ final class LiveModelEditorParts {
     synchronized int getRevision() { return revision; }
     synchronized int getPartCount() { return originals.size() + duplicates.size(); }
     synchronized int getSelected() { return selected; }
+    synchronized int getHovered() { return hovered; }
     synchronized boolean isIsolate() { return isolate; }
+
+    synchronized boolean hover(int index) {
+        int next = index >= 0 && index < getPartCount() ? index : -1;
+        if (hovered == next) return false;
+        hovered = next;
+        revision++;
+        return true;
+    }
 
     synchronized String[] getLabels() {
         if (source == null) return new String[0];
@@ -193,16 +205,17 @@ final class LiveModelEditorParts {
         Class159 raw = source.decode();
         if (raw == null) return null;
         ensureFaceAlpha(raw);
+        int highlight = hovered >= 0 ? hovered : selected;
         for (int i = 0; i < originals.size(); i++) {
             PartState state = originals.get(i);
             Component component = source.components[state.sourcePart];
-            boolean visible = !state.hidden && !state.deleted && (!isolate || selected == i);
+            boolean visible = !state.hidden && !state.deleted && (!isolate || highlight == i);
             if (!visible) {
                 hideFaces(raw, component);
                 continue;
             }
             transformVertices(raw, component, state);
-            if (selected == i) highlightFaces(raw, component);
+            if (highlight == i) highlightFaces(raw, component);
         }
         return raw;
     }
@@ -210,10 +223,11 @@ final class LiveModelEditorParts {
     synchronized List<Class159> buildDuplicateRaws() {
         if (source == null || duplicates.isEmpty()) return Collections.emptyList();
         List<Class159> raws = new ArrayList<Class159>();
+        int highlight = hovered >= 0 ? hovered : selected;
         for (int i = 0; i < duplicates.size(); i++) {
             int combinedIndex = originals.size() + i;
             PartState state = duplicates.get(i);
-            if (state.hidden || state.deleted || (isolate && selected != combinedIndex)) continue;
+            if (state.hidden || state.deleted || (isolate && highlight != combinedIndex)) continue;
             Class159 raw = source.decode();
             if (raw == null) continue;
             ensureFaceAlpha(raw);
@@ -221,7 +235,7 @@ final class LiveModelEditorParts {
             for (int part = 0; part < source.components.length; part++)
                 if (part != state.sourcePart) hideFaces(raw, source.components[part]);
             transformVertices(raw, keep, state);
-            if (selected == combinedIndex) highlightFaces(raw, keep);
+            if (highlight == combinedIndex) highlightFaces(raw, keep);
             raws.add(raw);
         }
         return raws;
@@ -276,6 +290,7 @@ final class LiveModelEditorParts {
         }
         selected = readInt(json, "partSelected", -1);
         if (selected < -1 || selected >= getPartCount()) selected = -1;
+        hovered = -1;
         isolate = readBoolean(json, "partIsolate", false);
         revision++;
     }
