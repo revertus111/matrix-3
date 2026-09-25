@@ -569,27 +569,22 @@ public final class RailRoutePreview {
             return;
         }
 
-        int startX;
-        int startY;
-        int endX;
-        int endY;
-        int plane;
-
-        if (dragging) {
-            startX = liveStartX;
-            startY = liveStartY;
-            endX = liveEndX;
-            endY = liveEndY;
-            plane = livePlane;
-        } else if (committed) {
-            startX = committedStartX;
-            startY = committedStartY;
-            endX = committedEndX;
-            endY = committedEndY;
-            plane = committedPlane;
-        } else {
+        /*
+         * Rail Network V1 only renders a client ghost while the mouse gesture
+         * is active. Once released, the persistent server-owned world objects
+         * are the sole visual authority; retaining the old A->B committed
+         * preview creates detached/duplicate rails after a commit.
+         */
+        if (!dragging) {
+            renderState = "idle - server rail visuals";
             return;
         }
+
+        int startX = liveStartX;
+        int startY = liveStartY;
+        int endX = liveEndX;
+        int endY = liveEndY;
+        int plane = livePlane;
 
         Class613 region = client.aClass613_8605;
         if (region == null || region.method7285(0) != scene) {
@@ -609,49 +604,19 @@ public final class RailRoutePreview {
             return;
         }
 
-        ObjectDefinitions definition =
-                (ObjectDefinitions) definitions.getDefinition(objectId, -1356282071);
-        if (definition == null) {
-            renderState = "UNKNOWN straight object id " + objectId;
-            return;
-        }
+        java.util.LinkedHashSet<String> previewNetwork =
+                new java.util.LinkedHashSet<String>(logicalNetwork);
+        java.util.LinkedHashSet<String> previewConnections =
+                new java.util.LinkedHashSet<String>(logicalConnections);
+        addDragPathToTopology(previewNetwork, previewConnections, liveDragPath);
+        int rendered = renderResolvedNetwork(
+                scene, renderer, sceneBase, definitions, previewNetwork, previewConnections);
 
-        ObjectDefinitions curveDefinition = curveObjectId < 0 ? null
-                : (ObjectDefinitions) definitions.getDefinition(curveObjectId, -1356282071);
-
-        int rendered;
-        if (dragging && !liveDragPath.isEmpty()) {
-            /*
-             * Preview is a read-only snapshot. The render thread must never
-             * temporarily mutate the authoritative logical graph because mouse
-             * release/commit runs on AWT and can race the scene render.
-             */
-            java.util.LinkedHashSet<String> previewNetwork =
-                    new java.util.LinkedHashSet<String>(logicalNetwork);
-            java.util.LinkedHashSet<String> previewConnections =
-                    new java.util.LinkedHashSet<String>(logicalConnections);
-            addDragPathToTopology(previewNetwork, previewConnections, liveDragPath);
-            rendered = renderResolvedNetwork(
-                    scene, renderer, sceneBase, definitions, previewNetwork, previewConnections);
-        } else if (routeOrder == RouteOrder.Y_THEN_X) {
-            rendered = renderYThenX(scene, renderer, sceneBase, definitions,
-                    definition, curveDefinition, startX, startY, endX, endY, plane);
-        } else {
-            rendered = renderXThenY(scene, renderer, sceneBase, definitions,
-                    definition, curveDefinition, startX, startY, endX, endY, plane);
-        }
-
-        int requested = routeTileCount(startX, startY, endX, endY);
-        boolean hasCorner = startX != endX && startY != endY;
-        renderState = "DRAW " + rendered + "/" + requested + " tile(s)"
-                + (requested > MAX_GESTURE_TILES ? " [capped " + MAX_GESTURE_TILES + "]" : "")
-                + (hasCorner
-                        ? (curveComposite != null
-                                ? " V2 multi-tile curve=" + curveComposite.getName()
-                                : (curveDefinition != null
-                                        ? " V2 single-curve fallback"
-                                        : " V2 curve missing -> straight fallback"))
-                        : " straight route");
+        int requested = liveDragPath.size();
+        renderState = "DRAW " + rendered + " resolved piece(s) from "
+                + requested + " sampled gesture tile(s)"
+                + (requested >= MAX_GESTURE_TILES ? " [gesture cap " + MAX_GESTURE_TILES + "]" : "")
+                + " snapshot-preview";
     }
 
     private static int renderResolvedNetwork(Class523 scene, Class106 renderer,
