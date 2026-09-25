@@ -968,3 +968,9 @@ Rail preview/persistence parity gate (2026-09-25)
 - Clear all builds and draw one long route containing straights plus several 90-degree curves.
 - Before release, note the complete preview. Release once and confirm the persisted world contains the same straight and curve physical pieces; straight runs must not disappear while curves remain.
 - Do not add a second route for this gate: first-placement preview -> release parity must pass independently.
+
+
+Rail runtime debug-log gate (2026-09-25)
+- Reproduce any preview/persistence or curve-orientation failure, then inspect Client/data/construction/rail_runtime_debug.txt.
+- Confirm each mouse-release commit appends a separator plus operation id, logical/physical counts, live gesture path and detailed resolved PIECE entries.
+- For debugging, reproduce from Clear Builds through the first bad commit and provide the complete rail_runtime_debug.txt without manually transcribing IDs/rotations.
