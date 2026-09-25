@@ -12,6 +12,7 @@ import com.alex.store.ReferenceTable;
 import com.alex.store.Store;
 import com.rs.cache.Cache;
 import com.rs.cache.loaders.ItemDefinitions;
+import com.rs.cache.loaders.ObjectDefinitions;
 
 public final class CacheSession {
 
@@ -30,6 +31,7 @@ public final class CacheSession {
 		this.store = new Store(this.cacheDirectory.getAbsolutePath() + File.separator);
 		Cache.STORE = store;
 		ItemDefinitions.clearItemsDefinitions();
+		ObjectDefinitions.clearObjectDefinitions();
 	}
 
 	public File getCacheDirectory() {
@@ -60,6 +62,12 @@ public final class CacheSession {
 		if (modelId < 0)
 			throw new IllegalArgumentException("Model id must be zero or greater.");
 		return readFile(MODEL_INDEX, modelId, 0);
+	}
+
+	public ObjectDefinitions getObjectDefinition(int objectId) {
+		if (objectId < 0)
+			throw new IllegalArgumentException("Object id must be zero or greater.");
+		return ObjectDefinitions.getObjectDefinitions(objectId);
 	}
 
 	public boolean isWriteEnabled() {

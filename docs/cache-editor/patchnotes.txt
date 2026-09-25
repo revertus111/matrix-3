@@ -38,3 +38,10 @@
 - Added orbit, pan, wheel zoom, reset view, flat face-colour lighting, textured-face identification, and wireframe preview controls.
 - Added raw model export plus Wavefront OBJ/MTL export; OBJ preserves model geometry and RuneScape face-colour materials and records source texture ids as comments.
 - Kept texture image decoding/rendering and model mutation out of this slice; both remain follow-up work after runtime verification of the standalone geometry boundary.
+
+2026-09-25
+- Enabled the CacheEditor Objects section for direct object-definition inspection.
+- Added Object ID / exact-name lookup plus Previous/Next object navigation.
+- Object Browser now exposes name, id, size, animation, clipping, interaction options, and all referenced model-id groups from Matrix3 ObjectDefinitions.
+- Added per-model buttons that copy referenced model IDs for immediate use in Assets > Models, removing the object-id/model-id ambiguity during asset investigation.
+- Reused Matrix3 ObjectDefinitions and the shared CacheSession; no second object-definition decoder was introduced.

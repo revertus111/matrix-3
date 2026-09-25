@@ -35,3 +35,9 @@ RS3 CacheEditor foundation test list
 [ ] Models: Export OBJ and confirm both .obj and sibling .mtl are created and open successfully in Blender or another Wavefront viewer.
 [ ] Models: inspect the OBJ for a textured model and confirm rs_texture_id comments are present on textured faces.
 [ ] Regression: Raw Cache and Items still open and behave as before; Model Viewer must not require a running game client renderer.
+
+[ ] Objects: open Definitions > Objects and load object 29394; confirm the displayed name is Smelter and the model reference groups populate.
+[ ] Objects: use Prev/Next and confirm the object ID/search field and definition details update together.
+[ ] Objects: load a known object by exact name and confirm it resolves without entering a numeric ID.
+[ ] Objects: click each referenced Model button for object 29394 and confirm its model ID is copied for use in Assets > Models.
+[ ] Objects regression: Items, Models, and Raw Cache continue to open normally.
