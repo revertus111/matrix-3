@@ -1011,3 +1011,10 @@ Rail authored-edge + capacity runtime gate (2026-09-25)
 - Start from the middle of an existing rail and deliberately drag outward; that authored branch must connect.
 - Continue building until the logical/physical network exceeds 64 pieces; no track may disappear or truncate at piece 64.
 - Keep Build Palette Debug OFF for the normal pass. If any geometry changes unexpectedly, enable Debug, reproduce once, and provide the matching PNG + rail_runtime_debug.txt.
+
+
+Rail debug export-path gate (2026-09-25)
+- Select Rail route and click the existing Build Palette Dbg OFF button; it must visibly change to Dbg ON.
+- Confirm Client/data/construction exists immediately after enabling, with rail_debug/ created before any rail commit.
+- Commit one rail gesture and confirm rail_runtime_debug.txt plus rail_debug/rail_XXXX.png are written under the same Client/data/construction root.
+- Toggle Dbg OFF, commit another rail gesture, and confirm neither file receives a new diagnostic operation.
