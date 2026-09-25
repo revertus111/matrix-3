@@ -1370,3 +1370,9 @@
 - Subsequent extend/turn/branch commits now diff the previous and resolved physical networks by world tile/plane/object type and send only changed rail pieces to the server.
 - Server staged rail replacement now accepts add-only and remove-only deltas, allowing a straight extension to persist without requiring an old piece to be destructively replaced.
 - Existing physical rails that did not change are left untouched; corner conversions replace only the affected straight/curve footprint.
+
+
+2026-09-25 - Rail Network V1 gesture routing + cart-direction foundation
+- Replaced prototype Point A -> Point B Manhattan commit routing with ordered cardinal tile sampling while Left is held. Turns are now authored by the mouse gesture instead of X_THEN_Y/Y_THEN_X endpoint recomputation.
+- Live rail preview now resolves the sampled gesture through the same logical topology/physical resolver used at commit time.
+- Rail topology remains direction-neutral for placement, but the ordered sampled path is preserved during the gesture as the foundation for directed cart traversal. Cart movement must use an explicit directed route/edge choice at runtime rather than infer travel direction from rail object rotation; junction direction will be chosen by the cart/router, not baked into track geometry.
