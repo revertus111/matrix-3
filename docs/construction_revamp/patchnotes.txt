@@ -1419,3 +1419,11 @@
 - Every committed rail gesture now appends a diagnostic block to Client/data/construction/rail_runtime_debug.txt.
 - Log captures operation/time, current event/render state, logical tile count, old/new resolved physical counts, ordered sampled gesture tiles, and the existing detailed rail debug report/piece list.
 - Logging is append-only so multiple failing commits can be reproduced in one session and uploaded as a single text artifact.
+
+
+2026-09-25 - Construction Development tab cleanup
+- Rebuilt ConstructionRevampTestPanel around active live-development controls instead of completed bundle test harnesses.
+- Removed obsolete UI for storage prime/self-test, Object Probe fallback actions, drag-button selection, duplicate Clear Selection, RWS-4 ring styling, needs mutation tests, standalone progression and Bundle 2.3 housing verification.
+- Consolidated worker controls into accepted LMB selection, selected-worker commands and inspection-only diagnostics.
+- Kept Storage status/reset, Needs HUD demo controls and Asset Studio because they remain useful to active development.
+- No settlement/server command or gameplay logic was removed.

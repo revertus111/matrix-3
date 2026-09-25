@@ -974,3 +974,12 @@ Rail runtime debug-log gate (2026-09-25)
 - Reproduce any preview/persistence or curve-orientation failure, then inspect Client/data/construction/rail_runtime_debug.txt.
 - Confirm each mouse-release commit appends a separator plus operation id, logical/physical counts, live gesture path and detailed resolved PIECE entries.
 - For debugging, reproduce from Clear Builds through the first bad commit and provide the complete rail_runtime_debug.txt without manually transcribing IDs/rotations.
+
+
+Construction Development tab cleanup — IMPLEMENTED / NEEDS UI SMOKE TEST (2026-09-25)
+[x] Source: tab contains only Settlement, Worker Control, Selected Worker Commands, Worker Diagnostics, Storage, Needs HUD Debug, Development Tools and Output cards.
+[x] Source: Worker Control enable forces the accepted LEFT drag mode; no drag-button chooser remains.
+[x] Source: Clear Selection button removed from panel; world right-click Clear Selection remains the accepted deselection path.
+[x] Source: completed storage/housing/ring-style/progression regression controls were removed from the panel only; server command handlers were not deleted.
+[ ] UI smoke: open Client Console -> Con Revamp and confirm the compact card order/layout fits normally with vertical scrolling.
+[ ] UI smoke: Enter/Exit/Status/Build Palette, Worker Control, selected-worker commands, diagnostics, Storage, Needs HUD and Asset Studio buttons still respond.

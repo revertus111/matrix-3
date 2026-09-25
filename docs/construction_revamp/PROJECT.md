@@ -1554,3 +1554,12 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Object/NPC skilling actions and Clear Selection behavior are unchanged.
 - Runtime VERIFIED: user confirmed the complete Bundle 2.4 interaction gate works, including drag selection without release movement, single-click no-move behavior, double-click movement, self+worker movement, vanilla resource commands, Clear Selection, and transient selection lifecycle.
 - Resume Here: Bundle 2.4 is DONE. Do not retest or reopen it without new regression evidence. Return to the canonical active main-goal row: Population, processing and logistics expansion; next implementation focus is Phase 3 processing chains + better materials.
+
+
+## Construction Development tab cleanup — 2026-09-25
+- IMPLEMENTED / NEEDS UI SMOKE TEST under approved AAA.
+- ConstructionRevampTestPanel is now a focused live-development panel instead of a completed-bundle regression archive.
+- Kept: settlement enter/exit/status/palette, Worker Control status/enable/disable, selected-worker role/pause/jobs commands, Worker diagnostics, Storage status/reset, Needs HUD demo controls, Asset Studio and output.
+- Removed from the tab only: storage prime/self-test, Object Probe fallback buttons, drag-button chooser, duplicate Clear Selection button, RWS-4 ring-style controls, needs mutation test buttons, standalone progression card, Bundle 2.3 housing test card and completed-phase explanatory clutter.
+- No server commands or gameplay owners were deleted. Completed regression commands remain callable through the existing command bridge if future evidence requires them.
+- Resume Here: UI smoke-test the cleaned Con Revamp tab once; then continue Phase 3 processing chains + better materials.
