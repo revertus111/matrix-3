@@ -424,8 +424,7 @@ final class LiveModelEditorParts {
     }
 
     private Source loadSource(ObjectDefinitions definition, int objectId, int objectType) {
-        if (definition == null || definition.aByteArray5644 == null
-                || definition.anIntArrayArray5611 == null) return null;
+        if (definition == null || definition.anIntArrayArray5611 == null) return null;
         int group = findModelGroup(definition, objectType);
         if (group < 0) return null;
 
@@ -444,8 +443,12 @@ final class LiveModelEditorParts {
     }
 
     private static int findModelGroup(ObjectDefinitions definition, int objectType) {
-        if (definition == null || definition.aByteArray5644 == null
-                || definition.anIntArrayArray5611 == null) return -1;
+        if (definition == null || definition.anIntArrayArray5611 == null) return -1;
+        if (definition.aByteArray5644 == null) {
+            return definition.anIntArrayArray5611.length > 0
+                    && definition.anIntArrayArray5611[0] != null
+                    && definition.anIntArrayArray5611[0].length > 0 ? 0 : -1;
+        }
         for (int i = 0; i < definition.aByteArray5644.length
                 && i < definition.anIntArrayArray5611.length; i++) {
             if ((definition.aByteArray5644[i] & 0xff) == objectType
