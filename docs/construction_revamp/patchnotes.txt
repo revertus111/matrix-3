@@ -1492,3 +1492,13 @@
 - Live slots: Rail, last selected non-rail Object, Eraser, Rotate +90, Undo. Junction/Crossing/Splitter/Favorites are visible reserved slots and perform no fake placement.
 - Hotbar follows palette show/hide lifecycle and mirrors selection/eraser state.
 - Normal Rail retains first-existing-contact clamp; special overlap semantics remain owned by future explicit rail tools.
+
+
+2026-09-25 - Phase 3 Bundle 3.2 physical Wooden workbench + Carpenter loop
+- Reused Matrix3's verified-static Wooden workbench asset 13704/type 10 as the first settlement WORKSTATION; no legacy POH behavior was transplanted.
+- Added normal persistent Wooden workbench placement for 5 Wood / 20 Construction XP and exposed it in Build Palette Furniture.
+- Added Process Wood Allowed Job, permanent Crafting worker skill and Carpenter preset.
+- Added one-worker-per-workstation runtime reservations plus storage -> workstation physical pathing and a 4-tick worker processing cycle.
+- Successful worker processing calls the existing atomic 2 Wood -> 1 Plank transaction, applies worker needs cost and awards 18 Crafting XP.
+- Pause, manual worker orders, critical needs, job disable and workstation removal release processing reservations without consuming materials.
+- Updated Con Revamp selected-worker controls with Process Wood and Carpenter. No unverified processing animation was added.

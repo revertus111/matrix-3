@@ -1048,3 +1048,23 @@ Construction Build Hotbar H1 — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-25)
 - Press/click 2 Junction, 3 Cross, 4 Splitter, 9 Favorites: only reserved status changes; no build/tool is falsely placed.
 - Close Build Palette: hotbar disappears and 1-9 are no longer consumed by Construction.
 - Rail regression: ordinary Rail still stops at first existing-rail contact; branch-from-middle remains available under current Rail Network V1 behavior.
+
+
+Phase 3 / Bundle 3.2 — Physical Workbench + Carpenter Worker (2026-09-25)
+[x] Source: Matrix3 Construction reference defines WOODEN_WORKBENCH as object 13704; settlement uses it as provisional verified-static workstation art without importing legacy POH behavior.
+[x] Source: wooden-workbench is a persistent WORKSTATION build piece, type 10, costing 5 Wood and awarding 20 Construction XP through normal placement.
+[x] Source: Build Palette exposes Wooden workbench and normal settlement placement key wooden-workbench.
+[x] Source: Process Wood is persistent Allowed Jobs policy and defaults OFF for existing/new workers until selected.
+[x] Source: Carpenter preset enables Process Wood only; client and server preset keys match.
+[x] Source: Crafting is permanent worker progression and Process Wood awards 18 Crafting XP only after successful processing.
+[x] Source: processing worker physically visits storage then the reserved live workbench before the atomic saw-planks transaction runs.
+[x] Source: one worker owns one workstation reservation at a time; Pause, manual move/gather, critical need, missing workstation and job disable clear the reservation.
+[ ] Runtime: Processing Self-Test reports PASS.
+[ ] Runtime: with >=5 Wood, place Wooden workbench from Build Palette -> Furniture; object 13704 appears and persists after exit/re-entry.
+[ ] Runtime: select one worker and apply Carpenter (or enable Process Wood only). Worker AI first moves to storage, then moves adjacent to Wooden workbench, then enters PROCESSING for the timed cycle.
+[ ] Runtime: each completed worker cycle changes storage by exactly Wood -2 / Planks +1 and awards Crafting XP; no unrelated resources change.
+[ ] Runtime: with insufficient Wood or full Plank storage, Carpenter waits/blocks without consuming Wood or awarding Crafting XP.
+[ ] Runtime: two Process Wood workers with one workbench do not occupy/process the same station simultaneously; the second waits or performs other allowed work.
+[ ] Runtime: Pause or manual RTS move during processing releases the workstation; Resume/policy later reacquires it cleanly.
+[ ] Runtime: removing the reserved workbench causes the worker to stop processing cleanly with no material loss.
+[ ] Runtime persistence: exit/re-enter preserves Wooden workbench, Planks amount, Process Wood policy and Crafting XP; processing can resume afterward.

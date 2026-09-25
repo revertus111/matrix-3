@@ -1595,3 +1595,18 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - This slice intentionally does NOT guess workstation art, worker processing AI, animations, or input/output object placement. The recipe/storage owner must pass first.
 - Runtime gate: Processing Self-Test PASS -> Prime 10 Wood -> Saw 1 Plank -> storage must read Wood=8 and Planks=1 -> repeat until Planks output is blocked by capacity without consuming Wood.
 - Resume Here: after Bundle 3.1 passes, select/verify a physical saw/crafting workstation asset and bind saw-planks to normal Construction placement + worker path/work cycle.
+
+
+## Phase 3 / Bundle 3.2 — Physical Wooden workbench + Carpenter worker loop — 2026-09-25
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Verified-static workstation art comes from Matrix3's existing Construction definitions: WOODEN_WORKBENCH object 13704. Settlement-native placement uses object type 10; no legacy POH runtime logic was transplanted.
+- Added persistent build definition wooden-workbench: WORKSTATION role, 13704/type 10, 5 Wood build cost, 20 base Construction XP.
+- Build Palette exposes Wooden workbench under Furniture and routes it through the normal server-authoritative settlement placement transaction.
+- Added persistent worker job Process Wood and permanent Crafting worker skill. Existing saved workers keep the new job OFF until explicitly enabled.
+- Added Carpenter convenience preset containing Process Wood only; presets remain rewrites of Allowed Jobs rather than fixed professions.
+- Runtime processing loop: eligible worker reserves one live Wooden workbench, physically routes to the existing storage access tile, then routes adjacent to that workbench, waits a 4-tick processing cycle, and executes the Bundle 3.1 atomic saw-planks transaction.
+- One workstation can be reserved by only one worker at a time. A removed/unavailable workstation, disabled Process Wood job, manual worker order, Pause, or critical need releases the reservation cleanly.
+- Successful worker processing applies the normal work-cycle need cost and awards 18 permanent Crafting XP. Failed atomic processing does not consume Wood or award XP.
+- No processing animation was guessed in this slice. Movement + station occupancy + timed work are authoritative; animation can be added only after a verified suitable cache animation is identified.
+- Combined runtime gate for Bundles 3.1/3.2: enter settlement -> Processing Self-Test PASS -> ensure at least 5 Wood -> place Wooden workbench -> prime/leave at least 2 Wood -> drag-select one worker -> Carpenter preset (or Process Wood ON) -> AI Status should show storage/workbench/processing progression -> storage changes by exactly 2 Wood / +1 Plank per completed cycle -> Crafting XP rises -> Pause/manual order/needs interruption releases the station -> exit/re-entry preserves workbench, Planks, job policy and Crafting XP.
+- Resume Here: runtime-test the combined processing vertical slice once. If accepted, Bundle 3.3 expands processing infrastructure/input-output rules instead of revisiting the core recipe/workbench path.
