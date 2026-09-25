@@ -40,7 +40,8 @@ public final class RailRoutePreview {
     private static final int MODEL_FLAGS = 2048;
     private static final int OBJECT_SIZE_X_DECODE = -876498849;
     private static final int OBJECT_SIZE_Y_DECODE = 1922784011;
-    private static final int MAX_ROUTE_TILES = 64;
+    private static final int MAX_GESTURE_TILES = 256;
+    private static final int MAX_NETWORK_PIECES = 4096;
     private static final long HOVER_STALE_MS = 1250L;
 
     private static final Class261 TRANSFORM = new Class261();
@@ -579,7 +580,7 @@ public final class RailRoutePreview {
         int requested = routeTileCount(startX, startY, endX, endY);
         boolean hasCorner = startX != endX && startY != endY;
         renderState = "DRAW " + rendered + "/" + requested + " tile(s)"
-                + (requested > MAX_ROUTE_TILES ? " [capped " + MAX_ROUTE_TILES + "]" : "")
+                + (requested > MAX_GESTURE_TILES ? " [capped " + MAX_GESTURE_TILES + "]" : "")
                 + (hasCorner
                         ? (curveComposite != null
                                 ? " V2 multi-tile curve=" + curveComposite.getName()
@@ -627,7 +628,7 @@ public final class RailRoutePreview {
                 endX, startY, horizontalNeighborDirection, verticalNeighborDirection);
 
         int x = startX;
-        while (x != endX && attempted < MAX_ROUTE_TILES) {
+        while (x != endX && attempted < MAX_GESTURE_TILES) {
             attempted++;
             if (!curveOccupies(curvePlacement, x, startY)
                     && renderPiece(scene, renderer, sceneBase, straightDefinition,
@@ -637,7 +638,7 @@ public final class RailRoutePreview {
             x += xStep;
         }
 
-        if (attempted >= MAX_ROUTE_TILES) {
+        if (attempted >= MAX_GESTURE_TILES) {
             return rendered;
         }
 
@@ -657,7 +658,7 @@ public final class RailRoutePreview {
         }
 
         int y = startY + yStep;
-        while (attempted < MAX_ROUTE_TILES) {
+        while (attempted < MAX_GESTURE_TILES) {
             attempted++;
             if (!curveOccupies(curvePlacement, endX, y)
                     && renderPiece(scene, renderer, sceneBase, straightDefinition,
@@ -695,7 +696,7 @@ public final class RailRoutePreview {
                 startX, endY, horizontalNeighborDirection, verticalNeighborDirection);
 
         int y = startY;
-        while (y != endY && attempted < MAX_ROUTE_TILES) {
+        while (y != endY && attempted < MAX_GESTURE_TILES) {
             attempted++;
             if (!curveOccupies(curvePlacement, startX, y)
                     && renderPiece(scene, renderer, sceneBase, straightDefinition,
@@ -705,7 +706,7 @@ public final class RailRoutePreview {
             y += yStep;
         }
 
-        if (attempted >= MAX_ROUTE_TILES) {
+        if (attempted >= MAX_GESTURE_TILES) {
             return rendered;
         }
 
@@ -725,7 +726,7 @@ public final class RailRoutePreview {
         }
 
         int x = startX + xStep;
-        while (attempted < MAX_ROUTE_TILES) {
+        while (attempted < MAX_GESTURE_TILES) {
             attempted++;
             if (!curveOccupies(curvePlacement, x, endY)
                     && renderPiece(scene, renderer, sceneBase, straightDefinition,
@@ -746,7 +747,7 @@ public final class RailRoutePreview {
         int attempted = 0;
         int step = Integer.compare(endX, startX);
         int x = startX;
-        while (attempted < MAX_ROUTE_TILES) {
+        while (attempted < MAX_GESTURE_TILES) {
             attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition,
                     objectType, x, y, plane, eastWestRotation())) {
@@ -766,7 +767,7 @@ public final class RailRoutePreview {
         int attempted = 0;
         int step = Integer.compare(endY, startY);
         int y = startY;
-        while (attempted < MAX_ROUTE_TILES) {
+        while (attempted < MAX_GESTURE_TILES) {
             attempted++;
             if (renderPiece(scene, renderer, sceneBase, definition,
                     objectType, x, y, plane, verticalRotation())) {
@@ -978,7 +979,7 @@ public final class RailRoutePreview {
 
         int destination = axis == 1 ? targetX : targetY;
         int cursor = axis == 1 ? x : y;
-        while (cursor != destination && liveDragPath.size() < MAX_ROUTE_TILES) {
+        while (cursor != destination && liveDragPath.size() < MAX_GESTURE_TILES) {
             cursor += Integer.compare(destination, cursor);
             if (axis == 1) x = cursor; else y = cursor;
             appendLiveDragTile(x, y);
@@ -1086,26 +1087,26 @@ public final class RailRoutePreview {
         int yStep = Integer.compare(endY, startY);
 
         if (routeOrder == RouteOrder.Y_THEN_X) {
-            while (y != endY && logicalNetwork.size() < MAX_ROUTE_TILES) {
+            while (y != endY && logicalNetwork.size() < MAX_NETWORK_PIECES) {
                 int oldY = y;
                 y += yStep;
                 logicalNetwork.add(logicalKey(x, y, plane));
                 addLogicalConnection(x, oldY, x, y, plane);
             }
-            while (x != endX && logicalNetwork.size() < MAX_ROUTE_TILES) {
+            while (x != endX && logicalNetwork.size() < MAX_NETWORK_PIECES) {
                 int oldX = x;
                 x += xStep;
                 logicalNetwork.add(logicalKey(x, y, plane));
                 addLogicalConnection(oldX, y, x, y, plane);
             }
         } else {
-            while (x != endX && logicalNetwork.size() < MAX_ROUTE_TILES) {
+            while (x != endX && logicalNetwork.size() < MAX_NETWORK_PIECES) {
                 int oldX = x;
                 x += xStep;
                 logicalNetwork.add(logicalKey(x, y, plane));
                 addLogicalConnection(oldX, y, x, y, plane);
             }
-            while (y != endY && logicalNetwork.size() < MAX_ROUTE_TILES) {
+            while (y != endY && logicalNetwork.size() < MAX_NETWORK_PIECES) {
                 int oldY = y;
                 y += yStep;
                 logicalNetwork.add(logicalKey(x, y, plane));
@@ -1152,7 +1153,7 @@ public final class RailRoutePreview {
                     tile[0], tile[1], tile[2]);
             pieces.add(piece);
             physicalOccupied.add(physicalKey);
-            if (pieces.size() >= MAX_ROUTE_TILES) {
+            if (pieces.size() >= MAX_NETWORK_PIECES) {
                 break;
             }
         }
@@ -1162,7 +1163,7 @@ public final class RailRoutePreview {
     private static void appendUniqueCurvePieces(java.util.List<RoutePiece> pieces,
             java.util.Set<String> occupied, CurvePlacement placement, int plane) {
         for (RailCompositeLibrary.Component component : placement.composite.getComponents()) {
-            if (pieces.size() >= MAX_ROUTE_TILES) {
+            if (pieces.size() >= MAX_NETWORK_PIECES) {
                 return;
             }
             int[] offset = rotateLayoutOffset(
@@ -1483,7 +1484,7 @@ public final class RailRoutePreview {
             }
             appendCurvePieces(pieces, curve, startX, endY, plane);
             int x = startX + xStep;
-            while (pieces.size() < MAX_ROUTE_TILES) {
+            while (pieces.size() < MAX_NETWORK_PIECES) {
                 if (!curveOccupies(curve, x, endY)) {
                     pieces.add(new RoutePiece(objectId, objectType, eastWestRotation(),
                             x, endY, plane));
@@ -1506,7 +1507,7 @@ public final class RailRoutePreview {
             }
             appendCurvePieces(pieces, curve, endX, startY, plane);
             int y = startY + yStep;
-            while (pieces.size() < MAX_ROUTE_TILES) {
+            while (pieces.size() < MAX_NETWORK_PIECES) {
                 if (!curveOccupies(curve, endX, y)) {
                     pieces.add(new RoutePiece(objectId, objectType, verticalRotation(),
                             endX, y, plane));
@@ -1523,7 +1524,7 @@ public final class RailRoutePreview {
             int startX, int endX, int y, int plane, CurvePlacement curve) {
         int step = Integer.compare(endX, startX);
         int x = startX;
-        while (pieces.size() < MAX_ROUTE_TILES) {
+        while (pieces.size() < MAX_NETWORK_PIECES) {
             if (!curveOccupies(curve, x, y)) {
                 pieces.add(new RoutePiece(objectId, objectType, eastWestRotation(), x, y, plane));
             }
@@ -1538,7 +1539,7 @@ public final class RailRoutePreview {
             int startY, int endY, int x, int plane, CurvePlacement curve) {
         int step = Integer.compare(endY, startY);
         int y = startY;
-        while (pieces.size() < MAX_ROUTE_TILES) {
+        while (pieces.size() < MAX_NETWORK_PIECES) {
             if (!curveOccupies(curve, x, y)) {
                 pieces.add(new RoutePiece(objectId, objectType, verticalRotation(), x, y, plane));
             }
@@ -1553,7 +1554,7 @@ public final class RailRoutePreview {
             CurvePlacement placement, int cornerX, int cornerY, int plane) {
         if (placement != null) {
             for (RailCompositeLibrary.Component component : placement.composite.getComponents()) {
-                if (pieces.size() >= MAX_ROUTE_TILES) {
+                if (pieces.size() >= MAX_NETWORK_PIECES) {
                     return;
                 }
                 int[] offset = rotateLayoutOffset(
