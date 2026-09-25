@@ -872,6 +872,7 @@ public final class RailRoutePreview {
                     tile[0], tile[1], horizontalDirection, verticalDirection);
             if (curve != null) {
                 appendUniqueCurvePieces(pieces, physicalOccupied, curve, tile[2]);
+                reserveCurveLogicalLegs(physicalOccupied, tile[0], tile[1], tile[2], mask);
             }
         }
 
@@ -917,6 +918,21 @@ public final class RailRoutePreview {
                     (component.getRotation() + placement.layoutTurns) & 0x3,
                     x, y, plane));
         }
+    }
+
+    private static void reserveCurveLogicalLegs(java.util.Set<String> occupied,
+            int cornerX, int cornerY, int plane, int mask) {
+        /*
+         * The accepted three-object RS3 curve models visually occupy the corner
+         * plus the first tile of each connected leg. Those logical tiles must
+         * not also emit straight object 46353 or the straight renders through
+         * the curve even though the topology itself is correct.
+         */
+        occupied.add(logicalKey(cornerX, cornerY, plane));
+        if ((mask & 1) != 0) occupied.add(logicalKey(cornerX, cornerY + 1, plane));
+        if ((mask & 2) != 0) occupied.add(logicalKey(cornerX + 1, cornerY, plane));
+        if ((mask & 4) != 0) occupied.add(logicalKey(cornerX, cornerY - 1, plane));
+        if ((mask & 8) != 0) occupied.add(logicalKey(cornerX - 1, cornerY, plane));
     }
 
     private static int logicalNeighborMask(int x, int y, int plane) {
