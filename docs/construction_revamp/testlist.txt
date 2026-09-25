@@ -868,3 +868,14 @@ RTS vanilla-render convergence — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Reproduce the exact prior high/zoomed-out beige-cutoff view.
 [ ] Compare terrain/fog behavior with vanilla detached camera rendering; RTS should now use the same scene/environment/terrain pipeline rather than settlement renderer overrides.
 [ ] Exit settlement: normal player camera remains unchanged.
+
+
+Packet-Safe Atomic Rail Endpoint Replacement — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Matrix3 command payload guard restored to 252 bytes.
+[x] Old/new route payloads are chunked below 220 characters.
+[x] Server stages all chunks and performs one atomic replacement only on commit.
+[x] Existing rail-only validation and rollback remain authoritative.
+[ ] Fresh A-to-B -> grab exact B -> 90-degree move: old persistent route disappears and only the replacement remains.
+[ ] Move B again: no U/parallel old+preview composite remains.
+[ ] Exit/re-enter: final edited route persists exactly.
+[ ] Confirm chat reports 'Rail route replaced atomically' after endpoint release.
