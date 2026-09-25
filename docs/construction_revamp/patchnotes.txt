@@ -1427,3 +1427,9 @@
 - Consolidated worker controls into accepted LMB selection, selected-worker commands and inspection-only diagnostics.
 - Kept Storage status/reset, Needs HUD demo controls and Asset Studio because they remain useful to active development.
 - No settlement/server command or gameplay logic was removed.
+
+
+2026-09-25 - Labeled Rail Network debug screenshots
+- Every committed rail operation now captures a full-screen PNG under Client/data/construction/rail_debug/ using the same operation number as the runtime debug session.
+- PNGs include a baked-in diagnostic panel with operation id, logical/physical counts, A/B coordinates, plane, event state, and resolved physical piece labels (Pxx, object id, type, rotation, world coordinate).
+- The complete piece/gesture report remains in rail_runtime_debug.txt; screenshots intentionally cap the overlay and point to the text log for the full list.
