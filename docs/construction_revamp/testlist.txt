@@ -879,3 +879,18 @@ Packet-Safe Atomic Rail Endpoint Replacement — IMPLEMENTED / NEEDS RUNTIME TES
 [ ] Move B again: no U/parallel old+preview composite remains.
 [ ] Exit/re-enter: final edited route persists exactly.
 [ ] Confirm chat reports 'Rail route replaced atomically' after endpoint release.
+
+
+Continuous Rail Path V1 — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Fresh drag starts a path with one current END.
+[x] Drag beginning exactly on END extends the existing path rather than recalculating from the original start.
+[x] Same-axis END extension appends straight rail.
+[x] Perpendicular END extension inserts the accepted three-piece curve at the seam and appends the outgoing straight.
+[x] Earlier authored segments remain in the complete route submitted to the server.
+[x] Existing packet-safe atomic replacement persists complete-path edits.
+[ ] Build START -> END straight.
+[ ] Grab END and turn 90 degrees; original straight remains and one clean curve/outgoing segment is added.
+[ ] Grab END again and turn 90 degrees the other way; first bend remains untouched and a second bend is added.
+[ ] Continue through at least four segments to form a zig-zag/S-style continuous route.
+[ ] Extend straight from END; no earlier turn changes.
+[ ] Exit/re-enter; final physical rail path persists.
