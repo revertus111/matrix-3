@@ -1413,3 +1413,9 @@
 - Initial Rail Network V1 commit no longer queues one legacy settlementbuild command per resolved physical rail piece.
 - First placement now uses the same staged server-authoritative settlementrailreplace begin/new/commit transaction as later network deltas, including add-only commit support.
 - This specifically fixes long sampled routes previewing all straights/curves while held, then losing straight sections on mouse release because the prototype per-piece placement stream only partially became persistent world objects.
+
+
+2026-09-25 - Persistent Rail Network runtime debug log
+- Every committed rail gesture now appends a diagnostic block to Client/data/construction/rail_runtime_debug.txt.
+- Log captures operation/time, current event/render state, logical tile count, old/new resolved physical counts, ordered sampled gesture tiles, and the existing detailed rail debug report/piece list.
+- Logging is append-only so multiple failing commits can be reproduced in one session and uploaded as a single text artifact.
