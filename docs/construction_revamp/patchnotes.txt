@@ -1344,3 +1344,9 @@
 - Manhattan drag adds logical tiles in the selected X-then-Y/Y-then-X order. The resolver converts two-neighbor perpendicular nodes into the accepted CURVE_RAIL_LAYOUT_01 composite, opposite neighbors into straight rail, and degree-3/4 nodes into a temporary straight-through junction visual until real switch/junction art is accepted.
 - Each edit deterministically resolves the complete logical network to one physical piece set and reuses the existing packet-safe atomic old-physical -> new-physical server replacement. This removes incremental seam mutation from the authoring model.
 - V1 session topology is client-side while persistent physical rails remain server-owned. Persisted logical graph metadata/reconstruction after relog is intentionally gated behind runtime acceptance of draw/turn/branch behavior.
+2026-09-25 - Object Explorer object-animation metadata
+- verified-static: ObjectDefinitions opcode 24/106 populates anIntArray5645; method6051/method6052 choose an object sequence from that set and method6053 exposes the decoded sequence IDs.
+- DevDefinitionBridge now carries object animation IDs without changing Matrix3 object-definition ownership.
+- Object Explorer shows the selected object's cache animation ID(s), allowing direct minecart asset inspection without scanning ~28k player animations.
+- No rail runtime behavior, cart movement, or player riding animation changed.
+
