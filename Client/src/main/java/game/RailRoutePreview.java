@@ -1054,12 +1054,14 @@ public final class RailRoutePreview {
                 ? "Rail network extended/branched from existing track."
                 : "Rail network segment added.";
 
-        debugOperationId++;
-        debugReport = buildDebugReport(debugOperationId, !oldPhysical.isEmpty(), joinedExisting,
-                liveStartX, liveStartY, liveStartX, liveStartY, livePlane,
-                oldPhysical, newPhysical);
-        appendDebugReportToFile(debugReport, oldPhysical, newPhysical);
-        captureDebugScreenshot(debugReport, newPhysical);
+        if (debugEnabled) {
+            debugOperationId++;
+            debugReport = buildDebugReport(debugOperationId, !oldPhysical.isEmpty(), joinedExisting,
+                    liveStartX, liveStartY, liveStartX, liveStartY, livePlane,
+                    oldPhysical, newPhysical);
+            appendDebugReportToFile(debugReport, oldPhysical, newPhysical);
+            captureDebugScreenshot(debugReport, newPhysical);
+        }
 
         if (oldPhysical.isEmpty()) {
             ConstructionPlacementController.onRailRouteCommitted(newPhysical);
