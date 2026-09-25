@@ -241,6 +241,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         checks.add(createJobCheckBox("Gather Food", "gather-food"));
         checks.add(createJobCheckBox("Gather Stone", "gather-stone"));
         checks.add(createJobCheckBox("Gather Basic Ore", "gather-basic-ore"));
+        checks.add(createJobCheckBox("Process Wood", "process-wood"));
         checks.add(createJobCheckBox("Haul", "haul"));
         card.add(checks);
         card.add(Box.createVerticalStrut(8));
@@ -383,8 +384,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Processing");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Phase 3 processing core. Current test recipe: 2 Wood -> 1 Plank. "
-                + "Physical workstation/worker binding comes after this storage transaction passes.",
+                "Phase 3 wood chain: place Wooden workbench from Furniture, select a worker, "
+                + "enable Process Wood or apply Carpenter, then watch storage -> workstation -> Planks.",
                 4));
         card.add(Box.createVerticalStrut(8));
 
@@ -588,6 +589,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 "gather-stone", "haul"),
         ORE_MINER("Ore Miner", "ore-miner",
                 "gather-basic-ore", "haul"),
+        CARPENTER("Carpenter", "carpenter",
+                "process-wood"),
         HAULER_ONLY("Hauler Only", "hauler-only",
                 "haul"),
         IDLE("Idle", "idle");

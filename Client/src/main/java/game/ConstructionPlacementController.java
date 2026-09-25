@@ -63,6 +63,8 @@ public final class ConstructionPlacementController {
                     "Current doorway candidate; final Construction art acceptance is pending."),
             new BuildPiece("basic-bed", "Bed", Category.FURNITURE, 14872, 10,
                     "Verified Matrix3 bed object; each placed bed adds one settlement population capacity."),
+            new BuildPiece("wooden-workbench", "Wooden workbench", Category.FURNITURE, 13704, 10,
+                    "Phase 3 workstation; Carpenter workers process 2 Wood into 1 Plank here."),
             new BuildPiece("basic-rail", "Rail route", Category.RAILS, 46353, 22,
                     "Factorio-style rail network: drag track, then start from existing track to extend or branch."),
             new BuildPiece("rail-loader", "Rail Loader", Category.RAILS, 13450, 0,
