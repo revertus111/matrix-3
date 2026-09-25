@@ -34,6 +34,13 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 - The prior 718/legacy Construction implementation is reference material only and must not be transplanted as architecture.
 - Phase 1 MVP vertical slice is runtime accepted; next playable target is Phase 2 population + broader survival production.
 
+## Live Model Editor material-replacement bridge
+
+- Developer-side foundation is now shared with the Construction revamp: Live Model Editor can consume the current `ConstructionPlacementController.BuildPiece` catalog as a non-destructive replacement library.
+- This is an authoring/tooling bridge, not yet the final player-facing Construction Detail Mode. Replacements stay client-local + JSON-backed and never mutate settlement persistence or cache bytes.
+- The intended reuse is now concrete: connected source part -> Construction catalog replacement -> direct in-world G/R/S adjustment -> JSON recipe. Repeated geometry can use Replace Matches for bars/supports/trim.
+- Future player-facing Detail Mode should promote the same transform/asset recipe behind server-validated settlement placement rules rather than reimplementing selection/transforms.
+
 ## Supporting design specs
 
 - `RADIAL_WORKER_SELECTION.md` — planned RuneScape-native world-space radial drag selection for settlement workers, including runtime-scaled ground reticule, live preview, server validation, and future work-area reuse.
