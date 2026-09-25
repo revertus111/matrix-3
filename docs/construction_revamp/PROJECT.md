@@ -1543,7 +1543,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Vanilla Matrix3 world interactions remain authoritative. Selected workers mirror Walk Here plus starter Wood/Stone/Ore object first-actions and the starter Food NPC first-action; the player continues the same vanilla action only when self is part of the committed selection.
 - World right-click menus expose one `Clear Selection` action whenever a committed RTS selection exists. It does not alter Allowed Jobs, Pause, Needs, progression or persistence.
 - Server gather validation accepts either OBJECT or NPC starter-resource sources and still resolves the exact plot-relative SettlementResourceNode before assigning any worker order.
-- Resume gate: drag-select workers -> verify normal click preserves selection -> right-click ground/object/NPC shows Clear Selection -> verify Walk Here -> verify Wood/Stone/Ore/Food vanilla skill options -> Clear Selection removes rings/server selection -> exit/re-entry requires a fresh selection.
+- Resume gate superseded for ground movement by the double-click arbitration slice below; retain this slice for vanilla Wood/Stone/Ore/Food actions, Clear Selection, and exit/re-entry selection cleanup.
 
 
 ## Bundle 2.4 double-click movement arbitration — 2026-09-25
@@ -1552,3 +1552,4 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - With a committed selection, one ground click is consumed and only arms the short double-click window. A second ground click within 375 ms on the same or adjacent tile issues the existing workerselectionmove order.
 - If self is selected, only the accepted second click is allowed through to Matrix3 vanilla Walk Here, keeping player and workers on the same destination.
 - Object/NPC skilling actions and Clear Selection behavior are unchanged.
+- Resume Here: pull once and runtime-test Bundle 2.4 as one gate: drag-select -> release moves nobody -> single ground click moves nobody -> double-click ground moves selected workers (and selected self) -> vanilla Wood/Stone/Ore/Food actions still command workers -> right-click Clear Selection -> exit/re-entry requires a fresh selection.
