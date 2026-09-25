@@ -23,3 +23,12 @@
 2026-09-25
 - Fixed Live Model Editor Bundle 2.1 compile regression: ConsoleTheme now provides the shared styleList(JList<?>) helper used by the mesh-parts list.
 - The helper applies the existing ConsoleTheme fonts/colors/selection colors without changing model-editor behavior.
+
+2026-09-25
+- Added Live Model Editor Bundle 2.2 in-client overlay UX.
+- Replaced the standalone JFrame-style editor experience with an owned JWindow anchored over the Matrix3 heavyweight game Canvas, following the same proven ownership approach used by the Construction palette.
+- Added drag repositioning while preserving automatic client move/resize tracking.
+- Rebuilt the editor layout into a compact RuneScape-style dark/brown/gold panel with target/model context, dense part list, per-part transforms/actions, whole-clone controls and JSON project controls without the previous oversized scroll-heavy form.
+- Added transient part-row hover preview: moving across the parts list temporarily highlights the hovered connected component in-world; leaving the list restores the locked clicked selection highlight.
+- Hover state is presentation-only and is not written into JSON or undo history. Clicked selection remains the authoritative project selection.
+- True 3D world-surface component hover/click picking remains Bundle 2.3 carryover.
