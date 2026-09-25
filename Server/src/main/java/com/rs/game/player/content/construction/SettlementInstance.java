@@ -53,6 +53,9 @@ public final class SettlementInstance {
     private boolean radialPlayerSelected;
     private final WorkerStorageReservationBook workerStorageReservations =
             new WorkerStorageReservationBook();
+    // One worker owns one physical processing station at a time.
+    private final Map<Long, Long> processingWorkstationReservations =
+            new HashMap<Long, Long>();
     // Short-lived server-owned staging for packet-safe atomic rail endpoint edits.
     private final List<int[]> pendingRailOld = new ArrayList<int[]>();
     private final List<String[]> pendingRailNew = new ArrayList<String[]>();
@@ -1117,6 +1120,94 @@ public final class SettlementInstance {
                 toWorldX(worker.getHomePlotX()),
                 toWorldY(worker.getHomePlotY()),
                 worker.getHomePlane());
+    }
+
+    public boolean canProcessRecipe(SettlementProcessingRecipe recipe) {
+        if (!loaded || destroyed || recipe == null) {
+            return false;
+        }
+        return state.getResourceAmount(recipe.getInputResource()) >= recipe.getInputAmount()
+                && state.getStorageRemaining(recipe.getOutputResource()) >= recipe.getOutputAmount();
+    }
+
+    public synchronized long reserveProcessingWorkstation(
+            long workerId, SettlementProcessingRecipe recipe) {
+        if (!canProcessRecipe(recipe) || workerId <= 0L) {
+            return -1L;
+        }
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (piece == null) {
+                continue;
+            }
+            SettlementBuildPiece definition =
+                    SettlementBuildPiece.forKey(piece.getDefinitionKey());
+            if (!isWorkstationForRecipe(definition, recipe)) {
+                continue;
+            }
+            Long owner = processingWorkstationReservations.get(
+                    Long.valueOf(piece.getPieceId()));
+            if (owner != null && owner.longValue() != workerId) {
+                continue;
+            }
+            if (getProcessingWorkstationTile(piece.getPieceId()) == null) {
+                continue;
+            }
+            processingWorkstationReservations.put(
+                    Long.valueOf(piece.getPieceId()), Long.valueOf(workerId));
+            return piece.getPieceId();
+        }
+        return -1L;
+    }
+
+    public synchronized void releaseProcessingWorkstation(long workerId) {
+        java.util.Iterator<Map.Entry<Long, Long>> iterator =
+                processingWorkstationReservations.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Long, Long> entry = iterator.next();
+            Long owner = entry.getValue();
+            if (owner != null && owner.longValue() == workerId) {
+                iterator.remove();
+            }
+        }
+    }
+
+    public WorldTile getProcessingWorkstationTile(long pieceId) {
+        if (!loaded || destroyed || boundChunks == null || pieceId <= 0L) {
+            return null;
+        }
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (piece == null || piece.getPieceId() != pieceId) {
+                continue;
+            }
+            SettlementBuildPiece definition =
+                    SettlementBuildPiece.forKey(piece.getDefinitionKey());
+            if (definition == null
+                    || definition.getRole() != SettlementBuildRole.WORKSTATION) {
+                return null;
+            }
+            WorldTile tile = new WorldTile(
+                    toWorldX(piece.getPlotX()),
+                    toWorldY(piece.getPlotY()),
+                    piece.getPlane());
+            WorldObject live = World.getObjectWithType(tile, definition.getObjectType());
+            return live != null && live.getId() == definition.getObjectId()
+                    ? live : null;
+        }
+        return null;
+    }
+
+    public SettlementProcessingTransaction.Result processWorkerRecipe(
+            SettlementWorkerState worker, SettlementProcessingRecipe recipe) {
+        if (!loaded || destroyed || worker == null || recipe == null) {
+            return null;
+        }
+        return SettlementProcessingTransaction.apply(state, recipe, 1);
+    }
+
+    private boolean isWorkstationForRecipe(
+            SettlementBuildPiece definition, SettlementProcessingRecipe recipe) {
+        return definition == SettlementBuildPiece.WOODEN_WORKBENCH
+                && recipe == SettlementProcessingRecipe.SAW_PLANKS;
     }
 
     public long getWorkerStorageRemaining(SettlementResource resource) {

@@ -16,6 +16,7 @@ public final class SettlementWorkerNpc extends NPC {
     private static final long serialVersionUID = 4457138259614473421L;
 
     private static final int GATHER_TICKS = 3;
+    private static final int PROCESS_TICKS = 4;
     private static final int CARRY_CAPACITY = 1;
     private static final int EAT_TICKS = 2;
     private static final int DRINK_TICKS = 2;
@@ -27,6 +28,9 @@ public final class SettlementWorkerNpc extends NPC {
         GATHERING,
         MOVING_TO_STORAGE,
         HAULING,
+        MOVING_TO_PROCESSING_STORAGE,
+        MOVING_TO_WORKSTATION,
+        PROCESSING,
         MOVING_HOME_FOR_NEED,
         EATING,
         DRINKING,
@@ -49,6 +53,10 @@ public final class SettlementWorkerNpc extends NPC {
     private WorldTile manualMoveTarget;
     private SettlementResourceNode manualGatherNode;
     private boolean manualGatherActive;
+    private SettlementProcessingRecipe processingRecipe;
+    private long processingWorkstationPieceId = -1L;
+    private boolean processingVisitedStorage;
+    private int processingTicksRemaining;
     private String statusDetail = "No allowed gathering job.";
 
     public SettlementWorkerNpc(SettlementInstance settlement,
@@ -84,6 +92,9 @@ public final class SettlementWorkerNpc extends NPC {
         if (workerState.isPaused()) {
             if (gatherTicksRemaining > 0 || targetNode != null) {
                 clearTarget();
+            }
+            if (processingRecipe != null) {
+                clearProcessingWork();
             }
             if (carriedAmount > 0) {
                 settlement.releaseWorkerStorageReservation(workerId);
@@ -129,6 +140,20 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
 
+        if (processingRecipe != null) {
+            processProcessingWork();
+            return;
+        }
+
+        boolean processWoodAllowed =
+                workerState.isJobAllowed(SettlementWorkerJob.PROCESS_WOOD);
+        if (processWoodAllowed
+                && settlement.canProcessRecipe(SettlementProcessingRecipe.SAW_PLANKS)
+                && beginProcessingWork(SettlementProcessingRecipe.SAW_PLANKS)) {
+            processProcessingWork();
+            return;
+        }
+
         if (targetNode != null) {
             SettlementWorkerJob job = findGatherJob(targetNode.getResource());
             if (job == null || !workerState.isJobAllowed(job)
@@ -145,7 +170,9 @@ public final class SettlementWorkerNpc extends NPC {
                         ? (hasAllowedGatheringStorageSpace()
                                 ? "No allowed resource node is currently available."
                                 : "Allowed resource storage is full.")
-                        : "No allowed gathering job.");
+                        : processWoodAllowed
+                                ? "Process Wood waiting for 2 Wood, Plank storage, or an available workbench."
+                                : "No allowed gathering job.");
                 return;
             }
         }
@@ -295,6 +322,7 @@ public final class SettlementWorkerNpc extends NPC {
             }
             activeNeed = next;
             clearTarget();
+            clearProcessingWork();
         }
 
         WorldTile home = settlement.getWorkerStorageTile(workerState);
@@ -371,6 +399,7 @@ public final class SettlementWorkerNpc extends NPC {
         if (target == null) {
             return;
         }
+        clearProcessingWork();
         manualGatherNode = null;
         manualGatherActive = false;
         clearTarget();
@@ -384,6 +413,7 @@ public final class SettlementWorkerNpc extends NPC {
         if (node == null) {
             return;
         }
+        clearProcessingWork();
         manualMoveTarget = null;
         manualGatherActive = false;
         clearTarget();
@@ -456,6 +486,115 @@ public final class SettlementWorkerNpc extends NPC {
         gatherTicksRemaining = GATHER_TICKS;
         statusDetail = "Gathering " + resource.getDisplayName() + ".";
         setNextAnimation(new Animation(targetNode.getAnimationId()));
+    }
+
+    private boolean beginProcessingWork(SettlementProcessingRecipe recipe) {
+        long workstationPieceId =
+                settlement.reserveProcessingWorkstation(workerId, recipe);
+        if (workstationPieceId <= 0L) {
+            return false;
+        }
+        processingRecipe = recipe;
+        processingWorkstationPieceId = workstationPieceId;
+        processingVisitedStorage = false;
+        processingTicksRemaining = 0;
+        resetWalkSteps();
+        workState = WorkState.MOVING_TO_PROCESSING_STORAGE;
+        statusDetail = "Process Wood: collecting "
+                + recipe.getInputAmount() + " "
+                + recipe.getInputResource().getDisplayName() + " from storage.";
+        return true;
+    }
+
+    private void processProcessingWork() {
+        SettlementProcessingRecipe recipe = processingRecipe;
+        if (recipe == null) {
+            return;
+        }
+        SettlementWorkerJob job = SettlementWorkerJob.PROCESS_WOOD;
+        if (!workerState.isJobAllowed(job)) {
+            clearProcessingWork();
+            idle("Process Wood disabled.");
+            return;
+        }
+
+        if (!processingVisitedStorage) {
+            if (!settlement.canProcessRecipe(recipe)) {
+                clearProcessingWork();
+                idle("Process Wood blocked by input or output storage.");
+                return;
+            }
+            WorldTile storage = settlement.getWorkerStorageTile(workerState);
+            if (storage == null) {
+                clearProcessingWork();
+                idle("No valid processing storage access tile.");
+                return;
+            }
+            workState = WorkState.MOVING_TO_PROCESSING_STORAGE;
+            statusDetail = "Collecting " + recipe.getInputAmount() + " "
+                    + recipe.getInputResource().getDisplayName() + " from storage.";
+            if (!walkToward(storage, "No Path to processing storage.")) {
+                return;
+            }
+            processingVisitedStorage = true;
+            resetWalkSteps();
+            statusDetail = "Inputs collected; moving to Wooden workbench.";
+            return;
+        }
+
+        WorldTile workstation =
+                settlement.getProcessingWorkstationTile(processingWorkstationPieceId);
+        if (workstation == null) {
+            clearProcessingWork();
+            idle("Wooden workbench is no longer available.");
+            return;
+        }
+
+        if (processingTicksRemaining <= 0) {
+            workState = WorkState.MOVING_TO_WORKSTATION;
+            statusDetail = "Moving to Wooden workbench.";
+            if (!walkToward(workstation, "No Path to Wooden workbench.", 1)) {
+                return;
+            }
+            resetWalkSteps();
+            workState = WorkState.PROCESSING;
+            processingTicksRemaining = PROCESS_TICKS;
+            statusDetail = "Processing " + recipe.getSummary() + ".";
+            return;
+        }
+
+        workState = WorkState.PROCESSING;
+        processingTicksRemaining--;
+        if (processingTicksRemaining > 0) {
+            return;
+        }
+
+        SettlementProcessingTransaction.Result result =
+                settlement.processWorkerRecipe(workerState, recipe);
+        clearProcessingWork();
+        workState = WorkState.IDLE;
+        if (result == null || !result.isSuccess()) {
+            statusDetail = "Processing blocked: "
+                    + (result == null ? "settlement runtime unavailable."
+                            : result.getSummary());
+            return;
+        }
+
+        workerState.applyWorkCycleCost();
+        workerState.addSkillXp(job.getSkill(), job.getWorkerXp());
+        statusDetail = result.getSummary() + " Worker Crafting XP +"
+                + job.getWorkerXp() + ".";
+    }
+
+    private void clearProcessingWork() {
+        if (processingWorkstationPieceId > 0L) {
+            settlement.releaseProcessingWorkstation(workerId);
+        }
+        processingRecipe = null;
+        processingWorkstationPieceId = -1L;
+        processingVisitedStorage = false;
+        processingTicksRemaining = 0;
+        resetWalkSteps();
     }
 
     private SettlementResourceNode selectNextGatherNode() {
@@ -616,6 +755,10 @@ public final class SettlementWorkerNpc extends NPC {
             summary.append(" | manualGather=")
                     .append(manualGatherNode != null ? manualGatherNode.getKey()
                             : targetNode != null ? targetNode.getKey() : "active");
+        }
+        if (processingRecipe != null) {
+            summary.append(" | processing=").append(processingRecipe.getKey())
+                    .append("@piece#").append(processingWorkstationPieceId);
         }
         summary.append(" | ").append(workerState.getNeedsSummary());
         summary.append(" | Skills: ").append(workerState.getSkillsSummary());

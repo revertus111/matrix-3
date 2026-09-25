@@ -12,6 +12,7 @@ public enum SettlementWorkerSkill {
     WOODCUTTING("woodcutting", "Woodcutting"),
     FOOD_GATHERING("food-gathering", "Food Gathering"),
     MINING("mining", "Mining"),
+    CRAFTING("crafting", "Crafting"),
     HAULING("hauling", "Hauling");
 
     private final String key;

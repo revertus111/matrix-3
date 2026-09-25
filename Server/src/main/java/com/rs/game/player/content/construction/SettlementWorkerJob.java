@@ -16,6 +16,8 @@ public enum SettlementWorkerJob {
             SettlementWorkerSkill.MINING, 12),
     GATHER_BASIC_ORE("gather-basic-ore", "Gather Basic Ore", SettlementResource.BASIC_ORE,
             SettlementWorkerSkill.MINING, 12),
+    PROCESS_WOOD("process-wood", "Process Wood", null,
+            SettlementWorkerSkill.CRAFTING, 18),
     HAUL("haul", "Haul", null, SettlementWorkerSkill.HAULING, 6);
 
     private final String key;

@@ -20,6 +20,8 @@ public enum SettlementWorkerRolePreset {
             SettlementWorkerJob.GATHER_STONE, SettlementWorkerJob.HAUL),
     ORE_MINER("ore-miner", "Ore Miner",
             SettlementWorkerJob.GATHER_BASIC_ORE, SettlementWorkerJob.HAUL),
+    CARPENTER("carpenter", "Carpenter",
+            SettlementWorkerJob.PROCESS_WOOD),
     HAULER_ONLY("hauler-only", "Hauler Only",
             SettlementWorkerJob.HAUL),
     IDLE("idle", "Idle");
