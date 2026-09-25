@@ -1457,3 +1457,9 @@
 - Added a compact active Processing card to Con Revamp for one-launch testing.
 - Corrected legacy shelter/final-gate loops so future processed resources cannot become accidental starter requirements.
 - Physical workstation art, worker processing AI and production scheduling remain intentionally deferred until this core passes runtime.
+
+
+2026-09-25 - Rail authored-connectivity + capacity correction
+- Runtime evidence confirmed tile adjacency was falsely connecting nearby/parallel tracks and reclassifying previously correct corners. Rail topology now uses explicit cardinal edges authored by the sampled drag path; neighboring tiles are independent unless the gesture actually traverses between them.
+- Removed the 64-piece full-network truncation exposed by the runtime log. Active gestures are capped at 256 tiles, full physical resolution at 4096 pieces, and packet-safe server old/new rail deltas at 256 pieces per edit.
+- Existing atomic persistence, curve composite mapping and Build Palette Debug ownership remain unchanged.
