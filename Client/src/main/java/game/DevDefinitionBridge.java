@@ -106,6 +106,25 @@ public final class DevDefinitionBridge {
         }
     }
 
+    public static int[] getObjectModelIds(int id) {
+        Interface18 definitions = objectDefinitions;
+        if (definitions == null || id < 0 || id >= definitions.method45()) return new int[0];
+        try {
+            Interface17 value = definitions.getDefinition(id, 0);
+            if (!(value instanceof ObjectDefinitions)) return new int[0];
+            ObjectDefinitions object = (ObjectDefinitions) value;
+            if (object.anIntArrayArray5611 == null) return new int[0];
+            int count = 0;
+            for (int[] group : object.anIntArrayArray5611) if (group != null) count += group.length;
+            int[] models = new int[count];
+            int offset = 0;
+            for (int[] group : object.anIntArrayArray5611) if (group != null) for (int model : group) models[offset++] = model;
+            return models;
+        } catch (RuntimeException ex) {
+            return new int[0];
+        }
+    }
+
     private static int count(Interface18 definitions) {
         if (definitions == null) {
             return 0;

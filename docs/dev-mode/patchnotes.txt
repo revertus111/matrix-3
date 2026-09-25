@@ -58,3 +58,8 @@
 - Added owner-only server validation/placement through the existing Item Browser command bridge and native World.spawnNPC, World.spawnObject, and World.addGroundItem APIs.
 - Live placements are runtime edits only; persistent save/edit workflows remain future Dev Mode phases.
 - Name search and NPC/object/item thumbnail browsing remain the next spawn-browser slice.
+
+2026-09-25 - Dev Inspector object model IDs
+- Added cache-backed object model ID display to the existing Dev Mode Selected target card.
+- The client definition bridge exposes all model IDs decoded from the selected ObjectDefinitions model groups; no second cache decoder was added.
+- NPC targets show '-' for Model ID(s); objects without resolved model groups show 'None / unresolved'.

@@ -1,6 +1,7 @@
 package game.console;
 
 import game.DevModeBridge;
+import game.DevDefinitionBridge;
 import game.DevModeBridge.DevTarget;
 import game.DevModeBridge.TargetType;
 
@@ -33,6 +34,7 @@ public final class DevInspectorWindow {
     private final JLabel typeLabel = valueLabel();
     private final JLabel nameLabel = valueLabel();
     private final JLabel idLabel = valueLabel();
+    private final JLabel modelIdsLabel = valueLabel();
     private final JLabel tileLabel = valueLabel();
     private final JLabel runtimeLabel = valueLabel();
     private final JLabel modeLabel = valueLabel();
@@ -134,11 +136,12 @@ public final class DevInspectorWindow {
 
     private JPanel createIdentityCard() {
         JPanel card = card("Selected target");
-        JPanel grid = new JPanel(new GridLayout(5, 2, 10, 7));
+        JPanel grid = new JPanel(new GridLayout(6, 2, 10, 7));
         grid.setOpaque(false);
         addRow(grid, "Type", typeLabel);
         addRow(grid, "Name", nameLabel);
         addRow(grid, "Definition ID", idLabel);
+        addRow(grid, "Model ID(s)", modelIdsLabel);
         addRow(grid, "World tile", tileLabel);
         addRow(grid, "Runtime reference", runtimeLabel);
         card.add(Box.createVerticalStrut(10));
@@ -304,6 +307,12 @@ public final class DevInspectorWindow {
         typeLabel.setText(value.getType().getDisplayName());
         nameLabel.setText(value.getName());
         idLabel.setText(value.getId() >= 0 ? Integer.toString(value.getId()) : "Unresolved");
+        if (value.getType() == TargetType.OBJECT && value.getId() >= 0) {
+            int[] models = DevDefinitionBridge.getObjectModelIds(value.getId());
+            modelIdsLabel.setText(models.length == 0 ? "None / unresolved" : joinIds(models));
+        } else {
+            modelIdsLabel.setText("-");
+        }
         tileLabel.setText(value.getWorldX() + ", " + value.getWorldY() + ", " + value.getPlane());
         runtimeLabel.setText(value.getRuntimeIndex() >= 0
                 ? "NPC index " + value.getRuntimeIndex()
@@ -324,6 +333,15 @@ public final class DevInspectorWindow {
         copyTileButton.setEnabled(true);
         objectLabButton.setEnabled(validId && object);
         statusLabel.setText("Target updated from the live Matrix3 right-click menu.");
+    }
+
+    private static String joinIds(int[] ids) {
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < ids.length; i++) {
+            if (i > 0) text.append(", ");
+            text.append(ids[i]);
+        }
+        return text.toString();
     }
 
     private void copyId() {

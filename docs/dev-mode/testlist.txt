@@ -141,3 +141,8 @@ Regression checks
 [ ] Use the normal Client Console Item Browser after Dev Spawn search and confirm its item indexing/thumbnails still work.
 [ ] Confirm normal NPC/object interaction packets still target the same live entities after Dev manipulation testing.
 [ ] Spawn/manipulate/paint then restart the server; confirm runtime placement is not mistaken for persistent source/map data.
+
+Dev Inspector model-ID lookup
+[ ] Right-click object 29394 (Smelter) -> Dev > Inspect Object and confirm Selected target includes Model ID(s).
+[ ] Confirm all model IDs referenced by its ObjectDefinitions model groups are shown comma-separated.
+[ ] Inspect an NPC and confirm Model ID(s) shows '-' rather than stale object model IDs.
