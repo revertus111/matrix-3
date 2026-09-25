@@ -68,7 +68,13 @@ public final class ConstructionRadialSelection {
     private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x8000 | 0x100 | 0x5;
     private static final long HOVER_STALE_MS = 1250L;
     private static final int MIN_SELECTION_DRAG_PIXELS = 6;
+    private static final int CLEAR_SELECTION_MENU_ACTION = 1530;
+    private static final int MATRIX3_FIRST_OBJECT_ACTION = 3;
+    private static final int MATRIX3_FIRST_NPC_ACTION = 9;
     private static final int STARTER_TREE_OBJECT_ID = 1276;
+    private static final int STARTER_STONE_OBJECT_ID = 11933;
+    private static final int STARTER_ORE_OBJECT_ID = 11936;
+    private static final int STARTER_FOOD_NPC_ID = 327;
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
@@ -371,6 +377,51 @@ public final class ConstructionRadialSelection {
         status.append(" | ").append(lastEventState);
         status.append(" | render=").append(lastRenderState);
         return status.toString();
+    }
+
+    /**
+     * Adds one RuneScape-native world context option while an RTS selection is
+     * committed. Ground/object/NPC right-click all expose the same clear action
+     * without replacing Matrix3's normal interactions.
+     */
+    static void mirrorWorldSelectionEntry(int sourceAction, int localX, int localY) {
+        if (!workerControlEnabled || !hasCommittedSelection()
+                || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
+            return;
+        }
+        int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
+        if (!isWorldMenuSourceAction(normalizedAction) || hasMenuAction(CLEAR_SELECTION_MENU_ACTION)) {
+            return;
+        }
+        Class572_Sub12_Sub10 entry = new Class572_Sub12_Sub10(
+                "Clear Selection", "", -646491435 * client.anInt8751,
+                CLEAR_SELECTION_MENU_ACTION, -1, 0L, localX, localY,
+                true, false, 0L, true);
+        Class412.method5075(entry, 722976984);
+    }
+
+    private static boolean isWorldMenuSourceAction(int action) {
+        return action == MATRIX3_TILE_ACTION
+                || action >= 3 && action <= 6
+                || action == 1001 || action == 1002
+                || action >= 9 && action <= 13
+                || action == 1003;
+    }
+
+    private static boolean hasMenuAction(int targetAction) {
+        for (Class572_Sub12_Sub10 entry =
+                (Class572_Sub12_Sub10) Class25.aClass675_174.method7932((byte) 50);
+                entry != null;
+                entry = (Class572_Sub12_Sub10) Class25.aClass675_174.method7926(1709126908)) {
+            int action = entry.anInt11402 * -44467871;
+            if (action >= 2000) {
+                action -= 2000;
+            }
+            if (action == targetAction) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1596,10 +1647,15 @@ public final class ConstructionRadialSelection {
      * selected, vanilla Chop continues for the player too.
      */
     static boolean handleMenuAction(int action, int localX, int localY, long targetUid) {
+        int normalizedAction = action >= 2000 ? action - 2000 : action;
+        if (normalizedAction == CLEAR_SELECTION_MENU_ACTION
+                && workerControlEnabled && hasCommittedSelection()) {
+            clearCommittedRadius();
+            return true;
+        }
         if (!workerControlEnabled || !hasCommittedSelection()) {
             return false;
         }
-        int normalizedAction = action >= 2000 ? action - 2000 : action;
 
         /*
          * Mouse release after a real radial drag can still produce Matrix3's
@@ -1625,15 +1681,54 @@ public final class ConstructionRadialSelection {
             return !committedPlayerSelected;
         }
 
-        if (normalizedAction == 3) {
+        if (normalizedAction == MATRIX3_FIRST_OBJECT_ACTION) {
             int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
-            if (objectId == STARTER_TREE_OBJECT_ID && committedWorkerNpcIndexes.length > 0) {
-                queueSelectionOrder("workerselectiongather " + objectId + " "
+            if (isStarterResourceObjectId(objectId) && committedWorkerNpcIndexes.length > 0) {
+                queueSelectionOrder("workerselectiongather object " + objectId + " "
                         + point.worldX + " " + point.worldY + " " + point.plane);
                 return !committedPlayerSelected;
             }
         }
+        if (normalizedAction == MATRIX3_FIRST_NPC_ACTION && committedWorkerNpcIndexes.length > 0) {
+            ResourceNpcTarget npcTarget = resolveResourceNpcTarget(targetUid);
+            if (npcTarget != null && npcTarget.npcId == STARTER_FOOD_NPC_ID) {
+                queueSelectionOrder("workerselectiongather npc " + npcTarget.npcId + " "
+                        + npcTarget.worldX + " " + npcTarget.worldY + " " + npcTarget.plane);
+                return !committedPlayerSelected;
+            }
+        }
         return false;
+    }
+
+    private static boolean isStarterResourceObjectId(int objectId) {
+        return objectId == STARTER_TREE_OBJECT_ID
+                || objectId == STARTER_STONE_OBJECT_ID
+                || objectId == STARTER_ORE_OBJECT_ID;
+    }
+
+    private static ResourceNpcTarget resolveResourceNpcTarget(long targetUid) {
+        if (client.aClass676_8622 == null || client.aClass613_8605 == null) {
+            return null;
+        }
+        int npcIndex = (int) targetUid;
+        LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+        if (link == null || !(link.anObject9081 instanceof NPC)) {
+            return null;
+        }
+        NPC npc = (NPC) link.anObject9081;
+        if (npc.aClass410_11803 == null || npc.screenX == null || npc.screenY == null
+                || npc.screenX.length == 0 || npc.screenY.length == 0) {
+            return null;
+        }
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
+        if (sceneBase == null) {
+            return null;
+        }
+        int npcId = npc.aClass410_11803.anInt4819 * 1355909985;
+        return new ResourceNpcTarget(npcId,
+                sceneBase.localX * -2109597897 + npc.screenX[0],
+                sceneBase.localY * 417324155 + npc.screenY[0],
+                npc.aByte9009 & 0xff);
     }
 
     private static void queueSelectionOrder(String suffix) {
@@ -1663,6 +1758,20 @@ public final class ConstructionRadialSelection {
         private final int plane;
 
         private WorldPoint(int worldX, int worldY, int plane) {
+            this.worldX = worldX;
+            this.worldY = worldY;
+            this.plane = plane;
+        }
+    }
+
+    private static final class ResourceNpcTarget {
+        private final int npcId;
+        private final int worldX;
+        private final int worldY;
+        private final int plane;
+
+        private ResourceNpcTarget(int npcId, int worldX, int worldY, int plane) {
+            this.npcId = npcId;
             this.worldX = worldX;
             this.worldY = worldY;
             this.plane = plane;
