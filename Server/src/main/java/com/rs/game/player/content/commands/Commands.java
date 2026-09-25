@@ -2937,6 +2937,62 @@ public final class Commands {
 	} else {
 	    String message;
 	    switch (cmd[0].toLowerCase()) {
+	    case "settlementrailreplacebegin":
+		SettlementInstance railStageBegin = SettlementInstance.getActive(player);
+		if (railStageBegin != null) {
+		    player.getPackets().sendGameMessage(railStageBegin.beginRailRouteReplacement());
+		}
+		return true;
+	    case "settlementrailreplaceold":
+		SettlementInstance railStageOld = SettlementInstance.getActive(player);
+		if (railStageOld == null) return true;
+		try {
+		    for (int i = 1; i < cmd.length; i++) {
+			String[] v = cmd[i].split(",");
+			if (v.length != 4) {
+			    player.getPackets().sendGameMessage("Invalid old rail staging entry.");
+			    return true;
+			}
+			String error = railStageOld.stageOldRailRoutePiece(
+				Integer.parseInt(v[0]), Integer.parseInt(v[1]),
+				Integer.parseInt(v[2]), Integer.parseInt(v[3]));
+			if (error != null) {
+			    player.getPackets().sendGameMessage(error);
+			    return true;
+			}
+		    }
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid old rail staging number.");
+		}
+		return true;
+	    case "settlementrailreplacenew":
+		SettlementInstance railStageNew = SettlementInstance.getActive(player);
+		if (railStageNew == null) return true;
+		try {
+		    for (int i = 1; i < cmd.length; i++) {
+			String[] v = cmd[i].split(",");
+			if (v.length != 5) {
+			    player.getPackets().sendGameMessage("Invalid new rail staging entry.");
+			    return true;
+			}
+			String error = railStageNew.stageNewRailRoutePiece(
+				v[0], Integer.parseInt(v[1]), Integer.parseInt(v[2]),
+				Integer.parseInt(v[3]), Integer.parseInt(v[4]));
+			if (error != null) {
+			    player.getPackets().sendGameMessage(error);
+			    return true;
+			}
+		    }
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid new rail staging number.");
+		}
+		return true;
+	    case "settlementrailreplacecommit":
+		SettlementInstance railStageCommit = SettlementInstance.getActive(player);
+		if (railStageCommit != null) {
+		    player.getPackets().sendGameMessage(railStageCommit.commitRailRouteReplacement());
+		}
+		return true;
 	    case "settlementrailreplace":
 		SettlementInstance railReplaceSettlement = SettlementInstance.getActive(player);
 		if (railReplaceSettlement == null) {
