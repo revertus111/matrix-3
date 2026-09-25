@@ -244,6 +244,49 @@ public final class RailRoutePreview {
         }
     }
 
+    private static void appendDebugReportToFile(String report,
+            java.util.List<RoutePiece> oldPieces, java.util.List<RoutePiece> newPieces) {
+        java.io.FileWriter writer = null;
+        try {
+            java.io.File dir = new java.io.File("data/construction");
+            if (!dir.exists() && !dir.mkdirs()) {
+                eventState = "Rail debug directory could not be created: " + dir.getPath();
+                return;
+            }
+            java.io.File file = new java.io.File(dir, "rail_runtime_debug.txt");
+            writer = new java.io.FileWriter(file, true);
+            writer.write("\r\n============================================================\r\n");
+            writer.write("Rail Network V1 runtime commit " + debugOperationId
+                    + " @ " + new java.util.Date() + "\r\n");
+            writer.write("event=" + eventState + "\r\n");
+            writer.write("render=" + renderState + "\r\n");
+            writer.write("logicalTiles=" + logicalNetwork.size()
+                    + " oldPhysical=" + (oldPieces == null ? 0 : oldPieces.size())
+                    + " newPhysical=" + (newPieces == null ? 0 : newPieces.size()) + "\r\n");
+            writer.write("liveGesture=");
+            for (int index = 0; index < liveDragPath.size(); index++) {
+                int[] tile = liveDragPath.get(index);
+                if (index > 0) writer.write(" -> ");
+                writer.write(tile[0] + "," + tile[1] + "," + tile[2]);
+            }
+            writer.write("\r\n");
+            writer.write(report == null ? "(no debug report)" : report);
+            if (report == null || !report.endsWith("\n")) writer.write("\r\n");
+            writer.flush();
+        } catch (Throwable t) {
+            eventState = "Rail debug file write failed: " + t.getClass().getSimpleName()
+                    + ": " + String.valueOf(t.getMessage());
+        } finally {
+            if (writer != null) {
+                try { writer.close(); } catch (Throwable ignored) { }
+            }
+        }
+    }
+
+    public static String getDebugFilePath() {
+        return new java.io.File("data/construction/rail_runtime_debug.txt").getPath();
+    }
+
     public static String getDebugReport() {
         return debugReport;
     }
@@ -924,6 +967,7 @@ public final class RailRoutePreview {
         debugReport = buildDebugReport(debugOperationId, !oldPhysical.isEmpty(), joinedExisting,
                 liveStartX, liveStartY, liveStartX, liveStartY, livePlane,
                 oldPhysical, newPhysical);
+        appendDebugReportToFile(debugReport, oldPhysical, newPhysical);
 
         if (oldPhysical.isEmpty()) {
             ConstructionPlacementController.onRailRouteCommitted(newPhysical);
