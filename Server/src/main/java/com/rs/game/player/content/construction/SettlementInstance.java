@@ -530,7 +530,13 @@ public final class SettlementInstance {
             }
             SettlementPlacedPiece existing = findSavedPiece(oldObjectIds[i], tile);
             if (existing == null) {
-                return "Rail route changed before edit; old piece " + i + " is missing.";
+                /*
+                 * Rail Network V1 sends physical deltas. A prior curve/straight
+                 * conversion may already have removed this visual piece, so a
+                 * missing requested removal is an idempotent no-op rather than
+                 * a reason to reject the rest of the network delta.
+                 */
+                continue;
             }
             SettlementBuildPiece definition = SettlementBuildPiece.forKey(existing.getDefinitionKey());
             if (definition == null || definition.getRole() != SettlementBuildRole.RAIL) {
