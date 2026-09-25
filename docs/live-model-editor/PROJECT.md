@@ -138,7 +138,7 @@ One short test session:
 
 ## Resume Here
 
-**Last completed:** Bundle 1.1 implementation and static ownership trace.
+**Last completed:** Bundle 1.1 implementation, static ownership trace, and corrective Class578 scene-render hook.
 
 **Current phase:** Phase 1 - Runtime Clone Foundation.
 

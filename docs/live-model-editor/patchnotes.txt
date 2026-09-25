@@ -6,3 +6,7 @@
 - Added JSON save/load under dev-model-projects with source object/model IDs and transform state.
 - Bundle 1 performs no cache writes, no clipping changes and no server-world persistence writes.
 - The source scene object is not replaced/suppressed yet; the editable clone defaults two tiles east and may be overlaid at 0/0 for the runtime proof.
+
+2026-09-25
+- Corrected the Bundle 1 scene-render integration: LiveModelEditorPreview is now invoked from the established Class578 developer render pass beside Object Lab/Composite previews.
+- This closes the missing render-hook regression from the initial Bundle 1 commit; runtime behavior remains NEEDS TEST.
