@@ -53,6 +53,9 @@ public final class SettlementInstance {
     private boolean radialPlayerSelected;
     private final WorkerStorageReservationBook workerStorageReservations =
             new WorkerStorageReservationBook();
+    // Short-lived server-owned staging for packet-safe atomic rail endpoint edits.
+    private final List<int[]> pendingRailOld = new ArrayList<int[]>();
+    private final List<String[]> pendingRailNew = new ArrayList<String[]>();
 
     private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
         this.player = player;
@@ -439,6 +442,59 @@ public final class SettlementInstance {
         return removedCount == 0
                 ? "No removable settlement builds found."
                 : "Removed " + removedCount + " settlement build(s).";
+    }
+
+    public synchronized String beginRailRouteReplacement() {
+        pendingRailOld.clear();
+        pendingRailNew.clear();
+        return "Rail route replacement staging started.";
+    }
+
+    public synchronized String stageOldRailRoutePiece(int objectId, int worldX, int worldY, int plane) {
+        if (pendingRailOld.size() >= 64) {
+            return "Rail old-route staging exceeds 64 pieces.";
+        }
+        pendingRailOld.add(new int[] { objectId, worldX, worldY, plane });
+        return null;
+    }
+
+    public synchronized String stageNewRailRoutePiece(
+            String key, int worldX, int worldY, int plane, int rotation) {
+        if (pendingRailNew.size() >= 64) {
+            return "Rail new-route staging exceeds 64 pieces.";
+        }
+        pendingRailNew.add(new String[] { key, Integer.toString(worldX), Integer.toString(worldY),
+                Integer.toString(plane), Integer.toString(rotation) });
+        return null;
+    }
+
+    public synchronized String commitRailRouteReplacement() {
+        int oldCount = pendingRailOld.size();
+        int newCount = pendingRailNew.size();
+        if (oldCount <= 0 || newCount <= 0) {
+            pendingRailOld.clear();
+            pendingRailNew.clear();
+            return "Rail route replacement staging is incomplete.";
+        }
+        int[] oldIds = new int[oldCount], oldXs = new int[oldCount],
+                oldYs = new int[oldCount], oldPlanes = new int[oldCount];
+        for (int i = 0; i < oldCount; i++) {
+            int[] value = pendingRailOld.get(i);
+            oldIds[i] = value[0]; oldXs[i] = value[1]; oldYs[i] = value[2]; oldPlanes[i] = value[3];
+        }
+        String[] newKeys = new String[newCount];
+        int[] newXs = new int[newCount], newYs = new int[newCount],
+                newPlanes = new int[newCount], newRotations = new int[newCount];
+        for (int i = 0; i < newCount; i++) {
+            String[] value = pendingRailNew.get(i);
+            newKeys[i] = value[0];
+            newXs[i] = Integer.parseInt(value[1]); newYs[i] = Integer.parseInt(value[2]);
+            newPlanes[i] = Integer.parseInt(value[3]); newRotations[i] = Integer.parseInt(value[4]);
+        }
+        pendingRailOld.clear();
+        pendingRailNew.clear();
+        return replaceRailRoute(oldIds, oldXs, oldYs, oldPlanes,
+                newKeys, newXs, newYs, newPlanes, newRotations);
     }
 
     /**
