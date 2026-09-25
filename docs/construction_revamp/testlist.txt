@@ -1018,3 +1018,13 @@ Rail debug export-path gate (2026-09-25)
 - Confirm Client/data/construction exists immediately after enabling, with rail_debug/ created before any rail commit.
 - Commit one rail gesture and confirm rail_runtime_debug.txt plus rail_debug/rail_XXXX.png are written under the same Client/data/construction root.
 - Toggle Dbg OFF, commit another rail gesture, and confirm neither file receives a new diagnostic operation.
+
+
+Rail snapshot-preview race gate (2026-09-25)
+- Pull/rebuild, Clear Builds, enable Dbg ON, and confirm the next log header contains debugBuild=SNAPSHOT_PREVIEW_V2 gestureLimit=256 networkLimit=4096.
+- Draw a closed outer loop, then a second nested loop, then a third nested loop. After every release, the previous loops must remain unchanged; no preview-only loop may disappear on the next operation.
+- In the log, each operation's oldPhysical count must equal the prior operation's newPhysical count unless a deliberate Clear Builds/reset occurred.
+- liveGesture must contain the ordered sampled tiles instead of being blank.
+- After release, no detached/white/duplicate legacy A->B preview rail may remain; only persistent world rails should be visible.
+- Grow past 64 physical pieces. The new log must report newPhysical > 64 when topology requires it; any exact 64 cap with logicalTiles > 64 indicates a stale runtime/build.
+- PNG rail_XXXX.png is intentionally captured ~650 ms post-queue and should match the persistent rail state visible after the operation.
