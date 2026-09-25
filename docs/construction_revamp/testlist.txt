@@ -909,3 +909,12 @@ Rail Network V1 Logical Topology — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Add a disconnected second rail segment from empty ground and verify both physical networks remain.
 [ ] Confirm chat reports successful atomic replacement after network edits.
 [ ] Exit/re-enter: physical rail layout persists. Logical editability after relog is CARRYOVER until graph persistence is implemented.
+
+Minecart Object Animation Discovery — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Object Explorer reads object sequence IDs from Matrix3 ObjectDefinitions.method6053().
+[x] Selected object shows "Object animation IDs" beside its ID/name.
+[ ] Open Client Console -> Test -> Object Explorer and enter object ID 8831.
+[ ] Record the revision-830 object name and displayed animation ID(s), or confirm "none".
+[ ] If 8831 is not the minecart in revision 830, search "Mine cart" by name and record the matching object ID + animation ID(s).
+[ ] Spawn-preview the matching cart object only if needed to visually confirm the asset.
+
