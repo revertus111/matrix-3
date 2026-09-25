@@ -24,3 +24,22 @@ Regression
 [ ] Object Lab preview still renders.
 [ ] Object Composite / rail previews still render.
 [ ] Normal object interactions and Dev Mode manipulation actions remain unchanged.
+
+Bundle 2.1 - connected mesh parts
+[ ] Eclipse/Java 8 clean-build Client with LiveModelEditorParts, LiveModelEditorPreview and LiveModelEditorWindow compiling cleanly.
+[ ] Open Smelter 29394/model 64036 in Live Model Editor and confirm Detect/Rebuild Parts reports a non-zero connected-component count.
+[ ] Select several Part rows and confirm only the selected component is highlighted white in the live scene.
+[ ] Toggle Isolate and confirm only the selected component remains rendered; toggle again and confirm all non-hidden parts return.
+[ ] Hide/Show Selected and confirm only that component disappears/reappears.
+[ ] Change Part Move X/Y/Z and confirm only the selected component moves while the rest of the Smelter stays fixed.
+[ ] Change Part Scale X/Y/Z and confirm scaling occurs around that component's own centroid.
+[ ] Change Part Yaw and confirm only the selected component rotates around its centroid.
+[ ] Duplicate Selected and confirm a second independent copy appears with the default +128 model-X offset; transform the copy without moving the source part.
+[ ] Delete Selected and confirm it disappears only from the authoring clone; press Ctrl+Z and confirm it returns.
+[ ] Perform several edits and use Ctrl+Z repeatedly; confirm history walks backward without changing the source scene object/cache.
+[ ] Save JSON v2, change/hide/duplicate parts, load the saved project and confirm original-part transforms, duplicate instances, selected part and isolate state restore.
+[ ] Confirm another object using the same stock model remains unchanged.
+[ ] Regression: hide the runtime clone and confirm the selected source object is still authoritative and unchanged.
+
+Bundle 2.2 carryover
+[ ] Do not treat list selection as final in-world picking. Screen hover/click -> connected component remains unimplemented until the Matrix3 picking seam is traced.
