@@ -8,7 +8,7 @@ public final class ClientConsoleBridge {
     private static final int RIGHTS_MULTIPLIER = -1550439133;
     private static final int MAX_QUEUED_COMMANDS = 128;
     private static final int MAX_COMMANDS_PER_CLIENT_CYCLE = 4;
-    private static final int MAX_COMMAND_LENGTH = 8192;
+    private static final int MAX_COMMAND_LENGTH = 252;
 
     private static final Queue<String> COMMAND_QUEUE = new ConcurrentLinkedQueue<String>();
 
