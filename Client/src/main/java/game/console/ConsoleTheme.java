@@ -11,6 +11,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
@@ -185,6 +186,16 @@ public final class ConsoleTheme {
     public static void styleLabel(JLabel label, boolean muted) {
         label.setFont(BODY_FONT);
         label.setForeground(muted ? MUTED_TEXT : TEXT);
+    }
+
+    public static void styleList(JList<?> list) {
+        list.setFont(BODY_FONT);
+        list.setForeground(TEXT);
+        list.setBackground(PANEL);
+        list.setSelectionForeground(TEXT);
+        list.setSelectionBackground(ACCENT_DARK);
+        list.setBorder(BorderFactory.createEmptyBorder());
+        list.setOpaque(true);
     }
 
     public static void styleScrollPane(JScrollPane scrollPane) {
