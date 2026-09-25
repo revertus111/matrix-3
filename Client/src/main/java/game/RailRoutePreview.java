@@ -821,7 +821,14 @@ public final class RailRoutePreview {
         if (oldPhysical.isEmpty()) {
             ConstructionPlacementController.onRailRouteCommitted(newPhysical);
         } else {
-            ConstructionPlacementController.onRailRouteEdited(oldPhysical, newPhysical);
+            /*
+             * Rail Network V1 is append/branch topology, not the old prototype's
+             * single-route endpoint editor. Only send the physical delta. Sending
+             * the complete old/new network through the legacy replacement path
+             * makes every new drag depend on re-identifying and replacing every
+             * previously persisted rail object.
+             */
+            ConstructionPlacementController.onRailNetworkDelta(oldPhysical, newPhysical);
         }
     }
 
