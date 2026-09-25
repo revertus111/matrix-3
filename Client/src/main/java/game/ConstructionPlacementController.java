@@ -325,31 +325,53 @@ public final class ConstructionPlacementController {
             return;
         }
 
-        StringBuilder command = new StringBuilder(4096);
-        command.append("settlementrailreplace ").append(previousRoute.size());
+        java.util.List<String> commands = new java.util.ArrayList<String>();
+        commands.add("settlementrailreplacebegin");
+
+        StringBuilder chunk = new StringBuilder("settlementrailreplaceold");
+        int chunkCount = 0;
         for (RailRoutePreview.RoutePiece piece : previousRoute) {
-            command.append(' ').append(piece.getObjectId())
-                    .append(' ').append(piece.getWorldX())
-                    .append(' ').append(piece.getWorldY())
-                    .append(' ').append(piece.getPlane());
+            String entry = " " + piece.getObjectId() + "," + piece.getWorldX() + ","
+                    + piece.getWorldY() + "," + piece.getPlane();
+            if (chunkCount >= 6 || chunk.length() + entry.length() > 220) {
+                commands.add(chunk.toString());
+                chunk = new StringBuilder("settlementrailreplaceold");
+                chunkCount = 0;
+            }
+            chunk.append(entry);
+            chunkCount++;
         }
-        command.append(' ').append(replacementRoute.size());
+        if (chunkCount > 0) {
+            commands.add(chunk.toString());
+        }
+
+        chunk = new StringBuilder("settlementrailreplacenew");
+        chunkCount = 0;
         for (RailRoutePreview.RoutePiece piece : replacementRoute) {
             String key = railBuildKey(piece.getObjectId());
             if (key == null) {
                 status = "Unsupported rail object " + piece.getObjectId() + " in edited route.";
                 return;
             }
-            command.append(' ').append(key)
-                    .append(' ').append(piece.getWorldX())
-                    .append(' ').append(piece.getWorldY())
-                    .append(' ').append(piece.getPlane())
-                    .append(' ').append(piece.getRotation());
+            String entry = " " + key + "," + piece.getWorldX() + "," + piece.getWorldY()
+                    + "," + piece.getPlane() + "," + piece.getRotation();
+            if (chunkCount >= 5 || chunk.length() + entry.length() > 220) {
+                commands.add(chunk.toString());
+                chunk = new StringBuilder("settlementrailreplacenew");
+                chunkCount = 0;
+            }
+            chunk.append(entry);
+            chunkCount++;
         }
+        if (chunkCount > 0) {
+            commands.add(chunk.toString());
+        }
+        commands.add("settlementrailreplacecommit");
 
-        String error = ClientConsoleBridge.queueConsoleCommand(command.toString());
+        String error = ClientConsoleBridge.queueConsoleCommands(
+                commands.toArray(new String[commands.size()]));
         status = error == null
-                ? "Atomic rail endpoint edit queued: " + previousRoute.size()
+                ? "Packet-safe atomic rail edit queued: " + previousRoute.size()
                         + " old -> " + replacementRoute.size() + " new piece(s)."
                 : "Rail endpoint edit failed to queue: " + error;
     }
