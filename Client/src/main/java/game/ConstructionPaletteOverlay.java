@@ -676,7 +676,9 @@ public final class ConstructionPaletteOverlay {
         paintButton(g, layout.clearBuilds,
                 System.currentTimeMillis() <= clearBuildsConfirmUntil ? "SURE?" : "Clear", false);
         if (ConstructionPlacementController.isRailRouteSelected()) {
-            paintButton(g, layout.railDebug, "Debug", RailRoutePreview.isDebugEnabled());
+            paintButton(g, layout.railDebug,
+                    RailRoutePreview.isDebugEnabled() ? "Dbg ON" : "Dbg OFF",
+                    RailRoutePreview.isDebugEnabled());
             paintButton(g, layout.copyRailDebug, "Copy", false);
         } else {
             paintButton(g, layout.railDebug, "-", false);
