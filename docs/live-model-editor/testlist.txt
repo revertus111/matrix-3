@@ -43,3 +43,6 @@ Bundle 2.1 - connected mesh parts
 
 Bundle 2.2 carryover
 [ ] Do not treat list selection as final in-world picking. Screen hover/click -> connected component remains unimplemented until the Matrix3 picking seam is traced.
+
+Bundle 2.1 compile correction
+[ ] Eclipse/Java 8 clean-build confirms ConsoleTheme.styleList(JList<?>) resolves and LiveModelEditorWindow.java line 331 compiles.
