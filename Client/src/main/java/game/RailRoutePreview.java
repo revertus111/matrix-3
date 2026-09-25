@@ -1475,7 +1475,7 @@ public final class RailRoutePreview {
             curve = createCurvePlacement(startX, endY, xStep, -yStep);
             int y = startY;
             int attempted = 0;
-            while (y != endY && attempted++ < MAX_ROUTE_TILES) {
+            while (y != endY && attempted++ < MAX_GESTURE_TILES) {
                 if (!curveOccupies(curve, startX, y)) {
                     pieces.add(new RoutePiece(objectId, objectType, verticalRotation(),
                             startX, y, plane));
@@ -1498,7 +1498,7 @@ public final class RailRoutePreview {
             curve = createCurvePlacement(endX, startY, -xStep, yStep);
             int x = startX;
             int attempted = 0;
-            while (x != endX && attempted++ < MAX_ROUTE_TILES) {
+            while (x != endX && attempted++ < MAX_GESTURE_TILES) {
                 if (!curveOccupies(curve, x, startY)) {
                     pieces.add(new RoutePiece(objectId, objectType, eastWestRotation(),
                             x, startY, plane));
