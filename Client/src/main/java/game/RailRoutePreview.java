@@ -98,6 +98,14 @@ public final class RailRoutePreview {
      */
     private static final java.util.LinkedHashSet<String> logicalNetwork =
             new java.util.LinkedHashSet<String>();
+    /*
+     * Explicit authored cardinal edges. Tile adjacency alone is NOT connectivity:
+     * parallel/nearby rails may occupy neighboring tiles without being joined.
+     * This preserves the user's gesture topology and prevents later routes from
+     * retroactively turning old corners into junctions/straights.
+     */
+    private static final java.util.LinkedHashSet<String> logicalConnections =
+            new java.util.LinkedHashSet<String>();
     private static volatile int pathEndX = -1;
     private static volatile int pathEndY = -1;
     private static volatile int pathPlane = -1;
@@ -404,6 +412,7 @@ public final class RailRoutePreview {
         committed = false;
         authoredPath.clear();
         logicalNetwork.clear();
+        logicalConnections.clear();
         pathEndX = -1;
         pathEndY = -1;
         pathPlane = -1;
@@ -551,12 +560,14 @@ public final class RailRoutePreview {
         int rendered;
         if (dragging && !liveDragPath.isEmpty()) {
             java.util.LinkedHashSet<String> saved = new java.util.LinkedHashSet<String>(logicalNetwork);
-            for (int[] tile : liveDragPath) {
-                logicalNetwork.add(logicalKey(tile[0], tile[1], tile[2]));
-            }
+            java.util.LinkedHashSet<String> savedConnections =
+                    new java.util.LinkedHashSet<String>(logicalConnections);
+            addLiveDragToLogicalNetwork();
             rendered = renderResolvedNetwork(scene, renderer, sceneBase, definitions);
             logicalNetwork.clear();
             logicalNetwork.addAll(saved);
+            logicalConnections.clear();
+            logicalConnections.addAll(savedConnections);
         } else if (routeOrder == RouteOrder.Y_THEN_X) {
             rendered = renderYThenX(scene, renderer, sceneBase, definitions,
                     definition, curveDefinition, startX, startY, endX, endY, plane);
@@ -1003,8 +1014,13 @@ public final class RailRoutePreview {
     }
 
     private static void addLiveDragToLogicalNetwork() {
+        int[] previous = null;
         for (int[] tile : liveDragPath) {
             logicalNetwork.add(logicalKey(tile[0], tile[1], tile[2]));
+            if (previous != null) {
+                addLogicalConnection(previous[0], previous[1], tile[0], tile[1], tile[2]);
+            }
+            previous = tile;
         }
     }
 
@@ -1069,21 +1085,29 @@ public final class RailRoutePreview {
 
         if (routeOrder == RouteOrder.Y_THEN_X) {
             while (y != endY && logicalNetwork.size() < MAX_ROUTE_TILES) {
+                int oldY = y;
                 y += yStep;
                 logicalNetwork.add(logicalKey(x, y, plane));
+                addLogicalConnection(x, oldY, x, y, plane);
             }
             while (x != endX && logicalNetwork.size() < MAX_ROUTE_TILES) {
+                int oldX = x;
                 x += xStep;
                 logicalNetwork.add(logicalKey(x, y, plane));
+                addLogicalConnection(oldX, y, x, y, plane);
             }
         } else {
             while (x != endX && logicalNetwork.size() < MAX_ROUTE_TILES) {
+                int oldX = x;
                 x += xStep;
                 logicalNetwork.add(logicalKey(x, y, plane));
+                addLogicalConnection(oldX, y, x, y, plane);
             }
             while (y != endY && logicalNetwork.size() < MAX_ROUTE_TILES) {
+                int oldY = y;
                 y += yStep;
                 logicalNetwork.add(logicalKey(x, y, plane));
+                addLogicalConnection(x, oldY, x, y, plane);
             }
         }
     }
@@ -1202,11 +1226,28 @@ public final class RailRoutePreview {
 
     private static int logicalNeighborMask(int x, int y, int plane) {
         int mask = 0;
-        if (logicalNetwork.contains(logicalKey(x, y + 1, plane))) mask |= 1; // N
-        if (logicalNetwork.contains(logicalKey(x + 1, y, plane))) mask |= 2; // E
-        if (logicalNetwork.contains(logicalKey(x, y - 1, plane))) mask |= 4; // S
-        if (logicalNetwork.contains(logicalKey(x - 1, y, plane))) mask |= 8; // W
+        if (hasLogicalConnection(x, y, x, y + 1, plane)) mask |= 1; // N
+        if (hasLogicalConnection(x, y, x + 1, y, plane)) mask |= 2; // E
+        if (hasLogicalConnection(x, y, x, y - 1, plane)) mask |= 4; // S
+        if (hasLogicalConnection(x, y, x - 1, y, plane)) mask |= 8; // W
         return mask;
+    }
+
+    private static void addLogicalConnection(int ax, int ay, int bx, int by, int plane) {
+        if (Math.abs(ax - bx) + Math.abs(ay - by) != 1) return;
+        logicalConnections.add(logicalConnectionKey(ax, ay, bx, by, plane));
+    }
+
+    private static boolean hasLogicalConnection(int ax, int ay, int bx, int by, int plane) {
+        return logicalConnections.contains(logicalConnectionKey(ax, ay, bx, by, plane));
+    }
+
+    private static String logicalConnectionKey(int ax, int ay, int bx, int by, int plane) {
+        if (ax > bx || (ax == bx && ay > by)) {
+            int tx = ax; ax = bx; bx = tx;
+            int ty = ay; ay = by; by = ty;
+        }
+        return ax + ":" + ay + ":" + plane + ">" + bx + ":" + by + ":" + plane;
     }
 
     private static boolean isOppositePair(int mask) {
