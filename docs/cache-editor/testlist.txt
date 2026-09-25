@@ -11,7 +11,7 @@ RS3 CacheEditor foundation test list
 [ ] Items: search a known item by name and confirm the background index completes without freezing the UI.
 [ ] Items: confirm name search results select and display the expected item definition fields.
 [ ] Confirm definitions that fail to decode are counted as skipped instead of crashing the editor.
-[ ] Confirm NPC/Object/Model/GFX/Animation/Sprite/Interface tabs remain disabled in this foundation slice.
+[ ] Confirm NPC/Object/GFX/Animation/Sprite/Interface tabs remain disabled while Models is enabled.
 [ ] Do not use raw replacement against the live server cache until the disposable-copy write/backup test passes.
 [ ] From the normal Client Console shell, click Open RS3 CacheEditor and confirm the editor starts in a separate process and opens the Matrix3 root 830_cache automatically without showing the directory chooser.
 [ ] Temporarily rename/remove the Matrix3 root 830_cache directory and confirm CacheEditor reports the supplied path is invalid and falls back to the directory chooser instead of failing silently.
@@ -25,3 +25,13 @@ RS3 CacheEditor foundation test list
 [ ] Select several item results and confirm the right side shows a selected-item summary followed by grouped Summary, Models, Equipment, Options, Appearance, Variants, and Client Script Params cards rather than the old field/value JTable.
 [ ] Resize CacheEditor narrower and wider. Confirm the detail pane tracks viewport width, long values stay reachable through vertical scrolling, and the result/detail split remains usable without horizontal clipping.
 [ ] Confirm this UI pass does not enable structured item writes or alter existing Raw Cache read/export/replace behavior.
+
+[ ] Models: open the enabled Models section without starting/logging into the Matrix3 client.
+[ ] Models: load at least one known revision-830 model id and confirm vertex/face counts and X/Y/Z bounds populate.
+[ ] Models: left-drag orbits, middle/right-drag pans, mouse wheel zooms, Reset View restores the default camera, and Wireframe toggles face fill correctly.
+[ ] Models: load a known untextured model and confirm its geometry and face-colour shading look coherent from multiple angles.
+[ ] Models: load a known textured model and confirm geometry still renders; texture images are intentionally not decoded yet and source texture ids remain available for export.
+[ ] Models: Export Raw and confirm the output byte length matches the loaded cache model.
+[ ] Models: Export OBJ and confirm both .obj and sibling .mtl are created and open successfully in Blender or another Wavefront viewer.
+[ ] Models: inspect the OBJ for a textured model and confirm rs_texture_id comments are present on textured faces.
+[ ] Regression: Raw Cache and Items still open and behave as before; Model Viewer must not require a running game client renderer.

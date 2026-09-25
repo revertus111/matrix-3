@@ -15,6 +15,8 @@ import com.rs.cache.loaders.ItemDefinitions;
 
 public final class CacheSession {
 
+	public static final int MODEL_INDEX = 7;
+
 	private final File cacheDirectory;
 	private final Store store;
 	private volatile boolean writeEnabled;
@@ -48,6 +50,16 @@ public final class CacheSession {
 
 	public byte[] readFile(int indexId, int archiveId, int fileId) {
 		return getIndex(indexId).getFile(archiveId, fileId);
+	}
+
+	public int getLastModelId() {
+		return getLastArchiveId(MODEL_INDEX);
+	}
+
+	public byte[] readModelBytes(int modelId) {
+		if (modelId < 0)
+			throw new IllegalArgumentException("Model id must be zero or greater.");
+		return readFile(MODEL_INDEX, modelId, 0);
 	}
 
 	public boolean isWriteEnabled() {

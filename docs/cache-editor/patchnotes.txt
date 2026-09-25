@@ -30,3 +30,11 @@
 - Fixed a compile-breaking missing closing brace in CacheEditor ItemBrowserPanel.filterIndex() introduced during stale-search-worker hardening.
 - The missing loop brace caused Eclipse to report one misplaced-construct syntax error plus two follow-on `entry cannot be resolved` errors.
 - Search cancellation/generation behavior is unchanged; this patch only restores the intended loop structure.
+
+2026-09-25
+- Enabled the standalone CacheEditor Models section and replaced its placeholder with a real Java2D 3D viewport.
+- Added a dedicated revision-830 model geometry adapter derived from the Matrix3 client Class159 byte-layout path without depending on the running game renderer.
+- Added model-id loading from cache index 7, archive=model id, file 0 through the existing shared CacheSession/FileStore.
+- Added orbit, pan, wheel zoom, reset view, flat face-colour lighting, textured-face identification, and wireframe preview controls.
+- Added raw model export plus Wavefront OBJ/MTL export; OBJ preserves model geometry and RuneScape face-colour materials and records source texture ids as comments.
+- Kept texture image decoding/rendering and model mutation out of this slice; both remain follow-up work after runtime verification of the standalone geometry boundary.

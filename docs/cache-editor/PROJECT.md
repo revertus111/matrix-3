@@ -26,7 +26,7 @@ Build a professional standalone Java 8 cache editor for Matrix3's revision-830 c
 | Item visual preview | CARRYOVER | No renderer is connected until a clean reusable Matrix3/client rendering boundary is proven. Do not duplicate the client renderer into CacheEditor. |
 | Structured Item Editor | BLOCKED | Requires a round-trip-safe ItemDefinitions encoder + verify/redecode/compare save pipeline. |
 | NPC/Object editors | PLANNED | Build after shared editor/save infrastructure is proven. |
-| Model editor/viewer | PLANNED | Likely dependency for richer item/NPC/object previews. |
+| Model editor/viewer | NEEDS TEST | Standalone Java2D model viewport, revision-830 geometry decode, raw export, and OBJ/MTL export are implemented; Eclipse/runtime verification is pending. |
 | Animation/GFX tools | PLANNED | Follow model/viewer infrastructure. |
 | Sprite/Interface tools | PLANNED | Later specialized asset tooling. |
 
@@ -66,6 +66,8 @@ Status: NEEDS TEST
 
 Status: NEXT
 
+Priority note: the user explicitly advanced the standalone Model Viewer foundation first because CacheEditor is intended to become a standalone application. That work is tracked in Phase 3 without treating the running client renderer as a dependency.
+
 - [ ] Trace the narrowest reusable model/item preview rendering boundary.
 - [ ] If reusable rendering is clean, add a real Item Viewer preview (inventory first; male/female worn modes later).
 - [ ] If no reusable boundary exists, define a dedicated preview adapter without copying the full client renderer.
@@ -75,9 +77,17 @@ Status: NEXT
 
 ## Phase 3 - Model + Effect Tooling
 
-Status: PLANNED
+Status: ACTIVE (explicit priority override)
 
-- [ ] Model viewer/editor with reusable preview controls.
+- [x] Add a standalone-capable Model Viewer panel under CacheEditor rather than requiring a logged-in/running client renderer.
+- [x] Add a dedicated revision-830 model geometry adapter based on the verified-static Matrix3 Class159 byte layout; do not copy the full game renderer.
+- [x] Add reusable orbit/pan/zoom/reset and wireframe viewport controls.
+- [x] Add raw model export from cache index 7/archive modelId/file 0.
+- [x] Add Wavefront OBJ + MTL export with geometry and RuneScape face-colour materials; preserve texture ids as OBJ comments.
+- [ ] Eclipse/Java 8 clean-build the Server/CacheEditor after the Model Viewer slice.
+- [ ] Runtime-load representative untextured and textured revision-830 models and verify geometry/orientation/face colours.
+- [ ] Add texture image/material rendering only after the standalone texture decode boundary is established; current preview intentionally falls back to face colour for textured faces.
+- [ ] Model editing operations remain later work; this slice is viewer/export foundation only.
 - [ ] Animation playback/viewer.
 - [ ] GFX model + animation viewer/editor.
 
@@ -97,4 +107,4 @@ Status: PLANNED
 
 ## Resume Here
 
-First run the **Phase 2 / Bundle A compile gate**: Eclipse/Java 8 clean-build Matrix3-Server and confirm `com.rs.tools.cacheeditor.ItemBrowserPanel` no longer reports the misplaced-construct or `entry cannot be resolved` errors. If clean, restore Item Browser/search and Bundle A to COMPLETE, then continue with **Phase 2 / Bundle B** by proving the preview renderer ownership boundary using the smallest relevant client/server/tool file set. Do not reconnect or duplicate client rendering blindly. If preview remains blocked, continue independently with the ItemDefinitions round-trip encoder investigation and dirty-state editor shell, but do not enable structured saves until byte-for-byte/semantic round-trip validation is proven.
+Run one consolidated **Eclipse/Java 8 CacheEditor gate**: clean-build Matrix3-Server (which also closes the pending ItemBrowserPanel compile gate), launch standalone CacheEditor, open Models, load representative revision-830 model ids, verify orbit/pan/zoom/wireframe, then export Raw and OBJ/MTL and reopen the OBJ in an external viewer. Current standalone preview intentionally renders textured faces with their RuneScape face-colour fallback while preserving texture ids in OBJ comments. If geometry decode fails for a real 830 model, capture the model id/error before expanding the decoder trace. After this gate, return to Phase 2 / Bundle B item-preview/editor foundation unless the user keeps Model Tooling as the active priority.

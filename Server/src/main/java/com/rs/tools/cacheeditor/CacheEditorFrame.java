@@ -80,7 +80,7 @@ public final class CacheEditorFrame extends JFrame {
 		addNavigation(navigation, group, "Objects", "objects", false);
 
 		addSection(navigation, "ASSETS");
-		addNavigation(navigation, group, "Models", "models", false);
+		addNavigation(navigation, group, "Models", "models", true);
 		addNavigation(navigation, group, "Sprites", "sprites", false);
 		addNavigation(navigation, group, "Interfaces", "interfaces", false);
 
@@ -112,7 +112,7 @@ public final class CacheEditorFrame extends JFrame {
 		content.add(new ItemBrowserPanel(session), "items");
 		content.add(createPlaceholder("NPC Editor"), "npcs");
 		content.add(createPlaceholder("Object Editor"), "objects");
-		content.add(createPlaceholder("Model Viewer / Editor"), "models");
+		content.add(new ModelBrowserPanel(session), "models");
 		content.add(createPlaceholder("Sprite Editor"), "sprites");
 		content.add(createPlaceholder("Interface Editor"), "interfaces");
 		content.add(createPlaceholder("Animation Viewer / Editor"), "animations");
