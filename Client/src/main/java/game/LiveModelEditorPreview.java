@@ -111,6 +111,11 @@ public final class LiveModelEditorPreview {
 
     public static void hide() {
         active = false;
+        dragging = false;
+        pointerInside = false;
+        worldHoveredPart = -1;
+        PARTS.endGesture();
+        PARTS.hover(-1);
         lastRenderedCycle = Integer.MIN_VALUE;
         status = "HIDDEN";
     }
