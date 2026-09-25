@@ -977,7 +977,8 @@ public final class RailRoutePreview {
         for (String key : logicalNetwork) {
             int[] tile = parseLogicalKey(key);
             int mask = logicalNeighborMask(tile[0], tile[1], tile[2]);
-            if (Integer.bitCount(mask) != 2 || isOppositePair(mask)) {
+            if (Integer.bitCount(mask) != 2 || isOppositePair(mask)
+                    || touchesLogicalJunction(tile[0], tile[1], tile[2], mask)) {
                 continue;
             }
             int horizontalDirection = (mask & 2) != 0 ? 1 : -1;
@@ -1047,6 +1048,36 @@ public final class RailRoutePreview {
         if ((mask & 2) != 0) occupied.add(logicalKey(cornerX + 1, cornerY, plane));
         if ((mask & 4) != 0) occupied.add(logicalKey(cornerX, cornerY - 1, plane));
         if ((mask & 8) != 0) occupied.add(logicalKey(cornerX - 1, cornerY, plane));
+    }
+
+    private static boolean touchesLogicalJunction(int x, int y, int plane, int mask) {
+        /*
+         * CURVE_RAIL_LAYOUT_01 owns the first tile of both legs. It must never
+         * consume a degree-3/4 node or the junction appears as a misplaced curve.
+         * Until dedicated switch/crossing art is classified, keep the junction
+         * tile as the straight-through placeholder and terminate the branch
+         * cleanly into it.
+         */
+        if ((mask & 1) != 0 && isLogicalJunction(x, y + 1, plane)) return true;
+        if ((mask & 2) != 0 && isLogicalJunction(x + 1, y, plane)) return true;
+        if ((mask & 4) != 0 && isLogicalJunction(x, y - 1, plane)) return true;
+        if ((mask & 8) != 0 && isLogicalJunction(x - 1, y, plane)) return true;
+        return false;
+    }
+
+    private static boolean isLogicalJunction(int x, int y, int plane) {
+        return Integer.bitCount(logicalNeighborMask(x, y, plane)) >= 3;
+    }
+
+    /**
+     * Direction-neutral rail topology mask for cart routing.
+     * N=1, E=2, S=4, W=8. A cart's incoming edge selects which of these
+     * connected outgoing edges are valid; physical object rotation is visual
+     * only and is never the travel-direction authority.
+     */
+    public static synchronized int getCartConnectionMask(int worldX, int worldY, int plane) {
+        if (!logicalNetwork.contains(logicalKey(worldX, worldY, plane))) return 0;
+        return logicalNeighborMask(worldX, worldY, plane);
     }
 
     private static int logicalNeighborMask(int x, int y, int plane) {
