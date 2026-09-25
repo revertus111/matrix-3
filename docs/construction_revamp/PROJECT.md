@@ -1539,7 +1539,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 
 ## Bundle 2.4 vanilla-context interaction closeout — 2026-09-25
-- IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
+- RUNTIME VERIFIED by user.
 - Vanilla Matrix3 world interactions remain authoritative. Selected workers mirror Walk Here plus starter Wood/Stone/Ore object first-actions and the starter Food NPC first-action; the player continues the same vanilla action only when self is part of the committed selection.
 - World right-click menus expose one `Clear Selection` action whenever a committed RTS selection exists. It does not alter Allowed Jobs, Pause, Needs, progression or persistence.
 - Server gather validation accepts either OBJECT or NPC starter-resource sources and still resolves the exact plot-relative SettlementResourceNode before assigning any worker order.
@@ -1547,9 +1547,10 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 
 ## Bundle 2.4 double-click movement arbitration — 2026-09-25
-- IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
+- RUNTIME VERIFIED by user.
 - Selection drag and movement are separate gestures: ordinary press/release clicks preserve pending double-click state, while crossing the >6px LMB drag threshold clears it; the completed drag release is consumed as selection-only input.
 - With a committed selection, one ground click is consumed and only arms the short double-click window. A second ground click within 375 ms on the same or adjacent tile issues the existing workerselectionmove order.
 - If self is selected, only the accepted second click is allowed through to Matrix3 vanilla Walk Here, keeping player and workers on the same destination.
 - Object/NPC skilling actions and Clear Selection behavior are unchanged.
-- Resume Here: pull once and runtime-test Bundle 2.4 as one gate: drag-select -> release moves nobody -> single ground click moves nobody -> double-click ground moves selected workers (and selected self) -> vanilla Wood/Stone/Ore/Food actions still command workers -> right-click Clear Selection -> exit/re-entry requires a fresh selection.
+- Runtime VERIFIED: user confirmed the complete Bundle 2.4 interaction gate works, including drag selection without release movement, single-click no-move behavior, double-click movement, self+worker movement, vanilla resource commands, Clear Selection, and transient selection lifecycle.
+- Resume Here: Bundle 2.4 is DONE. Do not retest or reopen it without new regression evidence. Return to the canonical active main-goal row: Population, processing and logistics expansion; next implementation focus is Phase 3 processing chains + better materials.
