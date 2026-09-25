@@ -275,8 +275,9 @@ public final class RailRoutePreview {
         return new java.io.File(cwd, "data/construction");
     }
 
-    private static void appendDebugReportToFile(String report,
-            java.util.List<RoutePiece> oldPieces, java.util.List<RoutePiece> newPieces) {
+    private static void appendDebugReportToFile(long operationId, String report,
+            java.util.List<RoutePiece> oldPieces, java.util.List<RoutePiece> newPieces,
+            java.util.List<int[]> gesture) {
         java.io.FileWriter writer = null;
         try {
             java.io.File dir = getDebugRootDirectory();
@@ -287,16 +288,18 @@ public final class RailRoutePreview {
             java.io.File file = new java.io.File(dir, "rail_runtime_debug.txt");
             writer = new java.io.FileWriter(file, true);
             writer.write("\r\n============================================================\r\n");
-            writer.write("Rail Network V1 runtime commit " + debugOperationId
+            writer.write("Rail Network V1 runtime commit " + operationId
                     + " @ " + new java.util.Date() + "\r\n");
+            writer.write("debugBuild=SNAPSHOT_PREVIEW_V2 gestureLimit=" + MAX_GESTURE_TILES
+                    + " networkLimit=" + MAX_NETWORK_PIECES + "\r\n");
             writer.write("event=" + eventState + "\r\n");
             writer.write("render=" + renderState + "\r\n");
             writer.write("logicalTiles=" + logicalNetwork.size()
                     + " oldPhysical=" + (oldPieces == null ? 0 : oldPieces.size())
                     + " newPhysical=" + (newPieces == null ? 0 : newPieces.size()) + "\r\n");
             writer.write("liveGesture=");
-            for (int index = 0; index < liveDragPath.size(); index++) {
-                int[] tile = liveDragPath.get(index);
+            for (int index = 0; index < gesture.size(); index++) {
+                int[] tile = gesture.get(index);
                 if (index > 0) writer.write(" -> ");
                 writer.write(tile[0] + "," + tile[1] + "," + tile[2]);
             }
@@ -314,8 +317,34 @@ public final class RailRoutePreview {
         }
     }
 
-    private static void captureDebugScreenshot(String report,
-            java.util.List<RoutePiece> newPieces) {
+    private static void scheduleDebugWorldScreenshot(
+            final long operationId, final String report,
+            final java.util.List<RoutePiece> newPieces, final int logicalCount,
+            final int startX, final int startY, final int endX, final int endY,
+            final int plane, final String event) {
+        final java.util.List<RoutePiece> pieceSnapshot =
+                new java.util.ArrayList<RoutePiece>(newPieces);
+        Thread captureThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(650L);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                captureDebugScreenshot(operationId, report, pieceSnapshot, logicalCount,
+                        startX, startY, endX, endY, plane, event);
+            }
+        }, "RailDebugCapture-" + operationId);
+        captureThread.setDaemon(true);
+        captureThread.start();
+    }
+
+    private static void captureDebugScreenshot(
+            long operationId, String report,
+            java.util.List<RoutePiece> newPieces, int logicalCount,
+            int startX, int startY, int endX, int endY, int plane, String event) {
         try {
             java.io.File dir = new java.io.File(getDebugRootDirectory(), "rail_debug");
             if (!dir.exists() && !dir.mkdirs()) {
@@ -330,9 +359,11 @@ public final class RailRoutePreview {
             java.awt.Graphics2D g = image.createGraphics();
             try {
                 g.setFont(new java.awt.Font("Monospaced", java.awt.Font.BOLD, 14));
-                java.util.List<String> lines = buildScreenshotDebugLines(report, newPieces);
+                java.util.List<String> lines = buildScreenshotDebugLines(
+                        operationId, report, newPieces, logicalCount,
+                        startX, startY, endX, endY, plane, event);
                 int lineHeight = 18;
-                int panelWidth = 560;
+                int panelWidth = 590;
                 int panelHeight = Math.min(image.getHeight() - 20,
                         20 + (lines.size() * lineHeight));
                 g.setColor(new java.awt.Color(0, 0, 0, 190));
@@ -349,7 +380,7 @@ public final class RailRoutePreview {
             }
 
             String name = String.format(java.util.Locale.ROOT,
-                    "rail_%04d.png", Long.valueOf(debugOperationId));
+                    "rail_%04d.png", Long.valueOf(operationId));
             javax.imageio.ImageIO.write(image, "png", new java.io.File(dir, name));
         } catch (Throwable t) {
             eventState = "Rail debug screenshot failed: " + t.getClass().getSimpleName()
@@ -357,16 +388,20 @@ public final class RailRoutePreview {
         }
     }
 
-    private static java.util.List<String> buildScreenshotDebugLines(String report,
-            java.util.List<RoutePiece> newPieces) {
+    private static java.util.List<String> buildScreenshotDebugLines(
+            long operationId, String report,
+            java.util.List<RoutePiece> newPieces, int logicalCount,
+            int startX, int startY, int endX, int endY, int plane, String event) {
         java.util.List<String> lines = new java.util.ArrayList<String>();
-        lines.add("RAIL NETWORK V1 DEBUG  OP " + debugOperationId);
-        lines.add("logical=" + logicalNetwork.size() + " physical="
-                + (newPieces == null ? 0 : newPieces.size()));
-        lines.add("A=" + committedStartX + "," + committedStartY
-                + "  B=" + committedEndX + "," + committedEndY
-                + "  plane=" + committedPlane);
-        lines.add("event=" + eventState);
+        lines.add("RAIL NETWORK V1 DEBUG  OP " + operationId + "  SNAPSHOT_PREVIEW_V2");
+        lines.add("logical=" + logicalCount + " physical="
+                + (newPieces == null ? 0 : newPieces.size())
+                + " limits=" + MAX_GESTURE_TILES + "/" + MAX_NETWORK_PIECES);
+        lines.add("A=" + startX + "," + startY
+                + "  B=" + endX + "," + endY
+                + "  plane=" + plane);
+        lines.add("event=" + event);
+        lines.add("capture=POST_QUEUE +650ms (world-state evidence)");
         if (newPieces != null) {
             int index = 0;
             for (RoutePiece piece : newPieces) {
@@ -586,15 +621,18 @@ public final class RailRoutePreview {
 
         int rendered;
         if (dragging && !liveDragPath.isEmpty()) {
-            java.util.LinkedHashSet<String> saved = new java.util.LinkedHashSet<String>(logicalNetwork);
-            java.util.LinkedHashSet<String> savedConnections =
+            /*
+             * Preview is a read-only snapshot. The render thread must never
+             * temporarily mutate the authoritative logical graph because mouse
+             * release/commit runs on AWT and can race the scene render.
+             */
+            java.util.LinkedHashSet<String> previewNetwork =
+                    new java.util.LinkedHashSet<String>(logicalNetwork);
+            java.util.LinkedHashSet<String> previewConnections =
                     new java.util.LinkedHashSet<String>(logicalConnections);
-            addLiveDragToLogicalNetwork();
-            rendered = renderResolvedNetwork(scene, renderer, sceneBase, definitions);
-            logicalNetwork.clear();
-            logicalNetwork.addAll(saved);
-            logicalConnections.clear();
-            logicalConnections.addAll(savedConnections);
+            addDragPathToTopology(previewNetwork, previewConnections, liveDragPath);
+            rendered = renderResolvedNetwork(
+                    scene, renderer, sceneBase, definitions, previewNetwork, previewConnections);
         } else if (routeOrder == RouteOrder.Y_THEN_X) {
             rendered = renderYThenX(scene, renderer, sceneBase, definitions,
                     definition, curveDefinition, startX, startY, endX, endY, plane);
@@ -618,8 +656,15 @@ public final class RailRoutePreview {
 
     private static int renderResolvedNetwork(Class523 scene, Class106 renderer,
             Class497 sceneBase, Class639_Sub16 definitions) {
+        return renderResolvedNetwork(scene, renderer, sceneBase, definitions,
+                logicalNetwork, logicalConnections);
+    }
+
+    private static int renderResolvedNetwork(Class523 scene, Class106 renderer,
+            Class497 sceneBase, Class639_Sub16 definitions,
+            java.util.Set<String> network, java.util.Set<String> connections) {
         int rendered = 0;
-        for (RoutePiece piece : resolveLogicalNetworkPieces()) {
+        for (RoutePiece piece : resolveLogicalNetworkPieces(network, connections)) {
             ObjectDefinitions def = (ObjectDefinitions) definitions.getDefinition(
                     piece.getObjectId(), -1356282071);
             if (def != null && renderPiece(scene, renderer, sceneBase, def,
@@ -1041,14 +1086,29 @@ public final class RailRoutePreview {
     }
 
     private static void addLiveDragToLogicalNetwork() {
+        addDragPathToTopology(logicalNetwork, logicalConnections, liveDragPath);
+    }
+
+    private static void addDragPathToTopology(
+            java.util.Set<String> network, java.util.Set<String> connections,
+            java.util.List<int[]> path) {
         int[] previous = null;
-        for (int[] tile : liveDragPath) {
-            logicalNetwork.add(logicalKey(tile[0], tile[1], tile[2]));
+        for (int[] tile : path) {
+            network.add(logicalKey(tile[0], tile[1], tile[2]));
             if (previous != null) {
-                addLogicalConnection(previous[0], previous[1], tile[0], tile[1], tile[2]);
+                addLogicalConnection(connections,
+                        previous[0], previous[1], tile[0], tile[1], tile[2]);
             }
             previous = tile;
         }
+    }
+
+    private static java.util.List<int[]> copyLiveDragPath() {
+        java.util.List<int[]> copy = new java.util.ArrayList<int[]>(liveDragPath.size());
+        for (int[] tile : liveDragPath) {
+            copy.add(new int[] { tile[0], tile[1], tile[2] });
+        }
+        return copy;
     }
 
     private static void commitActiveDrag() {
@@ -1057,6 +1117,7 @@ public final class RailRoutePreview {
                 logicalKey(liveStartX, liveStartY, livePlane));
 
         appendLiveDragToward(liveEndX, liveEndY);
+        java.util.List<int[]> committedGesture = copyLiveDragPath();
         addLiveDragToLogicalNetwork();
         java.util.List<RoutePiece> newPhysical = resolveLogicalNetworkPieces();
 
@@ -1068,7 +1129,6 @@ public final class RailRoutePreview {
         committed = true;
         dragging = false;
         editingEndpointB = false;
-        liveDragPath.clear();
         continuationHorizontalDirection = 0;
         continuationVerticalDirection = 0;
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -1081,27 +1141,38 @@ public final class RailRoutePreview {
                 ? "Rail network extended/branched from existing track."
                 : "Rail network segment added.";
 
+        long debugOp = -1L;
+        String debugEvent = eventState;
+        int debugLogicalCount = logicalNetwork.size();
         if (debugEnabled) {
             debugOperationId++;
+            debugOp = debugOperationId;
             debugReport = buildDebugReport(debugOperationId, !oldPhysical.isEmpty(), joinedExisting,
                     liveStartX, liveStartY, liveStartX, liveStartY, livePlane,
-                    oldPhysical, newPhysical);
-            appendDebugReportToFile(debugReport, oldPhysical, newPhysical);
-            captureDebugScreenshot(debugReport, newPhysical);
+                    oldPhysical, newPhysical, committedGesture);
+            appendDebugReportToFile(
+                    debugOperationId, debugReport, oldPhysical, newPhysical, committedGesture);
         }
 
+        /*
+         * Queue the real server-owned mutation before the screenshot. The
+         * screenshot is delayed slightly so it records the applied world state,
+         * not merely the client preview that existed at mouse release.
+         */
         if (oldPhysical.isEmpty()) {
             ConstructionPlacementController.onRailRouteCommitted(newPhysical);
         } else {
-            /*
-             * Rail Network V1 is append/branch topology, not the old prototype's
-             * single-route endpoint editor. Only send the physical delta. Sending
-             * the complete old/new network through the legacy replacement path
-             * makes every new drag depend on re-identifying and replacing every
-             * previously persisted rail object.
-             */
             ConstructionPlacementController.onRailNetworkDelta(oldPhysical, newPhysical);
         }
+
+        if (debugEnabled && debugOp >= 0L) {
+            scheduleDebugWorldScreenshot(
+                    debugOp, debugReport, newPhysical, debugLogicalCount,
+                    committedStartX, committedStartY, committedEndX, committedEndY,
+                    committedPlane, debugEvent);
+        }
+
+        liveDragPath.clear();
     }
 
     private static void addLogicalManhattanSegment(
@@ -1142,16 +1213,22 @@ public final class RailRoutePreview {
     }
 
     private static java.util.List<RoutePiece> resolveLogicalNetworkPieces() {
+        return resolveLogicalNetworkPieces(logicalNetwork, logicalConnections);
+    }
+
+    private static java.util.List<RoutePiece> resolveLogicalNetworkPieces(
+            java.util.Set<String> network, java.util.Set<String> connections) {
         java.util.List<RoutePiece> pieces = new java.util.ArrayList<RoutePiece>();
         java.util.HashSet<String> physicalOccupied = new java.util.HashSet<String>();
 
         // Resolve 90-degree logical corners first because the accepted RS3 curve
         // owns a three-object physical footprint around one logical node.
-        for (String key : logicalNetwork) {
+        for (String key : network) {
             int[] tile = parseLogicalKey(key);
-            int mask = logicalNeighborMask(tile[0], tile[1], tile[2]);
+            int mask = logicalNeighborMask(tile[0], tile[1], tile[2], connections);
             if (Integer.bitCount(mask) != 2 || isOppositePair(mask)
-                    || touchesLogicalJunction(tile[0], tile[1], tile[2], mask)) {
+                    || touchesLogicalJunction(
+                            tile[0], tile[1], tile[2], mask, connections)) {
                 continue;
             }
             int horizontalDirection = (mask & 2) != 0 ? 1 : -1;
@@ -1167,13 +1244,13 @@ public final class RailRoutePreview {
         // All remaining logical nodes receive a straight placeholder. Degree
         // 3/4 nodes are intentionally logical junctions in V1; final switch art
         // can replace this resolver choice later without changing saved topology.
-        for (String key : logicalNetwork) {
+        for (String key : network) {
             int[] tile = parseLogicalKey(key);
             String physicalKey = logicalKey(tile[0], tile[1], tile[2]);
             if (physicalOccupied.contains(physicalKey)) {
                 continue;
             }
-            int mask = logicalNeighborMask(tile[0], tile[1], tile[2]);
+            int mask = logicalNeighborMask(tile[0], tile[1], tile[2], connections);
             int rotation = chooseStraightRotation(mask);
             RoutePiece piece = new RoutePiece(objectId, objectType, rotation,
                     tile[0], tile[1], tile[2]);
@@ -1224,6 +1301,11 @@ public final class RailRoutePreview {
     }
 
     private static boolean touchesLogicalJunction(int x, int y, int plane, int mask) {
+        return touchesLogicalJunction(x, y, plane, mask, logicalConnections);
+    }
+
+    private static boolean touchesLogicalJunction(
+            int x, int y, int plane, int mask, java.util.Set<String> connections) {
         /*
          * CURVE_RAIL_LAYOUT_01 owns the first tile of both legs. It must never
          * consume a degree-3/4 node or the junction appears as a misplaced curve.
@@ -1231,15 +1313,20 @@ public final class RailRoutePreview {
          * tile as the straight-through placeholder and terminate the branch
          * cleanly into it.
          */
-        if ((mask & 1) != 0 && isLogicalJunction(x, y + 1, plane)) return true;
-        if ((mask & 2) != 0 && isLogicalJunction(x + 1, y, plane)) return true;
-        if ((mask & 4) != 0 && isLogicalJunction(x, y - 1, plane)) return true;
-        if ((mask & 8) != 0 && isLogicalJunction(x - 1, y, plane)) return true;
+        if ((mask & 1) != 0 && isLogicalJunction(x, y + 1, plane, connections)) return true;
+        if ((mask & 2) != 0 && isLogicalJunction(x + 1, y, plane, connections)) return true;
+        if ((mask & 4) != 0 && isLogicalJunction(x, y - 1, plane, connections)) return true;
+        if ((mask & 8) != 0 && isLogicalJunction(x - 1, y, plane, connections)) return true;
         return false;
     }
 
     private static boolean isLogicalJunction(int x, int y, int plane) {
-        return Integer.bitCount(logicalNeighborMask(x, y, plane)) >= 3;
+        return isLogicalJunction(x, y, plane, logicalConnections);
+    }
+
+    private static boolean isLogicalJunction(
+            int x, int y, int plane, java.util.Set<String> connections) {
+        return Integer.bitCount(logicalNeighborMask(x, y, plane, connections)) >= 3;
     }
 
     /**
@@ -1254,21 +1341,38 @@ public final class RailRoutePreview {
     }
 
     private static int logicalNeighborMask(int x, int y, int plane) {
+        return logicalNeighborMask(x, y, plane, logicalConnections);
+    }
+
+    private static int logicalNeighborMask(
+            int x, int y, int plane, java.util.Set<String> connections) {
         int mask = 0;
-        if (hasLogicalConnection(x, y, x, y + 1, plane)) mask |= 1; // N
-        if (hasLogicalConnection(x, y, x + 1, y, plane)) mask |= 2; // E
-        if (hasLogicalConnection(x, y, x, y - 1, plane)) mask |= 4; // S
-        if (hasLogicalConnection(x, y, x - 1, y, plane)) mask |= 8; // W
+        if (hasLogicalConnection(connections, x, y, x, y + 1, plane)) mask |= 1; // N
+        if (hasLogicalConnection(connections, x, y, x + 1, y, plane)) mask |= 2; // E
+        if (hasLogicalConnection(connections, x, y, x, y - 1, plane)) mask |= 4; // S
+        if (hasLogicalConnection(connections, x, y, x - 1, y, plane)) mask |= 8; // W
         return mask;
     }
 
     private static void addLogicalConnection(int ax, int ay, int bx, int by, int plane) {
+        addLogicalConnection(logicalConnections, ax, ay, bx, by, plane);
+    }
+
+    private static void addLogicalConnection(
+            java.util.Set<String> connections,
+            int ax, int ay, int bx, int by, int plane) {
         if (Math.abs(ax - bx) + Math.abs(ay - by) != 1) return;
-        logicalConnections.add(logicalConnectionKey(ax, ay, bx, by, plane));
+        connections.add(logicalConnectionKey(ax, ay, bx, by, plane));
     }
 
     private static boolean hasLogicalConnection(int ax, int ay, int bx, int by, int plane) {
-        return logicalConnections.contains(logicalConnectionKey(ax, ay, bx, by, plane));
+        return hasLogicalConnection(logicalConnections, ax, ay, bx, by, plane);
+    }
+
+    private static boolean hasLogicalConnection(
+            java.util.Set<String> connections,
+            int ax, int ay, int bx, int by, int plane) {
+        return connections.contains(logicalConnectionKey(ax, ay, bx, by, plane));
     }
 
     private static String logicalConnectionKey(int ax, int ay, int bx, int by, int plane) {
@@ -1310,11 +1414,15 @@ public final class RailRoutePreview {
     private static String buildDebugReport(long operationId, boolean hadPrevious, boolean endpointEdit,
             int previousStartX, int previousStartY, int previousEndX, int previousEndY,
             int previousPlane, java.util.List<RoutePiece> oldPieces,
-            java.util.List<RoutePiece> pieces) {
+            java.util.List<RoutePiece> pieces, java.util.List<int[]> gesture) {
         StringBuilder out = new StringBuilder(2048);
         out.append("RAIL_DEBUG\top=").append(operationId)
+                .append("\tbuild=SNAPSHOT_PREVIEW_V2")
                 .append("\torder=").append(routeOrder)
                 .append("\tcomposite=").append(getConfiguredCurveCompositeName())
+                .append("\tgestureTiles=").append(gesture == null ? 0 : gesture.size())
+                .append("\tlogicalTiles=").append(logicalNetwork.size())
+                .append("\tlimits=").append(MAX_GESTURE_TILES).append('/').append(MAX_NETWORK_PIECES)
                 .append("\n");
         out.append("MODE\tendpointEdit=").append(endpointEdit)
                 .append("\tfixedA=").append(endpointEdit)
