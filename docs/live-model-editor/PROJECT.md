@@ -24,7 +24,8 @@ The same transform/selection foundation is intended to become the developer-grad
 | Private in-world runtime model clone | ✅ Complete | Runtime-confirmed on the Smelter reference asset: the private clone renders in the live scene without replacing the source object. |
 | Live whole-model transforms | ✅ Complete | Runtime-confirmed in the live client; independent scale, translation and yaw visibly update the private clone. |
 | JSON project save/load | ⚠️ Needs runtime verification | Authoring state saves under dev-model-projects and can be loaded back into the live preview. |
-| Mesh component selection/editing | ⚠️ Needs runtime verification | Bundle 2 adds connected-component detection, list selection/highlight, isolate/hide, per-part transforms, duplicate/delete, Ctrl+Z and JSON v2. In-world mouse hover/pick remains carryover. |
+| Mesh component selection/editing | ⚠️ Needs runtime verification | Bundle 2.1 adds connected-component editing; Bundle 2.2 moves the editor into an owned in-client overlay and adds list-hover live preview. True 3D world hover/click picking remains Bundle 2.3 carryover. |
+| In-client model-editor overlay | ⚠️ Needs runtime verification | RuneScape-styled owned JWindow follows the Matrix3 game canvas, replaces the external editor frame, supports drag repositioning, compact part/global controls, and hover-preview rows. |
 | Permanent revision-830 model compiler | ❌ Not started | Requires validated encoder, model-ID allocation, backup, write/readback and hot reload. |
 | Construction Detail Mode reuse | ❌ Not started | Future player-facing placement/composition uses the shared transform/selection foundation and settlement persistence. |
 
@@ -103,16 +104,35 @@ Status: NEEDS TEST
 - [ ] Runtime verify duplicate/delete/undo.
 - [ ] Save/load JSON v2 and confirm the same part edits return.
 
-### Bundle 2.2 - In-world component picking
+### Bundle 2.2 - In-client overlay + hover workflow
+
+Status: NEEDS TEST
+
+- [x] Replace the standalone decorated editor frame with an owned overlay window positioned over the Matrix3 game canvas.
+- [x] Follow client move/resize and support dragging the overlay to a preferred in-client position.
+- [x] Replace the generic Swing layout with a compact RuneScape-style dark/gold editor skin.
+- [x] Keep target/model/part information visible without the oversized scroll-heavy layout.
+- [x] Hover a part row to preview-highlight that connected component in the live world.
+- [x] Clear hover preview when the pointer leaves the list; clicked selection remains the fallback highlight.
+- [x] Keep click-to-select, isolate, hide/show, duplicate, delete, undo, per-part transforms, whole-clone transforms and JSON save/load in the overlay.
+- [ ] Eclipse/Java 8 clean-build.
+- [ ] Runtime verify the overlay remains attached to the game client rather than opening as an independent desktop editor window.
+- [ ] Runtime verify moving the mouse across part rows changes the in-world highlight without clicking.
+- [ ] Runtime verify leaving the part list restores the locked selected-part highlight.
+- [ ] Runtime verify overlay drag/reposition and client move/resize tracking.
+- [ ] Runtime verify all Bundle 2.1 part actions still function from the overlay.
+
+### Bundle 2.3 - True in-world component picking
 
 Status: CARRYOVER
 
 - [ ] Trace the narrowest Matrix3 screen-to-model/triangle picking seam.
-- [ ] Hover a component in the live scene and highlight it without list selection.
-- [ ] Left-click the hovered component to select it.
+- [ ] Hover the actual rendered component in the live 3D scene and highlight it without using the list.
+- [ ] Left-click the hovered world component to select it.
+- [ ] Keep the overlay list synchronized with the world-selected component.
 - [ ] Preserve normal game input outside Live Model Editor edit mode.
 
-The connected-part editor deliberately ships first with list selection rather than inventing a second camera/raycast implementation. The existing live scene remains the visual editing surface; only mouse-to-component picking is deferred.
+Bundle 2.2 deliberately improves the authoring workflow first using the already-proven connected-part data. Bundle 2.3 remains the dedicated screen-to-3D picking trace so the implementation does not invent a second camera/raycast system.
 
 ## Phase 3 - Professional Transform UX
 
@@ -169,9 +189,9 @@ One short test session:
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
-**Active bundle:** Bundle 2.1 - Connected parts + per-part authoring (`NEEDS TEST`).
+**Active bundle:** Bundle 2.2 - In-client overlay + hover workflow (`NEEDS TEST`).
 
-**Next action:** one consolidated runtime gate on Smelter 29394/model 64036: Detect Parts, select several list entries, verify white highlight/isolate, move/scale/yaw one component, duplicate/delete/undo, then save/load JSON v2. After that passes, trace Bundle 2.2 in-world hover/click picking.
+**Next action:** one consolidated runtime gate on Smelter 29394/model 64036: open Dev > Edit Model Live and verify the RuneScape-style overlay appears over the game client, hover several part rows and watch the in-world highlight follow the pointer, click one row to lock selection, leave the list to confirm the locked highlight returns, then exercise isolate/move/duplicate/delete/undo plus overlay drag. If this passes, continue Bundle 2.3 with true 3D world hover/click picking.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`
@@ -188,4 +208,4 @@ One short test session:
 - Object Lab direct-render scene coordinate math.
 - Dev Mode object ID/tile target route.
 
-**Important uncertainty:** exact live scene object type/rotation and true one-instance renderer replacement/suppression are not yet established. Bundle 1 intentionally keeps those explicit and leaves the original object untouched. Bundle 2.1 also does not yet own a proven screen-to-component mouse-picking seam; list selection is authoritative until Bundle 2.2 traces that input path.
+**Important uncertainty:** exact live scene object type/rotation and true one-instance renderer replacement/suppression are not yet established. Bundle 1 intentionally keeps those explicit and leaves the original object untouched. Bundle 2.2 adds list-hover preview only; it does not claim true screen-to-component 3D picking. The world-picking seam remains explicitly deferred to Bundle 2.3.
