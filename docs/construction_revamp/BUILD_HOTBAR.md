@@ -105,10 +105,10 @@ The hotbar is UX only. It does not own persistent builds, rail topology persiste
 
 ### Phase H1 - Hotbar foundation
 - [x] Define explicit nine-slot tool contract.
-- [ ] Add separate ConstructionBuildHotbar overlay.
-- [ ] Add 1-9 hotkeys while palette is open.
-- [ ] Wire Rail/Object/Eraser/Rotate/Undo to existing owners.
-- [ ] Keep Junction/Crossing/Splitter/Favorites visibly reserved, non-fake.
+- [x] Add separate ConstructionBuildHotbar overlay.
+- [x] Add 1-9 hotkeys while palette is open.
+- [x] Wire Rail/Object/Eraser/Rotate/Undo to existing owners.
+- [x] Keep Junction/Crossing/Splitter/Favorites visibly reserved, non-fake.
 - [ ] Runtime UI/input smoke test.
 
 ### Phase H2 - Explicit rail special tools
