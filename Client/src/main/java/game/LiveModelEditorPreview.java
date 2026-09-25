@@ -32,7 +32,7 @@ public final class LiveModelEditorPreview {
     private static volatile int sourceX;
     private static volatile int sourceY;
     private static volatile int plane;
-    private static volatile int previewOffsetX = 2;
+    private static volatile int previewOffsetX;
     private static volatile int previewOffsetY;
 
     private static volatile int scaleXPercent = 100;
@@ -91,8 +91,66 @@ public final class LiveModelEditorPreview {
     }
 
     public static boolean isActive() { return active; }
+    public static boolean isEditSessionActive() { return active && objectId >= 0; }
     public static int getObjectId() { return objectId; }
     public static String getStatus() { return status; }
+
+    public static boolean matchesSource(int id, int worldX, int worldY, int worldPlane) {
+        return objectId == id && sourceX == worldX && sourceY == worldY && plane == worldPlane;
+    }
+
+    /**
+     * Developer render suppression for exactly the source object being edited.
+     *
+     * The server/world object is left registered so clipping, interactions and
+     * persistence remain authoritative. Only its normal scene model is skipped
+     * while the private editable replacement is active.
+     */
+    public static boolean shouldSuppressSceneObject(Interface65 object, Class456_Sub1 node) {
+        if (!isEditSessionActive() || object == null || node == null) {
+            return false;
+        }
+
+        int id;
+        try {
+            id = object.method136(0);
+        } catch (RuntimeException ex) {
+            return false;
+        }
+        if (id != objectId || (node.aByte9009 & 0xff) != plane) {
+            return false;
+        }
+
+        Class613 region = client.aClass613_8605;
+        if (region == null) {
+            return false;
+        }
+        Class497 sceneBase = region.method7280((byte) -102);
+        if (sceneBase == null) {
+            return false;
+        }
+
+        int localTargetX = sourceX - sceneBase.localX * -2109597897;
+        int localTargetY = sourceY - sceneBase.localY * 417324155;
+
+        if (node instanceof Class456_Sub1_Sub2) {
+            Class456_Sub1_Sub2 area = (Class456_Sub1_Sub2) node;
+            int minX = Math.min(area.aShort11503, area.aShort11499);
+            int maxX = Math.max(area.aShort11503, area.aShort11499);
+            int minY = Math.min(area.aShort11500, area.aShort11502);
+            int maxY = Math.max(area.aShort11500, area.aShort11502);
+            return localTargetX >= minX && localTargetX <= maxX
+                    && localTargetY >= minY && localTargetY <= maxY;
+        }
+
+        Class238 transform = node.method5394();
+        if (transform == null || transform.aClass240_2647 == null) {
+            return false;
+        }
+        int localX = (int) transform.aClass240_2647.aFloat2653 >> 9;
+        int localY = (int) transform.aClass240_2647.aFloat2657 >> 9;
+        return localX == localTargetX && localY == localTargetY;
+    }
 
     public static int initializeParts() {
         ObjectDefinitions definition = currentDefinition();

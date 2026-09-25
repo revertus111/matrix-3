@@ -32,3 +32,13 @@
 - Added transient part-row hover preview: moving across the parts list temporarily highlights the hovered connected component in-world; leaving the list restores the locked clicked selection highlight.
 - Hover state is presentation-only and is not written into JSON or undo history. Clicked selection remains the authoritative project selection.
 - True 3D world-surface component hover/click picking remains Bundle 2.3 carryover.
+
+2026-09-25
+- Started Bundle 2.3A proper live edit-session ownership.
+- Editable model replacement now defaults to preview offset 0/0 so it occupies the selected source object's tile instead of appearing as a second nearby clone.
+- Reopening the same object/tile/plane resumes the current authoring state instead of resetting transforms/parts or creating another editing workflow.
+- Added editor input ownership: action-23 Walk Here is consumed before RTS/Construction routing, normal object/NPC interaction actions are consumed, and Canvas left-click events are consumed while the edit session is active. Overlay controls remain usable; camera-only inputs are not globally disabled.
+- Escape or Exit Edit pauses the runtime editor, hides the overlay and immediately restores normal source rendering/input.
+- Added client-only source-object visual suppression across Matrix3's eight object scene-render implementations. Matching is object ID + plane + occupied tile bounds for multi-tile entities, or object ID + plane + scene tile for single-tile/wall/decor entities.
+- Source suppression is render-only: the original object is not deleted, moved or rewritten; server ownership, clipping, map state and cache bytes remain untouched.
+- Bundle 2.3B true screen-to-connected-component hover/click picking remains the next dependency after this replacement/input gate is runtime-verified.

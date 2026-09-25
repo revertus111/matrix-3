@@ -87,6 +87,8 @@ public class Class319 implements Interface52 {
 			long l = (-6760453999157901937L * ((Class572_Sub12_Sub10) class572_sub12_sub10).aLong11395);
 			if (i_8_ >= 2000)
 				i_8_ -= 2000;
+			if (LiveModelEditorPreview.isEditSessionActive() && i_8_ == 23)
+				return;
 			if (ConstructionRadialSelection.handleMenuAction(i_8_, i_6_, i_7_, l))
 				return;
 			if (DevModeBridge.handleMenuAction(i_8_, i_6_, i_7_))

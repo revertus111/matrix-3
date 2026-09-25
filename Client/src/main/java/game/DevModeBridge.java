@@ -243,6 +243,9 @@ public final class DevModeBridge {
         AtlasRuntimeBridge.observeMenuAction(action, payloadA, payloadB);
 
         int normalizedAction = normalizeAction(action);
+        if (LiveModelEditorPreview.isEditSessionActive() && isNormalWorldEntityAction(normalizedAction)) {
+            return true;
+        }
         if (normalizedAction == MATRIX3_TILE_ACTION && ConstructionBuildCamera.isRequested()) {
             ConstructionBuildCamera.stopMovement();
             if (ConstructionPlacementController.eraseAtLocalTile(payloadA, payloadB)) {
@@ -547,6 +550,10 @@ public final class DevModeBridge {
 
     private static boolean isObjectSourceAction(int action) {
         return action >= 3 && action <= 6 || action == 1001 || action == 1002;
+    }
+
+    private static boolean isNormalWorldEntityAction(int action) {
+        return isObjectSourceAction(action) || isNpcSourceAction(action);
     }
 
     private static boolean isNpcDevAction(int action) {

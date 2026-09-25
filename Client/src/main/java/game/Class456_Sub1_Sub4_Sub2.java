@@ -41,6 +41,8 @@ public class Class456_Sub1_Sub4_Sub2 extends Class456_Sub1_Sub4 implements Inter
 	}
 
 	Class531 method8350(Class106 class106, int i) {
+		if (LiveModelEditorPreview.shouldSuppressSceneObject(this, this))
+			return null;
 		Model model = aClass588_11571.method6970(class106, 2048, false, true, (byte) -69);
 		if (null == model)
 			return null;
@@ -93,6 +95,8 @@ public class Class456_Sub1_Sub4_Sub2 extends Class456_Sub1_Sub4 implements Inter
 	}
 
 	Class531 method8327(Class106 class106) {
+		if (LiveModelEditorPreview.shouldSuppressSceneObject(this, this))
+			return null;
 		Model model = aClass588_11571.method6970(class106, 2048, false, true, (byte) -33);
 		if (null == model)
 			return null;
@@ -248,6 +252,8 @@ public class Class456_Sub1_Sub4_Sub2 extends Class456_Sub1_Sub4 implements Inter
 	}
 
 	Class531 method8326(Class106 class106) {
+		if (LiveModelEditorPreview.shouldSuppressSceneObject(this, this))
+			return null;
 		Model model = aClass588_11571.method6970(class106, 2048, false, true, (byte) -122);
 		if (null == model)
 			return null;
@@ -280,6 +286,8 @@ public class Class456_Sub1_Sub4_Sub2 extends Class456_Sub1_Sub4 implements Inter
 	}
 
 	Class531 method8328(Class106 class106) {
+		if (LiveModelEditorPreview.shouldSuppressSceneObject(this, this))
+			return null;
 		Model model = aClass588_11571.method6970(class106, 2048, false, true, (byte) -97);
 		if (null == model)
 			return null;

@@ -62,3 +62,20 @@ Bundle 2.2 - in-client overlay + hover preview
 
 Bundle 2.3 carryover
 [ ] Do not mark 3D world hover/click picking complete from list-hover behavior; actual screen-to-rendered-component picking remains unimplemented.
+
+Bundle 2.3A - target replacement + editor input ownership
+[ ] Eclipse/Java 8 clean-build Client with the LiveModelEditorPreview suppression helper and eight scene-object render hooks.
+[ ] Spawn/locate Smelter 29394 and open Dev > Edit Model Live; confirm the editable model appears on the exact source tile with default Tile X=0 / Tile Y=0.
+[ ] Confirm the stock source Smelter model is no longer visible underneath/through the editable replacement.
+[ ] Confirm a second Smelter/object using model 64036 elsewhere remains visible and unchanged.
+[ ] Left-click the ground/minimap while the edit session is active and confirm the player does not walk.
+[ ] Attempt normal object/NPC interactions while editing and confirm they are consumed rather than dispatched.
+[ ] Confirm camera rotation/zoom/navigation inputs intended for viewing still work.
+[ ] Move/scale/hide a connected part, close the overlay, reopen Dev > Edit Model Live on the same object and confirm the existing authoring state resumes rather than resetting or duplicating the object.
+[ ] Press Escape and confirm the overlay closes, input returns to normal, and the original source object immediately renders again.
+[ ] Click Exit Edit and confirm the same restoration behavior.
+[ ] Confirm source clipping/server world state/cache data are unchanged after entering/exiting edit mode.
+[ ] Regression: Construction RTS/Walk Here behavior returns to its prior ownership rules after Live Model Editor exits.
+
+Bundle 2.3B carryover under current AAA
+[ ] After 2.3A passes, trace and implement actual 3D component hover/click selection against the single editable replacement.

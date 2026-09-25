@@ -6,6 +6,7 @@ import game.DevModeBridge.DevTarget;
 import game.DevModeBridge.TargetType;
 import game.LiveModelEditorPreview;
 
+import java.awt.AWTEvent;
 import java.awt.BorderLayout;
 import java.awt.Canvas;
 import java.awt.Color;
@@ -16,7 +17,9 @@ import java.awt.GridLayout;
 import java.awt.IllegalComponentStateException;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.Window;
+import java.awt.event.AWTEventListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -98,6 +101,7 @@ public final class LiveModelEditorWindow {
     private static LiveModelEditorWindow instance;
     private static Timer overlayTimer;
     private static boolean manuallyPositioned;
+    private static boolean inputGateInstalled;
     private static int manualLocalX;
     private static int manualLocalY;
 
@@ -112,7 +116,7 @@ public final class LiveModelEditorWindow {
 
     private final JSpinner typeSpinner = spinner(10, 0, 22, 1);
     private final JSpinner objectRotationSpinner = spinner(0, 0, 3, 1);
-    private final JSpinner tileOffsetXSpinner = spinner(2, -12, 12, 1);
+    private final JSpinner tileOffsetXSpinner = spinner(0, -12, 12, 1);
     private final JSpinner tileOffsetYSpinner = spinner(0, -12, 12, 1);
 
     private final JSpinner scaleXSpinner = spinner(100, 10, 400, 5);
@@ -163,7 +167,12 @@ public final class LiveModelEditorWindow {
         if (instance == null || overlayWindow == null) {
             return;
         }
-        instance.capture(target);
+        installInputGate();
+        if (instance.matchesTarget(target)) {
+            instance.resumeSession();
+        } else {
+            instance.capture(target);
+        }
         refreshOverlayBounds();
         overlayWindow.setVisible(true);
         overlayWindow.toFront();
@@ -291,11 +300,7 @@ public final class LiveModelEditorWindow {
 
         JButton close = rsButton("X");
         close.setPreferredSize(new Dimension(38, 32));
-        close.addActionListener(e -> {
-            LiveModelEditorPreview.clearPartPreview();
-            hoveredListIndex = -1;
-            if (overlayWindow != null) overlayWindow.setVisible(false);
-        });
+        close.addActionListener(e -> closeEditorSession());
         JPanel closeWrap = new JPanel(new BorderLayout());
         closeWrap.setOpaque(false);
         closeWrap.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 6));
@@ -486,7 +491,7 @@ public final class LiveModelEditorWindow {
         card.add(Box.createVerticalStrut(6));
         JPanel actions = actionRow(3);
         JButton show = rsButton("Refresh");
-        JButton hide = rsButton("Hide Clone");
+        JButton hide = rsButton("Exit Edit");
         JButton reset = rsButton("Reset");
         actions.add(show);
         actions.add(hide);
@@ -494,10 +499,7 @@ public final class LiveModelEditorWindow {
         card.add(actions);
 
         show.addActionListener(e -> refreshPreview());
-        hide.addActionListener(e -> {
-            LiveModelEditorPreview.hide();
-            statusLabel.setText("Runtime clone hidden. Source object unchanged.");
-        });
+        hide.addActionListener(e -> closeEditorSession());
         reset.addActionListener(e -> resetTransforms());
         return card;
     }
@@ -627,6 +629,75 @@ public final class LiveModelEditorWindow {
         }
     }
 
+    private boolean matchesTarget(DevTarget target) {
+        return target != null && hasSource
+                && objectId == target.getId()
+                && sourceX == target.getWorldX()
+                && sourceY == target.getWorldY()
+                && sourcePlane == target.getPlane();
+    }
+
+    private void resumeSession() {
+        hoveredListIndex = -1;
+        LiveModelEditorPreview.clearPartPreview();
+        refreshPreview();
+        refreshPartList();
+        loadSelectedPartEditors();
+        updateTargetLabels();
+        statusLabel.setText("Resumed existing edit session for " + objectName + " #" + objectId + ".");
+    }
+
+    private static void closeEditorSession() {
+        LiveModelEditorPreview.clearPartPreview();
+        LiveModelEditorPreview.hide();
+        if (instance != null) {
+            instance.hoveredListIndex = -1;
+            instance.statusLabel.setText("Edit session paused. Original scene object restored.");
+        }
+        if (overlayWindow != null) {
+            overlayWindow.setVisible(false);
+        }
+    }
+
+    private static synchronized void installInputGate() {
+        if (inputGateInstalled) {
+            return;
+        }
+        Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
+            @Override
+            public void eventDispatched(AWTEvent event) {
+                if (!LiveModelEditorPreview.isEditSessionActive()) {
+                    return;
+                }
+                if (event instanceof MouseEvent) {
+                    MouseEvent mouse = (MouseEvent) event;
+                    Canvas canvas = Class584.aCanvas7745;
+                    if (canvas != null && mouse.getSource() == canvas
+                            && mouse.getButton() == MouseEvent.BUTTON1
+                            && (mouse.getID() == MouseEvent.MOUSE_PRESSED
+                                    || mouse.getID() == MouseEvent.MOUSE_RELEASED
+                                    || mouse.getID() == MouseEvent.MOUSE_CLICKED)) {
+                        mouse.consume();
+                    }
+                    return;
+                }
+                if (event instanceof KeyEvent) {
+                    KeyEvent key = (KeyEvent) event;
+                    if (key.getID() == KeyEvent.KEY_PRESSED && key.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                        key.consume();
+                        SwingUtilities.invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                closeEditorSession();
+                            }
+                        });
+                    }
+                }
+            }
+        }, AWTEvent.MOUSE_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
+        inputGateInstalled = true;
+    }
+
     private void capture(DevTarget target) {
         objectId = target.getId();
         objectName = target.getName() == null ? "Object" : target.getName();
@@ -656,7 +727,7 @@ public final class LiveModelEditorWindow {
         targetLabel.setText(objectName + "   #" + objectId
                 + "   model " + joinIds(sourceModelIds));
         sourceLabel.setText("World " + sourceX + ", " + sourceY + ", " + sourcePlane
-                + "   |   hover a row = preview   |   click = select");
+                + "   |   SOURCE REPLACED   |   hover = preview   |   click = select");
     }
 
     private void refreshIfActive() {
@@ -766,7 +837,7 @@ public final class LiveModelEditorWindow {
     private void resetEditorsOnly() {
         typeSpinner.setValue(Integer.valueOf(10));
         objectRotationSpinner.setValue(Integer.valueOf(0));
-        tileOffsetXSpinner.setValue(Integer.valueOf(2));
+        tileOffsetXSpinner.setValue(Integer.valueOf(0));
         tileOffsetYSpinner.setValue(Integer.valueOf(0));
         scaleXSpinner.setValue(Integer.valueOf(100));
         scaleYSpinner.setValue(Integer.valueOf(100));
@@ -831,7 +902,7 @@ public final class LiveModelEditorWindow {
 
                 typeSpinner.setValue(Integer.valueOf(readInt(json, "objectType", 10)));
                 objectRotationSpinner.setValue(Integer.valueOf(readInt(json, "objectRotation", 0)));
-                tileOffsetXSpinner.setValue(Integer.valueOf(readInt(json, "previewOffsetX", 2)));
+                tileOffsetXSpinner.setValue(Integer.valueOf(readInt(json, "previewOffsetX", 0)));
                 tileOffsetYSpinner.setValue(Integer.valueOf(readInt(json, "previewOffsetY", 0)));
                 scaleXSpinner.setValue(Integer.valueOf(readInt(json, "scaleXPercent", 100)));
                 scaleYSpinner.setValue(Integer.valueOf(readInt(json, "scaleYPercent", 100)));
