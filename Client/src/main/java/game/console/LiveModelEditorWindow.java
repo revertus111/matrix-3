@@ -9,6 +9,9 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -20,30 +23,36 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.WindowConstants;
 import javax.swing.event.ChangeListener;
 
 /**
- * Live Model Editor Bundle 1.
+ * Live Model Editor Bundle 2.
  *
  * This window edits a client-only runtime clone that is rendered inside the live
  * Matrix3 scene. JSON is the authoring/project format. No cache or server-world
- * bytes are written by this bundle.
+ * bytes are written by this bundle. Connected mesh components can now be edited independently.
  */
 public final class LiveModelEditorWindow {
 
-    private static final int PROJECT_VERSION = 1;
+    private static final int PROJECT_VERSION = 2;
     private static final File PROJECT_DIR = new File("dev-model-projects");
 
     private static JFrame frame;
@@ -55,6 +64,9 @@ public final class LiveModelEditorWindow {
     private final JLabel modelIdsLabel = valueLabel();
     private final JLabel sourceTileLabel = valueLabel();
     private final JLabel statusLabel = new JLabel("Right-click an object -> Dev > Edit Model Live.");
+    private final JLabel partStatusLabel = new JLabel("Parts not detected yet.");
+    private final DefaultListModel<String> partListModel = new DefaultListModel<String>();
+    private final JList<String> partList = new JList<String>(partListModel);
 
     private final JSpinner typeSpinner = spinner(10, 0, 22, 1);
     private final JSpinner objectRotationSpinner = spinner(0, 0, 3, 1);
@@ -69,6 +81,14 @@ public final class LiveModelEditorWindow {
     private final JSpinner moveZSpinner = spinner(0, -4096, 4096, 16);
     private final JSpinner yawSpinner = spinner(0, -359, 359, 5);
 
+    private final JSpinner partScaleXSpinner = spinner(100, 10, 400, 5);
+    private final JSpinner partScaleYSpinner = spinner(100, 10, 400, 5);
+    private final JSpinner partScaleZSpinner = spinner(100, 10, 400, 5);
+    private final JSpinner partMoveXSpinner = spinner(0, -4096, 4096, 16);
+    private final JSpinner partMoveYSpinner = spinner(0, -4096, 4096, 16);
+    private final JSpinner partMoveZSpinner = spinner(0, -4096, 4096, 16);
+    private final JSpinner partYawSpinner = spinner(0, -359, 359, 5);
+
     private int objectId = -1;
     private String objectName = "Object";
     private int[] sourceModelIds = new int[0];
@@ -77,6 +97,7 @@ public final class LiveModelEditorWindow {
     private int sourcePlane;
     private boolean hasSource;
     private boolean suppressLiveRefresh;
+    private boolean suppressPartRefresh;
 
     private LiveModelEditorWindow() {
         buildUi();
@@ -113,11 +134,11 @@ public final class LiveModelEditorWindow {
         JPanel header = new JPanel();
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         header.setBackground(ConsoleTheme.WINDOW);
-        JLabel title = new JLabel("LIVE MODEL EDITOR - BUNDLE 1");
+        JLabel title = new JLabel("LIVE MODEL EDITOR - BUNDLE 2");
         title.setFont(ConsoleTheme.TITLE_FONT);
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel subtitle = new JLabel("In-world runtime clone / live transforms / JSON project");
+        JLabel subtitle = new JLabel("Connected mesh parts / live per-part transforms / JSON project");
         subtitle.setFont(ConsoleTheme.SMALL_FONT);
         subtitle.setForeground(ConsoleTheme.ACCENT);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -135,6 +156,8 @@ public final class LiveModelEditorWindow {
         content.add(createPlacementCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createTransformCard());
+        content.add(Box.createVerticalStrut(12));
+        content.add(createPartsCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createProjectCard());
 
@@ -161,6 +184,42 @@ public final class LiveModelEditorWindow {
         moveYSpinner.addChangeListener(live);
         moveZSpinner.addChangeListener(live);
         yawSpinner.addChangeListener(live);
+
+        ChangeListener partLive = e -> updateSelectedPartTransform();
+        partScaleXSpinner.addChangeListener(partLive);
+        partScaleYSpinner.addChangeListener(partLive);
+        partScaleZSpinner.addChangeListener(partLive);
+        partMoveXSpinner.addChangeListener(partLive);
+        partMoveYSpinner.addChangeListener(partLive);
+        partMoveZSpinner.addChangeListener(partLive);
+        partYawSpinner.addChangeListener(partLive);
+
+        partList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        partList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && !suppressPartRefresh) {
+                int index = partList.getSelectedIndex();
+                if (index >= 0 && LiveModelEditorPreview.selectPart(index)) {
+                    loadSelectedPartEditors();
+                    statusLabel.setText("Selected mesh part " + index + " in the live model.");
+                }
+            }
+        });
+
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK), "liveModelUndo");
+        root.getActionMap().put("liveModelUndo", new AbstractAction() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (LiveModelEditorPreview.undoPartEdit()) {
+                    refreshPartList();
+                    loadSelectedPartEditors();
+                    statusLabel.setText("Undo: restored previous mesh-part edit.");
+                } else {
+                    statusLabel.setText("Nothing to undo.");
+                }
+            }
+        });
     }
 
     private JPanel createTargetCard() {
@@ -252,11 +311,123 @@ public final class LiveModelEditorWindow {
         return card;
     }
 
+    private JPanel createPartsCard() {
+        JPanel card = ConsoleTheme.createCard("Mesh parts - connected components");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Detect Parts splits the source Class159 mesh by triangle connectivity. Select a part to highlight it "
+                + "white in-world, then move/rotate/scale only that component. Hide/Delete/Duplicate and Ctrl+Z are "
+                + "session-safe and are stored in the JSON project. In-world mouse picking is the remaining carryover; "
+                + "this bundle selects parts from the list while rendering the edit directly in the live scene.", 6));
+        card.add(Box.createVerticalStrut(9));
+
+        partStatusLabel.setFont(ConsoleTheme.SMALL_FONT);
+        partStatusLabel.setForeground(ConsoleTheme.ACCENT);
+        partStatusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(partStatusLabel);
+        card.add(Box.createVerticalStrut(7));
+
+        partList.setVisibleRowCount(7);
+        ConsoleTheme.styleList(partList);
+        JScrollPane partScroll = new JScrollPane(partList);
+        partScroll.setPreferredSize(new Dimension(620, 155));
+        partScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 175));
+        ConsoleTheme.styleScrollPane(partScroll);
+        card.add(partScroll);
+
+        card.add(Box.createVerticalStrut(9));
+        JPanel scale = new JPanel(new GridLayout(2, 3, 7, 7));
+        scale.setOpaque(false);
+        scale.add(label("Part Scale X %"));
+        scale.add(label("Part Scale Y %"));
+        scale.add(label("Part Scale Z %"));
+        scale.add(partScaleXSpinner);
+        scale.add(partScaleYSpinner);
+        scale.add(partScaleZSpinner);
+        card.add(scale);
+
+        card.add(Box.createVerticalStrut(7));
+        JPanel move = new JPanel(new GridLayout(2, 4, 7, 7));
+        move.setOpaque(false);
+        move.add(label("Part Move X"));
+        move.add(label("Part Move Y"));
+        move.add(label("Part Move Z"));
+        move.add(label("Part Yaw"));
+        move.add(partMoveXSpinner);
+        move.add(partMoveYSpinner);
+        move.add(partMoveZSpinner);
+        move.add(partYawSpinner);
+        card.add(move);
+
+        card.add(Box.createVerticalStrut(9));
+        JButton detect = button("Detect / Rebuild Parts");
+        JButton isolate = button("Toggle Isolate");
+        JButton showAll = button("Show All");
+        JButton hide = button("Hide / Show Selected");
+        JButton duplicate = button("Duplicate Selected");
+        JButton delete = button("Delete Selected");
+        JButton undo = button("Undo (Ctrl+Z)");
+
+        detect.addActionListener(e -> initializeParts());
+        isolate.addActionListener(e -> {
+            LiveModelEditorPreview.toggleIsolatePart();
+            partStatusLabel.setText(LiveModelEditorPreview.isPartIsolated()
+                    ? "Isolate ON - only the selected part is rendered."
+                    : "Isolate OFF - all visible parts are rendered.");
+        });
+        showAll.addActionListener(e -> {
+            LiveModelEditorPreview.showAllParts();
+            refreshPartList();
+        });
+        hide.addActionListener(e -> {
+            if (LiveModelEditorPreview.toggleSelectedPartHidden()) {
+                refreshPartList();
+                statusLabel.setText("Toggled selected part visibility.");
+            }
+        });
+        duplicate.addActionListener(e -> {
+            if (LiveModelEditorPreview.duplicateSelectedPart()) {
+                refreshPartList();
+                loadSelectedPartEditors();
+                statusLabel.setText("Duplicated selected mesh part with a +128 X offset.");
+            }
+        });
+        delete.addActionListener(e -> {
+            if (LiveModelEditorPreview.deleteSelectedPart()) {
+                refreshPartList();
+                statusLabel.setText("Deleted selected mesh part from this authoring project. Ctrl+Z restores it.");
+            }
+        });
+        undo.addActionListener(e -> {
+            if (LiveModelEditorPreview.undoPartEdit()) {
+                refreshPartList();
+                loadSelectedPartEditors();
+                statusLabel.setText("Undo: restored previous mesh-part edit.");
+            } else {
+                statusLabel.setText("Nothing to undo.");
+            }
+        });
+
+        JPanel first = new JPanel(new GridLayout(1, 3, 7, 0));
+        first.setOpaque(false);
+        first.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        first.add(detect); first.add(isolate); first.add(showAll);
+        card.add(first);
+        card.add(Box.createVerticalStrut(7));
+
+        JPanel second = new JPanel(new GridLayout(1, 4, 7, 0));
+        second.setOpaque(false);
+        second.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        second.add(hide); second.add(duplicate); second.add(delete); second.add(undo);
+        card.add(second);
+        return card;
+    }
+
     private JPanel createProjectCard() {
         JPanel card = ConsoleTheme.createCard("JSON project");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Save stores the source object/model IDs plus editor transforms under dev-model-projects. "
+                "Save stores source object/model IDs, whole-model transforms and mesh-part edits under dev-model-projects. "
                 + "Load restores the authoring state and redraws the runtime clone. "
                 + "This bundle never writes revision-830 cache bytes.", 5));
         card.add(Box.createVerticalStrut(9));
@@ -296,6 +467,7 @@ public final class LiveModelEditorWindow {
         }
 
         refreshPreview();
+        initializeParts();
         statusLabel.setText("Runtime clone opened for " + objectName + " (" + objectId + ")"
                 + (sourceModelIds.length == 0 ? "." : " model=" + sourceModelIds[0] + "."));
     }
@@ -320,6 +492,70 @@ public final class LiveModelEditorWindow {
                 number(moveXSpinner), number(moveYSpinner), number(moveZSpinner),
                 number(yawSpinner));
         statusLabel.setText(LiveModelEditorPreview.getStatus());
+        if (partListModel.size() > 0 && LiveModelEditorPreview.getPartLabels().length == 0) {
+            refreshPartList();
+        }
+    }
+
+    private void initializeParts() {
+        int count = LiveModelEditorPreview.initializeParts();
+        refreshPartList();
+        if (count > 0 && LiveModelEditorPreview.getSelectedPart() < 0) {
+            suppressPartRefresh = true;
+            try {
+                partList.setSelectedIndex(0);
+                LiveModelEditorPreview.selectPart(0);
+            } finally {
+                suppressPartRefresh = false;
+            }
+            loadSelectedPartEditors();
+        }
+        partStatusLabel.setText(count > 0
+                ? count + " connected components detected. Selected part is highlighted in-world."
+                : LiveModelEditorPreview.getStatus());
+    }
+
+    private void refreshPartList() {
+        String[] labels = LiveModelEditorPreview.getPartLabels();
+        int selected = LiveModelEditorPreview.getSelectedPart();
+        suppressPartRefresh = true;
+        try {
+            partListModel.clear();
+            for (String label : labels) partListModel.addElement(label);
+            if (selected >= 0 && selected < labels.length) partList.setSelectedIndex(selected);
+            else partList.clearSelection();
+        } finally {
+            suppressPartRefresh = false;
+        }
+        if (labels.length == 0) partStatusLabel.setText("Parts not detected for the current object type.");
+        else partStatusLabel.setText(labels.length + " editable part entries"
+                + (LiveModelEditorPreview.isPartIsolated() ? " - isolate ON" : ""));
+    }
+
+    private void loadSelectedPartEditors() {
+        int[] transform = LiveModelEditorPreview.getSelectedPartTransform();
+        suppressPartRefresh = true;
+        try {
+            partScaleXSpinner.setValue(Integer.valueOf(transform[0]));
+            partScaleYSpinner.setValue(Integer.valueOf(transform[1]));
+            partScaleZSpinner.setValue(Integer.valueOf(transform[2]));
+            partMoveXSpinner.setValue(Integer.valueOf(transform[3]));
+            partMoveYSpinner.setValue(Integer.valueOf(transform[4]));
+            partMoveZSpinner.setValue(Integer.valueOf(transform[5]));
+            partYawSpinner.setValue(Integer.valueOf(transform[6]));
+        } finally {
+            suppressPartRefresh = false;
+        }
+    }
+
+    private void updateSelectedPartTransform() {
+        if (suppressPartRefresh || LiveModelEditorPreview.getSelectedPart() < 0) return;
+        if (LiveModelEditorPreview.setSelectedPartTransform(
+                number(partScaleXSpinner), number(partScaleYSpinner), number(partScaleZSpinner),
+                number(partMoveXSpinner), number(partMoveYSpinner), number(partMoveZSpinner),
+                number(partYawSpinner))) {
+            statusLabel.setText("Applied live transform to selected mesh part.");
+        }
     }
 
     private void resetTransforms() {
@@ -384,7 +620,7 @@ public final class LiveModelEditorWindow {
         try {
             String json = readFile(file);
             int version = readInt(json, "version", -1);
-            if (version != PROJECT_VERSION) {
+            if (version < 1 || version > PROJECT_VERSION) {
                 throw new IllegalArgumentException("Unsupported project version " + version);
             }
 
@@ -419,6 +655,12 @@ public final class LiveModelEditorWindow {
             }
 
             refreshPreview();
+            initializeParts();
+            if (version >= 2) {
+                LiveModelEditorPreview.loadPartProjectJson(json);
+                refreshPartList();
+                loadSelectedPartEditors();
+            }
             statusLabel.setText("Loaded JSON project: " + file.getPath());
         } catch (Exception ex) {
             statusLabel.setText("Load failed: " + rootMessage(ex));
@@ -446,7 +688,8 @@ public final class LiveModelEditorWindow {
         out.append("  \"translateX\": ").append(number(moveXSpinner)).append(",\n");
         out.append("  \"translateY\": ").append(number(moveYSpinner)).append(",\n");
         out.append("  \"translateZ\": ").append(number(moveZSpinner)).append(",\n");
-        out.append("  \"yawDegrees\": ").append(number(yawSpinner)).append("\n");
+        out.append("  \"yawDegrees\": ").append(number(yawSpinner)).append(",\n");
+        out.append(LiveModelEditorPreview.getPartProjectJsonFields()).append("\n");
         out.append("}\n");
         return out.toString();
     }
