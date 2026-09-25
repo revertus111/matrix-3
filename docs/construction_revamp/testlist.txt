@@ -943,3 +943,10 @@ Rail sampled-drag routing gate (2026-09-25)
 - Start on an existing rail, drag around/away from it, and confirm the new path follows the held-mouse gesture instead of creating a curve at the starting tile unless the gesture actually turns there.
 - Existing persisted network must remain while the sampled route is added through the physical-delta commit path.
 - Cart direction design gate: treat rails as bidirectional topology. A future cart receives a current tile plus previous/next directed edge; at a junction the route/switch decision selects the outgoing neighbor. Do not use straight/curve object rotation as cart travel direction.
+
+
+Rail gesture stabilization runtime gate (2026-09-25)
+- Draw a long straight while allowing normal mouse wobble around the centerline; it must remain straight.
+- Deliberately move at least two tiles perpendicular and continue; exactly one intentional 90-degree turn should form.
+- Correct the mouse backward by one tile while drawing; no tiny loop/U-turn should be authored.
+- Repeat several straight/curve conversions in one network; no "Rail route changed before edit; old piece ... is missing" failure should stop later edits.
