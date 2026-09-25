@@ -538,29 +538,34 @@ Status: IMPLEMENTED / NEEDS RUNTIME TEST
 Goal:
 Send committed selection to the server safely.
 
-Requirements:
+Implemented:
 
-- validate NPC ownership
-- convert runtime NPC index to persistent worker ID
-- reject unrelated NPCs
-- maintain active worker-selection set
+- release commits only the render-thread-detected settlement NPC indexes plus optional local-player membership
+- SettlementInstance validates runtime NPC ownership and converts worker NPC indexes to persistent Worker IDs
+- committed selection remains transient to the active settlement instance
+- selected-unit GFX 4171 rings persist after release and ordinary clicks do not replace the selection
+- world right-click menus expose one Clear Selection option while a selection exists; it clears both local visualization state and server transient selection
+- settlement scene exit/rebuild invalidates the transient selection and requires a new drag
 
-Status: PLANNED
+Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
 ---
 
 ### RWS-6 — Group Command Foundation
 
 Goal:
-Allow one command to target all selected workers.
+Use Matrix3's normal world interaction surface to command the committed selection.
 
-Initial test command:
+Implemented:
 
-Pause / Resume selected workers
+- action 23 / Walk Here mirrors a transient move order to selected workers
+- if self is selected, vanilla player Walk Here continues; otherwise the selected workers move without forcing the player to walk
+- normal first-option skilling interactions mirror starter Wood 1276, Stone 11933 and Basic ore 11936 object nodes plus Food NPC 327
+- selecting the same skill option from the vanilla right-click menu produces the same worker order as direct clicking
+- worker manual Move/Gather orders are runtime overrides only; normal Allowed Jobs policy resumes after completion
+- server validates the exact active SettlementResourceNode before assigning a gather order
 
-This proves the multi-worker control path without adding new production systems.
-
-Status: PLANNED
+Status: IMPLEMENTED / NEEDS RUNTIME TEST
 
 ---
 
@@ -601,6 +606,10 @@ Runtime acceptance should be consolidated into one client/server launch.
 - [ ] Combat reticules remain unaffected
 - [ ] Group Pause affects selected workers only
 - [ ] Group Resume affects selected workers only
+- [ ] Vanilla Walk Here commands the selected workers and preserves selection
+- [ ] Vanilla Wood / Stone / Ore / Food skill options command the selected workers
+- [ ] Right-click world menus show one Clear Selection option while a group is committed
+- [ ] Clear Selection removes the rings and server transient selection without changing worker policy
 - [ ] Existing single-worker controls still work
 - [ ] No noticeable client performance regression
 

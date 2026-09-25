@@ -1022,7 +1022,9 @@ Runtime defect/fix note:
 - Persistent-ring patch implemented: the scene pass now renders the committed selected-worker ring layers after release without re-rendering the large drag circle.
 - Follow-up runtime clarified that ordinary clicks were replacing the selection because every mouse press/release counted as a drag. RWS now requires a 6px drag threshold; a normal click preserves the committed group and continues into Matrix3's normal context action.
 - RWS self-selection is now part of the transient active selection: the local player can be inside the drag circle, receives the same layered 4171 ring, and the active SettlementInstance records transient `self` membership alongside persistent Worker IDs without adding save-schema state.
-- Matrix3's existing context actions are the RTS command surface rather than a second custom menu: action 23 (Walk Here) mirrors a transient Move order to selected workers; if self is selected, vanilla Walk Here continues for the player. Starter-tree first object action (Chop, object 1276) mirrors a transient gather order to selected workers and also continues the player's normal Chop when self is selected.
+- Matrix3's existing context actions are the RTS command surface rather than a second custom command UI: action 23 (Walk Here) mirrors a transient Move order to selected workers; if self is selected, vanilla Walk Here continues for the player.
+- Starter-resource skilling now follows the same vanilla interaction seam. First object option routes Wood tree 1276, Stone 11933 and Basic ore 11936 to the selected workers; first NPC option routes Food spot 327. Choosing those same options from the normal right-click menu produces the identical action dispatch, so workers respond to normal vanilla left-click/right-click skilling without a parallel worker menu.
+- A committed selection adds one RuneScape-native `Clear Selection` option to world right-click menus (ground/object/NPC). It clears the client rings/self flag and the active SettlementInstance selection together; ordinary clicks and other vanilla menu actions do not clear the group.
 - Worker manual Move/Gather orders are runtime-only overrides owned by `SettlementWorkerNpc`; after the order completes, normal Allowed Jobs AI resumes. Pause remains authoritative.
 - The worker arrival seam is hardened: resource gathering now requires explicit physical interaction range (adjacent for resource nodes). A `calcFollow(...)` success with zero queued steps no longer means the worker has arrived, preventing the remote-chop behavior seen in runtime video.
 - Persistent rings no longer clear merely because one render pass cannot resolve a selected NPC. Local selection clears when explicitly replaced/cleared or when the committed selection center leaves the active scene, covering settlement exit/rebuild without transient-frame flicker.
@@ -1533,3 +1535,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Historical object ID 8831 is a HYPOTHESIS candidate for the Keldagrim mine cart and is not treated as revision-830 verified until runtime lookup confirms its name/asset in the user's cache.
 - Resume gate: Object Explorer -> ID 8831 -> record name + animation IDs. If it is not the minecart, use the existing name search for "Mine cart" and inspect the matching definition's animation IDs.
 
+
+
+## Bundle 2.4 vanilla-context interaction closeout — 2026-09-25
+- IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
+- Vanilla Matrix3 world interactions remain authoritative. Selected workers mirror Walk Here plus starter Wood/Stone/Ore object first-actions and the starter Food NPC first-action; the player continues the same vanilla action only when self is part of the committed selection.
+- World right-click menus expose one `Clear Selection` action whenever a committed RTS selection exists. It does not alter Allowed Jobs, Pause, Needs, progression or persistence.
+- Server gather validation accepts either OBJECT or NPC starter-resource sources and still resolves the exact plot-relative SettlementResourceNode before assigning any worker order.
+- Resume gate: drag-select workers -> verify normal click preserves selection -> right-click ground/object/NPC shows Clear Selection -> verify Walk Here -> verify Wood/Stone/Ore/Food vanilla skill options -> Clear Selection removes rings/server selection -> exit/re-entry requires a fresh selection.
