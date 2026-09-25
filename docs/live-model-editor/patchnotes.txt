@@ -42,3 +42,15 @@
 - Added client-only source-object visual suppression across Matrix3's eight object scene-render implementations. Matching is object ID + plane + occupied tile bounds for multi-tile entities, or object ID + plane + scene tile for single-tile/wall/decor entities.
 - Source suppression is render-only: the original object is not deleted, moved or rewritten; server ownership, clipping, map state and cache bytes remain untouched.
 - Bundle 2.3B true screen-to-connected-component hover/click picking remains the next dependency after this replacement/input gate is runtime-verified.
+
+2026-09-25
+- Added Bundle 2.3B direct in-world connected-component picking using Matrix3's existing Model.method1376(...) screen hit-test path.
+- The editor builds cached component-only pick models from the same source Class159 geometry; no independent camera/raycast stack was introduced.
+- Hovering actual model geometry can now drive the same temporary part highlight used by the overlay list; left-click locks the hovered component as the selected part.
+- Added direct left-drag transforms with G/R/S modes and X/Y/Z/F axis constraints. Each drag creates one undo checkpoint, while intermediate mouse motion applies transient transform updates.
+- Overlay selection/precision spinners synchronize back to the world-selected part so the number fields are now precision controls rather than the primary editing workflow.
+- Added Bundle 2.4A Construction material replacement foundation. The current ConstructionPlacementController build-piece catalog is exposed in Live Model Editor as a shared source-object library.
+- Replace Part hides the selected source component and renders the chosen Construction object's model geometry aligned to that component. Replace Matches applies the same replacement to geometrically matching repeated source parts such as repeated bars/supports.
+- Replacement auto-fit centers on the source component, scales to its longest dimension and rotates 90 degrees in X/Z when dominant horizontal axes differ. Existing per-part transforms remain available for fine alignment.
+- Restore removes the replacement recipe and reveals the untouched original component.
+- JSON project format advanced to v3 and now persists replacement object/type metadata. No cache bytes, map objects, clipping or server persistence are written.
