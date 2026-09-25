@@ -1537,17 +1537,18 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Runtime acceptance bundle: fresh loop with intentional close, close parallel tracks that remain independent, repeated 90-degree turns, branch from the middle, extend branch, disconnected second segment, and growth beyond 64 total physical pieces without truncation.
 - Resume Here: snapshot-preview race is fixed and runtime evidence is stable. Crossing an existing authored rail mid-gesture is now intentionally clamped at the first contact tile: the drag may branch FROM existing track or connect INTO existing track, but cannot pass through and create multiple unsupported degree-3/4 junctions until dedicated crossing/switch art is classified. Runtime-test branch-from-middle, connect-into-existing, and attempted cross-through; previous rails must remain visually stable.
 
-## Construction Build Hotbar H1 — 2026-09-25
-- IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
-- Added a dedicated nine-slot Construction build hotbar as a separate client overlay; Matrix3's real combat/action bar remains untouched.
-- 1-9 are owned only while the Construction palette is open.
-- Implemented slots: 1 Rail, 5 last selected non-rail Object, 6 Eraser, 7 Rotate +90, 8 existing settlement Undo.
-- Reserved visible slots: 2 Junction, 3 Crossing, 4 Splitter, 9 Favorites. They deliberately do not fake placement before accepted assets/semantics exist.
-- Current rail safety rule remains: ordinary Rail may branch from or connect into authored rail, but cross-through is clamped at first existing-rail contact. Explicit Crossing/Junction/Splitter tools will own those semantics in H2.
-- Detailed design and phased plan: docs/construction_revamp/BUILD_HOTBAR.md.
-- Runtime gate: open palette -> hotbar appears -> 1 Rail -> select an object -> 1/5 swap -> 6 Eraser -> 7 Rotate -> 8 Undo -> reserved slots do nothing destructive -> close palette and verify hotbar hides/number keys return to Matrix3.
-- Resume Here: runtime-test H1 once. If it passes, continue Rail Network special-node asset classification for Junction/Crossing/Splitter rather than weakening ordinary Rail overlap safety.
-
+## Construction Build Hotbar H1 — native 1430 retrofit — 2026-09-25
+- IMPLEMENTED / NEEDS NIS + LEGACY RUNTIME TEST under SAP AAA.
+- The first separate JWindow hotbar was runtime accepted by the user but visually superseded in favor of Matrix3's native RuneScape action bar.
+- Native host is interface 1430 at root 1477 component 35. ConstructionBuildHotbar is now controller/input routing only; it no longer renders a floating bar.
+- Construction action-bar mode is transient. Server ActionBar.shortcuts[][] are never overwritten: begin mode publishes temporary visual item tokens into the 1430 slot vars, native slot clicks are intercepted, and close restores the real current-bar visuals + real lock state.
+- NIS reuses the existing 1430 host. Legacy explicitly remounts/unhides 1430 while Construction is active without toggling Player.legacyMode; close re-emits gameframe/mode vars so the player's preferred interface presentation owns the bar again.
+- Native 1430 primary clicks route server -> packet 69 `constructionbar <slot>` -> client PacketsDecoder -> ConstructionBuildHotbar, so mouse clicks and existing 1-9 palette hotkeys call the same tool actions.
+- Implemented slots remain 1 Rail, 5 last non-rail Object, 6 Eraser, 7 Rotate +90, 8 Undo. Slots 2 Junction, 3 Crossing, 4 Splitter, 9 Favorites remain deliberately reserved until real assets/semantics exist.
+- Current rail safety rule is unchanged: ordinary Rail may branch from or connect into authored rail but cannot pass through it; explicit Crossing/Junction/Splitter tools will own overlap semantics.
+- SettlementInstance.destroy() force-restores normal action-bar mode as teardown safety for exit/teleport/logout paths.
+- Detailed design/runtime gate: docs/construction_revamp/BUILD_HOTBAR.md.
+- Resume Here: runtime-test native Construction bar in NIS and Legacy, verify the floating bar is gone and original player shortcuts/lock state restore exactly. If accepted, proceed to special rail-node asset classification rather than weakening ordinary Rail overlap safety.
 ## Minecart object-animation discovery — 2026-09-25
 - Scope is cart asset/animation only; player sitting/riding animation is intentionally out of scope.
 - verified-static: Matrix3 ObjectDefinitions opcode 24/106 decodes object sequence IDs into anIntArray5645. method6051()/method6052() select from that set, while method6053() returns the decoded sequence IDs directly.
