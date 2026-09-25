@@ -70,8 +70,9 @@ public final class DevDefinitionBridge {
             if (!(value instanceof ObjectDefinitions)) {
                 return null;
             }
-            String name = cleanName(((ObjectDefinitions) value).name);
-            return name == null ? null : new DefinitionInfo(id, name);
+            ObjectDefinitions object = (ObjectDefinitions) value;
+            String name = cleanName(object.name);
+            return name == null ? null : new DefinitionInfo(id, name, object.method6053((byte) 0));
         } catch (RuntimeException ex) {
             return null;
         }
@@ -94,11 +95,12 @@ public final class DevDefinitionBridge {
             if (!(value instanceof ObjectDefinitions)) {
                 return null;
             }
-            String name = cleanName(((ObjectDefinitions) value).name);
+            ObjectDefinitions object = (ObjectDefinitions) value;
+            String name = cleanName(object.name);
             if (name == null) {
                 name = "id-" + id;
             }
-            return new DefinitionInfo(id, name);
+            return new DefinitionInfo(id, name, object.method6053((byte) 0));
         } catch (RuntimeException ex) {
             return null;
         }
@@ -129,10 +131,16 @@ public final class DevDefinitionBridge {
     public static final class DefinitionInfo {
         private final int id;
         private final String name;
+        private final int[] animationIds;
 
         private DefinitionInfo(int id, String name) {
+            this(id, name, null);
+        }
+
+        private DefinitionInfo(int id, String name, int[] animationIds) {
             this.id = id;
             this.name = name;
+            this.animationIds = animationIds == null ? null : animationIds.clone();
         }
 
         public int getId() {
@@ -141,6 +149,14 @@ public final class DevDefinitionBridge {
 
         public String getName() {
             return name;
+        }
+
+        /**
+         * Object-definition sequence ids decoded by ObjectDefinitions opcode 24/106.
+         * NPC/name-only lookups return an empty array.
+         */
+        public int[] getAnimationIds() {
+            return animationIds == null ? new int[0] : animationIds.clone();
         }
     }
 }
