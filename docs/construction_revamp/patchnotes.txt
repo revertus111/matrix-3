@@ -1327,3 +1327,12 @@
 - SettlementInstance owns short-lived staging and invokes the existing atomic replace only after all chunks arrive, preserving all-or-nothing persistent mutation.
 - The visible replacement preview can no longer be mistaken for successful persistence caused by an oversized command failing to reach the server correctly.
 - No curve geometry/rotation math changed in this correction.
+
+
+2026-09-24 - Continuous Rail Path V1
+- Replaced the rejected whole-route endpoint recalculation model with an authored continuous-path model.
+- A fresh drag starts one rail path. Starting the next drag exactly on its current END extends that same path; prior segments remain authored instead of being reinterpreted from the original start.
+- Straight continuation appends straight rail. A perpendicular continuation inserts CURVE_RAIL_LAYOUT_01 at the current END and continues from it. Repeating END drags can therefore author straight -> 90-degree turn -> straight -> 90-degree turn -> straight paths.
+- Extension merging replaces only physical pieces whose exact tiles are owned by the newly authored seam/curve footprint, then keeps all earlier path pieces.
+- The existing packet-safe atomic old-path -> complete-new-path server replacement is reused for persistence. Server rail-only validation/rollback remains authoritative.
+- Branches/T junctions, arbitrary-angle curves, switches, and persistent path endpoint metadata after client restart remain future work.
