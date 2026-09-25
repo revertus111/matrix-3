@@ -1036,3 +1036,15 @@ Rail existing-track contact gate (2026-09-25)
 - Keep holding and move the mouse beyond that contacted rail before releasing. No rails may be authored on the far side; debug must report contactStop=x,y.
 - Attempt the same against a curved section. Existing curve footprints outside the single connection area must remain unchanged.
 - Confirm the next operation begins with oldPhysical equal to the prior operation's newPhysical; no hidden preview topology may leak into the commit.
+
+
+Construction Build Hotbar H1 — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-25)
+- Open Build Palette: dedicated horizontal BUILD HOTBAR appears near lower-center canvas and does not replace the real action bar.
+- Press 1: Rail route arms.
+- Select Bed/Fence/Door/etc. in palette: slot 5 label updates to that object; press 1 then 5 and confirm fast Rail/Object swapping.
+- Press 6: Eraser arms and slot highlights.
+- Re-arm an object then press 7: rotation advances +90.
+- Press 8 after a disposable placement: existing settlement Undo removes the last persistent build.
+- Press/click 2 Junction, 3 Cross, 4 Splitter, 9 Favorites: only reserved status changes; no build/tool is falsely placed.
+- Close Build Palette: hotbar disappears and 1-9 are no longer consumed by Construction.
+- Rail regression: ordinary Rail still stops at first existing-rail contact; branch-from-middle remains available under current Rail Network V1 behavior.
