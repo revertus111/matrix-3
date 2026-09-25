@@ -26,6 +26,7 @@ Construction Revamp remains the current main workstream. The pre-reset Matrix3 f
 | CacheEditor | `docs/cache-editor/PROJECT.md` | NEEDS TEST | Phase 2 Bundle A compile regression is patched; Eclipse/Java 8 clean-build must confirm the CacheEditor Item Browser search loop before Bundle B resumes. |
 | Interface Editor | `docs/interface-editor/PROJECT.md` | NEEDS TEST | V1.3 adds Load Active Interface, live Open now browsing, and searchable all-interface cache browsing; Bundle 1.3 consolidated runtime acceptance is next. Wire Mesh remains carryover because its AWT paint path flashes under OpenGL. |
 | Dev Mode | `docs/dev-mode/PROJECT.md` | NEEDS TEST | Phase 1 Bundles 1.2 World Manipulation and 1.3 Continuous/Paint are implemented statically; runtime is intentionally deferred in one accumulated test queue. Safe independent contextual-editor work may continue when explicitly requested. |
+| Live Model Editor | `docs/live-model-editor/PROJECT.md` | NEEDS TEST | Bundle 1.1 private in-world runtime clone, live whole-model transforms and JSON project save/load are implemented; Smelter 29394 / model 64036 is the runtime gate. |
 
 ## Rules
 

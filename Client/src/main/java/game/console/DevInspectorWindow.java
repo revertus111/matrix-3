@@ -49,6 +49,7 @@ public final class DevInspectorWindow {
     private final JButton copyIdButton = new JButton("Copy ID");
     private final JButton copyTileButton = new JButton("Copy tile coordinates");
     private final JButton objectLabButton = new JButton("Capture in Object Lab");
+    private final JButton liveModelButton = new JButton("Edit model live...");
 
     private DevTarget target;
 
@@ -241,6 +242,17 @@ public final class DevInspectorWindow {
                 copyTile();
             }
         });
+        configureActionButton(liveModelButton, new Runnable() {
+            @Override
+            public void run() {
+                if (target == null || target.getType() != TargetType.OBJECT) {
+                    statusLabel.setText("Live Model Editor requires an object target.");
+                    return;
+                }
+                LiveModelEditorWindow.open(target);
+                statusLabel.setText("Opened live runtime model clone.");
+            }
+        });
         configureActionButton(objectLabButton, new Runnable() {
             @Override
             public void run() {
@@ -257,6 +269,8 @@ public final class DevInspectorWindow {
         card.add(copyIdButton);
         card.add(Box.createVerticalStrut(7));
         card.add(copyTileButton);
+        card.add(Box.createVerticalStrut(7));
+        card.add(liveModelButton);
         card.add(Box.createVerticalStrut(7));
         card.add(objectLabButton);
         return card;
@@ -331,6 +345,7 @@ public final class DevInspectorWindow {
         cancelPlacementButton.setEnabled(true);
         copyIdButton.setEnabled(validId);
         copyTileButton.setEnabled(true);
+        liveModelButton.setEnabled(validId && object);
         objectLabButton.setEnabled(validId && object);
         statusLabel.setText("Target updated from the live Matrix3 right-click menu.");
     }

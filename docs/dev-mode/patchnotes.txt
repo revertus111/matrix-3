@@ -63,3 +63,8 @@
 - Added cache-backed object model ID display to the existing Dev Mode Selected target card.
 - The client definition bridge exposes all model IDs decoded from the selected ObjectDefinitions model groups; no second cache decoder was added.
 - NPC targets show '-' for Model ID(s); objects without resolved model groups show 'None / unresolved'.
+
+2026-09-25 - Live Model Editor Bundle 1 integration
+- Added an owner-only `Dev > Edit Model Live` object action and Inspector shortcut.
+- The action opens the separate Live Model Editor workstream; existing Dev object manipulation ownership is unchanged.
+- Live model editing is client-only visual authoring in this bundle and does not grant permanent map/cache mutation.

@@ -9,6 +9,7 @@ import java.awt.event.KeyEvent;
 import javax.swing.SwingUtilities;
 
 import game.console.DevInspectorWindow;
+import game.console.LiveModelEditorWindow;
 import game.console.DevSpawnBrowserWindow;
 import game.console.DevTileEditorWindow;
 
@@ -47,6 +48,7 @@ public final class DevModeBridge {
     public static final int OBJECT_ROTATE_RIGHT_MENU_ACTION = 1526;
     public static final int OBJECT_DUPLICATE_MENU_ACTION = 1527;
     public static final int OBJECT_DELETE_DEV_MENU_ACTION = 1528;
+    public static final int OBJECT_EDIT_MODEL_MENU_ACTION = 1529;
 
     private static final int MATRIX3_TILE_ACTION = 23;
     private static final int NPC_DEFINITION_ID_MULTIPLIER = 1355909985;
@@ -209,6 +211,8 @@ public final class DevModeBridge {
             int packedTile = packLocalCoordinates(localX, localY);
             addEntityEntry("Dev > Inspect Object", targetText, cursor, OBJECT_INSPECT_MENU_ACTION, sourceParam,
                     targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+            addEntityEntry("Dev > Edit Model Live", targetText, cursor, OBJECT_EDIT_MODEL_MENU_ACTION, sourceParam,
+                    targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
             addEntityEntry("Dev > Edit Object", targetText, cursor, OBJECT_EDIT_MENU_ACTION, sourceParam,
                     targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
             addEntityEntry("Dev > Copy Object ID", targetText, cursor, OBJECT_COPY_ID_MENU_ACTION, sourceParam,
@@ -283,7 +287,14 @@ public final class DevModeBridge {
         }
         currentTarget = target;
 
-        if (action == NPC_INSPECT_MENU_ACTION || action == OBJECT_INSPECT_MENU_ACTION
+        if (action == OBJECT_EDIT_MODEL_MENU_ACTION) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    LiveModelEditorWindow.open(target);
+                }
+            });
+        } else if (action == NPC_INSPECT_MENU_ACTION || action == OBJECT_INSPECT_MENU_ACTION
                 || action == NPC_EDIT_MENU_ACTION || action == OBJECT_EDIT_MENU_ACTION) {
             final boolean editIntent = action == NPC_EDIT_MENU_ACTION || action == OBJECT_EDIT_MENU_ACTION;
             SwingUtilities.invokeLater(new Runnable() {
@@ -544,7 +555,7 @@ public final class DevModeBridge {
 
     private static boolean isEntityDevAction(int action) {
         return isNpcDevAction(action)
-                || action >= OBJECT_INSPECT_MENU_ACTION && action <= OBJECT_DELETE_DEV_MENU_ACTION;
+                || action >= OBJECT_INSPECT_MENU_ACTION && action <= OBJECT_EDIT_MODEL_MENU_ACTION;
     }
 
     private static boolean isTileDevAction(int action) {

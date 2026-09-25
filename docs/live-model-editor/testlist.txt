@@ -1,0 +1,26 @@
+Matrix3 Live Model Editor - runtime gate
+
+Build
+[ ] Eclipse/Java 8 clean-build Client with no compilation errors.
+
+Bundle 1.1 - Smelter 29394 / model 64036
+[ ] Enable Dev Mode and spawn or locate object 29394 (Smelter).
+[ ] Right-click the object and confirm Dev > Edit Model Live appears without replacing normal object options.
+[ ] Open Edit Model Live and confirm Object=Smelter, Definition ID=29394 and Source model ID(s) includes 64036.
+[ ] Confirm a runtime clone renders two tiles east of the selected source by default.
+[ ] Change Scale X to 150 and confirm only the runtime clone stretches in X.
+[ ] Change Move Y by a visible amount and confirm the runtime clone shifts vertically/model-locally without moving the server object.
+[ ] Change Yaw and confirm the runtime clone rotates immediately.
+[ ] Change Preview tile X/Y to 0/0 and confirm the clone can be overlaid on the source object.
+[ ] Confirm the original selected object remains unchanged when Hide Runtime Clone is pressed.
+[ ] Confirm a second Smelter using the same source model is unchanged by all clone transforms.
+[ ] Reset Transforms and confirm the clone returns to 100/100/100 scale, zero model translation and zero yaw.
+[ ] Save Project and confirm dev-model-projects/object_29394_model_64036.json is created (or the first resolved model ID is used if the definition exposes multiple IDs).
+[ ] Change transforms, Hide Runtime Clone, then Load Project and confirm the saved transform state returns.
+[ ] Restart the client and confirm no cache model, map object, clipping state or server-world object was permanently changed.
+
+Regression
+[ ] Dev > Inspect Object and Dev Inspector model-ID display still work.
+[ ] Object Lab preview still renders.
+[ ] Object Composite / rail previews still render.
+[ ] Normal object interactions and Dev Mode manipulation actions remain unchanged.

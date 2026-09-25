@@ -1,0 +1,8 @@
+2026-09-25
+- Added Live Model Editor Bundle 1 runtime-clone proof.
+- Added Dev > Edit Model Live plus an Inspector shortcut for selected world objects.
+- Reused Matrix3 ObjectDefinitions and the established Class578 direct-render seam; the factory model is cloned privately before editor transforms.
+- Added live whole-model scale X/Y/Z, translation X/Y/Z and yaw controls plus explicit object type/rotation and preview-tile offsets.
+- Added JSON save/load under dev-model-projects with source object/model IDs and transform state.
+- Bundle 1 performs no cache writes, no clipping changes and no server-world persistence writes.
+- The source scene object is not replaced/suppressed yet; the editable clone defaults two tiles east and may be overlaid at 0/0 for the runtime proof.

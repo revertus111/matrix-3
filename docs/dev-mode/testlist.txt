@@ -146,3 +146,8 @@ Dev Inspector model-ID lookup
 [ ] Right-click object 29394 (Smelter) -> Dev > Inspect Object and confirm Selected target includes Model ID(s).
 [ ] Confirm all model IDs referenced by its ObjectDefinitions model groups are shown comma-separated.
 [ ] Inspect an NPC and confirm Model ID(s) shows '-' rather than stale object model IDs.
+
+Live Model Editor integration
+[ ] Right-click an object with Dev Mode ON and confirm exactly one `Dev > Edit Model Live` action appears.
+[ ] Confirm normal object options plus Inspect/Edit/Move/Rotate/Duplicate/Delete Dev actions remain available and target the same object.
+[ ] Open the Inspector and confirm `Edit model live...` opens the same Live Model Editor target.
