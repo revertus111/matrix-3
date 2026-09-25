@@ -85,6 +85,12 @@ public final class RailRoutePreview {
     private static volatile boolean editingEndpointB;
     private static final java.util.List<RoutePiece> authoredPath =
             new java.util.ArrayList<RoutePiece>();
+    /*
+     * Rail Network V1 authority: logical occupied rail tiles. Physical RS3
+     * objects are derived from this topology; they are not the authored route.
+     */
+    private static final java.util.LinkedHashSet<String> logicalNetwork =
+            new java.util.LinkedHashSet<String>();
     private static volatile int pathEndX = -1;
     private static volatile int pathEndY = -1;
     private static volatile int pathPlane = -1;
@@ -189,7 +195,7 @@ public final class RailRoutePreview {
             reloadCurveComposite();
 
             enabled = true;
-            eventState = "A->B rail preview ON. Move over ground, then hold Left mouse and drag.";
+            eventState = "Rail Network V1 ON. Drag new track or start from any authored rail tile to extend/branch.";
         } else {
             if (dragging) {
                 cancelActiveDrag();
@@ -272,6 +278,7 @@ public final class RailRoutePreview {
         editingEndpointB = false;
         committed = false;
         authoredPath.clear();
+        logicalNetwork.clear();
         pathEndX = -1;
         pathEndY = -1;
         pathPlane = -1;
@@ -289,12 +296,12 @@ public final class RailRoutePreview {
         committedPlane = -1;
         lastRenderedCycle = Integer.MIN_VALUE;
         renderState = "cleared";
-        eventState = "A->B route cleared.";
+        eventState = "Rail network draft cleared.";
     }
 
     public static String getStatus() {
         StringBuilder status = new StringBuilder(192);
-        status.append(enabled ? "RAIL V2 ON" : "RAIL V2 OFF");
+        status.append(enabled ? "RAIL NETWORK V1 ON" : "RAIL NETWORK V1 OFF");
         status.append(" | straight=").append(objectId < 0 ? "none" : objectId + "/" + objectType)
                 .append(" nsRot=").append(horizontalRotation)
                 .append(" ewRot=").append(eastWestRotation())
@@ -755,15 +762,16 @@ public final class RailRoutePreview {
             return false;
         }
 
-        editingEndpointB = !authoredPath.isEmpty() && pathPlane == hoveredPlane
-                && pathEndX == hoveredWorldX && pathEndY == hoveredWorldY;
+        editingEndpointB = logicalNetwork.contains(
+                logicalKey(hoveredWorldX, hoveredWorldY, hoveredPlane));
         if (editingEndpointB) {
-            liveStartX = pathEndX;
-            liveStartY = pathEndY;
-            liveEndX = pathEndX;
-            liveEndY = pathEndY;
-            livePlane = pathPlane;
-            eventState = "Extending rail path from END=" + pathEndX + "," + pathEndY + ".";
+            liveStartX = hoveredWorldX;
+            liveStartY = hoveredWorldY;
+            liveEndX = hoveredWorldX;
+            liveEndY = hoveredWorldY;
+            livePlane = hoveredPlane;
+            eventState = "Extending/branching rail network from "
+                    + liveStartX + "," + liveStartY + ".";
         } else {
             liveStartX = hoveredWorldX;
             liveStartY = hoveredWorldY;
@@ -778,42 +786,18 @@ public final class RailRoutePreview {
     }
 
     private static void commitActiveDrag() {
-        boolean extending = editingEndpointB && !authoredPath.isEmpty();
-        java.util.List<RoutePiece> oldPath =
-                new java.util.ArrayList<RoutePiece>(authoredPath);
-        java.util.List<RoutePiece> segment = new java.util.ArrayList<RoutePiece>();
+        java.util.List<RoutePiece> oldPhysical = resolveLogicalNetworkPieces();
+        boolean joinedExisting = logicalNetwork.contains(
+                logicalKey(liveStartX, liveStartY, livePlane));
 
-        int segmentStartX = liveStartX;
-        int segmentStartY = liveStartY;
-        int segmentEndX = liveEndX;
-        int segmentEndY = liveEndY;
-        int segmentPlane = livePlane;
+        addLogicalManhattanSegment(liveStartX, liveStartY, liveEndX, liveEndY, livePlane);
+        java.util.List<RoutePiece> newPhysical = resolveLogicalNetworkPieces();
 
-        if (extending) {
-            appendExtensionPieces(segment, segmentStartX, segmentStartY,
-                    segmentEndX, segmentEndY, segmentPlane, pathIncomingX, pathIncomingY);
-            mergeExtension(authoredPath, segment, segmentStartX, segmentStartY, segmentPlane);
-        } else {
-            authoredPath.clear();
-            appendRoutePieces(authoredPath, segmentStartX, segmentStartY,
-                    segmentEndX, segmentEndY, segmentPlane);
-        }
-
-        int[] finalDirection = finalTravelDirection(
-                segmentStartX, segmentStartY, segmentEndX, segmentEndY);
-        if (finalDirection[0] != 0 || finalDirection[1] != 0) {
-            pathIncomingX = finalDirection[0];
-            pathIncomingY = finalDirection[1];
-        }
-        pathEndX = segmentEndX;
-        pathEndY = segmentEndY;
-        pathPlane = segmentPlane;
-
-        committedStartX = segmentStartX;
-        committedStartY = segmentStartY;
-        committedEndX = segmentEndX;
-        committedEndY = segmentEndY;
-        committedPlane = segmentPlane;
+        committedStartX = liveStartX;
+        committedStartY = liveStartY;
+        committedEndX = liveEndX;
+        committedEndY = liveEndY;
+        committedPlane = livePlane;
         committed = true;
         dragging = false;
         editingEndpointB = false;
@@ -821,84 +805,155 @@ public final class RailRoutePreview {
         continuationVerticalDirection = 0;
         lastRenderedCycle = Integer.MIN_VALUE;
 
-        java.util.List<RoutePiece> completePath =
-                new java.util.ArrayList<RoutePiece>(authoredPath);
-        eventState = extending
-                ? "Rail path extended to END=" + pathEndX + "," + pathEndY + "."
-                : "Rail path started; END=" + pathEndX + "," + pathEndY + ".";
+        pathEndX = liveEndX;
+        pathEndY = liveEndY;
+        pathPlane = livePlane;
+
+        eventState = joinedExisting
+                ? "Rail network extended/branched from existing track."
+                : "Rail network segment added.";
 
         debugOperationId++;
-        debugReport = buildDebugReport(debugOperationId, extending, extending,
-                segmentStartX, segmentStartY, segmentStartX, segmentStartY, segmentPlane,
-                oldPath, completePath);
-        if (extending) {
-            ConstructionPlacementController.onRailRouteEdited(oldPath, completePath);
+        debugReport = buildDebugReport(debugOperationId, !oldPhysical.isEmpty(), joinedExisting,
+                liveStartX, liveStartY, liveStartX, liveStartY, livePlane,
+                oldPhysical, newPhysical);
+
+        if (oldPhysical.isEmpty()) {
+            ConstructionPlacementController.onRailRouteCommitted(newPhysical);
         } else {
-            ConstructionPlacementController.onRailRouteCommitted(completePath);
+            ConstructionPlacementController.onRailRouteEdited(oldPhysical, newPhysical);
         }
     }
 
-    private static void appendExtensionPieces(java.util.List<RoutePiece> pieces,
-            int startX, int startY, int endX, int endY, int plane,
-            int incomingX, int incomingY) {
-        int outgoingX = Integer.compare(endX, startX);
-        int outgoingY = Integer.compare(endY, startY);
-        boolean perpendicular = (incomingX != 0 && outgoingY != 0)
-                || (incomingY != 0 && outgoingX != 0);
-        if (!perpendicular) {
-            if (startY == endY) {
-                appendHorizontalPieces(pieces, startX, endX, startY, plane, null);
-            } else if (startX == endX) {
-                appendVerticalPieces(pieces, startY, endY, startX, plane, null);
-            } else {
-                appendRoutePieces(pieces, startX, startY, endX, endY, plane);
-            }
-            return;
-        }
+    private static void addLogicalManhattanSegment(
+            int startX, int startY, int endX, int endY, int plane) {
+        int x = startX;
+        int y = startY;
+        logicalNetwork.add(logicalKey(x, y, plane));
+        int xStep = Integer.compare(endX, startX);
+        int yStep = Integer.compare(endY, startY);
 
-        int horizontalDirection = incomingX != 0 ? incomingX : outgoingX;
-        int verticalDirection = incomingY != 0 ? incomingY : outgoingY;
-        CurvePlacement curve = createCurvePlacement(startX, startY,
-                horizontalDirection, verticalDirection);
-        appendCurvePieces(pieces, curve, startX, startY, plane);
-        if (outgoingX != 0) {
-            int x = startX + outgoingX;
-            while (pieces.size() < MAX_ROUTE_TILES) {
-                if (!curveOccupies(curve, x, startY)) {
-                    pieces.add(new RoutePiece(objectId, objectType, eastWestRotation(),
-                            x, startY, plane));
-                }
-                if (x == endX) break;
-                x += outgoingX;
+        if (routeOrder == RouteOrder.Y_THEN_X) {
+            while (y != endY && logicalNetwork.size() < MAX_ROUTE_TILES) {
+                y += yStep;
+                logicalNetwork.add(logicalKey(x, y, plane));
+            }
+            while (x != endX && logicalNetwork.size() < MAX_ROUTE_TILES) {
+                x += xStep;
+                logicalNetwork.add(logicalKey(x, y, plane));
             }
         } else {
-            int y = startY + outgoingY;
-            while (pieces.size() < MAX_ROUTE_TILES) {
-                if (!curveOccupies(curve, startX, y)) {
-                    pieces.add(new RoutePiece(objectId, objectType, verticalRotation(),
-                            startX, y, plane));
-                }
-                if (y == endY) break;
-                y += outgoingY;
+            while (x != endX && logicalNetwork.size() < MAX_ROUTE_TILES) {
+                x += xStep;
+                logicalNetwork.add(logicalKey(x, y, plane));
+            }
+            while (y != endY && logicalNetwork.size() < MAX_ROUTE_TILES) {
+                y += yStep;
+                logicalNetwork.add(logicalKey(x, y, plane));
             }
         }
     }
 
-    private static void mergeExtension(java.util.List<RoutePiece> path,
-            java.util.List<RoutePiece> extension, int seamX, int seamY, int plane) {
-        java.util.Iterator<RoutePiece> iterator = path.iterator();
-        while (iterator.hasNext()) {
-            RoutePiece piece = iterator.next();
-            if (piece.getPlane() != plane) continue;
-            for (RoutePiece replacement : extension) {
-                if (replacement.getWorldX() == piece.getWorldX()
-                        && replacement.getWorldY() == piece.getWorldY()) {
-                    iterator.remove();
-                    break;
-                }
+    private static java.util.List<RoutePiece> resolveLogicalNetworkPieces() {
+        java.util.List<RoutePiece> pieces = new java.util.ArrayList<RoutePiece>();
+        java.util.HashSet<String> physicalOccupied = new java.util.HashSet<String>();
+
+        // Resolve 90-degree logical corners first because the accepted RS3 curve
+        // owns a three-object physical footprint around one logical node.
+        for (String key : logicalNetwork) {
+            int[] tile = parseLogicalKey(key);
+            int mask = logicalNeighborMask(tile[0], tile[1], tile[2]);
+            if (Integer.bitCount(mask) != 2 || isOppositePair(mask)) {
+                continue;
+            }
+            int horizontalDirection = (mask & 2) != 0 ? 1 : -1;
+            int verticalDirection = (mask & 1) != 0 ? 1 : -1;
+            CurvePlacement curve = createCurvePlacement(
+                    tile[0], tile[1], horizontalDirection, verticalDirection);
+            if (curve != null) {
+                appendUniqueCurvePieces(pieces, physicalOccupied, curve, tile[2]);
             }
         }
-        path.addAll(extension);
+
+        // All remaining logical nodes receive a straight placeholder. Degree
+        // 3/4 nodes are intentionally logical junctions in V1; final switch art
+        // can replace this resolver choice later without changing saved topology.
+        for (String key : logicalNetwork) {
+            int[] tile = parseLogicalKey(key);
+            String physicalKey = logicalKey(tile[0], tile[1], tile[2]);
+            if (physicalOccupied.contains(physicalKey)) {
+                continue;
+            }
+            int mask = logicalNeighborMask(tile[0], tile[1], tile[2]);
+            int rotation = chooseStraightRotation(mask);
+            RoutePiece piece = new RoutePiece(objectId, objectType, rotation,
+                    tile[0], tile[1], tile[2]);
+            pieces.add(piece);
+            physicalOccupied.add(physicalKey);
+            if (pieces.size() >= MAX_ROUTE_TILES) {
+                break;
+            }
+        }
+        return pieces;
+    }
+
+    private static void appendUniqueCurvePieces(java.util.List<RoutePiece> pieces,
+            java.util.Set<String> occupied, CurvePlacement placement, int plane) {
+        for (RailCompositeLibrary.Component component : placement.composite.getComponents()) {
+            if (pieces.size() >= MAX_ROUTE_TILES) {
+                return;
+            }
+            int[] offset = rotateLayoutOffset(
+                    component.getOffsetX() - placement.anchorX,
+                    component.getOffsetY() - placement.anchorY,
+                    placement.layoutTurns);
+            int x = placement.cornerX + offset[0];
+            int y = placement.cornerY + offset[1];
+            String key = logicalKey(x, y, plane);
+            if (!occupied.add(key)) {
+                continue;
+            }
+            pieces.add(new RoutePiece(component.getId(), component.getType(),
+                    (component.getRotation() + placement.layoutTurns) & 0x3,
+                    x, y, plane));
+        }
+    }
+
+    private static int logicalNeighborMask(int x, int y, int plane) {
+        int mask = 0;
+        if (logicalNetwork.contains(logicalKey(x, y + 1, plane))) mask |= 1; // N
+        if (logicalNetwork.contains(logicalKey(x + 1, y, plane))) mask |= 2; // E
+        if (logicalNetwork.contains(logicalKey(x, y - 1, plane))) mask |= 4; // S
+        if (logicalNetwork.contains(logicalKey(x - 1, y, plane))) mask |= 8; // W
+        return mask;
+    }
+
+    private static boolean isOppositePair(int mask) {
+        return mask == (1 | 4) || mask == (2 | 8);
+    }
+
+    private static int chooseStraightRotation(int mask) {
+        boolean eastWest = (mask & (2 | 8)) != 0;
+        boolean northSouth = (mask & (1 | 4)) != 0;
+        if (eastWest && !northSouth) return eastWestRotation();
+        if (northSouth && !eastWest) return verticalRotation();
+        // Junction placeholder: preserve the through axis when one exists;
+        // otherwise prefer E/W. Final junction art is a later resolver concern.
+        if ((mask & (2 | 8)) == (2 | 8)) return eastWestRotation();
+        return verticalRotation();
+    }
+
+    private static String logicalKey(int x, int y, int plane) {
+        return x + ":" + y + ":" + plane;
+    }
+
+    private static int[] parseLogicalKey(String key) {
+        String[] parts = key.split(":");
+        return new int[] {
+                Integer.parseInt(parts[0]),
+                Integer.parseInt(parts[1]),
+                Integer.parseInt(parts[2])
+        };
     }
 
     private static String buildDebugReport(long operationId, boolean hadPrevious, boolean endpointEdit,
@@ -1028,8 +1083,8 @@ public final class RailRoutePreview {
         if (!committed || committedPlane < 0) {
             return pieces;
         }
-        if (!authoredPath.isEmpty()) {
-            pieces.addAll(authoredPath);
+        if (!logicalNetwork.isEmpty()) {
+            pieces.addAll(resolveLogicalNetworkPieces());
         } else {
             appendRoutePieces(pieces, committedStartX, committedStartY,
                     committedEndX, committedEndY, committedPlane);
