@@ -21,10 +21,10 @@ The same transform/selection foundation is intended to become the developer-grad
 | Area | Status | Notes |
 | --- | --- | --- |
 | Live object -> model resolution | ✅ Complete | Dev Inspector resolves object definition model IDs; Smelter 29394 -> model 64036 is the current reference asset. |
-| Private in-world runtime model clone | ⚠️ Needs runtime verification | Bundle 1 direct-renders a second private model clone through Matrix3's existing developer scene-render seam. |
-| Live whole-model transforms | ⚠️ Needs runtime verification | Scale X/Y/Z, model translation and yaw are implemented on the private clone. |
+| Private in-world runtime model clone | ✅ Complete | Runtime-confirmed on the Smelter reference asset: the private clone renders in the live scene without replacing the source object. |
+| Live whole-model transforms | ✅ Complete | Runtime-confirmed in the live client; independent scale, translation and yaw visibly update the private clone. |
 | JSON project save/load | ⚠️ Needs runtime verification | Authoring state saves under dev-model-projects and can be loaded back into the live preview. |
-| Mesh component selection/editing | ❌ Not started | Connected-component detection, isolate/highlight and part transforms follow the Bundle 1 gate. |
+| Mesh component selection/editing | ⚠️ Needs runtime verification | Bundle 2 adds connected-component detection, list selection/highlight, isolate/hide, per-part transforms, duplicate/delete, Ctrl+Z and JSON v2. In-world mouse hover/pick remains carryover. |
 | Permanent revision-830 model compiler | ❌ Not started | Requires validated encoder, model-ID allocation, backup, write/readback and hot reload. |
 | Construction Detail Mode reuse | ❌ Not started | Future player-facing placement/composition uses the shared transform/selection foundation and settlement persistence. |
 
@@ -72,20 +72,47 @@ Checklist:
 - [x] No cache writes.
 - [x] No server-world/persistent map writes.
 - [ ] Eclipse/Java 8 client clean-build.
-- [ ] Runtime acceptance on Smelter 29394 / model 64036.
+- [x] Runtime acceptance on Smelter 29394 / model 64036.
 - [ ] Confirm another Smelter/source object remains visually unchanged while the clone is transformed.
 - [ ] Save, hide, load JSON and confirm the same clone state returns.
 
 ## Phase 2 - Mesh Parts + In-World Selection
 
-Status: PLANNED
+Status: NEEDS TEST
 
-- Connected mesh-component detection.
-- Part list and isolate/hide/highlight.
-- In-world hover/pick of a component.
-- Selected-part visual feedback.
-- Per-part move/rotate/scale.
-- Delete/hide/duplicate and undo stack.
+### Bundle 2.1 - Connected parts + per-part authoring
+
+Status: NEEDS TEST
+
+- [x] Detect connected components from revision-830 Class159 triangle connectivity.
+- [x] Stable part list ordered by component face count.
+- [x] Selected-part live highlight.
+- [x] Isolate selected part.
+- [x] Hide/show selected part.
+- [x] Per-part X/Y/Z scale.
+- [x] Per-part X/Y/Z translation.
+- [x] Per-part yaw around the component centroid.
+- [x] Duplicate selected component as an independently rendered part instance.
+- [x] Delete selected component without mutating source cache geometry.
+- [x] 64-step session undo stack plus Ctrl+Z.
+- [x] JSON project v2 persists original-part edits, duplicate instances, selection and isolate state.
+- [ ] Eclipse/Java 8 client clean-build.
+- [ ] Runtime detect expected connected components on Smelter model 64036.
+- [ ] Runtime verify selected-part highlight/isolate/hide.
+- [ ] Runtime verify per-part move/rotate/scale changes only the selected component.
+- [ ] Runtime verify duplicate/delete/undo.
+- [ ] Save/load JSON v2 and confirm the same part edits return.
+
+### Bundle 2.2 - In-world component picking
+
+Status: CARRYOVER
+
+- [ ] Trace the narrowest Matrix3 screen-to-model/triangle picking seam.
+- [ ] Hover a component in the live scene and highlight it without list selection.
+- [ ] Left-click the hovered component to select it.
+- [ ] Preserve normal game input outside Live Model Editor edit mode.
+
+The connected-part editor deliberately ships first with list selection rather than inventing a second camera/raycast implementation. The existing live scene remains the visual editing surface; only mouse-to-component picking is deferred.
 
 ## Phase 3 - Professional Transform UX
 
@@ -138,13 +165,13 @@ One short test session:
 
 ## Resume Here
 
-**Last completed:** Bundle 1.1 implementation, static ownership trace, and corrective Class578 scene-render hook.
+**Last completed:** Bundle 1.1 runtime clone/whole-model transform proof passed in the live client. Bundle 2.1 connected-part authoring implementation is now in source.
 
-**Current phase:** Phase 1 - Runtime Clone Foundation.
+**Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
-**Active bundle:** Bundle 1.1 - Smelter runtime clone + JSON (`NEEDS TEST`).
+**Active bundle:** Bundle 2.1 - Connected parts + per-part authoring (`NEEDS TEST`).
 
-**Next action:** run the consolidated runtime gate above. If it passes, start Phase 2 with connected-component detection and isolate/highlight before attempting in-world part picking.
+**Next action:** one consolidated runtime gate on Smelter 29394/model 64036: Detect Parts, select several list entries, verify white highlight/isolate, move/scale/yaw one component, duplicate/delete/undo, then save/load JSON v2. After that passes, trace Bundle 2.2 in-world hover/click picking.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`
@@ -161,4 +188,4 @@ One short test session:
 - Object Lab direct-render scene coordinate math.
 - Dev Mode object ID/tile target route.
 
-**Important uncertainty:** exact live scene object type/rotation and true one-instance renderer replacement/suppression are not yet established. Bundle 1 intentionally keeps those explicit and leaves the original object untouched.
+**Important uncertainty:** exact live scene object type/rotation and true one-instance renderer replacement/suppression are not yet established. Bundle 1 intentionally keeps those explicit and leaves the original object untouched. Bundle 2.1 also does not yet own a proven screen-to-component mouse-picking seam; list selection is authoritative until Bundle 2.2 traces that input path.
