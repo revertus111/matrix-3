@@ -1311,3 +1311,10 @@
 - Rail debug now records MODE endpointEdit/fixedA plus the complete OLD_PIECE list captured before B moves and the complete replacement PIECE list calculated after B moves.
 - Visible palette diagnostics now include MODE, OLD_PIECES/OLD_PIECE and PIECES rows and allow up to 22 compact evidence lines.
 - No rail geometry, curve rotation, persistence mutation, or replacement behavior changed. This isolates whether the malformed route already exists in client A-to-new-B intent or appears after server application.
+
+2026-09-24 - RTS renderer convergence on vanilla camera path
+- SAP trace confirmed Matrix3 already renders detached camera mode through the same Class343 scene pipeline: ConstructionBuildCamera.tick() updates Class24.aClass411_Sub1_158, then vanilla Class411_Sub1.method5027(...) produces the camera transform/Class403 used by the normal scene renderer.
+- Removed the settlement-only Class343 scene-focus override. RTS now supplies the same player-local scene-focus arguments used by Matrix3's stock detached-camera branch.
+- Removed the settlement-only Class523 scene-radius expansion and Class174_Sub1 terrain-fog bypass. Those were symptom patches and runtime evidence showed they did not solve the beige cutoff.
+- Resulting ownership is intentionally narrow: ConstructionBuildCamera owns RTS position/orientation/input; Matrix3 vanilla camera/scene/environment/terrain rendering owns rendering.
+- Runtime gate: reproduce the prior zoomed-out settlement view and compare directly with vanilla detached camera behavior before any further renderer modification.
