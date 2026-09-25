@@ -1008,7 +1008,7 @@ Batch worker actions:
 
 Runtime acceptance target:
 
-`Enable Worker Control -> drag-select workers and optionally self -> release -> selected-unit rings persist -> normal click preserves selection -> Walk Here moves selected workers and also self only when self is selected -> right-click starter tree / Chop commands selected workers to physically path into range before chopping and also lets selected self perform normal player Chop -> manual order completes -> worker policy resumes -> Clear/reselect updates rings -> settlement exit/re-entry requires a fresh selection`
+`Enable Worker Control -> drag-select workers and optionally self -> release -> selected-unit rings persist -> single ground click preserves selection and issues no move -> second ground click within the bounded double-click window moves selected workers and also self only when self is selected -> vanilla resource actions command selected workers -> manual order completes -> worker policy resumes -> Clear/reselect updates rings -> settlement exit/re-entry requires a fresh selection`
 
 Runtime defect/fix note:
 - First RWS-5 runtime attempt: drag preview worked, but mouse release produced no useful selection action.
@@ -1022,13 +1022,14 @@ Runtime defect/fix note:
 - Persistent-ring patch implemented: the scene pass now renders the committed selected-worker ring layers after release without re-rendering the large drag circle.
 - Follow-up runtime clarified that ordinary clicks were replacing the selection because every mouse press/release counted as a drag. RWS now requires a 6px drag threshold; a normal click preserves the committed group and continues into Matrix3's normal context action.
 - RWS self-selection is now part of the transient active selection: the local player can be inside the drag circle, receives the same layered 4171 ring, and the active SettlementInstance records transient `self` membership alongside persistent Worker IDs without adding save-schema state.
-- Matrix3's existing context actions are the RTS command surface rather than a second custom command UI: action 23 (Walk Here) mirrors a transient Move order to selected workers; if self is selected, vanilla Walk Here continues for the player.
+- Matrix3's existing context actions are the RTS command surface rather than a second custom command UI. Ground movement is deliberately RTS-gated: the first action-23 ground click is consumed as a pending move click, and a second click within 375 ms on the same/adjacent tile issues the transient Move order. If self is selected, only that accepted second click falls through to vanilla Walk Here for the player.
 - Starter-resource skilling now follows the same vanilla interaction seam. First object option routes Wood tree 1276, Stone 11933 and Basic ore 11936 to the selected workers; first NPC option routes Food spot 327. Choosing those same options from the normal right-click menu produces the identical action dispatch, so workers respond to normal vanilla left-click/right-click skilling without a parallel worker menu.
 - A committed selection adds one RuneScape-native `Clear Selection` option to world right-click menus (ground/object/NPC). It clears the client rings/self flag and the active SettlementInstance selection together; ordinary clicks and other vanilla menu actions do not clear the group.
 - Worker manual Move/Gather orders are runtime-only overrides owned by `SettlementWorkerNpc`; after the order completes, normal Allowed Jobs AI resumes. Pause remains authoritative.
 - The worker arrival seam is hardened: resource gathering now requires explicit physical interaction range (adjacent for resource nodes). A `calcFollow(...)` success with zero queued steps no longer means the worker has arrived, preventing the remote-chop behavior seen in runtime video.
 - Persistent rings no longer clear merely because one render pass cannot resolve a selected NPC. Local selection clears when explicitly replaced/cleared or when the committed selection center leaves the active scene, covering settlement exit/rebuild without transient-frame flicker.
-- Runtime video exposed action arbitration after a successful selection: releasing a second radial drag could immediately fall through as Matrix3 Walk Here and move the newly selected self/workers. The client now consumes that release-side action 23 once; the next genuine click remains a normal RTS order. Fresh Construction camera sessions also force RTS mode on entry.
+- Runtime video exposed action arbitration after a successful selection: releasing a second radial drag could immediately fall through as Matrix3 Walk Here and move the newly selected self/workers. The client consumes that release-side action 23 and explicitly clears pending move-click state.
+- Follow-up UX decision: selected-unit ground movement requires a bounded double-click (375 ms, same/adjacent tile). A single ground click never moves the selected group, and a completed radial drag can never count as the first move click. Fresh Construction camera sessions still force RTS mode on entry.
 
 ## Phase 3 — Processing chains + better materials
 
@@ -1543,3 +1544,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - World right-click menus expose one `Clear Selection` action whenever a committed RTS selection exists. It does not alter Allowed Jobs, Pause, Needs, progression or persistence.
 - Server gather validation accepts either OBJECT or NPC starter-resource sources and still resolves the exact plot-relative SettlementResourceNode before assigning any worker order.
 - Resume gate: drag-select workers -> verify normal click preserves selection -> right-click ground/object/NPC shows Clear Selection -> verify Walk Here -> verify Wood/Stone/Ore/Food vanilla skill options -> Clear Selection removes rings/server selection -> exit/re-entry requires a fresh selection.
+
+
+## Bundle 2.4 double-click movement arbitration — 2026-09-25
+- IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
+- Selection drag and movement are separate gestures: >6px LMB drag selects; its release is consumed and clears all pending movement-click state.
+- With a committed selection, one ground click is consumed and only arms the short double-click window. A second ground click within 375 ms on the same or adjacent tile issues the existing workerselectionmove order.
+- If self is selected, only the accepted second click is allowed through to Matrix3 vanilla Walk Here, keeping player and workers on the same destination.
+- Object/NPC skilling actions and Clear Selection behavior are unchanged.

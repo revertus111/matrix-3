@@ -558,8 +558,9 @@ Use Matrix3's normal world interaction surface to command the committed selectio
 
 Implemented:
 
-- action 23 / Walk Here mirrors a transient move order to selected workers
-- if self is selected, vanilla player Walk Here continues; otherwise the selected workers move without forcing the player to walk
+- action 23 ground movement uses a dedicated double-click gate: the first click is consumed, and a second click within 375 ms on the same/adjacent tile mirrors a transient move order to selected workers
+- a completed radial selection drag clears the double-click state and its release is consumed, so selection can never accidentally become move-click #1
+- if self is selected, only the accepted second click continues into vanilla player Walk Here; otherwise only the selected workers move
 - normal first-option skilling interactions mirror starter Wood 1276, Stone 11933 and Basic ore 11936 object nodes plus Food NPC 327
 - selecting the same skill option from the vanilla right-click menu produces the same worker order as direct clicking
 - worker manual Move/Gather orders are runtime overrides only; normal Allowed Jobs policy resumes after completion
@@ -606,7 +607,9 @@ Runtime acceptance should be consolidated into one client/server launch.
 - [ ] Combat reticules remain unaffected
 - [ ] Group Pause affects selected workers only
 - [ ] Group Resume affects selected workers only
-- [ ] Vanilla Walk Here commands the selected workers and preserves selection
+- [ ] Single ground click preserves selection and moves nobody
+- [ ] Double-click ground commands the selected workers and preserves selection
+- [ ] A radial drag release never seeds or triggers the double-click move gesture
 - [ ] Vanilla Wood / Stone / Ore / Food skill options command the selected workers
 - [ ] Right-click world menus show one Clear Selection option while a group is committed
 - [ ] Clear Selection removes the rings and server transient selection without changing worker policy

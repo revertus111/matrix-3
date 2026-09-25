@@ -68,6 +68,8 @@ public final class ConstructionRadialSelection {
     private static final int MODEL_FLAGS = 2048 | 0x80000 | 0x8000 | 0x100 | 0x5;
     private static final long HOVER_STALE_MS = 1250L;
     private static final int MIN_SELECTION_DRAG_PIXELS = 6;
+    private static final long MOVE_DOUBLE_CLICK_WINDOW_MS = 375L;
+    private static final int MOVE_DOUBLE_CLICK_TILE_TOLERANCE = 1;
     private static final int CLEAR_SELECTION_MENU_ACTION = 1530;
     private static final int MATRIX3_FIRST_OBJECT_ACTION = 3;
     private static final int MATRIX3_FIRST_NPC_ACTION = 9;
@@ -116,6 +118,10 @@ public final class ConstructionRadialSelection {
     private static volatile int dragPressMouseX;
     private static volatile int dragPressMouseY;
     private static volatile boolean dragThresholdPassed;
+    private static volatile long pendingMoveClickAtMillis;
+    private static volatile int pendingMoveClickWorldX = -1;
+    private static volatile int pendingMoveClickWorldY = -1;
+    private static volatile int pendingMoveClickPlane = -1;
     // A completed selection drag must not fall through as Matrix3 Walk Here.
     // The next real mouse press clears this latch, so it cannot eat a later click.
     private static volatile boolean selectionDragJustCommitted;
@@ -342,6 +348,7 @@ public final class ConstructionRadialSelection {
         committedPlayerSelected = false;
         dragThresholdPassed = false;
         selectionDragJustCommitted = false;
+        resetGroundMoveClick();
         liveDetectedWorkerCount = 0;
         lastDetectedWorkers = "none";
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -1533,6 +1540,7 @@ public final class ConstructionRadialSelection {
         dragPressMouseY = mouseY;
         dragThresholdPassed = false;
         selectionDragJustCommitted = false;
+        resetGroundMoveClick();
         liveCenterWorldX = originWorldX;
         liveCenterWorldY = originWorldY;
         liveRadiusTiles = MIN_RADIUS_TILES;
@@ -1664,7 +1672,8 @@ public final class ConstructionRadialSelection {
          */
         if (normalizedAction == MATRIX3_TILE_ACTION && selectionDragJustCommitted) {
             selectionDragJustCommitted = false;
-            lastEventState = "RWS-5 selection drag release consumed; no Walk Here order issued.";
+            resetGroundMoveClick();
+            lastEventState = "RWS-5 selection drag release consumed; double-click move state remains clear.";
             return true;
         }
 
@@ -1674,12 +1683,22 @@ public final class ConstructionRadialSelection {
         }
 
         if (normalizedAction == MATRIX3_TILE_ACTION) {
+            if (!isGroundMoveDoubleClick(point)) {
+                lastEventState = "RWS move waiting: double-click ground to move the committed selection.";
+                return true;
+            }
             if (committedWorkerNpcIndexes.length > 0) {
                 queueSelectionOrder("workerselectionmove "
                         + point.worldX + " " + point.worldY + " " + point.plane);
             }
+            lastEventState = "RWS double-click move -> "
+                    + point.worldX + "," + point.worldY + "," + point.plane
+                    + "; workers=" + committedWorkerNpcIndexes.length
+                    + "; self=" + (committedPlayerSelected ? "YES" : "NO") + ".";
             return !committedPlayerSelected;
         }
+
+        resetGroundMoveClick();
 
         if (normalizedAction == MATRIX3_FIRST_OBJECT_ACTION) {
             int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
@@ -1698,6 +1717,34 @@ public final class ConstructionRadialSelection {
             }
         }
         return false;
+    }
+
+    private static boolean isGroundMoveDoubleClick(WorldPoint point) {
+        long now = System.currentTimeMillis();
+        boolean secondClick = pendingMoveClickAtMillis > 0L
+                && now >= pendingMoveClickAtMillis
+                && now - pendingMoveClickAtMillis <= MOVE_DOUBLE_CLICK_WINDOW_MS
+                && pendingMoveClickPlane == point.plane
+                && Math.abs(pendingMoveClickWorldX - point.worldX) <= MOVE_DOUBLE_CLICK_TILE_TOLERANCE
+                && Math.abs(pendingMoveClickWorldY - point.worldY) <= MOVE_DOUBLE_CLICK_TILE_TOLERANCE;
+
+        if (secondClick) {
+            resetGroundMoveClick();
+            return true;
+        }
+
+        pendingMoveClickAtMillis = now;
+        pendingMoveClickWorldX = point.worldX;
+        pendingMoveClickWorldY = point.worldY;
+        pendingMoveClickPlane = point.plane;
+        return false;
+    }
+
+    private static void resetGroundMoveClick() {
+        pendingMoveClickAtMillis = 0L;
+        pendingMoveClickWorldX = -1;
+        pendingMoveClickWorldY = -1;
+        pendingMoveClickPlane = -1;
     }
 
     private static boolean isStarterResourceObjectId(int objectId) {

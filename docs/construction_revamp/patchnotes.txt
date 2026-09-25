@@ -1388,3 +1388,11 @@
 - Curve resolution now refuses any 90-degree composite whose owned leg footprint touches a degree-3/4 logical junction. This prevents CURVE_RAIL_LAYOUT_01 from stealing the connection tile and visually bending the start of a branch/crossing.
 - Degree-3/4 nodes remain explicit logical junctions with a straight-through placeholder until accepted merge/split/crossing assets are classified; no fake stacked same-type rail objects are persisted.
 - Added direction-neutral cart connection-mask access (N=1/E=2/S=4/W=8). Future carts can choose outgoing edges from topology using their incoming edge/route state instead of inferring travel direction from visual object rotation.
+
+
+2026-09-25 - Bundle 2.4 double-click RTS movement
+- Separated radial selection drag from selected-unit ground movement.
+- A single ground click with an active RTS selection now moves nobody; a second click within 375 ms on the same/adjacent tile issues the existing selected-worker move order.
+- If self is selected, only the accepted second click falls through to vanilla Walk Here.
+- Selection drag start/release and Clear Selection reset pending move-click state, preventing drag release from becoming part of a move double-click.
+- Vanilla object/NPC skilling orders and worker/server ownership are unchanged.
