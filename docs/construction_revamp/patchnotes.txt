@@ -1442,3 +1442,9 @@
 - Preview uses temporary authored edges and restores them after rendering; Clear Route clears both tile and edge topology.
 - Manhattan fallback now records explicit edges as it creates tiles.
 - This keeps close/parallel tracks independent unless the authored route actually traverses between their tiles, while preserving intentional branches/crossings.
+
+
+2026-09-25 - Rail diagnostics obey existing build-palette Debug toggle
+- Reused RailRoutePreview's existing debugEnabled state instead of adding another debug control.
+- Rail commit report generation, append-only rail_runtime_debug.txt writes, and labeled PNG screen captures now run only while the existing build-palette Rail Debug control is enabled.
+- Debug remains off by default; normal rail authoring no longer floods diagnostic files/screenshots when debugging is disabled.
