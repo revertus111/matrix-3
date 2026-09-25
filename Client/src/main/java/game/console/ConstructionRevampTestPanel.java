@@ -79,6 +79,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createStorageCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createProcessingCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createNeedsHudCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createDevelopmentToolsCard());
@@ -373,6 +375,50 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         buttons.add(statusButton);
         buttons.add(reset);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createProcessingCard() {
+        JPanel card = ConsoleTheme.createCard("Processing");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Phase 3 processing core. Current test recipe: 2 Wood -> 1 Plank. "
+                + "Physical workstation/worker binding comes after this storage transaction passes.",
+                4));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton statusButton = new JButton("Processing Status");
+        JButton primeWood = new JButton("Prime 10 Wood");
+        JButton processOne = new JButton("Saw 1 Plank");
+        JButton selfTest = new JButton("Processing Self-Test");
+
+        styleButton(statusButton);
+        styleButton(primeWood);
+        styleButton(processOne);
+        styleButton(selfTest);
+
+        statusButton.addActionListener(e -> queue(
+                "itembrowser settlement processing",
+                "Processing Status queued. Check game chat."));
+        primeWood.addActionListener(e -> queue(
+                "itembrowser settlement storageset wood 10",
+                "Wood storage set to 10 for processing tests."));
+        processOne.addActionListener(e -> queue(
+                "itembrowser settlement process saw-planks 1",
+                "Saw Planks x1 queued."));
+        selfTest.addActionListener(e -> queue(
+                "itembrowser settlement processingselftest",
+                "Processing Self-Test queued. Expect PASS."));
+
+        JPanel buttons = new JPanel(new GridLayout(2, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(statusButton);
+        buttons.add(primeWood);
+        buttons.add(processOne);
+        buttons.add(selfTest);
         card.add(buttons);
         return card;
     }

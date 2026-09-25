@@ -38,7 +38,9 @@ public final class SettlementResourceSelfTest {
                 require(state.getResourceAmount(resource) == 10L,
                         "stored amount mismatch for " + resource.getKey());
             }
-            require(state.getTotalStoredResources() == 40L, "total storage mismatch");
+            require(state.getTotalStoredResources()
+                    == 10L * SettlementResource.values().length,
+                    "total storage mismatch");
 
             require(state.removeResource(SettlementResource.WOOD, 4L) == 4L,
                     "wood removal failed");
@@ -73,9 +75,17 @@ public final class SettlementResourceSelfTest {
             stage = "nodes";
             Set<String> tiles = new HashSet<String>();
             Set<String> keys = new HashSet<String>();
+            int starterResourceCount = 0;
+            for (SettlementResource resource : SettlementResource.values()) {
+                if (resource.isStarterResource()) {
+                    starterResourceCount++;
+                }
+            }
             for (SettlementResourceNode node : SettlementResourceNode.values()) {
                 require(node != null, "null resource node");
                 require(node.getResource() != null, "node has no resource");
+                require(node.getResource().isStarterResource(),
+                        "starter node points at processed resource " + node.getResource().getKey());
                 require(node.getRuntimeId() >= 0, "node has invalid runtime id");
                 require(SettlementState.isValidPlotLocation(
                         node.getPlotX(), node.getPlotY(), SettlementState.PLOT_PLANE),
@@ -88,10 +98,12 @@ public final class SettlementResourceSelfTest {
                         "reserved node tile lookup failed");
             }
 
-            require(SettlementResourceNode.values().length == SettlementResource.values().length,
-                    "starter node/resource count mismatch");
+            require(SettlementResourceNode.values().length == starterResourceCount,
+                    "starter node/raw-resource count mismatch");
+            require(!SettlementResource.PLANKS.isStarterResource(),
+                    "processed Planks incorrectly marked as a starter resource");
 
-            return "PASS: per-resource storage add/remove/capacity isolation + 4 starter-node definitions.";
+            return "PASS: per-resource storage isolation + raw starter-node boundary + processed-resource storage.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }

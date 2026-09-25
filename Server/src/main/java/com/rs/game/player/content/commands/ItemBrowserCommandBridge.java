@@ -23,6 +23,9 @@ import com.rs.game.player.content.construction.SettlementObjectCatalog;
 import com.rs.game.player.content.construction.SettlementObjectProbe;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementPopulationCheck;
+import com.rs.game.player.content.construction.SettlementProcessingRecipe;
+import com.rs.game.player.content.construction.SettlementProcessingSelfTest;
+import com.rs.game.player.content.construction.SettlementProcessingTransaction;
 import com.rs.game.player.content.construction.SettlementResource;
 import com.rs.game.player.content.construction.SettlementResourceNode;
 import com.rs.game.player.content.construction.SettlementResourceSelfTest;
@@ -247,7 +250,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -359,7 +362,7 @@ public final class ItemBrowserCommandBridge {
         if ("storageset".equals(operation)) {
             if (cmd.length < 5) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement storageset <wood|food|stone|basic-ore> <amount>");
+                        "Use: ::itembrowser settlement storageset <resourceKey> <amount>");
                 return true;
             }
             SettlementResource resource = SettlementResource.forKey(cmd[3].toLowerCase());
@@ -402,6 +405,62 @@ public final class ItemBrowserCommandBridge {
             String result = SettlementResourceSelfTest.run();
             System.out.println("[SettlementResourceSelfTest] " + result);
             player.getPackets().sendGameMessage("Bundle 1.3 resource self-test: " + result);
+            return true;
+        }
+
+        if ("processing".equals(operation)) {
+            player.getPackets().sendGameMessage(
+                    "Settlement processing | storage="
+                            + player.getSettlementState().getResourceSummary());
+            for (SettlementProcessingRecipe recipe : SettlementProcessingRecipe.values()) {
+                player.getPackets().sendGameMessage(
+                        recipe.getKey() + " | " + recipe.getSummary());
+            }
+            return true;
+        }
+
+        if ("process".equals(operation)) {
+            if (cmd.length < 4) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement process <recipeKey> [cycles]");
+                return true;
+            }
+            SettlementProcessingRecipe recipe =
+                    SettlementProcessingRecipe.forKey(cmd[3].toLowerCase());
+            if (recipe == null) {
+                player.getPackets().sendGameMessage(
+                        "Unknown settlement processing recipe: " + cmd[3] + ".");
+                return true;
+            }
+            int cycles = 1;
+            if (cmd.length >= 5) {
+                try {
+                    cycles = Integer.parseInt(cmd[4]);
+                } catch (NumberFormatException ex) {
+                    player.getPackets().sendGameMessage(
+                            "Processing cycles must be a whole number.");
+                    return true;
+                }
+            }
+            SettlementProcessingTransaction.Result result =
+                    SettlementProcessingTransaction.apply(
+                            player.getSettlementState(), recipe, cycles);
+            player.getPackets().sendGameMessage(
+                    (result.isSuccess() ? "Processing complete: " : "Processing blocked: ")
+                            + result.getSummary());
+            if (result.isSuccess()) {
+                player.getPackets().sendGameMessage(
+                        "Settlement storage: "
+                                + player.getSettlementState().getResourceSummary());
+            }
+            return true;
+        }
+
+        if ("processingselftest".equals(operation)) {
+            String result = SettlementProcessingSelfTest.run();
+            System.out.println("[SettlementProcessingSelfTest] " + result);
+            player.getPackets().sendGameMessage(
+                    "Phase 3 processing self-test: " + result);
             return true;
         }
 

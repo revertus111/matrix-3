@@ -508,6 +508,9 @@ public final class SettlementState implements Serializable {
             return false;
         }
         for (SettlementResource resource : SettlementResource.values()) {
+            if (!resource.isStarterResource()) {
+                continue;
+            }
             if (getResourceAmount(resource) < STARTER_SHELTER_RESOURCE_EACH
                     || getStorageCapacity(resource) < resource.getStarterStorageCapacity()) {
                 return false;
@@ -542,6 +545,9 @@ public final class SettlementState implements Serializable {
         status.append(", floors=").append(floors).append("/").append(STARTER_SHELTER_FLOORS);
         status.append(", doors=").append(doors).append("/").append(STARTER_SHELTER_DOORS);
         for (SettlementResource resource : SettlementResource.values()) {
+            if (!resource.isStarterResource()) {
+                continue;
+            }
             status.append(", ").append(resource.getDisplayName()).append("=")
                     .append(getResourceAmount(resource)).append("/")
                     .append(STARTER_SHELTER_RESOURCE_EACH);
