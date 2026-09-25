@@ -233,10 +233,20 @@ public final class RailRoutePreview {
     }
 
     public static String setDebugEnabled(boolean value) {
-        debugEnabled = value;
-        eventState = value
-                ? "Rail debug ON. Commit A->B routes, then use Copy Debug."
-                : "Rail debug OFF.";
+        if (!value) {
+            debugEnabled = false;
+            eventState = "Rail debug OFF.";
+            return eventState;
+        }
+        java.io.File root = getDebugRootDirectory();
+        java.io.File shots = new java.io.File(root, "rail_debug");
+        if ((!root.exists() && !root.mkdirs()) || (!shots.exists() && !shots.mkdirs())) {
+            debugEnabled = false;
+            eventState = "Rail debug failed: cannot create " + root.getAbsolutePath();
+            return eventState;
+        }
+        debugEnabled = true;
+        eventState = "Rail debug ON -> " + root.getAbsolutePath();
         return eventState;
     }
 
@@ -253,11 +263,23 @@ public final class RailRoutePreview {
         }
     }
 
+    private static java.io.File getDebugRootDirectory() {
+        java.io.File cwd = new java.io.File(System.getProperty("user.dir", ".")).getAbsoluteFile();
+        if ("Client".equalsIgnoreCase(cwd.getName())) {
+            return new java.io.File(cwd, "data/construction");
+        }
+        java.io.File clientDir = new java.io.File(cwd, "Client");
+        if (clientDir.isDirectory()) {
+            return new java.io.File(clientDir, "data/construction");
+        }
+        return new java.io.File(cwd, "data/construction");
+    }
+
     private static void appendDebugReportToFile(String report,
             java.util.List<RoutePiece> oldPieces, java.util.List<RoutePiece> newPieces) {
         java.io.FileWriter writer = null;
         try {
-            java.io.File dir = new java.io.File("data/construction");
+            java.io.File dir = getDebugRootDirectory();
             if (!dir.exists() && !dir.mkdirs()) {
                 eventState = "Rail debug directory could not be created: " + dir.getPath();
                 return;
@@ -295,7 +317,7 @@ public final class RailRoutePreview {
     private static void captureDebugScreenshot(String report,
             java.util.List<RoutePiece> newPieces) {
         try {
-            java.io.File dir = new java.io.File("data/construction/rail_debug");
+            java.io.File dir = new java.io.File(getDebugRootDirectory(), "rail_debug");
             if (!dir.exists() && !dir.mkdirs()) {
                 eventState = "Rail debug screenshot directory could not be created: " + dir.getPath();
                 return;
@@ -364,11 +386,15 @@ public final class RailRoutePreview {
     }
 
     public static String getDebugScreenshotDirectory() {
-        return new java.io.File("data/construction/rail_debug").getPath();
+        return new java.io.File(getDebugRootDirectory(), "rail_debug").getAbsolutePath();
+    }
+
+    public static String getDebugOutputDirectory() {
+        return getDebugRootDirectory().getAbsolutePath();
     }
 
     public static String getDebugFilePath() {
-        return new java.io.File("data/construction/rail_runtime_debug.txt").getPath();
+        return new java.io.File(getDebugRootDirectory(), "rail_runtime_debug.txt").getAbsolutePath();
     }
 
     public static String getDebugReport() {
