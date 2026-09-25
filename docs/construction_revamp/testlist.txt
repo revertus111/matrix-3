@@ -962,3 +962,9 @@ Rail junction protection runtime gate (2026-09-25)
 
 
 [x] 2026-09-25 Bundle 2.4 final runtime acceptance: user confirmed the complete vanilla-context + double-click movement interaction set works. Bundle 2.4 is DONE / RUNTIME VERIFIED.
+
+
+Rail preview/persistence parity gate (2026-09-25)
+- Clear all builds and draw one long route containing straights plus several 90-degree curves.
+- Before release, note the complete preview. Release once and confirm the persisted world contains the same straight and curve physical pieces; straight runs must not disappear while curves remain.
+- Do not add a second route for this gate: first-placement preview -> release parity must pass independently.
