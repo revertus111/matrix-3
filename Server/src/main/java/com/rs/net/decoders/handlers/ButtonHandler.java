@@ -333,6 +333,13 @@ public class ButtonHandler {
 		// 1);//TODO uknow.
 	    }
 	} else if (interfaceId == 1430) {
+	    if (player.getActionbar().isConstructionMode()) {
+		if (componentId >= 55 && componentId <= 229
+			&& packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET) {
+		    player.getActionbar().pushShortcut((componentId - 55) / 13, packetId);
+		}
+		return;
+	    }
 	    if (componentId == 6) {
 		if (packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
 		    player.getActionbar().useAbility(new HealAbilityShortcut(1), packetId);
@@ -1379,7 +1386,7 @@ public class ButtonHandler {
 		player.getBank().depositAllBob(true);
 	    else if (componentId == 128) {
 		if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET)
-		    player.getBank().sendExamineÎnventory(slotId);
+		    player.getBank().sendExamineÃŽnventory(slotId);
 		else
 		    sendRemove(player, slotId, packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET);
 	    } else if (componentId == 305) {
@@ -1427,7 +1434,7 @@ public class ButtonHandler {
 		} else if (packetId == WorldPacketsDecoder.ACTION_BUTTON9_PACKET)
 		    player.getBank().depositItem(slotId, Integer.MAX_VALUE, true);
 		else if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET)
-		    player.getBank().sendExamineÎnventory(slotId);
+		    player.getBank().sendExamineÃŽnventory(slotId);
 		else if (packetId == WorldPacketsDecoder.ACTION_BUTTON7_PACKET)
 		    player.getBank().sendWearInventory(slotId);
 	    }
