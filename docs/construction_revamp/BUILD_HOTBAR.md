@@ -2,13 +2,15 @@
 
 Status: ACTIVE foundation
 Workstream: Construction Revamp
-Owner: client-side Construction build UX; gameplay placement remains owned by existing ConstructionPlacementController/server settlement APIs.
+Owner: temporary native-action-bar Construction UX; gameplay placement remains owned by existing ConstructionPlacementController/server settlement APIs.
 
 ## Goal
 
-Add a dedicated Construction build hotbar inspired by RuneScape's action-bar readability without taking over the real combat/action bar.
+Reuse Matrix3's native RuneScape action bar (interface 1430) as a temporary Construction build bar while the Build Palette is open.
 
-The hotbar is the player's explicit build-tool selector. It should make Construction feel like a building/automation game: fast number-key tool changes, clear selected state, and no geometry guessing when a rail interaction requires a special tool.
+Construction does not overwrite the player's saved combat/action-bar shortcuts. The existing ActionBar.shortcuts[][] remain persistent gameplay state; Construction temporarily replaces only the client-facing slot visuals/input routing, then restores the player's real bar when build mode closes.
+
+The build bar is the player's explicit build-tool selector. It should make Construction feel like a building/automation game: fast number-key/tool changes, RuneScape-native presentation, and no geometry guessing when a rail interaction requires a special tool.
 
 ## Core interaction rule
 
@@ -49,12 +51,14 @@ V1 behavior:
 
 ## UX
 
-- Separate lightweight overlay; do not modify or replace Matrix3's combat/action bar.
-- Anchor near the lower center of the game canvas, clear of the Construction palette.
-- Selected/armed slot must be visually obvious.
-- Reserved/unimplemented slots stay visible but subdued.
-- Hotbar follows palette show/hide lifecycle.
-- Mouse click and 1-9 hotkeys must call the same tool actions.
+- Native host: interface 1430, mounted by Matrix3 at root 1477 component 35.
+- NIS: reuse the action bar in its normal gameframe location.
+- Legacy: Construction explicitly remounts/unhides interface 1430 while the Build Palette is open. It must not change the player's Legacy preference.
+- Closing Construction restores the real action-bar vars, lock state and interface-mode vars.
+- ConstructionBuildHotbar is now a controller/input bridge only; the old floating JWindow renderer is superseded.
+- Mouse click and 1-9 hotkeys call the same Construction tool actions.
+- Reserved/unimplemented slots remain present as temporary icon tokens but do not fake placement.
+- Current icon item IDs are visual-only tokens; they are not inventory items, persistent shortcut definitions or Construction gameplay identity. Custom sprites/labels may replace them later.
 
 ## Rail overlap policy
 
@@ -87,29 +91,50 @@ Future Splitter/Merge:
 ## Architecture
 
 ```
-ConstructionBuildHotbar
-        |
-        +--> ConstructionPlacementController (Rail/Object/Erase/Rotate)
-        |
-        +--> existing settlement undo command
-        |
-        +--> future Rail tool mode (Junction/Crossing/Splitter)
-                    |
-                    +--> logical rail topology
-                    +--> physical-object resolver
+Build Palette open
+      |
+      +--> client ConstructionBuildHotbar.show()
+      |        |
+      |        +--> ::settlementbuildbaropen
+      |                  |
+      |                  +--> server ActionBar.beginConstructionMode()
+      |                           |
+      |                           +--> mount/unhide native 1430 @ 1477:35
+      |                           +--> temporary build icons in client vars
+      |                           +--> persistent shortcuts[][] untouched
+      |
+native 1430 slot click
+      |
+      +--> ButtonHandler
+               |
+               +--> ActionBar construction-mode intercept
+                        |
+                        +--> packet 69: constructionbar <slot>
+                                  |
+                                  +--> PacketsDecoder
+                                           |
+                                           +--> ConstructionBuildHotbar.activate()
+                                                    |
+                                                    +--> ConstructionPlacementController
+                                                    +--> settlement undo
+                                                    +--> future special rail tools
 ```
 
-The hotbar is UX only. It does not own persistent builds, rail topology persistence, object placement, settlement state, or cart routing.
+The hotbar is UX/input routing only. It does not own persistent builds, rail topology persistence, object placement, settlement state, combat shortcut persistence or cart routing.
 
 ## Phases
 
-### Phase H1 - Hotbar foundation
+### Phase H1 - Native action-bar foundation
 - [x] Define explicit nine-slot tool contract.
-- [x] Add separate ConstructionBuildHotbar overlay.
+- [x] Supersede the floating Construction JWindow with Matrix3 native interface 1430.
+- [x] Preserve the player's persistent ActionBar.shortcuts[][] while Construction temporarily owns client slot visuals/input.
 - [x] Add 1-9 hotkeys while palette is open.
+- [x] Route native 1430 slot clicks back into the same Construction tool actions.
 - [x] Wire Rail/Object/Eraser/Rotate/Undo to existing owners.
-- [x] Keep Junction/Crossing/Splitter/Favorites visibly reserved, non-fake.
-- [ ] Runtime UI/input smoke test.
+- [x] Keep Junction/Crossing/Splitter/Favorites reserved and non-fake.
+- [x] Force native 1430 visible during Construction in Legacy without switching the player's interface preference.
+- [x] Restore real action-bar vars/lock state and Legacy/NIS mode vars on close/settlement teardown.
+- [ ] Runtime NIS + Legacy UI/input smoke test.
 
 ### Phase H2 - Explicit rail special tools
 - [ ] Classify/accept Junction art.
@@ -127,16 +152,16 @@ The hotbar is UX only. It does not own persistent builds, rail topology persiste
 
 ## Runtime gate for Phase H1
 
-1. Open Construction palette; hotbar appears separately.
-2. Press 1 -> Rail is armed.
-3. Select Bed/Fence/etc. from palette; slot 5 reflects that selected object.
-4. Press 1 then 5 -> swaps Rail <-> last object without reopening category/search.
-5. Press 6 -> Eraser arms.
-6. Press 7 with an object armed -> rotation advances.
-7. Press 8 -> existing settlement undo executes.
-8. Slots 2/3/4/9 clearly indicate reserved/unavailable and do not place fake content.
-9. Close Construction palette -> build hotbar hides and number keys return to normal Matrix3 ownership.
+1. NIS: open Construction palette; the separate floating BUILD HOTBAR must be gone and native interface 1430 must show the temporary Construction icons.
+2. Press 1 -> Rail is armed. Click native slot 1 -> the same Rail action fires.
+3. Select Bed/Fence/etc. from palette; press 1 then 5 -> swaps Rail <-> last object without reopening category/search.
+4. Press/click 6 -> Eraser; re-arm an object and press/click 7 -> Rotate; press/click 8 -> existing settlement Undo.
+5. Slots 2/3/4/9 remain reserved and do not perform fake placement.
+6. Close Build Palette -> the player's original combat/action-bar contents and lock state return exactly.
+7. Legacy: switch to Legacy before opening the palette. Opening Construction must force native 1430 visible without changing Legacy mode; closing Construction must restore the Legacy presentation.
+8. Exit/teleport/logout from the settlement while Construction is active -> teardown restores the player's normal action bar.
+9. Reopen Construction after both NIS and Legacy tests; persistent combat shortcuts must be unchanged.
 
 ## Resume Here
 
-Implement Phase H1 only. Do not invent Junction/Crossing/Splitter assets. Preserve the current Rail first-contact clamp until Phase H2 has accepted special-node art and semantics.
+Runtime-test the native 1430 retrofit in both NIS and Legacy. Do not invent Junction/Crossing/Splitter assets. Preserve the current Rail first-contact clamp until Phase H2 has accepted special-node art and semantics.
