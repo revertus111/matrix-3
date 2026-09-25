@@ -928,3 +928,11 @@ Rail Network V1 correction runtime gate (2026-09-25)
 - Extend the same network with at least two additional drags; confirm each committed segment remains instead of the newest drag replacing the prior one.
 - Use Clear Builds and confirm the rails disappear. Without restarting/rearming the client, build a new multi-drag network and confirm the second and later drags accumulate normally.
 - Start a drag from the middle of an existing straight and confirm the branch is retained with the original network.
+
+
+Rail Network V1 delta persistence gate (2026-09-25)
+- Clear Builds, arm Rail route, place one straight segment, then place a second connected straight segment. Both must remain persisted.
+- Add a third connected segment without closing/rearming the palette. Earlier segments must remain.
+- Turn 90 degrees from an existing end; only the physical pieces affected by the corner conversion may change.
+- Start from the middle of an existing line and branch. Original unchanged rail pieces must remain.
+- Repeat the same sequence from the Test Console A -> B Rail Route Preview V2 entry point to verify both UIs drive the same RailRoutePreview network authority.
