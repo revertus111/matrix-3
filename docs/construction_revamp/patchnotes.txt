@@ -1448,3 +1448,12 @@
 - Reused RailRoutePreview's existing debugEnabled state instead of adding another debug control.
 - Rail commit report generation, append-only rail_runtime_debug.txt writes, and labeled PNG screen captures now run only while the existing build-palette Rail Debug control is enabled.
 - Debug remains off by default; normal rail authoring no longer floods diagnostic files/screenshots when debugging is disabled.
+
+
+2026-09-25 - Phase 3 Bundle 3.1 processing core
+- Added persistent Planks as the first processed settlement resource while preserving the four raw starter-resource boundary.
+- Added stable saw-planks recipe (2 Wood -> 1 Plank) and server-authoritative exact-cycle atomic processing transaction.
+- Added disposable processing self-test and owner-only processing/status/manual-cycle commands.
+- Added a compact active Processing card to Con Revamp for one-launch testing.
+- Corrected legacy shelter/final-gate loops so future processed resources cannot become accidental starter requirements.
+- Physical workstation art, worker processing AI and production scheduling remain intentionally deferred until this core passes runtime.

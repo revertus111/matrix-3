@@ -280,6 +280,9 @@ public final class SettlementBundle22FinalGate {
                 34, 30, SettlementState.PLOT_PLANE, 0) != null,
                 "failed shelter door");
         for (SettlementResource resource : SettlementResource.values()) {
+            if (!resource.isStarterResource()) {
+                continue;
+            }
             require(state.addResource(resource,
                     SettlementState.STARTER_SHELTER_RESOURCE_EACH)
                     == SettlementState.STARTER_SHELTER_RESOURCE_EACH,

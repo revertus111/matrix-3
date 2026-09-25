@@ -51,6 +51,9 @@ public final class SettlementShelterSelfTest {
 
             stage = "resources";
             for (SettlementResource resource : SettlementResource.values()) {
+                if (!resource.isStarterResource()) {
+                    continue;
+                }
                 require(state.addResource(
                         resource, SettlementState.STARTER_SHELTER_RESOURCE_EACH)
                         == SettlementState.STARTER_SHELTER_RESOURCE_EACH,

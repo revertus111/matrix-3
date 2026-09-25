@@ -989,3 +989,17 @@ Rail screenshot-debug gate (2026-09-25)
 - Commit a rail route and confirm Client/data/construction/rail_debug/rail_0001.png is created.
 - Confirm the PNG visibly contains its OP number and labeled Pxx resolved pieces; correlate that OP with the matching block in rail_runtime_debug.txt.
 - Reproduce a bad corner/connection and provide the matching PNG plus rail_runtime_debug.txt so visual geometry can be mapped directly to object id/rotation/world coordinates.
+
+
+Phase 3 / Bundle 3.1 — Processing Core: Wood -> Planks (2026-09-25)
+[x] Source: PLANKS is persistent SettlementResource storage and is explicitly non-starter.
+[x] Source: starter shelter requirements/status and legacy Bundle 1.3/2.2 setup gates filter to starter resources only.
+[x] Source: saw-planks recipe is 2 Wood -> 1 Plank.
+[x] Source: processing transaction validates the full requested input/output capacity before mutation and rolls back any unexpected partial mutation.
+[x] Source: disposable processing self-test covers success, insufficient input, full output storage and starter-resource boundary.
+[x] Source: Con Revamp Processing card exposes status, active-save Wood prime, one-cycle Saw Plank and disposable self-test.
+[ ] Runtime: Processing Self-Test reports PASS.
+[ ] Runtime: reset/inspect storage, Prime 10 Wood, Saw 1 Plank -> Wood=8 and Planks=1.
+[ ] Runtime: Saw another Plank -> Wood=6 and Planks=2; no unrelated resource changes.
+[ ] Runtime: set Planks to full capacity, attempt Saw 1 Plank -> operation is blocked and Wood amount is unchanged.
+[ ] Regression: starter shelter / existing settlement remains complete without requiring Planks.

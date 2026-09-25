@@ -1563,3 +1563,16 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Removed from the tab only: storage prime/self-test, Object Probe fallback buttons, drag-button chooser, duplicate Clear Selection button, RWS-4 ring-style controls, needs mutation test buttons, standalone progression card, Bundle 2.3 housing test card and completed-phase explanatory clutter.
 - No server commands or gameplay owners were deleted. Completed regression commands remain callable through the existing command bridge if future evidence requires them.
 - Resume Here: UI smoke-test the cleaned Con Revamp tab once; then continue Phase 3 processing chains + better materials.
+
+
+## Phase 3 / Bundle 3.1 — Processing core: Wood -> Planks — 2026-09-25
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
+- SettlementResource now distinguishes raw starter resources from processed resources. PLANKS is persistent settlement storage but is not a starter resource node or starter-shelter requirement.
+- SettlementProcessingRecipe is the stable recipe authority. First recipe: saw-planks, 2 Wood -> 1 Plank.
+- SettlementProcessingTransaction owns exact-cycle atomic storage conversion. Insufficient input or insufficient output capacity rejects the whole requested transaction without partial mutation.
+- Existing starter-shelter gates/self-tests now explicitly operate only on isStarterResource() resources, so new processed materials cannot retroactively invalidate Phase 1/2 saves.
+- Developer bridge exposes processing, process <recipeKey> [cycles], and disposable processingselftest operations.
+- Cleaned Con Revamp tab gains one compact active Processing card: status, Prime 10 Wood, Saw 1 Plank, Processing Self-Test.
+- This slice intentionally does NOT guess workstation art, worker processing AI, animations, or input/output object placement. The recipe/storage owner must pass first.
+- Runtime gate: Processing Self-Test PASS -> Prime 10 Wood -> Saw 1 Plank -> storage must read Wood=8 and Planks=1 -> repeat until Planks output is blocked by capacity without consuming Wood.
+- Resume Here: after Bundle 3.1 passes, select/verify a physical saw/crafting workstation asset and bind saw-planks to normal Construction placement + worker path/work cycle.

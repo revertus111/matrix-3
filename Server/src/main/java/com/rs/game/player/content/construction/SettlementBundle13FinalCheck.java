@@ -36,6 +36,9 @@ public final class SettlementBundle13FinalCheck {
         }
 
         for (SettlementResource resource : SettlementResource.values()) {
+            if (!resource.isStarterResource()) {
+                continue;
+            }
             if (state.getResourceAmount(resource) < SettlementState.STARTER_SHELTER_RESOURCE_EACH) {
                 return "NOT READY: " + state.getStarterShelterStatus();
             }
