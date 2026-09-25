@@ -862,3 +862,9 @@ Rail Endpoint Old/New Ownership Diagnostic — IMPLEMENTED / NEEDS RUNTIME EVIDE
 [ ] Capture one screenshot showing malformed rails plus RAIL DEBUG panel.
 [ ] Confirm MODE says endpointEdit=true fixedA=true. If false, fix endpoint-hit ownership.
 [ ] Compare OLD_PIECE vs PIECE coordinates/rotations. If PIECE is already malformed, fix appendRoutePieces/createCurvePlacement. If PIECE is correct but world is malformed, instrument server replacement actual state.
+
+RTS vanilla-render convergence — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Enter settlement: RTS movement/orbit/zoom still works.
+[ ] Reproduce the exact prior high/zoomed-out beige-cutoff view.
+[ ] Compare terrain/fog behavior with vanilla detached camera rendering; RTS should now use the same scene/environment/terrain pipeline rather than settlement renderer overrides.
+[ ] Exit settlement: normal player camera remains unchanged.
