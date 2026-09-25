@@ -1,6 +1,7 @@
 package game.console;
 
 import game.Class584;
+import game.ConstructionPlacementController;
 import game.DevDefinitionBridge;
 import game.DevModeBridge.DevTarget;
 import game.DevModeBridge.TargetType;
@@ -44,6 +45,7 @@ import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -70,7 +72,7 @@ import javax.swing.event.ChangeListener;
  */
 public final class LiveModelEditorWindow {
 
-    private static final int PROJECT_VERSION = 2;
+    private static final int PROJECT_VERSION = 3;
     private static final File PROJECT_DIR = new File("dev-model-projects");
 
     private static final int OVERLAY_WIDTH = 438;
@@ -113,6 +115,9 @@ public final class LiveModelEditorWindow {
 
     private final DefaultListModel<String> partListModel = new DefaultListModel<String>();
     private final JList<String> partList = new JList<String>(partListModel);
+    private final ConstructionPlacementController.BuildPiece[] constructionPieces =
+            ConstructionPlacementController.getPieces();
+    private final JComboBox<String> replacementCombo = new JComboBox<String>();
 
     private final JSpinner typeSpinner = spinner(10, 0, 22, 1);
     private final JSpinner objectRotationSpinner = spinner(0, 0, 3, 1);
@@ -147,6 +152,13 @@ public final class LiveModelEditorWindow {
     private int hoveredListIndex = -1;
 
     private LiveModelEditorWindow() {
+        for (ConstructionPlacementController.BuildPiece piece : constructionPieces) {
+            replacementCombo.addItem(piece.getCategory().getDisplayName() + " - "
+                    + piece.getDisplayName() + " (#" + piece.getObjectId() + ")");
+        }
+        replacementCombo.setFont(RS_SMALL_FONT);
+        replacementCombo.setForeground(RS_TEXT);
+        replacementCombo.setBackground(RS_INPUT);
         buildUi();
     }
 
@@ -250,6 +262,9 @@ public final class LiveModelEditorWindow {
         Rectangle desired = new Rectangle(screen.x + localX, screen.y + localY, width, height);
         if (!desired.equals(overlayWindow.getBounds())) {
             overlayWindow.setBounds(desired);
+        }
+        if (instance != null && overlayWindow.isVisible()) {
+            instance.syncRuntimeState();
         }
     }
 
@@ -360,10 +375,15 @@ public final class LiveModelEditorWindow {
         heading.add(title, BorderLayout.WEST);
         heading.add(partStatusLabel, BorderLayout.EAST);
         card.add(heading);
-        card.add(Box.createVerticalStrut(6));
 
-        partList.setVisibleRowCount(8);
-        partList.setFixedCellHeight(25);
+        JLabel hint = new JLabel("Hover actual mesh -> highlight | Click/drag -> edit | G/R/S | X/Y/Z/F");
+        hint.setFont(RS_SMALL_FONT);
+        hint.setForeground(RS_MUTED);
+        card.add(hint);
+        card.add(Box.createVerticalStrut(5));
+
+        partList.setVisibleRowCount(6);
+        partList.setFixedCellHeight(24);
         partList.setFont(RS_BODY_FONT);
         partList.setForeground(RS_TEXT);
         partList.setBackground(RS_INPUT);
@@ -388,74 +408,103 @@ public final class LiveModelEditorWindow {
 
         JScrollPane scroll = new JScrollPane(partList);
         scroll.setBorder(BorderFactory.createLineBorder(RS_BORDER));
-        scroll.setPreferredSize(new Dimension(400, 208));
-        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 208));
+        scroll.setPreferredSize(new Dimension(400, 154));
+        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 154));
         scroll.getViewport().setBackground(RS_INPUT);
         scroll.getVerticalScrollBar().setUnitIncrement(18);
         card.add(scroll);
 
-        card.add(Box.createVerticalStrut(7));
+        card.add(Box.createVerticalStrut(6));
+        JPanel modes = actionRow(3);
+        JButton moveMode = rsButton("Move [G]");
+        JButton rotateMode = rsButton("Rotate [R]");
+        JButton scaleMode = rsButton("Scale [S]");
+        modes.add(moveMode); modes.add(rotateMode); modes.add(scaleMode);
+        card.add(modes);
+
+        card.add(Box.createVerticalStrut(4));
+        JPanel axes = actionRow(4);
+        JButton freeAxis = rsButton("Free [F]");
+        JButton xAxis = rsButton("X");
+        JButton yAxis = rsButton("Y");
+        JButton zAxis = rsButton("Z");
+        axes.add(freeAxis); axes.add(xAxis); axes.add(yAxis); axes.add(zAxis);
+        card.add(axes);
+
+        card.add(Box.createVerticalStrut(6));
         card.add(createSpinnerGrid(
                 new String[] { "SCALE X", "SCALE Y", "SCALE Z" },
                 new JSpinner[] { partScaleXSpinner, partScaleYSpinner, partScaleZSpinner }));
-        card.add(Box.createVerticalStrut(5));
+        card.add(Box.createVerticalStrut(4));
         card.add(createSpinnerGrid(
                 new String[] { "MOVE X", "MOVE Y", "MOVE Z", "YAW" },
                 new JSpinner[] { partMoveXSpinner, partMoveYSpinner, partMoveZSpinner, partYawSpinner }));
 
-        card.add(Box.createVerticalStrut(7));
+        card.add(Box.createVerticalStrut(6));
         JPanel row1 = actionRow(3);
         JButton rebuild = rsButton("Rebuild");
         JButton isolate = rsButton("Isolate");
         JButton showAll = rsButton("Show All");
-        row1.add(rebuild);
-        row1.add(isolate);
-        row1.add(showAll);
+        row1.add(rebuild); row1.add(isolate); row1.add(showAll);
         card.add(row1);
 
-        card.add(Box.createVerticalStrut(5));
+        card.add(Box.createVerticalStrut(4));
         JPanel row2 = actionRow(4);
-        JButton hide = rsButton("Hide");
+        JButton hide = rsButton("Hide [H]");
         JButton duplicate = rsButton("Duplicate");
         JButton delete = rsButton("Delete");
         JButton undo = rsButton("Undo");
         delete.setBackground(RS_DANGER);
-        row2.add(hide);
-        row2.add(duplicate);
-        row2.add(delete);
-        row2.add(undo);
+        row2.add(hide); row2.add(duplicate); row2.add(delete); row2.add(undo);
         card.add(row2);
+
+        card.add(Box.createVerticalStrut(7));
+        JLabel replaceTitle = new JLabel("CONSTRUCTION MATERIAL REPLACEMENT");
+        replaceTitle.setFont(RS_SMALL_FONT);
+        replaceTitle.setForeground(RS_GOLD);
+        card.add(replaceTitle);
+        replacementCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+        replacementCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(replacementCombo);
+        card.add(Box.createVerticalStrut(4));
+
+        JPanel replaceRow = actionRow(3);
+        JButton replaceOne = rsButton("Replace Part");
+        JButton replaceMatching = rsButton("Replace Matches");
+        JButton restorePart = rsButton("Restore");
+        replaceRow.add(replaceOne); replaceRow.add(replaceMatching); replaceRow.add(restorePart);
+        card.add(replaceRow);
+
+        moveMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.MOVE));
+        rotateMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.ROTATE));
+        scaleMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.SCALE));
+        freeAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.FREE));
+        xAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.X));
+        yAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Y));
+        zAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Z));
 
         rebuild.addActionListener(e -> initializeParts());
         isolate.addActionListener(e -> {
             LiveModelEditorPreview.toggleIsolatePart();
             refreshPartList();
-            partStatusLabel.setText(LiveModelEditorPreview.isPartIsolated() ? "ISOLATE ON" : "READY");
         });
         showAll.addActionListener(e -> {
             LiveModelEditorPreview.showAllParts();
             refreshPartList();
         });
-        hide.addActionListener(e -> {
-            if (LiveModelEditorPreview.toggleSelectedPartHidden()) {
-                refreshPartList();
-                statusLabel.setText("Toggled selected part visibility.");
-            }
-        });
-        duplicate.addActionListener(e -> {
-            if (LiveModelEditorPreview.duplicateSelectedPart()) {
-                refreshPartList();
-                loadSelectedPartEditors();
-                statusLabel.setText("Duplicated selected part (+128 model X).");
-            }
-        });
-        delete.addActionListener(e -> {
-            if (LiveModelEditorPreview.deleteSelectedPart()) {
-                refreshPartList();
-                statusLabel.setText("Deleted selected project part. Ctrl+Z restores it.");
-            }
-        });
+        hide.addActionListener(e -> toggleSelectedHidden());
+        duplicate.addActionListener(e -> duplicateSelected());
+        delete.addActionListener(e -> deleteSelected());
         undo.addActionListener(e -> undoPartEdit());
+
+        replaceOne.addActionListener(e -> replaceSelected(false));
+        replaceMatching.addActionListener(e -> replaceSelected(true));
+        restorePart.addActionListener(e -> {
+            if (LiveModelEditorPreview.clearSelectedReplacement()) {
+                refreshPartList();
+                statusLabel.setText("Restored the original connected component.");
+            }
+        });
         return card;
     }
 
@@ -669,21 +718,58 @@ public final class LiveModelEditorWindow {
                 if (!LiveModelEditorPreview.isEditSessionActive()) {
                     return;
                 }
+
                 if (event instanceof MouseEvent) {
                     MouseEvent mouse = (MouseEvent) event;
                     Canvas canvas = Class584.aCanvas7745;
-                    if (canvas != null && mouse.getSource() == canvas
-                            && mouse.getButton() == MouseEvent.BUTTON1
-                            && (mouse.getID() == MouseEvent.MOUSE_PRESSED
-                                    || mouse.getID() == MouseEvent.MOUSE_RELEASED
-                                    || mouse.getID() == MouseEvent.MOUSE_CLICKED)) {
+                    if (canvas == null || mouse.getSource() != canvas) {
+                        return;
+                    }
+
+                    int id = mouse.getID();
+                    if (id == MouseEvent.MOUSE_MOVED) {
+                        LiveModelEditorPreview.pointerMoved(mouse.getX(), mouse.getY());
+                        mouse.consume();
+                        return;
+                    }
+                    if (id == MouseEvent.MOUSE_EXITED) {
+                        LiveModelEditorPreview.pointerExited();
+                        return;
+                    }
+                    if (id == MouseEvent.MOUSE_PRESSED
+                            && mouse.getButton() == MouseEvent.BUTTON1) {
+                        LiveModelEditorPreview.beginPointerDrag(mouse.getX(), mouse.getY());
+                        mouse.consume();
+                        if (instance != null) instance.syncRuntimeState();
+                        return;
+                    }
+                    if (id == MouseEvent.MOUSE_DRAGGED) {
+                        LiveModelEditorPreview.dragPointerTo(mouse.getX(), mouse.getY());
+                        mouse.consume();
+                        if (instance != null) instance.syncRuntimeState();
+                        return;
+                    }
+                    if (id == MouseEvent.MOUSE_RELEASED
+                            && mouse.getButton() == MouseEvent.BUTTON1) {
+                        LiveModelEditorPreview.endPointerDrag();
+                        mouse.consume();
+                        if (instance != null) instance.syncRuntimeState();
+                        return;
+                    }
+                    if (id == MouseEvent.MOUSE_CLICKED
+                            && mouse.getButton() == MouseEvent.BUTTON1) {
                         mouse.consume();
                     }
                     return;
                 }
+
                 if (event instanceof KeyEvent) {
                     KeyEvent key = (KeyEvent) event;
-                    if (key.getID() == KeyEvent.KEY_PRESSED && key.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    if (key.getID() != KeyEvent.KEY_PRESSED) {
+                        return;
+                    }
+                    int code = key.getKeyCode();
+                    if (code == KeyEvent.VK_ESCAPE) {
                         key.consume();
                         SwingUtilities.invokeLater(new Runnable() {
                             @Override
@@ -691,10 +777,41 @@ public final class LiveModelEditorWindow {
                                 closeEditorSession();
                             }
                         });
+                        return;
                     }
+                    if (code == KeyEvent.VK_G) {
+                        LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.MOVE);
+                    } else if (code == KeyEvent.VK_R) {
+                        LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.ROTATE);
+                    } else if (code == KeyEvent.VK_S) {
+                        LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.SCALE);
+                    } else if (code == KeyEvent.VK_X) {
+                        LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.X);
+                    } else if (code == KeyEvent.VK_Y) {
+                        LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.Y);
+                    } else if (code == KeyEvent.VK_Z) {
+                        if (key.isControlDown()) {
+                            if (instance != null) instance.undoPartEdit();
+                            key.consume();
+                            return;
+                        }
+                        LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.Z);
+                    } else if (code == KeyEvent.VK_F) {
+                        LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.FREE);
+                    } else if (code == KeyEvent.VK_H) {
+                        if (instance != null) instance.toggleSelectedHidden();
+                    } else if (code == KeyEvent.VK_DELETE) {
+                        if (instance != null) instance.deleteSelected();
+                    } else if (code == KeyEvent.VK_D && key.isControlDown()) {
+                        if (instance != null) instance.duplicateSelected();
+                    } else {
+                        return;
+                    }
+                    key.consume();
+                    if (instance != null) instance.syncRuntimeState();
                 }
             }
-        }, AWTEvent.MOUSE_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
+        }, AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
         inputGateInstalled = true;
     }
 
@@ -727,7 +844,7 @@ public final class LiveModelEditorWindow {
         targetLabel.setText(objectName + "   #" + objectId
                 + "   model " + joinIds(sourceModelIds));
         sourceLabel.setText("World " + sourceX + ", " + sourceY + ", " + sourcePlane
-                + "   |   SOURCE REPLACED   |   hover = preview   |   click = select");
+                + "   |   WORLD PICK + MOUSE DRAG   |   G/R/S transforms");
     }
 
     private void refreshIfActive() {
@@ -793,6 +910,76 @@ public final class LiveModelEditorWindow {
                     + (LiveModelEditorPreview.isPartIsolated() ? " / ISOLATE" : ""));
         }
         partList.repaint();
+    }
+
+    private void syncRuntimeState() {
+        int selected = LiveModelEditorPreview.getSelectedPart();
+        if (selected >= 0 && selected < partListModel.size()
+                && partList.getSelectedIndex() != selected) {
+            suppressPartRefresh = true;
+            try {
+                partList.setSelectedIndex(selected);
+                partList.ensureIndexIsVisible(selected);
+            } finally {
+                suppressPartRefresh = false;
+            }
+        }
+        if (selected >= 0) {
+            loadSelectedPartEditors();
+        }
+        int hovered = LiveModelEditorPreview.getWorldHoveredPart();
+        partStatusLabel.setText((hovered >= 0 ? "HOVER P" + hovered + " | " : "")
+                + LiveModelEditorPreview.getTransformMode() + " "
+                + LiveModelEditorPreview.getAxisConstraint()
+                + (LiveModelEditorPreview.isPartIsolated() ? " | ISOLATE" : ""));
+    }
+
+    private void setEditMode(LiveModelEditorPreview.TransformMode mode) {
+        LiveModelEditorPreview.setTransformMode(mode);
+        syncRuntimeState();
+    }
+
+    private void setEditAxis(LiveModelEditorPreview.AxisConstraint axis) {
+        LiveModelEditorPreview.setAxisConstraint(axis);
+        syncRuntimeState();
+    }
+
+    private void toggleSelectedHidden() {
+        if (LiveModelEditorPreview.toggleSelectedPartHidden()) {
+            refreshPartList();
+            statusLabel.setText("Toggled selected part visibility.");
+        }
+    }
+
+    private void duplicateSelected() {
+        if (LiveModelEditorPreview.duplicateSelectedPart()) {
+            refreshPartList();
+            loadSelectedPartEditors();
+            statusLabel.setText("Duplicated selected mesh part.");
+        }
+    }
+
+    private void deleteSelected() {
+        if (LiveModelEditorPreview.deleteSelectedPart()) {
+            refreshPartList();
+            statusLabel.setText("Deleted selected project part. Ctrl+Z restores it.");
+        }
+    }
+
+    private void replaceSelected(boolean allMatching) {
+        int index = replacementCombo.getSelectedIndex();
+        if (index < 0 || index >= constructionPieces.length) {
+            statusLabel.setText("Choose a Construction material first.");
+            return;
+        }
+        ConstructionPlacementController.BuildPiece piece = constructionPieces[index];
+        if (LiveModelEditorPreview.replaceSelectedWithConstructionPiece(piece, allMatching)) {
+            refreshPartList();
+            statusLabel.setText((allMatching ? "Replaced matching components with " : "Replaced selected component with ")
+                    + piece.getDisplayName() + " #" + piece.getObjectId() + ".");
+        } else {
+            statusLabel.setText("Replacement could not be applied to the selected part.");
+        }
     }
 
     private void loadSelectedPartEditors() {
