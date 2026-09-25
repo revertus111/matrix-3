@@ -86,6 +86,13 @@ public final class RailRoutePreview {
     private static final java.util.List<RoutePiece> authoredPath =
             new java.util.ArrayList<RoutePiece>();
     /*
+     * Ordered cardinal tiles sampled while Left is held. This is the authored
+     * route for the active gesture; Point A/Point B Manhattan routing is legacy
+     * preview behavior and must not decide Rail Network V1 topology.
+     */
+    private static final java.util.List<int[]> liveDragPath =
+            new java.util.ArrayList<int[]>();
+    /*
      * Rail Network V1 authority: logical occupied rail tiles. Physical RS3
      * objects are derived from this topology; they are not the authored route.
      */
@@ -359,10 +366,12 @@ public final class RailRoutePreview {
         hoveredAtMillis = System.currentTimeMillis();
 
         if (dragging && hoveredPlane == livePlane) {
+            appendLiveDragToward(hoveredWorldX, hoveredWorldY);
             liveEndX = hoveredWorldX;
             liveEndY = hoveredWorldY;
             lastRenderedCycle = Integer.MIN_VALUE;
-            eventState = "Dragging route to " + liveEndX + "," + liveEndY + ".";
+            eventState = "Drawing rail path to " + liveEndX + "," + liveEndY
+                    + " (" + liveDragPath.size() + " sampled tile(s)).";
         }
     }
 
@@ -422,7 +431,15 @@ public final class RailRoutePreview {
                 : (ObjectDefinitions) definitions.getDefinition(curveObjectId, -1356282071);
 
         int rendered;
-        if (routeOrder == RouteOrder.Y_THEN_X) {
+        if (dragging && !liveDragPath.isEmpty()) {
+            java.util.LinkedHashSet<String> saved = new java.util.LinkedHashSet<String>(logicalNetwork);
+            for (int[] tile : liveDragPath) {
+                logicalNetwork.add(logicalKey(tile[0], tile[1], tile[2]));
+            }
+            rendered = renderResolvedNetwork(scene, renderer, sceneBase, definitions);
+            logicalNetwork.clear();
+            logicalNetwork.addAll(saved);
+        } else if (routeOrder == RouteOrder.Y_THEN_X) {
             rendered = renderYThenX(scene, renderer, sceneBase, definitions,
                     definition, curveDefinition, startX, startY, endX, endY, plane);
         } else {
@@ -441,6 +458,21 @@ public final class RailRoutePreview {
                                         ? " V2 single-curve fallback"
                                         : " V2 curve missing -> straight fallback"))
                         : " straight route");
+    }
+
+    private static int renderResolvedNetwork(Class523 scene, Class106 renderer,
+            Class497 sceneBase, Class639_Sub16 definitions) {
+        int rendered = 0;
+        for (RoutePiece piece : resolveLogicalNetworkPieces()) {
+            ObjectDefinitions def = (ObjectDefinitions) definitions.getDefinition(
+                    piece.getObjectId(), -1356282071);
+            if (def != null && renderPiece(scene, renderer, sceneBase, def,
+                    piece.getObjectType(), piece.getWorldX(), piece.getWorldY(),
+                    piece.getPlane(), piece.getRotation())) {
+                rendered++;
+            }
+        }
+        return rendered;
     }
 
     private static int renderXThenY(Class523 scene, Class106 renderer, Class497 sceneBase,
@@ -780,9 +812,43 @@ public final class RailRoutePreview {
             livePlane = hoveredPlane;
             eventState = "New route drag started at A=" + liveStartX + "," + liveStartY + ".";
         }
+        liveDragPath.clear();
+        liveDragPath.add(new int[] { liveStartX, liveStartY, livePlane });
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
         return true;
+    }
+
+    private static void appendLiveDragToward(int targetX, int targetY) {
+        if (liveDragPath.isEmpty()) {
+            liveDragPath.add(new int[] { liveStartX, liveStartY, livePlane });
+        }
+        int[] last = liveDragPath.get(liveDragPath.size() - 1);
+        int x = last[0], y = last[1];
+        /*
+         * Hover can skip tiles between client cycles. Fill the gap cardinally,
+         * preserving the axis the cursor actually moved on first. This makes
+         * turns occur where the held-mouse gesture turns instead of at a
+         * recomputed A->B Manhattan corner.
+         */
+        while ((x != targetX || y != targetY) && liveDragPath.size() < MAX_ROUTE_TILES) {
+            int dx = targetX - x;
+            int dy = targetY - y;
+            if (Math.abs(dx) >= Math.abs(dy) && dx != 0) {
+                x += Integer.compare(targetX, x);
+            } else if (dy != 0) {
+                y += Integer.compare(targetY, y);
+            } else {
+                x += Integer.compare(targetX, x);
+            }
+            liveDragPath.add(new int[] { x, y, livePlane });
+        }
+    }
+
+    private static void addLiveDragToLogicalNetwork() {
+        for (int[] tile : liveDragPath) {
+            logicalNetwork.add(logicalKey(tile[0], tile[1], tile[2]));
+        }
     }
 
     private static void commitActiveDrag() {
@@ -790,7 +856,8 @@ public final class RailRoutePreview {
         boolean joinedExisting = logicalNetwork.contains(
                 logicalKey(liveStartX, liveStartY, livePlane));
 
-        addLogicalManhattanSegment(liveStartX, liveStartY, liveEndX, liveEndY, livePlane);
+        appendLiveDragToward(liveEndX, liveEndY);
+        addLiveDragToLogicalNetwork();
         java.util.List<RoutePiece> newPhysical = resolveLogicalNetworkPieces();
 
         committedStartX = liveStartX;
@@ -801,6 +868,7 @@ public final class RailRoutePreview {
         committed = true;
         dragging = false;
         editingEndpointB = false;
+        liveDragPath.clear();
         continuationHorizontalDirection = 0;
         continuationVerticalDirection = 0;
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -1300,6 +1368,7 @@ public final class RailRoutePreview {
 
     private static void cancelActiveDrag() {
         dragging = false;
+        liveDragPath.clear();
         liveStartX = -1;
         liveStartY = -1;
         liveEndX = -1;
