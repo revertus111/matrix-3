@@ -825,24 +825,63 @@ public final class RailRoutePreview {
         }
         int[] last = liveDragPath.get(liveDragPath.size() - 1);
         int x = last[0], y = last[1];
-        /*
-         * Hover can skip tiles between client cycles. Fill the gap cardinally,
-         * preserving the axis the cursor actually moved on first. This makes
-         * turns occur where the held-mouse gesture turns instead of at a
-         * recomputed A->B Manhattan corner.
-         */
-        while ((x != targetX || y != targetY) && liveDragPath.size() < MAX_ROUTE_TILES) {
-            int dx = targetX - x;
-            int dy = targetY - y;
-            if (Math.abs(dx) >= Math.abs(dy) && dx != 0) {
-                x += Integer.compare(targetX, x);
-            } else if (dy != 0) {
-                y += Integer.compare(targetY, y);
-            } else {
-                x += Integer.compare(targetX, x);
-            }
-            liveDragPath.add(new int[] { x, y, livePlane });
+        if (x == targetX && y == targetY) {
+            return;
         }
+
+        /*
+         * Grid-snapped rail planner. Do not record every hover wobble. The
+         * current run stays locked to its axis until the cursor has moved at
+         * least two tiles perpendicular to that run; only then is a deliberate
+         * 90-degree turn authored. This gives the gesture hysteresis while still
+         * allowing tight intentional corners.
+         */
+        int axis = liveDragAxis();
+        int dx = targetX - x;
+        int dy = targetY - y;
+        if (axis == 0) {
+            axis = Math.abs(dx) >= Math.abs(dy) ? 1 : 2;
+        } else if (axis == 1 && Math.abs(dy) >= 2 && Math.abs(dy) > Math.abs(dx)) {
+            axis = 2;
+        } else if (axis == 2 && Math.abs(dx) >= 2 && Math.abs(dx) > Math.abs(dy)) {
+            axis = 1;
+        }
+
+        int destination = axis == 1 ? targetX : targetY;
+        int cursor = axis == 1 ? x : y;
+        while (cursor != destination && liveDragPath.size() < MAX_ROUTE_TILES) {
+            cursor += Integer.compare(destination, cursor);
+            if (axis == 1) x = cursor; else y = cursor;
+            appendLiveDragTile(x, y);
+        }
+    }
+
+    private static int liveDragAxis() {
+        if (liveDragPath.size() < 2) return 0;
+        int[] a = liveDragPath.get(liveDragPath.size() - 2);
+        int[] b = liveDragPath.get(liveDragPath.size() - 1);
+        if (a[0] != b[0]) return 1;
+        if (a[1] != b[1]) return 2;
+        return 0;
+    }
+
+    private static void appendLiveDragTile(int x, int y) {
+        if (!liveDragPath.isEmpty()) {
+            int[] last = liveDragPath.get(liveDragPath.size() - 1);
+            if (last[0] == x && last[1] == y && last[2] == livePlane) return;
+            /*
+             * Backtracking one tile removes the last sample instead of creating
+             * a tiny U-turn/loop from normal mouse correction.
+             */
+            if (liveDragPath.size() >= 2) {
+                int[] previous = liveDragPath.get(liveDragPath.size() - 2);
+                if (previous[0] == x && previous[1] == y && previous[2] == livePlane) {
+                    liveDragPath.remove(liveDragPath.size() - 1);
+                    return;
+                }
+            }
+        }
+        liveDragPath.add(new int[] { x, y, livePlane });
     }
 
     private static void addLiveDragToLogicalNetwork() {
