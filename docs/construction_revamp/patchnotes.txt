@@ -1407,3 +1407,9 @@
 2026-09-25 - Bundle 2.4 runtime acceptance
 - User runtime-confirmed radial selection, persistent selected-unit rings, single-click no-move behavior, double-click selected-unit movement, self+worker movement, vanilla starter resource commands, Clear Selection, and transient selection cleanup.
 - Bundle 2.4 is DONE / RUNTIME VERIFIED. Do not reopen without new regression evidence.
+
+
+2026-09-25 - Rail preview-to-persistence parity correction
+- Initial Rail Network V1 commit no longer queues one legacy settlementbuild command per resolved physical rail piece.
+- First placement now uses the same staged server-authoritative settlementrailreplace begin/new/commit transaction as later network deltas, including add-only commit support.
+- This specifically fixes long sampled routes previewing all straights/curves while held, then losing straight sections on mouse release because the prototype per-piece placement stream only partially became persistent world objects.
