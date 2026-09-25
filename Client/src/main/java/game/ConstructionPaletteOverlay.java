@@ -103,6 +103,7 @@ public final class ConstructionPaletteOverlay {
         searchFocused = false;
         scrollOffset = 0;
         ConstructionPlacementController.beginPaletteSession();
+        ConstructionBuildHotbar.show();
         ensureInputListener();
         updateTimerState();
     }
@@ -115,6 +116,7 @@ public final class ConstructionPaletteOverlay {
         visible = false;
         searchFocused = false;
         ConstructionPlacementController.endPaletteSession(cancelPlacement);
+        ConstructionBuildHotbar.hide();
         updateTimerState();
     }
 
@@ -176,17 +178,20 @@ public final class ConstructionPaletteOverlay {
     private static void refreshWindow() {
         if (!visible) {
             hideWindowSurface();
+            ConstructionBuildHotbar.hide();
             return;
         }
 
         Canvas canvas = Class584.aCanvas7745;
         if (canvas == null || !canvas.isDisplayable() || !canvas.isVisible()) {
             hideWindowSurface();
+            ConstructionBuildHotbar.refresh(null);
             return;
         }
 
         if (!ensureWindow(canvas)) {
             hideWindowSurface();
+            ConstructionBuildHotbar.refresh(null);
             return;
         }
 
@@ -213,6 +218,7 @@ public final class ConstructionPaletteOverlay {
             paletteWindow.setVisible(true);
         }
         paletteSurface.repaint();
+        ConstructionBuildHotbar.refresh(canvas);
     }
 
     private static boolean ensureWindow(Canvas canvas) {
@@ -441,6 +447,10 @@ public final class ConstructionPaletteOverlay {
                 }
                 return;
             }
+            if (ConstructionBuildHotbar.handleKey(event)) {
+                repaintSurface();
+                return;
+            }
             if (event.getKeyCode() == KeyEvent.VK_R && ConstructionPlacementController.isArmed()) {
                 ConstructionPlacementController.rotate(event.isShiftDown() ? -1 : 1);
                 event.consume();
@@ -461,6 +471,7 @@ public final class ConstructionPaletteOverlay {
         if (paletteSurface != null) {
             paletteSurface.repaint();
         }
+        ConstructionBuildHotbar.refresh(Class584.aCanvas7745);
     }
 
     private static LayoutSnapshot buildLayout(int width, int height) {
