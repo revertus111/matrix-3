@@ -894,3 +894,18 @@ Continuous Rail Path V1 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Continue through at least four segments to form a zig-zag/S-style continuous route.
 [ ] Extend straight from END; no earlier turn changes.
 [ ] Exit/re-enter; final physical rail path persists.
+
+
+Rail Network V1 Logical Topology — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] Logical rail tiles, not physical object components, are the current-session authoring authority.
+[x] Drag from empty ground adds a logical segment.
+[x] Drag beginning on any authored logical rail tile extends or branches the same network.
+[x] Repeated 90-degree turns are resolved from neighbor topology into accepted three-piece curve visuals.
+[x] Degree-3/4 logical nodes are accepted now with temporary straight-through visuals; final switch/splitter art is deferred.
+[x] Every commit resolves the whole logical network deterministically before one packet-safe atomic physical replacement.
+[ ] Fresh straight -> turn 90 -> turn 90 -> turn 90; earlier track remains unchanged and connected.
+[ ] Start a drag from the middle of an existing straight and branch 90 degrees; original straight remains and branch is added.
+[ ] Extend from a branch endpoint and verify the rest of the network remains unchanged.
+[ ] Add a disconnected second rail segment from empty ground and verify both physical networks remain.
+[ ] Confirm chat reports successful atomic replacement after network edits.
+[ ] Exit/re-enter: physical rail layout persists. Logical editability after relog is CARRYOVER until graph persistence is implemented.
