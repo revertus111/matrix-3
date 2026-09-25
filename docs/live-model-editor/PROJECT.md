@@ -21,7 +21,7 @@ The same transform/selection foundation is intended to become the developer-grad
 | Area | Status | Notes |
 | --- | --- | --- |
 | Live object -> model resolution | ✅ Complete | Dev Inspector resolves object definition model IDs; Smelter 29394 -> model 64036 is the current reference asset. |
-| Private in-world runtime model clone | ✅ Complete | Runtime-confirmed on the Smelter reference asset: the private clone renders in the live scene without replacing the source object. |
+| Private in-world runtime model clone | ✅ Complete | Runtime-confirmed on the Smelter reference asset. Bundle 2.3A now suppresses only the selected source object's normal render so the editable model visually replaces it during the edit session; that replacement gate remains runtime-tested separately. |
 | Live whole-model transforms | ✅ Complete | Runtime-confirmed in the live client; independent scale, translation and yaw visibly update the private clone. |
 | JSON project save/load | ⚠️ Needs runtime verification | Authoring state saves under dev-model-projects and can be loaded back into the live preview. |
 | Mesh component selection/editing | ⚠️ Needs runtime verification | Connected-part editing, overlay hover, source replacement, Model.method1376 world picking, click selection, mouse G/R/S transforms and Construction-catalog part replacement are implemented; consolidated runtime verification is pending. |
