@@ -1068,3 +1068,15 @@ Phase 3 / Bundle 3.2 — Physical Workbench + Carpenter Worker (2026-09-25)
 [ ] Runtime: Pause or manual RTS move during processing releases the workstation; Resume/policy later reacquires it cleanly.
 [ ] Runtime: removing the reserved workbench causes the worker to stop processing cleanly with no material loss.
 [ ] Runtime persistence: exit/re-enter preserves Wooden workbench, Planks amount, Process Wood policy and Crafting XP; processing can resume afterward.
+
+
+Construction native action-bar H1 gate — IMPLEMENTED / NEEDS NIS + LEGACY RUNTIME TEST (2026-09-25)
+- NIS: open Build Palette -> the old floating BUILD HOTBAR must be absent; native interface 1430 must show Construction tool icons in slots 1-9.
+- NIS input: press 1 and click native slot 1; both must arm Rail. Test 5 Object, 6 Eraser, 7 Rotate and 8 Undo by both keyboard and native click where practical.
+- Reserved slots 2 Junction, 3 Crossing, 4 Splitter and 9 Favorites must not activate combat abilities, mutate saved shortcuts or place fake Construction content.
+- Before opening Construction, note the player's real action-bar contents/current bar/lock state. Close Build Palette -> all must restore exactly.
+- Legacy: switch to Legacy before opening Build Palette. Construction must force native 1430 visible even if Legacy normally suppresses it, without switching the player out of Legacy.
+- Legacy close: close Build Palette -> normal Legacy presentation returns and the real action bar remains intact for later NIS use.
+- Teardown: with Build Palette open, exit/teleport/logout from the settlement -> normal action-bar mode must restore; no temporary build icons remain.
+- Reopen the settlement/palette in both NIS and Legacy and repeat one tool activation; no stale Construction action-bar state may survive.
+- Rail regression: slot 1 ordinary Rail still stops at first existing-rail contact; overlap remains reserved for future explicit Crossing/Junction/Splitter tools.
