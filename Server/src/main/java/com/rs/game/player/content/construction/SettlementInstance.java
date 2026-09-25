@@ -989,13 +989,21 @@ public final class SettlementInstance {
 
     public synchronized String orderRuntimeSelectionGather(
             int objectId, int worldX, int worldY, int plane) {
-        if (!loaded || destroyed || boundChunks == null) {
+        return orderRuntimeSelectionGather(
+                SettlementResourceNode.SourceKind.OBJECT, objectId, worldX, worldY, plane);
+    }
+
+    public synchronized String orderRuntimeSelectionGather(
+            SettlementResourceNode.SourceKind sourceKind,
+            int runtimeId, int worldX, int worldY, int plane) {
+        if (!loaded || destroyed || boundChunks == null || sourceKind == null) {
             return "RTS gather order unavailable; settlement runtime is not ready.";
         }
         int plotX = toPlotX(worldX);
         int plotY = toPlotY(worldY);
-        SettlementResourceNode node =
-                SettlementResourceNode.forObject(objectId, plotX, plotY, plane);
+        SettlementResourceNode node = sourceKind == SettlementResourceNode.SourceKind.NPC
+                ? SettlementResourceNode.forNpc(runtimeId, plotX, plotY, plane)
+                : SettlementResourceNode.forObject(runtimeId, plotX, plotY, plane);
         if (node == null || !isStarterResourceNodeAvailable(node)) {
             return "RTS gather target is not an active settlement resource node.";
         }

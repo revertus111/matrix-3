@@ -24,6 +24,7 @@ import com.rs.game.player.content.construction.SettlementObjectProbe;
 import com.rs.game.player.content.construction.SettlementPlacedPiece;
 import com.rs.game.player.content.construction.SettlementPopulationCheck;
 import com.rs.game.player.content.construction.SettlementResource;
+import com.rs.game.player.content.construction.SettlementResourceNode;
 import com.rs.game.player.content.construction.SettlementResourceSelfTest;
 import com.rs.game.player.content.construction.SettlementShelterSelfTest;
 import com.rs.game.player.content.construction.SettlementStateAudit;
@@ -649,7 +650,7 @@ public final class ItemBrowserCommandBridge {
         if ("workerselectiongather".equals(operation)) {
             if (cmd.length < 7) {
                 player.getPackets().sendGameMessage(
-                        "Use: ::itembrowser settlement workerselectiongather <objectId> <worldX> <worldY> <plane>");
+                        "Use: ::itembrowser settlement workerselectiongather [object|npc] <id> <worldX> <worldY> <plane>");
                 return true;
             }
             if (active == null || !active.isLoaded()) {
@@ -657,21 +658,37 @@ public final class ItemBrowserCommandBridge {
                         "Enter the loaded settlement before using RTS gather orders.");
                 return true;
             }
-            final int objectId;
+
+            SettlementResourceNode.SourceKind sourceKind = SettlementResourceNode.SourceKind.OBJECT;
+            int valueIndex = 3;
+            if ("object".equalsIgnoreCase(cmd[3]) || "npc".equalsIgnoreCase(cmd[3])) {
+                sourceKind = "npc".equalsIgnoreCase(cmd[3])
+                        ? SettlementResourceNode.SourceKind.NPC
+                        : SettlementResourceNode.SourceKind.OBJECT;
+                valueIndex = 4;
+            }
+            if (cmd.length <= valueIndex + 3) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectiongather [object|npc] <id> <worldX> <worldY> <plane>");
+                return true;
+            }
+
+            final int runtimeId;
             final int worldX;
             final int worldY;
             final int plane;
             try {
-                objectId = Integer.parseInt(cmd[3]);
-                worldX = Integer.parseInt(cmd[4]);
-                worldY = Integer.parseInt(cmd[5]);
-                plane = Integer.parseInt(cmd[6]);
+                runtimeId = Integer.parseInt(cmd[valueIndex]);
+                worldX = Integer.parseInt(cmd[valueIndex + 1]);
+                worldY = Integer.parseInt(cmd[valueIndex + 2]);
+                plane = Integer.parseInt(cmd[valueIndex + 3]);
             } catch (NumberFormatException ex) {
                 player.getPackets().sendGameMessage("RTS gather target is invalid.");
                 return true;
             }
             player.getPackets().sendGameMessage(
-                    active.orderRuntimeSelectionGather(objectId, worldX, worldY, plane));
+                    active.orderRuntimeSelectionGather(
+                            sourceKind, runtimeId, worldX, worldY, plane));
             return true;
         }
 
