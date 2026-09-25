@@ -47,10 +47,35 @@ public final class LiveModelEditorPreview {
     private static volatile String status = "IDLE";
     private static volatile int modelRevision;
 
+    public enum TransformMode {
+        MOVE, ROTATE, SCALE
+    }
+
+    public enum AxisConstraint {
+        FREE, X, Y, Z
+    }
+
     private static Class106 cachedRenderer;
     private static int cachedRevision = Integer.MIN_VALUE;
     private static Model cachedMainModel;
     private static Model[] cachedDuplicateModels = new Model[0];
+    private static Model[] cachedReplacementModels = new Model[0];
+
+    private static Class106 cachedPickRenderer;
+    private static int cachedPickRevision = Integer.MIN_VALUE;
+    private static Model[] cachedPickModels = new Model[0];
+    private static int[] cachedPickIndices = new int[0];
+
+    private static volatile TransformMode transformMode = TransformMode.MOVE;
+    private static volatile AxisConstraint axisConstraint = AxisConstraint.FREE;
+    private static volatile boolean pointerInside;
+    private static volatile int pointerX;
+    private static volatile int pointerY;
+    private static volatile int worldHoveredPart = -1;
+    private static volatile boolean dragging;
+    private static volatile int dragStartX;
+    private static volatile int dragStartY;
+    private static int[] dragStartTransform = new int[] { 100, 100, 100, 0, 0, 0, 0 };
 
     private LiveModelEditorPreview() {
     }
@@ -169,25 +194,141 @@ public final class LiveModelEditorPreview {
     public static int getSelectedPart() { return PARTS.getSelected(); }
     public static int getHoveredPart() { return PARTS.getHovered(); }
     public static int[] getSelectedPartTransform() { return PARTS.getSelectedTransform(); }
+    public static TransformMode getTransformMode() { return transformMode; }
+    public static AxisConstraint getAxisConstraint() { return axisConstraint; }
+    public static int getWorldHoveredPart() { return worldHoveredPart; }
+
+    public static void setTransformMode(TransformMode mode) {
+        if (mode != null) {
+            transformMode = mode;
+            status = "EDIT " + mode + " axis=" + axisConstraint;
+        }
+    }
+
+    public static void setAxisConstraint(AxisConstraint axis) {
+        if (axis != null) {
+            axisConstraint = axis;
+            status = "EDIT " + transformMode + " axis=" + axisConstraint;
+        }
+    }
+
+    public static void pointerMoved(int x, int y) {
+        pointerInside = true;
+        pointerX = x;
+        pointerY = y;
+    }
+
+    public static void pointerExited() {
+        pointerInside = false;
+        worldHoveredPart = -1;
+        if (!dragging && PARTS.hover(-1)) invalidateVisualModels();
+    }
+
+    public static boolean beginPointerDrag(int x, int y) {
+        pointerMoved(x, y);
+        int hit = worldHoveredPart;
+        if (hit < 0) hit = PARTS.getHovered();
+        if (hit < 0 || !PARTS.select(hit)) return false;
+        dragStartX = x;
+        dragStartY = y;
+        dragStartTransform = PARTS.getSelectedTransform();
+        dragging = PARTS.beginGesture();
+        if (dragging) {
+            invalidateVisualModels();
+            status = "DRAG " + transformMode + " Part " + hit + " axis=" + axisConstraint;
+        }
+        return dragging;
+    }
+
+    public static boolean dragPointerTo(int x, int y) {
+        if (!dragging) return false;
+        pointerX = x;
+        pointerY = y;
+        int dx = x - dragStartX;
+        int dy = y - dragStartY;
+        int sx = dragStartTransform[0], sy = dragStartTransform[1], sz = dragStartTransform[2];
+        int mx = dragStartTransform[3], my = dragStartTransform[4], mz = dragStartTransform[5];
+        int yaw = dragStartTransform[6];
+
+        if (transformMode == TransformMode.MOVE) {
+            int amountX = dx * 4;
+            int amountY = -dy * 4;
+            if (axisConstraint == AxisConstraint.X) {
+                mx += amountX;
+            } else if (axisConstraint == AxisConstraint.Y) {
+                my += amountY;
+            } else if (axisConstraint == AxisConstraint.Z) {
+                mz += amountY;
+            } else {
+                mx += amountX;
+                mz += amountY;
+            }
+        } else if (transformMode == TransformMode.ROTATE) {
+            yaw += dx;
+        } else {
+            int delta = (dx - dy) / 2;
+            if (axisConstraint == AxisConstraint.X) sx += delta;
+            else if (axisConstraint == AxisConstraint.Y) sy += delta;
+            else if (axisConstraint == AxisConstraint.Z) sz += delta;
+            else {
+                sx += delta;
+                sy += delta;
+                sz += delta;
+            }
+        }
+
+        boolean changed = PARTS.updateGestureTransform(sx, sy, sz, mx, my, mz, yaw);
+        if (changed) invalidateGeometryModels();
+        return changed;
+    }
+
+    public static void endPointerDrag() {
+        if (dragging) {
+            PARTS.endGesture();
+            dragging = false;
+            invalidateGeometryModels();
+        }
+    }
+
+    public static boolean replaceSelectedWithConstructionPiece(
+            ConstructionPlacementController.BuildPiece piece, boolean allMatching) {
+        if (piece == null) return false;
+        boolean changed = PARTS.replaceSelected(piece.getObjectId(), piece.getObjectType(), allMatching);
+        if (changed) {
+            invalidateGeometryModels();
+            status = (allMatching ? "REPLACED MATCHING PARTS with " : "REPLACED PART with ")
+                    + piece.getDisplayName() + " #" + piece.getObjectId();
+        }
+        return changed;
+    }
+
+    public static boolean clearSelectedReplacement() {
+        boolean changed = PARTS.clearSelectedReplacement();
+        if (changed) {
+            invalidateGeometryModels();
+            status = "RESTORED selected source component.";
+        }
+        return changed;
+    }
 
     public static void previewPart(int index) {
-        if (PARTS.hover(index)) invalidateModels();
+        if (PARTS.hover(index)) invalidateVisualModels();
     }
 
     public static void clearPartPreview() {
-        if (PARTS.hover(-1)) invalidateModels();
+        if (PARTS.hover(-1)) invalidateVisualModels();
     }
 
     public static boolean selectPart(int index) {
         boolean changed = PARTS.select(index);
-        invalidateModels();
+        invalidateVisualModels();
         return changed;
     }
 
     public static boolean setSelectedPartTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
         boolean changed = PARTS.setSelectedTransform(sx, sy, sz, mx, my, mz, yaw);
-        if (changed) invalidateModels();
+        if (changed) invalidateGeometryModels();
         return changed;
     }
 
@@ -217,7 +358,7 @@ public final class LiveModelEditorPreview {
 
     public static void toggleIsolatePart() {
         PARTS.toggleIsolate();
-        invalidateModels();
+        invalidateGeometryModels();
     }
 
     public static boolean isPartIsolated() { return PARTS.isIsolate(); }
@@ -232,7 +373,7 @@ public final class LiveModelEditorPreview {
 
     public static void loadPartProjectJson(String json) {
         PARTS.loadProjectJson(json);
-        invalidateModels();
+        invalidateGeometryModels();
     }
 
     static void render(Class523 scene, Class106 renderer) {
@@ -327,15 +468,28 @@ public final class LiveModelEditorPreview {
         if (cachedRenderer != renderer || cachedRevision != revision || cachedMainModel == null) {
             Class159 mainRaw = PARTS.buildMainRaw();
             cachedMainModel = mainRaw == null ? null
-                    : buildDefinitionModel(renderer, definition, mainRaw, rotation,
+                    : buildDefinitionModel(renderer, definition, definition, mainRaw, rotation,
                             ground, upperGround, sceneX, sceneY, sceneZ);
+
             List<Class159> duplicateRaws = PARTS.buildDuplicateRaws();
             cachedDuplicateModels = new Model[duplicateRaws.size()];
             for (int i = 0; i < duplicateRaws.size(); i++) {
-                cachedDuplicateModels[i] = buildDefinitionModel(renderer, definition,
+                cachedDuplicateModels[i] = buildDefinitionModel(renderer, definition, definition,
                         duplicateRaws.get(i), rotation,
                         ground, upperGround, sceneX, sceneY, sceneZ);
             }
+
+            List<LiveModelEditorParts.ReplacementRaw> replacements = PARTS.buildReplacementRaws();
+            cachedReplacementModels = new Model[replacements.size()];
+            for (int i = 0; i < replacements.size(); i++) {
+                LiveModelEditorParts.ReplacementRaw replacement = replacements.get(i);
+                ObjectDefinitions material = definitionFor(replacement.objectId);
+                cachedReplacementModels[i] = material == null ? null
+                        : buildDefinitionModel(renderer, material, definition,
+                                replacement.raw, rotation,
+                                ground, upperGround, sceneX, sceneY, sceneZ);
+            }
+
             cachedRenderer = renderer;
             cachedRevision = revision;
         }
@@ -344,61 +498,134 @@ public final class LiveModelEditorPreview {
         if (cachedMainModel != null) cachedMainModel.method1375(TRANSFORM, RENDER_BOUNDS, 0);
         for (Model model : cachedDuplicateModels)
             if (model != null) model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        for (Model model : cachedReplacementModels)
+            if (model != null) model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+
+        if (!dragging) updateWorldPick(renderer, definition, ground, upperGround,
+                sceneX, sceneY, sceneZ, rotation);
     }
 
-    private static Model buildDefinitionModel(Class106 renderer, ObjectDefinitions definition,
+    private static void updateWorldPick(Class106 renderer, ObjectDefinitions sourceDefinition,
+            Class174 ground, Class174 upperGround, int sceneX, int sceneY, int sceneZ,
+            int rotation) {
+        if (!pointerInside) {
+            if (worldHoveredPart != -1) {
+                worldHoveredPart = -1;
+                if (PARTS.hover(-1)) invalidateVisualModels();
+            }
+            return;
+        }
+
+        int pickRevision = modelRevision * 31 + PARTS.getGeometryRevision();
+        if (cachedPickRenderer != renderer || cachedPickRevision != pickRevision) {
+            List<LiveModelEditorParts.PickRaw> picks = PARTS.buildPickRaws();
+            cachedPickModels = new Model[picks.size()];
+            cachedPickIndices = new int[picks.size()];
+            for (int i = 0; i < picks.size(); i++) {
+                LiveModelEditorParts.PickRaw pick = picks.get(i);
+                ObjectDefinitions material = definitionFor(pick.materialObjectId);
+                if (material == null) material = sourceDefinition;
+                cachedPickModels[i] = buildDefinitionModel(renderer, material, sourceDefinition,
+                        pick.raw, rotation, ground, upperGround, sceneX, sceneY, sceneZ);
+                cachedPickIndices[i] = pick.partIndex;
+            }
+            cachedPickRenderer = renderer;
+            cachedPickRevision = pickRevision;
+        }
+
+        TRANSFORM.method3588(sceneX, sceneY, sceneZ);
+        int best = -1;
+        int bestFaces = Integer.MAX_VALUE;
+        for (int i = 0; i < cachedPickModels.length; i++) {
+            Model model = cachedPickModels[i];
+            if (model != null && model.method1376(pointerX, pointerY, TRANSFORM, false, 0)) {
+                int partIndex = cachedPickIndices[i];
+                int faces = PARTS.getFaceCount(partIndex);
+                if (faces < bestFaces) {
+                    bestFaces = faces;
+                    best = partIndex;
+                }
+            }
+        }
+
+        if (best != worldHoveredPart) {
+            worldHoveredPart = best;
+            if (PARTS.hover(best)) invalidateVisualModels();
+        }
+    }
+
+    private static Model buildDefinitionModel(Class106 renderer,
+            ObjectDefinitions materialDefinition, ObjectDefinitions spatialDefinition,
             Class159 raw, int rotation, Class174 ground, Class174 upperGround,
             int sceneX, int sceneY, int sceneZ) {
-        int ambient = definition.anInt5638 * 1878786655 + 64;
-        int contrast = -69277109 * definition.anInt5639 + 850;
+        int ambient = materialDefinition.anInt5638 * 1878786655 + 64;
+        int contrast = -69277109 * materialDefinition.anInt5639 + 850;
         Model model = renderer.method1755(raw, RAW_BUILD_FLAGS,
-                definition.aClass518_5608.anInt5751 * 1583875953, ambient, contrast);
+                materialDefinition.aClass518_5608.anInt5751 * 1583875953, ambient, contrast);
         if (model == null) return null;
 
-        if (definition.aBool5647) model.method1359();
+        if (spatialDefinition.aBool5647) model.method1359();
         int rot = rotation & 0x3;
         if (rot == 1) model.method1412(4096);
         else if (rot == 2) model.method1412(8192);
         else if (rot == 3) model.method1412(12288);
 
-        if (definition.aShortArray5613 != null) {
-            for (int i = 0; i < definition.aShortArray5613.length; i++) {
-                short replacement = definition.aShortArray5621[i];
-                if (definition.aByteArray5615 != null && i < definition.aByteArray5615.length)
-                    replacement = ObjectDefinitions.aShortArray5606[definition.aByteArray5615[i] & 0xff];
-                model.method1393(definition.aShortArray5613[i], replacement);
+        if (materialDefinition.aShortArray5613 != null) {
+            for (int i = 0; i < materialDefinition.aShortArray5613.length; i++) {
+                short replacement = materialDefinition.aShortArray5621[i];
+                if (materialDefinition.aByteArray5615 != null
+                        && i < materialDefinition.aByteArray5615.length) {
+                    replacement = ObjectDefinitions.aShortArray5606[
+                            materialDefinition.aByteArray5615[i] & 0xff];
+                }
+                model.method1393(materialDefinition.aShortArray5613[i], replacement);
             }
         }
-        if (definition.aShortArray5618 != null) {
-            for (int i = 0; i < definition.aShortArray5618.length; i++)
-                model.method1494(definition.aShortArray5618[i], definition.aShortArray5617[i]);
+        if (materialDefinition.aShortArray5618 != null) {
+            for (int i = 0; i < materialDefinition.aShortArray5618.length; i++)
+                model.method1494(materialDefinition.aShortArray5618[i],
+                        materialDefinition.aShortArray5617[i]);
         }
-        if (definition.aByte5666 != 0)
-            model.method1396(definition.aByte5616, definition.aByte5681,
-                    definition.aByte5622, definition.aByte5666 & 0xff);
+        if (materialDefinition.aByte5666 != 0)
+            model.method1396(materialDefinition.aByte5616, materialDefinition.aByte5681,
+                    materialDefinition.aByte5622, materialDefinition.aByte5666 & 0xff);
 
-        int dsx = definition.anInt5646 * 898312795;
-        int dsy = definition.anInt5634 * 1899990883;
-        int dsz = definition.anInt5641 * 1427207859;
+        int dsx = spatialDefinition.anInt5646 * 898312795;
+        int dsy = spatialDefinition.anInt5634 * 1899990883;
+        int dsz = spatialDefinition.anInt5641 * 1427207859;
         if (dsx != 128 || dsy != 128 || dsz != 128) model.method1464(dsx, dsy, dsz);
 
-        int dmx = definition.anInt5652 * -865773249;
-        int dmy = definition.anInt5653 * -955267449;
-        int dmz = definition.anInt5654 * -504975083;
+        int dmx = spatialDefinition.anInt5652 * -865773249;
+        int dmy = spatialDefinition.anInt5653 * -955267449;
+        int dmz = spatialDefinition.anInt5654 * -504975083;
         if (dmx != 0 || dmy != 0 || dmz != 0) model.method1358(dmx, dmy, dmz);
 
-        if (definition.aByte5628 != 0)
-            model.method1463(definition.aByte5628, definition.anInt5629 * -1793366483,
+        if (spatialDefinition.aByte5628 != 0)
+            model.method1463(spatialDefinition.aByte5628,
+                    spatialDefinition.anInt5629 * -1793366483,
                     ground, upperGround, sceneX, sceneY, sceneZ);
 
-        int extraX = definition.anInt5655 * 1281867755;
-        int extraY = definition.anInt5673 * -1496350233;
-        int extraZ = definition.anInt5657 * -2114564345;
-        if (extraX != 0 || extraY != 0 || extraZ != 0) model.method1358(extraX, extraY, extraZ);
+        int extraX = spatialDefinition.anInt5655 * 1281867755;
+        int extraY = spatialDefinition.anInt5673 * -1496350233;
+        int extraZ = spatialDefinition.anInt5657 * -2114564345;
+        if (extraX != 0 || extraY != 0 || extraZ != 0)
+            model.method1358(extraX, extraY, extraZ);
 
         applyWholeTransforms(model);
         model.method1450(EDIT_MODEL_FLAGS);
         return model;
+    }
+
+    private static ObjectDefinitions definitionFor(int id) {
+        Class613 region = client.aClass613_8605;
+        if (region == null || id < 0) return null;
+        Class639_Sub16 definitions = region.method7288(0);
+        if (definitions == null) return null;
+        try {
+            return (ObjectDefinitions) definitions.getDefinition(id, -1356282071);
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 
     private static void applyWholeTransforms(Model model) {
@@ -413,23 +640,26 @@ public final class LiveModelEditorPreview {
     }
 
     private static ObjectDefinitions currentDefinition() {
-        Class613 region = client.aClass613_8605;
-        if (region == null || objectId < 0) return null;
-        Class639_Sub16 definitions = region.method7288(0);
-        if (definitions == null) return null;
-        try {
-            return (ObjectDefinitions) definitions.getDefinition(objectId, -1356282071);
-        } catch (RuntimeException ex) {
-            return null;
-        }
+        return definitionFor(objectId);
     }
 
-    private static void invalidateModels() {
-        modelRevision++;
+    private static void invalidateVisualModels() {
         cachedRevision = Integer.MIN_VALUE;
         cachedMainModel = null;
         cachedDuplicateModels = new Model[0];
+        cachedReplacementModels = new Model[0];
         lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    private static void invalidateGeometryModels() {
+        modelRevision++;
+        invalidateVisualModels();
+        cachedPickRevision = Integer.MIN_VALUE;
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    private static void invalidateModels() {
+        invalidateGeometryModels();
     }
 
     private static String describe(String state) {
