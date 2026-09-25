@@ -1680,6 +1680,7 @@ public final class SettlementInstance {
         }
         destroyed = true;
         loaded = false;
+        player.getActionbar().endConstructionMode();
         removeSettlementWorkers();
         removeRailCarts();
         removeStarterResourceNodes();
