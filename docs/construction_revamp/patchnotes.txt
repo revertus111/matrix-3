@@ -1382,3 +1382,9 @@
 - Added axis locking/hysteresis to sampled Rail Network V1 gestures: normal perpendicular hover wobble no longer authors a turn; a two-tile dominant perpendicular move intentionally changes the active rail axis.
 - One-tile gesture backtracking now removes the latest sample instead of producing a micro-loop/U-turn.
 - Server rail physical-delta removal is now idempotent. If a requested old visual piece was already removed by an earlier straight/curve conversion, the delta continues instead of failing with "old piece 0 is missing".
+
+
+2026-09-25 - Rail junction protection + cart topology direction API
+- Curve resolution now refuses any 90-degree composite whose owned leg footprint touches a degree-3/4 logical junction. This prevents CURVE_RAIL_LAYOUT_01 from stealing the connection tile and visually bending the start of a branch/crossing.
+- Degree-3/4 nodes remain explicit logical junctions with a straight-through placeholder until accepted merge/split/crossing assets are classified; no fake stacked same-type rail objects are persisted.
+- Added direction-neutral cart connection-mask access (N=1/E=2/S=4/W=8). Future carts can choose outgoing edges from topology using their incoming edge/route state instead of inferring travel direction from visual object rotation.
