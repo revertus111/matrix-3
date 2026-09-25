@@ -1363,3 +1363,10 @@
 - Routed vanilla first-option starter Wood/Stone/Ore object actions and Food NPC actions to selected workers.
 - Generalized server RTS gather validation to object/NPC SettlementResourceNode sources while preserving the old object command form.
 - Ordinary world clicks keep the committed selection; no worker policy/persistence owner changed.
+
+
+2026-09-25 - Rail Network V1 delta persistence correction
+- Removed Rail Network V1's dependency on the prototype whole-route replacement behavior after the first committed segment.
+- Subsequent extend/turn/branch commits now diff the previous and resolved physical networks by world tile/plane/object type and send only changed rail pieces to the server.
+- Server staged rail replacement now accepts add-only and remove-only deltas, allowing a straight extension to persist without requiring an old piece to be destructively replaced.
+- Existing physical rails that did not change are left untouched; corner conversions replace only the affected straight/curve footprint.
