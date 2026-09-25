@@ -547,7 +547,7 @@ Implemented:
 - world right-click menus expose one Clear Selection option while a selection exists; it clears both local visualization state and server transient selection
 - settlement scene exit/rebuild invalidates the transient selection and requires a new drag
 
-Status: IMPLEMENTED / NEEDS RUNTIME TEST
+Status: RUNTIME VERIFIED
 
 ---
 
@@ -566,7 +566,7 @@ Implemented:
 - worker manual Move/Gather orders are runtime overrides only; normal Allowed Jobs policy resumes after completion
 - server validates the exact active SettlementResourceNode before assigning a gather order
 
-Status: IMPLEMENTED / NEEDS RUNTIME TEST
+Status: RUNTIME VERIFIED
 
 ---
 
