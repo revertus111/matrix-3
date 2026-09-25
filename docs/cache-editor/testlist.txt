@@ -41,3 +41,6 @@ RS3 CacheEditor foundation test list
 [ ] Objects: load a known object by exact name and confirm it resolves without entering a numeric ID.
 [ ] Objects: click each referenced Model button for object 29394 and confirm its model ID is copied for use in Assets > Models.
 [ ] Objects regression: Items, Models, and Raw Cache continue to open normally.
+
+[ ] Objects: type 29394 and confirm object #29394 appears/selects immediately without exact-name lookup.
+[ ] Objects: type a partial object name and confirm matching name + ID results appear after background indexing.

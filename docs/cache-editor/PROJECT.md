@@ -25,7 +25,7 @@ Build a professional standalone Java 8 cache editor for Matrix3's revision-830 c
 | Item Browser/search | NEEDS TEST | Missing-loop-brace compile regression is patched; Eclipse/Java 8 clean-build verification is pending before restoring COMPLETE. |
 | Item visual preview | CARRYOVER | No renderer is connected until a clean reusable Matrix3/client rendering boundary is proven. Do not duplicate the client renderer into CacheEditor. |
 | Structured Item Editor | BLOCKED | Requires a round-trip-safe ItemDefinitions encoder + verify/redecode/compare save pipeline. |
-| NPC/Object editors | PLANNED | Build after shared editor/save infrastructure is proven. |
+| NPC/Object editors | PLANNED | Object read-only browser/search foundation is implemented but needs runtime verification; structured editing remains planned. |
 | Model editor/viewer | NEEDS TEST | Standalone Java2D model viewport, revision-830 geometry decode, raw export, and OBJ/MTL export are implemented; Eclipse/runtime verification is pending. |
 | Animation/GFX tools | PLANNED | Follow model/viewer infrastructure. |
 | Sprite/Interface tools | PLANNED | Later specialized asset tooling. |

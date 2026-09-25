@@ -45,3 +45,8 @@
 - Object Browser now exposes name, id, size, animation, clipping, interaction options, and all referenced model-id groups from Matrix3 ObjectDefinitions.
 - Added per-model buttons that copy referenced model IDs for immediate use in Assets > Models, removing the object-id/model-id ambiguity during asset investigation.
 - Reused Matrix3 ObjectDefinitions and the shared CacheSession; no second object-definition decoder was introduced.
+
+2026-09-25
+- Replaced manual/exact-only Object lookup with an Item Browser-style searchable result list.
+- Numeric object IDs resolve directly; partial-name search is backed by a background definition index with debounced typing.
+- Existing object detail/model-reference workflow remains intact.
