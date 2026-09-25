@@ -101,3 +101,16 @@ Bundle 2.4A - Construction material replacement
 [ ] Test at least Wooden fence 13450/type 0, Floor decoration 13684/type 22, Door 13344/type 0, Bed 14872/type 10 and note any catalog entry whose current provisional object art is unsuitable.
 [ ] Save project JSON v3 with one replacement and one Replace Matches group, change the session, reload and confirm replacement object IDs/types and transforms restore.
 [ ] Exit Edit and confirm the normal stock source object returns with no cache/server/world changes.
+
+Bundle 2.3B crash regression
+[ ] Open Live Model Editor on Smelter 29394 and move the mouse over the live model; confirm world-pick model construction no longer crashes in OpenGLModel.<init> line 115.
+[ ] Confirm component-only pick models can reference vertices above index 0 without ArrayIndexOutOfBoundsException.
+[ ] Confirm malformed/unmapped component face indices are rejected rather than passed into OpenGLModel.
+
+Conveyor belt source experiment
+[ ] Inspect object 46298 and confirm Dev Inspector resolves model IDs 49717 and 49718.
+[ ] Open 46298 in Live Model Editor and Detect/Rebuild Parts.
+[ ] Identify whether the visible belt strip is a standalone connected part or corresponds cleanly to one of the two source model groups.
+[ ] Isolate the belt strip and confirm the surrounding frame/support geometry can be hidden independently.
+[ ] Duplicate the belt strip and move the copy end-to-end with G/drag; confirm a longer continuous belt can be assembled without duplicating the whole conveyor object.
+[ ] Save the conveyor extraction/duplication recipe to JSON v3 and reload it.

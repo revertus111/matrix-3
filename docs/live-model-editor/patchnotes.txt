@@ -54,3 +54,8 @@
 - Replacement auto-fit centers on the source component, scales to its longest dimension and rotates 90 degrees in X/Z when dominant horizontal axes differ. Existing per-part transforms remain available for fine alignment.
 - Restore removes the replacement recipe and reveals the untouched original component.
 - JSON project format advanced to v3 and now persists replacement object/type metadata. No cache bytes, map objects, clipping or server persistence are written.
+
+2026-09-25
+- Fixed the Bundle 2.3B OpenGL crash in component-only world-pick models. The compact Class159 remap now sets anInt1775 to its compact used-vertex count before OpenGLModel construction; previously it remained zero, causing OpenGLModel's per-vertex face-reference array to be allocated at length 1 and then indexed by vertex 1+.
+- Added face-remap range validation so a malformed component mapping is rejected before renderer construction instead of crashing the client.
+- Recorded Conveyor belt object 46298 / model IDs 49717+49718 as the preferred Construction conveyor visual-source experiment. The intended workflow is isolate the belt component, duplicate it and translate copies end-to-end rather than fabricating a belt mesh from scratch.

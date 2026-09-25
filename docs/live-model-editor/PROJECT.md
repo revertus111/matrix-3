@@ -234,6 +234,17 @@ One short test session:
 10. Save Project, Hide Runtime Clone, Load Project and confirm the transforms return.
 11. Restart client and confirm no cache/world object was permanently changed.
 
+### Conveyor belt source candidate
+
+Runtime reference found in-world through Dev Inspector:
+
+- Object: `Conveyor belt`
+- Definition ID: `46298`
+- Referenced model IDs: `49717, 49718`
+- Reference tile observed: `3324, 3496, 0`
+
+This is now the preferred asset-source experiment for the Construction automation belt. The immediate test is not to rebuild the full object: open 46298 in Live Model Editor, isolate the belt surface/strip, and determine whether it is a standalone connected component or one of the two source models. If separable, duplicate that belt component and translate copies end-to-end. That could provide the actual RuneScape belt visual while the Construction system owns routing/automation logic independently.
+
 ## Resume Here
 
 **Last completed:** Bundle 1.1 runtime clone/whole-model transform proof passed in the live client. Bundle 2.1 connected-part authoring implementation is now in source.
@@ -242,7 +253,7 @@ One short test session:
 
 **Active bundle:** Bundle 2.3B + Bundle 2.4A - world mouse editing + non-destructive Construction material replacement (`NEEDS TEST`).
 
-**Next action:** one consolidated runtime gate on Smelter 29394/model 64036: hover an actual side bar in-world, click it, drag it in Move mode, test G/R/S plus X/Y/Z/F, then choose a Construction material and run Replace Part / Replace Matches / Restore. Save/load JSON v3 after a replacement. If any world-pick coordinate mismatch appears, capture one short video before broadening the picking seam.
+**Next action:** first rerun the world-pick gate after the component-only Class159 used-vertex-count fix. Then test both reference assets: Smelter 29394/model 64036 for arbitrary connected-part editing, and Conveyor belt 46298/models 49717+49718 for belt-component extraction. On the conveyor, identify whether the moving belt surface is its own connected component or one whole source model, isolate it, duplicate it, and move copies end-to-end. If that works cleanly, prefer the extracted belt segment as the Construction conveyor visual foundation instead of fabricating a new belt mesh.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

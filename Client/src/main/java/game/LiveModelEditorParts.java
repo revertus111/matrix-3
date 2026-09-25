@@ -640,6 +640,11 @@ final class LiveModelEditorParts {
         Class159 raw = new Class159(component.vertices.length, component.faces.length, 0);
         raw.anInt1773 = sourceRaw.anInt1773;
         raw.anInt1791 = component.vertices.length;
+        // OpenGLModel sizes its per-vertex face-reference table from anInt1775.
+        // Decoded Class159 models leave this as the highest referenced vertex + 1.
+        // A component-only remap uses every copied vertex, so the used range is
+        // exactly the compact vertex count.
+        raw.anInt1775 = component.vertices.length;
         raw.anInt1778 = component.faces.length;
 
         for (int i = 0; i < component.vertices.length; i++) {
@@ -654,9 +659,16 @@ final class LiveModelEditorParts {
 
         for (int i = 0; i < component.faces.length; i++) {
             int face = component.faces[i];
-            raw.aShortArray1786[i] = (short) map[sourceRaw.aShortArray1786[face] & 0xffff];
-            raw.aShortArray1787[i] = (short) map[sourceRaw.aShortArray1787[face] & 0xffff];
-            raw.aShortArray1789[i] = (short) map[sourceRaw.aShortArray1789[face] & 0xffff];
+            int a = map[sourceRaw.aShortArray1786[face] & 0xffff];
+            int b = map[sourceRaw.aShortArray1787[face] & 0xffff];
+            int d = map[sourceRaw.aShortArray1789[face] & 0xffff];
+            if (a < 0 || b < 0 || d < 0
+                    || a >= raw.anInt1775 || b >= raw.anInt1775 || d >= raw.anInt1775) {
+                return null;
+            }
+            raw.aShortArray1786[i] = (short) a;
+            raw.aShortArray1787[i] = (short) b;
+            raw.aShortArray1789[i] = (short) d;
             raw.faceColours[i] = sourceRaw.faceColours == null ? 0 : sourceRaw.faceColours[face];
             raw.faceAlpha[i] = sourceRaw.faceAlpha == null ? 0 : sourceRaw.faceAlpha[face];
             raw.faceTextures[i] = -1;
