@@ -144,17 +144,46 @@ Status: ACTIVE / NEEDS TEST
 - [ ] Runtime verify Exit Edit/Escape restores the original object with clipping/world state unchanged.
 - [ ] Runtime verify reopening the same Smelter resumes the same part edits instead of creating/resetting another clone.
 
-#### Bundle 2.3B - True in-world component picking
+#### Bundle 2.3B - True in-world component picking + direct mouse transforms
 
-Status: CARRYOVER inside the approved Bundle 2.3 workstream
+Status: NEEDS TEST
 
-- [ ] Trace the narrowest Matrix3 screen-to-model/triangle picking seam.
-- [ ] Hover the actual rendered component in the live 3D scene and highlight it without using the list.
-- [ ] Left-click the hovered world component to select it.
-- [ ] Keep the overlay list synchronized with the world-selected component.
-- [ ] Route G/R/S and future gizmos through the editor-owned viewport without restoring normal Walk Here.
+- [x] Reuse Matrix3's verified Model.method1376(...) screen-hit path for connected-component picking rather than adding a second camera/raycast implementation.
+- [x] Build cached component-only pick Models from the same Class159 source geometry used by the editor.
+- [x] Hover the actual rendered component in the live 3D scene and preview-highlight it.
+- [x] Left-click a hovered world component to lock/select it.
+- [x] Keep the overlay list synchronized with world-selected components.
+- [x] Direct left-drag transform workflow on the selected component.
+- [x] G/R/S transform modes: Move / Rotate / Scale.
+- [x] X/Y/Z axis constraints plus F for free/screen-plane movement.
+- [x] One undo snapshot per mouse drag gesture rather than one undo record per mouse-motion event.
+- [x] Keep normal Walk Here/world interactions suppressed while editor mouse ownership is active.
+- [ ] Eclipse/Java 8 clean-build.
+- [ ] Runtime verify screen hover chooses the expected Smelter bar/part rather than only the whole model.
+- [ ] Runtime verify click locks the hovered part and the list follows the world selection.
+- [ ] Runtime verify Move/Rotate/Scale drag semantics and axis constraints.
+- [ ] Runtime verify camera viewing controls remain usable while editor mouse ownership is active.
 
-2.3A is a dependency gate for 2.3B: world picking must operate against the single visible editable replacement, not an original+clone overlap.
+#### Bundle 2.4A - Non-destructive Construction material replacement
+
+Status: NEEDS TEST
+
+- [x] Reuse ConstructionPlacementController's current build-piece catalog as the first shared material/object library.
+- [x] Replace selected connected component with a Construction catalog object's source model geometry.
+- [x] Replace All Matching uses stable source-component signatures (face count, vertex count and sorted dimensions) so repeated bars/supports can be swapped in one action.
+- [x] Source component becomes hidden while the replacement is rendered; Restore returns the original component.
+- [x] Replacement geometry auto-centers on the source component, auto-fits by longest dimension and auto-rotates X/Z when the dominant horizontal axis differs.
+- [x] Replacement remains non-destructive and uses the selected part's existing move/rotate/scale controls for fine alignment.
+- [x] JSON project v3 persists replacement object ID/type for original and duplicated part states.
+- [x] World picking treats the replacement geometry as the same logical part index.
+- [ ] Eclipse/Java 8 clean-build.
+- [ ] Runtime select one Smelter side bar and replace it with a Construction catalog material.
+- [ ] Runtime Replace Matches and confirm only geometrically matching repeated bars/supports are swapped.
+- [ ] Runtime adjust replacement with direct mouse Move/Rotate/Scale.
+- [ ] Runtime Restore and confirm the exact stock component returns.
+- [ ] Runtime save/load JSON v3 and confirm replacements return without cache/world writes.
+
+2.3B/2.4A deliberately keep replacement authoring client-local and JSON-backed. Permanent revision-830 cache compilation remains a later explicit build step.
 
 ## Phase 3 - Professional Transform UX
 
@@ -211,9 +240,9 @@ One short test session:
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
-**Active bundle:** Bundle 2.3A - Editor owns the target and viewport (`NEEDS TEST`).
+**Active bundle:** Bundle 2.3B + Bundle 2.4A - world mouse editing + non-destructive Construction material replacement (`NEEDS TEST`).
 
-**Next action:** one consolidated 2.3A runtime gate on Smelter 29394/model 64036: confirm only one Smelter is visible at the source tile, left-click cannot walk/interact, camera remains usable, reopen resumes the same edit state, and Exit Edit/Escape restores the original. If this gate passes, continue 2.3B under the existing AAA with true world component hover/click picking.
+**Next action:** one consolidated runtime gate on Smelter 29394/model 64036: hover an actual side bar in-world, click it, drag it in Move mode, test G/R/S plus X/Y/Z/F, then choose a Construction material and run Replace Part / Replace Matches / Restore. Save/load JSON v3 after a replacement. If any world-pick coordinate mismatch appears, capture one short video before broadening the picking seam.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`
@@ -230,4 +259,4 @@ One short test session:
 - Object Lab direct-render scene coordinate math.
 - Dev Mode object ID/tile target route.
 
-**Important uncertainty:** exact live scene object type/rotation and true one-instance renderer replacement/suppression are not yet established. Bundle 1 intentionally keeps those explicit and leaves the original object untouched. Bundle 2.2 adds list-hover preview only; it does not claim true screen-to-component 3D picking. The world-picking seam remains explicitly deferred to Bundle 2.3.
+**Important uncertainty:** exact live scene object type/rotation and true one-instance renderer replacement/suppression are not yet established. Bundle 1 intentionally keeps those explicit and leaves the original object untouched. Bundle 2.3B now uses Matrix3 Model.method1376(...) for component-level screen hit testing, but runtime coordinate/selection accuracy remains NEEDS TEST. Construction replacement currently uses the existing starter Construction catalog as an authoring library; it is not yet the final player-facing material taxonomy.
