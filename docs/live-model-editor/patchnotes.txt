@@ -19,3 +19,7 @@
 - Mirrored object-definition rotation/recolor/retexture/scale/offset/terrain transforms onto the developer raw-model build path before the existing whole-model editor transforms.
 - Added JSON project version 2 persistence for original-part edits, duplicate part instances, selected part and isolate state. Version 1 projects remain loadable with default part state.
 - In-world mouse hover/click component picking remains a bounded carryover; Bundle 2.1 uses the parts list while the edited geometry itself renders live in the game scene.
+
+2026-09-25
+- Fixed Live Model Editor Bundle 2.1 compile regression: ConsoleTheme now provides the shared styleList(JList<?>) helper used by the mesh-parts list.
+- The helper applies the existing ConsoleTheme fonts/colors/selection colors without changing model-editor behavior.
