@@ -400,22 +400,22 @@ Phase 2 Bundle 2.4 — RTS radial multi-worker control
 [x] Clear-selection menu source: while a committed selection exists, Matrix3 world ground/object/NPC menus add exactly one Clear Selection option; choosing it clears local rings/self state and the server-owned transient selection.
 [x] Manual order ownership: transient Move/Gather state lives only in SettlementWorkerNpc and resumes normal worker policy after completion; no save schema or Allowed Jobs rewrite is introduced.
 [x] Gather range guard: resource arrival requires explicit adjacency after calcFollow; zero queued route steps outside physical interaction range can no longer start gathering.
-[ ] Runtime: drag-select one or more workers and release; the large drag circle disappears while every committed worker keeps its small layered selection rings visible and following movement.
-[ ] Runtime: after a committed selection, one normal ground click preserves the rings/selection and moves neither workers nor selected self.
-[ ] Runtime: double-click the same/adjacent ground tile; selected workers receive one move order. If self is selected, the player also performs vanilla Walk Here on the accepted second click.
-[ ] Runtime: two ground clicks outside the 375 ms window do not move the selected group.
-[ ] Runtime regression: while a selection already exists, start another >6px radial drag around more/different units; releasing commits the new selection without moving self/workers and does not seed the next double-click move.
+[x] Runtime: drag-select one or more workers and release; the large drag circle disappears while every committed worker keeps its small layered selection rings visible and following movement.
+[x] Runtime: after a committed selection, one normal ground click preserves the rings/selection and moves neither workers nor selected self.
+[x] Runtime: double-click the same/adjacent ground tile; selected workers receive one move order. If self is selected, the player also performs vanilla Walk Here on the accepted second click.
+[x] Runtime: two ground clicks outside the 375 ms window do not move the selected group.
+[x] Runtime regression: while a selection already exists, start another >6px radial drag around more/different units; releasing commits the new selection without moving self/workers and does not seed the next double-click move.
 [ ] Runtime: exit/re-enter the settlement/Construction camera session; camera starts in RTS mode automatically. Free Build can still be selected manually for that session.
-[ ] Runtime: include the local player in the drag; self receives the same persistent selected ring and Selection Status reports self alongside any Worker IDs.
-[ ] Runtime: with workers selected but self NOT selected, double-click ground moves the selected workers to the destination while the player stays planted.
-[ ] Runtime: with workers + self selected, double-click ground moves both the player (vanilla Matrix3 movement on click #2) and selected workers toward the same destination.
-[ ] Runtime: with selected workers, use normal left-click and right-click menu actions on Wood, Stone and Basic ore; workers path all the way into valid interaction range before the gather animation/resource action starts.
-[ ] Runtime: use the starter Food NPC's normal first skilling option; selected workers receive the Food gather order through the NPC source path.
-[ ] Runtime: repeat a starter resource action with self also selected; normal player skilling continues while selected workers receive the same order.
-[ ] Runtime: right-click ground, a resource object and an NPC while selected; each menu exposes one Clear Selection option. Choosing it removes unit rings and clears server selection without changing worker policy.
+[x] Runtime: include the local player in the drag; self receives the same persistent selected ring and Selection Status reports self alongside any Worker IDs.
+[x] Runtime: with workers selected but self NOT selected, double-click ground moves the selected workers to the destination while the player stays planted.
+[x] Runtime: with workers + self selected, double-click ground moves both the player (vanilla Matrix3 movement on click #2) and selected workers toward the same destination.
+[x] Runtime: with selected workers, use normal left-click and right-click menu actions on Wood, Stone and Basic ore; workers path all the way into valid interaction range before the gather animation/resource action starts.
+[x] Runtime: use the starter Food NPC's normal first skilling option; selected workers receive the Food gather order through the NPC source path.
+[x] Runtime: repeat a starter resource action with self also selected; normal player skilling continues while selected workers receive the same order.
+[x] Runtime: right-click ground, a resource object and an NPC while selected; each menu exposes one Clear Selection option. Choosing it removes unit rings and clears server selection without changing worker policy.
 [ ] Runtime regression: autonomous Lumberjack no longer chops a distant tree after only one step; it physically reaches interaction range before gathering and then hauls normally.
-[ ] Runtime: Clear Selection removes the persistent unit rings; committing a different subset moves the rings to only the new selection.
-[ ] Runtime: settlement exit/re-entry clears transient selection and requires a fresh drag; saved worker policies remain unchanged.
+[x] Runtime: Clear Selection removes the persistent unit rings; committing a different subset moves the rings to only the new selection.
+[x] Runtime: settlement exit/re-entry clears transient selection and requires a fresh drag; saved worker policies remain unchanged.
 [x] Runtime VERIFIED by user: Selection Status and committed multi-worker targeting behave correctly; only the selected worker set is owned by RWS-5.
 [x] Runtime VERIFIED by user: role preset mutations apply through the committed RWS-5 selection rather than the inspection spinner.
 [x] Runtime VERIFIED by user: individual Allowed Job mutation works on the committed multi-worker selection.
@@ -959,3 +959,6 @@ Rail junction protection runtime gate (2026-09-25)
 - Build a straight, then branch from its middle. The existing through rail must remain straight at the junction and the nearby curve composite must not steal/bend the junction tile.
 - Cross/rejoin an existing rail and confirm no curve is generated merely because the node has 3/4 logical neighbors.
 - Junction art is intentionally placeholder-only until Merge/Split/Crossing assets are accepted; topology must still retain every connected cardinal edge for later cart routing.
+
+
+[x] 2026-09-25 Bundle 2.4 final runtime acceptance: user confirmed the complete vanilla-context + double-click movement interaction set works. Bundle 2.4 is DONE / RUNTIME VERIFIED.
