@@ -950,3 +950,9 @@ Rail gesture stabilization runtime gate (2026-09-25)
 - Deliberately move at least two tiles perpendicular and continue; exactly one intentional 90-degree turn should form.
 - Correct the mouse backward by one tile while drawing; no tiny loop/U-turn should be authored.
 - Repeat several straight/curve conversions in one network; no "Rail route changed before edit; old piece ... is missing" failure should stop later edits.
+
+
+Rail junction protection runtime gate (2026-09-25)
+- Build a straight, then branch from its middle. The existing through rail must remain straight at the junction and the nearby curve composite must not steal/bend the junction tile.
+- Cross/rejoin an existing rail and confirm no curve is generated merely because the node has 3/4 logical neighbors.
+- Junction art is intentionally placeholder-only until Merge/Split/Crossing assets are accepted; topology must still retain every connected cardinal edge for later cart routing.
