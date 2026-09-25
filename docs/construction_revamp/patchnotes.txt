@@ -1336,3 +1336,11 @@
 - Extension merging replaces only physical pieces whose exact tiles are owned by the newly authored seam/curve footprint, then keeps all earlier path pieces.
 - The existing packet-safe atomic old-path -> complete-new-path server replacement is reused for persistence. Server rail-only validation/rollback remains authoritative.
 - Branches/T junctions, arbitrary-angle curves, switches, and persistent path endpoint metadata after client restart remain future work.
+
+
+2026-09-25 - Rail Network V1 logical topology foundation
+- Superseded the endpoint-only/authoredPath interaction for new rail commits with a logical tile-network draft. Physical object IDs are now derived from network neighbor topology instead of being the authored path itself.
+- Any logical rail tile in the current builder session is a valid drag origin: dragging from an endpoint extends; dragging from the middle adds a branch; dragging from empty ground adds a new segment/network.
+- Manhattan drag adds logical tiles in the selected X-then-Y/Y-then-X order. The resolver converts two-neighbor perpendicular nodes into the accepted CURVE_RAIL_LAYOUT_01 composite, opposite neighbors into straight rail, and degree-3/4 nodes into a temporary straight-through junction visual until real switch/junction art is accepted.
+- Each edit deterministically resolves the complete logical network to one physical piece set and reuses the existing packet-safe atomic old-physical -> new-physical server replacement. This removes incremental seam mutation from the authoring model.
+- V1 session topology is client-side while persistent physical rails remain server-owned. Persisted logical graph metadata/reconstruction after relog is intentionally gated behind runtime acceptance of draw/turn/branch behavior.
