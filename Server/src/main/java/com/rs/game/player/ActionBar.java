@@ -49,6 +49,23 @@ public class ActionBar implements Serializable {
 
 	public static final int REGENERATION_VARBIT_ID = 24939;
 
+	/*
+	 * Construction build-mode visual tokens for the native 1430 action bar.
+	 * These are icon-only item ids; they never enter inventory, never replace
+	 * persistent shortcuts, and never define Construction gameplay identity.
+	 */
+	private static final int[] CONSTRUCTION_BAR_ICON_ITEMS = {
+		2353, // Rail: steel bar
+		2347, // Junction: hammer
+		1755, // Crossing: chisel
+		8794, // Splitter: saw
+		960,  // Object: plank
+		946,  // Erase: knife
+		954,  // Rotate: rope
+		952,  // Undo: spade
+		995   // Favorites: coins
+	};
+
 	public static final int[] CS_DATA_ID = {6734, 6735, 6736, 6737, 6738, 6740, 6739};
 
 	public static GeneralRequirementMap getAbilityData(int type, int abilityId) {
@@ -380,6 +397,7 @@ public class ActionBar implements Serializable {
 	private transient Player player;
 	private transient Map<Integer, Long> cooldowns;
 	private transient long globalCooldown;
+	private transient boolean constructionMode;
 
 
 	public ActionBar() {
@@ -395,6 +413,8 @@ public class ActionBar implements Serializable {
 	}
 
 	public void setShortcut(int index, Shortcut shortcut) {
+		if (constructionMode)
+			return;
 		if(shortcuts[currentBar][index] != null && shortcuts[currentBar][index].getType() == shortcut.getType()
 				&& shortcuts[currentBar][index].getId(player) == shortcut.getId(player)) {
 			return;
@@ -407,6 +427,8 @@ public class ActionBar implements Serializable {
 	}
 
 	public void clearShortcut(int index) {
+		if (constructionMode)
+			return;
 		if (shortcuts[currentBar][index] == null)
 			return;
 		if(getQueueShortcutIndex() == index) 
@@ -496,6 +518,11 @@ public class ActionBar implements Serializable {
 
 
 	public void pushShortcut(int index, int packetId) {
+		if (constructionMode) {
+			if (packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET)
+				activateConstructionSlot(index);
+			return;
+		}
 		//examine replaced with customize keybind
 		if(packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET) {
 			player.getInterfaceManager().openMenu(8, 3);
@@ -1368,8 +1395,67 @@ var1: 4164, 4
 	}
 
 	public void setCurrentBar(int id) {
+		if (constructionMode)
+			return;
 		currentBar = id;
 		refreshActionBar();
+	}
+
+	public boolean isConstructionMode() {
+		return constructionMode;
+	}
+
+	public void beginConstructionMode() {
+		if (player == null)
+			return;
+		constructionMode = true;
+
+		/*
+		 * NIS already mounts 1430 at root component 35. Legacy can visually
+		 * suppress that host, so Construction explicitly remounts/unhides it.
+		 * We do not switch the player's Legacy/NIS preference.
+		 */
+		player.getInterfaceManager().setWindowInterface(35, 1430);
+		player.getPackets().sendHideIComponent(InterfaceManager.FIXED_WINDOW_ID, 35, false);
+		unlockShortcuts(false);
+		refreshConstructionBar();
+	}
+
+	public void endConstructionMode() {
+		if (!constructionMode || player == null)
+			return;
+		constructionMode = false;
+		refreshActionBar();
+		refreshLockBar();
+
+		/*
+		 * Re-emit the player's real interface-mode vars. In Legacy this lets
+		 * the normal gameframe hide/suppress the action-bar host again; in NIS
+		 * it remains where the player already had it.
+		 */
+		player.refreshGameframe();
+		player.refreshMode();
+		refreshButtons();
+	}
+
+	private void activateConstructionSlot(int index) {
+		if (!constructionMode || index < 0 || index >= CONSTRUCTION_BAR_ICON_ITEMS.length)
+			return;
+		player.getPackets().sendClientConsoleCommand("constructionbar " + (index + 1));
+	}
+
+	private void refreshConstructionBar() {
+		if (!constructionMode || player == null)
+			return;
+
+		// Client vars only: persistent shortcuts[][] are intentionally untouched.
+		for (int i = 0; i < shortcuts[currentBar].length; i++)
+			sendShortcutVar(i, 0, -1, true);
+		for (int i = 0; i < CONSTRUCTION_BAR_ICON_ITEMS.length; i++)
+			sendShortcutVar(i, ITEM_SHORTCUT, CONSTRUCTION_BAR_ICON_ITEMS[i], true);
+
+		player.getVarsManager().forceSendVarBit(1892, 1); // visually lock the temporary build bar
+		refreshButtons();
 	}
 
 	public void shareBar() {
@@ -1401,14 +1487,22 @@ var1: 4164, 4
 	}
 
 	public void increaseCurrentBar() {
+		if (constructionMode)
+			return;
 		setCurrentBar(currentBar == shortcuts.length-1 ? 0 : currentBar+1);
 	}
 
 	public void desecreaseCurrentBar() {
+		if (constructionMode)
+			return;
 		setCurrentBar(currentBar == 0 ? shortcuts.length-1 : currentBar-1);
 	}
 
 	public void refreshActionBar() {
+		if (constructionMode) {
+			refreshConstructionBar();
+			return;
+		}
 		player.getVarsManager().sendVarBit(1893, currentBar+1);
 		for(int i = 0; i < shortcuts[currentBar].length; i++)
 			refresh(i, false);
