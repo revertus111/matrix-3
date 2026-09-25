@@ -2,6 +2,7 @@ package game;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -30,7 +31,9 @@ final class LiveModelEditorParts {
     private int selected = -1;
     private int hovered = -1;
     private boolean isolate;
+    private boolean gestureActive;
     private int revision;
+    private int geometryRevision;
 
     synchronized int ensureSource(ObjectDefinitions definition, int objectId, int objectType) {
         if (source != null && source.objectId == objectId && source.objectType == objectType)
@@ -43,7 +46,9 @@ final class LiveModelEditorParts {
         selected = -1;
         hovered = -1;
         isolate = false;
+        gestureActive = false;
         revision++;
+        geometryRevision++;
         if (loaded == null) return 0;
         for (int i = 0; i < loaded.components.length; i++) originals.add(new PartState(i));
         return loaded.components.length;
@@ -57,7 +62,9 @@ final class LiveModelEditorParts {
         selected = -1;
         hovered = -1;
         isolate = false;
+        gestureActive = false;
         revision++;
+        geometryRevision++;
     }
 
     synchronized boolean isReadyFor(int objectId, int objectType) {
@@ -65,10 +72,17 @@ final class LiveModelEditorParts {
     }
 
     synchronized int getRevision() { return revision; }
+    synchronized int getGeometryRevision() { return geometryRevision; }
     synchronized int getPartCount() { return originals.size() + duplicates.size(); }
     synchronized int getSelected() { return selected; }
     synchronized int getHovered() { return hovered; }
     synchronized boolean isIsolate() { return isolate; }
+
+    synchronized int getFaceCount(int index) {
+        PartState state = stateAt(index);
+        if (state == null || source == null) return Integer.MAX_VALUE;
+        return source.components[state.sourcePart].faces.length;
+    }
 
     synchronized boolean hover(int index) {
         int next = index >= 0 && index < getPartCount() ? index : -1;
@@ -105,8 +119,10 @@ final class LiveModelEditorParts {
 
     synchronized boolean select(int index) {
         if (index < 0 || index >= getPartCount()) {
-            selected = -1;
-            revision++;
+            if (selected != -1) {
+                selected = -1;
+                revision++;
+            }
             return false;
         }
         if (selected != index) {
@@ -120,21 +136,38 @@ final class LiveModelEditorParts {
             int mx, int my, int mz, int yaw) {
         PartState state = selectedState();
         if (state == null || state.deleted) return false;
-        sx = clamp(sx, 10, 400);
-        sy = clamp(sy, 10, 400);
-        sz = clamp(sz, 10, 400);
-        mx = clamp(mx, -4096, 4096);
-        my = clamp(my, -4096, 4096);
-        mz = clamp(mz, -4096, 4096);
-        yaw = normalizeDegrees(yaw);
-        if (state.scaleX == sx && state.scaleY == sy && state.scaleZ == sz
-                && state.moveX == mx && state.moveY == my && state.moveZ == mz
-                && state.yaw == yaw) return false;
+        int[] values = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
+        if (sameTransform(state, values)) return false;
         pushUndo();
-        state.scaleX = sx; state.scaleY = sy; state.scaleZ = sz;
-        state.moveX = mx; state.moveY = my; state.moveZ = mz; state.yaw = yaw;
-        revision++;
+        applyTransform(state, values);
+        markGeometryChanged();
         return true;
+    }
+
+    synchronized boolean beginGesture() {
+        PartState state = selectedState();
+        if (state == null || state.deleted) return false;
+        if (!gestureActive) {
+            pushUndo();
+            gestureActive = true;
+        }
+        return true;
+    }
+
+    synchronized boolean updateGestureTransform(int sx, int sy, int sz,
+            int mx, int my, int mz, int yaw) {
+        if (!gestureActive) return false;
+        PartState state = selectedState();
+        if (state == null || state.deleted) return false;
+        int[] values = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
+        if (sameTransform(state, values)) return false;
+        applyTransform(state, values);
+        markGeometryChanged();
+        return true;
+    }
+
+    synchronized void endGesture() {
+        gestureActive = false;
     }
 
     synchronized boolean toggleSelectedHidden() {
@@ -142,7 +175,7 @@ final class LiveModelEditorParts {
         if (state == null || state.deleted) return false;
         pushUndo();
         state.hidden = !state.hidden;
-        revision++;
+        markGeometryChanged();
         return true;
     }
 
@@ -152,7 +185,7 @@ final class LiveModelEditorParts {
         pushUndo();
         state.deleted = true;
         state.hidden = true;
-        revision++;
+        markGeometryChanged();
         return true;
     }
 
@@ -166,7 +199,7 @@ final class LiveModelEditorParts {
         copy.moveX = clamp(copy.moveX + 128, -4096, 4096);
         duplicates.add(copy);
         selected = originals.size() + duplicates.size() - 1;
-        revision++;
+        markGeometryChanged();
         return true;
     }
 
@@ -178,13 +211,61 @@ final class LiveModelEditorParts {
         pushUndo();
         for (PartState state : originals) if (!state.deleted) state.hidden = false;
         for (PartState state : duplicates) if (!state.deleted) state.hidden = false;
-        revision++;
+        markGeometryChanged();
         return true;
     }
 
     synchronized void toggleIsolate() {
         isolate = !isolate;
-        revision++;
+        markGeometryChanged();
+    }
+
+    synchronized boolean replaceSelected(int replacementObjectId, int replacementObjectType,
+            boolean allMatching) {
+        if (source == null || replacementObjectId < 0) return false;
+        PartState state = selectedState();
+        if (state == null || state.deleted) return false;
+        Component selectedComponent = source.components[state.sourcePart];
+        pushUndo();
+        boolean changed = false;
+        if (allMatching) {
+            String signature = selectedComponent.signature;
+            for (PartState candidate : originals) {
+                if (!candidate.deleted
+                        && signature.equals(source.components[candidate.sourcePart].signature)) {
+                    candidate.replacementObjectId = replacementObjectId;
+                    candidate.replacementObjectType = replacementObjectType;
+                    candidate.hidden = false;
+                    changed = true;
+                }
+            }
+            for (PartState candidate : duplicates) {
+                if (!candidate.deleted
+                        && signature.equals(source.components[candidate.sourcePart].signature)) {
+                    candidate.replacementObjectId = replacementObjectId;
+                    candidate.replacementObjectType = replacementObjectType;
+                    candidate.hidden = false;
+                    changed = true;
+                }
+            }
+        } else {
+            state.replacementObjectId = replacementObjectId;
+            state.replacementObjectType = replacementObjectType;
+            state.hidden = false;
+            changed = true;
+        }
+        if (changed) markGeometryChanged();
+        return changed;
+    }
+
+    synchronized boolean clearSelectedReplacement() {
+        PartState state = selectedState();
+        if (state == null || state.replacementObjectId < 0) return false;
+        pushUndo();
+        state.replacementObjectId = -1;
+        state.replacementObjectType = 10;
+        markGeometryChanged();
+        return true;
     }
 
     synchronized boolean undo() {
@@ -195,8 +276,10 @@ final class LiveModelEditorParts {
         duplicates.clear();
         for (PartState state : snapshot.duplicates) duplicates.add(state.copy());
         selected = snapshot.selected;
+        hovered = -1;
         isolate = snapshot.isolate;
-        revision++;
+        gestureActive = false;
+        markGeometryChanged();
         return true;
     }
 
@@ -209,7 +292,9 @@ final class LiveModelEditorParts {
         for (int i = 0; i < originals.size(); i++) {
             PartState state = originals.get(i);
             Component component = source.components[state.sourcePart];
-            boolean visible = !state.hidden && !state.deleted && (!isolate || highlight == i);
+            boolean visible = !state.hidden && !state.deleted
+                    && state.replacementObjectId < 0
+                    && (!isolate || highlight == i);
             if (!visible) {
                 hideFaces(raw, component);
                 continue;
@@ -227,16 +312,58 @@ final class LiveModelEditorParts {
         for (int i = 0; i < duplicates.size(); i++) {
             int combinedIndex = originals.size() + i;
             PartState state = duplicates.get(i);
-            if (state.hidden || state.deleted || (isolate && highlight != combinedIndex)) continue;
-            Class159 raw = source.decode();
+            if (state.hidden || state.deleted || state.replacementObjectId >= 0
+                    || (isolate && highlight != combinedIndex)) continue;
+            Class159 raw = componentOnlyRaw(source.decode(),
+                    source.components[state.sourcePart], state);
             if (raw == null) continue;
-            ensureFaceAlpha(raw);
-            Component keep = source.components[state.sourcePart];
-            for (int part = 0; part < source.components.length; part++)
-                if (part != state.sourcePart) hideFaces(raw, source.components[part]);
-            transformVertices(raw, keep, state);
-            if (highlight == combinedIndex) highlightFaces(raw, keep);
+            if (highlight == combinedIndex) highlightAllFaces(raw);
             raws.add(raw);
+        }
+        return raws;
+    }
+
+    synchronized List<ReplacementRaw> buildReplacementRaws() {
+        if (source == null) return Collections.emptyList();
+        List<ReplacementRaw> raws = new ArrayList<ReplacementRaw>();
+        int highlight = hovered >= 0 ? hovered : selected;
+        int total = getPartCount();
+        for (int index = 0; index < total; index++) {
+            PartState state = stateAt(index);
+            if (state == null || state.hidden || state.deleted || state.replacementObjectId < 0
+                    || (isolate && highlight != index)) continue;
+            Class159 raw = replacementRaw(state, source.components[state.sourcePart]);
+            if (raw == null) continue;
+            if (highlight == index) highlightAllFaces(raw);
+            raws.add(new ReplacementRaw(index, state.replacementObjectId,
+                    state.replacementObjectType, raw));
+        }
+        return raws;
+    }
+
+    synchronized List<PickRaw> buildPickRaws() {
+        if (source == null) return Collections.emptyList();
+        List<PickRaw> raws = new ArrayList<PickRaw>();
+        int total = getPartCount();
+        int highlight = hovered >= 0 ? hovered : selected;
+        for (int index = 0; index < total; index++) {
+            PartState state = stateAt(index);
+            if (state == null || state.hidden || state.deleted
+                    || (isolate && highlight != index)) continue;
+            if (state.replacementObjectId >= 0) {
+                Class159 replacement = replacementRaw(state,
+                        source.components[state.sourcePart]);
+                if (replacement != null) {
+                    raws.add(new PickRaw(index, state.replacementObjectId,
+                            state.replacementObjectType, replacement));
+                }
+            } else {
+                Class159 component = componentOnlyRaw(source.decode(),
+                        source.components[state.sourcePart], state);
+                if (component != null) {
+                    raws.add(new PickRaw(index, source.objectId, source.objectType, component));
+                }
+            }
         }
         return raws;
     }
@@ -292,22 +419,15 @@ final class LiveModelEditorParts {
         if (selected < -1 || selected >= getPartCount()) selected = -1;
         hovered = -1;
         isolate = readBoolean(json, "partIsolate", false);
-        revision++;
+        gestureActive = false;
+        markGeometryChanged();
     }
 
     private Source loadSource(ObjectDefinitions definition, int objectId, int objectType) {
         if (definition == null || definition.aByteArray5644 == null
                 || definition.anIntArrayArray5611 == null) return null;
-        int group = -1;
-        for (int i = 0; i < definition.aByteArray5644.length; i++) {
-            if ((definition.aByteArray5644[i] & 0xff) == objectType) {
-                group = i;
-                break;
-            }
-        }
-        if (group < 0 || group >= definition.anIntArrayArray5611.length
-                || definition.anIntArrayArray5611[group] == null
-                || definition.anIntArrayArray5611[group].length == 0) return null;
+        int group = findModelGroup(definition, objectType);
+        if (group < 0) return null;
 
         int[] modelIds = definition.anIntArrayArray5611[group].clone();
         byte[][] bytes = new byte[modelIds.length][];
@@ -319,7 +439,47 @@ final class LiveModelEditorParts {
         Class159 raw = candidate.decode();
         if (raw == null || raw.anInt1791 <= 0 || raw.anInt1778 <= 0) return null;
         candidate.components = detectComponents(raw);
+        populateComponentBounds(raw, candidate.components);
         return candidate;
+    }
+
+    private static int findModelGroup(ObjectDefinitions definition, int objectType) {
+        if (definition == null || definition.aByteArray5644 == null
+                || definition.anIntArrayArray5611 == null) return -1;
+        for (int i = 0; i < definition.aByteArray5644.length
+                && i < definition.anIntArrayArray5611.length; i++) {
+            if ((definition.aByteArray5644[i] & 0xff) == objectType
+                    && definition.anIntArrayArray5611[i] != null
+                    && definition.anIntArrayArray5611[i].length > 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private Source resolveSource(int objectId, int objectType) {
+        Class613 region = client.aClass613_8605;
+        if (region == null) return null;
+        Class639_Sub16 definitions = region.method7288(0);
+        if (definitions == null) return null;
+        try {
+            ObjectDefinitions definition = (ObjectDefinitions) definitions.getDefinition(
+                    objectId, -1356282071);
+            return loadSource(definition, objectId, objectType);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private Class159 replacementRaw(PartState state, Component target) {
+        Source replacement = resolveSource(state.replacementObjectId,
+                state.replacementObjectType);
+        if (replacement == null) return null;
+        Class159 raw = replacement.decode();
+        if (raw == null || raw.anInt1791 <= 0) return null;
+        autoFitReplacement(raw, target);
+        transformAllAround(raw, target.centerX, target.centerY, target.centerZ, state);
+        return raw;
     }
 
     private static Component[] detectComponents(Class159 raw) {
@@ -367,6 +527,34 @@ final class LiveModelEditorParts {
         return components;
     }
 
+    private static void populateComponentBounds(Class159 raw, Component[] components) {
+        for (Component component : components) {
+            int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+            int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+            for (int vertex : component.vertices) {
+                int x = raw.anIntArray1782[vertex];
+                int y = raw.anIntArray1777[vertex];
+                int z = raw.anIntArray1797[vertex];
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+                if (z < minZ) minZ = z;
+                if (z > maxZ) maxZ = z;
+            }
+            component.centerX = (minX + maxX) / 2;
+            component.centerY = (minY + maxY) / 2;
+            component.centerZ = (minZ + maxZ) / 2;
+            component.sizeX = Math.max(1, maxX - minX);
+            component.sizeY = Math.max(1, maxY - minY);
+            component.sizeZ = Math.max(1, maxZ - minZ);
+            int[] sorted = { component.sizeX, component.sizeY, component.sizeZ };
+            Arrays.sort(sorted);
+            component.signature = component.faces.length + ":" + component.vertices.length
+                    + ":" + sorted[0] + ":" + sorted[1] + ":" + sorted[2];
+        }
+    }
+
     private static void transformVertices(Class159 raw, Component component, PartState state) {
         if (component.vertices.length == 0) return;
         long cx = 0, cy = 0, cz = 0;
@@ -378,10 +566,22 @@ final class LiveModelEditorParts {
         cx /= component.vertices.length;
         cy /= component.vertices.length;
         cz /= component.vertices.length;
+        transformVerticesAround(raw, component.vertices, cx, cy, cz, state);
+    }
+
+    private static void transformAllAround(Class159 raw, int cx, int cy, int cz,
+            PartState state) {
+        int[] vertices = new int[raw.anInt1791];
+        for (int i = 0; i < vertices.length; i++) vertices[i] = i;
+        transformVerticesAround(raw, vertices, cx, cy, cz, state);
+    }
+
+    private static void transformVerticesAround(Class159 raw, int[] vertices,
+            long cx, long cy, long cz, PartState state) {
         double radians = Math.toRadians(state.yaw);
         double sin = Math.sin(radians);
         double cos = Math.cos(radians);
-        for (int vertex : component.vertices) {
+        for (int vertex : vertices) {
             double x = (raw.anIntArray1782[vertex] - cx) * state.scaleX / 100.0;
             double y = (raw.anIntArray1777[vertex] - cy) * state.scaleY / 100.0;
             double z = (raw.anIntArray1797[vertex] - cz) * state.scaleZ / 100.0;
@@ -391,6 +591,89 @@ final class LiveModelEditorParts {
             raw.anIntArray1777[vertex] = (int) Math.round(cy + y + state.moveY);
             raw.anIntArray1797[vertex] = (int) Math.round(cz + rz + state.moveZ);
         }
+    }
+
+    private static void autoFitReplacement(Class159 raw, Component target) {
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (int i = 0; i < raw.anInt1791; i++) {
+            int x = raw.anIntArray1782[i], y = raw.anIntArray1777[i], z = raw.anIntArray1797[i];
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+            if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+        }
+        int cx = (minX + maxX) / 2;
+        int cy = (minY + maxY) / 2;
+        int cz = (minZ + maxZ) / 2;
+        int sx = Math.max(1, maxX - minX);
+        int sy = Math.max(1, maxY - minY);
+        int sz = Math.max(1, maxZ - minZ);
+
+        boolean rotateXZ = (target.sizeX >= target.sizeZ) != (sx >= sz);
+        int sourceLongest = Math.max(sy, Math.max(sx, sz));
+        int targetLongest = Math.max(target.sizeY, Math.max(target.sizeX, target.sizeZ));
+        double scale = targetLongest / (double) Math.max(1, sourceLongest);
+
+        for (int i = 0; i < raw.anInt1791; i++) {
+            double x = raw.anIntArray1782[i] - cx;
+            double y = raw.anIntArray1777[i] - cy;
+            double z = raw.anIntArray1797[i] - cz;
+            if (rotateXZ) {
+                double swap = x;
+                x = z;
+                z = -swap;
+            }
+            raw.anIntArray1782[i] = (int) Math.round(target.centerX + x * scale);
+            raw.anIntArray1777[i] = (int) Math.round(target.centerY + y * scale);
+            raw.anIntArray1797[i] = (int) Math.round(target.centerZ + z * scale);
+        }
+    }
+
+    private static Class159 componentOnlyRaw(Class159 sourceRaw,
+            Component component, PartState state) {
+        if (sourceRaw == null || component == null) return null;
+        int[] map = new int[sourceRaw.anInt1791];
+        Arrays.fill(map, -1);
+        Class159 raw = new Class159(component.vertices.length, component.faces.length, 0);
+        raw.anInt1773 = sourceRaw.anInt1773;
+        raw.anInt1791 = component.vertices.length;
+        raw.anInt1778 = component.faces.length;
+
+        for (int i = 0; i < component.vertices.length; i++) {
+            int old = component.vertices[i];
+            map[old] = i;
+            raw.anIntArray1782[i] = sourceRaw.anIntArray1782[old];
+            raw.anIntArray1777[i] = sourceRaw.anIntArray1777[old];
+            raw.anIntArray1797[i] = sourceRaw.anIntArray1797[old];
+            if (sourceRaw.anIntArray1813 != null && old < sourceRaw.anIntArray1813.length)
+                raw.anIntArray1813[i] = sourceRaw.anIntArray1813[old];
+        }
+
+        for (int i = 0; i < component.faces.length; i++) {
+            int face = component.faces[i];
+            raw.aShortArray1786[i] = (short) map[sourceRaw.aShortArray1786[face] & 0xffff];
+            raw.aShortArray1787[i] = (short) map[sourceRaw.aShortArray1787[face] & 0xffff];
+            raw.aShortArray1789[i] = (short) map[sourceRaw.aShortArray1789[face] & 0xffff];
+            raw.faceColours[i] = sourceRaw.faceColours == null ? 0 : sourceRaw.faceColours[face];
+            raw.faceAlpha[i] = sourceRaw.faceAlpha == null ? 0 : sourceRaw.faceAlpha[face];
+            raw.faceTextures[i] = -1;
+            raw.faceTextureIndexes[i] = -1;
+            raw.aByteArray1792[i] = sourceRaw.aByteArray1792 == null ? 0 : sourceRaw.aByteArray1792[face];
+            raw.aByteArray1799[i] = sourceRaw.aByteArray1799 == null ? 0 : sourceRaw.aByteArray1799[face];
+            raw.anIntArray1780[i] = sourceRaw.anIntArray1780 == null ? 0 : sourceRaw.anIntArray1780[face];
+        }
+
+        PartState local = state.copy();
+        Component localComponent = new Component(sequence(component.faces.length),
+                sequence(component.vertices.length));
+        transformVertices(raw, localComponent, local);
+        return raw;
+    }
+
+    private static int[] sequence(int length) {
+        int[] values = new int[length];
+        for (int i = 0; i < length; i++) values[i] = i;
+        return values;
     }
 
     private static void hideFaces(Class159 raw, Component component) {
@@ -406,15 +689,29 @@ final class LiveModelEditorParts {
         }
     }
 
+    private static void highlightAllFaces(Class159 raw) {
+        ensureFaceAlpha(raw);
+        for (int face = 0; face < raw.anInt1778; face++) {
+            raw.faceAlpha[face] = 0;
+            raw.faceColours[face] = HIGHLIGHT_COLOUR;
+            if (raw.faceTextures != null) raw.faceTextures[face] = (short) -1;
+            if (raw.faceTextureIndexes != null) raw.faceTextureIndexes[face] = (short) -1;
+        }
+    }
+
     private static void ensureFaceAlpha(Class159 raw) {
         if (raw.faceAlpha == null || raw.faceAlpha.length < raw.anInt1778)
             raw.faceAlpha = new byte[raw.anInt1778];
     }
 
     private PartState selectedState() {
-        if (selected < 0) return null;
-        if (selected < originals.size()) return originals.get(selected);
-        int copy = selected - originals.size();
+        return stateAt(selected);
+    }
+
+    private PartState stateAt(int index) {
+        if (index < 0) return null;
+        if (index < originals.size()) return originals.get(index);
+        int copy = index - originals.size();
         return copy >= 0 && copy < duplicates.size() ? duplicates.get(copy) : null;
     }
 
@@ -423,10 +720,18 @@ final class LiveModelEditorParts {
         undo.addLast(new Snapshot(originals, duplicates, selected, isolate));
     }
 
+    private void markGeometryChanged() {
+        revision++;
+        geometryRevision++;
+    }
+
     private static String suffix(PartState state) {
-        if (state.deleted) return "  [deleted]";
-        if (state.hidden) return "  [hidden]";
-        return "";
+        StringBuilder suffix = new StringBuilder();
+        if (state.deleted) suffix.append("  [deleted]");
+        else if (state.hidden) suffix.append("  [hidden]");
+        if (state.replacementObjectId >= 0)
+            suffix.append("  [replace #").append(state.replacementObjectId).append(']');
+        return suffix.toString();
     }
 
     private static void appendState(StringBuilder out, PartState state, int index, boolean duplicate) {
@@ -444,6 +749,8 @@ final class LiveModelEditorParts {
                 .append(", \"yaw\": ").append(state.yaw)
                 .append(", \"hidden\": ").append(state.hidden)
                 .append(", \"deleted\": ").append(state.deleted)
+                .append(", \"replacementObjectId\": ").append(state.replacementObjectId)
+                .append(", \"replacementObjectType\": ").append(state.replacementObjectType)
                 .append("}");
     }
 
@@ -457,6 +764,8 @@ final class LiveModelEditorParts {
         state.yaw = normalizeDegrees(readInt(body, "yaw", 0));
         state.hidden = readBoolean(body, "hidden", false);
         state.deleted = readBoolean(body, "deleted", false);
+        state.replacementObjectId = readInt(body, "replacementObjectId", -1);
+        state.replacementObjectType = readInt(body, "replacementObjectType", 10);
     }
 
     private static int readInt(String text, String key, int fallback) {
@@ -469,6 +778,28 @@ final class LiveModelEditorParts {
         Matcher matcher = Pattern.compile("\\\"" + Pattern.quote(key)
                 + "\\\"\\s*:\\s*(true|false)", Pattern.CASE_INSENSITIVE).matcher(text);
         return matcher.find() ? Boolean.parseBoolean(matcher.group(1)) : fallback;
+    }
+
+    private static int[] sanitizeTransform(int sx, int sy, int sz,
+            int mx, int my, int mz, int yaw) {
+        return new int[] {
+                clamp(sx, 10, 400), clamp(sy, 10, 400), clamp(sz, 10, 400),
+                clamp(mx, -4096, 4096), clamp(my, -4096, 4096),
+                clamp(mz, -4096, 4096), normalizeDegrees(yaw)
+        };
+    }
+
+    private static boolean sameTransform(PartState state, int[] values) {
+        return state.scaleX == values[0] && state.scaleY == values[1]
+                && state.scaleZ == values[2] && state.moveX == values[3]
+                && state.moveY == values[4] && state.moveZ == values[5]
+                && state.yaw == values[6];
+    }
+
+    private static void applyTransform(PartState state, int[] values) {
+        state.scaleX = values[0]; state.scaleY = values[1]; state.scaleZ = values[2];
+        state.moveX = values[3]; state.moveY = values[4]; state.moveZ = values[5];
+        state.yaw = values[6];
     }
 
     private static int find(int[] parent, int value) {
@@ -505,6 +836,32 @@ final class LiveModelEditorParts {
         return normalized < 0 ? normalized + 360 : normalized;
     }
 
+    static final class PickRaw {
+        final int partIndex;
+        final int materialObjectId;
+        final int materialObjectType;
+        final Class159 raw;
+        PickRaw(int partIndex, int materialObjectId, int materialObjectType, Class159 raw) {
+            this.partIndex = partIndex;
+            this.materialObjectId = materialObjectId;
+            this.materialObjectType = materialObjectType;
+            this.raw = raw;
+        }
+    }
+
+    static final class ReplacementRaw {
+        final int partIndex;
+        final int objectId;
+        final int objectType;
+        final Class159 raw;
+        ReplacementRaw(int partIndex, int objectId, int objectType, Class159 raw) {
+            this.partIndex = partIndex;
+            this.objectId = objectId;
+            this.objectType = objectType;
+            this.raw = raw;
+        }
+    }
+
     private static final class Builder {
         final List<Integer> faces = new ArrayList<Integer>();
         final LinkedHashSet<Integer> vertices = new LinkedHashSet<Integer>();
@@ -513,6 +870,9 @@ final class LiveModelEditorParts {
     private static final class Component {
         final int[] faces;
         final int[] vertices;
+        int centerX, centerY, centerZ;
+        int sizeX, sizeY, sizeZ;
+        String signature = "";
         Component(int[] faces, int[] vertices) {
             this.faces = faces;
             this.vertices = vertices;
@@ -524,12 +884,18 @@ final class LiveModelEditorParts {
         int scaleX = 100, scaleY = 100, scaleZ = 100;
         int moveX, moveY, moveZ, yaw;
         boolean hidden, deleted;
+        int replacementObjectId = -1;
+        int replacementObjectType = 10;
+
         PartState(int sourcePart) { this.sourcePart = sourcePart; }
+
         PartState copy() {
             PartState copy = new PartState(sourcePart);
             copy.scaleX = scaleX; copy.scaleY = scaleY; copy.scaleZ = scaleZ;
             copy.moveX = moveX; copy.moveY = moveY; copy.moveZ = moveZ; copy.yaw = yaw;
             copy.hidden = hidden; copy.deleted = deleted;
+            copy.replacementObjectId = replacementObjectId;
+            copy.replacementObjectType = replacementObjectType;
             return copy;
         }
     }
@@ -554,12 +920,14 @@ final class LiveModelEditorParts {
         final int[] modelIds;
         final byte[][] bytes;
         Component[] components = new Component[0];
+
         Source(int objectId, int objectType, int[] modelIds, byte[][] bytes) {
             this.objectId = objectId;
             this.objectType = objectType;
             this.modelIds = modelIds;
             this.bytes = bytes;
         }
+
         Class159 decode() {
             Class159[] raws = new Class159[bytes.length];
             for (int i = 0; i < bytes.length; i++) {
