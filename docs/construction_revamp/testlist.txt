@@ -1003,3 +1003,11 @@ Phase 3 / Bundle 3.1 — Processing Core: Wood -> Planks (2026-09-25)
 [ ] Runtime: Saw another Plank -> Wood=6 and Planks=2; no unrelated resource changes.
 [ ] Runtime: set Planks to full capacity, attempt Saw 1 Plank -> operation is blocked and Wood amount is unchanged.
 [ ] Regression: starter shelter / existing settlement remains complete without requiring Planks.
+
+
+Rail authored-edge + capacity runtime gate (2026-09-25)
+- Clear Builds and create one closed loop by actually dragging the final segment onto the start tile. All four corners must remain stable.
+- Create a second rail one tile beside/parallel to the first without dragging between them; neither network may auto-connect or alter the other's corners.
+- Start from the middle of an existing rail and deliberately drag outward; that authored branch must connect.
+- Continue building until the logical/physical network exceeds 64 pieces; no track may disappear or truncate at piece 64.
+- Keep Build Palette Debug OFF for the normal pass. If any geometry changes unexpectedly, enable Debug, reproduce once, and provide the matching PNG + rail_runtime_debug.txt.
