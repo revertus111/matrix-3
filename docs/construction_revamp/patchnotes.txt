@@ -1484,3 +1484,11 @@
 - Until dedicated crossing/switch art exists, a gesture may branch FROM existing rail and may connect INTO existing rail, but first contact with pre-existing topology becomes the gesture endpoint; the drag cannot continue through it.
 - This prevents one gesture from silently creating multiple degree-3/4 crossings while preserving the requested middle-branch workflow.
 - Debug RAIL_DEBUG now reports contactStop=x,y when this guard fires.
+
+
+2026-09-25 - Construction Build Hotbar H1
+- Added a separate nine-slot Construction build hotbar overlay; Matrix3's combat/action bar is unchanged.
+- While the Construction palette is open, number keys 1-9 select hotbar actions.
+- Live slots: Rail, last selected non-rail Object, Eraser, Rotate +90, Undo. Junction/Crossing/Splitter/Favorites are visible reserved slots and perform no fake placement.
+- Hotbar follows palette show/hide lifecycle and mirrors selection/eraser state.
+- Normal Rail retains first-existing-contact clamp; special overlap semantics remain owned by future explicit rail tools.
