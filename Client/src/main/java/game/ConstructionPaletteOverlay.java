@@ -343,6 +343,13 @@ public final class ConstructionPaletteOverlay {
             long now = System.currentTimeMillis();
             if (now <= clearBuildsConfirmUntil) {
                 ClientConsoleBridge.queueConsoleCommand("itembrowser settlement clearbuilds");
+                /*
+                 * Clear Builds destroys the server-owned physical rails. Reset
+                 * the client topology in the same confirmed action so the next
+                 * rail commit cannot try to atomically replace rails that no
+                 * longer exist on the server.
+                 */
+                RailRoutePreview.clearRoute();
                 clearBuildsConfirmUntil = 0L;
             } else {
                 clearBuildsConfirmUntil = now + 3500L;
