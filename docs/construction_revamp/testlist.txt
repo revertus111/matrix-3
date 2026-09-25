@@ -918,3 +918,10 @@ Minecart Object Animation Discovery — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] If 8831 is not the minecart in revision 830, search "Mine cart" by name and record the matching object ID + animation ID(s).
 [ ] Spawn-preview the matching cart object only if needed to visually confirm the asset.
 
+
+
+Rail Network V1 correction runtime gate (2026-09-25)
+- Build a straight -> 90-degree curve -> straight route and confirm no straight 46353 remains visibly underneath/through the curve.
+- Extend the same network with at least two additional drags; confirm each committed segment remains instead of the newest drag replacing the prior one.
+- Use Clear Builds and confirm the rails disappear. Without restarting/rearming the client, build a new multi-drag network and confirm the second and later drags accumulate normally.
+- Start a drag from the middle of an existing straight and confirm the branch is retained with the original network.
