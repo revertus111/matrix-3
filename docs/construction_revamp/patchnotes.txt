@@ -1502,3 +1502,12 @@
 - Successful worker processing calls the existing atomic 2 Wood -> 1 Plank transaction, applies worker needs cost and awards 18 Crafting XP.
 - Pause, manual worker orders, critical needs, job disable and workstation removal release processing reservations without consuming materials.
 - Updated Con Revamp selected-worker controls with Process Wood and Carpenter. No unverified processing animation was added.
+
+
+2026-09-25 - Native Construction action-bar retrofit
+- Superseded the runtime-working floating Construction JWindow with Matrix3's native action bar interface 1430 at root 1477 component 35.
+- Construction mode now temporarily publishes nine build-tool icon tokens to native action-bar client vars while preserving the player's persistent ActionBar.shortcuts[][] unchanged.
+- Native 1430 primary clicks are intercepted during Construction and round-trip through packet 69 as constructionbar <slot>, then reuse the same client tool actions as 1-9 hotkeys.
+- NIS reuses its normal 1430 host. Legacy explicitly remounts/unhides 1430 for the Construction session without changing Player.legacyMode; closing the palette restores real action-bar vars/lock state and re-emits interface-mode vars.
+- Settlement teardown also ends Construction action-bar mode so exit/teleport/logout cannot strand the temporary build bar.
+- Initial visual tokens are icon-only item IDs and are not inventory items, persistent shortcuts or Construction identity; dedicated sprites/labels can replace them later.
