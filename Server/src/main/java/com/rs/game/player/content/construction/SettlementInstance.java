@@ -451,8 +451,8 @@ public final class SettlementInstance {
     }
 
     public synchronized String stageOldRailRoutePiece(int objectId, int worldX, int worldY, int plane) {
-        if (pendingRailOld.size() >= 64) {
-            return "Rail old-route staging exceeds 64 pieces.";
+        if (pendingRailOld.size() >= 256) {
+            return "Rail old-route staging exceeds 256 pieces.";
         }
         pendingRailOld.add(new int[] { objectId, worldX, worldY, plane });
         return null;
@@ -460,8 +460,8 @@ public final class SettlementInstance {
 
     public synchronized String stageNewRailRoutePiece(
             String key, int worldX, int worldY, int plane, int rotation) {
-        if (pendingRailNew.size() >= 64) {
-            return "Rail new-route staging exceeds 64 pieces.";
+        if (pendingRailNew.size() >= 256) {
+            return "Rail new-route staging exceeds 256 pieces.";
         }
         pendingRailNew.add(new String[] { key, Integer.toString(worldX), Integer.toString(worldY),
                 Integer.toString(plane), Integer.toString(rotation) });
@@ -520,8 +520,8 @@ public final class SettlementInstance {
                 || newPlanes.length != newCount || newRotations.length != newCount) {
             return "Rail route edit data lengths do not match.";
         }
-        if (oldCount > 64 || newCount > 64 || (oldCount <= 0 && newCount <= 0)) {
-            return "Rail network edit exceeds the 64-piece delta limit or is empty.";
+        if (oldCount > 256 || newCount > 256 || (oldCount <= 0 && newCount <= 0)) {
+            return "Rail network edit exceeds the 256-piece delta limit or is empty.";
         }
 
         java.util.List<SettlementPlacedPiece> oldPieces =
