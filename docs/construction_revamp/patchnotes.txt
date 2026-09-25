@@ -1318,3 +1318,12 @@
 - Removed the settlement-only Class523 scene-radius expansion and Class174_Sub1 terrain-fog bypass. Those were symptom patches and runtime evidence showed they did not solve the beige cutoff.
 - Resulting ownership is intentionally narrow: ConstructionBuildCamera owns RTS position/orientation/input; Matrix3 vanilla camera/scene/environment/terrain rendering owns rendering.
 - Runtime gate: reproduce the prior zoomed-out settlement view and compare directly with vanilla detached camera behavior before any further renderer modification.
+
+
+2026-09-24 - Packet-safe atomic rail endpoint replacement
+- Reclassified the malformed U-shaped runtime result after visible OLD/NEW evidence: endpointEdit=true and fixedA=true were correct, while the prior atomic replacement was being serialized into one oversized Matrix3 COMMANDS_PACKET.
+- ClientConsoleBridge's 252-byte command guard is restored; the prior 8192 allowance was invalid for this packet path.
+- Rail endpoint edits now stage old/new route data through bounded <=220-character command chunks, then commit once server-side.
+- SettlementInstance owns short-lived staging and invokes the existing atomic replace only after all chunks arrive, preserving all-or-nothing persistent mutation.
+- The visible replacement preview can no longer be mistaken for successful persistence caused by an oversized command failing to reach the server correctly.
+- No curve geometry/rotation math changed in this correction.
