@@ -46,3 +46,19 @@ Bundle 2.2 carryover
 
 Bundle 2.1 compile correction
 [ ] Eclipse/Java 8 clean-build confirms ConsoleTheme.styleList(JList<?>) resolves and LiveModelEditorWindow.java line 331 compiles.
+
+Bundle 2.2 - in-client overlay + hover preview
+[ ] Eclipse/Java 8 clean-build Client after the overlay rewrite.
+[ ] Open Smelter 29394 -> Dev > Edit Model Live and confirm the editor appears as a compact overlay attached over the game client, not as the old independent framed window.
+[ ] Move/resize the Matrix3 client and confirm the overlay follows the game canvas.
+[ ] Drag the overlay title bar and confirm it can be repositioned within the client area.
+[ ] Confirm the overlay uses the dark/brown/gold RuneScape-style skin and no longer requires the large scroll-heavy Bundle 2 window.
+[ ] Move the mouse over Part rows without clicking and confirm the corresponding connected component highlight changes live in-world.
+[ ] Move the mouse out of the parts list and confirm the last clicked/locked selected part becomes highlighted again.
+[ ] Click a Part row and confirm it remains the authoritative selection for transforms after hover preview clears.
+[ ] Verify Isolate, Show All, Hide, Duplicate, Delete, Undo, part transforms and whole-clone controls still work from the overlay.
+[ ] Save/load JSON v2 from the overlay and confirm hover state is not persisted while clicked selection/part edits are preserved.
+[ ] Regression: normal game scene interaction outside the overlay remains usable and the stock source object/cache remains unchanged.
+
+Bundle 2.3 carryover
+[ ] Do not mark 3D world hover/click picking complete from list-hover behavior; actual screen-to-rendered-component picking remains unimplemented.
