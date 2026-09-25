@@ -79,3 +79,25 @@ Bundle 2.3A - target replacement + editor input ownership
 
 Bundle 2.3B carryover under current AAA
 [ ] After 2.3A passes, trace and implement actual 3D component hover/click selection against the single editable replacement.
+
+Bundle 2.3B - true world pick + mouse manipulation
+[ ] Eclipse/Java 8 clean-build after component-only pick-model and mouse-drag additions.
+[ ] Hover several visible Smelter components directly in the 3D world and confirm the white highlight follows the geometry under the cursor.
+[ ] Hover one of the repeated side bars specifically and confirm a bar-sized component highlights rather than the whole Smelter.
+[ ] Left-click a hovered part and confirm the overlay list locks/selects the same Part index.
+[ ] G then left-drag with Free axis and confirm the selected component moves while the player remains planted.
+[ ] Press X/Y/Z during Move and confirm the drag is constrained to the requested model axis; press F to return to free screen-plane movement.
+[ ] R then drag horizontally and confirm only selected-part yaw changes.
+[ ] S then drag and confirm uniform scale in Free mode; X/Y/Z constrain scale to that axis.
+[ ] Ctrl+Z after a long drag and confirm the whole drag is undone as one edit operation.
+[ ] Confirm right/middle camera viewing controls still work while left-click remains editor-owned.
+
+Bundle 2.4A - Construction material replacement
+[ ] Select a Smelter side-bar component in-world and choose a Construction material from the replacement picker.
+[ ] Click Replace Part and confirm the stock bar disappears while the replacement geometry appears at the same logical part location.
+[ ] Use G/R/S to fine-align the replacement without affecting the rest of the Smelter.
+[ ] Restore and confirm the untouched source bar returns.
+[ ] Select a repeated bar and click Replace Matches; confirm geometrically matching repeated bars change together while unrelated components stay stock.
+[ ] Test at least Wooden fence 13450/type 0, Floor decoration 13684/type 22, Door 13344/type 0, Bed 14872/type 10 and note any catalog entry whose current provisional object art is unsuitable.
+[ ] Save project JSON v3 with one replacement and one Replace Matches group, change the session, reload and confirm replacement object IDs/types and transforms restore.
+[ ] Exit Edit and confirm the normal stock source object returns with no cache/server/world changes.
