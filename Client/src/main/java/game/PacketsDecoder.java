@@ -1796,7 +1796,9 @@ public class PacketsDecoder implements Interface52 {
 		}
 		if (class195.currentPacket == IncomingPacket.CLIENT_COMMAND) {
 			String string = buf.readString(1295706626);
-			Class266.method3632(string, false, false, 1803040773);
+			if (!ConstructionBuildHotbar.handleServerCommand(string)) {
+				Class266.method3632(string, false, false, 1803040773);
+			}
 			class195.currentPacket = null;
 			return true;
 		}
