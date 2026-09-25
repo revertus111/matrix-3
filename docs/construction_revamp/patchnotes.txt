@@ -1356,3 +1356,10 @@
 - Confirmed Clear Builds now resets the client RailRoutePreview logical topology at the same time the persistent server build clear is queued; subsequent rail drags no longer inherit a stale old-physical snapshot that the server has already deleted.
 - Curve resolution now reserves the logical corner plus the first connected tile on each curve leg after emitting CURVE_RAIL_LAYOUT_01, preventing straight object 46353 from rendering through the accepted curve model footprint.
 - Rail topology, arbitrary existing-tile branch origins, packet-safe atomic replacement and temporary junction behavior are unchanged.
+
+
+2026-09-25 - Bundle 2.4 vanilla context controls
+- Added world right-click Clear Selection for committed RTS worker/self selections.
+- Routed vanilla first-option starter Wood/Stone/Ore object actions and Food NPC actions to selected workers.
+- Generalized server RTS gather validation to object/NPC SettlementResourceNode sources while preserving the old object command form.
+- Ordinary world clicks keep the committed selection; no worker policy/persistence owner changed.

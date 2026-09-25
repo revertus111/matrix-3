@@ -395,7 +395,8 @@ Phase 2 Bundle 2.4 — RTS radial multi-worker control
 [x] Click semantics source: RWS requires at least a 6px mouse drag before replacing the committed selection; an ordinary click preserves the current group and falls through to Matrix3 interaction.
 [x] Self-selection source: local player inclusion is detected by the same world-space circle, rendered with the same layered GFX 4171 ring and mirrored to SettlementInstance as transient self membership only.
 [x] RTS Move source: Matrix3 action 23 (Walk Here) mirrors a transient move order to the server-owned selected workers; if self is selected the normal player Walk Here continues, otherwise the player remains planted.
-[x] RTS Gather source: starter tree object 1276 first object action mirrors a transient gather order to selected workers; if self is selected the normal player Chop continues too.
+[x] RTS Gather source: vanilla first object option mirrors Wood 1276, Stone 11933 and Basic ore 11936 to selected workers; vanilla first NPC option mirrors Food spot 327. Right-click choosing the same vanilla option reaches the identical action dispatch.
+[x] Clear-selection menu source: while a committed selection exists, Matrix3 world ground/object/NPC menus add exactly one Clear Selection option; choosing it clears local rings/self state and the server-owned transient selection.
 [x] Manual order ownership: transient Move/Gather state lives only in SettlementWorkerNpc and resumes normal worker policy after completion; no save schema or Allowed Jobs rewrite is introduced.
 [x] Gather range guard: resource arrival requires explicit adjacency after calcFollow; zero queued route steps outside physical interaction range can no longer start gathering.
 [ ] Runtime: drag-select one or more workers and release; the large drag circle disappears while every committed worker keeps its small layered selection rings visible and following movement.
@@ -405,8 +406,10 @@ Phase 2 Bundle 2.4 — RTS radial multi-worker control
 [ ] Runtime: include the local player in the drag; self receives the same persistent selected ring and Selection Status reports self alongside any Worker IDs.
 [ ] Runtime: with workers selected but self NOT selected, Walk Here moves the selected workers to the clicked tile while the player stays planted.
 [ ] Runtime: with workers + self selected, Walk Here moves both the player (vanilla Matrix3 movement) and selected workers toward the same destination.
-[ ] Runtime: with selected workers, right-click starter tree -> Chop; workers path all the way into adjacent interaction range before the chop animation/resource gather starts.
-[ ] Runtime: repeat tree Chop with self also selected; normal player Woodcutting continues while selected workers receive the same gather order.
+[ ] Runtime: with selected workers, use normal left-click and right-click menu actions on Wood, Stone and Basic ore; workers path all the way into valid interaction range before the gather animation/resource action starts.
+[ ] Runtime: use the starter Food NPC's normal first skilling option; selected workers receive the Food gather order through the NPC source path.
+[ ] Runtime: repeat a starter resource action with self also selected; normal player skilling continues while selected workers receive the same order.
+[ ] Runtime: right-click ground, a resource object and an NPC while selected; each menu exposes one Clear Selection option. Choosing it removes unit rings and clears server selection without changing worker policy.
 [ ] Runtime regression: autonomous Lumberjack no longer chops a distant tree after only one step; it physically reaches interaction range before gathering and then hauls normally.
 [ ] Runtime: Clear Selection removes the persistent unit rings; committing a different subset moves the rings to only the new selection.
 [ ] Runtime: settlement exit/re-entry clears transient selection and requires a fresh drag; saved worker policies remain unchanged.
