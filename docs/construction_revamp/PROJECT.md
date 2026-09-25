@@ -1491,3 +1491,9 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - The next evidence boundary is now explicit in the visible Rail Debug panel: MODE endpointEdit/fixedA, complete OLD_PIECE route before B movement, and complete replacement PIECE route after B movement.
 - No geometry guess was made. One screenshot after fresh A-to-B -> exact-B 90-degree edit decides the owner: endpointEdit=false means endpoint-hit ownership is wrong; malformed replacement PIECE rows mean the client router is wrong; correct replacement PIECE rows with malformed world objects mean the server application/state path is wrong.
 - Resume here: obtain that single visible screenshot, classify the failing owner, then patch only that owner.
+
+## RTS vanilla-render convergence — 2026-09-24
+- SAP AAA trace established verified-static ownership: Matrix3's stock detached camera path already consumes Class24.aClass411_Sub1_158 through Class411_Sub1.method5027(...) before the normal Class343 scene render.
+- Settlement RTS renderer overrides for scene focus, Class523 radius, and Class174_Sub1 fog were removed after failed runtime evidence.
+- ConstructionBuildCamera now remains responsible for detached RTS camera controls/state while vanilla Matrix3 remains responsible for scene/environment/terrain rendering.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST. Do not reintroduce renderer-specific RTS hacks unless vanilla-convergence runtime evidence identifies one exact remaining divergence.
