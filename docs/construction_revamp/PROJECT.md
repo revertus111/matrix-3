@@ -1505,3 +1505,12 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Endpoint edits now use bounded staging commands (<=220 characters) for old/new route pieces and one final server commit. SettlementInstance still performs the actual mutation atomically after complete staging.
 - Client command guard is restored to 252. Curve geometry remains unchanged pending this transport correction's runtime result.
 - Resume gate: fresh A-to-B -> exact-B 90-degree move -> chat must report 'Rail route replaced atomically' and only one route may remain; move B once more and exit/re-enter to verify persistence.
+
+
+## Continuous Rail Path V1 — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under active AAA.
+- User-confirmed target replaces the rejected endpoint-recalculation abstraction: rails are an authored continuous path with one START and one current END. Each drag beginning exactly on END appends another segment; previous segments do not move or get recalculated.
+- Same-axis extension appends straight pieces. A 90-degree direction change inserts the accepted three-piece curve at END, then appends the outgoing straight. Repeated extensions support paths such as START -> straight -> curve -> straight -> curve -> straight -> END.
+- Client keeps the complete authored physical path for the current session and submits old complete path -> new complete path through the existing packet-safe atomic server replacement. Exact overlapping seam/curve tiles are replaced inside the authored path; unrelated builds remain protected server-side.
+- CARRYOVER after runtime acceptance: persist authored path identity/end/incoming direction across relog so an existing saved path can be extended after client-session state is lost; branches/T/switches remain separate.
+- Resume gate: build at least four continuous segments with multiple 90-degree turns. Each END extension must leave all earlier segments untouched and produce exactly one connected persistent path.
