@@ -24,10 +24,10 @@ The same transform/selection foundation is intended to become the developer-grad
 | Private in-world runtime model clone | ✅ Complete | Runtime-confirmed on the Smelter reference asset: the private clone renders in the live scene without replacing the source object. |
 | Live whole-model transforms | ✅ Complete | Runtime-confirmed in the live client; independent scale, translation and yaw visibly update the private clone. |
 | JSON project save/load | ⚠️ Needs runtime verification | Authoring state saves under dev-model-projects and can be loaded back into the live preview. |
-| Mesh component selection/editing | ⚠️ Needs runtime verification | Bundle 2.1 adds connected-component editing; Bundle 2.2 moves the editor into an owned in-client overlay and adds list-hover live preview. True 3D world hover/click picking remains Bundle 2.3 carryover. |
+| Mesh component selection/editing | ⚠️ Needs runtime verification | Connected-part editing, overlay hover, source replacement, Model.method1376 world picking, click selection, mouse G/R/S transforms and Construction-catalog part replacement are implemented; consolidated runtime verification is pending. |
 | In-client model-editor overlay | ⚠️ Needs runtime verification | RuneScape-styled owned JWindow follows the Matrix3 game canvas, supports drag repositioning and hover-preview rows. Bundle 2.3A adds true edit-session ownership: input lock, same-target resume and source-object visual replacement. |
 | Permanent revision-830 model compiler | ❌ Not started | Requires validated encoder, model-ID allocation, backup, write/readback and hot reload. |
-| Construction Detail Mode reuse | ❌ Not started | Future player-facing placement/composition uses the shared transform/selection foundation and settlement persistence. |
+| Construction Detail Mode reuse | 🔵 Foundation in progress | Live Model Editor now consumes the Construction BuildPiece catalog for non-destructive part replacement; player-facing settlement Detail Mode and server-validated persistence remain future work. |
 
 ## Evidence
 
