@@ -1350,3 +1350,9 @@
 - Object Explorer shows the selected object's cache animation ID(s), allowing direct minecart asset inspection without scanning ~28k player animations.
 - No rail runtime behavior, cart movement, or player riding animation changed.
 
+
+
+2026-09-25 - Rail Network V1 clear-state + curve exclusivity correction
+- Confirmed Clear Builds now resets the client RailRoutePreview logical topology at the same time the persistent server build clear is queued; subsequent rail drags no longer inherit a stale old-physical snapshot that the server has already deleted.
+- Curve resolution now reserves the logical corner plus the first connected tile on each curve leg after emitting CURVE_RAIL_LAYOUT_01, preventing straight object 46353 from rendering through the accepted curve model footprint.
+- Rail topology, arbitrary existing-tile branch origins, packet-safe atomic replacement and temporary junction behavior are unchanged.
