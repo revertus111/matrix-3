@@ -83,6 +83,13 @@ public final class RailRoutePreview {
     private static volatile int continuationHorizontalDirection;
     private static volatile int continuationVerticalDirection;
     private static volatile boolean editingEndpointB;
+    private static final java.util.List<RoutePiece> authoredPath =
+            new java.util.ArrayList<RoutePiece>();
+    private static volatile int pathEndX = -1;
+    private static volatile int pathEndY = -1;
+    private static volatile int pathPlane = -1;
+    private static volatile int pathIncomingX;
+    private static volatile int pathIncomingY;
 
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String eventState = "A->B rail preview disabled.";
@@ -264,6 +271,12 @@ public final class RailRoutePreview {
         dragging = false;
         editingEndpointB = false;
         committed = false;
+        authoredPath.clear();
+        pathEndX = -1;
+        pathEndY = -1;
+        pathPlane = -1;
+        pathIncomingX = 0;
+        pathIncomingY = 0;
         liveStartX = -1;
         liveStartY = -1;
         liveEndX = -1;
@@ -742,16 +755,15 @@ public final class RailRoutePreview {
             return false;
         }
 
-        editingEndpointB = committed && committedPlane == hoveredPlane
-                && committedEndX == hoveredWorldX && committedEndY == hoveredWorldY;
+        editingEndpointB = !authoredPath.isEmpty() && pathPlane == hoveredPlane
+                && pathEndX == hoveredWorldX && pathEndY == hoveredWorldY;
         if (editingEndpointB) {
-            liveStartX = committedStartX;
-            liveStartY = committedStartY;
-            liveEndX = committedEndX;
-            liveEndY = committedEndY;
-            livePlane = committedPlane;
-            eventState = "Editing endpoint B from " + committedEndX + "," + committedEndY
-                    + "; A stays fixed at " + committedStartX + "," + committedStartY + ".";
+            liveStartX = pathEndX;
+            liveStartY = pathEndY;
+            liveEndX = pathEndX;
+            liveEndY = pathEndY;
+            livePlane = pathPlane;
+            eventState = "Extending rail path from END=" + pathEndX + "," + pathEndY + ".";
         } else {
             liveStartX = hoveredWorldX;
             liveStartY = hoveredWorldY;
@@ -766,47 +778,127 @@ public final class RailRoutePreview {
     }
 
     private static void commitActiveDrag() {
-        int previousEndX = committedEndX;
-        int previousEndY = committedEndY;
-        int previousStartX = committedStartX;
-        int previousStartY = committedStartY;
-        int previousPlane = committedPlane;
-        boolean hadCommitted = committed;
-        boolean endpointEdit = editingEndpointB && hadCommitted;
+        boolean extending = editingEndpointB && !authoredPath.isEmpty();
+        java.util.List<RoutePiece> oldPath =
+                new java.util.ArrayList<RoutePiece>(authoredPath);
+        java.util.List<RoutePiece> segment = new java.util.ArrayList<RoutePiece>();
 
-        java.util.List<RoutePiece> previousPieces = endpointEdit
-                ? snapshotCommittedRoutePieces()
-                : new java.util.ArrayList<RoutePiece>();
+        int segmentStartX = liveStartX;
+        int segmentStartY = liveStartY;
+        int segmentEndX = liveEndX;
+        int segmentEndY = liveEndY;
+        int segmentPlane = livePlane;
 
-        continuationHorizontalDirection = 0;
-        continuationVerticalDirection = 0;
+        if (extending) {
+            appendExtensionPieces(segment, segmentStartX, segmentStartY,
+                    segmentEndX, segmentEndY, segmentPlane, pathIncomingX, pathIncomingY);
+            mergeExtension(authoredPath, segment, segmentStartX, segmentStartY, segmentPlane);
+        } else {
+            authoredPath.clear();
+            appendRoutePieces(authoredPath, segmentStartX, segmentStartY,
+                    segmentEndX, segmentEndY, segmentPlane);
+        }
 
-        committedStartX = liveStartX;
-        committedStartY = liveStartY;
-        committedEndX = liveEndX;
-        committedEndY = liveEndY;
-        committedPlane = livePlane;
+        int[] finalDirection = finalTravelDirection(
+                segmentStartX, segmentStartY, segmentEndX, segmentEndY);
+        if (finalDirection[0] != 0 || finalDirection[1] != 0) {
+            pathIncomingX = finalDirection[0];
+            pathIncomingY = finalDirection[1];
+        }
+        pathEndX = segmentEndX;
+        pathEndY = segmentEndY;
+        pathPlane = segmentPlane;
+
+        committedStartX = segmentStartX;
+        committedStartY = segmentStartY;
+        committedEndX = segmentEndX;
+        committedEndY = segmentEndY;
+        committedPlane = segmentPlane;
         committed = true;
         dragging = false;
         editingEndpointB = false;
+        continuationHorizontalDirection = 0;
+        continuationVerticalDirection = 0;
         lastRenderedCycle = Integer.MIN_VALUE;
 
-        java.util.List<RoutePiece> committedPieces = snapshotCommittedRoutePieces();
-        eventState = endpointEdit
-                ? "Endpoint B moved. Route recalculated A=" + committedStartX + "," + committedStartY
-                        + " B=" + committedEndX + "," + committedEndY + "."
-                : "Route committed A=" + committedStartX + "," + committedStartY
-                        + " B=" + committedEndX + "," + committedEndY + ".";
+        java.util.List<RoutePiece> completePath =
+                new java.util.ArrayList<RoutePiece>(authoredPath);
+        eventState = extending
+                ? "Rail path extended to END=" + pathEndX + "," + pathEndY + "."
+                : "Rail path started; END=" + pathEndX + "," + pathEndY + ".";
 
         debugOperationId++;
-        debugReport = buildDebugReport(debugOperationId, hadCommitted, endpointEdit,
-                previousStartX, previousStartY, previousEndX, previousEndY, previousPlane,
-                previousPieces, committedPieces);
-        if (endpointEdit) {
-            ConstructionPlacementController.onRailRouteEdited(previousPieces, committedPieces);
+        debugReport = buildDebugReport(debugOperationId, extending, extending,
+                segmentStartX, segmentStartY, segmentStartX, segmentStartY, segmentPlane,
+                oldPath, completePath);
+        if (extending) {
+            ConstructionPlacementController.onRailRouteEdited(oldPath, completePath);
         } else {
-            ConstructionPlacementController.onRailRouteCommitted(committedPieces);
+            ConstructionPlacementController.onRailRouteCommitted(completePath);
         }
+    }
+
+    private static void appendExtensionPieces(java.util.List<RoutePiece> pieces,
+            int startX, int startY, int endX, int endY, int plane,
+            int incomingX, int incomingY) {
+        int outgoingX = Integer.compare(endX, startX);
+        int outgoingY = Integer.compare(endY, startY);
+        boolean perpendicular = (incomingX != 0 && outgoingY != 0)
+                || (incomingY != 0 && outgoingX != 0);
+        if (!perpendicular) {
+            if (startY == endY) {
+                appendHorizontalPieces(pieces, startX, endX, startY, plane, null);
+            } else if (startX == endX) {
+                appendVerticalPieces(pieces, startY, endY, startX, plane, null);
+            } else {
+                appendRoutePieces(pieces, startX, startY, endX, endY, plane);
+            }
+            return;
+        }
+
+        int horizontalDirection = incomingX != 0 ? incomingX : outgoingX;
+        int verticalDirection = incomingY != 0 ? incomingY : outgoingY;
+        CurvePlacement curve = createCurvePlacement(startX, startY,
+                horizontalDirection, verticalDirection);
+        appendCurvePieces(pieces, curve, startX, startY, plane);
+        if (outgoingX != 0) {
+            int x = startX + outgoingX;
+            while (pieces.size() < MAX_ROUTE_TILES) {
+                if (!curveOccupies(curve, x, startY)) {
+                    pieces.add(new RoutePiece(objectId, objectType, eastWestRotation(),
+                            x, startY, plane));
+                }
+                if (x == endX) break;
+                x += outgoingX;
+            }
+        } else {
+            int y = startY + outgoingY;
+            while (pieces.size() < MAX_ROUTE_TILES) {
+                if (!curveOccupies(curve, startX, y)) {
+                    pieces.add(new RoutePiece(objectId, objectType, verticalRotation(),
+                            startX, y, plane));
+                }
+                if (y == endY) break;
+                y += outgoingY;
+            }
+        }
+    }
+
+    private static void mergeExtension(java.util.List<RoutePiece> path,
+            java.util.List<RoutePiece> extension, int seamX, int seamY, int plane) {
+        java.util.Iterator<RoutePiece> iterator = path.iterator();
+        while (iterator.hasNext()) {
+            RoutePiece piece = iterator.next();
+            if (piece.getPlane() != plane) continue;
+            for (RoutePiece replacement : extension) {
+                if (replacement.getWorldX() == piece.getWorldX()
+                        && replacement.getWorldY() == piece.getWorldY()) {
+                    iterator.remove();
+                    break;
+                }
+            }
+        }
+        path.addAll(extension);
     }
 
     private static String buildDebugReport(long operationId, boolean hadPrevious, boolean endpointEdit,
@@ -936,8 +1028,12 @@ public final class RailRoutePreview {
         if (!committed || committedPlane < 0) {
             return pieces;
         }
-        appendRoutePieces(pieces, committedStartX, committedStartY,
-                committedEndX, committedEndY, committedPlane);
+        if (!authoredPath.isEmpty()) {
+            pieces.addAll(authoredPath);
+        } else {
+            appendRoutePieces(pieces, committedStartX, committedStartY,
+                    committedEndX, committedEndY, committedPlane);
+        }
         return pieces;
     }
 
