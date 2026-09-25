@@ -84,6 +84,16 @@ public final class RailRoutePreview {
     private static volatile int continuationHorizontalDirection;
     private static volatile int continuationVerticalDirection;
     private static volatile boolean editingEndpointB;
+    /*
+     * Until dedicated crossing/switch art exists, a gesture may branch FROM an
+     * existing rail or connect INTO one, but it must not pass through existing
+     * topology. First contact becomes the authored endpoint. This prevents one
+     * drag from silently creating multiple degree-3/4 junctions and rewriting
+     * nearby curve footprints.
+     */
+    private static volatile boolean liveDragLockedAtExistingRail;
+    private static volatile int liveExistingContactX = -1;
+    private static volatile int liveExistingContactY = -1;
     private static final java.util.List<RoutePiece> authoredPath =
             new java.util.ArrayList<RoutePiece>();
     /*
@@ -556,11 +566,19 @@ public final class RailRoutePreview {
 
         if (dragging && hoveredPlane == livePlane) {
             appendLiveDragToward(hoveredWorldX, hoveredWorldY);
-            liveEndX = hoveredWorldX;
-            liveEndY = hoveredWorldY;
+            if (liveDragLockedAtExistingRail) {
+                liveEndX = liveExistingContactX;
+                liveEndY = liveExistingContactY;
+                eventState = "Rail path connected at existing track "
+                        + liveEndX + "," + liveEndY
+                        + "; release to commit (cross-through waits for junction art).";
+            } else {
+                liveEndX = hoveredWorldX;
+                liveEndY = hoveredWorldY;
+                eventState = "Drawing rail path to " + liveEndX + "," + liveEndY
+                        + " (" + liveDragPath.size() + " sampled tile(s)).";
+            }
             lastRenderedCycle = Integer.MIN_VALUE;
-            eventState = "Drawing rail path to " + liveEndX + "," + liveEndY
-                    + " (" + liveDragPath.size() + " sampled tile(s)).";
         }
     }
 
@@ -930,7 +948,8 @@ public final class RailRoutePreview {
 
         if (mouse.getID() == MouseEvent.MOUSE_RELEASED && dragging
                 && mouse.getButton() == MouseEvent.BUTTON1) {
-            if (hoveredPlane == livePlane && hoveredWorldX >= 0 && hoveredWorldY >= 0) {
+            if (!liveDragLockedAtExistingRail
+                    && hoveredPlane == livePlane && hoveredWorldX >= 0 && hoveredWorldY >= 0) {
                 liveEndX = hoveredWorldX;
                 liveEndY = hoveredWorldY;
             }
@@ -980,12 +999,18 @@ public final class RailRoutePreview {
         }
         liveDragPath.clear();
         liveDragPath.add(new int[] { liveStartX, liveStartY, livePlane });
+        liveDragLockedAtExistingRail = false;
+        liveExistingContactX = -1;
+        liveExistingContactY = -1;
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
         return true;
     }
 
     private static void appendLiveDragToward(int targetX, int targetY) {
+        if (liveDragLockedAtExistingRail) {
+            return;
+        }
         if (liveDragPath.isEmpty()) {
             liveDragPath.add(new int[] { liveStartX, liveStartY, livePlane });
         }
@@ -1019,7 +1044,22 @@ public final class RailRoutePreview {
             cursor += Integer.compare(destination, cursor);
             if (axis == 1) x = cursor; else y = cursor;
             appendLiveDragTile(x, y);
+            if (isPreExistingRailContact(x, y)) {
+                liveDragLockedAtExistingRail = true;
+                liveExistingContactX = x;
+                liveExistingContactY = y;
+                liveEndX = x;
+                liveEndY = y;
+                return;
+            }
         }
+    }
+
+    private static boolean isPreExistingRailContact(int x, int y) {
+        if (x == liveStartX && y == liveStartY) {
+            return false;
+        }
+        return logicalNetwork.contains(logicalKey(x, y, livePlane));
     }
 
     private static int liveDragAxis() {
@@ -1096,15 +1136,22 @@ public final class RailRoutePreview {
         editingEndpointB = false;
         continuationHorizontalDirection = 0;
         continuationVerticalDirection = 0;
+        liveDragLockedAtExistingRail = false;
+        liveExistingContactX = -1;
+        liveExistingContactY = -1;
         lastRenderedCycle = Integer.MIN_VALUE;
 
         pathEndX = liveEndX;
         pathEndY = liveEndY;
         pathPlane = livePlane;
 
-        eventState = joinedExisting
-                ? "Rail network extended/branched from existing track."
-                : "Rail network segment added.";
+        eventState = liveDragLockedAtExistingRail
+                ? "Rail network connected to existing track at "
+                        + liveExistingContactX + "," + liveExistingContactY
+                        + "; cross-through intentionally stopped."
+                : (joinedExisting
+                        ? "Rail network extended/branched from existing track."
+                        : "Rail network segment added.");
 
         long debugOp = -1L;
         String debugEvent = eventState;
@@ -1387,6 +1434,8 @@ public final class RailRoutePreview {
                 .append("\tcomposite=").append(getConfiguredCurveCompositeName())
                 .append("\tgestureTiles=").append(gesture == null ? 0 : gesture.size())
                 .append("\tlogicalTiles=").append(logicalNetwork.size())
+                .append("\tcontactStop=").append(liveDragLockedAtExistingRail
+                        ? (liveExistingContactX + "," + liveExistingContactY) : "none")
                 .append("\tlimits=").append(MAX_GESTURE_TILES).append('/').append(MAX_NETWORK_PIECES)
                 .append("\n");
         out.append("MODE\tendpointEdit=").append(endpointEdit)
