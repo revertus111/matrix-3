@@ -316,6 +316,112 @@ public final class ConstructionPlacementController {
                 : "Rail route queued " + queued + " piece(s); " + failure;
     }
 
+    public static void onRailNetworkDelta(
+            java.util.List<RailRoutePreview.RoutePiece> previousRoute,
+            java.util.List<RailRoutePreview.RoutePiece> replacementRoute) {
+        if (!isRailRouteSelected() || previousRoute == null || replacementRoute == null
+                || replacementRoute.isEmpty()) {
+            status = "Rail network delta requires a replacement network.";
+            return;
+        }
+
+        java.util.Map<String, RailRoutePreview.RoutePiece> oldBySlot =
+                new java.util.LinkedHashMap<String, RailRoutePreview.RoutePiece>();
+        for (RailRoutePreview.RoutePiece piece : previousRoute) {
+            oldBySlot.put(railPhysicalSlot(piece), piece);
+        }
+        java.util.Map<String, RailRoutePreview.RoutePiece> newBySlot =
+                new java.util.LinkedHashMap<String, RailRoutePreview.RoutePiece>();
+        for (RailRoutePreview.RoutePiece piece : replacementRoute) {
+            newBySlot.put(railPhysicalSlot(piece), piece);
+        }
+
+        java.util.List<RailRoutePreview.RoutePiece> remove =
+                new java.util.ArrayList<RailRoutePreview.RoutePiece>();
+        java.util.List<RailRoutePreview.RoutePiece> add =
+                new java.util.ArrayList<RailRoutePreview.RoutePiece>();
+
+        for (java.util.Map.Entry<String, RailRoutePreview.RoutePiece> entry : oldBySlot.entrySet()) {
+            RailRoutePreview.RoutePiece replacement = newBySlot.get(entry.getKey());
+            if (replacement == null || !sameRailPhysicalPiece(entry.getValue(), replacement)) {
+                remove.add(entry.getValue());
+            }
+        }
+        for (java.util.Map.Entry<String, RailRoutePreview.RoutePiece> entry : newBySlot.entrySet()) {
+            RailRoutePreview.RoutePiece previous = oldBySlot.get(entry.getKey());
+            if (previous == null || !sameRailPhysicalPiece(previous, entry.getValue())) {
+                add.add(entry.getValue());
+            }
+        }
+
+        if (remove.isEmpty() && add.isEmpty()) {
+            status = "Rail network unchanged.";
+            return;
+        }
+
+        java.util.List<String> commands = new java.util.ArrayList<String>();
+        commands.add("settlementrailreplacebegin");
+        appendRailOldChunks(commands, remove);
+        appendRailNewChunks(commands, add);
+        commands.add("settlementrailreplacecommit");
+
+        String error = ClientConsoleBridge.queueConsoleCommands(
+                commands.toArray(new String[commands.size()]));
+        status = error == null
+                ? "Rail network delta queued: -" + remove.size() + " +" + add.size() + " piece(s)."
+                : "Rail network delta failed to queue: " + error;
+    }
+
+    private static void appendRailOldChunks(java.util.List<String> commands,
+            java.util.List<RailRoutePreview.RoutePiece> pieces) {
+        StringBuilder chunk = new StringBuilder("settlementrailreplaceold");
+        int count = 0;
+        for (RailRoutePreview.RoutePiece piece : pieces) {
+            String entry = " " + piece.getObjectId() + "," + piece.getWorldX() + ","
+                    + piece.getWorldY() + "," + piece.getPlane();
+            if (count >= 6 || chunk.length() + entry.length() > 220) {
+                commands.add(chunk.toString());
+                chunk = new StringBuilder("settlementrailreplaceold");
+                count = 0;
+            }
+            chunk.append(entry);
+            count++;
+        }
+        if (count > 0) commands.add(chunk.toString());
+    }
+
+    private static void appendRailNewChunks(java.util.List<String> commands,
+            java.util.List<RailRoutePreview.RoutePiece> pieces) {
+        StringBuilder chunk = new StringBuilder("settlementrailreplacenew");
+        int count = 0;
+        for (RailRoutePreview.RoutePiece piece : pieces) {
+            String key = railBuildKey(piece.getObjectId());
+            if (key == null) continue;
+            String entry = " " + key + "," + piece.getWorldX() + "," + piece.getWorldY()
+                    + "," + piece.getPlane() + "," + piece.getRotation();
+            if (count >= 5 || chunk.length() + entry.length() > 220) {
+                commands.add(chunk.toString());
+                chunk = new StringBuilder("settlementrailreplacenew");
+                count = 0;
+            }
+            chunk.append(entry);
+            count++;
+        }
+        if (count > 0) commands.add(chunk.toString());
+    }
+
+    private static String railPhysicalSlot(RailRoutePreview.RoutePiece piece) {
+        return piece.getWorldX() + ":" + piece.getWorldY() + ":" + piece.getPlane()
+                + ":" + piece.getObjectType();
+    }
+
+    private static boolean sameRailPhysicalPiece(RailRoutePreview.RoutePiece a,
+            RailRoutePreview.RoutePiece b) {
+        return a.getObjectId() == b.getObjectId()
+                && a.getObjectType() == b.getObjectType()
+                && a.getRotation() == b.getRotation();
+    }
+
     public static void onRailRouteEdited(
             java.util.List<RailRoutePreview.RoutePiece> previousRoute,
             java.util.List<RailRoutePreview.RoutePiece> replacementRoute) {
