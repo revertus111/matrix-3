@@ -476,6 +476,9 @@ public final class SettlementInstance {
             pendingRailNew.clear();
             return "Rail network delta staging is empty.";
         }
+        // Initial Rail Network commit is intentionally add-only. The same
+        // atomic replacement owner is used for first placement and later deltas
+        // so preview -> release cannot fall back to prototype per-piece builds.
         int[] oldIds = new int[oldCount], oldXs = new int[oldCount],
                 oldYs = new int[oldCount], oldPlanes = new int[oldCount];
         for (int i = 0; i < oldCount; i++) {
