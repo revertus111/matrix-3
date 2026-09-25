@@ -2937,6 +2937,16 @@ public final class Commands {
 	} else {
 	    String message;
 	    switch (cmd[0].toLowerCase()) {
+	    case "settlementbuildbaropen":
+		if (SettlementInstance.getActive(player) == null) {
+		    player.getPackets().sendGameMessage("Enter your settlement before opening the Construction build bar.");
+		    return true;
+		}
+		player.getActionbar().beginConstructionMode();
+		return true;
+	    case "settlementbuildbarclose":
+		player.getActionbar().endConstructionMode();
+		return true;
 	    case "settlementrailreplacebegin":
 		SettlementInstance railStageBegin = SettlementInstance.getActive(player);
 		if (railStageBegin != null) {
