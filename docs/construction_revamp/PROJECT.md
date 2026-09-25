@@ -1548,7 +1548,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 ## Bundle 2.4 double-click movement arbitration — 2026-09-25
 - IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
-- Selection drag and movement are separate gestures: >6px LMB drag selects; its release is consumed and clears all pending movement-click state.
+- Selection drag and movement are separate gestures: ordinary press/release clicks preserve pending double-click state, while crossing the >6px LMB drag threshold clears it; the completed drag release is consumed as selection-only input.
 - With a committed selection, one ground click is consumed and only arms the short double-click window. A second ground click within 375 ms on the same or adjacent tile issues the existing workerselectionmove order.
 - If self is selected, only the accepted second click is allowed through to Matrix3 vanilla Walk Here, keeping player and workers on the same destination.
 - Object/NPC skilling actions and Clear Selection behavior are unchanged.

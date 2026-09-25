@@ -1396,3 +1396,9 @@
 - If self is selected, only the accepted second click falls through to vanilla Walk Here.
 - Selection drag start/release and Clear Selection reset pending move-click state, preventing drag release from becoming part of a move double-click.
 - Vanilla object/NPC skilling orders and worker/server ownership are unchanged.
+
+
+2026-09-25 - Bundle 2.4 double-click press-state correction
+- Corrected double-click arbitration after static review: ordinary LMB press enters the radial candidate state before Matrix3 dispatches the click, so beginDrag must not clear move click #1.
+- Pending move-click state now clears only when mouse travel crosses the 6px radial-selection threshold (and on committed-drag release/Clear Selection).
+- This preserves two ordinary clicks for double-click movement while still isolating real selection drags from movement.

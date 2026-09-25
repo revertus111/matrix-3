@@ -1488,6 +1488,7 @@ public final class ConstructionRadialSelection {
             if (!dragThresholdPassed
                     && dx * dx + dy * dy >= MIN_SELECTION_DRAG_PIXELS * MIN_SELECTION_DRAG_PIXELS) {
                 dragThresholdPassed = true;
+                resetGroundMoveClick();
             }
             /*
              * Do not consume drag motion here. Matrix3's existing mouse/menu
@@ -1540,7 +1541,6 @@ public final class ConstructionRadialSelection {
         dragPressMouseY = mouseY;
         dragThresholdPassed = false;
         selectionDragJustCommitted = false;
-        resetGroundMoveClick();
         liveCenterWorldX = originWorldX;
         liveCenterWorldY = originWorldY;
         liveRadiusTiles = MIN_RADIUS_TILES;
