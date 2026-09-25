@@ -283,6 +283,81 @@ public final class RailRoutePreview {
         }
     }
 
+    private static void captureDebugScreenshot(String report,
+            java.util.List<RoutePiece> newPieces) {
+        try {
+            java.io.File dir = new java.io.File("data/construction/rail_debug");
+            if (!dir.exists() && !dir.mkdirs()) {
+                eventState = "Rail debug screenshot directory could not be created: " + dir.getPath();
+                return;
+            }
+
+            java.awt.Rectangle bounds = new java.awt.Rectangle(
+                    java.awt.Toolkit.getDefaultToolkit().getScreenSize());
+            java.awt.image.BufferedImage image = new java.awt.Robot().createScreenCapture(bounds);
+
+            java.awt.Graphics2D g = image.createGraphics();
+            try {
+                g.setFont(new java.awt.Font("Monospaced", java.awt.Font.BOLD, 14));
+                java.util.List<String> lines = buildScreenshotDebugLines(report, newPieces);
+                int lineHeight = 18;
+                int panelWidth = 560;
+                int panelHeight = Math.min(image.getHeight() - 20,
+                        20 + (lines.size() * lineHeight));
+                g.setColor(new java.awt.Color(0, 0, 0, 190));
+                g.fillRect(10, 10, panelWidth, panelHeight);
+                g.setColor(java.awt.Color.WHITE);
+                int y = 30;
+                for (String line : lines) {
+                    if (y > panelHeight) break;
+                    g.drawString(line, 20, y);
+                    y += lineHeight;
+                }
+            } finally {
+                g.dispose();
+            }
+
+            String name = String.format(java.util.Locale.ROOT,
+                    "rail_%04d.png", Long.valueOf(debugOperationId));
+            javax.imageio.ImageIO.write(image, "png", new java.io.File(dir, name));
+        } catch (Throwable t) {
+            eventState = "Rail debug screenshot failed: " + t.getClass().getSimpleName()
+                    + ": " + String.valueOf(t.getMessage());
+        }
+    }
+
+    private static java.util.List<String> buildScreenshotDebugLines(String report,
+            java.util.List<RoutePiece> newPieces) {
+        java.util.List<String> lines = new java.util.ArrayList<String>();
+        lines.add("RAIL NETWORK V1 DEBUG  OP " + debugOperationId);
+        lines.add("logical=" + logicalNetwork.size() + " physical="
+                + (newPieces == null ? 0 : newPieces.size()));
+        lines.add("A=" + committedStartX + "," + committedStartY
+                + "  B=" + committedEndX + "," + committedEndY
+                + "  plane=" + committedPlane);
+        lines.add("event=" + eventState);
+        if (newPieces != null) {
+            int index = 0;
+            for (RoutePiece piece : newPieces) {
+                lines.add(String.format(java.util.Locale.ROOT,
+                        "P%02d id=%d type=%d rot=%d @ %d,%d,%d",
+                        Integer.valueOf(index++), Integer.valueOf(piece.getObjectId()),
+                        Integer.valueOf(piece.getObjectType()), Integer.valueOf(piece.getRotation()),
+                        Integer.valueOf(piece.getWorldX()), Integer.valueOf(piece.getWorldY()),
+                        Integer.valueOf(piece.getPlane())));
+                if (lines.size() >= 30) {
+                    lines.add("... full piece list in rail_runtime_debug.txt");
+                    break;
+                }
+            }
+        }
+        return lines;
+    }
+
+    public static String getDebugScreenshotDirectory() {
+        return new java.io.File("data/construction/rail_debug").getPath();
+    }
+
     public static String getDebugFilePath() {
         return new java.io.File("data/construction/rail_runtime_debug.txt").getPath();
     }
@@ -968,6 +1043,7 @@ public final class RailRoutePreview {
                 liveStartX, liveStartY, liveStartX, liveStartY, livePlane,
                 oldPhysical, newPhysical);
         appendDebugReportToFile(debugReport, oldPhysical, newPhysical);
+        captureDebugScreenshot(debugReport, newPhysical);
 
         if (oldPhysical.isEmpty()) {
             ConstructionPlacementController.onRailRouteCommitted(newPhysical);
