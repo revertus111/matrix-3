@@ -1477,3 +1477,10 @@
 - Rail preview now resolves from copied tile/edge snapshots. Rendering never adds/removes from logicalNetwork or logicalConnections.
 - Removed the legacy post-release A->B preview; after mouse release, persistent server-owned rail objects are the only rail visual authority.
 - Debug now snapshots the actual live gesture before clear, stamps SNAPSHOT_PREVIEW_V2 plus 256/4096 limits, and delays the labeled PNG ~650 ms until after the server mutation is queued so the screenshot represents applied-world evidence instead of release-time preview state.
+
+
+2026-09-25 - Rail existing-track contact clamp
+- Runtime ops 6-7 showed long gestures repeatedly crossing/revisiting authored rail tiles, which converted several existing nodes into junctions in one commit and re-resolved nearby curve footprints.
+- Until dedicated crossing/switch art exists, a gesture may branch FROM existing rail and may connect INTO existing rail, but first contact with pre-existing topology becomes the gesture endpoint; the drag cannot continue through it.
+- This prevents one gesture from silently creating multiple degree-3/4 crossings while preserving the requested middle-branch workflow.
+- Debug RAIL_DEBUG now reports contactStop=x,y when this guard fires.
