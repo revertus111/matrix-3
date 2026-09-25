@@ -471,10 +471,10 @@ public final class SettlementInstance {
     public synchronized String commitRailRouteReplacement() {
         int oldCount = pendingRailOld.size();
         int newCount = pendingRailNew.size();
-        if (oldCount <= 0 || newCount <= 0) {
+        if (oldCount <= 0 && newCount <= 0) {
             pendingRailOld.clear();
             pendingRailNew.clear();
-            return "Rail route replacement staging is incomplete.";
+            return "Rail network delta staging is empty.";
         }
         int[] oldIds = new int[oldCount], oldXs = new int[oldCount],
                 oldYs = new int[oldCount], oldPlanes = new int[oldCount];
@@ -517,8 +517,8 @@ public final class SettlementInstance {
                 || newPlanes.length != newCount || newRotations.length != newCount) {
             return "Rail route edit data lengths do not match.";
         }
-        if (oldCount > 64 || newCount <= 0 || newCount > 64) {
-            return "Rail route edit exceeds the 64-piece route limit.";
+        if (oldCount > 64 || newCount > 64 || (oldCount <= 0 && newCount <= 0)) {
+            return "Rail network edit exceeds the 64-piece delta limit or is empty.";
         }
 
         java.util.List<SettlementPlacedPiece> oldPieces =
