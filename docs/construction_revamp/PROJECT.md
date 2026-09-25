@@ -1497,3 +1497,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Settlement RTS renderer overrides for scene focus, Class523 radius, and Class174_Sub1 fog were removed after failed runtime evidence.
 - ConstructionBuildCamera now remains responsible for detached RTS camera controls/state while vanilla Matrix3 remains responsible for scene/environment/terrain rendering.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST. Do not reintroduce renderer-specific RTS hacks unless vanilla-convergence runtime evidence identifies one exact remaining divergence.
+
+
+## Packet-safe atomic Rail Endpoint Editing — 2026-09-24
+- IMPLEMENTED / NEEDS RUNTIME TEST under active AAA.
+- The visible old/new screenshot proved endpoint ownership itself: endpointEdit=true, fixedA=true, A remained fixed. Review of the actual transport then established the concrete application fault: the prior one-command atomic replacement raised ClientConsoleBridge's guard to 8192 even though Matrix3's COMMANDS_PACKET uses a bounded command-packet framing path. The apparent new route could therefore be the committed client preview while the old persistent route remained.
+- Endpoint edits now use bounded staging commands (<=220 characters) for old/new route pieces and one final server commit. SettlementInstance still performs the actual mutation atomically after complete staging.
+- Client command guard is restored to 252. Curve geometry remains unchanged pending this transport correction's runtime result.
+- Resume gate: fresh A-to-B -> exact-B 90-degree move -> chat must report 'Rail route replaced atomically' and only one route may remain; move B once more and exit/re-enter to verify persistence.
