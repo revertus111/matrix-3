@@ -81,6 +81,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
             new JSpinner(new SpinnerNumberModel(0, -12, 12, 1));
 
     private final JLabel selectedName = valueLabel("No object selected");
+    private final JLabel selectedAnimations = valueLabel("Object animation IDs: none");
     private final JLabel status =
             ConsoleTheme.subtitleLabel("Search by name/ID or browse definitions.");
 
@@ -167,6 +168,9 @@ public final class ObjectExplorerPanel extends JScrollPane {
 
         selectedName.setAlignmentX(LEFT_ALIGNMENT);
         card.add(selectedName);
+        card.add(Box.createVerticalStrut(3));
+        selectedAnimations.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(selectedAnimations);
         card.add(Box.createVerticalStrut(6));
 
         JPanel idRow = new JPanel(new GridLayout(1, 3, 6, 0));
@@ -427,6 +431,7 @@ public final class ObjectExplorerPanel extends JScrollPane {
         idSpinner.setValue(Integer.valueOf(Math.max(0, id)));
         currentName = name == null || name.trim().isEmpty() ? "id-" + id : name;
         selectedName.setText(currentName + "  [ID " + id + "]");
+        refreshAnimationLabel(id);
         if (spawn) {
             spawnCurrent();
         }
@@ -438,10 +443,36 @@ public final class ObjectExplorerPanel extends JScrollPane {
         if (info == null) {
             currentName = "id-" + id;
             selectedName.setText(currentName + "  [definition unavailable]");
+            selectedAnimations.setText("Object animation IDs: unavailable");
             return;
         }
         currentName = info.getName();
         selectedName.setText(currentName + "  [ID " + id + "]");
+        setAnimationLabel(info);
+    }
+
+    private void refreshAnimationLabel(int id) {
+        setAnimationLabel(DevDefinitionBridge.getObjectInfoAny(id));
+    }
+
+    private void setAnimationLabel(DevDefinitionBridge.DefinitionInfo info) {
+        if (info == null) {
+            selectedAnimations.setText("Object animation IDs: unavailable");
+            return;
+        }
+        int[] animationIds = info.getAnimationIds();
+        if (animationIds.length == 0) {
+            selectedAnimations.setText("Object animation IDs: none");
+            return;
+        }
+        StringBuilder text = new StringBuilder("Object animation IDs: ");
+        for (int i = 0; i < animationIds.length; i++) {
+            if (i > 0) {
+                text.append(", ");
+            }
+            text.append(animationIds[i]);
+        }
+        selectedAnimations.setText(text.toString());
     }
 
     private void browseDefinition(int direction) {
