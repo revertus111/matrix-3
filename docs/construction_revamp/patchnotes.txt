@@ -1470,3 +1470,10 @@
 - Rail debug output now resolves a stable Client/data/construction root when launched from either the repository root or the Client working directory, instead of depending blindly on process-relative data/construction.
 - Enabling Debug now creates/validates the text + screenshot directories immediately and reports the absolute output path in RailRoutePreview status; failed directory creation leaves Debug OFF.
 - Build Palette button now visibly reads Dbg ON / Dbg OFF.
+
+
+2026-09-25 - Rail preview/commit race correction
+- Runtime ops 9-11 proved the authoritative logical graph was being temporarily mutated by the render preview: op 9 ended at 44 physical pieces, op 10 entered with 54 and made no delta, then op 11 entered back at 44. This cannot occur under one stable graph and identified a render-thread/AWT commit race.
+- Rail preview now resolves from copied tile/edge snapshots. Rendering never adds/removes from logicalNetwork or logicalConnections.
+- Removed the legacy post-release A->B preview; after mouse release, persistent server-owned rail objects are the only rail visual authority.
+- Debug now snapshots the actual live gesture before clear, stamps SNAPSHOT_PREVIEW_V2 plus 256/4096 limits, and delays the labeled PNG ~650 ms until after the server mutation is queued so the screenshot represents applied-world evidence instead of release-time preview state.
