@@ -109,7 +109,16 @@ public final class LiveModelEditorPreview {
 
     public static String[] getPartLabels() { return PARTS.getLabels(); }
     public static int getSelectedPart() { return PARTS.getSelected(); }
+    public static int getHoveredPart() { return PARTS.getHovered(); }
     public static int[] getSelectedPartTransform() { return PARTS.getSelectedTransform(); }
+
+    public static void previewPart(int index) {
+        if (PARTS.hover(index)) invalidateModels();
+    }
+
+    public static void clearPartPreview() {
+        if (PARTS.hover(-1)) invalidateModels();
+    }
 
     public static boolean selectPart(int index) {
         boolean changed = PARTS.select(index);
