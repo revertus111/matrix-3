@@ -983,3 +983,9 @@ Construction Development tab cleanup — IMPLEMENTED / NEEDS UI SMOKE TEST (2026
 [x] Source: completed storage/housing/ring-style/progression regression controls were removed from the panel only; server command handlers were not deleted.
 [ ] UI smoke: open Client Console -> Con Revamp and confirm the compact card order/layout fits normally with vertical scrolling.
 [ ] UI smoke: Enter/Exit/Status/Build Palette, Worker Control, selected-worker commands, diagnostics, Storage, Needs HUD and Asset Studio buttons still respond.
+
+
+Rail screenshot-debug gate (2026-09-25)
+- Commit a rail route and confirm Client/data/construction/rail_debug/rail_0001.png is created.
+- Confirm the PNG visibly contains its OP number and labeled Pxx resolved pieces; correlate that OP with the matching block in rail_runtime_debug.txt.
+- Reproduce a bad corner/connection and provide the matching PNG plus rail_runtime_debug.txt so visual geometry can be mapped directly to object id/rotation/world coordinates.
