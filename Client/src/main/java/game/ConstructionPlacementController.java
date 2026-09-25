@@ -292,28 +292,24 @@ public final class ConstructionPlacementController {
         if (!isRailRouteSelected() || route == null || route.isEmpty()) {
             return;
         }
-        int queued = 0;
-        String failure = null;
-        for (RailRoutePreview.RoutePiece piece : route) {
-            String key = railBuildKey(piece.getObjectId());
-            if (key == null) {
-                failure = "Unsupported rail object " + piece.getObjectId() + " in route.";
-                break;
-            }
-            DevSpawnPlacement.Request request = DevSpawnPlacement.constructionObject(
-                    key, piece.getObjectId(), piece.getObjectType(), piece.getRotation(),
-                    DevSpawnPlacement.RotationMode.FIXED);
-            String result = DevSpawnPlacement.placeOnce(
-                    request, piece.getWorldX(), piece.getWorldY(), piece.getPlane());
-            if (result == null || !result.startsWith("Spawn queued")) {
-                failure = result;
-                break;
-            }
-            queued++;
-        }
-        status = failure == null
-                ? "Rail route queued: " + queued + " piece(s)."
-                : "Rail route queued " + queued + " piece(s); " + failure;
+
+        /*
+         * The first Rail Network commit must be one server-owned transaction.
+         * The old prototype queued one settlementbuild command per physical
+         * piece. A long sampled route can outrun/partially apply that command
+         * stream, which is why the client preview vanished on release while
+         * only some curve components remained in the world.
+         */
+        java.util.List<String> commands = new java.util.ArrayList<String>();
+        commands.add("settlementrailreplacebegin");
+        appendRailNewChunks(commands, route);
+        commands.add("settlementrailreplacecommit");
+
+        String error = ClientConsoleBridge.queueConsoleCommands(
+                commands.toArray(new String[commands.size()]));
+        status = error == null
+                ? "Rail network commit queued: +" + route.size() + " piece(s)."
+                : "Rail network commit failed to queue: " + error;
     }
 
     public static void onRailNetworkDelta(
