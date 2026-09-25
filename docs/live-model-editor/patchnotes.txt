@@ -10,3 +10,12 @@
 2026-09-25
 - Corrected the Bundle 1 scene-render integration: LiveModelEditorPreview is now invoked from the established Class578 developer render pass beside Object Lab/Composite previews.
 - This closes the missing render-hook regression from the initial Bundle 1 commit; runtime behavior remains NEEDS TEST.
+
+2026-09-25
+- Runtime-confirmed the Bundle 1 private clone and whole-model transform path in the live Matrix3 client using the Smelter reference asset.
+- Added Live Model Editor Bundle 2.1 connected-component authoring from the source Class159 triangle graph.
+- Added stable mesh-part list selection, white in-world selected-part highlight, isolate, hide/show, per-part scale/translation/yaw around the component centroid, duplicate, project-delete and 64-step undo with Ctrl+Z.
+- Added a private raw-geometry rebuild path that starts from fresh source model bytes and rebuilds renderer Models; shared ObjectDefinitions/cache models remain untouched.
+- Mirrored object-definition rotation/recolor/retexture/scale/offset/terrain transforms onto the developer raw-model build path before the existing whole-model editor transforms.
+- Added JSON project version 2 persistence for original-part edits, duplicate part instances, selected part and isolate state. Version 1 projects remain loadable with default part state.
+- In-world mouse hover/click component picking remains a bounded carryover; Bundle 2.1 uses the parts list while the edited geometry itself renders live in the game scene.
