@@ -1433,3 +1433,12 @@
 - Every committed rail operation now captures a full-screen PNG under Client/data/construction/rail_debug/ using the same operation number as the runtime debug session.
 - PNGs include a baked-in diagnostic panel with operation id, logical/physical counts, A/B coordinates, plane, event state, and resolved physical piece labels (Pxx, object id, type, rotation, world coordinate).
 - The complete piece/gesture report remains in rail_runtime_debug.txt; screenshots intentionally cap the overlay and point to the text log for the full list.
+
+
+2026-09-25 - Rail Network authored-edge topology fix
+- Runtime debug evidence showed previously correct curves being reclassified after later nearby rail gestures.
+- Root cause: Rail Network V1 inferred connectivity from cardinal tile adjacency, so unrelated neighboring/parallel rails became phantom connections and changed existing node degree/corner classification.
+- Added explicit authored cardinal-edge topology. Connectivity now comes from the user's sampled gesture path, not mere tile proximity.
+- Preview uses temporary authored edges and restores them after rendering; Clear Route clears both tile and edge topology.
+- Manhattan fallback now records explicit edges as it creates tiles.
+- This keeps close/parallel tracks independent unless the authored route actually traverses between their tiles, while preserving intentional branches/crossings.
