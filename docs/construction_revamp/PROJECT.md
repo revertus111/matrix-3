@@ -1525,3 +1525,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Persistence boundary: physical rails remain server-persistent today. Logical graph metadata is current-session V1 and must become server-persistent only after draw/turn/middle-branch behavior passes runtime; this prevents another persistence schema from being committed before the UX/topology model is proven.
 - Runtime acceptance bundle: straight -> repeated 90-degree turns -> branch from the middle -> extend branch -> add disconnected second segment. Earlier topology must remain unchanged after each operation.
 - Resume Here: pull and runtime-test Rail Network V1 in one session. If topology behavior passes, next patch is server-persistent logical rail graph + reconstruction on settlement entry, followed by junction/switch visual asset resolution. If it fails, inspect only logical-network resolver output vs atomic physical replacement; do not return to endpoint-route architecture.
+
+## Minecart object-animation discovery — 2026-09-25
+- Scope is cart asset/animation only; player sitting/riding animation is intentionally out of scope.
+- verified-static: Matrix3 ObjectDefinitions opcode 24/106 decodes object sequence IDs into anIntArray5645. method6051()/method6052() select from that set, while method6053() returns the decoded sequence IDs directly.
+- Object Explorer now surfaces those object animation IDs for the selected cache definition through DevDefinitionBridge; no 28k-animation manual scan is required.
+- Historical object ID 8831 is a HYPOTHESIS candidate for the Keldagrim mine cart and is not treated as revision-830 verified until runtime lookup confirms its name/asset in the user's cache.
+- Resume gate: Object Explorer -> ID 8831 -> record name + animation IDs. If it is not the minecart, use the existing name search for "Mine cart" and inspect the matching definition's animation IDs.
+
