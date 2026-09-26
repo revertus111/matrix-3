@@ -352,3 +352,36 @@ Bundle 2.7C-E - repaired Scale interaction + native Scale gizmo
 [ ] Regression: corrected Move snapping from 2.7C-D still behaves by drag-start delta.
 [ ] Regression: Rotate yaw ring still renders/rotates correctly.
 [ ] Regression: no black screen, renderer corruption, stuck hover, or repeated GIZMO RENDER SKIP spam.
+
+
+Bundle 2.7C runtime confirmation — D/E
+[x] User confirmed the corrected Snap + Rotate + Scale core workflow works on Conveyor belt 46298.
+[ ] Retain the detailed D/E rows above as regression checks when convenient; they no longer block the F implementation pass.
+
+Bundle 2.7C-F - professional interaction polish
+[ ] Eclipse/Java 8 clean-build Client.
+[ ] Open Conveyor belt 46298 and confirm the current Whole/Part/Multi button is visibly selected.
+[ ] Switch G/R/V and confirm the active transform button follows both clicks and hotkeys.
+[ ] Switch F/X/Y/Z and confirm the active axis button follows both clicks and hotkeys.
+[ ] Toggle Isolate with button and I; active-state highlight follows runtime isolate state.
+[ ] Switch E/M/C/O/S rail drawers; only the open active rail button is highlighted.
+[ ] Confirm the compact EDIT readout updates live during Move, Rotate and Scale gizmo drags.
+[ ] Position field: drag horizontally and confirm live scrubbing; Shift is finer and Ctrl is substantially coarser.
+[ ] Yaw field: drag horizontally and confirm live degree scrubbing; Shift fine / Ctrl coarse.
+[ ] Scale field: drag horizontally and confirm live decimal-ratio scrubbing; Shift fine / Ctrl coarse.
+[ ] Part/Multi: perform one long numeric scrub then Ctrl+Z once; the entire scrub reverts in one undo operation.
+[ ] Mouse wheel over Position/Yaw/Scale fields adjusts the field and live geometry; Shift fine / Ctrl coarse.
+[ ] Alt+Left/Right in Move X nudges by 1; Alt+Shift uses a 16-unit coarse step.
+[ ] Move Free: Alt+Left/Right nudges X and Alt+Up/Down nudges Z.
+[ ] Rotate: Alt+Arrow nudges 1 degree; Alt+Shift nudges 15 degrees.
+[ ] Scale: Alt+Arrow nudges 0.01; Alt+Shift nudges 0.10.
+[ ] Plain arrow keys still belong to the active camera and are not consumed as transform nudges.
+[ ] Ctrl+O opens Load Project.
+[ ] Shift+H shows all parts without switching drawers.
+[ ] I toggles Isolate/Solo.
+[ ] Tab collapses/expands the editor drawer; text-field Tab still performs normal field traversal.
+[ ] While typing in any inspector field, 1/2/3/G/R/V/F/X/Y/Z/H/Delete/Ctrl+Z do not trigger editor commands.
+[ ] Ctrl+S, Ctrl+Shift+S, Ctrl+Z, Ctrl+D and Ctrl+A retain their established behavior.
+[ ] No duplicate old Parts/Transform panel appears and no old transform CardLayout behavior remains.
+[ ] Regression: Move/Rotate/Scale gizmos, Snap, inspector exact entry, selection, camera and project JSON remain functional.
+[ ] Expected: text readout is currently in the EDIT workspace, not physically beside the 3D gizmo; native gizmo text is recorded CARRYOVER pending a verified Matrix3 renderer-font seam.
