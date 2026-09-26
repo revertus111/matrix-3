@@ -213,3 +213,5 @@
 - Centralized editor shortcut ownership and added Ctrl+O Load, Shift+H Show All, I Isolate and Tab collapse/expand.
 - Removed obsolete duplicate createPartsPanel/createTransformPanel UI code and unused transform CardLayout state.
 - Native text beside the 3D gizmo remains non-blocking CARRYOVER because no verified Matrix3 renderer-font seam was established; no second Swing viewport overlay was added.
+
+- Added modal-dialog shortcut suppression so the centralized editor hotkeys cannot interfere with Load/Save file chooser navigation.
