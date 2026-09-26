@@ -1154,3 +1154,12 @@ Normal Rail special-node regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2
 - Start ordinary Rail on a true degree-1 endpoint and extend straight, then repeat with a 90-degree turn. Both must remain legal and resolve normally.
 - Debug ON: blocked contact must log contactStop=<x,y> and contactMode=SPECIAL_NODE_BLOCKED. A legal endpoint connection must log contactMode=CONNECTED.
 - Exit/re-enter after each case; protected existing rails and legal endpoint extensions must match server persistence.
+
+
+Rail sharp-bend footprint regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-26)
+- Recreate the tight S/hairpin shown in the 2026-09-26 screenshot by making two 90-degree turns only a couple tiles apart. The second turn must clamp before any curve composites overlap.
+- With Debug ON, the rejected gesture must record bendStop=<x,y>; previously authored rail must remain unchanged.
+- Make the same S shape with a wider straight section between turns. Once the two accepted curve footprints no longer share a physical tile, the route must be allowed.
+- Build a normal rectangular/rounded loop with four well-spaced corners. All accepted three-object curves must continue to resolve exactly as before.
+- Extend a legal degree-1 endpoint and turn after sufficient space; endpoint extension must still work.
+- Regression: the already runtime-confirmed normal-Rail degree-3/4 guard must still block branch/cross attempts into the middle of existing rail without altering the protected rail.
