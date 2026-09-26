@@ -271,12 +271,12 @@ Required:
 - [x] Display scale as decimal ratio while retaining current internal integer representation.
 - [x] Safe exact numeric entry contract.
 - [ ] Numeric value scrubbing.
-- [ ] Render visible pivot.
-- [ ] Render Move gizmo.
+- [x] Render visible pivot.
+- [x] Render Move gizmo.
 - [ ] Render supported Rotate gizmo.
 - [ ] Render Scale gizmo.
-- [ ] Gizmo hit testing / hover / active state.
-- [ ] Whole / Part / Multi gizmo pivot positioning.
+- [x] Move-gizmo hit testing / hover / active state.
+- [x] Whole / Part / Multi gizmo pivot positioning.
 - [ ] Multi shared-pivot rotation.
 - [ ] Compact active transform readout near gizmo.
 - [ ] Keyboard nudge path.
@@ -347,3 +347,28 @@ Part/Multi exact numeric commits already use the existing one-action undo path. 
 ### Next
 
 2.7C-C should add the first visible Matrix3-native viewport pivot + Move gizmo before Rotate/Scale.
+
+
+### 2.7C-C — native Move gizmo
+
+Implemented / NEEDS BATCHED RUNTIME TEST:
+
+- Part pivot comes from the connected component's detected source centroid plus its current move delta.
+- Multi pivot is the arithmetic mean of all selected edited component centers.
+- Whole uses the object/model origin as its pivot.
+- `Class106.method1792(...)` is the verified-static Matrix3 3D-to-screen projection seam.
+- `Class106.method1730(...)` and `method1725(...)` are the renderer-native line and filled-rectangle primitives used for gizmo handles.
+- X / Y / Z handles are normalized to a fixed 56-pixel screen length so camera zoom does not make them unusably tiny/huge.
+- The pivot center is a Free-move handle.
+- Hover changes the handle to yellow; active drag changes it to white.
+- Gizmo hit testing wins over component world-picking while the pointer is on a handle.
+- Axis dragging projects mouse movement onto the visible handle direction, so dragging along the rendered X/Y/Z handle drives that authoring axis.
+- Existing Free/Snap inverse-Ctrl behavior is reused without a second transform path.
+- Part/Multi gizmo drags reuse `LiveModelEditorParts.beginGesture/endGesture`, preserving one drag = one undo record.
+- The gizmo is drawn at the end of the existing Class578 developer-preview pass rather than through `Canvas.getGraphics()` or another Swing overlay.
+
+Known runtime gate:
+- definition model mirroring (`aBool5647`) is not duplicated in projection math until its point-transform semantics are proven;
+- terrain contour deformation is not duplicated in projection math;
+- those assets may show pivot/axis offset until runtime evidence establishes the exact mapping;
+- Conveyor 46298 on its normal flat placement is the primary 2.7C-C acceptance asset.
