@@ -493,6 +493,10 @@ public final class ConstructionPlacementController {
                 : "Rail endpoint edit failed to queue: " + error;
     }
 
+    public static boolean isPersistableRailObject(int objectId, int objectType) {
+        return objectType == 22 && railBuildKey(objectId) != null;
+    }
+
     private static String railBuildKey(int objectId) {
         switch (objectId) {
         case 46353:
@@ -503,6 +507,56 @@ public final class ConstructionPlacementController {
             return "rail-curve-elbow";
         case 46381:
             return "rail-curve-b";
+        case 4770:
+            return "rail-asset-4770";
+        case 4796:
+            return "rail-asset-4796";
+        case 14500:
+            return "rail-asset-14500";
+        case 14501:
+            return "rail-asset-14501";
+        case 14502:
+            return "rail-asset-14502";
+        case 46352:
+            return "rail-asset-46352";
+        case 46354:
+            return "rail-asset-46354";
+        case 46355:
+            return "rail-asset-46355";
+        case 46356:
+            return "rail-asset-46356";
+        case 46357:
+            return "rail-asset-46357";
+        case 46358:
+            return "rail-asset-46358";
+        case 46359:
+            return "rail-asset-46359";
+        case 46361:
+            return "rail-asset-46361";
+        case 46363:
+            return "rail-asset-46363";
+        case 46364:
+            return "rail-asset-46364";
+        case 46365:
+            return "rail-asset-46365";
+        case 46366:
+            return "rail-asset-46366";
+        case 46367:
+            return "rail-asset-46367";
+        case 46368:
+            return "rail-asset-46368";
+        case 46369:
+            return "rail-asset-46369";
+        case 46370:
+            return "rail-asset-46370";
+        case 46376:
+            return "rail-asset-46376";
+        case 46378:
+            return "rail-asset-46378";
+        case 46380:
+            return "rail-asset-46380";
+        case 46382:
+            return "rail-asset-46382";
         default:
             return null;
         }
