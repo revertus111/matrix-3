@@ -53,10 +53,14 @@ public final class SettlementWorkerNpc extends NPC {
     private WorldTile manualMoveTarget;
     private SettlementResourceNode manualGatherNode;
     private boolean manualGatherActive;
+    private boolean manualHaulActive;
+    private SettlementProcessingRecipe manualProcessingRecipe;
+    private long manualProcessingWorkstationPieceId = -1L;
     private SettlementProcessingRecipe processingRecipe;
     private long processingWorkstationPieceId = -1L;
     private boolean processingVisitedStorage;
     private int processingTicksRemaining;
+    private boolean processingManual;
     private String statusDetail = "No allowed gathering job.";
 
     public SettlementWorkerNpc(SettlementInstance settlement,
@@ -95,6 +99,9 @@ public final class SettlementWorkerNpc extends NPC {
             }
             if (processingRecipe != null) {
                 clearProcessingWork();
+            }
+            if (manualProcessingRecipe != null) {
+                clearManualProcessingOrder();
             }
             if (carriedAmount > 0) {
                 settlement.releaseWorkerStorageReservation(workerId);
@@ -137,6 +144,11 @@ public final class SettlementWorkerNpc extends NPC {
 
         if (carriedAmount > 0) {
             processCarriedResource();
+            return;
+        }
+
+        if (manualProcessingRecipe != null) {
+            processManualProcessingOrder();
             return;
         }
 
@@ -230,6 +242,9 @@ public final class SettlementWorkerNpc extends NPC {
 
         carriedResource = targetNode.getResource();
         carriedAmount = CARRY_CAPACITY;
+        if (manualGatherActive) {
+            manualHaulActive = true;
+        }
         workerState.applyWorkCycleCost();
         workerState.addSkillXp(job.getSkill(), job.getWorkerXp());
         nextGatherIndex = (targetNode.ordinal() + 1) % SettlementResourceNode.values().length;
@@ -240,7 +255,7 @@ public final class SettlementWorkerNpc extends NPC {
     }
 
     private void processCarriedResource() {
-        if (!workerState.isJobAllowed(SettlementWorkerJob.HAUL)) {
+        if (!manualHaulActive && !workerState.isJobAllowed(SettlementWorkerJob.HAUL)) {
             settlement.releaseWorkerStorageReservation(workerId);
             resetWalkSteps();
             workState = WorkState.IDLE;
@@ -287,6 +302,7 @@ public final class SettlementWorkerNpc extends NPC {
             }
             carriedResource = null;
             carriedAmount = 0;
+            manualHaulActive = false;
             workState = WorkState.IDLE;
             statusDetail = "Deposited " + deposited + ".";
         }
@@ -400,6 +416,7 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
         clearProcessingWork();
+        clearManualProcessingOrder();
         manualGatherNode = null;
         manualGatherActive = false;
         clearTarget();
@@ -414,6 +431,7 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
         clearProcessingWork();
+        clearManualProcessingOrder();
         manualMoveTarget = null;
         manualGatherActive = false;
         clearTarget();
@@ -469,6 +487,53 @@ public final class SettlementWorkerNpc extends NPC {
         beginGathering();
     }
 
+    public void assignManualProcessingOrder(
+            SettlementProcessingRecipe recipe, long workstationPieceId) {
+        if (recipe == null || workstationPieceId <= 0L) {
+            return;
+        }
+        clearProcessingWork();
+        clearManualProcessingOrder();
+        manualMoveTarget = null;
+        manualGatherNode = null;
+        manualGatherActive = false;
+        clearTarget();
+        manualProcessingRecipe = recipe;
+        manualProcessingWorkstationPieceId = workstationPieceId;
+        if (carriedAmount > 0) {
+            manualHaulActive = true;
+        }
+        resetWalkSteps();
+        workState = WorkState.IDLE;
+        statusDetail = "Manual order: process at selected workstation.";
+    }
+
+    private void processManualProcessingOrder() {
+        SettlementProcessingRecipe recipe = manualProcessingRecipe;
+        long requestedPieceId = manualProcessingWorkstationPieceId;
+        if (recipe == null || requestedPieceId <= 0L) {
+            clearManualProcessingOrder();
+            return;
+        }
+        if (!settlement.canProcessRecipe(recipe)) {
+            clearManualProcessingOrder();
+            idle("Manual Process Wood blocked by input or output storage.");
+            return;
+        }
+        if (!beginProcessingWork(recipe, requestedPieceId, true)) {
+            idle("Manual Process Wood waiting for the selected workstation.");
+            return;
+        }
+        manualProcessingRecipe = null;
+        manualProcessingWorkstationPieceId = -1L;
+        processProcessingWork();
+    }
+
+    private void clearManualProcessingOrder() {
+        manualProcessingRecipe = null;
+        manualProcessingWorkstationPieceId = -1L;
+    }
+
     private void beginGathering() {
         if (targetNode == null) {
             idle("Gather target was lost.");
@@ -489,8 +554,13 @@ public final class SettlementWorkerNpc extends NPC {
     }
 
     private boolean beginProcessingWork(SettlementProcessingRecipe recipe) {
+        return beginProcessingWork(recipe, -1L, false);
+    }
+
+    private boolean beginProcessingWork(
+            SettlementProcessingRecipe recipe, long preferredPieceId, boolean manual) {
         long workstationPieceId =
-                settlement.reserveProcessingWorkstation(workerId, recipe);
+                settlement.reserveProcessingWorkstation(workerId, recipe, preferredPieceId);
         if (workstationPieceId <= 0L) {
             return false;
         }
@@ -498,9 +568,10 @@ public final class SettlementWorkerNpc extends NPC {
         processingWorkstationPieceId = workstationPieceId;
         processingVisitedStorage = false;
         processingTicksRemaining = 0;
+        processingManual = manual;
         resetWalkSteps();
         workState = WorkState.MOVING_TO_PROCESSING_STORAGE;
-        statusDetail = "Process Wood: collecting "
+        statusDetail = (manual ? "Manual Process Wood: collecting " : "Process Wood: collecting ")
                 + recipe.getInputAmount() + " "
                 + recipe.getInputResource().getDisplayName() + " from storage.";
         return true;
@@ -512,7 +583,7 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
         SettlementWorkerJob job = SettlementWorkerJob.PROCESS_WOOD;
-        if (!workerState.isJobAllowed(job)) {
+        if (!processingManual && !workerState.isJobAllowed(job)) {
             clearProcessingWork();
             idle("Process Wood disabled.");
             return;
@@ -594,6 +665,7 @@ public final class SettlementWorkerNpc extends NPC {
         processingWorkstationPieceId = -1L;
         processingVisitedStorage = false;
         processingTicksRemaining = 0;
+        processingManual = false;
         resetWalkSteps();
     }
 
@@ -756,9 +828,14 @@ public final class SettlementWorkerNpc extends NPC {
                     .append(manualGatherNode != null ? manualGatherNode.getKey()
                             : targetNode != null ? targetNode.getKey() : "active");
         }
+        if (manualProcessingRecipe != null) {
+            summary.append(" | manualProcessing=").append(manualProcessingRecipe.getKey())
+                    .append("@piece#").append(manualProcessingWorkstationPieceId);
+        }
         if (processingRecipe != null) {
             summary.append(" | processing=").append(processingRecipe.getKey())
-                    .append("@piece#").append(processingWorkstationPieceId);
+                    .append("@piece#").append(processingWorkstationPieceId)
+                    .append(processingManual ? " [manual]" : " [policy]");
         }
         summary.append(" | ").append(workerState.getNeedsSummary());
         summary.append(" | Skills: ").append(workerState.getSkillsSummary());
