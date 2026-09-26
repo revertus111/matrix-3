@@ -342,7 +342,8 @@ public final class LiveModelEditorPreview {
             dragStartY = y;
             gizmoActiveAxis = gizmoHit;
             axisConstraint = gizmoHit;
-            if (transformMode == TransformMode.MOVE) {
+            if (transformMode == TransformMode.MOVE
+                    || transformMode == TransformMode.SCALE) {
                 captureGizmoDragDirection(gizmoHit);
             } else if (transformMode == TransformMode.ROTATE) {
                 captureRotateDragStart(x, y);
@@ -428,6 +429,10 @@ public final class LiveModelEditorPreview {
                 && gizmoActiveAxis == AxisConstraint.Y
                 ? rotateGizmoDeltaDegrees(x, y)
                 : 0;
+        int gizmoScaleDelta = transformMode == TransformMode.SCALE
+                && gizmoActiveAxis != null
+                ? scaleGizmoDelta(dx, dy)
+                : 0;
         int[] cameraGroundDrag = transformMode == TransformMode.MOVE
                 && axisConstraint == AxisConstraint.FREE
                 ? ConstructionBuildCamera.mapScreenDragToGround(dx, dy, 4)
@@ -457,10 +462,13 @@ public final class LiveModelEditorPreview {
             } else if (transformMode == TransformMode.ROTATE) {
                 yaw += gizmoActiveAxis == AxisConstraint.Y ? gizmoYawDelta : -dx;
             } else {
-                int delta = (-dx + dy) / 2;
-                if (axisConstraint == AxisConstraint.X) sx += delta;
-                else if (axisConstraint == AxisConstraint.Y) sy += delta;
-                else if (axisConstraint == AxisConstraint.Z) sz += delta;
+                int delta = gizmoActiveAxis != null
+                        ? gizmoScaleDelta : (dx - dy) / 2;
+                AxisConstraint scaleAxis = gizmoActiveAxis != null
+                        ? gizmoActiveAxis : axisConstraint;
+                if (scaleAxis == AxisConstraint.X) sx += delta;
+                else if (scaleAxis == AxisConstraint.Y) sy += delta;
+                else if (scaleAxis == AxisConstraint.Z) sz += delta;
                 else {
                     sx += delta;
                     sy += delta;
@@ -528,10 +536,13 @@ public final class LiveModelEditorPreview {
         } else if (transformMode == TransformMode.ROTATE) {
             yaw += gizmoActiveAxis == AxisConstraint.Y ? gizmoYawDelta : -dx;
         } else {
-            int delta = (-dx + dy) / 2;
-            if (axisConstraint == AxisConstraint.X) sx += delta;
-            else if (axisConstraint == AxisConstraint.Y) sy += delta;
-            else if (axisConstraint == AxisConstraint.Z) sz += delta;
+            int delta = gizmoActiveAxis != null
+                    ? gizmoScaleDelta : (dx - dy) / 2;
+            AxisConstraint scaleAxis = gizmoActiveAxis != null
+                    ? gizmoActiveAxis : axisConstraint;
+            if (scaleAxis == AxisConstraint.X) sx += delta;
+            else if (scaleAxis == AxisConstraint.Y) sy += delta;
+            else if (scaleAxis == AxisConstraint.Z) sz += delta;
             else {
                 sx += delta;
                 sy += delta;
@@ -783,10 +794,14 @@ public final class LiveModelEditorPreview {
                         state.zX, state.zY, AxisConstraint.Z, GIZMO_Z_COLOR);
             } else if (transformMode == TransformMode.ROTATE) {
                 drawRotateGizmo(renderer, state);
+            } else if (transformMode == TransformMode.SCALE) {
+                drawScaleGizmo(renderer, state);
             }
 
-            renderer.method1725(state.centerX - 4, state.centerY - 4,
-                    9, 9, pivotColor, 1);
+            int pivotSize = transformMode == TransformMode.SCALE ? 11 : 9;
+            int pivotHalf = pivotSize / 2;
+            renderer.method1725(state.centerX - pivotHalf, state.centerY - pivotHalf,
+                    pivotSize, pivotSize, pivotColor, 1);
         } catch (RuntimeException ex) {
             gizmoScreen = GizmoScreenState.hidden();
             gizmoHoveredAxis = null;
@@ -1249,6 +1264,37 @@ public final class LiveModelEditorPreview {
     }
 
 
+
+    private static void drawScaleGizmo(Class106 renderer, GizmoScreenState state) {
+        drawScaleAxis(renderer, state.centerX, state.centerY,
+                state.xX, state.xY, AxisConstraint.X, GIZMO_X_COLOR, state.xValid);
+        drawScaleAxis(renderer, state.centerX, state.centerY,
+                state.yX, state.yY, AxisConstraint.Y, GIZMO_Y_COLOR, state.yValid);
+        drawScaleAxis(renderer, state.centerX, state.centerY,
+                state.zX, state.zY, AxisConstraint.Z, GIZMO_Z_COLOR, state.zValid);
+    }
+
+    private static void drawScaleAxis(Class106 renderer,
+            int x1, int y1, int x2, int y2,
+            AxisConstraint axis, int baseColor, boolean valid) {
+        if (!valid) return;
+        int color = gizmoActiveAxis == axis ? GIZMO_ACTIVE_COLOR
+                : gizmoHoveredAxis == axis ? GIZMO_HOVER_COLOR : baseColor;
+        renderer.method1730(x1, y1, x2, y2, color, 1);
+        renderer.method1730(x1 + 1, y1, x2 + 1, y2, color, 1);
+        renderer.method1725(x2 - 5, y2 - 5, 11, 11, color, 1);
+    }
+
+    private static int scaleGizmoDelta(int dx, int dy) {
+        if (gizmoActiveAxis == AxisConstraint.FREE) {
+            // Right/up grows; left/down shrinks. Deliberately screen-relative
+            // because the center handle represents uniform scale, not a world axis.
+            return (dx - dy) / 2;
+        }
+        return (int) Math.round(
+                (dx * dragGizmoDirX + dy * dragGizmoDirY) / 2.0);
+    }
+
     private static void drawRotateGizmo(Class106 renderer, GizmoScreenState state) {
         int color = gizmoActiveAxis == AxisConstraint.Y ? GIZMO_ACTIVE_COLOR
                 : gizmoHoveredAxis == AxisConstraint.Y
@@ -1294,7 +1340,13 @@ public final class LiveModelEditorPreview {
     private static AxisConstraint hitTransformGizmo(int x, int y) {
         if (transformMode == TransformMode.MOVE) return hitMoveGizmo(x, y);
         if (transformMode == TransformMode.ROTATE) return hitRotateGizmo(x, y);
+        if (transformMode == TransformMode.SCALE) return hitScaleGizmo(x, y);
         return null;
+    }
+
+    private static AxisConstraint hitScaleGizmo(int x, int y) {
+        if (transformMode != TransformMode.SCALE) return null;
+        return hitAxisGizmo(x, y, GIZMO_PIVOT_RADIUS + 2, GIZMO_HIT_RADIUS + 2);
     }
 
     private static AxisConstraint hitRotateGizmo(int x, int y) {
@@ -1330,6 +1382,11 @@ public final class LiveModelEditorPreview {
 
     private static AxisConstraint hitMoveGizmo(int x, int y) {
         if (transformMode != TransformMode.MOVE) return null;
+        return hitAxisGizmo(x, y, GIZMO_PIVOT_RADIUS, GIZMO_HIT_RADIUS);
+    }
+
+    private static AxisConstraint hitAxisGizmo(int x, int y,
+            int pivotRadius, int hitRadius) {
         GizmoScreenState state = gizmoScreen;
         if (!state.visible) return null;
 
@@ -1337,12 +1394,12 @@ public final class LiveModelEditorPreview {
         int cy = state.centerY;
         int pdx = x - cx;
         int pdy = y - cy;
-        if (pdx * pdx + pdy * pdy <= GIZMO_PIVOT_RADIUS * GIZMO_PIVOT_RADIUS) {
+        if (pdx * pdx + pdy * pdy <= pivotRadius * pivotRadius) {
             return AxisConstraint.FREE;
         }
 
         AxisConstraint best = null;
-        double bestDistance = GIZMO_HIT_RADIUS + 1.0;
+        double bestDistance = hitRadius + 1.0;
         if (state.xValid) {
             double distance = pointSegmentDistance(x, y, cx, cy, state.xX, state.xY);
             if (distance < bestDistance) {
@@ -1364,7 +1421,7 @@ public final class LiveModelEditorPreview {
                 best = AxisConstraint.Z;
             }
         }
-        return bestDistance <= GIZMO_HIT_RADIUS ? best : null;
+        return bestDistance <= hitRadius ? best : null;
     }
 
     private static double pointSegmentDistance(int px, int py,
