@@ -633,6 +633,25 @@ public final class LiveModelEditorPreview {
         return changed;
     }
 
+    /**
+     * Inspector scrubbing uses the same Part/Multi gesture transaction as the
+     * viewport gizmos so one press-drag-release remains one undo record.
+     */
+    public static boolean beginSelectedPartTransformGesture() {
+        return PARTS.beginGesture();
+    }
+
+    public static boolean updateSelectedPartTransformGesture(int sx, int sy, int sz,
+            int mx, int my, int mz, int yaw) {
+        boolean changed = PARTS.updateGestureTransform(sx, sy, sz, mx, my, mz, yaw);
+        if (changed) invalidateGeometryModels();
+        return changed;
+    }
+
+    public static void endSelectedPartTransformGesture() {
+        PARTS.endGesture();
+    }
+
     public static boolean toggleSelectedPartHidden() {
         boolean changed = PARTS.toggleSelectedHidden();
         if (changed) invalidateModels();
