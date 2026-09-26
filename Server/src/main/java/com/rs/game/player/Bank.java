@@ -675,7 +675,7 @@ public class Bank implements Serializable {
 	}
     }
 
-    public void sendExamineÎnventory(int slotId) {
+    public void sendExamineInventory(int slotId) {
 	Item item = player.getInventory().getItem(slotId);
 	if (item == null)
 	    return;
