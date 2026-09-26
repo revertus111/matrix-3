@@ -61,6 +61,7 @@ public class Class592 {
 			ConstructionPlacementController.observeSceneMenuTile(i_1_, i_3_, i_4_);
 			ConstructionRadialSelection.observeSceneMenuTile(i_1_, i_3_, i_4_);
 			ConstructionRadialSelection.mirrorWorldSelectionEntry(i_1_, i_3_, i_4_);
+			ConstructionRadialSelection.mirrorWorkerJobsEntry(string_0_, i_1_, l, i_3_, i_4_);
 			RailRoutePreview.observeSceneMenuTile(i_1_, i_3_, i_4_);
 			DevModeBridge.mirrorTileSpawnEntry(i_1_, i_3_, i_4_);
 			DevModeBridge.mirrorEntityEntries(string_0_, i, i_1_, i_2_, l, i_3_, i_4_, bool, bool_5_, l_6_, bool_7_);
