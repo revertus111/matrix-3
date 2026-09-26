@@ -23,7 +23,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 worker-control foundation is DONE through Bundle 2.4 / RUNTIME VERIFIED. Phase 3 is ACTIVE: Bundle 3.1 processing core and Bundle 3.2 physical Wooden workbench + Carpenter loop are IMPLEMENTED / NEED RUNTIME TEST. Current user-prioritized side investigation is Bundle 3.3 sawmill evidence + prefab mapping; Wooden workbench 13704 remains the protected fallback until the real sawmill assembly is verified.
+- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 worker-control foundation is DONE through Bundle 2.4 / RUNTIME VERIFIED. Phase 3 is ACTIVE: Bundle 3.1 processing core is RUNTIME VERIFIED; Bundle 3.2 physical Wooden workbench + Carpenter loop is IMPLEMENTED / NEEDS RUNTIME TEST. Current user-prioritized side investigation is Bundle 3.3 sawmill evidence + prefab mapping; Wooden workbench 13704 remains the protected fallback until the real sawmill assembly is verified.
 - Current user-prioritized side slice: Radial Worker Selection RWS-1 and RWS-2 are RUNTIME VERIFIED. The user confirmed the circular ring now keeps edge A fixed while edge B owns the expansion after ring-body calibration. RWS-3 is RUNTIME VERIFIED: live drag detection correctly identifies settlement workers inside the world-space circle and renders temporary small 4171 preview markers on included workers. Screenshot evidence verified both active settlers marked simultaneously inside the large selection ring. No persistent selection/server authority is added yet. RWS-4 has changed direction by user decision: GFX 4187 is dropped. The selected-worker visual layers two independent clones of proven GFX 4171. Runtime screenshot verified multi-worker layered rendering and independent outer/inner scaling; color controls initially had no visible effect because 4171 is texture-driven. The recolor path now gives each clone private texture IDs (0x8000), detaches textures only when a custom color is chosen, then applies the chosen HSL. A second runtime failure showed the first detach implementation only handled AbstractModel; Matrix3's Class89_Sub2 renderer keeps textures in a separate array. RWS-4 layered GFX 4171 styling is now RUNTIME VERIFIED: the user confirmed independent scaling and recolor both work across multiple workers after renderer-aware texture detachment covered AbstractModel, Class89_Sub2 and OpenGLModel. The first Worker Needs HUD prototype (three concentric 4171 rings) rendered successfully but was visually rejected by the user as the wrong design. The active prototype cuts GFX 4171 into three partial arches on one shared circumference: Hunger / Thirst / Energy occupy separate ~100-degree slots with gaps, color trends toward red at the real critical threshold, and arch length represents wellbeing remaining. Runtime video proved the first angular mask still included 4171's outer decorative diamond/spike geometry, producing chunky fragments instead of clean ring-body arches. The mask now first isolates the circular ring-body radial band, then applies the angular need slot. A follow-up strict pass now requires all three vertices of each candidate face to remain inside that annulus; centroid-only radial acceptance was still allowing decorative spike/diamond triangles to survive. Runtime screenshot also exposed an extra visual level: RWS-4 was still rendering both outer and inner full selection rings while the needs arches added a third circumference. Needs HUD now owns the inner/status level: outer full ring remains selection, the old inner full selection ring is suppressed while Needs HUD is enabled, and Hunger/Thirst/Energy arches render at the former inner-ring radius (70% default). Demo values remain explicitly client-only; real needs stay server-owned in SettlementWorkerState until a clean metadata sync seam is added.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
@@ -1294,13 +1294,13 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Current phase:** Phase 3 — Processing chains + better materials.
 
-**Active persistent-runtime bundle:** Bundle 3.2 — Physical Wooden workbench + Carpenter worker loop (IMPLEMENTED / NEEDS RUNTIME TEST). Bundle 3.1 processing core shares the same pending runtime session.
+**Active persistent-runtime bundle:** Bundle 3.2 — Physical Wooden workbench + Carpenter worker loop (IMPLEMENTED / NEEDS RUNTIME TEST). Bundle 3.1 processing core is DONE / RUNTIME VERIFIED.
 
 **Current side-task:** Bundle 3.3 — Sawmill workstation evidence + prefab mapping (ACTIVE INVESTIGATION / NEEDS RUNTIME EVIDENCE). Known evidence: conveyor object 46298, models 49717,49718. No saw object/sequence/prefab semantics are verified yet.
 
 **Active tooling slice:** Object Explorer + AssetStudioCapture live-assembly evidence export. The capture preserves exact scene ID/type/rotation/slot/tile/relative offsets/size and enriches each component with model IDs and decoded object animation IDs. Wooden workbench 13704 remains untouched as the working provisional processing station.
 
-**Next checklist item:** At the real RuneScape sawmill, open Object Explorer -> Research list, set tag to SAWMILL, choose a radius that contains the complete machinery, then click Capture Live Assembly Evidence. Confirm the TSV contains conveyor 46298 with models 49717,49718 and identify every animated=YES object against the visible moving saw/machinery. Upload the TSV plus one screenshot/video. The next implementation patch will promote only those verified components into the settlement sawmill prefab, then run the combined Bundle 3.1/3.2 processing gate.
+**Next checklist item:** Runtime-test Bundle 3.2: place Wooden workbench 13704 with at least 2 Wood remaining, apply Carpenter/Process Wood to one worker, and confirm storage -> workbench -> PROCESSING -> exactly Wood -2 / Planks +1 with +18 Crafting XP. Then test Pause/Resume and exit/re-entry persistence. Bundle 3.3 sawmill evidence capture remains the parallel asset-mapping task.
 
 **Files/systems already inspected:**
 
@@ -1586,7 +1586,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 
 ## Phase 3 / Bundle 3.1 — Processing core: Wood -> Planks — 2026-09-25
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
+- Status: DONE / RUNTIME VERIFIED under approved AAA.
 - SettlementResource now distinguishes raw starter resources from processed resources. PLANKS is persistent settlement storage but is not a starter resource node or starter-shelter requirement.
 - SettlementProcessingRecipe is the stable recipe authority. First recipe: saw-planks, 2 Wood -> 1 Plank.
 - SettlementProcessingTransaction owns exact-cycle atomic storage conversion. Insufficient input or insufficient output capacity rejects the whole requested transaction without partial mutation.
@@ -1595,7 +1595,8 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Cleaned Con Revamp tab gains one compact active Processing card: status, Prime 10 Wood, Saw 1 Plank, Processing Self-Test.
 - This slice intentionally does NOT guess workstation art, worker processing AI, animations, or input/output object placement. The recipe/storage owner must pass first.
 - Runtime gate: Processing Self-Test PASS -> Prime 10 Wood -> Saw 1 Plank -> storage must read Wood=8 and Planks=1 -> repeat until Planks output is blocked by capacity without consuming Wood.
-- Resume Here: after Bundle 3.1 passes, select/verify a physical saw/crafting workstation asset and bind saw-planks to normal Construction placement + worker path/work cycle.
+- Runtime acceptance: user confirmed two live manual cycles changed storage Wood 90->88->86 and Planks 0->1->2, and the Processing Self-Test reported PASS for atomic conversion, input/output rollback and starter-resource boundary.
+- Resume Here: Bundle 3.1 is DONE / RUNTIME VERIFIED. Continue with Bundle 3.2 worker/workbench runtime acceptance while Bundle 3.3 maps the real sawmill assembly.
 
 
 ## Phase 3 / Bundle 3.2 — Physical Wooden workbench + Carpenter worker loop — 2026-09-25
