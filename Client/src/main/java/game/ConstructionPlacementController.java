@@ -575,8 +575,10 @@ public final class ConstructionPlacementController {
             RailRoutePreview.configure("Settlement rail", 46353, 22, 3,
                     RailRoutePreview.RouteOrder.X_THEN_Y);
             RailRoutePreview.reloadCurveComposite();
+            RailRoutePreview.reloadSpecialComposites();
+            RailRoutePreview.setToolMode(RailRoutePreview.ToolMode.NORMAL);
             RailRoutePreview.setEnabled(true);
-            status = "Rail Network armed. Drag track; start another drag on existing authored track to extend or branch.";
+            status = "Rail Network armed. Normal Rail creates degree <=2 track; use the native build-bar special tools for junctions.";
             return status;
         }
         RailRoutePreview.setEnabled(false);
