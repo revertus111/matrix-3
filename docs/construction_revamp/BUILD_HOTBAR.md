@@ -17,11 +17,12 @@ The build bar is the player's explicit build-tool selector. It should make Const
 Normal build tools do not infer special overlap intent.
 
 For rails:
-- Rail may draw ordinary track, extend track, and use the currently accepted branch behavior.
-- Rail may connect into existing authored rail at first contact.
-- Rail may not pass through existing authored rail.
+- Rail may draw ordinary track and extend an existing endpoint.
+- Rail may connect into existing authored rail at first contact only when the resulting node remains degree 2 or lower.
+- Rail may not create a degree-3/4 branch, junction or crossing. If first contact would do so, the gesture stops before authoring that edge.
 - Crossing an existing rail requires an explicit Crossing tool/piece.
-- Dedicated Junction / Splitter tools will own special connection semantics once accepted cache art is classified.
+- Branching from the middle of an existing degree-2 rail requires the explicit Junction tool.
+- Dedicated Junction / Splitter tools own special connection semantics once accepted cache art is classified.
 - Physical overlap and logical rail connectivity are separate concepts. A future Crossing can visually occupy the same crossing area without automatically becoming a switch.
 - Cart routing must continue using logical graph edges, never object rotation as travel direction.
 
@@ -65,10 +66,17 @@ V1 behavior:
 The current first-contact clamp remains the safe default until special rail tools exist:
 
 ```
-ordinary Rail:
+ordinary Rail, safe endpoint connection:
 NEW ----------->
-               X  first existing rail contact = endpoint
-EXISTING ======X========
+               X  connect only if resulting degree <= 2
+EXISTING -------X
+
+ordinary Rail, middle/degree-2 contact:
+NEW ----------->|
+                X  STOP BEFORE EDGE
+EXISTING =======X========
+                ^
+          Junction/Crossing/Splitter required
 ```
 
 Future Crossing:
