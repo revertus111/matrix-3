@@ -35,6 +35,7 @@ import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -72,11 +73,14 @@ import javax.swing.event.ChangeListener;
  */
 public final class LiveModelEditorWindow {
 
-    private static final int PROJECT_VERSION = 3;
+    private static final int PROJECT_VERSION = 4;
     private static final File PROJECT_DIR = new File("dev-model-projects");
+    private static final File ASSET_DIR = new File("dev-model-assets");
 
     private static final int OVERLAY_WIDTH = 438;
     private static final int OVERLAY_HEIGHT = 690;
+    private static final int MIN_OVERLAY_WIDTH = 360;
+    private static final int MIN_OVERLAY_HEIGHT = 460;
     private static final int OVERLAY_MARGIN = 10;
     private static final int OVERLAY_TOP = 48;
 
@@ -106,6 +110,9 @@ public final class LiveModelEditorWindow {
     private static boolean inputGateInstalled;
     private static int manualLocalX;
     private static int manualLocalY;
+    private static int manualWidth = OVERLAY_WIDTH;
+    private static int manualHeight = OVERLAY_HEIGHT;
+    private static boolean manuallySized;
 
     private final JPanel root = new JPanel(new BorderLayout());
     private final JLabel targetLabel = rsValue("-");
@@ -246,8 +253,10 @@ public final class LiveModelEditorWindow {
             return;
         }
 
-        int width = Math.min(OVERLAY_WIDTH, Math.max(280, canvas.getWidth() - 20));
-        int height = Math.min(OVERLAY_HEIGHT, Math.max(420, canvas.getHeight() - 20));
+        int requestedWidth = manuallySized ? manualWidth : OVERLAY_WIDTH;
+        int requestedHeight = manuallySized ? manualHeight : OVERLAY_HEIGHT;
+        int width = Math.min(requestedWidth, Math.max(MIN_OVERLAY_WIDTH, canvas.getWidth() - 20));
+        int height = Math.min(requestedHeight, Math.max(MIN_OVERLAY_HEIGHT, canvas.getHeight() - 20));
 
         int localX;
         int localY;
@@ -284,10 +293,23 @@ public final class LiveModelEditorWindow {
         center.add(createGlobalCard());
         center.add(Box.createVerticalStrut(7));
         center.add(createProjectStrip());
-        root.add(center, BorderLayout.CENTER);
+
+        JScrollPane editorScroll = new JScrollPane(center,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        editorScroll.setBorder(null);
+        editorScroll.getViewport().setBackground(RS_BG);
+        editorScroll.getVerticalScrollBar().setUnitIncrement(18);
+        editorScroll.getHorizontalScrollBar().setUnitIncrement(18);
+        root.add(editorScroll, BorderLayout.CENTER);
 
         statusLabel.setBorder(BorderFactory.createEmptyBorder(4, 9, 7, 9));
-        root.add(statusLabel, BorderLayout.SOUTH);
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(RS_PANEL_2);
+        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, RS_BORDER));
+        footer.add(statusLabel, BorderLayout.CENTER);
+        footer.add(createResizeGrip(), BorderLayout.EAST);
+        root.add(footer, BorderLayout.SOUTH);
 
         installListeners();
     }
@@ -296,7 +318,7 @@ public final class LiveModelEditorWindow {
         final JPanel bar = new JPanel(new BorderLayout(8, 0));
         bar.setBackground(RS_PANEL_2);
         bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, RS_BORDER));
-        bar.setPreferredSize(new Dimension(OVERLAY_WIDTH, 42));
+        bar.setPreferredSize(new Dimension(MIN_OVERLAY_WIDTH, 42));
 
         JPanel text = new JPanel();
         text.setOpaque(false);
@@ -376,10 +398,30 @@ public final class LiveModelEditorWindow {
         heading.add(partStatusLabel, BorderLayout.EAST);
         card.add(heading);
 
-        JLabel hint = new JLabel("Hover actual mesh -> highlight | Click/drag -> edit | G/R/S | X/Y/Z/F");
+        JLabel hint = new JLabel("Hover mesh -> highlight | drag = transform | Ctrl toggles in Multi");
         hint.setFont(RS_SMALL_FONT);
         hint.setForeground(RS_MUTED);
         card.add(hint);
+        card.add(Box.createVerticalStrut(5));
+
+        JPanel selectionModes = actionRow(3);
+        JButton wholeMode = rsButton("Whole [1]");
+        JButton partMode = rsButton("Part [2]");
+        JButton multiMode = rsButton("Multi [3]");
+        selectionModes.add(wholeMode);
+        selectionModes.add(partMode);
+        selectionModes.add(multiMode);
+        card.add(selectionModes);
+
+        card.add(Box.createVerticalStrut(4));
+        JPanel selectionActions = actionRow(3);
+        JButton selectAll = rsButton("Select All");
+        JButton clearSelection = rsButton("Clear");
+        JButton resetSelection = rsButton("Reset Sel");
+        selectionActions.add(selectAll);
+        selectionActions.add(clearSelection);
+        selectionActions.add(resetSelection);
+        card.add(selectionActions);
         card.add(Box.createVerticalStrut(5));
 
         partList.setVisibleRowCount(6);
@@ -475,6 +517,21 @@ public final class LiveModelEditorWindow {
         replaceRow.add(replaceOne); replaceRow.add(replaceMatching); replaceRow.add(restorePart);
         card.add(replaceRow);
 
+        wholeMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE));
+        partMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.PART));
+        multiMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI));
+        selectAll.addActionListener(e -> {
+            setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+            LiveModelEditorPreview.selectAllParts();
+            refreshPartList();
+        });
+        clearSelection.addActionListener(e -> {
+            setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+            LiveModelEditorPreview.clearPartSelection();
+            refreshPartList();
+        });
+        resetSelection.addActionListener(e -> resetSelectedTransforms());
+
         moveMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.MOVE));
         rotateMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.ROTATE));
         scaleMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.SCALE));
@@ -557,19 +614,22 @@ public final class LiveModelEditorWindow {
         JPanel card = rsCard();
         card.setLayout(new BorderLayout(6, 0));
 
-        JLabel label = new JLabel("PROJECT JSON v2");
+        JLabel label = new JLabel("PROJECT / CUSTOM ASSET");
         label.setFont(RS_SECTION_FONT);
         label.setForeground(RS_GOLD);
         card.add(label, BorderLayout.WEST);
 
-        JPanel actions = new JPanel(new GridLayout(1, 2, 5, 0));
+        JPanel actions = new JPanel(new GridLayout(1, 3, 5, 0));
         actions.setOpaque(false);
-        JButton save = rsButton("Save");
-        JButton load = rsButton("Load");
+        JButton save = rsButton("Save Project");
+        JButton load = rsButton("Load Project");
+        JButton saveAsset = rsButton("Save Selection");
         save.addActionListener(e -> saveProject());
         load.addActionListener(e -> loadProject());
+        saveAsset.addActionListener(e -> saveSelectionAsset());
         actions.add(save);
         actions.add(load);
+        actions.add(saveAsset);
         card.add(actions, BorderLayout.EAST);
         return card;
     }
@@ -615,13 +675,18 @@ public final class LiveModelEditorWindow {
 
         partList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         partList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting() && !suppressPartRefresh) {
+            if (e.getValueIsAdjusting() || suppressPartRefresh) return;
+            LiveModelEditorPreview.SelectionMode mode = LiveModelEditorPreview.getSelectionMode();
+            if (mode == LiveModelEditorPreview.SelectionMode.WHOLE) return;
+            if (mode == LiveModelEditorPreview.SelectionMode.MULTI) {
+                LiveModelEditorPreview.setPartSelection(partList.getSelectedIndices());
+            } else {
                 int index = partList.getSelectedIndex();
-                if (index >= 0 && LiveModelEditorPreview.selectPart(index)) {
-                    loadSelectedPartEditors();
-                    statusLabel.setText("Selected Part " + index + ".");
-                }
+                if (index >= 0) LiveModelEditorPreview.selectPart(index);
             }
+            loadSelectedPartEditors();
+            statusLabel.setText("Selected " + LiveModelEditorPreview.getSelectedPartCount()
+                    + " part(s) in " + mode + " mode.");
         });
 
         partList.addMouseMotionListener(new MouseMotionAdapter() {
@@ -738,7 +803,8 @@ public final class LiveModelEditorWindow {
                     }
                     if (id == MouseEvent.MOUSE_PRESSED
                             && mouse.getButton() == MouseEvent.BUTTON1) {
-                        LiveModelEditorPreview.beginPointerDrag(mouse.getX(), mouse.getY());
+                        LiveModelEditorPreview.beginPointerDrag(mouse.getX(), mouse.getY(),
+                                mouse.isShiftDown() || mouse.isControlDown(), mouse.isControlDown());
                         mouse.consume();
                         if (instance != null) instance.syncRuntimeState();
                         return;
@@ -779,7 +845,27 @@ public final class LiveModelEditorWindow {
                         });
                         return;
                     }
-                    if (code == KeyEvent.VK_G) {
+                    if (code == KeyEvent.VK_1) {
+                        if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE);
+                        else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE);
+                    } else if (code == KeyEvent.VK_2) {
+                        if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.PART);
+                        else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.PART);
+                    } else if (code == KeyEvent.VK_3) {
+                        if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+                        else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+                    } else if (code == KeyEvent.VK_A && key.isControlDown()) {
+                        if (instance != null) {
+                            instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+                            LiveModelEditorPreview.selectAllParts();
+                            instance.refreshPartList();
+                        }
+                    } else if (code == KeyEvent.VK_S && key.isControlDown()) {
+                        if (instance != null) {
+                            if (key.isShiftDown()) instance.saveSelectionAsset();
+                            else instance.saveProject();
+                        }
+                    } else if (code == KeyEvent.VK_G) {
                         LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.MOVE);
                     } else if (code == KeyEvent.VK_R) {
                         LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.ROTATE);
@@ -872,7 +958,8 @@ public final class LiveModelEditorWindow {
     private void initializeParts() {
         int count = LiveModelEditorPreview.initializeParts();
         refreshPartList();
-        if (count > 0 && LiveModelEditorPreview.getSelectedPart() < 0) {
+        if (count > 0 && LiveModelEditorPreview.getSelectedPart() < 0
+                && LiveModelEditorPreview.getSelectionMode() == LiveModelEditorPreview.SelectionMode.PART) {
             suppressPartRefresh = true;
             try {
                 partList.setSelectedIndex(0);
@@ -887,51 +974,69 @@ public final class LiveModelEditorWindow {
 
     private void refreshPartList() {
         String[] labels = LiveModelEditorPreview.getPartLabels();
-        int selected = LiveModelEditorPreview.getSelectedPart();
+        int[] selected = LiveModelEditorPreview.getSelectedParts();
+        applySelectionModeToList();
         suppressPartRefresh = true;
         try {
             partListModel.clear();
-            for (String label : labels) {
-                partListModel.addElement(label);
-            }
-            if (selected >= 0 && selected < labels.length) {
-                partList.setSelectedIndex(selected);
-                partList.ensureIndexIsVisible(selected);
-            } else {
-                partList.clearSelection();
-            }
+            for (String label : labels) partListModel.addElement(label);
+            partList.setSelectedIndices(selected);
+            int primary = LiveModelEditorPreview.getSelectedPart();
+            if (primary >= 0 && primary < labels.length) partList.ensureIndexIsVisible(primary);
         } finally {
             suppressPartRefresh = false;
         }
         if (labels.length == 0) {
             partStatusLabel.setText("NO PARTS");
         } else {
-            partStatusLabel.setText(labels.length + " PARTS"
-                    + (LiveModelEditorPreview.isPartIsolated() ? " / ISOLATE" : ""));
+            partStatusLabel.setText(LiveModelEditorPreview.getSelectionMode() + " | "
+                    + LiveModelEditorPreview.getSelectedPartCount() + "/" + labels.length + " SELECTED"
+                    + (LiveModelEditorPreview.isPartIsolated() ? " | ISOLATE" : ""));
         }
         partList.repaint();
     }
 
     private void syncRuntimeState() {
-        int selected = LiveModelEditorPreview.getSelectedPart();
-        if (selected >= 0 && selected < partListModel.size()
-                && partList.getSelectedIndex() != selected) {
+        int[] selected = LiveModelEditorPreview.getSelectedParts();
+        if (!Arrays.equals(partList.getSelectedIndices(), selected)) {
             suppressPartRefresh = true;
             try {
-                partList.setSelectedIndex(selected);
-                partList.ensureIndexIsVisible(selected);
+                partList.setSelectedIndices(selected);
+                int primary = LiveModelEditorPreview.getSelectedPart();
+                if (primary >= 0 && primary < partListModel.size()) partList.ensureIndexIsVisible(primary);
             } finally {
                 suppressPartRefresh = false;
             }
         }
-        if (selected >= 0) {
+        if (LiveModelEditorPreview.getSelectionMode() == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            loadWholeEditors();
+        } else if (LiveModelEditorPreview.getSelectedPart() >= 0) {
             loadSelectedPartEditors();
         }
         int hovered = LiveModelEditorPreview.getWorldHoveredPart();
-        partStatusLabel.setText((hovered >= 0 ? "HOVER P" + hovered + " | " : "")
-                + LiveModelEditorPreview.getTransformMode() + " "
+        partStatusLabel.setText(LiveModelEditorPreview.getSelectionMode() + " | "
+                + LiveModelEditorPreview.getSelectedPartCount() + " selected"
+                + (hovered >= 0 ? " | HOVER P" + hovered : "")
+                + " | " + LiveModelEditorPreview.getTransformMode() + " "
                 + LiveModelEditorPreview.getAxisConstraint()
                 + (LiveModelEditorPreview.isPartIsolated() ? " | ISOLATE" : ""));
+    }
+
+    private void setSelectionMode(LiveModelEditorPreview.SelectionMode mode) {
+        LiveModelEditorPreview.setSelectionMode(mode);
+        applySelectionModeToList();
+        refreshPartList();
+        if (mode == LiveModelEditorPreview.SelectionMode.WHOLE) loadWholeEditors();
+        else loadSelectedPartEditors();
+        statusLabel.setText("Selection mode: " + mode + ".");
+    }
+
+    private void applySelectionModeToList() {
+        LiveModelEditorPreview.SelectionMode mode = LiveModelEditorPreview.getSelectionMode();
+        partList.setSelectionMode(mode == LiveModelEditorPreview.SelectionMode.PART
+                ? ListSelectionModel.SINGLE_SELECTION
+                : ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        partList.setEnabled(mode != LiveModelEditorPreview.SelectionMode.WHOLE);
     }
 
     private void setEditMode(LiveModelEditorPreview.TransformMode mode) {
@@ -947,7 +1052,8 @@ public final class LiveModelEditorWindow {
     private void toggleSelectedHidden() {
         if (LiveModelEditorPreview.toggleSelectedPartHidden()) {
             refreshPartList();
-            statusLabel.setText("Toggled selected part visibility.");
+            statusLabel.setText("Toggled visibility for "
+                    + LiveModelEditorPreview.getSelectedPartCount() + " selected part(s).");
         }
     }
 
@@ -955,14 +1061,14 @@ public final class LiveModelEditorWindow {
         if (LiveModelEditorPreview.duplicateSelectedPart()) {
             refreshPartList();
             loadSelectedPartEditors();
-            statusLabel.setText("Duplicated selected mesh part.");
+            statusLabel.setText("Duplicated selected mesh part(s).");
         }
     }
 
     private void deleteSelected() {
         if (LiveModelEditorPreview.deleteSelectedPart()) {
             refreshPartList();
-            statusLabel.setText("Deleted selected project part. Ctrl+Z restores it.");
+            statusLabel.setText("Deleted selected project part(s). Ctrl+Z restores them.");
         }
     }
 
@@ -979,6 +1085,30 @@ public final class LiveModelEditorWindow {
                     + piece.getDisplayName() + " #" + piece.getObjectId() + ".");
         } else {
             statusLabel.setText("Replacement could not be applied to the selected part.");
+        }
+    }
+
+    private void resetSelectedTransforms() {
+        if (LiveModelEditorPreview.resetSelectedPartTransforms()) {
+            loadSelectedPartEditors();
+            refreshPartList();
+            statusLabel.setText("Reset selected part transform(s).");
+        }
+    }
+
+    private void loadWholeEditors() {
+        int[] transform = LiveModelEditorPreview.getWholeTransform();
+        suppressLiveRefresh = true;
+        try {
+            scaleXSpinner.setValue(Integer.valueOf(transform[0]));
+            scaleYSpinner.setValue(Integer.valueOf(transform[1]));
+            scaleZSpinner.setValue(Integer.valueOf(transform[2]));
+            moveXSpinner.setValue(Integer.valueOf(transform[3]));
+            moveYSpinner.setValue(Integer.valueOf(transform[4]));
+            moveZSpinner.setValue(Integer.valueOf(transform[5]));
+            yawSpinner.setValue(Integer.valueOf(transform[6]));
+        } finally {
+            suppressLiveRefresh = false;
         }
     }
 
@@ -999,14 +1129,15 @@ public final class LiveModelEditorWindow {
     }
 
     private void updateSelectedPartTransform() {
-        if (suppressPartRefresh || LiveModelEditorPreview.getSelectedPart() < 0) {
+        if (suppressPartRefresh || LiveModelEditorPreview.getSelectedPart() < 0
+                || LiveModelEditorPreview.getSelectionMode() == LiveModelEditorPreview.SelectionMode.WHOLE) {
             return;
         }
         if (LiveModelEditorPreview.setSelectedPartTransform(
                 number(partScaleXSpinner), number(partScaleYSpinner), number(partScaleZSpinner),
                 number(partMoveXSpinner), number(partMoveYSpinner), number(partMoveZSpinner),
                 number(partYawSpinner))) {
-            statusLabel.setText("Applied transform to selected mesh part.");
+            statusLabel.setText("Applied transform to selected mesh part(s).");
         }
     }
 
@@ -1057,6 +1188,34 @@ public final class LiveModelEditorWindow {
             statusLabel.setText("Saved " + file.getPath());
         } catch (Exception ex) {
             statusLabel.setText("Save failed: " + rootMessage(ex));
+        }
+    }
+
+    private void saveSelectionAsset() {
+        String json = LiveModelEditorPreview.getSelectionAssetJson();
+        if (json == null) {
+            statusLabel.setText("Select one or more live model parts first.");
+            return;
+        }
+        try {
+            if (!ASSET_DIR.exists() && !ASSET_DIR.mkdirs()) {
+                throw new IllegalStateException("Could not create " + ASSET_DIR.getPath());
+            }
+            JFileChooser chooser = new JFileChooser(ASSET_DIR);
+            chooser.setDialogTitle("Save Matrix3 custom model selection");
+            chooser.setSelectedFile(new File(ASSET_DIR,
+                    safeFileStem(objectName) + "_" + objectId + "_selection.json"));
+            if (chooser.showSaveDialog(overlayWindow) != JFileChooser.APPROVE_OPTION) return;
+            File file = chooser.getSelectedFile();
+            if (!file.getName().toLowerCase().endsWith(".json")) {
+                file = new File(file.getParentFile(), file.getName() + ".json");
+            }
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(file), StandardCharsets.UTF_8));
+            try { writer.write(json); } finally { writer.close(); }
+            statusLabel.setText("Saved custom selection asset: " + file.getPath());
+        } catch (Exception ex) {
+            statusLabel.setText("Selection save failed: " + rootMessage(ex));
         }
     }
 
@@ -1143,6 +1302,44 @@ public final class LiveModelEditorWindow {
         out.append(LiveModelEditorPreview.getPartProjectJsonFields()).append("\n");
         out.append("}\n");
         return out.toString();
+    }
+
+    private static JComponent createResizeGrip() {
+        final JLabel grip = new JLabel("  //  ");
+        grip.setFont(RS_SMALL_FONT);
+        grip.setForeground(RS_GOLD);
+        grip.setToolTipText("Drag to resize Live Model Editor");
+        grip.setBorder(BorderFactory.createEmptyBorder(4, 4, 5, 5));
+
+        MouseAdapter resize = new MouseAdapter() {
+            private int startX, startY, startWidth, startHeight;
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (overlayWindow == null) return;
+                startX = e.getXOnScreen();
+                startY = e.getYOnScreen();
+                startWidth = overlayWindow.getWidth();
+                startHeight = overlayWindow.getHeight();
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                Canvas canvas = Class584.aCanvas7745;
+                if (overlayWindow == null || canvas == null) return;
+                int maxWidth = Math.max(MIN_OVERLAY_WIDTH, canvas.getWidth() - 20);
+                int maxHeight = Math.max(MIN_OVERLAY_HEIGHT, canvas.getHeight() - 20);
+                manualWidth = clamp(startWidth + e.getXOnScreen() - startX,
+                        MIN_OVERLAY_WIDTH, maxWidth);
+                manualHeight = clamp(startHeight + e.getYOnScreen() - startY,
+                        MIN_OVERLAY_HEIGHT, maxHeight);
+                manuallySized = true;
+                refreshOverlayBounds();
+            }
+        };
+        grip.addMouseListener(resize);
+        grip.addMouseMotionListener(resize);
+        return grip;
     }
 
     private static JPanel rsCard() {
@@ -1235,6 +1432,12 @@ public final class LiveModelEditorWindow {
             manuallyPositioned = true;
         } catch (IllegalComponentStateException ignored) {
         }
+    }
+
+    private static String safeFileStem(String value) {
+        if (value == null || value.trim().length() == 0) return "model_asset";
+        String safe = value.trim().replaceAll("[^A-Za-z0-9._-]+", "_");
+        return safe.length() == 0 ? "model_asset" : safe;
     }
 
     private static String readFile(File file) throws Exception {
