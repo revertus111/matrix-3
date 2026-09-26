@@ -1511,3 +1511,9 @@
 - NIS reuses its normal 1430 host. Legacy explicitly remounts/unhides 1430 for the Construction session without changing Player.legacyMode; closing the palette restores real action-bar vars/lock state and re-emits interface-mode vars.
 - Settlement teardown also ends Construction action-bar mode so exit/teleport/logout cannot strand the temporary build bar.
 - Initial visual tokens are icon-only item IDs and are not inventory items, persistent shortcuts or Construction identity; dedicated sprites/labels can replace them later.
+
+
+2026-09-25 - Bank examine identifier encoding compile fix
+- Renamed the non-ASCII Bank method identifier sendExamineÎnventory to ASCII-only sendExamineInventory.
+- Updated both ButtonHandler bank-inventory examine call sites to the ASCII method name.
+- This removes the UTF-8/Windows-1252 source-encoding mismatch that Eclipse surfaced as sendExamineÃŽnventory undefined; runtime bank examine behavior is unchanged.
