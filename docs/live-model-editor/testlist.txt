@@ -290,3 +290,37 @@ Bundle 2.7C-C - native Move gizmo + pivot
 [ ] Regression: direct model dragging away from the gizmo still works with G/R/V + F/X/Y/Z.
 [ ] Regression: inspector values update continuously during gizmo movement.
 [ ] If pivot/axes are visibly offset on Conveyor 46298, record whether the object definition uses model mirroring or terrain contouring before changing projection math.
+
+
+Bundle 2.7C runtime report — 2026-09-26
+[x] Contextual Transform Inspector visible and usable on Conveyor belt 46298.
+[x] Native Move pivot/gizmo renders on the selected conveyor component.
+[x] User reported editor behavior working except Snap.
+[!] Pre-2.7C-D snap behavior FAILED runtime acceptance and is superseded by the corrected D implementation below.
+
+Bundle 2.7C-D - corrected snap + yaw Rotate gizmo
+[ ] Eclipse/Java 8 clean-build Client after Preview/Parts/Window changes.
+[ ] Open Conveyor belt 46298 and select one Part.
+[ ] MOVE / SNAP OFF: normal gizmo drag remains continuous/free.
+[ ] MOVE / SNAP OFF: begin dragging, then hold Ctrl; inspector Position advances by exact Move Snap deltas from the drag-start transform.
+[ ] Release Ctrl during the same drag; motion immediately returns to free without resetting the drag origin.
+[ ] MOVE / SNAP ON: normal drag advances by Move Snap deltas.
+[ ] MOVE / SNAP ON: hold Ctrl during the same drag; movement becomes temporarily free, then resumes snapping when Ctrl is released.
+[ ] Change Move Snap from 16 to 32 and confirm one identical drag produces 32-unit delta steps.
+[ ] Start from a non-zero/non-grid Position value and confirm snapping is relative to the drag-start value rather than teleporting to an unrelated absolute grid point.
+[ ] Confirm Ctrl snapping still works when the Canvas MouseEvent modifier bit would otherwise be unreliable; editor-level Ctrl latch must keep temporary Snap/Free state stable.
+[ ] Switch Rotate [R]; Move XYZ handles disappear and one yaw ring renders around the same pivot.
+[ ] Hover the yaw ring; ring highlights yellow.
+[ ] Drag the yaw ring clockwise/counter-clockwise; active ring turns white and inspector Yaw follows pointer angle around the pivot.
+[ ] ROTATE / SNAP OFF + Ctrl: yaw changes in exact Angle Snap deltas from the drag-start yaw.
+[ ] ROTATE / SNAP ON: yaw snaps normally; Ctrl temporarily returns to free rotation.
+[ ] Change Angle Snap from 15 to another value and confirm the next ring drag uses the new increment.
+[ ] Part mode: rotation occurs around that component's own center and does not translate the part.
+[ ] Multi mode: select at least two separated parts, rotate with the ring, and confirm their centers orbit the shared pivot while each part yaw changes by the same delta.
+[ ] Multi exact Yaw entry uses the same shared-pivot orbit semantics as viewport rotation.
+[ ] Ctrl+Z after one Multi rotate drag restores both part positions and yaw in one undo operation.
+[ ] Whole mode: yaw ring rotates the whole editable object around the whole/model pivot.
+[ ] Regression: Move gizmo pivot/handles remain aligned and usable after switching R -> G.
+[ ] Regression: direct model drag away from the gizmo still works.
+[ ] Regression: inspector Position/Yaw values update live during gizmo manipulation.
+[ ] Regression: no black screen, renderer corruption, or repeated GIZMO RENDER SKIP spam.
