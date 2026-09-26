@@ -273,11 +273,12 @@ Required:
 - [ ] Numeric value scrubbing.
 - [x] Render visible pivot.
 - [x] Render Move gizmo.
-- [ ] Render supported Rotate gizmo.
+- [x] Render supported yaw Rotate gizmo.
 - [ ] Render Scale gizmo.
 - [x] Move-gizmo hit testing / hover / active state.
+- [x] Rotate-ring hit testing / hover / active state.
 - [x] Whole / Part / Multi gizmo pivot positioning.
-- [ ] Multi shared-pivot rotation.
+- [x] Multi shared-pivot yaw rotation.
 - [ ] Compact active transform readout near gizmo.
 - [ ] Keyboard nudge path.
 - [ ] Centralized hotkey/text-entry ownership.
@@ -372,3 +373,43 @@ Known runtime gate:
 - terrain contour deformation is not duplicated in projection math;
 - those assets may show pivot/axis offset until runtime evidence establishes the exact mapping;
 - Conveyor 46298 on its normal flat placement is the primary 2.7C-C acceptance asset.
+
+
+### Runtime report — 2026-09-26
+
+Conveyor belt 46298 was runtime-tested after 2.7C-C.
+
+VERIFIED:
+- contextual inspector is visible and usable;
+- selected part values are shown in the interface;
+- native pivot/Move gizmo renders on the selected conveyor component;
+- handle sizing/alignment is usable in the live scene;
+- the user reported the rest of the tested editor behavior working.
+
+FAILED:
+- Move snap did not produce the intended snapped interaction.
+
+Bundle 2.7C-D therefore treats the pre-D snap implementation as superseded rather than marking it verified.
+
+### 2.7C-D — corrected snapping + yaw Rotate gizmo
+
+Implemented / NEEDS BATCHED RUNTIME TEST:
+
+- Move snapping now quantizes the transform delta from the gesture start rather than repeatedly rounding the final absolute transform.
+- The start transform remains stable for the full mouse-down -> mouse-up transaction.
+- Position snap therefore advances in exact configured increments relative to the drag start.
+- Angle snap uses the same gesture-start delta rule.
+- The Swing input gate now maintains an editor Ctrl latch in addition to MouseEvent modifier state so temporary Snap/Free behavior does not depend on every Canvas drag frame carrying the modifier bit.
+- Opening/closing the editor clears the Ctrl latch.
+- Rotate mode renders one yaw ring around the same Whole/Part/Multi pivot used by Move.
+- The yaw ring uses the projected X/Z basis so its screen orientation follows the current camera/model projection instead of being an unrelated desktop circle.
+- Ring hover is yellow; active rotation is white; normal yaw ring uses the Y-axis green.
+- Rotation begins only when the yaw ring is hit, and the mouse angular delta around the projected pivot drives yaw.
+- Angle snapping is applied to the yaw delta before commit.
+- Multi yaw now rotates selected component centers around the shared selection pivot and applies the same yaw delta to each component.
+- The shared-pivot rule lives in LiveModelEditorParts' selection-delta layer, so direct Multi rotation and exact Multi yaw editing do not diverge into different semantics.
+- Part/Multi rotation continues to use the existing beginGesture/endGesture transaction: one drag remains one undo snapshot.
+
+Deferred unchanged:
+- Scale snapping remains deferred.
+- Full pitch/roll rotation remains unsupported until the Matrix3 authoring model gains real XYZ rotation state.
