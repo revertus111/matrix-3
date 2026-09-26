@@ -161,3 +161,15 @@
 - Removed the duplicate Swing Ctrl+Z binding so inspector typing cannot accidentally undo model geometry.
 - Part list now expands into remaining Edit-drawer height instead of keeping a fixed short viewport.
 - Runtime verification intentionally remains batched with later 2.7C gizmo work per user request.
+
+
+2026-09-26
+- Added Bundle 2.7C-C first Matrix3-native Move gizmo.
+- LiveModelEditorParts now exposes the real edited Part/Multi selection centroid for pivot ownership.
+- LiveModelEditorPreview projects the pivot and X/Y/Z basis through Class106.method1792 and draws handles through renderer-native 2D primitives.
+- Move gizmo uses fixed screen-length handles, neutral center/free handle, axis colors, yellow hover and white active-drag feedback.
+- Clicking a gizmo handle takes priority over component picking; Multi selection is therefore not toggled when Ctrl is used for temporary snapping on a handle.
+- Axis drag movement is projected onto the visible handle direction and then routed through the existing Move + Snap transform path.
+- Part/Multi gizmo drags keep one gesture = one undo snapshot through the existing parts transaction API.
+- Class578 draws the gizmo after the other developer preview models; no Canvas.getGraphics or second Swing viewport overlay was introduced.
+- Mirrored-definition and terrain-contour point projection remain explicitly UNKNOWN pending runtime evidence instead of being guessed.
