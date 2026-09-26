@@ -1,0 +1,332 @@
+# Matrix3 Live Model Editor — Professional Transform Tool
+
+## Purpose
+
+Bundle 2.7C turns the existing Live Model Editor transform proof-of-concept into a compact professional authoring workflow.
+
+The viewport is the primary editing surface. The interface is a live inspector that shows exact values while the developer manipulates Whole / Part / Multi selections directly in the 3D world.
+
+This document is the design authority for the 2.7C transform-tool work.
+
+## Core interaction contract
+
+### Viewport first
+
+The normal workflow is:
+
+1. Select Whole, Part, or Multi.
+2. Choose Move, Rotate, or Scale.
+3. Manipulate the selected geometry directly in the viewport.
+4. Watch exact transform values update live in the compact inspector.
+5. Type exact values only when precision is required.
+
+The numeric interface must not be the only practical way to transform geometry.
+
+### Free movement and snapping must coexist
+
+Free movement is the default.
+
+- Normal drag: continuous/free transform.
+- Hold Ctrl during an active drag while SNAP is OFF: temporary snapping.
+- Toggle SNAP ON: snapping becomes persistent.
+- Hold Ctrl during an active drag while SNAP is ON: temporarily bypass snapping and move freely.
+
+This makes it possible to move a part freely, hold Ctrl to land on an exact increment, release Ctrl, then continue free adjustment without changing tools.
+
+#### Initial snap values
+
+- Move snap: 16 model units.
+- Rotation snap: 15 degrees.
+- Scale snap: deferred until runtime use proves it is useful.
+
+Move and angle snap values are configurable from the editor.
+
+Snapping modifies the transform result inside the active gesture. It must not create a second correction edit after the drag.
+
+### Selection ownership
+
+- Whole: transform the complete editable object.
+- Part: transform the selected connected component.
+- Multi: transform all selected components as one selection group.
+
+For Multi mode, move/rotate/scale gestures preserve relative offsets between selected components.
+
+### Pivot semantics
+
+The transform gizmo will use an explicit visible pivot.
+
+- Whole: object/model pivot.
+- Part: selected component centroid.
+- Multi: shared selection centroid.
+
+When selection context changes, the pivot/gizmo should visibly relocate. A brief highlight is enough; no complex animation is required.
+
+For Multi rotation, V1 rotates the selection around the shared group pivot. Per-part/individual-origin rotation is deferred.
+
+## Transform modes
+
+### Move
+
+Hotkey: G
+
+The Move gizmo will expose axis handles for X/Y/Z plus a free/plane interaction.
+
+The inspector displays Position X/Y/Z continuously during viewport manipulation.
+
+Move snapping applies only to axes affected by the current gesture. Free ground-plane movement snaps X/Z and does not unexpectedly alter untouched Y.
+
+### Rotate
+
+Hotkey: R
+
+V1 exposes only rotation axes the current Matrix3 authoring model actually supports.
+
+Current authoring state supports yaw. Do not fake unsupported pitch/roll UI.
+
+The inspector displays the supported rotation value continuously.
+
+Holding Ctrl follows the Free/Snap contract above. Rotation uses the configured angle snap.
+
+### Scale
+
+Hotkey: V
+
+The Scale gizmo will support per-axis and uniform/free scaling using the current scale transform model.
+
+The inspector displays scale as developer-friendly ratios:
+
+- 100 internal = 1.00 displayed
+- 50 internal = 0.50 displayed
+- 125 internal = 1.25 displayed
+- 200 internal = 2.00 displayed
+
+Linked/uniform scale state is deferred from V1. Scale snapping is also deferred.
+
+## Transform inspector
+
+The final compact inspector replaces duplicated Whole/Part spinner forms with one contextual inspector.
+
+Example:
+
+```text
+TRANSFORM                         PART 8
+
+Position
+X   128        Y   0          Z   -64
+
+Rotation
+Yaw  35°
+
+Scale
+X   1.00       Y   1.00       Z   1.25
+```
+
+The inspector always reflects the authoritative runtime transform.
+
+### Exact numeric entry
+
+Numeric editing must have a defined transaction:
+
+- Click/double-click value: enter exact-edit mode.
+- Enter: commit.
+- Tab: commit and advance.
+- Escape: cancel and restore the previous valid value.
+- Click away: commit only when valid; invalid/partial input reverts.
+- While a numeric field owns text input, ordinary editor hotkeys must not fire.
+
+The viewport/runtime value remains valid at all times; malformed partial text must never leak into model state.
+
+### Numeric scrubbing
+
+The target UX supports horizontal drag/scrub on numeric values for quick precision work.
+
+- normal scrub: standard step
+- Shift scrub: fine adjustment
+- Ctrl scrub: coarse adjustment unless Ctrl is currently reserved by an active viewport snap gesture
+
+Scrubbing is a later 2.7C checklist item after the transform inspector replaces the current spinner implementation.
+
+### Multi-value display
+
+If a Multi selection contains different absolute values, the inspector may display a mixed marker such as —.
+
+Direct viewport manipulation always applies a delta and preserves relative transforms.
+
+Entering a valid exact value applies the corresponding delta from the primary/selection transform according to the existing multi-selection authoring semantics.
+
+## Gizmo visual behavior
+
+The viewport gizmo is a professional editing control, not decorative UI.
+
+Required V1 visual states:
+
+- idle axis color
+- subtle hover highlight
+- clear active-drag highlight
+- visible pivot marker
+- compact transform readout near the gizmo during an active drag
+
+Do not turn hover/active feedback into a shader/rendering sub-project.
+
+Example active readout:
+
+```text
+MOVE X
++128
+```
+
+or
+
+```text
+ROTATE
+45°
+```
+
+The permanent inspector remains the authoritative exact-value display.
+
+## Undo contract
+
+One completed manipulation gesture equals one undo entry.
+
+- mouse-down begins one transform transaction
+- mouse movement updates the live preview
+- mouse-up commits one undo step
+
+A 300-pixel drag must not produce hundreds of history entries.
+
+Numeric scrub is one history entry from press to release.
+
+A committed exact numeric edit is one history entry.
+
+The current connected-part gesture system already follows this model and must remain the basis for gizmo transforms.
+
+## Keyboard contract
+
+Current/proposed transform workflow:
+
+- 1 — Whole
+- 2 — Part
+- 3 — Multi
+- G — Move
+- R — Rotate
+- V — Scale
+- F — Free axis/plane constraint
+- X / Y / Z — axis constraint
+- Ctrl during viewport drag — temporary inverse of persistent Snap state
+- H — hide/show selected
+- Shift+H — show all
+- I — Solo/Isolate selection
+- Ctrl+A — select all
+- Ctrl+D — duplicate
+- Delete — delete
+- Ctrl+Z — undo
+- Ctrl+S — save project
+- Ctrl+Shift+S — save selection asset
+- Ctrl+O — load project
+- Tab — collapse/expand editor workspace
+- Escape — cancel active numeric edit first; otherwise exit editor session
+
+Camera controls retain ownership of WASD/MMB/wheel and the established RTS/FREE camera inputs.
+
+## Compact UI direction
+
+The Edit drawer should become the primary workspace:
+
+```text
+WHOLE   PART   MULTI
+MOVE    ROTATE SCALE
+FREE      X      Y      Z
+
+SNAP OFF [Ctrl = Snap]
+Move Snap 16     Angle Snap 15°
+
+TRANSFORM                     PART 8
+Position  X ... Y ... Z ...
+Rotation  Yaw ...
+Scale     X ... Y ... Z ...
+
+PARTS
+...
+Solo Hide Dup Delete
+All Clear Reset Undo
+```
+
+The part list should consume flexible remaining height instead of forcing the transform controls to clip.
+
+Secondary drawers remain Material, Camera/View, Object, and Project.
+
+## V1 scope
+
+Required:
+
+- [x] Authoritative 2.7C specification.
+- [x] Free transform remains the default.
+- [x] Persistent SNAP toggle.
+- [x] Ctrl temporarily enables snap when SNAP is off.
+- [x] Ctrl temporarily bypasses snap when SNAP is on.
+- [x] Configurable Move snap.
+- [x] Configurable Angle snap.
+- [x] Snap is applied inside the existing transform gesture.
+- [ ] Replace duplicate Whole/Part spinner UX with one contextual live inspector.
+- [ ] Display scale as decimal ratio while retaining current internal integer representation.
+- [ ] Safe exact numeric entry contract.
+- [ ] Numeric value scrubbing.
+- [ ] Render visible pivot.
+- [ ] Render Move gizmo.
+- [ ] Render supported Rotate gizmo.
+- [ ] Render Scale gizmo.
+- [ ] Gizmo hit testing / hover / active state.
+- [ ] Whole / Part / Multi gizmo pivot positioning.
+- [ ] Multi shared-pivot rotation.
+- [ ] Compact active transform readout near gizmo.
+- [ ] Keyboard nudge path.
+- [ ] Centralized hotkey/text-entry ownership.
+- [ ] Active-state highlighting in the compact UI.
+- [ ] Remove obsolete duplicate legacy Parts/Transform panel methods after replacement UI is runtime-safe.
+
+## Deferred
+
+Not part of the first professional vertical slice:
+
+- linked-scale toggle
+- scale snapping
+- Local / World transform orientation switch
+- individual-origin Multi rotation
+- full XYZ rotation until the Matrix3 authoring state supports it correctly
+- advanced typed math expressions such as +16, -32, *2
+- redo/history browser
+- autosave/recovery
+- fancy gizmo shaders/effects
+
+## Architecture boundaries
+
+- Matrix3 renderer and object/model ownership remain authoritative.
+- Do not mutate shared cached models.
+- Do not write permanent cache model bytes in 2.7C.
+- Reuse the existing LiveModelEditorPreview / LiveModelEditorParts gesture and transform APIs.
+- The Swing overlay owns inspector/configuration UI, not 3D model state.
+- Gizmo rendering/picking must use the smallest Matrix3-native render seam available; do not introduce a second camera or general rendering framework.
+- Java 8 + Eclipse remain the protected target.
+
+## Runtime acceptance — 2.7C-A snap foundation
+
+1. Pull and Eclipse/Java 8 clean-build Client.
+2. Open Conveyor belt 46298 in Live Model Editor.
+3. Select a Part and choose Move / Free.
+4. Leave SNAP OFF and drag: movement is continuous.
+5. Start a drag, hold Ctrl, and confirm the affected position values jump to the Move Snap increment.
+6. Release Ctrl while still dragging and confirm movement immediately returns to free/continuous.
+7. Toggle SNAP ON and drag: movement stays snapped.
+8. While SNAP ON, hold Ctrl during the drag and confirm movement becomes temporarily free.
+9. Change Move Snap from 16 to another value and confirm the next snapped drag uses the new increment.
+10. Choose Rotate, change Angle Snap, and confirm snapped yaw uses that increment.
+11. Confirm Scale remains free/unsnapped in this patch.
+12. In Multi mode, confirm snapped movement preserves relative offsets.
+13. Ctrl+Z after a Part/Multi drag must undo the whole drag as one gesture.
+14. Exit/reopen the editor and confirm normal source-object/camera ownership behavior is unchanged.
+
+## Next implementation checkpoint
+
+2.7C-B should replace the duplicated spinner transform form with the single contextual live inspector while preserving the new Free/Snap behavior.
+
+After the inspector is stable, 2.7C-C should add the first visible Matrix3-native viewport gizmo and pivot, beginning with Move before Rotate/Scale.
