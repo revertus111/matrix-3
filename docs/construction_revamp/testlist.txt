@@ -1133,11 +1133,17 @@ Phase 3 worker-control UX — Jobs overlay + explicit object orders (2026-09-25)
 [x] Source: manual starter-resource orders complete their haul leg even when autonomous Haul is OFF.
 [x] Source: worker object/NPC orders consume vanilla player interaction after dispatch, so self selection does not redirect the player from their current action.
 [ ] Runtime: right-click one unselected Settler -> Jobs -> choose a job set -> Apply; confirm only that worker's Allowed Jobs change and persist.
-[ ] Runtime: drag-select 2+ workers -> right-click one selected Settler -> Jobs; header shows selected-worker scope and Apply gives every selected worker exactly the checked jobs.
-[ ] Runtime: leave Process Wood OFF, select one worker, click Wooden workbench 13704 -> worker visits storage -> exact clicked workbench -> PROCESSING -> Wood -2 / Planks +1 / Crafting XP +18, then resumes normal policy.
+[x] Runtime: drag-select 2+ workers -> right-click one selected Settler -> Jobs; screenshot confirmed a 3-worker selected scope and Apply reported "Applied to 3 selected workers."
+[ ] Runtime: selected-worker Wooden workbench order dispatch + exact Wood -2 / Planks +1 conversion are confirmed by screenshot; still verify Process Wood OFF override specifically, +18 Crafting XP, exact clicked-station path, and return to normal policy.
 [ ] Runtime: leave Gather Wood/Haul OFF, select a worker, click starter tree -> worker performs the explicit gather + haul once, then resumes normal policy.
 [ ] Runtime: while the player is already doing another activity, include self + workers in the RTS selection and click a worker resource/workbench target -> workers receive the order and the player does not walk/interact/change activity.
 [ ] Regression: selected-group ground movement still requires the accepted double-click and deliberately moves self when self is selected.
+[x] Source: SettlementWorkerNpc enables Matrix3 intelligent NPC traversal; Entity movement still applies static World.checkWalkStep/object/wall clipping before NPC occupancy checks.
+[x] Source: SettlementInstance reserves unique transient final/approach tiles per worker while leaving paths unreserved.
+[ ] Runtime movement: place/route 3+ workers so their paths cross or pass through one another; no worker should stop because another NPC is temporarily in the route.
+[ ] Runtime movement: double-click one shared ground destination with 3+ workers; they should finish on separate nearby tiles, not permanently stack.
+[ ] Runtime movement: send several workers through storage/resource/workstation traffic; paths may overlap temporarily but idle/interaction positions remain separated.
+[ ] Runtime movement: wall/object clipping remains normal; workers must not ghost through static scenery.
 
 
 Normal Rail special-node regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-25)
