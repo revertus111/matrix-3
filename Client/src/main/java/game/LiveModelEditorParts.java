@@ -126,6 +126,34 @@ final class LiveModelEditorParts {
                 state.moveX, state.moveY, state.moveZ, state.yaw };
     }
 
+    /**
+     * Shared pivot for the current Part/Multi selection in source model space.
+     *
+     * Per-part scale/yaw rotate around the component center, so the edited
+     * center is simply the detected source centroid plus that part's move delta.
+     * Multi uses the arithmetic mean of those edited centers.
+     */
+    synchronized int[] getSelectionPivot() {
+        if (source == null || selection.isEmpty()) return null;
+        long x = 0L, y = 0L, z = 0L;
+        int count = 0;
+        for (Integer key : selection) {
+            PartState state = stateAt(key.intValue());
+            if (state == null || state.deleted) continue;
+            Component component = source.components[state.sourcePart];
+            x += component.centerX + state.moveX;
+            y += component.centerY + state.moveY;
+            z += component.centerZ + state.moveZ;
+            count++;
+        }
+        if (count == 0) return null;
+        return new int[] {
+                (int) Math.round(x / (double) count),
+                (int) Math.round(y / (double) count),
+                (int) Math.round(z / (double) count)
+        };
+    }
+
     synchronized boolean select(int index) {
         if (index < 0 || index >= getPartCount()) return clearSelection();
         boolean changed = selection.size() != 1
