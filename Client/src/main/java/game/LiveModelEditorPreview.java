@@ -55,6 +55,10 @@ public final class LiveModelEditorPreview {
         FREE, X, Y, Z
     }
 
+    public enum SelectionMode {
+        WHOLE, PART, MULTI
+    }
+
     private static Class106 cachedRenderer;
     private static int cachedRevision = Integer.MIN_VALUE;
     private static Model cachedMainModel;
@@ -68,14 +72,17 @@ public final class LiveModelEditorPreview {
 
     private static volatile TransformMode transformMode = TransformMode.MOVE;
     private static volatile AxisConstraint axisConstraint = AxisConstraint.FREE;
+    private static volatile SelectionMode selectionMode = SelectionMode.PART;
     private static volatile boolean pointerInside;
     private static volatile int pointerX;
     private static volatile int pointerY;
     private static volatile int worldHoveredPart = -1;
     private static volatile boolean dragging;
+    private static volatile boolean draggingWhole;
     private static volatile int dragStartX;
     private static volatile int dragStartY;
     private static int[] dragStartTransform = new int[] { 100, 100, 100, 0, 0, 0, 0 };
+    private static int[] dragStartWholeTransform = new int[] { 100, 100, 100, 0, 0, 0, 0 };
 
     private LiveModelEditorPreview() {
     }
@@ -112,6 +119,7 @@ public final class LiveModelEditorPreview {
     public static void hide() {
         active = false;
         dragging = false;
+        draggingWhole = false;
         pointerInside = false;
         worldHoveredPart = -1;
         PARTS.endGesture();
@@ -197,10 +205,17 @@ public final class LiveModelEditorPreview {
 
     public static String[] getPartLabels() { return PARTS.getLabels(); }
     public static int getSelectedPart() { return PARTS.getSelected(); }
+    public static int[] getSelectedParts() { return PARTS.getSelectedIndices(); }
+    public static int getSelectedPartCount() { return PARTS.getSelectedCount(); }
     public static int getHoveredPart() { return PARTS.getHovered(); }
     public static int[] getSelectedPartTransform() { return PARTS.getSelectedTransform(); }
+    public static int[] getWholeTransform() {
+        return new int[] { scaleXPercent, scaleYPercent, scaleZPercent,
+                translateX, translateY, translateZ, yawDegrees };
+    }
     public static TransformMode getTransformMode() { return transformMode; }
     public static AxisConstraint getAxisConstraint() { return axisConstraint; }
+    public static SelectionMode getSelectionMode() { return selectionMode; }
     public static int getWorldHoveredPart() { return worldHoveredPart; }
 
     public static void setTransformMode(TransformMode mode) {
@@ -217,6 +232,45 @@ public final class LiveModelEditorPreview {
         }
     }
 
+    public static void setSelectionMode(SelectionMode mode) {
+        if (mode == null) return;
+        selectionMode = mode;
+        if (mode == SelectionMode.WHOLE) {
+            PARTS.hover(-1);
+            PARTS.selectAll();
+        } else if (mode == SelectionMode.PART) {
+            int primary = PARTS.getSelected();
+            if (primary >= 0) PARTS.select(primary);
+            else if (PARTS.getPartCount() > 0) PARTS.select(0);
+        }
+        invalidateVisualModels();
+        status = "SELECT " + selectionMode + " | " + transformMode + " " + axisConstraint;
+    }
+
+    public static boolean setPartSelection(int[] indices) {
+        boolean changed = PARTS.setSelection(indices);
+        if (changed) invalidateVisualModels();
+        return changed;
+    }
+
+    public static boolean selectAllParts() {
+        boolean changed = PARTS.selectAll();
+        if (changed) invalidateVisualModels();
+        return changed;
+    }
+
+    public static boolean clearPartSelection() {
+        boolean changed = PARTS.clearSelection();
+        if (changed) invalidateVisualModels();
+        return changed;
+    }
+
+    public static boolean resetSelectedPartTransforms() {
+        boolean changed = PARTS.resetSelectedTransforms();
+        if (changed) invalidateGeometryModels();
+        return changed;
+    }
+
     public static void pointerMoved(int x, int y) {
         pointerInside = true;
         pointerX = x;
@@ -229,49 +283,123 @@ public final class LiveModelEditorPreview {
         if (!dragging && PARTS.hover(-1)) invalidateVisualModels();
     }
 
-    public static boolean beginPointerDrag(int x, int y) {
+    public static boolean beginPointerDrag(int x, int y, boolean additive, boolean toggle) {
         pointerMoved(x, y);
         int hit = worldHoveredPart;
         if (hit < 0) hit = PARTS.getHovered();
-        if (hit < 0 || !PARTS.select(hit)) return false;
+        if (hit < 0) return false;
+
         dragStartX = x;
         dragStartY = y;
+
+        if (selectionMode == SelectionMode.WHOLE) {
+            draggingWhole = true;
+            dragging = false;
+            dragStartWholeTransform = getWholeTransform();
+            status = "DRAG " + transformMode + " WHOLE axis=" + axisConstraint;
+            invalidateVisualModels();
+            return true;
+        }
+
+        if (selectionMode == SelectionMode.MULTI) {
+            if (toggle) {
+                PARTS.toggleSelection(hit);
+            } else if (additive || !PARTS.isSelected(hit)) {
+                PARTS.addSelection(hit);
+            }
+            if (!PARTS.isSelected(hit)) {
+                invalidateVisualModels();
+                return false;
+            }
+        } else if (!PARTS.select(hit)) {
+            return false;
+        }
+
         dragStartTransform = PARTS.getSelectedTransform();
         dragging = PARTS.beginGesture();
+        draggingWhole = false;
         if (dragging) {
             invalidateVisualModels();
-            status = "DRAG " + transformMode + " Part " + hit + " axis=" + axisConstraint;
+            status = "DRAG " + transformMode + " " + selectionMode + " "
+                    + PARTS.getSelectedCount() + " part(s) axis=" + axisConstraint;
         }
         return dragging;
     }
 
     public static boolean dragPointerTo(int x, int y) {
-        if (!dragging) return false;
+        if (!dragging && !draggingWhole) return false;
         pointerX = x;
         pointerY = y;
         int dx = x - dragStartX;
         int dy = y - dragStartY;
+        int amountX = -dx * 4;
+        int amountY = dy * 4;
+
+        if (draggingWhole) {
+            int sx = dragStartWholeTransform[0], sy = dragStartWholeTransform[1],
+                    sz = dragStartWholeTransform[2];
+            int mx = dragStartWholeTransform[3], my = dragStartWholeTransform[4],
+                    mz = dragStartWholeTransform[5];
+            int yaw = dragStartWholeTransform[6];
+
+            if (transformMode == TransformMode.MOVE) {
+                if (axisConstraint == AxisConstraint.X) mx += amountX;
+                else if (axisConstraint == AxisConstraint.Y) my += amountY;
+                else if (axisConstraint == AxisConstraint.Z) mz += amountY;
+                else {
+                    mx += amountX;
+                    mz += amountY;
+                }
+            } else if (transformMode == TransformMode.ROTATE) {
+                yaw -= dx;
+            } else {
+                int delta = (-dx + dy) / 2;
+                if (axisConstraint == AxisConstraint.X) sx += delta;
+                else if (axisConstraint == AxisConstraint.Y) sy += delta;
+                else if (axisConstraint == AxisConstraint.Z) sz += delta;
+                else {
+                    sx += delta;
+                    sy += delta;
+                    sz += delta;
+                }
+            }
+
+            sx = clamp(sx, 10, 400);
+            sy = clamp(sy, 10, 400);
+            sz = clamp(sz, 10, 400);
+            mx = clamp(mx, -4096, 4096);
+            my = clamp(my, -4096, 4096);
+            mz = clamp(mz, -4096, 4096);
+            yaw = normalizeDegrees(yaw);
+            boolean changed = sx != scaleXPercent || sy != scaleYPercent || sz != scaleZPercent
+                    || mx != translateX || my != translateY || mz != translateZ || yaw != yawDegrees;
+            scaleXPercent = sx;
+            scaleYPercent = sy;
+            scaleZPercent = sz;
+            translateX = mx;
+            translateY = my;
+            translateZ = mz;
+            yawDegrees = yaw;
+            if (changed) invalidateGeometryModels();
+            return changed;
+        }
+
         int sx = dragStartTransform[0], sy = dragStartTransform[1], sz = dragStartTransform[2];
         int mx = dragStartTransform[3], my = dragStartTransform[4], mz = dragStartTransform[5];
         int yaw = dragStartTransform[6];
 
         if (transformMode == TransformMode.MOVE) {
-            int amountX = dx * 4;
-            int amountY = -dy * 4;
-            if (axisConstraint == AxisConstraint.X) {
-                mx += amountX;
-            } else if (axisConstraint == AxisConstraint.Y) {
-                my += amountY;
-            } else if (axisConstraint == AxisConstraint.Z) {
-                mz += amountY;
-            } else {
+            if (axisConstraint == AxisConstraint.X) mx += amountX;
+            else if (axisConstraint == AxisConstraint.Y) my += amountY;
+            else if (axisConstraint == AxisConstraint.Z) mz += amountY;
+            else {
                 mx += amountX;
                 mz += amountY;
             }
         } else if (transformMode == TransformMode.ROTATE) {
-            yaw += dx;
+            yaw -= dx;
         } else {
-            int delta = (dx - dy) / 2;
+            int delta = (-dx + dy) / 2;
             if (axisConstraint == AxisConstraint.X) sx += delta;
             else if (axisConstraint == AxisConstraint.Y) sy += delta;
             else if (axisConstraint == AxisConstraint.Z) sz += delta;
@@ -291,6 +419,10 @@ public final class LiveModelEditorPreview {
         if (dragging) {
             PARTS.endGesture();
             dragging = false;
+            invalidateGeometryModels();
+        }
+        if (draggingWhole) {
+            draggingWhole = false;
             invalidateGeometryModels();
         }
     }
@@ -328,6 +460,10 @@ public final class LiveModelEditorPreview {
         boolean changed = PARTS.select(index);
         invalidateVisualModels();
         return changed;
+    }
+
+    public static String getSelectionAssetJson() {
+        return PARTS.selectionAssetJson();
     }
 
     public static boolean setSelectedPartTransform(int sx, int sy, int sz,
@@ -506,7 +642,7 @@ public final class LiveModelEditorPreview {
         for (Model model : cachedReplacementModels)
             if (model != null) model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
 
-        if (!dragging) updateWorldPick(renderer, definition, ground, upperGround,
+        if (!dragging && !draggingWhole) updateWorldPick(renderer, definition, ground, upperGround,
                 sceneX, sceneY, sceneZ, rotation);
     }
 
@@ -555,7 +691,8 @@ public final class LiveModelEditorPreview {
 
         if (best != worldHoveredPart) {
             worldHoveredPart = best;
-            if (PARTS.hover(best)) invalidateVisualModels();
+            int previewPart = selectionMode == SelectionMode.WHOLE ? -1 : best;
+            if (PARTS.hover(previewPart)) invalidateVisualModels();
         }
     }
 
