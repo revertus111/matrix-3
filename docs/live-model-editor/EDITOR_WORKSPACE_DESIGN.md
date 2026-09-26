@@ -181,3 +181,24 @@ Implementation:
 - Structural root components 8 and 12 are never exposed or hideable.
 - Exit/Escape restores every component hidden through the editor.
 - Semantic labels (Minimap, Chat, Backpack, Action Bar, Ribbon) will be assigned after runtime slot identification instead of guessed.
+
+## Camera/View drawer consolidation
+
+The standalone H rail tab is removed because H is already an established model-editor hotkey for Hide Part.
+
+Final rail remains:
+- E - Edit
+- M - Material
+- C - Camera / View / HUD
+- O - Object
+- S - Project
+
+Camera/View contains:
+- RTS / FREE camera toggle;
+- RTS speed controls and camera hints;
+- HUD Visibility section;
+- Hide Mounted HUD / Restore All;
+- root-slot multi-select list;
+- Hide Selected / Show Selected.
+
+Keyboard H remains reserved for Hide Part and never opens/switches a drawer.

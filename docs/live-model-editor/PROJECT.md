@@ -337,3 +337,12 @@ This is now the preferred asset-source experiment for the Construction automatio
 - Dev Mode object ID/tile target route.
 
 **Important uncertainty:** exact live scene object type/rotation and true one-instance renderer replacement/suppression are not yet established. Bundle 1 intentionally keeps those explicit and leaves the original object untouched. Bundle 2.3B now uses Matrix3 Model.method1376(...) for component-level screen hit testing, but runtime coordinate/selection accuracy remains NEEDS TEST. Construction replacement currently uses the existing starter Construction catalog as an authoring library; it is not yet the final player-facing material taxonomy.
+
+### Bundle 2.7 compact-control follow-up — HUD moved into Camera/View
+
+- [x] Remove standalone H / HUD rail tab.
+- [x] Preserve keyboard H exclusively as Hide Part.
+- [x] Place HUD visibility controls inside the existing C / Camera/View drawer.
+- [x] Keep RTS/FREE camera controls and manual HUD controls available from the same drawer.
+- [x] Reduce HUD list height so Camera/View remains usable on the 16-inch layout.
+- [ ] Runtime verify H still hides selected model part and never changes editor tabs.

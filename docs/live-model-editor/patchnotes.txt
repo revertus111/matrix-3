@@ -132,3 +132,10 @@
 - Structural root components 8 (screen background) and 12 (game/world viewport) are not present in the HUD list and are rejected by the server hide API.
 - Server editorhud now supports safehide, restore, hide <rootComponent>, show <rootComponent>, and status. Only exact components already hidden are re-hidden on later mounts.
 - Exit/Escape restores all HUD components hidden through the editor.
+
+2026-09-25
+- Removed the standalone H / HUD rail tab because H is already the Live Model Editor Hide Part hotkey.
+- HUD visibility controls now live inside C / Camera/View beneath RTS/FREE camera controls.
+- Camera/View keeps Hide Mounted HUD, Restore All, root-slot multi-select, Hide Selected and Show Selected.
+- Reduced the embedded HUD list to a compact 9-row/190px view so the combined Camera/View drawer remains practical on the 16-inch workspace.
+- Keyboard H behavior was intentionally left unchanged: it still toggles selected-part visibility.

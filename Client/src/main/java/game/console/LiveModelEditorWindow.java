@@ -331,7 +331,6 @@ public final class LiveModelEditorWindow {
         toolCards.add(createEditPanel(), "EDIT");
         toolCards.add(createMaterialPanel(), "MATERIAL");
         toolCards.add(createCameraPanel(), "CAMERA");
-        toolCards.add(createHudPanel(), "HUD");
         toolCards.add(createObjectPanel(), "OBJECT");
         toolCards.add(createProjectPanel(), "PROJECT");
         editorDrawer.add(toolCards, BorderLayout.CENTER);
@@ -426,9 +425,7 @@ public final class LiveModelEditorWindow {
         rail.add(Box.createVerticalStrut(3));
         rail.add(railButton("M", "Material replacement", "MATERIAL"));
         rail.add(Box.createVerticalStrut(3));
-        rail.add(railButton("C", "Camera", "CAMERA"));
-        rail.add(Box.createVerticalStrut(3));
-        rail.add(railButton("H", "HUD visibility", "HUD"));
+        rail.add(railButton("C", "Camera / view / HUD", "CAMERA"));
         rail.add(Box.createVerticalStrut(3));
         rail.add(railButton("O", "Object / source", "OBJECT"));
         rail.add(Box.createVerticalStrut(3));
@@ -930,30 +927,30 @@ public final class LiveModelEditorWindow {
     }
 
     private JPanel createCameraPanel() {
-        JPanel panel = toolPanel("CAMERA");
+        JPanel panel = toolPanel("CAMERA / VIEW");
 
         JPanel status = new JPanel(new BorderLayout());
         status.setOpaque(false);
         status.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel label = new JLabel("Active mode");
+        JLabel label = new JLabel("Active camera");
         label.setFont(RS_SMALL_FONT);
         label.setForeground(RS_MUTED);
         status.add(label, BorderLayout.WEST);
         status.add(cameraStatusLabel, BorderLayout.EAST);
         panel.add(status);
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(Box.createVerticalStrut(5));
 
         JPanel modes = actionRow(2);
         modes.add(rtsCameraButton);
         modes.add(freeCameraButton);
         panel.add(modes);
-        panel.add(Box.createVerticalStrut(8));
+        panel.add(Box.createVerticalStrut(6));
 
         JLabel rts = new JLabel("RTS: WASD pan | MMB orbit | wheel zoom | Q/E yaw");
         rts.setFont(RS_SMALL_FONT);
         rts.setForeground(RS_TEXT);
         panel.add(rts);
-        panel.add(Box.createVerticalStrut(5));
+        panel.add(Box.createVerticalStrut(4));
 
         JPanel speed = new JPanel(new BorderLayout(5, 0));
         speed.setOpaque(false);
@@ -964,38 +961,30 @@ public final class LiveModelEditorWindow {
         speed.add(cameraSpeedLabel, BorderLayout.CENTER);
         speed.add(faster, BorderLayout.EAST);
         panel.add(speed);
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(Box.createVerticalStrut(5));
 
         JLabel free = new JLabel("FREE: unrestricted fly / inspect under geometry");
         free.setFont(RS_SMALL_FONT);
         free.setForeground(RS_TEXT);
         panel.add(free);
-        JLabel free2 = new JLabel("WASD move | Q/E vertical | normal free-camera look");
+        JLabel free2 = new JLabel("WASD move | Q/E vertical | free-camera look");
         free2.setFont(RS_SMALL_FONT);
         free2.setForeground(RS_MUTED);
         panel.add(free2);
 
-        rtsCameraButton.addActionListener(e -> setEditorCameraMode(ConstructionBuildCamera.CameraMode.RTS));
-        freeCameraButton.addActionListener(e -> setEditorCameraMode(ConstructionBuildCamera.CameraMode.FREE_BUILD));
-        slower.addActionListener(e -> {
-            ConstructionBuildCamera.adjustRtsMoveSpeed(-1);
-            syncCameraPanel();
-        });
-        faster.addActionListener(e -> {
-            ConstructionBuildCamera.adjustRtsMoveSpeed(1);
-            syncCameraPanel();
-        });
-        return panel;
-    }
-
-    private JPanel createHudPanel() {
-        JPanel panel = toolPanel("HUD VISIBILITY");
+        panel.add(Box.createVerticalStrut(10));
+        JLabel hudTitle = new JLabel("HUD VISIBILITY");
+        hudTitle.setFont(RS_SECTION_FONT);
+        hudTitle.setForeground(RS_GOLD);
+        hudTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(hudTitle);
+        panel.add(Box.createVerticalStrut(3));
 
         JLabel warning = new JLabel("Structural root 8/12 locked ON.");
         warning.setFont(RS_SMALL_FONT);
         warning.setForeground(RS_MUTED);
         panel.add(warning);
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(Box.createVerticalStrut(5));
 
         JPanel presetRow = actionRow(2);
         JButton hideMounted = rsButton("Hide Mounted HUD");
@@ -1003,17 +992,17 @@ public final class LiveModelEditorWindow {
         presetRow.add(hideMounted);
         presetRow.add(restoreAll);
         panel.add(presetRow);
-        panel.add(Box.createVerticalStrut(7));
+        panel.add(Box.createVerticalStrut(5));
 
-        JLabel hint = new JLabel("Select one or more NIS root slots:");
+        JLabel hint = new JLabel("Select NIS root slots:");
         hint.setFont(RS_SMALL_FONT);
         hint.setForeground(RS_TEXT);
         panel.add(hint);
-        panel.add(Box.createVerticalStrut(4));
+        panel.add(Box.createVerticalStrut(3));
 
         hudList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        hudList.setVisibleRowCount(15);
-        hudList.setFixedCellHeight(22);
+        hudList.setVisibleRowCount(9);
+        hudList.setFixedCellHeight(20);
         hudList.setFont(RS_SMALL_FONT);
         hudList.setForeground(RS_TEXT);
         hudList.setBackground(RS_INPUT);
@@ -1025,26 +1014,41 @@ public final class LiveModelEditorWindow {
                 JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setBorder(BorderFactory.createLineBorder(RS_BORDER));
-        scroll.setPreferredSize(new Dimension(300, 350));
-        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 390));
+        scroll.setPreferredSize(new Dimension(300, 190));
+        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 215));
         scroll.getViewport().setBackground(RS_INPUT);
         scroll.getVerticalScrollBar().setUnitIncrement(18);
         panel.add(scroll);
-        panel.add(Box.createVerticalStrut(6));
+        panel.add(Box.createVerticalStrut(5));
 
-        JPanel row = actionRow(2);
+        JPanel hudRow = actionRow(2);
         JButton hideSelected = rsButton("Hide Selected");
         JButton showSelected = rsButton("Show Selected");
-        row.add(hideSelected);
-        row.add(showSelected);
-        panel.add(row);
+        hudRow.add(hideSelected);
+        hudRow.add(showSelected);
+        panel.add(hudRow);
 
+        rtsCameraButton.addActionListener(e ->
+                setEditorCameraMode(ConstructionBuildCamera.CameraMode.RTS));
+        freeCameraButton.addActionListener(e ->
+                setEditorCameraMode(ConstructionBuildCamera.CameraMode.FREE_BUILD));
+        slower.addActionListener(e -> {
+            ConstructionBuildCamera.adjustRtsMoveSpeed(-1);
+            syncCameraPanel();
+        });
+        faster.addActionListener(e -> {
+            ConstructionBuildCamera.adjustRtsMoveSpeed(1);
+            syncCameraPanel();
+        });
         hideMounted.addActionListener(e -> {
-            String error = ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud safehide");
+            String error = ClientConsoleBridge.queueConsoleCommand(
+                    "itembrowser editorhud safehide");
             if (error == null) {
                 editorHudRequested = true;
                 statusLabel.setText("HUD: hid currently mounted panes.");
-            } else statusLabel.setText("HUD command failed: " + error);
+            } else {
+                statusLabel.setText("HUD command failed: " + error);
+            }
         });
         restoreAll.addActionListener(e -> restoreEditorHud());
         hideSelected.addActionListener(e -> setSelectedHudComponentsHidden(true));

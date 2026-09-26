@@ -223,3 +223,11 @@ Manual HUD visibility / black-screen recovery
 [ ] Identify rows for minimap, chat, backpack, action bar and left ribbon for later labels.
 [ ] Restore All leaves 3D world intact and returns normal HUD.
 [ ] Hide slots then Exit/Escape; all editor-hidden HUD restores automatically.
+
+Camera/View HUD consolidation
+[ ] Tool rail shows E/M/C/O/S with no H tab.
+[ ] Press H while a Part/Multi selection exists: selected part(s) hide/show exactly as before; no drawer changes.
+[ ] Open C / Camera/View: RTS/FREE controls remain at the top and HUD VISIBILITY controls appear below.
+[ ] Hide Mounted HUD / Restore All still work from Camera/View.
+[ ] Select HUD root rows and use Hide Selected / Show Selected.
+[ ] Combined Camera/View drawer fits the normal compact editor size without a whole-panel horizontal scrollbar.
