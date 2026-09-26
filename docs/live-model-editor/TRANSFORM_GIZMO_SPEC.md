@@ -267,9 +267,9 @@ Required:
 - [x] Configurable Move snap.
 - [x] Configurable Angle snap.
 - [x] Snap is applied inside the existing transform gesture.
-- [ ] Replace duplicate Whole/Part spinner UX with one contextual live inspector.
-- [ ] Display scale as decimal ratio while retaining current internal integer representation.
-- [ ] Safe exact numeric entry contract.
+- [x] Replace duplicate Whole/Part spinner UX with one contextual live inspector.
+- [x] Display scale as decimal ratio while retaining current internal integer representation.
+- [x] Safe exact numeric entry contract.
 - [ ] Numeric value scrubbing.
 - [ ] Render visible pivot.
 - [ ] Render Move gizmo.
@@ -325,8 +325,25 @@ Not part of the first professional vertical slice:
 13. Ctrl+Z after a Part/Multi drag must undo the whole drag as one gesture.
 14. Exit/reopen the editor and confirm normal source-object/camera ownership behavior is unchanged.
 
-## Next implementation checkpoint
+## Implementation checkpoint
 
-2.7C-B should replace the duplicated spinner transform form with the single contextual live inspector while preserving the new Free/Snap behavior.
+### 2.7C-B — contextual live inspector
 
-After the inspector is stable, 2.7C-C should add the first visible Matrix3-native viewport gizmo and pivot, beginning with Move before Rotate/Scale.
+Implemented / NEEDS BATCHED RUNTIME TEST:
+
+- one visible contextual inspector for Whole / Part / Multi;
+- Position X/Y/Z and Yaw update from authoritative runtime state;
+- Scale displays as decimal ratios while internal state stays percent-based;
+- Enter commits exact values;
+- Tab commits through focus transfer;
+- Escape restores the pre-edit value;
+- invalid/partial blur input reverts rather than entering model state;
+- ordinary editor hotkeys are suppressed while a numeric text field owns focus;
+- duplicate Swing Ctrl+Z ownership was removed so text editing cannot accidentally undo geometry;
+- the part list can consume flexible remaining drawer height.
+
+Part/Multi exact numeric commits already use the existing one-action undo path. Whole exact-value undo remains tied to the older whole-transform history limitation and is not being falsely marked as unified history.
+
+### Next
+
+2.7C-C should add the first visible Matrix3-native viewport pivot + Move gizmo before Rotate/Scale.
