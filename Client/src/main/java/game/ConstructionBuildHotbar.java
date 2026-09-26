@@ -132,16 +132,30 @@ public final class ConstructionBuildHotbar {
                 return;
             }
             ConstructionPlacementController.select(rail);
-            status = "Rail armed. Normal rail stops at existing track.";
+            status = RailRoutePreview.setToolMode(RailRoutePreview.ToolMode.NORMAL);
             return;
         case 1:
-            status = "Junction reserved: accepted junction art is still required.";
+            BuildPiece junctionRail = findPiece("basic-rail");
+            if (junctionRail == null) {
+                status = "Rail tool is unavailable.";
+                return;
+            }
+            ConstructionPlacementController.select(junctionRail);
+            status = RailRoutePreview.setToolMode(RailRoutePreview.ToolMode.JUNCTION);
             return;
         case 2:
-            status = "Crossing reserved: normal Rail cannot overlap existing track.";
+            BuildPiece crossingRail = findPiece("basic-rail");
+            if (crossingRail != null) {
+                ConstructionPlacementController.select(crossingRail);
+            }
+            status = RailRoutePreview.setToolMode(RailRoutePreview.ToolMode.CROSSING);
             return;
         case 3:
-            status = "Splitter reserved: routing asset/semantics are still pending.";
+            BuildPiece splitterRail = findPiece("basic-rail");
+            if (splitterRail != null) {
+                ConstructionPlacementController.select(splitterRail);
+            }
+            status = RailRoutePreview.setToolMode(RailRoutePreview.ToolMode.SPLITTER);
             return;
         case 4:
             rememberSelectedObject();
