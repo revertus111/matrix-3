@@ -71,11 +71,13 @@ public final class ConstructionRadialSelection {
     private static final long MOVE_DOUBLE_CLICK_WINDOW_MS = 375L;
     private static final int MOVE_DOUBLE_CLICK_TILE_TOLERANCE = 1;
     private static final int CLEAR_SELECTION_MENU_ACTION = 1530;
+    private static final int WORKER_JOBS_MENU_ACTION = 1531;
     private static final int MATRIX3_FIRST_OBJECT_ACTION = 3;
     private static final int MATRIX3_FIRST_NPC_ACTION = 9;
     private static final int STARTER_TREE_OBJECT_ID = 1276;
     private static final int STARTER_STONE_OBJECT_ID = 11933;
     private static final int STARTER_ORE_OBJECT_ID = 11936;
+    private static final int WOODEN_WORKBENCH_OBJECT_ID = 13704;
     private static final int STARTER_FOOD_NPC_ID = 327;
 
     private static final Class261 TRANSFORM = new Class261();
@@ -391,6 +393,28 @@ public final class ConstructionRadialSelection {
      * committed. Ground/object/NPC right-click all expose the same clear action
      * without replacing Matrix3's normal interactions.
      */
+    static void mirrorWorkerJobsEntry(String targetName, int sourceAction,
+            long targetUid, int localX, int localY) {
+        if (Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
+            return;
+        }
+        int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
+        if (normalizedAction < 9 || normalizedAction > 13
+                || hasMenuAction(WORKER_JOBS_MENU_ACTION)) {
+            return;
+        }
+        int npcIndex = (int) targetUid;
+        if (!isSettlementWorkerNpcIndex(npcIndex)) {
+            return;
+        }
+        Class572_Sub12_Sub10 entry = new Class572_Sub12_Sub10(
+                "Jobs", targetName == null ? "" : targetName,
+                -646491435 * client.anInt8751,
+                WORKER_JOBS_MENU_ACTION, -1, targetUid, localX, localY,
+                true, false, 0L, true);
+        Class412.method5075(entry, 722976984);
+    }
+
     static void mirrorWorldSelectionEntry(int sourceAction, int localX, int localY) {
         if (!workerControlEnabled || !hasCommittedSelection()
                 || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
@@ -1656,6 +1680,18 @@ public final class ConstructionRadialSelection {
      */
     static boolean handleMenuAction(int action, int localX, int localY, long targetUid) {
         int normalizedAction = action >= 2000 ? action - 2000 : action;
+        if (normalizedAction == WORKER_JOBS_MENU_ACTION) {
+            int npcIndex = (int) targetUid;
+            if (!isSettlementWorkerNpcIndex(npcIndex)) {
+                return true;
+            }
+            boolean selectionScope = containsCommittedWorkerNpcIndex(npcIndex)
+                    && committedWorkerNpcIndexes.length > 0;
+            ConstructionWorkerJobsOverlay.showForNpc(
+                    npcIndex, selectionScope,
+                    selectionScope ? committedWorkerNpcIndexes.length : 1);
+            return true;
+        }
         if (normalizedAction == CLEAR_SELECTION_MENU_ACTION
                 && workerControlEnabled && hasCommittedSelection()) {
             clearCommittedRadius();
@@ -1700,12 +1736,18 @@ public final class ConstructionRadialSelection {
 
         resetGroundMoveClick();
 
-        if (normalizedAction == MATRIX3_FIRST_OBJECT_ACTION) {
+        if (normalizedAction == MATRIX3_FIRST_OBJECT_ACTION
+                && committedWorkerNpcIndexes.length > 0) {
             int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
-            if (isStarterResourceObjectId(objectId) && committedWorkerNpcIndexes.length > 0) {
+            if (isStarterResourceObjectId(objectId)) {
                 queueSelectionOrder("workerselectiongather object " + objectId + " "
                         + point.worldX + " " + point.worldY + " " + point.plane);
-                return !committedPlayerSelected;
+                return true;
+            }
+            if (objectId == WOODEN_WORKBENCH_OBJECT_ID) {
+                queueSelectionOrder("workerselectionprocess " + objectId + " "
+                        + point.worldX + " " + point.worldY + " " + point.plane);
+                return true;
             }
         }
         if (normalizedAction == MATRIX3_FIRST_NPC_ACTION && committedWorkerNpcIndexes.length > 0) {
@@ -1713,7 +1755,7 @@ public final class ConstructionRadialSelection {
             if (npcTarget != null && npcTarget.npcId == STARTER_FOOD_NPC_ID) {
                 queueSelectionOrder("workerselectiongather npc " + npcTarget.npcId + " "
                         + npcTarget.worldX + " " + npcTarget.worldY + " " + npcTarget.plane);
-                return !committedPlayerSelected;
+                return true;
             }
         }
         return false;
@@ -1751,6 +1793,27 @@ public final class ConstructionRadialSelection {
         return objectId == STARTER_TREE_OBJECT_ID
                 || objectId == STARTER_STONE_OBJECT_ID
                 || objectId == STARTER_ORE_OBJECT_ID;
+    }
+
+    private static boolean containsCommittedWorkerNpcIndex(int npcIndex) {
+        for (int selected : committedWorkerNpcIndexes) {
+            if (selected == npcIndex) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isSettlementWorkerNpcIndex(int npcIndex) {
+        if (client.aClass676_8622 == null) {
+            return false;
+        }
+        LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+        if (link == null || !(link.anObject9081 instanceof NPC)) {
+            return false;
+        }
+        NPC npc = (NPC) link.anObject9081;
+        return isSettlementWorkerPreviewNpc(npc, npc.aByte9009 & 0xff);
     }
 
     private static ResourceNpcTarget resolveResourceNpcTarget(long targetUid) {
