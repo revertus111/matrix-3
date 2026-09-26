@@ -218,3 +218,14 @@ Workspace rule:
 - Move and Angle snap increments remain visible/configurable;
 - scale snapping is deferred;
 - the rendered pivot/gizmo must not expand the overlay into a large DCC-style desktop window.
+
+
+## Bundle 2.7C-F interaction polish
+
+- Selection / Transform / Axis / Isolate / rail state is visibly persistent.
+- EDIT includes a compact authoritative live transform readout.
+- Inspector numeric fields support click-to-type plus horizontal scrub and mouse-wheel adjustment.
+- Alt+Arrow is the transform nudge chord; plain arrows remain camera-owned.
+- Central shortcut ownership includes Ctrl+O, Shift+H, I and Tab in addition to the established editor shortcuts.
+- Obsolete standalone Parts/Transform panel methods are removed; the merged EDIT workspace is the only active transform UI.
+- Native text beside the 3D gizmo is intentionally deferred until a verified Matrix3 renderer-font seam exists; do not add another transparent Swing viewport overlay for it.
