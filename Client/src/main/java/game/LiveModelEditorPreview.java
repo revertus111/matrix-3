@@ -1122,8 +1122,9 @@ public final class LiveModelEditorPreview {
     /**
      * Mirrors the source-definition transform order used by buildDefinitionModel
      * closely enough to anchor the authoring pivot/axes to the rendered model.
-     * Terrain contour deformation is intentionally not duplicated here; the
-     * runtime gate must confirm the editor reference assets remain aligned.
+     * Definition model mirroring (aBool5647) and terrain contour deformation
+     * are intentionally not guessed here; the runtime gate must confirm the
+     * reference assets remain aligned before either seam is promoted.
      */
     private static double[] transformAuthoringPoint(ObjectDefinitions definition,
             int rotation, double x, double y, double z) {
