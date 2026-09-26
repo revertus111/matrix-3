@@ -149,3 +149,15 @@
 - Added configurable Move snap (default 16 model units) and Angle snap (default 15 degrees) in the EDIT workspace.
 - Snapping is applied inside the existing drag gesture so Part/Multi transforms retain one-drag/one-undo transaction behavior.
 - Scale snapping remains intentionally deferred.
+
+
+2026-09-26
+- Added Bundle 2.7C-B contextual live Transform Inspector.
+- Replaced the visible duplicate Whole/Part transform spinner grids with one contextual Position / Rotation / Scale inspector.
+- Inspector values update continuously from the authoritative Whole/Part/Multi runtime transform while viewport editing.
+- Scale is displayed as decimal ratios (1.00 = internal 100) without changing project/runtime storage format.
+- Exact numeric entry now supports Enter/Tab commit, Escape cancel, valid blur commit, and invalid/partial blur revert.
+- Editor hotkeys no longer fire while a JTextField/JSpinner/ComboBox owns text input.
+- Removed the duplicate Swing Ctrl+Z binding so inspector typing cannot accidentally undo model geometry.
+- Part list now expands into remaining Edit-drawer height instead of keeping a fixed short viewport.
+- Runtime verification intentionally remains batched with later 2.7C gizmo work per user request.
