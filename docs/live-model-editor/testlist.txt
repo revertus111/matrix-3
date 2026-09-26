@@ -324,3 +324,31 @@ Bundle 2.7C-D - corrected snap + yaw Rotate gizmo
 [ ] Regression: direct model drag away from the gizmo still works.
 [ ] Regression: inspector Position/Yaw values update live during gizmo manipulation.
 [ ] Regression: no black screen, renderer corruption, or repeated GIZMO RENDER SKIP spam.
+
+
+Bundle 2.7C runtime correction — 2026-09-26
+[!] Prior runtime report corrected: Snap AND Scale were the two failed interactions. Inspector/pivot/Move gizmo remained successful.
+[!] Pre-2.7C-E Scale viewport interaction is superseded by the native Scale gizmo below.
+
+Bundle 2.7C-E - repaired Scale interaction + native Scale gizmo
+[ ] Eclipse/Java 8 clean-build Client after LiveModelEditorPreview Scale-gizmo changes.
+[ ] Open Conveyor belt 46298 and select one Part.
+[ ] Press V / click Scale: Move arrows and Rotate ring disappear; Scale X/Y/Z handles with square endpoints appear at the same pivot.
+[ ] Hover each X/Y/Z Scale handle and confirm only the nearest handle highlights yellow.
+[ ] Drag X Scale handle along its visible direction; only inspector Scale X changes.
+[ ] Drag Y Scale handle; only Scale Y changes.
+[ ] Drag Z Scale handle; only Scale Z changes.
+[ ] Drag an axis handle opposite its visible direction; scale decreases rather than increasing.
+[ ] Drag the center uniform-scale handle right/up; X/Y/Z increase together.
+[ ] Drag the center uniform-scale handle left/down; X/Y/Z decrease together.
+[ ] Confirm inspector updates live as decimal ratios while scaling (for example 1.00 -> 1.25).
+[ ] Confirm scale clamps safely at 0.10 and 4.00 rather than wrapping or corrupting geometry.
+[ ] Part mode: scaling keeps that part centered around its existing component pivot.
+[ ] Multi mode: selected parts receive the same scale delta while their existing center spacing remains unchanged.
+[ ] Whole mode: Scale gizmo changes the whole editable object's X/Y/Z scale.
+[ ] Ctrl/SNAP state does not quantize Scale; Scale snapping remains intentionally deferred.
+[ ] Ctrl+Z after one long Part/Multi Scale gizmo drag restores the entire scale gesture in one undo step.
+[ ] Switch V -> G -> R -> V repeatedly; the correct gizmo replaces the prior one and pivot stays attached to the selection.
+[ ] Regression: corrected Move snapping from 2.7C-D still behaves by drag-start delta.
+[ ] Regression: Rotate yaw ring still renders/rotates correctly.
+[ ] Regression: no black screen, renderer corruption, stuck hover, or repeated GIZMO RENDER SKIP spam.
