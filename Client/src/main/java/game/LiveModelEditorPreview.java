@@ -20,6 +20,17 @@ public final class LiveModelEditorPreview {
     private static final int OBJECT_SIZE_X_DECODE = -876498849;
     private static final int OBJECT_SIZE_Y_DECODE = 1922784011;
 
+    private static final int GIZMO_AXIS_SAMPLE_UNITS = 256;
+    private static final int GIZMO_AXIS_PIXELS = 56;
+    private static final int GIZMO_HIT_RADIUS = 7;
+    private static final int GIZMO_PIVOT_RADIUS = 7;
+    private static final int GIZMO_X_COLOR = 0xffe05555;
+    private static final int GIZMO_Y_COLOR = 0xff55c86a;
+    private static final int GIZMO_Z_COLOR = 0xff5689e8;
+    private static final int GIZMO_HOVER_COLOR = 0xffffd166;
+    private static final int GIZMO_ACTIVE_COLOR = 0xffffffff;
+    private static final int GIZMO_PIVOT_COLOR = 0xffe9e3d5;
+
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
     private static final LiveModelEditorParts PARTS = new LiveModelEditorParts();
@@ -86,6 +97,11 @@ public final class LiveModelEditorPreview {
     private static volatile boolean draggingWhole;
     private static volatile int dragStartX;
     private static volatile int dragStartY;
+    private static volatile AxisConstraint gizmoHoveredAxis;
+    private static volatile AxisConstraint gizmoActiveAxis;
+    private static volatile GizmoScreenState gizmoScreen = GizmoScreenState.hidden();
+    private static double dragGizmoDirX;
+    private static double dragGizmoDirY;
     private static int[] dragStartTransform = new int[] { 100, 100, 100, 0, 0, 0, 0 };
     private static int[] dragStartWholeTransform = new int[] { 100, 100, 100, 0, 0, 0, 0 };
 
@@ -127,6 +143,9 @@ public final class LiveModelEditorPreview {
         draggingWhole = false;
         pointerInside = false;
         worldHoveredPart = -1;
+        gizmoHoveredAxis = null;
+        gizmoActiveAxis = null;
+        gizmoScreen = GizmoScreenState.hidden();
         PARTS.endGesture();
         PARTS.hover(-1);
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -298,16 +317,51 @@ public final class LiveModelEditorPreview {
         pointerInside = true;
         pointerX = x;
         pointerY = y;
+        if (!dragging && !draggingWhole) {
+            gizmoHoveredAxis = hitMoveGizmo(x, y);
+        }
     }
 
     public static void pointerExited() {
         pointerInside = false;
         worldHoveredPart = -1;
+        gizmoHoveredAxis = null;
         if (!dragging && PARTS.hover(-1)) invalidateVisualModels();
     }
 
     public static boolean beginPointerDrag(int x, int y, boolean additive, boolean toggle) {
         pointerMoved(x, y);
+
+        AxisConstraint gizmoHit = hitMoveGizmo(x, y);
+        if (gizmoHit != null && canTransformCurrentSelection()) {
+            dragStartX = x;
+            dragStartY = y;
+            gizmoActiveAxis = gizmoHit;
+            axisConstraint = gizmoHit;
+            captureGizmoDragDirection(gizmoHit);
+
+            if (selectionMode == SelectionMode.WHOLE) {
+                draggingWhole = true;
+                dragging = false;
+                dragStartWholeTransform = getWholeTransform();
+                status = "GIZMO MOVE WHOLE axis=" + axisConstraint;
+                invalidateVisualModels();
+                return true;
+            }
+
+            dragStartTransform = PARTS.getSelectedTransform();
+            dragging = PARTS.beginGesture();
+            draggingWhole = false;
+            if (dragging) {
+                status = "GIZMO MOVE " + selectionMode + " "
+                        + PARTS.getSelectedCount() + " part(s) axis=" + axisConstraint;
+                invalidateVisualModels();
+                return true;
+            }
+            gizmoActiveAxis = null;
+        }
+
+        gizmoActiveAxis = null;
         int hit = worldHoveredPart;
         if (hit < 0) hit = PARTS.getHovered();
         if (hit < 0) return false;
@@ -357,6 +411,10 @@ public final class LiveModelEditorPreview {
         int dy = y - dragStartY;
         int amountX = -dx * 4;
         int amountY = dy * 4;
+        int gizmoAxisAmount = gizmoActiveAxis != null
+                && gizmoActiveAxis != AxisConstraint.FREE
+                ? (int) Math.round((dx * dragGizmoDirX + dy * dragGizmoDirY) * 4.0)
+                : 0;
         int[] cameraGroundDrag = transformMode == TransformMode.MOVE
                 && axisConstraint == AxisConstraint.FREE
                 ? ConstructionBuildCamera.mapScreenDragToGround(dx, dy, 4)
@@ -370,7 +428,10 @@ public final class LiveModelEditorPreview {
             int yaw = dragStartWholeTransform[6];
 
             if (transformMode == TransformMode.MOVE) {
-                if (axisConstraint == AxisConstraint.X) mx += amountX;
+                if (gizmoActiveAxis == AxisConstraint.X) mx += gizmoAxisAmount;
+                else if (gizmoActiveAxis == AxisConstraint.Y) my += gizmoAxisAmount;
+                else if (gizmoActiveAxis == AxisConstraint.Z) mz += gizmoAxisAmount;
+                else if (axisConstraint == AxisConstraint.X) mx += amountX;
                 else if (axisConstraint == AxisConstraint.Y) my += amountY;
                 else if (axisConstraint == AxisConstraint.Z) mz += amountY;
                 else if (cameraGroundDrag != null) {
@@ -434,7 +495,10 @@ public final class LiveModelEditorPreview {
         int yaw = dragStartTransform[6];
 
         if (transformMode == TransformMode.MOVE) {
-            if (axisConstraint == AxisConstraint.X) mx += amountX;
+            if (gizmoActiveAxis == AxisConstraint.X) mx += gizmoAxisAmount;
+            else if (gizmoActiveAxis == AxisConstraint.Y) my += gizmoAxisAmount;
+            else if (gizmoActiveAxis == AxisConstraint.Z) mz += gizmoAxisAmount;
+            else if (axisConstraint == AxisConstraint.X) mx += amountX;
             else if (axisConstraint == AxisConstraint.Y) my += amountY;
             else if (axisConstraint == AxisConstraint.Z) mz += amountY;
             else if (cameraGroundDrag != null) {
@@ -488,6 +552,8 @@ public final class LiveModelEditorPreview {
             draggingWhole = false;
             invalidateGeometryModels();
         }
+        gizmoActiveAxis = null;
+        gizmoHoveredAxis = hitMoveGizmo(pointerX, pointerY);
     }
 
     public static boolean replaceSelectedWithConstructionPiece(
@@ -642,6 +708,8 @@ public final class LiveModelEditorPreview {
         if (PARTS.isReadyFor(objectId, objectType)) {
             renderPartModels(renderer, definition, ground, upperGround,
                     sceneX, sceneY, sceneZ, renderRotation);
+            updateGizmoProjection(renderer, definition,
+                    sceneX, sceneY, sceneZ, renderRotation);
             status = describe("DRAW PARTS") + " count=" + PARTS.getPartCount()
                     + " at=" + worldX + "," + worldY + "," + renderPlane;
             return;
@@ -662,7 +730,48 @@ public final class LiveModelEditorPreview {
         applyWholeTransforms(model);
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        updateGizmoProjection(renderer, definition,
+                sceneX, sceneY, sceneZ, renderRotation);
         status = describe("DRAW") + " at=" + worldX + "," + worldY + "," + renderPlane;
+    }
+
+    /**
+     * Draws the projected Move gizmo after the developer 3D preview pass.
+     *
+     * verified-static:
+     * - Class106.method1792 projects a 3D renderer-space point to screen x/y.
+     * - Class106.method1730 is the renderer-native 2D line primitive.
+     * - Class106.method1725 is the renderer-native filled rectangle primitive.
+     */
+    static void renderGizmoOverlay(Class106 renderer) {
+        if (!active || renderer == null) return;
+        GizmoScreenState state = gizmoScreen;
+        if (!state.visible) return;
+
+        try {
+            int pivotColor = gizmoActiveAxis == AxisConstraint.FREE
+                    ? GIZMO_ACTIVE_COLOR
+                    : gizmoHoveredAxis == AxisConstraint.FREE
+                            ? GIZMO_HOVER_COLOR : GIZMO_PIVOT_COLOR;
+
+            if (transformMode == TransformMode.MOVE) {
+                drawGizmoAxis(renderer, state.centerX, state.centerY,
+                        state.xX, state.xY, AxisConstraint.X, GIZMO_X_COLOR);
+                drawGizmoAxis(renderer, state.centerX, state.centerY,
+                        state.yX, state.yY, AxisConstraint.Y, GIZMO_Y_COLOR);
+                drawGizmoAxis(renderer, state.centerX, state.centerY,
+                        state.zX, state.zY, AxisConstraint.Z, GIZMO_Z_COLOR);
+            }
+
+            renderer.method1725(state.centerX - 4, state.centerY - 4,
+                    9, 9, pivotColor, 1);
+        } catch (RuntimeException ex) {
+            gizmoScreen = GizmoScreenState.hidden();
+            gizmoHoveredAxis = null;
+            gizmoActiveAxis = null;
+            System.err.println("[LiveModelEditor] GIZMO RENDER SKIP "
+                    + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+        }
     }
 
     private static void renderPartModels(Class106 renderer, ObjectDefinitions definition,
@@ -727,6 +836,12 @@ public final class LiveModelEditorPreview {
                 worldHoveredPart = -1;
                 if (PARTS.hover(-1)) invalidateVisualModels();
             }
+            return;
+        }
+
+        if (hitMoveGizmo(pointerX, pointerY) != null) {
+            if (worldHoveredPart != -1) worldHoveredPart = -1;
+            if (PARTS.hover(-1)) invalidateVisualModels();
             return;
         }
 
@@ -936,6 +1051,299 @@ public final class LiveModelEditorPreview {
             return (ObjectDefinitions) definitions.getDefinition(id, -1356282071);
         } catch (RuntimeException ex) {
             return null;
+        }
+    }
+
+
+    private static void updateGizmoProjection(Class106 renderer,
+            ObjectDefinitions definition, int sceneX, int sceneY, int sceneZ,
+            int rotation) {
+        if (renderer == null || definition == null) {
+            gizmoScreen = GizmoScreenState.hidden();
+            gizmoHoveredAxis = null;
+            return;
+        }
+
+        int[] localPivot;
+        if (selectionMode == SelectionMode.WHOLE) {
+            localPivot = new int[] { 0, 0, 0 };
+        } else {
+            localPivot = PARTS.getSelectionPivot();
+            if (localPivot == null) {
+                gizmoScreen = GizmoScreenState.hidden();
+                gizmoHoveredAxis = null;
+                return;
+            }
+        }
+
+        double[] pivot = transformAuthoringPoint(definition, rotation,
+                localPivot[0], localPivot[1], localPivot[2]);
+        double[][] ends = new double[3][];
+        if (selectionMode == SelectionMode.WHOLE) {
+            ends[0] = new double[] { pivot[0] + GIZMO_AXIS_SAMPLE_UNITS, pivot[1], pivot[2] };
+            ends[1] = new double[] { pivot[0], pivot[1] + GIZMO_AXIS_SAMPLE_UNITS, pivot[2] };
+            ends[2] = new double[] { pivot[0], pivot[1], pivot[2] + GIZMO_AXIS_SAMPLE_UNITS };
+        } else {
+            ends[0] = transformAuthoringPoint(definition, rotation,
+                    localPivot[0] + GIZMO_AXIS_SAMPLE_UNITS, localPivot[1], localPivot[2]);
+            ends[1] = transformAuthoringPoint(definition, rotation,
+                    localPivot[0], localPivot[1] + GIZMO_AXIS_SAMPLE_UNITS, localPivot[2]);
+            ends[2] = transformAuthoringPoint(definition, rotation,
+                    localPivot[0], localPivot[1], localPivot[2] + GIZMO_AXIS_SAMPLE_UNITS);
+        }
+
+        float[] center = project(renderer,
+                sceneX + pivot[0], sceneY + pivot[1], sceneZ + pivot[2]);
+        float[] x = project(renderer,
+                sceneX + ends[0][0], sceneY + ends[0][1], sceneZ + ends[0][2]);
+        float[] y = project(renderer,
+                sceneX + ends[1][0], sceneY + ends[1][1], sceneZ + ends[1][2]);
+        float[] z = project(renderer,
+                sceneX + ends[2][0], sceneY + ends[2][1], sceneZ + ends[2][2]);
+
+        if (center == null) {
+            gizmoScreen = GizmoScreenState.hidden();
+            gizmoHoveredAxis = null;
+            return;
+        }
+
+        int[] xEnd = fixedAxisEndpoint(center, x);
+        int[] yEnd = fixedAxisEndpoint(center, y);
+        int[] zEnd = fixedAxisEndpoint(center, z);
+        gizmoScreen = new GizmoScreenState(true,
+                Math.round(center[0]), Math.round(center[1]),
+                xEnd[0], xEnd[1], yEnd[0], yEnd[1], zEnd[0], zEnd[1],
+                xEnd[2] != 0, yEnd[2] != 0, zEnd[2] != 0);
+        if (!dragging && !draggingWhole && pointerInside) {
+            gizmoHoveredAxis = hitMoveGizmo(pointerX, pointerY);
+        }
+    }
+
+    /**
+     * Mirrors the source-definition transform order used by buildDefinitionModel
+     * closely enough to anchor the authoring pivot/axes to the rendered model.
+     * Terrain contour deformation is intentionally not duplicated here; the
+     * runtime gate must confirm the editor reference assets remain aligned.
+     */
+    private static double[] transformAuthoringPoint(ObjectDefinitions definition,
+            int rotation, double x, double y, double z) {
+        int rot = rotation & 0x3;
+        if (rot != 0) {
+            double radians = Math.toRadians(rot * 90.0);
+            double sin = Math.sin(radians);
+            double cos = Math.cos(radians);
+            double rx = x * cos + z * sin;
+            double rz = z * cos - x * sin;
+            x = rx;
+            z = rz;
+        }
+
+        int dsx = definition.anInt5646 * 898312795;
+        int dsy = definition.anInt5634 * 1899990883;
+        int dsz = definition.anInt5641 * 1427207859;
+        x = x * dsx / 128.0;
+        y = y * dsy / 128.0;
+        z = z * dsz / 128.0;
+
+        x += definition.anInt5652 * -865773249;
+        y += definition.anInt5653 * -955267449;
+        z += definition.anInt5654 * -504975083;
+        x += definition.anInt5655 * 1281867755;
+        y += definition.anInt5673 * -1496350233;
+        z += definition.anInt5657 * -2114564345;
+
+        x = x * scaleXPercent / 100.0;
+        y = y * scaleYPercent / 100.0;
+        z = z * scaleZPercent / 100.0;
+
+        if (yawDegrees != 0) {
+            double radians = Math.toRadians(yawDegrees);
+            double sin = Math.sin(radians);
+            double cos = Math.cos(radians);
+            double rx = x * cos + z * sin;
+            double rz = z * cos - x * sin;
+            x = rx;
+            z = rz;
+        }
+
+        return new double[] {
+                x + translateX,
+                y + translateY,
+                z + translateZ
+        };
+    }
+
+    private static float[] project(Class106 renderer, double x, double y, double z) {
+        float[] out = new float[3];
+        renderer.method1792((float) x, (float) y, (float) z, out);
+        if (Float.isNaN(out[0]) || Float.isNaN(out[1]) || Float.isNaN(out[2])
+                || Float.isInfinite(out[0]) || Float.isInfinite(out[1])) {
+            return null;
+        }
+        return out;
+    }
+
+    private static int[] fixedAxisEndpoint(float[] center, float[] sample) {
+        if (center == null || sample == null) {
+            return new int[] { Math.round(center == null ? 0.0F : center[0]),
+                    Math.round(center == null ? 0.0F : center[1]), 0 };
+        }
+        double dx = sample[0] - center[0];
+        double dy = sample[1] - center[1];
+        double length = Math.sqrt(dx * dx + dy * dy);
+        if (length < 2.0) {
+            return new int[] { Math.round(center[0]), Math.round(center[1]), 0 };
+        }
+        return new int[] {
+                (int) Math.round(center[0] + dx / length * GIZMO_AXIS_PIXELS),
+                (int) Math.round(center[1] + dy / length * GIZMO_AXIS_PIXELS),
+                1
+        };
+    }
+
+    private static void drawGizmoAxis(Class106 renderer,
+            int x1, int y1, int x2, int y2,
+            AxisConstraint axis, int baseColor) {
+        GizmoScreenState state = gizmoScreen;
+        boolean valid = axis == AxisConstraint.X ? state.xValid
+                : axis == AxisConstraint.Y ? state.yValid : state.zValid;
+        if (!valid) return;
+
+        int color = gizmoActiveAxis == axis ? GIZMO_ACTIVE_COLOR
+                : gizmoHoveredAxis == axis ? GIZMO_HOVER_COLOR : baseColor;
+        renderer.method1730(x1, y1, x2, y2, color, 1);
+
+        int dx = x2 - x1;
+        int dy = y2 - y1;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            renderer.method1730(x1, y1 - 1, x2, y2 - 1, color, 1);
+            renderer.method1730(x1, y1 + 1, x2, y2 + 1, color, 1);
+        } else {
+            renderer.method1730(x1 - 1, y1, x2 - 1, y2, color, 1);
+            renderer.method1730(x1 + 1, y1, x2 + 1, y2, color, 1);
+        }
+        renderer.method1725(x2 - 4, y2 - 4, 9, 9, color, 1);
+    }
+
+    private static AxisConstraint hitMoveGizmo(int x, int y) {
+        if (transformMode != TransformMode.MOVE) return null;
+        GizmoScreenState state = gizmoScreen;
+        if (!state.visible) return null;
+
+        int cx = state.centerX;
+        int cy = state.centerY;
+        int pdx = x - cx;
+        int pdy = y - cy;
+        if (pdx * pdx + pdy * pdy <= GIZMO_PIVOT_RADIUS * GIZMO_PIVOT_RADIUS) {
+            return AxisConstraint.FREE;
+        }
+
+        AxisConstraint best = null;
+        double bestDistance = GIZMO_HIT_RADIUS + 1.0;
+        if (state.xValid) {
+            double distance = pointSegmentDistance(x, y, cx, cy, state.xX, state.xY);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = AxisConstraint.X;
+            }
+        }
+        if (state.yValid) {
+            double distance = pointSegmentDistance(x, y, cx, cy, state.yX, state.yY);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = AxisConstraint.Y;
+            }
+        }
+        if (state.zValid) {
+            double distance = pointSegmentDistance(x, y, cx, cy, state.zX, state.zY);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = AxisConstraint.Z;
+            }
+        }
+        return bestDistance <= GIZMO_HIT_RADIUS ? best : null;
+    }
+
+    private static double pointSegmentDistance(int px, int py,
+            int x1, int y1, int x2, int y2) {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared <= 0.0) {
+            double ex = px - x1;
+            double ey = py - y1;
+            return Math.sqrt(ex * ex + ey * ey);
+        }
+        double t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared;
+        if (t < 0.0) t = 0.0;
+        else if (t > 1.0) t = 1.0;
+        double qx = x1 + t * dx;
+        double qy = y1 + t * dy;
+        double ex = px - qx;
+        double ey = py - qy;
+        return Math.sqrt(ex * ex + ey * ey);
+    }
+
+    private static boolean canTransformCurrentSelection() {
+        return selectionMode == SelectionMode.WHOLE || PARTS.getSelectedCount() > 0;
+    }
+
+    private static void captureGizmoDragDirection(AxisConstraint axis) {
+        GizmoScreenState state = gizmoScreen;
+        int ex = axis == AxisConstraint.X ? state.xX
+                : axis == AxisConstraint.Y ? state.yX
+                : axis == AxisConstraint.Z ? state.zX : state.centerX;
+        int ey = axis == AxisConstraint.X ? state.xY
+                : axis == AxisConstraint.Y ? state.yY
+                : axis == AxisConstraint.Z ? state.zY : state.centerY;
+        double dx = ex - state.centerX;
+        double dy = ey - state.centerY;
+        double length = Math.sqrt(dx * dx + dy * dy);
+        if (length < 1.0) {
+            dragGizmoDirX = 0.0;
+            dragGizmoDirY = 0.0;
+        } else {
+            dragGizmoDirX = dx / length;
+            dragGizmoDirY = dy / length;
+        }
+    }
+
+    private static final class GizmoScreenState {
+        final boolean visible;
+        final int centerX;
+        final int centerY;
+        final int xX;
+        final int xY;
+        final int yX;
+        final int yY;
+        final int zX;
+        final int zY;
+        final boolean xValid;
+        final boolean yValid;
+        final boolean zValid;
+
+        GizmoScreenState(boolean visible,
+                int centerX, int centerY,
+                int xX, int xY, int yX, int yY, int zX, int zY,
+                boolean xValid, boolean yValid, boolean zValid) {
+            this.visible = visible;
+            this.centerX = centerX;
+            this.centerY = centerY;
+            this.xX = xX;
+            this.xY = xY;
+            this.yX = yX;
+            this.yY = yY;
+            this.zX = zX;
+            this.zY = zY;
+            this.xValid = xValid;
+            this.yValid = yValid;
+            this.zValid = zValid;
+        }
+
+        static GizmoScreenState hidden() {
+            return new GizmoScreenState(false,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    false, false, false);
         }
     }
 
