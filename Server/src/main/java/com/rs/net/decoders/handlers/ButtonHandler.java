@@ -1386,7 +1386,7 @@ public class ButtonHandler {
 		player.getBank().depositAllBob(true);
 	    else if (componentId == 128) {
 		if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET)
-		    player.getBank().sendExamineÎnventory(slotId);
+		    player.getBank().sendExamineInventory(slotId);
 		else
 		    sendRemove(player, slotId, packetId == WorldPacketsDecoder.ACTION_BUTTON1_PACKET);
 	    } else if (componentId == 305) {
@@ -1434,7 +1434,7 @@ public class ButtonHandler {
 		} else if (packetId == WorldPacketsDecoder.ACTION_BUTTON9_PACKET)
 		    player.getBank().depositItem(slotId, Integer.MAX_VALUE, true);
 		else if (packetId == WorldPacketsDecoder.ACTION_BUTTON8_PACKET)
-		    player.getBank().sendExamineÎnventory(slotId);
+		    player.getBank().sendExamineInventory(slotId);
 		else if (packetId == WorldPacketsDecoder.ACTION_BUTTON7_PACKET)
 		    player.getBank().sendWearInventory(slotId);
 	    }
