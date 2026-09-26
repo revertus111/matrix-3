@@ -140,6 +140,19 @@ public final class ConstructionPlacementController {
         int worldX = sceneBase.localX * -2109597897 + localX;
         int worldY = sceneBase.localY * 417324155 + localY;
         int plane = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.aByte9009 & 0xff;
+
+        /*
+         * Rails are derived from Rail Network V1 logical topology. Let the rail
+         * owner remove the logical node and submit the physical delta; a generic
+         * server-only tile delete would leave stale client topology that can
+         * resurrect on the next rail edit.
+         */
+        String railErase = RailRoutePreview.eraseAtWorldTile(worldX, worldY, plane);
+        if (railErase != null) {
+            status = railErase;
+            return true;
+        }
+
         String error = ClientConsoleBridge.queueConsoleCommand(
                 "itembrowser settlement erasetile " + worldX + " " + worldY + " " + plane);
         status = error == null
