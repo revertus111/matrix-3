@@ -998,9 +998,9 @@ Phase 3 / Bundle 3.1 — Processing Core: Wood -> Planks (2026-09-25)
 [x] Source: processing transaction validates the full requested input/output capacity before mutation and rolls back any unexpected partial mutation.
 [x] Source: disposable processing self-test covers success, insufficient input, full output storage and starter-resource boundary.
 [x] Source: Con Revamp Processing card exposes status, active-save Wood prime, one-cycle Saw Plank and disposable self-test.
-[ ] Runtime: Processing Self-Test reports PASS.
-[ ] Runtime: reset/inspect storage, Prime 10 Wood, Saw 1 Plank -> Wood=8 and Planks=1.
-[ ] Runtime: Saw another Plank -> Wood=6 and Planks=2; no unrelated resource changes.
+[x] Runtime: Processing Self-Test reports PASS.
+[x] Runtime: manual Saw 1 Plank cycle confirmed exact Wood -2 / Planks +1 mutation.
+[x] Runtime: second manual Saw 1 Plank cycle confirmed another exact Wood -2 / Planks +1 mutation; screenshot showed Wood 88->86 and Planks 1->2.
 [ ] Runtime: set Planks to full capacity, attempt Saw 1 Plank -> operation is blocked and Wood amount is unchanged.
 [ ] Regression: starter shelter / existing settlement remains complete without requiring Planks.
 
