@@ -95,6 +95,9 @@ public final class RailRoutePreview {
     private static volatile int liveExistingContactX = -1;
     private static volatile int liveExistingContactY = -1;
     private static volatile boolean liveExistingContactRequiresSpecialTool;
+    private static volatile boolean liveDragLockedBySharpTurn;
+    private static volatile int liveSharpTurnX = -1;
+    private static volatile int liveSharpTurnY = -1;
     private static final java.util.List<RoutePiece> authoredPath =
             new java.util.ArrayList<RoutePiece>();
     /*
@@ -505,6 +508,9 @@ public final class RailRoutePreview {
         liveExistingContactX = -1;
         liveExistingContactY = -1;
         liveExistingContactRequiresSpecialTool = false;
+        liveDragLockedBySharpTurn = false;
+        liveSharpTurnX = -1;
+        liveSharpTurnY = -1;
         lastRenderedCycle = Integer.MIN_VALUE;
         renderState = "cleared";
         eventState = "Rail network draft cleared.";
@@ -571,12 +577,18 @@ public final class RailRoutePreview {
 
         if (dragging && hoveredPlane == livePlane) {
             appendLiveDragToward(hoveredWorldX, hoveredWorldY);
-            if (liveDragLockedAtExistingRail) {
+            if (liveDragLockedBySharpTurn) {
+                eventState = "Rail turn blocked at " + liveSharpTurnX + "," + liveSharpTurnY
+                        + ": curve footprints would overlap; release and widen the bend.";
+            } else if (liveDragLockedAtExistingRail) {
                 liveEndX = liveExistingContactX;
                 liveEndY = liveExistingContactY;
-                eventState = "Rail path connected at existing track "
-                        + liveEndX + "," + liveEndY
-                        + "; release to commit (cross-through waits for junction art).";
+                eventState = liveExistingContactRequiresSpecialTool
+                        ? "Normal Rail stopped at " + liveEndX + "," + liveEndY
+                                + ": Junction/Crossing/Splitter required."
+                        : "Rail path connected at existing track "
+                                + liveEndX + "," + liveEndY
+                                + "; release to commit.";
             } else {
                 liveEndX = hoveredWorldX;
                 liveEndY = hoveredWorldY;
@@ -953,7 +965,7 @@ public final class RailRoutePreview {
 
         if (mouse.getID() == MouseEvent.MOUSE_RELEASED && dragging
                 && mouse.getButton() == MouseEvent.BUTTON1) {
-            if (!liveDragLockedAtExistingRail
+            if (!liveDragLockedAtExistingRail && !liveDragLockedBySharpTurn
                     && hoveredPlane == livePlane && hoveredWorldX >= 0 && hoveredWorldY >= 0) {
                 liveEndX = hoveredWorldX;
                 liveEndY = hoveredWorldY;
@@ -1008,13 +1020,16 @@ public final class RailRoutePreview {
         liveExistingContactX = -1;
         liveExistingContactY = -1;
         liveExistingContactRequiresSpecialTool = false;
+        liveDragLockedBySharpTurn = false;
+        liveSharpTurnX = -1;
+        liveSharpTurnY = -1;
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
         return true;
     }
 
     private static void appendLiveDragToward(int targetX, int targetY) {
-        if (liveDragLockedAtExistingRail) {
+        if (liveDragLockedAtExistingRail || liveDragLockedBySharpTurn) {
             return;
         }
         if (liveDragPath.isEmpty()) {
@@ -1066,6 +1081,11 @@ public final class RailRoutePreview {
             if (isExistingRailTile(previousX, previousY)
                     && wouldRequireSpecialNode(previousX, previousY, x, y)) {
                 lockAtSpecialRailContact(previousX, previousY, previousX, previousY);
+                return;
+            }
+
+            if (wouldCreateOverlappingCurveFootprints(previousX, previousY, x, y)) {
+                lockAtSharpTurn(previousX, previousY);
                 return;
             }
 
@@ -1122,6 +1142,105 @@ public final class RailRoutePreview {
         liveEndY = stopY;
         eventState = "Normal Rail stopped at " + contactX + "," + contactY
                 + ": Junction/Crossing/Splitter required for a degree-3/4 node.";
+    }
+
+    private static void lockAtSharpTurn(int stopX, int stopY) {
+        liveDragLockedBySharpTurn = true;
+        liveSharpTurnX = stopX;
+        liveSharpTurnY = stopY;
+        liveEndX = stopX;
+        liveEndY = stopY;
+        eventState = "Rail turn blocked at " + stopX + "," + stopY
+                + ": accepted curve composites would overlap. Widen the bend.";
+    }
+
+    /**
+     * The accepted three-object curve owns the corner plus the first tile on
+     * each leg. Two corners packed too tightly can therefore claim the same
+     * physical tile even though their logical path is valid. Detect that at
+     * authoring time instead of letting the physical resolver emit interleaved
+     * curve objects like the sharp S/hairpin failure.
+     */
+    private static boolean wouldCreateOverlappingCurveFootprints(
+            int previousX, int previousY, int candidateX, int candidateY) {
+        java.util.LinkedHashSet<String> network =
+                new java.util.LinkedHashSet<String>(logicalNetwork);
+        java.util.LinkedHashSet<String> connections =
+                new java.util.LinkedHashSet<String>(logicalConnections);
+        addDragPathToTopology(network, connections, liveDragPath);
+
+        network.add(logicalKey(candidateX, candidateY, livePlane));
+        addLogicalConnection(connections,
+                previousX, previousY, candidateX, candidateY, livePlane);
+
+        return curveAtOverlapsAnother(
+                previousX, previousY, livePlane, network, connections)
+                || curveAtOverlapsAnother(
+                        candidateX, candidateY, livePlane, network, connections);
+    }
+
+    private static boolean curveAtOverlapsAnother(
+            int x, int y, int plane,
+            java.util.Set<String> network, java.util.Set<String> connections) {
+        CurvePlacement placement = curvePlacementForLogicalNode(
+                x, y, plane, network, connections);
+        if (placement == null) {
+            return false;
+        }
+
+        java.util.HashSet<String> footprint = curveFootprintKeys(placement, plane);
+        for (String key : network) {
+            int[] tile = parseLogicalKey(key);
+            if (tile[2] != plane || (tile[0] == x && tile[1] == y)) {
+                continue;
+            }
+            CurvePlacement other = curvePlacementForLogicalNode(
+                    tile[0], tile[1], tile[2], network, connections);
+            if (other == null) {
+                continue;
+            }
+            for (String occupied : curveFootprintKeys(other, plane)) {
+                if (footprint.contains(occupied)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static CurvePlacement curvePlacementForLogicalNode(
+            int x, int y, int plane,
+            java.util.Set<String> network, java.util.Set<String> connections) {
+        if (!network.contains(logicalKey(x, y, plane))) {
+            return null;
+        }
+        int mask = logicalNeighborMask(x, y, plane, connections);
+        if (Integer.bitCount(mask) != 2 || isOppositePair(mask)
+                || touchesLogicalJunction(x, y, plane, mask, connections)) {
+            return null;
+        }
+        int horizontalDirection = (mask & 2) != 0 ? 1 : -1;
+        int verticalDirection = (mask & 1) != 0 ? 1 : -1;
+        return createCurvePlacement(x, y, horizontalDirection, verticalDirection);
+    }
+
+    private static java.util.HashSet<String> curveFootprintKeys(
+            CurvePlacement placement, int plane) {
+        java.util.HashSet<String> footprint = new java.util.HashSet<String>();
+        if (placement == null) {
+            return footprint;
+        }
+        for (RailCompositeLibrary.Component component : placement.composite.getComponents()) {
+            int[] rotatedOffset = rotateLayoutOffset(
+                    component.getOffsetX() - placement.anchorX,
+                    component.getOffsetY() - placement.anchorY,
+                    placement.layoutTurns);
+            footprint.add(logicalKey(
+                    placement.cornerX + rotatedOffset[0],
+                    placement.cornerY + rotatedOffset[1],
+                    plane));
+        }
+        return footprint;
     }
 
     private static int liveDragAxis() {
@@ -1204,17 +1323,20 @@ public final class RailRoutePreview {
         pathEndY = liveEndY;
         pathPlane = livePlane;
 
-        eventState = liveDragLockedAtExistingRail
-                ? (liveExistingContactRequiresSpecialTool
-                        ? "Normal Rail stopped before unsupported special node at "
-                                + liveExistingContactX + "," + liveExistingContactY
-                                + "; use Junction/Crossing/Splitter."
-                        : "Rail network connected to existing track at "
-                                + liveExistingContactX + "," + liveExistingContactY
-                                + "; cross-through intentionally stopped.")
-                : (joinedExisting
-                        ? "Rail network extended from an existing endpoint."
-                        : "Rail network segment added.");
+        eventState = liveDragLockedBySharpTurn
+                ? "Rail turn stopped at " + liveSharpTurnX + "," + liveSharpTurnY
+                        + " because adjacent curve composites would overlap."
+                : (liveDragLockedAtExistingRail
+                        ? (liveExistingContactRequiresSpecialTool
+                                ? "Normal Rail stopped before unsupported special node at "
+                                        + liveExistingContactX + "," + liveExistingContactY
+                                        + "; use Junction/Crossing/Splitter."
+                                : "Rail network connected to existing track at "
+                                        + liveExistingContactX + "," + liveExistingContactY
+                                        + "; cross-through intentionally stopped.")
+                        : (joinedExisting
+                                ? "Rail network extended from an existing endpoint."
+                                : "Rail network segment added."));
 
         long debugOp = -1L;
         String debugEvent = eventState;
@@ -1251,6 +1373,9 @@ public final class RailRoutePreview {
         liveExistingContactX = -1;
         liveExistingContactY = -1;
         liveExistingContactRequiresSpecialTool = false;
+        liveDragLockedBySharpTurn = false;
+        liveSharpTurnX = -1;
+        liveSharpTurnY = -1;
         liveDragPath.clear();
     }
 
@@ -1592,6 +1717,8 @@ public final class RailRoutePreview {
                 .append("\tcontactMode=").append(liveDragLockedAtExistingRail
                         ? (liveExistingContactRequiresSpecialTool ? "SPECIAL_NODE_BLOCKED" : "CONNECTED")
                         : "none")
+                .append("\tbendStop=").append(liveDragLockedBySharpTurn
+                        ? (liveSharpTurnX + "," + liveSharpTurnY) : "none")
                 .append("\tlimits=").append(MAX_GESTURE_TILES).append('/').append(MAX_NETWORK_PIECES)
                 .append("\n");
         out.append("MODE\tendpointEdit=").append(endpointEdit)
