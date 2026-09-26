@@ -103,6 +103,9 @@ public final class ConstructionBuildCamera {
     private static boolean savedMinimapMarkerBool;
     private static int lastRtsMinimapMarkerLocalX = Integer.MIN_VALUE;
     private static int lastRtsMinimapMarkerLocalY = Integer.MIN_VALUE;
+    private static boolean pendingRtsMinimapFocus;
+    private static int pendingRtsMinimapFocusX;
+    private static int pendingRtsMinimapFocusY;
 
     // A placement click should stop motion even if a key is still physically held.
     // Movement can resume only after all camera movement keys are released once.
@@ -434,6 +437,12 @@ public final class ConstructionBuildCamera {
         if (!rtsOrientationInitialized) {
             initializeRtsHeading(lookController, position);
         }
+        if (pendingRtsMinimapFocus) {
+            int localX = pendingRtsMinimapFocusX;
+            int localY = pendingRtsMinimapFocusY;
+            pendingRtsMinimapFocus = false;
+            focusRtsAtLocalTile(localX, localY);
+        }
 
         boolean forward = keyDown(98) || keyDown(33); // Up or W
         boolean backward = keyDown(99) || keyDown(49); // Down or S
@@ -757,6 +766,14 @@ public final class ConstructionBuildCamera {
     }
 
     private static void focusRtsAtLocalTile(int localX, int localY) {
+        clearVelocity();
+        clickStopLatched = false;
+        if (!rtsOrientationInitialized) {
+            pendingRtsMinimapFocus = true;
+            pendingRtsMinimapFocusX = localX;
+            pendingRtsMinimapFocusY = localY;
+            return;
+        }
         if (client.aClass613_8605 == null) {
             return;
         }
@@ -776,8 +793,6 @@ public final class ConstructionBuildCamera {
         rtsPivotX = (worldTileX << 9) + 256.0F;
         rtsPivotZ = (worldTileY << 9) + 256.0F;
         clampRtsPivotToLoadedScene();
-        clearVelocity();
-        clickStopLatched = false;
         rememberRtsView();
         syncRtsMinimapMarker();
         reportToServer("RTS_MINIMAP_FOCUS local=" + localX + "," + localY);
@@ -909,6 +924,9 @@ public final class ConstructionBuildCamera {
         rtsPivotY = 0.0F;
         rtsPivotZ = 0.0F;
         pendingRtsZoomSteps = 0;
+        pendingRtsMinimapFocus = false;
+        pendingRtsMinimapFocusX = 0;
+        pendingRtsMinimapFocusY = 0;
     }
 
     private static boolean keyDown(int internalKey) {
