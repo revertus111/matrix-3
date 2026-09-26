@@ -274,11 +274,12 @@ Design authority: docs/live-model-editor/TRANSFORM_GIZMO_SPEC.md
 - [x] Display developer-friendly decimal scale values while preserving current internal percent representation.
 - [x] Add safe exact-entry behavior (Enter/Tab commit, Escape cancel, invalid blur revert, text-focus hotkey guard).
 - [ ] Add numeric scrub interaction.
-- [ ] Render visible selection pivot.
-- [ ] Render Matrix3-native Move gizmo first.
+- [x] Render visible selection pivot for Whole / Part / Multi.
+- [x] Render first Matrix3-native Move gizmo through renderer projection + 2D primitives.
 - [ ] Add supported Rotate gizmo.
 - [ ] Add Scale gizmo.
-- [ ] Add gizmo hit/hover/active states and compact active transform readout.
+- [x] Add Move-gizmo hit / hover / active states.
+- [ ] Add compact active transform readout.
 - [ ] Add shared-pivot Multi rotation.
 - [ ] Centralize hotkey/text-entry ownership and add keyboard nudge workflow.
 - [ ] Remove obsolete duplicate Parts/Transform panel methods after the replacement inspector is runtime-safe.
@@ -345,13 +346,13 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 ## Resume Here
 
-**Last completed:** Bundle 2.7C-B contextual Transform Inspector is in source: one live Whole/Part/Multi inspector, decimal scale display, safe exact-value entry, flexible part-list height, and protected text-input ownership.
+**Last completed:** Bundle 2.7C-C first native Move gizmo is in source: real Part/Multi selection centroid, Whole model pivot, renderer-native 3D->screen projection, X/Y/Z handles, center Free handle, gizmo-first hit testing, and projected-axis drag control.
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
 **Active bundle:** Bundle 2.7C - Professional transform tool (`ACTIVE / NEEDS TEST`).
 
-**Next action:** 2.7C-C — bounded trace + patch for the visible selection pivot and first Matrix3-native Move gizmo. Runtime verification for 2.7C-A/B is intentionally batched because the user will test the completed transform-tool slices together.
+**Next action:** 2.7C-D — add the supported yaw Rotate gizmo around the same pivot/projection ownership, then Scale gizmo. Runtime verification for 2.7C-A/B/C remains intentionally batched because the user will test the completed transform-tool slices together.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`
@@ -371,7 +372,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 - Object Lab direct-render scene coordinate math.
 - Dev Mode object ID/tile target route.
 
-**Important uncertainty:** 2.7C-A/B are verified-static only until the batched Java 8/runtime gate passes. Part/Multi exact numeric edits use the existing one-action undo path; Whole exact-value edits still inherit the older whole-transform history limitation until unified transform history is added. The visible 3D pivot/gizmo render seam is intentionally not claimed yet and is the next bounded implementation trace. Bundle 2.3B world picking still requires consolidated runtime verification.
+**Important uncertainty:** 2.7C-A/B/C are verified-static only until the batched Java 8/runtime gate passes. The Move gizmo uses verified Matrix3 projection/2D primitive APIs, but visual alignment on definitions using model mirroring (`aBool5647`) or terrain contour deformation is still UNKNOWN and intentionally not guessed. Part/Multi gizmo drags use the existing one-gesture undo path; Whole transform history still has the older limitation. Bundle 2.3B world picking still requires consolidated runtime verification.
 
 ### Bundle 2.7 compact-control follow-up — HUD moved into Camera/View
 
