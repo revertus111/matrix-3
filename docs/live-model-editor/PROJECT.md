@@ -268,19 +268,21 @@ Design authority: docs/live-model-editor/TRANSFORM_GIZMO_SPEC.md
 - [x] Add configurable Angle snap step (default 15 degrees).
 - [x] Apply snap inside the existing gesture so Part/Multi drag remains one undo transaction.
 - [x] Keep scale snapping deferred.
-- [ ] Eclipse/Java 8 client clean-build.
-- [ ] Runtime verify Free/Snap behavior on Conveyor belt 46298.
+- [x] Eclipse/Java 8 client clean-build through Bundle 2.7C-C; runtime screenshot/test received 2026-09-26.
+- [ ] Runtime verify corrected Free/Snap behavior on Conveyor belt 46298; pre-D snap path was the one reported failure.
+- [x] Runtime verify contextual inspector + Move gizmo/pivot on Conveyor belt 46298; user reported everything else working besides snap.
 - [x] Replace duplicated Whole/Part spinner form with one contextual live transform inspector.
 - [x] Display developer-friendly decimal scale values while preserving current internal percent representation.
 - [x] Add safe exact-entry behavior (Enter/Tab commit, Escape cancel, invalid blur revert, text-focus hotkey guard).
 - [ ] Add numeric scrub interaction.
 - [x] Render visible selection pivot for Whole / Part / Multi.
 - [x] Render first Matrix3-native Move gizmo through renderer projection + 2D primitives.
-- [ ] Add supported Rotate gizmo.
+- [x] Add supported yaw Rotate gizmo.
 - [ ] Add Scale gizmo.
 - [x] Add Move-gizmo hit / hover / active states.
+- [x] Add Rotate-ring hit / hover / active states.
 - [ ] Add compact active transform readout.
-- [ ] Add shared-pivot Multi rotation.
+- [x] Add shared-pivot Multi yaw rotation.
 - [ ] Centralize hotkey/text-entry ownership and add keyboard nudge workflow.
 - [ ] Remove obsolete duplicate Parts/Transform panel methods after the replacement inspector is runtime-safe.
 
@@ -346,13 +348,13 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 ## Resume Here
 
-**Last completed:** Bundle 2.7C-C first native Move gizmo is in source: real Part/Multi selection centroid, Whole model pivot, renderer-native 3D->screen projection, X/Y/Z handles, center Free handle, gizmo-first hit testing, and projected-axis drag control.
+**Last completed:** Bundle 2.7C-D is in source: gesture-delta Move/Angle snapping, reliable Ctrl modifier latching, a Matrix3-native yaw Rotate ring, and shared-pivot Multi rotation. The prior runtime test verified the inspector/pivot/Move gizmo and reported snapping as the only failure; D replaces that failed snap path.
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
 **Active bundle:** Bundle 2.7C - Professional transform tool (`ACTIVE / NEEDS TEST`).
 
-**Next action:** 2.7C-D — add the supported yaw Rotate gizmo around the same pivot/projection ownership, then Scale gizmo. Runtime verification for 2.7C-A/B/C remains intentionally batched because the user will test the completed transform-tool slices together.
+**Next action:** 2.7C-E — add the Scale gizmo on the existing pivot/projection/input foundation. Runtime verification for corrected snapping + Rotate remains intentionally batched so the user can test the completed transform-tool slices together.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`
@@ -372,7 +374,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 - Object Lab direct-render scene coordinate math.
 - Dev Mode object ID/tile target route.
 
-**Important uncertainty:** 2.7C-A/B/C are verified-static only until the batched Java 8/runtime gate passes. The Move gizmo uses verified Matrix3 projection/2D primitive APIs, but visual alignment on definitions using model mirroring (`aBool5647`) or terrain contour deformation is still UNKNOWN and intentionally not guessed. Part/Multi gizmo drags use the existing one-gesture undo path; Whole transform history still has the older limitation. Bundle 2.3B world picking still requires consolidated runtime verification.
+**Important uncertainty:** Conveyor 46298 runtime-confirmed the contextual inspector, visible pivot and native Move gizmo on 2026-09-26; snapping was the only reported failure and Bundle 2.7C-D replaces that snap implementation. D's corrected snap + Rotate ring + shared-pivot Multi yaw remain verified-static until the next batched runtime gate. Visual alignment on definitions using model mirroring (`aBool5647`) or terrain contour deformation remains UNKNOWN outside the verified Conveyor reference. Part/Multi gizmo drags use one-gesture undo; Whole transform history still has the older limitation.
 
 ### Bundle 2.7 compact-control follow-up — HUD moved into Camera/View
 
