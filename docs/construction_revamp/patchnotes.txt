@@ -1525,3 +1525,9 @@
 - Export status reports every animation-bearing object ID so the real animated saw/machinery candidates can be isolated from one capture instead of scanning arbitrary cache ranges.
 - Evidence writes under Client/data/tools/object_assemblies/ and uses the existing research tag (for example SAWMILL).
 - Wooden workbench 13704 remains the active provisional processing workstation; no sawmill object or animation has been promoted without runtime evidence.
+
+
+2026-09-25 - Phase 3 Bundle 3.1 runtime acceptance
+- Runtime confirmed two manual saw-planks cycles at exactly 2 Wood -> 1 Plank per cycle.
+- Runtime Processing Self-Test reported PASS for atomic conversion, input/output rollback and starter-resource boundary.
+- Bundle 3.1 processing core is DONE / RUNTIME VERIFIED; Bundle 3.2 physical workbench + Carpenter worker path remains the active runtime gate.
