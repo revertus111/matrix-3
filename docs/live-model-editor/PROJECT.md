@@ -24,7 +24,7 @@ The same transform/selection foundation is intended to become the developer-grad
 | Private in-world runtime model clone | ✅ Complete | Runtime-confirmed on the Smelter reference asset. Bundle 2.3A now suppresses only the selected source object's normal render so the editable model visually replaces it during the edit session; that replacement gate remains runtime-tested separately. |
 | Live whole-model transforms | ✅ Complete | Runtime-confirmed in the live client; independent scale, translation and yaw visibly update the private clone. |
 | JSON project save/load | ⚠️ Needs runtime verification | Authoring state saves under dev-model-projects and can be loaded back into the live preview. |
-| Mesh component selection/editing | ⚠️ Needs runtime verification | Connected-part editing, Whole/Part/Multi selection, group actions/transforms, world picking, G/R/S mouse transforms, Construction replacement and reusable selection-asset export are implemented; consolidated runtime verification is pending. |
+| Mesh component selection/editing | ⚠️ Needs runtime verification | Connected-part editing, Whole/Part/Multi selection, group actions/transforms, world picking, G/R/V mouse transforms, Construction replacement and reusable selection-asset export are implemented; consolidated runtime verification is pending. |
 | In-client model-editor overlay | ⚠️ Needs runtime verification | RuneScape-styled owned overlay follows the Matrix3 game canvas, supports drag repositioning/live resize/scroll fallback and now leases the shared Construction RTS camera for WASD pan, wheel zoom and MMB orbit. |
 | Permanent revision-830 model compiler | ❌ Not started | Requires validated encoder, model-ID allocation, backup, write/readback and hot reload. |
 | Construction Detail Mode reuse | 🔵 Foundation in progress | Live Model Editor now consumes the Construction BuildPiece catalog for non-destructive part replacement; player-facing settlement Detail Mode and server-validated persistence remain future work. |
@@ -154,7 +154,7 @@ Status: NEEDS TEST
 - [x] Left-click a hovered world component to lock/select it.
 - [x] Keep the overlay list synchronized with world-selected components.
 - [x] Direct left-drag transform workflow on the selected component.
-- [x] G/R/S transform modes: Move / Rotate / Scale.
+- [x] G/R/V transform modes: Move / Rotate / Scale.
 - [x] X/Y/Z axis constraints plus F for free/screen-plane movement.
 - [x] One undo snapshot per mouse drag gesture rather than one undo record per mouse-motion event.
 - [x] Keep normal Walk Here/world interactions suppressed while editor mouse ownership is active.
@@ -195,7 +195,7 @@ Status: NEEDS TEST
 - [x] Apply move/rotate/scale drag deltas, hide, delete, duplicate, reset and direct replacement across the selected part set with one undo snapshot per action/gesture.
 - [x] Highlight and isolate the full active selection rather than only one primary part.
 - [x] Correct direct mouse transform direction so screen drag direction is no longer inverted against the editor's model axes.
-- [x] Add Whole-mode direct G/R/S mouse editing against the existing clone transform.
+- [x] Add Whole-mode direct G/R/V mouse editing against the existing clone transform.
 - [x] Add Select All / Clear / Reset Selection controls and 1/2/3 selection-mode hotkeys.
 - [x] Add project JSON v4 multi-selection persistence while retaining legacy partSelected compatibility.
 - [x] Add Save Selection export under dev-model-assets as a reusable source-object/component recipe for later import/compiler work.
@@ -222,7 +222,9 @@ Status: NEEDS TEST
 
 Status: ACTIVE / NEEDS TEST
 
-Design authority: docs/live-model-editor/EDITOR_WORKSPACE_DESIGN.md
+Design authority:
+- docs/live-model-editor/EDITOR_WORKSPACE_DESIGN.md
+- docs/live-model-editor/TRANSFORM_GIZMO_SPEC.md
 
 #### Bundle 2.7A - Compact shell / focus / camera switch
 
@@ -251,14 +253,43 @@ Design authority: docs/live-model-editor/EDITOR_WORKSPACE_DESIGN.md
 - [ ] Runtime verify NIS HUD suppression/restoration.
 - [ ] Runtime verify Legacy restoration behavior.
 
+#### Bundle 2.7C - Professional transform tool
+
+Status: ACTIVE / NEEDS TEST
+
+Design authority: docs/live-model-editor/TRANSFORM_GIZMO_SPEC.md
+
+- [x] Lock viewport-first transform-tool specification.
+- [x] Preserve free transform as the normal drag behavior.
+- [x] Add persistent SNAP toggle.
+- [x] Ctrl temporarily enables snap when SNAP is off.
+- [x] Ctrl temporarily bypasses snap when SNAP is on.
+- [x] Add configurable Move snap step (default 16 model units).
+- [x] Add configurable Angle snap step (default 15 degrees).
+- [x] Apply snap inside the existing gesture so Part/Multi drag remains one undo transaction.
+- [x] Keep scale snapping deferred.
+- [ ] Eclipse/Java 8 client clean-build.
+- [ ] Runtime verify Free/Snap behavior on Conveyor belt 46298.
+- [ ] Replace duplicated Whole/Part spinner form with one contextual live transform inspector.
+- [ ] Display developer-friendly decimal scale values while preserving current internal percent representation.
+- [ ] Add safe exact-entry + numeric scrub interaction.
+- [ ] Render visible selection pivot.
+- [ ] Render Matrix3-native Move gizmo first.
+- [ ] Add supported Rotate gizmo.
+- [ ] Add Scale gizmo.
+- [ ] Add gizmo hit/hover/active states and compact active transform readout.
+- [ ] Add shared-pivot Multi rotation.
+- [ ] Centralize hotkey/text-entry ownership and add keyboard nudge workflow.
+- [ ] Remove obsolete duplicate Parts/Transform panel methods after the replacement inspector is runtime-safe.
+
 ## Phase 3 - Professional Transform UX
 
 Status: PLANNED
 
-- G/R/V hotkeys (V=Scale; S stays reserved for camera backward).
-- XYZ gizmos.
-- Snapping, local/world transform modes and numeric transform entry.
-- Ctrl+Z/redo/history.
+Bundle 2.7C now owns the first professional transform-tool vertical slice. Phase 3 remains the follow-on polish layer after that runtime gate:
+- Local / World transform orientation modes.
+- Redo/history beyond the existing undo path.
+- Advanced typed transform expressions.
 - Safe project autosave/recovery.
 
 ## Phase 4 - Permanent Model Build
@@ -313,13 +344,13 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 ## Resume Here
 
-**Last completed:** Bundle 1.1 runtime clone/whole-model transform proof passed in the live client. Bundle 2.1 connected-part authoring implementation is now in source.
+**Last completed:** Bundle 2.7C-A transform interaction foundation is in source: Free/Snap inverse-Ctrl behavior, configurable move/angle snap, compact editor snap controls, and the authoritative transform-tool specification.
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
-**Active bundle:** Bundle 2.7 - Professional Editor Shell (`ACTIVE / NEEDS TEST`) — persistent root HUD + merged EDIT workspace implemented.
+**Active bundle:** Bundle 2.7C - Professional transform tool (`ACTIVE / NEEDS TEST`).
 
-**Next action:** runtime-test Conveyor 46298 with the new manual HUD visibility tab. Editor must open with the normal world/HUD intact; use H to hide/show individual NIS root slots or Hide Mounted HUD, identify exact minimap/chat/backpack/actionbar/ribbon slots, and verify Restore All/Exit cannot black-screen the world.
+**Next action:** Eclipse/Java 8 clean-build, then runtime-test Conveyor 46298: verify free drag, temporary Ctrl snap, persistent SNAP, temporary Ctrl free while SNAP is on, configurable move/angle increments, Multi relative-offset preservation, and one-drag/one-undo behavior. After that gate, replace the duplicated spinner transform form with the contextual live inspector.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`
@@ -329,6 +360,9 @@ This is now the preferred asset-source experiment for the Construction automatio
 - `Client/src/main/java/game/DevDefinitionBridge.java`
 - `Client/src/main/java/game/DevModeBridge.java`
 - `Client/src/main/java/game/console/DevInspectorWindow.java`
+- `Client/src/main/java/game/LiveModelEditorPreview.java`
+- `Client/src/main/java/game/LiveModelEditorParts.java`
+- `Client/src/main/java/game/console/LiveModelEditorWindow.java`
 
 **Do not rescan without new evidence:**
 - Object definition model-ID decode.
@@ -336,7 +370,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 - Object Lab direct-render scene coordinate math.
 - Dev Mode object ID/tile target route.
 
-**Important uncertainty:** exact live scene object type/rotation and true one-instance renderer replacement/suppression are not yet established. Bundle 1 intentionally keeps those explicit and leaves the original object untouched. Bundle 2.3B now uses Matrix3 Model.method1376(...) for component-level screen hit testing, but runtime coordinate/selection accuracy remains NEEDS TEST. Construction replacement currently uses the existing starter Construction catalog as an authoring library; it is not yet the final player-facing material taxonomy.
+**Important uncertainty:** 2.7C-A Free/Snap behavior is verified-static only until the Java 8 build/runtime gate passes. The visible 3D pivot/gizmo render seam is intentionally not claimed yet; it is the next bounded implementation trace after the contextual inspector. Bundle 2.3B world picking still requires consolidated runtime verification, and Construction replacement still uses the starter Construction catalog rather than the final player-facing material taxonomy.
 
 ### Bundle 2.7 compact-control follow-up — HUD moved into Camera/View
 
