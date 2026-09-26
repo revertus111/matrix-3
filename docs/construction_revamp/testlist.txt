@@ -1099,3 +1099,11 @@ Phase 3 / Bundle 3.3 — Sawmill workstation evidence (2026-09-25)
 [ ] Evidence: upload the SAWMILL TSV plus one screenshot/video of the captured machine so relative offsets, rotations and visual roles can be classified.
 [ ] Gate: keep Wooden workbench 13704 as the processing workstation until the complete sawmill layout and animated saw object are verified.
 [ ] Follow-up: promote only the verified component layout into a settlement sawmill prefab/workstation, then rerun the Bundle 3.2 worker processing gate against it.
+
+
+Rail-aware Eraser regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-25)
+- Build a straight rail, arm Eraser, remove one middle rail tile, then re-arm Rail and extend/build nearby. The erased tile must remain absent and must not be treated as an existing contact.
+- Erase one visible component of a three-object curve. The curve owner must reconcile topology/physical pieces cleanly; no invisible logical rail may remain under the deleted visual.
+- After an erase, add another rail operation. Previously erased rail must not respawn or re-route because of stale client topology.
+- Exit/re-enter the settlement after erasing and confirm the erased physical rail is still absent (server persistence).
+- Regression: erase a normal non-rail settlement build object and confirm the existing server-authoritative erasetile path still removes it persistently.
