@@ -1660,3 +1660,15 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - This is footprint-driven rather than a hardcoded arbitrary distance, so valid compact turns remain allowed whenever the accepted composite objects do not physically collide.
 - Debug now records bendStop=x,y when the sharp-turn guard fires.
 - Resume Here: recreate the tight S/hairpin from the 2026-09-26 screenshot. Normal Rail must clamp before the overlapping curve forms while ordinary wide corners and loop corners remain unchanged.
+
+
+## Rail special-node layer H2A — explicit Junction — 2026-09-26
+- IMPLEMENTED / NEEDS ASSET ACCEPTANCE + RUNTIME TEST under SAP AAA.
+- Added RailRoutePreview.ToolMode NORMAL / JUNCTION / CROSSING / SPLITTER. Native Construction action-bar slot 2 now owns Junction; slots 3/4 route into reserved Crossing/Splitter framework messages instead of pretending ordinary Rail can infer those semantics.
+- Junction is asset-gated. Rail Classifier now has Accept Junction / Accept Crossing / Accept Splitter buttons that promote the currently previewed candidate + rotation into canonical special composites under Client/data/construction/asset_studio/rail_composites.tsv.
+- Canonical Junction contract is JUNCTION_RAIL_LAYOUT_01 with base logical orientation N+E+S (missing W). The resolver quarter-rotates the accepted composite to the authored degree-3 mask.
+- Junction mode allows exactly one special degree-3 node per drag. It works both starting from an existing degree-2 rail and connecting into one. Normal Rail's degree-3 guard remains unchanged.
+- Special-node semantics are stored separately from raw adjacency in the current-session logical graph so a degree-3 Junction is explicit, not inferred.
+- The evidence-seeded Rail Classifier type-22 object IDs are registered as zero-cost RAIL definitions on the server/client atomic rail key bridge so a visually accepted special candidate can persist instead of being silently skipped.
+- Crossing and Splitter are intentionally not runtime-enabled yet: Crossing needs cross-through topology/physical ownership; Splitter needs cart routing semantics. H2A does not fake either.
+- Resume Here: use Rail Classifier to preview the merge/turnout candidates, rotate until the junction visually faces canonical N+E+S, click Accept Junction, then press native build-bar slot 2 and runtime-test one branch from a straight middle tile. If the visual is wrong, adjust/accept the asset rather than changing topology logic.
