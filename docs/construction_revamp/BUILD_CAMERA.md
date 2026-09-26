@@ -149,9 +149,13 @@ Default Construction camera.
 - Shift fast / Ctrl precision modifiers remain active.
 - Palette header `- / +` controls select RTS pan multipliers `0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x, 2.5x, 3.0x`; `1.0x` is default and the selection survives Construction close/reopen for the current client session.
 - The multiplier applies only to RTS pan and scales normal, Shift-fast and Ctrl-precision speeds together; Free Build movement constants remain unchanged.
+- Minimap-originated action-23 movement type 1 is intercepted before Matrix3 sends the player-walk packet. The already-resolved local destination becomes the RTS pivot instead; current yaw, pitch and orbit distance are preserved.
+- RTS reuses Matrix3's existing minimap destination-marker state as a camera-focus marker. Keyboard pan and minimap focus clicks keep that marker synchronized with the pivot without hardcoding minimap screen coordinates or layout dimensions.
+- Entering RTS snapshots the prior minimap-marker state; leaving RTS restores it. Normal world Walk Here and Bundle 2.4 double-click worker/self movement remain separate.
+- The minimap itself still uses Matrix3's vanilla heading. A rotating RTS heading chevron remains deferred until the actual minimap render/angle owner is verified.
 - Free Build remains an explicit palette option for close-up detached movement and mouse-look.
 
-The RTS base view/orientation and the default-open + pivot-orbit revision are runtime VERIFIED.
+The RTS base view/orientation and the default-open + pivot-orbit revision are runtime VERIFIED. Minimap click-to-focus + pivot marker are IMPLEMENTED / NEEDS RUNTIME TEST.
 
 ### Top Down
 
