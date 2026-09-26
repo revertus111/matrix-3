@@ -1675,9 +1675,10 @@ public final class ConstructionRadialSelection {
      * Walk Here is allowed to continue for the local player; otherwise it is
      * consumed so only the selected workers move.
      *
-     * Object action 3 is Matrix3's first object option. For the starter tree
-     * (1276), the same Chop action is mirrored to selected workers. If self is
-     * selected, vanilla Chop continues for the player too.
+     * Object action 3 is Matrix3's first object option. Supported worker
+     * resource/workstation actions are consumed after the worker order is
+     * queued, even when self is selected, so they never redirect the player
+     * away from an unrelated current action.
      */
     static boolean handleMenuAction(int action, int localX, int localY, long targetUid) {
         int normalizedAction = action >= 2000 ? action - 2000 : action;
