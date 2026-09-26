@@ -1531,3 +1531,10 @@
 - Runtime confirmed two manual saw-planks cycles at exactly 2 Wood -> 1 Plank per cycle.
 - Runtime Processing Self-Test reported PASS for atomic conversion, input/output rollback and starter-resource boundary.
 - Bundle 3.1 processing core is DONE / RUNTIME VERIFIED; Bundle 3.2 physical workbench + Carpenter worker path remains the active runtime gate.
+
+
+2026-09-25 - Rail-aware Construction eraser
+- Fixed the Eraser path that could remove a visible rail server object while leaving Rail Network V1 logical topology intact on the client; later rail edits could therefore treat the deleted rail as still present or resurrect/re-resolve it.
+- Construction eraser now delegates known rail tiles to RailRoutePreview. The logical rail node + incident authored edges are removed first, the complete physical before/after rail sets are resolved, and the existing atomic onRailNetworkDelta owner reconciles persistent server objects.
+- Curve composite clicks are mapped back to their logical corner when the clicked physical component is on an offset tile.
+- Non-rail build tiles continue using the existing server-authoritative itemBrowser settlement erasetile path.
