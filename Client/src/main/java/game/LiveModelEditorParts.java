@@ -979,14 +979,35 @@ final class LiveModelEditorParts {
 
     private boolean applySelectionDelta(int[] delta, Map<Integer, int[]> starts) {
         boolean changed = false;
+        boolean sharedYawPivot = selection.size() > 1 && delta[6] != 0;
+        double[] pivot = sharedYawPivot ? selectionPivotForTransforms(starts) : null;
+        double radians = sharedYawPivot ? Math.toRadians(delta[6]) : 0.0;
+        double sin = sharedYawPivot ? Math.sin(radians) : 0.0;
+        double cos = sharedYawPivot ? Math.cos(radians) : 1.0;
+
         for (Integer index : selection) {
             PartState state = stateAt(index.intValue());
             if (state == null || state.deleted) continue;
             int[] base = starts == null ? transformOf(state) : starts.get(index);
             if (base == null) continue;
+
+            int moveX = base[3] + delta[3];
+            int moveZ = base[5] + delta[5];
+            if (pivot != null && source != null) {
+                Component component = source.components[state.sourcePart];
+                double centerX = component.centerX + base[3];
+                double centerZ = component.centerZ + base[5];
+                double dx = centerX - pivot[0];
+                double dz = centerZ - pivot[1];
+                double rotatedX = pivot[0] + dx * cos + dz * sin;
+                double rotatedZ = pivot[1] + dz * cos - dx * sin;
+                moveX += (int) Math.round(rotatedX - centerX);
+                moveZ += (int) Math.round(rotatedZ - centerZ);
+            }
+
             int[] values = sanitizeTransform(
                     base[0] + delta[0], base[1] + delta[1], base[2] + delta[2],
-                    base[3] + delta[3], base[4] + delta[4], base[5] + delta[5],
+                    moveX, base[4] + delta[4], moveZ,
                     base[6] + delta[6]);
             if (!sameTransform(state, values)) {
                 applyTransform(state, values);
@@ -994,6 +1015,28 @@ final class LiveModelEditorParts {
             }
         }
         return changed;
+    }
+
+    /**
+     * Returns the X/Z shared center represented by either the active gesture's
+     * frozen start transforms or the current authoring transforms.
+     */
+    private double[] selectionPivotForTransforms(Map<Integer, int[]> starts) {
+        if (source == null || selection.isEmpty()) return null;
+        double x = 0.0;
+        double z = 0.0;
+        int count = 0;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null || state.deleted) continue;
+            int[] base = starts == null ? transformOf(state) : starts.get(index);
+            if (base == null) continue;
+            Component component = source.components[state.sourcePart];
+            x += component.centerX + base[3];
+            z += component.centerZ + base[5];
+            count++;
+        }
+        return count == 0 ? null : new double[] { x / count, z / count };
     }
 
     private void markGeometryChanged() {
