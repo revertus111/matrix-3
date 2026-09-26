@@ -1163,3 +1163,15 @@ Rail sharp-bend footprint regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (
 - Build a normal rectangular/rounded loop with four well-spaced corners. All accepted three-object curves must continue to resolve exactly as before.
 - Extend a legal degree-1 endpoint and turn after sufficient space; endpoint extension must still work.
 - Regression: the already runtime-confirmed normal-Rail degree-3/4 guard must still block branch/cross attempts into the middle of existing rail without altering the protected rail.
+
+
+Rail special-node H2A Junction gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-26)
+- Open Rail Classifier and visually inspect a real merge/turnout candidate. Set the preview rotation so its canonical orientation is N+E+S (trunk north/south, branch east), then click Accept Junction.
+- Confirm Client/data/construction/asset_studio/rail_composites.tsv contains JUNCTION_RAIL_LAYOUT_01 and the chosen ID/type/rotation.
+- Open Build Palette and press/click native slot 2. Junction must arm; if the selected object ID is outside the server rail persistence whitelist, it must reject instead of silently losing the piece.
+- Starting on the middle of a straight degree-2 rail, drag outward. Exactly one node may become degree 3 and it must resolve to the accepted Junction asset, not the generic straight placeholder.
+- From empty ground, drag into the middle of a straight degree-2 rail. The contacted tile must become one Junction and the gesture must stop there.
+- Rotate the topology by testing all four T orientations. The same accepted Junction composite must quarter-rotate correctly from canonical N+E+S.
+- After each Junction placement, perform another normal Rail edit and exit/re-enter the settlement. The Junction physical object must persist and existing curve/straight geometry must remain stable.
+- Normal Rail regression: slot 1 must still refuse degree-3 creation and preserve existing curves.
+- Slot 3 Crossing and slot 4 Splitter must remain non-destructive/framework-only until H2B/H2C.
