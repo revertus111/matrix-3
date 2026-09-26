@@ -1586,3 +1586,13 @@
 - No arbitrary minimum-turn distance is hardcoded; the guard follows the actual accepted composite footprint, so future curve assets can change without rewriting gesture spacing math.
 - Debug RAIL_DEBUG now emits bendStop=x,y when this guard rejects a sharp turn.
 - Prior normal-Rail special-node/degree-3 guard is runtime confirmed working by the user.
+
+
+2026-09-26 - Rail special-node H2A: explicit Junction foundation
+- Added canonical special composite contracts JUNCTION_RAIL_LAYOUT_01, CROSSING_RAIL_LAYOUT_01 and SPLITTER_RAIL_LAYOUT_01.
+- Rail Classifier now promotes the selected preview candidate/rotation directly into those canonical special assets; multi-object specials may still be authored through Object Explorer composites.
+- Added explicit RailRoutePreview.ToolMode state. Native Construction hotbar slot 2 arms Junction when a valid accepted Junction asset exists; slots 3/4 remain framework-only for Crossing/Splitter.
+- Junction mode may author exactly one degree-3 node per gesture. Normal Rail remains degree<=2 and cannot create a junction.
+- Explicit Junction node semantics are stored separately from logical edges and resolved before generic curves/straights.
+- Junction composite rotates from canonical N+E+S orientation to the actual three-edge mask and replaces the old generic degree-3 straight placeholder.
+- Registered all current Rail Classifier evidence-seeded type-22 candidate IDs as persistent zero-cost RAIL assets and added client atomic-edit key mappings.
