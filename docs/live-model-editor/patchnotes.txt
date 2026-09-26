@@ -139,3 +139,13 @@
 - Camera/View keeps Hide Mounted HUD, Restore All, root-slot multi-select, Hide Selected and Show Selected.
 - Reduced the embedded HUD list to a compact 9-row/190px view so the combined Camera/View drawer remains practical on the 16-inch workspace.
 - Keyboard H behavior was intentionally left unchanged: it still toggles selected-part visibility.
+
+
+2026-09-26
+- Started Bundle 2.7C professional transform tool.
+- Added authoritative TRANSFORM_GIZMO_SPEC.md for viewport gizmos, live inspector, pivots, snapping, numeric editing and gesture ownership.
+- Normal transform drag remains free; Ctrl temporarily enables snapping.
+- Added persistent SNAP mode; while enabled, Ctrl temporarily bypasses snap for free movement.
+- Added configurable Move snap (default 16 model units) and Angle snap (default 15 degrees) in the EDIT workspace.
+- Snapping is applied inside the existing drag gesture so Part/Multi transforms retain one-drag/one-undo transaction behavior.
+- Scale snapping remains intentionally deferred.
