@@ -196,3 +196,14 @@ Live Model Editor render-crash containment — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] If a malformed component is encountered, console may log [LiveModelEditor] PART RENDER SKIP with stage/part/revision, but the game loop must continue.
 [ ] Verify valid main conveyor geometry remains rendered even when a bad pick/duplicate raw is skipped.
 [ ] Confirm a new geometry edit revision retries model construction rather than permanently disabling part rendering.
+
+Bundle 2.7 compact-workspace follow-up
+[ ] Open Live Model Editor and wait 2 seconds: minimap, chat, backpack, action bar/ribbon and other root-1477 chrome stay hidden.
+[ ] 3D world remains visible because root component 12 is protected.
+[ ] Expanded editor is larger (~390x720 where canvas permits) and begins near the top edge.
+[ ] Rail is E/M/C/O/S; no separate Parts/Transform tab hop.
+[ ] EDIT contains Whole/Part/Multi + All/Clear/Reset + Move/Rotate/Scale + Free/X/Y/Z together.
+[ ] Contextual numeric fields switch Whole vs Part/Multi correctly in EDIT.
+[ ] Part list and Rebuild/Isolate/Show All/Hide/Dup/Delete/Undo remain in EDIT.
+[ ] Trigger a NIS layout refresh while editor is open; hidden HUD chrome must not stay resurrected.
+[ ] Exit with X and Escape; normal NIS HUD/chrome returns.

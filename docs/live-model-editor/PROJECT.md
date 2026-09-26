@@ -317,9 +317,9 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
-**Active bundle:** Bundle 2.7 - Professional Editor Shell (`ACTIVE / NEEDS TEST`).
+**Active bundle:** Bundle 2.7 - Professional Editor Shell (`ACTIVE / NEEDS TEST`) — persistent root HUD + merged EDIT workspace implemented.
 
-**Next action:** runtime-test the combined Bundle 2.7 shell/fix pass on Conveyor belt 46298: normal root-1477 HUD suppression/restoration, FREE camera S/backward, view-relative free-axis Whole/Part/Multi dragging at north/east/south/west headings, and the new part-render crash containment against tiny conveyor components.
+**Next action:** runtime-test Conveyor 46298 with persistent root-1477 HUD suppression and the merged EDIT drawer: confirm chat/minimap/backpack/actionbar/ribbon frames disappear, selection + transform controls are together without tab switching, and Exit/Escape restores the normal HUD.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

@@ -61,6 +61,14 @@ public class InterfaceManager {
 	
 
 	private static final int[] MENU_SLOT_COMPONENTS_ = { 3, 5, 7, 9 };
+
+	private static final int[] DEV_WORKSPACE_ROOT_COMPONENTS = {
+		3, 5, 7, 8, 9, 13, 14, 18, 29, 30, 35, 39, 42, 46, 57, 68, 78, 87, 96,
+		105, 114, 123, 132, 143, 154, 165, 176, 187, 198, 209, 219, 230, 241, 252,
+		263, 274, 285, 296, 307, 318, 333, 337, 345, 349, 366, 368, 374, 378, 382,
+		386, 388, 395, 402, 403, 405, 410, 416, 421, 427, 428, 430, 466, 471, 475,
+		481, 486, 777, 791
+	};
 	
 	private static final int[] MENU_SUBMENU_VARS = { 18995, 18996, 18997, 18998, 18999, 19000, 19002, 19003, 19001};
 	
@@ -98,19 +106,22 @@ public class InterfaceManager {
 	 * Child interfaces are hidden only; ownership/open state is not removed.
 	 */
 	public boolean beginDevWorkspaceHud() {
-		if (devWorkspaceHudHidden)
-			return true;
 		if (rootInterface != FIXED_WINDOW_ID)
 			return false;
 
-		devWorkspaceHiddenRootComponents.clear();
-		for (Integer parentUID : openedinterfaces.keySet()) {
-			if (parentUID == null || (parentUID >>> 16) != rootInterface)
-				continue;
-			int componentId = parentUID & 0xffff;
-			if (componentId == GAME_SCREEN_COMPONENT_ID)
-				continue;
-			devWorkspaceHiddenRootComponents.add(componentId);
+		if (!devWorkspaceHudHidden) {
+			devWorkspaceHiddenRootComponents.clear();
+			for (int componentId : DEV_WORKSPACE_ROOT_COMPONENTS) {
+				if (componentId != GAME_SCREEN_COMPONENT_ID)
+					devWorkspaceHiddenRootComponents.add(componentId);
+			}
+			for (Integer parentUID : openedinterfaces.keySet()) {
+				if (parentUID == null || (parentUID >>> 16) != rootInterface)
+					continue;
+				int componentId = parentUID & 0xffff;
+				if (componentId != GAME_SCREEN_COMPONENT_ID)
+					devWorkspaceHiddenRootComponents.add(componentId);
+			}
 		}
 
 		for (int componentId : devWorkspaceHiddenRootComponents)
@@ -557,6 +568,13 @@ public class InterfaceManager {
 		}
 		else
 			player.getPackets().sendInterface(clickThrought, parentUID, interfaceId);
+
+		if (devWorkspaceHudHidden && parentInterfaceId == rootInterface
+				&& parentInterfaceComponentId != GAME_SCREEN_COMPONENT_ID) {
+			devWorkspaceHiddenRootComponents.add(parentInterfaceComponentId);
+			player.getPackets().sendHideIComponent(
+					rootInterface, parentInterfaceComponentId, true);
+		}
 	}
 
 	public void removeInterfaceByParent(int parentInterfaceId, int parentInterfaceComponentId) {

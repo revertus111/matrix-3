@@ -112,3 +112,10 @@
 - Part-model cache no longer retries a failed null main model every frame for the same revision; the next editor geometry revision retries cleanly.
 - Added defensive recolor/retexture array-length bounds in the custom definition-model builder.
 - Crash diagnostics are rate-limited per editor revision and identify stage/part/revision.
+
+2026-09-25
+- Bundle 2.7 compact-workspace follow-up: root-1477 HUD suppression is now persistent. The server seeds known NIS/root chrome component IDs, merges current mounted root children, and reasserts hidden state while Editor Workspace is active.
+- Any interface subsequently mounted into root 1477 is immediately hidden unless it is component 12 (world/game viewport).
+- Live Model Editor reasserts editorhud enter at a low 1-second cadence so NIS scripts cannot permanently resurrect minimap/chat/backpack/actionbar chrome.
+- Merged Parts + Transform into one larger EDIT drawer. Whole/Part/Multi, All/Clear/Reset, Move/Rotate/Scale, Free/X/Y/Z, numeric transforms, component list and common part actions are now together.
+- Simplified rail to E/M/C/O/S and enlarged default editor workspace from 304x560 to 390x720 (minimum 350x560).

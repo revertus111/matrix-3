@@ -160,3 +160,15 @@ Implementation:
 10. Exact numeric input still works.
 11. Re-test isolate/duplicate/delete/undo/replace/save/export.
 12. Exit Editor restores source/camera ownership.
+
+## Compact workspace refinement — persistent HUD + merged EDIT
+
+- Root 1477 chrome ownership is persistent while Live Model Editor is open, not a one-shot hide.
+- Root component 12 remains protected as the world/game viewport.
+- Known NIS/root chrome components are explicitly hidden in addition to dynamically mounted root children.
+- Any new interface mounted into root 1477 while editor workspace is active is immediately re-hidden unless it is component 12.
+- Client reasserts editor HUD ownership at a low 1-second cadence because NIS scripts can rebuild/unhide root chrome.
+- Parts + Transform are merged into one **EDIT** drawer to avoid normal select/edit tab hopping.
+- EDIT contains selection modes/actions, transform mode/axis controls, contextual numeric transforms, part list, and common part actions.
+- Rail becomes E/M/C/O/S.
+- Default expanded editor grows to ~390x720 (minimum 350x560) and starts near the top of the viewport.
