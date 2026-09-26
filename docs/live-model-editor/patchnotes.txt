@@ -199,3 +199,17 @@
 - Part/Multi scale gestures continue to use one mouse drag = one undo snapshot.
 - Existing 10–400 internal scale limits and 1.00-style inspector display are unchanged.
 - Scale snapping remains intentionally deferred; Move/Rotate are the only transform modes affected by the current Snap controls.
+
+
+2026-09-26
+- User runtime-confirmed the corrected 2.7C-D/E Snap + Rotate + Scale core workflow on Conveyor belt 46298.
+- Added Bundle 2.7C-F professional transform interaction polish.
+- Added persistent visual active states for Whole/Part/Multi, Move/Rotate/Scale, Free/X/Y/Z, Isolate and the active editor tool rail.
+- Added a compact live EDIT readout showing selection context, transform mode/axis and the current authoritative transform value.
+- Added horizontal numeric scrubbing to Position/Yaw/Scale inspector fields with Shift fine and Ctrl coarse modifiers.
+- Part/Multi numeric scrubbing reuses the existing transform gesture transaction so one scrub is one undo record.
+- Added inspector mouse-wheel value adjustment.
+- Added Alt+Arrow keyboard nudging with Alt+Shift coarse steps while preserving plain arrow keys for camera navigation.
+- Centralized editor shortcut ownership and added Ctrl+O Load, Shift+H Show All, I Isolate and Tab collapse/expand.
+- Removed obsolete duplicate createPartsPanel/createTransformPanel UI code and unused transform CardLayout state.
+- Native text beside the 3D gizmo remains non-blocking CARRYOVER because no verified Matrix3 renderer-font seam was established; no second Swing viewport overlay was added.
