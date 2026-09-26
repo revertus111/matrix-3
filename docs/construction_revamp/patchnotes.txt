@@ -1569,3 +1569,11 @@
 - Safe endpoint extension/connection remains supported when the resulting node is degree 2 or lower.
 - Junction/Crossing/Splitter remain the explicit owners for degree-3/4 topology; normal Rail no longer manufactures their placeholder behavior.
 - Fixed debug evidence ordering: contactStop is no longer reset before report generation, and RAIL_DEBUG now emits contactMode=CONNECTED or SPECIAL_NODE_BLOCKED.
+
+
+2026-09-25 - Settlement worker soft collision + destination separation
+- Settlement workers now use Matrix3 intelligent NPC traversal so another NPC may occupy/cross the route without cancelling movement; static wall/object clipping is unchanged.
+- Added SettlementInstance transient destination reservations: paths are not reserved, but final ground and interaction approach tiles are unique across workers and avoid live settlement NPC/cart occupancy.
+- Group move, storage, needs, gathering and processing all reuse the same worker walkToward destination allocator instead of adding system-specific collision rules.
+- Worker destination reservations clear with settlement worker teardown; no global Entity/NPC collision behavior changed.
+- Runtime evidence from the prior UX patch confirmed 3-worker Jobs apply and selected-worker workbench 2 Wood -> 1 Plank dispatch/conversion.
