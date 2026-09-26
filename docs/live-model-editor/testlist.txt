@@ -213,3 +213,13 @@ Editor Workspace black-screen regression
 [ ] Root component 8 (screen background) and component 12 (game/world viewport) remain visible for the entire edit session.
 [ ] Minimap/chat/backpack/actionbar/ribbon HUD chrome still disappears.
 [ ] Exit Editor and confirm normal HUD restoration.
+
+Manual HUD visibility / black-screen recovery
+[ ] Restart Client + Server and open Live Model Editor: world and normal HUD remain visible initially.
+[ ] H tab exists and structural components 8/12 are absent.
+[ ] Hide one selected root slot; only that slot changes. Show Selected restores it.
+[ ] Multi-select Hide/Show works.
+[ ] Hide Mounted HUD can be immediately reversed with Restore All.
+[ ] Identify rows for minimap, chat, backpack, action bar and left ribbon for later labels.
+[ ] Restore All leaves 3D world intact and returns normal HUD.
+[ ] Hide slots then Exit/Escape; all editor-hidden HUD restores automatically.

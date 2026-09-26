@@ -235,28 +235,48 @@ public final class ItemBrowserCommandBridge {
 
     private static boolean processEditorHud(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
-            player.getPackets().sendGameMessage("Use: ::itembrowser editorhud <enter|exit|status>");
+            player.getPackets().sendGameMessage(
+                    "Use: ::itembrowser editorhud <safehide|restore|hide|show|status> [rootComponent]");
             return true;
         }
         String operation = cmd[2].toLowerCase();
-        if ("enter".equals(operation)) {
-            boolean hidden = player.getInterfaceManager().beginDevWorkspaceHud();
-            if (!hidden) {
+        if ("enter".equals(operation) || "safehide".equals(operation)) {
+            if (!player.getInterfaceManager().beginDevWorkspaceHud())
                 player.getPackets().sendGameMessage(
-                        "Editor HUD suppression requires the normal Matrix3 game root.");
-            }
+                        "Editor HUD controls require the normal Matrix3 game root.");
             return true;
         }
-        if ("exit".equals(operation)) {
+        if ("exit".equals(operation) || "restore".equals(operation) || "showall".equals(operation)) {
             player.getInterfaceManager().endDevWorkspaceHud();
             return true;
         }
-        if ("status".equals(operation)) {
-            player.getPackets().sendGameMessage("Editor HUD: "
-                    + (player.getInterfaceManager().isDevWorkspaceHudHidden() ? "hidden." : "normal."));
+        if ("hide".equals(operation) || "show".equals(operation)) {
+            if (cmd.length < 4) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser editorhud " + operation + " <rootComponent>");
+                return true;
+            }
+            final int componentId;
+            try {
+                componentId = Integer.parseInt(cmd[3]);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("HUD root component must be a whole number.");
+                return true;
+            }
+            boolean hidden = "hide".equals(operation);
+            if (!player.getInterfaceManager().setDevWorkspaceComponentHidden(componentId, hidden))
+                player.getPackets().sendGameMessage(
+                        "HUD component " + componentId + " is structural or unavailable.");
             return true;
         }
-        player.getPackets().sendGameMessage("Use: ::itembrowser editorhud <enter|exit|status>");
+        if ("status".equals(operation)) {
+            player.getPackets().sendGameMessage("Editor HUD custom state: "
+                    + (player.getInterfaceManager().isDevWorkspaceHudHidden()
+                            ? "one or more components hidden." : "all restored."));
+            return true;
+        }
+        player.getPackets().sendGameMessage(
+                "Use: ::itembrowser editorhud <safehide|restore|hide|show|status> [rootComponent]");
         return true;
     }
 

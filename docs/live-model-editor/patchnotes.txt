@@ -124,3 +124,11 @@
 - Fixed Editor Workspace black-screen regression from the persistent root-HUD pass.
 - Root component 8 is Matrix3 SCREEN_BACKGROUND_COMPONENT_ID and is structural to the live scene; it is no longer included in the explicit developer-HUD hide set.
 - Added a shared structural-component guard so both the initial root snapshot and later root-interface mounts can never hide component 8 (screen background) or component 12 (game/world viewport).
+
+2026-09-25
+- Replaced automatic broad editor HUD suppression with explicit manual HUD controls after root hiding still black-screened the live world.
+- Editor now opens with normal HUD visibility and no periodic broad hide reassertion.
+- Added H / HUD VISIBILITY drawer with concrete NIS root component -> interface ID rows, multi-select Hide Selected / Show Selected, Hide Mounted HUD, and Restore All.
+- Structural root components 8 (screen background) and 12 (game/world viewport) are not present in the HUD list and are rejected by the server hide API.
+- Server editorhud now supports safehide, restore, hide <rootComponent>, show <rootComponent>, and status. Only exact components already hidden are re-hidden on later mounts.
+- Exit/Escape restores all HUD components hidden through the editor.

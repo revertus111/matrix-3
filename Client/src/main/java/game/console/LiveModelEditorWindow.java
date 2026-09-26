@@ -111,7 +111,6 @@ public final class LiveModelEditorWindow {
     private static Window overlayOwner;
     private static LiveModelEditorWindow instance;
     private static Timer overlayTimer;
-    private static long lastHudReassertMillis;
     private static boolean manuallyPositioned;
     private static boolean inputGateInstalled;
     private static boolean drawerExpanded = true;
@@ -146,6 +145,21 @@ public final class LiveModelEditorWindow {
 
     private final DefaultListModel<String> partListModel = new DefaultListModel<String>();
     private final JList<String> partList = new JList<String>(partListModel);
+
+    private static final int[] HUD_ROOT_COMPONENTS = {
+            165, 176, 198, 382, 219, 230, 57, 132, 154, 252, 296, 263,
+            46, 241, 285, 307, 274, 29, 386, 35, 39, 486, 349, 366, 345,
+            471, 403, 337, 481, 68, 78, 87, 96, 105, 114, 318, 123, 374,
+            475, 333
+    };
+    private static final int[] HUD_INTERFACE_IDS = {
+            1460, 1452, 1449, 635, 1466, 1220, 1473, 1464, 1458, 550, 1427, 1110,
+            590, 1416, 1417, 231, 1519, 1431, 568, 1430, 1465, 1433, 1483, 745, 1485,
+            1213, 1448, 557, 1484, 137, 1467, 1472, 1471, 1470, 464, 228, 1529, 182,
+            1488, 1215
+    };
+    private final DefaultListModel<String> hudListModel = new DefaultListModel<String>();
+    private final JList<String> hudList = new JList<String>(hudListModel);
     private final ConstructionPlacementController.BuildPiece[] constructionPieces =
             ConstructionPlacementController.getPieces();
     private final JComboBox<String> replacementCombo = new JComboBox<String>();
@@ -190,6 +204,9 @@ public final class LiveModelEditorWindow {
         replacementCombo.setFont(RS_SMALL_FONT);
         replacementCombo.setForeground(RS_TEXT);
         replacementCombo.setBackground(RS_INPUT);
+        for (int i = 0; i < HUD_ROOT_COMPONENTS.length; i++)
+            hudListModel.addElement("Root " + HUD_ROOT_COMPONENTS[i]
+                    + "  ->  interface " + HUD_INTERFACE_IDS[i]);
         buildUi();
     }
 
@@ -212,7 +229,6 @@ public final class LiveModelEditorWindow {
         }
         installInputGate();
         enterEditorRtsCamera();
-        enterEditorHud();
         if (instance.matchesTarget(target)) {
             instance.resumeSession();
         } else {
@@ -301,11 +317,6 @@ public final class LiveModelEditorWindow {
         }
         if (instance != null && overlayWindow.isVisible()) {
             instance.syncRuntimeState();
-            long now = System.currentTimeMillis();
-            if (editorHudRequested && now - lastHudReassertMillis >= 1000L) {
-                ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud enter");
-                lastHudReassertMillis = now;
-            }
         }
     }
 
@@ -320,6 +331,7 @@ public final class LiveModelEditorWindow {
         toolCards.add(createEditPanel(), "EDIT");
         toolCards.add(createMaterialPanel(), "MATERIAL");
         toolCards.add(createCameraPanel(), "CAMERA");
+        toolCards.add(createHudPanel(), "HUD");
         toolCards.add(createObjectPanel(), "OBJECT");
         toolCards.add(createProjectPanel(), "PROJECT");
         editorDrawer.add(toolCards, BorderLayout.CENTER);
@@ -415,6 +427,8 @@ public final class LiveModelEditorWindow {
         rail.add(railButton("M", "Material replacement", "MATERIAL"));
         rail.add(Box.createVerticalStrut(3));
         rail.add(railButton("C", "Camera", "CAMERA"));
+        rail.add(Box.createVerticalStrut(3));
+        rail.add(railButton("H", "HUD visibility", "HUD"));
         rail.add(Box.createVerticalStrut(3));
         rail.add(railButton("O", "Object / source", "OBJECT"));
         rail.add(Box.createVerticalStrut(3));
@@ -974,6 +988,97 @@ public final class LiveModelEditorWindow {
         return panel;
     }
 
+    private JPanel createHudPanel() {
+        JPanel panel = toolPanel("HUD VISIBILITY");
+
+        JLabel warning = new JLabel("Structural root 8/12 locked ON.");
+        warning.setFont(RS_SMALL_FONT);
+        warning.setForeground(RS_MUTED);
+        panel.add(warning);
+        panel.add(Box.createVerticalStrut(6));
+
+        JPanel presetRow = actionRow(2);
+        JButton hideMounted = rsButton("Hide Mounted HUD");
+        JButton restoreAll = rsButton("Restore All");
+        presetRow.add(hideMounted);
+        presetRow.add(restoreAll);
+        panel.add(presetRow);
+        panel.add(Box.createVerticalStrut(7));
+
+        JLabel hint = new JLabel("Select one or more NIS root slots:");
+        hint.setFont(RS_SMALL_FONT);
+        hint.setForeground(RS_TEXT);
+        panel.add(hint);
+        panel.add(Box.createVerticalStrut(4));
+
+        hudList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        hudList.setVisibleRowCount(15);
+        hudList.setFixedCellHeight(22);
+        hudList.setFont(RS_SMALL_FONT);
+        hudList.setForeground(RS_TEXT);
+        hudList.setBackground(RS_INPUT);
+        hudList.setSelectionForeground(RS_GOLD);
+        hudList.setSelectionBackground(RS_SELECTED);
+        hudList.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+
+        JScrollPane scroll = new JScrollPane(hudList,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setBorder(BorderFactory.createLineBorder(RS_BORDER));
+        scroll.setPreferredSize(new Dimension(300, 350));
+        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 390));
+        scroll.getViewport().setBackground(RS_INPUT);
+        scroll.getVerticalScrollBar().setUnitIncrement(18);
+        panel.add(scroll);
+        panel.add(Box.createVerticalStrut(6));
+
+        JPanel row = actionRow(2);
+        JButton hideSelected = rsButton("Hide Selected");
+        JButton showSelected = rsButton("Show Selected");
+        row.add(hideSelected);
+        row.add(showSelected);
+        panel.add(row);
+
+        hideMounted.addActionListener(e -> {
+            String error = ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud safehide");
+            if (error == null) {
+                editorHudRequested = true;
+                statusLabel.setText("HUD: hid currently mounted panes.");
+            } else statusLabel.setText("HUD command failed: " + error);
+        });
+        restoreAll.addActionListener(e -> restoreEditorHud());
+        hideSelected.addActionListener(e -> setSelectedHudComponentsHidden(true));
+        showSelected.addActionListener(e -> setSelectedHudComponentsHidden(false));
+        return panel;
+    }
+
+    private void setSelectedHudComponentsHidden(boolean hidden) {
+        int[] selected = hudList.getSelectedIndices();
+        if (selected == null || selected.length == 0) {
+            statusLabel.setText("HUD: select one or more root slots first.");
+            return;
+        }
+        String[] commands = new String[selected.length];
+        for (int i = 0; i < selected.length; i++)
+            commands[i] = "itembrowser editorhud "
+                    + (hidden ? "hide " : "show ")
+                    + HUD_ROOT_COMPONENTS[selected[i]];
+        String error = ClientConsoleBridge.queueConsoleCommands(commands);
+        if (error == null) {
+            editorHudRequested = true;
+            statusLabel.setText("HUD: " + (hidden ? "hid " : "showed ")
+                    + selected.length + " selected slot(s).");
+        } else statusLabel.setText("HUD command failed: " + error);
+    }
+
+    private void restoreEditorHud() {
+        String error = ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud restore");
+        if (error == null) {
+            editorHudRequested = false;
+            statusLabel.setText("HUD: restored all editor-hidden components.");
+        } else statusLabel.setText("HUD restore failed: " + error);
+    }
+
     private JPanel createObjectPanel() {
         JPanel panel = toolPanel("OBJECT / SOURCE");
         targetLabel.setFont(RS_SECTION_FONT);
@@ -1225,22 +1330,9 @@ public final class LiveModelEditorWindow {
         }
     }
 
-    private static void enterEditorHud() {
-        if (editorHudRequested) {
-            return;
-        }
-        String error = ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud enter");
-        editorHudRequested = error == null;
-        if (error != null && instance != null) {
-            instance.statusLabel.setText("Editor HUD request failed: " + error);
-        }
-    }
-
     private static void exitEditorHud() {
-        if (!editorHudRequested) {
-            return;
-        }
-        ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud exit");
+        if (!editorHudRequested) return;
+        ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud restore");
         editorHudRequested = false;
     }
 

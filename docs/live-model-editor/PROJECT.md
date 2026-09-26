@@ -319,7 +319,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 **Active bundle:** Bundle 2.7 - Professional Editor Shell (`ACTIVE / NEEDS TEST`) — persistent root HUD + merged EDIT workspace implemented.
 
-**Next action:** runtime-test Conveyor 46298 after the root-background protection fix: confirm the 3D world remains visible while chat/minimap/backpack/actionbar/ribbon disappear, then verify merged EDIT controls and Exit/Escape HUD restoration.
+**Next action:** runtime-test Conveyor 46298 with the new manual HUD visibility tab. Editor must open with the normal world/HUD intact; use H to hide/show individual NIS root slots or Hide Mounted HUD, identify exact minimap/chat/backpack/actionbar/ribbon slots, and verify Restore All/Exit cannot black-screen the world.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

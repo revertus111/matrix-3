@@ -172,3 +172,12 @@ Implementation:
 - EDIT contains selection modes/actions, transform mode/axis controls, contextual numeric transforms, part list, and common part actions.
 - Rail becomes E/M/C/O/S.
 - Default expanded editor grows to ~390x720 (minimum 350x560) and starts near the top of the viewport.
+
+## Manual HUD visibility revision
+- Broad automatic root-1477 suppression is retired after runtime black-screen regressions.
+- Live Model Editor opens with normal HUD untouched.
+- H / HUD VISIBILITY lists NIS root slots from sendNISScreenInterfaces() as root component -> interface ID.
+- Multi-select Hide Selected / Show Selected, plus Hide Mounted HUD and Restore All.
+- Structural root components 8 and 12 are never exposed or hideable.
+- Exit/Escape restores every component hidden through the editor.
+- Semantic labels (Minimap, Chat, Backpack, Action Bar, Ribbon) will be assigned after runtime slot identification instead of guessed.

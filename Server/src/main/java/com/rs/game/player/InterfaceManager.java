@@ -62,13 +62,6 @@ public class InterfaceManager {
 
 	private static final int[] MENU_SLOT_COMPONENTS_ = { 3, 5, 7, 9 };
 
-	private static final int[] DEV_WORKSPACE_ROOT_COMPONENTS = {
-		3, 5, 7, 9, 13, 14, 18, 29, 30, 35, 39, 42, 46, 57, 68, 78, 87, 96,
-		105, 114, 123, 132, 143, 154, 165, 176, 187, 198, 209, 219, 230, 241, 252,
-		263, 274, 285, 296, 307, 318, 333, 337, 345, 349, 366, 368, 374, 378, 382,
-		386, 388, 395, 402, 403, 405, 410, 416, 421, 427, 428, 430, 466, 471, 475,
-		481, 486, 777, 791
-	};
 	
 	private static final int[] MENU_SUBMENU_VARS = { 18995, 18996, 18997, 18998, 18999, 19000, 19002, 19003, 19001};
 	
@@ -108,44 +101,46 @@ public class InterfaceManager {
 	public boolean beginDevWorkspaceHud() {
 		if (rootInterface != FIXED_WINDOW_ID)
 			return false;
-
-		if (!devWorkspaceHudHidden) {
-			devWorkspaceHiddenRootComponents.clear();
-			for (int componentId : DEV_WORKSPACE_ROOT_COMPONENTS) {
-				if (!isDevWorkspaceStructuralComponent(componentId))
-					devWorkspaceHiddenRootComponents.add(componentId);
-			}
-			for (Integer parentUID : openedinterfaces.keySet()) {
-				if (parentUID == null || (parentUID >>> 16) != rootInterface)
-					continue;
-				int componentId = parentUID & 0xffff;
-				if (!isDevWorkspaceStructuralComponent(componentId))
-					devWorkspaceHiddenRootComponents.add(componentId);
-			}
-		}
-
-		for (int componentId : devWorkspaceHiddenRootComponents)
+		for (Integer parentUID : openedinterfaces.keySet()) {
+			if (parentUID == null || (parentUID >>> 16) != rootInterface)
+				continue;
+			int componentId = parentUID & 0xffff;
+			if (isDevWorkspaceStructuralComponent(componentId))
+				continue;
+			devWorkspaceHiddenRootComponents.add(componentId);
 			player.getPackets().sendHideIComponent(rootInterface, componentId, true);
-		devWorkspaceHudHidden = true;
+		}
+		devWorkspaceHudHidden = !devWorkspaceHiddenRootComponents.isEmpty();
+		return true;
+	}
+
+	public boolean setDevWorkspaceComponentHidden(int componentId, boolean hidden) {
+		if (rootInterface != FIXED_WINDOW_ID || isDevWorkspaceStructuralComponent(componentId))
+			return false;
+		if (hidden)
+			devWorkspaceHiddenRootComponents.add(componentId);
+		else
+			devWorkspaceHiddenRootComponents.remove(componentId);
+		player.getPackets().sendHideIComponent(rootInterface, componentId, hidden);
+		devWorkspaceHudHidden = !devWorkspaceHiddenRootComponents.isEmpty();
 		return true;
 	}
 
 	public void endDevWorkspaceHud() {
-		if (!devWorkspaceHudHidden)
-			return;
-
 		for (int componentId : devWorkspaceHiddenRootComponents)
 			player.getPackets().sendHideIComponent(rootInterface, componentId, false);
 		devWorkspaceHiddenRootComponents.clear();
 		devWorkspaceHudHidden = false;
-
-		// Re-apply the player's normal NIS/Legacy visibility rules.
 		player.refreshGameframe();
 		player.refreshMode();
 	}
 
 	public boolean isDevWorkspaceHudHidden() {
 		return devWorkspaceHudHidden;
+	}
+
+	public boolean isDevWorkspaceComponentHidden(int componentId) {
+		return devWorkspaceHiddenRootComponents.contains(componentId);
 	}
 
 	private boolean isDevWorkspaceStructuralComponent(int componentId) {
@@ -575,8 +570,7 @@ public class InterfaceManager {
 			player.getPackets().sendInterface(clickThrought, parentUID, interfaceId);
 
 		if (devWorkspaceHudHidden && parentInterfaceId == rootInterface
-				&& !isDevWorkspaceStructuralComponent(parentInterfaceComponentId)) {
-			devWorkspaceHiddenRootComponents.add(parentInterfaceComponentId);
+				&& devWorkspaceHiddenRootComponents.contains(parentInterfaceComponentId)) {
 			player.getPackets().sendHideIComponent(
 					rootInterface, parentInterfaceComponentId, true);
 		}
