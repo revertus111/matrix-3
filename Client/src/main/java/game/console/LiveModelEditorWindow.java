@@ -1493,15 +1493,6 @@ public final class LiveModelEditorWindow {
             }
         });
 
-        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
-                KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK), "liveModelUndo");
-        root.getActionMap().put("liveModelUndo", new AbstractAction() {
-            private static final long serialVersionUID = 1L;
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                undoPartEdit();
-            }
-        });
     }
 
     private void setHoveredPart(int index) {
@@ -2146,6 +2137,7 @@ public final class LiveModelEditorWindow {
                 refreshPartList();
                 loadSelectedPartEditors();
             }
+            syncTransformInspector();
             statusLabel.setText("Loaded " + file.getPath());
         } catch (Exception ex) {
             statusLabel.setText("Load failed: " + rootMessage(ex));
