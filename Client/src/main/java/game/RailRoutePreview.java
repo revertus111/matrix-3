@@ -20,6 +20,24 @@ import java.awt.event.MouseEvent;
  */
 public final class RailRoutePreview {
 
+    public enum ToolMode {
+        NORMAL("Rail"),
+        JUNCTION("Junction"),
+        CROSSING("Crossing"),
+        SPLITTER("Splitter");
+
+        private final String displayName;
+
+        ToolMode(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     public enum RouteOrder {
         X_THEN_Y("X then Y"),
         Y_THEN_X("Y then X");
@@ -64,6 +82,15 @@ public final class RailRoutePreview {
     private static volatile RailCompositeLibrary.CompositeDefinition curveComposite;
 
     private static volatile RouteOrder routeOrder = RouteOrder.X_THEN_Y;
+    private static volatile ToolMode toolMode = ToolMode.NORMAL;
+    private static volatile RailCompositeLibrary.CompositeDefinition junctionComposite;
+    private static volatile RailCompositeLibrary.CompositeDefinition crossingComposite;
+    private static volatile RailCompositeLibrary.CompositeDefinition splitterComposite;
+    private static final java.util.LinkedHashMap<String, ToolMode> specialNodeModes =
+            new java.util.LinkedHashMap<String, ToolMode>();
+    private static volatile int liveSpecialNodeX = -1;
+    private static volatile int liveSpecialNodeY = -1;
+    private static volatile ToolMode liveSpecialNodeMode;
 
     private static volatile int hoveredWorldX = -1;
     private static volatile int hoveredWorldY = -1;
@@ -136,6 +163,70 @@ public final class RailRoutePreview {
     private static boolean inputListenerInstalled;
 
     private RailRoutePreview() {
+    }
+
+    public static synchronized String reloadSpecialComposites() {
+        junctionComposite = RailCompositeLibrary.findAcceptedJunctionForRoute();
+        crossingComposite = RailCompositeLibrary.findAcceptedCrossingForRoute();
+        splitterComposite = RailCompositeLibrary.findAcceptedSplitterForRoute();
+        return "Special rails: junction=" + specialName(junctionComposite)
+                + " crossing=" + specialName(crossingComposite)
+                + " splitter=" + specialName(splitterComposite) + ".";
+    }
+
+    public static synchronized String setToolMode(ToolMode mode) {
+        ToolMode target = mode == null ? ToolMode.NORMAL : mode;
+        reloadSpecialComposites();
+        if (target == ToolMode.JUNCTION) {
+            String problem = validateSpecialComposite(junctionComposite, "Junction");
+            if (problem != null) {
+                toolMode = ToolMode.NORMAL;
+                eventState = problem;
+                return problem;
+            }
+        } else if (target == ToolMode.CROSSING) {
+            toolMode = ToolMode.NORMAL;
+            eventState = "Crossing tool framework is reserved; accept crossing art first, then H2B enables cross-through semantics.";
+            return eventState;
+        } else if (target == ToolMode.SPLITTER) {
+            toolMode = ToolMode.NORMAL;
+            eventState = "Splitter tool framework is reserved; accept splitter art first, then H2C enables routing semantics.";
+            return eventState;
+        }
+        toolMode = target;
+        eventState = target == ToolMode.NORMAL
+                ? "Normal Rail tool armed."
+                : "Junction tool armed. Create exactly one degree-3 node per gesture.";
+        return eventState;
+    }
+
+    public static ToolMode getToolMode() {
+        return toolMode;
+    }
+
+    public static boolean isJunctionReady() {
+        return validateSpecialComposite(junctionComposite, "Junction") == null;
+    }
+
+    private static String validateSpecialComposite(
+            RailCompositeLibrary.CompositeDefinition composite, String label) {
+        if (composite == null) {
+            return label + " asset missing. In Rail Classifier preview the real asset, then click Accept "
+                    + label + ".";
+        }
+        for (RailCompositeLibrary.Component component : composite.getComponents()) {
+            if (!ConstructionPlacementController.isPersistableRailObject(
+                    component.getId(), component.getType())) {
+                return label + " asset ID " + component.getId()
+                        + " type " + component.getType()
+                        + " is not in the server rail persistence whitelist.";
+            }
+        }
+        return null;
+    }
+
+    private static String specialName(RailCompositeLibrary.CompositeDefinition composite) {
+        return composite == null ? "none" : composite.getName();
     }
 
     public static void configure(String name, int id, int type, int baseHorizontalRotation,
@@ -489,6 +580,7 @@ public final class RailRoutePreview {
         authoredPath.clear();
         logicalNetwork.clear();
         logicalConnections.clear();
+        specialNodeModes.clear();
         pathEndX = -1;
         pathEndY = -1;
         pathPlane = -1;
@@ -519,6 +611,7 @@ public final class RailRoutePreview {
     public static String getStatus() {
         StringBuilder status = new StringBuilder(192);
         status.append(enabled ? "RAIL NETWORK V1 ON" : "RAIL NETWORK V1 OFF");
+        status.append(" | tool=").append(toolMode);
         status.append(" | straight=").append(objectId < 0 ? "none" : objectId + "/" + objectType)
                 .append(" nsRot=").append(horizontalRotation)
                 .append(" ewRot=").append(eastWestRotation())
@@ -644,8 +737,16 @@ public final class RailRoutePreview {
         java.util.LinkedHashSet<String> previewConnections =
                 new java.util.LinkedHashSet<String>(logicalConnections);
         addDragPathToTopology(previewNetwork, previewConnections, liveDragPath);
+        java.util.LinkedHashMap<String, ToolMode> previewSpecialNodes =
+                new java.util.LinkedHashMap<String, ToolMode>(specialNodeModes);
+        if (liveSpecialNodeMode != null) {
+            previewSpecialNodes.put(
+                    logicalKey(liveSpecialNodeX, liveSpecialNodeY, livePlane),
+                    liveSpecialNodeMode);
+        }
         int rendered = renderResolvedNetwork(
-                scene, renderer, sceneBase, definitions, previewNetwork, previewConnections);
+                scene, renderer, sceneBase, definitions,
+                previewNetwork, previewConnections, previewSpecialNodes);
 
         int requested = liveDragPath.size();
         renderState = "DRAW " + rendered + " resolved piece(s) from "
@@ -657,14 +758,22 @@ public final class RailRoutePreview {
     private static int renderResolvedNetwork(Class523 scene, Class106 renderer,
             Class497 sceneBase, Class639_Sub16 definitions) {
         return renderResolvedNetwork(scene, renderer, sceneBase, definitions,
-                logicalNetwork, logicalConnections);
+                logicalNetwork, logicalConnections, specialNodeModes);
     }
 
     private static int renderResolvedNetwork(Class523 scene, Class106 renderer,
             Class497 sceneBase, Class639_Sub16 definitions,
             java.util.Set<String> network, java.util.Set<String> connections) {
+        return renderResolvedNetwork(scene, renderer, sceneBase, definitions,
+                network, connections, specialNodeModes);
+    }
+
+    private static int renderResolvedNetwork(Class523 scene, Class106 renderer,
+            Class497 sceneBase, Class639_Sub16 definitions,
+            java.util.Set<String> network, java.util.Set<String> connections,
+            java.util.Map<String, ToolMode> specialNodes) {
         int rendered = 0;
-        for (RoutePiece piece : resolveLogicalNetworkPieces(network, connections)) {
+        for (RoutePiece piece : resolveLogicalNetworkPieces(network, connections, specialNodes)) {
             ObjectDefinitions def = (ObjectDefinitions) definitions.getDefinition(
                     piece.getObjectId(), -1356282071);
             if (def != null && renderPiece(scene, renderer, sceneBase, def,
@@ -1023,6 +1132,9 @@ public final class RailRoutePreview {
         liveDragLockedBySharpTurn = false;
         liveSharpTurnX = -1;
         liveSharpTurnY = -1;
+        liveSpecialNodeX = -1;
+        liveSpecialNodeY = -1;
+        liveSpecialNodeMode = null;
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
         return true;
@@ -1080,8 +1192,12 @@ public final class RailRoutePreview {
              */
             if (isExistingRailTile(previousX, previousY)
                     && wouldRequireSpecialNode(previousX, previousY, x, y)) {
-                lockAtSpecialRailContact(previousX, previousY, previousX, previousY);
-                return;
+                if (canAuthorJunctionAt(previousX, previousY)) {
+                    markLiveSpecialNode(previousX, previousY, ToolMode.JUNCTION);
+                } else {
+                    lockAtSpecialRailContact(previousX, previousY, previousX, previousY);
+                    return;
+                }
             }
 
             if (wouldCreateOverlappingCurveFootprints(previousX, previousY, x, y)) {
@@ -1091,6 +1207,17 @@ public final class RailRoutePreview {
 
             if (isPreExistingRailContact(x, y)) {
                 if (wouldRequireSpecialNode(x, y, previousX, previousY)) {
+                    if (canAuthorJunctionAt(x, y)) {
+                        appendLiveDragTile(x, y);
+                        markLiveSpecialNode(x, y, ToolMode.JUNCTION);
+                        liveDragLockedAtExistingRail = true;
+                        liveExistingContactX = x;
+                        liveExistingContactY = y;
+                        liveExistingContactRequiresSpecialTool = false;
+                        liveEndX = x;
+                        liveEndY = y;
+                        return;
+                    }
                     lockAtSpecialRailContact(x, y, previousX, previousY);
                     return;
                 }
@@ -1130,6 +1257,23 @@ public final class RailRoutePreview {
         }
         return Integer.bitCount(
                 logicalNeighborMask(existingX, existingY, livePlane)) >= 2;
+    }
+
+    private static boolean canAuthorJunctionAt(int x, int y) {
+        if (toolMode != ToolMode.JUNCTION || liveSpecialNodeMode != null) {
+            return false;
+        }
+        if (validateSpecialComposite(junctionComposite, "Junction") != null) {
+            return false;
+        }
+        return Integer.bitCount(logicalNeighborMask(x, y, livePlane)) == 2;
+    }
+
+    private static void markLiveSpecialNode(int x, int y, ToolMode mode) {
+        liveSpecialNodeX = x;
+        liveSpecialNodeY = y;
+        liveSpecialNodeMode = mode;
+        eventState = mode + " node staged at " + x + "," + y + ".";
     }
 
     private static void lockAtSpecialRailContact(
@@ -1305,6 +1449,11 @@ public final class RailRoutePreview {
         appendLiveDragToward(liveEndX, liveEndY);
         java.util.List<int[]> committedGesture = copyLiveDragPath();
         addLiveDragToLogicalNetwork();
+        if (liveSpecialNodeMode != null) {
+            specialNodeModes.put(
+                    logicalKey(liveSpecialNodeX, liveSpecialNodeY, livePlane),
+                    liveSpecialNodeMode);
+        }
         java.util.List<RoutePiece> newPhysical = resolveLogicalNetworkPieces();
 
         committedStartX = liveStartX;
@@ -1323,7 +1472,10 @@ public final class RailRoutePreview {
         pathEndY = liveEndY;
         pathPlane = livePlane;
 
-        eventState = liveDragLockedBySharpTurn
+        eventState = liveSpecialNodeMode != null
+                ? liveSpecialNodeMode + " committed at "
+                        + liveSpecialNodeX + "," + liveSpecialNodeY + "."
+                : (liveDragLockedBySharpTurn
                 ? "Rail turn stopped at " + liveSharpTurnX + "," + liveSharpTurnY
                         + " because adjacent curve composites would overlap."
                 : (liveDragLockedAtExistingRail
@@ -1336,7 +1488,7 @@ public final class RailRoutePreview {
                                         + "; cross-through intentionally stopped.")
                         : (joinedExisting
                                 ? "Rail network extended from an existing endpoint."
-                                : "Rail network segment added."));
+                                : "Rail network segment added.")));
 
         long debugOp = -1L;
         String debugEvent = eventState;
@@ -1376,6 +1528,9 @@ public final class RailRoutePreview {
         liveDragLockedBySharpTurn = false;
         liveSharpTurnX = -1;
         liveSharpTurnY = -1;
+        liveSpecialNodeX = -1;
+        liveSpecialNodeY = -1;
+        liveSpecialNodeMode = null;
         liveDragPath.clear();
     }
 
@@ -1417,13 +1572,35 @@ public final class RailRoutePreview {
     }
 
     private static java.util.List<RoutePiece> resolveLogicalNetworkPieces() {
-        return resolveLogicalNetworkPieces(logicalNetwork, logicalConnections);
+        return resolveLogicalNetworkPieces(logicalNetwork, logicalConnections, specialNodeModes);
     }
 
     private static java.util.List<RoutePiece> resolveLogicalNetworkPieces(
             java.util.Set<String> network, java.util.Set<String> connections) {
+        return resolveLogicalNetworkPieces(network, connections, specialNodeModes);
+    }
+
+    private static java.util.List<RoutePiece> resolveLogicalNetworkPieces(
+            java.util.Set<String> network, java.util.Set<String> connections,
+            java.util.Map<String, ToolMode> specialNodes) {
         java.util.List<RoutePiece> pieces = new java.util.ArrayList<RoutePiece>();
         java.util.HashSet<String> physicalOccupied = new java.util.HashSet<String>();
+
+        // Resolve explicit special nodes before generic curves/straights.
+        for (java.util.Map.Entry<String, ToolMode> entry : specialNodes.entrySet()) {
+            if (!network.contains(entry.getKey())) {
+                continue;
+            }
+            int[] tile = parseLogicalKey(entry.getKey());
+            int mask = logicalNeighborMask(tile[0], tile[1], tile[2], connections);
+            RailCompositeLibrary.CompositeDefinition composite =
+                    specialComposite(entry.getValue());
+            if (entry.getValue() == ToolMode.JUNCTION
+                    && Integer.bitCount(mask) == 3 && composite != null) {
+                appendSpecialComposite(pieces, physicalOccupied, composite,
+                        tile[0], tile[1], tile[2], turnsForJunctionMask(mask));
+            }
+        }
 
         // Resolve 90-degree logical corners first because the accepted RS3 curve
         // owns a three-object physical footprint around one logical node.
@@ -1465,6 +1642,64 @@ public final class RailRoutePreview {
             }
         }
         return pieces;
+    }
+
+    private static RailCompositeLibrary.CompositeDefinition specialComposite(ToolMode mode) {
+        if (mode == ToolMode.JUNCTION) return junctionComposite;
+        if (mode == ToolMode.CROSSING) return crossingComposite;
+        if (mode == ToolMode.SPLITTER) return splitterComposite;
+        return null;
+    }
+
+    private static int turnsForJunctionMask(int mask) {
+        // Canonical accepted Junction orientation is N+E+S (mask 7), i.e. missing W.
+        int rotated = 7;
+        for (int turns = 0; turns < 4; turns++) {
+            if (rotated == mask) return turns;
+            rotated = rotateConnectionMaskClockwise(rotated);
+        }
+        return 0;
+    }
+
+    private static int rotateConnectionMaskClockwise(int mask) {
+        int rotated = 0;
+        if ((mask & 1) != 0) rotated |= 2; // N -> E
+        if ((mask & 2) != 0) rotated |= 4; // E -> S
+        if ((mask & 4) != 0) rotated |= 8; // S -> W
+        if ((mask & 8) != 0) rotated |= 1; // W -> N
+        return rotated;
+    }
+
+    private static void appendSpecialComposite(
+            java.util.List<RoutePiece> pieces, java.util.Set<String> occupied,
+            RailCompositeLibrary.CompositeDefinition composite,
+            int anchorWorldX, int anchorWorldY, int plane, int turns) {
+        if (composite == null) return;
+        java.util.List<RailCompositeLibrary.Component> components = composite.getComponents();
+        if (components.isEmpty()) return;
+
+        int anchorX = components.get(0).getOffsetX();
+        int anchorY = components.get(0).getOffsetY();
+        for (RailCompositeLibrary.Component component : components) {
+            if (component.getOffsetX() == 0 && component.getOffsetY() == 0) {
+                anchorX = 0;
+                anchorY = 0;
+                break;
+            }
+        }
+
+        for (RailCompositeLibrary.Component component : components) {
+            if (pieces.size() >= MAX_NETWORK_PIECES) return;
+            int[] offset = rotateLayoutOffset(
+                    component.getOffsetX() - anchorX,
+                    component.getOffsetY() - anchorY, turns);
+            int x = anchorWorldX + offset[0];
+            int y = anchorWorldY + offset[1];
+            String key = logicalKey(x, y, plane);
+            if (!occupied.add(key)) continue;
+            pieces.add(new RoutePiece(component.getId(), component.getType(),
+                    (component.getRotation() + turns) & 0x3, x, y, plane));
+        }
     }
 
     private static void appendUniqueCurvePieces(java.util.List<RoutePiece> pieces,
@@ -1565,6 +1800,7 @@ public final class RailRoutePreview {
         int[] target = parseLogicalKey(targetKey);
 
         logicalNetwork.remove(targetKey);
+        specialNodeModes.remove(targetKey);
         removeLogicalConnectionsAt(target[0], target[1], target[2]);
 
         java.util.List<RoutePiece> newPhysical = resolveLogicalNetworkPieces();
