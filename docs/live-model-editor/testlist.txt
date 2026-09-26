@@ -250,3 +250,21 @@ Bundle 2.7C-A - Free/Snap transform foundation
 [ ] Multi-select at least two parts and confirm snapped movement preserves relative offsets.
 [ ] Ctrl+Z after a Part/Multi snapped drag restores the whole drag in one undo step.
 [ ] Regression: G/R/V, F/X/Y/Z, camera WASD/MMB/wheel, Hide/Dup/Delete and project save/load remain functional.
+
+
+Bundle 2.7C-B - contextual live Transform Inspector
+[ ] Open Conveyor belt 46298 and confirm EDIT shows one Position / Rotation / Scale inspector rather than separate Whole/Part transform spinner forms.
+[ ] Whole mode: inspector context reads WHOLE and live X/Y/Z/Yaw/Scale values follow viewport dragging.
+[ ] Part mode: context identifies the selected Part and values follow that part during dragging.
+[ ] Multi mode: context shows MULTI xN and editing an exact value applies the existing selection delta without collapsing relative offsets.
+[ ] Scale displays 100 internally as 1.00, 125 as 1.25, 50 as 0.50.
+[ ] Type an exact Position value and press Enter; valid value commits.
+[ ] Type an exact Scale ratio such as 1.25 and press Enter; runtime becomes internal 125.
+[ ] Edit a value then press Tab; value commits and focus advances.
+[ ] Edit a value then press Escape; previous valid value returns and no geometry change is committed.
+[ ] Enter invalid/partial text then click away; previous valid value returns.
+[ ] While an inspector field has focus, typing 1/2/3/G/R/V/F/X/Y/Z/H/Delete must not trigger editor actions.
+[ ] Ctrl+Z while an inspector field has focus must not trigger geometry undo through the old duplicate Swing binding.
+[ ] During viewport drag with no field focused, inspector values update live without requiring a click/refresh.
+[ ] Part list uses remaining vertical drawer space and remains usable on the compact layout.
+[ ] Regression: Save/Load JSON still uses the unchanged internal integer transform representation.
