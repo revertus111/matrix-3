@@ -114,3 +114,21 @@ Conveyor belt source experiment
 [ ] Isolate the belt strip and confirm the surrounding frame/support geometry can be hidden independently.
 [ ] Duplicate the belt strip and move the copy end-to-end with G/drag; confirm a longer continuous belt can be assembled without duplicating the whole conveyor object.
 [ ] Save the conveyor extraction/duplication recipe to JSON v3 and reload it.
+
+Bundle 2.5 - professional selection/editor usability
+[ ] Eclipse/Java 8 clean-build Client.
+[ ] Open Conveyor belt 46298 (models 49717 + 49718) and confirm the editor overlay can be resized from the lower-right grip.
+[ ] Shrink the overlay and confirm vertical/horizontal scrollbars keep every control reachable instead of clipping the lower controls.
+[ ] Part mode [2]: click one visible component and confirm only that part is selected/highlighted.
+[ ] Multi mode [3]: click several world components and confirm selection accumulates; Ctrl+click a selected component and confirm it toggles out.
+[ ] Multi mode: Ctrl/Shift-select several rows in the list and confirm the same set highlights in-world.
+[ ] Ctrl+A / Select All selects all non-deleted components; Clear removes the part selection.
+[ ] Whole mode [1]: confirm the full editable object highlights and G/R/S drags edit the whole clone rather than one component.
+[ ] Move a part/group by dragging right/up and confirm the geometry follows the pointer direction rather than moving in the opposite direction.
+[ ] Multi-select at least two parts; move them together and confirm relative offsets are preserved and Ctrl+Z restores the entire drag in one step.
+[ ] Multi-select at least two parts; duplicate, hide and delete them and confirm each action applies to the full set with one undo step.
+[ ] Reset Sel resets transforms for the entire selected set.
+[ ] Isolate with multiple parts selected and confirm every selected component remains visible while non-selected components hide.
+[ ] Save Project, reload JSON v4 and confirm the multi-selection plus part transforms return.
+[ ] Save Selection, choose a custom name, and confirm dev-model-assets contains a matrix3-live-model-selection JSON with object 46298, model IDs 49717/49718 and only the selected component recipes.
+[ ] Regression: existing Construction material replacement, Restore, Replace Matches and source-object restoration on Exit Edit still work.

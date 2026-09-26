@@ -24,8 +24,8 @@ The same transform/selection foundation is intended to become the developer-grad
 | Private in-world runtime model clone | ✅ Complete | Runtime-confirmed on the Smelter reference asset. Bundle 2.3A now suppresses only the selected source object's normal render so the editable model visually replaces it during the edit session; that replacement gate remains runtime-tested separately. |
 | Live whole-model transforms | ✅ Complete | Runtime-confirmed in the live client; independent scale, translation and yaw visibly update the private clone. |
 | JSON project save/load | ⚠️ Needs runtime verification | Authoring state saves under dev-model-projects and can be loaded back into the live preview. |
-| Mesh component selection/editing | ⚠️ Needs runtime verification | Connected-part editing, overlay hover, source replacement, Model.method1376 world picking, click selection, mouse G/R/S transforms and Construction-catalog part replacement are implemented; consolidated runtime verification is pending. |
-| In-client model-editor overlay | ⚠️ Needs runtime verification | RuneScape-styled owned JWindow follows the Matrix3 game canvas, supports drag repositioning and hover-preview rows. Bundle 2.3A adds true edit-session ownership: input lock, same-target resume and source-object visual replacement. |
+| Mesh component selection/editing | ⚠️ Needs runtime verification | Connected-part editing, Whole/Part/Multi selection, group actions/transforms, world picking, G/R/S mouse transforms, Construction replacement and reusable selection-asset export are implemented; consolidated runtime verification is pending. |
+| In-client model-editor overlay | ⚠️ Needs runtime verification | RuneScape-styled owned overlay follows the Matrix3 game canvas, supports drag repositioning, live resize with scroll fallback and current mode/selection status. |
 | Permanent revision-830 model compiler | ❌ Not started | Requires validated encoder, model-ID allocation, backup, write/readback and hot reload. |
 | Construction Detail Mode reuse | 🔵 Foundation in progress | Live Model Editor now consumes the Construction BuildPiece catalog for non-destructive part replacement; player-facing settlement Detail Mode and server-validated persistence remain future work. |
 
@@ -185,6 +185,24 @@ Status: NEEDS TEST
 
 2.3B/2.4A deliberately keep replacement authoring client-local and JSON-backed. Permanent revision-830 cache compilation remains a later explicit build step.
 
+### Bundle 2.5 - Professional selection + editor usability
+
+Status: NEEDS TEST
+
+- [x] Add explicit Whole / Part / Multi selection modes.
+- [x] Persist a real multi-part selection set in the mesh-authoring state rather than only Swing UI selection.
+- [x] Support list multi-selection plus additive/toggle world selection.
+- [x] Apply move/rotate/scale drag deltas, hide, delete, duplicate, reset and direct replacement across the selected part set with one undo snapshot per action/gesture.
+- [x] Highlight and isolate the full active selection rather than only one primary part.
+- [x] Correct direct mouse transform direction so screen drag direction is no longer inverted against the editor's model axes.
+- [x] Add Whole-mode direct G/R/S mouse editing against the existing clone transform.
+- [x] Add Select All / Clear / Reset Selection controls and 1/2/3 selection-mode hotkeys.
+- [x] Add project JSON v4 multi-selection persistence while retaining legacy partSelected compatibility.
+- [x] Add Save Selection export under dev-model-assets as a reusable source-object/component recipe for later import/compiler work.
+- [x] Make the live overlay resizable and scroll-safe so controls are not clipped on smaller client windows.
+- [ ] Eclipse/Java 8 clean-build.
+- [ ] Runtime verify on Conveyor belt 46298/models 49717+49718.
+
 ## Phase 3 - Professional Transform UX
 
 Status: PLANNED
@@ -251,9 +269,9 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
-**Active bundle:** Bundle 2.3B + Bundle 2.4A - world mouse editing + non-destructive Construction material replacement (`NEEDS TEST`).
+**Active bundle:** Bundle 2.5 - Professional selection + editor usability (`NEEDS TEST`).
 
-**Next action:** first rerun the world-pick gate after the component-only Class159 used-vertex-count fix. Then test both reference assets: Smelter 29394/model 64036 for arbitrary connected-part editing, and Conveyor belt 46298/models 49717+49718 for belt-component extraction. On the conveyor, identify whether the moving belt surface is its own connected component or one whole source model, isolate it, duplicate it, and move copies end-to-end. If that works cleanly, prefer the extracted belt segment as the Construction conveyor visual foundation instead of fabricating a new belt mesh.
+**Next action:** runtime-test Conveyor belt 46298/models 49717+49718 in the upgraded editor: verify mouse movement direction, Whole/Part/Multi modes, Ctrl-toggle/list multi-select, grouped move/duplicate/isolate/undo, live overlay resizing/scrolling and Save Selection. If the belt strip can be isolated cleanly, save it under dev-model-assets as the first reusable conveyor component recipe and continue the Construction conveyor visual handoff from that asset.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

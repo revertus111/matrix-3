@@ -59,3 +59,14 @@
 - Fixed the Bundle 2.3B OpenGL crash in component-only world-pick models. The compact Class159 remap now sets anInt1775 to its compact used-vertex count before OpenGLModel construction; previously it remained zero, causing OpenGLModel's per-vertex face-reference array to be allocated at length 1 and then indexed by vertex 1+.
 - Added face-remap range validation so a malformed component mapping is rejected before renderer construction instead of crashing the client.
 - Recorded Conveyor belt object 46298 / model IDs 49717+49718 as the preferred Construction conveyor visual-source experiment. The intended workflow is isolate the belt component, duplicate it and translate copies end-to-end rather than fabricating a belt mesh from scratch.
+
+2026-09-25
+- Added Live Model Editor Bundle 2.5 professional selection/editor pass.
+- Replaced single-part-only authoring state with a real persistent selection set while retaining one primary part for precision fields and legacy JSON compatibility.
+- Added Whole / Part / Multi selection modes, list multi-select, additive/toggle world selection, Select All, Clear and Reset Selection.
+- Group move/rotate/scale gestures now preserve each selected part's starting transform and create one undo snapshot per gesture; hide/delete/duplicate/replacement/reset actions operate on the full selected set.
+- Multi-selection highlight/isolate now renders the full active selection instead of one primary part.
+- Corrected direct mouse transform signs so move/rotate/scale drag direction is no longer inverted; Whole mode can now use the same G/R/S + axis workflow against clone transforms.
+- Project JSON advanced to v4 with partSelection persistence while retaining partSelected for older projects.
+- Added Save Selection export to dev-model-assets as matrix3-live-model-selection JSON containing source object/model IDs and selected component recipes.
+- Live Model Editor overlay is now resizable with a lower-right drag grip and scroll fallback so controls remain reachable on smaller client windows.
