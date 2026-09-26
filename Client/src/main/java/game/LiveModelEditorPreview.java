@@ -75,6 +75,9 @@ public final class LiveModelEditorPreview {
     private static volatile TransformMode transformMode = TransformMode.MOVE;
     private static volatile AxisConstraint axisConstraint = AxisConstraint.FREE;
     private static volatile SelectionMode selectionMode = SelectionMode.PART;
+    private static volatile boolean transformSnapEnabled;
+    private static volatile int moveSnapStep = 16;
+    private static volatile int angleSnapDegrees = 15;
     private static volatile boolean pointerInside;
     private static volatile int pointerX;
     private static volatile int pointerY;
@@ -218,7 +221,25 @@ public final class LiveModelEditorPreview {
     public static TransformMode getTransformMode() { return transformMode; }
     public static AxisConstraint getAxisConstraint() { return axisConstraint; }
     public static SelectionMode getSelectionMode() { return selectionMode; }
+    public static boolean isTransformSnapEnabled() { return transformSnapEnabled; }
+    public static int getMoveSnapStep() { return moveSnapStep; }
+    public static int getAngleSnapDegrees() { return angleSnapDegrees; }
     public static int getWorldHoveredPart() { return worldHoveredPart; }
+
+    public static void setTransformSnapEnabled(boolean enabled) {
+        transformSnapEnabled = enabled;
+        status = enabled
+                ? "SNAP ON move=" + moveSnapStep + " angle=" + angleSnapDegrees
+                : "SNAP OFF (Ctrl = temporary snap)";
+    }
+
+    public static void setMoveSnapStep(int step) {
+        moveSnapStep = clamp(step, 1, 512);
+    }
+
+    public static void setAngleSnapDegrees(int degrees) {
+        angleSnapDegrees = clamp(degrees, 1, 90);
+    }
 
     public static void setTransformMode(TransformMode mode) {
         if (mode != null) {
@@ -328,7 +349,7 @@ public final class LiveModelEditorPreview {
         return dragging;
     }
 
-    public static boolean dragPointerTo(int x, int y) {
+    public static boolean dragPointerTo(int x, int y, boolean snapModifier) {
         if (!dragging && !draggingWhole) return false;
         pointerX = x;
         pointerY = y;
@@ -370,6 +391,21 @@ public final class LiveModelEditorPreview {
                     sx += delta;
                     sy += delta;
                     sz += delta;
+                }
+            }
+
+            boolean snapActive = transformSnapEnabled ? !snapModifier : snapModifier;
+            if (snapActive) {
+                if (transformMode == TransformMode.MOVE) {
+                    if (axisConstraint == AxisConstraint.X) mx = snapToStep(mx, moveSnapStep);
+                    else if (axisConstraint == AxisConstraint.Y) my = snapToStep(my, moveSnapStep);
+                    else if (axisConstraint == AxisConstraint.Z) mz = snapToStep(mz, moveSnapStep);
+                    else {
+                        mx = snapToStep(mx, moveSnapStep);
+                        mz = snapToStep(mz, moveSnapStep);
+                    }
+                } else if (transformMode == TransformMode.ROTATE) {
+                    yaw = snapToStep(yaw, angleSnapDegrees);
                 }
             }
 
@@ -419,6 +455,21 @@ public final class LiveModelEditorPreview {
                 sx += delta;
                 sy += delta;
                 sz += delta;
+            }
+        }
+
+        boolean snapActive = transformSnapEnabled ? !snapModifier : snapModifier;
+        if (snapActive) {
+            if (transformMode == TransformMode.MOVE) {
+                if (axisConstraint == AxisConstraint.X) mx = snapToStep(mx, moveSnapStep);
+                else if (axisConstraint == AxisConstraint.Y) my = snapToStep(my, moveSnapStep);
+                else if (axisConstraint == AxisConstraint.Z) mz = snapToStep(mz, moveSnapStep);
+                else {
+                    mx = snapToStep(mx, moveSnapStep);
+                    mz = snapToStep(mz, moveSnapStep);
+                }
+            } else if (transformMode == TransformMode.ROTATE) {
+                yaw = snapToStep(yaw, angleSnapDegrees);
             }
         }
 
@@ -937,6 +988,11 @@ public final class LiveModelEditorPreview {
     private static int normalizeDegrees(int value) {
         int normalized = value % 360;
         return normalized < 0 ? normalized + 360 : normalized;
+    }
+
+    private static int snapToStep(int value, int step) {
+        if (step <= 1) return value;
+        return Math.round((float) value / (float) step) * step;
     }
 
     private static int clamp(int value, int min, int max) {
