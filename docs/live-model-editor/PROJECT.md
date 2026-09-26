@@ -218,6 +218,36 @@ Status: NEEDS TEST
 - [ ] Eclipse/Java 8 clean-build.
 - [ ] Runtime verify MMB orbit + wheel zoom + WASD pan while editing Conveyor belt 46298.
 
+### Bundle 2.7 - Professional Editor Shell
+
+Status: ACTIVE / NEEDS TEST
+
+Design authority: docs/live-model-editor/EDITOR_WORKSPACE_DESIGN.md
+
+#### Bundle 2.7A - Compact shell / focus / camera switch
+
+- [x] Replace giant page-length editor with right-side rail + one compact drawer.
+- [x] Remove whole-editor horizontal scrollbar.
+- [x] Add Parts / Transform / Material / Camera / Object / Project drawers.
+- [x] Make Transform selection-context-sensitive.
+- [x] Add RTS / FREE toggle through ConstructionBuildCamera.
+- [x] Preserve RTS behavior and expose FREE_BUILD for unrestricted inspection.
+- [x] Return focus to Matrix3 Canvas after ordinary button/list actions.
+- [x] MMB world press explicitly reacquires Canvas focus.
+- [x] Preserve exact numeric spinner/text input.
+- [x] Keep resize support without outer horizontal scrolling.
+- [x] Preserve existing selection/export/replacement/project actions.
+- [ ] Eclipse/Java 8 clean-build.
+- [ ] Runtime verify on compact 16-inch layout.
+
+#### Bundle 2.7B - Dedicated editor HUD suppression
+
+- [ ] Verify authoritative Matrix3 root-interface/HUD ownership seam.
+- [ ] Snapshot/suppress normal gameplay HUD during Editor Workspace.
+- [ ] Restore exact prior HUD state on Exit/Escape.
+- [ ] No hardcoded pixel masks/cover windows.
+- [ ] Verify NIS/Legacy restoration where applicable.
+
 ## Phase 3 - Professional Transform UX
 
 Status: PLANNED
@@ -284,9 +314,9 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
-**Active bundle:** Bundle 2.5 + Bundle 2.6 - Professional selection/editor usability + shared RTS authoring camera (`NEEDS TEST`).
+**Active bundle:** Bundle 2.7 - Professional Editor Shell (`ACTIVE / NEEDS TEST`).
 
-**Next action:** runtime-test Conveyor belt 46298/models 49717+49718 in one editor session: verify MMB orbit (yaw/pitch), wheel zoom, WASD/arrow pan and Q/E rotation while LMB still exclusively selects/transforms model parts; then verify Whole/Part/Multi editing, grouped duplicate/isolate/undo, resize/scroll and Save Selection. If the belt strip isolates cleanly, save it under dev-model-assets as the first reusable conveyor component recipe.
+**Next action:** runtime-test Bundle 2.7A on Conveyor belt 46298/models 49717+49718 at the compact 16-inch layout: rail collapse/expand, P/T/M/C/O/S drawers, contextual transforms, RTS/FREE switching, focus handoff and no outer horizontal scrollbar. Bundle 2.7B HUD suppression remains gated until the real Matrix3 root-interface owner is verified.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

@@ -11,6 +11,7 @@ import game.LiveModelEditorPreview;
 
 import java.awt.AWTEvent;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Component;
@@ -79,10 +80,11 @@ public final class LiveModelEditorWindow {
     private static final File PROJECT_DIR = new File("dev-model-projects");
     private static final File ASSET_DIR = new File("dev-model-assets");
 
-    private static final int OVERLAY_WIDTH = 438;
-    private static final int OVERLAY_HEIGHT = 690;
-    private static final int MIN_OVERLAY_WIDTH = 360;
-    private static final int MIN_OVERLAY_HEIGHT = 460;
+    private static final int OVERLAY_WIDTH = 304;
+    private static final int OVERLAY_HEIGHT = 560;
+    private static final int MIN_OVERLAY_WIDTH = 274;
+    private static final int MIN_OVERLAY_HEIGHT = 420;
+    private static final int TAB_RAIL_WIDTH = 42;
     private static final int OVERLAY_MARGIN = 10;
     private static final int OVERLAY_TOP = 48;
 
@@ -110,6 +112,8 @@ public final class LiveModelEditorWindow {
     private static Timer overlayTimer;
     private static boolean manuallyPositioned;
     private static boolean inputGateInstalled;
+    private static boolean drawerExpanded = true;
+    private static String activeTool = "PARTS";
     private static boolean modelLeftDragActive;
     private static boolean editorCameraSessionActive;
     private static boolean editorStartedRtsCamera;
@@ -122,6 +126,16 @@ public final class LiveModelEditorWindow {
     private static boolean manuallySized;
 
     private final JPanel root = new JPanel(new BorderLayout());
+    private final JPanel editorDrawer = new JPanel(new BorderLayout());
+    private final CardLayout toolCardLayout = new CardLayout();
+    private final JPanel toolCards = new JPanel(toolCardLayout);
+    private final CardLayout transformCardLayout = new CardLayout();
+    private final JPanel transformCards = new JPanel(transformCardLayout);
+    private final JLabel transformContextLabel = rsGold("PART");
+    private final JLabel cameraStatusLabel = rsGold("RTS");
+    private final JLabel cameraSpeedLabel = rsGold("1.0x");
+    private final JButton rtsCameraButton = rsButton("RTS");
+    private final JButton freeCameraButton = rsButton("FREE");
     private final JLabel targetLabel = rsValue("-");
     private final JLabel sourceLabel = rsMuted("-");
     private final JLabel statusLabel = rsMuted("Right-click an object -> Dev > Edit Model Live.");
@@ -261,9 +275,10 @@ public final class LiveModelEditorWindow {
             return;
         }
 
-        int requestedWidth = manuallySized ? manualWidth : OVERLAY_WIDTH;
+        int requestedWidth = drawerExpanded ? (manuallySized ? manualWidth : OVERLAY_WIDTH) : TAB_RAIL_WIDTH;
         int requestedHeight = manuallySized ? manualHeight : OVERLAY_HEIGHT;
-        int width = Math.min(requestedWidth, Math.max(MIN_OVERLAY_WIDTH, canvas.getWidth() - 20));
+        int minWidth = drawerExpanded ? MIN_OVERLAY_WIDTH : TAB_RAIL_WIDTH;
+        int width = Math.min(requestedWidth, Math.max(minWidth, canvas.getWidth() - 20));
         int height = Math.min(requestedHeight, Math.max(MIN_OVERLAY_HEIGHT, canvas.getHeight() - 20));
 
         int localX;
@@ -287,56 +302,53 @@ public final class LiveModelEditorWindow {
 
     private void buildUi() {
         root.setBackground(RS_BG);
-        root.setBorder(BorderFactory.createLineBorder(RS_BORDER, 2));
-        root.add(createTitleBar(), BorderLayout.NORTH);
+        root.setBorder(BorderFactory.createLineBorder(RS_BORDER, 1));
 
-        JPanel center = new JPanel();
-        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
-        center.setBackground(RS_BG);
-        center.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        center.add(createTargetStrip());
-        center.add(Box.createVerticalStrut(7));
-        center.add(createPartsCard());
-        center.add(Box.createVerticalStrut(7));
-        center.add(createGlobalCard());
-        center.add(Box.createVerticalStrut(7));
-        center.add(createProjectStrip());
+        editorDrawer.setBackground(RS_BG);
+        editorDrawer.add(createTitleBar(), BorderLayout.NORTH);
 
-        JScrollPane editorScroll = new JScrollPane(center,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        editorScroll.setBorder(null);
-        editorScroll.getViewport().setBackground(RS_BG);
-        editorScroll.getVerticalScrollBar().setUnitIncrement(18);
-        editorScroll.getHorizontalScrollBar().setUnitIncrement(18);
-        root.add(editorScroll, BorderLayout.CENTER);
+        toolCards.setBackground(RS_BG);
+        toolCards.add(createPartsPanel(), "PARTS");
+        toolCards.add(createTransformPanel(), "TRANSFORM");
+        toolCards.add(createMaterialPanel(), "MATERIAL");
+        toolCards.add(createCameraPanel(), "CAMERA");
+        toolCards.add(createObjectPanel(), "OBJECT");
+        toolCards.add(createProjectPanel(), "PROJECT");
+        editorDrawer.add(toolCards, BorderLayout.CENTER);
 
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(4, 9, 7, 9));
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(4, 7, 5, 7));
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(RS_PANEL_2);
         footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, RS_BORDER));
         footer.add(statusLabel, BorderLayout.CENTER);
         footer.add(createResizeGrip(), BorderLayout.EAST);
-        root.add(footer, BorderLayout.SOUTH);
+        editorDrawer.add(footer, BorderLayout.SOUTH);
+
+        root.add(editorDrawer, BorderLayout.CENTER);
+        root.add(createToolRail(), BorderLayout.EAST);
+        toolCardLayout.show(toolCards, activeTool);
+        editorDrawer.setVisible(drawerExpanded);
 
         installListeners();
+        refreshTransformContext();
+        syncCameraPanel();
     }
 
     private JPanel createTitleBar() {
         final JPanel bar = new JPanel(new BorderLayout(8, 0));
         bar.setBackground(RS_PANEL_2);
         bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, RS_BORDER));
-        bar.setPreferredSize(new Dimension(MIN_OVERLAY_WIDTH, 42));
+        bar.setPreferredSize(new Dimension(MIN_OVERLAY_WIDTH, 36));
 
         JPanel text = new JPanel();
         text.setOpaque(false);
         text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
-        text.setBorder(BorderFactory.createEmptyBorder(5, 9, 4, 0));
+        text.setBorder(BorderFactory.createEmptyBorder(3, 7, 2, 0));
 
         JLabel title = new JLabel("LIVE MODEL EDITOR");
         title.setFont(RS_TITLE_FONT);
         title.setForeground(RS_GOLD);
-        JLabel subtitle = new JLabel("Mesh Parts / Live Scene");
+        JLabel subtitle = new JLabel("Compact live workspace");
         subtitle.setFont(RS_SMALL_FONT);
         subtitle.setForeground(RS_MUTED);
         text.add(title);
@@ -383,58 +395,121 @@ public final class LiveModelEditorWindow {
         return bar;
     }
 
-    private JPanel createTargetStrip() {
-        JPanel card = rsCard();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        targetLabel.setFont(RS_SECTION_FONT);
-        card.add(targetLabel);
-        card.add(Box.createVerticalStrut(2));
-        card.add(sourceLabel);
-        return card;
+    private JPanel createToolRail() {
+        JPanel rail = new JPanel();
+        rail.setLayout(new BoxLayout(rail, BoxLayout.Y_AXIS));
+        rail.setBackground(RS_PANEL_2);
+        rail.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, RS_BORDER));
+        rail.setPreferredSize(new Dimension(TAB_RAIL_WIDTH, OVERLAY_HEIGHT));
+
+        rail.add(railButton("P", "Parts / selection", "PARTS"));
+        rail.add(Box.createVerticalStrut(3));
+        rail.add(railButton("T", "Transform", "TRANSFORM"));
+        rail.add(Box.createVerticalStrut(3));
+        rail.add(railButton("M", "Material replacement", "MATERIAL"));
+        rail.add(Box.createVerticalStrut(3));
+        rail.add(railButton("C", "Camera", "CAMERA"));
+        rail.add(Box.createVerticalStrut(3));
+        rail.add(railButton("O", "Object / source", "OBJECT"));
+        rail.add(Box.createVerticalStrut(3));
+        rail.add(railButton("S", "Save / project", "PROJECT"));
+        rail.add(Box.createVerticalGlue());
+
+        JButton collapse = rsButton("<");
+        collapse.setToolTipText("Collapse / expand editor drawer");
+        collapse.setPreferredSize(new Dimension(TAB_RAIL_WIDTH - 6, 30));
+        collapse.setMaximumSize(new Dimension(TAB_RAIL_WIDTH - 6, 30));
+        collapse.setAlignmentX(Component.CENTER_ALIGNMENT);
+        collapse.addActionListener(e -> {
+            drawerExpanded = !drawerExpanded;
+            editorDrawer.setVisible(drawerExpanded);
+            refreshOverlayBounds();
+        });
+        rail.add(collapse);
+        rail.add(Box.createVerticalStrut(3));
+
+        JButton close = rsButton("X");
+        close.setToolTipText("Exit Live Model Editor");
+        close.setBackground(RS_DANGER);
+        close.setPreferredSize(new Dimension(TAB_RAIL_WIDTH - 6, 30));
+        close.setMaximumSize(new Dimension(TAB_RAIL_WIDTH - 6, 30));
+        close.setAlignmentX(Component.CENTER_ALIGNMENT);
+        close.addActionListener(e -> closeEditorSession());
+        rail.add(close);
+        rail.add(Box.createVerticalStrut(5));
+        return rail;
     }
 
-    private JPanel createPartsCard() {
-        JPanel card = rsCard();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+    private JButton railButton(String text, String tooltip, final String tool) {
+        JButton button = rsButton(text);
+        button.setToolTipText(tooltip);
+        button.setPreferredSize(new Dimension(TAB_RAIL_WIDTH - 6, 34));
+        button.setMaximumSize(new Dimension(TAB_RAIL_WIDTH - 6, 34));
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.addActionListener(e -> showTool(tool));
+        return button;
+    }
 
-        JPanel heading = new JPanel(new BorderLayout(6, 0));
-        heading.setOpaque(false);
-        JLabel title = new JLabel("MODEL PARTS");
+    private void showTool(String tool) {
+        if (tool == null) return;
+        if (drawerExpanded && tool.equals(activeTool)) {
+            drawerExpanded = false;
+            editorDrawer.setVisible(false);
+        } else {
+            activeTool = tool;
+            drawerExpanded = true;
+            editorDrawer.setVisible(true);
+            toolCardLayout.show(toolCards, tool);
+        }
+        refreshOverlayBounds();
+    }
+
+    private JPanel toolPanel(String titleText) {
+        JPanel panel = rsCard();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7));
+        JLabel title = new JLabel(titleText);
         title.setFont(RS_SECTION_FONT);
         title.setForeground(RS_GOLD);
-        heading.add(title, BorderLayout.WEST);
-        heading.add(partStatusLabel, BorderLayout.EAST);
-        card.add(heading);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(title);
+        panel.add(Box.createVerticalStrut(6));
+        return panel;
+    }
 
-        JLabel hint = new JLabel("Hover mesh -> highlight | drag = transform | Ctrl toggles in Multi");
+    private JPanel createPartsPanel() {
+        JPanel panel = toolPanel("PARTS / SELECTION");
+
+        JPanel heading = new JPanel(new BorderLayout(4, 0));
+        heading.setOpaque(false);
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel hint = new JLabel("Whole / Part / Multi");
         hint.setFont(RS_SMALL_FONT);
         hint.setForeground(RS_MUTED);
-        card.add(hint);
-        card.add(Box.createVerticalStrut(5));
+        heading.add(hint, BorderLayout.WEST);
+        heading.add(partStatusLabel, BorderLayout.EAST);
+        panel.add(heading);
+        panel.add(Box.createVerticalStrut(5));
 
         JPanel selectionModes = actionRow(3);
         JButton wholeMode = rsButton("Whole [1]");
         JButton partMode = rsButton("Part [2]");
         JButton multiMode = rsButton("Multi [3]");
-        selectionModes.add(wholeMode);
-        selectionModes.add(partMode);
-        selectionModes.add(multiMode);
-        card.add(selectionModes);
+        selectionModes.add(wholeMode); selectionModes.add(partMode); selectionModes.add(multiMode);
+        panel.add(selectionModes);
+        panel.add(Box.createVerticalStrut(4));
 
-        card.add(Box.createVerticalStrut(4));
         JPanel selectionActions = actionRow(3);
-        JButton selectAll = rsButton("Select All");
+        JButton selectAll = rsButton("All");
         JButton clearSelection = rsButton("Clear");
-        JButton resetSelection = rsButton("Reset Sel");
-        selectionActions.add(selectAll);
-        selectionActions.add(clearSelection);
-        selectionActions.add(resetSelection);
-        card.add(selectionActions);
-        card.add(Box.createVerticalStrut(5));
+        JButton resetSelection = rsButton("Reset");
+        selectionActions.add(selectAll); selectionActions.add(clearSelection); selectionActions.add(resetSelection);
+        panel.add(selectionActions);
+        panel.add(Box.createVerticalStrut(5));
 
-        partList.setVisibleRowCount(6);
-        partList.setFixedCellHeight(24);
-        partList.setFont(RS_BODY_FONT);
+        partList.setVisibleRowCount(10);
+        partList.setFixedCellHeight(22);
+        partList.setFont(RS_SMALL_FONT);
         partList.setForeground(RS_TEXT);
         partList.setBackground(RS_INPUT);
         partList.setSelectionForeground(RS_GOLD);
@@ -447,83 +522,42 @@ public final class LiveModelEditorWindow {
                     boolean isSelected, boolean cellHasFocus) {
                 JLabel label = (JLabel) super.getListCellRendererComponent(
                         list, value, index, isSelected, false);
-                label.setFont(RS_BODY_FONT);
+                label.setFont(RS_SMALL_FONT);
                 label.setForeground(isSelected ? RS_GOLD : RS_TEXT);
                 label.setBackground(isSelected ? RS_SELECTED
                         : index == hoveredListIndex ? RS_HOVER : RS_INPUT);
-                label.setBorder(BorderFactory.createEmptyBorder(2, 7, 2, 7));
+                label.setBorder(BorderFactory.createEmptyBorder(1, 5, 1, 5));
                 return label;
             }
         });
 
-        JScrollPane scroll = new JScrollPane(partList);
+        JScrollPane scroll = new JScrollPane(partList,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setBorder(BorderFactory.createLineBorder(RS_BORDER));
-        scroll.setPreferredSize(new Dimension(400, 154));
-        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 154));
+        scroll.setPreferredSize(new Dimension(220, 230));
+        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
         scroll.getViewport().setBackground(RS_INPUT);
         scroll.getVerticalScrollBar().setUnitIncrement(18);
-        card.add(scroll);
+        panel.add(scroll);
+        panel.add(Box.createVerticalStrut(5));
 
-        card.add(Box.createVerticalStrut(6));
-        JPanel modes = actionRow(3);
-        JButton moveMode = rsButton("Move [G]");
-        JButton rotateMode = rsButton("Rotate [R]");
-        JButton scaleMode = rsButton("Scale [S]");
-        modes.add(moveMode); modes.add(rotateMode); modes.add(scaleMode);
-        card.add(modes);
-
-        card.add(Box.createVerticalStrut(4));
-        JPanel axes = actionRow(4);
-        JButton freeAxis = rsButton("Free [F]");
-        JButton xAxis = rsButton("X");
-        JButton yAxis = rsButton("Y");
-        JButton zAxis = rsButton("Z");
-        axes.add(freeAxis); axes.add(xAxis); axes.add(yAxis); axes.add(zAxis);
-        card.add(axes);
-
-        card.add(Box.createVerticalStrut(6));
-        card.add(createSpinnerGrid(
-                new String[] { "SCALE X", "SCALE Y", "SCALE Z" },
-                new JSpinner[] { partScaleXSpinner, partScaleYSpinner, partScaleZSpinner }));
-        card.add(Box.createVerticalStrut(4));
-        card.add(createSpinnerGrid(
-                new String[] { "MOVE X", "MOVE Y", "MOVE Z", "YAW" },
-                new JSpinner[] { partMoveXSpinner, partMoveYSpinner, partMoveZSpinner, partYawSpinner }));
-
-        card.add(Box.createVerticalStrut(6));
         JPanel row1 = actionRow(3);
         JButton rebuild = rsButton("Rebuild");
         JButton isolate = rsButton("Isolate");
         JButton showAll = rsButton("Show All");
         row1.add(rebuild); row1.add(isolate); row1.add(showAll);
-        card.add(row1);
+        panel.add(row1);
+        panel.add(Box.createVerticalStrut(4));
 
-        card.add(Box.createVerticalStrut(4));
         JPanel row2 = actionRow(4);
-        JButton hide = rsButton("Hide [H]");
-        JButton duplicate = rsButton("Duplicate");
+        JButton hide = rsButton("Hide");
+        JButton duplicate = rsButton("Dup");
         JButton delete = rsButton("Delete");
         JButton undo = rsButton("Undo");
         delete.setBackground(RS_DANGER);
         row2.add(hide); row2.add(duplicate); row2.add(delete); row2.add(undo);
-        card.add(row2);
-
-        card.add(Box.createVerticalStrut(7));
-        JLabel replaceTitle = new JLabel("CONSTRUCTION MATERIAL REPLACEMENT");
-        replaceTitle.setFont(RS_SMALL_FONT);
-        replaceTitle.setForeground(RS_GOLD);
-        card.add(replaceTitle);
-        replacementCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-        replacementCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(replacementCombo);
-        card.add(Box.createVerticalStrut(4));
-
-        JPanel replaceRow = actionRow(3);
-        JButton replaceOne = rsButton("Replace Part");
-        JButton replaceMatching = rsButton("Replace Matches");
-        JButton restorePart = rsButton("Restore");
-        replaceRow.add(replaceOne); replaceRow.add(replaceMatching); replaceRow.add(restorePart);
-        card.add(replaceRow);
+        panel.add(row2);
 
         wholeMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE));
         partMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.PART));
@@ -539,15 +573,6 @@ public final class LiveModelEditorWindow {
             refreshPartList();
         });
         resetSelection.addActionListener(e -> resetSelectedTransforms());
-
-        moveMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.MOVE));
-        rotateMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.ROTATE));
-        scaleMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.SCALE));
-        freeAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.FREE));
-        xAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.X));
-        yAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Y));
-        zAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Z));
-
         rebuild.addActionListener(e -> initializeParts());
         isolate.addActionListener(e -> {
             LiveModelEditorPreview.toggleIsolatePart();
@@ -561,6 +586,121 @@ public final class LiveModelEditorWindow {
         duplicate.addActionListener(e -> duplicateSelected());
         delete.addActionListener(e -> deleteSelected());
         undo.addActionListener(e -> undoPartEdit());
+        return panel;
+    }
+
+    private JPanel createTransformPanel() {
+        JPanel panel = toolPanel("TRANSFORM");
+
+        JPanel contextRow = new JPanel(new BorderLayout());
+        contextRow.setOpaque(false);
+        contextRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel hint = new JLabel("Selection context");
+        hint.setFont(RS_SMALL_FONT);
+        hint.setForeground(RS_MUTED);
+        contextRow.add(hint, BorderLayout.WEST);
+        contextRow.add(transformContextLabel, BorderLayout.EAST);
+        panel.add(contextRow);
+        panel.add(Box.createVerticalStrut(5));
+
+        JPanel modes = actionRow(3);
+        JButton moveMode = rsButton("Move [G]");
+        JButton rotateMode = rsButton("Rotate [R]");
+        JButton scaleMode = rsButton("Scale [S]");
+        modes.add(moveMode); modes.add(rotateMode); modes.add(scaleMode);
+        panel.add(modes);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel axes = actionRow(4);
+        JButton freeAxis = rsButton("Free [F]");
+        JButton xAxis = rsButton("X");
+        JButton yAxis = rsButton("Y");
+        JButton zAxis = rsButton("Z");
+        axes.add(freeAxis); axes.add(xAxis); axes.add(yAxis); axes.add(zAxis);
+        panel.add(axes);
+        panel.add(Box.createVerticalStrut(7));
+
+        transformCards.setOpaque(false);
+
+        JPanel whole = new JPanel();
+        whole.setLayout(new BoxLayout(whole, BoxLayout.Y_AXIS));
+        whole.setOpaque(false);
+        whole.add(createSpinnerGrid(
+                new String[] { "S X", "S Y", "S Z" },
+                new JSpinner[] { scaleXSpinner, scaleYSpinner, scaleZSpinner }));
+        whole.add(Box.createVerticalStrut(5));
+        whole.add(createSpinnerGrid(
+                new String[] { "X", "Y", "Z" },
+                new JSpinner[] { moveXSpinner, moveYSpinner, moveZSpinner }));
+        whole.add(Box.createVerticalStrut(5));
+        whole.add(createSpinnerGrid(new String[] { "YAW" }, new JSpinner[] { yawSpinner }));
+
+        JPanel parts = new JPanel();
+        parts.setLayout(new BoxLayout(parts, BoxLayout.Y_AXIS));
+        parts.setOpaque(false);
+        parts.add(createSpinnerGrid(
+                new String[] { "S X", "S Y", "S Z" },
+                new JSpinner[] { partScaleXSpinner, partScaleYSpinner, partScaleZSpinner }));
+        parts.add(Box.createVerticalStrut(5));
+        parts.add(createSpinnerGrid(
+                new String[] { "X", "Y", "Z" },
+                new JSpinner[] { partMoveXSpinner, partMoveYSpinner, partMoveZSpinner }));
+        parts.add(Box.createVerticalStrut(5));
+        parts.add(createSpinnerGrid(new String[] { "YAW" }, new JSpinner[] { partYawSpinner }));
+
+        transformCards.add(whole, "WHOLE");
+        transformCards.add(parts, "PARTS");
+        panel.add(transformCards);
+        panel.add(Box.createVerticalStrut(7));
+
+        JPanel actions = actionRow(2);
+        JButton reset = rsButton("Reset Selection");
+        JButton undo = rsButton("Undo");
+        actions.add(reset); actions.add(undo);
+        panel.add(actions);
+
+        moveMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.MOVE));
+        rotateMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.ROTATE));
+        scaleMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.SCALE));
+        freeAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.FREE));
+        xAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.X));
+        yAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Y));
+        zAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Z));
+        reset.addActionListener(e -> resetSelectedTransforms());
+        undo.addActionListener(e -> undoPartEdit());
+        return panel;
+    }
+
+    private JPanel createMaterialPanel() {
+        JPanel panel = toolPanel("MATERIAL / REPLACE");
+        JLabel hint = new JLabel("Construction catalog source");
+        hint.setFont(RS_SMALL_FONT);
+        hint.setForeground(RS_MUTED);
+        panel.add(hint);
+        panel.add(Box.createVerticalStrut(5));
+
+        replacementCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+        replacementCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        replacementCombo.addActionListener(e -> returnViewportFocusSoon());
+        panel.add(replacementCombo);
+        panel.add(Box.createVerticalStrut(6));
+
+        JPanel row1 = actionRow(1);
+        JButton replaceOne = rsButton("Replace Selected");
+        row1.add(replaceOne);
+        panel.add(row1);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel row2 = actionRow(1);
+        JButton replaceMatching = rsButton("Replace Matching Parts");
+        row2.add(replaceMatching);
+        panel.add(row2);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel row3 = actionRow(1);
+        JButton restorePart = rsButton("Restore Original");
+        row3.add(restorePart);
+        panel.add(row3);
 
         replaceOne.addActionListener(e -> replaceSelected(false));
         replaceMatching.addActionListener(e -> replaceSelected(true));
@@ -570,76 +710,168 @@ public final class LiveModelEditorWindow {
                 statusLabel.setText("Restored the original connected component.");
             }
         });
-        return card;
+        return panel;
     }
 
-    private JPanel createGlobalCard() {
-        JPanel card = rsCard();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+    private JPanel createCameraPanel() {
+        JPanel panel = toolPanel("CAMERA");
 
-        JPanel heading = new JPanel(new BorderLayout());
-        heading.setOpaque(false);
-        JLabel title = new JLabel("WHOLE CLONE");
-        title.setFont(RS_SECTION_FONT);
-        title.setForeground(RS_GOLD);
-        heading.add(title, BorderLayout.WEST);
-        JLabel context = new JLabel("type / rot / tile offset");
-        context.setFont(RS_SMALL_FONT);
-        context.setForeground(RS_MUTED);
-        heading.add(context, BorderLayout.EAST);
-        card.add(heading);
-        card.add(Box.createVerticalStrut(5));
+        JPanel status = new JPanel(new BorderLayout());
+        status.setOpaque(false);
+        status.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel label = new JLabel("Active mode");
+        label.setFont(RS_SMALL_FONT);
+        label.setForeground(RS_MUTED);
+        status.add(label, BorderLayout.WEST);
+        status.add(cameraStatusLabel, BorderLayout.EAST);
+        panel.add(status);
+        panel.add(Box.createVerticalStrut(6));
 
-        card.add(createSpinnerGrid(
-                new String[] { "TYPE", "ROT", "TILE X", "TILE Y" },
-                new JSpinner[] { typeSpinner, objectRotationSpinner, tileOffsetXSpinner, tileOffsetYSpinner }));
-        card.add(Box.createVerticalStrut(5));
-        card.add(createSpinnerGrid(
-                new String[] { "SCALE X", "SCALE Y", "SCALE Z", "YAW" },
-                new JSpinner[] { scaleXSpinner, scaleYSpinner, scaleZSpinner, yawSpinner }));
-        card.add(Box.createVerticalStrut(5));
-        card.add(createSpinnerGrid(
-                new String[] { "MOVE X", "MOVE Y", "MOVE Z" },
-                new JSpinner[] { moveXSpinner, moveYSpinner, moveZSpinner }));
+        JPanel modes = actionRow(2);
+        modes.add(rtsCameraButton);
+        modes.add(freeCameraButton);
+        panel.add(modes);
+        panel.add(Box.createVerticalStrut(8));
 
-        card.add(Box.createVerticalStrut(6));
-        JPanel actions = actionRow(3);
-        JButton show = rsButton("Refresh");
-        JButton hide = rsButton("Exit Edit");
-        JButton reset = rsButton("Reset");
-        actions.add(show);
-        actions.add(hide);
-        actions.add(reset);
-        card.add(actions);
+        JLabel rts = new JLabel("RTS: WASD pan | MMB orbit | wheel zoom | Q/E yaw");
+        rts.setFont(RS_SMALL_FONT);
+        rts.setForeground(RS_TEXT);
+        panel.add(rts);
+        panel.add(Box.createVerticalStrut(5));
 
-        show.addActionListener(e -> refreshPreview());
-        hide.addActionListener(e -> closeEditorSession());
+        JPanel speed = new JPanel(new BorderLayout(5, 0));
+        speed.setOpaque(false);
+        speed.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JButton slower = rsButton("-");
+        JButton faster = rsButton("+");
+        speed.add(slower, BorderLayout.WEST);
+        speed.add(cameraSpeedLabel, BorderLayout.CENTER);
+        speed.add(faster, BorderLayout.EAST);
+        panel.add(speed);
+        panel.add(Box.createVerticalStrut(10));
+
+        JLabel free = new JLabel("FREE: unrestricted fly / inspect under geometry");
+        free.setFont(RS_SMALL_FONT);
+        free.setForeground(RS_TEXT);
+        panel.add(free);
+        JLabel free2 = new JLabel("WASD move | Q/E vertical | normal free-camera look");
+        free2.setFont(RS_SMALL_FONT);
+        free2.setForeground(RS_MUTED);
+        panel.add(free2);
+
+        rtsCameraButton.addActionListener(e -> setEditorCameraMode(ConstructionBuildCamera.CameraMode.RTS));
+        freeCameraButton.addActionListener(e -> setEditorCameraMode(ConstructionBuildCamera.CameraMode.FREE_BUILD));
+        slower.addActionListener(e -> {
+            ConstructionBuildCamera.adjustRtsMoveSpeed(-1);
+            syncCameraPanel();
+        });
+        faster.addActionListener(e -> {
+            ConstructionBuildCamera.adjustRtsMoveSpeed(1);
+            syncCameraPanel();
+        });
+        return panel;
+    }
+
+    private JPanel createObjectPanel() {
+        JPanel panel = toolPanel("OBJECT / SOURCE");
+        targetLabel.setFont(RS_SECTION_FONT);
+        panel.add(targetLabel);
+        panel.add(Box.createVerticalStrut(2));
+        panel.add(sourceLabel);
+        panel.add(Box.createVerticalStrut(8));
+
+        panel.add(createSpinnerGrid(
+                new String[] { "TYPE", "ROT" },
+                new JSpinner[] { typeSpinner, objectRotationSpinner }));
+        panel.add(Box.createVerticalStrut(5));
+        panel.add(createSpinnerGrid(
+                new String[] { "TILE X", "TILE Y" },
+                new JSpinner[] { tileOffsetXSpinner, tileOffsetYSpinner }));
+        panel.add(Box.createVerticalStrut(7));
+
+        JPanel row1 = actionRow(2);
+        JButton refresh = rsButton("Refresh");
+        JButton rebuild = rsButton("Rebuild Parts");
+        row1.add(refresh); row1.add(rebuild);
+        panel.add(row1);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel row2 = actionRow(2);
+        JButton reset = rsButton("Reset Object");
+        JButton exit = rsButton("Exit Edit");
+        exit.setBackground(RS_DANGER);
+        row2.add(reset); row2.add(exit);
+        panel.add(row2);
+
+        refresh.addActionListener(e -> refreshPreview());
+        rebuild.addActionListener(e -> initializeParts());
         reset.addActionListener(e -> resetTransforms());
-        return card;
+        exit.addActionListener(e -> closeEditorSession());
+        return panel;
     }
 
-    private JPanel createProjectStrip() {
-        JPanel card = rsCard();
-        card.setLayout(new BorderLayout(6, 0));
+    private JPanel createProjectPanel() {
+        JPanel panel = toolPanel("PROJECT / ASSET");
+        JLabel hint = new JLabel("JSON authoring + reusable selection assets");
+        hint.setFont(RS_SMALL_FONT);
+        hint.setForeground(RS_MUTED);
+        panel.add(hint);
+        panel.add(Box.createVerticalStrut(8));
 
-        JLabel label = new JLabel("PROJECT / CUSTOM ASSET");
-        label.setFont(RS_SECTION_FONT);
-        label.setForeground(RS_GOLD);
-        card.add(label, BorderLayout.WEST);
+        JPanel row1 = actionRow(1);
+        JButton save = rsButton("Save Project   Ctrl+S");
+        row1.add(save);
+        panel.add(row1);
+        panel.add(Box.createVerticalStrut(5));
 
-        JPanel actions = new JPanel(new GridLayout(1, 3, 5, 0));
-        actions.setOpaque(false);
-        JButton save = rsButton("Save Project");
+        JPanel row2 = actionRow(1);
         JButton load = rsButton("Load Project");
-        JButton saveAsset = rsButton("Save Selection");
+        row2.add(load);
+        panel.add(row2);
+        panel.add(Box.createVerticalStrut(5));
+
+        JPanel row3 = actionRow(1);
+        JButton saveAsset = rsButton("Save Selection Asset");
+        row3.add(saveAsset);
+        panel.add(row3);
+
         save.addActionListener(e -> saveProject());
         load.addActionListener(e -> loadProject());
         saveAsset.addActionListener(e -> saveSelectionAsset());
-        actions.add(save);
-        actions.add(load);
-        actions.add(saveAsset);
-        card.add(actions, BorderLayout.EAST);
-        return card;
+        return panel;
+    }
+
+    private void refreshTransformContext() {
+        LiveModelEditorPreview.SelectionMode mode = LiveModelEditorPreview.getSelectionMode();
+        if (mode == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            transformCardLayout.show(transformCards, "WHOLE");
+            transformContextLabel.setText("WHOLE");
+            loadWholeEditors();
+        } else {
+            transformCardLayout.show(transformCards, "PARTS");
+            transformContextLabel.setText(mode + " x" + LiveModelEditorPreview.getSelectedPartCount());
+            if (LiveModelEditorPreview.getSelectedPart() >= 0) {
+                loadSelectedPartEditors();
+            }
+        }
+    }
+
+    private void setEditorCameraMode(ConstructionBuildCamera.CameraMode mode) {
+        if (!ConstructionBuildCamera.isRequested()) {
+            ConstructionBuildCamera.enter();
+        }
+        ConstructionBuildCamera.setMode(mode);
+        syncCameraPanel();
+        statusLabel.setText("Camera: " + mode.getDisplayName() + ".");
+    }
+
+    private void syncCameraPanel() {
+        ConstructionBuildCamera.CameraMode mode = ConstructionBuildCamera.getMode();
+        boolean rts = mode == ConstructionBuildCamera.CameraMode.RTS;
+        cameraStatusLabel.setText(mode.getDisplayName());
+        cameraSpeedLabel.setText("RTS PAN " + ConstructionBuildCamera.getRtsMoveSpeedLabel());
+        rtsCameraButton.setBackground(rts ? RS_SELECTED : RS_PANEL_2);
+        freeCameraButton.setBackground(!rts ? RS_SELECTED : RS_PANEL_2);
     }
 
     private JPanel createSpinnerGrid(String[] names, JSpinner[] spinners) {
@@ -712,6 +944,11 @@ public final class LiveModelEditorWindow {
             @Override
             public void mouseExited(MouseEvent e) {
                 setHoveredPart(-1);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                returnViewportFocusSoon();
             }
         });
 
@@ -842,6 +1079,10 @@ public final class LiveModelEditorWindow {
                     }
 
                     int id = mouse.getID();
+                    if (id == MouseEvent.MOUSE_PRESSED && mouse.getButton() == MouseEvent.BUTTON2) {
+                        requestGameCanvasFocus();
+                        return;
+                    }
                     if (id == MouseEvent.MOUSE_MOVED) {
                         LiveModelEditorPreview.pointerMoved(mouse.getX(), mouse.getY());
                         mouse.consume();
@@ -1064,11 +1305,8 @@ public final class LiveModelEditorWindow {
                 suppressPartRefresh = false;
             }
         }
-        if (LiveModelEditorPreview.getSelectionMode() == LiveModelEditorPreview.SelectionMode.WHOLE) {
-            loadWholeEditors();
-        } else if (LiveModelEditorPreview.getSelectedPart() >= 0) {
-            loadSelectedPartEditors();
-        }
+        refreshTransformContext();
+        syncCameraPanel();
         int hovered = LiveModelEditorPreview.getWorldHoveredPart();
         partStatusLabel.setText(LiveModelEditorPreview.getSelectionMode() + " | "
                 + LiveModelEditorPreview.getSelectedPartCount() + " selected"
@@ -1082,8 +1320,7 @@ public final class LiveModelEditorWindow {
         LiveModelEditorPreview.setSelectionMode(mode);
         applySelectionModeToList();
         refreshPartList();
-        if (mode == LiveModelEditorPreview.SelectionMode.WHOLE) loadWholeEditors();
-        else loadSelectedPartEditors();
+        refreshTransformContext();
         statusLabel.setText("Selection mode: " + mode + ".");
     }
 
@@ -1448,6 +1685,7 @@ public final class LiveModelEditorWindow {
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createLineBorder(RS_GOLD_DIM));
         button.setOpaque(true);
+        button.addActionListener(e -> returnViewportFocusSoon());
         return button;
     }
 
@@ -1495,6 +1733,24 @@ public final class LiveModelEditorWindow {
     private static int number(JSpinner spinner) {
         Object value = spinner.getValue();
         return value instanceof Number ? ((Number) value).intValue() : 0;
+    }
+
+    private static void returnViewportFocusSoon() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                requestGameCanvasFocus();
+            }
+        });
+    }
+
+    private static void requestGameCanvasFocus() {
+        Canvas canvas = Class584.aCanvas7745;
+        if (canvas == null || !canvas.isDisplayable()) {
+            return;
+        }
+        canvas.requestFocusInWindow();
+        canvas.requestFocus();
     }
 
     private static void rememberManualOverlayPosition() {

@@ -83,3 +83,13 @@
 - LMB remains exclusively owned by model selection/direct G/R/S transforms; non-LMB drag events are no longer consumed by the editor transform gate.
 - Editor exit restores a camera mode that was already active before editing, and only closes a camera session it started when no settlement/palette owner needs it.
 - RTS accepted pitch is persisted with the existing client-session yaw/pivot/orbit-distance view state.
+
+2026-09-25
+- Started Bundle 2.7 Professional Editor Shell and added EDITOR_WORKSPACE_DESIGN.md as the compact 16-inch workspace design authority.
+- Replaced the page-length shell with a right-side P/T/M/C/O/S rail and one active compact drawer.
+- Removed whole-editor horizontal scrolling; only the Parts list owns vertical scrolling.
+- Transform is selection-context-sensitive: Whole uses clone values while Part/Multi uses selected-component values in the same drawer.
+- Added RTS/FREE camera switching through the shared ConstructionBuildCamera owner; FREE_BUILD is exposed for under/inside geometry inspection.
+- Editor buttons and part-list selection now return keyboard focus to the Matrix3 Canvas; MMB world press explicitly reacquires Canvas focus. Exact numeric fields remain focusable.
+- Preserved resize, selection, isolate/show/hide, duplicate/delete/undo, replacement, source controls, project save/load and Save Selection export.
+- Dedicated gameplay-HUD suppression is deferred to Bundle 2.7B until Matrix3's authoritative root-interface seam is verified; no hardcoded masks were added.

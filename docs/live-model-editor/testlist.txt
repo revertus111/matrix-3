@@ -148,3 +148,29 @@ Bundle 2.6 - shared RTS authoring camera
 [ ] Open editor while an existing Construction RTS camera is active, then Exit Edit; existing Construction camera must remain active.
 [ ] Open editor from normal gameplay, then Exit Edit/Escape; the editor-started detached camera must close and normal camera control return.
 [ ] Reopen editor in the same loaded scene and confirm the accepted RTS yaw/pitch/pivot/zoom view resumes.
+
+Bundle 2.7A - compact professional editor shell
+[ ] Eclipse/Java 8 clean-build Client.
+[ ] Open Conveyor belt 46298 on the compact 16-inch client layout.
+[ ] Confirm narrow right rail + one drawer replaces old giant page-length form.
+[ ] Confirm no whole-editor horizontal scrollbar.
+[ ] P/T/M/C/O/S switches exactly one drawer at a time.
+[ ] Clicking active tab again collapses to rail only; another tab reopens drawer.
+[ ] Parts: Whole/Part/Multi, list, All/Clear/Reset, Rebuild/Isolate/Show All, Hide/Dup/Delete/Undo work.
+[ ] Transform: Whole shows clone values; Part/Multi shows selected-component values in same drawer.
+[ ] Exact numeric spinner/text entry retains focus while typing.
+[ ] Camera RTS retains WASD/arrows, MMB orbit, wheel zoom, Q/E yaw.
+[ ] Camera FREE permits unrestricted inspection beneath the conveyor/model.
+[ ] Click normal editor button then immediately use camera key without clicking viewport first.
+[ ] Select part row then immediately use camera without sacrificial click.
+[ ] MMB world press reacquires Canvas focus.
+[ ] Material replacement/restore/matches still work.
+[ ] Save Project / Load Project / Save Selection Asset still work.
+[ ] Object/source/type/rotation/tile controls still work.
+[ ] Resize expanded drawer without outer horizontal scroll.
+[ ] Exit/Escape restores source rendering and camera ownership.
+
+Bundle 2.7B - editor workspace HUD suppression
+[ ] Verify authoritative Matrix3 root-interface/HUD owner first.
+[ ] Suppress normal gameplay HUD during editor workspace and restore exact prior state on exit.
+[ ] Do not use opaque rectangle masks or hardcoded screen coordinates.
