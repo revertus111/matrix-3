@@ -693,10 +693,7 @@ public final class LiveModelEditorWindow {
 
         rebuild.addActionListener(e -> initializeParts());
         isolateButton.addActionListener(e -> toggleIsolateSelection());
-        showAll.addActionListener(e -> {
-            LiveModelEditorPreview.showAllParts();
-            refreshPartList();
-        });
+        showAll.addActionListener(e -> showAllParts());
         hide.addActionListener(e -> toggleSelectedHidden());
         duplicate.addActionListener(e -> duplicateSelected());
         delete.addActionListener(e -> deleteSelected());
@@ -956,7 +953,7 @@ public final class LiveModelEditorWindow {
         panel.add(Box.createVerticalStrut(5));
 
         JPanel row2 = actionRow(1);
-        JButton load = rsButton("Load Project");
+        JButton load = rsButton("Load Project   Ctrl+O");
         load.putClientProperty("keepEditorFocus", Boolean.TRUE);
         row2.add(load);
         panel.add(row2);
