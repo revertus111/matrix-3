@@ -28,6 +28,8 @@ final class LiveModelEditorParts {
     private final List<PartState> originals = new ArrayList<PartState>();
     private final List<PartState> duplicates = new ArrayList<PartState>();
     private final ArrayDeque<Snapshot> undo = new ArrayDeque<Snapshot>();
+    private final LinkedHashSet<Integer> selection = new LinkedHashSet<Integer>();
+    private final Map<Integer, int[]> gestureStarts = new LinkedHashMap<Integer, int[]>();
     private int selected = -1;
     private int hovered = -1;
     private boolean isolate;
@@ -43,6 +45,8 @@ final class LiveModelEditorParts {
         originals.clear();
         duplicates.clear();
         undo.clear();
+        selection.clear();
+        gestureStarts.clear();
         selected = -1;
         hovered = -1;
         isolate = false;
@@ -59,6 +63,8 @@ final class LiveModelEditorParts {
         originals.clear();
         duplicates.clear();
         undo.clear();
+        selection.clear();
+        gestureStarts.clear();
         selected = -1;
         hovered = -1;
         isolate = false;
@@ -75,6 +81,9 @@ final class LiveModelEditorParts {
     synchronized int getGeometryRevision() { return geometryRevision; }
     synchronized int getPartCount() { return originals.size() + duplicates.size(); }
     synchronized int getSelected() { return selected; }
+    synchronized int[] getSelectedIndices() { return selectionArray(); }
+    synchronized int getSelectedCount() { return selection.size(); }
+    synchronized boolean isSelected(int index) { return selection.contains(Integer.valueOf(index)); }
     synchronized int getHovered() { return hovered; }
     synchronized boolean isIsolate() { return isolate; }
 
@@ -118,87 +127,209 @@ final class LiveModelEditorParts {
     }
 
     synchronized boolean select(int index) {
-        if (index < 0 || index >= getPartCount()) {
-            if (selected != -1) {
-                selected = -1;
-                revision++;
+        if (index < 0 || index >= getPartCount()) return clearSelection();
+        boolean changed = selection.size() != 1
+                || !selection.contains(Integer.valueOf(index)) || selected != index;
+        selection.clear();
+        selection.add(Integer.valueOf(index));
+        selected = index;
+        if (changed) revision++;
+        return true;
+    }
+
+    synchronized boolean setSelection(int[] indices) {
+        LinkedHashSet<Integer> next = new LinkedHashSet<Integer>();
+        int nextPrimary = -1;
+        if (indices != null) {
+            for (int index : indices) {
+                if (index >= 0 && index < getPartCount()) {
+                    next.add(Integer.valueOf(index));
+                    nextPrimary = index;
+                }
             }
-            return false;
         }
+        boolean changed = !selection.equals(next) || selected != nextPrimary;
+        selection.clear();
+        selection.addAll(next);
+        selected = nextPrimary;
+        if (changed) revision++;
+        return changed;
+    }
+
+    synchronized boolean addSelection(int index) {
+        if (index < 0 || index >= getPartCount()) return false;
+        boolean changed = selection.add(Integer.valueOf(index));
         if (selected != index) {
             selected = index;
-            revision++;
+            changed = true;
         }
+        if (changed) revision++;
+        return true;
+    }
+
+    synchronized boolean toggleSelection(int index) {
+        if (index < 0 || index >= getPartCount()) return false;
+        Integer key = Integer.valueOf(index);
+        if (selection.contains(key)) {
+            selection.remove(key);
+            if (selected == index) selected = lastSelectionIndex();
+        } else {
+            selection.add(key);
+            selected = index;
+        }
+        revision++;
+        return true;
+    }
+
+    synchronized boolean selectAll() {
+        LinkedHashSet<Integer> next = new LinkedHashSet<Integer>();
+        for (int i = 0; i < getPartCount(); i++) {
+            PartState state = stateAt(i);
+            if (state != null && !state.deleted) next.add(Integer.valueOf(i));
+        }
+        int nextPrimary = next.isEmpty() ? -1 : next.iterator().next().intValue();
+        boolean changed = !selection.equals(next) || selected != nextPrimary;
+        selection.clear();
+        selection.addAll(next);
+        selected = nextPrimary;
+        if (changed) revision++;
+        return changed;
+    }
+
+    synchronized boolean clearSelection() {
+        if (selection.isEmpty() && selected == -1) return false;
+        selection.clear();
+        selected = -1;
+        revision++;
         return true;
     }
 
     synchronized boolean setSelectedTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
-        PartState state = selectedState();
-        if (state == null || state.deleted) return false;
-        int[] values = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
-        if (sameTransform(state, values)) return false;
+        PartState primary = selectedState();
+        if (primary == null || primary.deleted || selection.isEmpty()) return false;
+        int[] target = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
+        int[] current = transformOf(primary);
+        if (sameTransform(primary, target)) return false;
         pushUndo();
-        applyTransform(state, values);
+        boolean changed = applySelectionDelta(transformDelta(current, target), null);
+        if (changed) markGeometryChanged();
+        return changed;
+    }
+
+    synchronized boolean resetSelectedTransforms() {
+        if (selection.isEmpty()) return false;
+        boolean changed = false;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && !state.deleted
+                    && (state.scaleX != 100 || state.scaleY != 100 || state.scaleZ != 100
+                    || state.moveX != 0 || state.moveY != 0 || state.moveZ != 0 || state.yaw != 0)) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) return false;
+        pushUndo();
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null || state.deleted) continue;
+            state.scaleX = state.scaleY = state.scaleZ = 100;
+            state.moveX = state.moveY = state.moveZ = state.yaw = 0;
+        }
         markGeometryChanged();
         return true;
     }
 
     synchronized boolean beginGesture() {
-        PartState state = selectedState();
-        if (state == null || state.deleted) return false;
+        PartState primary = selectedState();
+        if (selection.isEmpty() || primary == null || primary.deleted) return false;
         if (!gestureActive) {
             pushUndo();
-            gestureActive = true;
+            gestureStarts.clear();
+            for (Integer index : selection) {
+                PartState state = stateAt(index.intValue());
+                if (state != null && !state.deleted) gestureStarts.put(index, transformOf(state));
+            }
+            gestureActive = !gestureStarts.isEmpty();
         }
-        return true;
+        return gestureActive;
     }
 
     synchronized boolean updateGestureTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
         if (!gestureActive) return false;
-        PartState state = selectedState();
-        if (state == null || state.deleted) return false;
-        int[] values = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
-        if (sameTransform(state, values)) return false;
-        applyTransform(state, values);
-        markGeometryChanged();
-        return true;
+        int[] primaryStart = gestureStarts.get(Integer.valueOf(selected));
+        if (primaryStart == null) return false;
+        int[] target = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
+        boolean changed = applySelectionDelta(transformDelta(primaryStart, target), gestureStarts);
+        if (changed) markGeometryChanged();
+        return changed;
     }
 
     synchronized void endGesture() {
         gestureActive = false;
+        gestureStarts.clear();
     }
 
     synchronized boolean toggleSelectedHidden() {
-        PartState state = selectedState();
-        if (state == null || state.deleted) return false;
+        if (selection.isEmpty()) return false;
+        boolean hide = false;
+        boolean hasEditable = false;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null || state.deleted) continue;
+            hasEditable = true;
+            if (!state.hidden) hide = true;
+        }
+        if (!hasEditable) return false;
         pushUndo();
-        state.hidden = !state.hidden;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && !state.deleted) state.hidden = hide;
+        }
         markGeometryChanged();
         return true;
     }
 
     synchronized boolean deleteSelected() {
-        PartState state = selectedState();
-        if (state == null || state.deleted) return false;
+        if (selection.isEmpty()) return false;
+        boolean changed = false;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && !state.deleted) { changed = true; break; }
+        }
+        if (!changed) return false;
         pushUndo();
-        state.deleted = true;
-        state.hidden = true;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null || state.deleted) continue;
+            state.deleted = true;
+            state.hidden = true;
+        }
         markGeometryChanged();
         return true;
     }
 
     synchronized boolean duplicateSelected() {
-        PartState state = selectedState();
-        if (state == null || state.deleted) return false;
+        if (selection.isEmpty()) return false;
+        int[] sourceSelection = selectionArray();
         pushUndo();
-        PartState copy = state.copy();
-        copy.hidden = false;
-        copy.deleted = false;
-        copy.moveX = clamp(copy.moveX + 128, -4096, 4096);
-        duplicates.add(copy);
-        selected = originals.size() + duplicates.size() - 1;
+        LinkedHashSet<Integer> created = new LinkedHashSet<Integer>();
+        for (int index : sourceSelection) {
+            PartState state = stateAt(index);
+            if (state == null || state.deleted) continue;
+            PartState copy = state.copy();
+            copy.hidden = false;
+            copy.deleted = false;
+            copy.moveX = clamp(copy.moveX + 128, -4096, 4096);
+            duplicates.add(copy);
+            created.add(Integer.valueOf(originals.size() + duplicates.size() - 1));
+        }
+        if (created.isEmpty()) return false;
+        selection.clear();
+        selection.addAll(created);
+        selected = lastSelectionIndex();
         markGeometryChanged();
         return true;
     }
@@ -222,7 +353,7 @@ final class LiveModelEditorParts {
 
     synchronized boolean replaceSelected(int replacementObjectId, int replacementObjectType,
             boolean allMatching) {
-        if (source == null || replacementObjectId < 0) return false;
+        if (source == null || replacementObjectId < 0 || selection.isEmpty()) return false;
         PartState state = selectedState();
         if (state == null || state.deleted) return false;
         Component selectedComponent = source.components[state.sourcePart];
@@ -231,8 +362,7 @@ final class LiveModelEditorParts {
         if (allMatching) {
             String signature = selectedComponent.signature;
             for (PartState candidate : originals) {
-                if (!candidate.deleted
-                        && signature.equals(source.components[candidate.sourcePart].signature)) {
+                if (!candidate.deleted && signature.equals(source.components[candidate.sourcePart].signature)) {
                     candidate.replacementObjectId = replacementObjectId;
                     candidate.replacementObjectType = replacementObjectType;
                     candidate.hidden = false;
@@ -240,8 +370,7 @@ final class LiveModelEditorParts {
                 }
             }
             for (PartState candidate : duplicates) {
-                if (!candidate.deleted
-                        && signature.equals(source.components[candidate.sourcePart].signature)) {
+                if (!candidate.deleted && signature.equals(source.components[candidate.sourcePart].signature)) {
                     candidate.replacementObjectId = replacementObjectId;
                     candidate.replacementObjectType = replacementObjectType;
                     candidate.hidden = false;
@@ -249,21 +378,34 @@ final class LiveModelEditorParts {
                 }
             }
         } else {
-            state.replacementObjectId = replacementObjectId;
-            state.replacementObjectType = replacementObjectType;
-            state.hidden = false;
-            changed = true;
+            for (Integer index : selection) {
+                PartState candidate = stateAt(index.intValue());
+                if (candidate == null || candidate.deleted) continue;
+                candidate.replacementObjectId = replacementObjectId;
+                candidate.replacementObjectType = replacementObjectType;
+                candidate.hidden = false;
+                changed = true;
+            }
         }
         if (changed) markGeometryChanged();
         return changed;
     }
 
     synchronized boolean clearSelectedReplacement() {
-        PartState state = selectedState();
-        if (state == null || state.replacementObjectId < 0) return false;
+        if (selection.isEmpty()) return false;
+        boolean changed = false;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && state.replacementObjectId >= 0) { changed = true; break; }
+        }
+        if (!changed) return false;
         pushUndo();
-        state.replacementObjectId = -1;
-        state.replacementObjectType = 10;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null) continue;
+            state.replacementObjectId = -1;
+            state.replacementObjectType = 10;
+        }
         markGeometryChanged();
         return true;
     }
@@ -276,9 +418,15 @@ final class LiveModelEditorParts {
         duplicates.clear();
         for (PartState state : snapshot.duplicates) duplicates.add(state.copy());
         selected = snapshot.selected;
+        selection.clear();
+        for (int index : snapshot.selection) {
+            if (index >= 0 && index < getPartCount()) selection.add(Integer.valueOf(index));
+        }
+        if (selected >= 0 && !selection.contains(Integer.valueOf(selected))) selected = lastSelectionIndex();
         hovered = -1;
         isolate = snapshot.isolate;
         gestureActive = false;
+        gestureStarts.clear();
         markGeometryChanged();
         return true;
     }
@@ -288,19 +436,19 @@ final class LiveModelEditorParts {
         Class159 raw = source.decode();
         if (raw == null) return null;
         ensureFaceAlpha(raw);
-        int highlight = hovered >= 0 ? hovered : selected;
         for (int i = 0; i < originals.size(); i++) {
             PartState state = originals.get(i);
             Component component = source.components[state.sourcePart];
+            boolean highlighted = isHighlighted(i);
             boolean visible = !state.hidden && !state.deleted
                     && state.replacementObjectId < 0
-                    && (!isolate || highlight == i);
+                    && (!isolate || highlighted);
             if (!visible) {
                 hideFaces(raw, component);
                 continue;
             }
             transformVertices(raw, component, state);
-            if (highlight == i) highlightFaces(raw, component);
+            if (highlighted) highlightFaces(raw, component);
         }
         return raw;
     }
@@ -308,16 +456,16 @@ final class LiveModelEditorParts {
     synchronized List<Class159> buildDuplicateRaws() {
         if (source == null || duplicates.isEmpty()) return Collections.emptyList();
         List<Class159> raws = new ArrayList<Class159>();
-        int highlight = hovered >= 0 ? hovered : selected;
         for (int i = 0; i < duplicates.size(); i++) {
             int combinedIndex = originals.size() + i;
             PartState state = duplicates.get(i);
+            boolean highlighted = isHighlighted(combinedIndex);
             if (state.hidden || state.deleted || state.replacementObjectId >= 0
-                    || (isolate && highlight != combinedIndex)) continue;
+                    || (isolate && !highlighted)) continue;
             Class159 raw = componentOnlyRaw(source.decode(),
                     source.components[state.sourcePart], state);
             if (raw == null) continue;
-            if (highlight == combinedIndex) highlightAllFaces(raw);
+            if (highlighted) highlightAllFaces(raw);
             raws.add(raw);
         }
         return raws;
@@ -326,15 +474,15 @@ final class LiveModelEditorParts {
     synchronized List<ReplacementRaw> buildReplacementRaws() {
         if (source == null) return Collections.emptyList();
         List<ReplacementRaw> raws = new ArrayList<ReplacementRaw>();
-        int highlight = hovered >= 0 ? hovered : selected;
         int total = getPartCount();
         for (int index = 0; index < total; index++) {
             PartState state = stateAt(index);
+            boolean highlighted = isHighlighted(index);
             if (state == null || state.hidden || state.deleted || state.replacementObjectId < 0
-                    || (isolate && highlight != index)) continue;
+                    || (isolate && !highlighted)) continue;
             Class159 raw = replacementRaw(state, source.components[state.sourcePart]);
             if (raw == null) continue;
-            if (highlight == index) highlightAllFaces(raw);
+            if (highlighted) highlightAllFaces(raw);
             raws.add(new ReplacementRaw(index, state.replacementObjectId,
                     state.replacementObjectType, raw));
         }
@@ -345,11 +493,10 @@ final class LiveModelEditorParts {
         if (source == null) return Collections.emptyList();
         List<PickRaw> raws = new ArrayList<PickRaw>();
         int total = getPartCount();
-        int highlight = hovered >= 0 ? hovered : selected;
         for (int index = 0; index < total; index++) {
             PartState state = stateAt(index);
             if (state == null || state.hidden || state.deleted
-                    || (isolate && highlight != index)) continue;
+                    || (isolate && !isHighlighted(index))) continue;
             if (state.replacementObjectId >= 0) {
                 Class159 replacement = replacementRaw(state,
                         source.components[state.sourcePart]);
@@ -371,6 +518,7 @@ final class LiveModelEditorParts {
     synchronized String projectJsonFields() {
         StringBuilder out = new StringBuilder();
         out.append("  \"partSelected\": ").append(selected).append(",\n");
+        out.append("  \"partSelection\": ").append(intArrayJson(selectionArray())).append(",\n");
         out.append("  \"partIsolate\": ").append(isolate).append(",\n");
         out.append("  \"partStates\": [\n");
         for (int i = 0; i < originals.size(); i++) {
@@ -417,6 +565,13 @@ final class LiveModelEditorParts {
         }
         selected = readInt(json, "partSelected", -1);
         if (selected < -1 || selected >= getPartCount()) selected = -1;
+        selection.clear();
+        int[] loadedSelection = readIntArray(json, "partSelection");
+        for (int index : loadedSelection) {
+            if (index >= 0 && index < getPartCount()) selection.add(Integer.valueOf(index));
+        }
+        if (selection.isEmpty() && selected >= 0) selection.add(Integer.valueOf(selected));
+        if (selected < 0 && !selection.isEmpty()) selected = lastSelectionIndex();
         hovered = -1;
         isolate = readBoolean(json, "partIsolate", false);
         gestureActive = false;
@@ -719,6 +874,35 @@ final class LiveModelEditorParts {
             raw.faceAlpha = new byte[raw.anInt1778];
     }
 
+    synchronized String selectionAssetJson() {
+        if (source == null || selection.isEmpty()) return null;
+        ArrayList<Integer> exported = new ArrayList<Integer>();
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && !state.deleted) exported.add(index);
+        }
+        if (exported.isEmpty()) return null;
+        StringBuilder out = new StringBuilder();
+        out.append("{\n");
+        out.append("  \"format\": \"matrix3-live-model-selection\",\n");
+        out.append("  \"version\": 1,\n");
+        out.append("  \"sourceObjectId\": ").append(source.objectId).append(",\n");
+        out.append("  \"sourceObjectType\": ").append(source.objectType).append(",\n");
+        out.append("  \"sourceModelIds\": ").append(intArrayJson(source.modelIds)).append(",\n");
+        int[] exportedIndices = new int[exported.size()];
+        for (int i = 0; i < exported.size(); i++) exportedIndices[i] = exported.get(i).intValue();
+        out.append("  \"selectedPartIndices\": ").append(intArrayJson(exportedIndices)).append(",\n");
+        out.append("  \"parts\": [\n");
+        for (int i = 0; i < exported.size(); i++) {
+            int index = exported.get(i).intValue();
+            if (i > 0) out.append(",\n");
+            if (index < originals.size()) appendState(out, originals.get(index), index, false);
+            else appendState(out, duplicates.get(index - originals.size()), index - originals.size(), true);
+        }
+        out.append("\n  ]\n}\n");
+        return out.toString();
+    }
+
     private PartState selectedState() {
         return stateAt(selected);
     }
@@ -732,7 +916,56 @@ final class LiveModelEditorParts {
 
     private void pushUndo() {
         if (undo.size() >= MAX_UNDO) undo.removeFirst();
-        undo.addLast(new Snapshot(originals, duplicates, selected, isolate));
+        undo.addLast(new Snapshot(originals, duplicates, selected, selectionArray(), isolate));
+    }
+
+    private int[] selectionArray() {
+        int[] values = new int[selection.size()];
+        int i = 0;
+        for (Integer index : selection) values[i++] = index.intValue();
+        return values;
+    }
+
+    private int lastSelectionIndex() {
+        int last = -1;
+        for (Integer index : selection) last = index.intValue();
+        return last;
+    }
+
+    private boolean isHighlighted(int index) {
+        return hovered >= 0 ? hovered == index : selection.contains(Integer.valueOf(index));
+    }
+
+    private static int[] transformOf(PartState state) {
+        return new int[] { state.scaleX, state.scaleY, state.scaleZ,
+                state.moveX, state.moveY, state.moveZ, state.yaw };
+    }
+
+    private static int[] transformDelta(int[] from, int[] to) {
+        return new int[] {
+                to[0] - from[0], to[1] - from[1], to[2] - from[2],
+                to[3] - from[3], to[4] - from[4], to[5] - from[5],
+                normalizeSignedDegrees(to[6] - from[6])
+        };
+    }
+
+    private boolean applySelectionDelta(int[] delta, Map<Integer, int[]> starts) {
+        boolean changed = false;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null || state.deleted) continue;
+            int[] base = starts == null ? transformOf(state) : starts.get(index);
+            if (base == null) continue;
+            int[] values = sanitizeTransform(
+                    base[0] + delta[0], base[1] + delta[1], base[2] + delta[2],
+                    base[3] + delta[3], base[4] + delta[4], base[5] + delta[5],
+                    base[6] + delta[6]);
+            if (!sameTransform(state, values)) {
+                applyTransform(state, values);
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     private void markGeometryChanged() {
@@ -795,6 +1028,33 @@ final class LiveModelEditorParts {
         return matcher.find() ? Boolean.parseBoolean(matcher.group(1)) : fallback;
     }
 
+    private static int[] readIntArray(String text, String key) {
+        Matcher matcher = Pattern.compile("\\\"" + Pattern.quote(key)
+                + "\\\"\\s*:\\s*\\[([^]]*)\\]").matcher(text);
+        if (!matcher.find()) return new int[0];
+        String body = matcher.group(1).trim();
+        if (body.length() == 0) return new int[0];
+        String[] tokens = body.split(",");
+        int[] values = new int[tokens.length];
+        int count = 0;
+        for (String token : tokens) {
+            try { values[count++] = Integer.parseInt(token.trim()); }
+            catch (NumberFormatException ignored) {}
+        }
+        return count == values.length ? values : Arrays.copyOf(values, count);
+    }
+
+    private static String intArrayJson(int[] values) {
+        StringBuilder out = new StringBuilder("[");
+        if (values != null) {
+            for (int i = 0; i < values.length; i++) {
+                if (i > 0) out.append(", ");
+                out.append(values[i]);
+            }
+        }
+        return out.append(']').toString();
+    }
+
     private static int[] sanitizeTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
         return new int[] {
@@ -849,6 +1109,13 @@ final class LiveModelEditorParts {
     private static int normalizeDegrees(int value) {
         int normalized = value % 360;
         return normalized < 0 ? normalized + 360 : normalized;
+    }
+
+    private static int normalizeSignedDegrees(int value) {
+        int normalized = value % 360;
+        if (normalized > 180) normalized -= 360;
+        if (normalized < -180) normalized += 360;
+        return normalized;
     }
 
     static final class PickRaw {
@@ -919,12 +1186,14 @@ final class LiveModelEditorParts {
         final List<PartState> originals = new ArrayList<PartState>();
         final List<PartState> duplicates = new ArrayList<PartState>();
         final int selected;
+        final int[] selection;
         final boolean isolate;
         Snapshot(List<PartState> originalStates, List<PartState> duplicateStates,
-                int selected, boolean isolate) {
+                int selected, int[] selection, boolean isolate) {
             for (PartState state : originalStates) originals.add(state.copy());
             for (PartState state : duplicateStates) duplicates.add(state.copy());
             this.selected = selected;
+            this.selection = selection == null ? new int[0] : selection.clone();
             this.isolate = isolate;
         }
     }
