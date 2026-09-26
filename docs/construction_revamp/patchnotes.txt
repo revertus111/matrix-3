@@ -1561,3 +1561,11 @@
 - Manual gather orders now finish their explicit haul leg even if autonomous Haul is disabled.
 - Worker object/NPC orders now consume the player's vanilla interaction after dispatch, preventing self selection from pulling the player off an unrelated current activity.
 - Ground double-click group movement remains unchanged.
+
+
+2026-09-25 - Normal Rail degree-3/4 guard from runtime evidence
+- Runtime rail debug operations 7, 10 and 11 showed first-contact gestures authoring a new edge into an existing degree-2 corner. The logical node became degree 3 and the resolver correctly removed curve art in favor of the temporary straight junction placeholder, producing the malformed T/cross visuals seen in screenshots.
+- Ordinary Rail now refuses any NEW edge that would raise an existing rail node above degree 2. This applies both when dragging into an existing rail and when starting from the middle of an existing degree-2 rail.
+- Safe endpoint extension/connection remains supported when the resulting node is degree 2 or lower.
+- Junction/Crossing/Splitter remain the explicit owners for degree-3/4 topology; normal Rail no longer manufactures their placeholder behavior.
+- Fixed debug evidence ordering: contactStop is no longer reset before report generation, and RAIL_DEBUG now emits contactMode=CONNECTED or SPECIAL_NODE_BLOCKED.
