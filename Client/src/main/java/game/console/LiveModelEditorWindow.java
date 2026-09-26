@@ -146,6 +146,14 @@ public final class LiveModelEditorWindow {
     private final JLabel statusLabel = rsMuted("Right-click an object -> Dev > Edit Model Live.");
     private final JLabel partStatusLabel = rsGold("Mesh parts not ready.");
 
+    private final JTextField inspectorPosXField = inspectorField("POS_X");
+    private final JTextField inspectorPosYField = inspectorField("POS_Y");
+    private final JTextField inspectorPosZField = inspectorField("POS_Z");
+    private final JTextField inspectorYawField = inspectorField("YAW");
+    private final JTextField inspectorScaleXField = inspectorField("SCALE_X");
+    private final JTextField inspectorScaleYField = inspectorField("SCALE_Y");
+    private final JTextField inspectorScaleZField = inspectorField("SCALE_Z");
+
     private final DefaultListModel<String> partListModel = new DefaultListModel<String>();
     private final JList<String> partList = new JList<String>(partListModel);
 
@@ -197,6 +205,7 @@ public final class LiveModelEditorWindow {
     private boolean hasSource;
     private boolean suppressLiveRefresh;
     private boolean suppressPartRefresh;
+    private boolean suppressInspectorRefresh;
     private int hoveredListIndex = -1;
 
     private LiveModelEditorWindow() {
@@ -575,37 +584,7 @@ public final class LiveModelEditorWindow {
                 new JSpinner[] { moveSnapSpinner, angleSnapSpinner }));
         panel.add(Box.createVerticalStrut(6));
 
-        transformCards.setOpaque(false);
-
-        JPanel whole = new JPanel();
-        whole.setLayout(new BoxLayout(whole, BoxLayout.Y_AXIS));
-        whole.setOpaque(false);
-        whole.add(createSpinnerGrid(
-                new String[] { "S X", "S Y", "S Z" },
-                new JSpinner[] { scaleXSpinner, scaleYSpinner, scaleZSpinner }));
-        whole.add(Box.createVerticalStrut(4));
-        whole.add(createSpinnerGrid(
-                new String[] { "X", "Y", "Z" },
-                new JSpinner[] { moveXSpinner, moveYSpinner, moveZSpinner }));
-        whole.add(Box.createVerticalStrut(4));
-        whole.add(createSpinnerGrid(new String[] { "YAW" }, new JSpinner[] { yawSpinner }));
-
-        JPanel parts = new JPanel();
-        parts.setLayout(new BoxLayout(parts, BoxLayout.Y_AXIS));
-        parts.setOpaque(false);
-        parts.add(createSpinnerGrid(
-                new String[] { "S X", "S Y", "S Z" },
-                new JSpinner[] { partScaleXSpinner, partScaleYSpinner, partScaleZSpinner }));
-        parts.add(Box.createVerticalStrut(4));
-        parts.add(createSpinnerGrid(
-                new String[] { "X", "Y", "Z" },
-                new JSpinner[] { partMoveXSpinner, partMoveYSpinner, partMoveZSpinner }));
-        parts.add(Box.createVerticalStrut(4));
-        parts.add(createSpinnerGrid(new String[] { "YAW" }, new JSpinner[] { partYawSpinner }));
-
-        transformCards.add(whole, "WHOLE");
-        transformCards.add(parts, "PARTS");
-        panel.add(transformCards);
+        panel.add(createTransformInspector());
         panel.add(Box.createVerticalStrut(6));
 
         partList.setVisibleRowCount(8);
@@ -636,8 +615,9 @@ public final class LiveModelEditorWindow {
                 JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setBorder(BorderFactory.createLineBorder(RS_BORDER));
-        scroll.setPreferredSize(new Dimension(300, 180));
-        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 210));
+        scroll.setPreferredSize(new Dimension(300, 205));
+        scroll.setMinimumSize(new Dimension(180, 110));
+        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         scroll.getViewport().setBackground(RS_INPUT);
         scroll.getVerticalScrollBar().setUnitIncrement(18);
         panel.add(scroll);
@@ -1176,16 +1156,21 @@ public final class LiveModelEditorWindow {
     private void refreshTransformContext() {
         LiveModelEditorPreview.SelectionMode mode = LiveModelEditorPreview.getSelectionMode();
         if (mode == LiveModelEditorPreview.SelectionMode.WHOLE) {
-            transformCardLayout.show(transformCards, "WHOLE");
             transformContextLabel.setText("WHOLE");
             loadWholeEditors();
+        } else if (mode == LiveModelEditorPreview.SelectionMode.PART) {
+            int selected = LiveModelEditorPreview.getSelectedPart();
+            transformContextLabel.setText(selected >= 0 ? "PART " + selected : "PART");
+            if (selected >= 0) {
+                loadSelectedPartEditors();
+            }
         } else {
-            transformCardLayout.show(transformCards, "PARTS");
-            transformContextLabel.setText(mode + " x" + LiveModelEditorPreview.getSelectedPartCount());
+            transformContextLabel.setText("MULTI x" + LiveModelEditorPreview.getSelectedPartCount());
             if (LiveModelEditorPreview.getSelectedPart() >= 0) {
                 loadSelectedPartEditors();
             }
         }
+        syncTransformInspector();
     }
 
     private void setEditorCameraMode(ConstructionBuildCamera.CameraMode mode) {
@@ -1219,6 +1204,210 @@ public final class LiveModelEditorWindow {
         if (number(angleSnapSpinner) != angleStep) {
             angleSnapSpinner.setValue(Integer.valueOf(angleStep));
         }
+    }
+
+
+    private JPanel createTransformInspector() {
+        JPanel inspector = new JPanel();
+        inspector.setLayout(new BoxLayout(inspector, BoxLayout.Y_AXIS));
+        inspector.setOpaque(false);
+        inspector.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel position = new JLabel("POSITION");
+        position.setFont(RS_SMALL_FONT);
+        position.setForeground(RS_MUTED);
+        position.setAlignmentX(Component.LEFT_ALIGNMENT);
+        inspector.add(position);
+        inspector.add(Box.createVerticalStrut(2));
+        inspector.add(createInspectorAxisRow(
+                new String[] { "X", "Y", "Z" },
+                new JTextField[] { inspectorPosXField, inspectorPosYField, inspectorPosZField }));
+        inspector.add(Box.createVerticalStrut(5));
+
+        JLabel rotation = new JLabel("ROTATION");
+        rotation.setFont(RS_SMALL_FONT);
+        rotation.setForeground(RS_MUTED);
+        rotation.setAlignmentX(Component.LEFT_ALIGNMENT);
+        inspector.add(rotation);
+        inspector.add(Box.createVerticalStrut(2));
+        inspector.add(createInspectorAxisRow(
+                new String[] { "YAW" },
+                new JTextField[] { inspectorYawField }));
+        inspector.add(Box.createVerticalStrut(5));
+
+        JLabel scale = new JLabel("SCALE");
+        scale.setFont(RS_SMALL_FONT);
+        scale.setForeground(RS_MUTED);
+        scale.setAlignmentX(Component.LEFT_ALIGNMENT);
+        inspector.add(scale);
+        inspector.add(Box.createVerticalStrut(2));
+        inspector.add(createInspectorAxisRow(
+                new String[] { "X", "Y", "Z" },
+                new JTextField[] { inspectorScaleXField, inspectorScaleYField, inspectorScaleZField }));
+
+        installInspectorField(inspectorPosXField);
+        installInspectorField(inspectorPosYField);
+        installInspectorField(inspectorPosZField);
+        installInspectorField(inspectorYawField);
+        installInspectorField(inspectorScaleXField);
+        installInspectorField(inspectorScaleYField);
+        installInspectorField(inspectorScaleZField);
+        return inspector;
+    }
+
+    private JPanel createInspectorAxisRow(String[] labels, JTextField[] fields) {
+        JPanel row = new JPanel(new GridLayout(1, labels.length, 5, 0));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        for (int i = 0; i < labels.length; i++) {
+            JPanel cell = new JPanel(new BorderLayout(4, 0));
+            cell.setOpaque(false);
+            JLabel label = new JLabel(labels[i]);
+            label.setFont(RS_SMALL_FONT);
+            label.setForeground(RS_GOLD_DIM);
+            cell.add(label, BorderLayout.WEST);
+            cell.add(fields[i], BorderLayout.CENTER);
+            row.add(cell);
+        }
+        return row;
+    }
+
+    private void installInspectorField(final JTextField field) {
+        field.addActionListener(e -> {
+            commitInspectorField(field);
+            returnViewportFocusSoon();
+        });
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                field.putClientProperty("editorStartValue", field.getText());
+                field.selectAll();
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                commitInspectorField(field);
+            }
+        });
+        field.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "cancelInspectorEdit");
+        field.getActionMap().put("cancelInspectorEdit", new AbstractAction() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Object start = field.getClientProperty("editorStartValue");
+                if (start instanceof String) {
+                    field.setText((String) start);
+                }
+                syncTransformInspector();
+                returnViewportFocusSoon();
+            }
+        });
+    }
+
+    private void commitInspectorField(JTextField field) {
+        if (suppressInspectorRefresh || field == null) return;
+
+        String key = String.valueOf(field.getClientProperty("transformKey"));
+        String text = field.getText() == null ? "" : field.getText().trim();
+        int[] transform = LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.WHOLE
+                ? LiveModelEditorPreview.getWholeTransform()
+                : LiveModelEditorPreview.getSelectedPartTransform();
+
+        try {
+            if (key.startsWith("SCALE_")) {
+                double ratio = Double.parseDouble(text);
+                int internal = clamp((int) Math.round(ratio * 100.0), 10, 400);
+                if ("SCALE_X".equals(key)) transform[0] = internal;
+                else if ("SCALE_Y".equals(key)) transform[1] = internal;
+                else transform[2] = internal;
+            } else {
+                int value = Integer.parseInt(text);
+                if ("POS_X".equals(key)) transform[3] = clamp(value, -4096, 4096);
+                else if ("POS_Y".equals(key)) transform[4] = clamp(value, -4096, 4096);
+                else if ("POS_Z".equals(key)) transform[5] = clamp(value, -4096, 4096);
+                else if ("YAW".equals(key)) transform[6] = normalizeInspectorYaw(value);
+            }
+
+            applyInspectorTransform(transform);
+            field.putClientProperty("editorStartValue", null);
+            statusLabel.setText("Applied exact " + key.replace('_', ' ').toLowerCase() + ".");
+        } catch (NumberFormatException ex) {
+            Object start = field.getClientProperty("editorStartValue");
+            if (start instanceof String) {
+                field.setText((String) start);
+            }
+            statusLabel.setText("Invalid transform value; previous value restored.");
+        }
+        syncTransformInspector();
+    }
+
+    private void applyInspectorTransform(int[] transform) {
+        if (transform == null || transform.length < 7) return;
+        if (LiveModelEditorPreview.getSelectionMode() == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            suppressLiveRefresh = true;
+            try {
+                scaleXSpinner.setValue(Integer.valueOf(transform[0]));
+                scaleYSpinner.setValue(Integer.valueOf(transform[1]));
+                scaleZSpinner.setValue(Integer.valueOf(transform[2]));
+                moveXSpinner.setValue(Integer.valueOf(transform[3]));
+                moveYSpinner.setValue(Integer.valueOf(transform[4]));
+                moveZSpinner.setValue(Integer.valueOf(transform[5]));
+                yawSpinner.setValue(Integer.valueOf(transform[6]));
+            } finally {
+                suppressLiveRefresh = false;
+            }
+            refreshPreview();
+            return;
+        }
+
+        if (LiveModelEditorPreview.getSelectedPart() >= 0
+                && LiveModelEditorPreview.setSelectedPartTransform(
+                        transform[0], transform[1], transform[2],
+                        transform[3], transform[4], transform[5], transform[6])) {
+            loadSelectedPartEditors();
+            refreshPartList();
+        }
+    }
+
+    private void syncTransformInspector() {
+        if (suppressInspectorRefresh) return;
+        int[] transform = LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.WHOLE
+                ? LiveModelEditorPreview.getWholeTransform()
+                : LiveModelEditorPreview.getSelectedPartTransform();
+
+        suppressInspectorRefresh = true;
+        try {
+            setInspectorText(inspectorScaleXField, formatScaleRatio(transform[0]));
+            setInspectorText(inspectorScaleYField, formatScaleRatio(transform[1]));
+            setInspectorText(inspectorScaleZField, formatScaleRatio(transform[2]));
+            setInspectorText(inspectorPosXField, Integer.toString(transform[3]));
+            setInspectorText(inspectorPosYField, Integer.toString(transform[4]));
+            setInspectorText(inspectorPosZField, Integer.toString(transform[5]));
+            setInspectorText(inspectorYawField, Integer.toString(transform[6]));
+        } finally {
+            suppressInspectorRefresh = false;
+        }
+    }
+
+    private static void setInspectorText(JTextField field, String value) {
+        if (field == null || field.isFocusOwner()) return;
+        if (!value.equals(field.getText())) {
+            field.setText(value);
+        }
+    }
+
+    private static String formatScaleRatio(int internalPercent) {
+        return String.format(java.util.Locale.US, "%.2f", internalPercent / 100.0);
+    }
+
+    private static int normalizeInspectorYaw(int value) {
+        int normalized = value % 360;
+        if (normalized > 359) normalized -= 360;
+        if (normalized < -359) normalized += 360;
+        return normalized;
     }
 
     private JPanel createSpinnerGrid(String[] names, JSpinner[] spinners) {
@@ -1355,6 +1544,7 @@ public final class LiveModelEditorWindow {
         refreshPartList();
         loadSelectedPartEditors();
         updateTargetLabels();
+        syncTransformInspector();
         statusLabel.setText("Resumed existing edit session for " + objectName + " #" + objectId + ".");
     }
 
@@ -1491,6 +1681,9 @@ public final class LiveModelEditorWindow {
                     if (key.getID() != KeyEvent.KEY_PRESSED) {
                         return;
                     }
+                    if (isEditorTextEntryFocused()) {
+                        return;
+                    }
                     int code = key.getKeyCode();
                     if (code == KeyEvent.VK_ESCAPE) {
                         key.consume();
@@ -1580,6 +1773,7 @@ public final class LiveModelEditorWindow {
         updateTargetLabels();
         refreshPreview();
         initializeParts();
+        syncTransformInspector();
         statusLabel.setText("Live editor ready for " + objectName + " #" + objectId + ".");
     }
 
@@ -1765,12 +1959,14 @@ public final class LiveModelEditorWindow {
             }
             refreshPreview();
             loadWholeEditors();
+            syncTransformInspector();
             statusLabel.setText("Reset whole-model transform.");
             return;
         }
         if (LiveModelEditorPreview.resetSelectedPartTransforms()) {
             loadSelectedPartEditors();
             refreshPartList();
+            syncTransformInspector();
             statusLabel.setText("Reset selected part transform(s).");
         }
     }
@@ -2053,6 +2249,34 @@ public final class LiveModelEditorWindow {
             }
         });
         return button;
+    }
+
+
+    private static JTextField inspectorField(String key) {
+        JTextField field = new JTextField();
+        field.putClientProperty("transformKey", key);
+        field.setFont(RS_SMALL_FONT);
+        field.setForeground(RS_TEXT);
+        field.setBackground(RS_INPUT);
+        field.setCaretColor(RS_GOLD);
+        field.setHorizontalAlignment(JTextField.RIGHT);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(RS_BORDER),
+                BorderFactory.createEmptyBorder(2, 4, 2, 4)));
+        field.setPreferredSize(new Dimension(72, 24));
+        field.setMinimumSize(new Dimension(48, 24));
+        return field;
+    }
+
+    private static boolean isEditorTextEntryFocused() {
+        Component focus = java.awt.KeyboardFocusManager
+                .getCurrentKeyboardFocusManager().getFocusOwner();
+        if (focus == null) return false;
+        if (focus instanceof JTextField) return true;
+        for (Component current = focus; current != null; current = current.getParent()) {
+            if (current instanceof JSpinner || current instanceof JComboBox) return true;
+        }
+        return false;
     }
 
     private static void styleSpinner(JSpinner spinner) {
