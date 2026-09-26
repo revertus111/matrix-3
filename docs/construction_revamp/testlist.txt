@@ -1087,3 +1087,15 @@ Bank examine identifier encoding compile gate — 2026-09-25
 [x] Source: ButtonHandler interface 762 component 128 and component 7 ACTION_BUTTON8 paths both call sendExamineInventory(int).
 [ ] Eclipse: Matrix3-Server rebuild shows no sendExamineÃŽnventory/sendExamineInventory undefined-method errors in ButtonHandler.
 [ ] Runtime regression: examine an inventory-side item through the bank interface; item examine text still displays normally.
+
+
+Phase 3 / Bundle 3.3 — Sawmill workstation evidence (2026-09-25)
+[x] Source: Object Explorer can capture the real live scene around the player with a configurable 1-12 tile assembly radius.
+[x] Source: each captured object exports ID, name, scene type/rotation/slot, world tile, relative X/Y, footprint size, model IDs, object animation IDs and an animated YES/NO marker.
+[x] Source: capture status summarizes unique animation-bearing object IDs; no sawmill semantics are hardcoded.
+[ ] Runtime: stand at/inside the real RuneScape sawmill, set Research tag to SAWMILL, choose a radius that contains the full machine, and click Capture Live Assembly Evidence.
+[ ] Runtime: open Client/data/tools/object_assemblies/assembly_*_SAWMILL.tsv and confirm conveyor object 46298 is present with models 49717,49718.
+[ ] Runtime: correlate every animated=YES row with the visible moving machinery and identify the actual saw object plus its animation sequence ID(s).
+[ ] Evidence: upload the SAWMILL TSV plus one screenshot/video of the captured machine so relative offsets, rotations and visual roles can be classified.
+[ ] Gate: keep Wooden workbench 13704 as the processing workstation until the complete sawmill layout and animated saw object are verified.
+[ ] Follow-up: promote only the verified component layout into a settlement sawmill prefab/workstation, then rerun the Bundle 3.2 worker processing gate against it.
