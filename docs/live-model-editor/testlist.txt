@@ -95,7 +95,7 @@ Bundle 2.3B - true world pick + mouse manipulation
 Bundle 2.4A - Construction material replacement
 [ ] Select a Smelter side-bar component in-world and choose a Construction material from the replacement picker.
 [ ] Click Replace Part and confirm the stock bar disappears while the replacement geometry appears at the same logical part location.
-[ ] Use G/R/S to fine-align the replacement without affecting the rest of the Smelter.
+[ ] Use G/R/V to fine-align the replacement without affecting the rest of the Smelter.
 [ ] Restore and confirm the untouched source bar returns.
 [ ] Select a repeated bar and click Replace Matches; confirm geometrically matching repeated bars change together while unrelated components stay stock.
 [ ] Test at least Wooden fence 13450/type 0, Floor decoration 13684/type 22, Door 13344/type 0, Bed 14872/type 10 and note any catalog entry whose current provisional object art is unsuitable.
@@ -123,7 +123,7 @@ Bundle 2.5 - professional selection/editor usability
 [ ] Multi mode [3]: click several world components and confirm selection accumulates; Ctrl+click a selected component and confirm it toggles out.
 [ ] Multi mode: Ctrl/Shift-select several rows in the list and confirm the same set highlights in-world.
 [ ] Ctrl+A / Select All selects all non-deleted components; Clear removes the part selection.
-[ ] Whole mode [1]: confirm the full editable object highlights and G/R/S drags edit the whole clone rather than one component.
+[ ] Whole mode [1]: confirm the full editable object highlights and G/R/V drags edit the whole clone rather than one component.
 [ ] Move a part/group by dragging right/up and confirm the geometry follows the pointer direction rather than moving in the opposite direction.
 [ ] Multi-select at least two parts; move them together and confirm relative offsets are preserved and Ctrl+Z restores the entire drag in one step.
 [ ] Multi-select at least two parts; duplicate, hide and delete them and confirm each action applies to the full set with one undo step.
@@ -144,7 +144,7 @@ Bundle 2.6 - shared RTS authoring camera
 [ ] Scroll the mouse wheel over the game canvas; RTS camera must zoom in/out and the model must remain editable.
 [ ] Use WASD/arrows to pan the RTS pivot while editing; player must remain stationary.
 [ ] Use Q/E and confirm keyboard yaw orbit still works after MMB orbit was added.
-[ ] LMB select/drag one component after moving the camera and confirm G/R/S editing still owns LMB exclusively.
+[ ] LMB select/drag one component after moving the camera and confirm G/R/V editing still owns LMB exclusively.
 [ ] Open editor while an existing Construction RTS camera is active, then Exit Edit; existing Construction camera must remain active.
 [ ] Open editor from normal gameplay, then Exit Edit/Escape; the editor-started detached camera must close and normal camera control return.
 [ ] Reopen editor in the same loaded scene and confirm the accepted RTS yaw/pitch/pivot/zoom view resumes.
@@ -216,7 +216,7 @@ Editor Workspace black-screen regression
 
 Manual HUD visibility / black-screen recovery
 [ ] Restart Client + Server and open Live Model Editor: world and normal HUD remain visible initially.
-[ ] H tab exists and structural components 8/12 are absent.
+[ ] C / Camera/View exposes manual HUD visibility controls and structural components 8/12 are absent.
 [ ] Hide one selected root slot; only that slot changes. Show Selected restores it.
 [ ] Multi-select Hide/Show works.
 [ ] Hide Mounted HUD can be immediately reversed with Restore All.
@@ -231,3 +231,22 @@ Camera/View HUD consolidation
 [ ] Hide Mounted HUD / Restore All still work from Camera/View.
 [ ] Select HUD root rows and use Hide Selected / Show Selected.
 [ ] Combined Camera/View drawer fits the normal compact editor size without a whole-panel horizontal scrollbar.
+
+
+Bundle 2.7C-A - Free/Snap transform foundation
+[ ] Eclipse/Java 8 clean-build Client.
+[ ] Open Conveyor belt 46298 / models 49717+49718 in Live Model Editor.
+[ ] Part + Move + Free with SNAP OFF: normal LMB drag is continuous/free.
+[ ] Start a drag with SNAP OFF, then hold Ctrl: affected move values snap to the configured Move Snap increment.
+[ ] Release Ctrl before mouse-up: the same gesture immediately returns to free movement.
+[ ] Toggle SNAP ON: normal drag remains snapped without holding Ctrl.
+[ ] While SNAP ON, hold Ctrl during the active drag: movement temporarily becomes free; release Ctrl and snapping resumes.
+[ ] Change Move Snap from 16 to another value and confirm the next snapped move uses the new increment.
+[ ] Rotate with SNAP OFF + Ctrl and confirm yaw uses the configured Angle Snap increment.
+[ ] Rotate with SNAP ON and confirm normal drag uses Angle Snap; Ctrl temporarily bypasses it.
+[ ] Scale remains free/unsnapped in 2.7C-A.
+[ ] In Free-axis Move, X/Z snap while untouched Y does not jump.
+[ ] X/Y/Z constrained Move snaps only the constrained axis.
+[ ] Multi-select at least two parts and confirm snapped movement preserves relative offsets.
+[ ] Ctrl+Z after a Part/Multi snapped drag restores the whole drag in one undo step.
+[ ] Regression: G/R/V, F/X/Y/Z, camera WASD/MMB/wheel, Hide/Dup/Delete and project save/load remain functional.
