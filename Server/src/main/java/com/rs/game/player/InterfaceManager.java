@@ -63,7 +63,7 @@ public class InterfaceManager {
 	private static final int[] MENU_SLOT_COMPONENTS_ = { 3, 5, 7, 9 };
 
 	private static final int[] DEV_WORKSPACE_ROOT_COMPONENTS = {
-		3, 5, 7, 8, 9, 13, 14, 18, 29, 30, 35, 39, 42, 46, 57, 68, 78, 87, 96,
+		3, 5, 7, 9, 13, 14, 18, 29, 30, 35, 39, 42, 46, 57, 68, 78, 87, 96,
 		105, 114, 123, 132, 143, 154, 165, 176, 187, 198, 209, 219, 230, 241, 252,
 		263, 274, 285, 296, 307, 318, 333, 337, 345, 349, 366, 368, 374, 378, 382,
 		386, 388, 395, 402, 403, 405, 410, 416, 421, 427, 428, 430, 466, 471, 475,
@@ -112,14 +112,14 @@ public class InterfaceManager {
 		if (!devWorkspaceHudHidden) {
 			devWorkspaceHiddenRootComponents.clear();
 			for (int componentId : DEV_WORKSPACE_ROOT_COMPONENTS) {
-				if (componentId != GAME_SCREEN_COMPONENT_ID)
+				if (!isDevWorkspaceStructuralComponent(componentId))
 					devWorkspaceHiddenRootComponents.add(componentId);
 			}
 			for (Integer parentUID : openedinterfaces.keySet()) {
 				if (parentUID == null || (parentUID >>> 16) != rootInterface)
 					continue;
 				int componentId = parentUID & 0xffff;
-				if (componentId != GAME_SCREEN_COMPONENT_ID)
+				if (!isDevWorkspaceStructuralComponent(componentId))
 					devWorkspaceHiddenRootComponents.add(componentId);
 			}
 		}
@@ -146,6 +146,11 @@ public class InterfaceManager {
 
 	public boolean isDevWorkspaceHudHidden() {
 		return devWorkspaceHudHidden;
+	}
+
+	private boolean isDevWorkspaceStructuralComponent(int componentId) {
+		return componentId == GAME_SCREEN_COMPONENT_ID
+				|| componentId == SCREEN_BACKGROUND_COMPONENT_ID;
 	}
 
 	public void sendExpandOptionsInterface(int id) {
@@ -570,7 +575,7 @@ public class InterfaceManager {
 			player.getPackets().sendInterface(clickThrought, parentUID, interfaceId);
 
 		if (devWorkspaceHudHidden && parentInterfaceId == rootInterface
-				&& parentInterfaceComponentId != GAME_SCREEN_COMPONENT_ID) {
+				&& !isDevWorkspaceStructuralComponent(parentInterfaceComponentId)) {
 			devWorkspaceHiddenRootComponents.add(parentInterfaceComponentId);
 			player.getPackets().sendHideIComponent(
 					rootInterface, parentInterfaceComponentId, true);

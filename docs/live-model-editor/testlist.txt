@@ -207,3 +207,9 @@ Bundle 2.7 compact-workspace follow-up
 [ ] Part list and Rebuild/Isolate/Show All/Hide/Dup/Delete/Undo remain in EDIT.
 [ ] Trigger a NIS layout refresh while editor is open; hidden HUD chrome must not stay resurrected.
 [ ] Exit with X and Escape; normal NIS HUD/chrome returns.
+
+Editor Workspace black-screen regression
+[ ] Open Live Model Editor: the 3D world must remain visible; the client must not become a black canvas.
+[ ] Root component 8 (screen background) and component 12 (game/world viewport) remain visible for the entire edit session.
+[ ] Minimap/chat/backpack/actionbar/ribbon HUD chrome still disappears.
+[ ] Exit Editor and confirm normal HUD restoration.

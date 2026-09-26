@@ -319,7 +319,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 **Active bundle:** Bundle 2.7 - Professional Editor Shell (`ACTIVE / NEEDS TEST`) — persistent root HUD + merged EDIT workspace implemented.
 
-**Next action:** runtime-test Conveyor 46298 with persistent root-1477 HUD suppression and the merged EDIT drawer: confirm chat/minimap/backpack/actionbar/ribbon frames disappear, selection + transform controls are together without tab switching, and Exit/Escape restores the normal HUD.
+**Next action:** runtime-test Conveyor 46298 after the root-background protection fix: confirm the 3D world remains visible while chat/minimap/backpack/actionbar/ribbon disappear, then verify merged EDIT controls and Exit/Escape HUD restoration.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

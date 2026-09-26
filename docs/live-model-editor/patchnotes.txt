@@ -119,3 +119,8 @@
 - Live Model Editor reasserts editorhud enter at a low 1-second cadence so NIS scripts cannot permanently resurrect minimap/chat/backpack/actionbar chrome.
 - Merged Parts + Transform into one larger EDIT drawer. Whole/Part/Multi, All/Clear/Reset, Move/Rotate/Scale, Free/X/Y/Z, numeric transforms, component list and common part actions are now together.
 - Simplified rail to E/M/C/O/S and enlarged default editor workspace from 304x560 to 390x720 (minimum 350x560).
+
+2026-09-25
+- Fixed Editor Workspace black-screen regression from the persistent root-HUD pass.
+- Root component 8 is Matrix3 SCREEN_BACKGROUND_COMPONENT_ID and is structural to the live scene; it is no longer included in the explicit developer-HUD hide set.
+- Added a shared structural-component guard so both the initial root snapshot and later root-interface mounts can never hide component 8 (screen background) or component 12 (game/world viewport).
