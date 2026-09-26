@@ -1467,8 +1467,9 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Construction palette Erase mode and guarded Clear Builds control are IMPLEMENTED / NEEDS RUNTIME TEST.
 - Erase owns exact clicked settlement tile origins through server-authoritative SettlementState removal; Clear requires a second click within 3.5 seconds before invoking clearPlayerBuilds().
 - RTS scene-visibility focus correction is IMPLEMENTED / NEEDS RUNTIME TEST. It re-anchors Class523.method6240 visibility focus to the detached RTS camera rather than the stationary player.
-- RTS minimap heading remains UNRESOLVED. A targeted source search did not establish the current Matrix3 minimap-angle owner, so no speculative obfuscated-field patch was made.
-- Consolidated next runtime gate: erase one normal build, erase one rail component, verify Clear requires confirmation then clears persistent builds, exit/re-enter to confirm removals persist, and pan RTS far enough to check the prior fog/scene wall.
+- RTS minimap navigation is IMPLEMENTED / NEEDS RUNTIME TEST. verified-static: Class319 action 23 movement type 1 is Matrix3's minimap-walk variant and already carries the resolved local destination. ConstructionBuildCamera now consumes only that variant in RTS, moves the camera pivot to the clicked tile while preserving yaw/pitch/orbit distance, and reuses Matrix3's existing destination-marker state as the camera-focus marker.
+- RTS minimap heading remains separately UNRESOLVED. The vanilla minimap angle owner is still not verified, so the patch does not guess an obfuscated angle field or rotate the minimap/marker.
+- Consolidated next runtime gate: erase one normal build, erase one rail component, verify Clear requires confirmation then clears persistent builds, exit/re-enter to confirm removals persist, pan RTS far enough to check the prior fog/scene wall, then click several minimap locations and confirm the camera focus marker/pivot moves without moving the player.
 
 
 ## Rail diagnostic safety freeze — 2026-09-24
