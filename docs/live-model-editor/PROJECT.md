@@ -319,7 +319,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 **Active bundle:** Bundle 2.7 - Professional Editor Shell (`ACTIVE / NEEDS TEST`).
 
-**Next action:** runtime-test the combined Bundle 2.7 shell/fix pass on Conveyor belt 46298: normal root-1477 HUD suppression/restoration, FREE camera S/backward, and view-relative free-axis Whole/Part/Multi dragging at north/east/south/west camera headings.
+**Next action:** runtime-test the combined Bundle 2.7 shell/fix pass on Conveyor belt 46298: normal root-1477 HUD suppression/restoration, FREE camera S/backward, view-relative free-axis Whole/Part/Multi dragging at north/east/south/west headings, and the new part-render crash containment against tiny conveyor components.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

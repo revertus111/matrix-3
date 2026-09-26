@@ -69,6 +69,8 @@ public final class LiveModelEditorPreview {
     private static int cachedPickRevision = Integer.MIN_VALUE;
     private static Model[] cachedPickModels = new Model[0];
     private static int[] cachedPickIndices = new int[0];
+    private static int lastPartRenderFaultRevision = Integer.MIN_VALUE;
+    private static String lastPartRenderFault = "";
 
     private static volatile TransformMode transformMode = TransformMode.MOVE;
     private static volatile AxisConstraint axisConstraint = AxisConstraint.FREE;
@@ -616,29 +618,39 @@ public final class LiveModelEditorPreview {
             Class174 ground, Class174 upperGround, int sceneX, int sceneY, int sceneZ,
             int rotation) {
         int revision = modelRevision * 31 + PARTS.getRevision();
-        if (cachedRenderer != renderer || cachedRevision != revision || cachedMainModel == null) {
-            Class159 mainRaw = PARTS.buildMainRaw();
-            cachedMainModel = mainRaw == null ? null
-                    : buildDefinitionModel(renderer, definition, definition, mainRaw, rotation,
-                            ground, upperGround, sceneX, sceneY, sceneZ);
+        if (cachedRenderer != renderer || cachedRevision != revision) {
+            cachedMainModel = null;
+            cachedDuplicateModels = new Model[0];
+            cachedReplacementModels = new Model[0];
 
-            List<Class159> duplicateRaws = PARTS.buildDuplicateRaws();
-            cachedDuplicateModels = new Model[duplicateRaws.size()];
-            for (int i = 0; i < duplicateRaws.size(); i++) {
-                cachedDuplicateModels[i] = buildDefinitionModel(renderer, definition, definition,
-                        duplicateRaws.get(i), rotation,
-                        ground, upperGround, sceneX, sceneY, sceneZ);
-            }
-
-            List<LiveModelEditorParts.ReplacementRaw> replacements = PARTS.buildReplacementRaws();
-            cachedReplacementModels = new Model[replacements.size()];
-            for (int i = 0; i < replacements.size(); i++) {
-                LiveModelEditorParts.ReplacementRaw replacement = replacements.get(i);
-                ObjectDefinitions material = definitionFor(replacement.objectId);
-                cachedReplacementModels[i] = material == null ? null
-                        : buildDefinitionModel(renderer, material, definition,
-                                replacement.raw, rotation,
+            try {
+                Class159 mainRaw = PARTS.buildMainRaw();
+                cachedMainModel = mainRaw == null ? null
+                        : safeBuildDefinitionModel("main", -1, renderer,
+                                definition, definition, mainRaw, rotation,
                                 ground, upperGround, sceneX, sceneY, sceneZ);
+
+                List<Class159> duplicateRaws = PARTS.buildDuplicateRaws();
+                cachedDuplicateModels = new Model[duplicateRaws.size()];
+                for (int i = 0; i < duplicateRaws.size(); i++) {
+                    cachedDuplicateModels[i] = safeBuildDefinitionModel(
+                            "duplicate", i, renderer, definition, definition,
+                            duplicateRaws.get(i), rotation,
+                            ground, upperGround, sceneX, sceneY, sceneZ);
+                }
+
+                List<LiveModelEditorParts.ReplacementRaw> replacements = PARTS.buildReplacementRaws();
+                cachedReplacementModels = new Model[replacements.size()];
+                for (int i = 0; i < replacements.size(); i++) {
+                    LiveModelEditorParts.ReplacementRaw replacement = replacements.get(i);
+                    ObjectDefinitions material = definitionFor(replacement.objectId);
+                    cachedReplacementModels[i] = material == null ? null
+                            : safeBuildDefinitionModel("replacement", replacement.partIndex,
+                                    renderer, material, definition, replacement.raw, rotation,
+                                    ground, upperGround, sceneX, sceneY, sceneZ);
+                }
+            } catch (RuntimeException ex) {
+                recordPartRenderFault("authoring-raw", -1, revision, ex);
             }
 
             cachedRenderer = renderer;
@@ -676,8 +688,9 @@ public final class LiveModelEditorPreview {
                 LiveModelEditorParts.PickRaw pick = picks.get(i);
                 ObjectDefinitions material = definitionFor(pick.materialObjectId);
                 if (material == null) material = sourceDefinition;
-                cachedPickModels[i] = buildDefinitionModel(renderer, material, sourceDefinition,
-                        pick.raw, rotation, ground, upperGround, sceneX, sceneY, sceneZ);
+                cachedPickModels[i] = safeBuildDefinitionModel("pick", pick.partIndex,
+                        renderer, material, sourceDefinition, pick.raw, rotation,
+                        ground, upperGround, sceneX, sceneY, sceneZ);
                 cachedPickIndices[i] = pick.partIndex;
             }
             cachedPickRenderer = renderer;
@@ -706,6 +719,95 @@ public final class LiveModelEditorPreview {
         }
     }
 
+    private static Model safeBuildDefinitionModel(String stage, int partIndex,
+            Class106 renderer, ObjectDefinitions materialDefinition,
+            ObjectDefinitions spatialDefinition, Class159 raw, int rotation,
+            Class174 ground, Class174 upperGround,
+            int sceneX, int sceneY, int sceneZ) {
+        String invalid = validateRawForRenderer(raw);
+        if (invalid != null) {
+            recordPartRenderFault(stage + "-invalid-" + invalid,
+                    partIndex, modelRevision * 31 + PARTS.getRevision(), null);
+            return null;
+        }
+        try {
+            return buildDefinitionModel(renderer, materialDefinition, spatialDefinition,
+                    raw, rotation, ground, upperGround, sceneX, sceneY, sceneZ);
+        } catch (RuntimeException ex) {
+            recordPartRenderFault(stage, partIndex,
+                    modelRevision * 31 + PARTS.getRevision(), ex);
+            return null;
+        }
+    }
+
+    private static String validateRawForRenderer(Class159 raw) {
+        if (raw == null) return "null";
+        int vertices = raw.anInt1791;
+        int faces = raw.anInt1778;
+        if (vertices <= 0 || faces < 0) return "counts";
+        if (raw.anIntArray1782 == null || raw.anIntArray1782.length < vertices
+                || raw.anIntArray1777 == null || raw.anIntArray1777.length < vertices
+                || raw.anIntArray1797 == null || raw.anIntArray1797.length < vertices)
+            return "vertex-tables";
+        if (raw.aShortArray1786 == null || raw.aShortArray1786.length < faces
+                || raw.aShortArray1787 == null || raw.aShortArray1787.length < faces
+                || raw.aShortArray1789 == null || raw.aShortArray1789.length < faces
+                || raw.faceColours == null || raw.faceColours.length < faces)
+            return "face-tables";
+
+        int maxVertex = -1;
+        for (int face = 0; face < faces; face++) {
+            int a = raw.aShortArray1786[face] & 0xffff;
+            int b = raw.aShortArray1787[face] & 0xffff;
+            int c = raw.aShortArray1789[face] & 0xffff;
+            if (a >= vertices || b >= vertices || c >= vertices)
+                return "face-" + face + "-vertex";
+            if (a > maxVertex) maxVertex = a;
+            if (b > maxVertex) maxVertex = b;
+            if (c > maxVertex) maxVertex = c;
+        }
+
+        int usedVertices = maxVertex + 1;
+        if (usedVertices <= 0 && faces > 0) return "used-vertices";
+        if (raw.anInt1775 < usedVertices || raw.anInt1775 > vertices)
+            raw.anInt1775 = usedVertices;
+
+        if (raw.faceAlpha != null && raw.faceAlpha.length < faces) return "face-alpha";
+        if (raw.faceTextures != null && raw.faceTextures.length < faces) return "face-textures";
+        if (raw.faceTextureIndexes != null && raw.faceTextureIndexes.length < faces)
+            return "face-texture-index";
+        if (raw.aByteArray1792 != null && raw.aByteArray1792.length < faces)
+            return "face-render-type";
+        if (raw.aByteArray1799 != null && raw.aByteArray1799.length < faces)
+            return "face-priority";
+        if (raw.anIntArray1780 != null && raw.anIntArray1780.length < faces)
+            return "face-skin";
+        if (raw.anIntArray1813 != null && raw.anIntArray1813.length < vertices)
+            return "vertex-skin";
+        if (raw.aShortArray1781 != null && raw.aShortArray1781.length < vertices)
+            return "vertex-mask";
+        if (raw.aShortArray1800 != null && raw.aShortArray1800.length < faces)
+            return "face-mask";
+        return null;
+    }
+
+    private static void recordPartRenderFault(String stage, int partIndex,
+            int revision, RuntimeException ex) {
+        String type = ex == null ? "validation" : ex.getClass().getSimpleName();
+        String message = "PART RENDER SKIP stage=" + stage
+                + " part=" + partIndex + " rev=" + revision + " cause=" + type;
+        status = message;
+        if (lastPartRenderFaultRevision != revision
+                || !message.equals(lastPartRenderFault)) {
+            lastPartRenderFaultRevision = revision;
+            lastPartRenderFault = message;
+            System.err.println("[LiveModelEditor] " + message);
+            if (ex != null)
+                System.err.println("[LiveModelEditor] "
+                        + ex.getClass().getName() + ": " + ex.getMessage());
+        }
+    }
+
     private static Model buildDefinitionModel(Class106 renderer,
             ObjectDefinitions materialDefinition, ObjectDefinitions spatialDefinition,
             Class159 raw, int rotation, Class174 ground, Class174 upperGround,
@@ -722,8 +824,11 @@ public final class LiveModelEditorPreview {
         else if (rot == 2) model.method1412(8192);
         else if (rot == 3) model.method1412(12288);
 
-        if (materialDefinition.aShortArray5613 != null) {
-            for (int i = 0; i < materialDefinition.aShortArray5613.length; i++) {
+        if (materialDefinition.aShortArray5613 != null
+                && materialDefinition.aShortArray5621 != null) {
+            int recolours = Math.min(materialDefinition.aShortArray5613.length,
+                    materialDefinition.aShortArray5621.length);
+            for (int i = 0; i < recolours; i++) {
                 short replacement = materialDefinition.aShortArray5621[i];
                 if (materialDefinition.aByteArray5615 != null
                         && i < materialDefinition.aByteArray5615.length) {
@@ -733,8 +838,11 @@ public final class LiveModelEditorPreview {
                 model.method1393(materialDefinition.aShortArray5613[i], replacement);
             }
         }
-        if (materialDefinition.aShortArray5618 != null) {
-            for (int i = 0; i < materialDefinition.aShortArray5618.length; i++)
+        if (materialDefinition.aShortArray5618 != null
+                && materialDefinition.aShortArray5617 != null) {
+            int retextures = Math.min(materialDefinition.aShortArray5618.length,
+                    materialDefinition.aShortArray5617.length);
+            for (int i = 0; i < retextures; i++)
                 model.method1494(materialDefinition.aShortArray5618[i],
                         materialDefinition.aShortArray5617[i]);
         }

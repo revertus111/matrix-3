@@ -188,3 +188,11 @@ Bundle 2.7 runtime-fix gate — HUD / FREE backward / camera-relative MOVE
 [ ] X/Y/Z constraints stay explicit world-axis transforms and do not rotate with camera.
 [ ] Switch RTS <-> FREE and repeat one free-axis MOVE in each.
 [ ] Legacy regression: if tested in Legacy, Exit restores normal Legacy visibility.
+
+Live Model Editor render-crash containment — IMPLEMENTED / NEEDS RUNTIME TEST
+[ ] Reopen Conveyor belt 46298 / models 49717+49718 and enter Part/Multi editing.
+[ ] Hover/select tiny 1-face/3-vertex parts and confirm the client no longer crashes.
+[ ] Move, isolate, duplicate and undo the previously selected conveyor components.
+[ ] If a malformed component is encountered, console may log [LiveModelEditor] PART RENDER SKIP with stage/part/revision, but the game loop must continue.
+[ ] Verify valid main conveyor geometry remains rendered even when a bad pick/duplicate raw is skipped.
+[ ] Confirm a new geometry edit revision retries model construction rather than permanently disabling part rendering.

@@ -103,3 +103,12 @@
 - Fixed FREE camera backward conflict: plain S is no longer consumed as Scale. Scale moved to V so WASD remains camera movement.
 - Added ConstructionBuildCamera.mapScreenDragToGround(...) using the actual detached camera view vector. Free-axis Whole/Part/Multi MOVE now follows screen direction at any RTS/FREE camera heading instead of assuming fixed world X/Z.
 - Explicit X/Y/Z constraints remain world-axis transforms; only Free-axis planar MOVE is camera-relative.
+
+2026-09-25
+- Hardened Live Model Editor part rendering after a runtime ArrayIndexOutOfBoundsException surfaced in renderPartModels while editing Conveyor 46298.
+- Added a renderer-facing Class159 validation gate for vertex/face table sizes and face vertex references before editor-generated main/duplicate/replacement/pick raws reach OpenGL.
+- Normalizes Class159.anInt1775 to the actual used-vertex range when its decoded/generated value is inconsistent but recoverable.
+- Added per-stage safe model construction for main, duplicate, replacement and world-pick models. A malformed individual authoring raw is now skipped and logged instead of crashing the entire Matrix3 client.
+- Part-model cache no longer retries a failed null main model every frame for the same revision; the next editor geometry revision retries cleanly.
+- Added defensive recolor/retexture array-length bounds in the custom definition-model builder.
+- Crash diagnostics are rate-limited per editor revision and identify stage/part/revision.
