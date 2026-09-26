@@ -24,6 +24,9 @@ public final class LiveModelEditorPreview {
     private static final int GIZMO_AXIS_PIXELS = 56;
     private static final int GIZMO_HIT_RADIUS = 7;
     private static final int GIZMO_PIVOT_RADIUS = 7;
+    private static final int ROTATE_RING_RADIUS = 46;
+    private static final int ROTATE_RING_HIT_TOLERANCE = 7;
+    private static final int ROTATE_RING_SEGMENTS = 48;
     private static final int GIZMO_X_COLOR = 0xffe05555;
     private static final int GIZMO_Y_COLOR = 0xff55c86a;
     private static final int GIZMO_Z_COLOR = 0xff5689e8;
@@ -102,6 +105,7 @@ public final class LiveModelEditorPreview {
     private static volatile GizmoScreenState gizmoScreen = GizmoScreenState.hidden();
     private static double dragGizmoDirX;
     private static double dragGizmoDirY;
+    private static double dragRotateStartAngle;
     private static int[] dragStartTransform = new int[] { 100, 100, 100, 0, 0, 0, 0 };
     private static int[] dragStartWholeTransform = new int[] { 100, 100, 100, 0, 0, 0, 0 };
 
@@ -318,7 +322,7 @@ public final class LiveModelEditorPreview {
         pointerX = x;
         pointerY = y;
         if (!dragging && !draggingWhole) {
-            gizmoHoveredAxis = hitMoveGizmo(x, y);
+            gizmoHoveredAxis = hitTransformGizmo(x, y);
         }
     }
 
@@ -332,19 +336,23 @@ public final class LiveModelEditorPreview {
     public static boolean beginPointerDrag(int x, int y, boolean additive, boolean toggle) {
         pointerMoved(x, y);
 
-        AxisConstraint gizmoHit = hitMoveGizmo(x, y);
+        AxisConstraint gizmoHit = hitTransformGizmo(x, y);
         if (gizmoHit != null && canTransformCurrentSelection()) {
             dragStartX = x;
             dragStartY = y;
             gizmoActiveAxis = gizmoHit;
             axisConstraint = gizmoHit;
-            captureGizmoDragDirection(gizmoHit);
+            if (transformMode == TransformMode.MOVE) {
+                captureGizmoDragDirection(gizmoHit);
+            } else if (transformMode == TransformMode.ROTATE) {
+                captureRotateDragStart(x, y);
+            }
 
             if (selectionMode == SelectionMode.WHOLE) {
                 draggingWhole = true;
                 dragging = false;
                 dragStartWholeTransform = getWholeTransform();
-                status = "GIZMO MOVE WHOLE axis=" + axisConstraint;
+                status = "GIZMO " + transformMode + " WHOLE axis=" + axisConstraint;
                 invalidateVisualModels();
                 return true;
             }
@@ -353,7 +361,7 @@ public final class LiveModelEditorPreview {
             dragging = PARTS.beginGesture();
             draggingWhole = false;
             if (dragging) {
-                status = "GIZMO MOVE " + selectionMode + " "
+                status = "GIZMO " + transformMode + " " + selectionMode + " "
                         + PARTS.getSelectedCount() + " part(s) axis=" + axisConstraint;
                 invalidateVisualModels();
                 return true;
@@ -411,9 +419,14 @@ public final class LiveModelEditorPreview {
         int dy = y - dragStartY;
         int amountX = -dx * 4;
         int amountY = dy * 4;
-        int gizmoAxisAmount = gizmoActiveAxis != null
+        int gizmoAxisAmount = transformMode == TransformMode.MOVE
+                && gizmoActiveAxis != null
                 && gizmoActiveAxis != AxisConstraint.FREE
                 ? (int) Math.round((dx * dragGizmoDirX + dy * dragGizmoDirY) * 4.0)
+                : 0;
+        int gizmoYawDelta = transformMode == TransformMode.ROTATE
+                && gizmoActiveAxis == AxisConstraint.Y
+                ? rotateGizmoDeltaDegrees(x, y)
                 : 0;
         int[] cameraGroundDrag = transformMode == TransformMode.MOVE
                 && axisConstraint == AxisConstraint.FREE
@@ -442,7 +455,7 @@ public final class LiveModelEditorPreview {
                     mz += amountY;
                 }
             } else if (transformMode == TransformMode.ROTATE) {
-                yaw -= dx;
+                yaw += gizmoActiveAxis == AxisConstraint.Y ? gizmoYawDelta : -dx;
             } else {
                 int delta = (-dx + dy) / 2;
                 if (axisConstraint == AxisConstraint.X) sx += delta;
@@ -458,15 +471,19 @@ public final class LiveModelEditorPreview {
             boolean snapActive = transformSnapEnabled ? !snapModifier : snapModifier;
             if (snapActive) {
                 if (transformMode == TransformMode.MOVE) {
-                    if (axisConstraint == AxisConstraint.X) mx = snapToStep(mx, moveSnapStep);
-                    else if (axisConstraint == AxisConstraint.Y) my = snapToStep(my, moveSnapStep);
-                    else if (axisConstraint == AxisConstraint.Z) mz = snapToStep(mz, moveSnapStep);
+                    if (axisConstraint == AxisConstraint.X)
+                        mx = snapFromDragStart(dragStartWholeTransform[3], mx, moveSnapStep);
+                    else if (axisConstraint == AxisConstraint.Y)
+                        my = snapFromDragStart(dragStartWholeTransform[4], my, moveSnapStep);
+                    else if (axisConstraint == AxisConstraint.Z)
+                        mz = snapFromDragStart(dragStartWholeTransform[5], mz, moveSnapStep);
                     else {
-                        mx = snapToStep(mx, moveSnapStep);
-                        mz = snapToStep(mz, moveSnapStep);
+                        mx = snapFromDragStart(dragStartWholeTransform[3], mx, moveSnapStep);
+                        mz = snapFromDragStart(dragStartWholeTransform[5], mz, moveSnapStep);
                     }
                 } else if (transformMode == TransformMode.ROTATE) {
-                    yaw = snapToStep(yaw, angleSnapDegrees);
+                    yaw = snapYawFromDragStart(
+                            dragStartWholeTransform[6], yaw, angleSnapDegrees);
                 }
             }
 
@@ -509,7 +526,7 @@ public final class LiveModelEditorPreview {
                 mz += amountY;
             }
         } else if (transformMode == TransformMode.ROTATE) {
-            yaw -= dx;
+            yaw += gizmoActiveAxis == AxisConstraint.Y ? gizmoYawDelta : -dx;
         } else {
             int delta = (-dx + dy) / 2;
             if (axisConstraint == AxisConstraint.X) sx += delta;
@@ -525,15 +542,18 @@ public final class LiveModelEditorPreview {
         boolean snapActive = transformSnapEnabled ? !snapModifier : snapModifier;
         if (snapActive) {
             if (transformMode == TransformMode.MOVE) {
-                if (axisConstraint == AxisConstraint.X) mx = snapToStep(mx, moveSnapStep);
-                else if (axisConstraint == AxisConstraint.Y) my = snapToStep(my, moveSnapStep);
-                else if (axisConstraint == AxisConstraint.Z) mz = snapToStep(mz, moveSnapStep);
+                if (axisConstraint == AxisConstraint.X)
+                    mx = snapFromDragStart(dragStartTransform[3], mx, moveSnapStep);
+                else if (axisConstraint == AxisConstraint.Y)
+                    my = snapFromDragStart(dragStartTransform[4], my, moveSnapStep);
+                else if (axisConstraint == AxisConstraint.Z)
+                    mz = snapFromDragStart(dragStartTransform[5], mz, moveSnapStep);
                 else {
-                    mx = snapToStep(mx, moveSnapStep);
-                    mz = snapToStep(mz, moveSnapStep);
+                    mx = snapFromDragStart(dragStartTransform[3], mx, moveSnapStep);
+                    mz = snapFromDragStart(dragStartTransform[5], mz, moveSnapStep);
                 }
             } else if (transformMode == TransformMode.ROTATE) {
-                yaw = snapToStep(yaw, angleSnapDegrees);
+                yaw = snapYawFromDragStart(dragStartTransform[6], yaw, angleSnapDegrees);
             }
         }
 
@@ -553,7 +573,7 @@ public final class LiveModelEditorPreview {
             invalidateGeometryModels();
         }
         gizmoActiveAxis = null;
-        gizmoHoveredAxis = hitMoveGizmo(pointerX, pointerY);
+        gizmoHoveredAxis = hitTransformGizmo(pointerX, pointerY);
     }
 
     public static boolean replaceSelectedWithConstructionPiece(
@@ -761,6 +781,8 @@ public final class LiveModelEditorPreview {
                         state.yX, state.yY, AxisConstraint.Y, GIZMO_Y_COLOR);
                 drawGizmoAxis(renderer, state.centerX, state.centerY,
                         state.zX, state.zY, AxisConstraint.Z, GIZMO_Z_COLOR);
+            } else if (transformMode == TransformMode.ROTATE) {
+                drawRotateGizmo(renderer, state);
             }
 
             renderer.method1725(state.centerX - 4, state.centerY - 4,
@@ -839,7 +861,7 @@ public final class LiveModelEditorPreview {
             return;
         }
 
-        if (hitMoveGizmo(pointerX, pointerY) != null) {
+        if (hitTransformGizmo(pointerX, pointerY) != null) {
             if (worldHoveredPart != -1) worldHoveredPart = -1;
             if (PARTS.hover(-1)) invalidateVisualModels();
             return;
@@ -1115,7 +1137,7 @@ public final class LiveModelEditorPreview {
                 xEnd[0], xEnd[1], yEnd[0], yEnd[1], zEnd[0], zEnd[1],
                 xEnd[2] != 0, yEnd[2] != 0, zEnd[2] != 0);
         if (!dragging && !draggingWhole && pointerInside) {
-            gizmoHoveredAxis = hitMoveGizmo(pointerX, pointerY);
+            gizmoHoveredAxis = hitTransformGizmo(pointerX, pointerY);
         }
     }
 
@@ -1224,6 +1246,86 @@ public final class LiveModelEditorPreview {
             renderer.method1730(x1 + 1, y1, x2 + 1, y2, color, 1);
         }
         renderer.method1725(x2 - 4, y2 - 4, 9, 9, color, 1);
+    }
+
+
+    private static void drawRotateGizmo(Class106 renderer, GizmoScreenState state) {
+        int color = gizmoActiveAxis == AxisConstraint.Y ? GIZMO_ACTIVE_COLOR
+                : gizmoHoveredAxis == AxisConstraint.Y
+                        ? GIZMO_HOVER_COLOR : GIZMO_Y_COLOR;
+        int[] previous = rotateRingPoint(state, 0.0);
+        for (int i = 1; i <= ROTATE_RING_SEGMENTS; i++) {
+            double angle = Math.PI * 2.0 * i / ROTATE_RING_SEGMENTS;
+            int[] next = rotateRingPoint(state, angle);
+            renderer.method1730(previous[0], previous[1], next[0], next[1], color, 1);
+            previous = next;
+        }
+    }
+
+    private static int[] rotateRingPoint(GizmoScreenState state, double angle) {
+        double xvx = state.xValid ? state.xX - state.centerX : ROTATE_RING_RADIUS;
+        double xvy = state.xValid ? state.xY - state.centerY : 0.0;
+        double zvx = state.zValid ? state.zX - state.centerX : 0.0;
+        double zvy = state.zValid ? state.zY - state.centerY : ROTATE_RING_RADIUS;
+
+        double xLength = Math.sqrt(xvx * xvx + xvy * xvy);
+        double zLength = Math.sqrt(zvx * zvx + zvy * zvy);
+        if (xLength < 1.0) {
+            xvx = ROTATE_RING_RADIUS;
+            xvy = 0.0;
+            xLength = ROTATE_RING_RADIUS;
+        }
+        if (zLength < 1.0) {
+            zvx = 0.0;
+            zvy = ROTATE_RING_RADIUS;
+            zLength = ROTATE_RING_RADIUS;
+        }
+
+        double xScale = ROTATE_RING_RADIUS / xLength;
+        double zScale = ROTATE_RING_RADIUS / zLength;
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        return new int[] {
+                (int) Math.round(state.centerX + cos * xvx * xScale + sin * zvx * zScale),
+                (int) Math.round(state.centerY + cos * xvy * xScale + sin * zvy * zScale)
+        };
+    }
+
+    private static AxisConstraint hitTransformGizmo(int x, int y) {
+        if (transformMode == TransformMode.MOVE) return hitMoveGizmo(x, y);
+        if (transformMode == TransformMode.ROTATE) return hitRotateGizmo(x, y);
+        return null;
+    }
+
+    private static AxisConstraint hitRotateGizmo(int x, int y) {
+        GizmoScreenState state = gizmoScreen;
+        if (!state.visible) return null;
+
+        int[] previous = rotateRingPoint(state, 0.0);
+        double best = Double.MAX_VALUE;
+        for (int i = 1; i <= ROTATE_RING_SEGMENTS; i++) {
+            double angle = Math.PI * 2.0 * i / ROTATE_RING_SEGMENTS;
+            int[] next = rotateRingPoint(state, angle);
+            double distance = pointSegmentDistance(
+                    x, y, previous[0], previous[1], next[0], next[1]);
+            if (distance < best) best = distance;
+            previous = next;
+        }
+        return best <= ROTATE_RING_HIT_TOLERANCE ? AxisConstraint.Y : null;
+    }
+
+    private static void captureRotateDragStart(int x, int y) {
+        GizmoScreenState state = gizmoScreen;
+        dragRotateStartAngle = Math.atan2(y - state.centerY, x - state.centerX);
+    }
+
+    private static int rotateGizmoDeltaDegrees(int x, int y) {
+        GizmoScreenState state = gizmoScreen;
+        double current = Math.atan2(y - state.centerY, x - state.centerX);
+        double delta = current - dragRotateStartAngle;
+        while (delta > Math.PI) delta -= Math.PI * 2.0;
+        while (delta < -Math.PI) delta += Math.PI * 2.0;
+        return (int) Math.round(Math.toDegrees(delta));
     }
 
     private static AxisConstraint hitMoveGizmo(int x, int y) {
@@ -1402,6 +1504,22 @@ public final class LiveModelEditorPreview {
     private static int snapToStep(int value, int step) {
         if (step <= 1) return value;
         return Math.round((float) value / (float) step) * step;
+    }
+
+    private static int snapFromDragStart(int start, int current, int step) {
+        return start + snapToStep(current - start, step);
+    }
+
+    private static int snapYawFromDragStart(int start, int current, int step) {
+        int delta = normalizeSignedDegrees(current - start);
+        return normalizeDegrees(start + snapToStep(delta, step));
+    }
+
+    private static int normalizeSignedDegrees(int value) {
+        int normalized = value % 360;
+        if (normalized > 180) normalized -= 360;
+        if (normalized < -180) normalized += 360;
+        return normalized;
     }
 
     private static int clamp(int value, int min, int max) {
