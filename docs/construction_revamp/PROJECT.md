@@ -1300,7 +1300,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Object Explorer + AssetStudioCapture live-assembly evidence export. The capture preserves exact scene ID/type/rotation/slot/tile/relative offsets/size and enriches each component with model IDs and decoded object animation IDs. Wooden workbench 13704 remains untouched as the working provisional processing station.
 
-**Next checklist item:** Runtime-test the worker-control UX follow-up first: right-click Settler -> Jobs, verify single-worker and multi-selection job replacement, then leave Process Wood OFF and click Wooden workbench 13704 with selected worker(s). Confirm the explicit order runs storage -> clicked workbench -> PROCESSING -> exactly Wood -2 / Planks +1 with +18 Crafting XP and does not redirect the player's current action. After that, verify autonomous Process Wood via Jobs, Pause/Resume and exit/re-entry persistence. Bundle 3.3 sawmill evidence capture remains the parallel asset-mapping task.
+**Next checklist item:** In one runtime session, verify the new soft worker-collision rule first: route 3+ workers through each other/narrow traffic, then double-click one shared ground destination and confirm they finish on separate nearby tiles rather than stacking. Repeat with storage/resource/workbench traffic and confirm walls/objects still block normally. Then finish the remaining worker-control checks: single-worker Jobs targeting, manual tree order with jobs OFF, player-current-action preservation, +18 Crafting XP, Pause/Resume and exit/re-entry persistence. Bundle 3.3 sawmill evidence capture remains the parallel asset-mapping task.
 
 **Files/systems already inspected:**
 
@@ -1630,14 +1630,17 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 
 ## Phase 3 worker-control UX follow-up — Jobs overlay + explicit object orders — 2026-09-25
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
+- Status: PARTIALLY RUNTIME VERIFIED; soft worker collision/destination separation IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
 - Added a player-facing Worker -> Jobs world context action. Right-clicking one live settlement worker opens an in-game Allowed Jobs checklist; right-clicking a worker inside the committed RTS selection applies the checked set to the whole selected worker group.
 - The overlay replaces the complete Allowed Jobs set atomically through existing SettlementWorkerState policy. Presets are removed from the normal Con Revamp UI; legacy preset helpers remain internal compatibility code only.
 - Explicit RTS object orders are now separate from autonomous Allowed Jobs. Clicking a starter resource with workers selected issues the existing manual gather order; clicking Wooden workbench 13704 issues a one-cycle manual saw-planks order to the exact clicked workstation even when Process Wood is OFF.
 - Manual gather now completes its explicit haul leg even when autonomous Haul is OFF, then returns to normal Allowed Jobs policy.
 - Worker object/NPC task orders consume the vanilla Matrix3 interaction after the worker order is accepted, even when self is part of the RTS selection. This preserves the player's current activity instead of walking the player to/changing them onto the worker target.
 - Ground double-click movement ownership is unchanged: self can still move with the selected group when deliberately included.
-- Runtime gate: verify single-worker Jobs apply, multi-selection Jobs apply, manual tree/workbench click with corresponding Allowed Job OFF, and player-current-action preservation while workers receive object orders.
+- Runtime evidence: user screenshot confirmed the Jobs context/overlay opens, a 3-worker committed selection applies one checked job set to all three, and a selected-worker Wooden workbench order executes the live 2 Wood -> 1 Plank transaction.
+- Movement follow-up: SettlementWorkerNpc now uses Matrix3's existing intelligent NPC traversal so other NPCs do not cancel an in-progress route; static wall/object clipping remains authoritative.
+- SettlementInstance now owns transient destination/approach reservations. Paths are intentionally not reserved, but final ground/storage/home/resource/workstation approach tiles are unique across active settlement workers and avoid live settlement NPC/cart occupancy.
+- Runtime gate: verify workers can cross through one another in a narrow path, 3+ workers ordered to one ground point resolve to separate nearby tiles, resource/storage/workstation traffic does not leave workers stacked, static obstacles still block normally, then finish the remaining Jobs/manual-order/player-action regression checks.
 
 
 ## Rail normal-tool special-node guard — 2026-09-25
