@@ -1650,3 +1650,13 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Junction/Crossing/Splitter remain the explicit future owners of degree-3/4 topology.
 - Rail debug contact state is now captured before reset and reports contactMode=CONNECTED or contactMode=SPECIAL_NODE_BLOCKED instead of incorrectly writing contactStop=none after a clamp.
 - Resume Here: rebuild the same loop from runtime debug op 5, then repeat the op 7/op 10/op 11 contact gestures. Existing curves must remain unchanged and the new ordinary Rail stub must stop adjacent to the protected degree-2 node. Then test extension from a true degree-1 endpoint; that must still connect/curve normally.
+
+
+## Rail sharp-bend footprint guard — 2026-09-26
+- IMPLEMENTED / NEEDS RUNTIME TEST under standing SAP AAA.
+- User runtime confirmed the prior normal-Rail degree-3/4 guard works.
+- New failure class: tightly packed consecutive 90-degree turns can be logically valid but physically invalid because each accepted three-object curve owns the corner plus the first tile on both legs. Two nearby curves can therefore claim the same physical tile and interleave into the malformed S/hairpin geometry shown in runtime evidence.
+- Rail authoring now simulates the prospective new edge against the current logical graph + active gesture. If a newly formed curve footprint overlaps any other accepted curve footprint, the gesture stops at the last safe tile before the conflicting turn is authored.
+- This is footprint-driven rather than a hardcoded arbitrary distance, so valid compact turns remain allowed whenever the accepted composite objects do not physically collide.
+- Debug now records bendStop=x,y when the sharp-turn guard fires.
+- Resume Here: recreate the tight S/hairpin from the 2026-09-26 screenshot. Normal Rail must clamp before the overlapping curve forms while ordinary wide corners and loop corners remain unchanged.
