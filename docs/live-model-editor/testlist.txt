@@ -268,3 +268,25 @@ Bundle 2.7C-B - contextual live Transform Inspector
 [ ] During viewport drag with no field focused, inspector values update live without requiring a click/refresh.
 [ ] Part list uses remaining vertical drawer space and remains usable on the compact layout.
 [ ] Regression: Save/Load JSON still uses the unchanged internal integer transform representation.
+
+
+Bundle 2.7C-C - native Move gizmo + pivot
+[ ] Eclipse/Java 8 clean-build Client after LiveModelEditorParts / Preview / Class578 changes.
+[ ] Open Conveyor belt 46298 and switch to Move [G]; a center pivot plus X/Y/Z handles render directly over the editable model.
+[ ] Part mode: select several different components and confirm the pivot relocates to each selected component center.
+[ ] Multi mode: select two or more separated components and confirm the pivot appears at their shared selection center.
+[ ] Whole mode: pivot uses the object's/model's origin and remains attached while whole translation changes.
+[ ] Orbit and zoom the RTS camera; gizmo stays anchored to the model while axis handles remain approximately fixed screen length.
+[ ] Hover X/Y/Z handles: only the nearest handle highlights yellow.
+[ ] Press/drag an axis handle: active handle turns white and movement follows that visible handle direction in both positive and negative directions.
+[ ] Drag the center pivot: Free movement uses the existing camera-relative ground-plane mapping.
+[ ] SNAP OFF: start an axis-handle drag, hold Ctrl, and confirm temporary snapping works without changing Multi selection.
+[ ] SNAP ON: axis-handle drag snaps normally; holding Ctrl temporarily returns to free movement.
+[ ] X/Y/Z snapped gizmo drags affect only the selected axis.
+[ ] Part/Multi: Ctrl+Z after one long gizmo drag restores the full drag in one undo operation.
+[ ] Move pointer over a gizmo handle sitting on top of model geometry; gizmo owns the hit and component hover does not steal the click.
+[ ] Switch Rotate [R] or Scale [V]: Move axis handles disappear; pivot may remain as the shared transform anchor until those gizmos land.
+[ ] Confirm no black screen, renderer flicker, scene corruption or repeated GIZMO RENDER SKIP spam.
+[ ] Regression: direct model dragging away from the gizmo still works with G/R/V + F/X/Y/Z.
+[ ] Regression: inspector values update continuously during gizmo movement.
+[ ] If pivot/axes are visibly offset on Conveyor 46298, record whether the object definition uses model mirroring or terrain contouring before changing projection math.
