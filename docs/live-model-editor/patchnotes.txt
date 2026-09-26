@@ -93,3 +93,6 @@
 - Editor buttons and part-list selection now return keyboard focus to the Matrix3 Canvas; MMB world press explicitly reacquires Canvas focus. Exact numeric fields remain focusable.
 - Preserved resize, selection, isolate/show/hide, duplicate/delete/undo, replacement, source controls, project save/load and Save Selection export.
 - Dedicated gameplay-HUD suppression is deferred to Bundle 2.7B until Matrix3's authoritative root-interface seam is verified; no hardcoded masks were added.
+
+2026-09-25
+- Bundle 2.7A focus follow-up: Load Project and Save Selection file-chooser actions are marked to retain editor/desktop focus while their modal dialogs are active; ordinary editor buttons still hand focus back to the Matrix3 Canvas.
