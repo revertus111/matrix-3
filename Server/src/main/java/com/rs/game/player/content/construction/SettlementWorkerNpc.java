@@ -73,6 +73,13 @@ public final class SettlementWorkerNpc extends NPC {
         this.workerId = state.getWorkerId();
         setName(state.getName());
         setRandomWalk(0);
+        /*
+         * Settlement workers use soft unit collision: Matrix3 still clips
+         * walls/objects, but other NPCs do not invalidate an in-progress path.
+         * SettlementInstance separately reserves final approach/rest tiles so
+         * workers do not permanently stack.
+         */
+        setIntelligentRouteFinder(true);
         setCantInteract(true);
         setNoDistanceCheck(true);
         setForceAgressive(false);
@@ -754,28 +761,45 @@ public final class SettlementWorkerNpc extends NPC {
         if (target == null) {
             return false;
         }
-        if (isWithinInteractionRange(target, interactionRange)) {
+
+        /*
+         * Do not reserve the path itself. Workers may cross through one another
+         * while travelling. Only the final stand/interaction tile is unique.
+         */
+        WorldTile destination =
+                settlement.reserveWorkerDestination(workerId, target, interactionRange);
+        if (destination == null) {
+            resetWalkSteps();
+            statusDetail = noPathReason + " No free worker approach tile.";
+            return false;
+        }
+
+        if (getPlane() == destination.getPlane()
+                && getX() == destination.getX()
+                && getY() == destination.getY()) {
             resetWalkSteps();
             return true;
         }
+
         if (!hasWalkSteps()) {
-            boolean routed = calcFollow(target, 25, true, true);
+            boolean routed = calcFollow(destination, 25, true, true);
             if (!routed) {
+                settlement.releaseWorkerDestination(workerId);
                 statusDetail = noPathReason;
                 return false;
             }
-            /*
-             * calcFollow(...) may legitimately return success without queuing
-             * steps when its own follow heuristics consider a target reached.
-             * Settlement gathering must not treat that as arrival unless the
-             * worker is physically inside the explicit interaction range.
-             */
-            if (!hasWalkSteps() && !isWithinInteractionRange(target, interactionRange)) {
+            if (!hasWalkSteps()
+                    && (getPlane() != destination.getPlane()
+                            || getX() != destination.getX()
+                            || getY() != destination.getY())) {
+                settlement.releaseWorkerDestination(workerId);
                 statusDetail = noPathReason;
                 return false;
             }
         }
-        return isWithinInteractionRange(target, interactionRange);
+        return getPlane() == destination.getPlane()
+                && getX() == destination.getX()
+                && getY() == destination.getY();
     }
 
     private boolean isWithinInteractionRange(WorldTile target, int range) {
