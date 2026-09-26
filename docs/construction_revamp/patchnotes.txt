@@ -1538,3 +1538,10 @@
 - Construction eraser now delegates known rail tiles to RailRoutePreview. The logical rail node + incident authored edges are removed first, the complete physical before/after rail sets are resolved, and the existing atomic onRailNetworkDelta owner reconciles persistent server objects.
 - Curve composite clicks are mapped back to their logical corner when the clicked physical component is on an offset tile.
 - Non-rail build tiles continue using the existing server-authoritative itemBrowser settlement erasetile path.
+
+2026-09-25 - RTS minimap camera navigation
+- verified-static: Class319 action 23 movement type 1 is Matrix3's minimap-walk variant; Construction RTS now consumes that already-resolved local destination before IncomingPacket.method4108 can send player movement.
+- Minimap clicks retarget ConstructionBuildCamera's RTS pivot to the clicked tile center while preserving current yaw, fixed pitch and orbit distance; camera pan velocity is cleared and the player remains stationary.
+- RTS reuses Matrix3's existing minimap destination-marker state as a layout-safe camera-focus marker; keyboard pan keeps it synchronized with the pivot and prior marker state is restored when RTS ownership ends.
+- Early minimap clicks queue until RTS orientation/pivot initialization completes.
+- Vanilla minimap heading remains unchanged; rotating RTS heading indication is deferred until the actual minimap render/angle owner is verified.
