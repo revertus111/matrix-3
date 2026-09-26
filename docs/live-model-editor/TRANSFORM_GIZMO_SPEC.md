@@ -274,9 +274,10 @@ Required:
 - [x] Render visible pivot.
 - [x] Render Move gizmo.
 - [x] Render supported yaw Rotate gizmo.
-- [ ] Render Scale gizmo.
+- [x] Render Scale gizmo.
 - [x] Move-gizmo hit testing / hover / active state.
 - [x] Rotate-ring hit testing / hover / active state.
+- [x] Scale-gizmo hit testing / hover / active state.
 - [x] Whole / Part / Multi gizmo pivot positioning.
 - [x] Multi shared-pivot yaw rotation.
 - [ ] Compact active transform readout near gizmo.
@@ -388,8 +389,10 @@ VERIFIED:
 
 FAILED:
 - Move snap did not produce the intended snapped interaction.
+- Scale viewport interaction was also reported nonfunctional; the user clarified this immediately after the initial runtime report.
 
-Bundle 2.7C-D therefore treats the pre-D snap implementation as superseded rather than marking it verified.
+Bundle 2.7C-D supersedes the failed Snap path.
+Bundle 2.7C-E supersedes the failed pre-gizmo Scale interaction.
 
 ### 2.7C-D — corrected snapping + yaw Rotate gizmo
 
@@ -413,3 +416,23 @@ Implemented / NEEDS BATCHED RUNTIME TEST:
 Deferred unchanged:
 - Scale snapping remains deferred.
 - Full pitch/roll rotation remains unsupported until the Matrix3 authoring model gains real XYZ rotation state.
+
+
+### 2.7C-E — repaired Scale interaction + native Scale gizmo
+
+Implemented / NEEDS BATCHED RUNTIME TEST:
+
+- Scale mode now has an explicit native viewport gizmo instead of relying on an invisible direct-drag-only interaction.
+- X / Y / Z scale handles reuse the same projected Whole/Part/Multi pivot and basis as Move.
+- Axis endpoints use larger square handles to distinguish Scale from Move.
+- The center pivot is a larger uniform-scale handle.
+- Hover uses yellow and active drag uses white, consistent with Move/Rotate.
+- Scale hit testing owns the pointer before mesh component picking, matching the established gizmo-first input rule.
+- Axis Scale projects mouse motion onto the visible axis-handle direction.
+- Center uniform Scale is intentionally screen-relative: right/up grows, left/down shrinks.
+- The fallback direct-scale drag direction was normalized to the same right/up-grow convention.
+- Part/Multi scaling continues through the existing beginGesture/endGesture transaction so one drag remains one undo record.
+- Scale values continue to clamp to the existing 0.10x–4.00x internal range (10–400 percent).
+- The inspector continues to display those values as decimal ratios (1.00, 1.25, etc.).
+- Scale snapping remains deliberately deferred; the Snap controls currently apply only to Move and Rotate.
+- Multi Scale continues to apply the same scale delta to each selected part while preserving their existing relative center offsets. Shared-pivot spatial expansion/contraction is not added implicitly in this bundle.
