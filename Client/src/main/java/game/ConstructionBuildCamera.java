@@ -232,6 +232,50 @@ public final class ConstructionBuildCamera {
     }
 
     /**
+     * Convert a screen-space drag into a ground-plane delta using the actual
+     * detached camera look vector. Screen-right follows camera-right and
+     * screen-down follows camera-backward. At the accepted north reference this
+     * reduces to the editor's previous -X/+Z mapping.
+     */
+    public static int[] mapScreenDragToGround(int deltaX, int deltaY, int unitsPerPixel) {
+        if (!active || Class24.aClass411_Sub1_158 == null || unitsPerPixel <= 0) {
+            return null;
+        }
+        try {
+            Class423_Sub2 positionController =
+                    (Class423_Sub2) Class24.aClass411_Sub1_158.method4990((byte) -37);
+            Class658_Sub2 lookController =
+                    (Class658_Sub2) Class24.aClass411_Sub1_158.method4991(-589573040);
+            Class240 position = positionController.method5159((byte) -54);
+            Class240 viewDirection = getViewDirection(lookController, position);
+            if (viewDirection == null) {
+                return null;
+            }
+
+            float planarLength = (float) Math.sqrt(
+                    viewDirection.aFloat2653 * viewDirection.aFloat2653
+                            + viewDirection.aFloat2657 * viewDirection.aFloat2657);
+            if (planarLength < 0.001F) {
+                return null;
+            }
+
+            float forwardX = viewDirection.aFloat2653 / planarLength;
+            float forwardZ = viewDirection.aFloat2657 / planarLength;
+            float rightX = forwardZ;
+            float rightZ = -forwardX;
+            float scale = unitsPerPixel;
+
+            int worldX = Math.round(deltaX * scale * rightX
+                    - deltaY * scale * forwardX);
+            int worldZ = Math.round(deltaX * scale * rightZ
+                    - deltaY * scale * forwardZ);
+            return new int[] { worldX, worldZ };
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    /**
      * VERIFIED-STATIC: Class319 action 23 movement type 1 is Matrix3's minimap
      * walk variant. Its local X/Y are already resolved before packet creation.
      * RTS consumes only that variant and converts the destination into a camera

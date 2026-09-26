@@ -174,3 +174,17 @@ Bundle 2.7B - editor workspace HUD suppression
 [ ] Verify authoritative Matrix3 root-interface/HUD owner first.
 [ ] Suppress normal gameplay HUD during editor workspace and restore exact prior state on exit.
 [ ] Do not use opaque rectangle masks or hardcoded screen coordinates.
+
+Bundle 2.7 runtime-fix gate — HUD / FREE backward / camera-relative MOVE
+[ ] Open Live Model Editor from normal NIS gameplay: minimap, chat, backpack, action bar/ribbon and other mounted HUD surfaces disappear while the 3D world remains visible.
+[ ] Confirm the Swing editor rail/drawer remains visible while root-1477 gameplay HUD is suppressed.
+[ ] Exit with X, reopen, then Exit with Escape: normal HUD returns with prior NIS visibility/layout behavior.
+[ ] FREE camera: W moves forward and S moves backward from the same heading; S must not switch Scale or do nothing.
+[ ] Scale mode now uses V; Ctrl+S and Ctrl+Shift+S save behavior remains unchanged.
+[ ] Free-axis MOVE at north: part follows right/left/up/down screen drag.
+[ ] Rotate camera east and repeat: screen-right still moves the part right on screen.
+[ ] Repeat at south and west headings.
+[ ] Repeat camera-relative MOVE in Whole and Multi modes.
+[ ] X/Y/Z constraints stay explicit world-axis transforms and do not rotate with camera.
+[ ] Switch RTS <-> FREE and repeat one free-axis MOVE in each.
+[ ] Legacy regression: if tested in Legacy, Exit restores normal Legacy visibility.

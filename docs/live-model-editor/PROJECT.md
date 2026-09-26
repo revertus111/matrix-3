@@ -242,17 +242,20 @@ Design authority: docs/live-model-editor/EDITOR_WORKSPACE_DESIGN.md
 
 #### Bundle 2.7B - Dedicated editor HUD suppression
 
-- [ ] Verify authoritative Matrix3 root-interface/HUD ownership seam.
-- [ ] Snapshot/suppress normal gameplay HUD during Editor Workspace.
-- [ ] Restore exact prior HUD state on Exit/Escape.
-- [ ] No hardcoded pixel masks/cover windows.
-- [ ] Verify NIS/Legacy restoration where applicable.
+- [x] Verify Matrix3 root 1477 + InterfaceManager.openedinterfaces as the mounted-HUD ownership seam.
+- [x] Snapshot direct root mounts and hide them without closing/removing interface ownership.
+- [x] Preserve root component 12 so the actual world/game viewport remains visible.
+- [x] Restore the same mounted components on Exit/Escape and re-emit normal gameframe/mode visibility.
+- [x] Route Live Model Editor open/close through owner-only itemBrowser editorhud enter/exit commands.
+- [x] No hardcoded pixel masks/cover windows.
+- [ ] Runtime verify NIS HUD suppression/restoration.
+- [ ] Runtime verify Legacy restoration behavior.
 
 ## Phase 3 - Professional Transform UX
 
 Status: PLANNED
 
-- G/R/S hotkeys.
+- G/R/V hotkeys (V=Scale; S stays reserved for camera backward).
 - XYZ gizmos.
 - Snapping, local/world transform modes and numeric transform entry.
 - Ctrl+Z/redo/history.
@@ -316,7 +319,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 **Active bundle:** Bundle 2.7 - Professional Editor Shell (`ACTIVE / NEEDS TEST`).
 
-**Next action:** runtime-test Bundle 2.7A on Conveyor belt 46298/models 49717+49718 at the compact 16-inch layout: rail collapse/expand, P/T/M/C/O/S drawers, contextual transforms, RTS/FREE switching, focus handoff and no outer horizontal scrollbar. Bundle 2.7B HUD suppression remains gated until the real Matrix3 root-interface owner is verified.
+**Next action:** runtime-test the combined Bundle 2.7 shell/fix pass on Conveyor belt 46298: normal root-1477 HUD suppression/restoration, FREE camera S/backward, and view-relative free-axis Whole/Part/Multi dragging at north/east/south/west camera headings.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

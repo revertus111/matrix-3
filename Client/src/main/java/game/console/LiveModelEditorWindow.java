@@ -1,6 +1,7 @@
 package game.console;
 
 import game.Class584;
+import game.ClientConsoleBridge;
 import game.ConstructionBuildCamera;
 import game.ConstructionPaletteOverlay;
 import game.ConstructionPlacementController;
@@ -117,6 +118,7 @@ public final class LiveModelEditorWindow {
     private static boolean modelLeftDragActive;
     private static boolean editorCameraSessionActive;
     private static boolean editorStartedRtsCamera;
+    private static boolean editorHudRequested;
     private static boolean editorCameraWasAlreadyActive;
     private static ConstructionBuildCamera.CameraMode editorPreviousCameraMode;
     private static int manualLocalX;
@@ -209,6 +211,7 @@ public final class LiveModelEditorWindow {
         }
         installInputGate();
         enterEditorRtsCamera();
+        enterEditorHud();
         if (instance.matchesTarget(target)) {
             instance.resumeSession();
         } else {
@@ -606,7 +609,7 @@ public final class LiveModelEditorWindow {
         JPanel modes = actionRow(3);
         JButton moveMode = rsButton("Move [G]");
         JButton rotateMode = rsButton("Rotate [R]");
-        JButton scaleMode = rsButton("Scale [S]");
+        JButton scaleMode = rsButton("Scale [V]");
         modes.add(moveMode); modes.add(rotateMode); modes.add(scaleMode);
         panel.add(modes);
         panel.add(Box.createVerticalStrut(4));
@@ -1012,6 +1015,7 @@ public final class LiveModelEditorWindow {
         LiveModelEditorPreview.clearPartPreview();
         LiveModelEditorPreview.hide();
         modelLeftDragActive = false;
+        exitEditorHud();
         exitEditorRtsCamera();
         if (instance != null) {
             instance.hoveredListIndex = -1;
@@ -1020,6 +1024,25 @@ public final class LiveModelEditorWindow {
         if (overlayWindow != null) {
             overlayWindow.setVisible(false);
         }
+    }
+
+    private static void enterEditorHud() {
+        if (editorHudRequested) {
+            return;
+        }
+        String error = ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud enter");
+        editorHudRequested = error == null;
+        if (error != null && instance != null) {
+            instance.statusLabel.setText("Editor HUD request failed: " + error);
+        }
+    }
+
+    private static void exitEditorHud() {
+        if (!editorHudRequested) {
+            return;
+        }
+        ClientConsoleBridge.queueConsoleCommand("itembrowser editorhud exit");
+        editorHudRequested = false;
     }
 
     private static void enterEditorRtsCamera() {
@@ -1168,7 +1191,7 @@ public final class LiveModelEditorWindow {
                         LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.MOVE);
                     } else if (code == KeyEvent.VK_R) {
                         LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.ROTATE);
-                    } else if (code == KeyEvent.VK_S) {
+                    } else if (code == KeyEvent.VK_V) {
                         LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.SCALE);
                     } else if (code == KeyEvent.VK_X) {
                         LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.X);

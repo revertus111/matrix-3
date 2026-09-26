@@ -334,6 +334,10 @@ public final class LiveModelEditorPreview {
         int dy = y - dragStartY;
         int amountX = -dx * 4;
         int amountY = dy * 4;
+        int[] cameraGroundDrag = transformMode == TransformMode.MOVE
+                && axisConstraint == AxisConstraint.FREE
+                ? ConstructionBuildCamera.mapScreenDragToGround(dx, dy, 4)
+                : null;
 
         if (draggingWhole) {
             int sx = dragStartWholeTransform[0], sy = dragStartWholeTransform[1],
@@ -346,7 +350,10 @@ public final class LiveModelEditorPreview {
                 if (axisConstraint == AxisConstraint.X) mx += amountX;
                 else if (axisConstraint == AxisConstraint.Y) my += amountY;
                 else if (axisConstraint == AxisConstraint.Z) mz += amountY;
-                else {
+                else if (cameraGroundDrag != null) {
+                    mx += cameraGroundDrag[0];
+                    mz += cameraGroundDrag[1];
+                } else {
                     mx += amountX;
                     mz += amountY;
                 }
@@ -392,7 +399,10 @@ public final class LiveModelEditorPreview {
             if (axisConstraint == AxisConstraint.X) mx += amountX;
             else if (axisConstraint == AxisConstraint.Y) my += amountY;
             else if (axisConstraint == AxisConstraint.Z) mz += amountY;
-            else {
+            else if (cameraGroundDrag != null) {
+                mx += cameraGroundDrag[0];
+                mz += cameraGroundDrag[1];
+            } else {
                 mx += amountX;
                 mz += amountY;
             }

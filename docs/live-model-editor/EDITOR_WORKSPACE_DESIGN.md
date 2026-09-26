@@ -86,9 +86,10 @@ For top-down assembly:
 For underneath/inside alignment:
 - reuse existing Construction FREE_BUILD camera
 - unrestricted inspection/fly
-- WASD movement
+- WASD movement; **S is reserved for backward camera movement**
 - Q/E vertical
 - existing Matrix3 free-camera look behavior
+- Scale transform uses **V** so it never steals S from the camera
 
 One shared ConstructionBuildCamera remains authoritative.
 
@@ -115,7 +116,7 @@ Desired flow: editor action -> viewport controls immediately.
 
 ## Must preserve
 
-Whole/Part/Multi, world/list selection, multi-select, G/R/S, constraints, exact numeric transforms, isolate/show/hide, duplicate/delete/undo, Construction replacement/restore/matches, project save/load, Save Selection export, source model metadata, type/rotation/tile offsets, resize, Exit/Escape restoration, RTS camera and FREE camera.
+Whole/Part/Multi, world/list selection, multi-select, G/R/V transform hotkeys, constraints, exact numeric transforms, isolate/show/hide, duplicate/delete/undo, Construction replacement/restore/matches, project save/load, Save Selection export, source model metadata, type/rotation/tile offsets, resize, Exit/Escape restoration, RTS camera and FREE camera.
 
 ## Bundle 2.7A - Compact shell / focus / camera switch
 
@@ -131,13 +132,19 @@ Whole/Part/Multi, world/list selection, multi-select, G/R/S, constraints, exact 
 
 ## Bundle 2.7B - Dedicated HUD suppression
 
-Gated on verified Matrix3 UI ownership seam:
-- snapshot normal HUD state;
-- suppress normal gameplay HUD in Editor Workspace;
+Verified-static ownership seam:
+- normal Matrix3 game root is 1477;
+- InterfaceManager.openedinterfaces tracks mounted child interfaces by parent UID;
+- root component 12 owns the world/game viewport and stays visible.
+
+Implementation:
+- snapshot direct root-1477 mounted components;
+- hide every captured root child except component 12;
+- do not close/remove interface ownership;
+- unhide the same snapshot on Exit/Escape;
+- re-emit normal gameframe/mode visibility afterward;
 - no hardcoded pixel masks;
-- no permanent NIS/Legacy mode mutation;
-- restore exact prior HUD state on Exit/Escape;
-- verify NIS and Legacy where applicable.
+- runtime verification remains required for NIS and Legacy.
 
 ## Runtime acceptance
 

@@ -73,6 +73,9 @@ public final class ItemBrowserCommandBridge {
         if (cmd != null && cmd.length >= 2 && "constructioncamera".equalsIgnoreCase(cmd[1])) {
             return processConstructionCamera(player, cmd);
         }
+        if (cmd != null && cmd.length >= 2 && "editorhud".equalsIgnoreCase(cmd[1])) {
+            return processEditorHud(player, cmd);
+        }
         if (cmd != null && cmd.length >= 2 && "settlement".equalsIgnoreCase(cmd[1])) {
             return processSettlement(player, cmd);
         }
@@ -227,6 +230,33 @@ public final class ItemBrowserCommandBridge {
         for (String line : SettlementObjectProbe.scan(center, radius)) {
             player.getPackets().sendGameMessage(line);
         }
+        return true;
+    }
+
+    private static boolean processEditorHud(Player player, String[] cmd) {
+        if (cmd == null || cmd.length < 3) {
+            player.getPackets().sendGameMessage("Use: ::itembrowser editorhud <enter|exit|status>");
+            return true;
+        }
+        String operation = cmd[2].toLowerCase();
+        if ("enter".equals(operation)) {
+            boolean hidden = player.getInterfaceManager().beginDevWorkspaceHud();
+            if (!hidden) {
+                player.getPackets().sendGameMessage(
+                        "Editor HUD suppression requires the normal Matrix3 game root.");
+            }
+            return true;
+        }
+        if ("exit".equals(operation)) {
+            player.getInterfaceManager().endDevWorkspaceHud();
+            return true;
+        }
+        if ("status".equals(operation)) {
+            player.getPackets().sendGameMessage("Editor HUD: "
+                    + (player.getInterfaceManager().isDevWorkspaceHudHidden() ? "hidden." : "normal."));
+            return true;
+        }
+        player.getPackets().sendGameMessage("Use: ::itembrowser editorhud <enter|exit|status>");
         return true;
     }
 

@@ -1,5 +1,7 @@
 package com.rs.game.player;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.rs.Settings;
@@ -66,6 +68,8 @@ public class InterfaceManager {
 	private Player player;
 
 	private final ConcurrentHashMap<Integer, Integer> openedinterfaces = new ConcurrentHashMap<Integer, Integer>();
+	private final Set<Integer> devWorkspaceHiddenRootComponents = new HashSet<Integer>();
+	private boolean devWorkspaceHudHidden;
 
 	private boolean resizableScreen;
 	private int rootInterface;
@@ -86,6 +90,51 @@ public class InterfaceManager {
 
 	public boolean containsGameMapInterface() {
 		return containsWindowInterfaceAtParent(GAME_SCREEN_COMPONENT_ID);
+	}
+
+	/**
+	 * Temporarily suppress the mounted gameplay HUD for developer workspaces.
+	 * Root component 12 owns the actual game/world viewport and remains visible.
+	 * Child interfaces are hidden only; ownership/open state is not removed.
+	 */
+	public boolean beginDevWorkspaceHud() {
+		if (devWorkspaceHudHidden)
+			return true;
+		if (rootInterface != FIXED_WINDOW_ID)
+			return false;
+
+		devWorkspaceHiddenRootComponents.clear();
+		for (Integer parentUID : openedinterfaces.keySet()) {
+			if (parentUID == null || (parentUID >>> 16) != rootInterface)
+				continue;
+			int componentId = parentUID & 0xffff;
+			if (componentId == GAME_SCREEN_COMPONENT_ID)
+				continue;
+			devWorkspaceHiddenRootComponents.add(componentId);
+		}
+
+		for (int componentId : devWorkspaceHiddenRootComponents)
+			player.getPackets().sendHideIComponent(rootInterface, componentId, true);
+		devWorkspaceHudHidden = true;
+		return true;
+	}
+
+	public void endDevWorkspaceHud() {
+		if (!devWorkspaceHudHidden)
+			return;
+
+		for (int componentId : devWorkspaceHiddenRootComponents)
+			player.getPackets().sendHideIComponent(rootInterface, componentId, false);
+		devWorkspaceHiddenRootComponents.clear();
+		devWorkspaceHudHidden = false;
+
+		// Re-apply the player's normal NIS/Legacy visibility rules.
+		player.refreshGameframe();
+		player.refreshMode();
+	}
+
+	public boolean isDevWorkspaceHudHidden() {
+		return devWorkspaceHudHidden;
 	}
 
 	public void sendExpandOptionsInterface(int id) {
