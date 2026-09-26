@@ -186,3 +186,16 @@
 - Multi yaw now orbits selected component centers around their shared pivot while rotating each component's yaw by the same delta.
 - Shared-pivot yaw semantics are implemented in the common selection-delta layer so viewport rotation and exact Multi yaw edits stay consistent.
 - Scale snapping remains deferred.
+
+
+2026-09-26
+- Runtime feedback clarified that Scale was also nonfunctional in the same Conveyor 46298 session where Snap failed.
+- Added Bundle 2.7C-E repaired Scale interaction + Matrix3-native Scale gizmo.
+- Scale mode now renders X/Y/Z projected handles with square endpoints plus a larger center uniform-scale handle.
+- Axis scaling projects mouse movement onto the visible handle direction.
+- Center uniform scaling uses right/up to grow and left/down to shrink.
+- The old fallback direct-scale drag direction was normalized to the same convention.
+- Scale gizmo uses the existing Whole/Part/Multi pivot, gizmo-first hit ownership, yellow hover and white active feedback.
+- Part/Multi scale gestures continue to use one mouse drag = one undo snapshot.
+- Existing 10–400 internal scale limits and 1.00-style inspector display are unchanged.
+- Scale snapping remains intentionally deferred; Move/Rotate are the only transform modes affected by the current Snap controls.
