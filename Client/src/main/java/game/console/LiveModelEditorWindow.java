@@ -132,8 +132,6 @@ public final class LiveModelEditorWindow {
     private final JPanel editorDrawer = new JPanel(new BorderLayout());
     private final CardLayout toolCardLayout = new CardLayout();
     private final JPanel toolCards = new JPanel(toolCardLayout);
-    private final CardLayout transformCardLayout = new CardLayout();
-    private final JPanel transformCards = new JPanel(transformCardLayout);
     private final JLabel transformContextLabel = rsGold("PART");
     private final JLabel cameraStatusLabel = rsGold("RTS");
     private final JLabel cameraSpeedLabel = rsGold("1.0x");
@@ -142,6 +140,22 @@ public final class LiveModelEditorWindow {
     private final JButton snapButton = rsButton("SNAP OFF");
     private final JSpinner moveSnapSpinner = spinner(16, 1, 512, 1);
     private final JSpinner angleSnapSpinner = spinner(15, 1, 90, 1);
+
+    private final JButton wholeModeButton = rsButton("Whole [1]");
+    private final JButton partModeButton = rsButton("Part [2]");
+    private final JButton multiModeButton = rsButton("Multi [3]");
+    private final JButton moveModeButton = rsButton("Move [G]");
+    private final JButton rotateModeButton = rsButton("Rotate [R]");
+    private final JButton scaleModeButton = rsButton("Scale [V]");
+    private final JButton freeAxisButton = rsButton("Free [F]");
+    private final JButton xAxisButton = rsButton("X");
+    private final JButton yAxisButton = rsButton("Y");
+    private final JButton zAxisButton = rsButton("Z");
+    private final JButton isolateButton = rsButton("Isolate");
+    private final JLabel transformReadoutLabel = rsGold("MOVE FREE");
+    private final java.util.ArrayList<JButton> railButtons =
+            new java.util.ArrayList<JButton>();
+
     private final JLabel targetLabel = rsValue("-");
     private final JLabel sourceLabel = rsMuted("-");
     private final JLabel statusLabel = rsMuted("Right-click an object -> Dev > Edit Model Live.");
@@ -366,6 +380,7 @@ public final class LiveModelEditorWindow {
         refreshTransformContext();
         syncCameraPanel();
         syncSnapPanel();
+        syncControlState();
     }
 
     private JPanel createTitleBar() {
@@ -452,11 +467,7 @@ public final class LiveModelEditorWindow {
         collapse.setPreferredSize(new Dimension(TAB_RAIL_WIDTH - 6, 30));
         collapse.setMaximumSize(new Dimension(TAB_RAIL_WIDTH - 6, 30));
         collapse.setAlignmentX(Component.CENTER_ALIGNMENT);
-        collapse.addActionListener(e -> {
-            drawerExpanded = !drawerExpanded;
-            editorDrawer.setVisible(drawerExpanded);
-            refreshOverlayBounds();
-        });
+        collapse.addActionListener(e -> toggleDrawer());
         rail.add(collapse);
         rail.add(Box.createVerticalStrut(3));
 
@@ -478,6 +489,8 @@ public final class LiveModelEditorWindow {
         button.setPreferredSize(new Dimension(TAB_RAIL_WIDTH - 6, 34));
         button.setMaximumSize(new Dimension(TAB_RAIL_WIDTH - 6, 34));
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.putClientProperty("toolName", tool);
+        railButtons.add(button);
         button.addActionListener(e -> showTool(tool));
         return button;
     }
@@ -493,6 +506,14 @@ public final class LiveModelEditorWindow {
             editorDrawer.setVisible(true);
             toolCardLayout.show(toolCards, tool);
         }
+        syncControlState();
+        refreshOverlayBounds();
+    }
+
+    private void toggleDrawer() {
+        drawerExpanded = !drawerExpanded;
+        editorDrawer.setVisible(drawerExpanded);
+        syncControlState();
         refreshOverlayBounds();
     }
 
@@ -524,12 +545,9 @@ public final class LiveModelEditorWindow {
         panel.add(Box.createVerticalStrut(4));
 
         JPanel selectionModes = actionRow(3);
-        JButton wholeMode = rsButton("Whole [1]");
-        JButton partMode = rsButton("Part [2]");
-        JButton multiMode = rsButton("Multi [3]");
-        selectionModes.add(wholeMode);
-        selectionModes.add(partMode);
-        selectionModes.add(multiMode);
+        selectionModes.add(wholeModeButton);
+        selectionModes.add(partModeButton);
+        selectionModes.add(multiModeButton);
         panel.add(selectionModes);
         panel.add(Box.createVerticalStrut(3));
 
@@ -555,25 +573,24 @@ public final class LiveModelEditorWindow {
         panel.add(Box.createVerticalStrut(4));
 
         JPanel modes = actionRow(3);
-        JButton moveMode = rsButton("Move [G]");
-        JButton rotateMode = rsButton("Rotate [R]");
-        JButton scaleMode = rsButton("Scale [V]");
-        modes.add(moveMode);
-        modes.add(rotateMode);
-        modes.add(scaleMode);
+        modes.add(moveModeButton);
+        modes.add(rotateModeButton);
+        modes.add(scaleModeButton);
         panel.add(modes);
         panel.add(Box.createVerticalStrut(3));
 
         JPanel axes = actionRow(4);
-        JButton freeAxis = rsButton("Free [F]");
-        JButton xAxis = rsButton("X");
-        JButton yAxis = rsButton("Y");
-        JButton zAxis = rsButton("Z");
-        axes.add(freeAxis);
-        axes.add(xAxis);
-        axes.add(yAxis);
-        axes.add(zAxis);
+        axes.add(freeAxisButton);
+        axes.add(xAxisButton);
+        axes.add(yAxisButton);
+        axes.add(zAxisButton);
         panel.add(axes);
+        panel.add(Box.createVerticalStrut(3));
+
+        transformReadoutLabel.setToolTipText(
+                "Live transform readout. Alt+Arrows nudge; Alt+Shift+Arrows use coarse steps.");
+        transformReadoutLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(transformReadoutLabel);
         panel.add(Box.createVerticalStrut(4));
 
         snapButton.setToolTipText("Normal drag is free. Ctrl temporarily snaps; when SNAP is ON, Ctrl temporarily bypasses snap.");
@@ -627,10 +644,9 @@ public final class LiveModelEditorWindow {
 
         JPanel partActions1 = actionRow(3);
         JButton rebuild = rsButton("Rebuild");
-        JButton isolate = rsButton("Isolate");
         JButton showAll = rsButton("Show All");
         partActions1.add(rebuild);
-        partActions1.add(isolate);
+        partActions1.add(isolateButton);
         partActions1.add(showAll);
         panel.add(partActions1);
         panel.add(Box.createVerticalStrut(3));
@@ -647,9 +663,9 @@ public final class LiveModelEditorWindow {
         partActions2.add(undo);
         panel.add(partActions2);
 
-        wholeMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE));
-        partMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.PART));
-        multiMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI));
+        wholeModeButton.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE));
+        partModeButton.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.PART));
+        multiModeButton.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI));
         selectAll.addActionListener(e -> {
             setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
             LiveModelEditorPreview.selectAllParts();
@@ -662,13 +678,13 @@ public final class LiveModelEditorWindow {
         });
         resetSelection.addActionListener(e -> resetSelectedTransforms());
 
-        moveMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.MOVE));
-        rotateMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.ROTATE));
-        scaleMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.SCALE));
-        freeAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.FREE));
-        xAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.X));
-        yAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Y));
-        zAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Z));
+        moveModeButton.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.MOVE));
+        rotateModeButton.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.ROTATE));
+        scaleModeButton.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.SCALE));
+        freeAxisButton.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.FREE));
+        xAxisButton.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.X));
+        yAxisButton.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Y));
+        zAxisButton.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Z));
         snapButton.addActionListener(e -> {
             LiveModelEditorPreview.setTransformSnapEnabled(
                     !LiveModelEditorPreview.isTransformSnapEnabled());
@@ -676,10 +692,7 @@ public final class LiveModelEditorWindow {
         });
 
         rebuild.addActionListener(e -> initializeParts());
-        isolate.addActionListener(e -> {
-            LiveModelEditorPreview.toggleIsolatePart();
-            refreshPartList();
-        });
+        isolateButton.addActionListener(e -> toggleIsolateSelection());
         showAll.addActionListener(e -> {
             LiveModelEditorPreview.showAllParts();
             refreshPartList();
@@ -687,200 +700,6 @@ public final class LiveModelEditorWindow {
         hide.addActionListener(e -> toggleSelectedHidden());
         duplicate.addActionListener(e -> duplicateSelected());
         delete.addActionListener(e -> deleteSelected());
-        undo.addActionListener(e -> undoPartEdit());
-        return panel;
-    }
-
-    private JPanel createPartsPanel() {
-        JPanel panel = toolPanel("PARTS / SELECTION");
-
-        JPanel heading = new JPanel(new BorderLayout(4, 0));
-        heading.setOpaque(false);
-        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel hint = new JLabel("Whole / Part / Multi");
-        hint.setFont(RS_SMALL_FONT);
-        hint.setForeground(RS_MUTED);
-        heading.add(hint, BorderLayout.WEST);
-        heading.add(partStatusLabel, BorderLayout.EAST);
-        panel.add(heading);
-        panel.add(Box.createVerticalStrut(5));
-
-        JPanel selectionModes = actionRow(3);
-        JButton wholeMode = rsButton("Whole [1]");
-        JButton partMode = rsButton("Part [2]");
-        JButton multiMode = rsButton("Multi [3]");
-        selectionModes.add(wholeMode); selectionModes.add(partMode); selectionModes.add(multiMode);
-        panel.add(selectionModes);
-        panel.add(Box.createVerticalStrut(4));
-
-        JPanel selectionActions = actionRow(3);
-        JButton selectAll = rsButton("All");
-        JButton clearSelection = rsButton("Clear");
-        JButton resetSelection = rsButton("Reset");
-        selectionActions.add(selectAll); selectionActions.add(clearSelection); selectionActions.add(resetSelection);
-        panel.add(selectionActions);
-        panel.add(Box.createVerticalStrut(5));
-
-        partList.setVisibleRowCount(10);
-        partList.setFixedCellHeight(22);
-        partList.setFont(RS_SMALL_FONT);
-        partList.setForeground(RS_TEXT);
-        partList.setBackground(RS_INPUT);
-        partList.setSelectionForeground(RS_GOLD);
-        partList.setSelectionBackground(RS_SELECTED);
-        partList.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
-        partList.setCellRenderer(new DefaultListCellRenderer() {
-            private static final long serialVersionUID = 1L;
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-                JLabel label = (JLabel) super.getListCellRendererComponent(
-                        list, value, index, isSelected, false);
-                label.setFont(RS_SMALL_FONT);
-                label.setForeground(isSelected ? RS_GOLD : RS_TEXT);
-                label.setBackground(isSelected ? RS_SELECTED
-                        : index == hoveredListIndex ? RS_HOVER : RS_INPUT);
-                label.setBorder(BorderFactory.createEmptyBorder(1, 5, 1, 5));
-                return label;
-            }
-        });
-
-        JScrollPane scroll = new JScrollPane(partList,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.setBorder(BorderFactory.createLineBorder(RS_BORDER));
-        scroll.setPreferredSize(new Dimension(220, 230));
-        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
-        scroll.getViewport().setBackground(RS_INPUT);
-        scroll.getVerticalScrollBar().setUnitIncrement(18);
-        panel.add(scroll);
-        panel.add(Box.createVerticalStrut(5));
-
-        JPanel row1 = actionRow(3);
-        JButton rebuild = rsButton("Rebuild");
-        JButton isolate = rsButton("Isolate");
-        JButton showAll = rsButton("Show All");
-        row1.add(rebuild); row1.add(isolate); row1.add(showAll);
-        panel.add(row1);
-        panel.add(Box.createVerticalStrut(4));
-
-        JPanel row2 = actionRow(4);
-        JButton hide = rsButton("Hide");
-        JButton duplicate = rsButton("Dup");
-        JButton delete = rsButton("Delete");
-        JButton undo = rsButton("Undo");
-        delete.setBackground(RS_DANGER);
-        row2.add(hide); row2.add(duplicate); row2.add(delete); row2.add(undo);
-        panel.add(row2);
-
-        wholeMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE));
-        partMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.PART));
-        multiMode.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI));
-        selectAll.addActionListener(e -> {
-            setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
-            LiveModelEditorPreview.selectAllParts();
-            refreshPartList();
-        });
-        clearSelection.addActionListener(e -> {
-            setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
-            LiveModelEditorPreview.clearPartSelection();
-            refreshPartList();
-        });
-        resetSelection.addActionListener(e -> resetSelectedTransforms());
-        rebuild.addActionListener(e -> initializeParts());
-        isolate.addActionListener(e -> {
-            LiveModelEditorPreview.toggleIsolatePart();
-            refreshPartList();
-        });
-        showAll.addActionListener(e -> {
-            LiveModelEditorPreview.showAllParts();
-            refreshPartList();
-        });
-        hide.addActionListener(e -> toggleSelectedHidden());
-        duplicate.addActionListener(e -> duplicateSelected());
-        delete.addActionListener(e -> deleteSelected());
-        undo.addActionListener(e -> undoPartEdit());
-        return panel;
-    }
-
-    private JPanel createTransformPanel() {
-        JPanel panel = toolPanel("TRANSFORM");
-
-        JPanel contextRow = new JPanel(new BorderLayout());
-        contextRow.setOpaque(false);
-        contextRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel hint = new JLabel("Selection context");
-        hint.setFont(RS_SMALL_FONT);
-        hint.setForeground(RS_MUTED);
-        contextRow.add(hint, BorderLayout.WEST);
-        contextRow.add(transformContextLabel, BorderLayout.EAST);
-        panel.add(contextRow);
-        panel.add(Box.createVerticalStrut(5));
-
-        JPanel modes = actionRow(3);
-        JButton moveMode = rsButton("Move [G]");
-        JButton rotateMode = rsButton("Rotate [R]");
-        JButton scaleMode = rsButton("Scale [V]");
-        modes.add(moveMode); modes.add(rotateMode); modes.add(scaleMode);
-        panel.add(modes);
-        panel.add(Box.createVerticalStrut(4));
-
-        JPanel axes = actionRow(4);
-        JButton freeAxis = rsButton("Free [F]");
-        JButton xAxis = rsButton("X");
-        JButton yAxis = rsButton("Y");
-        JButton zAxis = rsButton("Z");
-        axes.add(freeAxis); axes.add(xAxis); axes.add(yAxis); axes.add(zAxis);
-        panel.add(axes);
-        panel.add(Box.createVerticalStrut(7));
-
-        transformCards.setOpaque(false);
-
-        JPanel whole = new JPanel();
-        whole.setLayout(new BoxLayout(whole, BoxLayout.Y_AXIS));
-        whole.setOpaque(false);
-        whole.add(createSpinnerGrid(
-                new String[] { "S X", "S Y", "S Z" },
-                new JSpinner[] { scaleXSpinner, scaleYSpinner, scaleZSpinner }));
-        whole.add(Box.createVerticalStrut(5));
-        whole.add(createSpinnerGrid(
-                new String[] { "X", "Y", "Z" },
-                new JSpinner[] { moveXSpinner, moveYSpinner, moveZSpinner }));
-        whole.add(Box.createVerticalStrut(5));
-        whole.add(createSpinnerGrid(new String[] { "YAW" }, new JSpinner[] { yawSpinner }));
-
-        JPanel parts = new JPanel();
-        parts.setLayout(new BoxLayout(parts, BoxLayout.Y_AXIS));
-        parts.setOpaque(false);
-        parts.add(createSpinnerGrid(
-                new String[] { "S X", "S Y", "S Z" },
-                new JSpinner[] { partScaleXSpinner, partScaleYSpinner, partScaleZSpinner }));
-        parts.add(Box.createVerticalStrut(5));
-        parts.add(createSpinnerGrid(
-                new String[] { "X", "Y", "Z" },
-                new JSpinner[] { partMoveXSpinner, partMoveYSpinner, partMoveZSpinner }));
-        parts.add(Box.createVerticalStrut(5));
-        parts.add(createSpinnerGrid(new String[] { "YAW" }, new JSpinner[] { partYawSpinner }));
-
-        transformCards.add(whole, "WHOLE");
-        transformCards.add(parts, "PARTS");
-        panel.add(transformCards);
-        panel.add(Box.createVerticalStrut(7));
-
-        JPanel actions = actionRow(2);
-        JButton reset = rsButton("Reset Selection");
-        JButton undo = rsButton("Undo");
-        actions.add(reset); actions.add(undo);
-        panel.add(actions);
-
-        moveMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.MOVE));
-        rotateMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.ROTATE));
-        scaleMode.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.SCALE));
-        freeAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.FREE));
-        xAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.X));
-        yAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Y));
-        zAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Z));
-        reset.addActionListener(e -> resetSelectedTransforms());
         undo.addActionListener(e -> undoPartEdit());
         return panel;
     }
@@ -1209,6 +1028,82 @@ public final class LiveModelEditorWindow {
     }
 
 
+    private void syncControlState() {
+        LiveModelEditorPreview.SelectionMode selection =
+                LiveModelEditorPreview.getSelectionMode();
+        LiveModelEditorPreview.TransformMode transform =
+                LiveModelEditorPreview.getTransformMode();
+        LiveModelEditorPreview.AxisConstraint axis =
+                LiveModelEditorPreview.getAxisConstraint();
+
+        setActiveButton(wholeModeButton, selection == LiveModelEditorPreview.SelectionMode.WHOLE);
+        setActiveButton(partModeButton, selection == LiveModelEditorPreview.SelectionMode.PART);
+        setActiveButton(multiModeButton, selection == LiveModelEditorPreview.SelectionMode.MULTI);
+        setActiveButton(moveModeButton, transform == LiveModelEditorPreview.TransformMode.MOVE);
+        setActiveButton(rotateModeButton, transform == LiveModelEditorPreview.TransformMode.ROTATE);
+        setActiveButton(scaleModeButton, transform == LiveModelEditorPreview.TransformMode.SCALE);
+        setActiveButton(freeAxisButton, axis == LiveModelEditorPreview.AxisConstraint.FREE);
+        setActiveButton(xAxisButton, axis == LiveModelEditorPreview.AxisConstraint.X);
+        setActiveButton(yAxisButton, axis == LiveModelEditorPreview.AxisConstraint.Y);
+        setActiveButton(zAxisButton, axis == LiveModelEditorPreview.AxisConstraint.Z);
+        setActiveButton(isolateButton, LiveModelEditorPreview.isPartIsolated());
+
+        for (JButton button : railButtons) {
+            Object tool = button.getClientProperty("toolName");
+            setActiveButton(button, drawerExpanded && activeTool.equals(tool));
+        }
+
+        transformReadoutLabel.setText(buildTransformReadout());
+    }
+
+    private static void setActiveButton(JButton button, boolean active) {
+        if (button == null) return;
+        button.setBackground(active ? RS_SELECTED : RS_PANEL_2);
+        button.setForeground(active ? RS_GOLD : RS_TEXT);
+    }
+
+    private String buildTransformReadout() {
+        int[] transform = currentInspectorTransform();
+        String context;
+        LiveModelEditorPreview.SelectionMode selection =
+                LiveModelEditorPreview.getSelectionMode();
+        if (selection == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            context = "WHOLE";
+        } else if (selection == LiveModelEditorPreview.SelectionMode.MULTI) {
+            context = "MULTI x" + LiveModelEditorPreview.getSelectedPartCount();
+        } else {
+            int selected = LiveModelEditorPreview.getSelectedPart();
+            context = selected >= 0 ? "PART " + selected : "PART";
+        }
+
+        LiveModelEditorPreview.TransformMode mode =
+                LiveModelEditorPreview.getTransformMode();
+        LiveModelEditorPreview.AxisConstraint axis =
+                LiveModelEditorPreview.getAxisConstraint();
+        if (mode == LiveModelEditorPreview.TransformMode.MOVE) {
+            if (axis == LiveModelEditorPreview.AxisConstraint.X)
+                return context + "  |  MOVE X  |  " + transform[3];
+            if (axis == LiveModelEditorPreview.AxisConstraint.Y)
+                return context + "  |  MOVE Y  |  " + transform[4];
+            if (axis == LiveModelEditorPreview.AxisConstraint.Z)
+                return context + "  |  MOVE Z  |  " + transform[5];
+            return context + "  |  MOVE FREE  |  X " + transform[3] + "  Z " + transform[5];
+        }
+        if (mode == LiveModelEditorPreview.TransformMode.ROTATE) {
+            return context + "  |  ROTATE  |  YAW " + transform[6] + " deg";
+        }
+        if (axis == LiveModelEditorPreview.AxisConstraint.X)
+            return context + "  |  SCALE X  |  " + formatScaleRatio(transform[0]);
+        if (axis == LiveModelEditorPreview.AxisConstraint.Y)
+            return context + "  |  SCALE Y  |  " + formatScaleRatio(transform[1]);
+        if (axis == LiveModelEditorPreview.AxisConstraint.Z)
+            return context + "  |  SCALE Z  |  " + formatScaleRatio(transform[2]);
+        return context + "  |  SCALE FREE  |  "
+                + formatScaleRatio(transform[0]) + "/"
+                + formatScaleRatio(transform[1]) + "/"
+                + formatScaleRatio(transform[2]);
+    }
+
     private JPanel createTransformInspector() {
         JPanel inspector = new JPanel();
         inspector.setLayout(new BoxLayout(inspector, BoxLayout.Y_AXIS));
@@ -1276,6 +1171,9 @@ public final class LiveModelEditorWindow {
     }
 
     private void installInspectorField(final JTextField field) {
+        field.setToolTipText(
+                "Click/type exact. Drag horizontally to scrub. Shift=fine, Ctrl=coarse. Mouse wheel nudges.");
+        field.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.E_RESIZE_CURSOR));
         field.addActionListener(e -> {
             commitInspectorField(field);
             returnViewportFocusSoon();
@@ -1305,10 +1203,79 @@ public final class LiveModelEditorWindow {
                 returnViewportFocusSoon();
             }
         });
+
+        MouseAdapter scrub = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e) || !field.isEnabled()) return;
+                field.putClientProperty("scrubStartX", Integer.valueOf(e.getXOnScreen()));
+                field.putClientProperty("scrubStartTransform", currentInspectorTransform());
+                field.putClientProperty("scrubActive", Boolean.FALSE);
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if ((e.getModifiersEx() & InputEvent.BUTTON1_DOWN_MASK) == 0
+                        || !field.isEnabled()) return;
+                Object startXValue = field.getClientProperty("scrubStartX");
+                Object startTransformValue = field.getClientProperty("scrubStartTransform");
+                if (!(startXValue instanceof Integer) || !(startTransformValue instanceof int[])) return;
+
+                int pixels = e.getXOnScreen() - ((Integer) startXValue).intValue();
+                boolean active = Boolean.TRUE.equals(field.getClientProperty("scrubActive"));
+                if (!active && Math.abs(pixels) < 3) return;
+
+                if (!active) {
+                    if (LiveModelEditorPreview.getSelectionMode()
+                            != LiveModelEditorPreview.SelectionMode.WHOLE
+                            && !LiveModelEditorPreview.beginSelectedPartTransformGesture()) {
+                        return;
+                    }
+                    field.putClientProperty("scrubActive", Boolean.TRUE);
+                }
+
+                int[] transform = ((int[]) startTransformValue).clone();
+                applyInspectorScrubDelta(field, transform, pixels,
+                        e.isShiftDown(), e.isControlDown());
+                applyInspectorScrubTransform(transform);
+                field.setText(inspectorValueText(field, transform));
+                syncTransformInspector();
+                syncControlState();
+                e.consume();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (!Boolean.TRUE.equals(field.getClientProperty("scrubActive"))) return;
+                if (LiveModelEditorPreview.getSelectionMode()
+                        != LiveModelEditorPreview.SelectionMode.WHOLE) {
+                    LiveModelEditorPreview.endSelectedPartTransformGesture();
+                    loadSelectedPartEditors();
+                }
+                field.putClientProperty("scrubActive", Boolean.FALSE);
+                field.putClientProperty("scrubStartTransform", null);
+                field.putClientProperty("editorStartValue", field.getText());
+                syncTransformInspector();
+                syncControlState();
+                statusLabel.setText("Scrubbed " + String.valueOf(
+                        field.getClientProperty("transformKey")).replace('_', ' ').toLowerCase() + ".");
+                returnViewportFocusSoon();
+                e.consume();
+            }
+        };
+        field.addMouseListener(scrub);
+        field.addMouseMotionListener(scrub);
+        field.addMouseWheelListener(e -> {
+            if (!field.isEnabled()) return;
+            int direction = e.getWheelRotation() < 0 ? 1 : -1;
+            nudgeInspectorField(field, direction, e.isShiftDown(), e.isControlDown());
+            e.consume();
+        });
     }
 
     private void commitInspectorField(JTextField field) {
-        if (suppressInspectorRefresh || field == null) return;
+        if (suppressInspectorRefresh || field == null
+                || Boolean.TRUE.equals(field.getClientProperty("scrubActive"))) return;
         if (LiveModelEditorPreview.getSelectionMode() != LiveModelEditorPreview.SelectionMode.WHOLE
                 && LiveModelEditorPreview.getSelectedPart() < 0) {
             syncTransformInspector();
@@ -1349,6 +1316,80 @@ public final class LiveModelEditorWindow {
             statusLabel.setText("Invalid transform value; previous value restored.");
         }
         syncTransformInspector();
+    }
+
+    private int[] currentInspectorTransform() {
+        int[] transform = LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.WHOLE
+                ? LiveModelEditorPreview.getWholeTransform()
+                : LiveModelEditorPreview.getSelectedPartTransform();
+        return transform == null ? new int[] { 100, 100, 100, 0, 0, 0, 0 }
+                : transform.clone();
+    }
+
+    private void applyInspectorScrubDelta(JTextField field, int[] transform,
+            int pixels, boolean fine, boolean coarse) {
+        String key = String.valueOf(field.getClientProperty("transformKey"));
+        if (key.startsWith("POS_")) {
+            int delta = coarse ? pixels * 16 : fine ? pixels / 2 : pixels * 2;
+            if ("POS_X".equals(key)) transform[3] = clamp(transform[3] + delta, -4096, 4096);
+            else if ("POS_Y".equals(key)) transform[4] = clamp(transform[4] + delta, -4096, 4096);
+            else transform[5] = clamp(transform[5] + delta, -4096, 4096);
+        } else if ("YAW".equals(key)) {
+            int delta = coarse ? pixels * 5 : fine ? pixels / 4 : pixels;
+            transform[6] = normalizeInspectorYaw(transform[6] + delta);
+        } else if (key.startsWith("SCALE_")) {
+            int delta = coarse ? pixels * 5 : fine ? pixels / 4 : pixels;
+            if ("SCALE_X".equals(key)) transform[0] = clamp(transform[0] + delta, 10, 400);
+            else if ("SCALE_Y".equals(key)) transform[1] = clamp(transform[1] + delta, 10, 400);
+            else transform[2] = clamp(transform[2] + delta, 10, 400);
+        }
+    }
+
+    private void applyInspectorScrubTransform(int[] transform) {
+        if (LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            applyInspectorTransform(transform);
+            return;
+        }
+        LiveModelEditorPreview.updateSelectedPartTransformGesture(
+                transform[0], transform[1], transform[2],
+                transform[3], transform[4], transform[5], transform[6]);
+    }
+
+    private void nudgeInspectorField(JTextField field, int direction,
+            boolean fine, boolean coarse) {
+        int[] transform = currentInspectorTransform();
+        String key = String.valueOf(field.getClientProperty("transformKey"));
+        if (key.startsWith("POS_")) {
+            int step = coarse ? 16 : fine ? 1 : 4;
+            if ("POS_X".equals(key)) transform[3] = clamp(transform[3] + direction * step, -4096, 4096);
+            else if ("POS_Y".equals(key)) transform[4] = clamp(transform[4] + direction * step, -4096, 4096);
+            else transform[5] = clamp(transform[5] + direction * step, -4096, 4096);
+        } else if ("YAW".equals(key)) {
+            int step = coarse ? 15 : fine ? 1 : 5;
+            transform[6] = normalizeInspectorYaw(transform[6] + direction * step);
+        } else if (key.startsWith("SCALE_")) {
+            int step = coarse ? 10 : 1;
+            if ("SCALE_X".equals(key)) transform[0] = clamp(transform[0] + direction * step, 10, 400);
+            else if ("SCALE_Y".equals(key)) transform[1] = clamp(transform[1] + direction * step, 10, 400);
+            else transform[2] = clamp(transform[2] + direction * step, 10, 400);
+        }
+        applyInspectorTransform(transform);
+        syncTransformInspector();
+        syncControlState();
+    }
+
+    private static String inspectorValueText(JTextField field, int[] transform) {
+        String key = String.valueOf(field.getClientProperty("transformKey"));
+        if ("POS_X".equals(key)) return Integer.toString(transform[3]);
+        if ("POS_Y".equals(key)) return Integer.toString(transform[4]);
+        if ("POS_Z".equals(key)) return Integer.toString(transform[5]);
+        if ("YAW".equals(key)) return Integer.toString(transform[6]);
+        if ("SCALE_X".equals(key)) return formatScaleRatio(transform[0]);
+        if ("SCALE_Y".equals(key)) return formatScaleRatio(transform[1]);
+        if ("SCALE_Z".equals(key)) return formatScaleRatio(transform[2]);
+        return "";
     }
 
     private void applyInspectorTransform(int[] transform) {
@@ -1708,71 +1749,137 @@ public final class LiveModelEditorWindow {
                     if (isEditorTextEntryFocused()) {
                         return;
                     }
-                    int code = key.getKeyCode();
-                    if (code == KeyEvent.VK_ESCAPE) {
+                    if (handleEditorShortcut(key)) {
                         key.consume();
-                        SwingUtilities.invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                closeEditorSession();
-                            }
-                        });
-                        return;
+                        if (instance != null) instance.syncRuntimeState();
                     }
-                    if (code == KeyEvent.VK_1) {
-                        if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE);
-                        else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE);
-                    } else if (code == KeyEvent.VK_2) {
-                        if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.PART);
-                        else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.PART);
-                    } else if (code == KeyEvent.VK_3) {
-                        if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
-                        else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
-                    } else if (code == KeyEvent.VK_A && key.isControlDown()) {
-                        if (instance != null) {
-                            instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
-                            LiveModelEditorPreview.selectAllParts();
-                            instance.refreshPartList();
-                        }
-                    } else if (code == KeyEvent.VK_S && key.isControlDown()) {
-                        if (instance != null) {
-                            if (key.isShiftDown()) instance.saveSelectionAsset();
-                            else instance.saveProject();
-                        }
-                    } else if (code == KeyEvent.VK_G) {
-                        LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.MOVE);
-                    } else if (code == KeyEvent.VK_R) {
-                        LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.ROTATE);
-                    } else if (code == KeyEvent.VK_V) {
-                        LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.SCALE);
-                    } else if (code == KeyEvent.VK_X) {
-                        LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.X);
-                    } else if (code == KeyEvent.VK_Y) {
-                        LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.Y);
-                    } else if (code == KeyEvent.VK_Z) {
-                        if (key.isControlDown()) {
-                            if (instance != null) instance.undoPartEdit();
-                            key.consume();
-                            return;
-                        }
-                        LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.Z);
-                    } else if (code == KeyEvent.VK_F) {
-                        LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.FREE);
-                    } else if (code == KeyEvent.VK_H) {
-                        if (instance != null) instance.toggleSelectedHidden();
-                    } else if (code == KeyEvent.VK_DELETE) {
-                        if (instance != null) instance.deleteSelected();
-                    } else if (code == KeyEvent.VK_D && key.isControlDown()) {
-                        if (instance != null) instance.duplicateSelected();
-                    } else {
-                        return;
-                    }
-                    key.consume();
-                    if (instance != null) instance.syncRuntimeState();
                 }
             }
         }, AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
         inputGateInstalled = true;
+    }
+
+    private static boolean handleEditorShortcut(KeyEvent key) {
+        int code = key.getKeyCode();
+        boolean ctrl = key.isControlDown() || editorCtrlDown;
+
+        if (code == KeyEvent.VK_ESCAPE) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    closeEditorSession();
+                }
+            });
+            return true;
+        }
+
+        if (key.isAltDown()
+                && (code == KeyEvent.VK_LEFT || code == KeyEvent.VK_RIGHT
+                || code == KeyEvent.VK_UP || code == KeyEvent.VK_DOWN)) {
+            if (instance != null) instance.nudgeTransform(code, key.isShiftDown());
+            return true;
+        }
+
+        if (ctrl && code == KeyEvent.VK_A) {
+            if (instance != null) {
+                instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+                LiveModelEditorPreview.selectAllParts();
+                instance.refreshPartList();
+            }
+            return true;
+        }
+        if (ctrl && code == KeyEvent.VK_S) {
+            if (instance != null) {
+                if (key.isShiftDown()) instance.saveSelectionAsset();
+                else instance.saveProject();
+            }
+            return true;
+        }
+        if (ctrl && code == KeyEvent.VK_O) {
+            if (instance != null) instance.loadProject();
+            return true;
+        }
+        if (ctrl && code == KeyEvent.VK_Z) {
+            if (instance != null) instance.undoPartEdit();
+            return true;
+        }
+        if (ctrl && code == KeyEvent.VK_D) {
+            if (instance != null) instance.duplicateSelected();
+            return true;
+        }
+
+        if (code == KeyEvent.VK_TAB) {
+            if (instance != null) instance.toggleDrawer();
+            return true;
+        }
+        if (code == KeyEvent.VK_H && key.isShiftDown()) {
+            if (instance != null) instance.showAllParts();
+            return true;
+        }
+        if (code == KeyEvent.VK_I) {
+            if (instance != null) instance.toggleIsolateSelection();
+            return true;
+        }
+
+        if (code == KeyEvent.VK_1) {
+            if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE);
+            else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE);
+            return true;
+        }
+        if (code == KeyEvent.VK_2) {
+            if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.PART);
+            else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.PART);
+            return true;
+        }
+        if (code == KeyEvent.VK_3) {
+            if (instance != null) instance.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+            else LiveModelEditorPreview.setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+            return true;
+        }
+        if (code == KeyEvent.VK_G) {
+            if (instance != null) instance.setEditMode(LiveModelEditorPreview.TransformMode.MOVE);
+            else LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.MOVE);
+            return true;
+        }
+        if (code == KeyEvent.VK_R) {
+            if (instance != null) instance.setEditMode(LiveModelEditorPreview.TransformMode.ROTATE);
+            else LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.ROTATE);
+            return true;
+        }
+        if (code == KeyEvent.VK_V) {
+            if (instance != null) instance.setEditMode(LiveModelEditorPreview.TransformMode.SCALE);
+            else LiveModelEditorPreview.setTransformMode(LiveModelEditorPreview.TransformMode.SCALE);
+            return true;
+        }
+        if (code == KeyEvent.VK_X) {
+            if (instance != null) instance.setEditAxis(LiveModelEditorPreview.AxisConstraint.X);
+            else LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.X);
+            return true;
+        }
+        if (code == KeyEvent.VK_Y) {
+            if (instance != null) instance.setEditAxis(LiveModelEditorPreview.AxisConstraint.Y);
+            else LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.Y);
+            return true;
+        }
+        if (code == KeyEvent.VK_Z) {
+            if (instance != null) instance.setEditAxis(LiveModelEditorPreview.AxisConstraint.Z);
+            else LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.Z);
+            return true;
+        }
+        if (code == KeyEvent.VK_F) {
+            if (instance != null) instance.setEditAxis(LiveModelEditorPreview.AxisConstraint.FREE);
+            else LiveModelEditorPreview.setAxisConstraint(LiveModelEditorPreview.AxisConstraint.FREE);
+            return true;
+        }
+        if (code == KeyEvent.VK_H) {
+            if (instance != null) instance.toggleSelectedHidden();
+            return true;
+        }
+        if (code == KeyEvent.VK_DELETE) {
+            if (instance != null) instance.deleteSelected();
+            return true;
+        }
+        return false;
     }
 
     private void capture(DevTarget target) {
@@ -1886,6 +1993,7 @@ public final class LiveModelEditorWindow {
         refreshTransformContext();
         syncCameraPanel();
         syncSnapPanel();
+        syncControlState();
         int hovered = LiveModelEditorPreview.getWorldHoveredPart();
         partStatusLabel.setText(LiveModelEditorPreview.getSelectionMode() + " | "
                 + LiveModelEditorPreview.getSelectedPartCount() + " selected"
@@ -1926,6 +2034,68 @@ public final class LiveModelEditorWindow {
     private void setEditAxis(LiveModelEditorPreview.AxisConstraint axis) {
         LiveModelEditorPreview.setAxisConstraint(axis);
         syncRuntimeState();
+    }
+
+    private void toggleIsolateSelection() {
+        LiveModelEditorPreview.toggleIsolatePart();
+        refreshPartList();
+        syncControlState();
+        statusLabel.setText(LiveModelEditorPreview.isPartIsolated()
+                ? "Solo/Isolate enabled for current selection."
+                : "Solo/Isolate disabled.");
+    }
+
+    private void showAllParts() {
+        if (LiveModelEditorPreview.showAllParts()) {
+            refreshPartList();
+            statusLabel.setText("All model parts visible.");
+        }
+    }
+
+    private void nudgeTransform(int keyCode, boolean coarse) {
+        int[] transform = currentInspectorTransform();
+        LiveModelEditorPreview.TransformMode mode =
+                LiveModelEditorPreview.getTransformMode();
+        LiveModelEditorPreview.AxisConstraint axis =
+                LiveModelEditorPreview.getAxisConstraint();
+        boolean positive = keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_UP;
+
+        if (mode == LiveModelEditorPreview.TransformMode.MOVE) {
+            int step = coarse ? 16 : 1;
+            int delta = positive ? step : -step;
+            if (axis == LiveModelEditorPreview.AxisConstraint.X) transform[3] += delta;
+            else if (axis == LiveModelEditorPreview.AxisConstraint.Y) transform[4] += delta;
+            else if (axis == LiveModelEditorPreview.AxisConstraint.Z) transform[5] += delta;
+            else if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT)
+                transform[3] += delta;
+            else transform[5] += delta;
+            transform[3] = clamp(transform[3], -4096, 4096);
+            transform[4] = clamp(transform[4], -4096, 4096);
+            transform[5] = clamp(transform[5], -4096, 4096);
+        } else if (mode == LiveModelEditorPreview.TransformMode.ROTATE) {
+            int step = coarse ? 15 : 1;
+            transform[6] = normalizeInspectorYaw(transform[6] + (positive ? step : -step));
+        } else {
+            int step = coarse ? 10 : 1;
+            int delta = positive ? step : -step;
+            if (axis == LiveModelEditorPreview.AxisConstraint.X) transform[0] += delta;
+            else if (axis == LiveModelEditorPreview.AxisConstraint.Y) transform[1] += delta;
+            else if (axis == LiveModelEditorPreview.AxisConstraint.Z) transform[2] += delta;
+            else {
+                transform[0] += delta;
+                transform[1] += delta;
+                transform[2] += delta;
+            }
+            transform[0] = clamp(transform[0], 10, 400);
+            transform[1] = clamp(transform[1], 10, 400);
+            transform[2] = clamp(transform[2], 10, 400);
+        }
+
+        applyInspectorTransform(transform);
+        syncTransformInspector();
+        syncControlState();
+        statusLabel.setText("Nudged " + mode + " " + axis
+                + (coarse ? " (coarse)." : "."));
     }
 
     private void toggleSelectedHidden() {
