@@ -173,3 +173,16 @@
 - Part/Multi gizmo drags keep one gesture = one undo snapshot through the existing parts transaction API.
 - Class578 draws the gizmo after the other developer preview models; no Canvas.getGraphics or second Swing viewport overlay was introduced.
 - Mirrored-definition and terrain-contour point projection remain explicitly UNKNOWN pending runtime evidence instead of being guessed.
+
+
+2026-09-26
+- Runtime feedback on Conveyor belt 46298 confirmed the contextual inspector, visible pivot and native Move gizmo; snap was the reported failure.
+- Added Bundle 2.7C-D corrected snapping + yaw Rotate gizmo.
+- Move snap now quantizes gesture delta from the mouse-down transform instead of rounding the final absolute transform every drag frame.
+- Angle snap now quantizes yaw delta from the gesture start by the configured Angle Snap increment.
+- Added an editor-level Ctrl key latch alongside MouseEvent modifier state; SNAP OFF + Ctrl and SNAP ON + Ctrl no longer depend on each Canvas drag event preserving the Ctrl modifier bit.
+- Added one Matrix3-native yaw rotation ring using the existing projected pivot/XZ basis, renderer line primitives, yellow hover and white active state.
+- Ring drag converts pointer angle around the projected pivot into yaw delta.
+- Multi yaw now orbits selected component centers around their shared pivot while rotating each component's yaw by the same delta.
+- Shared-pivot yaw semantics are implemented in the common selection-delta layer so viewport rotation and exact Multi yaw edits stay consistent.
+- Scale snapping remains deferred.
