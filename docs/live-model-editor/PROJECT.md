@@ -270,9 +270,10 @@ Design authority: docs/live-model-editor/TRANSFORM_GIZMO_SPEC.md
 - [x] Keep scale snapping deferred.
 - [ ] Eclipse/Java 8 client clean-build.
 - [ ] Runtime verify Free/Snap behavior on Conveyor belt 46298.
-- [ ] Replace duplicated Whole/Part spinner form with one contextual live transform inspector.
-- [ ] Display developer-friendly decimal scale values while preserving current internal percent representation.
-- [ ] Add safe exact-entry + numeric scrub interaction.
+- [x] Replace duplicated Whole/Part spinner form with one contextual live transform inspector.
+- [x] Display developer-friendly decimal scale values while preserving current internal percent representation.
+- [x] Add safe exact-entry behavior (Enter/Tab commit, Escape cancel, invalid blur revert, text-focus hotkey guard).
+- [ ] Add numeric scrub interaction.
 - [ ] Render visible selection pivot.
 - [ ] Render Matrix3-native Move gizmo first.
 - [ ] Add supported Rotate gizmo.
@@ -344,13 +345,13 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 ## Resume Here
 
-**Last completed:** Bundle 2.7C-A transform interaction foundation is in source: Free/Snap inverse-Ctrl behavior, configurable move/angle snap, compact editor snap controls, and the authoritative transform-tool specification.
+**Last completed:** Bundle 2.7C-B contextual Transform Inspector is in source: one live Whole/Part/Multi inspector, decimal scale display, safe exact-value entry, flexible part-list height, and protected text-input ownership.
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
 **Active bundle:** Bundle 2.7C - Professional transform tool (`ACTIVE / NEEDS TEST`).
 
-**Next action:** Eclipse/Java 8 clean-build, then runtime-test Conveyor 46298: verify free drag, temporary Ctrl snap, persistent SNAP, temporary Ctrl free while SNAP is on, configurable move/angle increments, Multi relative-offset preservation, and one-drag/one-undo behavior. After that gate, replace the duplicated spinner transform form with the contextual live inspector.
+**Next action:** 2.7C-C — bounded trace + patch for the visible selection pivot and first Matrix3-native Move gizmo. Runtime verification for 2.7C-A/B is intentionally batched because the user will test the completed transform-tool slices together.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`
@@ -370,7 +371,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 - Object Lab direct-render scene coordinate math.
 - Dev Mode object ID/tile target route.
 
-**Important uncertainty:** 2.7C-A Free/Snap behavior is verified-static only until the Java 8 build/runtime gate passes. The visible 3D pivot/gizmo render seam is intentionally not claimed yet; it is the next bounded implementation trace after the contextual inspector. Bundle 2.3B world picking still requires consolidated runtime verification, and Construction replacement still uses the starter Construction catalog rather than the final player-facing material taxonomy.
+**Important uncertainty:** 2.7C-A/B are verified-static only until the batched Java 8/runtime gate passes. Part/Multi exact numeric edits use the existing one-action undo path; Whole exact-value edits still inherit the older whole-transform history limitation until unified transform history is added. The visible 3D pivot/gizmo render seam is intentionally not claimed yet and is the next bounded implementation trace. Bundle 2.3B world picking still requires consolidated runtime verification.
 
 ### Bundle 2.7 compact-control follow-up — HUD moved into Camera/View
 
