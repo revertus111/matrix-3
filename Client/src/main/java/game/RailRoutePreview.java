@@ -94,6 +94,7 @@ public final class RailRoutePreview {
     private static volatile boolean liveDragLockedAtExistingRail;
     private static volatile int liveExistingContactX = -1;
     private static volatile int liveExistingContactY = -1;
+    private static volatile boolean liveExistingContactRequiresSpecialTool;
     private static final java.util.List<RoutePiece> authoredPath =
             new java.util.ArrayList<RoutePiece>();
     /*
@@ -500,6 +501,10 @@ public final class RailRoutePreview {
         committedEndX = -1;
         committedEndY = -1;
         committedPlane = -1;
+        liveDragLockedAtExistingRail = false;
+        liveExistingContactX = -1;
+        liveExistingContactY = -1;
+        liveExistingContactRequiresSpecialTool = false;
         lastRenderedCycle = Integer.MIN_VALUE;
         renderState = "cleared";
         eventState = "Rail network draft cleared.";
@@ -1002,6 +1007,7 @@ public final class RailRoutePreview {
         liveDragLockedAtExistingRail = false;
         liveExistingContactX = -1;
         liveExistingContactY = -1;
+        liveExistingContactRequiresSpecialTool = false;
         dragging = true;
         lastRenderedCycle = Integer.MIN_VALUE;
         return true;
@@ -1041,17 +1047,45 @@ public final class RailRoutePreview {
         int destination = axis == 1 ? targetX : targetY;
         int cursor = axis == 1 ? x : y;
         while (cursor != destination && liveDragPath.size() < MAX_GESTURE_TILES) {
+            int previousX = x;
+            int previousY = y;
             cursor += Integer.compare(destination, cursor);
             if (axis == 1) x = cursor; else y = cursor;
-            appendLiveDragTile(x, y);
+
+            /*
+             * Ordinary Rail may extend an endpoint, but it must not manufacture
+             * a degree-3/4 node. Junction/Crossing/Splitter own those semantics.
+             *
+             * This guard covers both directions:
+             *  - dragging FROM an existing degree-2 rail into empty ground;
+             *  - dragging INTO an existing degree-2 rail from empty ground.
+             *
+             * In either case the normal Rail gesture stops before the new edge
+             * is authored, preserving the existing straight/curve resolver.
+             */
+            if (isExistingRailTile(previousX, previousY)
+                    && wouldRequireSpecialNode(previousX, previousY, x, y)) {
+                lockAtSpecialRailContact(previousX, previousY, previousX, previousY);
+                return;
+            }
+
             if (isPreExistingRailContact(x, y)) {
+                if (wouldRequireSpecialNode(x, y, previousX, previousY)) {
+                    lockAtSpecialRailContact(x, y, previousX, previousY);
+                    return;
+                }
+
+                appendLiveDragTile(x, y);
                 liveDragLockedAtExistingRail = true;
                 liveExistingContactX = x;
                 liveExistingContactY = y;
+                liveExistingContactRequiresSpecialTool = false;
                 liveEndX = x;
                 liveEndY = y;
                 return;
             }
+
+            appendLiveDragTile(x, y);
         }
     }
 
@@ -1059,7 +1093,35 @@ public final class RailRoutePreview {
         if (x == liveStartX && y == liveStartY) {
             return false;
         }
+        return isExistingRailTile(x, y);
+    }
+
+    private static boolean isExistingRailTile(int x, int y) {
         return logicalNetwork.contains(logicalKey(x, y, livePlane));
+    }
+
+    private static boolean wouldRequireSpecialNode(
+            int existingX, int existingY, int neighborX, int neighborY) {
+        if (!isExistingRailTile(existingX, existingY)) {
+            return false;
+        }
+        if (hasLogicalConnection(existingX, existingY, neighborX, neighborY, livePlane)) {
+            return false;
+        }
+        return Integer.bitCount(
+                logicalNeighborMask(existingX, existingY, livePlane)) >= 2;
+    }
+
+    private static void lockAtSpecialRailContact(
+            int contactX, int contactY, int stopX, int stopY) {
+        liveDragLockedAtExistingRail = true;
+        liveExistingContactX = contactX;
+        liveExistingContactY = contactY;
+        liveExistingContactRequiresSpecialTool = true;
+        liveEndX = stopX;
+        liveEndY = stopY;
+        eventState = "Normal Rail stopped at " + contactX + "," + contactY
+                + ": Junction/Crossing/Splitter required for a degree-3/4 node.";
     }
 
     private static int liveDragAxis() {
@@ -1136,9 +1198,6 @@ public final class RailRoutePreview {
         editingEndpointB = false;
         continuationHorizontalDirection = 0;
         continuationVerticalDirection = 0;
-        liveDragLockedAtExistingRail = false;
-        liveExistingContactX = -1;
-        liveExistingContactY = -1;
         lastRenderedCycle = Integer.MIN_VALUE;
 
         pathEndX = liveEndX;
@@ -1146,11 +1205,15 @@ public final class RailRoutePreview {
         pathPlane = livePlane;
 
         eventState = liveDragLockedAtExistingRail
-                ? "Rail network connected to existing track at "
-                        + liveExistingContactX + "," + liveExistingContactY
-                        + "; cross-through intentionally stopped."
+                ? (liveExistingContactRequiresSpecialTool
+                        ? "Normal Rail stopped before unsupported special node at "
+                                + liveExistingContactX + "," + liveExistingContactY
+                                + "; use Junction/Crossing/Splitter."
+                        : "Rail network connected to existing track at "
+                                + liveExistingContactX + "," + liveExistingContactY
+                                + "; cross-through intentionally stopped.")
                 : (joinedExisting
-                        ? "Rail network extended/branched from existing track."
+                        ? "Rail network extended from an existing endpoint."
                         : "Rail network segment added.");
 
         long debugOp = -1L;
@@ -1184,6 +1247,10 @@ public final class RailRoutePreview {
                     committedPlane, debugEvent);
         }
 
+        liveDragLockedAtExistingRail = false;
+        liveExistingContactX = -1;
+        liveExistingContactY = -1;
+        liveExistingContactRequiresSpecialTool = false;
         liveDragPath.clear();
     }
 
@@ -1522,6 +1589,9 @@ public final class RailRoutePreview {
                 .append("\tlogicalTiles=").append(logicalNetwork.size())
                 .append("\tcontactStop=").append(liveDragLockedAtExistingRail
                         ? (liveExistingContactX + "," + liveExistingContactY) : "none")
+                .append("\tcontactMode=").append(liveDragLockedAtExistingRail
+                        ? (liveExistingContactRequiresSpecialTool ? "SPECIAL_NODE_BLOCKED" : "CONNECTED")
+                        : "none")
                 .append("\tlimits=").append(MAX_GESTURE_TILES).append('/').append(MAX_NETWORK_PIECES)
                 .append("\n");
         out.append("MODE\tendpointEdit=").append(endpointEdit)
