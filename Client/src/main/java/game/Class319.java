@@ -89,6 +89,8 @@ public class Class319 implements Interface52 {
 				i_8_ -= 2000;
 			if (LiveModelEditorPreview.isEditSessionActive() && i_8_ == 23)
 				return;
+			if (ConstructionBuildCamera.handleMinimapWalkAction(i_8_, i_6_, i_7_, i_9_))
+				return;
 			if (ConstructionRadialSelection.handleMenuAction(i_8_, i_6_, i_7_, l))
 				return;
 			if (DevModeBridge.handleMenuAction(i_8_, i_6_, i_7_))
