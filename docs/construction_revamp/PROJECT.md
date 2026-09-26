@@ -1300,7 +1300,7 @@ See `docs/construction_revamp/testlist.txt` and `docs/construction_revamp/BUILD_
 
 **Active tooling slice:** Object Explorer + AssetStudioCapture live-assembly evidence export. The capture preserves exact scene ID/type/rotation/slot/tile/relative offsets/size and enriches each component with model IDs and decoded object animation IDs. Wooden workbench 13704 remains untouched as the working provisional processing station.
 
-**Next checklist item:** Runtime-test Bundle 3.2: place Wooden workbench 13704 with at least 2 Wood remaining, apply Carpenter/Process Wood to one worker, and confirm storage -> workbench -> PROCESSING -> exactly Wood -2 / Planks +1 with +18 Crafting XP. Then test Pause/Resume and exit/re-entry persistence. Bundle 3.3 sawmill evidence capture remains the parallel asset-mapping task.
+**Next checklist item:** Runtime-test the worker-control UX follow-up first: right-click Settler -> Jobs, verify single-worker and multi-selection job replacement, then leave Process Wood OFF and click Wooden workbench 13704 with selected worker(s). Confirm the explicit order runs storage -> clicked workbench -> PROCESSING -> exactly Wood -2 / Planks +1 with +18 Crafting XP and does not redirect the player's current action. After that, verify autonomous Process Wood via Jobs, Pause/Resume and exit/re-entry persistence. Bundle 3.3 sawmill evidence capture remains the parallel asset-mapping task.
 
 **Files/systems already inspected:**
 
