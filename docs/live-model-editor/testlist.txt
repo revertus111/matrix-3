@@ -88,7 +88,7 @@ Bundle 2.3B - true world pick + mouse manipulation
 [ ] G then left-drag with Free axis and confirm the selected component moves while the player remains planted.
 [ ] Press X/Y/Z during Move and confirm the drag is constrained to the requested model axis; press F to return to free screen-plane movement.
 [ ] R then drag horizontally and confirm only selected-part yaw changes.
-[ ] S then drag and confirm uniform scale in Free mode; X/Y/Z constrain scale to that axis.
+[ ] V then drag and confirm uniform scale in Free mode; X/Y/Z constrain scale to that axis.
 [ ] Ctrl+Z after a long drag and confirm the whole drag is undone as one edit operation.
 [ ] Confirm right/middle camera viewing controls still work while left-click remains editor-owned.
 
