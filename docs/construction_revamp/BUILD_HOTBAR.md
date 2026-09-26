@@ -145,12 +145,15 @@ The hotbar is UX/input routing only. It does not own persistent builds, rail top
 - [ ] Runtime NIS + Legacy UI/input smoke test.
 
 ### Phase H2 - Explicit rail special tools
-- [ ] Classify/accept Junction art.
-- [ ] Classify/accept Crossing art or approved same-area overlay solution.
-- [ ] Classify/accept Splitter/Merge art.
-- [ ] Add explicit rail tool mode/policy enum.
-- [ ] Replace temporary generic branch placeholder where accepted art exists.
-- [ ] Add cart-routing semantics for special nodes.
+- [~] Classify/accept Junction art. Rail Classifier now has one-click Accept Junction promotion to JUNCTION_RAIL_LAYOUT_01; runtime still needs the user's visually verified candidate.
+- [ ] Classify/accept Crossing art or approved same-area overlay solution. One-click Accept Crossing promotion exists; runtime crossing semantics remain H2B.
+- [ ] Classify/accept Splitter/Merge art. One-click Accept Splitter promotion exists; routing semantics remain H2C.
+- [x] Add explicit RailRoutePreview.ToolMode policy enum (NORMAL / JUNCTION / CROSSING / SPLITTER).
+- [x] Junction H2A logical authoring path: native hotbar slot 2 can create exactly one degree-3 node per gesture, but only when an accepted/persistable Junction composite exists.
+- [x] Junction H2A physical resolver: accepted Junction composite replaces the generic degree-3 straight placeholder and rotates from canonical N+E+S orientation to the authored mask.
+- [x] Register the evidence-seeded type-22 rail candidate IDs with server persistence so accepted classifier assets can survive atomic rail edits.
+- [ ] Crossing H2B cross-through topology + physical resolver.
+- [ ] Splitter/Merge H2C route-selection semantics + cart routing.
 
 ### Phase H3 - Player-customizable build slots
 - [ ] Allow build objects/prefabs to be assigned to slots.
@@ -161,14 +164,16 @@ The hotbar is UX/input routing only. It does not own persistent builds, rail top
 ## Runtime gate for Phase H1
 
 1. NIS: open Construction palette; the separate floating BUILD HOTBAR must be gone and native interface 1430 must show the temporary Construction icons.
-2. Press 1 -> Rail is armed. Click native slot 1 -> the same Rail action fires.
-3. Select Bed/Fence/etc. from palette; press 1 then 5 -> swaps Rail <-> last object without reopening category/search.
-4. Press/click 6 -> Eraser; re-arm an object and press/click 7 -> Rotate; press/click 8 -> existing settlement Undo.
-5. Slots 2/3/4/9 remain reserved and do not perform fake placement.
+2. Press 1 -> normal Rail is armed. Click native slot 1 -> the same Rail action fires.
+3. In Rail Classifier, visually verify a turnout/junction candidate and click Accept Junction; this writes JUNCTION_RAIL_LAYOUT_01 using the current preview rotation.
+4. Press/click native slot 2 -> Junction arms only when that accepted asset is server-persistable. Start from the middle of a degree-2 rail or drag into one; exactly one degree-3 Junction node may be authored in that gesture.
+5. Select Bed/Fence/etc. from palette; press 1 then 5 -> swaps Rail <-> last object without reopening category/search.
+6. Press/click 6 -> Eraser; re-arm an object and press/click 7 -> Rotate; press/click 8 -> existing settlement Undo.
+7. Slots 3 Crossing, 4 Splitter and 9 Favorites remain non-destructive until their H2 phases are implemented.
 6. Close Build Palette -> the player's original combat/action-bar contents and lock state return exactly.
 7. Legacy: switch to Legacy before opening the palette. Opening Construction must force native 1430 visible without changing Legacy mode; closing Construction must restore the Legacy presentation.
-8. Exit/teleport/logout from the settlement while Construction is active -> teardown restores the player's normal action bar.
-9. Reopen Construction after both NIS and Legacy tests; persistent combat shortcuts must be unchanged.
+10. Exit/teleport/logout from the settlement while Construction is active -> teardown restores the player's normal action bar.
+11. Reopen Construction after both NIS and Legacy tests; persistent combat shortcuts must be unchanged.
 
 ## Resume Here
 
