@@ -75,3 +75,11 @@
 - Bundle 2.5 follow-up: multi-part isolate visibility now follows the full selected set independently of transient hover preview, preventing hover from collapsing an isolated multi-selection to one component.
 - Guarded JList selection-mode transitions so switching Whole/Part/Multi cannot fire a stale Swing selection event back into the authoritative editor selection.
 - Reset Sel now resets the whole-clone transform when Whole mode is active and resets component transforms in Part/Multi modes.
+
+2026-09-25
+- Added Live Model Editor Bundle 2.6 shared RTS authoring camera.
+- Live Model Editor now leases the existing ConstructionBuildCamera RTS controller on open instead of creating a parallel camera implementation.
+- Editor camera controls: WASD/arrows pan, Q/E yaw orbit, mouse wheel zoom, and middle-mouse drag orbits yaw plus bounded pitch around the existing RTS pivot.
+- LMB remains exclusively owned by model selection/direct G/R/S transforms; non-LMB drag events are no longer consumed by the editor transform gate.
+- Editor exit restores a camera mode that was already active before editing, and only closes a camera session it started when no settlement/palette owner needs it.
+- RTS accepted pitch is persisted with the existing client-session yaw/pivot/orbit-distance view state.

@@ -45,9 +45,13 @@ public final class ConstructionBuildCamera {
     private static final float MAX_DT = 0.050F;
     private static final float VELOCITY_EPSILON = 0.5F;
 
-    // RTS uses a stable downward pitch and keeps pan movement on the ground plane.
-    private static final float RTS_PITCH_RADIANS = (float) Math.toRadians(52.0);
+    // RTS keeps a bounded editor-friendly orbit pitch and pans on the ground plane.
+    private static final float RTS_DEFAULT_PITCH_RADIANS = (float) Math.toRadians(52.0);
+    private static final float RTS_MIN_PITCH_RADIANS = (float) Math.toRadians(24.0);
+    private static final float RTS_MAX_PITCH_RADIANS = (float) Math.toRadians(78.0);
     private static final float RTS_ROTATE_SPEED = (float) Math.toRadians(90.0);
+    private static final float RTS_MOUSE_ORBIT_RADIANS_PER_PIXEL = (float) Math.toRadians(0.32);
+    private static final int RTS_MAX_QUEUED_ORBIT_PIXELS = 240;
     private static final float RTS_LOOK_DISTANCE = 4096.0F;
     private static final float RTS_INITIAL_BACKOFF = 3600.0F;
     private static final float RTS_ZOOM_STEP = 450.0F;
@@ -81,15 +85,19 @@ public final class ConstructionBuildCamera {
     // Q/E moves the camera around this pivot instead of turning in place.
     private static boolean rtsOrientationInitialized;
     private static float rtsYawRadians;
+    private static float rtsPitchRadians = RTS_DEFAULT_PITCH_RADIANS;
     private static float rtsOrbitDistance;
     private static float rtsPivotX;
     private static float rtsPivotY;
     private static float rtsPivotZ;
     private static int pendingRtsZoomSteps;
+    private static int pendingRtsOrbitX;
+    private static int pendingRtsOrbitY;
 
     // Preserve the last accepted RTS view for the lifetime of this client.
     private static boolean savedRtsView;
     private static float savedRtsYawRadians;
+    private static float savedRtsPitchRadians = RTS_DEFAULT_PITCH_RADIANS;
     private static float savedRtsOrbitDistance;
     private static float savedRtsPivotX;
     private static float savedRtsPivotY;
@@ -200,6 +208,26 @@ public final class ConstructionBuildCamera {
                 pendingRtsZoomSteps + wheelRotation,
                 -RTS_MAX_QUEUED_WHEEL_STEPS,
                 RTS_MAX_QUEUED_WHEEL_STEPS);
+        return true;
+    }
+
+    /**
+     * Shared RTS orbit seam for Construction and developer editors.
+     * Horizontal MMB drag orbits yaw around the current pivot; vertical drag
+     * changes the bounded RTS pitch. The actual camera mutation stays on tick().
+     */
+    public static synchronized boolean handleRtsMouseOrbitDrag(int deltaX, int deltaY) {
+        if (!active || cameraMode != CameraMode.RTS || (deltaX == 0 && deltaY == 0)) {
+            return false;
+        }
+        pendingRtsOrbitX = clamp(
+                pendingRtsOrbitX + deltaX,
+                -RTS_MAX_QUEUED_ORBIT_PIXELS,
+                RTS_MAX_QUEUED_ORBIT_PIXELS);
+        pendingRtsOrbitY = clamp(
+                pendingRtsOrbitY + deltaY,
+                -RTS_MAX_QUEUED_ORBIT_PIXELS,
+                RTS_MAX_QUEUED_ORBIT_PIXELS);
         return true;
     }
 
@@ -469,16 +497,33 @@ public final class ConstructionBuildCamera {
         }
 
         float rotationInput = (rotateRight ? 1.0F : 0.0F) - (rotateLeft ? 1.0F : 0.0F);
+        int[] mouseOrbit = consumeRtsOrbitPixels();
+        boolean orbitChanged = false;
         if (rotationInput != 0.0F) {
             rtsYawRadians = normalizeRadians(rtsYawRadians + rotationInput * RTS_ROTATE_SPEED * dt);
+            orbitChanged = true;
+        }
+        if (mouseOrbit[0] != 0) {
+            rtsYawRadians = normalizeRadians(rtsYawRadians
+                    - mouseOrbit[0] * RTS_MOUSE_ORBIT_RADIANS_PER_PIXEL);
+            orbitChanged = true;
+        }
+        if (mouseOrbit[1] != 0) {
+            rtsPitchRadians = clamp(
+                    rtsPitchRadians + mouseOrbit[1] * RTS_MOUSE_ORBIT_RADIANS_PER_PIXEL,
+                    RTS_MIN_PITCH_RADIANS,
+                    RTS_MAX_PITCH_RADIANS);
+            orbitChanged = true;
+        }
+        if (orbitChanged) {
             rememberRtsView();
         }
 
-        // Apply the requested heading first, then use Matrix3's real rendered look
-        // vector to place the camera on the orbit circle around the stored pivot.
+        // Apply the requested orbit first, then use Matrix3's real rendered look
+        // vector to place the camera on the circle around the stored pivot.
         applyRtsOrientation(lookController);
         Class240 viewDirection = getViewDirection(lookController, position);
-        if (rotationInput != 0.0F && viewDirection != null) {
+        if (orbitChanged && viewDirection != null) {
             setPositionFromRtsPivot(position, viewDirection);
         }
 
@@ -534,6 +579,8 @@ public final class ConstructionBuildCamera {
     private static void initializeRtsHeading(Class658_Sub2 lookController, Class240 position) {
         if (savedRtsView && isSavedRtsPivotInLoadedScene()) {
             rtsYawRadians = savedRtsYawRadians;
+            rtsPitchRadians = clamp(savedRtsPitchRadians,
+                    RTS_MIN_PITCH_RADIANS, RTS_MAX_PITCH_RADIANS);
             rtsOrbitDistance = clamp(savedRtsOrbitDistance, RTS_MIN_ORBIT_DISTANCE, RTS_MAX_ORBIT_DISTANCE);
             rtsPivotX = savedRtsPivotX;
             rtsPivotY = savedRtsPivotY;
@@ -562,6 +609,7 @@ public final class ConstructionBuildCamera {
             rtsYawRadians = 0.0F;
         }
 
+        rtsPitchRadians = RTS_DEFAULT_PITCH_RADIANS;
         rtsOrientationInitialized = true;
         applyRtsOrientation(lookController);
 
@@ -582,10 +630,10 @@ public final class ConstructionBuildCamera {
     }
 
     private static void applyRtsOrientation(Class658_Sub2 lookController) {
-        float horizontal = (float) Math.cos(RTS_PITCH_RADIANS) * RTS_LOOK_DISTANCE;
+        float horizontal = (float) Math.cos(rtsPitchRadians) * RTS_LOOK_DISTANCE;
         int x = Math.round((float) Math.sin(rtsYawRadians) * horizontal);
         // method8927 negates its Y target internally; negative here means look down in world space.
-        int y = -Math.round((float) Math.sin(RTS_PITCH_RADIANS) * RTS_LOOK_DISTANCE);
+        int y = -Math.round((float) Math.sin(rtsPitchRadians) * RTS_LOOK_DISTANCE);
         int z = Math.round((float) Math.cos(rtsYawRadians) * horizontal);
         lookController.method8927(x, y, z, 0);
     }
@@ -728,6 +776,13 @@ public final class ConstructionBuildCamera {
         int steps = pendingRtsZoomSteps;
         pendingRtsZoomSteps = 0;
         return steps;
+    }
+
+    private static synchronized int[] consumeRtsOrbitPixels() {
+        int[] delta = { pendingRtsOrbitX, pendingRtsOrbitY };
+        pendingRtsOrbitX = 0;
+        pendingRtsOrbitY = 0;
+        return delta;
     }
 
     private static float movementSpeed() {
@@ -910,6 +965,7 @@ public final class ConstructionBuildCamera {
         }
         savedRtsView = true;
         savedRtsYawRadians = rtsYawRadians;
+        savedRtsPitchRadians = rtsPitchRadians;
         savedRtsOrbitDistance = rtsOrbitDistance;
         savedRtsPivotX = rtsPivotX;
         savedRtsPivotY = rtsPivotY;
@@ -919,11 +975,14 @@ public final class ConstructionBuildCamera {
     private static synchronized void resetRtsState() {
         rtsOrientationInitialized = false;
         rtsYawRadians = 0.0F;
+        rtsPitchRadians = RTS_DEFAULT_PITCH_RADIANS;
         rtsOrbitDistance = 0.0F;
         rtsPivotX = 0.0F;
         rtsPivotY = 0.0F;
         rtsPivotZ = 0.0F;
         pendingRtsZoomSteps = 0;
+        pendingRtsOrbitX = 0;
+        pendingRtsOrbitY = 0;
         pendingRtsMinimapFocus = false;
         pendingRtsMinimapFocusX = 0;
         pendingRtsMinimapFocusY = 0;

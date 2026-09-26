@@ -1,6 +1,8 @@
 package game.console;
 
 import game.Class584;
+import game.ConstructionBuildCamera;
+import game.ConstructionPaletteOverlay;
 import game.ConstructionPlacementController;
 import game.DevDefinitionBridge;
 import game.DevModeBridge.DevTarget;
@@ -108,6 +110,11 @@ public final class LiveModelEditorWindow {
     private static Timer overlayTimer;
     private static boolean manuallyPositioned;
     private static boolean inputGateInstalled;
+    private static boolean modelLeftDragActive;
+    private static boolean editorCameraSessionActive;
+    private static boolean editorStartedRtsCamera;
+    private static boolean editorCameraWasAlreadyActive;
+    private static ConstructionBuildCamera.CameraMode editorPreviousCameraMode;
     private static int manualLocalX;
     private static int manualLocalY;
     private static int manualWidth = OVERLAY_WIDTH;
@@ -187,6 +194,7 @@ public final class LiveModelEditorWindow {
             return;
         }
         installInputGate();
+        enterEditorRtsCamera();
         if (instance.matchesTarget(target)) {
             instance.resumeSession();
         } else {
@@ -764,6 +772,8 @@ public final class LiveModelEditorWindow {
     private static void closeEditorSession() {
         LiveModelEditorPreview.clearPartPreview();
         LiveModelEditorPreview.hide();
+        modelLeftDragActive = false;
+        exitEditorRtsCamera();
         if (instance != null) {
             instance.hoveredListIndex = -1;
             instance.statusLabel.setText("Edit session paused. Original scene object restored.");
@@ -771,6 +781,46 @@ public final class LiveModelEditorWindow {
         if (overlayWindow != null) {
             overlayWindow.setVisible(false);
         }
+    }
+
+    private static void enterEditorRtsCamera() {
+        if (editorCameraSessionActive) {
+            return;
+        }
+        editorCameraSessionActive = true;
+        editorCameraWasAlreadyActive = ConstructionBuildCamera.isRequested();
+        editorPreviousCameraMode = ConstructionBuildCamera.getMode();
+        ConstructionPaletteOverlay.installRtsInputListener();
+
+        if (editorCameraWasAlreadyActive) {
+            ConstructionBuildCamera.setMode(ConstructionBuildCamera.CameraMode.RTS);
+            editorStartedRtsCamera = false;
+        } else {
+            ConstructionBuildCamera.enter();
+            editorStartedRtsCamera = ConstructionBuildCamera.isRequested();
+        }
+    }
+
+    private static void exitEditorRtsCamera() {
+        if (!editorCameraSessionActive) {
+            return;
+        }
+        if (editorStartedRtsCamera && ConstructionBuildCamera.isRequested()) {
+            if (!ConstructionBuildCamera.isSettlementAutoMode()
+                    && !ConstructionPaletteOverlay.isVisible()) {
+                ConstructionBuildCamera.exit();
+            }
+        } else if (editorCameraWasAlreadyActive
+                && ConstructionBuildCamera.isRequested()
+                && !ConstructionBuildCamera.isSettlementAutoMode()
+                && editorPreviousCameraMode != null) {
+            ConstructionBuildCamera.setMode(editorPreviousCameraMode);
+        }
+
+        editorCameraSessionActive = false;
+        editorStartedRtsCamera = false;
+        editorCameraWasAlreadyActive = false;
+        editorPreviousCameraMode = null;
     }
 
     private static synchronized void installInputGate() {
@@ -803,21 +853,27 @@ public final class LiveModelEditorWindow {
                     }
                     if (id == MouseEvent.MOUSE_PRESSED
                             && mouse.getButton() == MouseEvent.BUTTON1) {
-                        LiveModelEditorPreview.beginPointerDrag(mouse.getX(), mouse.getY(),
+                        modelLeftDragActive = LiveModelEditorPreview.beginPointerDrag(
+                                mouse.getX(), mouse.getY(),
                                 mouse.isShiftDown() || mouse.isControlDown(), mouse.isControlDown());
                         mouse.consume();
                         if (instance != null) instance.syncRuntimeState();
                         return;
                     }
                     if (id == MouseEvent.MOUSE_DRAGGED) {
-                        LiveModelEditorPreview.dragPointerTo(mouse.getX(), mouse.getY());
-                        mouse.consume();
-                        if (instance != null) instance.syncRuntimeState();
+                        if (modelLeftDragActive) {
+                            LiveModelEditorPreview.dragPointerTo(mouse.getX(), mouse.getY());
+                            mouse.consume();
+                            if (instance != null) instance.syncRuntimeState();
+                        }
                         return;
                     }
                     if (id == MouseEvent.MOUSE_RELEASED
                             && mouse.getButton() == MouseEvent.BUTTON1) {
-                        LiveModelEditorPreview.endPointerDrag();
+                        if (modelLeftDragActive) {
+                            LiveModelEditorPreview.endPointerDrag();
+                        }
+                        modelLeftDragActive = false;
                         mouse.consume();
                         if (instance != null) instance.syncRuntimeState();
                         return;
@@ -930,7 +986,7 @@ public final class LiveModelEditorWindow {
         targetLabel.setText(objectName + "   #" + objectId
                 + "   model " + joinIds(sourceModelIds));
         sourceLabel.setText("World " + sourceX + ", " + sourceY + ", " + sourcePlane
-                + "   |   WORLD PICK + MOUSE DRAG   |   G/R/S transforms");
+                + "   |   LMB edit   |   MMB orbit   |   wheel zoom   |   WASD pan");
     }
 
     private void refreshIfActive() {

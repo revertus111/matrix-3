@@ -25,7 +25,7 @@ The same transform/selection foundation is intended to become the developer-grad
 | Live whole-model transforms | ✅ Complete | Runtime-confirmed in the live client; independent scale, translation and yaw visibly update the private clone. |
 | JSON project save/load | ⚠️ Needs runtime verification | Authoring state saves under dev-model-projects and can be loaded back into the live preview. |
 | Mesh component selection/editing | ⚠️ Needs runtime verification | Connected-part editing, Whole/Part/Multi selection, group actions/transforms, world picking, G/R/S mouse transforms, Construction replacement and reusable selection-asset export are implemented; consolidated runtime verification is pending. |
-| In-client model-editor overlay | ⚠️ Needs runtime verification | RuneScape-styled owned overlay follows the Matrix3 game canvas, supports drag repositioning, live resize with scroll fallback and current mode/selection status. |
+| In-client model-editor overlay | ⚠️ Needs runtime verification | RuneScape-styled owned overlay follows the Matrix3 game canvas, supports drag repositioning/live resize/scroll fallback and now leases the shared Construction RTS camera for WASD pan, wheel zoom and MMB orbit. |
 | Permanent revision-830 model compiler | ❌ Not started | Requires validated encoder, model-ID allocation, backup, write/readback and hot reload. |
 | Construction Detail Mode reuse | 🔵 Foundation in progress | Live Model Editor now consumes the Construction BuildPiece catalog for non-destructive part replacement; player-facing settlement Detail Mode and server-validated persistence remain future work. |
 
@@ -203,6 +203,21 @@ Status: NEEDS TEST
 - [ ] Eclipse/Java 8 clean-build.
 - [ ] Runtime verify on Conveyor belt 46298/models 49717+49718.
 
+### Bundle 2.6 - Shared RTS authoring camera
+
+Status: NEEDS TEST
+
+- [x] Reuse ConstructionBuildCamera RTS mode instead of creating a second Live Model Editor camera controller.
+- [x] Live Model Editor acquires RTS camera ownership on open and releases/restores prior camera ownership on Exit Edit/Escape.
+- [x] Preserve an already-active Construction/settlement camera rather than tearing it down when the editor closes.
+- [x] Keep LMB owned by model selection/transforms while MMB remains available for camera orbit.
+- [x] Route world mouse-wheel input to the active RTS camera for zoom while editing.
+- [x] Add MMB drag yaw + bounded pitch orbit around the existing RTS pivot.
+- [x] Preserve WASD/arrow pan and Q/E yaw controls.
+- [x] Persist the accepted RTS pitch together with yaw, pivot and zoom for the client session.
+- [ ] Eclipse/Java 8 clean-build.
+- [ ] Runtime verify MMB orbit + wheel zoom + WASD pan while editing Conveyor belt 46298.
+
 ## Phase 3 - Professional Transform UX
 
 Status: PLANNED
@@ -269,9 +284,9 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
-**Active bundle:** Bundle 2.5 - Professional selection + editor usability (`NEEDS TEST`).
+**Active bundle:** Bundle 2.5 + Bundle 2.6 - Professional selection/editor usability + shared RTS authoring camera (`NEEDS TEST`).
 
-**Next action:** runtime-test Conveyor belt 46298/models 49717+49718 in the upgraded editor: verify mouse movement direction, Whole/Part/Multi modes, Ctrl-toggle/list multi-select, grouped move/duplicate/isolate/undo, live overlay resizing/scrolling and Save Selection. If the belt strip can be isolated cleanly, save it under dev-model-assets as the first reusable conveyor component recipe and continue the Construction conveyor visual handoff from that asset.
+**Next action:** runtime-test Conveyor belt 46298/models 49717+49718 in one editor session: verify MMB orbit (yaw/pitch), wheel zoom, WASD/arrow pan and Q/E rotation while LMB still exclusively selects/transforms model parts; then verify Whole/Part/Multi editing, grouped duplicate/isolate/undo, resize/scroll and Save Selection. If the belt strip isolates cleanly, save it under dev-model-assets as the first reusable conveyor component recipe.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`

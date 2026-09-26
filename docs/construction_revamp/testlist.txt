@@ -1114,3 +1114,11 @@ Rail-aware Eraser regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-
 - After an erase, add another rail operation. Previously erased rail must not respawn or re-route because of stale client topology.
 - Exit/re-enter the settlement after erasing and confirm the erased physical rail is still absent (server persistence).
 - Regression: erase a normal non-rail settlement build object and confirm the existing server-authoritative erasetile path still removes it persistently.
+
+RTS middle-mouse orbit regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-25)
+- Enter settlement RTS or open Live Model Editor and hold MMB over the game canvas.
+- Drag horizontally: orbit yaw must change smoothly around the pivot; Q/E must still rotate in the same camera system afterward.
+- Drag vertically: pitch must change smoothly but remain within the safe RTS bounds; no flip/inversion or horizon crossing.
+- Wheel zoom must still operate while MMB orbit support is installed.
+- WASD/arrows must still pan relative to rendered heading, minimap focus must remain synchronized, and loaded-scene pivot clamping must still hold.
+- Release MMB and confirm no stuck rotation state survives.

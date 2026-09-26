@@ -83,6 +83,9 @@ public final class ConstructionPaletteOverlay {
 
     private static Timer paintTimer;
     private static boolean inputListenerInstalled;
+    private static boolean rtsMiddleDragging;
+    private static int rtsMiddleLastX;
+    private static int rtsMiddleLastY;
     private static JWindow paletteWindow;
     private static PaletteSurface paletteSurface;
     private static Window paletteOwner;
@@ -157,16 +160,22 @@ public final class ConstructionPaletteOverlay {
                 @Override
                 public void eventDispatched(AWTEvent event) {
                     if (event instanceof MouseWheelEvent) {
-                        if (visible || ConstructionBuildCamera.isSettlementAutoMode()) {
+                        if (visible || ConstructionBuildCamera.isSettlementAutoMode()
+                                || isLiveRtsCamera()) {
                             handleWorldWheel((MouseWheelEvent) event);
                         }
+                        return;
+                    }
+                    if (event instanceof MouseEvent && isLiveRtsCamera()) {
+                        handleRtsMiddleMouse((MouseEvent) event);
                         return;
                     }
                     if ((visible || ConstructionBuildCamera.isSettlementAutoMode()) && event instanceof KeyEvent) {
                         handleKey((KeyEvent) event);
                     }
                 }
-            }, AWTEvent.MOUSE_WHEEL_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
+            }, AWTEvent.MOUSE_WHEEL_EVENT_MASK | AWTEvent.MOUSE_EVENT_MASK
+                    | AWTEvent.MOUSE_MOTION_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
             inputListenerInstalled = true;
         } catch (RuntimeException ex) {
             visible = false;
@@ -389,6 +398,45 @@ public final class ConstructionPaletteOverlay {
         scrollOffset = clamp(scrollOffset + (wheel > 0 ? 1 : -1), 0, max);
         event.consume();
         repaintSurface();
+    }
+
+    private static boolean isLiveRtsCamera() {
+        return ConstructionBuildCamera.isRequested() && ConstructionBuildCamera.isRtsMode();
+    }
+
+    private static void handleRtsMiddleMouse(MouseEvent event) {
+        Canvas canvas = Class584.aCanvas7745;
+        if (canvas == null || event.getSource() != canvas) {
+            return;
+        }
+        int id = event.getID();
+        if (id == MouseEvent.MOUSE_PRESSED && event.getButton() == MouseEvent.BUTTON2) {
+            rtsMiddleDragging = true;
+            rtsMiddleLastX = event.getX();
+            rtsMiddleLastY = event.getY();
+            event.consume();
+            return;
+        }
+        if (id == MouseEvent.MOUSE_DRAGGED && rtsMiddleDragging) {
+            int x = event.getX();
+            int y = event.getY();
+            int dx = x - rtsMiddleLastX;
+            int dy = y - rtsMiddleLastY;
+            rtsMiddleLastX = x;
+            rtsMiddleLastY = y;
+            if (ConstructionBuildCamera.handleRtsMouseOrbitDrag(dx, dy)) {
+                event.consume();
+            }
+            return;
+        }
+        if (id == MouseEvent.MOUSE_RELEASED && event.getButton() == MouseEvent.BUTTON2) {
+            rtsMiddleDragging = false;
+            event.consume();
+            return;
+        }
+        if (id == MouseEvent.MOUSE_EXITED) {
+            rtsMiddleDragging = false;
+        }
     }
 
     private static void handleWorldWheel(MouseWheelEvent event) {

@@ -1545,3 +1545,9 @@
 - RTS reuses Matrix3's existing minimap destination-marker state as a layout-safe camera-focus marker; keyboard pan keeps it synchronized with the pivot and prior marker state is restored when RTS ownership ends.
 - Early minimap clicks queue until RTS orientation/pivot initialization completes.
 - Vanilla minimap heading remains unchanged; rotating RTS heading indication is deferred until the actual minimap render/angle owner is verified.
+
+2026-09-25 - RTS middle-mouse orbit + shared editor camera input
+- Extended the existing ConstructionBuildCamera RTS owner with queued middle-mouse orbit input; horizontal drag changes yaw and vertical drag changes bounded pitch around the existing pivot.
+- RTS pitch is now dynamic within safe 24-78 degree bounds and persists with the existing session yaw/pivot/orbit-distance state.
+- ConstructionPaletteOverlay's global RTS input listener now routes MMB drag and wheel zoom whenever the shared RTS camera is active, including Live Model Editor camera sessions.
+- Existing WASD/arrow pan, Q/E yaw, minimap focus, scene clamping and wheel zoom ownership are preserved.

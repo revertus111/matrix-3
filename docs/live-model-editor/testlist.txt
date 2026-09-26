@@ -136,3 +136,15 @@ Bundle 2.5 - professional selection/editor usability
 [ ] Bundle 2.5 regression: with Multi + Isolate active, hover each selected component and confirm all selected components remain visible while only the hover highlight changes.
 [ ] Bundle 2.5 regression: switch Whole -> Part -> Multi repeatedly and confirm the authoritative selection does not change from stale list events.
 [ ] Bundle 2.5 regression: Reset Sel in Whole mode resets clone scale/move/yaw without changing object type, rotation or tile offset.
+
+Bundle 2.6 - shared RTS authoring camera
+[ ] Open Conveyor belt 46298 in Live Model Editor and confirm RTS camera activates automatically.
+[ ] Hold MMB and drag left/right; camera must orbit yaw around the current pivot without selecting or moving a model part.
+[ ] Hold MMB and drag up/down; camera pitch must change smoothly and remain bounded away from flat/horizon and vertical singularities.
+[ ] Scroll the mouse wheel over the game canvas; RTS camera must zoom in/out and the model must remain editable.
+[ ] Use WASD/arrows to pan the RTS pivot while editing; player must remain stationary.
+[ ] Use Q/E and confirm keyboard yaw orbit still works after MMB orbit was added.
+[ ] LMB select/drag one component after moving the camera and confirm G/R/S editing still owns LMB exclusively.
+[ ] Open editor while an existing Construction RTS camera is active, then Exit Edit; existing Construction camera must remain active.
+[ ] Open editor from normal gameplay, then Exit Edit/Escape; the editor-started detached camera must close and normal camera control return.
+[ ] Reopen editor in the same loaded scene and confirm the accepted RTS yaw/pitch/pivot/zoom view resumes.
