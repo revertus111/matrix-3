@@ -56,6 +56,18 @@ public final class SettlementInstance {
     // One worker owns one physical processing station at a time.
     private final Map<Long, Long> processingWorkstationReservations =
             new HashMap<Long, Long>();
+    /*
+     * Settlement workers use soft NPC collision while travelling, so their
+     * final/interaction positions need a separate transient owner. Paths may
+     * cross; reserved destination tiles may not.
+     */
+    private final Map<Long, WorkerDestinationReservation> workerDestinationReservations =
+            new HashMap<Long, WorkerDestinationReservation>();
+    private static final int[][] WORKER_DESTINATION_OFFSETS = {
+        { 0, 0 },
+        { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 },
+        { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 }
+    };
     // Short-lived server-owned staging for packet-safe atomic rail endpoint edits.
     private final List<int[]> pendingRailOld = new ArrayList<int[]>();
     private final List<String[]> pendingRailNew = new ArrayList<String[]>();
@@ -971,6 +983,139 @@ public final class SettlementInstance {
         return selected;
     }
 
+    public synchronized WorldTile reserveWorkerDestination(
+            long workerId, WorldTile target, int interactionRange) {
+        if (!loaded || destroyed || boundChunks == null
+                || workerId <= 0L || target == null
+                || target.getPlane() != PLOT_PLANE) {
+            return null;
+        }
+
+        boolean centerBlocked = target instanceof WorldObject || target instanceof NPC;
+        int spreadRadius = Math.max(1, interactionRange);
+        WorkerDestinationReservation existing =
+                workerDestinationReservations.get(Long.valueOf(workerId));
+        if (existing != null
+                && existing.matches(target, interactionRange, centerBlocked)
+                && isWorkerDestinationTileValid(
+                        workerId, existing.tile, false)) {
+            return new WorldTile(existing.tile);
+        }
+
+        workerDestinationReservations.remove(Long.valueOf(workerId));
+
+        /*
+         * If this worker is already standing on a valid approach tile, keep it
+         * there instead of shuffling around the same target.
+         */
+        WorldTile current = findActiveWorkerTile(workerId);
+        if (current != null
+                && Math.abs(current.getX() - target.getX()) <= spreadRadius
+                && Math.abs(current.getY() - target.getY()) <= spreadRadius
+                && !(centerBlocked
+                        && current.getX() == target.getX()
+                        && current.getY() == target.getY())
+                && isWorkerDestinationTileValid(workerId, current, true)) {
+            workerDestinationReservations.put(Long.valueOf(workerId),
+                    new WorkerDestinationReservation(
+                            target, interactionRange, centerBlocked, current));
+            return new WorldTile(current);
+        }
+
+        for (int[] offset : WORKER_DESTINATION_OFFSETS) {
+            int dx = offset[0];
+            int dy = offset[1];
+            if (Math.abs(dx) > spreadRadius || Math.abs(dy) > spreadRadius) {
+                continue;
+            }
+            if (centerBlocked && dx == 0 && dy == 0) {
+                continue;
+            }
+
+            WorldTile candidate = new WorldTile(
+                    target.getX() + dx,
+                    target.getY() + dy,
+                    target.getPlane());
+            if (!isWorkerDestinationTileValid(workerId, candidate, true)) {
+                continue;
+            }
+
+            workerDestinationReservations.put(Long.valueOf(workerId),
+                    new WorkerDestinationReservation(
+                            target, interactionRange, centerBlocked, candidate));
+            return candidate;
+        }
+        return null;
+    }
+
+    public synchronized void releaseWorkerDestination(long workerId) {
+        workerDestinationReservations.remove(Long.valueOf(workerId));
+    }
+
+    private WorldTile findActiveWorkerTile(long workerId) {
+        SettlementWorkerNpc npc = findActiveWorkerNpc(workerId);
+        return npc == null
+                ? null : new WorldTile(npc.getX(), npc.getY(), npc.getPlane());
+    }
+
+    private boolean isWorkerDestinationTileValid(
+            long workerId, WorldTile tile, boolean checkCurrentOccupancy) {
+        if (tile == null || !containsWorldTile(tile)
+                || !World.isFloorFree(tile.getPlane(), tile.getX(), tile.getY(), 1)) {
+            return false;
+        }
+
+        for (Map.Entry<Long, WorkerDestinationReservation> entry
+                : workerDestinationReservations.entrySet()) {
+            if (entry.getKey().longValue() == workerId) {
+                continue;
+            }
+            WorkerDestinationReservation reservation = entry.getValue();
+            if (reservation != null && sameTile(reservation.tile, tile)) {
+                return false;
+            }
+        }
+
+        if (!checkCurrentOccupancy) {
+            return true;
+        }
+
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc == null || npc.hasFinished() || npc.getWorkerId() == workerId) {
+                continue;
+            }
+            if (npc.getPlane() == tile.getPlane()
+                    && npc.getX() == tile.getX()
+                    && npc.getY() == tile.getY()) {
+                return false;
+            }
+        }
+        for (NPC npc : starterResourceNpcs) {
+            if (npc != null && !npc.hasFinished()
+                    && npc.getPlane() == tile.getPlane()
+                    && npc.getX() == tile.getX()
+                    && npc.getY() == tile.getY()) {
+                return false;
+            }
+        }
+        for (SettlementRailCartNpc npc : railCarts) {
+            if (npc != null && !npc.hasFinished()
+                    && npc.getPlane() == tile.getPlane()
+                    && npc.getX() == tile.getX()
+                    && npc.getY() == tile.getY()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean sameTile(WorldTile a, WorldTile b) {
+        return a != null && b != null
+                && a.getPlane() == b.getPlane()
+                && a.getX() == b.getX()
+                && a.getY() == b.getY();
+    }
+
     public synchronized String orderRuntimeSelectionMove(WorldTile destination) {
         if (!loaded || destroyed || boundChunks == null || destination == null) {
             return "RTS move order unavailable; settlement runtime is not ready.";
@@ -1529,6 +1674,7 @@ public final class SettlementInstance {
         }
         workerNpcs.clear();
         workerStorageReservations.clear();
+        workerDestinationReservations.clear();
     }
 
     public static String runWorkerStorageReservationSelfTest() {
@@ -1630,6 +1776,36 @@ public final class SettlementInstance {
 
         private synchronized void clear() {
             byWorker.clear();
+        }
+    }
+
+    private static final class WorkerDestinationReservation {
+        private final int anchorX;
+        private final int anchorY;
+        private final int plane;
+        private final int interactionRange;
+        private final boolean centerBlocked;
+        private final WorldTile tile;
+
+        private WorkerDestinationReservation(
+                WorldTile target, int interactionRange,
+                boolean centerBlocked, WorldTile tile) {
+            this.anchorX = target.getX();
+            this.anchorY = target.getY();
+            this.plane = target.getPlane();
+            this.interactionRange = interactionRange;
+            this.centerBlocked = centerBlocked;
+            this.tile = new WorldTile(tile);
+        }
+
+        private boolean matches(
+                WorldTile target, int interactionRange, boolean centerBlocked) {
+            return target != null
+                    && anchorX == target.getX()
+                    && anchorY == target.getY()
+                    && plane == target.getPlane()
+                    && this.interactionRange == interactionRange
+                    && this.centerBlocked == centerBlocked;
         }
     }
 
