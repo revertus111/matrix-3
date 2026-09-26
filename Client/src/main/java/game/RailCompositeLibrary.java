@@ -27,6 +27,9 @@ public final class RailCompositeLibrary {
             Paths.get("data/construction/asset_studio/rail_composites.tsv");
 
     public static final String ACCEPTED_CURVE_NAME = "CURVE_RAIL_LAYOUT_01";
+    public static final String ACCEPTED_JUNCTION_NAME = "JUNCTION_RAIL_LAYOUT_01";
+    public static final String ACCEPTED_CROSSING_NAME = "CROSSING_RAIL_LAYOUT_01";
+    public static final String ACCEPTED_SPLITTER_NAME = "SPLITTER_RAIL_LAYOUT_01";
 
     public enum Role {
         STRAIGHT,
@@ -183,6 +186,28 @@ public final class RailCompositeLibrary {
             }
         }
         return null;
+    }
+
+    public static CompositeDefinition findAcceptedJunctionForRoute() {
+        return findByName(ACCEPTED_JUNCTION_NAME);
+    }
+
+    public static CompositeDefinition findAcceptedCrossingForRoute() {
+        return findByName(ACCEPTED_CROSSING_NAME);
+    }
+
+    public static CompositeDefinition findAcceptedSplitterForRoute() {
+        return findByName(ACCEPTED_SPLITTER_NAME);
+    }
+
+    public static synchronized String promoteSingleSpecial(
+            String canonicalName, Role role, int id, int type, int rotation) {
+        if (canonicalName == null || canonicalName.trim().isEmpty()) {
+            return "Canonical rail special name is required.";
+        }
+        List<Component> components = new ArrayList<Component>();
+        components.add(new Component(id, type, rotation, 0, 0));
+        return saveComposite(canonicalName, role, components);
     }
 
     public static CompositeDefinition findAcceptedCurveForRoute() {
