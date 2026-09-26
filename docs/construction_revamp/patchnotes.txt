@@ -1577,3 +1577,12 @@
 - Group move, storage, needs, gathering and processing all reuse the same worker walkToward destination allocator instead of adding system-specific collision rules.
 - Worker destination reservations clear with settlement worker teardown; no global Entity/NPC collision behavior changed.
 - Runtime evidence from the prior UX patch confirmed 3-worker Jobs apply and selected-worker workbench 2 Wood -> 1 Plank dispatch/conversion.
+
+
+2026-09-26 - Rail sharp-bend / curve-footprint overlap guard
+- Runtime evidence showed consecutive tight 90-degree turns could create overlapping accepted three-object curve composites even though the logical path itself remained valid.
+- Added author-time curve-footprint collision validation. Before a candidate rail edge is accepted, Rail Network V1 evaluates any new corner at both ends against all existing/prospective accepted curve footprints.
+- If two curve composites would occupy the same physical tile, the active Rail gesture clamps at the last safe tile and instructs the player to widen the bend.
+- No arbitrary minimum-turn distance is hardcoded; the guard follows the actual accepted composite footprint, so future curve assets can change without rewriting gesture spacing math.
+- Debug RAIL_DEBUG now emits bendStop=x,y when this guard rejects a sharp turn.
+- Prior normal-Rail special-node/degree-3 guard is runtime confirmed working by the user.
