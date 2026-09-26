@@ -769,12 +769,19 @@ Settlement RTS World View Bundle — IMPLEMENTED / NEEDS RUNTIME TEST
 [x] RTS wheel input remains installed while palette is closed; orbit range is 700..10000.
 [x] RTS pivot/yaw/orbit distance persist across detached-camera recreation for the client lifetime.
 [x] Settlement server enables Matrix3's existing large-scene NPC update protocol and resets the local NPC list on enter/leave.
+[x] Source: Class319 action 23 movement type 1 is intercepted as the minimap-walk variant before IncomingPacket.method4108 sends the player movement packet.
+[x] Source: minimap click reuses the already-resolved local destination, preserves RTS yaw/pitch/orbit distance, and moves only the ConstructionBuildCamera pivot.
+[x] Source: RTS camera focus reuses Matrix3's destination-marker state and snapshots/restores the prior marker state around RTS ownership.
 [ ] Enter settlement with palette closed; wheel zoom works across the expanded range.
 [ ] Pan from entry toward workers without moving the player; workers remain visible/arrive in the local NPC list up to the large-scene 64-tile protocol radius.
+[ ] Click several visible minimap locations; the RTS camera jumps/focuses to the corresponding area and the player does not Walk Here.
+[ ] After minimap focus, current zoom and Q/E heading remain unchanged; subsequent Q/E still orbits the clicked pivot.
+[ ] Pan with WASD/arrows after a minimap click; the minimap focus marker follows the RTS pivot as it crosses tiles.
+[ ] Switch RTS -> Free Build or exit settlement; normal Matrix3 minimap marker behavior is restored with no stuck camera-focus marker.
 [ ] Exit/re-enter or recreate RTS; prior pivot/yaw/zoom restores cleanly without blank viewport.
 [ ] Leave settlement; vanilla camera and ordinary NPC update radius return normally.
 [ ] Fog range is still visibly limiting at long RTS zoom; requires a verified renderer/environment seam before changing.
-[ ] Minimap heading remains vanilla-coupled; requires a verified minimap camera-heading seam before changing.
+[ ] Minimap heading remains vanilla-coupled; rotating RTS heading chevron remains deferred until the minimap render/angle owner is verified.
 
 
 Rail Continuation Ownership Correction — IMPLEMENTED / NEEDS RUNTIME TEST
