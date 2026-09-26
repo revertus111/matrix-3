@@ -385,3 +385,5 @@ Bundle 2.7C-F - professional interaction polish
 [ ] No duplicate old Parts/Transform panel appears and no old transform CardLayout behavior remains.
 [ ] Regression: Move/Rotate/Scale gizmos, Snap, inspector exact entry, selection, camera and project JSON remain functional.
 [ ] Expected: text readout is currently in the EDIT workspace, not physically beside the 3D gizmo; native gizmo text is recorded CARRYOVER pending a verified Matrix3 renderer-font seam.
+
+[ ] Open Load Project / Save Selection file chooser and use arrows/Tab/Delete/typing; editor transform/selection shortcuts must not fire behind the modal dialog.
