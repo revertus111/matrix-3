@@ -5,6 +5,7 @@ import game.AssetStudioCapture.CaptureBatch;
 import game.AssetStudioCapture.CaptureEntry;
 import game.ObjectLabPreview;
 import game.RailRoutePreview;
+import game.RailCompositeLibrary;
 
 import java.awt.Component;
 import java.awt.Dimension;
@@ -397,6 +398,34 @@ public final class RailKitClassifierPanel extends JScrollPane {
         checks.add(notRail);
         checks.add(unsure);
         card.add(checks);
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel promote = new JPanel(new GridLayout(1, 3, 5, 0));
+        promote.setOpaque(false);
+        promote.setAlignmentX(LEFT_ALIGNMENT);
+        promote.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        JButton acceptJunction = button("Accept Junction");
+        JButton acceptCrossing = button("Accept Crossing");
+        JButton acceptSplitter = button("Accept Splitter");
+        acceptJunction.addActionListener(e -> promoteSelectedSpecial(
+                RailCompositeLibrary.ACCEPTED_JUNCTION_NAME,
+                RailCompositeLibrary.Role.TURNOUT, "Junction"));
+        acceptCrossing.addActionListener(e -> promoteSelectedSpecial(
+                RailCompositeLibrary.ACCEPTED_CROSSING_NAME,
+                RailCompositeLibrary.Role.CROSSING, "Crossing"));
+        acceptSplitter.addActionListener(e -> promoteSelectedSpecial(
+                RailCompositeLibrary.ACCEPTED_SPLITTER_NAME,
+                RailCompositeLibrary.Role.TURNOUT, "Splitter"));
+        promote.add(acceptJunction);
+        promote.add(acceptCrossing);
+        promote.add(acceptSplitter);
+        card.add(promote);
+        card.add(Box.createVerticalStrut(6));
+        card.add(ConsoleTheme.createWrappedText(
+                "Accepted special buttons save the selected preview rotation as the canonical "
+                + "single-object special asset. Use Object Explorer composites instead when the "
+                + "special node needs multiple objects.",
+                4));
         card.add(Box.createVerticalStrut(7));
         card.add(ConsoleTheme.createWrappedText(
                 "Auto-save: Client/data/construction/asset_studio/rail_kit.tsv", 2));
@@ -409,6 +438,25 @@ public final class RailKitClassifierPanel extends JScrollPane {
         statusLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(statusLabel);
         return card;
+    }
+
+    private void promoteSelectedSpecial(
+            String canonicalName, RailCompositeLibrary.Role role, String label) {
+        Candidate candidate = selected;
+        if (candidate == null) {
+            setStatus("Select and preview a rail candidate first.");
+            return;
+        }
+        int rotation = number(previewRotation);
+        String error = RailCompositeLibrary.promoteSingleSpecial(
+                canonicalName, role, candidate.id, candidate.type, rotation);
+        if (error != null) {
+            setStatus(error);
+            return;
+        }
+        RailRoutePreview.reloadSpecialComposites();
+        setStatus(label + " accepted: ID " + candidate.id + " type "
+                + candidate.type + " rot " + rotation + " -> " + canonicalName + ".");
     }
 
     private void configureSelectedRouteRail() {
