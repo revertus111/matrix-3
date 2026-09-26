@@ -2,6 +2,7 @@ package game.console;
 
 import game.AssetStudioCapture;
 import game.AssetStudioCapture.CaptureBatch;
+import game.AssetStudioCapture.CaptureEntry;
 import game.DevDefinitionBridge;
 import game.ObjectCompositePreview;
 import game.RailCompositeLibrary;
@@ -51,6 +52,8 @@ public final class ObjectExplorerPanel extends JScrollPane {
     private static final long serialVersionUID = 1L;
     private static final Path RESEARCH_FILE =
             Paths.get("data/tools/object_explorer.tsv");
+    private static final Path ASSEMBLY_RESEARCH_DIR =
+            Paths.get("data/tools/object_assemblies");
 
     /*
      * VERIFIED from the 2026-09-22 uploaded curve capture.
@@ -79,6 +82,8 @@ public final class ObjectExplorerPanel extends JScrollPane {
             new JSpinner(new SpinnerNumberModel(3, -12, 12, 1));
     private final JSpinner offsetYSpinner =
             new JSpinner(new SpinnerNumberModel(0, -12, 12, 1));
+    private final JSpinner assemblyRadiusSpinner =
+            new JSpinner(new SpinnerNumberModel(8, 1, 12, 1));
 
     private final JLabel selectedName = valueLabel("No object selected");
     private final JLabel selectedAnimations = valueLabel("Object animation IDs: none");
@@ -416,6 +421,27 @@ public final class ObjectExplorerPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(5));
         card.add(ConsoleTheme.createWrappedText(
                 "Saves ID/name/type/rotation/tag to Client/data/tools/object_explorer.tsv.", 2));
+        card.add(Box.createVerticalStrut(10));
+
+        JPanel assemblySettings = new JPanel(new GridLayout(1, 2, 6, 0));
+        assemblySettings.setOpaque(false);
+        assemblySettings.setAlignmentX(LEFT_ALIGNMENT);
+        assemblySettings.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        assemblySettings.add(smallLabel("Live assembly radius (tiles)"));
+        assemblySettings.add(assemblyRadiusSpinner);
+        card.add(assemblySettings);
+        card.add(Box.createVerticalStrut(6));
+
+        JButton captureAssembly = button("Capture Live Assembly Evidence");
+        captureAssembly.setAlignmentX(LEFT_ALIGNMENT);
+        captureAssembly.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        captureAssembly.addActionListener(e -> captureLiveAssemblyEvidence());
+        card.add(captureAssembly);
+        card.add(Box.createVerticalStrut(5));
+        card.add(ConsoleTheme.createWrappedText(
+                "Captures the real scene objects around you and exports exact ID/type/rotation/tile/size "
+                + "plus cache model IDs and object animation IDs. Use the tag above (for example SAWMILL). "
+                + "Files: Client/data/tools/object_assemblies/.", 4));
         return card;
     }
 
@@ -857,6 +883,79 @@ public final class ObjectExplorerPanel extends JScrollPane {
         }
     }
 
+    private void captureLiveAssemblyEvidence() {
+        int radius = number(assemblyRadiusSpinner);
+        CaptureBatch batch = AssetStudioCapture.capturePlayerArea(radius);
+        if (batch == null || !batch.isSuccess()) {
+            setStatus("Assembly capture failed: "
+                    + (batch == null ? "live player/scene unavailable" : batch.getError()));
+            return;
+        }
+
+        List<CaptureEntry> entries = batch.getEntries();
+        if (entries.isEmpty()) {
+            setStatus("Assembly capture found no live scene objects within " + radius + " tile(s).");
+            return;
+        }
+
+        String tag = tagField.getText() == null ? "" : tagField.getText().trim();
+        if (tag.length() == 0) {
+            tag = "OBJECT_ASSEMBLY";
+        }
+
+        try {
+            Files.createDirectories(ASSEMBLY_RESEARCH_DIR);
+            Path output = ASSEMBLY_RESEARCH_DIR.resolve(
+                    "assembly_" + fileTimestamp() + "_" + safeFilePart(tag) + ".tsv");
+            List<String> lines = new ArrayList<String>();
+            lines.add("# tag\t" + safe(tag)
+                    + "\tcenter\t" + batch.getCenterX() + "," + batch.getCenterY() + "," + batch.getPlane()
+                    + "\tradius\t" + batch.getRadius());
+            lines.add("index\tid\tname\ttype\trotation\tscene_slot\tworld_x\tworld_y\tplane"
+                    + "\trel_x\trel_y\tsize\tmodel_ids\tanimation_ids\tanimated\ttag");
+
+            List<Integer> animatedIds = new ArrayList<Integer>();
+            int index = 1;
+            for (CaptureEntry entry : entries) {
+                DevDefinitionBridge.DefinitionInfo info =
+                        DevDefinitionBridge.getObjectInfoAny(entry.getId());
+                int[] models = DevDefinitionBridge.getObjectModelIds(entry.getId());
+                int[] animations = info == null ? new int[0] : info.getAnimationIds();
+                if (animations.length > 0
+                        && !animatedIds.contains(Integer.valueOf(entry.getId()))) {
+                    animatedIds.add(Integer.valueOf(entry.getId()));
+                }
+
+                lines.add(index++
+                        + "\t" + entry.getId()
+                        + "\t" + safe(entry.getName())
+                        + "\t" + entry.getType()
+                        + "\t" + entry.getRotation()
+                        + "\t" + safe(entry.getSlot())
+                        + "\t" + entry.getWorldX()
+                        + "\t" + entry.getWorldY()
+                        + "\t" + entry.getPlane()
+                        + "\t" + (entry.getWorldX() - batch.getCenterX())
+                        + "\t" + (entry.getWorldY() - batch.getCenterY())
+                        + "\t" + entry.getSizeText()
+                        + "\t" + joinIds(models)
+                        + "\t" + joinIds(animations)
+                        + "\t" + (animations.length > 0 ? "YES" : "NO")
+                        + "\t" + safe(tag));
+            }
+
+            Files.write(output, lines, StandardCharsets.UTF_8,
+                    java.nio.file.StandardOpenOption.CREATE,
+                    java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+
+            setStatus("Assembly evidence saved: " + output.toAbsolutePath()
+                    + " | objects=" + entries.size()
+                    + " | animated object IDs=" + animatedIds);
+        } catch (Exception ex) {
+            setStatus("Assembly capture export failed: " + ex.getMessage());
+        }
+    }
+
     private void setStatus(String text) {
         status.setText(text == null ? "" : text);
     }
@@ -894,6 +993,30 @@ public final class ObjectExplorerPanel extends JScrollPane {
 
     private static String timestamp() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+    }
+
+    private static String fileTimestamp() {
+        return new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+    }
+
+    private static String safeFilePart(String value) {
+        String safe = value == null ? "OBJECT_ASSEMBLY"
+                : value.trim().replaceAll("[^A-Za-z0-9._-]+", "_");
+        return safe.length() == 0 ? "OBJECT_ASSEMBLY" : safe;
+    }
+
+    private static String joinIds(int[] ids) {
+        if (ids == null || ids.length == 0) {
+            return "-";
+        }
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < ids.length; i++) {
+            if (i > 0) {
+                text.append(',');
+            }
+            text.append(ids[i]);
+        }
+        return text.toString();
     }
 
     private static int clamp(int value, int min, int max) {
