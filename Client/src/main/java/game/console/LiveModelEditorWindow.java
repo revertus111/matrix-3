@@ -1307,6 +1307,12 @@ public final class LiveModelEditorWindow {
 
     private void commitInspectorField(JTextField field) {
         if (suppressInspectorRefresh || field == null) return;
+        if (LiveModelEditorPreview.getSelectionMode() != LiveModelEditorPreview.SelectionMode.WHOLE
+                && LiveModelEditorPreview.getSelectedPart() < 0) {
+            syncTransformInspector();
+            statusLabel.setText("Select a part before editing transform values.");
+            return;
+        }
 
         String key = String.valueOf(field.getClientProperty("transformKey"));
         String text = field.getText() == null ? "" : field.getText().trim();
@@ -1378,8 +1384,12 @@ public final class LiveModelEditorWindow {
                 ? LiveModelEditorPreview.getWholeTransform()
                 : LiveModelEditorPreview.getSelectedPartTransform();
 
+        boolean editable = LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.WHOLE
+                || LiveModelEditorPreview.getSelectedPart() >= 0;
         suppressInspectorRefresh = true;
         try {
+            setInspectorFieldsEnabled(editable);
             setInspectorText(inspectorScaleXField, formatScaleRatio(transform[0]));
             setInspectorText(inspectorScaleYField, formatScaleRatio(transform[1]));
             setInspectorText(inspectorScaleZField, formatScaleRatio(transform[2]));
@@ -1390,6 +1400,16 @@ public final class LiveModelEditorWindow {
         } finally {
             suppressInspectorRefresh = false;
         }
+    }
+
+    private void setInspectorFieldsEnabled(boolean enabled) {
+        inspectorPosXField.setEnabled(enabled);
+        inspectorPosYField.setEnabled(enabled);
+        inspectorPosZField.setEnabled(enabled);
+        inspectorYawField.setEnabled(enabled);
+        inspectorScaleXField.setEnabled(enabled);
+        inspectorScaleYField.setEnabled(enabled);
+        inspectorScaleZField.setEnabled(enabled);
     }
 
     private static void setInspectorText(JTextField field, String value) {
@@ -1466,6 +1486,7 @@ public final class LiveModelEditorWindow {
                 if (index >= 0) LiveModelEditorPreview.selectPart(index);
             }
             loadSelectedPartEditors();
+            syncTransformInspector();
             statusLabel.setText("Selected " + LiveModelEditorPreview.getSelectedPartCount()
                     + " part(s) in " + mode + " mode.");
         });
