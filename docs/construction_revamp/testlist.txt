@@ -1122,3 +1122,19 @@ RTS middle-mouse orbit regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (202
 - Wheel zoom must still operate while MMB orbit support is installed.
 - WASD/arrows must still pan relative to rendered heading, minimap focus must remain synchronized, and loaded-scene pivot clamping must still hold.
 - Release MMB and confirm no stuck rotation state survives.
+
+
+Phase 3 worker-control UX — Jobs overlay + explicit object orders (2026-09-25)
+[x] Source: live settlement workers receive a world right-click Jobs entry without replacing vanilla NPC actions.
+[x] Source: Jobs overlay can replace the complete Allowed Jobs policy for one clicked worker or the committed selected worker group.
+[x] Source: Con Revamp no longer exposes Role Preset controls; legacy preset server helpers remain untouched for compatibility.
+[x] Source: selected-worker click on Wooden workbench 13704 routes a manual one-cycle saw-planks order to that exact persistent workstation.
+[x] Source: manual processing bypasses Process Wood policy only for the explicit order; autonomous repeat processing still requires Process Wood ON.
+[x] Source: manual starter-resource orders complete their haul leg even when autonomous Haul is OFF.
+[x] Source: worker object/NPC orders consume vanilla player interaction after dispatch, so self selection does not redirect the player from their current action.
+[ ] Runtime: right-click one unselected Settler -> Jobs -> choose a job set -> Apply; confirm only that worker's Allowed Jobs change and persist.
+[ ] Runtime: drag-select 2+ workers -> right-click one selected Settler -> Jobs; header shows selected-worker scope and Apply gives every selected worker exactly the checked jobs.
+[ ] Runtime: leave Process Wood OFF, select one worker, click Wooden workbench 13704 -> worker visits storage -> exact clicked workbench -> PROCESSING -> Wood -2 / Planks +1 / Crafting XP +18, then resumes normal policy.
+[ ] Runtime: leave Gather Wood/Haul OFF, select a worker, click starter tree -> worker performs the explicit gather + haul once, then resumes normal policy.
+[ ] Runtime: while the player is already doing another activity, include self + workers in the RTS selection and click a worker resource/workbench target -> workers receive the order and the player does not walk/interact/change activity.
+[ ] Regression: selected-group ground movement still requires the accepted double-click and deliberately moves self when self is selected.
