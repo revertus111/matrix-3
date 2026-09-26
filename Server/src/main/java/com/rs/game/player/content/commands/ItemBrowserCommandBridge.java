@@ -751,6 +751,30 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workerselectionprocess".equals(operation)) {
+            if (cmd.length < 7) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectionprocess <objectId> <worldX> <worldY> <plane>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using RTS processing orders.");
+                return true;
+            }
+            try {
+                int objectId = Integer.parseInt(cmd[3]);
+                int worldX = Integer.parseInt(cmd[4]);
+                int worldY = Integer.parseInt(cmd[5]);
+                int plane = Integer.parseInt(cmd[6]);
+                player.getPackets().sendGameMessage(
+                        active.orderRuntimeSelectionProcessWood(objectId, worldX, worldY, plane));
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("RTS processing target is invalid.");
+            }
+            return true;
+        }
+
         if ("workerselectionstatus".equals(operation)) {
             if (active == null || !active.isLoaded()) {
                 player.getPackets().sendGameMessage(
@@ -927,6 +951,53 @@ public final class ItemBrowserCommandBridge {
             player.getPackets().sendGameMessage(
                     "Radial selection " + formatWorkerIds(selected)
                             + " Allowed Jobs=" + (allowed ? "ALL ON" : "ALL OFF") + ".");
+            return true;
+        }
+
+        if ("workerselectionjobsreplace".equals(operation)) {
+            if (cmd.length < 4) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectionjobsreplace <job-key-csv|none>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before changing selected worker jobs.");
+                return true;
+            }
+            java.util.Set<SettlementWorkerJob> jobs = parseWorkerJobSet(cmd[3]);
+            if (jobs == null) {
+                player.getPackets().sendGameMessage("Allowed Jobs list contains an unknown job key.");
+                return true;
+            }
+            player.getPackets().sendGameMessage(
+                    active.replaceRuntimeSelectionAllowedJobs(jobs));
+            return true;
+        }
+
+        if ("workernpcjobsreplace".equals(operation)) {
+            if (cmd.length < 5) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workernpcjobsreplace <runtimeNpcIndex> <job-key-csv|none>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before changing worker jobs.");
+                return true;
+            }
+            try {
+                int runtimeNpcIndex = Integer.parseInt(cmd[3]);
+                java.util.Set<SettlementWorkerJob> jobs = parseWorkerJobSet(cmd[4]);
+                if (jobs == null) {
+                    player.getPackets().sendGameMessage("Allowed Jobs list contains an unknown job key.");
+                    return true;
+                }
+                player.getPackets().sendGameMessage(
+                        active.replaceRuntimeNpcAllowedJobs(runtimeNpcIndex, jobs));
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Runtime worker NPC index is invalid.");
+            }
             return true;
         }
 
@@ -1336,6 +1407,25 @@ public final class ItemBrowserCommandBridge {
             player.getPackets().sendGameMessage("No starter worker exists yet.");
         }
         return worker;
+    }
+
+    private static java.util.Set<SettlementWorkerJob> parseWorkerJobSet(String value) {
+        java.util.Set<SettlementWorkerJob> jobs =
+                new java.util.HashSet<SettlementWorkerJob>();
+        if (value == null || value.trim().length() == 0
+                || "none".equalsIgnoreCase(value.trim())) {
+            return jobs;
+        }
+        String[] keys = value.split(",");
+        for (String key : keys) {
+            SettlementWorkerJob job =
+                    SettlementWorkerJob.forKey(key == null ? null : key.trim().toLowerCase());
+            if (job == null) {
+                return null;
+            }
+            jobs.add(job);
+        }
+        return jobs;
     }
 
     private static boolean hasWorkerIdArgument(String[] cmd, int index) {
