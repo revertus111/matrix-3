@@ -70,3 +70,8 @@
 - Project JSON advanced to v4 with partSelection persistence while retaining partSelected for older projects.
 - Added Save Selection export to dev-model-assets as matrix3-live-model-selection JSON containing source object/model IDs and selected component recipes.
 - Live Model Editor overlay is now resizable with a lower-right drag grip and scroll fallback so controls remain reachable on smaller client windows.
+
+2026-09-25
+- Bundle 2.5 follow-up: multi-part isolate visibility now follows the full selected set independently of transient hover preview, preventing hover from collapsing an isolated multi-selection to one component.
+- Guarded JList selection-mode transitions so switching Whole/Part/Multi cannot fire a stale Swing selection event back into the authoritative editor selection.
+- Reset Sel now resets the whole-clone transform when Whole mode is active and resets component transforms in Part/Multi modes.

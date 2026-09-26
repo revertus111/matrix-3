@@ -442,7 +442,7 @@ final class LiveModelEditorParts {
             boolean highlighted = isHighlighted(i);
             boolean visible = !state.hidden && !state.deleted
                     && state.replacementObjectId < 0
-                    && (!isolate || highlighted);
+                    && (!isolate || selection.contains(Integer.valueOf(i)));
             if (!visible) {
                 hideFaces(raw, component);
                 continue;
@@ -461,7 +461,7 @@ final class LiveModelEditorParts {
             PartState state = duplicates.get(i);
             boolean highlighted = isHighlighted(combinedIndex);
             if (state.hidden || state.deleted || state.replacementObjectId >= 0
-                    || (isolate && !highlighted)) continue;
+                    || (isolate && !selection.contains(Integer.valueOf(combinedIndex)))) continue;
             Class159 raw = componentOnlyRaw(source.decode(),
                     source.components[state.sourcePart], state);
             if (raw == null) continue;
@@ -479,7 +479,7 @@ final class LiveModelEditorParts {
             PartState state = stateAt(index);
             boolean highlighted = isHighlighted(index);
             if (state == null || state.hidden || state.deleted || state.replacementObjectId < 0
-                    || (isolate && !highlighted)) continue;
+                    || (isolate && !selection.contains(Integer.valueOf(index)))) continue;
             Class159 raw = replacementRaw(state, source.components[state.sourcePart]);
             if (raw == null) continue;
             if (highlighted) highlightAllFaces(raw);
@@ -496,7 +496,7 @@ final class LiveModelEditorParts {
         for (int index = 0; index < total; index++) {
             PartState state = stateAt(index);
             if (state == null || state.hidden || state.deleted
-                    || (isolate && !isHighlighted(index))) continue;
+                    || (isolate && !selection.contains(Integer.valueOf(index)))) continue;
             if (state.replacementObjectId >= 0) {
                 Class159 replacement = replacementRaw(state,
                         source.components[state.sourcePart]);

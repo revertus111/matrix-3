@@ -132,3 +132,7 @@ Bundle 2.5 - professional selection/editor usability
 [ ] Save Project, reload JSON v4 and confirm the multi-selection plus part transforms return.
 [ ] Save Selection, choose a custom name, and confirm dev-model-assets contains a matrix3-live-model-selection JSON with object 46298, model IDs 49717/49718 and only the selected component recipes.
 [ ] Regression: existing Construction material replacement, Restore, Replace Matches and source-object restoration on Exit Edit still work.
+
+[ ] Bundle 2.5 regression: with Multi + Isolate active, hover each selected component and confirm all selected components remain visible while only the hover highlight changes.
+[ ] Bundle 2.5 regression: switch Whole -> Part -> Multi repeatedly and confirm the authoritative selection does not change from stale list events.
+[ ] Bundle 2.5 regression: Reset Sel in Whole mode resets clone scale/move/yaw without changing object type, rotation or tile offset.

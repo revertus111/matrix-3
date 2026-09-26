@@ -1033,10 +1033,16 @@ public final class LiveModelEditorWindow {
 
     private void applySelectionModeToList() {
         LiveModelEditorPreview.SelectionMode mode = LiveModelEditorPreview.getSelectionMode();
-        partList.setSelectionMode(mode == LiveModelEditorPreview.SelectionMode.PART
-                ? ListSelectionModel.SINGLE_SELECTION
-                : ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        partList.setEnabled(mode != LiveModelEditorPreview.SelectionMode.WHOLE);
+        boolean previous = suppressPartRefresh;
+        suppressPartRefresh = true;
+        try {
+            partList.setSelectionMode(mode == LiveModelEditorPreview.SelectionMode.PART
+                    ? ListSelectionModel.SINGLE_SELECTION
+                    : ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+            partList.setEnabled(mode != LiveModelEditorPreview.SelectionMode.WHOLE);
+        } finally {
+            suppressPartRefresh = previous;
+        }
     }
 
     private void setEditMode(LiveModelEditorPreview.TransformMode mode) {
@@ -1089,6 +1095,24 @@ public final class LiveModelEditorWindow {
     }
 
     private void resetSelectedTransforms() {
+        if (LiveModelEditorPreview.getSelectionMode() == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            suppressLiveRefresh = true;
+            try {
+                scaleXSpinner.setValue(Integer.valueOf(100));
+                scaleYSpinner.setValue(Integer.valueOf(100));
+                scaleZSpinner.setValue(Integer.valueOf(100));
+                moveXSpinner.setValue(Integer.valueOf(0));
+                moveYSpinner.setValue(Integer.valueOf(0));
+                moveZSpinner.setValue(Integer.valueOf(0));
+                yawSpinner.setValue(Integer.valueOf(0));
+            } finally {
+                suppressLiveRefresh = false;
+            }
+            refreshPreview();
+            loadWholeEditors();
+            statusLabel.setText("Reset whole-model transform.");
+            return;
+        }
         if (LiveModelEditorPreview.resetSelectedPartTransforms()) {
             loadSelectedPartEditors();
             refreshPartList();
