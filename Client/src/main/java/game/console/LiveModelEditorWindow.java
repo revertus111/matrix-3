@@ -138,6 +138,9 @@ public final class LiveModelEditorWindow {
     private final JLabel cameraSpeedLabel = rsGold("1.0x");
     private final JButton rtsCameraButton = rsButton("RTS");
     private final JButton freeCameraButton = rsButton("FREE");
+    private final JButton snapButton = rsButton("SNAP OFF");
+    private final JSpinner moveSnapSpinner = spinner(16, 1, 512, 1);
+    private final JSpinner angleSnapSpinner = spinner(15, 1, 90, 1);
     private final JLabel targetLabel = rsValue("-");
     private final JLabel sourceLabel = rsMuted("-");
     private final JLabel statusLabel = rsMuted("Right-click an object -> Dev > Edit Model Live.");
@@ -351,6 +354,7 @@ public final class LiveModelEditorWindow {
         installListeners();
         refreshTransformContext();
         syncCameraPanel();
+        syncSnapPanel();
     }
 
     private JPanel createTitleBar() {
@@ -559,6 +563,16 @@ public final class LiveModelEditorWindow {
         axes.add(yAxis);
         axes.add(zAxis);
         panel.add(axes);
+        panel.add(Box.createVerticalStrut(4));
+
+        snapButton.setToolTipText("Normal drag is free. Ctrl temporarily snaps; when SNAP is ON, Ctrl temporarily bypasses snap.");
+        JPanel snapMode = actionRow(1);
+        snapMode.add(snapButton);
+        panel.add(snapMode);
+        panel.add(Box.createVerticalStrut(3));
+        panel.add(createSpinnerGrid(
+                new String[] { "MOVE SNAP", "ANGLE SNAP" },
+                new JSpinner[] { moveSnapSpinner, angleSnapSpinner }));
         panel.add(Box.createVerticalStrut(6));
 
         transformCards.setOpaque(false);
@@ -673,6 +687,11 @@ public final class LiveModelEditorWindow {
         xAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.X));
         yAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Y));
         zAxis.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Z));
+        snapButton.addActionListener(e -> {
+            LiveModelEditorPreview.setTransformSnapEnabled(
+                    !LiveModelEditorPreview.isTransformSnapEnabled());
+            syncSnapPanel();
+        });
 
         rebuild.addActionListener(e -> initializeParts());
         isolate.addActionListener(e -> {
@@ -1187,6 +1206,21 @@ public final class LiveModelEditorWindow {
         freeCameraButton.setBackground(!rts ? RS_SELECTED : RS_PANEL_2);
     }
 
+    private void syncSnapPanel() {
+        boolean enabled = LiveModelEditorPreview.isTransformSnapEnabled();
+        snapButton.setText(enabled ? "SNAP ON  [Ctrl = Free]" : "SNAP OFF  [Ctrl = Snap]");
+        snapButton.setBackground(enabled ? RS_SELECTED : RS_PANEL_2);
+
+        int moveStep = LiveModelEditorPreview.getMoveSnapStep();
+        int angleStep = LiveModelEditorPreview.getAngleSnapDegrees();
+        if (number(moveSnapSpinner) != moveStep) {
+            moveSnapSpinner.setValue(Integer.valueOf(moveStep));
+        }
+        if (number(angleSnapSpinner) != angleStep) {
+            angleSnapSpinner.setValue(Integer.valueOf(angleStep));
+        }
+    }
+
     private JPanel createSpinnerGrid(String[] names, JSpinner[] spinners) {
         JPanel panel = new JPanel(new GridLayout(2, names.length, 4, 3));
         panel.setOpaque(false);
@@ -1225,6 +1259,11 @@ public final class LiveModelEditorWindow {
         partMoveYSpinner.addChangeListener(partLive);
         partMoveZSpinner.addChangeListener(partLive);
         partYawSpinner.addChangeListener(partLive);
+
+        moveSnapSpinner.addChangeListener(e ->
+                LiveModelEditorPreview.setMoveSnapStep(number(moveSnapSpinner)));
+        angleSnapSpinner.addChangeListener(e ->
+                LiveModelEditorPreview.setAngleSnapDegrees(number(angleSnapSpinner)));
 
         partList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         partList.addListSelectionListener(e -> {
@@ -1423,7 +1462,8 @@ public final class LiveModelEditorWindow {
                     }
                     if (id == MouseEvent.MOUSE_DRAGGED) {
                         if (modelLeftDragActive) {
-                            LiveModelEditorPreview.dragPointerTo(mouse.getX(), mouse.getY());
+                            LiveModelEditorPreview.dragPointerTo(
+                                    mouse.getX(), mouse.getY(), mouse.isControlDown());
                             mouse.consume();
                             if (instance != null) instance.syncRuntimeState();
                         }
@@ -1627,12 +1667,14 @@ public final class LiveModelEditorWindow {
         }
         refreshTransformContext();
         syncCameraPanel();
+        syncSnapPanel();
         int hovered = LiveModelEditorPreview.getWorldHoveredPart();
         partStatusLabel.setText(LiveModelEditorPreview.getSelectionMode() + " | "
                 + LiveModelEditorPreview.getSelectedPartCount() + " selected"
                 + (hovered >= 0 ? " | HOVER P" + hovered : "")
                 + " | " + LiveModelEditorPreview.getTransformMode() + " "
                 + LiveModelEditorPreview.getAxisConstraint()
+                + (LiveModelEditorPreview.isTransformSnapEnabled() ? " | SNAP" : " | FREE")
                 + (LiveModelEditorPreview.isPartIsolated() ? " | ISOLATE" : ""));
     }
 
