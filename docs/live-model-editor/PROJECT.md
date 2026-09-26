@@ -268,14 +268,15 @@ Design authority: docs/live-model-editor/TRANSFORM_GIZMO_SPEC.md
 - [x] Add configurable Angle snap step (default 15 degrees).
 - [x] Apply snap inside the existing gesture so Part/Multi drag remains one undo transaction.
 - [x] Keep scale snapping deferred.
-- [x] Eclipse/Java 8 client clean-build through Bundle 2.7C-C; runtime screenshot/test received 2026-09-26.
-- [ ] Runtime verify corrected Free/Snap behavior on Conveyor belt 46298; pre-D snap path was the one reported failure.
+- [x] Eclipse/Java 8 client clean-build through Bundle 2.7C-E; runtime confirmations received 2026-09-26.
+- [x] Runtime verify corrected Free/Snap core behavior on Conveyor belt 46298; user confirmed the D/E bundle works.
 - [x] Runtime verify contextual inspector + Move gizmo/pivot on Conveyor belt 46298.
-- [ ] Runtime verify repaired Scale interaction; user clarified the pre-E scale path also failed in the same runtime session.
+- [x] Runtime verify yaw Rotate gizmo core behavior; user confirmed the D/E bundle works.
+- [x] Runtime verify repaired Scale gizmo core behavior; user confirmed the D/E bundle works.
 - [x] Replace duplicated Whole/Part spinner form with one contextual live transform inspector.
 - [x] Display developer-friendly decimal scale values while preserving current internal percent representation.
 - [x] Add safe exact-entry behavior (Enter/Tab commit, Escape cancel, invalid blur revert, text-focus hotkey guard).
-- [ ] Add numeric scrub interaction.
+- [x] Add numeric scrub interaction with one Part/Multi undo transaction per scrub gesture.
 - [x] Render visible selection pivot for Whole / Part / Multi.
 - [x] Render first Matrix3-native Move gizmo through renderer projection + 2D primitives.
 - [x] Add supported yaw Rotate gizmo.
@@ -283,10 +284,12 @@ Design authority: docs/live-model-editor/TRANSFORM_GIZMO_SPEC.md
 - [x] Add Move-gizmo hit / hover / active states.
 - [x] Add Rotate-ring hit / hover / active states.
 - [x] Add Scale-gizmo hit / hover / active states.
-- [ ] Add compact active transform readout.
+- [x] Add compact live transform readout in the EDIT workspace.
+- [ ] CARRYOVER: native text readout beside the 3D gizmo awaits a verified Matrix3 renderer-font seam; do not add another Swing viewport overlay.
 - [x] Add shared-pivot Multi yaw rotation.
-- [ ] Centralize hotkey/text-entry ownership and add keyboard nudge workflow.
-- [ ] Remove obsolete duplicate Parts/Transform panel methods after the replacement inspector is runtime-safe.
+- [x] Centralize hotkey/text-entry ownership and add keyboard nudge workflow.
+- [x] Add visible active-state highlighting for Selection / Transform / Axis / Isolate / tool rail.
+- [x] Remove obsolete duplicate Parts/Transform panel methods after the replacement inspector proved runtime-safe.
 
 ## Phase 3 - Professional Transform UX
 
@@ -350,13 +353,13 @@ This is now the preferred asset-source experiment for the Construction automatio
 
 ## Resume Here
 
-**Last completed:** Bundle 2.7C-E is in source: repaired Scale interaction plus a Matrix3-native Scale gizmo with X/Y/Z handles and a center uniform-scale handle. The runtime record is corrected: the prior session verified inspector/pivot/Move gizmo, while Snap and Scale were the two reported failures; D/E supersede both failed paths.
+**Last completed:** Bundle 2.7C-F interaction polish is in source: live EDIT readout, numeric field scrubbing/wheel adjustment, active-state highlighting, centralized shortcut dispatch, Alt+Arrow nudging, Ctrl+O / Shift+H / I / Tab shortcuts, and removal of obsolete duplicate Parts/Transform panel methods. D/E Snap + Rotate + Scale core behavior is runtime-confirmed by the user.
 
 **Current phase:** Phase 2 - Mesh Parts + In-World Selection.
 
 **Active bundle:** Bundle 2.7C - Professional transform tool (`ACTIVE / NEEDS TEST`).
 
-**Next action:** 2.7C-F — transform interaction polish: compact active transform readout, numeric scrubbing, keyboard nudge/hotkey ownership cleanup, then remove obsolete legacy transform panel code. Runtime verification for corrected Snap + Rotate + Scale remains intentionally batched.
+**Next action:** one consolidated 2.7C-F runtime gate on Conveyor 46298. If F passes, close the professional transform vertical slice and return to using the editor on the conveyor/construction workflow. Native text physically beside the 3D gizmo is non-blocking CARRYOVER pending a verified renderer-font seam.
 
 **Files/systems already inspected:**
 - `Client/src/main/java/game/ObjectDefinitions.java`
@@ -376,7 +379,7 @@ This is now the preferred asset-source experiment for the Construction automatio
 - Object Lab direct-render scene coordinate math.
 - Dev Mode object ID/tile target route.
 
-**Important uncertainty:** Conveyor 46298 runtime-confirmed the contextual inspector, visible pivot and native Move gizmo on 2026-09-26. The user later clarified that Snap and Scale were the two failures in that session. Bundle 2.7C-D replaces the failed Snap path and adds Rotate; Bundle 2.7C-E replaces the failed Scale interaction with an explicit native gizmo. D/E remain verified-static until the next batched runtime gate. Visual alignment on mirrored/terrain-contoured definitions remains UNKNOWN outside the Conveyor reference. Part/Multi gizmo drags use one-gesture undo; Whole transform history still has the older limitation.
+**Important uncertainty:** Conveyor 46298 runtime-confirmed the contextual inspector, pivot, Move gizmo, and the corrected D/E Snap + Rotate + Scale core workflow on 2026-09-26. Bundle 2.7C-F is verified-static only until its consolidated runtime gate passes. Numeric scrubbing reuses the existing Part/Multi gesture transaction; Whole transform history still inherits the older no-unified-undo limitation. Native text physically beside the 3D gizmo is CARRYOVER because the bounded Matrix3 renderer-text lookup did not establish a safe font seam; the patch intentionally avoids a second Swing viewport overlay. Visual alignment on mirrored/terrain-contoured definitions remains UNKNOWN outside the Conveyor reference.
 
 ### Bundle 2.7 compact-control follow-up — HUD moved into Camera/View
 
