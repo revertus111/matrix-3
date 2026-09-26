@@ -1743,7 +1743,7 @@ public final class LiveModelEditorWindow {
                     if (key.getID() != KeyEvent.KEY_PRESSED) {
                         return;
                     }
-                    if (isEditorTextEntryFocused()) {
+                    if (isEditorTextEntryFocused() || isEditorModalDialogActive()) {
                         return;
                     }
                     if (handleEditorShortcut(key)) {
@@ -2469,6 +2469,13 @@ public final class LiveModelEditorWindow {
             if (current instanceof JSpinner || current instanceof JComboBox) return true;
         }
         return false;
+    }
+
+    private static boolean isEditorModalDialogActive() {
+        Window active = java.awt.KeyboardFocusManager
+                .getCurrentKeyboardFocusManager().getActiveWindow();
+        return active instanceof java.awt.Dialog
+                && ((java.awt.Dialog) active).isModal();
     }
 
     private static void styleSpinner(JSpinner spinner) {
