@@ -1080,3 +1080,10 @@ Construction native action-bar H1 gate — IMPLEMENTED / NEEDS NIS + LEGACY RUNT
 - Teardown: with Build Palette open, exit/teleport/logout from the settlement -> normal action-bar mode must restore; no temporary build icons remain.
 - Reopen the settlement/palette in both NIS and Legacy and repeat one tool activation; no stale Construction action-bar state may survive.
 - Rail regression: slot 1 ordinary Rail still stops at first existing-rail contact; overlap remains reserved for future explicit Crossing/Junction/Splitter tools.
+
+
+Bank examine identifier encoding compile gate — 2026-09-25
+[x] Source: Bank exposes ASCII-only sendExamineInventory(int); no non-ASCII identifier remains for this method.
+[x] Source: ButtonHandler interface 762 component 128 and component 7 ACTION_BUTTON8 paths both call sendExamineInventory(int).
+[ ] Eclipse: Matrix3-Server rebuild shows no sendExamineÃŽnventory/sendExamineInventory undefined-method errors in ButtonHandler.
+[ ] Runtime regression: examine an inventory-side item through the bank interface; item examine text still displays normally.
