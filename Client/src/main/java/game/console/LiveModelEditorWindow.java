@@ -116,6 +116,7 @@ public final class LiveModelEditorWindow {
     private static boolean drawerExpanded = true;
     private static String activeTool = "EDIT";
     private static boolean modelLeftDragActive;
+    private static boolean editorCtrlDown;
     private static boolean editorCameraSessionActive;
     private static boolean editorStartedRtsCamera;
     private static boolean editorHudRequested;
@@ -240,6 +241,7 @@ public final class LiveModelEditorWindow {
             return;
         }
         installInputGate();
+        editorCtrlDown = false;
         enterEditorRtsCamera();
         if (instance.matchesTarget(target)) {
             instance.resumeSession();
@@ -1564,6 +1566,7 @@ public final class LiveModelEditorWindow {
         LiveModelEditorPreview.clearPartPreview();
         LiveModelEditorPreview.hide();
         modelLeftDragActive = false;
+        editorCtrlDown = false;
         exitEditorHud();
         exitEditorRtsCamera();
         if (instance != null) {
@@ -1655,9 +1658,10 @@ public final class LiveModelEditorWindow {
                     }
                     if (id == MouseEvent.MOUSE_PRESSED
                             && mouse.getButton() == MouseEvent.BUTTON1) {
+                        boolean ctrl = mouse.isControlDown() || editorCtrlDown;
                         modelLeftDragActive = LiveModelEditorPreview.beginPointerDrag(
                                 mouse.getX(), mouse.getY(),
-                                mouse.isShiftDown() || mouse.isControlDown(), mouse.isControlDown());
+                                mouse.isShiftDown() || ctrl, ctrl);
                         mouse.consume();
                         if (instance != null) instance.syncRuntimeState();
                         return;
@@ -1665,7 +1669,8 @@ public final class LiveModelEditorWindow {
                     if (id == MouseEvent.MOUSE_DRAGGED) {
                         if (modelLeftDragActive) {
                             LiveModelEditorPreview.dragPointerTo(
-                                    mouse.getX(), mouse.getY(), mouse.isControlDown());
+                                    mouse.getX(), mouse.getY(),
+                                    mouse.isControlDown() || editorCtrlDown);
                             mouse.consume();
                             if (instance != null) instance.syncRuntimeState();
                         }
@@ -1690,6 +1695,13 @@ public final class LiveModelEditorWindow {
 
                 if (event instanceof KeyEvent) {
                     KeyEvent key = (KeyEvent) event;
+                    if (key.getKeyCode() == KeyEvent.VK_CONTROL) {
+                        if (key.getID() == KeyEvent.KEY_PRESSED) {
+                            editorCtrlDown = true;
+                        } else if (key.getID() == KeyEvent.KEY_RELEASED) {
+                            editorCtrlDown = false;
+                        }
+                    }
                     if (key.getID() != KeyEvent.KEY_PRESSED) {
                         return;
                     }
