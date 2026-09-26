@@ -49,9 +49,6 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private final JSpinner needsArcScale =
             new JSpinner(new SpinnerNumberModel(70, 25, 300, 5));
 
-    private final JComboBox<WorkerPresetChoice> workerRolePreset =
-            new JComboBox<WorkerPresetChoice>(WorkerPresetChoice.values());
-
     private final java.util.List<JCheckBox> workerJobCheckBoxes =
             new java.util.ArrayList<JCheckBox>();
     private final java.util.Map<String, JCheckBox> workerJobCheckBoxByKey =
@@ -184,33 +181,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Selected Worker Commands");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Role presets, Pause/Resume and Allowed Jobs apply to the committed drag selection only.",
+                "Pause/Resume and these development checkboxes apply to the committed drag selection. "
+                + "Player-facing job policy now lives on Worker -> Jobs in the world context menu.",
                 3));
-        card.add(Box.createVerticalStrut(8));
-
-        workerRolePreset.setMaximumSize(new Dimension(180, 30));
-        workerRolePreset.setAlignmentX(LEFT_ALIGNMENT);
-        workerRolePreset.setFocusable(false);
-
-        JButton applyPreset = new JButton("Apply Role Preset");
-        styleButton(applyPreset);
-        applyPreset.addActionListener(e -> {
-            WorkerPresetChoice choice = (WorkerPresetChoice) workerRolePreset.getSelectedItem();
-            if (choice == null) {
-                return;
-            }
-            applyPresetVisual(choice);
-            queueRadialBatch("workerselectionpreset", choice.key,
-                    choice.displayName + " queued for the committed selection.");
-        });
-
-        JPanel presetRow = new JPanel(new GridLayout(1, 2, 7, 7));
-        presetRow.setOpaque(false);
-        presetRow.setAlignmentX(LEFT_ALIGNMENT);
-        presetRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        presetRow.add(workerRolePreset);
-        presetRow.add(applyPreset);
-        card.add(presetRow);
         card.add(Box.createVerticalStrut(8));
 
         JButton pause = new JButton("Pause Selection");
@@ -384,8 +357,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Processing");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Phase 3 wood chain: place Wooden workbench from Furniture, select a worker, "
-                + "enable Process Wood or apply Carpenter, then watch storage -> workstation -> Planks.",
+                "Phase 3 wood chain: place Wooden workbench from Furniture, select worker(s), then click "
+                + "the workbench for a one-cycle manual order. Process Wood Allowed Job controls autonomous repeat work.",
                 4));
         card.add(Box.createVerticalStrut(8));
 
@@ -531,16 +504,6 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return card;
     }
 
-    private void applyPresetVisual(WorkerPresetChoice choice) {
-        if (choice == null) {
-            return;
-        }
-        for (java.util.Map.Entry<String, JCheckBox> entry :
-                workerJobCheckBoxByKey.entrySet()) {
-            entry.getValue().setSelected(choice.allows(entry.getKey()));
-        }
-    }
-
     private long selectedWorkerId() {
         Object value = workerSelector.getValue();
         return value instanceof Number ? ((Number) value).longValue() : 1L;
@@ -578,48 +541,6 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 getViewport().setViewPosition(viewPosition);
             }
         });
-    }
-
-    private enum WorkerPresetChoice {
-        LUMBERJACK("Lumberjack", "lumberjack",
-                "gather-wood", "haul"),
-        FORAGER("Forager", "forager",
-                "gather-food", "haul"),
-        STONE_MINER("Stone Miner", "stone-miner",
-                "gather-stone", "haul"),
-        ORE_MINER("Ore Miner", "ore-miner",
-                "gather-basic-ore", "haul"),
-        CARPENTER("Carpenter", "carpenter",
-                "process-wood"),
-        HAULER_ONLY("Hauler Only", "hauler-only",
-                "haul"),
-        IDLE("Idle", "idle");
-
-        private final String displayName;
-        private final String key;
-        private final java.util.Set<String> jobs =
-                new java.util.HashSet<String>();
-
-        WorkerPresetChoice(String displayName, String key, String... jobs) {
-            this.displayName = displayName;
-            this.key = key;
-            if (jobs != null) {
-                for (String job : jobs) {
-                    if (job != null) {
-                        this.jobs.add(job);
-                    }
-                }
-            }
-        }
-
-        private boolean allows(String jobKey) {
-            return jobs.contains(jobKey);
-        }
-
-        @Override
-        public String toString() {
-            return displayName;
-        }
     }
 
     private static final class ViewportWidthPanel extends JPanel implements Scrollable {
