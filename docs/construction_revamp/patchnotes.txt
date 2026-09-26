@@ -1517,3 +1517,11 @@
 - Renamed the non-ASCII Bank method identifier sendExamineÎnventory to ASCII-only sendExamineInventory.
 - Updated both ButtonHandler bank-inventory examine call sites to the ASCII method name.
 - This removes the UTF-8/Windows-1252 source-encoding mismatch that Eclipse surfaced as sendExamineÃŽnventory undefined; runtime bank examine behavior is unchanged.
+
+
+2026-09-25 - Phase 3 sawmill live-assembly evidence capture
+- Added Object Explorer live-assembly capture with configurable 1-12 tile radius for mapping real multi-object machinery in the active scene.
+- Export rows preserve scene ID/type/rotation/slot/world tile/relative offsets/size and enrich them with cache model IDs plus decoded object animation sequence IDs.
+- Export status reports every animation-bearing object ID so the real animated saw/machinery candidates can be isolated from one capture instead of scanning arbitrary cache ranges.
+- Evidence writes under Client/data/tools/object_assemblies/ and uses the existing research tag (for example SAWMILL).
+- Wooden workbench 13704 remains the active provisional processing workstation; no sawmill object or animation has been promoted without runtime evidence.
