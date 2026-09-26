@@ -202,3 +202,19 @@ Camera/View contains:
 - Hide Selected / Show Selected.
 
 Keyboard H remains reserved for Hide Part and never opens/switches a drawer.
+
+
+## Bundle 2.7C transform-tool handoff
+
+Detailed transform behavior is authoritative in `TRANSFORM_GIZMO_SPEC.md`.
+
+Workspace rule:
+- viewport manipulation is primary;
+- the compact EDIT drawer acts as a live numeric inspector/configuration surface;
+- normal drag remains free;
+- Ctrl temporarily snaps when persistent Snap is off;
+- persistent Snap can be toggled in EDIT;
+- Ctrl temporarily returns to free movement while persistent Snap is on;
+- Move and Angle snap increments remain visible/configurable;
+- scale snapping is deferred;
+- the rendered pivot/gizmo must not expand the overlay into a large DCC-style desktop window.
