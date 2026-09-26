@@ -1138,3 +1138,13 @@ Phase 3 worker-control UX — Jobs overlay + explicit object orders (2026-09-25)
 [ ] Runtime: leave Gather Wood/Haul OFF, select a worker, click starter tree -> worker performs the explicit gather + haul once, then resumes normal policy.
 [ ] Runtime: while the player is already doing another activity, include self + workers in the RTS selection and click a worker resource/workbench target -> workers receive the order and the player does not walk/interact/change activity.
 [ ] Regression: selected-group ground movement still requires the accepted double-click and deliberately moves self when self is selected.
+
+
+Normal Rail special-node regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-25)
+- Recreate a closed four-corner loop. All four accepted three-object curves must remain intact.
+- From empty ground, drag ordinary Rail perpendicularly into the middle of a straight degree-2 rail. Gesture must stop adjacent; existing straight must not rotate/change and no degree-3 node may be authored.
+- From empty ground, drag ordinary Rail into a degree-2 curve/corner. Gesture must stop adjacent; existing three-object curve must remain intact.
+- Start ordinary Rail on the middle of a degree-2 straight/corner and drag outward. No branch edge may be authored; Junction is required.
+- Start ordinary Rail on a true degree-1 endpoint and extend straight, then repeat with a 90-degree turn. Both must remain legal and resolve normally.
+- Debug ON: blocked contact must log contactStop=<x,y> and contactMode=SPECIAL_NODE_BLOCKED. A legal endpoint connection must log contactMode=CONNECTED.
+- Exit/re-enter after each case; protected existing rails and legal endpoint extensions must match server persistence.
