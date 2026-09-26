@@ -826,12 +826,14 @@ public final class LiveModelEditorWindow {
 
         JPanel row2 = actionRow(1);
         JButton load = rsButton("Load Project");
+        load.putClientProperty("keepEditorFocus", Boolean.TRUE);
         row2.add(load);
         panel.add(row2);
         panel.add(Box.createVerticalStrut(5));
 
         JPanel row3 = actionRow(1);
         JButton saveAsset = rsButton("Save Selection Asset");
+        saveAsset.putClientProperty("keepEditorFocus", Boolean.TRUE);
         row3.add(saveAsset);
         panel.add(row3);
 
@@ -1685,7 +1687,11 @@ public final class LiveModelEditorWindow {
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createLineBorder(RS_GOLD_DIM));
         button.setOpaque(true);
-        button.addActionListener(e -> returnViewportFocusSoon());
+        button.addActionListener(e -> {
+            if (!Boolean.TRUE.equals(button.getClientProperty("keepEditorFocus"))) {
+                returnViewportFocusSoon();
+            }
+        });
         return button;
     }
 
