@@ -399,7 +399,8 @@ public final class ConstructionRadialSelection {
             return;
         }
         int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
-        if (normalizedAction < 9 || normalizedAction > 13
+        if (!((normalizedAction >= 9 && normalizedAction <= 13)
+                || normalizedAction == 1003)
                 || hasMenuAction(WORKER_JOBS_MENU_ACTION)) {
             return;
         }
