@@ -1347,6 +1347,92 @@ public final class RailRoutePreview {
      * connected outgoing edges are valid; physical object rotation is visual
      * only and is never the travel-direction authority.
      */
+    /**
+     * Eraser bridge for Rail Network V1.
+     *
+     * Persistent rail objects are derived from logical topology. Deleting only
+     * the visible server object leaves the client graph believing the rail still
+     * exists, so the next edit can resurrect/re-route it. Erase the authored
+     * logical node first, then submit the resulting physical delta through the
+     * same atomic rail replacement owner used by normal rail edits.
+     *
+     * @return non-null status when the tile belonged to the current logical rail
+     *         graph; null when the generic settlement eraser should handle it.
+     */
+    public static synchronized String eraseAtWorldTile(int worldX, int worldY, int plane) {
+        if (logicalNetwork.isEmpty()) {
+            return null;
+        }
+
+        String targetKey = findLogicalEraseTarget(worldX, worldY, plane);
+        if (targetKey == null) {
+            return null;
+        }
+
+        java.util.List<RoutePiece> oldPhysical = resolveLogicalNetworkPieces();
+        int[] target = parseLogicalKey(targetKey);
+
+        logicalNetwork.remove(targetKey);
+        removeLogicalConnectionsAt(target[0], target[1], target[2]);
+
+        java.util.List<RoutePiece> newPhysical = resolveLogicalNetworkPieces();
+        ConstructionPlacementController.onRailNetworkDelta(oldPhysical, newPhysical);
+
+        committed = !logicalNetwork.isEmpty();
+        dragging = false;
+        editingEndpointB = false;
+        liveDragPath.clear();
+        liveDragLockedAtExistingRail = false;
+        liveExistingContactX = -1;
+        liveExistingContactY = -1;
+        lastRenderedCycle = Integer.MIN_VALUE;
+
+        eventState = "Rail eraser removed logical tile "
+                + target[0] + "," + target[1] + "," + target[2]
+                + " and queued " + oldPhysical.size() + " -> "
+                + newPhysical.size() + " physical reconciliation.";
+        return eventState;
+    }
+
+    private static String findLogicalEraseTarget(int worldX, int worldY, int plane) {
+        String exact = logicalKey(worldX, worldY, plane);
+        if (logicalNetwork.contains(exact)) {
+            return exact;
+        }
+
+        /*
+         * A rendered curve is a three-object composite. A clicked component can
+         * sit on an offset tile rather than the authored corner, so map that
+         * physical footprint back to its logical corner before erasing.
+         */
+        for (String key : logicalNetwork) {
+            int[] tile = parseLogicalKey(key);
+            if (tile[2] != plane) {
+                continue;
+            }
+            int mask = logicalNeighborMask(tile[0], tile[1], tile[2]);
+            if (Integer.bitCount(mask) != 2 || isOppositePair(mask)
+                    || touchesLogicalJunction(tile[0], tile[1], tile[2], mask)) {
+                continue;
+            }
+            int horizontalDirection = (mask & 2) != 0 ? 1 : -1;
+            int verticalDirection = (mask & 1) != 0 ? 1 : -1;
+            CurvePlacement curve = createCurvePlacement(
+                    tile[0], tile[1], horizontalDirection, verticalDirection);
+            if (curveOccupies(curve, worldX, worldY)) {
+                return key;
+            }
+        }
+        return null;
+    }
+
+    private static void removeLogicalConnectionsAt(int x, int y, int plane) {
+        logicalConnections.remove(logicalConnectionKey(x, y, x, y + 1, plane));
+        logicalConnections.remove(logicalConnectionKey(x, y, x + 1, y, plane));
+        logicalConnections.remove(logicalConnectionKey(x, y, x, y - 1, plane));
+        logicalConnections.remove(logicalConnectionKey(x, y, x - 1, y, plane));
+    }
+
     public static synchronized int getCartConnectionMask(int worldX, int worldY, int plane) {
         if (!logicalNetwork.contains(logicalKey(worldX, worldY, plane))) return 0;
         return logicalNeighborMask(worldX, worldY, plane);
