@@ -56,6 +56,12 @@ public final class ConstructionBuildCamera {
     private static final int RTS_MAX_QUEUED_WHEEL_STEPS = 8;
     private static final float RTS_SCENE_EDGE_MARGIN = 768.0F;
 
+    // Matrix3 action 23 uses movement type 1 for minimap-originated walking.
+    // Construction RTS consumes that already-resolved destination before a
+    // player movement packet is sent.
+    private static final int MATRIX3_TILE_ACTION = 23;
+    private static final int MATRIX3_MINIMAP_MOVE_TYPE = 1;
+
     private static volatile boolean active;
     private static volatile boolean ownsFreeCamera;
     private static volatile boolean settlementAutoMode;
@@ -88,6 +94,15 @@ public final class ConstructionBuildCamera {
     private static float savedRtsPivotX;
     private static float savedRtsPivotY;
     private static float savedRtsPivotZ;
+
+    // RTS temporarily owns Matrix3's existing minimap destination marker so the
+    // camera focus stays visible without hardcoding any minimap screen layout.
+    private static boolean rtsMinimapMarkerSnapshotValid;
+    private static int savedMinimapMarkerXRaw;
+    private static int savedMinimapMarkerYRaw;
+    private static boolean savedMinimapMarkerBool;
+    private static int lastRtsMinimapMarkerLocalX = Integer.MIN_VALUE;
+    private static int lastRtsMinimapMarkerLocalY = Integer.MIN_VALUE;
 
     // A placement click should stop motion even if a key is still physically held.
     // Movement can resume only after all camera movement keys are released once.
@@ -149,6 +164,10 @@ public final class ConstructionBuildCamera {
             return;
         }
 
+        if (active && cameraMode == CameraMode.RTS && nextMode != CameraMode.RTS) {
+            restoreRtsMinimapMarker();
+        }
+
         clearVelocity();
         clickStopLatched = false;
         inputReported = false;
@@ -157,6 +176,9 @@ public final class ConstructionBuildCamera {
         resetRtsState();
         cameraMode = nextMode;
 
+        if (active && nextMode == CameraMode.RTS) {
+            snapshotRtsMinimapMarker();
+        }
         if (active) {
             reportToServer("MODE " + nextMode.name());
         }
@@ -175,6 +197,22 @@ public final class ConstructionBuildCamera {
                 pendingRtsZoomSteps + wheelRotation,
                 -RTS_MAX_QUEUED_WHEEL_STEPS,
                 RTS_MAX_QUEUED_WHEEL_STEPS);
+        return true;
+    }
+
+    /**
+     * VERIFIED-STATIC: Class319 action 23 movement type 1 is Matrix3's minimap
+     * walk variant. Its local X/Y are already resolved before packet creation.
+     * RTS consumes only that variant and converts the destination into a camera
+     * pivot; normal world Walk Here remains owned by the existing selection path.
+     */
+    public static boolean handleMinimapWalkAction(int action, int localX, int localY, int movementType) {
+        if (!active || cameraMode != CameraMode.RTS
+                || action != MATRIX3_TILE_ACTION || movementType != MATRIX3_MINIMAP_MOVE_TYPE) {
+            return false;
+        }
+
+        focusRtsAtLocalTile(localX, localY);
         return true;
     }
 
@@ -237,6 +275,7 @@ public final class ConstructionBuildCamera {
         stopReported = false;
         failureReported = false;
         resetRtsState();
+        snapshotRtsMinimapMarker();
 
         reportToServer("ENTER active=" + IncomingPacket.method4113((byte) 0)
                 + " owned=" + ownsFreeCamera
@@ -254,6 +293,7 @@ public final class ConstructionBuildCamera {
             RSSocket.method7604(0);
         }
 
+        restoreRtsMinimapMarker();
         active = false;
         ownsFreeCamera = false;
         lastTickCycle = Integer.MIN_VALUE;
@@ -478,6 +518,8 @@ public final class ConstructionBuildCamera {
             applyRtsZoom(position, viewDirection, wheelSteps);
             rememberRtsView();
         }
+
+        syncRtsMinimapMarker();
     }
 
     private static void initializeRtsHeading(Class658_Sub2 lookController, Class240 position) {
@@ -712,6 +754,93 @@ public final class ConstructionBuildCamera {
         velocityX = 0.0F;
         velocityY = 0.0F;
         velocityZ = 0.0F;
+    }
+
+    private static void focusRtsAtLocalTile(int localX, int localY) {
+        if (client.aClass613_8605 == null) {
+            return;
+        }
+
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -115);
+        if (sceneBase == null) {
+            return;
+        }
+
+        int baseTileX = sceneBase.localX * -2109597897;
+        int baseTileY = sceneBase.localY * 417324155;
+        int worldTileX = baseTileX + localX;
+        int worldTileY = baseTileY + localY;
+
+        // Matrix3 camera horizontal coordinates use 512 units per scene tile.
+        // Aim at tile center and preserve the current pivot height/orbit/yaw.
+        rtsPivotX = (worldTileX << 9) + 256.0F;
+        rtsPivotZ = (worldTileY << 9) + 256.0F;
+        clampRtsPivotToLoadedScene();
+        clearVelocity();
+        clickStopLatched = false;
+        rememberRtsView();
+        syncRtsMinimapMarker();
+        reportToServer("RTS_MINIMAP_FOCUS local=" + localX + "," + localY);
+    }
+
+    private static void snapshotRtsMinimapMarker() {
+        if (rtsMinimapMarkerSnapshotValid) {
+            return;
+        }
+        savedMinimapMarkerXRaw = Class192.anInt2310;
+        savedMinimapMarkerYRaw = Class192.anInt2300;
+        savedMinimapMarkerBool = Class192.aBool2307;
+        rtsMinimapMarkerSnapshotValid = true;
+        lastRtsMinimapMarkerLocalX = Integer.MIN_VALUE;
+        lastRtsMinimapMarkerLocalY = Integer.MIN_VALUE;
+    }
+
+    private static void restoreRtsMinimapMarker() {
+        if (!rtsMinimapMarkerSnapshotValid) {
+            return;
+        }
+        Class192.anInt2310 = savedMinimapMarkerXRaw;
+        Class192.anInt2300 = savedMinimapMarkerYRaw;
+        Class192.aBool2307 = savedMinimapMarkerBool;
+        rtsMinimapMarkerSnapshotValid = false;
+        lastRtsMinimapMarkerLocalX = Integer.MIN_VALUE;
+        lastRtsMinimapMarkerLocalY = Integer.MIN_VALUE;
+        Class10.method544((byte) 1);
+    }
+
+    private static void syncRtsMinimapMarker() {
+        if (!active || cameraMode != CameraMode.RTS || !rtsOrientationInitialized
+                || client.aClass613_8605 == null) {
+            return;
+        }
+
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -115);
+        if (sceneBase == null) {
+            return;
+        }
+
+        int baseTileX = sceneBase.localX * -2109597897;
+        int baseTileY = sceneBase.localY * 417324155;
+        int localX = (int) Math.floor(rtsPivotX / 512.0F) - baseTileX;
+        int localY = (int) Math.floor(rtsPivotZ / 512.0F) - baseTileY;
+        if (localX < 0 || localY < 0) {
+            return;
+        }
+
+        if (!rtsMinimapMarkerSnapshotValid) {
+            snapshotRtsMinimapMarker();
+        }
+        if (localX == lastRtsMinimapMarkerLocalX && localY == lastRtsMinimapMarkerLocalY) {
+            return;
+        }
+
+        // Reuse the exact encoded marker writes from IncomingPacket.method4108.
+        Class192.anInt2310 = -3733871 * localX;
+        Class192.anInt2300 = -343091919 * localY;
+        Class192.aBool2307 = false;
+        lastRtsMinimapMarkerLocalX = localX;
+        lastRtsMinimapMarkerLocalY = localY;
+        Class10.method544((byte) 1);
     }
 
     private static boolean isSavedRtsPivotInLoadedScene() {
