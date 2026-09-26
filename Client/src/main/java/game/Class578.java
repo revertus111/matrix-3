@@ -62,6 +62,7 @@ public class Class578 {
 				LiveModelEditorPreview.render(scene, Class272_Sub2.aClass106_9517);
 				ObjectCompositePreview.render(scene, Class272_Sub2.aClass106_9517);
 				RailRoutePreview.render(scene, Class272_Sub2.aClass106_9517);
+				LiveModelEditorPreview.renderGizmoOverlay(Class272_Sub2.aClass106_9517);
 			}
 		}
 		class531.aClass456_Sub1_5929 = null;
