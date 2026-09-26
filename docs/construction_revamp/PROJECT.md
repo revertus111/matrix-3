@@ -1627,3 +1627,14 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Runtime evidence gate: stand at the real sawmill -> tag SAWMILL -> capture enough radius for the complete machine -> confirm object 46298/models 49717,49718 -> classify every animated=YES row against the visible machinery -> upload TSV plus one screenshot/video.
 - Promotion gate: only after the assembly is verified, replace/follow up the generic workbench with a persistent multi-object sawmill prefab/workstation. The intended production flow remains input/storage -> conveyor -> saw -> output, but input/output behavior must reuse the existing atomic saw-planks transaction rather than invent a second processing owner.
 - Resume Here: obtain the SAWMILL live-assembly TSV and visual evidence. Next code patch should promote only verified components/sequence data into the settlement workstation prefab and then run the combined processing runtime gate.
+
+
+## Phase 3 worker-control UX follow-up — Jobs overlay + explicit object orders — 2026-09-25
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under approved AAA.
+- Added a player-facing Worker -> Jobs world context action. Right-clicking one live settlement worker opens an in-game Allowed Jobs checklist; right-clicking a worker inside the committed RTS selection applies the checked set to the whole selected worker group.
+- The overlay replaces the complete Allowed Jobs set atomically through existing SettlementWorkerState policy. Presets are removed from the normal Con Revamp UI; legacy preset helpers remain internal compatibility code only.
+- Explicit RTS object orders are now separate from autonomous Allowed Jobs. Clicking a starter resource with workers selected issues the existing manual gather order; clicking Wooden workbench 13704 issues a one-cycle manual saw-planks order to the exact clicked workstation even when Process Wood is OFF.
+- Manual gather now completes its explicit haul leg even when autonomous Haul is OFF, then returns to normal Allowed Jobs policy.
+- Worker object/NPC task orders consume the vanilla Matrix3 interaction after the worker order is accepted, even when self is part of the RTS selection. This preserves the player's current activity instead of walking the player to/changing them onto the worker target.
+- Ground double-click movement ownership is unchanged: self can still move with the selected group when deliberately included.
+- Runtime gate: verify single-worker Jobs apply, multi-selection Jobs apply, manual tree/workbench click with corresponding Allowed Job OFF, and player-current-action preservation while workers receive object orders.
