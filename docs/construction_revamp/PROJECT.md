@@ -1638,3 +1638,12 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Worker object/NPC task orders consume the vanilla Matrix3 interaction after the worker order is accepted, even when self is part of the RTS selection. This preserves the player's current activity instead of walking the player to/changing them onto the worker target.
 - Ground double-click movement ownership is unchanged: self can still move with the selected group when deliberately included.
 - Runtime gate: verify single-worker Jobs apply, multi-selection Jobs apply, manual tree/workbench click with corresponding Allowed Job OFF, and player-current-action preservation while workers receive object orders.
+
+
+## Rail normal-tool special-node guard — 2026-09-25
+- IMPLEMENTED / NEEDS RUNTIME TEST under standing SAP AAA.
+- Runtime debug evidence from operations 7/10/11 proved the ordinary Rail first-contact path was still authoring the final edge into an existing degree-2 corner. That raised the contact node to degree 3, causing the resolver to intentionally drop the accepted curve composite and replace it with the generic straight junction placeholder.
+- Normal Rail now permits only topology that remains degree <= 2. Endpoint extension/connection stays legal; middle branching, curve branching and perpendicular crossing are blocked before the new edge is authored.
+- Junction/Crossing/Splitter remain the explicit future owners of degree-3/4 topology.
+- Rail debug contact state is now captured before reset and reports contactMode=CONNECTED or contactMode=SPECIAL_NODE_BLOCKED instead of incorrectly writing contactStop=none after a clamp.
+- Resume Here: rebuild the same loop from runtime debug op 5, then repeat the op 7/op 10/op 11 contact gestures. Existing curves must remain unchanged and the new ordinary Rail stub must stop adjacent to the protected degree-2 node. Then test extension from a true degree-1 endpoint; that must still connect/curve normally.
