@@ -1038,6 +1038,89 @@ public final class SettlementInstance {
                 + node.getResource().getDisplayName() + " node.";
     }
 
+    public synchronized String orderRuntimeSelectionProcessWood(
+            int objectId, int worldX, int worldY, int plane) {
+        if (!loaded || destroyed || boundChunks == null) {
+            return "RTS processing order unavailable; settlement runtime is not ready.";
+        }
+        WorldTile clickedTile = new WorldTile(worldX, worldY, plane);
+        if (!containsWorldTile(clickedTile)) {
+            return "RTS processing target is outside the active settlement plot.";
+        }
+        SettlementPlacedPiece piece = findSavedPiece(objectId, clickedTile);
+        if (piece == null) {
+            return "RTS processing target is not a persistent settlement workstation.";
+        }
+        SettlementBuildPiece definition =
+                SettlementBuildPiece.forKey(piece.getDefinitionKey());
+        SettlementProcessingRecipe recipe = SettlementProcessingRecipe.SAW_PLANKS;
+        if (!isWorkstationForRecipe(definition, recipe)) {
+            return "RTS processing target cannot process Wood.";
+        }
+
+        List<SettlementWorkerState> selected = snapshotRuntimeWorkerSelection();
+        if (selected.isEmpty()) {
+            return "No server-owned radial worker selection is active.";
+        }
+
+        int ordered = 0;
+        for (SettlementWorkerState worker : selected) {
+            SettlementWorkerNpc npc = findActiveWorkerNpc(worker.getWorkerId());
+            if (npc == null) {
+                continue;
+            }
+            npc.assignManualProcessingOrder(recipe, piece.getPieceId());
+            ordered++;
+        }
+        return "RTS Process Wood order: " + ordered
+                + " worker(s) -> " + definition.getDisplayName() + ".";
+    }
+
+    public synchronized String replaceRuntimeSelectionAllowedJobs(
+            java.util.Set<SettlementWorkerJob> jobs) {
+        if (jobs == null) {
+            return "Allowed Jobs replacement is invalid.";
+        }
+        List<SettlementWorkerState> selected = snapshotRuntimeWorkerSelection();
+        if (selected.isEmpty()) {
+            return "No server-owned radial worker selection is active.";
+        }
+        for (SettlementWorkerState worker : selected) {
+            replaceAllowedJobs(worker, jobs);
+        }
+        return "Allowed Jobs replaced for radial selection "
+                + formatWorkerIds(selected) + ".";
+    }
+
+    public synchronized String replaceRuntimeNpcAllowedJobs(
+            int runtimeNpcIndex, java.util.Set<SettlementWorkerJob> jobs) {
+        if (jobs == null) {
+            return "Allowed Jobs replacement is invalid.";
+        }
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc == null || npc.hasFinished() || npc.getIndex() != runtimeNpcIndex) {
+                continue;
+            }
+            SettlementWorkerState worker = state.findWorker(npc.getWorkerId());
+            if (worker == null) {
+                break;
+            }
+            replaceAllowedJobs(worker, jobs);
+            return "Allowed Jobs replaced for Worker #" + worker.getWorkerId() + ".";
+        }
+        return "That runtime NPC is not an active settlement worker.";
+    }
+
+    private static void replaceAllowedJobs(
+            SettlementWorkerState worker, java.util.Set<SettlementWorkerJob> jobs) {
+        if (worker == null) {
+            return;
+        }
+        for (SettlementWorkerJob job : SettlementWorkerJob.values()) {
+            worker.setJobAllowed(job, jobs.contains(job));
+        }
+    }
+
     private SettlementWorkerNpc findActiveWorkerNpc(long workerId) {
         for (SettlementWorkerNpc npc : workerNpcs) {
             if (npc != null && !npc.hasFinished() && npc.getWorkerId() == workerId) {
@@ -1132,11 +1215,17 @@ public final class SettlementInstance {
 
     public synchronized long reserveProcessingWorkstation(
             long workerId, SettlementProcessingRecipe recipe) {
+        return reserveProcessingWorkstation(workerId, recipe, -1L);
+    }
+
+    public synchronized long reserveProcessingWorkstation(
+            long workerId, SettlementProcessingRecipe recipe, long preferredPieceId) {
         if (!canProcessRecipe(recipe) || workerId <= 0L) {
             return -1L;
         }
         for (SettlementPlacedPiece piece : state.snapshotPieces()) {
-            if (piece == null) {
+            if (piece == null
+                    || preferredPieceId > 0L && piece.getPieceId() != preferredPieceId) {
                 continue;
             }
             SettlementBuildPiece definition =
