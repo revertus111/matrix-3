@@ -270,7 +270,7 @@ Required:
 - [x] Replace duplicate Whole/Part spinner UX with one contextual live inspector.
 - [x] Display scale as decimal ratio while retaining current internal integer representation.
 - [x] Safe exact numeric entry contract.
-- [ ] Numeric value scrubbing.
+- [x] Numeric value scrubbing.
 - [x] Render visible pivot.
 - [x] Render Move gizmo.
 - [x] Render supported yaw Rotate gizmo.
@@ -280,11 +280,12 @@ Required:
 - [x] Scale-gizmo hit testing / hover / active state.
 - [x] Whole / Part / Multi gizmo pivot positioning.
 - [x] Multi shared-pivot yaw rotation.
-- [ ] Compact active transform readout near gizmo.
-- [ ] Keyboard nudge path.
-- [ ] Centralized hotkey/text-entry ownership.
-- [ ] Active-state highlighting in the compact UI.
-- [ ] Remove obsolete duplicate legacy Parts/Transform panel methods after replacement UI is runtime-safe.
+- [x] Compact live transform readout in the EDIT workspace.
+- [ ] Native text physically beside the 3D gizmo (CARRYOVER pending verified renderer-font seam).
+- [x] Keyboard nudge path.
+- [x] Centralized hotkey/text-entry ownership.
+- [x] Active-state highlighting in the compact UI.
+- [x] Remove obsolete duplicate legacy Parts/Transform panel methods after replacement UI is runtime-safe.
 
 ## Deferred
 
@@ -436,3 +437,33 @@ Implemented / NEEDS BATCHED RUNTIME TEST:
 - The inspector continues to display those values as decimal ratios (1.00, 1.25, etc.).
 - Scale snapping remains deliberately deferred; the Snap controls currently apply only to Move and Rotate.
 - Multi Scale continues to apply the same scale delta to each selected part while preserving their existing relative center offsets. Shared-pivot spatial expansion/contraction is not added implicitly in this bundle.
+
+
+### Runtime report — D/E confirmation
+
+The user confirmed the post-D/E editor workflow works in the live client. This promotes the corrected Snap + yaw Rotate + Scale core interactions on Conveyor belt 46298 to VERIFIED at the workflow level. Fine-grained regression checklist rows remain useful for future smoke testing but no longer block the F implementation pass.
+
+### 2.7C-F — professional interaction polish
+
+Implemented / NEEDS RUNTIME TEST:
+
+- Selection mode buttons, Move/Rotate/Scale buttons, axis buttons, Isolate, Snap and the active tool rail now expose persistent visual state instead of behaving like stateless debug buttons.
+- A compact live readout in the EDIT drawer shows the current selection context, transform mode/axis and authoritative value while viewport or inspector edits occur.
+- Native text physically beside the 3D gizmo is CARRYOVER. The bounded Matrix3 text-render lookup did not establish a safe renderer-font seam, so F deliberately avoids a second Swing/JWindow viewport overlay.
+- Transform inspector fields support horizontal mouse scrubbing:
+  - Position: normal 2 units/pixel, Shift fine, Ctrl coarse.
+  - Yaw: normal 1 degree/pixel, Shift fine, Ctrl coarse.
+  - Scale: normal 0.01/pixel internal ratio equivalent, Shift fine, Ctrl coarse.
+- Part/Multi numeric scrubbing calls the same beginGesture/updateGestureTransform/endGesture transaction used by viewport transforms, so one press-drag-release is one undo record.
+- Inspector mouse wheel adjusts the hovered field; Shift is fine and Ctrl is coarse.
+- Keyboard nudging uses Alt+Arrow so the editor does not steal the camera's normal arrow-key ownership:
+  - Move: 1 unit, Alt+Shift = 16 units.
+  - Rotate: 1 degree, Alt+Shift = 15 degrees.
+  - Scale: 0.01, Alt+Shift = 0.10.
+  - Free Move maps horizontal arrows to X and vertical arrows to Z.
+- Shortcut dispatch is centralized in one editor command resolver rather than a long duplicated key-state path.
+- Added Ctrl+O Load Project, Shift+H Show All, I Isolate/Solo, and Tab drawer collapse/expand.
+- Existing Ctrl+S / Ctrl+Shift+S / Ctrl+Z / Ctrl+D / Ctrl+A / 1/2/3 / G/R/V / F/X/Y/Z / H / Delete remain owned by the centralized resolver.
+- Text-entry focus remains authoritative: editor shortcuts do not fire while typing exact numeric values.
+- Plain arrow keys remain unconsumed for the existing camera controller.
+- Obsolete createPartsPanel/createTransformPanel methods and the unused transform CardLayout state were removed. Hidden spinner models remain only as compatibility/state adapters for existing project serialization and listeners.
