@@ -1725,3 +1725,10 @@
 - Rally Restricted now constrains autonomous resource-node, workstation and physical-chest candidates to the rally zone while critical needs and explicit RTS orders keep higher authority.
 - Direct Orders Only stops new autonomous gather/process selection while preserving needs, explicit orders and safe carried-payload completion.
 - Rally visualization/rename/radius editing and richer item filters remain follow-up polish; sawmill I/O migration remains next.
+
+2026-09-27 - Rail Assembly Studio UX V1.1
+- Selecting a rail candidate now immediately renders a separate live solo preview through ObjectLabPreview; Prev/Next swaps that preview without adding anything to the assembly.
+- Add Here commits the selected candidate to the assembly; Add Here + Next commits then advances. Candidate preview stays independent from ObjectCompositePreview assembly rendering.
+- Reworked Rail Studio for the real narrow Client Console: outer horizontal scrolling disabled, candidate actions moved to 2x2, workspace navigation/actions moved to 2-column layouts, R0-R3 kept as the only 4-column row, and ports moved to 2x2.
+- Reduced Rail Studio-local title/section/body/helper/button fonts and padding another step; global ConsoleTheme remains unchanged.
+- World Anchor now repositions both candidate and assembly previews.
