@@ -1598,7 +1598,8 @@ public final class RailRoutePreview {
             if (entry.getValue() == ToolMode.JUNCTION
                     && Integer.bitCount(mask) == 3 && composite != null) {
                 appendSpecialComposite(pieces, physicalOccupied, composite,
-                        tile[0], tile[1], tile[2], turnsForJunctionMask(mask));
+                        tile[0], tile[1], tile[2],
+                        turnsForSpecialMask(composite, mask));
             }
         }
 
@@ -1651,14 +1652,129 @@ public final class RailRoutePreview {
         return null;
     }
 
-    private static int turnsForJunctionMask(int mask) {
-        // Canonical accepted Junction orientation is N+E+S (mask 7), i.e. missing W.
-        int rotated = 7;
+    private static int turnsForSpecialMask(
+            RailCompositeLibrary.CompositeDefinition composite, int targetMask) {
+        SpecialLayoutProfile profile = inferSpecialLayoutProfile(composite);
+        int baseMask = profile.connectionMask;
+        if (Integer.bitCount(baseMask) < 3) {
+            // Backward compatibility for the old one-object Junction contract.
+            baseMask = 1 | 2 | 4; // canonical N+E+S
+        }
+        int rotated = baseMask;
         for (int turns = 0; turns < 4; turns++) {
-            if (rotated == mask) return turns;
+            if (rotated == targetMask) return turns;
             rotated = rotateConnectionMaskClockwise(rotated);
         }
         return 0;
+    }
+
+    private static SpecialLayoutProfile inferSpecialLayoutProfile(
+            RailCompositeLibrary.CompositeDefinition composite) {
+        if (composite == null) {
+            return new SpecialLayoutProfile(0, 0, 0);
+        }
+        java.util.List<RailCompositeLibrary.Component> components = composite.getComponents();
+        if (components.isEmpty()) {
+            return new SpecialLayoutProfile(0, 0, 0);
+        }
+
+        /*
+         * An explicitly normalized authored layout wins. Rail Classifier uses
+         * the selected workbench part as (0,0) when accepting a multi-object
+         * special, so this is the stable author-controlled anchor.
+         */
+        for (RailCompositeLibrary.Component component : components) {
+            if (component.getOffsetX() == 0 && component.getOffsetY() == 0) {
+                return new SpecialLayoutProfile(0, 0,
+                        inferSpecialConnectionMask(components, 0, 0));
+            }
+        }
+
+        /*
+         * Legacy research layouts predate explicit special anchors. Infer the
+         * junction center from cardinal footprint connectivity: highest local
+         * degree first, then nearest the footprint center as a deterministic
+         * tie-breaker.
+         */
+        java.util.LinkedHashSet<String> occupied = new java.util.LinkedHashSet<String>();
+        int minX = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        for (RailCompositeLibrary.Component component : components) {
+            int x = component.getOffsetX();
+            int y = component.getOffsetY();
+            occupied.add(x + ":" + y);
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+        }
+
+        int centerX2 = minX + maxX;
+        int centerY2 = minY + maxY;
+        int bestX = components.get(0).getOffsetX();
+        int bestY = components.get(0).getOffsetY();
+        int bestDegree = -1;
+        long bestDistance = Long.MAX_VALUE;
+
+        for (RailCompositeLibrary.Component component : components) {
+            int x = component.getOffsetX();
+            int y = component.getOffsetY();
+            int degree = cardinalFootprintDegree(occupied, x, y);
+            long dx2 = 2L * x - centerX2;
+            long dy2 = 2L * y - centerY2;
+            long distance = dx2 * dx2 + dy2 * dy2;
+            if (degree > bestDegree || degree == bestDegree && distance < bestDistance) {
+                bestDegree = degree;
+                bestDistance = distance;
+                bestX = x;
+                bestY = y;
+            }
+        }
+
+        return new SpecialLayoutProfile(bestX, bestY,
+                inferSpecialConnectionMask(components, bestX, bestY));
+    }
+
+    private static int inferSpecialConnectionMask(
+            java.util.List<RailCompositeLibrary.Component> components,
+            int anchorX, int anchorY) {
+        java.util.LinkedHashSet<String> occupied = new java.util.LinkedHashSet<String>();
+        for (RailCompositeLibrary.Component component : components) {
+            occupied.add(component.getOffsetX() + ":" + component.getOffsetY());
+        }
+
+        int mask = 0;
+        for (RailCompositeLibrary.Component component : components) {
+            int x = component.getOffsetX();
+            int y = component.getOffsetY();
+            if (x == anchorX && y == anchorY) {
+                continue;
+            }
+            if (cardinalFootprintDegree(occupied, x, y) > 1) {
+                continue;
+            }
+
+            int dx = x - anchorX;
+            int dy = y - anchorY;
+            if (Math.abs(dx) >= Math.abs(dy) && dx != 0) {
+                mask |= dx > 0 ? 2 : 8; // E / W
+            } else if (dy != 0) {
+                mask |= dy > 0 ? 1 : 4; // N / S
+            }
+        }
+        return mask;
+    }
+
+    private static int cardinalFootprintDegree(
+            java.util.Set<String> occupied, int x, int y) {
+        int degree = 0;
+        if (occupied.contains(x + ":" + (y + 1))) degree++;
+        if (occupied.contains((x + 1) + ":" + y)) degree++;
+        if (occupied.contains(x + ":" + (y - 1))) degree++;
+        if (occupied.contains((x - 1) + ":" + y)) degree++;
+        return degree;
     }
 
     private static int rotateConnectionMaskClockwise(int mask) {
@@ -1678,15 +1794,9 @@ public final class RailRoutePreview {
         java.util.List<RailCompositeLibrary.Component> components = composite.getComponents();
         if (components.isEmpty()) return;
 
-        int anchorX = components.get(0).getOffsetX();
-        int anchorY = components.get(0).getOffsetY();
-        for (RailCompositeLibrary.Component component : components) {
-            if (component.getOffsetX() == 0 && component.getOffsetY() == 0) {
-                anchorX = 0;
-                anchorY = 0;
-                break;
-            }
-        }
+        SpecialLayoutProfile profile = inferSpecialLayoutProfile(composite);
+        int anchorX = profile.anchorX;
+        int anchorY = profile.anchorY;
 
         for (RailCompositeLibrary.Component component : components) {
             if (pieces.size() >= MAX_NETWORK_PIECES) return;
@@ -1700,6 +1810,26 @@ public final class RailRoutePreview {
             pieces.add(new RoutePiece(component.getId(), component.getType(),
                     (component.getRotation() + turns) & 0x3, x, y, plane));
         }
+    }
+
+    private static boolean specialCompositeOccupies(
+            RailCompositeLibrary.CompositeDefinition composite,
+            int anchorWorldX, int anchorWorldY, int plane, int turns,
+            int worldX, int worldY) {
+        if (composite == null) {
+            return false;
+        }
+        SpecialLayoutProfile profile = inferSpecialLayoutProfile(composite);
+        for (RailCompositeLibrary.Component component : composite.getComponents()) {
+            int[] offset = rotateLayoutOffset(
+                    component.getOffsetX() - profile.anchorX,
+                    component.getOffsetY() - profile.anchorY, turns);
+            if (anchorWorldX + offset[0] == worldX
+                    && anchorWorldY + offset[1] == worldY) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void appendUniqueCurvePieces(java.util.List<RoutePiece> pieces,
@@ -1826,6 +1956,29 @@ public final class RailRoutePreview {
         String exact = logicalKey(worldX, worldY, plane);
         if (logicalNetwork.contains(exact)) {
             return exact;
+        }
+
+        /*
+         * Multi-object special nodes may render several tiles away from the
+         * logical Junction tile. Map any clicked special component back to the
+         * logical node before checking generic curves.
+         */
+        for (java.util.Map.Entry<String, ToolMode> entry : specialNodeModes.entrySet()) {
+            if (!logicalNetwork.contains(entry.getKey())) {
+                continue;
+            }
+            int[] tile = parseLogicalKey(entry.getKey());
+            if (tile[2] != plane) {
+                continue;
+            }
+            RailCompositeLibrary.CompositeDefinition composite =
+                    specialComposite(entry.getValue());
+            int mask = logicalNeighborMask(tile[0], tile[1], tile[2]);
+            if (composite != null && specialCompositeOccupies(composite,
+                    tile[0], tile[1], tile[2],
+                    turnsForSpecialMask(composite, mask), worldX, worldY)) {
+                return entry.getKey();
+            }
         }
 
         /*
@@ -2398,6 +2551,18 @@ public final class RailRoutePreview {
             return new int[] { -offsetY, offsetX };
         default:
             return new int[] { offsetX, offsetY };
+        }
+    }
+
+    private static final class SpecialLayoutProfile {
+        private final int anchorX;
+        private final int anchorY;
+        private final int connectionMask;
+
+        private SpecialLayoutProfile(int anchorX, int anchorY, int connectionMask) {
+            this.anchorX = anchorX;
+            this.anchorY = anchorY;
+            this.connectionMask = connectionMask;
         }
     }
 
