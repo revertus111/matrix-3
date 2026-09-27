@@ -1243,3 +1243,11 @@ Worker Logistics AI V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
 - Progression bridge: with legacy Wood insufficient but physical Logs available, place one normal Wood-cost Construction piece and confirm the required value is consumed without duplicating Logs.
 - Confirm existing Food/Stone/Ore workers still use their legacy compatibility path for this slice; sawmill/rail behavior is intentionally unchanged.
 - Do not repeat already accepted Bank-shell chest or Saved Tile tests unless one of these checks exposes a regression.
+
+Rail Classifier self-contained workflow correction — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Open Test Console -> Rail Classifier. Rail Classifier Workbench must now be the first functional card and show CURRENT CANDIDATE 1 / N with a real object ID/type/rotation immediately.
+- Without touching the Advanced candidate list, click Place Current. A rail must be added to the workbench list and rendered beside the player.
+- Prev Rail / Next Rail must browse candidates directly from the workbench; Place + Next must place the current candidate and advance in one click.
+- Geometry Classification must sit directly below the workbench so the active/current rail can be classified without scrolling through route-preview tooling first.
+- Rotate a placed rail with R and confirm CURRENT CANDIDATE + ACTIVE PLACED RAIL both reflect the same rotation before toggling classification.
+- Regression: Advanced candidate list, solo Spawn Preview, route preview, Accept Junction/Crossing/Splitter, layout saving and hotkeys must continue working.
