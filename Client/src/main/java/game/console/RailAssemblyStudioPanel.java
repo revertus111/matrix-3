@@ -84,7 +84,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private final JList<String> assemblyList = new JList<String>(assemblyModel);
     private final JLabel activeLabel = valueLabel("ACTIVE: none");
     private final JCheckBox evidenceLabels =
-            new JCheckBox("Evidence labels: ID / type / rotation / dX / dY", true);
+            new JCheckBox("Show ID / T / R / dX / dY", true);
 
     private final JTextField prefabName = new JTextField("RAIL_PREFAB_01");
     private final JComboBox<PrefabType> prefabType =
@@ -337,6 +337,10 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         JButton hide = button("Hide");
         JButton clear = button("Clear");
         JButton refresh = button("Refresh");
+        reset.setToolTipText("Move the live prefab preview beside your current player position.");
+        hide.setToolTipText("Hide only the client-side prefab preview.");
+        clear.setToolTipText("Clear the current Studio assembly.");
+        refresh.setToolTipText("Redraw the current live prefab preview.");
         r0.addActionListener(e -> setPreviewTurns(0));
         r1.addActionListener(e -> setPreviewTurns(1));
         r2.addActionListener(e -> setPreviewTurns(2));
@@ -457,7 +461,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
     private JPanel createValidationCard() {
         JPanel card = compactCard("5. Validation");
-        card.add(Box.createVerticalStrut(8));
+        card.add(Box.createVerticalStrut(4));
         validationLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         validationLabel.setForeground(ConsoleTheme.TEXT);
         validationLabel.setAlignmentX(LEFT_ALIGNMENT);
@@ -495,7 +499,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
             return;
         }
         int id = filteredCandidateIds.get(index).intValue();
-        candidateLabel.setText("Candidate " + (index + 1) + " / " + filteredCandidateIds.size()
+        candidateLabel.setText("#" + (index + 1) + "/" + filteredCandidateIds.size()
                 + "  |  ID " + id + "  |  T22  |  " + objectName(id));
     }
 
@@ -866,12 +870,12 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
             return;
         }
         Part part = parts.get(selected[0]);
-        activeLabel.setText((part == anchorPart ? "ANCHOR / " : "")
-                + "ACTIVE #" + (selected[0] + 1)
+        activeLabel.setText((part == anchorPart ? "ANCHOR • " : "")
+                + "#" + (selected[0] + 1)
                 + " | ID " + part.id + " | T" + part.type
                 + " | R" + part.rotation
-                + " | dX " + part.offsetX + " | dY " + part.offsetY
-                + (selected.length > 1 ? " | selected=" + selected.length : ""));
+                + " | X" + part.offsetX + " Y" + part.offsetY
+                + (selected.length > 1 ? " | sel " + selected.length : ""));
     }
 
     private int[] selectedIndices() {
