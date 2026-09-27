@@ -759,6 +759,11 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
             setStatus("Publish blocked: " + validation.errors.get(0));
             return;
         }
+        String sceneSlotConflict = firstRuntimeSceneSlotConflict();
+        if (sceneSlotConflict != null) {
+            setStatus("Publish blocked: " + sceneSlotConflict);
+            return;
+        }
 
         String canonical = canonicalName(type);
         String error = RailCompositeLibrary.saveComposite(
@@ -920,6 +925,10 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         if (overlapTiles > 0) {
             result.info.add(overlapTiles + " intentionally overlapping tile(s) detected.");
         }
+        String sceneSlotConflict = firstRuntimeSceneSlotConflict();
+        if (sceneSlotConflict != null) {
+            result.info.add("Draft-only overlap: " + sceneSlotConflict);
+        }
 
         int ports = Integer.bitCount(portMask());
         PrefabType type = selectedPrefabType();
@@ -942,6 +951,26 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         result.info.add(parts.size() + " component(s); ports=" + portsText(portMask())
                 + "; preview=R" + previewTurns + ".");
         return result;
+    }
+
+    private String firstRuntimeSceneSlotConflict() {
+        if (parts.isEmpty()) {
+            return null;
+        }
+        Part anchor = anchorPart == null ? parts.get(0) : anchorPart;
+        java.util.LinkedHashSet<String> occupied =
+                new java.util.LinkedHashSet<String>();
+        for (Part part : parts) {
+            int dx = part.offsetX - anchor.offsetX;
+            int dy = part.offsetY - anchor.offsetY;
+            String key = dx + ":" + dy + ":" + part.type;
+            if (!occupied.add(key)) {
+                return "Matrix3 has one scene slot per tile/object-type; multiple T"
+                        + part.type + " rail visuals at dX " + dx + ", dY " + dy
+                        + " can be saved as research but cannot be published as persistent world objects yet.";
+            }
+        }
+        return null;
     }
 
     private void updateValidation() {
