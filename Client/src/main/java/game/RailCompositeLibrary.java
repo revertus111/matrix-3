@@ -31,6 +31,11 @@ public final class RailCompositeLibrary {
     public static final String ACCEPTED_CROSSING_NAME = "CROSSING_RAIL_LAYOUT_01";
     public static final String ACCEPTED_SPLITTER_NAME = "SPLITTER_RAIL_LAYOUT_01";
 
+    public static final int PORT_NORTH = 1;
+    public static final int PORT_EAST = 2;
+    public static final int PORT_SOUTH = 4;
+    public static final int PORT_WEST = 8;
+
     private static final int[] EVIDENCE_SEED_OBJECT_IDS = {
         4770, 4796, 14500, 14501, 14502,
         46352, 46353, 46354, 46355, 46356, 46357, 46358, 46359, 46360, 46361,
@@ -60,6 +65,11 @@ public final class RailCompositeLibrary {
 
     public static synchronized String saveComposite(String name, Role role,
             List<Component> components) {
+        return saveComposite(name, role, components, 0);
+    }
+
+    public static synchronized String saveComposite(String name, Role role,
+            List<Component> components, int portMask) {
         String cleanedName = cleanName(name);
         if (cleanedName.length() == 0) {
             return "Composite name is required.";
@@ -77,7 +87,7 @@ public final class RailCompositeLibrary {
             }
         }
         next.add(new CompositeDefinition(cleanedName, actualRole,
-                new ArrayList<Component>(components)));
+                new ArrayList<Component>(components), portMask));
 
         Collections.sort(next, new Comparator<CompositeDefinition>() {
             @Override
@@ -91,7 +101,8 @@ public final class RailCompositeLibrary {
             List<String> lines = new ArrayList<String>();
             lines.add("# Matrix3 rail layout/composite library");
             lines.add("# One row per visual component; offset_x/offset_y are relative tiles from the saved layout origin.");
-            lines.add("name\trole\tindex\tid\ttype\trotation\toffset_x\toffset_y");
+            lines.add("# port_mask is optional metadata: N=1, E=2, S=4, W=8. Legacy rows without it remain readable.");
+            lines.add("name\trole\tindex\tid\ttype\trotation\toffset_x\toffset_y\tport_mask");
             for (CompositeDefinition definition : next) {
                 for (int i = 0; i < definition.components.size(); i++) {
                     Component component = definition.components.get(i);
@@ -101,7 +112,8 @@ public final class RailCompositeLibrary {
                             + "\t" + component.type
                             + "\t" + component.rotation
                             + "\t" + component.offsetX
-                            + "\t" + component.offsetY);
+                            + "\t" + component.offsetY
+                            + "\t" + definition.portMask);
                 }
             }
             Files.write(FILE, lines, StandardCharsets.UTF_8,
@@ -140,12 +152,15 @@ public final class RailCompositeLibrary {
                     int rotation = Integer.parseInt(parts[5]);
                     int offsetX = parts.length >= 8 ? Integer.parseInt(parts[6]) : 0;
                     int offsetY = parts.length >= 8 ? Integer.parseInt(parts[7]) : 0;
+                    int portMask = parts.length >= 9 ? Integer.parseInt(parts[8]) & 0xF : 0;
 
                     String key = name.toLowerCase(Locale.ENGLISH);
                     MutableComposite mutable = grouped.get(key);
                     if (mutable == null) {
-                        mutable = new MutableComposite(name, role);
+                        mutable = new MutableComposite(name, role, portMask);
                         grouped.put(key, mutable);
+                    } else if (mutable.portMask == 0 && portMask != 0) {
+                        mutable.portMask = portMask;
                     }
                     mutable.components.add(new IndexedComponent(index,
                             new Component(id, type, rotation, offsetX, offsetY)));
@@ -170,7 +185,7 @@ public final class RailCompositeLibrary {
             }
             if (!components.isEmpty()) {
                 result.add(new CompositeDefinition(
-                        mutable.name, mutable.role, components));
+                        mutable.name, mutable.role, components, mutable.portMask));
             }
         }
         return result;
@@ -256,7 +271,7 @@ public final class RailCompositeLibrary {
         CompositeDefinition accepted = findByName(ACCEPTED_CURVE_NAME);
         if (accepted != null) {
             return new CompositeDefinition(accepted.name, Role.CURVE,
-                    new ArrayList<Component>(accepted.components));
+                    new ArrayList<Component>(accepted.components), accepted.portMask);
         }
 
         CompositeDefinition classified = findFirst(Role.CURVE);
@@ -268,7 +283,7 @@ public final class RailCompositeLibrary {
         components.add(new Component(46377, 22, 0, 2, -1));
         components.add(new Component(46379, 22, 0, 3, -1));
         components.add(new Component(46381, 22, 0, 3, 0));
-        return new CompositeDefinition(ACCEPTED_CURVE_NAME, Role.CURVE, components);
+        return new CompositeDefinition(ACCEPTED_CURVE_NAME, Role.CURVE, components, 0);
     }
 
     private static Role parseRole(String value) {
@@ -337,11 +352,14 @@ public final class RailCompositeLibrary {
         private final String name;
         private final Role role;
         private final List<Component> components;
+        private final int portMask;
 
-        private CompositeDefinition(String name, Role role, List<Component> components) {
+        private CompositeDefinition(String name, Role role, List<Component> components,
+                int portMask) {
             this.name = name;
             this.role = role;
             this.components = components;
+            this.portMask = portMask & 0xF;
         }
 
         public String getName() {
@@ -356,20 +374,39 @@ public final class RailCompositeLibrary {
             return new ArrayList<Component>(components);
         }
 
+        public int getPortMask() {
+            return portMask;
+        }
+
+        public String getPortsText() {
+            if (portMask == 0) {
+                return "auto";
+            }
+            StringBuilder out = new StringBuilder();
+            if ((portMask & PORT_NORTH) != 0) out.append("N");
+            if ((portMask & PORT_EAST) != 0) out.append(out.length() == 0 ? "E" : "/E");
+            if ((portMask & PORT_SOUTH) != 0) out.append(out.length() == 0 ? "S" : "/S");
+            if ((portMask & PORT_WEST) != 0) out.append(out.length() == 0 ? "W" : "/W");
+            return out.toString();
+        }
+
         public String describe() {
-            return name + " [" + role + "] " + components.size() + " component(s)";
+            return name + " [" + role + "] " + components.size() + " component(s)"
+                    + " ports=" + getPortsText();
         }
     }
 
     private static final class MutableComposite {
         private final String name;
         private final Role role;
+        private int portMask;
         private final List<IndexedComponent> components =
                 new ArrayList<IndexedComponent>();
 
-        private MutableComposite(String name, Role role) {
+        private MutableComposite(String name, Role role, int portMask) {
             this.name = name;
             this.role = role;
+            this.portMask = portMask & 0xF;
         }
     }
 
