@@ -1970,3 +1970,10 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
   - Clear Selection -> vanilla single-click walking owns the player immediately.
 - Client Console Worker Control controls are now debug-only: `RTS Automatic` and `Force Disable RTS`.
 - Resume Here: runtime-test automatic selection without touching the console toggle; then open/close Build Palette and Worker Jobs around a committed selection to prove suspension/resume preserves selection and avoids input conflicts.
+
+## Rail Assembly Studio compact console correction — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under AAA.
+- Runtime screenshot proved V1 controls were oversized for the real narrow Client Console: five-column controls clipped, helper copy consumed excessive vertical space, and the Saved Prefabs JComboBox popup obscured the tool.
+- Correction is Rail Studio-local only: compact fonts/padding/gaps, shorter button labels, narrower-safe grid layouts, shorter visible lists and concise helper text. Global ConsoleTheme is untouched.
+- Saved Prefabs now uses a persistent visible JList with Load/Refresh and double-click load, removing the oversized popup failure.
+- Resume Here: restart/rebuild client once and verify the full Studio is readable at normal dock width; then load the existing Junction and continue the Rail Assembly Studio V1 authoring gate.
