@@ -189,14 +189,19 @@ public final class RailRoutePreview {
             eventState = "Crossing tool framework is reserved; accept crossing art first, then H2B enables cross-through semantics.";
             return eventState;
         } else if (target == ToolMode.SPLITTER) {
-            toolMode = ToolMode.NORMAL;
-            eventState = "Splitter tool framework is reserved; accept splitter art first, then H2C enables routing semantics.";
-            return eventState;
+            String problem = validateSpecialComposite(splitterComposite, "Splitter");
+            if (problem != null) {
+                toolMode = ToolMode.NORMAL;
+                eventState = problem;
+                return problem;
+            }
         }
         toolMode = target;
         eventState = target == ToolMode.NORMAL
                 ? "Normal Rail tool armed."
-                : "Junction tool armed. Create exactly one degree-3 node per gesture.";
+                : target == ToolMode.JUNCTION
+                        ? "Junction tool armed. Create exactly one degree-3 node per gesture."
+                        : "Splitter tool armed. Create exactly one degree-3 node per gesture.";
         return eventState;
     }
 
@@ -1192,8 +1197,8 @@ public final class RailRoutePreview {
              */
             if (isExistingRailTile(previousX, previousY)
                     && wouldRequireSpecialNode(previousX, previousY, x, y)) {
-                if (canAuthorJunctionAt(previousX, previousY)) {
-                    markLiveSpecialNode(previousX, previousY, ToolMode.JUNCTION);
+                if (canAuthorDegreeThreeSpecialAt(previousX, previousY)) {
+                    markLiveSpecialNode(previousX, previousY, toolMode);
                 } else {
                     lockAtSpecialRailContact(previousX, previousY, previousX, previousY);
                     return;
@@ -1207,9 +1212,9 @@ public final class RailRoutePreview {
 
             if (isPreExistingRailContact(x, y)) {
                 if (wouldRequireSpecialNode(x, y, previousX, previousY)) {
-                    if (canAuthorJunctionAt(x, y)) {
+                    if (canAuthorDegreeThreeSpecialAt(x, y)) {
                         appendLiveDragTile(x, y);
-                        markLiveSpecialNode(x, y, ToolMode.JUNCTION);
+                        markLiveSpecialNode(x, y, toolMode);
                         liveDragLockedAtExistingRail = true;
                         liveExistingContactX = x;
                         liveExistingContactY = y;
@@ -1259,11 +1264,19 @@ public final class RailRoutePreview {
                 logicalNeighborMask(existingX, existingY, livePlane)) >= 2;
     }
 
-    private static boolean canAuthorJunctionAt(int x, int y) {
-        if (toolMode != ToolMode.JUNCTION || liveSpecialNodeMode != null) {
+    private static boolean canAuthorDegreeThreeSpecialAt(int x, int y) {
+        if (liveSpecialNodeMode != null) {
             return false;
         }
-        if (validateSpecialComposite(junctionComposite, "Junction") != null) {
+        if (toolMode == ToolMode.JUNCTION) {
+            if (validateSpecialComposite(junctionComposite, "Junction") != null) {
+                return false;
+            }
+        } else if (toolMode == ToolMode.SPLITTER) {
+            if (validateSpecialComposite(splitterComposite, "Splitter") != null) {
+                return false;
+            }
+        } else {
             return false;
         }
         return Integer.bitCount(logicalNeighborMask(x, y, livePlane)) == 2;
@@ -1595,7 +1608,8 @@ public final class RailRoutePreview {
             int mask = logicalNeighborMask(tile[0], tile[1], tile[2], connections);
             RailCompositeLibrary.CompositeDefinition composite =
                     specialComposite(entry.getValue());
-            if (entry.getValue() == ToolMode.JUNCTION
+            if ((entry.getValue() == ToolMode.JUNCTION
+                    || entry.getValue() == ToolMode.SPLITTER)
                     && Integer.bitCount(mask) == 3 && composite != null) {
                 appendSpecialComposite(pieces, physicalOccupied, composite,
                         tile[0], tile[1], tile[2],
