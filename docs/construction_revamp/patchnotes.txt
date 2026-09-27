@@ -1629,3 +1629,10 @@
 - Drop + Next automatically spaces candidates into a research grid; each dropped piece remains fully movable/rotatable through the existing layout buttons and hotkeys.
 - Moved the evidence-seeded rail object-id catalog into RailCompositeLibrary so Object Explorer and Rail Classifier consume one source of truth.
 - Tool split is now explicit: Object Explorer = place/move/assemble/research; Rail Classifier = label roles and promote the visually confirmed asset to Junction/Crossing/Splitter.
+
+2026-09-27 - Integrated Rail Classifier placement workbench
+- Added client-only multi-piece rail layout controls directly to Rail Classifier using the existing shared candidate catalog; no manual object-id entry is required.
+- Drop Selected / Drop + Next carries the selected candidate id/type/rotation into the live layout, with [ / ], arrow, R, Delete and Ctrl+D manipulation.
+- Selecting or rotating a dropped piece synchronizes the classifier candidate and preview rotation so checkbox classification and special promotion use the active rail automatically.
+- Added Save Layout Evidence in Rail Classifier using RailCompositeLibrary id/type/rotation + relative dX/dY storage.
+- Scoped candidate-table arrow navigation to table focus so workbench arrows can move placed rails without fighting candidate browsing.
