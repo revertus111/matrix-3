@@ -1675,7 +1675,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 
 ## Phase 3 / Bundle 3.4 — Physical Storage + Factorio-style Logistics Foundation — 2026-09-26
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Status: PARTIALLY RUNTIME VERIFIED. Physical chest placement/opening and bank-shell inventory are VERIFIED; worker hauling/processing still uses legacy invisible storage and must migrate before this bundle is DONE.
 - Decision lock: settlement item storage is physical. Each placed chest owns an independent persistent inventory; there is no new invisible global item pool.
 - V1 physical art is Matrix3's verified-static Oak Treasure Chest object 18804/type 10, exposed as `basic-storage-chest`.
 - Chest presentation reuses Matrix3 Bank interface 762 as a visual shell only. Settlement storage never reads or writes `Bank.bankTabs`.
@@ -1693,7 +1693,9 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Backpressure is intentional: a full output buffer/chest must stop upstream production until transport/storage space becomes available.
 - Safety rule: non-empty physical storage cannot be erased, undone or deleted. It must be emptied first so build tools cannot destroy stored factory items.
 - Next implementation checkpoint after V1 runtime acceptance: machine-local input/output buffers + worker transfer jobs using this physical storage API, then conveyor/cart/loaders against the same contract.
-- Resume Here: place a Wooden chest, prove capped multi-stack deposit/withdraw/persistence and read-only total overview in one runtime session. If accepted, do not reopen bank-shell/storage ownership; continue directly to machine I/O buffers and worker logistics.
+- Runtime evidence 2026-09-27: physical Wooden chest places successfully and opens the bank-style settlement inventory; saved-build-tile cleanup protection also works. Worker hauling still returns to the old home/spawn storage point because legacy worker storage routing remains active.
+- Known UX defect 2026-09-27: the chest opens, but the injected world right-click `View Storage` option is not visible at runtime. Treat the menu injection as NOT VERIFIED and fix it before calling the chest interaction UX complete.
+- Resume Here: do not retest the working bank-shell chest or saved-tile behavior. Fix the missing `View Storage` menu entry, then migrate worker hauling/processing away from invisible settlement storage onto physical chest selection through Bundle 3.5.
 
 
 ### Bundle 3.4 UX correction — 2026-09-26
@@ -1705,7 +1707,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 
 ## Construction test cleanup safety — Saved Build Tiles — 2026-09-27
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under AAA.
+- Status: RUNTIME VERIFIED.
 - Problem: rapid Construction testing commonly uses Clear All, but accepted/important test structures should not need to be rebuilt after every cleanup.
 - Ownership is tile-based, not piece-based. Right-click settlement ground exposes `Save Tile` and `Unsave Tile`.
 - Saved tiles persist in `SettlementState` using plot-relative X/Y/plane identity, so dynamic-region world coordinates are never serialized.
@@ -1734,3 +1736,126 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Save Layout Evidence writes the arranged pieces through RailCompositeLibrary with exact id/type/rotation + relative dX/dY.
 - Candidate-table arrow navigation is now table-focus scoped so it does not conflict with workbench movement.
 - Resume Here: runtime-test one Drop + Next batch, move/rotate several rails, classify one active dropped rail, save one layout, and confirm the saved TSV rows use the expected IDs/rotations without typed input.
+
+
+## Phase 3 / Bundle 3.5 — Worker Logistics AI + Rally / Work-Zone Control — 2026-09-27
+- Status: DESIGN LOCKED / READY TO IMPLEMENT under explicit AAA planning approval.
+- Goal: replace hardcoded worker storage behavior with one reusable logistics decision system that supports both autonomous workers and player-directed RTS control.
+- Design principle: workers may think for themselves by default, but player orders/rally zones always provide a higher-authority steering layer. The system must support both Factorio-style automation and RTS-style micromanagement without duplicating worker code.
+
+### Worker control hierarchy
+1. Critical needs remain highest priority and may interrupt ordinary work.
+2. Explicit temporary orders override autonomous job selection until the order completes/fails/cancels.
+3. Rally/work-zone policy constrains or biases autonomous candidate selection.
+4. Allowed Jobs determines which job families the worker may consider.
+5. Autonomous logistics AI scores valid candidates and selects the best available task/destination.
+
+### Worker behavior modes
+- `AUTONOMOUS`: worker may search the active settlement for valid work and logistics destinations.
+- `RALLY_RESTRICTED`: worker thinks autonomously but strongly prefers or is restricted to its assigned rally/work zone.
+- `DIRECT_ORDERS_ONLY`: worker remains idle except for needs/safety behavior and explicit player orders.
+- Behavior mode must be persistent per worker and compatible with the existing Worker -> Jobs overlay.
+
+### Rally / work-zone model
+- Rally points are virtual settlement markers, not mandatory physical objects.
+- A rally owns plot-relative center X/Y/plane, optional radius, display name, and future visual ring/color metadata.
+- Rally points persist with the settlement and reuse existing plot-relative persistence rules rather than dynamic world coordinates.
+- Selected workers can be assigned to a rally through RTS controls.
+- Rally assignment acts as a work-zone anchor, not merely a stand-here tile.
+- Candidate jobs, resource nodes, storage, and machines near/in the assigned rally receive a strong preference or eligibility rule depending on worker behavior mode.
+- Planned player actions:
+  - right-click ground -> `Create Rally Point`
+  - selected workers -> `Assign Rally`
+  - rally marker -> Rename / Resize / Recolor / Assign Selected / Clear Assignment / Remove
+- Existing ground-ring/GFX scaling/recolor tooling should be reused for rally visualization rather than inventing a second marker renderer.
+
+### Autonomous logistics destination selection
+- Workers must never blindly use a fixed home/spawn storage tile for hauling.
+- For a carried item, build a candidate list of physical storage endpoints and score only legal/reachable candidates.
+- Minimum destination checks:
+  - chest/container accepts the item filter
+  - destination mode allows worker deposit/withdraw as required
+  - destination has physical capacity for the requested amount
+  - destination is reachable
+  - destination is not already over-reserved by other workers
+  - rally/work-zone rules permit or score the destination
+- Baseline scoring intent:
+  - higher storage/request priority = better
+  - unmet Request/Buffer target = better
+  - same rally/work zone = strong bonus
+  - shorter route/distance = better
+  - congestion/reservation pressure = worse
+- Nearest valid chest is the fallback behavior, not an unconditional rule.
+- Multiple workers should reserve destination capacity/approach ownership before committing so they do not all select the same final slot/chest and thrash between choices.
+
+### Storage filters and logistics intent
+- Physical storage continues to store actual `itemId + amount` stacks.
+- Each chest/container may persist:
+  - mode: `STORAGE / SUPPLY / REQUEST / BUFFER`
+  - item whitelist/filter set
+  - worker deposit permission
+  - worker withdraw permission
+  - logistics priority
+  - optional rally/work-zone association
+  - future minimum/target/maximum quantities per requested item
+- `STORAGE`: general-purpose destination.
+- `SUPPLY`: preferred source for workers/machines.
+- `REQUEST`: asks logistics to maintain configured item targets.
+- `BUFFER`: may both request and provide while maintaining target quantities.
+- Filters must operate on real item IDs. Player-facing category shortcuts such as Wood/Ore/Food may be added later as UI helpers, but they must resolve to item filters rather than become a second resource system.
+
+### Explicit RTS logistics orders
+- Explicit orders are temporary overrides, not permanent policy changes.
+- Planned orders include:
+  - Deliver Here
+  - Take From Here
+  - Gather Here
+  - Work Here
+  - Rally Here / Assign Rally
+- After an explicit order completes, the worker returns to its persisted behavior mode + rally + Allowed Jobs policy.
+- Existing selected-worker object-order ownership should be reused so these actions work for one worker or a committed multi-worker selection.
+
+### Home/needs versus storage ownership
+- Worker home and physical logistics storage are now separate concepts.
+- Replace legacy semantic use of `getWorkerStorageTile(worker)` with:
+  - worker home/rest access for needs
+  - physical storage resolver for hauling/processing
+- Hunger/rest/water behavior must not accidentally route to arbitrary factory chests unless a later design explicitly makes that resource physical.
+- Physical factory hauling must not fall back to the worker spawn/home tile once a valid physical storage endpoint is required.
+
+### Legacy progression cleanup / compatibility plan
+- Current invisible `SettlementResource` counters are compatibility-only for already-verified Phase 1/2 systems until each resource chain has an approved real item mapping.
+- Do NOT delete the old counters in one destructive migration. Convert one production chain at a time and remove legacy ownership only after runtime acceptance.
+- First migration target: Wood/Log -> physical chest -> processing machine -> Plank output.
+- Generic Food / Stone / Basic Ore remain on compatibility storage until their actual factory item identities and gameplay loops are deliberately chosen.
+- Current legacy worker storage capacity/reservation methods that read `SettlementState.getStorageRemaining(...)` are transitional. They must stop owning migrated physical-item hauling once Bundle 3.5 is active.
+- Current processing that walks to worker home and then mutates `SettlementState.resources` is transitional. Machine input/output buffers must become the production owner for migrated recipes.
+- Client Console controls labeled `Storage Status` / `Reset Legacy Storage` remain temporary compatibility/debug controls and should be removed or relabeled once no live gameplay path depends on the legacy counters.
+- Do not maintain two permanent economies. The end state is physical item storage/logistics for factory gameplay, with legacy counters removed from migrated chains.
+
+### Implementation order
+1. Fix the missing physical chest right-click `View Storage` entry.
+2. Add persistent worker behavior mode + rally definitions/assignment.
+3. Add physical storage candidate/filter/priority query API.
+4. Route gathered Wood/Logs to the best valid physical chest instead of worker home.
+5. Split worker home/needs routing from logistics-storage routing.
+6. Add machine-local input/output buffers and migrate Wood/Log -> Plank processing to physical inventory.
+7. Add explicit Deliver/Take/Work/Rally RTS orders using the same logistics APIs.
+8. Add request/buffer targets and congestion-aware selection.
+9. Remove migrated legacy storage paths only after combined runtime acceptance.
+10. Later conveyors/carts/loaders must consume the same container/machine endpoint contract rather than adding parallel transfer logic.
+
+### Runtime gate
+- With two or more physical chests, an autonomous worker carrying a migrated item chooses a valid destination and normally prefers the closest eligible chest.
+- Apply a filter that rejects that item on the closest chest; worker must choose another valid chest.
+- Apply a higher-priority/request destination farther away; worker must choose it when its score outweighs distance.
+- Assign the worker to a rally/work zone; worker must prefer/restrict work and storage according to its behavior mode.
+- Issue a direct order to a different destination; worker must obey it once, then return to autonomous/rally policy.
+- Multiple workers hauling simultaneously must not permanently stack, overfill a chest, duplicate/loss items, or continuously retarget between the same destinations.
+- Worker home remains the needs/rest owner and is no longer treated as physical factory storage for migrated items.
+- Wood/Log processing must physically source its input and place output through machine/container inventory; no migrated cycle may silently mutate invisible counters.
+
+### Resume Here
+- Current proven state: physical chest + bank-style inventory work; saved tiles work.
+- Current defects/dependencies: `View Storage` right-click option is missing at runtime; worker hauling and processing still route through the legacy home/invisible-storage owner.
+- Next implementation bundle should fix `View Storage` and establish Worker Logistics AI V1 with physical chest selection + rally-ready ownership before deeper sawmill/conveyor automation.
