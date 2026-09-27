@@ -1991,3 +1991,17 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
   - only exits the Construction camera when settlement auto-mode is not active.
 - Committed worker/self selection remains preserved through this handoff and should become selectable/controllable again immediately after the palette closes.
 - Resume Here: open Build Palette, switch to Free and/or arm Eraser/build placement, close Build Palette, then confirm RTS LMB drag and the prior committed selection resume without touching Client Console.
+
+## Placeable Splitter V1 — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA. User deferred runtime testing so implementation continued without advancing the canonical Construction milestone state.
+- Direction change: Splitter is now a first-class placeable rail-network item. Existing Junction remains the older drag-authored special-node workflow.
+- Client ownership:
+  - ConstructionPlacementController exposes rail-splitter in the Rails catalog and rotates the item as a whole;
+  - native build-bar Splitter slot selects that item directly;
+  - RailRoutePreview owns single-click item placement, live prefab ghost, logical special-node registration, explicit rotation, and port-aware later Rail connections;
+  - empty-tile placement seeds one logical Splitter node; clicking a compatible current-session degree-2 straight upgrades that tile in place.
+- Runtime compatibility finding (verified-static): Matrix3 world projection uses one object slot per tile/object-type (World.getObjectWithType(...) / type-slot projection). Therefore two type-22 rail objects with the same authored tile origin cannot both be persistent world objects.
+- Tool correction: Rail Studio keeps same-tile overlap useful for research/draft visuals, but Publish blocks same-tile + same-type scene-slot collisions. RailRoutePreview performs the same validation before arming Junction/Splitter runtime art.
+- No server occupancy relaxation was added; normal Construction and rail persistence safety remain intact.
+- Limitation/CARRYOVER: RailRoutePreview logical topology is still client-session state and is not reconstructed from persisted rail pieces after client restart/settlement re-entry. Placeable Splitter V1 therefore guarantees empty/upgrade/connect behavior only inside the current logical Rail Network session.
+- Resume Here: when runtime time is available, first accept the compact Rail Studio UI, then publish a runtime-safe splitter prefab and test empty placement + straight upgrade + allowed-port connections in one client/server session. After that, design persistent logical special-node reconstruction rather than inferring behavior from physical art.
