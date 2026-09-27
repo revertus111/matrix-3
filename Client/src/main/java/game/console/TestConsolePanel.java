@@ -19,19 +19,21 @@ public final class TestConsolePanel extends JPanel {
     private static final long serialVersionUID = -3097526505843407244L;
 
     private static final int TAB_CON_REVAMP = 0;
-    private static final int TAB_RAIL_CLASSIFIER = 1;
-    private static final int TAB_OBJECT_EXPLORER = 2;
-    private static final int TAB_CONSTRUCTION = 3;
-    private static final int TAB_PLAYER = 4;
-    private static final int TAB_ITEMS = 5;
-    private static final int TAB_INTERFACES = 6;
-    private static final int TAB_VISUAL_EXPLORER = 7;
-    private static final int TAB_ATLAS = 8;
-    private static final int TAB_BOSS_RESEARCH = 9;
+    private static final int TAB_RAIL_STUDIO = 1;
+    private static final int TAB_RAIL_CLASSIFIER = 2;
+    private static final int TAB_OBJECT_EXPLORER = 3;
+    private static final int TAB_CONSTRUCTION = 4;
+    private static final int TAB_PLAYER = 5;
+    private static final int TAB_ITEMS = 6;
+    private static final int TAB_INTERFACES = 7;
+    private static final int TAB_VISUAL_EXPLORER = 8;
+    private static final int TAB_ATLAS = 9;
+    private static final int TAB_BOSS_RESEARCH = 10;
 
     private final JTabbedPane tabs = new JTabbedPane();
 
     private JComponent conRevampPanel;
+    private JComponent railStudioPanel;
     private JComponent railClassifierPanel;
     private JComponent objectExplorerPanel;
     private JComponent constructionPanel;
@@ -56,6 +58,7 @@ public final class TestConsolePanel extends JPanel {
         tabs.setBorder(BorderFactory.createEmptyBorder(0, 8, 8, 8));
 
         tabs.addTab("Con Revamp", placeholder());
+        tabs.addTab("Rail Studio", placeholder());
         tabs.addTab("Rail Classifier", placeholder());
         tabs.addTab("Object Explorer", placeholder());
         tabs.addTab("Construction", placeholder());
@@ -115,6 +118,11 @@ public final class TestConsolePanel extends JPanel {
                     conRevampPanel = new ConstructionRevampTestPanel();
                 }
                 return conRevampPanel;
+            case TAB_RAIL_STUDIO:
+                if (railStudioPanel == null) {
+                    railStudioPanel = new RailAssemblyStudioPanel();
+                }
+                return railStudioPanel;
             case TAB_RAIL_CLASSIFIER:
                 if (railClassifierPanel == null) {
                     railClassifierPanel = new RailKitClassifierPanel();
