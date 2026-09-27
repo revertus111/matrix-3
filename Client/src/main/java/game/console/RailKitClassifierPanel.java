@@ -92,8 +92,10 @@ public final class RailKitClassifierPanel extends JScrollPane {
     private final DefaultListModel<String> workbenchModel = new DefaultListModel<String>();
     private final JList<String> workbenchList = new JList<String>(workbenchModel);
     private final List<LayoutPart> workbenchParts = new ArrayList<LayoutPart>();
+    private final JLabel workbenchCandidateLabel =
+            ConsoleTheme.titleLabel("CURRENT CANDIDATE: loading...");
     private final JLabel activeWorkbenchPiece =
-            ConsoleTheme.titleLabel("ACTIVE RAIL: none");
+            ConsoleTheme.titleLabel("ACTIVE PLACED RAIL: none");
     private final JCheckBox workbenchHotkeys = new JCheckBox(
             "Workbench hotkeys: [ / ] select, arrows move, R rotate, Del remove, Ctrl+D duplicate", true);
     private final JTextField workbenchNameField = new JTextField("RAIL_RESEARCH_01");
@@ -154,17 +156,17 @@ public final class RailKitClassifierPanel extends JScrollPane {
         content.add(header);
         content.add(Box.createVerticalStrut(12));
 
+        content.add(createWorkbenchCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createClassificationCard());
+        content.add(Box.createVerticalStrut(10));
         content.add(createCandidateCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createSelectedCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createPreviewCard());
         content.add(Box.createVerticalStrut(10));
-        content.add(createWorkbenchCard());
-        content.add(Box.createVerticalStrut(10));
         content.add(createRoutePreviewCard());
-        content.add(Box.createVerticalStrut(10));
-        content.add(createClassificationCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createStatusCard());
         content.add(Box.createVerticalGlue());
@@ -177,6 +179,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
         bindCheckbox(crossing);
         bindCheckbox(notRail);
         bindCheckbox(unsure);
+        previewRotation.addChangeListener(e -> refreshWorkbenchCandidateLabel());
         installNavigationBindings();
 
         setViewportView(content);
@@ -186,11 +189,12 @@ public final class RailKitClassifierPanel extends JScrollPane {
     }
 
     private JPanel createCandidateCard() {
-        JPanel card = ConsoleTheme.createCard("Rail candidates");
+        JPanel card = ConsoleTheme.createCard("Advanced candidate list");
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createWrappedText(
-                "27 evidence-seeded rail ids are always available. Refresh Live 9x9 Rails merges exact "
-                + "ids/types/rotations from the scene around your player without opening Asset Studio.",
+                "Optional full list. Normal review no longer requires this table: browse/place directly "
+                + "from the Workbench above. Refresh Live 9x9 Rails merges exact ids/types/rotations "
+                + "from the scene around your player.",
                 4));
         card.add(Box.createVerticalStrut(8));
 
@@ -297,11 +301,48 @@ public final class RailKitClassifierPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Rail Classifier Workbench");
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createWrappedText(
-                "Drop the currently selected classifier candidate into a client-only layout. "
-                + "The active dropped rail automatically becomes the classifier selection and supplies "
-                + "its object ID, type and rotation to classification/save actions.",
-                5));
+                "Normal workflow: browse a rail here, place it, move/rotate it in the world, classify "
+                + "it below, then advance. Object ID, type and rotation are carried automatically.",
+                4));
         card.add(Box.createVerticalStrut(7));
+
+        workbenchCandidateLabel.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(workbenchCandidateLabel);
+        card.add(Box.createVerticalStrut(7));
+
+        JButton previousCandidate = button("< Prev Rail");
+        JButton placeCurrent = button("Place Current");
+        JButton nextCandidate = button("Next Rail >");
+        previousCandidate.addActionListener(e -> stepWorkbenchCandidate(-1));
+        placeCurrent.addActionListener(e -> dropSelectedCandidate(false));
+        nextCandidate.addActionListener(e -> stepWorkbenchCandidate(1));
+
+        JPanel browse = new JPanel(new GridLayout(1, 3, 6, 0));
+        browse.setOpaque(false);
+        browse.setAlignmentX(LEFT_ALIGNMENT);
+        browse.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        browse.add(previousCandidate);
+        browse.add(placeCurrent);
+        browse.add(nextCandidate);
+        card.add(browse);
+        card.add(Box.createVerticalStrut(6));
+
+        JButton placeNext = button("Place + Next");
+        JButton duplicate = button("Duplicate");
+        JButton remove = button("Delete");
+        placeNext.addActionListener(e -> dropSelectedCandidate(true));
+        duplicate.addActionListener(e -> duplicateWorkbenchPart());
+        remove.addActionListener(e -> removeWorkbenchPart());
+
+        JPanel quickActions = new JPanel(new GridLayout(1, 3, 6, 0));
+        quickActions.setOpaque(false);
+        quickActions.setAlignmentX(LEFT_ALIGNMENT);
+        quickActions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        quickActions.add(placeNext);
+        quickActions.add(duplicate);
+        quickActions.add(remove);
+        card.add(quickActions);
+        card.add(Box.createVerticalStrut(8));
 
         activeWorkbenchPiece.setAlignmentX(LEFT_ALIGNMENT);
         card.add(activeWorkbenchPiece);
@@ -323,26 +364,6 @@ public final class RailKitClassifierPanel extends JScrollPane {
         listScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 170));
         ConsoleTheme.styleScrollPane(listScroll);
         card.add(listScroll);
-        card.add(Box.createVerticalStrut(7));
-
-        JButton drop = button("Drop Selected Rail");
-        JButton dropNext = button("Drop + Next");
-        JButton duplicate = button("Duplicate");
-        JButton remove = button("Delete");
-        drop.addActionListener(e -> dropSelectedCandidate(false));
-        dropNext.addActionListener(e -> dropSelectedCandidate(true));
-        duplicate.addActionListener(e -> duplicateWorkbenchPart());
-        remove.addActionListener(e -> removeWorkbenchPart());
-
-        JPanel primary = new JPanel(new GridLayout(2, 2, 6, 6));
-        primary.setOpaque(false);
-        primary.setAlignmentX(LEFT_ALIGNMENT);
-        primary.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
-        primary.add(drop);
-        primary.add(dropNext);
-        primary.add(duplicate);
-        primary.add(remove);
-        card.add(primary);
         card.add(Box.createVerticalStrut(7));
 
         JButton previous = button("[ Previous");
@@ -412,8 +433,9 @@ public final class RailKitClassifierPanel extends JScrollPane {
         card.add(save);
         card.add(Box.createVerticalStrut(5));
         card.add(ConsoleTheme.createWrappedText(
-                "Classification checkboxes still auto-save to rail_kit.tsv. Save Layout Evidence writes "
-                + "the complete arranged ID/type/rotation + dX/dY layout to rail_composites.tsv.",
+                "Classification below auto-saves the current candidate to rail_kit.tsv. Save Layout "
+                + "Evidence writes the arranged ID/type/rotation + dX/dY layout to rail_composites.tsv. "
+                + "No object ID entry is required.",
                 4));
         return card;
     }
@@ -783,6 +805,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
         if (!candidates.isEmpty()) {
             table.setRowSelectionInterval(rowToSelect, rowToSelect);
             table.scrollRectToVisible(table.getCellRect(rowToSelect, 0, true));
+            setSelected(candidates.get(rowToSelect));
         } else {
             setSelected(null);
         }
@@ -798,6 +821,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
 
     private void setSelected(Candidate candidate) {
         selected = candidate;
+        refreshWorkbenchCandidateLabel();
         loadingChecks = true;
         try {
             if (candidate == null) {
@@ -826,6 +850,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
                     ? candidate.preferredRotation()
                     : record.lastPreviewRotation;
             previewRotation.setValue(Integer.valueOf(restoredRotation & 0x3));
+            refreshWorkbenchCandidateLabel();
 
             straight.setSelected(record.straight);
             curve.setSelected(record.curve);
@@ -903,9 +928,9 @@ public final class RailKitClassifierPanel extends JScrollPane {
 
 
     private void dropSelectedCandidate(boolean advance) {
-        Candidate candidate = selected;
+        Candidate candidate = ensureSelectedCandidate();
         if (candidate == null) {
-            setStatus("Select a rail candidate first.");
+            setStatus("No rail candidates are available.");
             return;
         }
         if (workbenchParts.size() >= 32) {
@@ -935,8 +960,74 @@ public final class RailKitClassifierPanel extends JScrollPane {
                 + ". Active piece now owns classifier ID/rotation.");
 
         if (advance) {
-            moveSelection(1, false);
+            stepWorkbenchCandidate(1);
         }
+    }
+
+    private Candidate ensureSelectedCandidate() {
+        if (selected != null) {
+            return selected;
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        selectCandidateRow(0);
+        return selected;
+    }
+
+    private void stepWorkbenchCandidate(int delta) {
+        if (candidates.isEmpty()) {
+            setStatus("No rail candidates are available.");
+            return;
+        }
+        int current = selectedCandidateIndex();
+        if (current < 0) {
+            current = delta < 0 ? 0 : -1;
+        }
+        int next = (current + delta + candidates.size()) % candidates.size();
+        selectCandidateRow(next);
+        Candidate candidate = selected;
+        if (candidate != null) {
+            setStatus("Current rail " + (next + 1) + " / " + candidates.size()
+                    + ": ID " + candidate.id + " T" + candidate.type
+                    + " R" + number(previewRotation) + ". Place Current when ready.");
+        }
+    }
+
+    private int selectedCandidateIndex() {
+        if (selected == null) {
+            return -1;
+        }
+        for (int i = 0; i < candidates.size(); i++) {
+            Candidate candidate = candidates.get(i);
+            if (candidate.id == selected.id && candidate.type == selected.type) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void selectCandidateRow(int row) {
+        if (row < 0 || row >= candidates.size()) {
+            return;
+        }
+        table.setRowSelectionInterval(row, row);
+        table.scrollRectToVisible(table.getCellRect(row, 0, true));
+        setSelected(candidates.get(row));
+    }
+
+    private void refreshWorkbenchCandidateLabel() {
+        if (selected == null || candidates.isEmpty()) {
+            workbenchCandidateLabel.setText("CURRENT CANDIDATE: none");
+            return;
+        }
+        int index = selectedCandidateIndex();
+        workbenchCandidateLabel.setText("CURRENT CANDIDATE "
+                + (index < 0 ? "?" : Integer.toString(index + 1))
+                + " / " + candidates.size()
+                + "  |  ID " + selected.id
+                + "  |  T" + selected.type
+                + "  |  R" + number(previewRotation));
     }
 
     private void refreshWorkbenchList() {
@@ -954,7 +1045,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
     private void refreshActiveWorkbenchLabel() {
         int index = selectedWorkbenchIndex();
         if (index < 0) {
-            activeWorkbenchPiece.setText("ACTIVE RAIL: none");
+            activeWorkbenchPiece.setText("ACTIVE PLACED RAIL: none");
             return;
         }
         LayoutPart part = workbenchParts.get(index);
@@ -978,6 +1069,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
                 table.setRowSelectionInterval(row, row);
                 table.scrollRectToVisible(table.getCellRect(row, 0, true));
                 previewRotation.setValue(Integer.valueOf(part.rotation));
+                refreshWorkbenchCandidateLabel();
                 ClassificationRecord record = recordFor(candidate);
                 record.lastPreviewRotation = part.rotation;
                 record.updatedAt = timestamp();
@@ -1036,7 +1128,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
         LayoutPart removed = workbenchParts.remove(index);
         refreshWorkbenchList();
         if (workbenchParts.isEmpty()) {
-            activeWorkbenchPiece.setText("ACTIVE RAIL: none");
+            activeWorkbenchPiece.setText("ACTIVE PLACED RAIL: none");
             ObjectCompositePreview.hide();
         } else {
             workbenchList.setSelectedIndex(Math.min(index, workbenchParts.size() - 1));
@@ -1074,6 +1166,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
         refreshWorkbenchList();
         workbenchList.setSelectedIndex(index);
         previewRotation.setValue(Integer.valueOf(part.rotation));
+        refreshWorkbenchCandidateLabel();
         syncClassifierToActiveWorkbenchPart();
         refreshActiveWorkbenchLabel();
         refreshWorkbenchPreview();
@@ -1125,7 +1218,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
     private void clearWorkbench() {
         workbenchParts.clear();
         refreshWorkbenchList();
-        activeWorkbenchPiece.setText("ACTIVE RAIL: none");
+        activeWorkbenchPiece.setText("ACTIVE PLACED RAIL: none");
         ObjectCompositePreview.hide();
         setStatus("Rail Classifier Workbench cleared.");
     }
