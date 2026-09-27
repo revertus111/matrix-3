@@ -1272,3 +1272,9 @@ RTS committed-selection ownership regression gate — IMPLEMENTED / NEEDS RUNTIM
 - With workers committed and drag authoring OFF, issue one supported resource/workstation object order; workers must still receive it.
 - Turn drag authoring back ON and create a replacement selection; normal radial selection behavior must remain unchanged.
 - Clear Selection, then single-click ground once: vanilla Matrix3 player walking must be restored immediately.
+
+Junction prefab 46360 blocker correction — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Previous runtime result: arming/using Junction produced no placement because junction_LAYOUT_01 contains 46360/type 22 and validation rejected it as non-persistable.
+- Pull/restart both client and server, then arm Junction again. The tool must remain in Junction mode instead of silently reverting to normal Rail.
+- Create one branch from an existing degree-2 rail. The complete junction_LAYOUT_01 prefab must now render/commit.
+- If the prefab appears but is shifted/rotated incorrectly, capture one screenshot/video; that is an anchor/orientation issue, not persistence validation.
