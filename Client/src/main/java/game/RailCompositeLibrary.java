@@ -200,15 +200,46 @@ public final class RailCompositeLibrary {
     }
 
     public static CompositeDefinition findAcceptedJunctionForRoute() {
-        return findByName(ACCEPTED_JUNCTION_NAME);
+        return findPreferredSpecial(ACCEPTED_JUNCTION_NAME, "junction");
     }
 
     public static CompositeDefinition findAcceptedCrossingForRoute() {
-        return findByName(ACCEPTED_CROSSING_NAME);
+        return findPreferredSpecial(ACCEPTED_CROSSING_NAME, "crossing");
     }
 
     public static CompositeDefinition findAcceptedSplitterForRoute() {
-        return findByName(ACCEPTED_SPLITTER_NAME);
+        return findPreferredSpecial(ACCEPTED_SPLITTER_NAME, "splitter");
+    }
+
+    /*
+     * Authored multi-object layouts are preferred over an older one-object
+     * canonical placeholder. This lets existing research layouts such as
+     * junction_LAYOUT_01 immediately feed the logical Junction resolver without
+     * forcing the author to rebuild the assembly.
+     */
+    private static CompositeDefinition findPreferredSpecial(
+            String canonicalName, String authoredKeyword) {
+        CompositeDefinition canonical = findByName(canonicalName);
+        if (canonical != null && canonical.components.size() > 1) {
+            return canonical;
+        }
+
+        String keyword = authoredKeyword == null
+                ? "" : authoredKeyword.toLowerCase(Locale.ENGLISH);
+        CompositeDefinition best = null;
+        for (CompositeDefinition definition : loadAll()) {
+            if (definition == null || definition.components.size() <= 1
+                    || definition.name.equalsIgnoreCase(canonicalName)) {
+                continue;
+            }
+            if (definition.name.toLowerCase(Locale.ENGLISH).contains(keyword)) {
+                if (best == null
+                        || definition.components.size() > best.components.size()) {
+                    best = definition;
+                }
+            }
+        }
+        return best != null ? best : canonical;
     }
 
     public static synchronized String promoteSingleSpecial(
