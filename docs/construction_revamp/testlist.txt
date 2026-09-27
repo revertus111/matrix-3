@@ -1292,3 +1292,18 @@ Automatic RTS input ownership gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09
 - Start a radial drag and then open an exclusive tool before releasing. The in-progress drag must cancel while any previously committed selection remains intact.
 - Client Console -> Con Revamp -> Worker Control -> Force Disable RTS is debug-only: it must suppress automatic RTS until RTS Automatic is clicked again, without deleting the committed selection.
 - Clear Selection, then single-click ground once. Vanilla Matrix3 player walking must be restored immediately.
+
+Rail Assembly Studio V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Restart/rebuild CLIENT only. Open Client Console -> Test -> Rail Studio. It must appear directly after Con Revamp and before the legacy Rail Classifier/Object Explorer tabs.
+- Asset Browser: search by part of an ID/name, double-click one rail candidate, then use Add Selected / Add + Next. No manual object-ID entry should be required.
+- Assembly Workspace: add at least three pieces, Ctrl/Shift multi-select two, move with arrows, rotate with R, Ctrl+D duplicate, Delete remove, then Ctrl+Z/Ctrl+Y. Selection and live preview must remain synchronized.
+- Same-tile overlap: add two different curved rail IDs on the same tile. Validation must report intentional overlap but must NOT block save/publish solely because the tile is shared.
+- Exact duplicate guard: add the exact same ID/type/rotation twice on the same tile. Validation must BLOCK publish until one duplicate is moved/rotated/deleted.
+- Anchor: select the intended logical component -> Set Anchor -> Normalize. The anchor row must show [ANCHOR] and become dX0/dY0 while preserving relative geometry.
+- Ports: author N/E/S/W base-orientation ports. Curve requires 2, Junction 3, Crossing 4, Splitter at least 3. A 4-port Splitter is valid authoring data but must show the current degree-3-runtime informational warning.
+- Rotation proof: click Preview R0/R1/R2/R3. The entire assembly must quarter-rotate around the anchor, including each component's object rotation, without modifying the saved base component rows.
+- Load existing junction_LAYOUT_01 (or current junction saved layout) from Saved Prefabs. Confirm all pieces return with ID/type/rotation/dX/dY and an anchor can be assigned/normalized without rebuilding the assembly.
+- Save / Update Draft. rail_composites.tsv must retain all layouts and write the new optional port_mask column. Re-open an older layout that previously had no port metadata; it must still load.
+- Publish Junction from a normalized 3-port assembly. JUNCTION_RAIL_LAYOUT_01 must be written with the complete component set + explicit port mask and RailRoutePreview must reload it.
+- Author the user's new straight+curved-track Splitter concept with intentional overlay, save it as a draft, and preview all four rotations. Do NOT require the current runtime Splitter topology to support four-port left/right/straight routing in this tool gate.
+- Regression: Rail Classifier, Object Explorer Rail Layout Lab and existing Junction runtime data must still open/read rail_composites.tsv after the schema extension.
