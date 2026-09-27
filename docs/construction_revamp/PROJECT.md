@@ -1724,3 +1724,13 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Drop Into Layout turns the current candidate into a normal Rail Layout Lab part. Drop + Next lays successive candidates into a spaced 6-column research grid so several candidate objects can be compared without immediately overlapping.
 - Once dropped, the existing Rail Layout Lab controls own manipulation: [ / ] select, arrow keys move, R rotates, Delete removes, Ctrl+D duplicates; all pieces remain client-only direct-render research previews until explicitly saved/accepted.
 - Resume Here: open Object Explorer, use Drop + Next across the candidate list, identify likely turnout/junction/crossing/splitter pieces visually, then use Rail Classifier only to label/accept the confirmed asset.
+
+## Rail Classifier integrated placement workbench — 2026-09-27
+- IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- Corrected the prior tool split: Rail Classifier now owns the fast candidate identify -> place -> move/rotate -> classify/save workflow. Object Explorer remains available as the broader generic object/composite research tool.
+- Rail Classifier uses the existing shared evidence-seeded candidate catalog and can Drop Selected / Drop + Next directly into a multi-piece client-only layout without manually entering object IDs.
+- The active dropped rail synchronizes the classifier table selection and preview rotation. Geometry checkbox auto-save, route selection and Accept Junction/Crossing/Splitter therefore operate on the active piece's real id/type/rotation.
+- Workbench layout controls reuse the proven Object Explorer semantics: [ / ] select, arrows move, R rotate, Delete remove, Ctrl+D duplicate, plus Reset Anchor/Clear Layout.
+- Save Layout Evidence writes the arranged pieces through RailCompositeLibrary with exact id/type/rotation + relative dX/dY.
+- Candidate-table arrow navigation is now table-focus scoped so it does not conflict with workbench movement.
+- Resume Here: runtime-test one Drop + Next batch, move/rotate several rails, classify one active dropped rail, save one layout, and confirm the saved TSV rows use the expected IDs/rotations without typed input.
