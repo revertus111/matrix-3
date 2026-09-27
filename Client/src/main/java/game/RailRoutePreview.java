@@ -88,6 +88,16 @@ public final class RailRoutePreview {
     private static volatile RailCompositeLibrary.CompositeDefinition splitterComposite;
     private static final java.util.LinkedHashMap<String, ToolMode> specialNodeModes =
             new java.util.LinkedHashMap<String, ToolMode>();
+    /*
+     * Explicit whole-prefab rotation for placeable special items. Drag-authored
+     * Junction/Splitter nodes omit this entry and continue deriving orientation
+     * from their connected logical mask.
+     */
+    private static final java.util.LinkedHashMap<String, Integer> specialNodeTurns =
+            new java.util.LinkedHashMap<String, Integer>();
+    private static volatile boolean specialItemPlacement;
+    private static volatile ToolMode specialItemMode = ToolMode.SPLITTER;
+    private static volatile int specialItemTurns;
     private static volatile int liveSpecialNodeX = -1;
     private static volatile int liveSpecialNodeY = -1;
     private static volatile ToolMode liveSpecialNodeMode;
@@ -176,6 +186,7 @@ public final class RailRoutePreview {
 
     public static synchronized String setToolMode(ToolMode mode) {
         ToolMode target = mode == null ? ToolMode.NORMAL : mode;
+        specialItemPlacement = false;
         reloadSpecialComposites();
         if (target == ToolMode.JUNCTION) {
             String problem = validateSpecialComposite(junctionComposite, "Junction");
@@ -207,6 +218,45 @@ public final class RailRoutePreview {
 
     public static ToolMode getToolMode() {
         return toolMode;
+    }
+
+    public static synchronized String armSpecialItem(ToolMode mode, int turns) {
+        ToolMode target = mode == null ? ToolMode.SPLITTER : mode;
+        if (target != ToolMode.SPLITTER) {
+            specialItemPlacement = false;
+            eventState = "Only Splitter is a placeable rail item in V1.";
+            return eventState;
+        }
+        reloadSpecialComposites();
+        String problem = validateSpecialComposite(splitterComposite, "Splitter");
+        if (problem != null) {
+            specialItemPlacement = false;
+            eventState = problem;
+            return problem;
+        }
+        toolMode = target;
+        specialItemMode = target;
+        specialItemTurns = turns & 0x3;
+        specialItemPlacement = true;
+        setEnabled(true);
+        eventState = "Splitter item armed R" + specialItemTurns
+                + ". Click empty ground or a compatible straight rail tile.";
+        return eventState;
+    }
+
+    public static synchronized void disarmSpecialItem() {
+        specialItemPlacement = false;
+    }
+
+    public static synchronized String setSpecialItemRotation(int turns) {
+        specialItemTurns = turns & 0x3;
+        eventState = "Splitter item rotation R" + specialItemTurns + ".";
+        lastRenderedCycle = Integer.MIN_VALUE;
+        return eventState;
+    }
+
+    public static boolean isSpecialItemPlacement() {
+        return specialItemPlacement;
     }
 
     public static boolean isJunctionReady() {
@@ -326,6 +376,7 @@ public final class RailRoutePreview {
             if (dragging) {
                 cancelActiveDrag();
             }
+            specialItemPlacement = false;
             enabled = false;
             lastRenderedCycle = Integer.MIN_VALUE;
             renderState = "hidden";
@@ -586,6 +637,8 @@ public final class RailRoutePreview {
         logicalNetwork.clear();
         logicalConnections.clear();
         specialNodeModes.clear();
+        specialNodeTurns.clear();
+        specialItemPlacement = false;
         pathEndX = -1;
         pathEndY = -1;
         pathPlane = -1;
@@ -699,6 +752,15 @@ public final class RailRoutePreview {
 
     static void render(Class523 scene, Class106 renderer) {
         if (!enabled || objectId < 0 || scene == null || renderer == null) {
+            return;
+        }
+
+        /*
+         * Placeable Splitter owns a single-tile prefab ghost while armed.
+         * Normal Rail/Junction gestures continue using the drag preview below.
+         */
+        if (specialItemPlacement) {
+            renderSpecialItemGhost(scene, renderer);
             return;
         }
 
@@ -1066,6 +1128,11 @@ public final class RailRoutePreview {
         }
 
         if (mouse.getID() == MouseEvent.MOUSE_PRESSED && mouse.getButton() == MouseEvent.BUTTON1) {
+            if (specialItemPlacement) {
+                placeSpecialItemAtHovered();
+                mouse.consume();
+                return;
+            }
             if (beginDrag()) {
                 mouse.consume();
             }
@@ -1096,6 +1163,161 @@ public final class RailRoutePreview {
         }
         cancelActiveDrag();
         key.consume();
+    }
+
+    private static void placeSpecialItemAtHovered() {
+        long age = System.currentTimeMillis() - hoveredAtMillis;
+        if (!specialItemPlacement || specialItemMode != ToolMode.SPLITTER) {
+            return;
+        }
+        if (hoveredWorldX < 0 || hoveredWorldY < 0 || hoveredPlane < 0
+                || hoveredAtMillis == 0L || age > HOVER_STALE_MS) {
+            eventState = "WAIT: hover a valid settlement tile before placing Splitter.";
+            return;
+        }
+
+        reloadSpecialComposites();
+        String problem = validateSpecialComposite(splitterComposite, "Splitter");
+        if (problem != null) {
+            eventState = problem;
+            return;
+        }
+
+        String key = logicalKey(hoveredWorldX, hoveredWorldY, hoveredPlane);
+        java.util.List<RoutePiece> oldPhysical = resolveLogicalNetworkPieces();
+
+        ToolMode existingSpecial = specialNodeModes.get(key);
+        if (existingSpecial != null && existingSpecial != ToolMode.SPLITTER) {
+            eventState = "Splitter blocked: tile already owns " + existingSpecial + ".";
+            return;
+        }
+
+        int existingMask = logicalNeighborMask(
+                hoveredWorldX, hoveredWorldY, hoveredPlane);
+        boolean existed = logicalNetwork.contains(key);
+        if (existed) {
+            if (Integer.bitCount(existingMask) != 2 || !isOppositePair(existingMask)) {
+                eventState = "Splitter upgrade needs a straight degree-2 rail tile.";
+                return;
+            }
+            int allowed = rotatedSpecialPortMask(splitterComposite, specialItemTurns);
+            if ((existingMask & allowed) != existingMask) {
+                eventState = "Splitter R" + specialItemTurns
+                        + " does not include the existing straight rail axis.";
+                return;
+            }
+        } else {
+            logicalNetwork.add(key);
+        }
+
+        specialNodeModes.put(key, ToolMode.SPLITTER);
+        specialNodeTurns.put(key, Integer.valueOf(specialItemTurns));
+
+        java.util.List<RoutePiece> newPhysical = resolveLogicalNetworkPieces();
+        if (newPhysical.isEmpty()) {
+            if (!existed) logicalNetwork.remove(key);
+            specialNodeModes.remove(key);
+            specialNodeTurns.remove(key);
+            eventState = "Splitter placement produced no persistent rail pieces.";
+            return;
+        }
+
+        ConstructionPlacementController.onRailNetworkDelta(oldPhysical, newPhysical);
+        committed = true;
+        committedStartX = hoveredWorldX;
+        committedStartY = hoveredWorldY;
+        committedEndX = hoveredWorldX;
+        committedEndY = hoveredWorldY;
+        committedPlane = hoveredPlane;
+        pathEndX = hoveredWorldX;
+        pathEndY = hoveredWorldY;
+        pathPlane = hoveredPlane;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        eventState = existed
+                ? "Straight rail upgraded to Splitter R" + specialItemTurns + "."
+                : "Splitter R" + specialItemTurns + " placed on empty tile.";
+    }
+
+    private static void renderSpecialItemGhost(Class523 scene, Class106 renderer) {
+        long age = System.currentTimeMillis() - hoveredAtMillis;
+        if (splitterComposite == null || hoveredWorldX < 0 || hoveredWorldY < 0
+                || hoveredPlane < 0 || hoveredAtMillis == 0L || age > HOVER_STALE_MS) {
+            renderState = "Splitter item: hover a valid tile";
+            return;
+        }
+
+        Class613 region = client.aClass613_8605;
+        if (region == null || region.method7285(0) != scene) {
+            return;
+        }
+        int cycle = client.cycles;
+        if (lastRenderedCycle == cycle) {
+            return;
+        }
+        lastRenderedCycle = cycle;
+
+        Class497 sceneBase = region.method7280((byte) -102);
+        Class639_Sub16 definitions = region.method7288(0);
+        if (sceneBase == null || definitions == null) {
+            renderState = "WAIT scene/object definitions";
+            return;
+        }
+
+        java.util.List<RoutePiece> pieces = new java.util.ArrayList<RoutePiece>();
+        java.util.LinkedHashSet<String> occupied = new java.util.LinkedHashSet<String>();
+        appendSpecialComposite(pieces, occupied, splitterComposite,
+                hoveredWorldX, hoveredWorldY, hoveredPlane, specialItemTurns);
+
+        int rendered = 0;
+        for (RoutePiece piece : pieces) {
+            ObjectDefinitions definition = (ObjectDefinitions) definitions.getDefinition(
+                    piece.getObjectId(), -1356282071);
+            if (definition != null && renderPiece(scene, renderer, sceneBase, definition,
+                    piece.getObjectType(), piece.getWorldX(), piece.getWorldY(),
+                    piece.getPlane(), piece.getRotation())) {
+                rendered++;
+            }
+        }
+        renderState = "Splitter item ghost R" + specialItemTurns
+                + " " + rendered + "/" + pieces.size() + " piece(s)";
+    }
+
+    private static boolean specialAllowsConnection(String key, ToolMode mode,
+            int existingX, int existingY, int neighborX, int neighborY, int plane) {
+        RailCompositeLibrary.CompositeDefinition composite = specialComposite(mode);
+        if (composite == null) {
+            return false;
+        }
+        int direction = connectionDirectionMask(
+                neighborX - existingX, neighborY - existingY);
+        if (direction == 0) {
+            return false;
+        }
+        int currentMask = logicalNeighborMask(existingX, existingY, plane);
+        int turns = specialTurnsForNode(key, composite, currentMask);
+        int allowed = rotatedSpecialPortMask(composite, turns);
+        return (allowed & direction) != 0;
+    }
+
+    private static int rotatedSpecialPortMask(
+            RailCompositeLibrary.CompositeDefinition composite, int turns) {
+        SpecialLayoutProfile profile = inferSpecialLayoutProfile(composite);
+        int mask = profile.connectionMask;
+        if (Integer.bitCount(mask) < 2) {
+            mask = 1 | 2 | 4;
+        }
+        for (int i = 0; i < (turns & 0x3); i++) {
+            mask = rotateConnectionMaskClockwise(mask);
+        }
+        return mask;
+    }
+
+    private static int connectionDirectionMask(int dx, int dy) {
+        if (dx == 0 && dy == 1) return 1;
+        if (dx == 1 && dy == 0) return 2;
+        if (dx == 0 && dy == -1) return 4;
+        if (dx == -1 && dy == 0) return 8;
+        return 0;
     }
 
     private static boolean beginDrag() {
@@ -1258,6 +1480,12 @@ public final class RailRoutePreview {
             return false;
         }
         if (hasLogicalConnection(existingX, existingY, neighborX, neighborY, livePlane)) {
+            return false;
+        }
+        String key = logicalKey(existingX, existingY, livePlane);
+        ToolMode special = specialNodeModes.get(key);
+        if (special != null && specialAllowsConnection(
+                key, special, existingX, existingY, neighborX, neighborY, livePlane)) {
             return false;
         }
         return Integer.bitCount(
@@ -1608,12 +1836,23 @@ public final class RailRoutePreview {
             int mask = logicalNeighborMask(tile[0], tile[1], tile[2], connections);
             RailCompositeLibrary.CompositeDefinition composite =
                     specialComposite(entry.getValue());
-            if ((entry.getValue() == ToolMode.JUNCTION
-                    || entry.getValue() == ToolMode.SPLITTER)
-                    && Integer.bitCount(mask) == 3 && composite != null) {
+            if (composite == null) {
+                continue;
+            }
+            if (entry.getValue() == ToolMode.JUNCTION
+                    && Integer.bitCount(mask) == 3) {
                 appendSpecialComposite(pieces, physicalOccupied, composite,
                         tile[0], tile[1], tile[2],
-                        turnsForSpecialMask(composite, mask));
+                        specialTurnsForNode(entry.getKey(), composite, mask));
+            } else if (entry.getValue() == ToolMode.SPLITTER) {
+                Integer authoredTurns = specialNodeTurns.get(entry.getKey());
+                if (authoredTurns != null || Integer.bitCount(mask) >= 3) {
+                    appendSpecialComposite(pieces, physicalOccupied, composite,
+                            tile[0], tile[1], tile[2],
+                            authoredTurns == null
+                                    ? turnsForSpecialMask(composite, mask)
+                                    : authoredTurns.intValue());
+                }
             }
         }
 
@@ -1664,6 +1903,14 @@ public final class RailRoutePreview {
         if (mode == ToolMode.CROSSING) return crossingComposite;
         if (mode == ToolMode.SPLITTER) return splitterComposite;
         return null;
+    }
+
+    private static int specialTurnsForNode(String key,
+            RailCompositeLibrary.CompositeDefinition composite, int targetMask) {
+        Integer authored = specialNodeTurns.get(key);
+        return authored == null
+                ? turnsForSpecialMask(composite, targetMask)
+                : authored.intValue() & 0x3;
     }
 
     private static int turnsForSpecialMask(
@@ -1950,6 +2197,7 @@ public final class RailRoutePreview {
 
         logicalNetwork.remove(targetKey);
         specialNodeModes.remove(targetKey);
+        specialNodeTurns.remove(targetKey);
         removeLogicalConnectionsAt(target[0], target[1], target[2]);
 
         java.util.List<RoutePiece> newPhysical = resolveLogicalNetworkPieces();
@@ -1995,7 +2243,7 @@ public final class RailRoutePreview {
             int mask = logicalNeighborMask(tile[0], tile[1], tile[2]);
             if (composite != null && specialCompositeOccupies(composite,
                     tile[0], tile[1], tile[2],
-                    turnsForSpecialMask(composite, mask), worldX, worldY)) {
+                    specialTurnsForNode(entry.getKey(), composite, mask), worldX, worldY)) {
                 return entry.getKey();
             }
         }
