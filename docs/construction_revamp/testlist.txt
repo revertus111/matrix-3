@@ -1357,3 +1357,14 @@ Worker Logistics Policy + Rally V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (20
 - Exit/re-enter and logout/relog with a rally assigned. Worker behavior mode + rally assignment + rally coordinates must persist.
 - Regression: critical hunger/thirst/energy handling may leave normal rally work policy as needed; worker home remains the rest/needs owner.
 - Regression: Food/Stone/Ore and current sawmill processing remain explicit legacy compatibility paths in this bundle.
+
+Rail Assembly Studio UX V1.1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Open Test -> Rail Studio at the normal narrow dock width. The Studio itself must have no horizontal scrollbar and no right-edge button clipping.
+- Click a candidate without adding it. That rail must immediately appear as a solo client-only preview left of the assembly work area.
+- Prev Rail / Next Rail must change the solo preview immediately without growing the assembly list.
+- Add Here must add exactly the selected candidate to the assembly while leaving candidate browsing usable.
+- Add Here + Next must add once, advance once, and preview the newly selected next candidate.
+- Candidate controls must render as two rows: Prev Rail/Next Rail and Add Here/Add Here + Next.
+- Assembly controls must remain readable in 2-column rows; only R0/R1/R2/R3 may use four columns.
+- World Anchor must relocate both solo-candidate and assembly previews. Hide Assembly must hide only the assembled prefab preview.
+- Regression: saved prefab load, anchor/normalize, multi-select movement, undo/redo, validation and Publish behavior must remain unchanged.
