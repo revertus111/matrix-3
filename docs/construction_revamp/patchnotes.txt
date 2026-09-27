@@ -1653,3 +1653,10 @@
 - Rail candidate 1 is explicitly initialized after candidate loading even if Swing selection events do not fire, fixing an empty ACTIVE/current selection state.
 - Workbench candidate label now shows candidate index, object ID, type and rotation; placed-rail selection/rotation remains synchronized back into classifier save/promotion actions.
 - Existing movement, duplicate/delete, layout save, rail_kit.tsv auto-save and RailCompositeLibrary output remain unchanged.
+
+2026-09-27 - Multi-object Junction/Splitter prefab resolver
+- RailCompositeLibrary now prefers authored multi-object junction/splitter/crossing layouts over older one-object canonical placeholders; existing junction_LAYOUT_01 can feed Junction immediately.
+- Rail special placement now derives an anchor + three-port orientation from legacy layout footprints, while explicitly normalized (0,0) layouts keep the author-selected anchor.
+- Rail Classifier Accept Junction/Crossing/Splitter now promotes the whole Workbench layout when pieces are present, normalizing the active placed rail to anchor (0,0) and removing exact duplicate rows.
+- Junction and Splitter now share the existing degree-3 logical topology path but resolve through their own saved prefab art; Crossing remains degree-4/framework-only.
+- Erasing any physical component of a multi-object special maps back to the owning logical special node.
