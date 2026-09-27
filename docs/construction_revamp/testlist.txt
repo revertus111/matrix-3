@@ -1336,3 +1336,7 @@ Placeable Splitter V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
 - Four-port authored Splitter: current-session Rail may connect all four explicit ports, but server cart routing is still tile-derived V1 and needs its own later behavioral acceptance.
 - Junction regression: native Junction build-bar slot must retain the existing drag-authored degree-3 workflow.
 - Restart/re-entry note: logical special-node reconstruction from persisted physical rails is still CARRYOVER; do not count re-entry persistence as passing in this slice.
+
+Placeable Splitter V1 legacy Junction regression
+- With the existing legacy junction_LAYOUT_01 containing the duplicate 46360/R0/dX5/dY0 row, Junction must still arm; exact duplicate legacy rows are tolerated/collapsed.
+- A prefab containing two DIFFERENT type-22 IDs at the exact same authored dX/dY must still be rejected for runtime publish/arming because Matrix3 owns one type-22 scene slot per tile.
