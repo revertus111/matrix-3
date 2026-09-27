@@ -4,12 +4,14 @@ import game.AssetStudioCapture;
 import game.AssetStudioCapture.CaptureBatch;
 import game.AssetStudioCapture.CaptureEntry;
 import game.ObjectLabPreview;
+import game.ObjectCompositePreview;
 import game.RailRoutePreview;
 import game.RailCompositeLibrary;
 
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
@@ -36,12 +38,16 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.DefaultListModel;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -82,6 +88,22 @@ public final class RailKitClassifierPanel extends JScrollPane {
 
     private final JSpinner previewRotation =
             new JSpinner(new SpinnerNumberModel(0, 0, 3, 1));
+
+    private final DefaultListModel<String> workbenchModel = new DefaultListModel<String>();
+    private final JList<String> workbenchList = new JList<String>(workbenchModel);
+    private final List<LayoutPart> workbenchParts = new ArrayList<LayoutPart>();
+    private final JLabel activeWorkbenchPiece =
+            ConsoleTheme.titleLabel("ACTIVE RAIL: none");
+    private final JCheckBox workbenchHotkeys = new JCheckBox(
+            "Workbench hotkeys: [ / ] select, arrows move, R rotate, Del remove, Ctrl+D duplicate", true);
+    private final JTextField workbenchNameField = new JTextField("RAIL_RESEARCH_01");
+    private final JComboBox<RailCompositeLibrary.Role> workbenchRole =
+            new JComboBox<RailCompositeLibrary.Role>(RailCompositeLibrary.Role.values());
+    private int workbenchAnchorX = Integer.MIN_VALUE;
+    private int workbenchAnchorY = Integer.MIN_VALUE;
+    private int workbenchAnchorPlane = -1;
+    private boolean workbenchHotkeysInstalled;
+
     private final JComboBox<RailRoutePreview.RouteOrder> routeOrder =
             new JComboBox<RailRoutePreview.RouteOrder>(RailRoutePreview.RouteOrder.values());
     private final JLabel routePieceLabel = valueLabel("Straight rail: not configured");
@@ -108,6 +130,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
         loadRecords();
         buildUi();
         replaceCandidates(null, false);
+        installWorkbenchHotkeys();
     }
 
     private void buildUi() {
@@ -124,7 +147,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
         header.add(ConsoleTheme.titleLabel("RAIL CLASSIFIER"));
         header.add(Box.createVerticalStrut(3));
         header.add(ConsoleTheme.subtitleLabel(
-                "Review rails beside the game: refresh -> double-click/arrow -> classify."));
+                "Select a candidate -> drop/move/rotate it -> classify/save without typing object IDs."));
         header.add(Box.createVerticalStrut(4));
         progressLabel.setAlignmentX(LEFT_ALIGNMENT);
         header.add(progressLabel);
@@ -136,6 +159,8 @@ public final class RailKitClassifierPanel extends JScrollPane {
         content.add(createSelectedCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createPreviewCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createWorkbenchCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createRoutePreviewCard());
         content.add(Box.createVerticalStrut(10));
@@ -264,6 +289,132 @@ public final class RailKitClassifierPanel extends JScrollPane {
         actions.add(spawn);
         actions.add(hide);
         card.add(actions);
+        return card;
+    }
+
+
+    private JPanel createWorkbenchCard() {
+        JPanel card = ConsoleTheme.createCard("Rail Classifier Workbench");
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createWrappedText(
+                "Drop the currently selected classifier candidate into a client-only layout. "
+                + "The active dropped rail automatically becomes the classifier selection and supplies "
+                + "its object ID, type and rotation to classification/save actions.",
+                5));
+        card.add(Box.createVerticalStrut(7));
+
+        activeWorkbenchPiece.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(activeWorkbenchPiece);
+        card.add(Box.createVerticalStrut(7));
+
+        workbenchList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        workbenchList.setBackground(ConsoleTheme.PANEL);
+        workbenchList.setForeground(ConsoleTheme.TEXT);
+        workbenchList.setSelectionBackground(ConsoleTheme.CARD_HOVER);
+        workbenchList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                syncClassifierToActiveWorkbenchPart();
+                refreshActiveWorkbenchLabel();
+            }
+        });
+        JScrollPane listScroll = new JScrollPane(workbenchList);
+        listScroll.setAlignmentX(LEFT_ALIGNMENT);
+        listScroll.setPreferredSize(new Dimension(240, 150));
+        listScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 170));
+        ConsoleTheme.styleScrollPane(listScroll);
+        card.add(listScroll);
+        card.add(Box.createVerticalStrut(7));
+
+        JButton drop = button("Drop Selected Rail");
+        JButton dropNext = button("Drop + Next");
+        JButton duplicate = button("Duplicate");
+        JButton remove = button("Delete");
+        drop.addActionListener(e -> dropSelectedCandidate(false));
+        dropNext.addActionListener(e -> dropSelectedCandidate(true));
+        duplicate.addActionListener(e -> duplicateWorkbenchPart());
+        remove.addActionListener(e -> removeWorkbenchPart());
+
+        JPanel primary = new JPanel(new GridLayout(2, 2, 6, 6));
+        primary.setOpaque(false);
+        primary.setAlignmentX(LEFT_ALIGNMENT);
+        primary.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
+        primary.add(drop);
+        primary.add(dropNext);
+        primary.add(duplicate);
+        primary.add(remove);
+        card.add(primary);
+        card.add(Box.createVerticalStrut(7));
+
+        JButton previous = button("[ Previous");
+        JButton up = button("Up +Y");
+        JButton next = button("Next ]");
+        JButton left = button("Left -X");
+        JButton rotate = button("Rotate R");
+        JButton right = button("Right +X");
+        JButton resetAnchor = button("Reset Anchor");
+        JButton down = button("Down -Y");
+        JButton clear = button("Clear Layout");
+
+        previous.addActionListener(e -> selectWorkbenchPart(-1));
+        next.addActionListener(e -> selectWorkbenchPart(1));
+        up.addActionListener(e -> moveWorkbenchPart(0, 1));
+        down.addActionListener(e -> moveWorkbenchPart(0, -1));
+        left.addActionListener(e -> moveWorkbenchPart(-1, 0));
+        right.addActionListener(e -> moveWorkbenchPart(1, 0));
+        rotate.addActionListener(e -> rotateWorkbenchPart());
+        resetAnchor.addActionListener(e -> resetWorkbenchAnchor());
+        clear.addActionListener(e -> clearWorkbench());
+
+        JPanel placement = new JPanel(new GridLayout(3, 3, 6, 6));
+        placement.setOpaque(false);
+        placement.setAlignmentX(LEFT_ALIGNMENT);
+        placement.setMaximumSize(new Dimension(Integer.MAX_VALUE, 108));
+        placement.add(previous);
+        placement.add(up);
+        placement.add(next);
+        placement.add(left);
+        placement.add(rotate);
+        placement.add(right);
+        placement.add(resetAnchor);
+        placement.add(down);
+        placement.add(clear);
+        card.add(placement);
+        card.add(Box.createVerticalStrut(7));
+
+        workbenchHotkeys.setOpaque(false);
+        workbenchHotkeys.setForeground(ConsoleTheme.TEXT);
+        workbenchHotkeys.setFocusable(false);
+        workbenchHotkeys.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(workbenchHotkeys);
+        card.add(Box.createVerticalStrut(8));
+
+        ConsoleTheme.styleTextField(workbenchNameField);
+        workbenchNameField.setAlignmentX(LEFT_ALIGNMENT);
+        workbenchNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        card.add(smallLabel("Layout / composite name"));
+        card.add(Box.createVerticalStrut(3));
+        card.add(workbenchNameField);
+        card.add(Box.createVerticalStrut(6));
+
+        workbenchRole.setFocusable(false);
+        workbenchRole.setAlignmentX(LEFT_ALIGNMENT);
+        workbenchRole.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        workbenchRole.setSelectedItem(RailCompositeLibrary.Role.CUSTOM);
+        card.add(smallLabel("Layout role"));
+        card.add(Box.createVerticalStrut(3));
+        card.add(workbenchRole);
+        card.add(Box.createVerticalStrut(6));
+
+        JButton save = button("Save Layout Evidence");
+        save.setAlignmentX(LEFT_ALIGNMENT);
+        save.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        save.addActionListener(e -> saveWorkbenchLayout());
+        card.add(save);
+        card.add(Box.createVerticalStrut(5));
+        card.add(ConsoleTheme.createWrappedText(
+                "Classification checkboxes still auto-save to rail_kit.tsv. Save Layout Evidence writes "
+                + "the complete arranged ID/type/rotation + dX/dY layout to rail_composites.tsv.",
+                4));
         return card;
     }
 
@@ -750,6 +901,328 @@ public final class RailKitClassifierPanel extends JScrollPane {
                 : saveError);
     }
 
+
+    private void dropSelectedCandidate(boolean advance) {
+        Candidate candidate = selected;
+        if (candidate == null) {
+            setStatus("Select a rail candidate first.");
+            return;
+        }
+        if (workbenchParts.size() >= 32) {
+            setStatus("Rail Classifier Workbench is capped at 32 visual pieces.");
+            return;
+        }
+
+        int slot = workbenchParts.size();
+        int column = slot % 6;
+        int row = slot / 6;
+        int offsetX = clamp(-10 + column * 4, -12, 12);
+        int offsetY = clamp(-8 + row * 4, -12, 12);
+        LayoutPart part = new LayoutPart(candidate.name, candidate.id, candidate.type,
+                number(previewRotation), offsetX, offsetY);
+        workbenchParts.add(part);
+        refreshWorkbenchList();
+        workbenchList.setSelectedIndex(workbenchParts.size() - 1);
+        workbenchList.ensureIndexIsVisible(workbenchParts.size() - 1);
+        refreshActiveWorkbenchLabel();
+
+        if (ensureWorkbenchAnchor()) {
+            refreshWorkbenchPreview();
+        }
+
+        setStatus("Dropped ID " + part.id + " T" + part.type + " R" + part.rotation
+                + " at dX " + part.offsetX + ", dY " + part.offsetY
+                + ". Active piece now owns classifier ID/rotation.");
+
+        if (advance) {
+            moveSelection(1, false);
+        }
+    }
+
+    private void refreshWorkbenchList() {
+        workbenchModel.clear();
+        for (int i = 0; i < workbenchParts.size(); i++) {
+            workbenchModel.addElement("#" + (i + 1) + "  " + workbenchParts.get(i).describe());
+        }
+    }
+
+    private int selectedWorkbenchIndex() {
+        int index = workbenchList.getSelectedIndex();
+        return index >= 0 && index < workbenchParts.size() ? index : -1;
+    }
+
+    private void refreshActiveWorkbenchLabel() {
+        int index = selectedWorkbenchIndex();
+        if (index < 0) {
+            activeWorkbenchPiece.setText("ACTIVE RAIL: none");
+            return;
+        }
+        LayoutPart part = workbenchParts.get(index);
+        activeWorkbenchPiece.setText("ACTIVE #" + (index + 1)
+                + "  |  OBJECT ID " + part.id
+                + "  |  T" + part.type
+                + "  |  R" + part.rotation
+                + "  |  dX " + part.offsetX
+                + "  |  dY " + part.offsetY);
+    }
+
+    private void syncClassifierToActiveWorkbenchPart() {
+        int index = selectedWorkbenchIndex();
+        if (index < 0) {
+            return;
+        }
+        LayoutPart part = workbenchParts.get(index);
+        for (int row = 0; row < candidates.size(); row++) {
+            Candidate candidate = candidates.get(row);
+            if (candidate.id == part.id && candidate.type == part.type) {
+                table.setRowSelectionInterval(row, row);
+                table.scrollRectToVisible(table.getCellRect(row, 0, true));
+                previewRotation.setValue(Integer.valueOf(part.rotation));
+                ClassificationRecord record = recordFor(candidate);
+                record.lastPreviewRotation = part.rotation;
+                record.updatedAt = timestamp();
+                saveRecords();
+                return;
+            }
+        }
+    }
+
+    private void selectWorkbenchPart(int delta) {
+        if (workbenchParts.isEmpty()) {
+            return;
+        }
+        int index = selectedWorkbenchIndex();
+        if (index < 0) {
+            index = delta < 0 ? workbenchParts.size() - 1 : 0;
+        } else {
+            index = (index + delta + workbenchParts.size()) % workbenchParts.size();
+        }
+        workbenchList.setSelectedIndex(index);
+        workbenchList.ensureIndexIsVisible(index);
+        syncClassifierToActiveWorkbenchPart();
+        refreshActiveWorkbenchLabel();
+        setStatus("Selected workbench rail #" + (index + 1) + ": "
+                + workbenchParts.get(index).describe());
+    }
+
+    private void duplicateWorkbenchPart() {
+        int index = selectedWorkbenchIndex();
+        if (index < 0) {
+            setStatus("Select a workbench rail to duplicate.");
+            return;
+        }
+        if (workbenchParts.size() >= 32) {
+            setStatus("Rail Classifier Workbench is capped at 32 visual pieces.");
+            return;
+        }
+        LayoutPart source = workbenchParts.get(index);
+        LayoutPart copy = new LayoutPart(source.name, source.id, source.type, source.rotation,
+                source.offsetX + 1, source.offsetY);
+        workbenchParts.add(copy);
+        refreshWorkbenchList();
+        workbenchList.setSelectedIndex(workbenchParts.size() - 1);
+        syncClassifierToActiveWorkbenchPart();
+        refreshActiveWorkbenchLabel();
+        refreshWorkbenchPreview();
+        setStatus("Duplicated ID " + copy.id + " to dX " + copy.offsetX + ", dY " + copy.offsetY + ".");
+    }
+
+    private void removeWorkbenchPart() {
+        int index = selectedWorkbenchIndex();
+        if (index < 0) {
+            setStatus("Select a workbench rail to remove.");
+            return;
+        }
+        LayoutPart removed = workbenchParts.remove(index);
+        refreshWorkbenchList();
+        if (workbenchParts.isEmpty()) {
+            activeWorkbenchPiece.setText("ACTIVE RAIL: none");
+            ObjectCompositePreview.hide();
+        } else {
+            workbenchList.setSelectedIndex(Math.min(index, workbenchParts.size() - 1));
+            syncClassifierToActiveWorkbenchPart();
+            refreshActiveWorkbenchLabel();
+            refreshWorkbenchPreview();
+        }
+        setStatus("Removed workbench rail: " + removed.describe());
+    }
+
+    private void moveWorkbenchPart(int dx, int dy) {
+        int index = selectedWorkbenchIndex();
+        if (index < 0) {
+            setStatus("Select a workbench rail to move.");
+            return;
+        }
+        LayoutPart part = workbenchParts.get(index);
+        part.offsetX = clamp(part.offsetX + dx, -12, 12);
+        part.offsetY = clamp(part.offsetY + dy, -12, 12);
+        refreshWorkbenchList();
+        workbenchList.setSelectedIndex(index);
+        refreshActiveWorkbenchLabel();
+        refreshWorkbenchPreview();
+        setStatus("Moved ID " + part.id + " to dX " + part.offsetX + ", dY " + part.offsetY + ".");
+    }
+
+    private void rotateWorkbenchPart() {
+        int index = selectedWorkbenchIndex();
+        if (index < 0) {
+            setStatus("Select a workbench rail to rotate.");
+            return;
+        }
+        LayoutPart part = workbenchParts.get(index);
+        part.rotation = (part.rotation + 1) & 0x3;
+        refreshWorkbenchList();
+        workbenchList.setSelectedIndex(index);
+        previewRotation.setValue(Integer.valueOf(part.rotation));
+        syncClassifierToActiveWorkbenchPart();
+        refreshActiveWorkbenchLabel();
+        refreshWorkbenchPreview();
+        setStatus("Rotated ID " + part.id + " to R" + part.rotation
+                + "; classifier rotation updated automatically.");
+    }
+
+    private boolean ensureWorkbenchAnchor() {
+        if (workbenchAnchorPlane >= 0) {
+            return true;
+        }
+        CaptureBatch anchor = AssetStudioCapture.capturePlayerArea(0);
+        if (anchor == null || !anchor.isSuccess()) {
+            setStatus("Workbench anchor failed: "
+                    + (anchor == null ? "live player/scene unavailable" : anchor.getError()));
+            return false;
+        }
+        workbenchAnchorX = anchor.getCenterX();
+        workbenchAnchorY = anchor.getCenterY();
+        workbenchAnchorPlane = anchor.getPlane();
+        return true;
+    }
+
+    private void resetWorkbenchAnchor() {
+        workbenchAnchorPlane = -1;
+        if (ensureWorkbenchAnchor()) {
+            refreshWorkbenchPreview();
+            setStatus("Rail Classifier Workbench moved beside the current player position.");
+        }
+    }
+
+    private void refreshWorkbenchPreview() {
+        if (workbenchParts.isEmpty() || !ensureWorkbenchAnchor()) {
+            return;
+        }
+        List<RailCompositeLibrary.Component> components =
+                new ArrayList<RailCompositeLibrary.Component>();
+        for (LayoutPart part : workbenchParts) {
+            components.add(new RailCompositeLibrary.Component(
+                    part.id, part.type, part.rotation, part.offsetX, part.offsetY));
+        }
+        ObjectLabPreview.hide();
+        String name = workbenchNameField.getText() == null
+                ? "Rail Classifier Workbench" : workbenchNameField.getText().trim();
+        ObjectCompositePreview.showComposite(name, components,
+                workbenchAnchorX, workbenchAnchorY, workbenchAnchorPlane, 3, 0);
+    }
+
+    private void clearWorkbench() {
+        workbenchParts.clear();
+        refreshWorkbenchList();
+        activeWorkbenchPiece.setText("ACTIVE RAIL: none");
+        ObjectCompositePreview.hide();
+        setStatus("Rail Classifier Workbench cleared.");
+    }
+
+    private void saveWorkbenchLayout() {
+        if (workbenchParts.isEmpty()) {
+            setStatus("Drop at least one rail before saving layout evidence.");
+            return;
+        }
+        List<RailCompositeLibrary.Component> components =
+                new ArrayList<RailCompositeLibrary.Component>();
+        for (LayoutPart part : workbenchParts) {
+            components.add(new RailCompositeLibrary.Component(
+                    part.id, part.type, part.rotation, part.offsetX, part.offsetY));
+        }
+        Object selectedRole = workbenchRole.getSelectedItem();
+        RailCompositeLibrary.Role role = selectedRole instanceof RailCompositeLibrary.Role
+                ? (RailCompositeLibrary.Role) selectedRole
+                : RailCompositeLibrary.Role.CUSTOM;
+        String error = RailCompositeLibrary.saveComposite(
+                workbenchNameField.getText(), role, components);
+        setStatus(error == null
+                ? "Saved " + workbenchNameField.getText().trim() + " [" + role + "] with "
+                        + components.size() + " rail piece(s); IDs/rotations came from classifier selection."
+                : error);
+    }
+
+    private void installWorkbenchHotkeys() {
+        if (workbenchHotkeysInstalled) {
+            return;
+        }
+        workbenchHotkeysInstalled = true;
+        KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                .addKeyEventDispatcher(new KeyEventDispatcher() {
+                    @Override
+                    public boolean dispatchKeyEvent(KeyEvent event) {
+                        if (event.getID() != KeyEvent.KEY_PRESSED
+                                || !workbenchHotkeys.isSelected()
+                                || !RailKitClassifierPanel.this.isShowing()
+                                || workbenchParts.isEmpty()) {
+                            return false;
+                        }
+
+                        Component focus = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                                .getFocusOwner();
+                        if (focus instanceof JTextField
+                                || focus != null && SwingUtilities.getAncestorOfClass(
+                                        JSpinner.class, focus) != null
+                                || focus != null && SwingUtilities.getAncestorOfClass(
+                                        JComboBox.class, focus) != null
+                                || focus != null && SwingUtilities.getAncestorOfClass(
+                                        JTable.class, focus) != null) {
+                            return false;
+                        }
+
+                        int key = event.getKeyCode();
+                        if (event.isControlDown() && key == KeyEvent.VK_D) {
+                            duplicateWorkbenchPart();
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_OPEN_BRACKET) {
+                            selectWorkbenchPart(-1);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_CLOSE_BRACKET) {
+                            selectWorkbenchPart(1);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_R) {
+                            rotateWorkbenchPart();
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_LEFT) {
+                            moveWorkbenchPart(-1, 0);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_RIGHT) {
+                            moveWorkbenchPart(1, 0);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_UP) {
+                            moveWorkbenchPart(0, 1);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_DOWN) {
+                            moveWorkbenchPart(0, -1);
+                            return true;
+                        }
+                        if (key == KeyEvent.VK_DELETE) {
+                            removeWorkbenchPart();
+                            return true;
+                        }
+                        return false;
+                    }
+                });
+    }
+
     private void moveSelection(int delta, boolean preview) {
         if (candidates.isEmpty()) {
             return;
@@ -779,8 +1252,6 @@ public final class RailKitClassifierPanel extends JScrollPane {
     private void bindNavigation(String actionKey, int keyCode, final int delta) {
         KeyStroke keyStroke = KeyStroke.getKeyStroke(keyCode, 0);
 
-        getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-                .put(keyStroke, actionKey);
         table.getInputMap(JComponent.WHEN_FOCUSED).put(keyStroke, actionKey);
 
         AbstractAction action = new AbstractAction() {
@@ -798,7 +1269,6 @@ public final class RailKitClassifierPanel extends JScrollPane {
             }
         };
 
-        getActionMap().put(actionKey, action);
         table.getActionMap().put(actionKey, action);
     }
 
@@ -951,6 +1421,10 @@ public final class RailKitClassifierPanel extends JScrollPane {
         return value instanceof Number ? ((Number) value).intValue() : 0;
     }
 
+    private static int clamp(int value, int min, int max) {
+        return value < min ? min : value > max ? max : value;
+    }
+
     private static int parseInt(String value, int fallback) {
         try {
             return Integer.parseInt(value);
@@ -1010,6 +1484,32 @@ public final class RailKitClassifierPanel extends JScrollPane {
         @Override
         public Class<?> getColumnClass(int columnIndex) {
             return columnIndex == 0 ? Integer.class : String.class;
+        }
+    }
+
+
+    private static final class LayoutPart {
+        private final String name;
+        private final int id;
+        private final int type;
+        private int rotation;
+        private int offsetX;
+        private int offsetY;
+
+        private LayoutPart(String name, int id, int type, int rotation,
+                int offsetX, int offsetY) {
+            this.name = name == null || name.trim().isEmpty() ? "id-" + id : name;
+            this.id = id;
+            this.type = type;
+            this.rotation = rotation & 0x3;
+            this.offsetX = clamp(offsetX, -12, 12);
+            this.offsetY = clamp(offsetY, -12, 12);
+        }
+
+        private String describe() {
+            return "OBJECT ID " + id + " | T" + type + " | R" + rotation
+                    + " | dX " + offsetX + " | dY " + offsetY
+                    + (name.startsWith("id-") ? "" : " | " + name);
         }
     }
 
