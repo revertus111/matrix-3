@@ -269,6 +269,8 @@ public final class RailRoutePreview {
             return label + " asset missing. In Rail Classifier preview the real asset, then click Accept "
                     + label + ".";
         }
+        java.util.LinkedHashSet<String> exactRows =
+                new java.util.LinkedHashSet<String>();
         java.util.LinkedHashSet<String> sceneSlots =
                 new java.util.LinkedHashSet<String>();
         for (RailCompositeLibrary.Component component : composite.getComponents()) {
@@ -278,10 +280,18 @@ public final class RailRoutePreview {
                         + " type " + component.getType()
                         + " is not in the server rail persistence whitelist.";
             }
+            String exact = component.getId() + ":" + component.getType() + ":"
+                    + component.getRotation() + ":" + component.getOffsetX()
+                    + ":" + component.getOffsetY();
+            if (!exactRows.add(exact)) {
+                // Legacy authoring files may contain an accidental duplicate row;
+                // physical resolution already collapses that exact duplicate.
+                continue;
+            }
             String sceneSlot = component.getOffsetX() + ":" + component.getOffsetY()
                     + ":" + component.getType();
             if (!sceneSlots.add(sceneSlot)) {
-                return label + " prefab has multiple type-" + component.getType()
+                return label + " prefab has multiple different type-" + component.getType()
                         + " objects on authored tile dX " + component.getOffsetX()
                         + ", dY " + component.getOffsetY()
                         + ". Matrix3 can project only one object per tile/type scene slot; "
