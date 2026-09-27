@@ -1714,3 +1714,13 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Saved-tile protection intentionally applies only to mass cleanup. Explicit Eraser/Delete and Ctrl+Z remain deliberate authoring actions and may still remove a build from a saved tile.
 - The right-click actions use the existing owner-authorized Client Console command bridge internally; the user-facing workflow is world-native and requires no typed command.
 - Resume Here: save one occupied tile and one empty tile, run Clear All, confirm the occupied tile survives, then build on the formerly empty saved tile and prove it survives the next Clear All.
+
+
+## Object Explorer rail candidate workbench — 2026-09-27
+- IMPLEMENTED / NEEDS RUNTIME TEST under standing SAP AAA.
+- Clarified tool ownership: Object Explorer is now the physical rail research/assembly workbench; Rail Classifier remains the labeling/acceptance surface once a candidate has been visually identified.
+- Added a Rail Candidate Workbench card inside Object Explorer backed by the same evidence-seeded rail candidate catalog used by Rail Classifier.
+- Prev Rail / Spawn Rail / Next Rail loads type-22 rail candidates directly into Object Explorer for visual inspection.
+- Drop Into Layout turns the current candidate into a normal Rail Layout Lab part. Drop + Next lays successive candidates into a spaced 6-column research grid so several candidate objects can be compared without immediately overlapping.
+- Once dropped, the existing Rail Layout Lab controls own manipulation: [ / ] select, arrow keys move, R rotates, Delete removes, Ctrl+D duplicates; all pieces remain client-only direct-render research previews until explicitly saved/accepted.
+- Resume Here: open Object Explorer, use Drop + Next across the candidate list, identify likely turnout/junction/crossing/splitter pieces visually, then use Rail Classifier only to label/accept the confirmed asset.
