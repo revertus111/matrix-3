@@ -2040,3 +2040,9 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - verified-static cause: Rail Studio was sending ObjectLabPreview to offset (-4,0) from the captured player anchor. On the user's narrow gameplay viewport that placement can land behind the left HUD/off-screen while the renderer remains active.
 - Correction: candidate preview now uses the near-player (+1,+1) slot and exposes selected ID + target world coordinates + ObjectLabPreview status in the Candidate Browser.
 - Resume Here: runtime-select one candidate before adding anything. If the model is still invisible, use the new Preview line/status to distinguish MODEL_NULL / scene-skip from simple viewport placement before changing rendering ownership.
+
+## Rail Studio font readability correction — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the existing Rail Studio UX AAA.
+- User feedback after the compact pass: controls fit better, but local text was too small.
+- Increased Rail Studio-local fonts one notch while preserving the narrow-safe layout and disabled horizontal scrolling.
+- Resume Here: runtime-check candidate visibility + final font/readability together in one client launch.
