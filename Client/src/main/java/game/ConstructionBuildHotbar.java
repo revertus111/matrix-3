@@ -151,11 +151,12 @@ public final class ConstructionBuildHotbar {
             status = RailRoutePreview.setToolMode(RailRoutePreview.ToolMode.CROSSING);
             return;
         case 3:
-            BuildPiece splitterRail = findPiece("basic-rail");
-            if (splitterRail != null) {
-                ConstructionPlacementController.select(splitterRail);
+            BuildPiece splitterRail = findPiece("rail-splitter");
+            if (splitterRail == null) {
+                status = "Splitter item is unavailable.";
+                return;
             }
-            status = RailRoutePreview.setToolMode(RailRoutePreview.ToolMode.SPLITTER);
+            status = ConstructionPlacementController.select(splitterRail);
             return;
         case 4:
             rememberSelectedObject();
@@ -194,7 +195,8 @@ public final class ConstructionBuildHotbar {
 
     private static void rememberSelectedObject() {
         BuildPiece selected = ConstructionPlacementController.getSelectedPiece();
-        if (selected == null || "basic-rail".equals(selected.getKey())) {
+        if (selected == null || "basic-rail".equals(selected.getKey())
+                || "rail-splitter".equals(selected.getKey())) {
             return;
         }
         lastObjectKey = selected.getKey();
