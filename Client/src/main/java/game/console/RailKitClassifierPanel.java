@@ -588,10 +588,10 @@ public final class RailKitClassifierPanel extends JScrollPane {
         card.add(promote);
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Accepted special buttons save the selected preview rotation as the canonical "
-                + "single-object special asset. Use Object Explorer composites instead when the "
-                + "special node needs multiple objects.",
-                4));
+                "If the Workbench contains placed rails, Accept Junction/Crossing/Splitter saves the "
+                + "whole layout as the canonical special. The ACTIVE PLACED RAIL becomes layout anchor "
+                + "(0,0). With an empty Workbench, the old single-object fallback is preserved.",
+                5));
         card.add(Box.createVerticalStrut(7));
         card.add(ConsoleTheme.createWrappedText(
                 "Auto-save: Client/data/construction/asset_studio/rail_kit.tsv", 2));
@@ -608,9 +608,45 @@ public final class RailKitClassifierPanel extends JScrollPane {
 
     private void promoteSelectedSpecial(
             String canonicalName, RailCompositeLibrary.Role role, String label) {
+        if (!workbenchParts.isEmpty()) {
+            int anchorIndex = selectedWorkbenchIndex();
+            if (anchorIndex < 0) {
+                anchorIndex = 0;
+            }
+            LayoutPart anchor = workbenchParts.get(anchorIndex);
+            java.util.List<RailCompositeLibrary.Component> components =
+                    new ArrayList<RailCompositeLibrary.Component>();
+            java.util.LinkedHashSet<String> seen =
+                    new java.util.LinkedHashSet<String>();
+
+            for (LayoutPart part : workbenchParts) {
+                int offsetX = part.offsetX - anchor.offsetX;
+                int offsetY = part.offsetY - anchor.offsetY;
+                String key = part.id + ":" + part.type + ":" + part.rotation
+                        + ":" + offsetX + ":" + offsetY;
+                if (!seen.add(key)) {
+                    continue;
+                }
+                components.add(new RailCompositeLibrary.Component(
+                        part.id, part.type, part.rotation, offsetX, offsetY));
+            }
+
+            String error = RailCompositeLibrary.saveComposite(
+                    canonicalName, role, components);
+            if (error != null) {
+                setStatus(error);
+                return;
+            }
+            RailRoutePreview.reloadSpecialComposites();
+            setStatus(label + " layout accepted: " + components.size()
+                    + " unique piece(s), anchor=ID " + anchor.id
+                    + " at (0,0) -> " + canonicalName + ".");
+            return;
+        }
+
         Candidate candidate = selected;
         if (candidate == null) {
-            setStatus("Select and preview a rail candidate first.");
+            setStatus("Select a rail candidate first.");
             return;
         }
         int rotation = number(previewRotation);
@@ -621,8 +657,9 @@ public final class RailKitClassifierPanel extends JScrollPane {
             return;
         }
         RailRoutePreview.reloadSpecialComposites();
-        setStatus(label + " accepted: ID " + candidate.id + " type "
-                + candidate.type + " rot " + rotation + " -> " + canonicalName + ".");
+        setStatus(label + " single-object fallback accepted: ID " + candidate.id
+                + " type " + candidate.type + " rot " + rotation
+                + " -> " + canonicalName + ".");
     }
 
     private void configureSelectedRouteRail() {
