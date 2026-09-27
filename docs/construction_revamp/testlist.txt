@@ -1179,7 +1179,7 @@ Rail special-node H2A Junction gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-0
 
 Physical Storage + Logistics V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-26)
 - Enter the settlement and place Furniture -> Wooden chest. Confirm object 18804 persists after exit/re-entry.
-- Click the physical chest. Bank interface 762 must open against settlement storage only; opening/using it must not change the player's real bank.
+- Right-click the physical Wooden chest and choose View Storage. Bank interface 762 must open against that chest only; the context action must still use Matrix3 normal object handling and must not change the player's real bank.
 - Deposit one stackable factory item above 100 quantity. Confirm the chest displays multiple stacks (for example 100 + remainder) and consumes multiple physical slots.
 - Fill one partial same-item stack, deposit more of that item, and confirm the partial stack fills before a new stack is allocated.
 - Deposit non-stackable items and confirm each item consumes one chest slot.
@@ -1188,7 +1188,15 @@ Physical Storage + Logistics V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-
 - Withdraw with insufficient inventory space and confirm only the amount that can fit moves; chest remainder stays authoritative.
 - Put at least one item in a chest and attempt Eraser/Delete/Undo. The non-empty chest must remain; empty it, then confirm removal works normally.
 - Place a second Wooden chest. Confirm each chest has a separate inventory and persists independently through exit/re-entry and logout/relog.
-- Use ::settlementstorage from inside and outside the settlement. Confirm it aggregates all physical chest item totals, is read-only, and cannot deposit/withdraw.
+- Open Client Console -> Test Console -> Con Revamp -> Storage -> Physical Storage Overview from inside and outside the settlement. Confirm it aggregates all physical chest item totals, is read-only, and cannot deposit/withdraw.
 - Open the real bank after closing settlement storage and confirm tabs/items/size state are restored and normal bank actions still operate on Bank.bankTabs.
 - Confirm legacy starter resource counters, worker gather/haul, needs, shelter gates and existing processing self-test still function; physical item storage must not silently migrate or erase those counters.
 - Processing regression: Saw Planks now consumes exactly 1 Wood/log-equivalent and produces exactly 2 Planks per completed current recipe cycle.
+
+
+Physical Storage UX correction gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-26)
+- Right-click a placed Wooden chest in the settlement. View Storage must appear once in the normal RuneScape object menu.
+- Select View Storage. It must open that exact chest through normal object interaction; no typed command is required.
+- Confirm non-settlement object 18804 does not gain the settlement View Storage entry when settlement auto-mode is inactive.
+- In Client Console -> Test Console -> Con Revamp -> Storage, click Physical Storage Overview; aggregate storage opens read-only.
+- Confirm ::settlementstorage and ::settlementstorageoverview are no longer normal player commands.

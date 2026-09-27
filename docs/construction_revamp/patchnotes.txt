@@ -1606,4 +1606,10 @@
 - Blocked removal of non-empty storage pieces to prevent eraser/undo/delete item loss.
 - Kept legacy SettlementResource counters intact for compatibility while new factory storage is generic itemId/amount based.
 - Rebalanced saw-planks from 2 Wood -> 1 Plank to 1 Wood/log-equivalent -> 2 Planks.
-- Added global read-only ::settlementstorage overview entry point; no remote withdrawal/deposit is permitted.
+- Added read-only physical-storage overview backend; no remote withdrawal/deposit is permitted.
+
+
+2026-09-26 - Physical storage UX correction
+- Removed public settlementstorage/settlementstorageoverview normal commands; Client Console now owns aggregate storage inspection.
+- Added Con Revamp -> Storage -> Physical Storage Overview button using the existing owner-only console bridge.
+- Added Wooden chest world right-click View Storage entry by mirroring Matrix3 first-object action 3; physical access remains under normal ObjectHandler/SettlementControler ownership.

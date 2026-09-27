@@ -78,6 +78,7 @@ public final class ConstructionRadialSelection {
     private static final int STARTER_STONE_OBJECT_ID = 11933;
     private static final int STARTER_ORE_OBJECT_ID = 11936;
     private static final int WOODEN_WORKBENCH_OBJECT_ID = 13704;
+    private static final int BASIC_STORAGE_CHEST_OBJECT_ID = 18804;
     private static final int STARTER_FOOD_NPC_ID = 327;
 
     private static final Class261 TRANSFORM = new Class261();
@@ -412,6 +413,36 @@ public final class ConstructionRadialSelection {
                 "Jobs", targetName == null ? "" : targetName,
                 -646491435 * client.anInt8751,
                 WORKER_JOBS_MENU_ACTION, -1, targetUid, localX, localY,
+                true, false, 0L, true);
+        Class412.method5075(entry, 722976984);
+    }
+
+    /**
+     * Adds a player-facing View Storage entry to the persistent settlement chest.
+     *
+     * The mirrored action deliberately reuses Matrix3's native first-object
+     * action (3), so the click still flows through ObjectHandler and the active
+     * SettlementControler. No owner/dev command is involved in physical chest
+     * access.
+     */
+    static void mirrorStorageViewEntry(String targetName, int sourceAction,
+            long targetUid, int localX, int localY) {
+        if (!ConstructionBuildCamera.isSettlementAutoMode()
+                || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
+            return;
+        }
+        int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
+        if (normalizedAction != 1002) {
+            return;
+        }
+        int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
+        if (objectId != BASIC_STORAGE_CHEST_OBJECT_ID) {
+            return;
+        }
+        Class572_Sub12_Sub10 entry = new Class572_Sub12_Sub10(
+                "View Storage", targetName == null ? "" : targetName,
+                -646491435 * client.anInt8751,
+                MATRIX3_FIRST_OBJECT_ACTION, -1, targetUid, localX, localY,
                 true, false, 0L, true);
         Class412.method5075(entry, 722976984);
     }

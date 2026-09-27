@@ -1683,8 +1683,9 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Future chest tiers/upgrades may independently raise slot count and per-stack cap. The storage model persists both limits so upgrades do not require a storage rewrite.
 - Factory storage is generic item-based (`itemId + amount`), not restricted to the legacy Wood/Food/Stone/Ore enum. Any valid item produced/consumed by a factory recipe can flow through the same container/logistics contract.
 - Storage mode state is persisted as `STORAGE / SUPPLY / REQUEST / BUFFER`; advanced routing/filter semantics are intentionally deferred until worker/machine transport binds to this API.
-- A physical chest opened in-world allows bank-style Deposit/Withdraw 1/5/10/X/All and Examine against that chest only.
-- `::settlementstorage` / `::settlementstorageoverview` opens a settlement-wide read-only aggregate through the same bank shell from anywhere. The overview may inspect totals but cannot deposit or withdraw, so it cannot teleport items across the settlement.
+- A physical chest exposes a RuneScape-native world right-click `View Storage` entry. That entry deliberately reuses Matrix3's normal first-object action so access still flows through ObjectHandler -> SettlementControler; no owner/dev command owns chest access.
+- Opening a physical chest allows bank-style Deposit/Withdraw 1/5/10/X/All and Examine against that chest only.
+- Client Console -> Test Console -> Con Revamp -> Storage -> Physical Storage Overview opens a settlement-wide read-only aggregate through the same bank shell. The overview may inspect totals from anywhere but cannot deposit or withdraw, so it cannot teleport items across the settlement. Public `::settlementstorage*` commands are intentionally not part of the workflow.
 - Legacy `SettlementResource` counters remain intact for already-verified Phase 1/2 gather/needs/shelter behavior. They are not fabricated into item IDs. Migration happens chain-by-chain after physical item logistics is proven.
 - Sawmill balance target is corrected to 1 Wood/log-equivalent -> 2 Planks in the current processing owner. A later efficiency upgrade may raise output to 4 Planks rather than using random 2-or-4 output.
 - Transport architecture decision: workers and automation both consume the same future machine/container I/O contract. Early flow is Chest -> Worker -> Machine -> Worker -> Chest; later conveyors/carts/loaders can replace either transport leg without rewriting recipes or storage.
@@ -1693,3 +1694,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Safety rule: non-empty physical storage cannot be erased, undone or deleted. It must be emptied first so build tools cannot destroy stored factory items.
 - Next implementation checkpoint after V1 runtime acceptance: machine-local input/output buffers + worker transfer jobs using this physical storage API, then conveyor/cart/loaders against the same contract.
 - Resume Here: place a Wooden chest, prove capped multi-stack deposit/withdraw/persistence and read-only total overview in one runtime session. If accepted, do not reopen bank-shell/storage ownership; continue directly to machine I/O buffers and worker logistics.
+
+
+### Bundle 3.4 UX correction — 2026-09-26
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+- Removed the temporary public `::settlementstorage` and `::settlementstorageoverview` normal commands.
+- Physical chest access is world-native: right-click Wooden chest -> `View Storage`.
+- Settlement-wide aggregate inspection is developer-tooling only through Client Console -> Con Revamp -> Storage -> `Physical Storage Overview`.
+- The console overview continues to use the existing owner-only Client Console bridge internally; physical chest access does not.

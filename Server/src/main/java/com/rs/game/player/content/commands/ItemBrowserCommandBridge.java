@@ -32,6 +32,7 @@ import com.rs.game.player.content.construction.SettlementResourceSelfTest;
 import com.rs.game.player.content.construction.SettlementShelterSelfTest;
 import com.rs.game.player.content.construction.SettlementStateAudit;
 import com.rs.game.player.content.construction.SettlementStateSelfTest;
+import com.rs.game.player.content.construction.SettlementStorageInterface;
 import com.rs.game.player.content.construction.SettlementWorkerArrivalCheck;
 import com.rs.game.player.content.construction.SettlementWorkerJob;
 import com.rs.game.player.content.construction.SettlementWorkerJobsSelfTest;
@@ -300,7 +301,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|storageoverview|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -394,6 +395,11 @@ public final class ItemBrowserCommandBridge {
         if ("resources".equals(operation)) {
             player.getPackets().sendGameMessage(
                     "Settlement storage: " + player.getSettlementState().getResourceSummary());
+            return true;
+        }
+
+        if ("storageoverview".equals(operation)) {
+            SettlementStorageInterface.openOverview(player);
             return true;
         }
 

@@ -326,28 +326,35 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Storage");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Live persistent settlement storage controls.",
-                2));
+                "Legacy resource counters plus the physical chest storage overview. "
+                + "Open individual chests from their world right-click View Storage action.",
+                3));
         card.add(Box.createVerticalStrut(8));
 
         JButton statusButton = new JButton("Storage Status");
-        JButton reset = new JButton("Reset All Storage");
+        JButton overview = new JButton("Physical Storage Overview");
+        JButton reset = new JButton("Reset Legacy Storage");
 
         styleButton(statusButton);
+        styleButton(overview);
         styleButton(reset);
 
         statusButton.addActionListener(e -> queue(
                 "itembrowser settlement resources",
                 "Storage Status queued. Check game chat."));
+        overview.addActionListener(e -> queue(
+                "itembrowser settlement storageoverview",
+                "Physical Storage Overview opened."));
         reset.addActionListener(e -> queue(
                 "itembrowser settlement storagereset",
-                "Settlement storage reset queued."));
+                "Legacy settlement resource storage reset queued."));
 
-        JPanel buttons = new JPanel(new GridLayout(1, 2, 7, 7));
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
         buttons.add(statusButton);
+        buttons.add(overview);
         buttons.add(reset);
         card.add(buttons);
         return card;
