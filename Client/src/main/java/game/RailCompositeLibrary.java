@@ -31,6 +31,13 @@ public final class RailCompositeLibrary {
     public static final String ACCEPTED_CROSSING_NAME = "CROSSING_RAIL_LAYOUT_01";
     public static final String ACCEPTED_SPLITTER_NAME = "SPLITTER_RAIL_LAYOUT_01";
 
+    private static final int[] EVIDENCE_SEED_OBJECT_IDS = {
+        4770, 4796, 14500, 14501, 14502,
+        46352, 46353, 46354, 46355, 46356, 46357, 46358, 46359, 46361,
+        46363, 46364, 46365, 46366, 46367, 46368, 46369, 46370,
+        46376, 46378, 46380, 46381, 46382
+    };
+
     public enum Role {
         STRAIGHT,
         CURVE,
@@ -41,6 +48,10 @@ public final class RailCompositeLibrary {
     }
 
     private RailCompositeLibrary() {
+    }
+
+    public static int[] getEvidenceSeedObjectIds() {
+        return EVIDENCE_SEED_OBJECT_IDS.clone();
     }
 
     public static Path getFile() {
