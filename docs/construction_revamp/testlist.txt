@@ -1220,3 +1220,14 @@ Object Explorer rail candidate workbench gate — IMPLEMENTED / NEEDS RUNTIME TE
 - Click Drop + Next several times. Successive candidates must be spaced into the research grid rather than all rendering on one tile.
 - Clear Rail Layout must clear the candidate research layout without mutating persistent settlement objects.
 - Regression: Rail Classifier must still populate the same shared candidate catalog and its role classification/Accept Junction controls must continue to work.
+
+Rail Classifier integrated workbench gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Open Test Console -> Rail Classifier. The new Rail Classifier Workbench must appear directly under Spawn Preview.
+- Select any seeded candidate and click Drop Selected Rail. It must render in the client-only multi-piece layout without typing an object ID.
+- Click Drop + Next several times. Each dropped rail must keep its own candidate ID/type/rotation and appear in the spaced research grid while the classifier advances to the next candidate.
+- Select a dropped rail from the workbench list. The Rail Classifier selected row, ID/type labels and Rotation spinner must switch to that rail automatically.
+- With the workbench list active, use [ / ] to select pieces, arrows to move, R to rotate, Delete to remove and Ctrl+D to duplicate. The active label and live preview must update immediately.
+- Rotate a dropped rail, then tick/untick a geometry classification. rail_kit.tsv must save the dropped rail's ID/type and the active R0-R3 without manual ID entry.
+- Enter a layout name/role and click Save Layout Evidence. rail_composites.tsv must contain every dropped piece with exact id/type/rotation/dX/dY.
+- Regression: focus the candidate table and use arrow keys; table navigation/spawn preview must still work. Outside the candidate table, workbench arrow keys must move the active dropped rail instead of changing candidates.
+- Regression: Accept Junction/Crossing/Splitter must continue promoting the currently synchronized candidate + rotation.
