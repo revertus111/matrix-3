@@ -1621,3 +1621,11 @@
 - Clear All now skips all build pieces on saved tiles and reports preserved build count.
 - Saving an empty tile protects future builds placed on that tile from Clear All.
 - Explicit Eraser/Delete/Ctrl+Z remain deliberate removal tools and are not blocked by saved-tile protection.
+
+
+2026-09-27 - Move rail candidate placement/research into Object Explorer
+- Added a dedicated Rail Candidate Workbench to Object Explorer so rail discovery no longer depends on remembering Rail Classifier preview workflow.
+- Object Explorer can now step through the shared evidence-seeded type-22 rail candidate catalog, spawn any candidate beside the player, and drop candidates directly into Rail Layout Lab.
+- Drop + Next automatically spaces candidates into a research grid; each dropped piece remains fully movable/rotatable through the existing layout buttons and hotkeys.
+- Moved the evidence-seeded rail object-id catalog into RailCompositeLibrary so Object Explorer and Rail Classifier consume one source of truth.
+- Tool split is now explicit: Object Explorer = place/move/assemble/research; Rail Classifier = label roles and promote the visually confirmed asset to Junction/Crossing/Splitter.
