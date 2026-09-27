@@ -1879,3 +1879,14 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Added direct Prev Rail / Place Current / Next Rail / Place + Next controls. Candidate 1 is explicitly initialized after load instead of relying only on JTable selection events.
 - CURRENT CANDIDATE displays index/id/type/rotation. Active placed-piece rotation continues to synchronize classifier data, auto-save and special promotion.
 - Resume Here: open Rail Classifier and verify CURRENT CANDIDATE is populated immediately; Place Current must work before touching any other card.
+
+## Multi-object Junction/Splitter prefab integration — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- Scope is a rail-authoring side slice; the canonical Construction main-goal table and active Phase 3 logistics milestone remain unchanged.
+- Preserved existing logical rail topology. Junction/Splitter are still explicit special-node tools; the change replaces the old one-object visual assumption with authored multi-object prefab resolution.
+- Existing authored special fallback: if the canonical JUNCTION/SPLITTER file entry is absent or still a one-object placeholder, RailCompositeLibrary prefers a matching multi-object authored layout (for example junction_LAYOUT_01).
+- Legacy authored layouts receive deterministic anchor/port inference. For the uploaded junction_LAYOUT_01 evidence, static inference selects dX=2,dY=0 and exits N/E/W; visual correctness remains a runtime gate.
+- Newly accepted Workbench specials are normalized explicitly: the ACTIVE PLACED RAIL becomes anchor (0,0), all component offsets are rebased around it, and exact duplicate component rows are removed before saving the canonical special.
+- Junction and Splitter both author one degree-3 logical node and resolve their own prefab. Crossing remains reserved for separate degree-4 semantics.
+- Multi-object special erasing maps any clicked prefab component back to the owning logical node before atomic rail reconciliation.
+- Resume Here: pull once, keep the existing junction_LAYOUT_01 TSV, arm Junction and place all four T orientations. If orientation is wrong, identify which physical component should be the logical anchor; no topology rewrite should be needed.
