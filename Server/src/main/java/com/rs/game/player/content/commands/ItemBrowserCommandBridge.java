@@ -34,6 +34,7 @@ import com.rs.game.player.content.construction.SettlementStateAudit;
 import com.rs.game.player.content.construction.SettlementStateSelfTest;
 import com.rs.game.player.content.construction.SettlementStorageInterface;
 import com.rs.game.player.content.construction.SettlementWorkerArrivalCheck;
+import com.rs.game.player.content.construction.SettlementWorkerBehaviorMode;
 import com.rs.game.player.content.construction.SettlementWorkerJob;
 import com.rs.game.player.content.construction.SettlementWorkerJobsSelfTest;
 import com.rs.game.player.content.construction.SettlementWorkerNeed;
@@ -301,7 +302,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|buildtilesave|resources|storageoverview|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|buildtilesave|storageconfig|resources|storageoverview|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -349,6 +350,34 @@ public final class ItemBrowserCommandBridge {
             } catch (NumberFormatException ex) {
                 player.getPackets().sendGameMessage(
                         "Build-tile coordinates are invalid.");
+            }
+            return true;
+        }
+
+        if ("storageconfig".equals(operation)) {
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before changing storage policy.");
+                return true;
+            }
+            if (cmd.length < 7) {
+                player.getPackets().sendGameMessage(
+                        "Storage policy request is incomplete.");
+                return true;
+            }
+            try {
+                int worldX = Integer.parseInt(cmd[3]);
+                int worldY = Integer.parseInt(cmd[4]);
+                int plane = Integer.parseInt(cmd[5]);
+                String setting = cmd[6];
+                String value = cmd.length >= 8 ? cmd[7] : null;
+                player.getPackets().sendGameMessage(
+                        active.configurePhysicalStorage(
+                                new WorldTile(worldX, worldY, plane),
+                                setting, value));
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage(
+                        "Storage policy coordinates are invalid.");
             }
             return true;
         }
@@ -889,8 +918,67 @@ public final class ItemBrowserCommandBridge {
                                 + " Preset="
                                 + (matchingPreset == null ? "Custom" : matchingPreset.getDisplayName())
                                 + " | Paused=" + (worker.isPaused() ? "YES" : "NO")
+                                + " | Behavior=" + worker.getBehaviorSummary()
                                 + " | Jobs: " + worker.getAllowedJobsSummary());
             }
+            return true;
+        }
+
+        if ("workerselectionbehavior".equals(operation)) {
+            if (cmd.length < 4) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectionbehavior <autonomous|rally|orders>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before changing worker behavior.");
+                return true;
+            }
+            SettlementWorkerBehaviorMode mode =
+                    SettlementWorkerBehaviorMode.forKey(cmd[3]);
+            if (mode == null) {
+                player.getPackets().sendGameMessage(
+                        "Unknown worker behavior mode: " + cmd[3] + ".");
+                return true;
+            }
+            player.getPackets().sendGameMessage(
+                    active.setRuntimeSelectionBehavior(mode));
+            return true;
+        }
+
+        if ("workerselectionrally".equals(operation)) {
+            if (cmd.length < 6) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workerselectionrally <worldX> <worldY> <plane>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before assigning a rally.");
+                return true;
+            }
+            try {
+                int worldX = Integer.parseInt(cmd[3]);
+                int worldY = Integer.parseInt(cmd[4]);
+                int plane = Integer.parseInt(cmd[5]);
+                player.getPackets().sendGameMessage(
+                        active.assignRuntimeSelectionRally(
+                                new WorldTile(worldX, worldY, plane)));
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Rally coordinates are invalid.");
+            }
+            return true;
+        }
+
+        if ("workerselectionrallyclear".equals(operation)) {
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before clearing a rally.");
+                return true;
+            }
+            player.getPackets().sendGameMessage(
+                    active.clearRuntimeSelectionRally());
             return true;
         }
 
@@ -1084,6 +1172,35 @@ public final class ItemBrowserCommandBridge {
                         active.replaceRuntimeNpcAllowedJobs(runtimeNpcIndex, jobs));
             } catch (NumberFormatException ex) {
                 player.getPackets().sendGameMessage("Runtime worker NPC index is invalid.");
+            }
+            return true;
+        }
+
+        if ("workernpcbehavior".equals(operation)) {
+            if (cmd.length < 5) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement workernpcbehavior <runtimeNpcIndex> <autonomous|rally|orders>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before changing worker behavior.");
+                return true;
+            }
+            try {
+                int runtimeNpcIndex = Integer.parseInt(cmd[3]);
+                SettlementWorkerBehaviorMode mode =
+                        SettlementWorkerBehaviorMode.forKey(cmd[4]);
+                if (mode == null) {
+                    player.getPackets().sendGameMessage(
+                            "Unknown worker behavior mode: " + cmd[4] + ".");
+                    return true;
+                }
+                player.getPackets().sendGameMessage(
+                        active.setRuntimeNpcBehavior(runtimeNpcIndex, mode));
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage(
+                        "Runtime worker NPC index is invalid.");
             }
             return true;
         }

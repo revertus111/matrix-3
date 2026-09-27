@@ -769,6 +769,73 @@ public final class SettlementInstance {
         return true;
     }
 
+    public synchronized String configurePhysicalStorage(
+            WorldTile source, String setting, String value) {
+        if (!loaded || source == null || !containsWorldTile(source)) {
+            return "Storage settings target must be inside the active settlement plot.";
+        }
+        SettlementPlacedPiece piece = findSavedPiece(
+                SettlementBuildPiece.BASIC_STORAGE_CHEST.getObjectId(), source);
+        if (piece == null) {
+            return "Storage settings target is not a persistent Wooden chest.";
+        }
+        SettlementStorageContainer container =
+                state.findStorageContainer(piece.getPieceId());
+        if (container == null) {
+            return "That physical storage container is unavailable.";
+        }
+
+        String key = setting == null ? "" : setting.trim().toLowerCase();
+        String normalized = value == null ? "" : value.trim().toLowerCase();
+        if ("status".equals(key)) {
+            return "Storage policy: " + container.getLogisticsPolicySummary();
+        }
+        if ("mode".equals(key)) {
+            SettlementStorageMode mode;
+            try {
+                mode = SettlementStorageMode.valueOf(normalized.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                return "Unknown storage mode: " + value + ".";
+            }
+            container.setMode(mode);
+        } else if ("priority".equals(key)) {
+            if ("up".equals(normalized)) {
+                container.setLogisticsPriority(container.getLogisticsPriority() + 1);
+            } else if ("down".equals(normalized)) {
+                container.setLogisticsPriority(container.getLogisticsPriority() - 1);
+            } else if ("reset".equals(normalized)) {
+                container.setLogisticsPriority(0);
+            } else {
+                return "Storage priority must be up, down, or reset.";
+            }
+        } else if ("deposit".equals(key)) {
+            if (!"on".equals(normalized) && !"off".equals(normalized)) {
+                return "Worker deposit access must be on or off.";
+            }
+            container.setWorkerDepositEnabled("on".equals(normalized));
+        } else if ("withdraw".equals(key)) {
+            if (!"on".equals(normalized) && !"off".equals(normalized)) {
+                return "Worker withdraw access must be on or off.";
+            }
+            container.setWorkerWithdrawEnabled("on".equals(normalized));
+        } else if ("filter".equals(key)) {
+            if ("any".equals(normalized)) {
+                container.clearItemFilters();
+            } else if ("logs".equals(normalized)) {
+                container.clearItemFilters();
+                container.setItemFilter(
+                        SettlementFactoryItem.NORMAL_LOGS.getItemId(), true);
+            } else {
+                return "Storage filter must be any or logs.";
+            }
+        } else {
+            return "Unknown storage policy setting: " + setting + ".";
+        }
+
+        releaseAllPhysicalStorageReservations();
+        return "Storage policy updated: " + container.getLogisticsPolicySummary();
+    }
+
     public boolean handleStarterResourceObjectClick(WorldObject object) {
         if (!loaded || object == null || !containsWorldTile(object)) {
             return false;
@@ -1281,6 +1348,111 @@ public final class SettlementInstance {
                 + " worker(s) -> " + definition.getDisplayName() + ".";
     }
 
+    public synchronized String setRuntimeSelectionBehavior(
+            SettlementWorkerBehaviorMode mode) {
+        if (mode == null) {
+            return "Worker behavior mode is invalid.";
+        }
+        List<SettlementWorkerState> selected = snapshotRuntimeWorkerSelection();
+        if (selected.isEmpty()) {
+            return "No server-owned radial worker selection is active.";
+        }
+        for (SettlementWorkerState worker : selected) {
+            worker.setBehaviorMode(mode);
+        }
+        releaseAllPhysicalStorageReservations();
+        return "Worker behavior set to " + mode.getDisplayName()
+                + " for " + formatWorkerIds(selected) + ".";
+    }
+
+    public synchronized String setRuntimeNpcBehavior(
+            int runtimeNpcIndex, SettlementWorkerBehaviorMode mode) {
+        if (mode == null) {
+            return "Worker behavior mode is invalid.";
+        }
+        for (SettlementWorkerNpc npc : workerNpcs) {
+            if (npc == null || npc.hasFinished() || npc.getIndex() != runtimeNpcIndex) {
+                continue;
+            }
+            SettlementWorkerState worker = state.findWorker(npc.getWorkerId());
+            if (worker == null) {
+                break;
+            }
+            worker.setBehaviorMode(mode);
+            releaseAllPhysicalStorageReservations();
+            return "Worker #" + worker.getWorkerId()
+                    + " behavior=" + mode.getDisplayName() + ".";
+        }
+        return "That runtime NPC is not an active settlement worker.";
+    }
+
+    public synchronized String assignRuntimeSelectionRally(WorldTile destination) {
+        if (!loaded || destroyed || boundChunks == null || destination == null
+                || !containsWorldTile(destination)) {
+            return "Rally target must be inside the active settlement plot.";
+        }
+        List<SettlementWorkerState> selected = snapshotRuntimeWorkerSelection();
+        if (selected.isEmpty()) {
+            return "No server-owned radial worker selection is active.";
+        }
+        SettlementRallyPoint rally = state.findOrCreateRallyPoint(
+                toPlotX(destination.getX()),
+                toPlotY(destination.getY()),
+                destination.getPlane());
+        if (rally == null) {
+            return "Unable to create that rally work zone.";
+        }
+        for (SettlementWorkerState worker : selected) {
+            worker.setRallyPointId(rally.getRallyId());
+            worker.setBehaviorMode(SettlementWorkerBehaviorMode.RALLY_RESTRICTED);
+        }
+        releaseAllPhysicalStorageReservations();
+        return "Assigned " + formatWorkerIds(selected)
+                + " to " + rally.getName()
+                + " radius=" + rally.getRadius() + ".";
+    }
+
+    public synchronized String clearRuntimeSelectionRally() {
+        List<SettlementWorkerState> selected = snapshotRuntimeWorkerSelection();
+        if (selected.isEmpty()) {
+            return "No server-owned radial worker selection is active.";
+        }
+        for (SettlementWorkerState worker : selected) {
+            worker.clearRallyPoint();
+            if (worker.getBehaviorMode()
+                    == SettlementWorkerBehaviorMode.RALLY_RESTRICTED) {
+                worker.setBehaviorMode(SettlementWorkerBehaviorMode.AUTONOMOUS);
+            }
+        }
+        releaseAllPhysicalStorageReservations();
+        return "Cleared rally assignment for " + formatWorkerIds(selected)
+                + "; behavior returned to Autonomous.";
+    }
+
+    public boolean isWorkerNodeAllowedByRally(
+            SettlementWorkerState worker, SettlementResourceNode node) {
+        return node != null && isWorkerPlotAllowedByRally(
+                worker, node.getPlotX(), node.getPlotY(), node.getPlane());
+    }
+
+    private boolean isWorkerPieceAllowedByRally(
+            SettlementWorkerState worker, SettlementPlacedPiece piece) {
+        return piece != null && isWorkerPlotAllowedByRally(
+                worker, piece.getPlotX(), piece.getPlotY(), piece.getPlane());
+    }
+
+    private boolean isWorkerPlotAllowedByRally(
+            SettlementWorkerState worker, int plotX, int plotY, int plane) {
+        if (worker == null
+                || worker.getBehaviorMode()
+                        != SettlementWorkerBehaviorMode.RALLY_RESTRICTED) {
+            return true;
+        }
+        SettlementRallyPoint rally =
+                state.findRallyPoint(worker.getRallyPointId());
+        return rally != null && rally.contains(plotX, plotY, plane);
+    }
+
     public synchronized String replaceRuntimeSelectionAllowedJobs(
             java.util.Set<SettlementWorkerJob> jobs) {
         if (jobs == null) {
@@ -1438,6 +1610,12 @@ public final class SettlementInstance {
             if (!isWorkstationForRecipe(definition, recipe)) {
                 continue;
             }
+            if (preferredPieceId <= 0L) {
+                SettlementWorkerState policyWorker = state.findWorker(workerId);
+                if (!isWorkerPieceAllowedByRally(policyWorker, piece)) {
+                    continue;
+                }
+            }
             Long owner = processingWorkstationReservations.get(
                     Long.valueOf(piece.getPieceId()));
             if (owner != null && owner.longValue() != workerId) {
@@ -1552,11 +1730,18 @@ public final class SettlementInstance {
 
     public synchronized boolean reserveWorkerStorage(
             long workerId, SettlementResource resource, long amount) {
+        return reserveWorkerStorage(workerId, resource, amount, false);
+    }
+
+    public synchronized boolean reserveWorkerStorage(
+            long workerId, SettlementResource resource, long amount,
+            boolean ignoreRally) {
         if (!loaded || destroyed || resource == null || amount <= 0L) {
             return false;
         }
         if (usesPhysicalWorkerStorage(resource)) {
-            return reserveBestPhysicalWorkerStorage(workerId, resource, amount);
+            return reserveBestPhysicalWorkerStorage(
+                    workerId, resource, amount, ignoreRally);
         }
         return workerStorageReservations.reserve(
                 workerId, resource, amount, state.getStorageRemaining(resource));
@@ -1582,13 +1767,20 @@ public final class SettlementInstance {
 
     public synchronized long depositWorkerResource(
             long workerId, SettlementResource resource, long amount) {
+        return depositWorkerResource(workerId, resource, amount, false);
+    }
+
+    public synchronized long depositWorkerResource(
+            long workerId, SettlementResource resource, long amount,
+            boolean ignoreRally) {
         if (!loaded || destroyed || resource == null || amount <= 0L) {
             return 0L;
         }
 
         SettlementFactoryItem mapping = SettlementFactoryItem.forResource(resource);
         if (mapping != null) {
-            if (!reserveBestPhysicalWorkerStorage(workerId, resource, amount)) {
+            if (!reserveBestPhysicalWorkerStorage(
+                    workerId, resource, amount, ignoreRally)) {
                 return 0L;
             }
             WorkerPhysicalStorageReservation reservation =
@@ -1626,8 +1818,11 @@ public final class SettlementInstance {
         }
         long total = 0L;
         int itemId = mapping.getItemId();
+        SettlementWorkerState policyWorker =
+                workerId > 0L ? state.findWorker(workerId) : null;
         for (SettlementPlacedPiece piece : state.snapshotPieces()) {
-            if (!isPhysicalStoragePiece(piece) || getPhysicalStorageObject(piece.getPieceId()) == null) {
+            if (!isPhysicalStoragePiece(piece) || getPhysicalStorageObject(piece.getPieceId()) == null
+                    || workerId > 0L && !isWorkerPieceAllowedByRally(policyWorker, piece)) {
                 continue;
             }
             SettlementStorageContainer container =
@@ -1650,19 +1845,24 @@ public final class SettlementInstance {
     }
 
     private boolean reserveBestPhysicalWorkerStorage(
-            long workerId, SettlementResource resource, long amount) {
+            long workerId, SettlementResource resource, long amount,
+            boolean ignoreRally) {
         SettlementFactoryItem mapping = SettlementFactoryItem.forResource(resource);
         if (mapping == null || workerId <= 0L || amount <= 0L) {
             return false;
         }
         int itemId = mapping.getItemId();
 
+        SettlementWorkerState policyWorker = state.findWorker(workerId);
         WorkerPhysicalStorageReservation existing =
                 physicalWorkerStorageReservations.get(workerId);
         if (existing != null && existing.itemId == itemId) {
             SettlementStorageContainer existingContainer =
                     state.findStorageContainer(existing.pieceId);
+            SettlementPlacedPiece existingPiece =
+                    findPieceById(existing.pieceId);
             if (existingContainer != null
+                    && (ignoreRally || isWorkerPieceAllowedByRally(policyWorker, existingPiece))
                     && existingContainer.isWorkerDepositEnabled()
                     && existingContainer.acceptsItem(itemId)
                     && getPhysicalStorageObject(existing.pieceId) != null) {
@@ -1686,7 +1886,8 @@ public final class SettlementInstance {
         long bestScore = Long.MIN_VALUE;
 
         for (SettlementPlacedPiece piece : state.snapshotPieces()) {
-            if (!isPhysicalStoragePiece(piece)) {
+            if (!isPhysicalStoragePiece(piece)
+                    || !ignoreRally && !isWorkerPieceAllowedByRally(policyWorker, piece)) {
                 continue;
             }
             WorldObject live = getPhysicalStorageObject(piece.getPieceId());
@@ -1729,6 +1930,19 @@ public final class SettlementInstance {
         physicalWorkerStorageReservations.reserve(
                 workerId, bestPiece.getPieceId(), itemId, amount);
         return true;
+    }
+
+    private SettlementPlacedPiece findPieceById(long pieceId) {
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (piece != null && piece.getPieceId() == pieceId) {
+                return piece;
+            }
+        }
+        return null;
+    }
+
+    private void releaseAllPhysicalStorageReservations() {
+        physicalWorkerStorageReservations.clear();
     }
 
     private boolean isPhysicalStoragePiece(SettlementPlacedPiece piece) {

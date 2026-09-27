@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 11;
+    private static final int CURRENT_SCHEMA_VERSION = 12;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -45,6 +45,9 @@ public final class SettlementState implements Serializable {
     private Map<Long, SettlementStorageContainer> storageContainers =
             new HashMap<Long, SettlementStorageContainer>();
     private Set<String> savedBuildTiles = new HashSet<String>();
+    private Map<Long, SettlementRallyPoint> rallyPoints =
+            new HashMap<Long, SettlementRallyPoint>();
+    private long nextRallyPointId = 1L;
     private Map<String, Long> resources = new HashMap<String, Long>();
     /**
      * Legacy serialized shared-cap field. Kept so existing player saves remain
@@ -102,6 +105,33 @@ public final class SettlementState implements Serializable {
                 storageIterator.remove();
             }
         }
+
+        if (rallyPoints == null) {
+            rallyPoints = new HashMap<Long, SettlementRallyPoint>();
+        }
+        long highestRallyId = 0L;
+        Iterator<Map.Entry<Long, SettlementRallyPoint>> rallyIterator =
+                rallyPoints.entrySet().iterator();
+        while (rallyIterator.hasNext()) {
+            Map.Entry<Long, SettlementRallyPoint> entry = rallyIterator.next();
+            SettlementRallyPoint rally = entry.getValue();
+            if (entry.getKey() == null || rally == null
+                    || entry.getKey().longValue() != rally.getRallyId()
+                    || !rally.normalize()) {
+                rallyIterator.remove();
+                continue;
+            }
+            if (rally.getRallyId() > highestRallyId) {
+                highestRallyId = rally.getRallyId();
+            }
+        }
+        if (nextRallyPointId <= highestRallyId) {
+            nextRallyPointId = highestRallyId + 1L;
+        }
+        if (nextRallyPointId <= 0L) {
+            nextRallyPointId = 1L;
+        }
+
         if (resources == null) {
             resources = new HashMap<String, Long>();
         }
@@ -140,6 +170,10 @@ public final class SettlementState implements Serializable {
                 continue;
             }
             worker.normalize(definition);
+            if (worker.getRallyPointId() > 0L
+                    && !rallyPoints.containsKey(Long.valueOf(worker.getRallyPointId()))) {
+                worker.clearRallyPoint();
+            }
             if (worker.getWorkerId() > highestWorkerId) {
                 highestWorkerId = worker.getWorkerId();
             }
@@ -210,6 +244,37 @@ public final class SettlementState implements Serializable {
     public synchronized int getSavedBuildTileCount() {
         normalize();
         return savedBuildTiles.size();
+    }
+
+    public synchronized SettlementRallyPoint findOrCreateRallyPoint(
+            int plotX, int plotY, int plane) {
+        normalize();
+        if (!isValidPlotLocation(plotX, plotY, plane)) {
+            return null;
+        }
+        for (SettlementRallyPoint rally : rallyPoints.values()) {
+            if (rally != null && rally.getPlotX() == plotX
+                    && rally.getPlotY() == plotY && rally.getPlane() == plane) {
+                return rally;
+            }
+        }
+        long rallyId = nextRallyPointId++;
+        SettlementRallyPoint rally = new SettlementRallyPoint(
+                rallyId, "Rally #" + rallyId,
+                plotX, plotY, plane, SettlementRallyPoint.DEFAULT_RADIUS);
+        rallyPoints.put(Long.valueOf(rallyId), rally);
+        return rally;
+    }
+
+    public synchronized SettlementRallyPoint findRallyPoint(long rallyId) {
+        normalize();
+        return rallyId > 0L
+                ? rallyPoints.get(Long.valueOf(rallyId)) : null;
+    }
+
+    public synchronized List<SettlementRallyPoint> snapshotRallyPoints() {
+        normalize();
+        return new ArrayList<SettlementRallyPoint>(rallyPoints.values());
     }
 
     public synchronized SettlementPlacedPiece place(SettlementBuildPiece definition,

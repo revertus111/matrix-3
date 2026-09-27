@@ -99,7 +99,7 @@ public final class ConstructionWorkerJobsOverlay {
         }
 
         int width = Math.min(340, Math.max(280, canvas.getWidth() - 24));
-        int height = Math.min(382, Math.max(300, canvas.getHeight() - 24));
+        int height = Math.min(430, Math.max(340, canvas.getHeight() - 24));
         int x = canvasLocation.x + Math.max(12, canvas.getWidth() - width - 18);
         int y = canvasLocation.y + Math.min(80, Math.max(12, canvas.getHeight() - height));
         window.setBounds(x, y, width, height);
@@ -149,6 +149,31 @@ public final class ConstructionWorkerJobsOverlay {
         root.add(checks);
         root.add(Box.createVerticalStrut(10));
 
+        JLabel behaviorHint = new JLabel("Behavior policy");
+        behaviorHint.setForeground(MUTED);
+        behaviorHint.setAlignmentX(JLabel.LEFT_ALIGNMENT);
+        root.add(behaviorHint);
+        root.add(Box.createVerticalStrut(4));
+
+        JButton autonomous = button("Auto");
+        JButton rally = button("Rally");
+        JButton orders = button("Orders");
+        autonomous.setToolTipText("Think independently across the settlement.");
+        rally.setToolTipText("Think independently inside the assigned rally work zone.");
+        orders.setToolTipText("Wait for explicit RTS orders after needs/current payload are handled.");
+        autonomous.addActionListener(e -> applyBehavior("autonomous"));
+        rally.addActionListener(e -> applyBehavior("rally"));
+        orders.addActionListener(e -> applyBehavior("orders"));
+        JPanel behaviorRow = new JPanel(new GridLayout(1, 3, 5, 0));
+        behaviorRow.setOpaque(false);
+        behaviorRow.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+        behaviorRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        behaviorRow.add(autonomous);
+        behaviorRow.add(rally);
+        behaviorRow.add(orders);
+        root.add(behaviorRow);
+        root.add(Box.createVerticalStrut(10));
+
         JButton allOn = button("All On");
         JButton allOff = button("All Off");
         allOn.addActionListener(e -> setAll(true));
@@ -196,6 +221,19 @@ public final class ConstructionWorkerJobsOverlay {
         for (JCheckBox check : jobChecks) {
             check.setSelected(selected);
         }
+    }
+
+    private static void applyBehavior(String behavior) {
+        String command = selectionScope
+                ? "itembrowser settlement workerselectionbehavior " + behavior
+                : "itembrowser settlement workernpcbehavior "
+                        + targetNpcIndex + " " + behavior;
+        String error = ClientConsoleBridge.queueConsoleCommand(command);
+        statusLabel.setText(error == null
+                ? ("rally".equals(behavior)
+                        ? "Rally mode set. Right-click ground -> Assign Rally Here."
+                        : "Behavior set to " + behavior + ".")
+                : error);
     }
 
     private static void applyJobs() {

@@ -38,6 +38,9 @@ public final class SettlementWorkerState implements Serializable {
     private int homePlane;
     private Set<String> allowedJobs = new HashSet<String>();
     private boolean paused;
+    private SettlementWorkerBehaviorMode behaviorMode =
+            SettlementWorkerBehaviorMode.AUTONOMOUS;
+    private long rallyPointId = -1L;
 
     // Hunger/thirst are pressure values: 0 = satisfied, 100 = critical.
     // Energy is reserve: 100 = rested, 0 = exhausted.
@@ -111,6 +114,34 @@ public final class SettlementWorkerState implements Serializable {
 
     public void setPaused(boolean paused) {
         this.paused = paused;
+    }
+
+    public SettlementWorkerBehaviorMode getBehaviorMode() {
+        normalizePolicy();
+        return behaviorMode;
+    }
+
+    public void setBehaviorMode(SettlementWorkerBehaviorMode mode) {
+        behaviorMode = mode == null
+                ? SettlementWorkerBehaviorMode.AUTONOMOUS : mode;
+    }
+
+    public long getRallyPointId() {
+        return rallyPointId;
+    }
+
+    public void setRallyPointId(long rallyPointId) {
+        this.rallyPointId = rallyPointId > 0L ? rallyPointId : -1L;
+    }
+
+    public void clearRallyPoint() {
+        rallyPointId = -1L;
+    }
+
+    public String getBehaviorSummary() {
+        normalizePolicy();
+        return behaviorMode.getDisplayName()
+                + (rallyPointId > 0L ? " | Rally #" + rallyPointId : " | No rally");
     }
 
     public String getAllowedJobsSummary() {
@@ -268,6 +299,7 @@ public final class SettlementWorkerState implements Serializable {
         normalizeJobs();
         normalizeNeeds();
         normalizeSkills();
+        normalizePolicy();
     }
 
     private void normalizeJobs() {
@@ -292,6 +324,15 @@ public final class SettlementWorkerState implements Serializable {
         hunger = clamp(hunger);
         thirst = clamp(thirst);
         energy = clamp(energy);
+    }
+
+    private void normalizePolicy() {
+        if (behaviorMode == null) {
+            behaviorMode = SettlementWorkerBehaviorMode.AUTONOMOUS;
+        }
+        if (rallyPointId <= 0L) {
+            rallyPointId = -1L;
+        }
     }
 
     private void normalizeSkills() {

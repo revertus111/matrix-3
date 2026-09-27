@@ -115,6 +115,29 @@ public final class SettlementStorageContainer implements Serializable {
         return new HashSet<Integer>(itemFilters);
     }
 
+    public synchronized void clearItemFilters() {
+        normalize();
+        itemFilters.clear();
+    }
+
+    public synchronized String getLogisticsPolicySummary() {
+        normalize();
+        String filter;
+        if (itemFilters.isEmpty()) {
+            filter = "ANY";
+        } else {
+            java.util.List<Integer> sorted =
+                    new java.util.ArrayList<Integer>(itemFilters);
+            java.util.Collections.sort(sorted);
+            filter = sorted.toString();
+        }
+        return "mode=" + mode.name()
+                + ", priority=" + logisticsPriority
+                + ", workerDeposit=" + (isWorkerDepositEnabled() ? "ON" : "OFF")
+                + ", workerWithdraw=" + (isWorkerWithdrawEnabled() ? "ON" : "OFF")
+                + ", filter=" + filter;
+    }
+
     public synchronized boolean isWorkerDepositEnabled() {
         normalize();
         return workerDepositEnabled.booleanValue();

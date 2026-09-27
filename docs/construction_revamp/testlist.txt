@@ -1340,3 +1340,20 @@ Placeable Splitter V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
 Placeable Splitter V1 legacy Junction regression
 - With the existing legacy junction_LAYOUT_01 containing the duplicate 46360/R0/dX5/dY0 row, Junction must still arm; exact duplicate legacy rows are tolerated/collapsed.
 - A prefab containing two DIFFERENT type-22 IDs at the exact same authored dX/dY must still be rejected for runtime publish/arming because Matrix3 owns one type-22 scene slot per tile.
+
+
+Worker Logistics Policy + Rally V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Right-click a persistent Wooden chest. Confirm both View Storage and Storage Settings appear once.
+- Open Storage Settings. Set the nearer chest to Logs Only + worker Deposit ON; leave a farther chest Allow Any. With equal mode/priority, a Wood worker must still choose the nearer valid chest.
+- Set the nearer chest Deposit OFF or make it reject Logs. The worker must reroute to the farther valid chest without returning to the old invisible spawn storage.
+- Re-enable the nearer chest, then raise the farther chest priority or set it to Request. The worker must select the farther policy-preferred destination when its score outweighs distance.
+- Reopen/exit-reenter the settlement and request Storage Settings -> Status; mode/priority/access/filter policy must persist.
+- Worker -> Jobs -> Orders: after any already-held payload is safely handled, the worker must stop starting autonomous gathering/processing. A direct RTS move/gather/process order must still execute.
+- Worker -> Jobs -> Auto: autonomous Allowed Jobs behavior must resume.
+- Select one or more workers, right-click ground -> Assign Rally Here. The server must create/reuse a persistent rally and switch those workers to Rally Restricted.
+- Put one valid Wood node/chest inside the default 8-tile rally circle and another outside. Rally Restricted workers must choose only in-zone autonomous node/storage candidates.
+- While Rally Restricted, issue an explicit RTS move/gather order outside the zone. The direct order must execute; autonomous work afterward must return to rally policy.
+- Right-click ground -> Clear Rally. Selected Rally-restricted workers must return to Autonomous and may again choose valid work across the settlement.
+- Exit/re-enter and logout/relog with a rally assigned. Worker behavior mode + rally assignment + rally coordinates must persist.
+- Regression: critical hunger/thirst/energy handling may leave normal rally work policy as needed; worker home remains the rest/needs owner.
+- Regression: Food/Stone/Ore and current sawmill processing remain explicit legacy compatibility paths in this bundle.

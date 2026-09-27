@@ -1715,3 +1715,13 @@
 2026-09-27 - Placeable Splitter V1 legacy-special compatibility
 - Runtime scene-slot validation now ignores exact duplicate legacy prefab rows already collapsed by physical resolution, so the existing junction_LAYOUT_01 duplicate 46360 row does not disable Junction.
 - Different rail components competing for the same tile + object-type scene slot remain blocked.
+
+
+2026-09-27 - Worker Logistics policy controls + Rally/Behavior V1
+- Added Wooden chest right-click Storage Settings with persistent mode, priority, worker deposit/withdraw and Any/Logs-only filter controls.
+- Storage policy changes invalidate transient physical-storage reservations so active workers rescore destinations immediately.
+- Added persistent worker behavior modes: Autonomous, Rally Restricted and Direct Orders Only; Worker -> Jobs can apply them to one worker or the committed selection.
+- Added persistent plot-relative virtual Rally points. Selected workers can right-click ground -> Assign Rally Here or Clear Rally; V1 uses an 8-tile circular work zone.
+- Rally Restricted now constrains autonomous resource-node, workstation and physical-chest candidates to the rally zone while critical needs and explicit RTS orders keep higher authority.
+- Direct Orders Only stops new autonomous gather/process selection while preserving needs, explicit orders and safe carried-payload completion.
+- Rally visualization/rename/radius editing and richer item filters remain follow-up polish; sawmill I/O migration remains next.

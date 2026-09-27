@@ -1742,7 +1742,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 
 ## Phase 3 / Bundle 3.5 — Worker Logistics AI + Rally / Work-Zone Control — 2026-09-27
-- Status: ACTIVE — Worker Logistics AI V1 IMPLEMENTED / NEEDS RUNTIME TEST; rally/work-zone control and player-facing filter/priority configuration remain READY.
+- Status: ACTIVE — Worker Logistics AI V1 + player-facing storage policy + Rally/Behavior V1 IMPLEMENTED / NEEDS RUNTIME TEST; machine-local I/O remains the next migration boundary.
 - Goal: replace hardcoded worker storage behavior with one reusable logistics decision system that supports both autonomous workers and player-directed RTS control.
 - Design principle: workers may think for themselves by default, but player orders/rally zones always provide a higher-authority steering layer. The system must support both Factorio-style automation and RTS-style micromanagement without duplicating worker code.
 
@@ -1868,9 +1868,29 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Existing chest filter, mode, worker-deposit permission and logistics-priority fields are now consumed by the selector; player-facing configuration UI remains a follow-up.
 - Worker needs still use worker home. Sawmill processing still uses legacy processing storage until machine I/O migration.
 
+### Implementation checkpoint — Player Logistics Policy + Rally V1
+- Physical Wooden chest right-click now exposes `Storage Settings` beside `View Storage`.
+- Storage Settings is a compact player-facing action panel. Server state remains authoritative; controls apply persistent:
+  - STORAGE / SUPPLY / REQUEST / BUFFER mode;
+  - logistics priority up/down/reset;
+  - worker deposit ON/OFF;
+  - worker withdraw ON/OFF;
+  - item filter ANY or Logs Only for the currently migrated Log chain.
+- Existing Worker Logistics AI immediately consumes those policies. Changing chest policy clears transient physical-storage reservations so workers rescore instead of finishing against stale routing.
+- Persistent worker behavior mode now owns `AUTONOMOUS / RALLY_RESTRICTED / DIRECT_ORDERS_ONLY`.
+- Worker -> Jobs exposes Auto / Rally / Orders behavior controls for one worker or the committed multi-worker selection.
+- Rally V1 is server-persistent and plot-relative. Right-click ground with workers selected -> `Assign Rally Here` creates/reuses a virtual Rally point and assigns the selected workers with an 8-tile circular work-zone radius. `Clear Rally` removes the assignment and returns Rally-restricted workers to Autonomous.
+- RALLY_RESTRICTED autonomous resource-node, workstation and physical-chest choices are constrained to the assigned rally circle.
+- Critical needs remain allowed to override normal rally work-zone behavior.
+- Explicit RTS orders remain higher authority than rally policy: direct move/gather/process orders may leave the zone and manual gathered payload may use a valid physical chest outside the zone.
+- DIRECT_ORDERS_ONLY does not start new autonomous gather/process work; needs, explicit orders and safe completion/hauling of an already-held payload remain active.
+- Rally marker visualization, rename, radius resize/recolor and richer item/category filter editing remain follow-up polish; the persistent routing owner is now in place.
+- Food/Stone/Basic Ore and sawmill machine input/output remain legacy compatibility paths and are intentionally not migrated by this bundle.
+
 ### Resume Here
-- Pending runtime gate: `View Storage` must appear on the chest; with two equal default chests, a Wood worker should choose the nearer valid chest and deposit a real Log item into it.
-- After that passes: expose chest filter/priority/mode controls, then add persistent worker behavior mode + rally/work-zone creation/assignment before moving the sawmill to physical input/output buffers.
+- Pending combined runtime gate: prove `View Storage` + `Storage Settings`, nearest/priority/filter chest rerouting, Auto/Orders behavior, and Rally assignment/restriction in one session.
+- Do not reopen already accepted Saved Tiles or bank-shell mechanics unless a regression appears.
+- After policy/rally acceptance, continue directly to machine-local input/output buffers and migrate Wood/Log -> Sawmill -> Plank to the same physical logistics contract.
 
 ## Rail Classifier self-contained workflow correction — 2026-09-27
 - IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.

@@ -159,6 +159,36 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
 
+        if (processingRecipe != null && processingManual) {
+            processProcessingWork();
+            return;
+        }
+
+        if (workerState.getBehaviorMode()
+                == SettlementWorkerBehaviorMode.DIRECT_ORDERS_ONLY) {
+            if (processingRecipe != null && !processingManual) {
+                clearProcessingWork();
+            }
+            if (targetNode != null && !manualGatherActive) {
+                clearTarget();
+            }
+            idle("Direct Orders Only; waiting for an RTS order.");
+            return;
+        }
+
+        if (workerState.getBehaviorMode()
+                == SettlementWorkerBehaviorMode.RALLY_RESTRICTED
+                && workerState.getRallyPointId() <= 0L) {
+            if (processingRecipe != null && !processingManual) {
+                clearProcessingWork();
+            }
+            if (targetNode != null && !manualGatherActive) {
+                clearTarget();
+            }
+            idle("Rally Restricted; assign a rally point.");
+            return;
+        }
+
         if (processingRecipe != null) {
             processProcessingWork();
             return;
@@ -176,6 +206,7 @@ public final class SettlementWorkerNpc extends NPC {
         if (targetNode != null) {
             SettlementWorkerJob job = findGatherJob(targetNode.getResource());
             if (job == null || !workerState.isJobAllowed(job)
+                    || !settlement.isWorkerNodeAllowedByRally(workerState, targetNode)
                     || !settlement.isStarterResourceNodeAvailable(targetNode)
                     || !settlement.hasWorkerStorageSpace(workerId, targetNode.getResource())) {
                 clearTarget();
@@ -190,7 +221,7 @@ public final class SettlementWorkerNpc extends NPC {
                                 ? "No allowed resource node is currently available."
                                 : "Allowed resource storage is full.")
                         : processWoodAllowed
-                                ? "Process Wood waiting for 2 Wood, Plank storage, or an available workbench."
+                                ? "Process Wood waiting for recipe input/output or an available workbench."
                                 : "No allowed gathering job.");
                 return;
             }
@@ -270,7 +301,8 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
         if (!settlement.reserveWorkerStorage(
-                workerId, carriedResource, Math.max(1, carriedAmount))) {
+                workerId, carriedResource, Math.max(1, carriedAmount),
+                manualHaulActive)) {
             resetWalkSteps();
             workState = WorkState.IDLE;
             statusDetail = carriedResource.getDisplayName()
@@ -298,7 +330,7 @@ public final class SettlementWorkerNpc extends NPC {
 
         workState = WorkState.HAULING;
         long added = settlement.depositWorkerResource(
-                workerId, carriedResource, carriedAmount);
+                workerId, carriedResource, carriedAmount, manualHaulActive);
         if (added <= 0L) {
             resetWalkSteps();
             idle("Storage unavailable; holding " + carriedResource.getDisplayName() + ".");
@@ -553,7 +585,8 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
         SettlementResource resource = targetNode.getResource();
-        if (!settlement.reserveWorkerStorage(workerId, resource, CARRY_CAPACITY)) {
+        if (!settlement.reserveWorkerStorage(
+                workerId, resource, CARRY_CAPACITY, manualGatherActive)) {
             clearTarget();
             idle(resource.getDisplayName() + " storage is full or reserved.");
             return;
@@ -703,6 +736,7 @@ public final class SettlementWorkerNpc extends NPC {
             SettlementResourceNode node = nodes[index];
             SettlementWorkerJob job = findGatherJob(node.getResource());
             if (job != null && workerState.isJobAllowed(job)
+                    && settlement.isWorkerNodeAllowedByRally(workerState, node)
                     && settlement.hasWorkerStorageSpace(workerId, node.getResource())
                     && settlement.isStarterResourceNodeAvailable(node)) {
                 return node;

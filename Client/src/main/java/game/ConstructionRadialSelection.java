@@ -74,6 +74,9 @@ public final class ConstructionRadialSelection {
     private static final int WORKER_JOBS_MENU_ACTION = 1531;
     private static final int SAVE_BUILD_TILE_MENU_ACTION = 1532;
     private static final int UNSAVE_BUILD_TILE_MENU_ACTION = 1533;
+    private static final int STORAGE_SETTINGS_MENU_ACTION = 1534;
+    private static final int ASSIGN_RALLY_MENU_ACTION = 1535;
+    private static final int CLEAR_RALLY_MENU_ACTION = 1536;
     private static final int MATRIX3_FIRST_OBJECT_ACTION = 3;
     private static final int MATRIX3_FIRST_NPC_ACTION = 9;
     private static final int STARTER_TREE_OBJECT_ID = 1276;
@@ -373,6 +376,9 @@ public final class ConstructionRadialSelection {
         if (ConstructionWorkerJobsOverlay.isVisible()) {
             return "Worker Jobs";
         }
+        if (ConstructionStorageSettingsOverlay.isVisible()) {
+            return "Storage Settings";
+        }
         return null;
     }
 
@@ -485,20 +491,29 @@ public final class ConstructionRadialSelection {
             return;
         }
         int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
-        if (!isObjectMenuSourceAction(normalizedAction)
-                || hasMenuText("View Storage")) {
+        if (!isObjectMenuSourceAction(normalizedAction)) {
             return;
         }
         int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
         if (objectId != BASIC_STORAGE_CHEST_OBJECT_ID) {
             return;
         }
-        Class572_Sub12_Sub10 entry = new Class572_Sub12_Sub10(
-                "View Storage", targetName == null ? "" : targetName,
-                -646491435 * client.anInt8751,
-                MATRIX3_FIRST_OBJECT_ACTION, -1, targetUid, localX, localY,
-                true, false, 0L, true);
-        Class412.method5075(entry, 722976984);
+        if (!hasMenuText("View Storage")) {
+            Class572_Sub12_Sub10 view = new Class572_Sub12_Sub10(
+                    "View Storage", targetName == null ? "" : targetName,
+                    -646491435 * client.anInt8751,
+                    MATRIX3_FIRST_OBJECT_ACTION, -1, targetUid, localX, localY,
+                    true, false, 0L, true);
+            Class412.method5075(view, 722976984);
+        }
+        if (!hasMenuAction(STORAGE_SETTINGS_MENU_ACTION)) {
+            Class572_Sub12_Sub10 settings = new Class572_Sub12_Sub10(
+                    "Storage Settings", targetName == null ? "" : targetName,
+                    -646491435 * client.anInt8751,
+                    STORAGE_SETTINGS_MENU_ACTION, -1, targetUid, localX, localY,
+                    true, false, 0L, true);
+            Class412.method5075(settings, 722976984);
+        }
     }
 
     /**
@@ -529,6 +544,31 @@ public final class ConstructionRadialSelection {
                     UNSAVE_BUILD_TILE_MENU_ACTION, -1, 0L, localX, localY,
                     true, false, 0L, true);
             Class412.method5075(unsave, 722976984);
+        }
+    }
+
+    static void mirrorRallyEntries(int sourceAction, int localX, int localY) {
+        if (!isRtsWorldInputAvailable() || committedWorkerNpcIndexes.length <= 0
+                || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
+            return;
+        }
+        int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
+        if (normalizedAction != MATRIX3_TILE_ACTION) {
+            return;
+        }
+        if (!hasMenuAction(ASSIGN_RALLY_MENU_ACTION)) {
+            Class572_Sub12_Sub10 assign = new Class572_Sub12_Sub10(
+                    "Assign Rally Here", "", -646491435 * client.anInt8751,
+                    ASSIGN_RALLY_MENU_ACTION, -1, 0L, localX, localY,
+                    true, false, 0L, true);
+            Class412.method5075(assign, 722976984);
+        }
+        if (!hasMenuAction(CLEAR_RALLY_MENU_ACTION)) {
+            Class572_Sub12_Sub10 clear = new Class572_Sub12_Sub10(
+                    "Clear Rally", "", -646491435 * client.anInt8751,
+                    CLEAR_RALLY_MENU_ACTION, -1, 0L, localX, localY,
+                    true, false, 0L, true);
+            Class412.method5075(clear, 722976984);
         }
     }
 
@@ -1830,6 +1870,29 @@ public final class ConstructionRadialSelection {
      */
     static boolean handleMenuAction(int action, int localX, int localY, long targetUid) {
         int normalizedAction = action >= 2000 ? action - 2000 : action;
+        if (normalizedAction == STORAGE_SETTINGS_MENU_ACTION) {
+            WorldPoint point = resolveWorldPoint(localX, localY);
+            if (point != null) {
+                ConstructionStorageSettingsOverlay.showForChest(
+                        point.worldX, point.worldY, point.plane);
+                lastEventState = "Storage Settings opened.";
+            }
+            return true;
+        }
+        if (normalizedAction == ASSIGN_RALLY_MENU_ACTION) {
+            WorldPoint point = resolveWorldPoint(localX, localY);
+            if (point != null) {
+                queueSelectionOrder("workerselectionrally "
+                        + point.worldX + " " + point.worldY + " " + point.plane);
+                lastEventState = "Rally assignment queued for committed workers.";
+            }
+            return true;
+        }
+        if (normalizedAction == CLEAR_RALLY_MENU_ACTION) {
+            queueSelectionOrder("workerselectionrallyclear");
+            lastEventState = "Rally clear queued for committed workers.";
+            return true;
+        }
         if (normalizedAction == WORKER_JOBS_MENU_ACTION) {
             if (!isRtsWorldInputAvailable()) {
                 return true;
