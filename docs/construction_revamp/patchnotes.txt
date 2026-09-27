@@ -1735,3 +1735,8 @@
 2026-09-27 - Rally resource-node compile fix
 - Fixed SettlementInstance rally filtering calling nonexistent SettlementResourceNode.getPlane().
 - Resource nodes now use SettlementState.PLOT_PLANE, matching SettlementResourceNode.occupies(...) fixed-plane ownership.
+
+2026-09-27 - Rail Studio candidate-preview visibility correction
+- Fixed solo candidate preview placement: Rail Studio no longer hardcodes the candidate at -4 X tiles from the player anchor, which could put it behind the left HUD/off the narrow viewport.
+- Candidate preview now renders one tile north/east of the live player anchor and shows its preview ID/world coordinates/status directly under the candidate row.
+- Assembly preview ownership/placement is unchanged.
