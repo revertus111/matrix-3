@@ -2025,3 +2025,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - No server occupancy relaxation was added; normal Construction and rail persistence safety remain intact.
 - Limitation/CARRYOVER: RailRoutePreview logical topology is still client-session state and is not reconstructed from persisted rail pieces after client restart/settlement re-entry. Placeable Splitter V1 therefore guarantees empty/upgrade/connect behavior only inside the current logical Rail Network session.
 - Resume Here: when runtime time is available, first accept the compact Rail Studio UI, then publish a runtime-safe splitter prefab and test empty placement + straight upgrade + allowed-port connections in one client/server session. After that, design persistent logical special-node reconstruction rather than inferring behavior from physical art.
+
+## Rail Assembly Studio UX V1.1 — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under AAA.
+- Runtime evidence clarified two UX issues: browsing candidates could not visually inspect a rail until it was added, and wide controls made Add Here + Next appear like a plain Next action at the narrow Client Console width.
+- Candidate browser now owns a separate ObjectLabPreview solo preview. Selection/Prev/Next updates that preview immediately; assembly rendering remains independently owned by ObjectCompositePreview.
+- Rail Studio is now width-constrained: outer horizontal scrolling disabled, normal controls use 2-column rows, R0-R3 is the only 4-column row, and local font/padding density is reduced again without changing ConsoleTheme globally.
+- Add semantics are explicit: Add Here places at the current assembly anchor for intentional overlap; Add Here + Next does the same then advances the candidate browser.
+- Resume Here: runtime-check solo candidate browsing and narrow-width readability. Then continue the existing Rail Studio/Placeable Splitter combined acceptance session when user time permits.
