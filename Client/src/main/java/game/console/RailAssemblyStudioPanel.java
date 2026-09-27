@@ -79,6 +79,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private final JList<String> candidateList = new JList<String>(candidateModel);
     private final JTextField candidateSearch = new JTextField();
     private final JLabel candidateLabel = valueLabel("Candidate: none");
+    private final JLabel candidatePreviewLabel = valueLabel("Preview: idle");
 
     private final List<Part> parts = new ArrayList<Part>();
     private final DefaultListModel<String> assemblyModel = new DefaultListModel<String>();
@@ -206,7 +207,11 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         candidateLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(candidateLabel);
-        card.add(Box.createVerticalStrut(6));
+        card.add(Box.createVerticalStrut(2));
+        candidatePreviewLabel.setAlignmentX(LEFT_ALIGNMENT);
+        candidatePreviewLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        card.add(candidatePreviewLabel);
+        card.add(Box.createVerticalStrut(4));
 
         JPanel actions = new JPanel(new GridLayout(2, 2, 4, 4));
         actions.setOpaque(false);
@@ -510,6 +515,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         int index = candidateList.getSelectedIndex();
         if (index < 0 || index >= filteredCandidateIds.size()) {
             candidateLabel.setText("Candidate: none");
+            candidatePreviewLabel.setText("Preview: idle");
             ObjectLabPreview.hide();
             return;
         }
@@ -528,11 +534,19 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
             return;
         }
         int id = filteredCandidateIds.get(index).intValue();
+        /*
+         * Keep solo browsing close to the player. The old -4 X offset was easy
+         * to push behind the left-side HUD/off the narrow viewport even though
+         * ObjectLabPreview was successfully active.
+         */
         ObjectLabPreview.showPreview(
                 objectName(id), id, 22, 0,
-                previewWorldX, previewWorldY, previewPlane, -4, 0);
+                previewWorldX, previewWorldY, previewPlane, 1, 1);
+        candidatePreviewLabel.setText("Preview: ID " + id
+                + " @ " + (previewWorldX + 1) + "," + (previewWorldY + 1)
+                + " | " + ObjectLabPreview.getStatus());
         setStatus("Candidate preview: ID " + id
-                + " T22 R0. Add Here commits it to the assembly.");
+                + " T22 R0 one tile NE of player. Add Here commits it.");
     }
 
     private void stepCandidate(int delta) {
