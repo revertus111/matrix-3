@@ -85,6 +85,10 @@ public final class ObjectExplorerPanel extends JScrollPane {
     private final JSpinner assemblyRadiusSpinner =
             new JSpinner(new SpinnerNumberModel(8, 1, 12, 1));
 
+    private final int[] railCandidateIds = RailCompositeLibrary.getEvidenceSeedObjectIds();
+    private final JLabel railCandidateLabel = valueLabel("Rail candidate: not loaded");
+    private int railCandidateIndex = -1;
+
     private final JLabel selectedName = valueLabel("No object selected");
     private final JLabel selectedAnimations = valueLabel("Object animation IDs: none");
     private final JLabel status =
@@ -149,6 +153,8 @@ public final class ObjectExplorerPanel extends JScrollPane {
         content.add(createSearchCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createPreviewCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createRailCandidateWorkbenchCard());
         content.add(Box.createVerticalStrut(10));
         content.add(createCompositeCard());
         content.add(Box.createVerticalStrut(10));
@@ -256,6 +262,60 @@ public final class ObjectExplorerPanel extends JScrollPane {
         card.add(ConsoleTheme.createWrappedText(
                 "Double-click a search result to spawn it immediately. Type 10 is a useful generic "
                 + "starting point; rail floor decorations generally use type 22.", 3));
+        return card;
+    }
+
+    private JPanel createRailCandidateWorkbenchCard() {
+        JPanel card = ConsoleTheme.createCard("Rail Candidate Workbench");
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createWrappedText(
+                "Use Object Explorer to physically inspect and arrange rail candidates. "
+                + "Rail Classifier is the labeling/acceptance step after you know what a piece actually is.",
+                4));
+        card.add(Box.createVerticalStrut(7));
+
+        railCandidateLabel.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(railCandidateLabel);
+        card.add(Box.createVerticalStrut(6));
+
+        JPanel browse = new JPanel(new GridLayout(1, 3, 6, 0));
+        browse.setOpaque(false);
+        browse.setAlignmentX(LEFT_ALIGNMENT);
+        browse.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        JButton previous = button("< Prev Rail");
+        JButton spawn = button("Spawn Rail");
+        JButton next = button("Next Rail >");
+        previous.addActionListener(e -> stepRailCandidate(-1, true));
+        spawn.addActionListener(e -> spawnRailCandidate());
+        next.addActionListener(e -> stepRailCandidate(1, true));
+        browse.add(previous);
+        browse.add(spawn);
+        browse.add(next);
+        card.add(browse);
+        card.add(Box.createVerticalStrut(6));
+
+        JPanel place = new JPanel(new GridLayout(1, 3, 6, 0));
+        place.setOpaque(false);
+        place.setAlignmentX(LEFT_ALIGNMENT);
+        place.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        JButton drop = button("Drop Into Layout");
+        JButton dropNext = button("Drop + Next");
+        JButton clear = button("Clear Rail Layout");
+        drop.addActionListener(e -> dropCurrentRailCandidate(false));
+        dropNext.addActionListener(e -> dropCurrentRailCandidate(true));
+        clear.addActionListener(e -> clearComposite());
+        place.add(drop);
+        place.add(dropNext);
+        place.add(clear);
+        card.add(place);
+        card.add(Box.createVerticalStrut(7));
+
+        card.add(ConsoleTheme.createWrappedText(
+                "Dropped candidates become normal Rail Layout Lab pieces. Select one below, then use "
+                + "[ / ] to change active piece, arrow keys to move, R to rotate, Del to remove, "
+                + "Ctrl+D to duplicate. Drop + Next lays candidates into a spaced research grid so "
+                + "you can identify which object is a junction/crossing/splitter without overlap.",
+                6));
         return card;
     }
 
@@ -539,6 +599,87 @@ public final class ObjectExplorerPanel extends JScrollPane {
                 number(rotationSpinner), anchor.getCenterX(), anchor.getCenterY(),
                 anchor.getPlane(), number(offsetXSpinner), number(offsetYSpinner));
         setStatus(ObjectCompositePreview.getStatus());
+    }
+
+    private void stepRailCandidate(int delta, boolean spawn) {
+        if (railCandidateIds.length == 0) {
+            setStatus("No evidence-seeded rail candidates are configured.");
+            return;
+        }
+        if (railCandidateIndex < 0) {
+            railCandidateIndex = delta < 0 ? railCandidateIds.length - 1 : 0;
+        } else {
+            railCandidateIndex = (railCandidateIndex + delta + railCandidateIds.length)
+                    % railCandidateIds.length;
+        }
+        loadRailCandidateAtCurrentIndex(spawn);
+    }
+
+    private void spawnRailCandidate() {
+        if (railCandidateIndex < 0) {
+            railCandidateIndex = 0;
+        }
+        loadRailCandidateAtCurrentIndex(true);
+    }
+
+    private void loadRailCandidateAtCurrentIndex(boolean spawn) {
+        if (railCandidateIds.length == 0) {
+            return;
+        }
+        railCandidateIndex = Math.max(0, Math.min(railCandidateIds.length - 1, railCandidateIndex));
+        int id = railCandidateIds[railCandidateIndex];
+        DevDefinitionBridge.DefinitionInfo info = DevDefinitionBridge.getObjectInfoAny(id);
+        String name = info == null || info.getName() == null || info.getName().trim().isEmpty()
+                ? "id-" + id : info.getName();
+        typeSpinner.setValue(Integer.valueOf(22));
+        rotationSpinner.setValue(Integer.valueOf(0));
+        selectObject(id, name, false);
+        railCandidateLabel.setText("Rail candidate " + (railCandidateIndex + 1)
+                + " / " + railCandidateIds.length + "  |  ID " + id
+                + "  |  type 22  |  use R0-R3 to inspect orientation");
+        if (spawn) {
+            spawnCurrent();
+        } else {
+            setStatus("Loaded rail candidate ID " + id + " into Object Explorer.");
+        }
+    }
+
+    private void dropCurrentRailCandidate(boolean advance) {
+        if (railCandidateIndex < 0) {
+            railCandidateIndex = 0;
+            loadRailCandidateAtCurrentIndex(false);
+        }
+        if (compositeParts.size() >= 32) {
+            setStatus("Rail Layout Lab is capped at 32 visual pieces.");
+            return;
+        }
+
+        Snapshot snapshot = currentSnapshot();
+        int slot = compositeParts.size();
+        int column = slot % 6;
+        int row = slot / 6;
+        int offsetX = -10 + column * 4;
+        int offsetY = -8 + row * 4;
+        offsetX = clamp(offsetX, -12, 12);
+        offsetY = clamp(offsetY, -12, 12);
+
+        LayoutPart part = new LayoutPart(
+                snapshot.name, snapshot.id, 22, snapshot.rotation, offsetX, offsetY);
+        compositeParts.add(part);
+        refreshCompositeList();
+        compositeList.setSelectedIndex(compositeParts.size() - 1);
+        refreshActiveLayoutLabel();
+        if (ensureLayoutAnchor()) {
+            refreshLayoutPreview();
+        }
+
+        setStatus("Dropped rail candidate ID " + part.id + " at dX "
+                + part.offsetX + ", dY " + part.offsetY
+                + ". Use arrows/R to inspect it in place.");
+
+        if (advance) {
+            stepRailCandidate(1, false);
+        }
     }
 
     private void addCompositePart() {
