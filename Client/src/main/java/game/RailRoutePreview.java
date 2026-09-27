@@ -1697,10 +1697,13 @@ public final class RailRoutePreview {
          * the selected workbench part as (0,0) when accepting a multi-object
          * special, so this is the stable author-controlled anchor.
          */
+        int explicitPortMask = composite.getPortMask();
         for (RailCompositeLibrary.Component component : components) {
             if (component.getOffsetX() == 0 && component.getOffsetY() == 0) {
                 return new SpecialLayoutProfile(0, 0,
-                        inferSpecialConnectionMask(components, 0, 0));
+                        explicitPortMask != 0
+                                ? explicitPortMask
+                                : inferSpecialConnectionMask(components, 0, 0));
             }
         }
 
@@ -1748,7 +1751,9 @@ public final class RailRoutePreview {
         }
 
         return new SpecialLayoutProfile(bestX, bestY,
-                inferSpecialConnectionMask(components, bestX, bestY));
+                explicitPortMask != 0
+                        ? explicitPortMask
+                        : inferSpecialConnectionMask(components, bestX, bestY));
     }
 
     private static int inferSpecialConnectionMask(
