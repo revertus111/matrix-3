@@ -1324,3 +1324,15 @@ Build Mode -> RTS handoff regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (
 - Open Build Palette, arm a normal build piece or rail, then close the palette. Placement/rail ownership must cancel and RTS drag must resume.
 - Preserve a committed self/worker selection before opening Build Palette. Close Build Palette after each case above; the same committed selection must return without reselecting.
 - Regression: outside settlement auto-mode, closing Build Palette may still exit the Construction camera as before.
+
+Placeable Splitter V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Prerequisite: publish a runtime-safe SPLITTER_RAIL_LAYOUT_01 from Rail Studio. Same authored tile + same object type must be rejected by Publish/arm validation; research drafts may still save.
+- Open Construction build mode and choose Splitter from the Rails category or native build-bar Splitter slot. Splitter must arm as a single-click item, not start a drag-special gesture.
+- Rotate Splitter with R / rotate control before placement. The live prefab ghost must rotate as one assembly around its authored anchor.
+- Empty tile: click once. The Splitter logical node + prefab must be queued through the existing atomic rail replacement transaction.
+- Existing straight: click one current-session degree-2 straight rail tile. It must upgrade that logical tile to Splitter without requiring delete/rebuild first.
+- Invalid existing corner/end/junction: placement must refuse with a clear status and leave topology unchanged.
+- Port behavior: after placement, switch back to normal Rail and drag from/into each authored Splitter port. Allowed ports must connect; non-authored directions must stop before creating a connection.
+- Four-port authored Splitter: current-session Rail may connect all four explicit ports, but server cart routing is still tile-derived V1 and needs its own later behavioral acceptance.
+- Junction regression: native Junction build-bar slot must retain the existing drag-authored degree-3 workflow.
+- Restart/re-entry note: logical special-node reconstruction from persisted physical rails is still CARRYOVER; do not count re-entry persistence as passing in this slice.
