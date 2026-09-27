@@ -1368,3 +1368,9 @@ Rail Assembly Studio UX V1.1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-
 - Assembly controls must remain readable in 2-column rows; only R0/R1/R2/R3 may use four columns.
 - World Anchor must relocate both solo-candidate and assembly previews. Hide Assembly must hide only the assembled prefab preview.
 - Regression: saved prefab load, anchor/normalize, multi-select movement, undo/redo, validation and Publish behavior must remain unchanged.
+
+Rail Studio candidate-preview visibility correction — NEEDS RUNTIME TEST (2026-09-27)
+- Select a candidate with an empty assembly. The solo candidate must appear one tile north/east of the player rather than several tiles left of the player.
+- Candidate Browser must show a Preview line containing the selected ID and target world coordinates.
+- Prev Rail / Next Rail must move only the solo candidate identity, keeping it in the same near-player preview slot.
+- Regression: adding parts still renders the assembly through the separate composite preview and does not disable the solo candidate browser preview.
