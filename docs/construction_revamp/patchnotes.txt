@@ -1646,3 +1646,10 @@
 - Physical chest capacity is reserved per worker/chest/item before hauling to prevent overbooking; existing worker approach reservations keep final tiles separated.
 - Newly gathered Wood is no longer added to the invisible Wood counter. Construction build costs can spend legacy saved Wood plus physical Logs, preserving progression while avoiding duplicate value.
 - Food/Stone/Basic Ore, sawmill processing and rail Wood payload remain explicit legacy compatibility paths pending their own migration.
+
+2026-09-27 - Rail Classifier self-contained review workflow
+- Moved Rail Classifier Workbench to the top of the panel and Geometry Classification directly beneath it; candidate-table and solo-preview tools are now secondary/advanced.
+- Added Prev Rail / Place Current / Next Rail plus Place + Next directly inside the workbench so normal classification no longer depends on selecting a separate table row first.
+- Rail candidate 1 is explicitly initialized after candidate loading even if Swing selection events do not fire, fixing an empty ACTIVE/current selection state.
+- Workbench candidate label now shows candidate index, object ID, type and rotation; placed-rail selection/rotation remains synchronized back into classifier save/promotion actions.
+- Existing movement, duplicate/delete, layout save, rail_kit.tsv auto-save and RailCompositeLibrary output remain unchanged.
