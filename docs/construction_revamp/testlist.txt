@@ -1374,3 +1374,7 @@ Rail Studio candidate-preview visibility correction — NEEDS RUNTIME TEST (2026
 - Candidate Browser must show a Preview line containing the selected ID and target world coordinates.
 - Prev Rail / Next Rail must move only the solo candidate identity, keeping it in the same near-player preview slot.
 - Regression: adding parts still renders the assembly through the separate composite preview and does not disable the solo candidate browser preview.
+
+Rail Studio font readability gate — NEEDS RUNTIME TEST (2026-09-27)
+- At the normal narrow Client Console width, confirm Rail Studio text/buttons are comfortably readable without zooming.
+- Confirm the larger local fonts do not reintroduce horizontal scrolling or right-edge clipping.
