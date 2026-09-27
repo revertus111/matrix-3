@@ -132,12 +132,12 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         header.setOpaque(false);
         header.setAlignmentX(LEFT_ALIGNMENT);
         JLabel title = ConsoleTheme.titleLabel("RAIL ASSEMBLY STUDIO");
-        title.setFont(ConsoleTheme.TITLE_FONT.deriveFont(13f));
+        title.setFont(ConsoleTheme.TITLE_FONT.deriveFont(14f));
         header.add(title);
         header.add(Box.createVerticalStrut(2));
         JLabel subtitle = ConsoleTheme.subtitleLabel(
                 "Build, rotate, validate and publish reusable rail prefabs.");
-        subtitle.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        subtitle.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         header.add(subtitle);
         content.add(header);
         content.add(Box.createVerticalStrut(5));
@@ -167,7 +167,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         ConsoleTheme.styleTextField(candidateSearch);
         candidateSearch.setAlignmentX(LEFT_ALIGNMENT);
-        candidateSearch.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
+        candidateSearch.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
         candidateSearch.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         candidateSearch.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { rebuildCandidateFilter(); }
@@ -178,7 +178,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleList(candidateList);
-        candidateList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9.5f));
+        candidateList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10.5f));
         candidateList.setFixedCellHeight(18);
         candidateList.setPrototypeCellValue("ID 99999 | rail-candidate");
         candidateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -209,7 +209,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(candidateLabel);
         card.add(Box.createVerticalStrut(2));
         candidatePreviewLabel.setAlignmentX(LEFT_ALIGNMENT);
-        candidatePreviewLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        candidatePreviewLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         card.add(candidatePreviewLabel);
         card.add(Box.createVerticalStrut(4));
 
@@ -246,7 +246,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleList(assemblyList);
-        assemblyList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9.5f));
+        assemblyList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10.5f));
         assemblyList.setFixedCellHeight(18);
         assemblyList.setPrototypeCellValue("[ANCHOR] #99 ID 99999 T22 R3 X-12 Y-12");
         assemblyList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -265,7 +265,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         evidenceLabels.setOpaque(false);
         evidenceLabels.setForeground(ConsoleTheme.TEXT);
-        evidenceLabels.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        evidenceLabels.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         evidenceLabels.setFocusable(false);
         evidenceLabels.setAlignmentX(LEFT_ALIGNMENT);
         evidenceLabels.addActionListener(e -> refreshAssemblyList(selectedIndices()));
@@ -384,7 +384,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         ConsoleTheme.styleTextField(prefabName);
         prefabName.setAlignmentX(LEFT_ALIGNMENT);
-        prefabName.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
+        prefabName.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
         prefabName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         card.add(smallLabel("Prefab name"));
         card.add(Box.createVerticalStrut(3));
@@ -392,7 +392,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleComboBox(prefabType);
-        prefabType.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
+        prefabType.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
         prefabType.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         prefabType.setAlignmentX(LEFT_ALIGNMENT);
         prefabType.addActionListener(e -> updateValidation());
@@ -443,7 +443,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(4));
 
         ConsoleTheme.styleList(savedPrefabList);
-        savedPrefabList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9.5f));
+        savedPrefabList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10.5f));
         savedPrefabList.setFixedCellHeight(18);
         savedPrefabList.setPrototypeCellValue("SPLITTER_RAIL_LAYOUT_01");
         savedPrefabList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -480,12 +480,12 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private JPanel createValidationCard() {
         JPanel card = compactCard("5. Validation");
         card.add(Box.createVerticalStrut(4));
-        validationLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        validationLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         validationLabel.setForeground(ConsoleTheme.TEXT);
         validationLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(validationLabel);
         card.add(Box.createVerticalStrut(4));
-        statusLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        statusLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         statusLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(statusLabel);
         return card;
@@ -1231,7 +1231,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         JLabel title = new JLabel(titleText);
-        title.setFont(ConsoleTheme.SECTION_FONT.deriveFont(11f));
+        title.setFont(ConsoleTheme.SECTION_FONT.deriveFont(12f));
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(LEFT_ALIGNMENT);
         card.add(title);
@@ -1240,14 +1240,14 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
     private javax.swing.JTextArea compactText(String text, int rows) {
         javax.swing.JTextArea area = ConsoleTheme.createWrappedText(text, rows);
-        area.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        area.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         return area;
     }
 
     private JButton button(String text) {
         JButton button = new JButton(text);
         ConsoleTheme.styleButton(button);
-        button.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
+        button.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
         button.setBorder(javax.swing.BorderFactory.createEmptyBorder(3, 4, 3, 4));
         button.setFocusable(false);
         return button;
@@ -1257,21 +1257,21 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         JCheckBox box = new JCheckBox(text);
         box.setOpaque(false);
         box.setForeground(ConsoleTheme.TEXT);
-        box.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        box.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         box.setFocusable(false);
         return box;
     }
 
     private static JLabel smallLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
+        label.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         label.setForeground(ConsoleTheme.MUTED_TEXT);
         return label;
     }
 
     private static JLabel valueLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
+        label.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
         label.setForeground(ConsoleTheme.TEXT);
         return label;
     }
