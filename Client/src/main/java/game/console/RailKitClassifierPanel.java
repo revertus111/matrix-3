@@ -67,13 +67,6 @@ public final class RailKitClassifierPanel extends JScrollPane {
      * floor-decoration rail candidates. Geometry is deliberately left for visual
      * classification rather than inferred from object ids.
      */
-    private static final int[] EVIDENCE_SEED_IDS = {
-        4770, 4796, 14500, 14501, 14502,
-        46352, 46353, 46354, 46355, 46356, 46357, 46358, 46359, 46361,
-        46363, 46364, 46365, 46366, 46367, 46368, 46369, 46370,
-        46376, 46378, 46380, 46381, 46382
-    };
-
     private final List<Candidate> candidates = new ArrayList<Candidate>();
     private final Map<String, ClassificationRecord> records =
             new LinkedHashMap<String, ClassificationRecord>();
@@ -568,7 +561,7 @@ public final class RailKitClassifierPanel extends JScrollPane {
         String selectedKey = selected == null ? null : selected.key();
         Map<String, Candidate> merged = new LinkedHashMap<String, Candidate>();
 
-        for (int id : EVIDENCE_SEED_IDS) {
+        for (int id : RailCompositeLibrary.getEvidenceSeedObjectIds()) {
             Candidate candidate = new Candidate(id, 22, "id-" + id);
             ClassificationRecord saved = records.get(candidate.key());
             if (saved != null) {
