@@ -1913,3 +1913,23 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Fixed client/server key parity by registering rail-asset-46360 and added the ID to RailCompositeLibrary's shared candidate catalog.
 - Uploaded junction layout IDs are now all represented in the persistence registry.
 - Resume Here: restart client + server once, arm Junction, create one degree-3 branch. Expected next evidence is either full prefab success or a visible anchor/orientation mismatch.
+
+## Rail Assembly Studio V1 — professional prefab authoring tool — 2026-09-27
+- Status: ACTIVE under SAP AAA; developer-tool side slice only. Canonical Construction milestone table remains unchanged.
+- Ownership: Rail Assembly Studio authors reusable rail prefab data. RailCompositeLibrary owns local authoring persistence. ObjectCompositePreview owns client-only visual preview. RailRoutePreview remains authoritative for logical rail topology/runtime placement.
+- Goal: replace the current fragmented Object Explorer + Rail Classifier assembly workflow with one fast professional rail-prefab workstation while preserving those older tools for fallback/research until Studio acceptance.
+- V1 workflow: choose/search a shared rail candidate -> add/double-click into assembly -> multi-select/move/rotate/duplicate/delete -> choose explicit anchor -> mark cardinal ports -> validate -> preview R0/R1/R2/R3 -> save/load draft -> publish canonical Junction/Splitter/Crossing/Curve prefab.
+- V1 editor requirements:
+  - shared evidence-seeded rail candidate browser; no manual ID entry required;
+  - multi-piece live client-only assembly with intentional same-tile overlap allowed;
+  - multi-selection and batch arrow movement / R rotation / duplicate / delete;
+  - [ / ] piece stepping plus Ctrl+Z / Ctrl+Y undo/redo and Ctrl+D duplicate;
+  - component rows always expose ID/type/rotation/relative X/Y for screenshot/video evidence;
+  - explicit selected-component anchor; saved components are normalized around that anchor;
+  - explicit cardinal N/E/S/W connection-port metadata stored with the prefab so new assets do not depend on geometry inference;
+  - Junction/Splitter/Crossing/Curve/Custom authoring types mapped to existing RailCompositeLibrary roles/canonical names without changing runtime topology ownership;
+  - whole-prefab R0/R1/R2/R3 preview rotates offsets and object rotations around the selected anchor without mutating the authored base layout;
+  - validation reports persistability, exact duplicates, intentional overlapping tiles, anchor state and connection-port requirements before publish;
+  - saved prefab picker can reload an existing authored layout for rapid corrections instead of rebuilding it.
+- Compatibility: rail_composites.tsv remains backward-readable. New explicit port metadata is optional; old rows continue using runtime inference. Old Junction/Splitter layouts and Rail Classifier/Object Explorer remain readable.
+- Resume Here: implement the dedicated Test Console Rail Studio tab, add optional port metadata to RailCompositeLibrary/runtime special resolver, then run one fast authoring gate using the new straight+curve splitter concept and the existing junction layout.
