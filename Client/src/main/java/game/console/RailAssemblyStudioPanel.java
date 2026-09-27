@@ -94,7 +94,8 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private final JCheckBox portSouth = check("South");
     private final JCheckBox portWest = check("West");
 
-    private final JComboBox<String> savedPrefabs = new JComboBox<String>();
+    private final DefaultListModel<String> savedPrefabModel = new DefaultListModel<String>();
+    private final JList<String> savedPrefabList = new JList<String>(savedPrefabModel);
     private final JLabel validationLabel = new JLabel();
     private final JLabel statusLabel =
             ConsoleTheme.subtitleLabel("Rail Assembly Studio ready.");
@@ -121,28 +122,32 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBackground(ConsoleTheme.PANEL);
-        content.setBorder(ConsoleTheme.panelPadding(16, 14, 16, 14));
+        content.setBorder(ConsoleTheme.panelPadding(8, 7, 8, 7));
         content.setMinimumSize(new Dimension(0, 0));
 
         JPanel header = new JPanel();
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         header.setOpaque(false);
         header.setAlignmentX(LEFT_ALIGNMENT);
-        header.add(ConsoleTheme.titleLabel("RAIL ASSEMBLY STUDIO"));
-        header.add(Box.createVerticalStrut(3));
-        header.add(ConsoleTheme.subtitleLabel(
-                "Author multi-object Junction / Splitter / Crossing / Curve prefabs without typing object IDs."));
+        JLabel title = ConsoleTheme.titleLabel("RAIL ASSEMBLY STUDIO");
+        title.setFont(ConsoleTheme.TITLE_FONT.deriveFont(14f));
+        header.add(title);
+        header.add(Box.createVerticalStrut(2));
+        JLabel subtitle = ConsoleTheme.subtitleLabel(
+                "Build, rotate, validate and publish reusable rail prefabs.");
+        subtitle.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        header.add(subtitle);
         content.add(header);
-        content.add(Box.createVerticalStrut(10));
+        content.add(Box.createVerticalStrut(5));
 
         content.add(createCandidateCard());
-        content.add(Box.createVerticalStrut(10));
+        content.add(Box.createVerticalStrut(5));
         content.add(createWorkspaceCard());
-        content.add(Box.createVerticalStrut(10));
+        content.add(Box.createVerticalStrut(5));
         content.add(createDefinitionCard());
-        content.add(Box.createVerticalStrut(10));
+        content.add(Box.createVerticalStrut(5));
         content.add(createSavedCard());
-        content.add(Box.createVerticalStrut(10));
+        content.add(Box.createVerticalStrut(5));
         content.add(createValidationCard());
         content.add(Box.createVerticalGlue());
 
@@ -152,17 +157,15 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     }
 
     private JPanel createCandidateCard() {
-        JPanel card = ConsoleTheme.createCard("1. Rail Asset Browser");
-        card.add(Box.createVerticalStrut(8));
-        card.add(ConsoleTheme.createWrappedText(
-                "Shared evidence-seeded rail catalog. Search by ID/name, double-click to add, or browse "
-                + "with Prev/Next. Added parts begin on the assembly anchor so intentional overlays are easy.",
-                4));
-        card.add(Box.createVerticalStrut(7));
+        JPanel card = compactCard("1. Rail Asset Browser");
+        card.add(Box.createVerticalStrut(4));
+        card.add(compactText("Search ID/name • double-click to add • same-tile overlays supported.", 2));
+        card.add(Box.createVerticalStrut(4));
 
         ConsoleTheme.styleTextField(candidateSearch);
         candidateSearch.setAlignmentX(LEFT_ALIGNMENT);
-        candidateSearch.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        candidateSearch.setFont(ConsoleTheme.BODY_FONT.deriveFont(11f));
+        candidateSearch.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         candidateSearch.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { rebuildCandidateFilter(); }
             @Override public void removeUpdate(DocumentEvent e) { rebuildCandidateFilter(); }
@@ -172,6 +175,8 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleList(candidateList);
+        candidateList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        candidateList.setFixedCellHeight(19);
         candidateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         candidateList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -189,8 +194,8 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         JScrollPane candidateScroll = new JScrollPane(candidateList);
         candidateScroll.setAlignmentX(LEFT_ALIGNMENT);
-        candidateScroll.setPreferredSize(new Dimension(240, 145));
-        candidateScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 165));
+        candidateScroll.setPreferredSize(new Dimension(220, 92));
+        candidateScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 105));
         ConsoleTheme.styleScrollPane(candidateScroll);
         card.add(candidateScroll);
         card.add(Box.createVerticalStrut(6));
@@ -199,14 +204,14 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(candidateLabel);
         card.add(Box.createVerticalStrut(6));
 
-        JPanel actions = new JPanel(new GridLayout(1, 4, 6, 0));
+        JPanel actions = new JPanel(new GridLayout(1, 4, 4, 0));
         actions.setOpaque(false);
         actions.setAlignmentX(LEFT_ALIGNMENT);
-        actions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        JButton previous = button("< Prev");
-        JButton add = button("Add Selected");
+        actions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        JButton previous = button("Prev");
+        JButton add = button("Add");
         JButton addNext = button("Add + Next");
-        JButton next = button("Next >");
+        JButton next = button("Next");
         previous.addActionListener(e -> stepCandidate(-1));
         add.addActionListener(e -> addSelectedCandidate(false));
         addNext.addActionListener(e -> addSelectedCandidate(true));
@@ -220,20 +225,20 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     }
 
     private JPanel createWorkspaceCard() {
-        JPanel card = ConsoleTheme.createCard("2. Assembly Workspace");
-        card.add(Box.createVerticalStrut(8));
-        card.add(ConsoleTheme.createWrappedText(
-                "Multi-select with Ctrl/Shift. Arrows move selected parts, R rotates them in place, "
-                + "Ctrl+D duplicates, Delete removes, [ / ] steps the active part, Ctrl+Z/Ctrl+Y undo/redo. "
-                + "Same-tile overlap is intentionally allowed inside one prefab.",
-                5));
-        card.add(Box.createVerticalStrut(7));
+        JPanel card = compactCard("2. Assembly Workspace");
+        card.add(Box.createVerticalStrut(4));
+        card.add(compactText(
+                "Ctrl/Shift multi-select • arrows move • R rotate • Ctrl+D duplicate • Del remove • Ctrl+Z/Y undo/redo.",
+                2));
+        card.add(Box.createVerticalStrut(4));
 
         activeLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(activeLabel);
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleList(assemblyList);
+        assemblyList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        assemblyList.setFixedCellHeight(19);
         assemblyList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         assemblyList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -242,54 +247,63 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         });
         JScrollPane assemblyScroll = new JScrollPane(assemblyList);
         assemblyScroll.setAlignmentX(LEFT_ALIGNMENT);
-        assemblyScroll.setPreferredSize(new Dimension(240, 190));
-        assemblyScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
+        assemblyScroll.setPreferredSize(new Dimension(220, 126));
+        assemblyScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 145));
         ConsoleTheme.styleScrollPane(assemblyScroll);
         card.add(assemblyScroll);
         card.add(Box.createVerticalStrut(6));
 
         evidenceLabels.setOpaque(false);
         evidenceLabels.setForeground(ConsoleTheme.TEXT);
+        evidenceLabels.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         evidenceLabels.setFocusable(false);
         evidenceLabels.setAlignmentX(LEFT_ALIGNMENT);
         evidenceLabels.addActionListener(e -> refreshAssemblyList(selectedIndices()));
         card.add(evidenceLabels);
         card.add(Box.createVerticalStrut(6));
 
-        JPanel row1 = new JPanel(new GridLayout(1, 5, 6, 0));
+        JPanel row1 = new JPanel(new GridLayout(1, 3, 4, 0));
         row1.setOpaque(false);
         row1.setAlignmentX(LEFT_ALIGNMENT);
-        row1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        row1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         JButton previous = button("[ Prev");
         JButton duplicate = button("Duplicate");
-        JButton setAnchor = button("Set Anchor");
-        JButton normalize = button("Normalize");
         JButton next = button("Next ]");
         previous.addActionListener(e -> stepPart(-1));
         duplicate.addActionListener(e -> duplicateSelected());
-        setAnchor.addActionListener(e -> setSelectedAnchor());
-        normalize.addActionListener(e -> normalizeAroundAnchor());
         next.addActionListener(e -> stepPart(1));
         row1.add(previous);
         row1.add(duplicate);
-        row1.add(setAnchor);
-        row1.add(normalize);
         row1.add(next);
         card.add(row1);
-        card.add(Box.createVerticalStrut(6));
+        card.add(Box.createVerticalStrut(4));
 
-        JPanel row2 = new JPanel(new GridLayout(2, 4, 6, 6));
+        JPanel anchorRow = new JPanel(new GridLayout(1, 2, 4, 0));
+        anchorRow.setOpaque(false);
+        anchorRow.setAlignmentX(LEFT_ALIGNMENT);
+        anchorRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        JButton setAnchor = button("Set Anchor");
+        JButton normalize = button("Normalize");
+        setAnchor.addActionListener(e -> setSelectedAnchor());
+        normalize.addActionListener(e -> normalizeAroundAnchor());
+        anchorRow.add(setAnchor);
+        anchorRow.add(normalize);
+        card.add(anchorRow);
+        card.add(Box.createVerticalStrut(4));
+
+        JPanel row2 = new JPanel(new GridLayout(3, 3, 4, 4));
         row2.setOpaque(false);
         row2.setAlignmentX(LEFT_ALIGNMENT);
-        row2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
-        JButton up = button("Up +Y");
-        JButton down = button("Down -Y");
-        JButton left = button("Left -X");
-        JButton right = button("Right +X");
+        row2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 84));
+        JButton up = button("Up");
+        JButton down = button("Down");
+        JButton left = button("Left");
+        JButton right = button("Right");
         JButton rotate = button("Rotate R");
         JButton delete = button("Delete");
         JButton undoButton = button("Undo");
         JButton redoButton = button("Redo");
+        JButton refreshMove = button("Refresh");
         up.addActionListener(e -> moveSelected(0, 1));
         down.addActionListener(e -> moveSelected(0, -1));
         left.addActionListener(e -> moveSelected(-1, 0));
@@ -298,29 +312,31 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         delete.addActionListener(e -> deleteSelected());
         undoButton.addActionListener(e -> undo());
         redoButton.addActionListener(e -> redo());
-        row2.add(up);
-        row2.add(down);
+        refreshMove.addActionListener(e -> refreshPreview());
         row2.add(left);
+        row2.add(up);
         row2.add(right);
-        row2.add(rotate);
-        row2.add(delete);
         row2.add(undoButton);
+        row2.add(rotate);
         row2.add(redoButton);
+        row2.add(delete);
+        row2.add(down);
+        row2.add(refreshMove);
         card.add(row2);
-        card.add(Box.createVerticalStrut(7));
+        card.add(Box.createVerticalStrut(4));
 
-        JPanel preview = new JPanel(new GridLayout(2, 4, 6, 6));
+        JPanel preview = new JPanel(new GridLayout(2, 4, 4, 4));
         preview.setOpaque(false);
         preview.setAlignmentX(LEFT_ALIGNMENT);
-        preview.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
-        JButton r0 = button("Preview R0");
-        JButton r1 = button("Preview R1");
-        JButton r2 = button("Preview R2");
-        JButton r3 = button("Preview R3");
-        JButton reset = button("Reset World Anchor");
-        JButton hide = button("Hide Preview");
-        JButton clear = button("Clear Assembly");
-        JButton refresh = button("Refresh Preview");
+        preview.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+        JButton r0 = button("R0");
+        JButton r1 = button("R1");
+        JButton r2 = button("R2");
+        JButton r3 = button("R3");
+        JButton reset = button("World");
+        JButton hide = button("Hide");
+        JButton clear = button("Clear");
+        JButton refresh = button("Refresh");
         r0.addActionListener(e -> setPreviewTurns(0));
         r1.addActionListener(e -> setPreviewTurns(1));
         r2.addActionListener(e -> setPreviewTurns(2));
@@ -342,34 +358,37 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     }
 
     private JPanel createDefinitionCard() {
-        JPanel card = ConsoleTheme.createCard("3. Prefab Definition");
-        card.add(Box.createVerticalStrut(8));
+        JPanel card = compactCard("3. Prefab Definition");
+        card.add(Box.createVerticalStrut(4));
 
         ConsoleTheme.styleTextField(prefabName);
         prefabName.setAlignmentX(LEFT_ALIGNMENT);
-        prefabName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        prefabName.setFont(ConsoleTheme.BODY_FONT.deriveFont(11f));
+        prefabName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         card.add(smallLabel("Prefab name"));
         card.add(Box.createVerticalStrut(3));
         card.add(prefabName);
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleComboBox(prefabType);
+        prefabType.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
+        prefabType.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         prefabType.setAlignmentX(LEFT_ALIGNMENT);
         prefabType.addActionListener(e -> updateValidation());
         card.add(smallLabel("Authoring type"));
         card.add(Box.createVerticalStrut(3));
         card.add(prefabType);
-        card.add(Box.createVerticalStrut(7));
+        card.add(Box.createVerticalStrut(4));
 
-        JPanel ports = new JPanel(new GridLayout(2, 2, 6, 3));
+        JPanel ports = new JPanel(new GridLayout(1, 4, 4, 0));
         ports.setOpaque(false);
         ports.setAlignmentX(LEFT_ALIGNMENT);
-        ports.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
+        ports.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
         ports.add(portNorth);
         ports.add(portEast);
         ports.add(portSouth);
         ports.add(portWest);
-        card.add(smallLabel("Logical connection ports (base R0 orientation)"));
+        card.add(smallLabel("R0 ports"));
         card.add(Box.createVerticalStrut(3));
         card.add(ports);
         card.add(Box.createVerticalStrut(7));
@@ -380,40 +399,54 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         portSouth.addActionListener(metadataChanged);
         portWest.addActionListener(metadataChanged);
 
-        JPanel saveRow = new JPanel(new GridLayout(1, 2, 6, 0));
+        JPanel saveRow = new JPanel(new GridLayout(1, 2, 4, 0));
         saveRow.setOpaque(false);
         saveRow.setAlignmentX(LEFT_ALIGNMENT);
-        saveRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        JButton saveDraft = button("Save / Update Draft");
-        JButton publish = button("Publish To Runtime");
+        saveRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        JButton saveDraft = button("Save Draft");
+        JButton publish = button("Publish");
         saveDraft.addActionListener(e -> saveDraft());
         publish.addActionListener(e -> publishRuntime());
         saveRow.add(saveDraft);
         saveRow.add(publish);
         card.add(saveRow);
         card.add(Box.createVerticalStrut(6));
-        card.add(ConsoleTheme.createWrappedText(
-                "Saving normalizes every component around the selected anchor. Publishing writes the "
-                + "canonical runtime name for Junction/Splitter/Crossing/Curve and reloads the existing "
-                + "rail resolver. Custom prefabs are draft-only.",
-                4));
+        card.add(compactText(
+                "Save = named draft • Publish = canonical runtime prefab. Anchor is normalized to 0,0.",
+                2));
         return card;
     }
 
     private JPanel createSavedCard() {
-        JPanel card = ConsoleTheme.createCard("4. Saved Prefabs");
-        card.add(Box.createVerticalStrut(8));
-        ConsoleTheme.styleComboBox(savedPrefabs);
-        savedPrefabs.setAlignmentX(LEFT_ALIGNMENT);
-        card.add(savedPrefabs);
-        card.add(Box.createVerticalStrut(6));
+        JPanel card = compactCard("4. Saved Prefabs");
+        card.add(Box.createVerticalStrut(4));
 
-        JPanel row = new JPanel(new GridLayout(1, 2, 6, 0));
+        ConsoleTheme.styleList(savedPrefabList);
+        savedPrefabList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        savedPrefabList.setFixedCellHeight(19);
+        savedPrefabList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        savedPrefabList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (event.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(event)) {
+                    loadSelectedPrefab();
+                }
+            }
+        });
+        JScrollPane savedScroll = new JScrollPane(savedPrefabList);
+        savedScroll.setAlignmentX(LEFT_ALIGNMENT);
+        savedScroll.setPreferredSize(new Dimension(220, 70));
+        savedScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        ConsoleTheme.styleScrollPane(savedScroll);
+        card.add(savedScroll);
+        card.add(Box.createVerticalStrut(4));
+
+        JPanel row = new JPanel(new GridLayout(1, 2, 4, 0));
         row.setOpaque(false);
         row.setAlignmentX(LEFT_ALIGNMENT);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        JButton load = button("Load Selected Prefab");
-        JButton refresh = button("Refresh Saved List");
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        JButton load = button("Load");
+        JButton refresh = button("Refresh");
         load.addActionListener(e -> loadSelectedPrefab());
         refresh.addActionListener(e -> refreshSavedPrefabs());
         row.add(load);
@@ -423,13 +456,14 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     }
 
     private JPanel createValidationCard() {
-        JPanel card = ConsoleTheme.createCard("5. Validation");
+        JPanel card = compactCard("5. Validation");
         card.add(Box.createVerticalStrut(8));
-        validationLabel.setFont(ConsoleTheme.SMALL_FONT);
+        validationLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         validationLabel.setForeground(ConsoleTheme.TEXT);
         validationLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(validationLabel);
-        card.add(Box.createVerticalStrut(8));
+        card.add(Box.createVerticalStrut(4));
+        statusLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         statusLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(statusLabel);
         return card;
@@ -751,25 +785,30 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     }
 
     private void refreshSavedPrefabs() {
-        String selected = savedPrefabs.getSelectedItem() instanceof String
-                ? (String) savedPrefabs.getSelectedItem() : null;
-        savedPrefabs.removeAllItems();
+        String selected = savedPrefabList.getSelectedValue();
+        savedPrefabModel.clear();
+        int restoreIndex = -1;
+        int index = 0;
         for (RailCompositeLibrary.CompositeDefinition definition : RailCompositeLibrary.loadAll()) {
-            savedPrefabs.addItem(definition.getName());
+            savedPrefabModel.addElement(definition.getName());
+            if (selected != null && selected.equalsIgnoreCase(definition.getName())) {
+                restoreIndex = index;
+            }
+            index++;
         }
-        if (selected != null) {
-            savedPrefabs.setSelectedItem(selected);
+        if (!savedPrefabModel.isEmpty()) {
+            savedPrefabList.setSelectedIndex(restoreIndex >= 0 ? restoreIndex : 0);
         }
     }
 
     private void loadSelectedPrefab() {
-        Object selected = savedPrefabs.getSelectedItem();
-        if (!(selected instanceof String)) {
+        String selected = savedPrefabList.getSelectedValue();
+        if (selected == null || selected.trim().isEmpty()) {
             setStatus("No saved prefab selected.");
             return;
         }
         RailCompositeLibrary.CompositeDefinition definition =
-                RailCompositeLibrary.findByName((String) selected);
+                RailCompositeLibrary.findByName(selected);
         if (definition == null) {
             setStatus("Saved prefab could not be loaded.");
             return;
@@ -1101,9 +1140,35 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         statusLabel.setText(text == null ? "" : text);
     }
 
+    private JPanel compactCard(String titleText) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(ConsoleTheme.CARD);
+        card.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(ConsoleTheme.BORDER),
+                ConsoleTheme.panelPadding(8, 8, 8, 8)));
+        card.setAlignmentX(LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+
+        JLabel title = new JLabel(titleText);
+        title.setFont(ConsoleTheme.SECTION_FONT.deriveFont(12f));
+        title.setForeground(ConsoleTheme.TEXT);
+        title.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(title);
+        return card;
+    }
+
+    private javax.swing.JTextArea compactText(String text, int rows) {
+        javax.swing.JTextArea area = ConsoleTheme.createWrappedText(text, rows);
+        area.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        return area;
+    }
+
     private JButton button(String text) {
         JButton button = new JButton(text);
         ConsoleTheme.styleButton(button);
+        button.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
+        button.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 5, 4, 5));
         button.setFocusable(false);
         return button;
     }
@@ -1112,21 +1177,21 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         JCheckBox box = new JCheckBox(text);
         box.setOpaque(false);
         box.setForeground(ConsoleTheme.TEXT);
-        box.setFont(ConsoleTheme.BODY_FONT);
+        box.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         box.setFocusable(false);
         return box;
     }
 
     private static JLabel smallLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(ConsoleTheme.SMALL_FONT);
+        label.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
         label.setForeground(ConsoleTheme.MUTED_TEXT);
         return label;
     }
 
     private static JLabel valueLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(ConsoleTheme.BODY_FONT);
+        label.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
         label.setForeground(ConsoleTheme.TEXT);
         return label;
     }
