@@ -1432,7 +1432,7 @@ public final class SettlementInstance {
     public boolean isWorkerNodeAllowedByRally(
             SettlementWorkerState worker, SettlementResourceNode node) {
         return node != null && isWorkerPlotAllowedByRally(
-                worker, node.getPlotX(), node.getPlotY(), node.getPlane());
+                worker, node.getPlotX(), node.getPlotY(), SettlementState.PLOT_PLANE);
     }
 
     private boolean isWorkerPieceAllowedByRally(
