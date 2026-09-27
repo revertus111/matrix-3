@@ -1694,8 +1694,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Safety rule: non-empty physical storage cannot be erased, undone or deleted. It must be emptied first so build tools cannot destroy stored factory items.
 - Next implementation checkpoint after V1 runtime acceptance: machine-local input/output buffers + worker transfer jobs using this physical storage API, then conveyor/cart/loaders against the same contract.
 - Runtime evidence 2026-09-27: physical Wooden chest places successfully and opens the bank-style settlement inventory; saved-build-tile cleanup protection also works. Worker hauling still returns to the old home/spawn storage point because legacy worker storage routing remains active.
-- Known UX defect 2026-09-27: the chest opens, but the injected world right-click `View Storage` option is not visible at runtime. Treat the menu injection as NOT VERIFIED and fix it before calling the chest interaction UX complete.
-- Resume Here: do not retest the working bank-shell chest or saved-tile behavior. Fix the missing `View Storage` menu entry, then migrate worker hauling/processing away from invisible settlement storage onto physical chest selection through Bundle 3.5.
+- UX correction 2026-09-27: the missing world `View Storage` entry was traced to an overly narrow client assumption that only object action 1002 would build the storage option. The injection now accepts Matrix3's full normal object-action family (3-6/1001/1002) and de-duplicates by menu text. Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+- Worker Logistics AI V1 2026-09-27: normal Wood gathering is the first migrated physical chain. Matrix3 Woodcutting statically verifies normal Logs as item 1511. Workers reserve and score eligible physical chests, route to the selected chest, and deposit actual Logs into that chest instead of the worker home/invisible Wood counter.
+- Progression compatibility: Construction build-cost checks now treat pre-migration legacy Wood plus physical Logs as one spendable progression pool, consuming old counter stock first and then real Logs. This preserves existing settlements without duplicating newly gathered value.
+- Food/Stone/Basic Ore hauling, sawmill processing and rail Wood payloads remain explicitly legacy until their own migration slices; they are not silently converted in this patch.
+- Resume Here: runtime-test `View Storage` plus Worker Logistics AI V1 with two physical chests. Do not retest bank-shell storage or Saved Tiles unless a regression appears. After acceptance, add player-facing chest filters/priorities + rally/work-zone assignment before migrating sawmill input/output.
 
 
 ### Bundle 3.4 UX correction — 2026-09-26
@@ -1739,7 +1742,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 
 ## Phase 3 / Bundle 3.5 — Worker Logistics AI + Rally / Work-Zone Control — 2026-09-27
-- Status: DESIGN LOCKED / READY TO IMPLEMENT under explicit AAA planning approval.
+- Status: ACTIVE — Worker Logistics AI V1 IMPLEMENTED / NEEDS RUNTIME TEST; rally/work-zone control and player-facing filter/priority configuration remain READY.
 - Goal: replace hardcoded worker storage behavior with one reusable logistics decision system that supports both autonomous workers and player-directed RTS control.
 - Design principle: workers may think for themselves by default, but player orders/rally zones always provide a higher-authority steering layer. The system must support both Factorio-style automation and RTS-style micromanagement without duplicating worker code.
 
@@ -1855,7 +1858,16 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Worker home remains the needs/rest owner and is no longer treated as physical factory storage for migrated items.
 - Wood/Log processing must physically source its input and place output through machine/container inventory; no migrated cycle may silently mutate invisible counters.
 
+### Implementation checkpoint — Worker Logistics AI V1
+- Normal Logs item 1511 is verified-static from Matrix3's Woodcutting.TreeDefinitions.NORMAL mapping.
+- Migrated Wood workers no longer reserve the legacy resource-cap slot. They score physical STORAGE-role chests that are live, worker-deposit enabled, filter-compatible and have unreserved item capacity.
+- V1 score uses persisted logistics priority, storage mode intent, travel distance and competing reservations. Nearest eligible chest is therefore the default when priorities/modes are equal.
+- Per-worker physical chest/item capacity reservations prevent multiple workers from overbooking the same final capacity.
+- The existing soft-collision/final-approach reservation system is reused; physical chests use interaction range 1 so workers approach rather than stand on the object.
+- Actual deposit mutates the selected chest's `SettlementStorageContainer` with item 1511. No new Wood counter is created for migrated gathers.
+- Existing chest filter, mode, worker-deposit permission and logistics-priority fields are now consumed by the selector; player-facing configuration UI remains a follow-up.
+- Worker needs still use worker home. Sawmill processing still uses legacy processing storage until machine I/O migration.
+
 ### Resume Here
-- Current proven state: physical chest + bank-style inventory work; saved tiles work.
-- Current defects/dependencies: `View Storage` right-click option is missing at runtime; worker hauling and processing still route through the legacy home/invisible-storage owner.
-- Next implementation bundle should fix `View Storage` and establish Worker Logistics AI V1 with physical chest selection + rally-ready ownership before deeper sawmill/conveyor automation.
+- Pending runtime gate: `View Storage` must appear on the chest; with two equal default chests, a Wood worker should choose the nearer valid chest and deposit a real Log item into it.
+- After that passes: expose chest filter/priority/mode controls, then add persistent worker behavior mode + rally/work-zone creation/assignment before moving the sawmill to physical input/output buffers.

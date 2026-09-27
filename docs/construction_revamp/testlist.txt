@@ -1231,3 +1231,15 @@ Rail Classifier integrated workbench gate — IMPLEMENTED / NEEDS RUNTIME TEST (
 - Enter a layout name/role and click Save Layout Evidence. rail_composites.tsv must contain every dropped piece with exact id/type/rotation/dX/dY.
 - Regression: focus the candidate table and use arrow keys; table navigation/spawn preview must still work. Outside the candidate table, workbench arrow keys must move the active dropped rail instead of changing candidates.
 - Regression: Accept Junction/Crossing/Splitter must continue promoting the currently synchronized candidate + rotation.
+
+
+Worker Logistics AI V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Right-click a placed Wooden chest. View Storage must now appear once and open that exact chest.
+- Place two Wooden chests at clearly different distances from a Wood worker/tree. Leave both default/empty, enable Chop Wood + Haul, and confirm the worker routes to the nearer eligible physical chest rather than its old spawn/home tile.
+- Open the chosen chest and confirm the worker deposited a real normal Log item (item 1511). The legacy Wood counter must not increase from that migrated gather.
+- Let two or more workers haul Logs concurrently into the same chest. Confirm no overfill, item loss/duplication or permanent worker stacking.
+- Fill the nearer chest so it has no Log capacity. Confirm the worker selects the farther valid chest.
+- Regression: hunger/thirst/energy recovery still uses worker home/shelter behavior; physical chests do not replace the needs home.
+- Progression bridge: with legacy Wood insufficient but physical Logs available, place one normal Wood-cost Construction piece and confirm the required value is consumed without duplicating Logs.
+- Confirm existing Food/Stone/Ore workers still use their legacy compatibility path for this slice; sawmill/rail behavior is intentionally unchanged.
+- Do not repeat already accepted Bank-shell chest or Saved Tile tests unless one of these checks exposes a regression.

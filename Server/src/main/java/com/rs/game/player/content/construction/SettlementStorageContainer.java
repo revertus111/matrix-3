@@ -25,6 +25,9 @@ public final class SettlementStorageContainer implements Serializable {
     private int stackLimit = BASIC_STACK_LIMIT;
     private SettlementStorageMode mode = SettlementStorageMode.STORAGE;
     private Set<Integer> itemFilters = new HashSet<Integer>();
+    private Boolean workerDepositEnabled = Boolean.TRUE;
+    private Boolean workerWithdrawEnabled = Boolean.TRUE;
+    private int logisticsPriority;
     private ItemsContainer<Item> items =
             new ItemsContainer<Item>(BASIC_SLOT_CAPACITY, false);
 
@@ -44,6 +47,12 @@ public final class SettlementStorageContainer implements Serializable {
         }
         if (itemFilters == null) {
             itemFilters = new HashSet<Integer>();
+        }
+        if (workerDepositEnabled == null) {
+            workerDepositEnabled = Boolean.TRUE;
+        }
+        if (workerWithdrawEnabled == null) {
+            workerWithdrawEnabled = Boolean.TRUE;
         }
         if (items == null || items.getSize() != slotCapacity) {
             ItemsContainer<Item> resized =
@@ -106,6 +115,52 @@ public final class SettlementStorageContainer implements Serializable {
         return new HashSet<Integer>(itemFilters);
     }
 
+    public synchronized boolean isWorkerDepositEnabled() {
+        normalize();
+        return workerDepositEnabled.booleanValue();
+    }
+
+    public synchronized void setWorkerDepositEnabled(boolean enabled) {
+        workerDepositEnabled = Boolean.valueOf(enabled);
+    }
+
+    public synchronized boolean isWorkerWithdrawEnabled() {
+        normalize();
+        return workerWithdrawEnabled.booleanValue();
+    }
+
+    public synchronized void setWorkerWithdrawEnabled(boolean enabled) {
+        workerWithdrawEnabled = Boolean.valueOf(enabled);
+    }
+
+    public synchronized int getLogisticsPriority() {
+        normalize();
+        return logisticsPriority;
+    }
+
+    public synchronized void setLogisticsPriority(int priority) {
+        logisticsPriority = Math.max(-10, Math.min(10, priority));
+    }
+
+    public synchronized long getAvailableCapacityForItem(int itemId) {
+        normalize();
+        if (itemId < 0 || !acceptsItem(itemId)) {
+            return 0L;
+        }
+        Item probe = new Item(itemId, 1);
+        int perSlot = isMultiAmount(probe) ? stackLimit : 1;
+        long capacity = 0L;
+        for (int slot = 0; slot < items.getSize(); slot++) {
+            Item current = items.get(slot);
+            if (current == null) {
+                capacity += perSlot;
+            } else if (current.getId() == itemId && current.getAmount() < perSlot) {
+                capacity += perSlot - current.getAmount();
+            }
+        }
+        return capacity;
+    }
+
     public synchronized void upgradeLimits(int newSlotCapacity, int newStackLimit) {
         normalize();
         if (newSlotCapacity < slotCapacity || newStackLimit < stackLimit) {
@@ -157,6 +212,33 @@ public final class SettlementStorageContainer implements Serializable {
             int accepted = Math.min(remaining, perSlot);
             items.set(slot, new Item(itemId, accepted));
             remaining -= accepted;
+        }
+        return amount - remaining;
+    }
+
+    public synchronized int removeItem(int itemId, int amount) {
+        normalize();
+        if (itemId < 0 || amount <= 0) {
+            return 0;
+        }
+        int remaining = amount;
+        int slot = 0;
+        while (slot < items.getSize() && remaining > 0) {
+            Item current = items.get(slot);
+            if (current == null || current.getId() != itemId) {
+                slot++;
+                continue;
+            }
+            int removed = Math.min(remaining, current.getAmount());
+            int next = current.getAmount() - removed;
+            remaining -= removed;
+            if (next <= 0) {
+                items.set(slot, null);
+                items.shift();
+            } else {
+                items.set(slot, new Item(itemId, next));
+                slot++;
+            }
         }
         return amount - remaining;
     }

@@ -1636,3 +1636,13 @@
 - Selecting or rotating a dropped piece synchronizes the classifier candidate and preview rotation so checkbox classification and special promotion use the active rail automatically.
 - Added Save Layout Evidence in Rail Classifier using RailCompositeLibrary id/type/rotation + relative dX/dY storage.
 - Scoped candidate-table arrow navigation to table focus so workbench arrows can move placed rails without fighting candidate browsing.
+
+
+2026-09-27 - Worker Logistics AI V1 + physical Log hauling
+- Fixed the missing Wooden chest View Storage injection by accepting Matrix3's full normal object-action family instead of requiring action 1002 only.
+- Verified-static from Matrix3 Woodcutting: normal Logs use item 1511.
+- Migrated worker Wood hauling to real physical chest inventory: eligible STORAGE-role chests are scored by logistics priority, mode, distance and competing capacity reservations; nearest eligible chest wins when policy is otherwise equal.
+- Added worker deposit/withdraw permissions, logistics priority and item-capacity queries to physical storage containers; existing item filters/modes now participate in V1 destination selection.
+- Physical chest capacity is reserved per worker/chest/item before hauling to prevent overbooking; existing worker approach reservations keep final tiles separated.
+- Newly gathered Wood is no longer added to the invisible Wood counter. Construction build costs can spend legacy saved Wood plus physical Logs, preserving progression while avoiding duplicate value.
+- Food/Stone/Basic Ore, sawmill processing and rail Wood payload remain explicit legacy compatibility paths pending their own migration.

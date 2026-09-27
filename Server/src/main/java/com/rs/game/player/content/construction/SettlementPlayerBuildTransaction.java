@@ -54,7 +54,7 @@ public final class SettlementPlayerBuildTransaction {
                 return Result.success(saved, null, 0L, definition.getConstructionXp());
             }
 
-            if (state.getResourceAmount(resource) < cost) {
+            if (state.getProgressionResourceAmount(resource) < cost) {
                 return Result.fail("You need " + cost + " " + resource.getDisplayName()
                         + " in settlement storage to build " + definition.getDisplayName() + ".");
             }
@@ -65,7 +65,7 @@ public final class SettlementPlayerBuildTransaction {
                 return Result.fail("That settlement slot is already occupied.");
             }
 
-            long consumed = state.removeResource(resource, cost);
+            long consumed = state.consumeProgressionResource(resource, cost);
             if (consumed != cost) {
                 state.remove(saved.getPieceId());
                 if (consumed > 0L) {

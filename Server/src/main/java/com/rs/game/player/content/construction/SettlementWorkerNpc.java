@@ -279,15 +279,20 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
 
-        WorldTile storage = settlement.getWorkerStorageTile(workerState);
+        WorldTile storage = settlement.getWorkerHaulStorageTile(
+                workerId, workerState, carriedResource);
         if (storage == null) {
+            settlement.releaseWorkerStorageReservation(workerId);
             idle("No valid storage access tile.");
             return;
         }
 
         workState = WorkState.MOVING_TO_STORAGE;
-        statusDetail = "Hauling " + carriedResource.getDisplayName() + " to storage.";
-        if (!walkToward(storage, "No Path to storage.")) {
+        statusDetail = "Hauling " + carriedResource.getDisplayName()
+                + (settlement.usesPhysicalWorkerStorage(carriedResource)
+                        ? " to physical storage." : " to storage.");
+        if (!walkToward(storage, "No Path to storage.",
+                settlement.getWorkerStorageInteractionRange(carriedResource))) {
             return;
         }
 
@@ -301,6 +306,7 @@ public final class SettlementWorkerNpc extends NPC {
         }
 
         settlement.recordWorkerDepositProgress(workerState, added);
+        settlement.releaseWorkerDestination(workerId);
         carriedAmount -= (int) added;
         if (carriedAmount <= 0) {
             String deposited = carriedResource.getDisplayName();

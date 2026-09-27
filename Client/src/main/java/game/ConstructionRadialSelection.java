@@ -434,7 +434,8 @@ public final class ConstructionRadialSelection {
             return;
         }
         int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
-        if (normalizedAction != 1002) {
+        if (!isObjectMenuSourceAction(normalizedAction)
+                || hasMenuText("View Storage")) {
             return;
         }
         int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
@@ -496,12 +497,31 @@ public final class ConstructionRadialSelection {
         Class412.method5075(entry, 722976984);
     }
 
+    private static boolean isObjectMenuSourceAction(int action) {
+        return action >= 3 && action <= 6
+                || action == 1001 || action == 1002;
+    }
+
     private static boolean isWorldMenuSourceAction(int action) {
         return action == MATRIX3_TILE_ACTION
-                || action >= 3 && action <= 6
-                || action == 1001 || action == 1002
+                || isObjectMenuSourceAction(action)
                 || action >= 9 && action <= 13
                 || action == 1003;
+    }
+
+    private static boolean hasMenuText(String text) {
+        if (text == null) {
+            return false;
+        }
+        for (Class572_Sub12_Sub10 entry =
+                (Class572_Sub12_Sub10) Class25.aClass675_174.method7932((byte) 50);
+                entry != null;
+                entry = (Class572_Sub12_Sub10) Class25.aClass675_174.method7926(1709126908)) {
+            if (text.equals(entry.aString11391)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean hasMenuAction(int targetAction) {

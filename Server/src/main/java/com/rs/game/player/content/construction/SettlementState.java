@@ -599,7 +599,7 @@ public final class SettlementState implements Serializable {
             if (!resource.isStarterResource()) {
                 continue;
             }
-            if (getResourceAmount(resource) < STARTER_SHELTER_RESOURCE_EACH
+            if (getProgressionResourceAmount(resource) < STARTER_SHELTER_RESOURCE_EACH
                     || getStorageCapacity(resource) < resource.getStarterStorageCapacity()) {
                 return false;
             }
@@ -637,7 +637,7 @@ public final class SettlementState implements Serializable {
                 continue;
             }
             status.append(", ").append(resource.getDisplayName()).append("=")
-                    .append(getResourceAmount(resource)).append("/")
+                    .append(getProgressionResourceAmount(resource)).append("/")
                     .append(STARTER_SHELTER_RESOURCE_EACH);
         }
         return status.toString();
@@ -661,6 +661,77 @@ public final class SettlementState implements Serializable {
     public synchronized int getPhysicalStorageContainerCount() {
         normalize();
         return storageContainers.size();
+    }
+
+    public synchronized long getPhysicalItemAmount(int itemId) {
+        normalize();
+        if (itemId < 0) {
+            return 0L;
+        }
+        long total = 0L;
+        for (SettlementStorageContainer container : storageContainers.values()) {
+            if (container == null) {
+                continue;
+            }
+            total += container.getItemAmount(itemId);
+        }
+        return total;
+    }
+
+    public synchronized long removePhysicalItem(int itemId, long amount) {
+        normalize();
+        if (itemId < 0 || amount <= 0L) {
+            return 0L;
+        }
+        long remaining = amount;
+        for (SettlementStorageContainer container : storageContainers.values()) {
+            if (container == null || remaining <= 0L) {
+                continue;
+            }
+            int request = (int) Math.min((long) Integer.MAX_VALUE, remaining);
+            int removed = container.removeItem(itemId, request);
+            remaining -= removed;
+        }
+        return amount - remaining;
+    }
+
+    /**
+     * Transitional progression view while legacy resource counters are migrated
+     * one chain at a time. A migrated factory item is real physical inventory;
+     * pre-migration saved counter stock remains spendable so old settlements do
+     * not lose value.
+     */
+    public synchronized long getProgressionResourceAmount(SettlementResource resource) {
+        normalize();
+        if (resource == null) {
+            return 0L;
+        }
+        long total = getResourceAmount(resource);
+        SettlementFactoryItem mapping = SettlementFactoryItem.forResource(resource);
+        if (mapping != null) {
+            total += getPhysicalItemAmount(mapping.getItemId());
+        }
+        return total;
+    }
+
+    public synchronized long consumeProgressionResource(
+            SettlementResource resource, long amount) {
+        normalize();
+        if (resource == null || amount <= 0L) {
+            return 0L;
+        }
+        long remaining = amount;
+        long legacyAvailable = getResourceAmount(resource);
+        if (legacyAvailable > 0L) {
+            long removedLegacy = removeResource(
+                    resource, Math.min(legacyAvailable, remaining));
+            remaining -= removedLegacy;
+        }
+        SettlementFactoryItem mapping = SettlementFactoryItem.forResource(resource);
+        if (remaining > 0L && mapping != null) {
+            remaining -= removePhysicalItem(mapping.getItemId(), remaining);
+        }
+        return amount - remaining;
     }
 
     public synchronized long getResourceAmount(SettlementResource resource) {
