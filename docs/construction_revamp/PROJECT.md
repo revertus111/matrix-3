@@ -1915,7 +1915,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Resume Here: restart client + server once, arm Junction, create one degree-3 branch. Expected next evidence is either full prefab success or a visible anchor/orientation mismatch.
 
 ## Rail Assembly Studio V1 — professional prefab authoring tool — 2026-09-27
-- Status: ACTIVE under SAP AAA; developer-tool side slice only. Canonical Construction milestone table remains unchanged.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA; developer-tool side slice only. Canonical Construction milestone table remains unchanged.
 - Ownership: Rail Assembly Studio authors reusable rail prefab data. RailCompositeLibrary owns local authoring persistence. ObjectCompositePreview owns client-only visual preview. RailRoutePreview remains authoritative for logical rail topology/runtime placement.
 - Goal: replace the current fragmented Object Explorer + Rail Classifier assembly workflow with one fast professional rail-prefab workstation while preserving those older tools for fallback/research until Studio acceptance.
 - V1 workflow: choose/search a shared rail candidate -> add/double-click into assembly -> multi-select/move/rotate/duplicate/delete -> choose explicit anchor -> mark cardinal ports -> validate -> preview R0/R1/R2/R3 -> save/load draft -> publish canonical Junction/Splitter/Crossing/Curve prefab.
@@ -1932,7 +1932,17 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
   - validation reports persistability, exact duplicates, intentional overlapping tiles, anchor state and connection-port requirements before publish;
   - saved prefab picker can reload an existing authored layout for rapid corrections instead of rebuilding it.
 - Compatibility: rail_composites.tsv remains backward-readable. New explicit port metadata is optional; old rows continue using runtime inference. Old Junction/Splitter layouts and Rail Classifier/Object Explorer remain readable.
-- Resume Here: implement the dedicated Test Console Rail Studio tab, add optional port metadata to RailCompositeLibrary/runtime special resolver, then run one fast authoring gate using the new straight+curve splitter concept and the existing junction layout.
+- Implementation checkpoint:
+  - dedicated Test Console -> Rail Studio tab is lazy-loaded ahead of the legacy Rail Classifier/Object Explorer;
+  - shared candidate browser filters by ID/name and double-click/Add/Add+Next requires no manual object-ID entry;
+  - Assembly Workspace supports Ctrl/Shift multi-selection, batch movement/rotation, duplicate/delete, anchor selection/normalization, Ctrl+Z/Ctrl+Y history, and persistent evidence rows showing ID/type/rotation/dX/dY;
+  - whole-prefab R0/R1/R2/R3 preview rotates both component offsets and object rotations around the selected anchor without mutating authored data;
+  - explicit N/E/S/W port metadata is now optional in rail_composites.tsv (port_mask); old eight-column layouts remain readable and continue using runtime inference;
+  - runtime special-profile resolution prefers explicit authored ports when present while preserving legacy inference for old Junction/Splitter layouts;
+  - validation blocks missing anchor, non-persistable assets, exact duplicates and invalid type/port counts; same-tile different-component overlap is reported but intentionally allowed;
+  - saved-prefab picker reloads existing layouts for correction; Save/Update Draft preserves user names; Publish To Runtime writes canonical Curve/Junction/Splitter/Crossing names and reloads the existing rail resolver;
+  - four-port Splitter authoring is allowed and explicitly flagged as ahead of the current degree-3 Splitter runtime topology, preserving the user's newer placeable left/right/straight splitter direction without silently changing runtime semantics.
+- Resume Here: runtime-test Rail Studio once. Load the existing junction layout, verify anchor/ports/rotation previews, then author the straight+curve splitter as an overlapping prefab. Do not change rail topology until the authored asset workflow is accepted.
 
 
 ## Automatic RTS input ownership — 2026-09-27
