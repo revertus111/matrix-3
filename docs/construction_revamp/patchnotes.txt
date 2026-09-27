@@ -1667,3 +1667,8 @@
 - Turning Worker Control/radial drag OFF no longer releases a committed selection back to vanilla single-click Walk Here.
 - Clear Selection and committed worker object/NPC orders now remain available while drag authoring is disabled.
 - Double-click remains the deliberate ground-move command until the committed selection is cleared.
+
+2026-09-27 - Junction prefab 46360 persistence registration
+- Fixed Junction tool failing to arm when junction_LAYOUT_01 is selected: the authored prefab contains object 46360/type 22, but 46360 was missing from both client rail persistence keys and the server SettlementBuildPiece registry.
+- Registered rail-asset-46360 on client/server and added 46360 to the shared Rail Classifier/Object Explorer candidate catalog.
+- Verified the uploaded junction_LAYOUT_01 uses only registered type-22 rail IDs after this correction.
