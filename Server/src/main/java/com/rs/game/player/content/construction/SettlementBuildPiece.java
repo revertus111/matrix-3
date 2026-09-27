@@ -54,6 +54,8 @@ public enum SettlementBuildPiece {
             null, 0L, 4.0),
     RAIL_ASSET_46359("rail-asset-46359", "Rail asset 46359", SettlementBuildRole.RAIL, 46359, 22,
             null, 0L, 4.0),
+    RAIL_ASSET_46360("rail-asset-46360", "Rail asset 46360", SettlementBuildRole.RAIL, 46360, 22,
+            null, 0L, 4.0),
     RAIL_ASSET_46361("rail-asset-46361", "Rail asset 46361", SettlementBuildRole.RAIL, 46361, 22,
             null, 0L, 4.0),
     RAIL_ASSET_46363("rail-asset-46363", "Rail asset 46363", SettlementBuildRole.RAIL, 46363, 22,
