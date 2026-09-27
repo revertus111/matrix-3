@@ -1690,3 +1690,9 @@
 - Added live validation for persistent rail registration, exact duplicates, intentional overlapping tiles, anchor state and type-specific port counts.
 - Added saved-prefab reload/edit plus draft save and canonical Curve/Junction/Splitter/Crossing publish actions.
 - RailRoutePreview now consumes explicit authored special-node ports when available and falls back to legacy geometry inference otherwise.
+
+2026-09-27 - Rail Assembly Studio compact console pass
+- Reworked Rail Studio density specifically for the narrow Client Console: smaller local fonts/padding/gaps, shorter controls, compact candidate/assembly list heights and 3-column workspace controls.
+- Replaced the Saved Prefabs JComboBox popup with a visible scrollable prefab list + Load/Refresh actions; double-click loads a saved prefab.
+- Split the clipped five-button workspace row into navigation + anchor rows and shortened preview controls while preserving tooltips.
+- No global ConsoleTheme changes and no rail runtime/topology changes.
