@@ -1711,3 +1711,7 @@
 - Added Matrix3 scene-slot safety: runtime special prefabs reject multiple components sharing the same tile + object type because the world scene exposes one object slot per tile/type.
 - Rail Studio still allows such overlaps as research drafts, but Publish now blocks them with a clear message instead of creating an invalid persistent prefab.
 - Persisted-world topology reconstruction after client restart/re-entry is NOT part of this slice; existing logical-session ownership remains unchanged.
+
+2026-09-27 - Placeable Splitter V1 legacy-special compatibility
+- Runtime scene-slot validation now ignores exact duplicate legacy prefab rows already collapsed by physical resolution, so the existing junction_LAYOUT_01 duplicate 46360 row does not disable Junction.
+- Different rail components competing for the same tile + object-type scene slot remain blocked.
