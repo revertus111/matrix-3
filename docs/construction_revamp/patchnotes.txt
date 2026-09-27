@@ -1740,3 +1740,7 @@
 - Fixed solo candidate preview placement: Rail Studio no longer hardcodes the candidate at -4 X tiles from the player anchor, which could put it behind the left HUD/off the narrow viewport.
 - Candidate preview now renders one tile north/east of the live player anchor and shows its preview ID/world coordinates/status directly under the candidate row.
 - Assembly preview ownership/placement is unchanged.
+
+2026-09-27 - Rail Studio font readability pass
+- Increased Rail Studio-local title/section/body/helper/list/button fonts one notch after the prior compact pass proved too small in the real dock.
+- Kept the narrow-safe 2-column control layouts and horizontal-scroll prevention unchanged, so readability improves without reintroducing clipping.
