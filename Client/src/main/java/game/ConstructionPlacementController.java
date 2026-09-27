@@ -533,6 +533,8 @@ public final class ConstructionPlacementController {
             return "rail-asset-46358";
         case 46359:
             return "rail-asset-46359";
+        case 46360:
+            return "rail-asset-46360";
         case 46361:
             return "rail-asset-46361";
         case 46363:
