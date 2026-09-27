@@ -1905,3 +1905,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
   - `Clear Selection` remains visible and functional.
 - Turning radial drag OFF during an active drag still cancels only the in-progress drag and preserves the prior committed selection.
 - Resume Here: with self + at least one worker committed, turn radial drag OFF and verify single-click does not move the player, double-click still moves the committed selection, worker object orders still dispatch, and Clear Selection restores ordinary vanilla single-click walking.
+
+## Junction prefab runtime blocker correction — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the existing Junction prefab AAA.
+- Runtime evidence: Junction produced no placement at all.
+- verified-static root cause: uploaded junction_LAYOUT_01 contains 46360/type 22, while ConstructionPlacementController and SettlementBuildPiece omitted 46360 from the persistent rail registry. validateSpecialComposite therefore rejected the whole prefab and set the tool back to NORMAL.
+- Fixed client/server key parity by registering rail-asset-46360 and added the ID to RailCompositeLibrary's shared candidate catalog.
+- Uploaded junction layout IDs are now all represented in the persistence registry.
+- Resume Here: restart client + server once, arm Junction, create one degree-3 branch. Expected next evidence is either full prefab success or a visible anchor/orientation mismatch.
