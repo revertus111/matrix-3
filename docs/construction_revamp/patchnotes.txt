@@ -1672,3 +1672,11 @@
 - Fixed Junction tool failing to arm when junction_LAYOUT_01 is selected: the authored prefab contains object 46360/type 22, but 46360 was missing from both client rail persistence keys and the server SettlementBuildPiece registry.
 - Registered rail-asset-46360 on client/server and added 46360 to the shared Rail Classifier/Object Explorer candidate catalog.
 - Verified the uploaded junction_LAYOUT_01 uses only registered type-22 rail IDs after this correction.
+
+
+2026-09-27 - Automatic context-aware RTS input ownership
+- Enabled settlement RTS radial selection automatically by default; manual Worker Control enable is no longer part of normal gameplay.
+- Added one context arbiter that suspends RTS input for Build Palette, non-RTS camera, Eraser, build/rail placement, Live Model Editor and Worker Jobs overlay.
+- Exclusive tools preserve the committed selection while hiding/suspending RTS interaction; closing the tool resumes the same selection automatically.
+- Mid-drag tool takeover cancels only the active radial gesture and preserves the prior committed selection.
+- Demoted Client Console Worker Control buttons to RTS Automatic / Force Disable RTS debug overrides.

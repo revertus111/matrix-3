@@ -1933,3 +1933,30 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
   - saved prefab picker can reload an existing authored layout for rapid corrections instead of rebuilding it.
 - Compatibility: rail_composites.tsv remains backward-readable. New explicit port metadata is optional; old rows continue using runtime inference. Old Junction/Splitter layouts and Rail Classifier/Object Explorer remain readable.
 - Resume Here: implement the dedicated Test Console Rail Studio tab, add optional port metadata to RailCompositeLibrary/runtime special resolver, then run one fast authoring gate using the new straight+curve splitter concept and the existing junction layout.
+
+
+## Automatic RTS input ownership — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- User decision: RTS radial selection is automatic during normal settlement play; normal gameplay no longer requires manually enabling Worker Control.
+- The old Worker Control boolean is retained only as a developer/debug master override. Default is AUTO/ON.
+- One client-side context arbiter now decides whether RTS world input may run.
+- RTS world input is available only when:
+  - the settlement auto-mode is active;
+  - the Construction camera is in RTS mode;
+  - Build Palette is closed;
+  - Eraser is not armed;
+  - no build/rail placement is armed;
+  - Live Model Editor is not in an edit session;
+  - Worker Jobs overlay is not open;
+  - the developer debug override is not forcing RTS off.
+- Opening one of those exclusive tools suspends RTS input without clearing the committed worker/self selection.
+- If an exclusive tool takes ownership during an active radial drag, only that in-progress drag is cancelled; the previous committed selection is preserved.
+- While RTS is suspended, selection rings are hidden and RTS world/menu interception is disabled so the exclusive tool receives clean mouse ownership.
+- When the exclusive tool closes and RTS camera context returns, the same committed selection becomes visible/active again automatically.
+- Normal movement contract:
+  - no committed selection -> vanilla Matrix3 ground walking;
+  - workers selected -> double-click ground orders workers; player does not move;
+  - self + workers selected -> double-click moves the committed group including self;
+  - Clear Selection -> vanilla single-click walking owns the player immediately.
+- Client Console Worker Control controls are now debug-only: `RTS Automatic` and `Force Disable RTS`.
+- Resume Here: runtime-test automatic selection without touching the console toggle; then open/close Build Palette and Worker Jobs around a committed selection to prove suspension/resume preserves selection and avoids input conflicts.

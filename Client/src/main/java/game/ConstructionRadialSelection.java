@@ -86,7 +86,12 @@ public final class ConstructionRadialSelection {
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
 
-    private static volatile boolean workerControlEnabled;
+    /*
+     * Automatic settlement RTS input is ON by default. This flag is now only a
+     * developer/debug master override; normal availability is decided by the
+     * context arbiter below.
+     */
+    private static volatile boolean workerControlEnabled = true;
     private static volatile boolean dragging;
     private static volatile boolean committed;
     private static volatile DragButton dragButton = DragButton.LEFT;
@@ -317,22 +322,58 @@ public final class ConstructionRadialSelection {
                 + " | mask=" + needsArcMaskState;
     }
 
+    /**
+     * Debug master override. Normal gameplay uses automatic context ownership;
+     * callers should not require players to toggle RTS selection manually.
+     */
     public static void setWorkerControlEnabled(boolean enabled) {
         if (enabled) {
             ensureInputListener();
             workerControlEnabled = true;
-            lastEventState = "RWS-5 Worker Control ON. Hold " + dragButton
-                    + " on valid ground and drag.";
+            lastEventState = "RTS input override=AUTO. Settlement context owns availability.";
         } else {
             if (dragging) {
                 cancelActiveDrag();
             }
             workerControlEnabled = false;
             lastEventState = hasCommittedSelection()
-                    ? "RWS drag selection OFF; committed selection remains RTS-active until Clear Selection."
-                    : "RWS drag selection OFF.";
+                    ? "RTS input FORCE DISABLED; committed selection preserved."
+                    : "RTS input FORCE DISABLED.";
         }
+        resetGroundMoveClick();
         lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    private static boolean isRtsWorldInputAvailable() {
+        return getRtsInputBlockReason() == null;
+    }
+
+    private static String getRtsInputBlockReason() {
+        if (!workerControlEnabled) {
+            return "debug override";
+        }
+        if (!ConstructionBuildCamera.isSettlementAutoMode()) {
+            return "outside settlement";
+        }
+        if (!ConstructionBuildCamera.isRtsMode()) {
+            return "non-RTS camera";
+        }
+        if (ConstructionPaletteOverlay.isVisible()) {
+            return "Build Palette";
+        }
+        if (ConstructionPlacementController.isEraserMode()) {
+            return "Eraser";
+        }
+        if (ConstructionPlacementController.isArmed()) {
+            return "build/rail placement";
+        }
+        if (LiveModelEditorPreview.isEditSessionActive()) {
+            return "Live Model Editor";
+        }
+        if (ConstructionWorkerJobsOverlay.isVisible()) {
+            return "Worker Jobs";
+        }
+        return null;
     }
 
     public static void clearCommittedRadius() {
@@ -363,8 +404,15 @@ public final class ConstructionRadialSelection {
     }
 
     public static String getStatus() {
-        StringBuilder status = new StringBuilder(192);
-        status.append(workerControlEnabled ? "RWS-5 ON" : "RWS-5 OFF");
+        StringBuilder status = new StringBuilder(224);
+        String blockReason = getRtsInputBlockReason();
+        if (!workerControlEnabled) {
+            status.append("RTS AUTO FORCE-OFF");
+        } else if (blockReason == null) {
+            status.append("RTS AUTO ACTIVE");
+        } else {
+            status.append("RTS AUTO SUSPENDED(").append(blockReason).append(')');
+        }
         status.append(" | button=").append(dragButton);
         if (dragging) {
             status.append(" | DRAGGING edgeA=")
@@ -400,7 +448,8 @@ public final class ConstructionRadialSelection {
      */
     static void mirrorWorkerJobsEntry(String targetName, int sourceAction,
             long targetUid, int localX, int localY) {
-        if (Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
+        if (!isRtsWorldInputAvailable()
+                || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
             return;
         }
         int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
@@ -484,7 +533,7 @@ public final class ConstructionRadialSelection {
     }
 
     static void mirrorWorldSelectionEntry(int sourceAction, int localX, int localY) {
-        if (!hasCommittedSelection()
+        if (!isRtsWorldInputAvailable() || !hasCommittedSelection()
                 || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
             return;
         }
@@ -547,7 +596,10 @@ public final class ConstructionRadialSelection {
      * second picker and does not alter the menu entry.
      */
     static void observeSceneMenuTile(int sourceAction, int localX, int localY) {
-        if (!workerControlEnabled) {
+        if (workerControlEnabled && ConstructionBuildCamera.isSettlementAutoMode()) {
+            ensureInputListener();
+        }
+        if (!isRtsWorldInputAvailable()) {
             return;
         }
 
@@ -585,13 +637,20 @@ public final class ConstructionRadialSelection {
      *   RWS-1 and ConstructionGhostPreview.
      */
     static void render(Class523 scene, Class106 renderer) {
-        if ((!workerControlEnabled && !workerNeedsPreviewEnabled)
+        if (workerControlEnabled && ConstructionBuildCamera.isSettlementAutoMode()) {
+            ensureInputListener();
+        }
+        boolean rtsInputAvailable = isRtsWorldInputAvailable();
+        if (!rtsInputAvailable && dragging) {
+            cancelActiveDrag();
+        }
+        if ((!rtsInputAvailable && !workerNeedsPreviewEnabled)
                 || scene == null || renderer == null || client.aClass613_8605 == null) {
             return;
         }
 
-        boolean renderDragSelection = workerControlEnabled && dragging;
-        boolean renderCommittedSelection = workerControlEnabled
+        boolean renderDragSelection = rtsInputAvailable && dragging;
+        boolean renderCommittedSelection = rtsInputAvailable
                 && !dragging && (committedWorkerNpcIndexes.length > 0 || committedPlayerSelected);
         boolean renderNeedsPreview = workerNeedsPreviewEnabled;
         if (!renderDragSelection && !renderCommittedSelection && !renderNeedsPreview) {
@@ -1579,7 +1638,10 @@ public final class ConstructionRadialSelection {
     }
 
     private static void handleMouseEvent(MouseEvent mouse) {
-        if (!workerControlEnabled) {
+        if (!isRtsWorldInputAvailable()) {
+            if (dragging) {
+                cancelActiveDrag();
+            }
             return;
         }
 
@@ -1628,7 +1690,7 @@ public final class ConstructionRadialSelection {
     }
 
     private static void handleKeyEvent(KeyEvent key) {
-        if (!workerControlEnabled || !dragging || key.getID() != KeyEvent.KEY_PRESSED
+        if (!isRtsWorldInputAvailable() || !dragging || key.getID() != KeyEvent.KEY_PRESSED
                 || key.getKeyCode() != KeyEvent.VK_ESCAPE) {
             return;
         }
@@ -1769,6 +1831,9 @@ public final class ConstructionRadialSelection {
     static boolean handleMenuAction(int action, int localX, int localY, long targetUid) {
         int normalizedAction = action >= 2000 ? action - 2000 : action;
         if (normalizedAction == WORKER_JOBS_MENU_ACTION) {
+            if (!isRtsWorldInputAvailable()) {
+                return true;
+            }
             int npcIndex = (int) targetUid;
             if (!isSettlementWorkerNpcIndex(npcIndex)) {
                 return true;
@@ -1802,12 +1867,10 @@ public final class ConstructionRadialSelection {
             return true;
         }
         /*
-         * Drag-selection enablement and committed-selection ownership are
-         * intentionally separate. Turning the radial drag tool off only stops
-         * creating/replacing selections; an existing committed selection keeps
-         * RTS command ownership until Clear Selection.
+         * Automatic RTS ownership is context-sensitive. Build/editor tools may
+         * suspend world RTS input without clearing the committed selection.
          */
-        if (!hasCommittedSelection()) {
+        if (!isRtsWorldInputAvailable() || !hasCommittedSelection()) {
             return false;
         }
 

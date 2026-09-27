@@ -135,13 +135,13 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Worker Control");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "LMB drag selects workers. Single ground click does not move them; double-click ground moves the committed selection. "
-                + "Use the world right-click Clear Selection action to deselect.",
-                4));
+                "RTS input is automatic during normal settlement play. Build Palette, placement/edit tools and Worker Jobs temporarily suspend it without clearing the committed selection. "
+                + "LMB drag selects; double-click ground moves the committed selection; Clear Selection restores ordinary movement ownership.",
+                5));
         card.add(Box.createVerticalStrut(8));
 
-        JButton enable = new JButton("Enable Worker Control");
-        JButton disable = new JButton("Disable Worker Control");
+        JButton enable = new JButton("RTS Automatic");
+        JButton disable = new JButton("Force Disable RTS");
         JButton selectionStatus = new JButton("Selection Status");
 
         styleButton(enable);

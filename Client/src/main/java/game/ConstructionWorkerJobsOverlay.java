@@ -54,6 +54,10 @@ public final class ConstructionWorkerJobsOverlay {
     private ConstructionWorkerJobsOverlay() {
     }
 
+    public static boolean isVisible() {
+        return window != null && window.isVisible();
+    }
+
     public static void showForNpc(int npcIndex, boolean applyToSelection, int workerCount) {
         targetNpcIndex = npcIndex;
         selectionScope = applyToSelection;

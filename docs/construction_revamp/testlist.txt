@@ -1278,3 +1278,17 @@ Junction prefab 46360 blocker correction — IMPLEMENTED / NEEDS RUNTIME TEST (2
 - Pull/restart both client and server, then arm Junction again. The tool must remain in Junction mode instead of silently reverting to normal Rail.
 - Create one branch from an existing degree-2 rail. The complete junction_LAYOUT_01 prefab must now render/commit.
 - If the prefab appears but is shifted/rotated incorrectly, capture one screenshot/video; that is an anchor/orientation issue, not persistence validation.
+
+
+Automatic RTS input ownership gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Enter the settlement without pressing any Client Console Worker Control button. LMB drag on normal ground must create a radial selection automatically.
+- With no committed selection, single-click ground must retain normal vanilla Matrix3 walking.
+- Commit workers only: single-click ground must not move them; double-click ground must order the selected workers while the player remains still.
+- Commit self + workers: double-click ground must move the committed group including self.
+- Open Build Palette with a committed selection. RTS drag/menu movement must suspend, selection must remain persisted in client state, and build/placement input must work normally.
+- Close Build Palette and return to RTS camera. The same committed selection/rings must resume automatically without reselecting.
+- Repeat suspension/resume with Worker -> Jobs overlay and Live Model Editor edit mode.
+- Arm Eraser or another build/rail placement tool. RTS drag must not begin and RTS movement interception must not steal the tool click.
+- Start a radial drag and then open an exclusive tool before releasing. The in-progress drag must cancel while any previously committed selection remains intact.
+- Client Console -> Con Revamp -> Worker Control -> Force Disable RTS is debug-only: it must suppress automatic RTS until RTS Automatic is clicked again, without deleting the committed selection.
+- Clear Selection, then single-click ground once. Vanilla Matrix3 player walking must be restored immediately.
