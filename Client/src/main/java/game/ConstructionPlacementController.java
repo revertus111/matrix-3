@@ -69,6 +69,8 @@ public final class ConstructionPlacementController {
                     "Physical 16-slot settlement storage; each stack is capped at 100 items in V1."),
             new BuildPiece("basic-rail", "Rail route", Category.RAILS, 46353, 22,
                     "Factorio-style rail network: drag track, then start from existing track to extend or branch."),
+            new BuildPiece("rail-splitter", "Splitter", Category.RAILS, 46353, 22,
+                    "Placeable rail-network item. Click empty ground or upgrade a compatible straight rail tile."),
             new BuildPiece("rail-loader", "Rail Loader", Category.RAILS, 13450, 0,
                     "V1 logistics endpoint; place cardinally adjacent to a rail."),
             new BuildPiece("rail-unloader", "Rail Unloader", Category.RAILS, 13344, 0,
@@ -169,7 +171,16 @@ public final class ConstructionPlacementController {
 
     public static boolean isRailRouteSelected() {
         BuildPiece piece = selectedPiece;
-        return piece != null && "basic-rail".equals(piece.getKey()) && RailRoutePreview.isEnabled();
+        return piece != null
+                && ("basic-rail".equals(piece.getKey())
+                        || "rail-splitter".equals(piece.getKey()))
+                && RailRoutePreview.isEnabled();
+    }
+
+    public static boolean isRailSplitterSelected() {
+        BuildPiece piece = selectedPiece;
+        return piece != null && "rail-splitter".equals(piece.getKey())
+                && RailRoutePreview.isSpecialItemPlacement();
     }
 
     public static void beginPaletteSession() {
@@ -300,6 +311,10 @@ public final class ConstructionPlacementController {
             return status;
         }
         rotation = (rotation + delta) & 0x3;
+        if (isRailSplitterSelected()) {
+            status = RailRoutePreview.setSpecialItemRotation(rotation);
+            return status;
+        }
         if (selectedPiece != null && DevSpawnPlacement.hasActive()) {
             return armSelected();
         }
@@ -591,7 +606,17 @@ public final class ConstructionPlacementController {
             RailRoutePreview.reloadSpecialComposites();
             RailRoutePreview.setToolMode(RailRoutePreview.ToolMode.NORMAL);
             RailRoutePreview.setEnabled(true);
-            status = "Rail Network armed. Normal Rail creates degree <=2 track; use the native build-bar special tools for junctions.";
+            status = "Rail Network armed. Normal Rail creates degree <=2 track; use Junction or Splitter for special nodes.";
+            return status;
+        }
+        if ("rail-splitter".equals(piece.getKey())) {
+            DevModeBridge.cancelPlacement();
+            RailRoutePreview.configure("Settlement rail", 46353, 22, 3,
+                    RailRoutePreview.RouteOrder.X_THEN_Y);
+            RailRoutePreview.reloadCurveComposite();
+            RailRoutePreview.reloadSpecialComposites();
+            status = RailRoutePreview.armSpecialItem(
+                    RailRoutePreview.ToolMode.SPLITTER, rotation);
             return status;
         }
         RailRoutePreview.setEnabled(false);
