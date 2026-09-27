@@ -269,12 +269,23 @@ public final class RailRoutePreview {
             return label + " asset missing. In Rail Classifier preview the real asset, then click Accept "
                     + label + ".";
         }
+        java.util.LinkedHashSet<String> sceneSlots =
+                new java.util.LinkedHashSet<String>();
         for (RailCompositeLibrary.Component component : composite.getComponents()) {
             if (!ConstructionPlacementController.isPersistableRailObject(
                     component.getId(), component.getType())) {
                 return label + " asset ID " + component.getId()
                         + " type " + component.getType()
                         + " is not in the server rail persistence whitelist.";
+            }
+            String sceneSlot = component.getOffsetX() + ":" + component.getOffsetY()
+                    + ":" + component.getType();
+            if (!sceneSlots.add(sceneSlot)) {
+                return label + " prefab has multiple type-" + component.getType()
+                        + " objects on authored tile dX " + component.getOffsetX()
+                        + ", dY " + component.getOffsetY()
+                        + ". Matrix3 can project only one object per tile/type scene slot; "
+                        + "keep this as a Studio draft or spread the component origins.";
             }
         }
         return null;
