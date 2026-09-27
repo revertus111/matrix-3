@@ -1209,3 +1209,14 @@ Saved Build Tiles gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
 - Exit/re-enter and logout/relog, then use Clear All. Saved-tile protection must persist.
 - Right-click a saved tile -> Unsave Tile, then use Clear All. Builds there may now be removed normally.
 - Confirm Eraser/Delete and Ctrl+Z still intentionally remove builds from saved tiles; saved-tile protection is only for Clear All.
+
+
+Object Explorer rail candidate workbench gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Open Test Console -> Object Explorer. A Rail Candidate Workbench card must appear between Object preview and Rail Layout Lab.
+- Click Spawn Rail with no prior selection: candidate 1/27 must load as type 22 and direct-render beside the player.
+- Prev Rail / Next Rail must cycle the same evidence-seeded candidate ids used by Rail Classifier.
+- Click Drop Into Layout. The candidate must appear in Rail Layout Lab, remain selected, and render in the live layout preview.
+- Use arrow keys to move the dropped candidate, R to rotate, [ / ] to switch selected pieces, Delete to remove, Ctrl+D to duplicate.
+- Click Drop + Next several times. Successive candidates must be spaced into the research grid rather than all rendering on one tile.
+- Clear Rail Layout must clear the candidate research layout without mutating persistent settlement objects.
+- Regression: Rail Classifier must still populate the same shared candidate catalog and its role classification/Accept Junction controls must continue to work.
