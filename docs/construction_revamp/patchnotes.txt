@@ -1680,3 +1680,13 @@
 - Exclusive tools preserve the committed selection while hiding/suspending RTS interaction; closing the tool resumes the same selection automatically.
 - Mid-drag tool takeover cancels only the active radial gesture and preserves the prior committed selection.
 - Demoted Client Console Worker Control buttons to RTS Automatic / Force Disable RTS debug overrides.
+
+2026-09-27 - Rail Assembly Studio V1
+- Added Test Console -> Rail Studio as the primary professional rail-prefab authoring workspace; legacy Rail Classifier/Object Explorer remain available for fallback research.
+- Added shared rail candidate search/browse + double-click/Add/Add+Next with no manual object-ID entry.
+- Added multi-select assembly editing, batch move/rotate/duplicate/delete, selected anchor + normalization, Ctrl+Z/Ctrl+Y history, component evidence labels and client-only live preview.
+- Added whole-prefab R0/R1/R2/R3 preview around the selected anchor without mutating authored layout data.
+- Extended rail_composites.tsv with optional backward-compatible port_mask metadata (N=1,E=2,S=4,W=8); old layouts still load with automatic port inference.
+- Added live validation for persistent rail registration, exact duplicates, intentional overlapping tiles, anchor state and type-specific port counts.
+- Added saved-prefab reload/edit plus draft save and canonical Curve/Junction/Splitter/Crossing publish actions.
+- RailRoutePreview now consumes explicit authored special-node ports when available and falls back to legacy geometry inference otherwise.
