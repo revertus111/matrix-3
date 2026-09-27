@@ -1251,3 +1251,14 @@ Rail Classifier self-contained workflow correction — IMPLEMENTED / NEEDS RUNTI
 - Geometry Classification must sit directly below the workbench so the active/current rail can be classified without scrolling through route-preview tooling first.
 - Rotate a placed rail with R and confirm CURRENT CANDIDATE + ACTIVE PLACED RAIL both reflect the same rotation before toggling classification.
 - Regression: Advanced candidate list, solo Spawn Preview, route preview, Accept Junction/Crossing/Splitter, layout saving and hotkeys must continue working.
+
+Multi-object Junction/Splitter prefab gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Keep the existing Client/data/construction/asset_studio/rail_composites.tsv containing junction_LAYOUT_01. Open/arm Junction without rebuilding the layout; the resolver must prefer that multi-object authored layout over the old one-object JUNCTION_RAIL_LAYOUT_01 placeholder.
+- Static inference for the uploaded junction_LAYOUT_01 resolves anchor dX=2,dY=0 and base exits N/E/W. Place a Junction in each of the four degree-3 orientations and confirm the complete physical assembly rotates around the logical node correctly.
+- Existing layout contains an exact duplicate 46360/R0/dX5/dY0 row. Runtime must render/persist only one physical piece in that slot.
+- In Rail Classifier Workbench, build/select a multi-piece special, make the intended logical anchor the ACTIVE PLACED RAIL, then click Accept Junction. JUNCTION_RAIL_LAYOUT_01 must be rewritten as the complete normalized layout with the active piece at dX0/dY0.
+- Repeat Accept Splitter with a splitter assembly. SPLITTER_RAIL_LAYOUT_01 must contain the complete layout and Splitter mode must author exactly one degree-3 node using its own prefab art.
+- Junction/Splitter normal-Rail regression: ordinary Rail still cannot create degree-3 nodes.
+- Eraser regression: click an offset physical component of a placed Junction/Splitter prefab; the owning logical special node and its complete physical footprint must reconcile away atomically.
+- Persistence regression: exit/re-enter after each special placement. All physical prefab components must persist with correct ID/type/rotation and no one-object placeholder must reappear.
+- Crossing remains framework-only in this patch; do not treat it as enabled degree-4 routing yet.
