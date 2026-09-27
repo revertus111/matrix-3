@@ -190,14 +190,23 @@ public final class ConstructionPlacementController {
         hoverTracking = false;
         clearHoveredTile();
         ConstructionGhostPreview.endDebugSession();
-        // The palette no longer owns camera lifetime while the settlement lifecycle
-        // owns the always-on RTS session. Closing build UI must not restore vanilla.
-        if (!ConstructionBuildCamera.isSettlementAutoMode()) {
-            ConstructionBuildCamera.exit();
-        }
+
+        /*
+         * Closing Build Mode must release every palette-owned world-input lock
+         * before automatic settlement RTS resumes. Free Build, Eraser and an
+         * armed placement are all legitimate while the palette is open, but
+         * none of them may remain as stale RTS-arbiter blockers afterward.
+         */
         RailRoutePreview.setEnabled(false);
+        eraserMode = false;
         if (cancelPlacement) {
             status = DevModeBridge.cancelPlacement();
+        }
+
+        if (ConstructionBuildCamera.isSettlementAutoMode()) {
+            ConstructionBuildCamera.setMode(ConstructionBuildCamera.CameraMode.RTS);
+        } else {
+            ConstructionBuildCamera.exit();
         }
     }
 

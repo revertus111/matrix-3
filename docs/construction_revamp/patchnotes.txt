@@ -1696,3 +1696,9 @@
 - Replaced the Saved Prefabs JComboBox popup with a visible scrollable prefab list + Load/Refresh actions; double-click loads a saved prefab.
 - Split the clipped five-button workspace row into navigation + anchor rows and shortened preview controls while preserving tooltips.
 - No global ConsoleTheme changes and no rail runtime/topology changes.
+
+
+2026-09-27 - Restore automatic RTS after Build Mode closes
+- Fixed Build Palette close leaving automatic RTS drag suspended when Free Build camera or Eraser state remained active.
+- Build Mode close now clears rail/eraser/placement ownership and restores RTS camera mode when settlement auto-mode remains active.
+- Committed RTS selection remains preserved; no Client Console re-enable is required after closing Build Palette.

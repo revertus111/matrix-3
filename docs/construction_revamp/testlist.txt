@@ -1315,3 +1315,12 @@ Rail Assembly Studio compact console gate — IMPLEMENTED / NEEDS RUNTIME TEST (
 - Workspace controls must show Prev/Duplicate/Next, Set Anchor/Normalize, 3x3 movement/history controls and R0/R1/R2/R3 preview controls at the narrow width.
 - Confirm smaller Rail Studio fonts/padding do not affect other Client Console tabs.
 - Regression: load an existing prefab and verify multi-select, move/rotate, anchor, save/publish and validation behavior is unchanged.
+
+
+Build Mode -> RTS handoff regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Enter settlement and confirm automatic RTS LMB drag works without using Client Console.
+- Open Build Palette, switch camera to Free, then close the palette. RTS LMB drag must work again immediately and camera mode must be RTS.
+- Open Build Palette, arm Eraser, close the palette without erasing. RTS LMB drag must resume; Eraser must no longer block world input.
+- Open Build Palette, arm a normal build piece or rail, then close the palette. Placement/rail ownership must cancel and RTS drag must resume.
+- Preserve a committed self/worker selection before opening Build Palette. Close Build Palette after each case above; the same committed selection must return without reselecting.
+- Regression: outside settlement auto-mode, closing Build Palette may still exit the Construction camera as before.

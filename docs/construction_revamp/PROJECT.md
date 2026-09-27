@@ -1977,3 +1977,17 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Correction is Rail Studio-local only: compact fonts/padding/gaps, shorter button labels, narrower-safe grid layouts, shorter visible lists and concise helper text. Global ConsoleTheme is untouched.
 - Saved Prefabs now uses a persistent visible JList with Load/Refresh and double-click load, removing the oversized popup failure.
 - Resume Here: restart/rebuild client once and verify the full Studio is readable at normal dock width; then load the existing Junction and continue the Rail Assembly Studio V1 authoring gate.
+
+
+## Build Mode -> RTS ownership handoff correction — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+- Runtime bug: closing Build Palette could leave automatic RTS drag suspended.
+- verified-static root cause: Build Palette may switch the camera to `FREE_BUILD`, and Eraser may remain armed. Both are valid RTS-arbiter blockers while Build Mode is open, but `endPaletteSession(...)` did not clear/restore them on close.
+- Fix: closing Build Mode now releases palette-owned tool state in one handoff:
+  - disables rail-route preview ownership;
+  - clears Eraser mode;
+  - cancels any armed placement;
+  - if the player is still in settlement auto-mode, restores camera mode to `RTS`;
+  - only exits the Construction camera when settlement auto-mode is not active.
+- Committed worker/self selection remains preserved through this handoff and should become selectable/controllable again immediately after the palette closes.
+- Resume Here: open Build Palette, switch to Free and/or arm Eraser/build placement, close Build Palette, then confirm RTS LMB drag and the prior committed selection resume without touching Client Console.
