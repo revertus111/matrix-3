@@ -328,7 +328,9 @@ public final class ConstructionRadialSelection {
                 cancelActiveDrag();
             }
             workerControlEnabled = false;
-            lastEventState = "RWS-5 Worker Control OFF.";
+            lastEventState = hasCommittedSelection()
+                    ? "RWS drag selection OFF; committed selection remains RTS-active until Clear Selection."
+                    : "RWS drag selection OFF.";
         }
         lastRenderedCycle = Integer.MIN_VALUE;
     }
@@ -482,7 +484,7 @@ public final class ConstructionRadialSelection {
     }
 
     static void mirrorWorldSelectionEntry(int sourceAction, int localX, int localY) {
-        if (!workerControlEnabled || !hasCommittedSelection()
+        if (!hasCommittedSelection()
                 || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
             return;
         }
@@ -1779,7 +1781,7 @@ public final class ConstructionRadialSelection {
             return true;
         }
         if (normalizedAction == CLEAR_SELECTION_MENU_ACTION
-                && workerControlEnabled && hasCommittedSelection()) {
+                && hasCommittedSelection()) {
             clearCommittedRadius();
             return true;
         }
@@ -1799,7 +1801,13 @@ public final class ConstructionRadialSelection {
                     : "Saved tile command failed: " + error;
             return true;
         }
-        if (!workerControlEnabled || !hasCommittedSelection()) {
+        /*
+         * Drag-selection enablement and committed-selection ownership are
+         * intentionally separate. Turning the radial drag tool off only stops
+         * creating/replacing selections; an existing committed selection keeps
+         * RTS command ownership until Clear Selection.
+         */
+        if (!hasCommittedSelection()) {
             return false;
         }
 

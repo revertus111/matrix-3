@@ -1890,3 +1890,18 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Junction and Splitter both author one degree-3 logical node and resolve their own prefab. Crossing remains reserved for separate degree-4 semantics.
 - Multi-object special erasing maps any clicked prefab component back to the owning logical node before atomic rail reconciliation.
 - Resume Here: pull once, keep the existing junction_LAYOUT_01 TSV, arm Junction and place all four T orientations. If orientation is wrong, identify which physical component should be the logical anchor; no topology rewrite should be needed.
+
+
+## RTS committed-selection ownership correction — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under AAA.
+- Runtime bug: when self remained part of a committed RTS selection but radial drag selection was toggled OFF, Matrix3 single-click Walk Here became active again.
+- Root cause: committed-selection command ownership, Clear Selection visibility/action, and worker object-order interception were incorrectly gated by `workerControlEnabled`, which is the drag-authoring toggle.
+- Ownership correction: radial drag enablement now controls only creating/replacing a selection. Once a selection is committed, it remains RTS-owned until `Clear Selection` regardless of whether radial drag authoring is ON or OFF.
+- While a committed selection exists with drag authoring OFF:
+  - single-click ground remains consumed;
+  - double-click ground remains the deliberate RTS move command;
+  - self moves only through the accepted committed-selection double-click path when self is selected;
+  - selected-worker object/NPC orders remain active;
+  - `Clear Selection` remains visible and functional.
+- Turning radial drag OFF during an active drag still cancels only the in-progress drag and preserves the prior committed selection.
+- Resume Here: with self + at least one worker committed, turn radial drag OFF and verify single-click does not move the player, double-click still moves the committed selection, worker object orders still dispatch, and Clear Selection restores ordinary vanilla single-click walking.

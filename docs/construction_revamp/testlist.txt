@@ -1262,3 +1262,13 @@ Multi-object Junction/Splitter prefab gate — IMPLEMENTED / NEEDS RUNTIME TEST 
 - Eraser regression: click an offset physical component of a placed Junction/Splitter prefab; the owning logical special node and its complete physical footprint must reconcile away atomically.
 - Persistence regression: exit/re-enter after each special placement. All physical prefab components must persist with correct ID/type/rotation and no one-object placeholder must reappear.
 - Crossing remains framework-only in this patch; do not treat it as enabled degree-4 routing yet.
+
+
+RTS committed-selection ownership regression gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Commit a selection containing self + at least one worker, then turn radial drag/Worker Control OFF without clearing the selection.
+- Single-click normal ground: player and workers must NOT move; the committed selection still owns the click.
+- Double-click ground: selected workers must receive the move order and self must move through the same deliberate double-click when self is selected.
+- Right-click world while drag authoring is OFF: Clear Selection must still appear and work.
+- With workers committed and drag authoring OFF, issue one supported resource/workstation object order; workers must still receive it.
+- Turn drag authoring back ON and create a replacement selection; normal radial selection behavior must remain unchanged.
+- Clear Selection, then single-click ground once: vanilla Matrix3 player walking must be restored immediately.

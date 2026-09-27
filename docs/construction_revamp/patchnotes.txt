@@ -1660,3 +1660,10 @@
 - Rail Classifier Accept Junction/Crossing/Splitter now promotes the whole Workbench layout when pieces are present, normalizing the active placed rail to anchor (0,0) and removing exact duplicate rows.
 - Junction and Splitter now share the existing degree-3 logical topology path but resolve through their own saved prefab art; Crossing remains degree-4/framework-only.
 - Erasing any physical component of a multi-object special maps back to the owning logical special node.
+
+
+2026-09-27 - RTS committed selection remains authoritative with drag tool off
+- Separated radial drag-authoring enablement from committed RTS selection ownership.
+- Turning Worker Control/radial drag OFF no longer releases a committed selection back to vanilla single-click Walk Here.
+- Clear Selection and committed worker object/NPC orders now remain available while drag authoring is disabled.
+- Double-click remains the deliberate ground-move command until the committed selection is cleared.
