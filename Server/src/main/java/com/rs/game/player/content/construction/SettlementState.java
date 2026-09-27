@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 10;
+    private static final int CURRENT_SCHEMA_VERSION = 11;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -44,6 +44,7 @@ public final class SettlementState implements Serializable {
     private List<SettlementPlacedPiece> pieces = new ArrayList<SettlementPlacedPiece>();
     private Map<Long, SettlementStorageContainer> storageContainers =
             new HashMap<Long, SettlementStorageContainer>();
+    private Set<String> savedBuildTiles = new HashSet<String>();
     private Map<String, Long> resources = new HashMap<String, Long>();
     /**
      * Legacy serialized shared-cap field. Kept so existing player saves remain
@@ -64,6 +65,15 @@ public final class SettlementState implements Serializable {
         }
         if (storageContainers == null) {
             storageContainers = new HashMap<Long, SettlementStorageContainer>();
+        }
+        if (savedBuildTiles == null) {
+            savedBuildTiles = new HashSet<String>();
+        }
+        Iterator<String> savedTileIterator = savedBuildTiles.iterator();
+        while (savedTileIterator.hasNext()) {
+            if (!isValidSavedBuildTileKey(savedTileIterator.next())) {
+                savedTileIterator.remove();
+            }
         }
         Set<Long> liveStoragePieceIds = new HashSet<Long>();
         for (SettlementPlacedPiece piece : pieces) {
@@ -173,6 +183,33 @@ public final class SettlementState implements Serializable {
     public synchronized List<SettlementPlacedPiece> snapshotPieces() {
         normalize();
         return new ArrayList<SettlementPlacedPiece>(pieces);
+    }
+
+    public synchronized boolean saveBuildTile(int plotX, int plotY, int plane) {
+        normalize();
+        if (!isValidPlotLocation(plotX, plotY, plane)) {
+            return false;
+        }
+        return savedBuildTiles.add(savedBuildTileKey(plotX, plotY, plane));
+    }
+
+    public synchronized boolean unsaveBuildTile(int plotX, int plotY, int plane) {
+        normalize();
+        if (!isValidPlotLocation(plotX, plotY, plane)) {
+            return false;
+        }
+        return savedBuildTiles.remove(savedBuildTileKey(plotX, plotY, plane));
+    }
+
+    public synchronized boolean isBuildTileSaved(int plotX, int plotY, int plane) {
+        normalize();
+        return isValidPlotLocation(plotX, plotY, plane)
+                && savedBuildTiles.contains(savedBuildTileKey(plotX, plotY, plane));
+    }
+
+    public synchronized int getSavedBuildTileCount() {
+        normalize();
+        return savedBuildTiles.size();
     }
 
     public synchronized SettlementPlacedPiece place(SettlementBuildPiece definition,
@@ -760,6 +797,28 @@ public final class SettlementState implements Serializable {
         return plane == PLOT_PLANE
                 && plotX >= 0 && plotX < PLOT_TILES
                 && plotY >= 0 && plotY < PLOT_TILES;
+    }
+
+    private String savedBuildTileKey(int plotX, int plotY, int plane) {
+        return plotX + "," + plotY + "," + plane;
+    }
+
+    private boolean isValidSavedBuildTileKey(String key) {
+        if (key == null) {
+            return false;
+        }
+        String[] values = key.split(",");
+        if (values.length != 3) {
+            return false;
+        }
+        try {
+            return isValidPlotLocation(
+                    Integer.parseInt(values[0]),
+                    Integer.parseInt(values[1]),
+                    Integer.parseInt(values[2]));
+        } catch (NumberFormatException ex) {
+            return false;
+        }
     }
 
     private boolean isOccupied(int plotX, int plotY, int plane, int objectType, long ignoredPieceId) {

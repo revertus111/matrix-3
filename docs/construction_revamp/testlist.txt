@@ -1200,3 +1200,12 @@ Physical Storage UX correction gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-0
 - Confirm non-settlement object 18804 does not gain the settlement View Storage entry when settlement auto-mode is inactive.
 - In Client Console -> Test Console -> Con Revamp -> Storage, click Physical Storage Overview; aggregate storage opens read-only.
 - Confirm ::settlementstorage and ::settlementstorageoverview are no longer normal player commands.
+
+
+Saved Build Tiles gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Enter the settlement and right-click normal ground. Confirm Save Tile and Unsave Tile appear once each.
+- Place at least one build on a tile, right-click that tile -> Save Tile, then use Clear All. The build on the saved tile must remain while ordinary unsaved builds are removed.
+- Save an empty tile, build something there afterward, then use Clear All again. The later build must survive because protection belongs to the tile.
+- Exit/re-enter and logout/relog, then use Clear All. Saved-tile protection must persist.
+- Right-click a saved tile -> Unsave Tile, then use Clear All. Builds there may now be removed normally.
+- Confirm Eraser/Delete and Ctrl+Z still intentionally remove builds from saved tiles; saved-tile protection is only for Clear All.

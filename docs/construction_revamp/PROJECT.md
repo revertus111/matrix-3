@@ -1702,3 +1702,15 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Physical chest access is world-native: right-click Wooden chest -> `View Storage`.
 - Settlement-wide aggregate inspection is developer-tooling only through Client Console -> Con Revamp -> Storage -> `Physical Storage Overview`.
 - The console overview continues to use the existing owner-only Client Console bridge internally; physical chest access does not.
+
+
+## Construction test cleanup safety — Saved Build Tiles — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under AAA.
+- Problem: rapid Construction testing commonly uses Clear All, but accepted/important test structures should not need to be rebuilt after every cleanup.
+- Ownership is tile-based, not piece-based. Right-click settlement ground exposes `Save Tile` and `Unsave Tile`.
+- Saved tiles persist in `SettlementState` using plot-relative X/Y/plane identity, so dynamic-region world coordinates are never serialized.
+- Saving an empty tile is valid. Any build placed on that same saved tile later inherits Clear All protection automatically.
+- `Clear All` skips every persistent build piece whose plot tile is saved and reports how many builds were preserved.
+- Saved-tile protection intentionally applies only to mass cleanup. Explicit Eraser/Delete and Ctrl+Z remain deliberate authoring actions and may still remove a build from a saved tile.
+- The right-click actions use the existing owner-authorized Client Console command bridge internally; the user-facing workflow is world-native and requires no typed command.
+- Resume Here: save one occupied tile and one empty tile, run Clear All, confirm the occupied tile survives, then build on the formerly empty saved tile and prove it survives the next Clear All.

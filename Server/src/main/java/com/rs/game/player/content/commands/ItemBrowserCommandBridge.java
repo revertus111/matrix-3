@@ -301,7 +301,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|resources|storageoverview|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|list|buildtilesave|resources|storageoverview|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -318,6 +318,37 @@ public final class ItemBrowserCommandBridge {
             } else {
                 active.leaveToReturn();
                 player.getPackets().sendGameMessage("You leave your Construction settlement.");
+            }
+            return true;
+        }
+
+        if ("buildtilesave".equals(operation)) {
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before saving a build tile.");
+                return true;
+            }
+            if (cmd.length < 7) {
+                player.getPackets().sendGameMessage(
+                        "Build-tile save request is incomplete.");
+                return true;
+            }
+            try {
+                int worldX = Integer.parseInt(cmd[3]);
+                int worldY = Integer.parseInt(cmd[4]);
+                int plane = Integer.parseInt(cmd[5]);
+                boolean saved = "on".equalsIgnoreCase(cmd[6]);
+                if (!saved && !"off".equalsIgnoreCase(cmd[6])) {
+                    player.getPackets().sendGameMessage(
+                            "Build-tile save state must be on or off.");
+                    return true;
+                }
+                player.getPackets().sendGameMessage(
+                        active.setBuildTileSaved(
+                                new WorldTile(worldX, worldY, plane), saved));
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage(
+                        "Build-tile coordinates are invalid.");
             }
             return true;
         }

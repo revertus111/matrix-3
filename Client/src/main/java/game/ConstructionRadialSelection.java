@@ -72,6 +72,8 @@ public final class ConstructionRadialSelection {
     private static final int MOVE_DOUBLE_CLICK_TILE_TOLERANCE = 1;
     private static final int CLEAR_SELECTION_MENU_ACTION = 1530;
     private static final int WORKER_JOBS_MENU_ACTION = 1531;
+    private static final int SAVE_BUILD_TILE_MENU_ACTION = 1532;
+    private static final int UNSAVE_BUILD_TILE_MENU_ACTION = 1533;
     private static final int MATRIX3_FIRST_OBJECT_ACTION = 3;
     private static final int MATRIX3_FIRST_NPC_ACTION = 9;
     private static final int STARTER_TREE_OBJECT_ID = 1276;
@@ -445,6 +447,37 @@ public final class ConstructionRadialSelection {
                 MATRIX3_FIRST_OBJECT_ACTION, -1, targetUid, localX, localY,
                 true, false, 0L, true);
         Class412.method5075(entry, 722976984);
+    }
+
+    /**
+     * Testing/build-authoring safety: saved tiles survive settlement Clear All.
+     *
+     * The save belongs to the plot tile rather than the object currently on it,
+     * so later replacement builds on the same tile inherit the protection.
+     */
+    static void mirrorSavedBuildTileEntries(int sourceAction, int localX, int localY) {
+        if (!ConstructionBuildCamera.isSettlementAutoMode()
+                || Class25.aBool165 || 357782167 * Class25.anInt172 >= 504) {
+            return;
+        }
+        int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
+        if (normalizedAction != MATRIX3_TILE_ACTION) {
+            return;
+        }
+        if (!hasMenuAction(SAVE_BUILD_TILE_MENU_ACTION)) {
+            Class572_Sub12_Sub10 save = new Class572_Sub12_Sub10(
+                    "Save Tile", "", -646491435 * client.anInt8751,
+                    SAVE_BUILD_TILE_MENU_ACTION, -1, 0L, localX, localY,
+                    true, false, 0L, true);
+            Class412.method5075(save, 722976984);
+        }
+        if (!hasMenuAction(UNSAVE_BUILD_TILE_MENU_ACTION)) {
+            Class572_Sub12_Sub10 unsave = new Class572_Sub12_Sub10(
+                    "Unsave Tile", "", -646491435 * client.anInt8751,
+                    UNSAVE_BUILD_TILE_MENU_ACTION, -1, 0L, localX, localY,
+                    true, false, 0L, true);
+            Class412.method5075(unsave, 722976984);
+        }
     }
 
     static void mirrorWorldSelectionEntry(int sourceAction, int localX, int localY) {
@@ -1728,6 +1761,22 @@ public final class ConstructionRadialSelection {
         if (normalizedAction == CLEAR_SELECTION_MENU_ACTION
                 && workerControlEnabled && hasCommittedSelection()) {
             clearCommittedRadius();
+            return true;
+        }
+        if (normalizedAction == SAVE_BUILD_TILE_MENU_ACTION
+                || normalizedAction == UNSAVE_BUILD_TILE_MENU_ACTION) {
+            WorldPoint point = resolveWorldPoint(localX, localY);
+            if (point == null) {
+                return true;
+            }
+            boolean save = normalizedAction == SAVE_BUILD_TILE_MENU_ACTION;
+            String error = ClientConsoleBridge.queueConsoleCommand(
+                    "itembrowser settlement buildtilesave "
+                    + point.worldX + " " + point.worldY + " " + point.plane
+                    + (save ? " on" : " off"));
+            lastEventState = error == null
+                    ? (save ? "Saved build tile request queued." : "Unsave build tile request queued.")
+                    : "Saved tile command failed: " + error;
             return true;
         }
         if (!workerControlEnabled || !hasCommittedSelection()) {

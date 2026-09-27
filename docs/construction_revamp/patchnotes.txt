@@ -1613,3 +1613,11 @@
 - Removed public settlementstorage/settlementstorageoverview normal commands; Client Console now owns aggregate storage inspection.
 - Added Con Revamp -> Storage -> Physical Storage Overview button using the existing owner-only console bridge.
 - Added Wooden chest world right-click View Storage entry by mirroring Matrix3 first-object action 3; physical access remains under normal ObjectHandler/SettlementControler ownership.
+
+
+2026-09-27 - Saved Build Tiles for fast test cleanup
+- Added persistent plot-relative saved-tile state to SettlementState.
+- Added settlement ground right-click Save Tile / Unsave Tile actions.
+- Clear All now skips all build pieces on saved tiles and reports preserved build count.
+- Saving an empty tile protects future builds placed on that tile from Clear All.
+- Explicit Eraser/Delete/Ctrl+Z remain deliberate removal tools and are not blocked by saved-tile protection.

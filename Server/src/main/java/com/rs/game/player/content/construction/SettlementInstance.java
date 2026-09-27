@@ -439,14 +439,44 @@ public final class SettlementInstance {
         return "Undid last settlement build.";
     }
 
+    public String setBuildTileSaved(WorldTile source, boolean saved) {
+        if (!loaded || source == null || !containsWorldTile(source)) {
+            return "Saved build tile must be inside the active settlement plot.";
+        }
+        int plotX = toPlotX(source.getX());
+        int plotY = toPlotY(source.getY());
+        boolean changed = saved
+                ? state.saveBuildTile(plotX, plotY, source.getPlane())
+                : state.unsaveBuildTile(plotX, plotY, source.getPlane());
+        if (saved) {
+            return changed
+                    ? "Saved build tile " + plotX + ", " + plotY
+                            + ". Clear All will preserve builds on this tile."
+                    : "Build tile " + plotX + ", " + plotY + " is already saved.";
+        }
+        return changed
+                ? "Unsaved build tile " + plotX + ", " + plotY
+                        + ". Clear All may remove builds on this tile."
+                : "Build tile " + plotX + ", " + plotY + " was not saved.";
+    }
+
     public String clearPlayerBuilds() {
         if (!loaded) {
             return "Settlement is still loading.";
         }
         int removedCount = 0;
+        int preservedCount = 0;
         java.util.List<SettlementPlacedPiece> pieces = state.snapshotPieces();
         for (int i = pieces.size() - 1; i >= 0; i--) {
             SettlementPlacedPiece piece = pieces.get(i);
+            if (piece == null) {
+                continue;
+            }
+            if (state.isBuildTileSaved(
+                    piece.getPlotX(), piece.getPlotY(), piece.getPlane())) {
+                preservedCount++;
+                continue;
+            }
             SettlementPlacedPiece removed = state.remove(piece.getPieceId());
             if (removed != null) {
                 removeProjectedPiece(removed);
@@ -454,9 +484,16 @@ public final class SettlementInstance {
             }
         }
         refreshRailLogistics();
-        return removedCount == 0
-                ? "No removable settlement builds found."
-                : "Removed " + removedCount + " settlement build(s).";
+        if (removedCount == 0) {
+            return preservedCount > 0
+                    ? "No removable settlement builds found. Preserved "
+                            + preservedCount + " build(s) on saved tile(s)."
+                    : "No removable settlement builds found.";
+        }
+        return "Removed " + removedCount + " settlement build(s)"
+                + (preservedCount > 0
+                        ? "; preserved " + preservedCount + " build(s) on saved tile(s)."
+                        : ".");
     }
 
     public synchronized String beginRailRouteReplacement() {
