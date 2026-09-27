@@ -5,6 +5,7 @@ import game.AssetStudioCapture.CaptureBatch;
 import game.ConstructionPlacementController;
 import game.DevDefinitionBridge;
 import game.ObjectCompositePreview;
+import game.ObjectLabPreview;
 import game.RailCompositeLibrary;
 import game.RailRoutePreview;
 
@@ -130,12 +131,12 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         header.setOpaque(false);
         header.setAlignmentX(LEFT_ALIGNMENT);
         JLabel title = ConsoleTheme.titleLabel("RAIL ASSEMBLY STUDIO");
-        title.setFont(ConsoleTheme.TITLE_FONT.deriveFont(14f));
+        title.setFont(ConsoleTheme.TITLE_FONT.deriveFont(13f));
         header.add(title);
         header.add(Box.createVerticalStrut(2));
         JLabel subtitle = ConsoleTheme.subtitleLabel(
                 "Build, rotate, validate and publish reusable rail prefabs.");
-        subtitle.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        subtitle.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
         header.add(subtitle);
         content.add(header);
         content.add(Box.createVerticalStrut(5));
@@ -152,6 +153,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         content.add(Box.createVerticalGlue());
 
         setViewportView(content);
+        setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         getVerticalScrollBar().setUnitIncrement(18);
         setBorder(null);
     }
@@ -159,12 +161,12 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private JPanel createCandidateCard() {
         JPanel card = compactCard("1. Rail Asset Browser");
         card.add(Box.createVerticalStrut(4));
-        card.add(compactText("Search ID/name • double-click to add • same-tile overlays supported.", 2));
+        card.add(compactText("Select = live solo preview • Add = commit to assembly.", 1));
         card.add(Box.createVerticalStrut(4));
 
         ConsoleTheme.styleTextField(candidateSearch);
         candidateSearch.setAlignmentX(LEFT_ALIGNMENT);
-        candidateSearch.setFont(ConsoleTheme.BODY_FONT.deriveFont(11f));
+        candidateSearch.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
         candidateSearch.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         candidateSearch.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { rebuildCandidateFilter(); }
@@ -175,12 +177,14 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleList(candidateList);
-        candidateList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
-        candidateList.setFixedCellHeight(19);
+        candidateList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9.5f));
+        candidateList.setFixedCellHeight(18);
+        candidateList.setPrototypeCellValue("ID 99999 | rail-candidate");
         candidateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         candidateList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 refreshCandidateLabel();
+                previewSelectedCandidate();
             }
         });
         candidateList.addMouseListener(new MouseAdapter() {
@@ -204,22 +208,22 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(candidateLabel);
         card.add(Box.createVerticalStrut(6));
 
-        JPanel actions = new JPanel(new GridLayout(1, 4, 4, 0));
+        JPanel actions = new JPanel(new GridLayout(2, 2, 4, 4));
         actions.setOpaque(false);
         actions.setAlignmentX(LEFT_ALIGNMENT);
-        actions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
-        JButton previous = button("Prev");
-        JButton add = button("Add");
-        JButton addNext = button("Add + Next");
-        JButton next = button("Next");
+        actions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
+        JButton previous = button("Prev Rail");
+        JButton next = button("Next Rail");
+        JButton add = button("Add Here");
+        JButton addNext = button("Add Here + Next");
         previous.addActionListener(e -> stepCandidate(-1));
+        next.addActionListener(e -> stepCandidate(1));
         add.addActionListener(e -> addSelectedCandidate(false));
         addNext.addActionListener(e -> addSelectedCandidate(true));
-        next.addActionListener(e -> stepCandidate(1));
         actions.add(previous);
+        actions.add(next);
         actions.add(add);
         actions.add(addNext);
-        actions.add(next);
         card.add(actions);
         return card;
     }
@@ -228,7 +232,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         JPanel card = compactCard("2. Assembly Workspace");
         card.add(Box.createVerticalStrut(4));
         card.add(compactText(
-                "Ctrl/Shift multi-select • arrows move • R rotate • Ctrl+D duplicate • Del remove • Ctrl+Z/Y undo/redo.",
+                "Ctrl/Shift select • arrows move • R rotate • Ctrl+D copy • Del remove • Ctrl+Z/Y history.",
                 2));
         card.add(Box.createVerticalStrut(4));
 
@@ -237,8 +241,9 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleList(assemblyList);
-        assemblyList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
-        assemblyList.setFixedCellHeight(19);
+        assemblyList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9.5f));
+        assemblyList.setFixedCellHeight(18);
+        assemblyList.setPrototypeCellValue("[ANCHOR] #99 ID 99999 T22 R3 X-12 Y-12");
         assemblyList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         assemblyList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -255,26 +260,29 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         evidenceLabels.setOpaque(false);
         evidenceLabels.setForeground(ConsoleTheme.TEXT);
-        evidenceLabels.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        evidenceLabels.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
         evidenceLabels.setFocusable(false);
         evidenceLabels.setAlignmentX(LEFT_ALIGNMENT);
         evidenceLabels.addActionListener(e -> refreshAssemblyList(selectedIndices()));
         card.add(evidenceLabels);
         card.add(Box.createVerticalStrut(6));
 
-        JPanel row1 = new JPanel(new GridLayout(1, 3, 4, 0));
+        JPanel row1 = new JPanel(new GridLayout(2, 2, 4, 4));
         row1.setOpaque(false);
         row1.setAlignmentX(LEFT_ALIGNMENT);
-        row1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
-        JButton previous = button("[ Prev");
+        row1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
+        JButton previous = button("Prev Part");
+        JButton next = button("Next Part");
         JButton duplicate = button("Duplicate");
-        JButton next = button("Next ]");
+        JButton delete = button("Delete");
         previous.addActionListener(e -> stepPart(-1));
-        duplicate.addActionListener(e -> duplicateSelected());
         next.addActionListener(e -> stepPart(1));
+        duplicate.addActionListener(e -> duplicateSelected());
+        delete.addActionListener(e -> deleteSelected());
         row1.add(previous);
-        row1.add(duplicate);
         row1.add(next);
+        row1.add(duplicate);
+        row1.add(delete);
         card.add(row1);
         card.add(Box.createVerticalStrut(4));
 
@@ -291,68 +299,72 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(anchorRow);
         card.add(Box.createVerticalStrut(4));
 
-        JPanel row2 = new JPanel(new GridLayout(3, 3, 4, 4));
+        JPanel row2 = new JPanel(new GridLayout(4, 2, 4, 4));
         row2.setOpaque(false);
         row2.setAlignmentX(LEFT_ALIGNMENT);
-        row2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 84));
-        JButton up = button("Up");
-        JButton down = button("Down");
+        row2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 108));
         JButton left = button("Left");
         JButton right = button("Right");
+        JButton up = button("Up");
+        JButton down = button("Down");
         JButton rotate = button("Rotate R");
-        JButton delete = button("Delete");
         JButton undoButton = button("Undo");
         JButton redoButton = button("Redo");
         JButton refreshMove = button("Refresh");
-        up.addActionListener(e -> moveSelected(0, 1));
-        down.addActionListener(e -> moveSelected(0, -1));
         left.addActionListener(e -> moveSelected(-1, 0));
         right.addActionListener(e -> moveSelected(1, 0));
+        up.addActionListener(e -> moveSelected(0, 1));
+        down.addActionListener(e -> moveSelected(0, -1));
         rotate.addActionListener(e -> rotateSelected());
-        delete.addActionListener(e -> deleteSelected());
         undoButton.addActionListener(e -> undo());
         redoButton.addActionListener(e -> redo());
         refreshMove.addActionListener(e -> refreshPreview());
         row2.add(left);
-        row2.add(up);
         row2.add(right);
-        row2.add(undoButton);
-        row2.add(rotate);
-        row2.add(redoButton);
-        row2.add(delete);
+        row2.add(up);
         row2.add(down);
+        row2.add(rotate);
+        row2.add(undoButton);
+        row2.add(redoButton);
         row2.add(refreshMove);
         card.add(row2);
         card.add(Box.createVerticalStrut(4));
 
-        JPanel preview = new JPanel(new GridLayout(2, 4, 4, 4));
-        preview.setOpaque(false);
-        preview.setAlignmentX(LEFT_ALIGNMENT);
-        preview.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+        JPanel rotations = new JPanel(new GridLayout(1, 4, 3, 0));
+        rotations.setOpaque(false);
+        rotations.setAlignmentX(LEFT_ALIGNMENT);
+        rotations.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
         JButton r0 = button("R0");
         JButton r1 = button("R1");
         JButton r2 = button("R2");
         JButton r3 = button("R3");
-        JButton reset = button("World");
-        JButton hide = button("Hide");
-        JButton clear = button("Clear");
-        JButton refresh = button("Refresh");
-        reset.setToolTipText("Move the live prefab preview beside your current player position.");
-        hide.setToolTipText("Hide only the client-side prefab preview.");
-        clear.setToolTipText("Clear the current Studio assembly.");
-        refresh.setToolTipText("Redraw the current live prefab preview.");
         r0.addActionListener(e -> setPreviewTurns(0));
         r1.addActionListener(e -> setPreviewTurns(1));
         r2.addActionListener(e -> setPreviewTurns(2));
         r3.addActionListener(e -> setPreviewTurns(3));
+        rotations.add(r0);
+        rotations.add(r1);
+        rotations.add(r2);
+        rotations.add(r3);
+        card.add(rotations);
+        card.add(Box.createVerticalStrut(4));
+
+        JPanel preview = new JPanel(new GridLayout(2, 2, 4, 4));
+        preview.setOpaque(false);
+        preview.setAlignmentX(LEFT_ALIGNMENT);
+        preview.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
+        JButton reset = button("World Anchor");
+        JButton hide = button("Hide Assembly");
+        JButton clear = button("Clear Assembly");
+        JButton refresh = button("Refresh");
+        reset.setToolTipText("Move candidate + assembly previews beside your current player position.");
+        hide.setToolTipText("Hide only the assembled prefab preview; candidate preview stays live.");
+        clear.setToolTipText("Clear the current Studio assembly.");
+        refresh.setToolTipText("Redraw the current assembly preview.");
         reset.addActionListener(e -> resetWorldAnchor());
         hide.addActionListener(e -> ObjectCompositePreview.hide());
         clear.addActionListener(e -> clearAssembly());
         refresh.addActionListener(e -> refreshPreview());
-        preview.add(r0);
-        preview.add(r1);
-        preview.add(r2);
-        preview.add(r3);
         preview.add(reset);
         preview.add(hide);
         preview.add(clear);
@@ -367,7 +379,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         ConsoleTheme.styleTextField(prefabName);
         prefabName.setAlignmentX(LEFT_ALIGNMENT);
-        prefabName.setFont(ConsoleTheme.BODY_FONT.deriveFont(11f));
+        prefabName.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
         prefabName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         card.add(smallLabel("Prefab name"));
         card.add(Box.createVerticalStrut(3));
@@ -375,7 +387,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(6));
 
         ConsoleTheme.styleComboBox(prefabType);
-        prefabType.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
+        prefabType.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
         prefabType.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         prefabType.setAlignmentX(LEFT_ALIGNMENT);
         prefabType.addActionListener(e -> updateValidation());
@@ -384,10 +396,10 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(prefabType);
         card.add(Box.createVerticalStrut(4));
 
-        JPanel ports = new JPanel(new GridLayout(1, 4, 4, 0));
+        JPanel ports = new JPanel(new GridLayout(2, 2, 4, 2));
         ports.setOpaque(false);
         ports.setAlignmentX(LEFT_ALIGNMENT);
-        ports.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        ports.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         ports.add(portNorth);
         ports.add(portEast);
         ports.add(portSouth);
@@ -426,8 +438,9 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(4));
 
         ConsoleTheme.styleList(savedPrefabList);
-        savedPrefabList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
-        savedPrefabList.setFixedCellHeight(19);
+        savedPrefabList.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9.5f));
+        savedPrefabList.setFixedCellHeight(18);
+        savedPrefabList.setPrototypeCellValue("SPLITTER_RAIL_LAYOUT_01");
         savedPrefabList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         savedPrefabList.addMouseListener(new MouseAdapter() {
             @Override
@@ -462,12 +475,12 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private JPanel createValidationCard() {
         JPanel card = compactCard("5. Validation");
         card.add(Box.createVerticalStrut(4));
-        validationLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        validationLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
         validationLabel.setForeground(ConsoleTheme.TEXT);
         validationLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(validationLabel);
         card.add(Box.createVerticalStrut(4));
-        statusLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        statusLabel.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
         statusLabel.setAlignmentX(LEFT_ALIGNMENT);
         card.add(statusLabel);
         return card;
@@ -490,17 +503,36 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
             candidateList.setSelectedIndex(0);
         }
         refreshCandidateLabel();
+        previewSelectedCandidate();
     }
 
     private void refreshCandidateLabel() {
         int index = candidateList.getSelectedIndex();
         if (index < 0 || index >= filteredCandidateIds.size()) {
             candidateLabel.setText("Candidate: none");
+            ObjectLabPreview.hide();
             return;
         }
         int id = filteredCandidateIds.get(index).intValue();
         candidateLabel.setText("#" + (index + 1) + "/" + filteredCandidateIds.size()
-                + "  |  ID " + id + "  |  T22  |  " + objectName(id));
+                + " | ID " + id + " | T22 | " + objectName(id));
+    }
+
+    private void previewSelectedCandidate() {
+        int index = candidateList.getSelectedIndex();
+        if (index < 0 || index >= filteredCandidateIds.size()) {
+            ObjectLabPreview.hide();
+            return;
+        }
+        if (!ensureWorldAnchor()) {
+            return;
+        }
+        int id = filteredCandidateIds.get(index).intValue();
+        ObjectLabPreview.showPreview(
+                objectName(id), id, 22, 0,
+                previewWorldX, previewWorldY, previewPlane, -4, 0);
+        setStatus("Candidate preview: ID " + id
+                + " T22 R0. Add Here commits it to the assembly.");
     }
 
     private void stepCandidate(int delta) {
@@ -701,8 +733,9 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private void resetWorldAnchor() {
         previewPlane = -1;
         if (ensureWorldAnchor()) {
+            previewSelectedCandidate();
             refreshPreview();
-            setStatus("Preview moved beside current player position.");
+            setStatus("Candidate + assembly previews moved beside current player position.");
         }
     }
 
@@ -1184,7 +1217,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         JLabel title = new JLabel(titleText);
-        title.setFont(ConsoleTheme.SECTION_FONT.deriveFont(12f));
+        title.setFont(ConsoleTheme.SECTION_FONT.deriveFont(11f));
         title.setForeground(ConsoleTheme.TEXT);
         title.setAlignmentX(LEFT_ALIGNMENT);
         card.add(title);
@@ -1193,15 +1226,15 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
     private javax.swing.JTextArea compactText(String text, int rows) {
         javax.swing.JTextArea area = ConsoleTheme.createWrappedText(text, rows);
-        area.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        area.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
         return area;
     }
 
     private JButton button(String text) {
         JButton button = new JButton(text);
         ConsoleTheme.styleButton(button);
-        button.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
-        button.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 5, 4, 5));
+        button.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
+        button.setBorder(javax.swing.BorderFactory.createEmptyBorder(3, 4, 3, 4));
         button.setFocusable(false);
         return button;
     }
@@ -1210,21 +1243,21 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         JCheckBox box = new JCheckBox(text);
         box.setOpaque(false);
         box.setForeground(ConsoleTheme.TEXT);
-        box.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        box.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
         box.setFocusable(false);
         return box;
     }
 
     private static JLabel smallLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        label.setFont(ConsoleTheme.SMALL_FONT.deriveFont(9f));
         label.setForeground(ConsoleTheme.MUTED_TEXT);
         return label;
     }
 
     private static JLabel valueLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
+        label.setFont(ConsoleTheme.BODY_FONT.deriveFont(9.5f));
         label.setForeground(ConsoleTheme.TEXT);
         return label;
     }
