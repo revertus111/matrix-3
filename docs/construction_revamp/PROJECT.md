@@ -1871,3 +1871,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 ### Resume Here
 - Pending runtime gate: `View Storage` must appear on the chest; with two equal default chests, a Wood worker should choose the nearer valid chest and deposit a real Log item into it.
 - After that passes: expose chest filter/priority/mode controls, then add persistent worker behavior mode + rally/work-zone creation/assignment before moving the sawmill to physical input/output buffers.
+
+## Rail Classifier self-contained workflow correction — 2026-09-27
+- IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Runtime screenshot showed the first integrated workbench still depended on an off-screen/separate candidate selection, leaving ACTIVE RAIL empty and making the primary workflow unclear.
+- Corrected ownership/UI flow: Workbench is now first, Geometry Classification is second, and the candidate table/solo preview are advanced tools below them.
+- Added direct Prev Rail / Place Current / Next Rail / Place + Next controls. Candidate 1 is explicitly initialized after load instead of relying only on JTable selection events.
+- CURRENT CANDIDATE displays index/id/type/rotation. Active placed-piece rotation continues to synchronize classifier data, auto-save and special promotion.
+- Resume Here: open Rail Classifier and verify CURRENT CANDIDATE is populated immediately; Place Current must work before touching any other card.
