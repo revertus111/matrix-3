@@ -1702,3 +1702,12 @@
 - Fixed Build Palette close leaving automatic RTS drag suspended when Free Build camera or Eraser state remained active.
 - Build Mode close now clears rail/eraser/placement ownership and restores RTS camera mode when settlement auto-mode remains active.
 - Committed RTS selection remains preserved; no Client Console re-enable is required after closing Build Palette.
+
+2026-09-27 - Placeable Splitter V1 foundation
+- Added Splitter as a real Construction rail item instead of routing build-bar slot 4 through the old drag-special workflow.
+- Splitter item uses single-click placement with whole-prefab rotation, live client ghost, empty-tile placement, and compatible straight-rail upgrade inside the current Rail Network logical session.
+- Existing Junction drag workflow remains unchanged.
+- Splitter logical ports are respected when later Rail drags connect from/into the placed node; explicit authored port masks + stored item rotation own the allowed directions.
+- Added Matrix3 scene-slot safety: runtime special prefabs reject multiple components sharing the same tile + object type because the world scene exposes one object slot per tile/type.
+- Rail Studio still allows such overlaps as research drafts, but Publish now blocks them with a clear message instead of creating an invalid persistent prefab.
+- Persisted-world topology reconstruction after client restart/re-entry is NOT part of this slice; existing logical-session ownership remains unchanged.
