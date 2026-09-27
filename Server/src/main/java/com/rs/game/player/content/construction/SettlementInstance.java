@@ -709,6 +709,27 @@ public final class SettlementInstance {
                 : "Settlement piece removed.";
     }
 
+    public boolean handleStorageObjectClick(WorldObject object) {
+        if (!loaded || object == null || !containsWorldTile(object)) {
+            return false;
+        }
+        SettlementPlacedPiece piece = state.find(
+                object.getId(),
+                toPlotX(object.getX()),
+                toPlotY(object.getY()),
+                object.getPlane());
+        if (piece == null) {
+            return false;
+        }
+        SettlementBuildPiece definition =
+                SettlementBuildPiece.forKey(piece.getDefinitionKey());
+        if (definition == null || definition.getRole() != SettlementBuildRole.STORAGE) {
+            return false;
+        }
+        SettlementStorageInterface.openChest(player, piece.getPieceId());
+        return true;
+    }
+
     public boolean handleStarterResourceObjectClick(WorldObject object) {
         if (!loaded || object == null || !containsWorldTile(object)) {
             return false;

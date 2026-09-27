@@ -57,6 +57,7 @@ import com.rs.game.player.content.StealingCreationShop;
 import com.rs.game.player.content.Summoning;
 import com.rs.game.player.content.clans.ClansManager;
 import com.rs.game.player.content.construction.House;
+import com.rs.game.player.content.construction.SettlementStorageInterface;
 import com.rs.game.player.content.dungeoneering.DungeonRewardShop;
 import com.rs.game.player.content.grandExchange.GrandExchange;
 import com.rs.game.player.controllers.events.DeathEvent;
@@ -117,6 +118,8 @@ public class ButtonHandler {
 	    System.out.println(packetId + "," + interfaceId + "," + componentId + "," + slotId + "," + slotId2);
 	}
 	if (!player.getControlerManager().processButtonClick(interfaceId, componentId, slotId, slotId2, packetId))
+	    return;
+	if (SettlementStorageInterface.processButtonClick(player, interfaceId, componentId, slotId, packetId))
 	    return;
 	if (interfaceId == 91) // divination inter
 	    player.getActionManager().setAction(new ConvertAction(componentId));

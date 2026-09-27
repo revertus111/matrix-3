@@ -27,6 +27,9 @@ public final class SettlementControler extends Controller {
 
     @Override
     public boolean processObjectClick1(WorldObject object) {
+        if (instance != null && instance.handleStorageObjectClick(object)) {
+            return false;
+        }
         if (instance != null && instance.handleStarterResourceObjectClick(object)) {
             return false;
         }

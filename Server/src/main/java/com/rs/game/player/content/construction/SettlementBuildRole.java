@@ -11,6 +11,7 @@ public enum SettlementBuildRole {
     DOOR,
     BED,
     WORKSTATION,
+    STORAGE,
     RAIL,
     RAIL_LOADER,
     RAIL_UNLOADER

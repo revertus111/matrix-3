@@ -49,6 +49,7 @@ import com.rs.game.npc.randomEvent.CombatEventNPC;
 import com.rs.game.player.Player;
 import com.rs.game.player.Skills;
 import com.rs.game.player.content.construction.SettlementInstance;
+import com.rs.game.player.content.construction.SettlementStorageInterface;
 import com.rs.game.player.SlayerManager;
 import com.rs.game.player.actions.HomeTeleport;
 import com.rs.game.player.content.DonatorZone;
@@ -2937,6 +2938,10 @@ public final class Commands {
 	} else {
 	    String message;
 	    switch (cmd[0].toLowerCase()) {
+	    case "settlementstorage":
+	    case "settlementstorageoverview":
+		SettlementStorageInterface.openOverview(player);
+		return true;
 	    case "settlementbuildbaropen":
 		if (SettlementInstance.getActive(player) == null) {
 		    player.getPackets().sendGameMessage("Enter your settlement before opening the Construction build bar.");

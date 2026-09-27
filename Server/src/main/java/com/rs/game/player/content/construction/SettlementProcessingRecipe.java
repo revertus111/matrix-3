@@ -10,8 +10,8 @@ package com.rs.game.player.content.construction;
 public enum SettlementProcessingRecipe {
 
     SAW_PLANKS("saw-planks", "Saw Planks",
-            SettlementResource.WOOD, 2L,
-            SettlementResource.PLANKS, 1L);
+            SettlementResource.WOOD, 1L,
+            SettlementResource.PLANKS, 2L);
 
     private final String key;
     private final String displayName;

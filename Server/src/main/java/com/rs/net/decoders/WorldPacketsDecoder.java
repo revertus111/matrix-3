@@ -60,6 +60,7 @@ import com.rs.game.player.content.TicketSystem.TicketEntry;
 import com.rs.game.player.content.clans.ClansManager;
 import com.rs.game.player.content.commands.Commands;
 import com.rs.game.player.content.construction.House;
+import com.rs.game.player.content.construction.SettlementStorageInterface;
 import com.rs.game.player.content.construction.TabletMaking;
 import com.rs.game.player.content.pet.Pets;
 import com.rs.game.player.controllers.Controller;
@@ -1183,6 +1184,8 @@ public final class WorldPacketsDecoder extends Decoder {
 			player.getInterfaceManager().removeInputTextInterface();
 			int value = stream.readInt();
 			if (value < 0)
+				return;
+			if (SettlementStorageInterface.processIntegerInput(player, value))
 				return;
 			if ((player.getInterfaceManager().containsInterface(762)) || player.getInterfaceManager().containsInterface(11)) {
 				Integer bank_item_X_Slot = (Integer) player.getTemporaryAttributtes().remove("bank_item_X_Slot");

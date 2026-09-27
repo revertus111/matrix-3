@@ -1175,3 +1175,20 @@ Rail special-node H2A Junction gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-0
 - After each Junction placement, perform another normal Rail edit and exit/re-enter the settlement. The Junction physical object must persist and existing curve/straight geometry must remain stable.
 - Normal Rail regression: slot 1 must still refuse degree-3 creation and preserve existing curves.
 - Slot 3 Crossing and slot 4 Splitter must remain non-destructive/framework-only until H2B/H2C.
+
+
+Physical Storage + Logistics V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-26)
+- Enter the settlement and place Furniture -> Wooden chest. Confirm object 18804 persists after exit/re-entry.
+- Click the physical chest. Bank interface 762 must open against settlement storage only; opening/using it must not change the player's real bank.
+- Deposit one stackable factory item above 100 quantity. Confirm the chest displays multiple stacks (for example 100 + remainder) and consumes multiple physical slots.
+- Fill one partial same-item stack, deposit more of that item, and confirm the partial stack fills before a new stack is allocated.
+- Deposit non-stackable items and confirm each item consumes one chest slot.
+- Verify Deposit/Withdraw 1, 5, 10, X and All plus Examine for both chest and inventory sides.
+- Fill all 16 slots/capped stacks and confirm excess deposit is rejected/partially accepted without item loss or duplication.
+- Withdraw with insufficient inventory space and confirm only the amount that can fit moves; chest remainder stays authoritative.
+- Put at least one item in a chest and attempt Eraser/Delete/Undo. The non-empty chest must remain; empty it, then confirm removal works normally.
+- Place a second Wooden chest. Confirm each chest has a separate inventory and persists independently through exit/re-entry and logout/relog.
+- Use ::settlementstorage from inside and outside the settlement. Confirm it aggregates all physical chest item totals, is read-only, and cannot deposit/withdraw.
+- Open the real bank after closing settlement storage and confirm tabs/items/size state are restored and normal bank actions still operate on Bank.bankTabs.
+- Confirm legacy starter resource counters, worker gather/haul, needs, shelter gates and existing processing self-test still function; physical item storage must not silently migrate or erase those counters.
+- Processing regression: Saw Planks now consumes exactly 1 Wood/log-equivalent and produces exactly 2 Planks per completed current recipe cycle.

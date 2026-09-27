@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 9;
+    private static final int CURRENT_SCHEMA_VERSION = 10;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -42,6 +42,8 @@ public final class SettlementState implements Serializable {
     private int schemaVersion = CURRENT_SCHEMA_VERSION;
     private long nextPieceId = 1L;
     private List<SettlementPlacedPiece> pieces = new ArrayList<SettlementPlacedPiece>();
+    private Map<Long, SettlementStorageContainer> storageContainers =
+            new HashMap<Long, SettlementStorageContainer>();
     private Map<String, Long> resources = new HashMap<String, Long>();
     /**
      * Legacy serialized shared-cap field. Kept so existing player saves remain
@@ -59,6 +61,36 @@ public final class SettlementState implements Serializable {
         }
         if (pieces == null) {
             pieces = new ArrayList<SettlementPlacedPiece>();
+        }
+        if (storageContainers == null) {
+            storageContainers = new HashMap<Long, SettlementStorageContainer>();
+        }
+        Set<Long> liveStoragePieceIds = new HashSet<Long>();
+        for (SettlementPlacedPiece piece : pieces) {
+            if (piece == null) {
+                continue;
+            }
+            SettlementBuildPiece definition = SettlementBuildPiece.forKey(piece.getDefinitionKey());
+            if (definition == null || definition.getRole() != SettlementBuildRole.STORAGE) {
+                continue;
+            }
+            Long pieceId = Long.valueOf(piece.getPieceId());
+            liveStoragePieceIds.add(pieceId);
+            SettlementStorageContainer container = storageContainers.get(pieceId);
+            if (container == null) {
+                container = new SettlementStorageContainer(piece.getPieceId());
+                storageContainers.put(pieceId, container);
+            }
+            container.normalize();
+        }
+        Iterator<Map.Entry<Long, SettlementStorageContainer>> storageIterator =
+                storageContainers.entrySet().iterator();
+        while (storageIterator.hasNext()) {
+            Map.Entry<Long, SettlementStorageContainer> entry = storageIterator.next();
+            if (entry.getKey() == null || entry.getValue() == null
+                    || !liveStoragePieceIds.contains(entry.getKey())) {
+                storageIterator.remove();
+            }
         }
         if (resources == null) {
             resources = new HashMap<String, Long>();
@@ -156,6 +188,10 @@ public final class SettlementState implements Serializable {
         SettlementPlacedPiece piece = new SettlementPlacedPiece(
                 nextPieceId++, definition.getKey(), plotX, plotY, plane, rotation);
         pieces.add(piece);
+        if (definition.getRole() == SettlementBuildRole.STORAGE) {
+            storageContainers.put(Long.valueOf(piece.getPieceId()),
+                    new SettlementStorageContainer(piece.getPieceId()));
+        }
         return piece;
     }
 
@@ -236,6 +272,10 @@ public final class SettlementState implements Serializable {
         SettlementPlacedPiece duplicate = new SettlementPlacedPiece(
                 nextPieceId++, current.getDefinitionKey(), plotX, plotY, plane, current.getRotation());
         pieces.add(duplicate);
+        if (definition.getRole() == SettlementBuildRole.STORAGE) {
+            storageContainers.put(Long.valueOf(duplicate.getPieceId()),
+                    new SettlementStorageContainer(duplicate.getPieceId()));
+        }
         return duplicate;
     }
 
@@ -252,7 +292,18 @@ public final class SettlementState implements Serializable {
                 && !removeHousingBed()) {
             return null;
         }
-        return pieces.remove(index);
+        if (definition != null && definition.getRole() == SettlementBuildRole.STORAGE) {
+            SettlementStorageContainer container =
+                    storageContainers.get(Long.valueOf(pieceId));
+            if (container != null && !container.isEmpty()) {
+                return null;
+            }
+        }
+        SettlementPlacedPiece removed = pieces.remove(index);
+        if (definition != null && definition.getRole() == SettlementBuildRole.STORAGE) {
+            storageContainers.remove(Long.valueOf(pieceId));
+        }
+        return removed;
     }
 
     public synchronized int getWorkerCount() {
@@ -553,6 +604,26 @@ public final class SettlementState implements Serializable {
                     .append(STARTER_SHELTER_RESOURCE_EACH);
         }
         return status.toString();
+    }
+
+    public synchronized SettlementStorageContainer findStorageContainer(long pieceId) {
+        normalize();
+        SettlementStorageContainer container =
+                storageContainers.get(Long.valueOf(pieceId));
+        if (container != null) {
+            container.normalize();
+        }
+        return container;
+    }
+
+    public synchronized List<SettlementStorageContainer> snapshotStorageContainers() {
+        normalize();
+        return new ArrayList<SettlementStorageContainer>(storageContainers.values());
+    }
+
+    public synchronized int getPhysicalStorageContainerCount() {
+        normalize();
+        return storageContainers.size();
     }
 
     public synchronized long getResourceAmount(SettlementResource resource) {
