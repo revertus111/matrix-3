@@ -1307,3 +1307,11 @@ Rail Assembly Studio V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
 - Publish Junction from a normalized 3-port assembly. JUNCTION_RAIL_LAYOUT_01 must be written with the complete component set + explicit port mask and RailRoutePreview must reload it.
 - Author the user's new straight+curved-track Splitter concept with intentional overlay, save it as a draft, and preview all four rotations. Do NOT require the current runtime Splitter topology to support four-port left/right/straight routing in this tool gate.
 - Regression: Rail Classifier, Object Explorer Rail Layout Lab and existing Junction runtime data must still open/read rail_composites.tsv after the schema extension.
+
+Rail Assembly Studio compact console gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Open Test -> Rail Studio at the normal narrow Client Console width. No primary workspace button may be clipped off the right edge.
+- Confirm Asset Browser, Assembly Workspace and Prefab Definition controls are readable without horizontally scrolling the Studio content.
+- Saved Prefabs must render as a normal visible scroll list (not the oversized JComboBox popup); click or double-click junction_LAYOUT_01 and confirm Load works.
+- Workspace controls must show Prev/Duplicate/Next, Set Anchor/Normalize, 3x3 movement/history controls and R0/R1/R2/R3 preview controls at the narrow width.
+- Confirm smaller Rail Studio fonts/padding do not affect other Client Console tabs.
+- Regression: load an existing prefab and verify multi-select, move/rotate, anchor, save/publish and validation behavior is unchanged.
