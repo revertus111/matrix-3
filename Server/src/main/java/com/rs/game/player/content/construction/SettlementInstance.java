@@ -55,6 +55,8 @@ public final class SettlementInstance {
             new WorkerStorageReservationBook();
     private final WorkerPhysicalStorageReservationBook physicalWorkerStorageReservations =
             new WorkerPhysicalStorageReservationBook();
+    private final WorkerPhysicalStorageReservationBook physicalWorkerSourceReservations =
+            new WorkerPhysicalStorageReservationBook();
     // One worker owns one physical processing station at a time.
     private final Map<Long, Long> processingWorkstationReservations =
             new HashMap<Long, Long>();
@@ -1586,6 +1588,44 @@ public final class SettlementInstance {
         if (!loaded || destroyed || recipe == null) {
             return false;
         }
+        SettlementFactoryItem input = SettlementFactoryItem.forResource(recipe.getInputResource());
+        SettlementFactoryItem output = SettlementFactoryItem.forResource(recipe.getOutputResource());
+        if (input != null && output != null) {
+            long availableInput = 0L;
+            for (SettlementStorageContainer container : state.snapshotStorageContainers()) {
+                if (container == null || !container.isWorkerWithdrawEnabled()
+                        || !container.acceptsItem(input.getItemId())) {
+                    continue;
+                }
+                availableInput += container.getItemAmount(input.getItemId());
+                if (availableInput >= recipe.getInputAmount()) {
+                    break;
+                }
+            }
+            if (availableInput < recipe.getInputAmount()) {
+                return false;
+            }
+            for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+                if (piece == null) {
+                    continue;
+                }
+                SettlementBuildPiece definition =
+                        SettlementBuildPiece.forKey(piece.getDefinitionKey());
+                if (!isWorkstationForRecipe(definition, recipe)) {
+                    continue;
+                }
+                SettlementMachineBuffer buffer = state.findMachineBuffer(piece.getPieceId());
+                if (buffer != null
+                        && buffer.getInputAmount(input.getItemId())
+                                + buffer.getInputCapacityForItem(input.getItemId())
+                                >= recipe.getInputAmount()
+                        && buffer.getOutputCapacityForItem(output.getItemId())
+                                >= recipe.getOutputAmount()) {
+                    return true;
+                }
+            }
+            return false;
+        }
         return state.getResourceAmount(recipe.getInputResource()) >= recipe.getInputAmount()
                 && state.getStorageRemaining(recipe.getOutputResource()) >= recipe.getOutputAmount();
     }
@@ -1609,6 +1649,21 @@ public final class SettlementInstance {
                     SettlementBuildPiece.forKey(piece.getDefinitionKey());
             if (!isWorkstationForRecipe(definition, recipe)) {
                 continue;
+            }
+            SettlementFactoryItem input =
+                    SettlementFactoryItem.forResource(recipe.getInputResource());
+            SettlementFactoryItem output =
+                    SettlementFactoryItem.forResource(recipe.getOutputResource());
+            if (input != null && output != null) {
+                SettlementMachineBuffer buffer = state.findMachineBuffer(piece.getPieceId());
+                if (buffer == null
+                        || buffer.getInputAmount(input.getItemId())
+                                + buffer.getInputCapacityForItem(input.getItemId())
+                                < recipe.getInputAmount()
+                        || buffer.getOutputCapacityForItem(output.getItemId())
+                                < recipe.getOutputAmount()) {
+                    continue;
+                }
             }
             if (preferredPieceId <= 0L) {
                 SettlementWorkerState policyWorker = state.findWorker(workerId);
@@ -1670,8 +1725,21 @@ public final class SettlementInstance {
 
     public SettlementProcessingTransaction.Result processWorkerRecipe(
             SettlementWorkerState worker, SettlementProcessingRecipe recipe) {
+        return processWorkerRecipe(worker, recipe, -1L);
+    }
+
+    public SettlementProcessingTransaction.Result processWorkerRecipe(
+            SettlementWorkerState worker, SettlementProcessingRecipe recipe,
+            long workstationPieceId) {
         if (!loaded || destroyed || worker == null || recipe == null) {
             return null;
+        }
+        SettlementFactoryItem input = SettlementFactoryItem.forResource(recipe.getInputResource());
+        SettlementFactoryItem output = SettlementFactoryItem.forResource(recipe.getOutputResource());
+        if (input != null && output != null && workstationPieceId > 0L) {
+            SettlementMachineBuffer buffer = state.findMachineBuffer(workstationPieceId);
+            return SettlementProcessingTransaction.apply(
+                    buffer, recipe, input.getItemId(), output.getItemId(), 1);
         }
         return SettlementProcessingTransaction.apply(state, recipe, 1);
     }
@@ -1688,6 +1756,255 @@ public final class SettlementInstance {
 
     public int getWorkerStorageInteractionRange(SettlementResource resource) {
         return usesPhysicalWorkerStorage(resource) ? 1 : 0;
+    }
+
+
+    public synchronized boolean reserveWorkerItemSource(
+            long workerId, int itemId, long amount, boolean ignoreRally) {
+        if (!loaded || destroyed || workerId <= 0L || itemId < 0 || amount <= 0L) {
+            return false;
+        }
+        SettlementWorkerState policyWorker = state.findWorker(workerId);
+        WorkerPhysicalStorageReservation existing =
+                physicalWorkerSourceReservations.get(workerId);
+        if (existing != null && existing.itemId == itemId) {
+            SettlementStorageContainer existingContainer =
+                    state.findStorageContainer(existing.pieceId);
+            SettlementPlacedPiece existingPiece = findPieceById(existing.pieceId);
+            if (existingContainer != null
+                    && (ignoreRally || isWorkerPieceAllowedByRally(policyWorker, existingPiece))
+                    && existingContainer.isWorkerWithdrawEnabled()
+                    && existingContainer.acceptsItem(itemId)
+                    && getPhysicalStorageObject(existing.pieceId) != null) {
+                long reservedByOthers =
+                        physicalWorkerSourceReservations.getReservedByOthers(
+                                workerId, existing.pieceId, itemId);
+                long available = Math.max(0L,
+                        existingContainer.getItemAmount(itemId) - reservedByOthers);
+                if (available >= amount) {
+                    physicalWorkerSourceReservations.reserve(
+                            workerId, existing.pieceId, itemId, amount);
+                    return true;
+                }
+            }
+        }
+
+        physicalWorkerSourceReservations.release(workerId);
+        WorldTile origin = findActiveWorkerTile(workerId);
+        SettlementPlacedPiece bestPiece = null;
+        long bestScore = Long.MIN_VALUE;
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (!isPhysicalStoragePiece(piece)
+                    || !ignoreRally && !isWorkerPieceAllowedByRally(policyWorker, piece)) {
+                continue;
+            }
+            WorldObject live = getPhysicalStorageObject(piece.getPieceId());
+            if (live == null) {
+                continue;
+            }
+            SettlementStorageContainer container =
+                    state.findStorageContainer(piece.getPieceId());
+            if (container == null || !container.isWorkerWithdrawEnabled()
+                    || !container.acceptsItem(itemId)) {
+                continue;
+            }
+            long reservedByOthers =
+                    physicalWorkerSourceReservations.getReservedByOthers(
+                            workerId, piece.getPieceId(), itemId);
+            long available = Math.max(0L,
+                    container.getItemAmount(itemId) - reservedByOthers);
+            if (available < amount) {
+                continue;
+            }
+            int distance = origin == null ? 0
+                    : Math.abs(origin.getX() - live.getX())
+                            + Math.abs(origin.getY() - live.getY());
+            long score = ((long) container.getLogisticsPriority() * 100000L)
+                    + getStorageModeWithdrawBonus(container.getMode())
+                    - ((long) distance * 100L)
+                    - reservedByOthers;
+            if (bestPiece == null || score > bestScore
+                    || score == bestScore && piece.getPieceId() < bestPiece.getPieceId()) {
+                bestPiece = piece;
+                bestScore = score;
+            }
+        }
+        if (bestPiece == null) {
+            return false;
+        }
+        physicalWorkerSourceReservations.reserve(
+                workerId, bestPiece.getPieceId(), itemId, amount);
+        return true;
+    }
+
+    public WorldTile getWorkerItemSourceTile(long workerId) {
+        WorkerPhysicalStorageReservation reservation =
+                physicalWorkerSourceReservations.get(workerId);
+        return reservation == null ? null : getPhysicalStorageObject(reservation.pieceId);
+    }
+
+    public synchronized int withdrawWorkerItemSource(
+            long workerId, int itemId, int amount) {
+        if (itemId < 0 || amount <= 0) {
+            return 0;
+        }
+        WorkerPhysicalStorageReservation reservation =
+                physicalWorkerSourceReservations.get(workerId);
+        if (reservation == null || reservation.itemId != itemId
+                || reservation.amount < amount) {
+            return 0;
+        }
+        SettlementStorageContainer container =
+                state.findStorageContainer(reservation.pieceId);
+        if (container == null || !container.isWorkerWithdrawEnabled()) {
+            physicalWorkerSourceReservations.release(workerId);
+            return 0;
+        }
+        int removed = container.removeItem(itemId, amount);
+        physicalWorkerSourceReservations.release(workerId);
+        return removed;
+    }
+
+    public synchronized void releaseWorkerItemSourceReservation(long workerId) {
+        physicalWorkerSourceReservations.release(workerId);
+    }
+
+    public synchronized boolean reserveWorkerItemDestination(
+            long workerId, int itemId, long amount, boolean ignoreRally) {
+        return reserveBestPhysicalWorkerItemDestination(
+                workerId, itemId, amount, ignoreRally);
+    }
+
+    public WorldTile getWorkerItemDestinationTile(long workerId) {
+        WorkerPhysicalStorageReservation reservation =
+                physicalWorkerStorageReservations.get(workerId);
+        return reservation == null ? null : getPhysicalStorageObject(reservation.pieceId);
+    }
+
+    public synchronized int depositWorkerItem(
+            long workerId, int itemId, int amount, boolean ignoreRally) {
+        if (!reserveBestPhysicalWorkerItemDestination(
+                workerId, itemId, amount, ignoreRally)) {
+            return 0;
+        }
+        WorkerPhysicalStorageReservation reservation =
+                physicalWorkerStorageReservations.get(workerId);
+        if (reservation == null) {
+            return 0;
+        }
+        SettlementStorageContainer container =
+                state.findStorageContainer(reservation.pieceId);
+        if (container == null || !container.isWorkerDepositEnabled()) {
+            physicalWorkerStorageReservations.release(workerId);
+            return 0;
+        }
+        int added = container.addItem(itemId, amount);
+        physicalWorkerStorageReservations.release(workerId);
+        return added;
+    }
+
+    public synchronized void releaseWorkerItemDestinationReservation(long workerId) {
+        physicalWorkerStorageReservations.release(workerId);
+    }
+
+    public long getMachineInputAmount(long pieceId, int itemId) {
+        SettlementMachineBuffer buffer = state.findMachineBuffer(pieceId);
+        return buffer == null ? 0L : buffer.getInputAmount(itemId);
+    }
+
+    public long getMachineOutputAmount(long pieceId, int itemId) {
+        SettlementMachineBuffer buffer = state.findMachineBuffer(pieceId);
+        return buffer == null ? 0L : buffer.getOutputAmount(itemId);
+    }
+
+    public int depositWorkerItemToMachine(long pieceId, int itemId, int amount) {
+        SettlementMachineBuffer buffer = state.findMachineBuffer(pieceId);
+        return buffer == null ? 0 : buffer.addInput(itemId, amount);
+    }
+
+    public int collectMachineOutput(long pieceId, int itemId, int amount) {
+        SettlementMachineBuffer buffer = state.findMachineBuffer(pieceId);
+        return buffer == null ? 0 : buffer.removeOutput(itemId, amount);
+    }
+
+    private boolean reserveBestPhysicalWorkerItemDestination(
+            long workerId, int itemId, long amount, boolean ignoreRally) {
+        if (workerId <= 0L || itemId < 0 || amount <= 0L) {
+            return false;
+        }
+
+        SettlementWorkerState policyWorker = state.findWorker(workerId);
+        WorkerPhysicalStorageReservation existing =
+                physicalWorkerStorageReservations.get(workerId);
+        if (existing != null && existing.itemId == itemId) {
+            SettlementStorageContainer existingContainer =
+                    state.findStorageContainer(existing.pieceId);
+            SettlementPlacedPiece existingPiece = findPieceById(existing.pieceId);
+            if (existingContainer != null
+                    && (ignoreRally || isWorkerPieceAllowedByRally(policyWorker, existingPiece))
+                    && existingContainer.isWorkerDepositEnabled()
+                    && existingContainer.acceptsItem(itemId)
+                    && getPhysicalStorageObject(existing.pieceId) != null) {
+                long reservedByOthers =
+                        physicalWorkerStorageReservations.getReservedByOthers(
+                                workerId, existing.pieceId, itemId);
+                long available = Math.max(0L,
+                        existingContainer.getAvailableCapacityForItem(itemId)
+                                - reservedByOthers);
+                if (available >= amount) {
+                    physicalWorkerStorageReservations.reserve(
+                            workerId, existing.pieceId, itemId, amount);
+                    return true;
+                }
+            }
+        }
+
+        physicalWorkerStorageReservations.release(workerId);
+        WorldTile origin = findActiveWorkerTile(workerId);
+        SettlementPlacedPiece bestPiece = null;
+        long bestScore = Long.MIN_VALUE;
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (!isPhysicalStoragePiece(piece)
+                    || !ignoreRally && !isWorkerPieceAllowedByRally(policyWorker, piece)) {
+                continue;
+            }
+            WorldObject live = getPhysicalStorageObject(piece.getPieceId());
+            if (live == null) {
+                continue;
+            }
+            SettlementStorageContainer container =
+                    state.findStorageContainer(piece.getPieceId());
+            if (container == null || !container.isWorkerDepositEnabled()
+                    || !container.acceptsItem(itemId)) {
+                continue;
+            }
+            long reservedByOthers =
+                    physicalWorkerStorageReservations.getReservedByOthers(
+                            workerId, piece.getPieceId(), itemId);
+            long available = Math.max(0L,
+                    container.getAvailableCapacityForItem(itemId) - reservedByOthers);
+            if (available < amount) {
+                continue;
+            }
+            int distance = origin == null ? 0
+                    : Math.abs(origin.getX() - live.getX())
+                            + Math.abs(origin.getY() - live.getY());
+            long score = ((long) container.getLogisticsPriority() * 100000L)
+                    + getStorageModeDepositBonus(container.getMode())
+                    - ((long) distance * 100L)
+                    - reservedByOthers;
+            if (bestPiece == null || score > bestScore
+                    || score == bestScore && piece.getPieceId() < bestPiece.getPieceId()) {
+                bestPiece = piece;
+                bestScore = score;
+            }
+        }
+        if (bestPiece == null) {
+            return false;
+        }
+        physicalWorkerStorageReservations.reserve(
+                workerId, bestPiece.getPieceId(), itemId, amount);
+        return true;
     }
 
     public WorldTile getWorkerHaulStorageTile(long workerId,
@@ -1943,6 +2260,7 @@ public final class SettlementInstance {
 
     private void releaseAllPhysicalStorageReservations() {
         physicalWorkerStorageReservations.clear();
+        physicalWorkerSourceReservations.clear();
     }
 
     private boolean isPhysicalStoragePiece(SettlementPlacedPiece piece) {
@@ -1984,6 +2302,24 @@ public final class SettlementInstance {
         case STORAGE:
             return 10000L;
         case SUPPLY:
+        default:
+            return 0L;
+        }
+    }
+
+
+    private long getStorageModeWithdrawBonus(SettlementStorageMode mode) {
+        if (mode == null) {
+            return 0L;
+        }
+        switch (mode) {
+        case SUPPLY:
+            return 30000L;
+        case BUFFER:
+            return 20000L;
+        case STORAGE:
+            return 10000L;
+        case REQUEST:
         default:
             return 0L;
         }
@@ -2171,6 +2507,7 @@ public final class SettlementInstance {
         workerNpcs.clear();
         workerStorageReservations.clear();
         physicalWorkerStorageReservations.clear();
+        physicalWorkerSourceReservations.clear();
         workerDestinationReservations.clear();
     }
 
