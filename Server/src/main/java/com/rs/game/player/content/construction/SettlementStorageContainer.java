@@ -10,8 +10,9 @@ import com.rs.game.item.ItemsContainer;
 /**
  * Persistent item inventory owned by one physical settlement storage build.
  *
- * Stackable items are deliberately capped per physical slot. Once a stack
- * reaches the configured limit, the same item may occupy another slot.
+ * Settlement storage uses its own per-slot stack cap regardless of the normal
+ * RuneScape inventory stackability flag. Once a settlement stack reaches the
+ * configured limit, the same item may occupy another physical slot.
  */
 public final class SettlementStorageContainer implements Serializable {
 
@@ -170,8 +171,7 @@ public final class SettlementStorageContainer implements Serializable {
         if (itemId < 0 || !acceptsItem(itemId)) {
             return 0L;
         }
-        Item probe = new Item(itemId, 1);
-        int perSlot = isMultiAmount(probe) ? stackLimit : 1;
+        int perSlot = stackLimit;
         long capacity = 0L;
         for (int slot = 0; slot < items.getSize(); slot++) {
             Item current = items.get(slot);
@@ -213,8 +213,7 @@ public final class SettlementStorageContainer implements Serializable {
             return 0;
         }
 
-        Item probe = new Item(itemId, 1);
-        int perSlot = isMultiAmount(probe) ? stackLimit : 1;
+        int perSlot = stackLimit;
         int remaining = amount;
 
         for (int slot = 0; slot < items.getSize() && remaining > 0; slot++) {
@@ -328,9 +327,4 @@ public final class SettlementStorageContainer implements Serializable {
         return copy;
     }
 
-    private boolean isMultiAmount(Item item) {
-        return item != null
-                && (item.getDefinitions().isStackable()
-                        || item.getDefinitions().isNoted());
-    }
 }
