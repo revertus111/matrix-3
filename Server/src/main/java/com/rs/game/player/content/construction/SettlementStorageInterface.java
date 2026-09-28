@@ -359,6 +359,26 @@ public final class SettlementStorageInterface {
         player.getPackets().sendCSVarInteger(190, 0);
     }
 
+    /**
+     * Event-driven worker/automation refresh for one physical chest.
+     *
+     * This intentionally does not resend the player's inventory. It only emits
+     * the chest item container and size vars when the player is currently
+     * viewing this exact persistent chest.
+     */
+    public static void refreshOpenChest(Player player, long pieceId) {
+        Session session = getOpenSession(player);
+        if (session == null || session.overview || session.pieceId != pieceId) {
+            return;
+        }
+        SettlementStorageContainer container =
+                player.getSettlementState().findStorageContainer(pieceId);
+        Item[] display = container == null
+                ? new Item[0] : container.snapshotItems();
+        player.getPackets().sendItems(BANK_ITEMS_KEY, display);
+        refreshTotalSize(player);
+    }
+
     private static void sendItems(Player player) {
         Session session = getOpenSession(player);
         if (session == null) {
