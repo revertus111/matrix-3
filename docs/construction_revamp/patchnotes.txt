@@ -1765,3 +1765,11 @@
 - Corrected the stale processing self-test from the superseded 2 Wood -> 1 Plank expectation to the accepted 1 -> 2 recipe and extended it with physical item mappings, machine conversion and full-output rollback.
 - Placeholder workstation art is explicitly acceptable for this logistics gate; final sawmill/conveyor/cart visuals must reuse the same endpoint contract rather than create another inventory owner.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST. Canonical Population, processing and logistics expansion row remains IN PROGRESS until the consolidated runtime gate passes.
+
+2026-09-27 - Rail Studio directional splitter authoring
+- Replaced Rail Studio R0 N/E/S/W checkboxes with a compact compass selector; each direction cycles OFF -> IN -> OUT -> BOTH.
+- Extended rail_composites.tsv with backward-compatible input_mask/output_mask columns while retaining port_mask as the undirected union consumed by current RailRoutePreview topology.
+- Legacy authored port_mask rows load each connected direction as BOTH, preserving existing Junction/Splitter behavior.
+- R1/R2/R3 directional masks derive by quarter-rotating the authored R0 input/output masks; Rail Studio validation shows the rotated routing beside whole-prefab preview state.
+- Splitter publish validation now requires at least one INPUT-capable and one OUTPUT-capable direction in addition to the existing >=3 overall-port requirement.
+
