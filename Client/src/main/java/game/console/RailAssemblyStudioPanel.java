@@ -764,12 +764,24 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         List<RailCompositeLibrary.Component> components =
                 new ArrayList<RailCompositeLibrary.Component>();
         for (Part part : parts) {
-            int dx = part.offsetX - anchor.offsetX;
-            int dy = part.offsetY - anchor.offsetY;
-            int[] rotated = rotateOffset(dx, dy, previewTurns);
+            /*
+             * Workspace coordinates are real editable coordinates. Do NOT
+             * normalize them around the anchor during live editing: doing so
+             * makes a single anchor part visually immovable even while dX/dY
+             * change in the UI. Rotation still pivots around the anchor, then
+             * returns the rotated part to the anchor's workspace position.
+             *
+             * Anchor normalization remains save/publish ownership through
+             * normalizedComponents() and the explicit Normalize action.
+             */
+            int relativeX = part.offsetX - anchor.offsetX;
+            int relativeY = part.offsetY - anchor.offsetY;
+            int[] rotated = rotateOffset(relativeX, relativeY, previewTurns);
+            int workspaceX = anchor.offsetX + rotated[0];
+            int workspaceY = anchor.offsetY + rotated[1];
             components.add(new RailCompositeLibrary.Component(
                     part.id, part.type, (part.rotation + previewTurns) & 0x3,
-                    rotated[0], rotated[1]));
+                    workspaceX, workspaceY));
         }
         ObjectCompositePreview.showComposite(
                 prefabName.getText(), components,
