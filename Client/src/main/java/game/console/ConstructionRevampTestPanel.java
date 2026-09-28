@@ -74,6 +74,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createWorkerDiagnosticsCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createDebugCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createStorageCard());
         content.add(Box.createVerticalStrut(12));
         content.add(createProcessingCard());
@@ -320,6 +322,98 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(all);
         card.add(buttons);
         return card;
+    }
+
+    private JPanel createDebugCard() {
+        JPanel card = ConsoleTheme.createCard("Debug");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Central Construction runtime debug. Category presets are ready, but Master Debug starts OFF so normal settlement play stays quiet.",
+                3));
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel checks = new JPanel(new GridLayout(0, 1, 4, 4));
+        checks.setOpaque(false);
+        checks.setAlignmentX(LEFT_ALIGNMENT);
+
+        JCheckBox master = createDebugMasterCheckBox();
+        checks.add(master);
+        checks.add(createDebugCategoryCheckBox(
+                "Worker Actions", "worker-actions", true));
+        checks.add(createDebugCategoryCheckBox(
+                "Worker Speech", "worker-speech", true));
+        checks.add(createDebugCategoryCheckBox(
+                "Pathing", "pathing", false));
+        checks.add(createDebugCategoryCheckBox(
+                "Logistics", "logistics", true));
+        checks.add(createDebugCategoryCheckBox(
+                "Storage", "storage", true));
+        checks.add(createDebugCategoryCheckBox(
+                "Reservations", "reservations", false));
+        checks.add(createDebugCategoryCheckBox(
+                "Processing", "processing", false));
+        checks.add(createDebugCategoryCheckBox(
+                "Rails", "rails", false));
+        checks.add(createDebugCategoryCheckBox(
+                "RTS", "rts", false));
+        checks.add(createDebugCategoryCheckBox(
+                "Persistence", "persistence", false));
+        checks.add(createDebugCategoryCheckBox(
+                "Performance", "performance", false));
+        card.add(checks);
+        card.add(Box.createVerticalStrut(8));
+
+        JButton clear = new JButton("Clear");
+        JButton export = new JButton("Export");
+        styleButton(clear);
+        styleButton(export);
+
+        clear.addActionListener(e -> queue(
+                "itembrowser settlement debug clear",
+                "Construction debug buffer clear queued."));
+        export.addActionListener(e -> queue(
+                "itembrowser settlement debug export",
+                "Construction debug export queued. Check game chat for the server path."));
+
+        JPanel buttons = new JPanel(new GridLayout(1, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        buttons.add(clear);
+        buttons.add(export);
+        card.add(buttons);
+        return card;
+    }
+
+    private JCheckBox createDebugMasterCheckBox() {
+        JCheckBox checkBox = styleDebugCheckBox("Master Debug", false);
+        checkBox.addActionListener(e -> queue(
+                "itembrowser settlement debug master "
+                        + (checkBox.isSelected() ? "on" : "off"),
+                "Master Debug=" + (checkBox.isSelected() ? "ON" : "OFF")
+                        + " queued."));
+        return checkBox;
+    }
+
+    private JCheckBox createDebugCategoryCheckBox(
+            String label, String key, boolean selected) {
+        JCheckBox checkBox = styleDebugCheckBox(label, selected);
+        checkBox.addActionListener(e -> queue(
+                "itembrowser settlement debug category " + key + " "
+                        + (checkBox.isSelected() ? "on" : "off"),
+                label + "=" + (checkBox.isSelected() ? "ON" : "OFF")
+                        + " queued."));
+        return checkBox;
+    }
+
+    private JCheckBox styleDebugCheckBox(String label, boolean selected) {
+        JCheckBox checkBox = new JCheckBox(label, selected);
+        checkBox.setOpaque(false);
+        checkBox.setForeground(ConsoleTheme.TEXT);
+        checkBox.setFont(ConsoleTheme.BODY_FONT);
+        checkBox.setFocusable(false);
+        checkBox.setAlignmentX(LEFT_ALIGNMENT);
+        return checkBox;
     }
 
     private JPanel createStorageCard() {
