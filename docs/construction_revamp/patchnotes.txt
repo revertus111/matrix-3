@@ -1773,3 +1773,12 @@
 - R1/R2/R3 directional masks derive by quarter-rotating the authored R0 input/output masks; Rail Studio validation shows the rotated routing beside whole-prefab preview state.
 - Splitter publish validation now requires at least one INPUT-capable and one OUTPUT-capable direction in addition to the existing >=3 overall-port requirement.
 
+
+
+2026-09-27 - Bundle 3.5B runtime regression corrections
+- Settlement physical chests and machine buffers now use the settlement-owned stack cap for every item instead of RuneScape inventory stackability; non-stackable Logs/Planks therefore stack normally inside settlement logistics up to the configured per-slot cap.
+- Added Planks Only storage filtering (item 960) to the server policy owner and Storage Settings overlay so a REQUEST output chest can explicitly reject raw Logs.
+- Corrected physical processing resume logic: an already-loaded machine input now satisfies the recipe even when no fresh source chest currently contains another Log.
+- Storage Settings Close now disposes the overlay and clears its window/component ownership rather than only hiding the JWindow, allowing reliable close/reopen lifecycle.
+- Updated the 3.5B runtime gate to use Logs Only on the source chest and Planks Only on the destination chest and added stacking, machine-input-resume and overlay-close regressions.
+- Status remains IMPLEMENTED / NEEDS RUNTIME TEST.
