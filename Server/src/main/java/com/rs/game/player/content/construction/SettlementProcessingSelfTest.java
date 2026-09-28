@@ -26,16 +26,16 @@ public final class SettlementProcessingSelfTest {
             SettlementProcessingTransaction.Result success =
                     SettlementProcessingTransaction.apply(state, recipe, 3);
             require(success.isSuccess(), "3-cycle conversion failed: " + success.getSummary());
-            require(state.getResourceAmount(SettlementResource.WOOD) == 4L,
+            require(state.getResourceAmount(SettlementResource.WOOD) == 7L,
                     "Wood input was not consumed exactly");
-            require(state.getResourceAmount(SettlementResource.PLANKS) == 3L,
+            require(state.getResourceAmount(SettlementResource.PLANKS) == 6L,
                     "Planks output was not produced exactly");
 
             stage = "input-rollback";
             long woodBefore = state.getResourceAmount(SettlementResource.WOOD);
             long planksBefore = state.getResourceAmount(SettlementResource.PLANKS);
             SettlementProcessingTransaction.Result noInput =
-                    SettlementProcessingTransaction.apply(state, recipe, 3);
+                    SettlementProcessingTransaction.apply(state, recipe, 8);
             require(!noInput.isSuccess(), "insufficient-input conversion unexpectedly succeeded");
             require(state.getResourceAmount(SettlementResource.WOOD) == woodBefore,
                     "failed input check mutated Wood");
@@ -58,11 +58,53 @@ public final class SettlementProcessingSelfTest {
                     == state.getStorageCapacity(SettlementResource.PLANKS),
                     "full-output failure changed Planks");
 
+            stage = "physical-machine";
+            SettlementFactoryItem logs =
+                    SettlementFactoryItem.forResource(SettlementResource.WOOD);
+            SettlementFactoryItem planks =
+                    SettlementFactoryItem.forResource(SettlementResource.PLANKS);
+            require(logs != null && logs.getItemId() == 1511,
+                    "physical Logs mapping mismatch");
+            require(planks != null && planks.getItemId() == 960,
+                    "physical Planks mapping mismatch");
+
+            SettlementMachineBuffer machine = new SettlementMachineBuffer(999L);
+            require(machine.addInput(logs.getItemId(), 3) == 3,
+                    "could not seed physical machine input");
+            SettlementProcessingTransaction.Result physical =
+                    SettlementProcessingTransaction.apply(
+                            machine, recipe, logs.getItemId(), planks.getItemId(), 2);
+            require(physical.isSuccess(),
+                    "physical 2-cycle conversion failed: " + physical.getSummary());
+            require(machine.getInputAmount(logs.getItemId()) == 1L,
+                    "physical machine input was not consumed exactly");
+            require(machine.getOutputAmount(planks.getItemId()) == 4L,
+                    "physical machine output was not produced exactly");
+
+            stage = "physical-output-rollback";
+            long freePhysicalOutput = machine.getOutputCapacityForItem(planks.getItemId());
+            require(freePhysicalOutput <= Integer.MAX_VALUE,
+                    "physical output capacity exceeds test limits");
+            if (freePhysicalOutput > 0L) {
+                require(machine.addOutput(
+                        planks.getItemId(), (int) freePhysicalOutput)
+                        == (int) freePhysicalOutput,
+                        "could not fill physical output buffer");
+            }
+            long physicalInputBefore = machine.getInputAmount(logs.getItemId());
+            SettlementProcessingTransaction.Result physicalBlocked =
+                    SettlementProcessingTransaction.apply(
+                            machine, recipe, logs.getItemId(), planks.getItemId(), 1);
+            require(!physicalBlocked.isSuccess(),
+                    "full physical output conversion unexpectedly succeeded");
+            require(machine.getInputAmount(logs.getItemId()) == physicalInputBefore,
+                    "full physical output failure consumed machine input");
+
             stage = "starter-boundary";
             require(!SettlementResource.PLANKS.isStarterResource(),
                     "Planks became a starter shelter requirement");
 
-            return "PASS: saw-planks atomic conversion + input/output rollback + starter-resource boundary.";
+            return "PASS: saw-planks legacy + physical machine conversion, rollback, mappings and starter boundary.";
         } catch (Throwable failure) {
             return "FAIL at " + stage + ": " + safeMessage(failure);
         }
