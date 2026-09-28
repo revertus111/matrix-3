@@ -2073,3 +2073,14 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - verified-static cause: refreshPreview() subtracted the selected anchor coordinates from every component before every live render. With one part that guaranteed rendered offset 0,0 regardless of the editable dX/dY state.
 - Correction: live workspace rendering now uses real editable workspace offsets. Whole-prefab rotation pivots around the selected anchor and returns to the anchor's current workspace position. Normalize/save/publish remain the only normalization boundaries.
 - Resume Here: runtime-test one-part movement first, then multi-part relative movement + R0-R3 rotation in the same Studio session.
+
+## Rail Studio directional splitter authoring — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA. This remains a Rail Studio/rail-authoring side slice; the Canonical Main-Goal Status table is unchanged.
+- Replaced the temporary R0 cardinal checkboxes with one compact compass authoring control. N/E/S/W each cycle OFF -> IN -> OUT -> BOTH.
+- RailCompositeLibrary now stores separate R0 input_mask and output_mask metadata while preserving port_mask as their undirected union for the existing RailRoutePreview connection contract.
+- Backward compatibility: legacy rows with only port_mask load every connected direction as BOTH, so existing Junction/Splitter assets keep their previous bidirectional behavior.
+- Rotation ownership is deterministic: only R0 is authored; R1/R2/R3 input/output masks are derived by the same clockwise quarter-turn transform used by whole-prefab preview/runtime orientation.
+- Rail Studio validation now displays both authored R0 routing and the currently previewed rotated routing. Splitter publication additionally requires at least one INPUT-capable and one OUTPUT-capable direction while preserving the existing >=3 overall connection requirement.
+- Current rail topology remains intentionally unchanged: RailRoutePreview continues consuming getPortMask() as the overall connection mask. Directional masks are retained for later manual/smart cart splitter routing rather than prematurely moving cart authority into the authoring tool.
+- Resume Here: rebuild/restart the client once, author W=IN / N=OUT / E=OUT / S=OFF, verify R0-R3 routing rotation + save/reload + legacy BOTH compatibility, then publish one runtime-safe Splitter and confirm current normal-rail connections still follow the union mask. Include the existing live movement regression in the same Rail Studio session.
+
