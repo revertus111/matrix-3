@@ -31,6 +31,7 @@ public final class SettlementWorkerNpc extends NPC {
         MOVING_TO_PROCESSING_STORAGE,
         MOVING_TO_WORKSTATION,
         PROCESSING,
+        MOVING_TO_PROCESSING_OUTPUT_STORAGE,
         MOVING_HOME_FOR_NEED,
         EATING,
         DRINKING,
@@ -45,6 +46,8 @@ public final class SettlementWorkerNpc extends NPC {
     private SettlementResourceNode targetNode;
     private SettlementResource carriedResource;
     private int carriedAmount;
+    private int carriedItemId = -1;
+    private int carriedItemAmount;
     private int gatherTicksRemaining;
     private int nextGatherIndex;
     private SettlementWorkerNeed activeNeed;
@@ -58,7 +61,8 @@ public final class SettlementWorkerNpc extends NPC {
     private long manualProcessingWorkstationPieceId = -1L;
     private SettlementProcessingRecipe processingRecipe;
     private long processingWorkstationPieceId = -1L;
-    private boolean processingVisitedStorage;
+    private boolean processingInputDelivered;
+    private int processingOutputRemaining;
     private int processingTicksRemaining;
     private boolean processingManual;
     private String statusDetail = "No allowed gathering job.";
@@ -104,7 +108,8 @@ public final class SettlementWorkerNpc extends NPC {
             if (gatherTicksRemaining > 0 || targetNode != null) {
                 clearTarget();
             }
-            if (processingRecipe != null) {
+            if (processingRecipe != null
+                    && carriedItemAmount <= 0 && processingOutputRemaining <= 0) {
                 clearProcessingWork();
             }
             if (manualProcessingRecipe != null) {
@@ -118,9 +123,15 @@ public final class SettlementWorkerNpc extends NPC {
                 return;
             }
             workState = WorkState.IDLE;
-            statusDetail = carriedAmount > 0 && carriedResource != null
-                    ? "Paused; holding " + carriedResource.getDisplayName() + "."
-                    : "Paused.";
+            if (carriedItemAmount > 0) {
+                statusDetail = "Paused; holding "
+                        + getFactoryItemDisplayName(carriedItemId)
+                        + " x" + carriedItemAmount + ".";
+            } else {
+                statusDetail = carriedAmount > 0 && carriedResource != null
+                        ? "Paused; holding " + carriedResource.getDisplayName() + "."
+                        : "Paused.";
+            }
             return;
         }
 
@@ -381,6 +392,11 @@ public final class SettlementWorkerNpc extends NPC {
             if (next == null) {
                 return false;
             }
+            if (processingRecipe != null && hasPhysicalProcessingPayload()) {
+                statusDetail = "Finishing physical logistics payload before "
+                        + next.getDisplayName() + " recovery.";
+                return false;
+            }
             activeNeed = next;
             clearTarget();
             clearProcessingWork();
@@ -460,6 +476,10 @@ public final class SettlementWorkerNpc extends NPC {
         if (target == null) {
             return;
         }
+        if (hasPhysicalProcessingPayload()) {
+            statusDetail = "Finish current physical logistics payload before moving.";
+            return;
+        }
         clearProcessingWork();
         clearManualProcessingOrder();
         manualGatherNode = null;
@@ -473,6 +493,10 @@ public final class SettlementWorkerNpc extends NPC {
 
     public void assignManualGatherOrder(SettlementResourceNode node) {
         if (node == null) {
+            return;
+        }
+        if (hasPhysicalProcessingPayload()) {
+            statusDetail = "Finish current physical logistics payload before gathering.";
             return;
         }
         clearProcessingWork();
@@ -535,6 +559,10 @@ public final class SettlementWorkerNpc extends NPC {
     public void assignManualProcessingOrder(
             SettlementProcessingRecipe recipe, long workstationPieceId) {
         if (recipe == null || workstationPieceId <= 0L) {
+            return;
+        }
+        if (hasPhysicalProcessingPayload()) {
+            statusDetail = "Finish current physical logistics payload before changing machines.";
             return;
         }
         clearProcessingWork();
@@ -612,14 +640,14 @@ public final class SettlementWorkerNpc extends NPC {
         }
         processingRecipe = recipe;
         processingWorkstationPieceId = workstationPieceId;
-        processingVisitedStorage = false;
+        processingInputDelivered = false;
+        processingOutputRemaining = 0;
         processingTicksRemaining = 0;
         processingManual = manual;
         resetWalkSteps();
         workState = WorkState.MOVING_TO_PROCESSING_STORAGE;
-        statusDetail = (manual ? "Manual Process Wood: collecting " : "Process Wood: collecting ")
-                + recipe.getInputAmount() + " "
-                + recipe.getInputResource().getDisplayName() + " from storage.";
+        statusDetail = (manual ? "Manual Process Wood: " : "Process Wood: ")
+                + "checking physical machine input/output.";
         return true;
     }
 
@@ -630,53 +658,208 @@ public final class SettlementWorkerNpc extends NPC {
         }
         SettlementWorkerJob job = SettlementWorkerJob.PROCESS_WOOD;
         if (!processingManual && !workerState.isJobAllowed(job)) {
-            clearProcessingWork();
+            if (!hasPhysicalProcessingPayload()) {
+                clearProcessingWork();
+            }
             idle("Process Wood disabled.");
             return;
         }
 
-        if (!processingVisitedStorage) {
-            if (!settlement.canProcessRecipe(recipe)) {
-                clearProcessingWork();
-                idle("Process Wood blocked by input or output storage.");
-                return;
-            }
-            WorldTile storage = settlement.getWorkerStorageTile(workerState);
-            if (storage == null) {
-                clearProcessingWork();
-                idle("No valid processing storage access tile.");
-                return;
-            }
-            workState = WorkState.MOVING_TO_PROCESSING_STORAGE;
-            statusDetail = "Collecting " + recipe.getInputAmount() + " "
-                    + recipe.getInputResource().getDisplayName() + " from storage.";
-            if (!walkToward(storage, "No Path to processing storage.")) {
-                return;
-            }
-            processingVisitedStorage = true;
-            resetWalkSteps();
-            statusDetail = "Inputs collected; moving to Wooden workbench.";
+        SettlementFactoryItem inputMapping =
+                SettlementFactoryItem.forResource(recipe.getInputResource());
+        SettlementFactoryItem outputMapping =
+                SettlementFactoryItem.forResource(recipe.getOutputResource());
+        if (inputMapping == null || outputMapping == null) {
+            clearProcessingWork();
+            idle("Process Wood blocked: physical recipe item mapping unavailable.");
             return;
         }
+        int inputItemId = inputMapping.getItemId();
+        int outputItemId = outputMapping.getItemId();
 
         WorldTile workstation =
                 settlement.getProcessingWorkstationTile(processingWorkstationPieceId);
         if (workstation == null) {
             clearProcessingWork();
-            idle("Wooden workbench is no longer available.");
+            idle("Processing workstation is no longer available.");
             return;
         }
 
+        /*
+         * A machine may already contain output from an interrupted/blocked
+         * cycle. Drain that first so output backpressure can recover without a
+         * second invisible inventory owner.
+         */
+        if (processingOutputRemaining <= 0 && carriedItemAmount <= 0
+                && settlement.getMachineOutputAmount(
+                        processingWorkstationPieceId, outputItemId) > 0L) {
+            processingOutputRemaining = (int) Math.min(
+                    (long) Integer.MAX_VALUE,
+                    settlement.getMachineOutputAmount(
+                            processingWorkstationPieceId, outputItemId));
+        }
+
+        if (carriedItemAmount > 0 && carriedItemId == outputItemId) {
+            int payload = Math.min(carriedItemAmount, CARRY_CAPACITY);
+            if (!settlement.reserveWorkerItemDestination(
+                    workerId, outputItemId, payload, processingManual)) {
+                settlement.releaseWorkerItemDestinationReservation(workerId);
+                clearProcessingWork();
+                idle("Machine output blocked: no destination accepts "
+                        + outputMapping.getDisplayName() + ".");
+                return;
+            }
+            WorldTile destination = settlement.getWorkerItemDestinationTile(workerId);
+            if (destination == null) {
+                settlement.releaseWorkerItemDestinationReservation(workerId);
+                idle("Machine output blocked: destination storage unavailable.");
+                return;
+            }
+            workState = WorkState.MOVING_TO_PROCESSING_OUTPUT_STORAGE;
+            statusDetail = "Hauling " + outputMapping.getDisplayName()
+                    + " from machine output to physical storage.";
+            if (!walkToward(destination, "No Path to machine-output storage.", 1)) {
+                return;
+            }
+            int added = settlement.depositWorkerItem(
+                    workerId, outputItemId, payload, processingManual);
+            if (added <= 0) {
+                idle("Machine output destination changed; holding "
+                        + outputMapping.getDisplayName() + ".");
+                return;
+            }
+            carriedItemAmount -= added;
+            processingOutputRemaining = Math.max(0, processingOutputRemaining - added);
+            if (carriedItemAmount <= 0) {
+                carriedItemId = -1;
+                carriedItemAmount = 0;
+            }
+            settlement.releaseWorkerDestination(workerId);
+            resetWalkSteps();
+            if (processingOutputRemaining <= 0) {
+                String completed = recipe.getDisplayName()
+                        + " physical cycle complete; output stored.";
+                clearProcessingWork();
+                workState = WorkState.IDLE;
+                statusDetail = completed;
+            }
+            return;
+        }
+
+        if (processingOutputRemaining > 0) {
+            int take = Math.min(CARRY_CAPACITY, processingOutputRemaining);
+            if (!settlement.reserveWorkerItemDestination(
+                    workerId, outputItemId, take, processingManual)) {
+                settlement.releaseWorkerItemDestinationReservation(workerId);
+                clearProcessingWork();
+                idle("Machine output waiting: no physical storage accepts "
+                        + outputMapping.getDisplayName() + ".");
+                return;
+            }
+            workState = WorkState.MOVING_TO_WORKSTATION;
+            statusDetail = "Collecting " + outputMapping.getDisplayName()
+                    + " from machine output.";
+            if (!walkToward(workstation, "No Path to processing workstation.", 1)) {
+                return;
+            }
+            int removed = settlement.collectMachineOutput(
+                    processingWorkstationPieceId, outputItemId, take);
+            if (removed <= 0) {
+                settlement.releaseWorkerItemDestinationReservation(workerId);
+                processingOutputRemaining = 0;
+                resetWalkSteps();
+                return;
+            }
+            carriedItemId = outputItemId;
+            carriedItemAmount = removed;
+            resetWalkSteps();
+            return;
+        }
+
+        long machineInput = settlement.getMachineInputAmount(
+                processingWorkstationPieceId, inputItemId);
+        if (!processingInputDelivered && machineInput < recipe.getInputAmount()) {
+            int missing = (int) Math.min(
+                    (long) CARRY_CAPACITY,
+                    recipe.getInputAmount() - machineInput);
+
+            if (carriedItemAmount > 0 && carriedItemId == inputItemId) {
+                workState = WorkState.MOVING_TO_WORKSTATION;
+                statusDetail = "Delivering " + inputMapping.getDisplayName()
+                        + " to machine input.";
+                if (!walkToward(workstation, "No Path to processing workstation.", 1)) {
+                    return;
+                }
+                int added = settlement.depositWorkerItemToMachine(
+                        processingWorkstationPieceId, inputItemId, carriedItemAmount);
+                if (added <= 0) {
+                    idle("Machine input full; holding "
+                            + inputMapping.getDisplayName() + ".");
+                    return;
+                }
+                carriedItemAmount -= added;
+                if (carriedItemAmount <= 0) {
+                    carriedItemId = -1;
+                    carriedItemAmount = 0;
+                }
+                settlement.releaseWorkerDestination(workerId);
+                resetWalkSteps();
+                machineInput = settlement.getMachineInputAmount(
+                        processingWorkstationPieceId, inputItemId);
+                processingInputDelivered = machineInput >= recipe.getInputAmount();
+                statusDetail = processingInputDelivered
+                        ? "Machine input delivered."
+                        : "Machine still needs physical input.";
+                return;
+            }
+
+            if (!settlement.reserveWorkerItemSource(
+                    workerId, inputItemId, missing, processingManual)) {
+                clearProcessingWork();
+                idle("Process Wood waiting: no eligible physical source has "
+                        + inputMapping.getDisplayName() + ".");
+                return;
+            }
+            WorldTile source = settlement.getWorkerItemSourceTile(workerId);
+            if (source == null) {
+                settlement.releaseWorkerItemSourceReservation(workerId);
+                clearProcessingWork();
+                idle("Process Wood blocked: source storage unavailable.");
+                return;
+            }
+            workState = WorkState.MOVING_TO_PROCESSING_STORAGE;
+            statusDetail = "Collecting " + missing + " "
+                    + inputMapping.getDisplayName() + " from physical storage.";
+            if (!walkToward(source, "No Path to processing source storage.", 1)) {
+                return;
+            }
+            int removed = settlement.withdrawWorkerItemSource(
+                    workerId, inputItemId, missing);
+            if (removed != missing) {
+                clearProcessingWork();
+                idle("Process Wood source changed before pickup.");
+                return;
+            }
+            carriedItemId = inputItemId;
+            carriedItemAmount = removed;
+            resetWalkSteps();
+            statusDetail = "Carrying " + inputMapping.getDisplayName()
+                    + " to machine input.";
+            return;
+        }
+        processingInputDelivered = true;
+
         if (processingTicksRemaining <= 0) {
             workState = WorkState.MOVING_TO_WORKSTATION;
-            statusDetail = "Moving to Wooden workbench.";
-            if (!walkToward(workstation, "No Path to Wooden workbench.", 1)) {
+            statusDetail = "Moving to processing workstation.";
+            if (!walkToward(workstation, "No Path to processing workstation.", 1)) {
                 return;
             }
             resetWalkSteps();
             workState = WorkState.PROCESSING;
             processingTicksRemaining = PROCESS_TICKS;
-            statusDetail = "Processing " + recipe.getSummary() + ".";
+            statusDetail = "Processing " + recipe.getSummary()
+                    + " from machine-local input.";
             return;
         }
 
@@ -687,32 +870,49 @@ public final class SettlementWorkerNpc extends NPC {
         }
 
         SettlementProcessingTransaction.Result result =
-                settlement.processWorkerRecipe(workerState, recipe);
-        clearProcessingWork();
-        workState = WorkState.IDLE;
+                settlement.processWorkerRecipe(
+                        workerState, recipe, processingWorkstationPieceId);
         if (result == null || !result.isSuccess()) {
-            statusDetail = "Processing blocked: "
-                    + (result == null ? "settlement runtime unavailable."
-                            : result.getSummary());
+            String blocked = result == null
+                    ? "settlement runtime unavailable." : result.getSummary();
+            clearProcessingWork();
+            workState = WorkState.IDLE;
+            statusDetail = "Processing blocked: " + blocked;
             return;
         }
 
         workerState.applyWorkCycleCost();
         workerState.addSkillXp(job.getSkill(), job.getWorkerXp());
-        statusDetail = result.getSummary() + " Worker Crafting XP +"
+        processingInputDelivered = false;
+        processingTicksRemaining = 0;
+        processingOutputRemaining = (int) Math.min(
+                (long) Integer.MAX_VALUE, result.getOutputProduced());
+        statusDetail = result.getSummary() + " Machine output ready; Worker Crafting XP +"
                 + job.getWorkerXp() + ".";
     }
 
     private void clearProcessingWork() {
+        settlement.releaseWorkerItemSourceReservation(workerId);
+        settlement.releaseWorkerItemDestinationReservation(workerId);
         if (processingWorkstationPieceId > 0L) {
             settlement.releaseProcessingWorkstation(workerId);
         }
         processingRecipe = null;
         processingWorkstationPieceId = -1L;
-        processingVisitedStorage = false;
+        processingInputDelivered = false;
+        processingOutputRemaining = 0;
         processingTicksRemaining = 0;
         processingManual = false;
         resetWalkSteps();
+    }
+
+    private boolean hasPhysicalProcessingPayload() {
+        return carriedItemAmount > 0 || processingOutputRemaining > 0;
+    }
+
+    private String getFactoryItemDisplayName(int itemId) {
+        SettlementFactoryItem item = SettlementFactoryItem.forItemId(itemId);
+        return item == null ? "item #" + itemId : item.getDisplayName();
     }
 
     private SettlementResourceNode selectNextGatherNode() {
@@ -875,7 +1075,10 @@ public final class SettlementWorkerNpc extends NPC {
         summary.append(" | paused=").append(workerState.isPaused() ? "YES" : "NO");
         summary.append(" | ").append(statusDetail);
         summary.append(" | carried=");
-        if (carriedResource == null || carriedAmount <= 0) {
+        if (carriedItemAmount > 0) {
+            summary.append(getFactoryItemDisplayName(carriedItemId))
+                    .append(" x").append(carriedItemAmount);
+        } else if (carriedResource == null || carriedAmount <= 0) {
             summary.append("none");
         } else {
             summary.append(carriedResource.getDisplayName()).append(" x").append(carriedAmount);
