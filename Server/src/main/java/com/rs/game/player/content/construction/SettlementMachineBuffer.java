@@ -133,8 +133,7 @@ public final class SettlementMachineBuffer implements Serializable {
             if (itemId < 0) {
                 return 0L;
             }
-            Item probe = new Item(itemId, 1);
-            int perSlot = isMultiAmount(probe) ? stackLimit : 1;
+            int perSlot = stackLimit;
             long capacity = 0L;
             for (int slot = 0; slot < items.getSize(); slot++) {
                 Item current = items.get(slot);
@@ -152,8 +151,7 @@ public final class SettlementMachineBuffer implements Serializable {
             if (itemId < 0 || amount <= 0) {
                 return 0;
             }
-            Item probe = new Item(itemId, 1);
-            int perSlot = isMultiAmount(probe) ? stackLimit : 1;
+            int perSlot = stackLimit;
             int remaining = amount;
 
             for (int slot = 0; slot < items.getSize() && remaining > 0; slot++) {
@@ -226,10 +224,5 @@ public final class SettlementMachineBuffer implements Serializable {
             return getUsedSlots() == 0;
         }
 
-        private boolean isMultiAmount(Item item) {
-            return item != null
-                    && (item.getDefinitions().isStackable()
-                            || item.getDefinitions().isNoted());
-        }
     }
 }
