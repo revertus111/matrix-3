@@ -1,6 +1,10 @@
 package com.rs.game.player.content.construction;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.rs.game.Animation;
+import com.rs.game.ForceTalk;
 import com.rs.game.WorldTile;
 import com.rs.game.npc.NPC;
 
@@ -68,6 +72,8 @@ public final class SettlementWorkerNpc extends NPC {
     private int processingTicksRemaining;
     private boolean processingManual;
     private String statusDetail = "No allowed gathering job.";
+    private WorkState lastDebugWorkState;
+    private String lastDebugStatusDetail;
 
     public SettlementWorkerNpc(SettlementInstance settlement,
             SettlementWorkerDefinition definition,
@@ -98,6 +104,7 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
         processSettlementWork();
+        emitDebugTransition();
     }
 
     private void processSettlementWork() {
@@ -1367,6 +1374,79 @@ public final class SettlementWorkerNpc extends NPC {
     private void idle(String reason) {
         workState = WorkState.IDLE;
         statusDetail = reason;
+    }
+
+    private void emitDebugTransition() {
+        SettlementDebug debug = settlement.getDebug();
+        if (debug == null) {
+            return;
+        }
+        if (lastDebugWorkState == workState
+                && (lastDebugStatusDetail == null
+                        ? statusDetail == null
+                        : lastDebugStatusDetail.equals(statusDetail))) {
+            return;
+        }
+
+        lastDebugWorkState = workState;
+        lastDebugStatusDetail = statusDetail;
+
+        String detail = statusDetail == null ? "" : statusDetail;
+        String lower = detail.toLowerCase();
+        List<SettlementDebug.Category> categories =
+                new ArrayList<SettlementDebug.Category>();
+        categories.add(SettlementDebug.Category.WORKER_ACTIONS);
+
+        if (workState.name().startsWith("MOVING_")
+                || lower.contains("path")) {
+            categories.add(SettlementDebug.Category.PATHING);
+        }
+        if (workState == WorkState.MOVING_TO_STORAGE
+                || workState == WorkState.HAULING
+                || workState == WorkState.MOVING_TO_PROCESSING_STORAGE
+                || workState == WorkState.MOVING_TO_PROCESSING_OUTPUT_STORAGE
+                || lower.contains("storage")
+                || lower.contains("chest")
+                || lower.contains("haul")
+                || lower.contains("carry")
+                || lower.contains("deliver here")
+                || lower.contains("take from here")) {
+            categories.add(SettlementDebug.Category.LOGISTICS);
+        }
+        if (lower.contains("storage")
+                || lower.contains("chest")
+                || lower.contains("deposit")
+                || lower.contains("withdraw")) {
+            categories.add(SettlementDebug.Category.STORAGE);
+        }
+        if (lower.contains("reserv")) {
+            categories.add(SettlementDebug.Category.RESERVATIONS);
+        }
+        if (workState == WorkState.MOVING_TO_WORKSTATION
+                || workState == WorkState.PROCESSING
+                || lower.contains("process")
+                || lower.contains("machine")
+                || lower.contains("workstation")) {
+            categories.add(SettlementDebug.Category.PROCESSING);
+        }
+        if (lower.startsWith("manual order:")
+                || lower.contains("take from here")
+                || lower.contains("deliver here")) {
+            categories.add(SettlementDebug.Category.RTS);
+        }
+
+        debug.record(
+                "Worker#" + workerId,
+                workState + " | " + detail,
+                categories.toArray(
+                        new SettlementDebug.Category[categories.size()]));
+
+        if (debug.isEnabled(SettlementDebug.Category.WORKER_SPEECH)
+                && detail.length() > 0) {
+            String speech = detail.length() > 80
+                    ? detail.substring(0, 77) + "..." : detail;
+            setNextForceTalk(new ForceTalk(speech));
+        }
     }
 
     public long getWorkerId() {
