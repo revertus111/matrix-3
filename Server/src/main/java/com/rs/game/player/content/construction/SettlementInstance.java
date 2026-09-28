@@ -39,6 +39,7 @@ public final class SettlementInstance {
 
     private final Player player;
     private final SettlementState state;
+    private final SettlementDebug debug;
     private final WorldTile returnTile;
 
     private volatile int[] boundChunks;
@@ -79,6 +80,7 @@ public final class SettlementInstance {
     private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
         this.player = player;
         this.state = state;
+        this.debug = new SettlementDebug();
         this.returnTile = returnTile;
     }
 
@@ -127,6 +129,10 @@ public final class SettlementInstance {
             return null;
         }
         return ((SettlementControler) controller).getInstance();
+    }
+
+    public SettlementDebug getDebug() {
+        return debug;
     }
 
     private void load() {
