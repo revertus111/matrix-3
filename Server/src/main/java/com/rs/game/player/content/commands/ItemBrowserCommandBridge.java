@@ -891,6 +891,36 @@ public final class ItemBrowserCommandBridge {
             return true;
         }
 
+        if ("workerselectiontake".equals(operation)
+                || "workerselectiondeliver".equals(operation)) {
+            if (cmd.length < 7) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement " + operation
+                        + " <objectId> <worldX> <worldY> <plane>");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using RTS logistics orders.");
+                return true;
+            }
+            try {
+                int objectId = Integer.parseInt(cmd[3]);
+                int worldX = Integer.parseInt(cmd[4]);
+                int worldY = Integer.parseInt(cmd[5]);
+                int plane = Integer.parseInt(cmd[6]);
+                String result = "workerselectiontake".equals(operation)
+                        ? active.orderRuntimeSelectionTakeFromStorage(
+                                objectId, worldX, worldY, plane)
+                        : active.orderRuntimeSelectionDeliverToStorage(
+                                objectId, worldX, worldY, plane);
+                player.getPackets().sendGameMessage(result);
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("RTS logistics target is invalid.");
+            }
+            return true;
+        }
+
         if ("workerselectionstatus".equals(operation)) {
             if (active == null || !active.isLoaded()) {
                 player.getPackets().sendGameMessage(
