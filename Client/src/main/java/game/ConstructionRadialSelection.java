@@ -1898,9 +1898,10 @@ public final class ConstructionRadialSelection {
      * consumed so only the selected workers move.
      *
      * Object action 3 is Matrix3's first object option. Supported worker
-     * resource/workstation actions are consumed after the worker order is
-     * queued, even when self is selected, so they never redirect the player
-     * away from an unrelated current action.
+     * resource/workstation actions mirror the same click into a worker order,
+     * then allow Matrix3's vanilla object action to continue for the player.
+     * The local player therefore never needs to be part of the RTS selection
+     * just to path to/interact with the clicked object.
      */
     static boolean handleMenuAction(int action, int localX, int localY, long targetUid) {
         int normalizedAction = action >= 2000 ? action - 2000 : action;
@@ -2038,12 +2039,12 @@ public final class ConstructionRadialSelection {
             if (isStarterResourceObjectId(objectId)) {
                 queueSelectionOrder("workerselectiongather object " + objectId + " "
                         + point.worldX + " " + point.worldY + " " + point.plane);
-                return true;
+                return false;
             }
             if (objectId == WOODEN_WORKBENCH_OBJECT_ID) {
                 queueSelectionOrder("workerselectionprocess " + objectId + " "
                         + point.worldX + " " + point.worldY + " " + point.plane);
-                return true;
+                return false;
             }
         }
         if (normalizedAction == MATRIX3_FIRST_NPC_ACTION && committedWorkerNpcIndexes.length > 0) {
