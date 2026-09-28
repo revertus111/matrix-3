@@ -178,6 +178,10 @@ public final class SettlementWorkerNpc extends NPC {
         if (workerState.getBehaviorMode()
                 == SettlementWorkerBehaviorMode.DIRECT_ORDERS_ONLY) {
             if (processingRecipe != null && !processingManual) {
+                if (hasPhysicalProcessingPayload()) {
+                    processProcessingWork();
+                    return;
+                }
                 clearProcessingWork();
             }
             if (targetNode != null && !manualGatherActive) {
@@ -191,6 +195,10 @@ public final class SettlementWorkerNpc extends NPC {
                 == SettlementWorkerBehaviorMode.RALLY_RESTRICTED
                 && workerState.getRallyPointId() <= 0L) {
             if (processingRecipe != null && !processingManual) {
+                if (hasPhysicalProcessingPayload()) {
+                    processProcessingWork();
+                    return;
+                }
                 clearProcessingWork();
             }
             if (targetNode != null && !manualGatherActive) {
@@ -657,10 +665,9 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
         SettlementWorkerJob job = SettlementWorkerJob.PROCESS_WOOD;
-        if (!processingManual && !workerState.isJobAllowed(job)) {
-            if (!hasPhysicalProcessingPayload()) {
-                clearProcessingWork();
-            }
+        if (!processingManual && !workerState.isJobAllowed(job)
+                && !hasPhysicalProcessingPayload()) {
+            clearProcessingWork();
             idle("Process Wood disabled.");
             return;
         }
