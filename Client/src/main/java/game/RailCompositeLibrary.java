@@ -70,6 +70,15 @@ public final class RailCompositeLibrary {
 
     public static synchronized String saveComposite(String name, Role role,
             List<Component> components, int portMask) {
+        int legacyMask = portMask & 0xF;
+        return saveComposite(name, role, components, legacyMask, legacyMask);
+    }
+
+    public static synchronized String saveComposite(String name, Role role,
+            List<Component> components, int inputMask, int outputMask) {
+        int safeInputMask = inputMask & 0xF;
+        int safeOutputMask = outputMask & 0xF;
+        int portMask = safeInputMask | safeOutputMask;
         String cleanedName = cleanName(name);
         if (cleanedName.length() == 0) {
             return "Composite name is required.";
@@ -87,7 +96,8 @@ public final class RailCompositeLibrary {
             }
         }
         next.add(new CompositeDefinition(cleanedName, actualRole,
-                new ArrayList<Component>(components), portMask));
+                new ArrayList<Component>(components), portMask,
+                safeInputMask, safeOutputMask));
 
         Collections.sort(next, new Comparator<CompositeDefinition>() {
             @Override
@@ -101,8 +111,9 @@ public final class RailCompositeLibrary {
             List<String> lines = new ArrayList<String>();
             lines.add("# Matrix3 rail layout/composite library");
             lines.add("# One row per visual component; offset_x/offset_y are relative tiles from the saved layout origin.");
-            lines.add("# port_mask is optional metadata: N=1, E=2, S=4, W=8. Legacy rows without it remain readable.");
-            lines.add("name\trole\tindex\tid\ttype\trotation\toffset_x\toffset_y\tport_mask");
+            lines.add("# port_mask is the undirected union used by the current rail runtime: N=1, E=2, S=4, W=8.");
+            lines.add("# input_mask/output_mask are optional directional R0 metadata. Legacy rows load each authored port as BOTH.");
+            lines.add("name\trole\tindex\tid\ttype\trotation\toffset_x\toffset_y\tport_mask\tinput_mask\toutput_mask");
             for (CompositeDefinition definition : next) {
                 for (int i = 0; i < definition.components.size(); i++) {
                     Component component = definition.components.get(i);
@@ -113,7 +124,9 @@ public final class RailCompositeLibrary {
                             + "\t" + component.rotation
                             + "\t" + component.offsetX
                             + "\t" + component.offsetY
-                            + "\t" + definition.portMask);
+                            + "\t" + definition.portMask
+                            + "\t" + definition.inputMask
+                            + "\t" + definition.outputMask);
                 }
             }
             Files.write(FILE, lines, StandardCharsets.UTF_8,
@@ -153,14 +166,23 @@ public final class RailCompositeLibrary {
                     int offsetX = parts.length >= 8 ? Integer.parseInt(parts[6]) : 0;
                     int offsetY = parts.length >= 8 ? Integer.parseInt(parts[7]) : 0;
                     int portMask = parts.length >= 9 ? Integer.parseInt(parts[8]) & 0xF : 0;
+                    boolean hasDirectionalMasks = parts.length >= 11;
+                    int inputMask = hasDirectionalMasks
+                            ? Integer.parseInt(parts[9]) & 0xF : portMask;
+                    int outputMask = hasDirectionalMasks
+                            ? Integer.parseInt(parts[10]) & 0xF : portMask;
+                    portMask |= inputMask | outputMask;
 
                     String key = name.toLowerCase(Locale.ENGLISH);
                     MutableComposite mutable = grouped.get(key);
                     if (mutable == null) {
-                        mutable = new MutableComposite(name, role, portMask);
+                        mutable = new MutableComposite(
+                                name, role, portMask, inputMask, outputMask);
                         grouped.put(key, mutable);
-                    } else if (mutable.portMask == 0 && portMask != 0) {
-                        mutable.portMask = portMask;
+                    } else {
+                        mutable.portMask |= portMask;
+                        mutable.inputMask |= inputMask;
+                        mutable.outputMask |= outputMask;
                     }
                     mutable.components.add(new IndexedComponent(index,
                             new Component(id, type, rotation, offsetX, offsetY)));
@@ -185,7 +207,8 @@ public final class RailCompositeLibrary {
             }
             if (!components.isEmpty()) {
                 result.add(new CompositeDefinition(
-                        mutable.name, mutable.role, components, mutable.portMask));
+                        mutable.name, mutable.role, components, mutable.portMask,
+                        mutable.inputMask, mutable.outputMask));
             }
         }
         return result;
@@ -271,7 +294,8 @@ public final class RailCompositeLibrary {
         CompositeDefinition accepted = findByName(ACCEPTED_CURVE_NAME);
         if (accepted != null) {
             return new CompositeDefinition(accepted.name, Role.CURVE,
-                    new ArrayList<Component>(accepted.components), accepted.portMask);
+                    new ArrayList<Component>(accepted.components), accepted.portMask,
+                    accepted.inputMask, accepted.outputMask);
         }
 
         CompositeDefinition classified = findFirst(Role.CURVE);
@@ -283,7 +307,8 @@ public final class RailCompositeLibrary {
         components.add(new Component(46377, 22, 0, 2, -1));
         components.add(new Component(46379, 22, 0, 3, -1));
         components.add(new Component(46381, 22, 0, 3, 0));
-        return new CompositeDefinition(ACCEPTED_CURVE_NAME, Role.CURVE, components, 0);
+        return new CompositeDefinition(
+                ACCEPTED_CURVE_NAME, Role.CURVE, components, 0, 0, 0);
     }
 
     private static Role parseRole(String value) {
@@ -353,13 +378,17 @@ public final class RailCompositeLibrary {
         private final Role role;
         private final List<Component> components;
         private final int portMask;
+        private final int inputMask;
+        private final int outputMask;
 
         private CompositeDefinition(String name, Role role, List<Component> components,
-                int portMask) {
+                int portMask, int inputMask, int outputMask) {
             this.name = name;
             this.role = role;
             this.components = components;
-            this.portMask = portMask & 0xF;
+            this.inputMask = inputMask & 0xF;
+            this.outputMask = outputMask & 0xF;
+            this.portMask = (portMask | this.inputMask | this.outputMask) & 0xF;
         }
 
         public String getName() {
@@ -376,6 +405,26 @@ public final class RailCompositeLibrary {
 
         public int getPortMask() {
             return portMask;
+        }
+
+        public int getInputMask() {
+            return inputMask;
+        }
+
+        public int getOutputMask() {
+            return outputMask;
+        }
+
+        public int getRotatedPortMask(int turns) {
+            return rotatePortMask(portMask, turns);
+        }
+
+        public int getRotatedInputMask(int turns) {
+            return rotatePortMask(inputMask, turns);
+        }
+
+        public int getRotatedOutputMask(int turns) {
+            return rotatePortMask(outputMask, turns);
         }
 
         public String getPortsText() {
@@ -400,13 +449,18 @@ public final class RailCompositeLibrary {
         private final String name;
         private final Role role;
         private int portMask;
+        private int inputMask;
+        private int outputMask;
         private final List<IndexedComponent> components =
                 new ArrayList<IndexedComponent>();
 
-        private MutableComposite(String name, Role role, int portMask) {
+        private MutableComposite(String name, Role role, int portMask,
+                int inputMask, int outputMask) {
             this.name = name;
             this.role = role;
-            this.portMask = portMask & 0xF;
+            this.inputMask = inputMask & 0xF;
+            this.outputMask = outputMask & 0xF;
+            this.portMask = (portMask | this.inputMask | this.outputMask) & 0xF;
         }
     }
 
@@ -418,6 +472,19 @@ public final class RailCompositeLibrary {
             this.index = index;
             this.component = component;
         }
+    }
+
+    public static int rotatePortMask(int mask, int turns) {
+        int rotated = mask & 0xF;
+        for (int i = 0; i < (turns & 0x3); i++) {
+            int next = 0;
+            if ((rotated & PORT_NORTH) != 0) next |= PORT_EAST;
+            if ((rotated & PORT_EAST) != 0) next |= PORT_SOUTH;
+            if ((rotated & PORT_SOUTH) != 0) next |= PORT_WEST;
+            if ((rotated & PORT_WEST) != 0) next |= PORT_NORTH;
+            rotated = next;
+        }
+        return rotated;
     }
 
     private static int clamp(int value, int min, int max) {
