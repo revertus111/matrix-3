@@ -9,7 +9,10 @@ package com.rs.game.player.content.construction;
  */
 public enum SettlementFactoryItem {
 
-    NORMAL_LOGS(SettlementResource.WOOD, 1511);
+    // VERIFIED-static: Matrix3 Woodcutting normal Logs mapping.
+    NORMAL_LOGS(SettlementResource.WOOD, 1511),
+    // VERIFIED-static: HouseConstants.PLANK = 960.
+    PLANKS(SettlementResource.PLANKS, 960);
 
     private final SettlementResource resource;
     private final int itemId;
@@ -37,5 +40,18 @@ public enum SettlementFactoryItem {
             }
         }
         return null;
+    }
+
+    public static SettlementFactoryItem forItemId(int itemId) {
+        for (SettlementFactoryItem mapping : values()) {
+            if (mapping.itemId == itemId) {
+                return mapping;
+            }
+        }
+        return null;
+    }
+
+    public String getDisplayName() {
+        return resource.getDisplayName();
     }
 }
