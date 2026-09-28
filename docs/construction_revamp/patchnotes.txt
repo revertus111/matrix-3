@@ -1783,3 +1783,7 @@
 - Storage Settings Close now disposes the overlay and clears its window/component ownership rather than only hiding the JWindow, allowing reliable close/reopen lifecycle.
 - Updated the 3.5B runtime gate to use Logs Only on the source chest and Planks Only on the destination chest and added stacking, machine-input-resume and overlay-close regressions.
 - Status remains IMPLEMENTED / NEEDS RUNTIME TEST.
+2026-09-28 - RTS object-click ownership fix
+- Selected workers still receive supported resource/workbench orders from first-object clicks.
+- Those object clicks now continue into Matrix3's vanilla interaction path for the local player instead of being consumed by RTS selection.
+- Ground-click movement, radial selection, and NPC-order ownership are unchanged.
