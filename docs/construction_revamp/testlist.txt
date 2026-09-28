@@ -1378,6 +1378,23 @@ Bundle 3.5B Generic Physical Logistics Spine V1 gate — IMPLEMENTED / NEEDS RUN
 - Persistence: leave items in a machine input or output buffer, exit/re-enter and logout/relog. The same workstation piece id must retain its buffer contents; after return the worker must be able to continue/drain the chain.
 - Final pass: run several consecutive cycles. The visible physical total must reconcile: Logs decrease by cycles, Planks increase by 2x cycles, with no unexplained legacy-counter mutation.
 
+Bundle 3.5C Explicit Logistics Control + Live Storage V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-28)
+- Live chest refresh: open Chest B and leave interface 762 open while a worker deposits Planks. The visible stack/quantity and used-slot counters must update immediately without closing/reopening the chest.
+- Live source refresh: leave Chest A open while a worker withdraws a Log. The visible Log stack must decrement immediately. Player inventory must not flicker/change because worker refresh sends only chest items + size.
+- Idle-performance regression: leave a chest open with no item mutations for at least a minute. No visible refresh loop/flicker should occur; refresh is mutation-triggered, not tick-polled.
+- Take From Here: commit-select one worker, right-click a physical chest containing at least one item, choose Take From Here. Worker must path to that exact chest, withdraw exactly one available item, and AI Status must report the held physical item.
+- Take contention: leave exactly one item in a chest, select two workers and issue Take From Here. Only one worker may obtain the item; the other must wait/block without duplication or negative quantity.
+- Deliver Here: with a worker holding a manually-taken physical item, right-click a valid destination chest -> Deliver Here. Worker must deliver to that exact chest, ignoring Rally location preference but still respecting filter/deposit/capacity safety.
+- Gathered payload redirect: manually gather a Log, then Deliver Here to a valid Logs-accepting chest. It must use the exact selected chest rather than autonomous destination scoring.
+- Delivery rejection: target a chest whose filter rejects the payload or whose Deposit is OFF. Worker must keep the item and report waiting/blocked; changing the chest policy to valid must allow the same explicit delivery to finish without item loss.
+- Work Here: commit-select a worker and right-click workbench 13704 -> Work Here. Worker must use that exact workstation and the existing physical Log -> machine input -> Plank output contract.
+- Machine-output redirect: while Process Wood owns remaining output, issue Deliver Here on a valid Planks chest. Worker must collect remaining machine output and deliver it to that exact chest until the current output is drained.
+- REQUEST pressure: with two otherwise equal Planks destinations, make one REQUEST chest materially emptier than the other. Repeated autonomous output should prefer the emptier REQUEST endpoint when distance/priority do not dominate.
+- BUFFER pressure: with two otherwise similar BUFFER chests, deposits should prefer the less-filled buffer and withdrawals should prefer the more-filled buffer around the half-full balancing point.
+- Congestion: provide two equivalent valid destinations and two+ workers. Competing reservations should bias workers away from the already-reserved endpoint when the alternative is reasonably comparable; no overfill, dupes or permanent retarget thrash.
+- Regression: SUPPLY source / REQUEST output first-chain setup continues to produce exactly 1 Log -> 2 Planks with physical item totals reconciling.
+- Regression: View Storage, Storage Settings, Close/reopen, Rally, Auto/Orders behavior, needs and persistence remain unchanged.
+
 Rail Assembly Studio UX V1.1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
 - Open Test -> Rail Studio at the normal narrow dock width. The Studio itself must have no horizontal scrollbar and no right-edge button clipping.
 - Click a candidate without adding it. That rail must immediately appear as a solo client-only preview left of the assembly work area.
