@@ -1436,3 +1436,17 @@ Rail Studio directional splitter authoring gate — IMPLEMENTED / NEEDS RUNTIME 
 - Publish a valid Splitter. Current RailRoutePreview connection behavior must remain unchanged: allowed normal-rail directions use the overall union port_mask and non-authored directions remain blocked.
 - Regression: load/move/rotate/normalize the assembly, including the prior one-part movement correction; rendered dX/dY must continue moving with the Studio row values.
 
+Construction Debug Framework V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-28)
+- Open Client Console -> Con Revamp -> Debug. Confirm Master Debug, Worker Actions, Worker Speech, Pathing, Logistics, Storage, Reservations, Processing, Rails, RTS, Persistence and Performance controls are visible with Clear/Export.
+- Safe default: Master Debug starts OFF; Worker Actions, Worker Speech, Logistics and Storage category presets are checked.
+- Enter the settlement, enable Master Debug, then let one worker gather/haul. Overhead speech must change only when the worker's authoritative work state/detail changes; it must not repeat every server tick.
+- With Worker Actions ON, server console output must show [ConstructionDebug] Worker#<id> transition lines.
+- Toggle Worker Speech OFF while Worker Actions remains ON. Console events must continue but worker overhead debug chat must stop.
+- Toggle Worker Actions OFF and Logistics ON. Gather/haul/storage-related transitions must continue logging while unrelated worker transitions are filtered.
+- Enable Pathing and reproduce normal movement plus one blocked/no-path case if convenient. Movement/path failure transitions must be tagged pathing.
+- Enable Processing during Process Wood. Source collection, machine movement/processing/output-haul transitions must appear without changing recipe behavior.
+- Clear must empty the in-memory debug buffer without changing settlement gameplay or persistent state.
+- Export must create data/construction/debug/settlement_debug_<timestamp>.txt containing the current debug status header plus buffered events.
+- Exit/re-enter the settlement. Debug configuration/buffer must reset with the new runtime instance; settlement save data must be unchanged.
+- Regression: with Master Debug OFF, workers/logistics/processing must behave exactly as before and produce no debug speech/event output.
+
