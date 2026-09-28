@@ -1092,15 +1092,15 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Phase: Phase 3 — Processing chains + better materials.
 - Phase status: ACTIVE.
 - Last completed foundation checkpoint: Phase 2 worker-control foundation through Bundle 2.4 is DONE / RUNTIME VERIFIED.
-- Persistent-runtime bundle: Bundle 3.5B — Generic Physical Logistics Spine V1.
+- Persistent-runtime bundle: Bundle 3.5C — Explicit Logistics Control + Live Storage V1.
 - Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST.
 - Current gameplay owner: physical storage + worker logistics + machine-local input/output. Migrated Wood production must use real item movement; worker home is needs/rest only.
 - Current verified-static item mappings: normal Logs = 1511 from Matrix3 Woodcutting; normal Plank = 960 from Matrix3 HouseConstants.
 - Current workstation presentation: Wooden workbench 13704 may remain placeholder art while logistics is tested. Final sawmill assets can replace presentation later without changing the container/machine endpoint contract.
 - Side tooling: Rail Studio, Junction/Splitter authoring, Live Model Editor and rail cosmetics remain non-blocking side lanes. Do not make them prerequisites for the current logistics runtime gate.
 - Approval state: Bundle 3.5B physical logistics spine is SAP AAA approved and implemented on main.
-- Current checklist item: run Processing Self-Test, then one consolidated physical Log -> machine -> Plank runtime gate with two chests, storage policies, blocked-output recovery, multi-worker contention and persistence.
-- Current objective: runtime-accept the generic physical logistics spine. After PASS, continue with explicit Take/Deliver/Work orders plus richer Request/Buffer targets, then let conveyors/carts/loaders consume the same endpoint contract.
+- Current checklist item: runtime-test live open-chest refresh, Take From Here, Deliver Here, Work Here, dynamic Request/Buffer pressure and multi-worker congestion on top of the accepted physical Log -> machine -> Plank loop.
+- Current objective: runtime-accept explicit logistics control on the generic physical spine. After PASS, refine per-item target quantities only if needed, then let conveyors/carts/loaders consume the same endpoint contract.
 
 ## Verification classifications
 
@@ -1912,6 +1912,22 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Existing Processing Self-Test is corrected for the accepted 1 Wood -> 2 Planks recipe and now verifies physical Logs/Planks mappings, physical machine conversion and full-output rollback.
 - Next after runtime PASS: explicit Take From Here / Deliver Here / Work Here logistics orders, richer Request/Buffer quantity targets and congestion scoring. Conveyors, loaders and minecarts must plug into this same physical endpoint contract rather than creating parallel inventories.
 - Runtime-regression correction before acceptance: settlement inventories now stack all item identities under the settlement stack cap, Storage Settings exposes Planks Only, machine resume recognizes input already loaded into a workstation buffer, and Close fully disposes the settings overlay. For the first-chain acceptance layout use Logs Only on the SUPPLY/source chest and Planks Only on the REQUEST/output chest.
+
+### Implementation checkpoint — Bundle 3.5C Explicit Logistics Control + Live Storage V1 — 2026-09-28
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Selected settlement workers now receive explicit RuneScape-native chest context orders:
+  - `Take From Here` on a physical chest;
+  - `Deliver Here` on a physical chest;
+  - `Work Here` on the provisional Wooden workbench/machine.
+- Take/Deliver reuse the same server-owned physical source/destination reservation books as autonomous logistics. They do not create a second inventory or transport owner.
+- `Take From Here` V1 withdraws one currently available physical item from the exact selected chest and leaves the worker holding that item until an explicit `Deliver Here` or another valid physical owner receives it.
+- `Deliver Here` can route a manually gathered migrated payload, a manually-taken generic physical item, or remaining physical machine output to the exact selected chest. Exact orders override Rally location preference but still obey deposit/withdraw access, item filters, capacity and contention safety.
+- `Work Here` reuses the existing server-authoritative Process Wood workstation order; final sawmill art remains independent from the logistics control contract.
+- Open physical chest interface 762 now refreshes event-driven when worker logistics mutates that exact chest. The lightweight refresh sends chest items + used-size only; it does not resend player inventory and does not poll per tick.
+- REQUEST/SUPPLY/BUFFER routing now has dynamic fill-pressure scoring in addition to mode priority: emptier REQUEST destinations pull harder, fuller SUPPLY sources push harder, and BUFFER prefers deposits below roughly half-full and withdrawals above roughly half-full.
+- Competing source/destination reservations now carry a stronger congestion penalty so autonomous workers spread across otherwise-similar endpoints sooner instead of dog-piling one chest.
+- Quantity targets remain a later refinement; this bundle intentionally establishes useful mode pressure without inventing per-item target UI before runtime acceptance.
+- Next after runtime PASS: add explicit per-item Request/Buffer target quantities if needed, then bind conveyors/loaders/minecarts to the same event/reservation/endpoint contract.
 
 ## Rail Classifier self-contained workflow correction — 2026-09-27
 - IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
