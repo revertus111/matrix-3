@@ -1911,6 +1911,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Legacy `SettlementProcessingTransaction.apply(SettlementState,...)` remains only for compatibility/debug of unmigrated paths. Worker Process Wood calls the new machine-buffer transaction.
 - Existing Processing Self-Test is corrected for the accepted 1 Wood -> 2 Planks recipe and now verifies physical Logs/Planks mappings, physical machine conversion and full-output rollback.
 - Next after runtime PASS: explicit Take From Here / Deliver Here / Work Here logistics orders, richer Request/Buffer quantity targets and congestion scoring. Conveyors, loaders and minecarts must plug into this same physical endpoint contract rather than creating parallel inventories.
+- Runtime-regression correction before acceptance: settlement inventories now stack all item identities under the settlement stack cap, Storage Settings exposes Planks Only, machine resume recognizes input already loaded into a workstation buffer, and Close fully disposes the settings overlay. For the first-chain acceptance layout use Logs Only on the SUPPLY/source chest and Planks Only on the REQUEST/output chest.
 
 ## Rail Classifier self-contained workflow correction — 2026-09-27
 - IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
