@@ -69,6 +69,43 @@ public final class SettlementStorageContainer implements Serializable {
             }
             items = resized;
         }
+        compactSettlementStacks();
+    }
+
+    private void compactSettlementStacks() {
+        if (items == null) {
+            return;
+        }
+        for (int slot = 0; slot < items.getSize(); slot++) {
+            Item current = items.get(slot);
+            if (current == null) {
+                continue;
+            }
+            int itemId = current.getId();
+            int currentAmount = current.getAmount();
+            if (currentAmount >= stackLimit) {
+                continue;
+            }
+            for (int otherSlot = slot + 1;
+                    otherSlot < items.getSize() && currentAmount < stackLimit;
+                    otherSlot++) {
+                Item other = items.get(otherSlot);
+                if (other == null || other.getId() != itemId) {
+                    continue;
+                }
+                int moved = Math.min(
+                        stackLimit - currentAmount, other.getAmount());
+                if (moved <= 0) {
+                    continue;
+                }
+                currentAmount += moved;
+                int remainder = other.getAmount() - moved;
+                items.set(slot, new Item(itemId, currentAmount));
+                items.set(otherSlot, remainder <= 0
+                        ? null : new Item(itemId, remainder));
+            }
+        }
+        items.shift();
     }
 
     public long getPieceId() {
