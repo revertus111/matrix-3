@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 12;
+    private static final int CURRENT_SCHEMA_VERSION = 13;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -44,6 +44,8 @@ public final class SettlementState implements Serializable {
     private List<SettlementPlacedPiece> pieces = new ArrayList<SettlementPlacedPiece>();
     private Map<Long, SettlementStorageContainer> storageContainers =
             new HashMap<Long, SettlementStorageContainer>();
+    private Map<Long, SettlementMachineBuffer> machineBuffers =
+            new HashMap<Long, SettlementMachineBuffer>();
     private Set<String> savedBuildTiles = new HashSet<String>();
     private Map<Long, SettlementRallyPoint> rallyPoints =
             new HashMap<Long, SettlementRallyPoint>();
@@ -69,6 +71,9 @@ public final class SettlementState implements Serializable {
         if (storageContainers == null) {
             storageContainers = new HashMap<Long, SettlementStorageContainer>();
         }
+        if (machineBuffers == null) {
+            machineBuffers = new HashMap<Long, SettlementMachineBuffer>();
+        }
         if (savedBuildTiles == null) {
             savedBuildTiles = new HashSet<String>();
         }
@@ -79,22 +84,33 @@ public final class SettlementState implements Serializable {
             }
         }
         Set<Long> liveStoragePieceIds = new HashSet<Long>();
+        Set<Long> liveMachinePieceIds = new HashSet<Long>();
         for (SettlementPlacedPiece piece : pieces) {
             if (piece == null) {
                 continue;
             }
             SettlementBuildPiece definition = SettlementBuildPiece.forKey(piece.getDefinitionKey());
-            if (definition == null || definition.getRole() != SettlementBuildRole.STORAGE) {
+            if (definition == null) {
                 continue;
             }
             Long pieceId = Long.valueOf(piece.getPieceId());
-            liveStoragePieceIds.add(pieceId);
-            SettlementStorageContainer container = storageContainers.get(pieceId);
-            if (container == null) {
-                container = new SettlementStorageContainer(piece.getPieceId());
-                storageContainers.put(pieceId, container);
+            if (definition.getRole() == SettlementBuildRole.STORAGE) {
+                liveStoragePieceIds.add(pieceId);
+                SettlementStorageContainer container = storageContainers.get(pieceId);
+                if (container == null) {
+                    container = new SettlementStorageContainer(piece.getPieceId());
+                    storageContainers.put(pieceId, container);
+                }
+                container.normalize();
+            } else if (definition.getRole() == SettlementBuildRole.WORKSTATION) {
+                liveMachinePieceIds.add(pieceId);
+                SettlementMachineBuffer buffer = machineBuffers.get(pieceId);
+                if (buffer == null) {
+                    buffer = new SettlementMachineBuffer(piece.getPieceId());
+                    machineBuffers.put(pieceId, buffer);
+                }
+                buffer.normalize();
             }
-            container.normalize();
         }
         Iterator<Map.Entry<Long, SettlementStorageContainer>> storageIterator =
                 storageContainers.entrySet().iterator();
@@ -103,6 +119,15 @@ public final class SettlementState implements Serializable {
             if (entry.getKey() == null || entry.getValue() == null
                     || !liveStoragePieceIds.contains(entry.getKey())) {
                 storageIterator.remove();
+            }
+        }
+        Iterator<Map.Entry<Long, SettlementMachineBuffer>> machineIterator =
+                machineBuffers.entrySet().iterator();
+        while (machineIterator.hasNext()) {
+            Map.Entry<Long, SettlementMachineBuffer> entry = machineIterator.next();
+            if (entry.getKey() == null || entry.getValue() == null
+                    || !liveMachinePieceIds.contains(entry.getKey())) {
+                machineIterator.remove();
             }
         }
 
@@ -293,6 +318,9 @@ public final class SettlementState implements Serializable {
         if (definition.getRole() == SettlementBuildRole.STORAGE) {
             storageContainers.put(Long.valueOf(piece.getPieceId()),
                     new SettlementStorageContainer(piece.getPieceId()));
+        } else if (definition.getRole() == SettlementBuildRole.WORKSTATION) {
+            machineBuffers.put(Long.valueOf(piece.getPieceId()),
+                    new SettlementMachineBuffer(piece.getPieceId()));
         }
         return piece;
     }
@@ -377,6 +405,9 @@ public final class SettlementState implements Serializable {
         if (definition.getRole() == SettlementBuildRole.STORAGE) {
             storageContainers.put(Long.valueOf(duplicate.getPieceId()),
                     new SettlementStorageContainer(duplicate.getPieceId()));
+        } else if (definition.getRole() == SettlementBuildRole.WORKSTATION) {
+            machineBuffers.put(Long.valueOf(duplicate.getPieceId()),
+                    new SettlementMachineBuffer(duplicate.getPieceId()));
         }
         return duplicate;
     }
@@ -401,9 +432,19 @@ public final class SettlementState implements Serializable {
                 return null;
             }
         }
+        if (definition != null && definition.getRole() == SettlementBuildRole.WORKSTATION) {
+            SettlementMachineBuffer buffer =
+                    machineBuffers.get(Long.valueOf(pieceId));
+            if (buffer != null && !buffer.isEmpty()) {
+                return null;
+            }
+        }
         SettlementPlacedPiece removed = pieces.remove(index);
         if (definition != null && definition.getRole() == SettlementBuildRole.STORAGE) {
             storageContainers.remove(Long.valueOf(pieceId));
+        } else if (definition != null
+                && definition.getRole() == SettlementBuildRole.WORKSTATION) {
+            machineBuffers.remove(Long.valueOf(pieceId));
         }
         return removed;
     }
@@ -721,6 +762,20 @@ public final class SettlementState implements Serializable {
     public synchronized List<SettlementStorageContainer> snapshotStorageContainers() {
         normalize();
         return new ArrayList<SettlementStorageContainer>(storageContainers.values());
+    }
+
+    public synchronized SettlementMachineBuffer findMachineBuffer(long pieceId) {
+        normalize();
+        SettlementMachineBuffer buffer = machineBuffers.get(Long.valueOf(pieceId));
+        if (buffer != null) {
+            buffer.normalize();
+        }
+        return buffer;
+    }
+
+    public synchronized List<SettlementMachineBuffer> snapshotMachineBuffers() {
+        normalize();
+        return new ArrayList<SettlementMachineBuffer>(machineBuffers.values());
     }
 
     public synchronized int getPhysicalStorageContainerCount() {
