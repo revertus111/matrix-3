@@ -1356,7 +1356,25 @@ Worker Logistics Policy + Rally V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (20
 - Right-click ground -> Clear Rally. Selected Rally-restricted workers must return to Autonomous and may again choose valid work across the settlement.
 - Exit/re-enter and logout/relog with a rally assigned. Worker behavior mode + rally assignment + rally coordinates must persist.
 - Regression: critical hunger/thirst/energy handling may leave normal rally work policy as needed; worker home remains the rest/needs owner.
-- Regression: Food/Stone/Ore and current sawmill processing remain explicit legacy compatibility paths in this bundle.
+- Regression: Food/Stone/Ore remain explicit legacy compatibility paths. Sawmill/Process Wood is superseded by Bundle 3.5B physical machine logistics below.
+
+Bundle 3.5B Generic Physical Logistics Spine V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Run the existing Processing Self-Test first. It must report PASS for the accepted 1 Wood -> 2 Planks ratio, physical Logs 1511 / Planks 960 mappings, physical machine conversion and full-output rollback.
+- Setup: place one Wooden workbench 13704 (placeholder workstation is acceptable) and at least two physical Wooden chests. Keep enough free chest capacity for several Logs and Planks.
+- Source policy: put real Logs 1511 in one chest, set it SUPPLY or STORAGE, Withdraw ON and filter Any/Logs. Set the other chest to REQUEST or STORAGE, Deposit ON and Allow Any.
+- Worker path: enable Process Wood on one worker. AI Status must show physical source collection, machine delivery/processing and physical output hauling; it must NOT route to the worker home tile for factory input.
+- Exact conversion: one completed production cycle must remove exactly 1 Logs item 1511 from physical storage and create exactly 2 Plank items 960 through the machine output path.
+- Legacy-counter regression: the migrated live Process Wood cycle must not increase/decrease legacy Wood or Planks counters. Those counters remain compatibility-only for unmigrated/debug paths.
+- Output routing: produced Planks must leave machine output via the worker and arrive in a valid physical destination chest. With equal policy, normal distance scoring applies; REQUEST priority must be able to outweigh distance.
+- Source reroute: with two Log-containing source chests, disable Withdraw or reject Logs on the preferred source. The worker must rescore and use the other eligible source.
+- Source contention: leave exactly one Log available and allow two Process Wood workers to compete. Exactly one worker may withdraw it; no duplicate Log, duplicate Planks or negative source quantity.
+- Destination contention: allow two workers/machines to target limited final chest capacity. Reservations must prevent overfill; blocked output must remain in machine output or physically carried.
+- Backpressure recovery: make every destination reject Planks or set Deposit OFF before output hauling. Production/output hauling must block without item loss. Restore one valid destination; a worker must drain existing machine output before starting another cycle.
+- Machine deletion safety: while a workstation input/output buffer is non-empty, Eraser/Delete/Undo must not destroy the persistent workstation. Empty it first, then removal may proceed normally.
+- Pause/needs safety: if Pause/critical needs occur at a safe boundary, machine items remain owned by the machine. If a worker is already carrying a physical factory item, the payload must remain carried/recoverable and never vanish.
+- Rally regression: Rally Restricted autonomous source/workstation/destination choices stay inside the rally zone; explicit/manual processing may use the approved manual-order override semantics.
+- Persistence: leave items in a machine input or output buffer, exit/re-enter and logout/relog. The same workstation piece id must retain its buffer contents; after return the worker must be able to continue/drain the chain.
+- Final pass: run several consecutive cycles. The visible physical total must reconcile: Logs decrease by cycles, Planks increase by 2x cycles, with no unexplained legacy-counter mutation.
 
 Rail Assembly Studio UX V1.1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
 - Open Test -> Rail Studio at the normal narrow dock width. The Studio itself must have no horizontal scrollbar and no right-edge button clipping.
