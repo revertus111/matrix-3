@@ -1787,3 +1787,16 @@
 - Selected workers still receive supported resource/workbench orders from first-object clicks.
 - Those object clicks now continue into Matrix3's vanilla interaction path for the local player instead of being consumed by RTS selection.
 - Ground-click movement, radial selection, and NPC-order ownership are unchanged.
+
+
+2026-09-28 - Bundle 3.5C Explicit Logistics Control + Live Storage V1
+- Added selected-worker chest context orders Take From Here and Deliver Here plus workstation Work Here.
+- Explicit Take/Deliver reuse the physical source/destination reservation books and exact persistent chest piece ids; no parallel logistics inventory was introduced.
+- Take From Here withdraws one available physical item from the selected chest and leaves generic item cargo on the worker for later explicit delivery.
+- Deliver Here supports generic physical item cargo, migrated gathered-resource cargo, and remaining physical machine output. Exact orders bypass Rally location preference but retain access/filter/capacity/reservation safety.
+- Work Here reuses the existing Process Wood workstation command and physical machine-buffer pipeline.
+- Added SettlementStorageInterface.refreshOpenChest(player,pieceId): successful worker deposits/withdrawals refresh only the exact currently-open physical chest, sending chest contents + used-size without resending player inventory or polling each tick.
+- Wired live refresh into autonomous gathered deposits, autonomous physical source withdrawal/output deposits, and explicit Take/Deliver mutations.
+- Added dynamic mode pressure: emptier REQUEST destinations score higher, fuller SUPPLY sources score higher, and BUFFER scoring tends toward a half-full balance for deposit/withdraw direction.
+- Increased competing-reservation penalty in autonomous source/destination scoring to reduce multi-worker endpoint dog-piling.
+- Added Bundle 3.5C consolidated runtime gate. Status remains IMPLEMENTED / NEEDS RUNTIME TEST.
