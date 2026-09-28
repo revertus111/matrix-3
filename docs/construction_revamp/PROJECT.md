@@ -23,7 +23,7 @@ The player should be able to build a settlement wall-by-wall, recruit and train 
 
 - Repository authority: `revertus111/matrix-3`, branch `main`.
 - Runtime foundation: protected Matrix3 baseline `e86851b95e1d2927d58463b67f600153b9166f6a` plus the restored pre-reset feature stack.
-- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 worker-control foundation is DONE through Bundle 2.4 / RUNTIME VERIFIED. Phase 3 is ACTIVE: processing core is RUNTIME VERIFIED and physical factory/logistics expansion is now the active lane. The sawmill asset/assembly is already available to the workstream and is no longer a discovery blocker. Current implementation target is physical independent storage + generic item logistics; legacy SettlementResource counters remain compatibility-owned until each old production path is migrated safely.
+- State: Phase 1 MVP is DONE / runtime accepted. Phase 2 worker-control foundation is DONE through Bundle 2.4 / RUNTIME VERIFIED. Phase 3 is ACTIVE: processing core is RUNTIME VERIFIED, Worker Logistics Policy + Rally V1 is IMPLEMENTED / NEEDS RUNTIME TEST, and Bundle 3.5B Generic Physical Logistics Spine V1 is now IMPLEMENTED / NEEDS RUNTIME TEST. The migrated Wood chain uses real physical Logs 1511 -> machine-local input/output -> Planks 960 -> physical storage; legacy SettlementResource counters remain compatibility-owned only for unmigrated paths. Placeholder workstation art is acceptable during logistics acceptance; final sawmill visuals do not own the logistics contract.
 - Current user-prioritized side slice: Radial Worker Selection RWS-1 and RWS-2 are RUNTIME VERIFIED. The user confirmed the circular ring now keeps edge A fixed while edge B owns the expansion after ring-body calibration. RWS-3 is RUNTIME VERIFIED: live drag detection correctly identifies settlement workers inside the world-space circle and renders temporary small 4171 preview markers on included workers. Screenshot evidence verified both active settlers marked simultaneously inside the large selection ring. No persistent selection/server authority is added yet. RWS-4 has changed direction by user decision: GFX 4187 is dropped. The selected-worker visual layers two independent clones of proven GFX 4171. Runtime screenshot verified multi-worker layered rendering and independent outer/inner scaling; color controls initially had no visible effect because 4171 is texture-driven. The recolor path now gives each clone private texture IDs (0x8000), detaches textures only when a custom color is chosen, then applies the chosen HSL. A second runtime failure showed the first detach implementation only handled AbstractModel; Matrix3's Class89_Sub2 renderer keeps textures in a separate array. RWS-4 layered GFX 4171 styling is now RUNTIME VERIFIED: the user confirmed independent scaling and recolor both work across multiple workers after renderer-aware texture detachment covered AbstractModel, Class89_Sub2 and OpenGLModel. The first Worker Needs HUD prototype (three concentric 4171 rings) rendered successfully but was visually rejected by the user as the wrong design. The active prototype cuts GFX 4171 into three partial arches on one shared circumference: Hunger / Thirst / Energy occupy separate ~100-degree slots with gaps, color trends toward red at the real critical threshold, and arch length represents wellbeing remaining. Runtime video proved the first angular mask still included 4171's outer decorative diamond/spike geometry, producing chunky fragments instead of clean ring-body arches. The mask now first isolates the circular ring-body radial band, then applies the angular need slot. A follow-up strict pass now requires all three vertices of each candidate face to remain inside that annulus; centroid-only radial acceptance was still allowing decorative spike/diamond triangles to survive. Runtime screenshot also exposed an extra visual level: RWS-4 was still rendering both outer and inner full selection rings while the needs arches added a third circumference. Needs HUD now owns the inner/status level: outer full ring remains selection, the old inner full selection ring is suppressed while Needs HUD is enabled, and Hunger/Thirst/Energy arches render at the former inner-ring radius (70% default). Demo values remain explicitly client-only; real needs stay server-owned in SettlementWorkerState until a clean metadata sync seam is added.
 - Construction Editor implementation: `09cd35fec87defd0f49ef8000f49eca3523f112e`.
 - Custom Construction palette foundation implementation: `a2ce37439896d77d257d0966463104fcb962803f`.
@@ -1089,17 +1089,18 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 
 # Current execution state
 
-- Phase: Phase 2 — Population + broader survival production
-- Phase status: ACTIVE
-- Last completed phase: Phase 1 — MVP Vertical Slice (DONE / runtime accepted)
-- Persistent-runtime bundle: 2.4 — RTS radial multi-worker control
-- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST
-- Tooling track: Phase-1 Construction palette + ghost + Free Build camera
-- Tooling status: Phase-1 Free Build DONE / runtime accepted; RTS default + pivot-orbit camera DONE / runtime VERIFIED; adjustable RTS pan speed IMPLEMENTED / NEEDS RUNTIME TEST; Matrix3 Asset Studio v1 + paired evidence capture + Rail Kit Classifier + Object Probe fallback IMPLEMENTED / NEEDS RUNTIME TEST; later Top Down/Orbit/Player presets remain non-blocking
-- Side tooling verification: stand on/near a known track or cart, run Current Tile then Nearby 3x3 if needed, confirm ID/name/type/rotation/options readback, then Log and verify `Server/data/construction/object_catalog.txt` receives the full scan.
-- Approval state: Bundle 2.3 is fully RUNTIME VERIFIED. Bundle 2.4 RWS-5 radial multi-worker control is SAP AAA approved and implemented.
-- Current checklist item: focused RWS-5 persistent-selection-ring retest: drag-select one or more workers, release, verify the large drag circle disappears while the selected workers' small rings remain attached/following them; Clear Selection and a replacement drag must update/remove the rings cleanly.
-- Current objective: runtime-accept persistent selected-worker ring visibility, then close Bundle 2.4 and continue Phase 2 into cooking and farming/hunting production chains.
+- Phase: Phase 3 — Processing chains + better materials.
+- Phase status: ACTIVE.
+- Last completed foundation checkpoint: Phase 2 worker-control foundation through Bundle 2.4 is DONE / RUNTIME VERIFIED.
+- Persistent-runtime bundle: Bundle 3.5B — Generic Physical Logistics Spine V1.
+- Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST.
+- Current gameplay owner: physical storage + worker logistics + machine-local input/output. Migrated Wood production must use real item movement; worker home is needs/rest only.
+- Current verified-static item mappings: normal Logs = 1511 from Matrix3 Woodcutting; normal Plank = 960 from Matrix3 HouseConstants.
+- Current workstation presentation: Wooden workbench 13704 may remain placeholder art while logistics is tested. Final sawmill assets can replace presentation later without changing the container/machine endpoint contract.
+- Side tooling: Rail Studio, Junction/Splitter authoring, Live Model Editor and rail cosmetics remain non-blocking side lanes. Do not make them prerequisites for the current logistics runtime gate.
+- Approval state: Bundle 3.5B physical logistics spine is SAP AAA approved and implemented on main.
+- Current checklist item: run Processing Self-Test, then one consolidated physical Log -> machine -> Plank runtime gate with two chests, storage policies, blocked-output recovery, multi-worker contention and persistence.
+- Current objective: runtime-accept the generic physical logistics spine. After PASS, continue with explicit Take/Deliver/Work orders plus richer Request/Buffer targets, then let conveyors/carts/loaders consume the same endpoint contract.
 
 ## Verification classifications
 
@@ -1888,9 +1889,28 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Food/Stone/Basic Ore and sawmill machine input/output remain legacy compatibility paths and are intentionally not migrated by this bundle.
 
 ### Resume Here
-- Pending combined runtime gate: prove `View Storage` + `Storage Settings`, nearest/priority/filter chest rerouting, Auto/Orders behavior, and Rally assignment/restriction in one session.
+- Pending combined runtime gate now includes the already-implemented policy/rally slice plus Bundle 3.5B physical machine logistics.
 - Do not reopen already accepted Saved Tiles or bank-shell mechanics unless a regression appears.
-- After policy/rally acceptance, continue directly to machine-local input/output buffers and migrate Wood/Log -> Sawmill -> Plank to the same physical logistics contract.
+- Immediate runtime target: physical Logs source chest -> worker -> machine input -> atomic 1 Log -> 2 Planks -> machine output -> worker -> destination chest, including backpressure/recovery and persistence.
+
+### Implementation checkpoint — Bundle 3.5B Generic Physical Logistics Spine V1 — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Verified-static item identities are now complete for the first migrated chain: normal Logs = item 1511 from Matrix3 Woodcutting, normal Plank = item 960 from Matrix3 `HouseConstants.PLANK`.
+- `SettlementState` schema 13 persistently owns one `SettlementMachineBuffer` per WORKSTATION piece. Each machine has independent input/output item buffers keyed by the stable workstation piece id.
+- Non-empty machine buffers are protected from build deletion, matching the existing non-empty physical chest safety rule.
+- Storage selection now has symmetric generic item semantics:
+  - destination scoring prefers REQUEST -> BUFFER -> STORAGE -> SUPPLY and respects deposit permission, filters, rally policy, capacity and competing reservations;
+  - source scoring prefers SUPPLY -> BUFFER -> STORAGE -> REQUEST and respects withdraw permission, filters, rally policy, real item quantity and competing reservations.
+- Source and destination reservations are separate. Multiple workers cannot both claim the same final source item or overbook the same destination capacity.
+- Process Wood no longer visits worker home or mutates invisible Wood/Plank counters for the migrated chain. The physical loop is:
+  `physical chest Logs -> worker carry -> machine input -> atomic machine transaction -> machine output Planks -> worker carry -> physical chest`.
+- Machine processing remains server-authoritative and atomic. Input is not consumed unless the machine output buffer can accept the complete output.
+- Backpressure is recoverable. Existing machine output is treated as valid logistics work and is drained before another production cycle; a full/filtered/disabled destination leaves output in the machine or physically carried rather than deleting it.
+- Physical worker cargo is transient runtime state. Critical needs/manual-order interruption may only occur at safe ownership boundaries; already-held factory payload is preserved until it can be stored/recovered.
+- Current provisional Wooden workbench 13704 remains a valid placeholder WORKSTATION for this runtime gate. Replacing it with the final sawmill assembly is presentation/prefab work, not a new logistics architecture.
+- Legacy `SettlementProcessingTransaction.apply(SettlementState,...)` remains only for compatibility/debug of unmigrated paths. Worker Process Wood calls the new machine-buffer transaction.
+- Existing Processing Self-Test is corrected for the accepted 1 Wood -> 2 Planks recipe and now verifies physical Logs/Planks mappings, physical machine conversion and full-output rollback.
+- Next after runtime PASS: explicit Take From Here / Deliver Here / Work Here logistics orders, richer Request/Buffer quantity targets and congestion scoring. Conveyors, loaders and minecarts must plug into this same physical endpoint contract rather than creating parallel inventories.
 
 ## Rail Classifier self-contained workflow correction — 2026-09-27
 - IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
