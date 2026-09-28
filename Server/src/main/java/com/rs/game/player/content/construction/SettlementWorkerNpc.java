@@ -680,8 +680,44 @@ public final class SettlementWorkerNpc extends NPC {
         WorldTile workstation =
                 settlement.getProcessingWorkstationTile(processingWorkstationPieceId);
         if (workstation == null) {
+            if (carriedItemAmount > 0) {
+                if (!settlement.reserveWorkerItemDestination(
+                        workerId, carriedItemId, carriedItemAmount, true)) {
+                    idle("Processing workstation unavailable; holding "
+                            + getFactoryItemDisplayName(carriedItemId)
+                            + " until recovery storage is available.");
+                    return;
+                }
+                WorldTile recovery = settlement.getWorkerItemDestinationTile(workerId);
+                if (recovery == null) {
+                    settlement.releaseWorkerItemDestinationReservation(workerId);
+                    idle("Processing workstation unavailable; recovery storage unavailable.");
+                    return;
+                }
+                workState = WorkState.MOVING_TO_PROCESSING_OUTPUT_STORAGE;
+                statusDetail = "Recovering carried "
+                        + getFactoryItemDisplayName(carriedItemId)
+                        + " to physical storage.";
+                if (!walkToward(recovery, "No Path to recovery storage.", 1)) {
+                    return;
+                }
+                int itemId = carriedItemId;
+                int added = settlement.depositWorkerItem(
+                        workerId, itemId, carriedItemAmount, true);
+                if (added > 0) {
+                    carriedItemAmount -= added;
+                    if (carriedItemAmount <= 0) {
+                        carriedItemId = -1;
+                        carriedItemAmount = 0;
+                        clearProcessingWork();
+                        workState = WorkState.IDLE;
+                        statusDetail = "Recovered physical payload after workstation loss.";
+                    }
+                }
+                return;
+            }
             clearProcessingWork();
-            idle("Processing workstation is no longer available.");
+            idle("Processing workstation is no longer available; machine buffer preserved.");
             return;
         }
 
@@ -704,9 +740,9 @@ public final class SettlementWorkerNpc extends NPC {
             if (!settlement.reserveWorkerItemDestination(
                     workerId, outputItemId, payload, processingManual)) {
                 settlement.releaseWorkerItemDestinationReservation(workerId);
-                clearProcessingWork();
-                idle("Machine output blocked: no destination accepts "
-                        + outputMapping.getDisplayName() + ".");
+                idle("Machine output blocked: holding "
+                        + outputMapping.getDisplayName()
+                        + "; no destination currently accepts it.");
                 return;
             }
             WorldTile destination = settlement.getWorkerItemDestinationTile(workerId);
