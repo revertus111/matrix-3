@@ -1744,3 +1744,8 @@
 2026-09-27 - Rail Studio font readability pass
 - Increased Rail Studio-local title/section/body/helper/list/button fonts one notch after the prior compact pass proved too small in the real dock.
 - Kept the narrow-safe 2-column control layouts and horizontal-scroll prevention unchanged, so readability improves without reintroducing clipping.
+
+2026-09-27 - Rail Studio live movement correction
+- Fixed Assembly Workspace movement preview: live rendering no longer normalizes every part around the anchor on each frame.
+- Editable dX/dY now move the rendered part exactly as shown in the Studio. Whole-prefab R0-R3 still rotates around the selected anchor.
+- Anchor normalization remains explicit through Normalize and implicit only when saving/publishing prefab data.
