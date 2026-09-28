@@ -1800,3 +1800,12 @@
 - Added dynamic mode pressure: emptier REQUEST destinations score higher, fuller SUPPLY sources score higher, and BUFFER scoring tends toward a half-full balance for deposit/withdraw direction.
 - Increased competing-reservation penalty in autonomous source/destination scoring to reduce multi-worker endpoint dog-piling.
 - Added Bundle 3.5C consolidated runtime gate. Status remains IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-28 - Construction Debug Framework V1
+- Added a transient per-settlement debug event bus with Master Debug plus Worker Actions, Worker Speech, Pathing, Logistics, Storage, Reservations, Processing, Rails, RTS, Persistence and Performance category switches.
+- Construction Development now exposes the category panel with Clear/Export controls; Master Debug defaults OFF while Worker Actions/Speech/Logistics/Storage are preset ON.
+- Worker runtime emits only when authoritative workState/statusDetail changes, avoiding per-tick log/speech spam.
+- Worker transitions are tagged into pathing/logistics/storage/reservations/processing/RTS categories and can drive overhead ForceTalk from the same event.
+- Debug buffer keeps the latest 2000 enabled events, mirrors enabled events to server console, and exports to data/construction/debug/settlement_debug_<timestamp>.txt.
+- Debug configuration and buffered events are transient only; no SettlementState/player-save schema changes.
+
