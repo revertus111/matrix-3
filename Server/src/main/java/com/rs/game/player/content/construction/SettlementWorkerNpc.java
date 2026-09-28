@@ -59,6 +59,8 @@ public final class SettlementWorkerNpc extends NPC {
     private boolean manualHaulActive;
     private SettlementProcessingRecipe manualProcessingRecipe;
     private long manualProcessingWorkstationPieceId = -1L;
+    private long manualTakeStoragePieceId = -1L;
+    private long manualDeliverStoragePieceId = -1L;
     private SettlementProcessingRecipe processingRecipe;
     private long processingWorkstationPieceId = -1L;
     private boolean processingInputDelivered;
@@ -145,6 +147,16 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
 
+        if (manualDeliverStoragePieceId > 0L) {
+            processManualDeliverOrder();
+            return;
+        }
+
+        if (manualTakeStoragePieceId > 0L) {
+            processManualTakeOrder();
+            return;
+        }
+
         if (carriedAmount > 0
                 && workerState.isJobAllowed(SettlementWorkerJob.HAUL)) {
             processCarriedResource();
@@ -157,6 +169,12 @@ public final class SettlementWorkerNpc extends NPC {
         }
 
         if (processNeeds()) {
+            return;
+        }
+
+        if (carriedItemAmount > 0 && processingRecipe == null) {
+            idle("Holding " + getFactoryItemDisplayName(carriedItemId)
+                    + " x" + carriedItemAmount + "; use Deliver Here.");
             return;
         }
 
@@ -490,6 +508,7 @@ public final class SettlementWorkerNpc extends NPC {
         }
         clearProcessingWork();
         clearManualProcessingOrder();
+        clearManualLogisticsOrders();
         manualGatherNode = null;
         manualGatherActive = false;
         clearTarget();
@@ -509,6 +528,7 @@ public final class SettlementWorkerNpc extends NPC {
         }
         clearProcessingWork();
         clearManualProcessingOrder();
+        clearManualLogisticsOrders();
         manualMoveTarget = null;
         manualGatherActive = false;
         clearTarget();
@@ -564,6 +584,246 @@ public final class SettlementWorkerNpc extends NPC {
         beginGathering();
     }
 
+    public void assignManualTakeOrder(long storagePieceId) {
+        if (storagePieceId <= 0L) {
+            return;
+        }
+        if (carriedItemAmount > 0 || carriedAmount > 0 || hasPhysicalProcessingPayload()) {
+            statusDetail = "Take From Here blocked; deliver the current payload first.";
+            return;
+        }
+        clearProcessingWork();
+        clearManualProcessingOrder();
+        clearManualLogisticsOrders();
+        manualMoveTarget = null;
+        manualGatherNode = null;
+        manualGatherActive = false;
+        clearTarget();
+        manualTakeStoragePieceId = storagePieceId;
+        resetWalkSteps();
+        workState = WorkState.IDLE;
+        statusDetail = "Manual order: Take From Here at chest#" + storagePieceId + ".";
+    }
+
+    public void assignManualDeliverOrder(long storagePieceId) {
+        if (storagePieceId <= 0L) {
+            return;
+        }
+        boolean hasPayload = carriedItemAmount > 0 || carriedAmount > 0
+                || processingRecipe != null && processingOutputRemaining > 0;
+        if (!hasPayload) {
+            statusDetail = "Deliver Here blocked; worker is not carrying a physical payload.";
+            return;
+        }
+        settlement.releaseWorkerItemDestinationReservation(workerId);
+        manualDeliverStoragePieceId = storagePieceId;
+        manualTakeStoragePieceId = -1L;
+        resetWalkSteps();
+        statusDetail = "Manual order: Deliver Here to chest#" + storagePieceId + ".";
+    }
+
+    private void processManualTakeOrder() {
+        long pieceId = manualTakeStoragePieceId;
+        if (pieceId <= 0L) {
+            return;
+        }
+        if (carriedItemAmount > 0 || carriedAmount > 0) {
+            manualTakeStoragePieceId = -1L;
+            idle("Take From Here stopped; worker is already carrying a payload.");
+            return;
+        }
+        int itemId = settlement.getFirstWorkerWithdrawableItemId(workerId, pieceId);
+        if (itemId < 0) {
+            manualTakeStoragePieceId = -1L;
+            settlement.releaseWorkerItemSourceReservation(workerId);
+            idle("Take From Here blocked: selected chest is empty or unavailable.");
+            return;
+        }
+        if (!settlement.reserveWorkerItemSourceAt(
+                workerId, pieceId, itemId, CARRY_CAPACITY)) {
+            idle("Take From Here waiting: selected chest item is reserved.");
+            return;
+        }
+        WorldTile source = settlement.getPhysicalStorageTile(pieceId);
+        if (source == null) {
+            manualTakeStoragePieceId = -1L;
+            settlement.releaseWorkerItemSourceReservation(workerId);
+            idle("Take From Here blocked: selected chest is unavailable.");
+            return;
+        }
+        workState = WorkState.MOVING_TO_PROCESSING_STORAGE;
+        statusDetail = "Take From Here: moving to chest for "
+                + getFactoryItemDisplayName(itemId) + ".";
+        if (!walkToward(source, "No Path to Take From Here chest.", 1)) {
+            return;
+        }
+        int removed = settlement.withdrawWorkerItemSourceAt(
+                workerId, pieceId, itemId, CARRY_CAPACITY);
+        if (removed <= 0) {
+            manualTakeStoragePieceId = -1L;
+            idle("Take From Here failed: chest contents changed.");
+            return;
+        }
+        carriedItemId = itemId;
+        carriedItemAmount = removed;
+        manualTakeStoragePieceId = -1L;
+        settlement.releaseWorkerDestination(workerId);
+        resetWalkSteps();
+        workState = WorkState.IDLE;
+        statusDetail = "Take From Here complete; holding "
+                + getFactoryItemDisplayName(itemId) + " x" + removed
+                + ". Use Deliver Here.";
+    }
+
+    private void processManualDeliverOrder() {
+        long pieceId = manualDeliverStoragePieceId;
+        if (pieceId <= 0L) {
+            return;
+        }
+
+        /*
+         * If this order redirected machine output before the worker picked up
+         * the next unit, collect one physical output item first and keep the
+         * exact destination order active.
+         */
+        if (carriedItemAmount <= 0 && carriedAmount <= 0
+                && processingRecipe != null && processingOutputRemaining > 0) {
+            SettlementFactoryItem output = SettlementFactoryItem.forResource(
+                    processingRecipe.getOutputResource());
+            WorldTile workstation =
+                    settlement.getProcessingWorkstationTile(processingWorkstationPieceId);
+            if (output == null || workstation == null) {
+                manualDeliverStoragePieceId = -1L;
+                idle("Deliver Here blocked: machine output is unavailable.");
+                return;
+            }
+            int take = Math.min(CARRY_CAPACITY, processingOutputRemaining);
+            workState = WorkState.MOVING_TO_WORKSTATION;
+            statusDetail = "Deliver Here: collecting "
+                    + output.getDisplayName() + " from machine output.";
+            if (!walkToward(workstation, "No Path to machine output.", 1)) {
+                return;
+            }
+            int removed = settlement.collectMachineOutput(
+                    processingWorkstationPieceId, output.getItemId(), take);
+            if (removed <= 0) {
+                processingOutputRemaining = 0;
+                manualDeliverStoragePieceId = -1L;
+                idle("Deliver Here stopped: machine output is empty.");
+                return;
+            }
+            carriedItemId = output.getItemId();
+            carriedItemAmount = removed;
+            resetWalkSteps();
+            return;
+        }
+
+        int itemId;
+        int amount;
+        boolean resourceCargo = false;
+        if (carriedItemAmount > 0) {
+            itemId = carriedItemId;
+            amount = carriedItemAmount;
+        } else if (carriedAmount > 0 && carriedResource != null) {
+            SettlementFactoryItem mapping =
+                    SettlementFactoryItem.forResource(carriedResource);
+            if (mapping == null) {
+                manualDeliverStoragePieceId = -1L;
+                idle("Deliver Here blocked: "
+                        + carriedResource.getDisplayName()
+                        + " is not migrated to physical item logistics yet.");
+                return;
+            }
+            itemId = mapping.getItemId();
+            amount = carriedAmount;
+            resourceCargo = true;
+        } else {
+            manualDeliverStoragePieceId = -1L;
+            idle("Deliver Here stopped; worker has no physical payload.");
+            return;
+        }
+
+        if (!settlement.reserveWorkerItemDestinationAt(
+                workerId, pieceId, itemId, amount)) {
+            idle("Deliver Here waiting: selected chest rejects the item, is full, or is reserved.");
+            return;
+        }
+        WorldTile destination = settlement.getPhysicalStorageTile(pieceId);
+        if (destination == null) {
+            settlement.releaseWorkerItemDestinationReservation(workerId);
+            idle("Deliver Here blocked: selected chest is unavailable.");
+            return;
+        }
+        workState = WorkState.MOVING_TO_STORAGE;
+        statusDetail = "Deliver Here: hauling "
+                + getFactoryItemDisplayName(itemId) + " to selected chest.";
+        if (!walkToward(destination, "No Path to Deliver Here chest.", 1)) {
+            return;
+        }
+        int added = settlement.depositWorkerItemToStorageAt(
+                workerId, pieceId, itemId, amount);
+        if (added <= 0) {
+            idle("Deliver Here waiting: selected chest changed before delivery.");
+            return;
+        }
+
+        settlement.releaseWorkerDestination(workerId);
+        resetWalkSteps();
+
+        if (resourceCargo) {
+            settlement.recordWorkerDepositProgress(workerState, added);
+            carriedAmount -= added;
+            if (carriedAmount <= 0) {
+                carriedResource = null;
+                carriedAmount = 0;
+                manualHaulActive = false;
+                manualDeliverStoragePieceId = -1L;
+                workState = WorkState.IDLE;
+                statusDetail = "Deliver Here complete.";
+            }
+            return;
+        }
+
+        carriedItemAmount -= added;
+        if (processingRecipe != null) {
+            SettlementFactoryItem output = SettlementFactoryItem.forResource(
+                    processingRecipe.getOutputResource());
+            if (output != null && output.getItemId() == itemId) {
+                processingOutputRemaining =
+                        Math.max(0, processingOutputRemaining - added);
+            }
+        }
+        if (carriedItemAmount <= 0) {
+            carriedItemId = -1;
+            carriedItemAmount = 0;
+        }
+
+        if (processingRecipe != null && processingOutputRemaining > 0) {
+            workState = WorkState.IDLE;
+            statusDetail = "Deliver Here: continuing remaining machine output.";
+            return;
+        }
+
+        manualDeliverStoragePieceId = -1L;
+        if (processingRecipe != null) {
+            String completed = processingRecipe.getDisplayName()
+                    + " output delivered to selected chest.";
+            clearProcessingWork();
+            workState = WorkState.IDLE;
+            statusDetail = completed;
+        } else {
+            workState = WorkState.IDLE;
+            statusDetail = "Deliver Here complete.";
+        }
+    }
+
+    private void clearManualLogisticsOrders() {
+        manualTakeStoragePieceId = -1L;
+        manualDeliverStoragePieceId = -1L;
+        settlement.releaseWorkerItemSourceReservation(workerId);
+        settlement.releaseWorkerItemDestinationReservation(workerId);
+    }
+
     public void assignManualProcessingOrder(
             SettlementProcessingRecipe recipe, long workstationPieceId) {
         if (recipe == null || workstationPieceId <= 0L) {
@@ -575,6 +835,7 @@ public final class SettlementWorkerNpc extends NPC {
         }
         clearProcessingWork();
         clearManualProcessingOrder();
+        clearManualLogisticsOrders();
         manualMoveTarget = null;
         manualGatherNode = null;
         manualGatherActive = false;
@@ -1141,6 +1402,12 @@ public final class SettlementWorkerNpc extends NPC {
         if (manualProcessingRecipe != null) {
             summary.append(" | manualProcessing=").append(manualProcessingRecipe.getKey())
                     .append("@piece#").append(manualProcessingWorkstationPieceId);
+        }
+        if (manualTakeStoragePieceId > 0L) {
+            summary.append(" | manualTake=chest#").append(manualTakeStoragePieceId);
+        }
+        if (manualDeliverStoragePieceId > 0L) {
+            summary.append(" | manualDeliver=chest#").append(manualDeliverStoragePieceId);
         }
         if (processingRecipe != null) {
             summary.append(" | processing=").append(processingRecipe.getKey())
