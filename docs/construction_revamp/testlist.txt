@@ -1378,3 +1378,11 @@ Rail Studio candidate-preview visibility correction — NEEDS RUNTIME TEST (2026
 Rail Studio font readability gate — NEEDS RUNTIME TEST (2026-09-27)
 - At the normal narrow Client Console width, confirm Rail Studio text/buttons are comfortably readable without zooming.
 - Confirm the larger local fonts do not reintroduce horizontal scrolling or right-edge clipping.
+
+Rail Studio live movement correction — NEEDS RUNTIME TEST (2026-09-27)
+- Add one rail part, select it, then press Left/Right/Up/Down. Its dX/dY row and rendered world preview must move together on every click.
+- With one part marked [ANCHOR], moving it must still visibly move the model; the anchor must not pin the live preview to the workspace origin.
+- Add a second part, set one as anchor, then move only the other. Only that component must move.
+- Preview R0/R1/R2/R3 must rotate the assembly around the anchor's current workspace position.
+- Normalize must intentionally shift the anchor to dX0/dY0 while preserving relative component geometry.
+- Save/Publish must continue storing anchor-normalized component offsets.
