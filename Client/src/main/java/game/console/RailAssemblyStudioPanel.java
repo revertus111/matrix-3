@@ -11,6 +11,8 @@ import game.RailRoutePreview;
 
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
@@ -54,6 +56,28 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private static final int MAX_PARTS = 64;
     private static final int HISTORY_LIMIT = 50;
 
+    private enum PortState {
+        OFF("OFF", false, false),
+        INPUT("IN", true, false),
+        OUTPUT("OUT", false, true),
+        BOTH("BOTH", true, true);
+
+        private final String label;
+        private final boolean input;
+        private final boolean output;
+
+        PortState(String label, boolean input, boolean output) {
+            this.label = label;
+            this.input = input;
+            this.output = output;
+        }
+
+        private PortState next() {
+            PortState[] values = values();
+            return values[(ordinal() + 1) % values.length];
+        }
+    }
+
     private enum PrefabType {
         CURVE("Curve"),
         JUNCTION("Junction"),
@@ -91,10 +115,14 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private final JTextField prefabName = new JTextField("RAIL_PREFAB_01");
     private final JComboBox<PrefabType> prefabType =
             new JComboBox<PrefabType>(PrefabType.values());
-    private final JCheckBox portNorth = check("North");
-    private final JCheckBox portEast = check("East");
-    private final JCheckBox portSouth = check("South");
-    private final JCheckBox portWest = check("West");
+    private final JButton portNorth = new JButton("OFF");
+    private final JButton portEast = new JButton("OFF");
+    private final JButton portSouth = new JButton("OFF");
+    private final JButton portWest = new JButton("OFF");
+    private PortState portNorthState = PortState.OFF;
+    private PortState portEastState = PortState.OFF;
+    private PortState portSouthState = PortState.OFF;
+    private PortState portWestState = PortState.OFF;
 
     private final DefaultListModel<String> savedPrefabModel = new DefaultListModel<String>();
     private final JList<String> savedPrefabList = new JList<String>(savedPrefabModel);
@@ -401,24 +429,70 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         card.add(prefabType);
         card.add(Box.createVerticalStrut(4));
 
-        JPanel ports = new JPanel(new GridLayout(2, 2, 4, 2));
+        configurePortButton(portNorth, "North");
+        configurePortButton(portEast, "East");
+        configurePortButton(portSouth, "South");
+        configurePortButton(portWest, "West");
+
+        JPanel ports = new JPanel(new GridBagLayout());
         ports.setOpaque(false);
         ports.setAlignmentX(LEFT_ALIGNMENT);
-        ports.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-        ports.add(portNorth);
-        ports.add(portEast);
-        ports.add(portSouth);
-        ports.add(portWest);
-        card.add(smallLabel("R0 ports"));
+        ports.setMaximumSize(new Dimension(Integer.MAX_VALUE, 98));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 0.0;
+
+        gbc.gridx = 2; gbc.gridy = 0;
+        ports.add(compassLabel("N"), gbc);
+        gbc.gridx = 2; gbc.gridy = 1;
+        ports.add(portNorth, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 2;
+        ports.add(compassLabel("W"), gbc);
+        gbc.gridx = 1; gbc.gridy = 2;
+        ports.add(portWest, gbc);
+
+        gbc.gridx = 2; gbc.gridy = 2;
+        ports.add(compassLabel("●"), gbc);
+
+        gbc.gridx = 3; gbc.gridy = 2;
+        ports.add(portEast, gbc);
+        gbc.gridx = 4; gbc.gridy = 2;
+        ports.add(compassLabel("E"), gbc);
+
+        gbc.gridx = 2; gbc.gridy = 3;
+        ports.add(portSouth, gbc);
+        gbc.gridx = 2; gbc.gridy = 4;
+        ports.add(compassLabel("S"), gbc);
+
+        card.add(smallLabel("R0 routing — click a direction: OFF → IN → OUT → BOTH"));
         card.add(Box.createVerticalStrut(3));
         card.add(ports);
+        card.add(Box.createVerticalStrut(3));
+        card.add(compactText("R1 / R2 / R3 rotate both routing masks automatically.", 1));
         card.add(Box.createVerticalStrut(7));
 
-        java.awt.event.ActionListener metadataChanged = e -> updateValidation();
-        portNorth.addActionListener(metadataChanged);
-        portEast.addActionListener(metadataChanged);
-        portSouth.addActionListener(metadataChanged);
-        portWest.addActionListener(metadataChanged);
+        portNorth.addActionListener(e -> {
+            portNorthState = portNorthState.next();
+            refreshPortButton(portNorth, portNorthState);
+            updateValidation();
+        });
+        portEast.addActionListener(e -> {
+            portEastState = portEastState.next();
+            refreshPortButton(portEast, portEastState);
+            updateValidation();
+        });
+        portSouth.addActionListener(e -> {
+            portSouthState = portSouthState.next();
+            refreshPortButton(portSouth, portSouthState);
+            updateValidation();
+        });
+        portWest.addActionListener(e -> {
+            portWestState = portWestState.next();
+            refreshPortButton(portWest, portWestState);
+            updateValidation();
+        });
 
         JPanel saveRow = new JPanel(new GridLayout(1, 2, 4, 0));
         saveRow.setOpaque(false);
@@ -727,7 +801,12 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private void setPreviewTurns(int turns) {
         previewTurns = turns & 0x3;
         refreshPreview();
-        setStatus("Whole-prefab preview set to R" + previewTurns + ".");
+        updateValidation();
+        setStatus("Whole-prefab preview set to R" + previewTurns
+                + " | IN=" + portsText(RailCompositeLibrary.rotatePortMask(
+                        inputMask(), previewTurns))
+                + " | OUT=" + portsText(RailCompositeLibrary.rotatePortMask(
+                        outputMask(), previewTurns)) + ".");
     }
 
     private boolean ensureWorldAnchor() {
@@ -797,14 +876,15 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         String name = prefabName.getText() == null ? "" : prefabName.getText().trim();
         String error = RailCompositeLibrary.saveComposite(
                 name, roleForType(selectedPrefabType()),
-                normalizedComponents(), portMask());
+                normalizedComponents(), inputMask(), outputMask());
         if (error != null) {
             setStatus(error);
             return;
         }
         refreshSavedPrefabs();
         setStatus("Saved prefab " + name + " with " + parts.size()
-                + " part(s), anchor normalized and ports=" + portsText(portMask()) + ".");
+                + " part(s), anchor normalized, IN=" + portsText(inputMask())
+                + ", OUT=" + portsText(outputMask()) + ".");
     }
 
     private void publishRuntime() {
@@ -826,7 +906,8 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         String canonical = canonicalName(type);
         String error = RailCompositeLibrary.saveComposite(
-                canonical, roleForType(type), normalizedComponents(), portMask());
+                canonical, roleForType(type), normalizedComponents(),
+                inputMask(), outputMask());
         if (error != null) {
             setStatus(error);
             return;
@@ -835,7 +916,9 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         RailRoutePreview.reloadCurveComposite();
         refreshSavedPrefabs();
         setStatus("Published " + type + " -> " + canonical
-                + " | pieces=" + parts.size() + " | ports=" + portsText(portMask()) + ".");
+                + " | pieces=" + parts.size()
+                + " | IN=" + portsText(inputMask())
+                + " | OUT=" + portsText(outputMask()) + ".");
     }
 
     private List<RailCompositeLibrary.Component> normalizedComponents() {
@@ -899,7 +982,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
         prefabName.setText(definition.getName());
         prefabType.setSelectedItem(typeForDefinition(definition));
-        setPortMask(definition.getPortMask());
+        setDirectionalMasks(definition.getInputMask(), definition.getOutputMask());
         previewTurns = 0;
         refreshAssemblyList(parts.isEmpty() ? new int[0] : new int[] { 0 });
         refreshPreview();
@@ -990,6 +1073,8 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         }
 
         int ports = Integer.bitCount(portMask());
+        int inputs = Integer.bitCount(inputMask());
+        int outputs = Integer.bitCount(outputMask());
         PrefabType type = selectedPrefabType();
         if (type == PrefabType.CURVE && ports != 2) {
             result.errors.add("Curve requires exactly 2 connection ports.");
@@ -1000,6 +1085,12 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         } else if (type == PrefabType.SPLITTER && ports < 3) {
             result.errors.add("Splitter requires at least 3 connection ports.");
         }
+        if (type == PrefabType.SPLITTER && inputs == 0) {
+            result.errors.add("Splitter requires at least 1 INPUT-capable direction.");
+        }
+        if (type == PrefabType.SPLITTER && outputs == 0) {
+            result.errors.add("Splitter requires at least 1 OUTPUT-capable direction.");
+        }
         if (type == PrefabType.SPLITTER && ports == 4) {
             result.info.add("4-port splitter authored; current runtime Splitter topology is still degree-3 until the placeable Splitter-item runtime slice.");
         }
@@ -1007,8 +1098,15 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
             result.info.add("Custom prefab has no logical ports; visual-only draft is valid.");
         }
 
-        result.info.add(parts.size() + " component(s); ports=" + portsText(portMask())
-                + "; preview=R" + previewTurns + ".");
+        int previewInput = RailCompositeLibrary.rotatePortMask(inputMask(), previewTurns);
+        int previewOutput = RailCompositeLibrary.rotatePortMask(outputMask(), previewTurns);
+        result.info.add(parts.size() + " component(s); R0 IN=" + portsText(inputMask())
+                + " OUT=" + portsText(outputMask())
+                + " CONNECTIONS=" + portsText(portMask()) + ".");
+        result.info.add("Preview R" + previewTurns
+                + " IN=" + portsText(previewInput)
+                + " OUT=" + portsText(previewOutput)
+                + " CONNECTIONS=" + portsText(previewInput | previewOutput) + ".");
         return result;
     }
 
@@ -1172,19 +1270,54 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     }
 
     private int portMask() {
+        return inputMask() | outputMask();
+    }
+
+    private int inputMask() {
         int mask = 0;
-        if (portNorth.isSelected()) mask |= RailCompositeLibrary.PORT_NORTH;
-        if (portEast.isSelected()) mask |= RailCompositeLibrary.PORT_EAST;
-        if (portSouth.isSelected()) mask |= RailCompositeLibrary.PORT_SOUTH;
-        if (portWest.isSelected()) mask |= RailCompositeLibrary.PORT_WEST;
+        if (portNorthState.input) mask |= RailCompositeLibrary.PORT_NORTH;
+        if (portEastState.input) mask |= RailCompositeLibrary.PORT_EAST;
+        if (portSouthState.input) mask |= RailCompositeLibrary.PORT_SOUTH;
+        if (portWestState.input) mask |= RailCompositeLibrary.PORT_WEST;
+        return mask;
+    }
+
+    private int outputMask() {
+        int mask = 0;
+        if (portNorthState.output) mask |= RailCompositeLibrary.PORT_NORTH;
+        if (portEastState.output) mask |= RailCompositeLibrary.PORT_EAST;
+        if (portSouthState.output) mask |= RailCompositeLibrary.PORT_SOUTH;
+        if (portWestState.output) mask |= RailCompositeLibrary.PORT_WEST;
         return mask;
     }
 
     private void setPortMask(int mask) {
-        portNorth.setSelected((mask & RailCompositeLibrary.PORT_NORTH) != 0);
-        portEast.setSelected((mask & RailCompositeLibrary.PORT_EAST) != 0);
-        portSouth.setSelected((mask & RailCompositeLibrary.PORT_SOUTH) != 0);
-        portWest.setSelected((mask & RailCompositeLibrary.PORT_WEST) != 0);
+        setDirectionalMasks(mask, mask);
+    }
+
+    private void setDirectionalMasks(int inputMask, int outputMask) {
+        portNorthState = stateForDirection(
+                RailCompositeLibrary.PORT_NORTH, inputMask, outputMask);
+        portEastState = stateForDirection(
+                RailCompositeLibrary.PORT_EAST, inputMask, outputMask);
+        portSouthState = stateForDirection(
+                RailCompositeLibrary.PORT_SOUTH, inputMask, outputMask);
+        portWestState = stateForDirection(
+                RailCompositeLibrary.PORT_WEST, inputMask, outputMask);
+        refreshPortButton(portNorth, portNorthState);
+        refreshPortButton(portEast, portEastState);
+        refreshPortButton(portSouth, portSouthState);
+        refreshPortButton(portWest, portWestState);
+    }
+
+    private static PortState stateForDirection(
+            int directionMask, int inputMask, int outputMask) {
+        boolean input = (inputMask & directionMask) != 0;
+        boolean output = (outputMask & directionMask) != 0;
+        if (input && output) return PortState.BOTH;
+        if (input) return PortState.INPUT;
+        if (output) return PortState.OUTPUT;
+        return PortState.OFF;
     }
 
     private PrefabType selectedPrefabType() {
@@ -1263,6 +1396,30 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         button.setBorder(javax.swing.BorderFactory.createEmptyBorder(3, 4, 3, 4));
         button.setFocusable(false);
         return button;
+    }
+
+    private void configurePortButton(JButton button, String direction) {
+        ConsoleTheme.styleButton(button);
+        button.setFont(ConsoleTheme.BODY_FONT.deriveFont(10.5f));
+        button.setBorder(javax.swing.BorderFactory.createEmptyBorder(3, 5, 3, 5));
+        button.setPreferredSize(new Dimension(54, 25));
+        button.setMinimumSize(new Dimension(48, 25));
+        button.setFocusable(false);
+        button.setToolTipText(direction + " routing state. Click: OFF → IN → OUT → BOTH.");
+    }
+
+    private static void refreshPortButton(JButton button, PortState state) {
+        if (button != null && state != null) {
+            button.setText(state.label);
+        }
+    }
+
+    private static JLabel compassLabel(String text) {
+        JLabel label = new JLabel(text, JLabel.CENTER);
+        label.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        label.setForeground(ConsoleTheme.MUTED_TEXT);
+        label.setPreferredSize(new Dimension(18, 18));
+        return label;
     }
 
     private static JCheckBox check(String text) {
