@@ -2046,3 +2046,10 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - User feedback after the compact pass: controls fit better, but local text was too small.
 - Increased Rail Studio-local fonts one notch while preserving the narrow-safe layout and disabled horizontal scrolling.
 - Resume Here: runtime-check candidate visibility + final font/readability together in one client launch.
+
+## Rail Studio live movement correction — 2026-09-27
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the existing Rail Studio UX AAA.
+- Runtime video proved the part row dX/dY changed while the rendered model stayed fixed.
+- verified-static cause: refreshPreview() subtracted the selected anchor coordinates from every component before every live render. With one part that guaranteed rendered offset 0,0 regardless of the editable dX/dY state.
+- Correction: live workspace rendering now uses real editable workspace offsets. Whole-prefab rotation pivots around the selected anchor and returns to the anchor's current workspace position. Normalize/save/publish remain the only normalization boundaries.
+- Resume Here: runtime-test one-part movement first, then multi-part relative movement + R0-R3 rotation in the same Studio session.
