@@ -1404,3 +1404,16 @@ Rail Studio live movement correction — NEEDS RUNTIME TEST (2026-09-27)
 - Preview R0/R1/R2/R3 must rotate the assembly around the anchor's current workspace position.
 - Normalize must intentionally shift the anchor to dX0/dY0 while preserving relative component geometry.
 - Save/Publish must continue storing anchor-normalized component offsets.
+
+Rail Studio directional splitter authoring gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-27)
+- Open Test -> Rail Studio at normal narrow-console width. Prefab Definition must show a compass layout with N above, W/center/E across the middle, and S below; no routing control may clip horizontally.
+- Click each cardinal state button repeatedly. Its exact cycle must be OFF -> IN -> OUT -> BOTH -> OFF.
+- Author the target R0 splitter example: W=IN, N=OUT, E=OUT, S=OFF. Validation must report R0 IN=W, OUT=N/E and CONNECTIONS=N/E/W.
+- Click R1/R2/R3. Directional metadata must rotate with the whole prefab: R1 IN=N OUT=E/S; R2 IN=E OUT=S/W; R3 IN=S OUT=W/N.
+- Save a draft, reload it from Saved Prefabs, and confirm all four directional states return unchanged.
+- Load an older prefab that only has port_mask metadata. Every previously connected direction must appear as BOTH; disconnected directions remain OFF.
+- Inspect data/construction/asset_studio/rail_composites.tsv after save. New rows must include port_mask + input_mask + output_mask, with port_mask equal to the union of input/output directions.
+- Splitter validation must BLOCK a >=3-port layout with no INPUT-capable direction and BLOCK one with no OUTPUT-capable direction. BOTH counts as both capabilities.
+- Publish a valid Splitter. Current RailRoutePreview connection behavior must remain unchanged: allowed normal-rail directions use the overall union port_mask and non-authored directions remain blocked.
+- Regression: load/move/rotate/normalize the assembly, including the prior one-part movement correction; rendered dX/dY must continue moving with the Studio row values.
+
