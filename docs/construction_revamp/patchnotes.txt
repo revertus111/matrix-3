@@ -1777,6 +1777,7 @@
 
 2026-09-27 - Bundle 3.5B runtime regression corrections
 - Settlement physical chests and machine buffers now use the settlement-owned stack cap for every item instead of RuneScape inventory stackability; non-stackable Logs/Planks therefore stack normally inside settlement logistics up to the configured per-slot cap.
+- Existing saved split stacks are normalized/compacted on chest or machine-buffer access, so already-stored one-per-slot Planks/Logs merge into settlement stacks after this patch rather than only new deposits stacking correctly.
 - Added Planks Only storage filtering (item 960) to the server policy owner and Storage Settings overlay so a REQUEST output chest can explicitly reject raw Logs.
 - Corrected physical processing resume logic: an already-loaded machine input now satisfies the recipe even when no fresh source chest currently contains another Log.
 - Storage Settings Close now disposes the overlay and clears its window/component ownership rather than only hiding the JWindow, allowing reliable close/reopen lifecycle.
