@@ -1760,6 +1760,7 @@
 - Process Wood migrated off worker-home/legacy SettlementResource mutation: worker physically withdraws Logs 1511 from a chest, carries them to machine input, executes an atomic 1 Log -> 2 Planks 960 machine-buffer transaction, then carries machine output to physical storage.
 - Existing machine output is drained before another production cycle so output backpressure can recover after destination policy/capacity changes.
 - Blocked output remains in the machine or physically carried; workstation-loss recovery returns carried factory items to valid physical storage instead of deleting them.
+- Worker policy changes (Process Wood OFF, Direct Orders Only, missing Rally assignment) now allow an already-held physical factory payload to finish safely before stopping autonomous processing.
 - Physical machine transaction preserves all-or-nothing input/output semantics and rolls input back if output cannot commit.
 - Corrected the stale processing self-test from the superseded 2 Wood -> 1 Plank expectation to the accepted 1 -> 2 recipe and extended it with physical item mappings, machine conversion and full-output rollback.
 - Placeholder workstation art is explicitly acceptable for this logistics gate; final sawmill/conveyor/cart visuals must reuse the same endpoint contract rather than create another inventory owner.
