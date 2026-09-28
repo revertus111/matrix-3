@@ -17,6 +17,7 @@ import com.rs.game.player.content.construction.SettlementBundle13FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle14FinalGate;
 import com.rs.game.player.content.construction.SettlementBundle15FinalCheck;
 import com.rs.game.player.content.construction.SettlementBundle22FinalGate;
+import com.rs.game.player.content.construction.SettlementDebug;
 import com.rs.game.player.content.construction.SettlementInstance;
 import com.rs.game.player.content.construction.SettlementHousingCheck;
 import com.rs.game.player.content.construction.SettlementObjectCatalog;
@@ -302,7 +303,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|list|buildtilesave|storageconfig|resources|storageoverview|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|debug|list|buildtilesave|storageconfig|resources|storageoverview|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -313,6 +314,64 @@ public final class ItemBrowserCommandBridge {
         }
 
         SettlementInstance active = SettlementInstance.getActive(player);
+
+        if ("debug".equals(operation)) {
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before using Construction debug.");
+                return true;
+            }
+            SettlementDebug debug = active.getDebug();
+            if (cmd.length < 4 || "status".equalsIgnoreCase(cmd[3])) {
+                player.getPackets().sendGameMessage(debug.getStatus());
+                return true;
+            }
+
+            String debugAction = cmd[3].toLowerCase();
+            if ("master".equals(debugAction)) {
+                if (cmd.length < 5
+                        || (!"on".equalsIgnoreCase(cmd[4])
+                                && !"off".equalsIgnoreCase(cmd[4]))) {
+                    player.getPackets().sendGameMessage(
+                            "Use: ::itembrowser settlement debug master <on|off>");
+                    return true;
+                }
+                player.getPackets().sendGameMessage(
+                        debug.setMasterEnabled("on".equalsIgnoreCase(cmd[4])));
+                return true;
+            }
+
+            if ("category".equals(debugAction)) {
+                if (cmd.length < 6
+                        || (!"on".equalsIgnoreCase(cmd[5])
+                                && !"off".equalsIgnoreCase(cmd[5]))) {
+                    player.getPackets().sendGameMessage(
+                            "Use: ::itembrowser settlement debug category <key> <on|off>");
+                    return true;
+                }
+                SettlementDebug.Category category =
+                        SettlementDebug.Category.forKey(cmd[4]);
+                player.getPackets().sendGameMessage(
+                        debug.setCategoryEnabled(
+                                category, "on".equalsIgnoreCase(cmd[5])));
+                return true;
+            }
+
+            if ("clear".equals(debugAction)) {
+                player.getPackets().sendGameMessage(debug.clear());
+                return true;
+            }
+
+            if ("export".equals(debugAction)) {
+                player.getPackets().sendGameMessage(debug.export());
+                return true;
+            }
+
+            player.getPackets().sendGameMessage(
+                    "Construction debug: <status|master on/off|category key on/off|clear|export>.");
+            return true;
+        }
+
         if ("exit".equals(operation)) {
             if (active == null) {
                 player.getPackets().sendGameMessage("You are not inside an active settlement.");
