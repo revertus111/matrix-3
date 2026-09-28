@@ -1602,9 +1602,6 @@ public final class SettlementInstance {
                     break;
                 }
             }
-            if (availableInput < recipe.getInputAmount()) {
-                return false;
-            }
             for (SettlementPlacedPiece piece : state.snapshotPieces()) {
                 if (piece == null) {
                     continue;
@@ -1615,7 +1612,13 @@ public final class SettlementInstance {
                     continue;
                 }
                 SettlementMachineBuffer buffer = state.findMachineBuffer(piece.getPieceId());
-                if (buffer != null
+                if (buffer == null) {
+                    continue;
+                }
+                if (buffer.getOutputAmount(output.getItemId()) > 0L) {
+                    return true;
+                }
+                if (availableInput >= recipe.getInputAmount()
                         && buffer.getInputAmount(input.getItemId())
                                 + buffer.getInputCapacityForItem(input.getItemId())
                                 >= recipe.getInputAmount()
@@ -1656,12 +1659,17 @@ public final class SettlementInstance {
                     SettlementFactoryItem.forResource(recipe.getOutputResource());
             if (input != null && output != null) {
                 SettlementMachineBuffer buffer = state.findMachineBuffer(piece.getPieceId());
-                if (buffer == null
-                        || buffer.getInputAmount(input.getItemId())
+                if (buffer == null) {
+                    continue;
+                }
+                boolean hasPendingOutput =
+                        buffer.getOutputAmount(output.getItemId()) > 0L;
+                if (!hasPendingOutput
+                        && (buffer.getInputAmount(input.getItemId())
                                 + buffer.getInputCapacityForItem(input.getItemId())
                                 < recipe.getInputAmount()
                         || buffer.getOutputCapacityForItem(output.getItemId())
-                                < recipe.getOutputAmount()) {
+                                < recipe.getOutputAmount())) {
                     continue;
                 }
             }
