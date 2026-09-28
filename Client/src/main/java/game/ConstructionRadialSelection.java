@@ -77,6 +77,9 @@ public final class ConstructionRadialSelection {
     private static final int STORAGE_SETTINGS_MENU_ACTION = 1534;
     private static final int ASSIGN_RALLY_MENU_ACTION = 1535;
     private static final int CLEAR_RALLY_MENU_ACTION = 1536;
+    private static final int TAKE_FROM_HERE_MENU_ACTION = 1537;
+    private static final int DELIVER_HERE_MENU_ACTION = 1538;
+    private static final int WORK_HERE_MENU_ACTION = 1539;
     private static final int MATRIX3_FIRST_OBJECT_ACTION = 3;
     private static final int MATRIX3_FIRST_NPC_ACTION = 9;
     private static final int STARTER_TREE_OBJECT_ID = 1276;
@@ -495,24 +498,55 @@ public final class ConstructionRadialSelection {
             return;
         }
         int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
-        if (objectId != BASIC_STORAGE_CHEST_OBJECT_ID) {
+        String target = targetName == null ? "" : targetName;
+        if (objectId == BASIC_STORAGE_CHEST_OBJECT_ID) {
+            if (!hasMenuText("View Storage")) {
+                Class572_Sub12_Sub10 view = new Class572_Sub12_Sub10(
+                        "View Storage", target,
+                        -646491435 * client.anInt8751,
+                        MATRIX3_FIRST_OBJECT_ACTION, -1, targetUid, localX, localY,
+                        true, false, 0L, true);
+                Class412.method5075(view, 722976984);
+            }
+            if (!hasMenuAction(STORAGE_SETTINGS_MENU_ACTION)) {
+                Class572_Sub12_Sub10 settings = new Class572_Sub12_Sub10(
+                        "Storage Settings", target,
+                        -646491435 * client.anInt8751,
+                        STORAGE_SETTINGS_MENU_ACTION, -1, targetUid, localX, localY,
+                        true, false, 0L, true);
+                Class412.method5075(settings, 722976984);
+            }
+            if (isRtsWorldInputAvailable() && committedWorkerNpcIndexes.length > 0) {
+                if (!hasMenuAction(TAKE_FROM_HERE_MENU_ACTION)) {
+                    Class572_Sub12_Sub10 take = new Class572_Sub12_Sub10(
+                            "Take From Here", target,
+                            -646491435 * client.anInt8751,
+                            TAKE_FROM_HERE_MENU_ACTION, -1, targetUid, localX, localY,
+                            true, false, 0L, true);
+                    Class412.method5075(take, 722976984);
+                }
+                if (!hasMenuAction(DELIVER_HERE_MENU_ACTION)) {
+                    Class572_Sub12_Sub10 deliver = new Class572_Sub12_Sub10(
+                            "Deliver Here", target,
+                            -646491435 * client.anInt8751,
+                            DELIVER_HERE_MENU_ACTION, -1, targetUid, localX, localY,
+                            true, false, 0L, true);
+                    Class412.method5075(deliver, 722976984);
+                }
+            }
             return;
         }
-        if (!hasMenuText("View Storage")) {
-            Class572_Sub12_Sub10 view = new Class572_Sub12_Sub10(
-                    "View Storage", targetName == null ? "" : targetName,
+
+        if (objectId == WOODEN_WORKBENCH_OBJECT_ID
+                && isRtsWorldInputAvailable()
+                && committedWorkerNpcIndexes.length > 0
+                && !hasMenuAction(WORK_HERE_MENU_ACTION)) {
+            Class572_Sub12_Sub10 work = new Class572_Sub12_Sub10(
+                    "Work Here", target,
                     -646491435 * client.anInt8751,
-                    MATRIX3_FIRST_OBJECT_ACTION, -1, targetUid, localX, localY,
+                    WORK_HERE_MENU_ACTION, -1, targetUid, localX, localY,
                     true, false, 0L, true);
-            Class412.method5075(view, 722976984);
-        }
-        if (!hasMenuAction(STORAGE_SETTINGS_MENU_ACTION)) {
-            Class572_Sub12_Sub10 settings = new Class572_Sub12_Sub10(
-                    "Storage Settings", targetName == null ? "" : targetName,
-                    -646491435 * client.anInt8751,
-                    STORAGE_SETTINGS_MENU_ACTION, -1, targetUid, localX, localY,
-                    true, false, 0L, true);
-            Class412.method5075(settings, 722976984);
+            Class412.method5075(work, 722976984);
         }
     }
 
@@ -1876,6 +1910,32 @@ public final class ConstructionRadialSelection {
                 ConstructionStorageSettingsOverlay.showForChest(
                         point.worldX, point.worldY, point.plane);
                 lastEventState = "Storage Settings opened.";
+            }
+            return true;
+        }
+        if (normalizedAction == TAKE_FROM_HERE_MENU_ACTION
+                || normalizedAction == DELIVER_HERE_MENU_ACTION
+                || normalizedAction == WORK_HERE_MENU_ACTION) {
+            if (!isRtsWorldInputAvailable() || committedWorkerNpcIndexes.length <= 0) {
+                return true;
+            }
+            WorldPoint point = resolveWorldPoint(localX, localY);
+            if (point == null) {
+                return true;
+            }
+            int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
+            if (normalizedAction == TAKE_FROM_HERE_MENU_ACTION) {
+                queueSelectionOrder("workerselectiontake " + objectId + " "
+                        + point.worldX + " " + point.worldY + " " + point.plane);
+                lastEventState = "Take From Here queued for committed workers.";
+            } else if (normalizedAction == DELIVER_HERE_MENU_ACTION) {
+                queueSelectionOrder("workerselectiondeliver " + objectId + " "
+                        + point.worldX + " " + point.worldY + " " + point.plane);
+                lastEventState = "Deliver Here queued for committed workers.";
+            } else {
+                queueSelectionOrder("workerselectionprocess " + objectId + " "
+                        + point.worldX + " " + point.worldY + " " + point.plane);
+                lastEventState = "Work Here queued for committed workers.";
             }
             return true;
         }
