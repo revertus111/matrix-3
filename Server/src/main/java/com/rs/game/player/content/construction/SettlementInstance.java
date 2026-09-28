@@ -827,8 +827,12 @@ public final class SettlementInstance {
                 container.clearItemFilters();
                 container.setItemFilter(
                         SettlementFactoryItem.NORMAL_LOGS.getItemId(), true);
+            } else if ("planks".equals(normalized)) {
+                container.clearItemFilters();
+                container.setItemFilter(
+                        SettlementFactoryItem.PLANKS.getItemId(), true);
             } else {
-                return "Storage filter must be any or logs.";
+                return "Storage filter must be any, logs, or planks.";
             }
         } else {
             return "Unknown storage policy setting: " + setting + ".";
@@ -1618,8 +1622,11 @@ public final class SettlementInstance {
                 if (buffer.getOutputAmount(output.getItemId()) > 0L) {
                     return true;
                 }
-                if (availableInput >= recipe.getInputAmount()
-                        && buffer.getInputAmount(input.getItemId())
+                long machineInput = buffer.getInputAmount(input.getItemId());
+                long missingInput = Math.max(0L,
+                        recipe.getInputAmount() - machineInput);
+                if (availableInput >= missingInput
+                        && machineInput
                                 + buffer.getInputCapacityForItem(input.getItemId())
                                 >= recipe.getInputAmount()
                         && buffer.getOutputCapacityForItem(output.getItemId())
