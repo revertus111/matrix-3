@@ -69,6 +69,67 @@ public final class SettlementProcessingTransaction {
         }
     }
 
+
+    public static Result apply(SettlementMachineBuffer machine,
+            SettlementProcessingRecipe recipe,
+            int inputItemId, int outputItemId, int cycles) {
+        if (machine == null) {
+            return Result.fail("Physical workstation buffer is unavailable.");
+        }
+        if (recipe == null) {
+            return Result.fail("Unknown settlement processing recipe.");
+        }
+        if (inputItemId < 0 || outputItemId < 0) {
+            return Result.fail("Physical recipe item mapping is unavailable.");
+        }
+        if (cycles <= 0 || cycles > MAX_CYCLES_PER_TRANSACTION) {
+            return Result.fail("Processing cycles must be between 1 and "
+                    + MAX_CYCLES_PER_TRANSACTION + ".");
+        }
+
+        final long inputNeeded;
+        final long outputProduced;
+        try {
+            inputNeeded = Math.multiplyExact(recipe.getInputAmount(), (long) cycles);
+            outputProduced = Math.multiplyExact(recipe.getOutputAmount(), (long) cycles);
+        } catch (ArithmeticException overflow) {
+            return Result.fail("Processing amount is too large.");
+        }
+        if (inputNeeded > Integer.MAX_VALUE || outputProduced > Integer.MAX_VALUE) {
+            return Result.fail("Physical processing amount exceeds item-container limits.");
+        }
+
+        synchronized (machine) {
+            if (machine.getInputAmount(inputItemId) < inputNeeded) {
+                return Result.fail("Machine input needs " + inputNeeded + " "
+                        + recipe.getInputResource().getDisplayName() + ".");
+            }
+            if (machine.getOutputCapacityForItem(outputItemId) < outputProduced) {
+                return Result.fail("Machine output buffer needs " + outputProduced
+                        + " free " + recipe.getOutputResource().getDisplayName() + " space.");
+            }
+
+            int removed = machine.removeInput(inputItemId, (int) inputNeeded);
+            if (removed != (int) inputNeeded) {
+                if (removed > 0) {
+                    machine.addInput(inputItemId, removed);
+                }
+                return Result.fail("Machine input changed before conversion completed.");
+            }
+
+            int added = machine.addOutput(outputItemId, (int) outputProduced);
+            if (added != (int) outputProduced) {
+                if (added > 0) {
+                    machine.removeOutput(outputItemId, added);
+                }
+                machine.addInput(inputItemId, removed);
+                return Result.fail("Machine output changed before conversion completed.");
+            }
+
+            return Result.success(recipe, cycles, removed, added);
+        }
+    }
+
     public static final class Result {
         private final boolean success;
         private final String message;
