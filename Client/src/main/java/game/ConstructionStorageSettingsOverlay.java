@@ -149,16 +149,17 @@ public final class ConstructionStorageSettingsOverlay {
         root.add(Box.createVerticalStrut(8));
 
         root.add(sectionLabel("Item Filter"));
-        JPanel filters = row(2);
+        JPanel filters = row(3);
         filters.add(action("Allow Any", "filter", "any"));
         filters.add(action("Logs Only", "filter", "logs"));
+        filters.add(action("Planks Only", "filter", "planks"));
         root.add(filters);
         root.add(Box.createVerticalStrut(10));
 
         JPanel actions = row(2);
         actions.add(action("Status", "status", null));
         JButton close = button("Close");
-        close.addActionListener(e -> window.setVisible(false));
+        close.addActionListener(e -> closeNow());
         actions.add(close);
         root.add(actions);
         root.add(Box.createVerticalStrut(9));
@@ -170,6 +171,18 @@ public final class ConstructionStorageSettingsOverlay {
 
         window.getContentPane().setLayout(new BorderLayout());
         window.getContentPane().add(root, BorderLayout.CENTER);
+    }
+
+    private static void closeNow() {
+        JWindow current = window;
+        window = null;
+        owner = null;
+        targetLabel = null;
+        statusLabel = null;
+        if (current != null) {
+            current.setVisible(false);
+            current.dispose();
+        }
     }
 
     private static JLabel sectionLabel(String text) {
