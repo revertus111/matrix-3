@@ -2101,3 +2101,14 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Current rail topology remains intentionally unchanged: RailRoutePreview continues consuming getPortMask() as the overall connection mask. Directional masks are retained for later manual/smart cart splitter routing rather than prematurely moving cart authority into the authoring tool.
 - Resume Here: rebuild/restart the client once, author W=IN / N=OUT / E=OUT / S=OFF, verify R0-R3 routing rotation + save/reload + legacy BOTH compatibility, then publish one runtime-safe Splitter and confirm current normal-rail connections still follow the union mask. Include the existing live movement regression in the same Rail Studio session.
 
+## Implementation checkpoint — Construction Debug Framework V1 — 2026-09-28
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- This is supporting instrumentation for the active Phase 3 Population/Processing/Logistics milestone; the Canonical Main-Goal Status table is unchanged.
+- Added one transient SettlementDebug event bus per live SettlementInstance. Debug configuration and captured events are intentionally excluded from SettlementState persistence.
+- Client Console -> Con Revamp now has the accepted centralized Debug card: Master Debug; Worker Actions; Worker Speech; Pathing; Logistics; Storage; Reservations; Processing; Rails; RTS; Persistence; Performance; Clear; Export.
+- Master Debug is safe-off by default. Worker Actions, Worker Speech, Logistics and Storage are preset categories so one master toggle enables the common troubleshooting view.
+- Worker NPC instrumentation is state-transition based: it emits only when the existing authoritative workState + statusDetail pair changes. The same event is tagged for pathing/logistics/storage/reservation/processing/RTS filtering and can feed overhead ForceTalk without introducing another AI state owner.
+- Enabled events mirror to server console and a bounded 2000-event in-memory buffer. Export writes the current snapshot to data/construction/debug/settlement_debug_<timestamp>.txt; Clear only resets that transient buffer.
+- Rails, Persistence and Performance categories are present in the common contract now but do not yet have dedicated emitters in this V1 slice. Future subsystems should emit into this bus instead of inventing isolated debug toggles/log formats.
+- Resume Here: include the Construction Debug V1 gate in the next consolidated Phase 3 runtime session. Enable Master Debug while testing Bundle 3.5B/3.5C so worker speech + categorized events explain stalls, source/destination choices and processing transitions. Do not reopen accepted logistics architecture unless debug/runtime evidence identifies a real regression.
+
