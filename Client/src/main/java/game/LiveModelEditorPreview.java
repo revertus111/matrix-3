@@ -90,6 +90,7 @@ public final class LiveModelEditorPreview {
     private static volatile AxisConstraint axisConstraint = AxisConstraint.FREE;
     private static volatile SelectionMode selectionMode = SelectionMode.PART;
     private static volatile boolean transformSnapEnabled;
+    private static volatile boolean groupScaleEnabled;
     private static volatile int moveSnapStep = 16;
     private static volatile int angleSnapDegrees = 15;
     private static volatile boolean pointerInside;
@@ -245,6 +246,7 @@ public final class LiveModelEditorPreview {
     public static AxisConstraint getAxisConstraint() { return axisConstraint; }
     public static SelectionMode getSelectionMode() { return selectionMode; }
     public static boolean isTransformSnapEnabled() { return transformSnapEnabled; }
+    public static boolean isGroupScaleEnabled() { return groupScaleEnabled; }
     public static int getMoveSnapStep() { return moveSnapStep; }
     public static int getAngleSnapDegrees() { return angleSnapDegrees; }
     public static int getWorldHoveredPart() { return worldHoveredPart; }
@@ -254,6 +256,13 @@ public final class LiveModelEditorPreview {
         status = enabled
                 ? "SNAP ON move=" + moveSnapStep + " angle=" + angleSnapDegrees
                 : "SNAP OFF (Ctrl = temporary snap)";
+    }
+
+    public static void setGroupScaleEnabled(boolean enabled) {
+        groupScaleEnabled = enabled;
+        status = enabled
+                ? "GROUP SCALE ON: geometry + spacing scale around selection pivot"
+                : "GROUP SCALE OFF: scale selected geometry in place";
     }
 
     public static void setMoveSnapStep(int step) {
@@ -568,7 +577,9 @@ public final class LiveModelEditorPreview {
             }
         }
 
-        boolean changed = PARTS.updateGestureTransform(sx, sy, sz, mx, my, mz, yaw);
+        boolean changed = PARTS.updateGestureTransform(
+                sx, sy, sz, mx, my, mz, yaw,
+                groupScaleEnabled && transformMode == TransformMode.SCALE);
         if (changed) invalidateGeometryModels();
         return changed;
     }
@@ -628,7 +639,9 @@ public final class LiveModelEditorPreview {
 
     public static boolean setSelectedPartTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
-        boolean changed = PARTS.setSelectedTransform(sx, sy, sz, mx, my, mz, yaw);
+        boolean changed = PARTS.setSelectedTransform(
+                sx, sy, sz, mx, my, mz, yaw,
+                groupScaleEnabled && transformMode == TransformMode.SCALE);
         if (changed) invalidateGeometryModels();
         return changed;
     }
@@ -643,9 +656,37 @@ public final class LiveModelEditorPreview {
 
     public static boolean updateSelectedPartTransformGesture(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
-        boolean changed = PARTS.updateGestureTransform(sx, sy, sz, mx, my, mz, yaw);
+        boolean changed = PARTS.updateGestureTransform(
+                sx, sy, sz, mx, my, mz, yaw,
+                groupScaleEnabled && transformMode == TransformMode.SCALE);
         if (changed) invalidateGeometryModels();
         return changed;
+    }
+
+    /**
+     * Shrink the current part/multi selection to one 512-unit tile footprint.
+     * The parts system owns the actual pivot-aware geometry/offset transaction.
+     */
+    public static boolean fitSelectedToOneTile() {
+        boolean changed = PARTS.fitSelectionToFootprint(512);
+        if (changed) {
+            invalidateGeometryModels();
+            int[] bounds = PARTS.getSelectionBounds();
+            status = bounds == null ? "FIT 1 TILE applied"
+                    : "FIT 1 TILE " + bounds[0] + "x" + bounds[2]
+                            + " footprint (" + bounds[1] + " high)";
+        } else {
+            int[] bounds = PARTS.getSelectionBounds();
+            status = bounds == null
+                    ? "FIT 1 TILE requires one or more selected parts"
+                    : "FIT 1 TILE no change: footprint "
+                            + bounds[0] + "x" + bounds[2] + " already fits";
+        }
+        return changed;
+    }
+
+    public static int[] getSelectedBounds() {
+        return PARTS.getSelectionBounds();
     }
 
     public static void endSelectedPartTransformGesture() {
