@@ -21,6 +21,48 @@ import java.util.regex.Pattern;
  */
 final class LiveModelEditorParts {
 
+    enum ConveyorRole {
+        UNASSIGNED,
+        BELT_SURFACE,
+        START_CAP,
+        END_CAP,
+        FIXED_DETAIL,
+        REPEAT_DETAIL,
+        SUPPORT,
+        SCALE_POSITION,
+        IGNORE;
+
+        static ConveyorRole fromName(String value) {
+            if (value == null) return UNASSIGNED;
+            try {
+                return ConveyorRole.valueOf(value.trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                return UNASSIGNED;
+            }
+        }
+    }
+
+    static final class ConveyorRecipePart {
+        final int sourcePart;
+        final ConveyorRole role;
+        final int scaleX, scaleY, scaleZ;
+        final int moveX, moveY, moveZ, yaw;
+
+        ConveyorRecipePart(int sourcePart, ConveyorRole role,
+                int scaleX, int scaleY, int scaleZ,
+                int moveX, int moveY, int moveZ, int yaw) {
+            this.sourcePart = sourcePart;
+            this.role = role;
+            this.scaleX = scaleX;
+            this.scaleY = scaleY;
+            this.scaleZ = scaleZ;
+            this.moveX = moveX;
+            this.moveY = moveY;
+            this.moveZ = moveZ;
+            this.yaw = yaw;
+        }
+    }
+
     private static final int MAX_UNDO = 64;
     private static final short HIGHLIGHT_COLOUR = (short) 0xffff;
 
@@ -86,6 +128,62 @@ final class LiveModelEditorParts {
     synchronized boolean isSelected(int index) { return selection.contains(Integer.valueOf(index)); }
     synchronized int getHovered() { return hovered; }
     synchronized boolean isIsolate() { return isolate; }
+
+    synchronized String[] getConveyorRoleOptions() {
+        ConveyorRole[] roles = ConveyorRole.values();
+        String[] values = new String[roles.length];
+        for (int i = 0; i < roles.length; i++) values[i] = roles[i].name();
+        return values;
+    }
+
+    synchronized String getSelectedConveyorRoleName() {
+        if (selection.isEmpty()) return ConveyorRole.UNASSIGNED.name();
+        ConveyorRole shared = null;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null) continue;
+            if (shared == null) shared = state.conveyorRole;
+            else if (shared != state.conveyorRole) return "MIXED";
+        }
+        return shared == null ? ConveyorRole.UNASSIGNED.name() : shared.name();
+    }
+
+    synchronized boolean setSelectedConveyorRole(String roleName) {
+        if (selection.isEmpty()) return false;
+        ConveyorRole role = ConveyorRole.fromName(roleName);
+        boolean changed = false;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && state.conveyorRole != role) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) return false;
+        pushUndo();
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null) state.conveyorRole = role;
+        }
+        revision++;
+        return true;
+    }
+
+    synchronized ConveyorRecipePart[] buildConveyorRecipe() {
+        if (source == null) return new ConveyorRecipePart[0];
+        List<ConveyorRecipePart> recipe = new ArrayList<ConveyorRecipePart>();
+        for (PartState state : originals) {
+            if (state.deleted || state.hidden
+                    || state.replacementObjectId >= 0
+                    || state.conveyorRole == ConveyorRole.UNASSIGNED) {
+                continue;
+            }
+            recipe.add(new ConveyorRecipePart(state.sourcePart, state.conveyorRole,
+                    state.scaleX, state.scaleY, state.scaleZ,
+                    state.moveX, state.moveY, state.moveZ, state.yaw));
+        }
+        return recipe.toArray(new ConveyorRecipePart[recipe.size()]);
+    }
 
     synchronized int getFaceCount(int index) {
         PartState state = stateAt(index);
@@ -1421,6 +1519,8 @@ final class LiveModelEditorParts {
         else if (state.hidden) suffix.append("  [hidden]");
         if (state.replacementObjectId >= 0)
             suffix.append("  [replace #").append(state.replacementObjectId).append(']');
+        if (state.conveyorRole != ConveyorRole.UNASSIGNED)
+            suffix.append("  [").append(state.conveyorRole.name()).append(']');
         return suffix.toString();
     }
 
@@ -1441,6 +1541,7 @@ final class LiveModelEditorParts {
                 .append(", \"deleted\": ").append(state.deleted)
                 .append(", \"replacementObjectId\": ").append(state.replacementObjectId)
                 .append(", \"replacementObjectType\": ").append(state.replacementObjectType)
+                .append(", \"conveyorRole\": \"").append(state.conveyorRole.name()).append("\"")
                 .append("}");
     }
 
@@ -1456,6 +1557,14 @@ final class LiveModelEditorParts {
         state.deleted = readBoolean(body, "deleted", false);
         state.replacementObjectId = readInt(body, "replacementObjectId", -1);
         state.replacementObjectType = readInt(body, "replacementObjectType", 10);
+        state.conveyorRole = ConveyorRole.fromName(
+                readString(body, "conveyorRole", ConveyorRole.UNASSIGNED.name()));
+    }
+
+    private static String readString(String text, String key, String fallback) {
+        Matcher matcher = Pattern.compile("\\\"" + Pattern.quote(key)
+                + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"").matcher(text);
+        return matcher.find() ? matcher.group(1) : fallback;
     }
 
     private static int readInt(String text, String key, int fallback) {
@@ -1610,6 +1719,7 @@ final class LiveModelEditorParts {
         boolean hidden, deleted;
         int replacementObjectId = -1;
         int replacementObjectType = 10;
+        ConveyorRole conveyorRole = ConveyorRole.UNASSIGNED;
 
         PartState(int sourcePart) { this.sourcePart = sourcePart; }
 
@@ -1620,6 +1730,7 @@ final class LiveModelEditorParts {
             copy.hidden = hidden; copy.deleted = deleted;
             copy.replacementObjectId = replacementObjectId;
             copy.replacementObjectType = replacementObjectType;
+            copy.conveyorRole = conveyorRole;
             return copy;
         }
     }
