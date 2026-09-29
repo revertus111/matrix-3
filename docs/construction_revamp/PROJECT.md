@@ -2139,3 +2139,16 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Long candidate/debug/validation text no longer owns layout width: the candidate status is concise with full detail in a tooltip, and Validation/status content uses wrapped text areas.
 - Font sizing and current narrow-safe control layout remain unchanged.
 - Resume Here: runtime-check the Studio once at narrow and wide console widths. If clipping remains, inspect only the specific child that violates width tracking; do not shrink fonts again.
+## Live Model Editor Group Scale + Fit 1 Tile — 2026-09-29
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA. This is a developer-tooling side slice supporting the active Population/Processing/Logistics milestone; the Canonical Main-Goal Status table is unchanged.
+- Problem addressed: Multi scaling previously changed each selected mesh part's size in place, so a large source machine became a set of tiny parts that still occupied the original wide footprint.
+- Group Scale is now an opt-in Part/Multi transform mode. Scale changes are multiplicative across the selection, preserving relative part sizes while scaling each selected part center around the shared selection pivot. This contracts/expands geometry and spacing as one assembly.
+- Existing scale semantics remain available with Group Scale OFF. Whole-model transform ownership is unchanged.
+- Fit 1 Tile is a shrink-only authoring action for the current Part/Multi selection. It measures the current transformed X/Z footprint and uniformly contracts geometry + center offsets around the same pivot toward a 512-model-unit tile footprint. It never intentionally enlarges an already-fitting selection.
+- Both Group Scale gestures and Fit 1 Tile reuse the existing LiveModelEditorParts undo snapshots. Cache data, server world objects and Construction persistence remain untouched.
+- Verified-static implementation ownership:
+  - LiveModelEditorParts owns shared-pivot transform math, selection bounds and the one-tile transaction.
+  - LiveModelEditorPreview exposes the group-scale toggle and fit action while preserving the existing render/selection owner.
+  - LiveModelEditorWindow exposes GROUP SCALE ON/OFF + FIT 1 TILE in the Edit/Transform card.
+- Resume Here: load the saved Conveyor belt 46298 / source models 49717+49718 project, Multi-select the intended conveyor assembly, prove Group Scale contracts spacing with geometry, then use Fit 1 Tile and Ctrl+Z. If runtime accepted, continue the conveyor transport prototype using the one-tile authored belt visual.
+
