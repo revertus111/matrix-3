@@ -159,7 +159,8 @@ public final class ConveyorRunPreview {
         int failed = 0;
         for (int i = 0; i < current.length; i++) {
             Model model = i < cachedModels.length ? cachedModels[i] : null;
-            if (model != null && renderOne(current[i], model, scene, renderer, sceneBase)) {
+            if (model != null && renderOne(current[i], model, definition,
+                    scene, renderer, sceneBase)) {
                 rendered++;
             } else {
                 failed++;
@@ -197,8 +198,9 @@ public final class ConveyorRunPreview {
         cachedModels = built;
         cachedRenderer = renderer;
         cachedRevision = revision;
-        roleSummary = summary;
-        System.out.println("[ConveyorRunPreview] " + summary);
+        roleSummary = summary + " | "
+                + LiveModelEditorPreview.sourceAnimationSummary(definition);
+        System.out.println("[ConveyorRunPreview] " + roleSummary);
     }
 
     private static Generation generateRaw(ObjectDefinitions definition, ConveyorRun run) {
@@ -434,12 +436,16 @@ public final class ConveyorRunPreview {
         if (!sourceAxisX) yaw = (yaw + 4096) & 0x3fff;
         if (yaw != 0) model.method1412(yaw);
 
-        model.method1450(MODEL_FLAGS);
+        // Keep animation-capable source groups on the cached base. Each draw
+        // clones this model, applies the current source-object frame, then drops
+        // the clone back to normal render flags.
+        model.method1450(RAW_BUILD_FLAGS);
         return model;
     }
 
     private static boolean renderOne(ConveyorRun run, Model model,
-            Class523 scene, Class106 renderer, Class497 sceneBase) {
+            ObjectDefinitions definition, Class523 scene,
+            Class106 renderer, Class497 sceneBase) {
         int plane = run.plane;
         if (plane < 0 || plane >= scene.aClass174Array5838.length) return false;
         Class174 ground = scene.aClass174Array5838[plane];
@@ -489,7 +495,10 @@ public final class ConveyorRunPreview {
         }
 
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
-        model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        Model animated = LiveModelEditorPreview.sourceAnimatedCopy(
+                definition, model, MODEL_FLAGS);
+        if (animated == null) return false;
+        animated.method1375(TRANSFORM, RENDER_BOUNDS, 0);
         return true;
     }
 
