@@ -56,6 +56,23 @@ public final class ClientConsoleRotsBridge {
         }
     }
 
+    /**
+     * Small package-level reuse seam for developer/runtime previews that need
+     * the same authoritative client animation-definition loader.
+     */
+    static AnimationDefinition getAnimationDefinition(int animationId) {
+        Interface18 loader = animationDefinitions;
+        if (loader == null || animationId < 0) return null;
+        try {
+            if (animationId >= loader.method45()) return null;
+            Object value = loader.getDefinition(animationId, 0);
+            return value instanceof AnimationDefinition
+                    ? (AnimationDefinition) value : null;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
     static void registerGraphicsDefinitions(Interface18 definitions) {
         if (definitions != null) {
             graphicsDefinitions = definitions;
