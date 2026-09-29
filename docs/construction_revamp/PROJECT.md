@@ -594,14 +594,14 @@ Runtime-verified palette foundation:
 Construction Build Camera v1 state:
 
 - The legacy `InterfaceManager.gazeOrbOfOculus()` / root-component `475/57` path is permanently runtime-rejected for Construction.
-- The generic renderer-global camera implementation is also runtime-rejected; it produced invalid/empty-looking views and did not control the live detached camera.
+- The old standalone renderer-global camera-owner prototype is runtime-rejected; it produced invalid/empty-looking views. This does not reject Matrix3's own vanilla `Class246.method3359(...)` solver, which is now the RTS migration target.
 - Runtime diagnostics plus source tracing established `Class24.aClass411_Sub1_158` as the detached Class411 camera object used by the developer camera path.
 - The first Class24 reuse patch detached correctly but its W/A/S/D/Q/E changes were placed in unreached `Class24.method711()`; that patch location is runtime-rejected and `Class24.java` is restored to stock.
-- Current implementation activates/reuses the detached Class24/Class411 camera and drives Construction controls through `ConstructionBuildCamera.tick()`, called once per `client.cycles` from the live `Class343.method4302(...)` viewport seam immediately before camera submission.
+- Current camera implementation is hybrid: RTS updates pivot/yaw/pitch/zoom through `ConstructionBuildCamera.tickVanillaRtsCamera(...)` and reuses Matrix3's vanilla `Class246.method3359(...)` solver before shake/clamp/scene setup; Free Build retains the proven late `ConstructionBuildCamera.tick()` -> detached Class24/Class411 submission path.
 - Runtime VERIFIED in the user's acceptance sweep: automatic activation, W/S/A/D movement, Shift fast, Ctrl precision, Q/E vertical movement, mouse-look, normal-camera restore on close, and clean reopen.
 - Camera ownership remains client-side; confirmed object placement remains server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
 - Smooth acceleration/deceleration and click-to-stop are now implemented on the live controller: normalized input feeds time-based world-space velocity; action 23 clears velocity, latches movement off until key release, optionally confirms Paint placement and is consumed so the player remains planted. Runtime feel/integration acceptance is pending.
-- RTS camera default + pivot-orbit revision is DONE / runtime VERIFIED on the same detached Class411 owner: Construction opens in RTS, W/A/S/D + arrows pan camera and pivot together, Q/E orbits the camera around the pivot, wheel changes orbit distance, Shift fast and Ctrl precision remain.
+- RTS controls/default + pivot-orbit behavior were runtime VERIFIED on the former detached owner. The 2026-09-29 owner migration now keeps those inputs/state but feeds them into the vanilla `Class246.method3359(...)` camera path; this ownership migration is IMPLEMENTED / NEEDS RUNTIME TEST.
 - Adjustable RTS pan speed is IMPLEMENTED / NEEDS RUNTIME TEST: palette header exposes -/+ presets from 0.5x through 3.0x, default 1.0x; the selected multiplier persists for the client session and scales normal/Shift/Ctrl RTS pan without altering Free Build speed.
 - First runtime showed the detached RTS camera below the terrain looking through the underside; Matrix3's Class658_Sub2.method8927(...) negates its Y target internally, so the initial deterministic pitch sign was inverted.
 - Corrective patch now backs the camera 3600 Matrix3 units away from the real rendered look vector on RTS entry and constrains zoom to a safe backoff band; pan/zoom direction is derived from Class658_Sub2.method7736(...) instead of guessed obfuscated axis signs.
@@ -2343,3 +2343,18 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Con Revamp Development Tools adds **Create Persistent Conveyor** (5-tile test run near the player) and **Clear Persistent Conveyors**. These call the real server owner; they do not fake local persistence.
 - Runtime gate: create -> visible sync -> exit/re-entry -> relog -> delete/clear -> exit/re-entry. Existing visual demo must remain independent and no saved build-piece count/per-tile world objects may be created.
 - Next after acceptance: smooth real Log 1511 payload progress on one persistent run, then spacing/backpressure.
+
+## RTS vanilla-camera owner migration — 2026-09-29
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under AAA.
+- Verified-static root cause: `Class343.method4302(...)` calculated the normal camera through `Class246.method3359(...)`, but active RTS then selected `Class24.aClass411_Sub1_158.method5027(...)` and bypassed that normal render branch.
+- RTS now owns only its pivot/yaw/pitch/orbit-distance inputs. `ConstructionBuildCamera.tickVanillaRtsCamera(viewportHeight)` runs immediately after Matrix3's normal camera calculation and reuses `Class246.method3359(...)` before normal shake, clamp and scene setup.
+- RTS keeps the detached-camera active flag false, so `Class343` submits the ordinary Matrix3 camera globals instead of Class411.
+- Free Build remains on the accepted detached Class411 path. The detached camera is activated lazily only when Free Build is selected and is seeded from the current rendered RTS camera to reduce handoff jumps.
+- RTS movement/screen-drag basis now derives directly from the owned yaw; it no longer requires `Class423_Sub2` / `Class658_Sub2` to discover view direction.
+- Existing RTS features remain intended unchanged: W/A/S/D + arrows, Q/E orbit, corrected MMB orbit direction, bounded pitch, wheel zoom, 2.0x default pan speed, minimap focus, saved view and scene-pivot clamp.
+- The settlement visual terrain apron and stock scene-culling focus remain separate scene-data/culling support; no renderer-radius/fog override is reintroduced.
+- Runtime gate: fresh client rebuild -> enter settlement -> verify RTS view/pan/orbit/zoom/minimap -> compare terrain/object/NPC/fog behavior against vanilla -> RTS->Free Build->RTS handoff -> exit/re-enter saved-view restore.
+
+**Resume Here:** pull/rebuild/restart the Client and run the RTS vanilla-camera migration gate in `docs/construction_revamp/testlist.txt`. Do not reopen detached-camera render-parity hacks unless this vanilla-owner test produces concrete evidence that a separate scene subsystem is still wrong. Free Build is expected to stay detached.
+
