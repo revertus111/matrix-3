@@ -1464,3 +1464,10 @@ Construction Debug Framework V1 gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-
 - Exit/re-enter the settlement. Debug configuration/buffer must reset with the new runtime instance; settlement save data must be unchanged.
 - Regression: with Master Debug OFF, workers/logistics/processing must behave exactly as before and produce no debug speech/event output.
 
+Rail Studio viewport-width regression — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-29)
+- Open Test -> Rail Studio at the normal narrow dock width and then widen the Client Console substantially. In both sizes, every card must match the visible viewport width with no right-edge clipping.
+- Confirm there is no outer horizontal scrollbar and no hidden off-screen second column.
+- Candidate Preview line must stay concise (ID / READY-or-state / world tile); hovering it should expose the full preview status tooltip.
+- Long Validation text must wrap inside the card instead of stretching the Studio wider.
+- Candidate, Assembly and Saved Prefab lists must remain vertically scrollable without introducing horizontal scrollbars.
+- Regression: 2-column workspace controls, R0-R3 row, directional splitter controls, saved prefab load, movement and preview behavior remain unchanged.
