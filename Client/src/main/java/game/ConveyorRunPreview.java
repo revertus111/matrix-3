@@ -25,6 +25,8 @@ public final class ConveyorRunPreview {
 
     private static final int TILE_UNITS = 512;
     private static final double STRETCH_MIN_LONG_FRACTION = 0.60;
+    private static final double REPEAT_DETAIL_SPACING_TILES = 1.0;
+    private static final double MAX_SUPPORT_SPAN_TILES = 3.0;
 
     /*
      * Canonical authored conveyor assembly from the saved Matrix3 Live Model
@@ -59,12 +61,51 @@ public final class ConveyorRunPreview {
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String status = "HIDDEN";
     private static volatile String roleSummary = "roles not generated";
+    private static volatile LiveModelEditorParts.ConveyorRecipePart[] authoringRecipe =
+            new LiveModelEditorParts.ConveyorRecipePart[0];
 
     private static Class106 cachedRenderer;
     private static int cachedRevision = Integer.MIN_VALUE;
     private static Model[] cachedModels = new Model[0];
 
     private ConveyorRunPreview() {
+    }
+
+    public static String setAuthoringRecipe(
+            LiveModelEditorParts.ConveyorRecipePart[] recipe) {
+        if (recipe == null || recipe.length == 0) {
+            status = "CONVEYOR ROLES: tag at least one BELT_SURFACE part first";
+            return status;
+        }
+
+        int belts = 0;
+        int included = 0;
+        LinkedHashSet<Integer> sourceParts = new LinkedHashSet<Integer>();
+        for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
+            if (part == null
+                    || part.role == LiveModelEditorParts.ConveyorRole.UNASSIGNED) {
+                continue;
+            }
+            if (!sourceParts.add(Integer.valueOf(part.sourcePart))) {
+                status = "CONVEYOR ROLES: duplicate source part "
+                        + part.sourcePart + " is not supported in V1";
+                return status;
+            }
+            if (part.role != LiveModelEditorParts.ConveyorRole.IGNORE) included++;
+            if (part.role == LiveModelEditorParts.ConveyorRole.BELT_SURFACE) belts++;
+        }
+
+        if (belts == 0) {
+            status = "CONVEYOR ROLES: at least one BELT_SURFACE is required";
+            return status;
+        }
+
+        authoringRecipe = recipe.clone();
+        revision++;
+        invalidateModels();
+        status = "CONVEYOR ROLE RECIPE READY included=" + included
+                + " belt=" + belts + " tagged=" + sourceParts.size();
+        return status;
     }
 
     /**
@@ -198,12 +239,184 @@ public final class ConveyorRunPreview {
         cachedModels = built;
         cachedRenderer = renderer;
         cachedRevision = revision;
-        roleSummary = summary + " | "
-                + LiveModelEditorPreview.sourceAnimationSummary(definition);
+        roleSummary = summary + " | static-belt visual";
         System.out.println("[ConveyorRunPreview] " + roleSummary);
     }
 
     private static Generation generateRaw(ObjectDefinitions definition, ConveyorRun run) {
+        LiveModelEditorParts.ConveyorRecipePart[] recipe = authoringRecipe;
+        if (recipe != null && recipe.length > 0) {
+            return generateRoleRaw(definition, run, recipe);
+        }
+        return generateLegacyRaw(definition, run);
+    }
+
+    private static Generation generateRoleRaw(ObjectDefinitions definition,
+            ConveyorRun run, LiveModelEditorParts.ConveyorRecipePart[] recipe) {
+        Class159 authored = decodeSource(definition);
+        Class159 working = decodeSource(definition);
+        if (authored == null || working == null
+                || working.anInt1791 <= 0 || working.anInt1778 <= 0) {
+            status = "SOURCE decode failed for 49717/49718";
+            return null;
+        }
+
+        Component[] components = detectComponents(working);
+        if (components.length == 0) {
+            status = "SOURCE connected-component analysis failed";
+            return null;
+        }
+
+        for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
+            if (part == null) continue;
+            if (part.sourcePart < 0 || part.sourcePart >= components.length) {
+                status = "CONVEYOR ROLE source part " + part.sourcePart
+                        + " unavailable; detected=" + components.length;
+                return null;
+            }
+        }
+
+        ensureFaceAlpha(working);
+        ensureFaceAlpha(authored);
+        for (int i = 0; i < components.length; i++) {
+            LiveModelEditorParts.ConveyorRecipePart part = recipePart(recipe, i);
+            if (part == null
+                    || part.role == LiveModelEditorParts.ConveyorRole.UNASSIGNED
+                    || part.role == LiveModelEditorParts.ConveyorRole.IGNORE) {
+                hideFaces(working, components[i]);
+                continue;
+            }
+            applyRecipeTransform(working, components[i], part);
+            applyRecipeTransform(authored, components[i], part);
+        }
+
+        populateComponentBounds(working, components);
+        Bounds all = boundsForRecipeParts(working, components, recipe);
+        if (all == null) {
+            status = "CONVEYOR ROLE recipe has no visible authored geometry";
+            return null;
+        }
+
+        boolean axisX = all.sizeX >= all.sizeZ;
+        double sourceMin = axisX ? all.minX : all.minZ;
+        double sourceMax = axisX ? all.maxX : all.maxZ;
+        double sourceCenter = (sourceMin + sourceMax) * 0.5;
+        double sourceLength = Math.max(1.0, sourceMax - sourceMin);
+        double targetLength = Math.max(TILE_UNITS, run.lengthTiles() * TILE_UNITS);
+        double stretchFactor = targetLength / sourceLength;
+
+        ArrayList<Component> repeat = new ArrayList<Component>();
+        ArrayList<Component> supports = new ArrayList<Component>();
+        int beltCount = 0;
+        int startCount = 0;
+        int endCount = 0;
+        int fixedCount = 0;
+
+        int startShift = (int) Math.round(
+                (sourceCenter - targetLength * 0.5) - sourceMin);
+        int endShift = (int) Math.round(
+                (sourceCenter + targetLength * 0.5) - sourceMax);
+
+        for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
+            if (part == null
+                    || part.role == LiveModelEditorParts.ConveyorRole.UNASSIGNED
+                    || part.role == LiveModelEditorParts.ConveyorRole.IGNORE) {
+                continue;
+            }
+            Component component = components[part.sourcePart];
+            switch (part.role) {
+            case BELT_SURFACE:
+                scaleComponentAxis(working, component, axisX,
+                        sourceCenter, stretchFactor);
+                beltCount++;
+                break;
+            case START_CAP:
+                translateComponentAxis(working, component, axisX, startShift);
+                startCount++;
+                break;
+            case END_CAP:
+                translateComponentAxis(working, component, axisX, endShift);
+                endCount++;
+                break;
+            case REPEAT_DETAIL:
+                hideFaces(working, component);
+                repeat.add(component);
+                break;
+            case SUPPORT:
+                hideFaces(working, component);
+                supports.add(component);
+                break;
+            case FIXED_DETAIL:
+            case SCALE_POSITION:
+                remapComponentPosition(working, component, axisX,
+                        sourceMin, sourceLength, sourceCenter, targetLength);
+                fixedCount++;
+                break;
+            default:
+                break;
+            }
+        }
+
+        if (beltCount == 0) {
+            status = "CONVEYOR ROLE recipe lost BELT_SURFACE";
+            return null;
+        }
+
+        ArrayList<Class159> generated = new ArrayList<Class159>();
+        generated.add(working);
+
+        int repeatStations = 0;
+        if (!repeat.isEmpty()) {
+            repeatStations = Math.max(1, (int) Math.floor(
+                    run.lengthTiles() / REPEAT_DETAIL_SPACING_TILES));
+            double groupCenter = roleGroupCenter(repeat, axisX);
+            for (int station = 0; station < repeatStations; station++) {
+                double fraction = (station + 0.5) / repeatStations;
+                double targetCenter = sourceCenter + (fraction - 0.5) * targetLength;
+                int shift = (int) Math.round(targetCenter - groupCenter);
+                for (Component component : repeat) {
+                    Class159 copy = componentOnlyTranslatedRaw(
+                            authored, component, axisX, shift);
+                    if (copy != null) generated.add(copy);
+                }
+            }
+        }
+
+        int supportStations = 0;
+        if (!supports.isEmpty()) {
+            supportStations = Math.max(0,
+                    (int) Math.ceil(run.lengthTiles() / MAX_SUPPORT_SPAN_TILES) - 1);
+            double groupCenter = roleGroupCenter(supports, axisX);
+            for (int station = 0; station < supportStations; station++) {
+                double fraction = (station + 1.0) / (supportStations + 1.0);
+                double targetCenter = sourceCenter + (fraction - 0.5) * targetLength;
+                int shift = (int) Math.round(targetCenter - groupCenter);
+                for (Component component : supports) {
+                    Class159 copy = componentOnlyTranslatedRaw(
+                            authored, component, axisX, shift);
+                    if (copy != null) generated.add(copy);
+                }
+            }
+        }
+
+        Class159 raw = generated.size() == 1
+                ? generated.get(0)
+                : new Class159(generated.toArray(new Class159[generated.size()]),
+                        generated.size());
+
+        String summary = "ROLES axis=" + (axisX ? "X" : "Z")
+                + " belt=" + beltCount
+                + " startCap=" + startCount
+                + " endCap=" + endCount
+                + " fixed=" + fixedCount
+                + " repeatParts=" + repeat.size()
+                + " repeatStations=" + repeatStations
+                + " supportParts=" + supports.size()
+                + " supportStations=" + supportStations;
+        return new Generation(raw, axisX, summary);
+    }
+
+    private static Generation generateLegacyRaw(ObjectDefinitions definition, ConveyorRun run) {
         Class159 working = decodeSource(definition);
         if (working == null || working.anInt1791 <= 0 || working.anInt1778 <= 0) {
             status = "SOURCE decode failed for 49717/49718";
@@ -293,6 +506,81 @@ public final class ConveyorRunPreview {
                 + " support=DEFERRED"
                 + " sourceSpan=" + Math.round(sourceLength);
         return new Generation(working, axisX, summary);
+    }
+
+    private static LiveModelEditorParts.ConveyorRecipePart recipePart(
+            LiveModelEditorParts.ConveyorRecipePart[] recipe, int sourcePart) {
+        for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
+            if (part != null && part.sourcePart == sourcePart) return part;
+        }
+        return null;
+    }
+
+    private static void applyRecipeTransform(Class159 raw, Component component,
+            LiveModelEditorParts.ConveyorRecipePart state) {
+        if (raw == null || component == null || component.vertices.length == 0) return;
+
+        long cx = 0L, cy = 0L, cz = 0L;
+        for (int vertex : component.vertices) {
+            cx += raw.anIntArray1782[vertex];
+            cy += raw.anIntArray1777[vertex];
+            cz += raw.anIntArray1797[vertex];
+        }
+        cx /= component.vertices.length;
+        cy /= component.vertices.length;
+        cz /= component.vertices.length;
+
+        double radians = Math.toRadians(state.yaw);
+        double sin = Math.sin(radians);
+        double cos = Math.cos(radians);
+        for (int vertex : component.vertices) {
+            double x = (raw.anIntArray1782[vertex] - cx) * state.scaleX / 100.0;
+            double y = (raw.anIntArray1777[vertex] - cy) * state.scaleY / 100.0;
+            double z = (raw.anIntArray1797[vertex] - cz) * state.scaleZ / 100.0;
+            double rx = x * cos + z * sin;
+            double rz = z * cos - x * sin;
+            raw.anIntArray1782[vertex] = (int) Math.round(cx + rx + state.moveX);
+            raw.anIntArray1777[vertex] = (int) Math.round(cy + y + state.moveY);
+            raw.anIntArray1797[vertex] = (int) Math.round(cz + rz + state.moveZ);
+        }
+    }
+
+    private static Bounds boundsForRecipeParts(Class159 raw, Component[] components,
+            LiveModelEditorParts.ConveyorRecipePart[] recipe) {
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        boolean found = false;
+
+        for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
+            if (part == null
+                    || part.role == LiveModelEditorParts.ConveyorRole.UNASSIGNED
+                    || part.role == LiveModelEditorParts.ConveyorRole.IGNORE) {
+                continue;
+            }
+            Component component = components[part.sourcePart];
+            for (int vertex : component.vertices) {
+                int x = raw.anIntArray1782[vertex];
+                int y = raw.anIntArray1777[vertex];
+                int z = raw.anIntArray1797[vertex];
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+                if (z < minZ) minZ = z;
+                if (z > maxZ) maxZ = z;
+                found = true;
+            }
+        }
+        return found ? new Bounds(minX, minY, minZ, maxX, maxY, maxZ) : null;
+    }
+
+    private static double roleGroupCenter(List<Component> components, boolean axisX) {
+        if (components == null || components.isEmpty()) return 0.0;
+        double total = 0.0;
+        for (Component component : components) {
+            total += axisX ? component.centerX : component.centerZ;
+        }
+        return total / components.size();
     }
 
     private static AuthoredPart authoredPart(int componentIndex) {
@@ -436,10 +724,10 @@ public final class ConveyorRunPreview {
         if (!sourceAxisX) yaw = (yaw + 4096) & 0x3fff;
         if (yaw != 0) model.method1412(yaw);
 
-        // Keep animation-capable source groups on the cached base. Each draw
-        // clones this model, applies the current source-object frame, then drops
-        // the clone back to normal render flags.
-        model.method1450(RAW_BUILD_FLAGS);
+        // Native source animation is intentionally non-blocking/carryover.
+        // Runtime conveyor proof stays static while payload motion becomes the
+        // gameplay movement layer.
+        model.method1450(MODEL_FLAGS);
         return model;
     }
 
@@ -495,10 +783,7 @@ public final class ConveyorRunPreview {
         }
 
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
-        Model animated = LiveModelEditorPreview.sourceAnimatedCopy(
-                definition, model, MODEL_FLAGS);
-        if (animated == null) return false;
-        animated.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
         return true;
     }
 
@@ -573,10 +858,11 @@ public final class ConveyorRunPreview {
             raw.faceAlpha[i] = sourceRaw.faceAlpha == null
                     ? 0 : sourceRaw.faceAlpha[face];
 
-            // V0 intentionally strips support-copy texture mappings. The primary
-            // stretched source keeps its original texture data; UV-repeat work is
-            // a later, separately verified renderer slice.
-            raw.faceTextures[i] = -1;
+            // Compact role copies keep the face texture id but drop explicit
+            // texture-triangle mapping because that mapping references source
+            // model texture triangles not copied into this compact raw.
+            raw.faceTextures[i] = sourceRaw.faceTextures == null
+                    ? (short) -1 : sourceRaw.faceTextures[face];
             raw.faceTextureIndexes[i] = -1;
             raw.aByteArray1792[i] = sourceRaw.aByteArray1792 == null
                     ? 0 : sourceRaw.aByteArray1792[face];
