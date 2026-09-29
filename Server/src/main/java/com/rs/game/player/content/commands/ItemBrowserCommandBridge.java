@@ -303,7 +303,7 @@ public final class ItemBrowserCommandBridge {
     private static boolean processSettlement(Player player, String[] cmd) {
         if (cmd == null || cmd.length < 3) {
             player.getPackets().sendGameMessage(
-                    "Use: ::itembrowser settlement <enter|exit|status|debug|list|buildtilesave|storageconfig|resources|storageoverview|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
+                    "Use: ::itembrowser settlement <enter|exit|status|debug|list|buildtilesave|storageconfig|resources|storageoverview|storageclearone|storageclearallphysical|storagereset|storageset|resourceselftest|processing|process|processingselftest|shelter|shelterselftest|bundle13check|workers|workerselftest|workercheck|workerjobs|workerjob|workerjobsall|workerjobselftest|workerai|workerneeds|workerneed|workerneedsreset|workerneedselftest|workerprogress|workerprogressselftest|bundle14gatebaseline|bundle14gatecheck|bundle15selftest|bundle15baseline|bundle15check|bundle22selftest|bundle22baseline|bundle22check|workerallstatus|population|populationrecruit|populationselftest|populationcheck|audit|selftest|finalcheck>");
             return true;
         }
 
@@ -519,6 +519,46 @@ public final class ItemBrowserCommandBridge {
 
         if ("storageoverview".equals(operation)) {
             SettlementStorageInterface.openOverview(player);
+            return true;
+        }
+
+        if ("storageclearone".equals(operation)) {
+            if (cmd.length < 8 || !"confirm".equalsIgnoreCase(cmd[7])) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement storageclearone <objectId> <worldX> <worldY> <plane> confirm");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before clearing physical storage.");
+                return true;
+            }
+            try {
+                int objectId = Integer.parseInt(cmd[3]);
+                int worldX = Integer.parseInt(cmd[4]);
+                int worldY = Integer.parseInt(cmd[5]);
+                int plane = Integer.parseInt(cmd[6]);
+                player.getPackets().sendGameMessage(
+                        active.clearPhysicalStorage(
+                                objectId, new WorldTile(worldX, worldY, plane)));
+            } catch (NumberFormatException ex) {
+                player.getPackets().sendGameMessage("Physical chest clear target is invalid.");
+            }
+            return true;
+        }
+
+        if ("storageclearallphysical".equals(operation)) {
+            if (cmd.length < 4 || !"confirm".equalsIgnoreCase(cmd[3])) {
+                player.getPackets().sendGameMessage(
+                        "Use: ::itembrowser settlement storageclearallphysical confirm");
+                return true;
+            }
+            if (active == null || !active.isLoaded()) {
+                player.getPackets().sendGameMessage(
+                        "Enter the loaded settlement before clearing physical storage.");
+                return true;
+            }
+            player.getPackets().sendGameMessage(active.clearAllPhysicalStorage());
             return true;
         }
 
