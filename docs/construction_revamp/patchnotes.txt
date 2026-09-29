@@ -1838,3 +1838,11 @@
 - Simplified single-chest Clear Chest to a direct developer/test reset. Clear All Physical Storage keeps the stronger second-click confirmation. Server scope/policy/reservation/live-refresh safety is unchanged.
 - Worker Debug overhead ForceTalk is now throttled per worker to one line every 2000 ms so readable speech is not overwritten by rapid state transitions. Console event recording, in-memory buffering and export remain full-fidelity and unthrottled.
 - Status remains IMPLEMENTED / NEEDS RUNTIME TEST.
+2026-09-29 - Live Model Editor Group Scale + Fit 1 Tile
+- Added pivot-aware Group Scale for Part/Multi selections: selected mesh geometry and inter-part spacing scale together instead of shrinking in place.
+- Group scaling is multiplicative, preserving relative part sizes while moving each selected part center toward/away from the shared selection pivot.
+- Added Fit 1 Tile, a shrink-only one-click operation targeting a 512-unit X/Z footprint for the current Part/Multi selection.
+- Group Scale gizmo, inspector exact values, inspector scrub and keyboard/nudge scale paths reuse the same transform owner; normal scale behavior remains available with Group Scale OFF.
+- Group Scale and Fit 1 Tile each preserve the existing part undo transaction model; no cache/server-world writes or object persistence ownership changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
