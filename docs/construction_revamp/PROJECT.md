@@ -2355,3 +2355,6 @@ Build three straight test runs from the same authored conveyor source (short, me
 **Resume Here:** the detached RTS camera is the protected working baseline again. Next camera investigation, if pursued, must first add/read a bounded runtime diagnostic for `Class18.anInt143` and the actual `Class343` render branch during ordinary gameplay, then compare that owner with settlement RTS. Do not modify the working RTS camera until that owner is verified.
 
 
+
+- Runtime regression found immediately after V1: **Clear Persistent Conveyors did not visually clear the active run.** verified-static root cause: server saved state was cleared correctly, but the clear path reused an empty `BEGIN -> END` snapshot instead of the already-defined explicit `CLEAR` client signal.
+- Fix implemented: `SettlementInstance.clearConveyorRuns()` now clears server state then sends `CLEAR`; create/normal restore still use staged snapshots. Status remains **NEEDS RUNTIME TEST** until immediate disappearance + exit/re-entry persistence are confirmed.
