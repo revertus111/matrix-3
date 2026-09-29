@@ -34,7 +34,8 @@ public final class ConstructionBuildCamera {
     private static final float[] RTS_MOVE_SPEED_MULTIPLIERS = {
             0.50F, 0.75F, 1.00F, 1.25F, 1.50F, 2.00F, 2.50F, 3.00F
     };
-    private static int rtsMoveSpeedIndex = 2;
+    // Default to 2.0x; 1.0x proved too slow for normal settlement navigation.
+    private static int rtsMoveSpeedIndex = 5;
 
     // Exponential response rates: higher = more immediate.
     private static final float ACCEL_RESPONSE = 10.0F;
@@ -152,6 +153,42 @@ public final class ConstructionBuildCamera {
         return multiplier == (int) multiplier
                 ? Integer.toString((int) multiplier) + ".0x"
                 : Float.toString(multiplier) + "x";
+    }
+
+
+    /**
+     * Vanilla scene visibility is normally centered around the player's local
+     * scene tile. Settlement RTS keeps the player planted, so expose the
+     * detached camera's managed look pivot as the equivalent render-focus tile.
+     *
+     * This changes only the focus passed into Matrix3's stock scene culling.
+     * It does not alter the renderer radius, fog or visibility arrays.
+     */
+    public static int[] getRtsRenderFocusLocalTile() {
+        if (!active || cameraMode != CameraMode.RTS || !rtsOrientationInitialized
+                || client.aClass613_8605 == null) {
+            return null;
+        }
+        try {
+            Class497 sceneBase =
+                    client.aClass613_8605.method7280((byte) -115);
+            if (sceneBase == null) {
+                return null;
+            }
+            int baseTileX = sceneBase.localX * -2109597897;
+            int baseTileY = sceneBase.localY * 417324155;
+            int localX = (int) Math.floor(rtsPivotX / 512.0F) - baseTileX;
+            int localY = (int) Math.floor(rtsPivotZ / 512.0F) - baseTileY;
+            int sceneWidth = client.aClass613_8605.method7347(-740581830);
+            int sceneHeight = client.aClass613_8605.method7278(277214477);
+            if (localX < 0 || localY < 0
+                    || localX >= sceneWidth || localY >= sceneHeight) {
+                return null;
+            }
+            return new int[] { localX, localY };
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 
     public static void adjustRtsMoveSpeed(int delta) {
