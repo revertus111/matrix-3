@@ -1855,3 +1855,12 @@
 - Connected-component STRETCH/SUPPORT/fixed classification remains HYPOTHESIS pending runtime visual confirmation; wrong classifications should be replaced with explicit authored roles.
 - Primary source texture data is preserved; generated support-copy UV mappings are intentionally stripped in V0. Texture-repeat/UV work remains deferred.
 - Added the preview to the existing post-scene Construction render seam; normal Construction/server ownership is unchanged.
+
+2026-09-29 - ConveyorRun V0.1 authored-source correction
+- Runtime screenshot proved V0 was procedurally operating on the entire 46298 sawmill source, allowing unrelated crates/blades/parts into generated runs.
+- Replaced the whole-object source assumption with the user's saved Live Model Editor conveyor recipe only: connected components 4,5,8,16,17,18,19,21.
+- Applied the saved editor transforms before run generation: components 4/5 scale X=45 and move -744/0/-1140; components 8/16/17/18/19/21 move -36/0/-1140 at 100% scale.
+- Every untouched connected component from the original sawmill is hidden before procedural length generation, so it cannot appear in the ConveyorRun visual.
+- Removed active automatic support guessing. The support-spacing design remains locked, but runtime support generation is deferred until an explicit support component is authored/identified from the corrected conveyor source.
+- Procedural STRETCH versus fixed-position classification now operates only inside the eight-part authored conveyor assembly.
+- No server, SettlementState, physical-storage, item-transport, collision, or per-tile conveyor ownership changed.
