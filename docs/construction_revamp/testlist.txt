@@ -1545,3 +1545,13 @@ Live Model Editor / ConveyorRun — Group-Aware Source Animation V1.2 (2026-09-2
 [ ] Show Conveyor A->B Demo. SHORT/MEDIUM/LONG preserve their generated lengths while inheriting the same visible source animation.
 [ ] Watch multiple loops for cumulative drift, progressive scale/offset changes, exploding geometry or stale alpha state.
 [ ] If still visually static, do not test random animation ids; compare the trace's animated source parts against the current authored parts 4,5,8,16,17,18,19,21.
+
+
+RTS camera continuity/speed/render-parity regression — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-29)
+- Continuous input: hold W/A/S/D or an arrow key in RTS mode and click normal world tiles, workers, chests and workstation actions while still holding the key. Camera pan must continue without stopping or requiring key release/repress.
+- Free Build regression: switch to Free Build/placement and confirm its intentional click-stop placement behavior still works.
+- Default speed: fresh client/session RTS pan starts at 2.0x. Movement must feel materially faster than the previous 1.0x default; speed presets still step from 0.50x through 3.00x.
+- Render focus: leave the player stationary and pan the RTS pivot several tiles away. Terrain, objects and NPC visibility/culling must follow the RTS view instead of disappearing based on distance from the player's tile.
+- Vanilla parity: fog and effective scene radius must remain Matrix3 stock behavior around the RTS focus. Do not render the entire loaded scene and do not disable fog.
+- Orbit regression: MMB left/right follows drag direction; vertical MMB pitch, wheel zoom and Q/E orbit remain unchanged.
+- Minimap regression: click-to-focus/RTS minimap marker and loaded-scene boundary clamp continue to work.
