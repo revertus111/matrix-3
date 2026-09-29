@@ -514,9 +514,9 @@ public final class ConveyorRunPreview {
             }
         }
 
-        status = "DRAW ConveyorRun V1 " + rendered + "/" + current.length
-                + " payloadItem=" + payloadItemId
+        status = "DRAW ConveyorRun Transport " + rendered + "/" + current.length
                 + " payloads=" + payloads
+                + " testItem=" + payloadItemId
                 + (failed == 0 ? "" : " failed=" + failed);
     }
 
