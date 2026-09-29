@@ -90,6 +90,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createConveyorPayloadTunerCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createConveyorTransportCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createStatusCard());
         content.add(Box.createVerticalGlue());
 
@@ -911,6 +913,80 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(reload);
         buttons.add(resetPreview);
         buttons.add(profileStatus);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createConveyorTransportCard() {
+        JPanel card = ConsoleTheme.createCard("Conveyor Transport Core");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Server-owned payload test harness for the first persistent conveyor (runId 0 resolves to the first run). "
+                + "Point B is blocked by default. Open Output enables a development sink so accepted payloads leave the belt. "
+                + "These controls exercise the real persistent payload/spacing/backpressure owner; they do not create client-only fake items.",
+                6));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton addCurrent = new JButton("Add Current Test Item");
+        JButton addLog = new JButton("Add Log 1511");
+        JButton addOak = new JButton("Add Oak Log 1521");
+        JButton addOre = new JButton("Add Iron Ore 440");
+        JButton addPlank = new JButton("Add Plank 960");
+        JButton fillMixed = new JButton("Fill Mixed Belt");
+        JButton blockOutput = new JButton("Block Output");
+        JButton openOutput = new JButton("Open Output (Debug Sink)");
+        JButton clearPayloads = new JButton("Clear Payloads");
+        JButton transportStatus = new JButton("Transport Status");
+
+        JButton[] controls = {
+                addCurrent, addLog, addOak, addOre, addPlank,
+                fillMixed, blockOutput, openOutput,
+                clearPayloads, transportStatus
+        };
+        for (JButton button : controls) {
+            styleButton(button);
+        }
+
+        addCurrent.addActionListener(e -> {
+            int itemId = ConveyorRunPreview.getPayloadTestItemId();
+            queue("settlementconveyorpayloadadd 0 " + itemId + " 1",
+                    "Payload add queued for current Test Item ID " + itemId + ".");
+        });
+        addLog.addActionListener(e -> queue(
+                "settlementconveyorpayloadadd 0 1511 1",
+                "Log 1511 payload add queued."));
+        addOak.addActionListener(e -> queue(
+                "settlementconveyorpayloadadd 0 1521 1",
+                "Oak log 1521 payload add queued."));
+        addOre.addActionListener(e -> queue(
+                "settlementconveyorpayloadadd 0 440 1",
+                "Iron ore 440 payload add queued."));
+        addPlank.addActionListener(e -> queue(
+                "settlementconveyorpayloadadd 0 960 1",
+                "Plank 960 payload add queued."));
+        fillMixed.addActionListener(e -> queue(
+                "settlementconveyorpayloadfill 0",
+                "Mixed payload fill queued."));
+        blockOutput.addActionListener(e -> queue(
+                "settlementconveyoroutput 0 block",
+                "Conveyor output BLOCK queued."));
+        openOutput.addActionListener(e -> queue(
+                "settlementconveyoroutput 0 open",
+                "Conveyor debug sink OPEN queued."));
+        clearPayloads.addActionListener(e -> queue(
+                "settlementconveyorpayloadclear 0",
+                "Conveyor payload clear queued."));
+        transportStatus.addActionListener(e -> queue(
+                "settlementconveyortransportstatus 0",
+                "Transport status queued. Check game chat."));
+
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+        for (JButton button : controls) {
+            buttons.add(button);
+        }
         card.add(buttons);
         return card;
     }
