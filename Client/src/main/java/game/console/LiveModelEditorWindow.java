@@ -138,6 +138,8 @@ public final class LiveModelEditorWindow {
     private final JButton rtsCameraButton = rsButton("RTS");
     private final JButton freeCameraButton = rsButton("FREE");
     private final JButton snapButton = rsButton("SNAP OFF");
+    private final JButton groupScaleButton = rsButton("GROUP SCALE OFF");
+    private final JButton fitOneTileButton = rsButton("FIT 1 TILE");
     private final JSpinner moveSnapSpinner = spinner(16, 1, 512, 1);
     private final JSpinner angleSnapSpinner = spinner(15, 1, 90, 1);
 
@@ -593,6 +595,16 @@ public final class LiveModelEditorWindow {
         panel.add(transformReadoutLabel);
         panel.add(Box.createVerticalStrut(4));
 
+        groupScaleButton.setToolTipText(
+                "Scale selected geometry and its spacing together around the shared pivot.");
+        fitOneTileButton.setToolTipText(
+                "Shrink the current Part/Multi selection to a maximum 1-tile X/Z footprint.");
+        JPanel groupScaleRow = actionRow(2);
+        groupScaleRow.add(groupScaleButton);
+        groupScaleRow.add(fitOneTileButton);
+        panel.add(groupScaleRow);
+        panel.add(Box.createVerticalStrut(3));
+
         snapButton.setToolTipText("Normal drag is free. Ctrl temporarily snaps; when SNAP is ON, Ctrl temporarily bypasses snap.");
         JPanel snapMode = actionRow(1);
         snapMode.add(snapButton);
@@ -685,6 +697,32 @@ public final class LiveModelEditorWindow {
         xAxisButton.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.X));
         yAxisButton.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Y));
         zAxisButton.addActionListener(e -> setEditAxis(LiveModelEditorPreview.AxisConstraint.Z));
+        groupScaleButton.addActionListener(e -> {
+            LiveModelEditorPreview.setGroupScaleEnabled(
+                    !LiveModelEditorPreview.isGroupScaleEnabled());
+            syncControlState();
+            statusLabel.setText(LiveModelEditorPreview.isGroupScaleEnabled()
+                    ? "Group Scale ON: selected parts shrink/grow toward the shared pivot."
+                    : "Group Scale OFF: selected parts scale in place.");
+        });
+        fitOneTileButton.addActionListener(e -> {
+            if (LiveModelEditorPreview.getSelectionMode()
+                    == LiveModelEditorPreview.SelectionMode.WHOLE) {
+                statusLabel.setText("Fit 1 Tile: use Part/Multi selection (All is fine) so the edit is undoable.");
+                return;
+            }
+            LiveModelEditorPreview.fitSelectedToOneTile();
+            loadSelectedPartEditors();
+            refreshPartList();
+            syncTransformInspector();
+            syncControlState();
+            int[] bounds = LiveModelEditorPreview.getSelectedBounds();
+            statusLabel.setText(bounds == null
+                    ? "Fit 1 Tile: select one or more parts first."
+                    : "Fit 1 Tile: selection footprint is now "
+                            + bounds[0] + " x " + bounds[2] + " model units.");
+        });
+
         snapButton.addActionListener(e -> {
             LiveModelEditorPreview.setTransformSnapEnabled(
                     !LiveModelEditorPreview.isTransformSnapEnabled());
@@ -1045,6 +1083,14 @@ public final class LiveModelEditorWindow {
         setActiveButton(zAxisButton, axis == LiveModelEditorPreview.AxisConstraint.Z);
         setActiveButton(isolateButton, LiveModelEditorPreview.isPartIsolated());
 
+        boolean groupScale = LiveModelEditorPreview.isGroupScaleEnabled();
+        groupScaleButton.setText(groupScale ? "GROUP SCALE ON" : "GROUP SCALE OFF");
+        setActiveButton(groupScaleButton, groupScale);
+        boolean partSelection = selection != LiveModelEditorPreview.SelectionMode.WHOLE;
+        groupScaleButton.setEnabled(partSelection);
+        fitOneTileButton.setEnabled(partSelection
+                && LiveModelEditorPreview.getSelectedPartCount() > 0);
+
         for (JButton button : railButtons) {
             Object tool = button.getClientProperty("toolName");
             setActiveButton(button, drawerExpanded && activeTool.equals(tool));
@@ -1098,7 +1144,10 @@ public final class LiveModelEditorWindow {
         return context + "  |  SCALE FREE  |  "
                 + formatScaleRatio(transform[0]) + "/"
                 + formatScaleRatio(transform[1]) + "/"
-                + formatScaleRatio(transform[2]);
+                + formatScaleRatio(transform[2])
+                + (LiveModelEditorPreview.isGroupScaleEnabled()
+                        && selection != LiveModelEditorPreview.SelectionMode.WHOLE
+                        ? "  |  GROUP" : "");
     }
 
     private JPanel createTransformInspector() {
