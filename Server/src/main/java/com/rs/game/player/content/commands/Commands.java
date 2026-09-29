@@ -2947,6 +2947,50 @@ public final class Commands {
 	    case "settlementbuildbarclose":
 		player.getActionbar().endConstructionMode();
 		return true;
+	    case "settlementconveyorcreate":
+		SettlementInstance conveyorCreate = SettlementInstance.getActive(player);
+		if (conveyorCreate == null) {
+		    player.getPackets().sendGameMessage("Enter your settlement before creating a ConveyorRun.");
+		    return true;
+		}
+		if (cmd.length != 6) {
+		    player.getPackets().sendGameMessage(
+			    "Conveyor create requires: startX startY endX endY plane.");
+		    return true;
+		}
+		try {
+		    int startX = Integer.parseInt(cmd[1]);
+		    int startY = Integer.parseInt(cmd[2]);
+		    int endX = Integer.parseInt(cmd[3]);
+		    int endY = Integer.parseInt(cmd[4]);
+		    int plane = Integer.parseInt(cmd[5]);
+		    player.getPackets().sendGameMessage(conveyorCreate.createConveyorRun(
+			    new WorldTile(startX, startY, plane),
+			    new WorldTile(endX, endY, plane)));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid ConveyorRun endpoint number.");
+		}
+		return true;
+	    case "settlementconveyorremove":
+		SettlementInstance conveyorRemove = SettlementInstance.getActive(player);
+		if (conveyorRemove == null) return true;
+		if (cmd.length != 2) {
+		    player.getPackets().sendGameMessage("Conveyor remove requires a run id.");
+		    return true;
+		}
+		try {
+		    player.getPackets().sendGameMessage(
+			    conveyorRemove.removeConveyorRun(Long.parseLong(cmd[1])));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid ConveyorRun id.");
+		}
+		return true;
+	    case "settlementconveyorclear":
+		SettlementInstance conveyorClear = SettlementInstance.getActive(player);
+		if (conveyorClear != null) {
+		    player.getPackets().sendGameMessage(conveyorClear.clearConveyorRuns());
+		}
+		return true;
 	    case "settlementrailreplacebegin":
 		SettlementInstance railStageBegin = SettlementInstance.getActive(player);
 		if (railStageBegin != null) {
