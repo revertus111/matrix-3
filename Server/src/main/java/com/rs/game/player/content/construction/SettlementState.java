@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 14;
+    private static final int CURRENT_SCHEMA_VERSION = 15;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -229,7 +229,7 @@ public final class SettlementState implements Serializable {
         Iterator<SettlementConveyorRun> conveyorIterator = conveyorRuns.iterator();
         while (conveyorIterator.hasNext()) {
             SettlementConveyorRun run = conveyorIterator.next();
-            if (run == null || !run.isValid()
+            if (run == null || !run.normalize()
                     || !liveConveyorRunIds.add(Long.valueOf(run.getRunId()))) {
                 conveyorIterator.remove();
                 continue;
@@ -279,6 +279,24 @@ public final class SettlementState implements Serializable {
     public synchronized List<SettlementConveyorRun> snapshotConveyorRuns() {
         normalize();
         return new ArrayList<SettlementConveyorRun>(conveyorRuns);
+    }
+
+    public synchronized SettlementConveyorRun findConveyorRun(long runId) {
+        normalize();
+        if (runId <= 0L) {
+            for (SettlementConveyorRun run : conveyorRuns) {
+                if (run != null && run.isValid()) {
+                    return run;
+                }
+            }
+            return null;
+        }
+        for (SettlementConveyorRun run : conveyorRuns) {
+            if (run != null && run.getRunId() == runId) {
+                return run;
+            }
+        }
+        return null;
     }
 
     public synchronized SettlementConveyorRun addConveyorRun(
