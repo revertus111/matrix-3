@@ -2206,7 +2206,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 ### Implementation checkpoint — Group-Aware Source Animation V1.2 — 2026-09-29
 
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- Status: CARRYOVER / NON-BLOCKING. Runtime confirmed neither editor SOURCE ANIM nor procedural ConveyorRun produced useful visible belt motion. Native belt-surface animation is deferred as polish; static conveyor geometry plus smooth moving payloads remains the accepted first gameplay target.
 - Runtime trace identified source animation **12394**, 19 loaded frames, and real transform-group overlap in object 46298. The prior SOURCE ANIM path used `Model.method1367(...)`, which applies frame values without the skeleton's per-slot target-group arrays and therefore was the wrong application seam for this object.
 - **verified-static:** Matrix3's group-aware path is `Model.method1364(...)` -> `method1422(...)` -> `method1499(...)`, passing each skeleton slot's `anIntArrayArray9197` target groups into the renderer model.
 - **verified-static:** OpenGL transform type 5 changes per-face alpha. The 46298 trace showed authored conveyor part 8 intersects non-spatial type-5 face groups, while other source parts also carry spatial sequence overlap.
@@ -2214,6 +2214,25 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - The cached authored/procedural base Model is still cloned before animation, so group-aware transforms remain transient and cannot accumulate into saved editor geometry or ConveyorRun length state.
 - ConveyorRun inherits this fix automatically because SHORT/MEDIUM/LONG renders reuse the same `sourceAnimatedCopy(...)` helper; no separate conveyor animation owner was introduced.
 - Runtime gate: load the saved 46298 conveyor project, toggle SOURCE ANIM ON, and verify visible source animation now occurs without geometry drift. Then show the A->B conveyor demo and verify the same source animation appears on all three generated run lengths. If motion is still absent, use the existing ANIM TRACE output to identify whether the visible belt effect depends on source parts outside the current authored eight-part assembly rather than guessing another sequence id.
+
+### Implementation checkpoint — Conveyor Visual Role Cleanup V1 — 2026-09-29
+
+- Status: IMPLEMENTED / NEEDS RUNTIME AUTHORING TEST under explicit AAA.
+- Live Model Editor project format advances to **v5** and persists one optional procedural conveyor role per source part.
+- Authoring roles are: `UNASSIGNED`, `BELT_SURFACE`, `START_CAP`, `END_CAP`, `FIXED_DETAIL`, `REPEAT_DETAIL`, `SUPPORT`, `SCALE_POSITION`, and `IGNORE`.
+- Part/Multi selection can assign one role to every selected component. Part-list labels show explicit role tags so the recipe is readable without a separate window.
+- Existing v4 conveyor projects remain backward compatible. Non-default edited source components with no explicit role enter the live recipe as `FIXED_DETAIL`; untouched sawmill components remain excluded. This preserves the current eight-part authored assembly while requiring the author to identify only the procedural behavior that differs from fixed detail.
+- **Apply To Demo** snapshots the current role/transforms into `ConveyorRunPreview`. At least one `BELT_SURFACE` is required. Duplicate source-component recipes are rejected in V1 rather than silently producing ambiguous ownership.
+- Once a role recipe is active, the procedural generator no longer uses size heuristics:
+  - `BELT_SURFACE` stretches only along the run axis.
+  - `START_CAP` / `END_CAP` keep authored size and anchor to A/B.
+  - `FIXED_DETAIL` / `SCALE_POSITION` keep authored size and remap longitudinal position.
+  - `REPEAT_DETAIL` is regenerated at approximately one-tile spacing.
+  - `SUPPORT` is regenerated as fixed-size interior support stations using the locked `max(0, ceil(runLength / 3 tiles) - 1)` rule.
+  - `IGNORE` is omitted.
+- Role-generated repeat/support copies retain their face texture id while dropping explicit source texture-triangle mapping; UV/material fidelity for copied details remains a later renderer-polish gate.
+- Native source animation is disabled in the procedural ConveyorRun render path for now. This removes per-frame Model cloning that produced no visible benefit and keeps the belt static while visual-role cleanup and later payload motion are validated.
+- Runtime gate: load the saved 46298 project, use Solo/Isolate to identify the true belt component(s), tag at least one `BELT_SURFACE`, then classify obvious caps/repeating details/supports as they are identified. Click **Apply To Demo**, then show SHORT/MEDIUM/LONG and verify only the tagged/legacy-authored assembly appears, caps stay at endpoints, repeats/supports keep fixed size, and belt length changes without whole-assembly deformation.
 
 ### Canonical conveyor visual source
 
@@ -2283,7 +2302,7 @@ Build three straight test runs from the same authored conveyor source (short, me
 - deleting the run removes the whole generated conveyor;
 - once visual generation is accepted, a real Log (1511) can be rendered moving continuously from A toward B.
 
-**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. The ANIM TRACE is now classified: object 46298 uses animation 12394 with 19 loaded frames; the old preview used the wrong non-grouped `Model.method1367(...)` path. V1.2 now uses Matrix3's group-aware `method1364(...)` path. Pull/rebuild/restart Client, load the saved conveyor project, toggle SOURCE ANIM ON, and observe whether the authored conveyor now visibly animates. Then show SHORT/MEDIUM/LONG ConveyorRun demo and verify the same motion on all three with no cumulative drift. If still static, inspect which animated source components from the trace are missing from the authored eight-part assembly; do not guess another animation id or add fake belt motion.
+**Resume Here:** native conveyor animation is CARRYOVER / NON-BLOCKING after runtime rejection. Continue the conveyor visual-role gate instead. Pull/rebuild/restart Client, load the saved 46298 project, identify the belt mesh with Solo/Isolate, assign `BELT_SURFACE`, then tag any obvious `START_CAP`, `END_CAP`, `REPEAT_DETAIL`, `SUPPORT`, `SCALE_POSITION`, or `IGNORE` parts as appropriate. Untagged but already-edited v4 assembly parts automatically remain `FIXED_DETAIL`. Save the project (v5), click **Apply To Demo**, then show SHORT/MEDIUM/LONG and accept/reject endpoint anchoring, fixed detail size, repeat spacing and support spacing. Do not start persistence, chest automation or payload transport until this role-driven visual source is accepted.
 
 
 
