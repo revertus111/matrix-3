@@ -2369,3 +2369,16 @@ Build three straight test runs from the same authored conveyor source (short, me
 - V1.1 intentionally loops one payload per run. It is a visual/motion proof only: no inventory is consumed, no item ownership transfers, and payload progress is not persisted yet.
 - Payload renders only for persistent runs (`runId > 0`), keeping the old SHORT/MEDIUM/LONG demo independent.
 - **Resume Here (conveyor):** pull/build Client, enter settlement, create or restore one persistent conveyor and verify the real Log 1511 moves smoothly A -> B at the correct vertical deck height. If accepted, implement payload spacing + end-of-line stopped/backpressure behavior next. Do not wire chest -> conveyor -> chest until spacing/backpressure is accepted.
+
+
+### Conveyor Gameplay V1.2 — Live Payload Tuner — 2026-09-29
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TUNING** under SAP AAA.
+- Runtime evidence: the real Log 1511 model is visible and moving, but the initial hardcoded transform is significantly offset from the accepted conveyor visual. The user explicitly chose a self-service tuning workflow rather than repeated code patches for visual alignment.
+- Con Revamp now exposes a live **Conveyor Payload Tuner** with Item ID, Forward, Side, Height, Scale, Pitch, Yaw, Roll and Speed.
+- Forward/Side use model units where 512 = one tile and are relative to the run direction. Yaw is applied relative to the run heading, so a saved visual preset is reusable across differently oriented straight conveyors.
+- Tuning is client-side presentation only. Changing Item ID or Scale invalidates/rebuilds the payload model cache; offsets/rotation/speed update live without rebuilding ConveyorRun geometry.
+- **Save Payload Preset** writes `data/construction/conveyor_payload_tuning.properties`; ConveyorRunPreview auto-loads the file on client startup. Reload and unsaved Reset Defaults are available from the same card.
+- This saved file becomes the accepted payload visual baseline once the user tunes Log 1511 and confirms it survives a client restart. Do not replace it with new hardcoded alignment guesses after acceptance.
+- No chest/machine transfer, item consumption, spacing/backpressure or persistent payload progress is added by this tool.
+- **Resume Here (conveyor):** pull/build/restart Client, use the live Payload Tuner until Log 1511 is centered and correctly oriented/raised on the belt, click Save Payload Preset, then restart once to verify auto-load. After that acceptance, proceed directly to multi-payload spacing + stopped-end/backpressure.
