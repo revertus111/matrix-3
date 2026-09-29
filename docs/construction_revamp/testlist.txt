@@ -1472,3 +1472,15 @@ Rail Studio viewport-width regression — IMPLEMENTED / NEEDS RUNTIME TEST (2026
 - Long Validation text must wrap inside the card instead of stretching the Studio wider.
 - Candidate, Assembly and Saved Prefab lists must remain vertically scrollable without introducing horizontal scrollbars.
 - Regression: 2-column workspace controls, R0-R3 row, directional splitter controls, saved prefab load, movement and preview behavior remain unchanged.
+Live Model Editor — Group Scale / Fit 1 Tile gate (2026-09-29)
+[ ] Load the saved conveyor-belt Live Model project and enter Multi selection.
+[ ] Select at least two separated parts, enable Group Scale, then scale down with the viewport gizmo; both geometry size and spacing toward the shared pivot shrink together.
+[ ] Scale back up and confirm relative part proportions/spacing expand around the same pivot without drifting the pivot itself.
+[ ] With Group Scale OFF, confirm the same Multi scale changes mesh size without changing inter-part spacing (legacy behavior preserved).
+[ ] With Group Scale ON, scrub/type an exact Scale value in the inspector and confirm spacing follows the same group-scale rule.
+[ ] Ctrl+Z after a Group Scale gesture restores all selected part scales and offsets in one undo.
+[ ] Select the complete intended conveyor assembly and click Fit 1 Tile; reported X/Z footprint is <=512 model units when the 10% per-part minimum does not constrain the result.
+[ ] Fit 1 Tile never enlarges an assembly that already fits inside one tile.
+[ ] Ctrl+Z after Fit 1 Tile restores the full pre-fit assembly in one undo.
+[ ] Save/reload the project and confirm resulting per-part scale/move values persist exactly.
+
