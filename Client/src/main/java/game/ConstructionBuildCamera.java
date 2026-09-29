@@ -159,8 +159,8 @@ public final class ConstructionBuildCamera {
 
     /**
      * Vanilla scene visibility is normally centered around the player's local
-     * scene tile. Settlement RTS keeps the player planted, so expose the
-     * detached camera's managed look pivot as the equivalent render-focus tile.
+     * scene tile. Settlement RTS keeps the player planted, so expose its
+     * managed vanilla-camera pivot as the equivalent render-focus tile.
      *
      * This changes only the focus passed into Matrix3's stock scene culling.
      * It does not alter the renderer radius, fog or visibility arrays.
@@ -1097,9 +1097,10 @@ public final class ConstructionBuildCamera {
     }
 
     /**
-     * Keep the RTS look pivot inside Matrix3's currently loaded scene. Detached
-     * camera position may sit outside this rectangle at long orbit distances; the
-     * important invariant is that its look target remains on loaded terrain.
+     * Keep the RTS look pivot inside Matrix3's currently loaded scene. The
+     * vanilla solver may place the rendered camera outside this rectangle at long
+     * orbit distances; the important invariant is that its focus remains on
+     * loaded terrain.
      */
     private static float[] getLoadedSceneBounds() {
         try {
