@@ -549,7 +549,7 @@ public final class ConstructionBuildCamera {
         }
         if (mouseOrbit[0] != 0) {
             rtsYawRadians = normalizeRadians(rtsYawRadians
-                    - mouseOrbit[0] * RTS_MOUSE_ORBIT_RADIANS_PER_PIXEL);
+                    + mouseOrbit[0] * RTS_MOUSE_ORBIT_RADIANS_PER_PIXEL);
             orbitChanged = true;
         }
         if (mouseOrbit[1] != 0) {
