@@ -16,6 +16,7 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
+import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -37,8 +38,10 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -126,9 +129,9 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
     private final DefaultListModel<String> savedPrefabModel = new DefaultListModel<String>();
     private final JList<String> savedPrefabList = new JList<String>(savedPrefabModel);
-    private final JLabel validationLabel = new JLabel();
-    private final JLabel statusLabel =
-            ConsoleTheme.subtitleLabel("Rail Assembly Studio ready.");
+    private final JTextArea validationLabel = wrappedStatusArea("", 6);
+    private final JTextArea statusLabel =
+            wrappedStatusArea("Rail Assembly Studio ready.", 2);
 
     private final Deque<StudioSnapshot> undo = new ArrayDeque<StudioSnapshot>();
     private final Deque<StudioSnapshot> redo = new ArrayDeque<StudioSnapshot>();
@@ -149,7 +152,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     }
 
     private void buildUi() {
-        JPanel content = new JPanel();
+        JPanel content = new ViewportWidthPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBackground(ConsoleTheme.PANEL);
         content.setBorder(ConsoleTheme.panelPadding(8, 7, 8, 7));
@@ -226,6 +229,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         });
 
         JScrollPane candidateScroll = new JScrollPane(candidateList);
+        candidateScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         candidateScroll.setAlignmentX(LEFT_ALIGNMENT);
         candidateScroll.setPreferredSize(new Dimension(220, 92));
         candidateScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 105));
@@ -284,6 +288,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
             }
         });
         JScrollPane assemblyScroll = new JScrollPane(assemblyList);
+        assemblyScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         assemblyScroll.setAlignmentX(LEFT_ALIGNMENT);
         assemblyScroll.setPreferredSize(new Dimension(220, 126));
         assemblyScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 145));
@@ -530,6 +535,7 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
             }
         });
         JScrollPane savedScroll = new JScrollPane(savedPrefabList);
+        savedScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         savedScroll.setAlignmentX(LEFT_ALIGNMENT);
         savedScroll.setPreferredSize(new Dimension(220, 70));
         savedScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
@@ -616,11 +622,13 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         ObjectLabPreview.showPreview(
                 objectName(id), id, 22, 0,
                 previewWorldX, previewWorldY, previewPlane, 1, 1);
-        candidatePreviewLabel.setText("Preview: ID " + id
-                + " @ " + (previewWorldX + 1) + "," + (previewWorldY + 1)
-                + " | " + ObjectLabPreview.getStatus());
-        setStatus("Candidate preview: ID " + id
-                + " T22 R0 one tile NE of player. Add Here commits it.");
+        String previewStatus = ObjectLabPreview.getStatus();
+        candidatePreviewLabel.setText("Preview: " + id
+                + " | " + previewState(previewStatus)
+                + " | " + (previewWorldX + 1) + "," + (previewWorldY + 1));
+        candidatePreviewLabel.setToolTipText(previewStatus);
+        setStatus("Candidate " + id
+                + " previewing one tile NE of player. Add Here commits it.");
     }
 
     private void stepCandidate(int delta) {
@@ -1132,20 +1140,20 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
 
     private void updateValidation() {
         Validation validation = validateAssembly();
-        StringBuilder html = new StringBuilder("<html>");
+        StringBuilder text = new StringBuilder();
         if (validation.errors.isEmpty()) {
-            html.append("<b>PASS</b> — publishable structure");
+            text.append("PASS — publishable structure");
         } else {
-            html.append("<b>BLOCKED</b> — ").append(validation.errors.size()).append(" issue(s)");
+            text.append("BLOCKED — ").append(validation.errors.size()).append(" issue(s)");
         }
         for (String error : validation.errors) {
-            html.append("<br>✗ ").append(escapeHtml(error));
+            text.append("\n✗ ").append(error);
         }
         for (String info : validation.info) {
-            html.append("<br>• ").append(escapeHtml(info));
+            text.append("\n• ").append(info);
         }
-        html.append("</html>");
-        validationLabel.setText(html.toString());
+        validationLabel.setText(text.toString());
+        validationLabel.setCaretPosition(0);
     }
 
     private void pushUndo() {
@@ -1365,6 +1373,29 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
         statusLabel.setText(text == null ? "" : text);
     }
 
+    private static JTextArea wrappedStatusArea(String text, int rows) {
+        JTextArea area = ConsoleTheme.createWrappedText(text, Math.max(1, rows));
+        area.setFont(ConsoleTheme.SMALL_FONT.deriveFont(10f));
+        area.setForeground(ConsoleTheme.TEXT);
+        area.setOpaque(false);
+        area.setEditable(false);
+        area.setFocusable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setAlignmentX(LEFT_ALIGNMENT);
+        area.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        return area;
+    }
+
+    private static String previewState(String status) {
+        if (status == null || status.trim().isEmpty()) {
+            return "IDLE";
+        }
+        String trimmed = status.trim();
+        int space = trimmed.indexOf(' ');
+        return space < 0 ? trimmed : trimmed.substring(0, space);
+    }
+
     private JPanel compactCard(String titleText) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
@@ -1471,6 +1502,43 @@ public final class RailAssemblyStudioPanel extends JScrollPane {
     private static String escapeHtml(String value) {
         if (value == null) return "";
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    /**
+     * The Rail Studio lives inside another narrow dock. Swing's ordinary
+     * JPanel preferred width can exceed the viewport when one child contains a
+     * long status string, which previously caused right-edge clipping even
+     * with the horizontal scrollbar hidden. Track the viewport width instead.
+     */
+    private static final class ViewportWidthPanel extends JPanel implements Scrollable {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(
+                Rectangle visibleRect, int orientation, int direction) {
+            return 18;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(
+                Rectangle visibleRect, int orientation, int direction) {
+            return Math.max(18, visibleRect.height - 18);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 
     private static final class Part {
