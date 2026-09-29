@@ -1823,3 +1823,10 @@
 - Cleaned settlement chest context: suppress duplicate Matrix3-native Open/View Storage entries for chest 18804 while keeping one canonical View Storage; suppress Saved Tile/Unsave Tile authoring entries on chest context; retain Remove/Examine/Walk here and selected-worker Take/Deliver actions.
 - Workers are intentionally not paused by storage clear, so active production may immediately refill cleared chests.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-29 - Rail Studio viewport-width ownership fix
+- Replaced the ordinary BoxLayout root panel with a Scrollable viewport-width panel so Rail Studio content now tracks the actual Client Console viewport width instead of preserving oversized child preferred widths.
+- Kept horizontal scrolling disabled, but fixed the underlying width ownership rather than hiding the scrollbar.
+- Candidate/assembly/saved nested lists also disable horizontal scrolling so long rows cannot widen the Studio.
+- Candidate preview status is shortened on-screen to ID/state/world tile; full ObjectLabPreview detail remains available as a tooltip.
+- Validation/status output now uses wrapped text areas instead of long single-line/HTML labels that could force the panel wider than the dock.
