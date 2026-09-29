@@ -141,21 +141,33 @@ public final class ConveyorPayloadVisualProfiles {
     }
 
     public static synchronized String saveCategory(
-            int itemId, String categoryName, Profile profile) {
+            String categoryName, Profile profile) {
         Category category = categoryFromName(categoryName);
         if (category == null) {
             return "Choose a valid payload category first.";
         }
         CATEGORY_PROFILES.put(category,
                 profile == null ? DEFAULT_PROFILE : profile);
-        ITEM_CATEGORIES.put(Integer.valueOf(Math.max(0, itemId)), category);
         clearPreview();
         if (!saveToDisk()) {
             return "Category profile changed, but disk save failed.";
         }
-        return "Saved " + category.name()
-                + " profile and assigned item " + Math.max(0, itemId)
-                + " to that category.";
+        return "Saved " + category.name() + " payload visual profile.";
+    }
+
+    public static synchronized Profile getCategoryProfile(String categoryName) {
+        Category category = categoryFromName(categoryName);
+        if (category == null) {
+            return globalProfile == null ? DEFAULT_PROFILE : globalProfile;
+        }
+        Profile profile = CATEGORY_PROFILES.get(category);
+        return profile == null
+                ? (globalProfile == null ? DEFAULT_PROFILE : globalProfile)
+                : profile;
+    }
+
+    public static synchronized Profile getGlobalProfile() {
+        return globalProfile == null ? DEFAULT_PROFILE : globalProfile;
     }
 
     public static synchronized String saveItemOverride(int itemId, Profile profile) {
