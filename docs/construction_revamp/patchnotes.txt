@@ -1917,3 +1917,14 @@
 - Client full-scene render-radius/fog hacks remain removed; this fix provides actual terrain data instead of overriding renderer policy.
 - Fresh instance required: exit/re-enter settlement after pull to generate the padded map.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-29 - Conveyor Visual Role Cleanup V1
+- Native 46298 belt animation moved to non-blocking carryover after runtime confirmed no useful visible motion in editor or ConveyorRun.
+- Live Model Editor project format bumped to v5 and now persists per-part conveyorRole metadata.
+- Added Part/Multi conveyor roles: UNASSIGNED, BELT_SURFACE, START_CAP, END_CAP, FIXED_DETAIL, REPEAT_DETAIL, SUPPORT, SCALE_POSITION and IGNORE.
+- Added Set Role + Apply To Demo controls; role tags appear directly in part-list labels.
+- Backward compatibility: non-default edited parts from old v4 projects enter the live conveyor recipe as FIXED_DETAIL until explicitly reclassified; untouched sawmill components stay excluded.
+- ConveyorRun accepts a role/transforms snapshot from the editor and rejects recipes without BELT_SURFACE or with duplicate source-part ownership.
+- Role-driven generator stretches only BELT_SURFACE; anchors start/end caps; remaps fixed/scale-position detail; repeats REPEAT_DETAIL at ~1-tile spacing; generates fixed-size SUPPORT stations using max(0, ceil(runLength / 3 tiles) - 1).
+- Procedural ConveyorRun rendering is static again, removing useless per-frame source-animation model clones while animation remains deferred polish.
+- No server, SettlementState, persistence, storage, processing, collision or per-tile conveyor ownership changed.
