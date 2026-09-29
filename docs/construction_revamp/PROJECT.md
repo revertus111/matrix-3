@@ -2177,7 +2177,8 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 ### Implementation checkpoint — Source Object Animation Reuse V1 — 2026-09-29
 
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- Status: IMPLEMENTED / RUNTIME REJECTED FOR VISIBLE MOTION; DIAGNOSTIC TRACE ACTIVE under explicit AAA.
+- Runtime evidence: the SOURCE ANIM toggle is present and can be enabled, but the edited conveyor shows no visible source motion. The previous assumption that directly applying the first ObjectDefinitions sequence would reproduce the belt animation is therefore **not accepted**.
 - Object 46298's decoded animation ids remain authoritative; no custom/fake conveyor animation id was introduced.
 - Live Model Editor now has `SOURCE ANIM OFF/ON`. OFF preserves the existing static authoring workflow. ON resolves the first valid source-object animation id, loads the real Matrix3 `AnimationDefinition`, advances exact source frames using the sequence frame-duration table, and applies the current frame to the edited main assembly preview.
 - Animation is non-destructive: the cached authored renderer Model keeps animation-capable groups; each displayed animation frame starts from a fresh Model clone, applies the source frame, then renders. Frame transforms therefore cannot accumulate onto the authored base geometry.
@@ -2185,6 +2186,23 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - V1 intentionally uses exact frame stepping rather than interpolation. This gate answers the load-bearing question first: whether the isolated custom conveyor assembly still preserves the source object's animation groups after authoring/procedural length transforms.
 - If source animation does not visibly affect the authored conveyor, treat that as evidence that the required animated group/component was excluded or its grouping data is incompatible with the generated assembly. Do not replace it with a fake belt animation until that result is understood.
 - Runtime gate: load the saved conveyor project in Live Model Editor; confirm static editing with SOURCE ANIM OFF, enable SOURCE ANIM ON and confirm the source sequence visibly animates without changing saved transforms; then show the SHORT/MEDIUM/LONG ConveyorRun demo and confirm the same source motion appears on all three generated runs without geometry drift.
+
+### Implementation checkpoint — Conveyor Animation Path Diagnostics V1.1 — 2026-09-29
+
+- Status: IMPLEMENTED / NEEDS ONE RUNTIME TRACE.
+- **verified-static:** `ObjectDefinitions.method6057(...)` builds the object Model but does not consume `anIntArray5645` (the object-definition animation sequence ids). Normal animated world objects therefore have an additional runtime animation owner/path beyond the raw object-model builder used by Live Model Editor.
+- **verified-static:** decoded `Class159` source geometry preserves vertex skin groups (`anIntArray1813`), face groups (`anIntArray1780`), face texture ids, texture-coordinate metadata and related model animation/material inputs.
+- Live Model Editor now exposes **ANIM TRACE** beside SOURCE ANIM. It is read-only and prints a full diagnostic block to the client console.
+- The trace reports object animation ids, source model ids, frame count/load state, sequence transform-type counts, sequence spatial/non-spatial group ids, whole-source vertex/face skin groups, textured faces/texture ids, and a per-connected-part comparison.
+- Per part, the trace reports vertex skin groups, face groups, textured-face count/texture ids, spatial sequence-group overlap, non-spatial vertex overlap and non-spatial face overlap.
+- The trace emits one bounded classification:
+  - `SEQUENCE_SPATIAL_GROUP_OVERLAP` — source sequence directly targets geometry groups present in the source mesh; current application path/flags then need scrutiny.
+  - `SEQUENCE_NONSPATIAL_GROUP_OVERLAP` — source sequence intersects only non-spatial groups, pointing toward alpha/colour/other animated state rather than belt-geometry movement.
+  - `NO_SEQUENCE_GROUP_OVERLAP + TEXTURED_GEOMETRY_PRESENT` — the decoded source sequence does not target the mesh groups while textured geometry exists; material/texture/world-runtime animation becomes the leading next trace.
+  - `NO_SEQUENCE_GROUP_OVERLAP` — neither source sequence group overlap nor a texture signal explains the visible world motion; trace the normal world-object animation owner next.
+  - `SEQUENCE_FRAME_DATA_WAIT` — animation definition exists but frame-set data was not loaded at trace time.
+- This diagnostic does not mutate editor state, cache geometry, ConveyorRun state, server state or persistence.
+- Runtime gate: load the saved 46298 project and click **ANIM TRACE** once. Copy the full `=== LIVE MODEL SOURCE ANIM TRACE ===` console block back into the workstream. Do not continue guessing animation ids or add a fake belt animation before reading that result.
 
 ### Canonical conveyor visual source
 
@@ -2254,5 +2272,5 @@ Build three straight test runs from the same authored conveyor source (short, me
 - deleting the run removes the whole generated conveyor;
 - once visual generation is accepted, a real Log (1511) can be rendered moving continuously from A toward B.
 
-**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. Pull/rebuild/restart the client. First load the saved 46298 conveyor project in Live Model Editor and toggle SOURCE ANIM ON; verify the edited assembly visibly inherits the source object sequence while OFF remains static. Then show the SHORT/MEDIUM/LONG ConveyorRun demo and verify the same source motion is present on all generated runs with no geometry drift. If animation is absent or corrupt, inspect the source animation/group preservation next. Do not add support generation, chest automation, payload transport, persistence, fake belt animation, or per-tile belt objects before this animation-reuse gate is understood.
+**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. Runtime already proved SOURCE ANIM ON produces no visible conveyor motion, so do not repeat that acceptance test or guess another animation id. Pull/rebuild/restart the client, load the saved 46298 conveyor project, click **ANIM TRACE** once, and return the full `=== LIVE MODEL SOURCE ANIM TRACE ===` console block. Use its classification/group/texture evidence to choose the next exact seam: sequence application/flags, non-spatial sequence state, material/texture animation, or the normal world-object runtime animation owner. Do not add support generation, chest automation, payload transport, persistence, fake belt animation, or per-tile belt objects before this trace is classified.
 
