@@ -578,8 +578,7 @@ public final class LiveModelEditorPreview {
         }
 
         boolean changed = PARTS.updateGestureTransform(
-                sx, sy, sz, mx, my, mz, yaw,
-                groupScaleEnabled && transformMode == TransformMode.SCALE);
+                sx, sy, sz, mx, my, mz, yaw, groupScaleEnabled);
         if (changed) invalidateGeometryModels();
         return changed;
     }
@@ -640,8 +639,7 @@ public final class LiveModelEditorPreview {
     public static boolean setSelectedPartTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
         boolean changed = PARTS.setSelectedTransform(
-                sx, sy, sz, mx, my, mz, yaw,
-                groupScaleEnabled && transformMode == TransformMode.SCALE);
+                sx, sy, sz, mx, my, mz, yaw, groupScaleEnabled);
         if (changed) invalidateGeometryModels();
         return changed;
     }
