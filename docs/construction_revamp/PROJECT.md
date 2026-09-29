@@ -2408,3 +2408,40 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Forward/Side offsets and Yaw remain run-relative, so the same category/item profile can be reused on conveyors with different world headings.
 - No server persistence schema, inventory ownership, item consumption, spacing/backpressure, machine I/O or physical chest transfer changed.
 - **Resume Here (conveyor):** pull/build/restart Client. Use item 1511 to tune/save a LOGS category profile, then switch Test Item ID to another log and confirm it inherits CATEGORY LOGS without an exact override. Save one deliberately different Item Override and verify resolution changes to ITEM <id>; remove it and verify category inheritance returns. Restart once and confirm profiles + manual assignments persist. After acceptance, proceed to multi-payload spacing + stopped-end/backpressure.
+
+
+### Conveyor Gameplay V1.4/V1.5 — Real Payload Transport + Backpressure — 2026-09-29
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- This bundle deliberately advances transport while V1.3 Visual Profiles remains **NEEDS RUNTIME TEST**; the profile gate is deferred to the user's next runtime session and does not block server transport ownership.
+- Added persistent server-owned `SettlementConveyorPayload` state to each `SettlementConveyorRun`: stable payload id, real item id, amount and distance-from-Point-A.
+- `SettlementState` schema advances to **v15**. Old v14 saves normalize with empty payload lists; existing ConveyorRun ids/endpoints remain unchanged.
+- Conveyor movement now runs from Matrix3's normal `SettlementControler.process()` game-tick callback through `SettlementInstance.processGameTick()`; no background transport scheduler was added.
+- Belt speed is owned by `SettlementConveyorRun` at the current V1 basic speed **1.25 tiles/sec**. Payload visual profiles contain no speed.
+- Minimum payload spacing is **0.85 tiles**. Server advances payloads front-to-back and clamps each follower behind the payload ahead.
+- Point B is **blocked by default** because no physical endpoint consumer is connected yet. The front payload stops at B and followers naturally queue behind it.
+- Development-only **Open Output (Debug Sink)** temporarily treats Point B as an accepting endpoint. Payloads that cross B are removed by the server so the belt can visibly drain. This transient debug switch is not persisted and is not the future chest/machine endpoint contract.
+- Added payload-only client sync over the existing reserved Construction CSVar-string bridge:
+  - `PBEGIN`
+  - `PSTATE,<runId>,<speedMilli>,<spacingMilli>,<blocked>`
+  - `PAYLOAD,<runId>,<payloadId>,<itemId>,<amount>,<distanceMilli>`
+  - `PEND`
+- Payload updates do **not** resend/rebuild ConveyorRun geometry every game tick.
+- Client rendering now supports multiple mixed real item ids simultaneously. Each payload resolves its own Global -> Category -> Item visual profile.
+- Client smooths between authoritative server snapshots by bounded extrapolation (max 1.2 sec) using the server-sent belt speed and spacing, then clamps followers locally with the same front-to-back spacing rule. Server state remains authoritative.
+- Replaced the previous one-looping-Log visual proof. Persistent conveyors now render only payloads actually present in server state.
+- Added Con Revamp **Conveyor Transport Core** harness for the first run:
+  - Add Current Test Item
+  - Add Log 1511
+  - Add Oak Log 1521
+  - Add Iron Ore 440
+  - Add Plank 960
+  - Fill Mixed Belt
+  - Block Output
+  - Open Output (Debug Sink)
+  - Clear Payloads
+  - Transport Status
+- `Fill Mixed Belt` seeds the real persistent payload list at legal spacing using 1511/1521/440/960 for deterministic backpressure testing.
+- Payloads persist with the run across settlement exit/re-entry/relog unless they are cleared or accepted by an open endpoint.
+- No chest withdrawal/deposit, machine-buffer transfer, splitter/filter logic, belt tiers or production item source is added yet.
+- **Resume Here (conveyor):** next runtime session should test V1.3 profiles and V1.4/V1.5 transport together: create/restore one persistent run, Fill Mixed Belt with output blocked, verify mixed models move smoothly and queue at B without overlap, open the debug sink and verify the queue drains, block again and add payloads one-by-one, then exit/re-enter/relog to verify remaining payload state persists. Run the full RS3 smoke test after the focused transport gate because this bundle changes persistence and client/server sync. If accepted, next main slice is physical chest -> conveyor -> chest.
