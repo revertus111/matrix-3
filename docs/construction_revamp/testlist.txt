@@ -1620,3 +1620,13 @@ RTS Vanilla Camera Owner Migration — RUNTIME REJECTED / ROLLED BACK
 [x] Rollback: restored the last known working detached Class24/Class411 RTS implementation.
 [ ] Confirm after pull/rebuild that normal RTS pan/orbit/zoom behavior is restored.
 [ ] Before any future vanilla-owner migration, runtime-log the active `Class18.anInt143` value and actual `Class343` render branch during ordinary gameplay.
+
+Persistent ConveyorRun clear regression retest (2026-09-29)
+[x] verified-static: SettlementState.clearConveyorRuns() already empties the saved run list correctly.
+[x] Clear Persistent Conveyors now sends explicit client CLEAR after server deletion instead of BEGIN/END with zero RUN entries.
+[ ] Pull/build Server, restart, enter settlement with at least one persistent conveyor visible.
+[ ] Click Clear Persistent Conveyors; visible persistent conveyor(s) disappear immediately.
+[ ] Conveyor Status reports persistent=0.
+[ ] Exit/re-enter settlement; cleared conveyor(s) do not return.
+[ ] Optional relog/re-enter; cleared conveyor(s) remain deleted.
+[ ] Show Conveyor A->B Demo remains independent and is not removed by persistent CLEAR.
