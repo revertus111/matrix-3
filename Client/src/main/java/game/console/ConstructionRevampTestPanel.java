@@ -3,6 +3,7 @@ package game.console;
 import game.ClientConsoleBridge;
 import game.ConstructionPaletteOverlay;
 import game.ConstructionRadialSelection;
+import game.ConveyorRunPreview;
 
 import java.awt.Dimension;
 import java.awt.GridLayout;
@@ -595,22 +596,40 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel card = ConsoleTheme.createCard("Development Tools");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Asset Studio remains the primary Construction object/rail discovery tool.",
-                3));
+                "Asset Studio remains the primary Construction object/rail discovery tool. "
+                + "ConveyorRun V0 is a client-only procedural visual proof from canonical "
+                + "object 46298 / models 49717+49718; it creates no settlement/world belt objects.",
+                5));
         card.add(Box.createVerticalStrut(8));
 
         JButton studio = new JButton("Open Asset Studio");
+        JButton conveyorDemo = new JButton("Show Conveyor A->B Demo");
+        JButton conveyorHide = new JButton("Hide Conveyor Demo");
+        JButton conveyorStatus = new JButton("Conveyor Status");
         styleButton(studio);
+        styleButton(conveyorDemo);
+        styleButton(conveyorHide);
+        styleButton(conveyorStatus);
+
         studio.addActionListener(e -> {
             ObjectLabWindow.openEmpty();
             setStatus("Matrix3 Asset Studio opened.");
         });
+        conveyorDemo.addActionListener(e ->
+                setStatus(ConveyorRunPreview.showDemoNearPlayer()));
+        conveyorHide.addActionListener(e ->
+                setStatus(ConveyorRunPreview.hide()));
+        conveyorStatus.addActionListener(e ->
+                setStatus(ConveyorRunPreview.getStatus()));
 
-        JPanel buttons = new JPanel(new GridLayout(1, 1, 7, 7));
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
         buttons.add(studio);
+        buttons.add(conveyorDemo);
+        buttons.add(conveyorHide);
+        buttons.add(conveyorStatus);
         card.add(buttons);
         return card;
     }
