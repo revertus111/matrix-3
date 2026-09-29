@@ -596,7 +596,8 @@ public final class ConveyorRunPreview {
         }
 
         status = "DRAW ConveyorRun V1 " + rendered + "/" + current.length
-                + " log1511=" + payloads
+                + " payloadItem=" + payloadItemId
+                + " payloads=" + payloads
                 + (failed == 0 ? "" : " failed=" + failed);
     }
 
