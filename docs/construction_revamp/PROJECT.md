@@ -2285,3 +2285,13 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 **Resume Here:** keep the current physical worker/storage/machine runtime gate independent. The ANIM TRACE is now classified: object 46298 uses animation 12394 with 19 loaded frames; the old preview used the wrong non-grouped `Model.method1367(...)` path. V1.2 now uses Matrix3's group-aware `method1364(...)` path. Pull/rebuild/restart Client, load the saved conveyor project, toggle SOURCE ANIM ON, and observe whether the authored conveyor now visibly animates. Then show SHORT/MEDIUM/LONG ConveyorRun demo and verify the same motion on all three with no cumulative drift. If still static, inspect which animated source components from the trace are missing from the authored eight-part assembly; do not guess another animation id or add fake belt motion.
 
+
+
+## RTS camera regression correction — 2026-09-29
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Normal RTS world clicks/orders no longer call the legacy click-stop latch. Holding WASD/arrows while clicking must keep continuous camera motion; Free Build retains its accepted click-stop placement behavior.
+- Default RTS pan multiplier is now 2.0x instead of 1.0x. Existing adjustable presets remain available from 0.50x through 3.00x.
+- Vanilla render parity is corrected at the scene-culling focus seam: Matrix3's stock Class523 render radius, fog and visibility arrays are unchanged, but settlement RTS feeds the managed RTS pivot/local focus tile instead of the stationary player's tile into the stock scene render pass.
+- No full-scene radius override is reintroduced. The removed Class523.anInt5865 expansion hack remains removed.
+- Existing MMB horizontal orbit direction fix, vertical pitch, wheel zoom, Q/E orbit, minimap focus and loaded-scene pivot clamp remain unchanged.
+- Runtime gate: pan away from the stationary player and verify terrain/NPC/object visibility follows the RTS view with the same effective vanilla radius/fog behavior; hold a movement key while clicking world/chest/worker targets and verify motion continues; verify 2.0x default speed is usable.
