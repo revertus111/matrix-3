@@ -1928,3 +1928,11 @@
 - Role-driven generator stretches only BELT_SURFACE; anchors start/end caps; remaps fixed/scale-position detail; repeats REPEAT_DETAIL at ~1-tile spacing; generates fixed-size SUPPORT stations using max(0, ceil(runLength / 3 tiles) - 1).
 - Procedural ConveyorRun rendering is static again, removing useless per-frame source-animation model clones while animation remains deferred polish.
 - No server, SettlementState, persistence, storage, processing, collision or per-tile conveyor ownership changed.
+
+2026-09-29 - Conveyor Gameplay V1 persistent ConveyorRun
+- Added SettlementConveyorRun as one stable server-owned A->B conveyor identity with plot-relative endpoints; SettlementState schema v14 persists run ids/list and normalizes old saves safely.
+- Added create/remove/clear runtime ownership in SettlementInstance plus staged server->client BEGIN/RUN/END restore over reserved Construction CSVar-string id 65534; settlement exit clears transient client visuals.
+- ConveyorRunPreview now renders synced persistent runs separately from the optional visual demo and preserves server run ids for later payload transport.
+- Added settlementconveyorcreate/remove/clear commands and Development Tools buttons for a real 5-tile persistent runtime test.
+- No per-tile conveyor objects, physical inventory owner, payload movement, backpressure or machine/chest automation added yet.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
