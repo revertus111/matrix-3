@@ -55,8 +55,16 @@ public final class ConveyorRunPreview {
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
 
-    private static volatile boolean active;
-    private static volatile ConveyorRun[] runs = new ConveyorRun[0];
+    // Reserved Construction-only CSVar-string transport. PacketsDecoder
+    // intercepts this id before Matrix3's normal CSVar store.
+    public static final int SETTLEMENT_SYNC_CS_VAR = 65534;
+
+    private static volatile boolean demoActive;
+    private static volatile ConveyorRun[] demoRuns = new ConveyorRun[0];
+    private static volatile ConveyorRun[] settlementRuns = new ConveyorRun[0];
+    private static final List<ConveyorRun> pendingSettlementRuns =
+            new ArrayList<ConveyorRun>();
+    private static boolean settlementSyncOpen;
     private static volatile int revision;
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String status = "HIDDEN";
@@ -133,12 +141,12 @@ public final class ConveyorRunPreview {
         int worldY = sceneBase.localY * 417324155 + localY;
         int plane = player.aByte9009 & 0xff;
 
-        runs = new ConveyorRun[] {
+        demoRuns = new ConveyorRun[] {
                 eastWestRun("SHORT", worldX, worldY + 2, plane, 2),
                 eastWestRun("MEDIUM", worldX, worldY + 4, plane, 5),
                 eastWestRun("LONG", worldX, worldY + 6, plane, 9)
         };
-        active = true;
+        demoActive = true;
         revision++;
         invalidateModels();
         status = "READY ConveyorRun V0: short=2t medium=5t long=9t; "
@@ -147,22 +155,139 @@ public final class ConveyorRunPreview {
     }
 
     public static String hide() {
-        active = false;
-        runs = new ConveyorRun[0];
+        demoActive = false;
+        demoRuns = new ConveyorRun[0];
         revision++;
         invalidateModels();
         lastRenderedCycle = Integer.MIN_VALUE;
-        status = "HIDDEN";
+        status = settlementRuns.length == 0
+                ? "HIDDEN"
+                : "DEMO HIDDEN; persistent=" + settlementRuns.length;
         return status;
     }
 
+    public static String createPersistentTestNearPlayer() {
+        Class613 region = client.aClass613_8605;
+        Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
+        if (region == null || player == null) {
+            return "Persistent conveyor test is waiting for the active settlement.";
+        }
+        Class497 sceneBase = region.method7280((byte) -102);
+        Class240 position = player.method5394().aClass240_2647;
+        if (sceneBase == null || position == null) {
+            return "Persistent conveyor test is waiting for player world position.";
+        }
+
+        int localX = Math.round(position.aFloat2653) >> 9;
+        int localY = Math.round(position.aFloat2657) >> 9;
+        int worldX = sceneBase.localX * -2109597897 + localX;
+        int worldY = sceneBase.localY * 417324155 + localY;
+        int plane = player.aByte9009 & 0xff;
+        String command = "settlementconveyorcreate "
+                + (worldX - 2) + " " + (worldY + 2) + " "
+                + (worldX + 3) + " " + (worldY + 2) + " " + plane;
+        String error = ClientConsoleBridge.queueConsoleCommands(
+                new String[] { command });
+        return error == null
+                ? "Persistent 5-tile ConveyorRun create queued."
+                : "Persistent ConveyorRun create failed to queue: " + error;
+    }
+
+    public static String clearPersistentRuns() {
+        String error = ClientConsoleBridge.queueConsoleCommands(
+                new String[] { "settlementconveyorclear" });
+        return error == null
+                ? "Persistent ConveyorRun clear queued."
+                : "Persistent ConveyorRun clear failed to queue: " + error;
+    }
+
+    public static synchronized boolean handleSettlementSyncSignal(
+            int id, String payload) {
+        if (id != SETTLEMENT_SYNC_CS_VAR) {
+            return false;
+        }
+        if (payload == null) {
+            return true;
+        }
+
+        if ("BEGIN".equals(payload)) {
+            pendingSettlementRuns.clear();
+            settlementSyncOpen = true;
+            return true;
+        }
+        if ("END".equals(payload)) {
+            if (!settlementSyncOpen) {
+                return true;
+            }
+            settlementRuns = pendingSettlementRuns.toArray(
+                    new ConveyorRun[pendingSettlementRuns.size()]);
+            pendingSettlementRuns.clear();
+            settlementSyncOpen = false;
+            revision++;
+            invalidateModels();
+            lastRenderedCycle = Integer.MIN_VALUE;
+            status = "PERSISTENT SYNC runs=" + settlementRuns.length;
+            return true;
+        }
+        if ("CLEAR".equals(payload)) {
+            pendingSettlementRuns.clear();
+            settlementSyncOpen = false;
+            settlementRuns = new ConveyorRun[0];
+            revision++;
+            invalidateModels();
+            lastRenderedCycle = Integer.MIN_VALUE;
+            status = demoActive ? "PERSISTENT CLEARED; demo active" : "HIDDEN";
+            return true;
+        }
+        if (payload.startsWith("RUN,")) {
+            if (!settlementSyncOpen) {
+                return true;
+            }
+            String[] values = payload.split(",");
+            if (values.length != 7) {
+                status = "PERSISTENT SYNC rejected malformed RUN";
+                return true;
+            }
+            try {
+                long runId = Long.parseLong(values[1]);
+                int startX = Integer.parseInt(values[2]);
+                int startY = Integer.parseInt(values[3]);
+                int endX = Integer.parseInt(values[4]);
+                int endY = Integer.parseInt(values[5]);
+                int plane = Integer.parseInt(values[6]);
+                if (runId > 0L && (startX != endX || startY != endY)) {
+                    pendingSettlementRuns.add(new ConveyorRun(
+                            runId, "RUN#" + runId,
+                            startX, startY, endX, endY, plane));
+                }
+            } catch (NumberFormatException ex) {
+                status = "PERSISTENT SYNC rejected malformed numbers";
+            }
+            return true;
+        }
+
+        return true;
+    }
+
+    public static synchronized void clearSettlementRuns() {
+        pendingSettlementRuns.clear();
+        settlementSyncOpen = false;
+        settlementRuns = new ConveyorRun[0];
+        revision++;
+        invalidateModels();
+        lastRenderedCycle = Integer.MIN_VALUE;
+        status = demoActive ? "PERSISTENT CLEARED; demo active" : "HIDDEN";
+    }
+
     public static String getStatus() {
-        return status + " | " + roleSummary;
+        return status + " | persistent=" + settlementRuns.length
+                + " demo=" + (demoActive ? demoRuns.length : 0)
+                + " | " + roleSummary;
     }
 
     static void render(Class523 scene, Class106 renderer) {
-        ConveyorRun[] current = runs;
-        if (!active || current.length == 0 || scene == null || renderer == null) {
+        ConveyorRun[] current = visibleRuns();
+        if (current.length == 0 || scene == null || renderer == null) {
             return;
         }
 
@@ -212,12 +337,27 @@ public final class ConveyorRunPreview {
                 + (failed == 0 ? "" : " failed=" + failed);
     }
 
+    private static ConveyorRun[] visibleRuns() {
+        ConveyorRun[] persistent = settlementRuns;
+        ConveyorRun[] demo = demoActive ? demoRuns : new ConveyorRun[0];
+        if (demo.length == 0) {
+            return persistent;
+        }
+        if (persistent.length == 0) {
+            return demo;
+        }
+        ConveyorRun[] combined = new ConveyorRun[persistent.length + demo.length];
+        System.arraycopy(persistent, 0, combined, 0, persistent.length);
+        System.arraycopy(demo, 0, combined, persistent.length, demo.length);
+        return combined;
+    }
+
     private static ConveyorRun eastWestRun(String name, int centerWorldX,
             int worldY, int plane, int lengthTiles) {
         int left = lengthTiles / 2;
         int startX = centerWorldX - left;
         int endX = startX + lengthTiles;
-        return new ConveyorRun(name, startX, worldY, endX, worldY, plane);
+        return new ConveyorRun(-1L, name, startX, worldY, endX, worldY, plane);
     }
 
     private static void rebuildModels(Class106 renderer, ObjectDefinitions definition,
@@ -1019,6 +1159,7 @@ public final class ConveyorRunPreview {
     }
 
     private static final class ConveyorRun {
+        final long runId;
         final String name;
         final int startX;
         final int startY;
@@ -1026,8 +1167,9 @@ public final class ConveyorRunPreview {
         final int endY;
         final int plane;
 
-        ConveyorRun(String name, int startX, int startY,
+        ConveyorRun(long runId, String name, int startX, int startY,
                 int endX, int endY, int plane) {
+            this.runId = runId;
             this.name = name;
             this.startX = startX;
             this.startY = startY;
