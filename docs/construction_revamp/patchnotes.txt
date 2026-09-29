@@ -1936,3 +1936,12 @@
 - Added settlementconveyorcreate/remove/clear commands and Development Tools buttons for a real 5-tile persistent runtime test.
 - No per-tile conveyor objects, physical inventory owner, payload movement, backpressure or machine/chest automation added yet.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-29 - RTS Vanilla Camera Owner Migration
+- Verified-static the render split in Class343: Matrix3 calculates its normal camera through Class246.method3359(...), but the active Class24/Class411 detached branch bypasses those vanilla globals.
+- Migrated settlement RTS to a new early ConstructionBuildCamera.tickVanillaRtsCamera(viewportHeight) seam that keeps RTS pivot/yaw/pitch/zoom state but reuses Matrix3's vanilla Class246.method3359(...) solver before normal shake/clamp/scene setup.
+- RTS now suppresses Class24.aBool157 so Class343 submits the normal Matrix3 camera transform; no direct standalone renderer-global owner was reintroduced.
+- Free Build remains on the proven detached Class411 camera path and activates it lazily only when selected; RTS -> Free Build seeds the detached position from the currently rendered camera.
+- RTS movement and screen-drag basis now derive from owned yaw instead of the detached Class423_Sub2/Class658_Sub2 look vector.
+- Existing RTS speed/orbit/zoom/minimap/saved-pivot behavior is preserved by design; runtime verification is required for render parity and RTS <-> Free Build handoff.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
