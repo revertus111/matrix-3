@@ -2358,3 +2358,14 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 - Runtime regression found immediately after V1: **Clear Persistent Conveyors did not visually clear the active run.** verified-static root cause: server saved state was cleared correctly, but the clear path reused an empty `BEGIN -> END` snapshot instead of the already-defined explicit `CLEAR` client signal.
 - Fix implemented: `SettlementInstance.clearConveyorRuns()` now clears server state then sends `CLEAR`; create/normal restore still use staged snapshots. Status remains **NEEDS RUNTIME TEST** until immediate disappearance + exit/re-entry persistence are confirmed.
+
+
+### Conveyor Gameplay V1.1 — Smooth Log 1511 Payload Proof — 2026-09-29
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- Runtime update: the explicit persistent ConveyorRun clear fix is accepted; clear now removes the visible persistent run. Full exit/relog persistence verification remains useful but the user explicitly advanced to the payload checkpoint.
+- Client now renders one real **Log item 1511** on each persistent/server-synced ConveyorRun. The model comes from Matrix3's registered `Class639_Sub5` item definitions and `ItemDefinitions.method7526(...)`; no substitute model id or hand-authored log mesh is used.
+- Motion is continuous Point A -> Point B interpolation at **1.25 tiles/second**, driven by render-time elapsed nanoseconds for smooth visual movement rather than server-tick/tile hopping.
+- V1.1 intentionally loops one payload per run. It is a visual/motion proof only: no inventory is consumed, no item ownership transfers, and payload progress is not persisted yet.
+- Payload renders only for persistent runs (`runId > 0`), keeping the old SHORT/MEDIUM/LONG demo independent.
+- **Resume Here (conveyor):** pull/build Client, enter settlement, create or restore one persistent conveyor and verify the real Log 1511 moves smoothly A -> B at the correct vertical deck height. If accepted, implement payload spacing + end-of-line stopped/backpressure behavior next. Do not wire chest -> conveyor -> chest until spacing/backpressure is accepted.
