@@ -1,9 +1,5 @@
 package game;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -12,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * Client-only procedural conveyor visual proof.
@@ -31,29 +26,15 @@ public final class ConveyorRunPreview {
     private static final int TILE_UNITS = 512;
 
     private static final int DEFAULT_PAYLOAD_ITEM_ID = 1511;
-    private static final double DEFAULT_PAYLOAD_SPEED_TILES_PER_SECOND = 1.25;
-    private static final int DEFAULT_PAYLOAD_ALONG_OFFSET = 0;
-    private static final int DEFAULT_PAYLOAD_SIDE_OFFSET = 0;
-    private static final int DEFAULT_PAYLOAD_HEIGHT_OFFSET = -96;
-    private static final int DEFAULT_PAYLOAD_SCALE_PERCENT = 100;
-    private static final int DEFAULT_PAYLOAD_PITCH_DEGREES = 0;
-    private static final int DEFAULT_PAYLOAD_YAW_DEGREES = 0;
-    private static final int DEFAULT_PAYLOAD_ROLL_DEGREES = 0;
 
-    private static final File PAYLOAD_TUNING_FILE =
-            new File("data/construction/conveyor_payload_tuning.properties");
+    /*
+     * Temporary belt-owned movement speed for the visual proof. Payload visual
+     * profiles deliberately do not own speed; future conveyor tiers/runtime
+     * state replace this constant without touching item presentation profiles.
+     */
+    private static final double CONVEYOR_TEST_SPEED_TILES_PER_SECOND = 1.25;
     private static final long PAYLOAD_EPOCH_NANOS = System.nanoTime();
-
     private static volatile int payloadItemId = DEFAULT_PAYLOAD_ITEM_ID;
-    private static volatile double payloadSpeedTilesPerSecond =
-            DEFAULT_PAYLOAD_SPEED_TILES_PER_SECOND;
-    private static volatile int payloadAlongOffset = DEFAULT_PAYLOAD_ALONG_OFFSET;
-    private static volatile int payloadSideOffset = DEFAULT_PAYLOAD_SIDE_OFFSET;
-    private static volatile int payloadHeightOffset = DEFAULT_PAYLOAD_HEIGHT_OFFSET;
-    private static volatile int payloadScalePercent = DEFAULT_PAYLOAD_SCALE_PERCENT;
-    private static volatile int payloadPitchDegrees = DEFAULT_PAYLOAD_PITCH_DEGREES;
-    private static volatile int payloadYawDegrees = DEFAULT_PAYLOAD_YAW_DEGREES;
-    private static volatile int payloadRollDegrees = DEFAULT_PAYLOAD_ROLL_DEGREES;
 
     private static final double STRETCH_MIN_LONG_FRACTION = 0.60;
     private static final double REPEAT_DETAIL_SPACING_TILES = 1.0;
@@ -113,207 +94,53 @@ public final class ConveyorRunPreview {
     private static int cachedPayloadItemId = -1;
     private static int cachedPayloadScalePercent = -1;
 
-    static {
-        loadPayloadTuningFromDisk();
-    }
-
     private ConveyorRunPreview() {
     }
 
-    public static final class PayloadTuning {
-        public final int itemId;
-        public final int alongOffset;
-        public final int sideOffset;
-        public final int heightOffset;
-        public final int scalePercent;
-        public final int pitchDegrees;
-        public final int yawDegrees;
-        public final int rollDegrees;
-        public final double speedTilesPerSecond;
-
-        PayloadTuning(int itemId, int alongOffset, int sideOffset,
-                int heightOffset, int scalePercent,
-                int pitchDegrees, int yawDegrees, int rollDegrees,
-                double speedTilesPerSecond) {
-            this.itemId = itemId;
-            this.alongOffset = alongOffset;
-            this.sideOffset = sideOffset;
-            this.heightOffset = heightOffset;
-            this.scalePercent = scalePercent;
-            this.pitchDegrees = pitchDegrees;
-            this.yawDegrees = yawDegrees;
-            this.rollDegrees = rollDegrees;
-            this.speedTilesPerSecond = speedTilesPerSecond;
-        }
+    public static int getPayloadTestItemId() {
+        return payloadItemId;
     }
 
-    public static PayloadTuning getPayloadTuning() {
-        return new PayloadTuning(
-                payloadItemId,
-                payloadAlongOffset,
-                payloadSideOffset,
-                payloadHeightOffset,
-                payloadScalePercent,
-                payloadPitchDegrees,
-                payloadYawDegrees,
-                payloadRollDegrees,
-                payloadSpeedTilesPerSecond);
-    }
-
-    public static synchronized String setPayloadTuning(
-            int itemId, int alongOffset, int sideOffset, int heightOffset,
-            int scalePercent, int pitchDegrees, int yawDegrees, int rollDegrees,
-            double speedTilesPerSecond) {
+    public static synchronized String setPayloadTestItemId(int itemId) {
         int nextItemId = Math.max(0, itemId);
-        int nextScale = clamp(scalePercent, 10, 400);
-        double nextSpeed = Math.max(0.05, Math.min(20.0, speedTilesPerSecond));
-
-        boolean rebuildPayload = nextItemId != payloadItemId
-                || nextScale != payloadScalePercent;
-
-        payloadItemId = nextItemId;
-        payloadAlongOffset = clamp(alongOffset, -4096, 4096);
-        payloadSideOffset = clamp(sideOffset, -4096, 4096);
-        payloadHeightOffset = clamp(heightOffset, -2048, 2048);
-        payloadScalePercent = nextScale;
-        payloadPitchDegrees = normalizeDegrees(pitchDegrees);
-        payloadYawDegrees = normalizeDegrees(yawDegrees);
-        payloadRollDegrees = normalizeDegrees(rollDegrees);
-        payloadSpeedTilesPerSecond = nextSpeed;
-
-        if (rebuildPayload) {
-            invalidatePayloadModel();
+        if (nextItemId != payloadItemId) {
+            payloadItemId = nextItemId;
+            ConveyorPayloadVisualProfiles.clearPreview();
         }
-
-        return getPayloadTuningStatus();
+        return getPayloadProfileStatus();
     }
 
-    public static synchronized String savePayloadTuning() {
-        Properties properties = new Properties();
-        properties.setProperty("itemId", Integer.toString(payloadItemId));
-        properties.setProperty("alongOffset", Integer.toString(payloadAlongOffset));
-        properties.setProperty("sideOffset", Integer.toString(payloadSideOffset));
-        properties.setProperty("heightOffset", Integer.toString(payloadHeightOffset));
-        properties.setProperty("scalePercent", Integer.toString(payloadScalePercent));
-        properties.setProperty("pitchDegrees", Integer.toString(payloadPitchDegrees));
-        properties.setProperty("yawDegrees", Integer.toString(payloadYawDegrees));
-        properties.setProperty("rollDegrees", Integer.toString(payloadRollDegrees));
-        properties.setProperty("speedTilesPerSecond",
-                Double.toString(payloadSpeedTilesPerSecond));
-
-        File parent = PAYLOAD_TUNING_FILE.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            return "Payload preset save failed: could not create " + parent.getPath();
-        }
-
-        FileOutputStream out = null;
-        try {
-            out = new FileOutputStream(PAYLOAD_TUNING_FILE);
-            properties.store(out, "Matrix3 Construction conveyor payload tuning");
-            return "Payload preset saved: " + PAYLOAD_TUNING_FILE.getPath();
-        } catch (IOException ex) {
-            return "Payload preset save failed: " + ex.getMessage();
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException ignored) {
-                    // Best-effort developer-tool cleanup.
-                }
-            }
-        }
+    public static synchronized String setPayloadVisualPreview(
+            int itemId, int alongOffset, int sideOffset, int heightOffset,
+            int scalePercent, int pitchDegrees, int yawDegrees, int rollDegrees) {
+        payloadItemId = Math.max(0, itemId);
+        ConveyorPayloadVisualProfiles.setPreview(
+                payloadItemId,
+                new ConveyorPayloadVisualProfiles.Profile(
+                        alongOffset, sideOffset, heightOffset, scalePercent,
+                        pitchDegrees, yawDegrees, rollDegrees));
+        return getPayloadProfileStatus();
     }
 
-    public static synchronized String reloadPayloadTuning() {
-        boolean loaded = loadPayloadTuningFromDisk();
-        return loaded
-                ? "Payload preset reloaded. " + getPayloadTuningStatus()
-                : "No saved payload preset found; current values unchanged.";
+    public static ConveyorPayloadVisualProfiles.Resolution getPayloadResolution() {
+        return ConveyorPayloadVisualProfiles.resolve(payloadItemId);
     }
 
-    public static synchronized String resetPayloadTuning() {
-        setPayloadTuning(
-                DEFAULT_PAYLOAD_ITEM_ID,
-                DEFAULT_PAYLOAD_ALONG_OFFSET,
-                DEFAULT_PAYLOAD_SIDE_OFFSET,
-                DEFAULT_PAYLOAD_HEIGHT_OFFSET,
-                DEFAULT_PAYLOAD_SCALE_PERCENT,
-                DEFAULT_PAYLOAD_PITCH_DEGREES,
-                DEFAULT_PAYLOAD_YAW_DEGREES,
-                DEFAULT_PAYLOAD_ROLL_DEGREES,
-                DEFAULT_PAYLOAD_SPEED_TILES_PER_SECOND);
-        return "Payload tuner reset to defaults (not saved).";
+    public static ConveyorPayloadVisualProfiles.Resolution getPayloadRenderResolution() {
+        return ConveyorPayloadVisualProfiles.resolveForRender(payloadItemId);
     }
 
-    public static String getPayloadTuningStatus() {
-        return "Payload item=" + payloadItemId
-                + " along=" + payloadAlongOffset
-                + " side=" + payloadSideOffset
-                + " height=" + payloadHeightOffset
-                + " scale=" + payloadScalePercent + "%"
-                + " rot=(" + payloadPitchDegrees
-                + "," + payloadYawDegrees
-                + "," + payloadRollDegrees + ")"
-                + " speed=" + String.format("%.2f", payloadSpeedTilesPerSecond) + "t/s";
+    public static synchronized String resetPayloadVisualPreview() {
+        ConveyorPayloadVisualProfiles.clearPreview();
+        return getPayloadProfileStatus();
     }
 
-    private static synchronized boolean loadPayloadTuningFromDisk() {
-        if (!PAYLOAD_TUNING_FILE.isFile()) {
-            return false;
-        }
-
-        Properties properties = new Properties();
-        FileInputStream in = null;
-        try {
-            in = new FileInputStream(PAYLOAD_TUNING_FILE);
-            properties.load(in);
-
-            int itemId = parseInt(properties, "itemId", DEFAULT_PAYLOAD_ITEM_ID);
-            int along = parseInt(properties, "alongOffset", DEFAULT_PAYLOAD_ALONG_OFFSET);
-            int side = parseInt(properties, "sideOffset", DEFAULT_PAYLOAD_SIDE_OFFSET);
-            int height = parseInt(properties, "heightOffset", DEFAULT_PAYLOAD_HEIGHT_OFFSET);
-            int scale = parseInt(properties, "scalePercent", DEFAULT_PAYLOAD_SCALE_PERCENT);
-            int pitch = parseInt(properties, "pitchDegrees", DEFAULT_PAYLOAD_PITCH_DEGREES);
-            int yaw = parseInt(properties, "yawDegrees", DEFAULT_PAYLOAD_YAW_DEGREES);
-            int roll = parseInt(properties, "rollDegrees", DEFAULT_PAYLOAD_ROLL_DEGREES);
-            double speed = parseDouble(properties, "speedTilesPerSecond",
-                    DEFAULT_PAYLOAD_SPEED_TILES_PER_SECOND);
-
-            setPayloadTuning(itemId, along, side, height, scale,
-                    pitch, yaw, roll, speed);
-            return true;
-        } catch (IOException ex) {
-            System.err.println("[ConveyorRunPreview] Payload preset load failed: "
-                    + ex.getMessage());
-            return false;
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException ignored) {
-                    // Best-effort developer-tool cleanup.
-                }
-            }
-        }
-    }
-
-    private static int parseInt(Properties properties, String key, int fallback) {
-        try {
-            return Integer.parseInt(properties.getProperty(key,
-                    Integer.toString(fallback)).trim());
-        } catch (RuntimeException ex) {
-            return fallback;
-        }
-    }
-
-    private static double parseDouble(
-            Properties properties, String key, double fallback) {
-        try {
-            return Double.parseDouble(properties.getProperty(key,
-                    Double.toString(fallback)).trim());
-        } catch (RuntimeException ex) {
-            return fallback;
-        }
+    public static String getPayloadProfileStatus() {
+        ConveyorPayloadVisualProfiles.Resolution render =
+                ConveyorPayloadVisualProfiles.resolveForRender(payloadItemId);
+        return ConveyorPayloadVisualProfiles.describe(payloadItemId)
+                + ("LIVE PREVIEW".equals(render.source)
+                        ? " | active=LIVE PREVIEW" : "");
     }
 
     private static int normalizeDegrees(int value) {
@@ -326,13 +153,6 @@ public final class ConveyorRunPreview {
     private static int degreesToAngle(int degrees) {
         return ((int) Math.round(normalizeDegrees(degrees)
                 * 16384.0 / 360.0)) & 0x3fff;
-    }
-
-    private static void invalidatePayloadModel() {
-        cachedPayloadRenderer = null;
-        cachedPayloadModel = null;
-        cachedPayloadItemId = -1;
-        cachedPayloadScalePercent = -1;
     }
 
     public static String setAuthoringRecipe(
