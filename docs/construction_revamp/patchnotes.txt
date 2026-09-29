@@ -1879,3 +1879,11 @@
 - Runtime report: holding the mouse wheel/MMB and dragging left/right in RTS camera mode orbited horizontally in the opposite direction from the drag.
 - Corrected only the horizontal mouse-orbit yaw sign in ConstructionBuildCamera. Vertical MMB pitch, wheel zoom, WASD/arrow pan and Q/E keyboard orbit are unchanged.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-29 - Conveyor Animation Path Diagnostics V1.1
+- Runtime rejected the first SOURCE ANIM proof: enabling the real object-definition sequence produced no visible motion on the edited conveyor.
+- Verified statically that ObjectDefinitions.method6057 builds object geometry but does not itself consume the object's anIntArray5645 sequence ids; normal animated world objects therefore have an additional runtime animation path.
+- Added read-only Live Model Editor ANIM TRACE beside SOURCE ANIM.
+- Trace compares the real AnimationDefinition frame transform groups against decoded Class159 vertex skin groups, face groups and textured faces for every connected source component.
+- Trace reports sequence transform types, spatial/non-spatial group overlap, per-part texture ids and a bounded classification to select the next exact reverse-engineering seam.
+- No animation ids, cache data, editor transforms, server state, ConveyorRun persistence or physical logistics ownership are changed by the trace.
