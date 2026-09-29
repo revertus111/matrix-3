@@ -1864,3 +1864,12 @@
 - Removed active automatic support guessing. The support-spacing design remains locked, but runtime support generation is deferred until an explicit support component is authored/identified from the corrected conveyor source.
 - Procedural STRETCH versus fixed-position classification now operates only inside the eight-part authored conveyor assembly.
 - No server, SettlementState, physical-storage, item-transport, collision, or per-tile conveyor ownership changed.
+
+2026-09-29 - Source Object Animation Reuse V1
+- Added a package-level authoritative animation-definition lookup through the existing client animation loader registration.
+- Live Model Editor now exposes SOURCE ANIM OFF/ON. OFF keeps the current static editing workflow; ON previews the first valid animation sequence decoded from the source ObjectDefinitions.
+- Source animation uses the real AnimationDefinition frame ids/durations and Matrix3 Model frame application path. V1 uses exact frame stepping; interpolation is deliberately deferred.
+- Animated editor frames clone the cached authored base Model before applying the current frame, preventing cumulative deformation and preserving saved part transforms.
+- ConveyorRun now reuses the same source-object sequence automatically on SHORT/MEDIUM/LONG procedural runs. The generated A->B raw/base model remains cached; only the renderer Model clone changes each animation frame.
+- No new cache object, custom animation id, server state, settlement persistence, collision, storage, item transport, or per-tile conveyor ownership was introduced.
+- Runtime goal: prove the custom eight-part conveyor assembly still preserves the animation groups inherited from object 46298 after editor transforms and procedural run-length generation.
