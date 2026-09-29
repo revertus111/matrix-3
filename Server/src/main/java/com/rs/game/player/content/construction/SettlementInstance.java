@@ -41,6 +41,8 @@ public final class SettlementInstance {
             PLOT_CHUNKS + VISUAL_PADDING_CHUNKS * 2;
 
     private static final int ENTRY_OFFSET = PLOT_TILES / 2;
+    // Reserved client bridge intercepted by ConveyorRunPreview before normal CSVar storage.
+    private static final int CONVEYOR_SYNC_CS_VAR = 65534;
     private static final double PASSIVE_CONSTRUCTION_XP_PER_RESOURCE = 1.0;
     // V1 presentation placeholder until a dedicated mine-cart NPC/model is accepted.
     private static final int RAIL_CART_NPC_ID = 1;
@@ -233,6 +235,7 @@ public final class SettlementInstance {
             public void run() {
                 if (!destroyed && loaded && getActive(player) == SettlementInstance.this) {
                     player.getPackets().sendCSVarInteger(2835, 1);
+                    syncConveyorRunsToClient();
                 }
             }
         }, 1800L, TimeUnit.MILLISECONDS);
@@ -272,6 +275,103 @@ public final class SettlementInstance {
         checkStarterShelterMilestone();
         return "Settlement placed " + definition.getDisplayName()
                 + " at plot " + plotX + ", " + plotY + ".";
+    }
+
+    /**
+     * Server-authoritative persistent conveyor creation.
+     *
+     * Endpoints arrive as runtime world tiles but are stored plot-relative.
+     * One call creates one logical ConveyorRun regardless of its visual length.
+     */
+    public synchronized String createConveyorRun(WorldTile start, WorldTile end) {
+        if (!loaded || destroyed) {
+            return "Settlement conveyor placement is unavailable while the settlement is loading.";
+        }
+        if (start == null || end == null
+                || !containsWorldTile(start) || !containsWorldTile(end)) {
+            return "Conveyor endpoints must both be inside the active settlement plot.";
+        }
+        if (start.getPlane() != end.getPlane()) {
+            return "Conveyor endpoints must be on the same plane.";
+        }
+        if (start.getX() == end.getX() && start.getY() == end.getY()) {
+            return "Conveyor Point A and Point B must be different tiles.";
+        }
+
+        SettlementConveyorRun run = state.addConveyorRun(
+                toPlotX(start.getX()), toPlotY(start.getY()),
+                toPlotX(end.getX()), toPlotY(end.getY()),
+                start.getPlane());
+        if (run == null) {
+            return "ConveyorRun could not be saved.";
+        }
+
+        syncConveyorRunsToClient();
+        if (debug != null) {
+            debug.record("conveyor#" + run.getRunId(),
+                    "Created persistent ConveyorRun A=("
+                            + run.getStartPlotX() + "," + run.getStartPlotY()
+                            + ") B=(" + run.getEndPlotX() + "," + run.getEndPlotY()
+                            + ") length=" + String.format("%.2f", run.getLengthTiles()) + "t.",
+                    SettlementDebug.Category.LOGISTICS);
+        }
+        return "Created ConveyorRun #" + run.getRunId()
+                + " (" + String.format("%.2f", run.getLengthTiles()) + " tiles).";
+    }
+
+    public synchronized String removeConveyorRun(long runId) {
+        if (!loaded || destroyed) {
+            return "Settlement conveyor removal is unavailable while the settlement is loading.";
+        }
+        if (!state.removeConveyorRun(runId)) {
+            return "ConveyorRun #" + runId + " was not found.";
+        }
+        syncConveyorRunsToClient();
+        if (debug != null) {
+            debug.record("conveyor#" + runId,
+                    "Removed persistent ConveyorRun.",
+                    SettlementDebug.Category.LOGISTICS);
+        }
+        return "Removed ConveyorRun #" + runId + ".";
+    }
+
+    public synchronized String clearConveyorRuns() {
+        if (!loaded || destroyed) {
+            return "Settlement conveyor clear is unavailable while the settlement is loading.";
+        }
+        int removed = state.clearConveyorRuns();
+        syncConveyorRunsToClient();
+        if (debug != null) {
+            debug.record("conveyor",
+                    "Cleared persistent ConveyorRuns count=" + removed + ".",
+                    SettlementDebug.Category.LOGISTICS);
+        }
+        return "Cleared " + removed + " persistent ConveyorRun"
+                + (removed == 1 ? "." : "s.");
+    }
+
+    private void syncConveyorRunsToClient() {
+        if (destroyed || boundChunks == null) {
+            return;
+        }
+        player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR, "BEGIN");
+        for (SettlementConveyorRun run : state.snapshotConveyorRuns()) {
+            if (run == null || !run.isValid()) {
+                continue;
+            }
+            player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR,
+                    "RUN," + run.getRunId()
+                    + "," + toWorldX(run.getStartPlotX())
+                    + "," + toWorldY(run.getStartPlotY())
+                    + "," + toWorldX(run.getEndPlotX())
+                    + "," + toWorldY(run.getEndPlotY())
+                    + "," + run.getPlane());
+        }
+        player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR, "END");
+    }
+
+    private void clearConveyorRunsOnClient() {
+        player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR, "CLEAR");
     }
 
     /**
@@ -3074,6 +3174,7 @@ public final class SettlementInstance {
         if (destroyed) {
             return;
         }
+        clearConveyorRunsOnClient();
         player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
         player.setForceNextMapLoadRefresh(true);
@@ -3085,6 +3186,7 @@ public final class SettlementInstance {
         if (destroyed) {
             return;
         }
+        clearConveyorRunsOnClient();
         player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
         player.setLocation(returnTile);
@@ -3095,6 +3197,7 @@ public final class SettlementInstance {
         if (destroyed) {
             return;
         }
+        clearConveyorRunsOnClient();
         player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
         destroy();
