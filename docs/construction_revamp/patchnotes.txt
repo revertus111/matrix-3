@@ -1846,3 +1846,12 @@
 - Group Scale and Fit 1 Tile each preserve the existing part undo transaction model; no cache/server-world writes or object persistence ownership changed.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
 
+
+2026-09-29 - Procedural ConveyorRun Visual Generator V0
+- Added client-only ConveyorRunPreview using canonical object 46298 / models 49717+49718; no scene registration, settlement persistence, collision or per-tile belt objects.
+- Added SHORT/MEDIUM/LONG A->B demo runs from Con Revamp Development Tools and a status readout for procedural role diagnostics.
+- Generated one composite Class159/renderer Model per logical run; long-span components stretch while fixed details remap position without changing authored size.
+- Added fixed-size endpoint/interior support generation using max(0, ceil(runLength / 3 tiles) - 1) interior supports and cached generated models.
+- Connected-component STRETCH/SUPPORT/fixed classification remains HYPOTHESIS pending runtime visual confirmation; wrong classifications should be replaced with explicit authored roles.
+- Primary source texture data is preserved; generated support-copy UV mappings are intentionally stripped in V0. Texture-repeat/UV work remains deferred.
+- Added the preview to the existing post-scene Construction render seam; normal Construction/server ownership is unchanged.
