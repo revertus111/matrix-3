@@ -22,6 +22,7 @@ public final class SettlementWorkerNpc extends NPC {
     private static final int GATHER_TICKS = 3;
     private static final int PROCESS_TICKS = 4;
     private static final int CARRY_CAPACITY = 1;
+    private static final long DEBUG_SPEECH_MIN_INTERVAL_MS = 2000L;
     private static final int EAT_TICKS = 2;
     private static final int DRINK_TICKS = 2;
     private static final int REST_TICKS = 4;
@@ -74,6 +75,7 @@ public final class SettlementWorkerNpc extends NPC {
     private String statusDetail = "No allowed gathering job.";
     private WorkState lastDebugWorkState;
     private String lastDebugStatusDetail;
+    private long lastDebugSpeechMillis;
 
     public SettlementWorkerNpc(SettlementInstance settlement,
             SettlementWorkerDefinition definition,
@@ -1443,9 +1445,13 @@ public final class SettlementWorkerNpc extends NPC {
 
         if (debug.isEnabled(SettlementDebug.Category.WORKER_SPEECH)
                 && detail.length() > 0) {
-            String speech = detail.length() > 80
-                    ? detail.substring(0, 77) + "..." : detail;
-            setNextForceTalk(new ForceTalk(speech));
+            long now = System.currentTimeMillis();
+            if (now - lastDebugSpeechMillis >= DEBUG_SPEECH_MIN_INTERVAL_MS) {
+                String speech = detail.length() > 80
+                        ? detail.substring(0, 77) + "..." : detail;
+                setNextForceTalk(new ForceTalk(speech));
+                lastDebugSpeechMillis = now;
+            }
         }
     }
 
