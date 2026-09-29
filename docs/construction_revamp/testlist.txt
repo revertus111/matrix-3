@@ -1555,3 +1555,14 @@ RTS camera continuity/speed/render-parity regression — IMPLEMENTED / NEEDS RUN
 - Vanilla parity: fog and effective scene radius must remain Matrix3 stock behavior around the RTS focus. Do not render the entire loaded scene and do not disable fog.
 - Orbit regression: MMB left/right follows drag direction; vertical MMB pitch, wheel zoom and Q/E orbit remain unchanged.
 - Minimap regression: click-to-focus/RTS minimap marker and loaded-scene boundary clamp continue to work.
+
+
+RTS/editor visual terrain apron regression — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-29)
+- Pull/build, then EXIT and RE-ENTER the settlement before testing; an already-loaded instance remains the old 64x64 allocation until rebuilt.
+- From the middle of the settlement, zoom/orbit the shared RTS camera to the same distance that previously exposed the gray dynamic-map edge. Terrain should continue beyond the 64x64 playable boundary instead of terminating immediately at the plot edge.
+- Pan/orbit around all four plot edges. The generated visual backdrop is 24 tiles beyond each side of the playable plot; no former 64x64 hard terrain edge should be visible during normal settlement/editor framing.
+- Player-boundary safety: attempt to Walk Here / path beyond each 64x64 settlement edge. Ordinary player movement must stop at the playable plot even though terrain remains visible beyond it.
+- Build-boundary safety: placement, rails, chests and other persistent Construction actions must still reject tiles outside the original 64x64 plot.
+- Persistence regression: existing build coordinates and worker/resource positions must remain unchanged after exit/re-entry; the visual apron must create no saved pieces or resources.
+- Cleanup regression: leave and recreate the settlement several times; padded dynamic regions must be released/reallocated without leaking or overlapping another instance.
+- Camera regression: continuous-click movement, 2.0x default RTS speed, MMB orbit direction, vertical pitch, wheel zoom and minimap focus remain unchanged.
