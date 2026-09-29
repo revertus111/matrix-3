@@ -1952,3 +1952,8 @@
 - Restored ConstructionBuildCamera and Class343 to the last known working detached Class24/Class411 RTS implementation.
 - Restored BUILD_CAMERA documentation and marked the vanilla-owner attempt RUNTIME REJECTED / ROLLED BACK.
 - Future parity work must verify the active ordinary-gameplay camera branch at runtime before changing RTS ownership again.
+
+2026-09-29 - Persistent ConveyorRun clear regression
+- Fixed Clear Persistent Conveyors to emit the explicit client CLEAR signal after server state is emptied instead of encoding zero runs as an empty BEGIN/END snapshot.
+- Server persistence ownership is unchanged; create/restore sync continues to use BEGIN/RUN/END snapshots.
+- Status: IMPLEMENTED / NEEDS RUNTIME RETEST.
