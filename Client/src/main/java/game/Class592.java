@@ -56,8 +56,13 @@ public class Class592 {
 			if (CustomItemActionConfig.shouldSuppressBankInventoryMenuEntry(i_1_, l, i_3_, i_4_))
 				return;
 			i = -1 != i ? i : -646491435 * client.anInt8751;
-			Class572_Sub12_Sub10 class572_sub12_sub10 = new Class572_Sub12_Sub10(string, string_0_, i, i_1_, i_2_, l, i_3_, i_4_, bool, bool_5_, l_6_, bool_7_);
-			Class412.method5075(class572_sub12_sub10, 722976984);
+			boolean suppressSettlementStorageEntry =
+					ConstructionRadialSelection.shouldSuppressSettlementStorageNativeEntry(
+							string, i_1_, l);
+			if (!suppressSettlementStorageEntry) {
+				Class572_Sub12_Sub10 class572_sub12_sub10 = new Class572_Sub12_Sub10(string, string_0_, i, i_1_, i_2_, l, i_3_, i_4_, bool, bool_5_, l_6_, bool_7_);
+				Class412.method5075(class572_sub12_sub10, 722976984);
+			}
 			ConstructionPlacementController.observeSceneMenuTile(i_1_, i_3_, i_4_);
 			ConstructionRadialSelection.observeSceneMenuTile(i_1_, i_3_, i_4_);
 			ConstructionRadialSelection.mirrorSavedBuildTileEntries(i_1_, i_3_, i_4_);
