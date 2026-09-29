@@ -1809,3 +1809,17 @@
 - Debug buffer keeps the latest 2000 enabled events, mirrors enabled events to server console, and exports to data/construction/debug/settlement_debug_<timestamp>.txt.
 - Debug configuration and buffered events are transient only; no SettlementState/player-save schema changes.
 
+
+
+2026-09-29 - Bundle 3.5D Storage Test UX + Chest Menu Cleanup
+- Reused the already-landed Construction Debug Framework V1; no duplicate debug owner/toggle was introduced.
+- Added SettlementStorageContainer.clearItems() as a contents-only reset. It preserves mode, filters, worker access, priority, capacity upgrades and the persistent chest build.
+- Added server-authoritative clear-one and clear-all physical-storage commands with explicit confirm tokens.
+- Added world Clear Chest -> Confirm Clear Chest two-step confirmation for the exact selected settlement chest, with a five-second confirmation window.
+- Added Con Revamp -> Storage -> Clear All Physical Storage with a second-click five-second confirmation.
+- Clear-one/all release transient physical source/destination reservations and refresh the currently-open exact chest through the existing lightweight event-driven bank-shell refresh.
+- Clear-all affects physical chest contents only; machine buffers and legacy SettlementResource counters remain intact.
+- Physical clear operations emit Storage + Logistics events through the existing SettlementDebug bus when enabled.
+- Cleaned settlement chest context: suppress duplicate Matrix3-native Open/View Storage entries for chest 18804 while keeping one canonical View Storage; suppress Saved Tile/Unsave Tile authoring entries on chest context; retain Remove/Examine/Walk here and selected-worker Take/Deliver actions.
+- Workers are intentionally not paused by storage clear, so active production may immediately refill cleared chests.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
