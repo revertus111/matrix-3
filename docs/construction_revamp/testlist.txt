@@ -1395,6 +1395,10 @@ Bundle 3.5C Explicit Logistics Control + Live Storage V1 gate — IMPLEMENTED / 
 - Regression: SUPPLY source / REQUEST output first-chain setup continues to produce exactly 1 Log -> 2 Planks with physical item totals reconciling.
 - Regression: View Storage, Storage Settings, Close/reopen, Rally, Auto/Orders behavior, needs and persistence remain unchanged.
 
+RTS camera MMB horizontal orbit regression — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-29)
+- Hold the mouse wheel/MMB and drag left/right in RTS camera mode. The camera orbit must follow the drag direction instead of moving opposite it.
+- Vertical MMB drag/pitch, wheel zoom, WASD/arrow pan and Q/E keyboard orbit must remain unchanged.
+
 Bundle 3.5D Storage Test UX + Chest Menu Cleanup gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-29)
 - Chest menu cleanup: right-click settlement chest 18804 with no worker selection. Expected canonical entries include exactly one View Storage, one Storage Settings, Clear Chest, Remove, Examine and Walk here; duplicate native Open/View Storage and Saved Tile/Unsave Tile must not appear.
 - Selected-worker chest menu: with one or more committed workers, Take From Here and Deliver Here appear in addition to the cleaned normal storage entries; no duplicate View Storage/Open entries return.
