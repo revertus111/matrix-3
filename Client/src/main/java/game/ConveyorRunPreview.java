@@ -24,6 +24,11 @@ public final class ConveyorRunPreview {
     private static final int[] SOURCE_MODEL_IDS = { 49717, 49718 };
 
     private static final int TILE_UNITS = 512;
+    private static final int PAYLOAD_ITEM_ID = 1511;
+    private static final double PAYLOAD_SPEED_TILES_PER_SECOND = 1.25;
+    private static final int PAYLOAD_HEIGHT_OFFSET = -96;
+    private static final long PAYLOAD_EPOCH_NANOS = System.nanoTime();
+
     private static final double STRETCH_MIN_LONG_FRACTION = 0.60;
     private static final double REPEAT_DETAIL_SPACING_TILES = 1.0;
     private static final double MAX_SUPPORT_SPAN_TILES = 3.0;
@@ -75,6 +80,9 @@ public final class ConveyorRunPreview {
     private static Class106 cachedRenderer;
     private static int cachedRevision = Integer.MIN_VALUE;
     private static Model[] cachedModels = new Model[0];
+
+    private static Class106 cachedPayloadRenderer;
+    private static Model cachedPayloadModel;
 
     private ConveyorRunPreview() {
     }
@@ -323,6 +331,7 @@ public final class ConveyorRunPreview {
 
         int rendered = 0;
         int failed = 0;
+        int payloads = 0;
         for (int i = 0; i < current.length; i++) {
             Model model = i < cachedModels.length ? cachedModels[i] : null;
             if (model != null && renderOne(current[i], model, definition,
@@ -331,9 +340,15 @@ public final class ConveyorRunPreview {
             } else {
                 failed++;
             }
+
+            if (current[i].runId > 0L
+                    && renderPayload(current[i], scene, renderer, sceneBase)) {
+                payloads++;
+            }
         }
 
-        status = "DRAW ConveyorRun V0 " + rendered + "/" + current.length
+        status = "DRAW ConveyorRun V1 " + rendered + "/" + current.length
+                + " log1511=" + payloads
                 + (failed == 0 ? "" : " failed=" + failed);
     }
 
@@ -869,6 +884,116 @@ public final class ConveyorRunPreview {
         // gameplay movement layer.
         model.method1450(MODEL_FLAGS);
         return model;
+    }
+
+    private static boolean renderPayload(ConveyorRun run,
+            Class523 scene, Class106 renderer, Class497 sceneBase) {
+        if (run == null || run.runId <= 0L || renderer == null
+                || scene == null || sceneBase == null) {
+            return false;
+        }
+
+        Model payloadModel = getPayloadModel(renderer);
+        if (payloadModel == null) {
+            return false;
+        }
+
+        int plane = run.plane;
+        if (plane < 0 || plane >= scene.aClass174Array5838.length) {
+            return false;
+        }
+        Class174 ground = scene.aClass174Array5838[plane];
+        if (ground == null) {
+            return false;
+        }
+
+        int baseWorldX = sceneBase.localX * -2109597897;
+        int baseWorldY = sceneBase.localY * 417324155;
+        int startLocalX = run.startX - baseWorldX;
+        int startLocalY = run.startY - baseWorldY;
+        int endLocalX = run.endX - baseWorldX;
+        int endLocalY = run.endY - baseWorldY;
+
+        int sceneWidth = scene.anInt5833 * -1396185127;
+        int sceneHeight = scene.anInt5834 * -1519623925;
+        if (startLocalX < 0 || startLocalY < 0 || endLocalX < 0 || endLocalY < 0
+                || startLocalX >= sceneWidth || endLocalX >= sceneWidth
+                || startLocalY >= sceneHeight || endLocalY >= sceneHeight) {
+            return false;
+        }
+
+        double lengthTiles = Math.max(0.001, run.lengthTiles());
+        double elapsedSeconds =
+                (System.nanoTime() - PAYLOAD_EPOCH_NANOS) / 1000000000.0;
+        double runOffsetTiles = (run.runId % 7L) * 0.37;
+        double distanceTiles =
+                (elapsedSeconds * PAYLOAD_SPEED_TILES_PER_SECOND + runOffsetTiles)
+                % lengthTiles;
+        double progress = distanceTiles / lengthTiles;
+
+        int tileSize = ground.anInt2087 * 2129890771;
+        double localX = startLocalX + (endLocalX - startLocalX) * progress;
+        double localY = startLocalY + (endLocalY - startLocalY) * progress;
+        int sceneX = (int) Math.round(localX * tileSize + tileSize * 0.5);
+        int sceneZ = (int) Math.round(localY * tileSize + tileSize * 0.5);
+
+        // ConveyorRun itself is a straight generated deck positioned from the
+        // run midpoint, so keep the payload on that same horizontal deck rather
+        // than making it bob with every terrain sample under the span.
+        double midLocalX = (startLocalX + endLocalX) * 0.5;
+        double midLocalY = (startLocalY + endLocalY) * 0.5;
+        int midSceneX = (int) Math.round(midLocalX * tileSize + tileSize * 0.5);
+        int midSceneZ = (int) Math.round(midLocalY * tileSize + tileSize * 0.5);
+        int sceneY = ground.method2718(midSceneX, midSceneZ, 0)
+                + PAYLOAD_HEIGHT_OFFSET;
+
+        TRANSFORM.method3588(sceneX, sceneY, sceneZ);
+        payloadModel.method1375(TRANSFORM, null, 0);
+        return true;
+    }
+
+    private static Model getPayloadModel(Class106 renderer) {
+        if (renderer == null) {
+            return null;
+        }
+        if (cachedPayloadRenderer == renderer && cachedPayloadModel != null) {
+            return cachedPayloadModel;
+        }
+
+        Class639_Sub5 itemDefinitions =
+                ClientConsoleItemBridge.getRegisteredItemDefinitions();
+        if (itemDefinitions == null
+                || PAYLOAD_ITEM_ID < 0
+                || PAYLOAD_ITEM_ID >= itemDefinitions.method45()) {
+            return null;
+        }
+
+        try {
+            ItemDefinitions definition = (ItemDefinitions)
+                    itemDefinitions.getDefinition(PAYLOAD_ITEM_ID, 0);
+            if (definition == null) {
+                return null;
+            }
+            Model model = definition.method7526(
+                    renderer,
+                    MODEL_FLAGS,
+                    1,
+                    null,
+                    null,
+                    0, 0, 0, 0,
+                    0);
+            if (model == null) {
+                return null;
+            }
+            model.method1450(MODEL_FLAGS);
+            cachedPayloadRenderer = renderer;
+            cachedPayloadModel = model;
+            return model;
+        } catch (RuntimeException ex) {
+            System.err.println("[ConveyorRunPreview] Log 1511 model build failed: "
+                    + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+            return null;
+        }
     }
 
     private static boolean renderOne(ConveyorRun run, Model model,
