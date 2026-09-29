@@ -87,6 +87,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         content.add(Box.createVerticalStrut(12));
         content.add(createDevelopmentToolsCard());
         content.add(Box.createVerticalStrut(12));
+        content.add(createConveyorPayloadTunerCard());
+        content.add(Box.createVerticalStrut(12));
         content.add(createStatusCard());
         content.add(Box.createVerticalGlue());
 
@@ -640,6 +642,145 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(conveyorPersist);
         buttons.add(conveyorClear);
         buttons.add(conveyorStatus);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createConveyorPayloadTunerCard() {
+        JPanel card = ConsoleTheme.createCard("Conveyor Payload Tuner");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Live-tune the moving payload relative to the conveyor. "
+                + "Forward/Side/Height use model units (512 = one tile). "
+                + "Rotation is relative to the run direction. Save makes the preset load automatically next client start.",
+                5));
+        card.add(Box.createVerticalStrut(8));
+
+        ConveyorRunPreview.PayloadTuning initial =
+                ConveyorRunPreview.getPayloadTuning();
+
+        final JSpinner itemId = new JSpinner(new SpinnerNumberModel(
+                initial.itemId, 0, 100000, 1));
+        final JSpinner forward = new JSpinner(new SpinnerNumberModel(
+                initial.alongOffset, -4096, 4096, 16));
+        final JSpinner side = new JSpinner(new SpinnerNumberModel(
+                initial.sideOffset, -4096, 4096, 16));
+        final JSpinner height = new JSpinner(new SpinnerNumberModel(
+                initial.heightOffset, -2048, 2048, 16));
+        final JSpinner scale = new JSpinner(new SpinnerNumberModel(
+                initial.scalePercent, 10, 400, 5));
+        final JSpinner pitch = new JSpinner(new SpinnerNumberModel(
+                initial.pitchDegrees, -180, 180, 5));
+        final JSpinner yaw = new JSpinner(new SpinnerNumberModel(
+                initial.yawDegrees, -180, 180, 5));
+        final JSpinner roll = new JSpinner(new SpinnerNumberModel(
+                initial.rollDegrees, -180, 180, 5));
+        final JSpinner speed = new JSpinner(new SpinnerNumberModel(
+                initial.speedTilesPerSecond, 0.05, 20.0, 0.05));
+
+        JSpinner[] spinners = {
+                itemId, forward, side, height, scale, pitch, yaw, roll, speed
+        };
+        for (JSpinner spinner : spinners) {
+            spinner.setMaximumSize(new Dimension(110, 30));
+            spinner.setFocusable(false);
+        }
+
+        final boolean[] syncing = { false };
+        javax.swing.event.ChangeListener liveChange = e -> {
+            if (syncing[0]) return;
+            setStatus(ConveyorRunPreview.setPayloadTuning(
+                    ((Number) itemId.getValue()).intValue(),
+                    ((Number) forward.getValue()).intValue(),
+                    ((Number) side.getValue()).intValue(),
+                    ((Number) height.getValue()).intValue(),
+                    ((Number) scale.getValue()).intValue(),
+                    ((Number) pitch.getValue()).intValue(),
+                    ((Number) yaw.getValue()).intValue(),
+                    ((Number) roll.getValue()).intValue(),
+                    ((Number) speed.getValue()).doubleValue()));
+        };
+        for (JSpinner spinner : spinners) {
+            spinner.addChangeListener(liveChange);
+        }
+
+        Runnable syncFields = () -> {
+            ConveyorRunPreview.PayloadTuning tuning =
+                    ConveyorRunPreview.getPayloadTuning();
+            syncing[0] = true;
+            try {
+                itemId.setValue(Integer.valueOf(tuning.itemId));
+                forward.setValue(Integer.valueOf(tuning.alongOffset));
+                side.setValue(Integer.valueOf(tuning.sideOffset));
+                height.setValue(Integer.valueOf(tuning.heightOffset));
+                scale.setValue(Integer.valueOf(tuning.scalePercent));
+                pitch.setValue(Integer.valueOf(tuning.pitchDegrees));
+                yaw.setValue(Integer.valueOf(tuning.yawDegrees));
+                roll.setValue(Integer.valueOf(tuning.rollDegrees));
+                speed.setValue(Double.valueOf(tuning.speedTilesPerSecond));
+            } finally {
+                syncing[0] = false;
+            }
+        };
+
+        JPanel values = new JPanel(new GridLayout(0, 2, 7, 7));
+        values.setOpaque(false);
+        values.setAlignmentX(LEFT_ALIGNMENT);
+        values.setMaximumSize(new Dimension(Integer.MAX_VALUE, 286));
+
+        values.add(ConsoleTheme.createWrappedText("Item ID", 1));
+        values.add(itemId);
+        values.add(ConsoleTheme.createWrappedText("Forward offset", 1));
+        values.add(forward);
+        values.add(ConsoleTheme.createWrappedText("Side offset", 1));
+        values.add(side);
+        values.add(ConsoleTheme.createWrappedText("Height offset", 1));
+        values.add(height);
+        values.add(ConsoleTheme.createWrappedText("Scale %", 1));
+        values.add(scale);
+        values.add(ConsoleTheme.createWrappedText("Pitch", 1));
+        values.add(pitch);
+        values.add(ConsoleTheme.createWrappedText("Yaw", 1));
+        values.add(yaw);
+        values.add(ConsoleTheme.createWrappedText("Roll", 1));
+        values.add(roll);
+        values.add(ConsoleTheme.createWrappedText("Speed tiles/sec", 1));
+        values.add(speed);
+        card.add(values);
+        card.add(Box.createVerticalStrut(8));
+
+        JButton save = new JButton("Save Payload Preset");
+        JButton reload = new JButton("Reload Saved Preset");
+        JButton reset = new JButton("Reset Defaults");
+        JButton tunerStatus = new JButton("Payload Tuner Status");
+        styleButton(save);
+        styleButton(reload);
+        styleButton(reset);
+        styleButton(tunerStatus);
+
+        save.addActionListener(e ->
+                setStatus(ConveyorRunPreview.savePayloadTuning()));
+        reload.addActionListener(e -> {
+            String result = ConveyorRunPreview.reloadPayloadTuning();
+            syncFields.run();
+            setStatus(result);
+        });
+        reset.addActionListener(e -> {
+            String result = ConveyorRunPreview.resetPayloadTuning();
+            syncFields.run();
+            setStatus(result);
+        });
+        tunerStatus.addActionListener(e ->
+                setStatus(ConveyorRunPreview.getPayloadTuningStatus()));
+
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.add(save);
+        buttons.add(reload);
+        buttons.add(reset);
+        buttons.add(tunerStatus);
         card.add(buttons);
         return card;
     }
