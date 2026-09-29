@@ -1092,15 +1092,15 @@ Early asset-discovery tooling is intentionally pulled forward without advancing 
 - Phase: Phase 3 — Processing chains + better materials.
 - Phase status: ACTIVE.
 - Last completed foundation checkpoint: Phase 2 worker-control foundation through Bundle 2.4 is DONE / RUNTIME VERIFIED.
-- Persistent-runtime bundle: Bundle 3.5C — Explicit Logistics Control + Live Storage V1.
+- Persistent-runtime bundle: Bundle 3.5D — Storage Test UX + Chest Menu Cleanup.
 - Persistent-runtime bundle status: IMPLEMENTED / NEEDS RUNTIME TEST.
 - Current gameplay owner: physical storage + worker logistics + machine-local input/output. Migrated Wood production must use real item movement; worker home is needs/rest only.
 - Current verified-static item mappings: normal Logs = 1511 from Matrix3 Woodcutting; normal Plank = 960 from Matrix3 HouseConstants.
 - Current workstation presentation: Wooden workbench 13704 may remain placeholder art while logistics is tested. Final sawmill assets can replace presentation later without changing the container/machine endpoint contract.
 - Side tooling: Rail Studio, Junction/Splitter authoring, Live Model Editor and rail cosmetics remain non-blocking side lanes. Do not make them prerequisites for the current logistics runtime gate.
-- Approval state: Bundle 3.5B physical logistics spine is SAP AAA approved and implemented on main.
-- Current checklist item: runtime-test live open-chest refresh, Take From Here, Deliver Here, Work Here, dynamic Request/Buffer pressure and multi-worker congestion on top of the accepted physical Log -> machine -> Plank loop.
-- Current objective: runtime-accept explicit logistics control on the generic physical spine. After PASS, refine per-item target quantities only if needed, then let conveyors/carts/loaders consume the same endpoint contract.
+- Approval state: Bundles 3.5B/3.5C and supporting Construction Debug V1 are implemented; Bundle 3.5D Storage Test UX + Chest Menu Cleanup is SAP AAA approved and implemented on main.
+- Current checklist item: runtime-test per-chest/all-chest physical clear safety plus the cleaned chest menu while continuing the existing 3.5C live-refresh/Take/Deliver/Work gate with Construction Debug enabled.
+- Current objective: runtime-accept worker-side physical logistics + explicit control + test/debug UX. After PASS, refine per-item Request/Buffer targets only if needed, then let conveyors/carts/loaders consume the same endpoint contract.
 
 ## Verification classifications
 
@@ -2111,4 +2111,21 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Enabled events mirror to server console and a bounded 2000-event in-memory buffer. Export writes the current snapshot to data/construction/debug/settlement_debug_<timestamp>.txt; Clear only resets that transient buffer.
 - Rails, Persistence and Performance categories are present in the common contract now but do not yet have dedicated emitters in this V1 slice. Future subsystems should emit into this bus instead of inventing isolated debug toggles/log formats.
 - Resume Here: include the Construction Debug V1 gate in the next consolidated Phase 3 runtime session. Enable Master Debug while testing Bundle 3.5B/3.5C so worker speech + categorized events explain stalls, source/destination choices and processing transitions. Do not reopen accepted logistics architecture unless debug/runtime evidence identifies a real regression.
+
+
+## Implementation checkpoint — Bundle 3.5D Storage Test UX + Chest Menu Cleanup — 2026-09-29
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Scope intentionally reuses the already-landed Construction Debug Framework V1 rather than creating another debug system.
+- Physical chest containers now expose a contents-only clear primitive. Clearing items preserves the chest build, mode, item filters, worker Deposit/Withdraw flags, logistics priority, slot/stack upgrades and all unrelated settlement state.
+- World chest context adds `Clear Chest` with a five-second same-chest confirmation flow. The first click only arms the action; reopening the same chest menu within the window exposes `Confirm Clear Chest`, which queues the server-authoritative clear.
+- Client Console -> Con Revamp -> Storage adds `Clear All Physical Storage` with a second-click five-second confirmation. This wipes physical chest contents only; machine buffers and legacy SettlementResource counters remain untouched.
+- Both one-chest and all-chest clear operations release transient physical source/destination reservations so workers cannot retain claims against removed inventory.
+- Clearing refreshes the exact currently-open bank-shell chest immediately through the existing event-driven lightweight refresh path.
+- When Construction debug is enabled, destructive physical clear operations emit Storage + Logistics events through the existing SettlementDebug bus.
+- Chest menu clutter is reduced without changing normal object ownership:
+  - Matrix3-native duplicate `Open` / `View Storage` entries for settlement chest object 18804 are suppressed while the canonical settlement `View Storage` entry remains;
+  - Saved Tile / Unsave Tile authoring entries are suppressed when the active context is a physical chest;
+  - normal Remove / Examine / Walk here remain, while Take From Here / Deliver Here appear only with selected workers.
+- Clear operations do not pause workers. If production remains active, workers may legitimately refill an emptied chest immediately; pause/disable relevant jobs when a stable empty-state test is required.
+- Next gate: confirm menu de-duplication, clear-one confirmation/policy preservation/open-bank refresh, clear-all scope/reservation cleanup, then continue the existing 3.5C explicit-logistics/runtime-debug acceptance session.
 
