@@ -1905,3 +1905,15 @@
 - Class343 now passes that RTS focus into Matrix3's existing Class523 scene render/culling call while RTS is active. Stock render radius, fog and visibility arrays are untouched.
 - The previous full-scene Class523 radius override remains removed; this patch changes culling center only.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+
+2026-09-29 - Settlement RTS/editor visual terrain apron root correction
+- Runtime screenshot after the culling-focus patch still exposed the hard gray scene edge.
+- Verified-static root cause: SettlementInstance generated only the exact 8x8-chunk / 64x64 persistent plot. Detached RTS/editor camera zoom can see beyond that dynamic-map allocation, where no settlement terrain exists.
+- SettlementInstance now reserves a 14x14-chunk visual allocation and centers the unchanged 8x8 playable/persistent settlement inside it, creating a 3-chunk / 24-tile terrain apron on every side.
+- Added separate allocatedChunks runtime ownership so plot-relative boundChunks semantics stay unchanged while destruction frees the full padded map.
+- Added SettlementControler.checkWalkStep boundary enforcement so visible apron terrain remains camera scenery and cannot expand normal player movement beyond the 64x64 plot.
+- No persistence schema, plot coordinates, build bounds, resource ownership, worker ownership, rail ownership or storage ownership changed.
+- Client full-scene render-radius/fog hacks remain removed; this fix provides actual terrain data instead of overriding renderer policy.
+- Fresh instance required: exit/re-enter settlement after pull to generate the padded map.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
