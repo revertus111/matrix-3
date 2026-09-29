@@ -1270,7 +1270,17 @@ public final class LiveModelEditorPreview {
         try {
             animated = base.method1351((byte) 0, base.method1353(), true);
             if (animated == null) return base;
-            animated.method1367(frameSet, packedFrame & 0xffff);
+            /*
+             * Use Matrix3's group-aware animation path. method1367() applies
+             * transform values without the skeleton's per-slot target arrays;
+             * method1364() routes through method1422()/method1499(), preserving
+             * the actual vertex/face group ownership required by object 46298
+             * (including its type-5 face-alpha transforms).
+             *
+             * V1.2 remains exact-frame: no next frame/interpolation yet.
+             */
+            animated.method1364(frameSet, packedFrame & 0xffff,
+                    null, -1, 0, 0, 0, false);
             animated.method1450(finalFlags);
             return animated;
         } catch (RuntimeException ex) {
