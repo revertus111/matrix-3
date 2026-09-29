@@ -91,6 +91,7 @@ public final class LiveModelEditorPreview {
     private static volatile SelectionMode selectionMode = SelectionMode.PART;
     private static volatile boolean transformSnapEnabled;
     private static volatile boolean groupScaleEnabled;
+    private static volatile boolean sourceAnimationPreviewEnabled;
     private static volatile int moveSnapStep = 16;
     private static volatile int angleSnapDegrees = 15;
     private static volatile boolean pointerInside;
@@ -247,7 +248,31 @@ public final class LiveModelEditorPreview {
     public static SelectionMode getSelectionMode() { return selectionMode; }
     public static boolean isTransformSnapEnabled() { return transformSnapEnabled; }
     public static boolean isGroupScaleEnabled() { return groupScaleEnabled; }
+    public static boolean isSourceAnimationPreviewEnabled() { return sourceAnimationPreviewEnabled; }
     public static int getMoveSnapStep() { return moveSnapStep; }
+
+    public static void setSourceAnimationPreviewEnabled(boolean enabled) {
+        sourceAnimationPreviewEnabled = enabled;
+        invalidateVisualModels();
+        status = getSourceAnimationPreviewStatus();
+    }
+
+    public static String getSourceAnimationPreviewStatus() {
+        ObjectDefinitions definition = currentDefinition();
+        int animationId = firstSourceAnimationId(definition);
+        if (animationId < 0) {
+            return sourceAnimationPreviewEnabled
+                    ? "SOURCE ANIM ON - source object has no animation id"
+                    : "SOURCE ANIM OFF - source object has no animation id";
+        }
+        AnimationDefinition animation =
+                ClientConsoleRotsBridge.getAnimationDefinition(animationId);
+        int frames = animation == null || animation.anIntArray1544 == null
+                ? 0 : animation.anIntArray1544.length;
+        return (sourceAnimationPreviewEnabled ? "SOURCE ANIM ON" : "SOURCE ANIM OFF")
+                + " id=" + animationId
+                + (frames > 0 ? " frames=" + frames : " (definition waiting)");
+    }
     public static int getAngleSnapDegrees() { return angleSnapDegrees; }
     public static int getWorldHoveredPart() { return worldHoveredPart; }
 
@@ -913,7 +938,13 @@ public final class LiveModelEditorPreview {
         }
 
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
-        if (cachedMainModel != null) cachedMainModel.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        if (cachedMainModel != null) {
+            Model mainToRender = sourceAnimationPreviewEnabled
+                    ? sourceAnimatedCopy(definition, cachedMainModel, EDIT_MODEL_FLAGS)
+                    : cachedMainModel;
+            if (mainToRender != null)
+                mainToRender.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        }
         for (Model model : cachedDuplicateModels)
             if (model != null) model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
         for (Model model : cachedReplacementModels)
@@ -1133,8 +1164,109 @@ public final class LiveModelEditorPreview {
             model.method1358(extraX, extraY, extraZ);
 
         applyWholeTransforms(model);
-        model.method1450(EDIT_MODEL_FLAGS);
+        model.method1450(sourceAnimationPreviewEnabled
+                ? RAW_BUILD_FLAGS : EDIT_MODEL_FLAGS);
         return model;
+    }
+
+    /**
+     * Returns the first deterministic source sequence for an object definition.
+     * ObjectDefinitions opcode 24/106 stores these ids in anIntArray5645.
+     */
+    static int firstSourceAnimationId(ObjectDefinitions definition) {
+        if (definition == null) return -1;
+        int[] animationIds = definition.method6053((byte) 0);
+        if (animationIds == null) return -1;
+        for (int animationId : animationIds) {
+            if (animationId >= 0) return animationId;
+        }
+        return -1;
+    }
+
+    static String sourceAnimationSummary(ObjectDefinitions definition) {
+        int animationId = firstSourceAnimationId(definition);
+        if (animationId < 0) return "anim=none";
+        AnimationDefinition animation =
+                ClientConsoleRotsBridge.getAnimationDefinition(animationId);
+        if (animation == null) return "anim=" + animationId + " waiting";
+        int frames = animation.anIntArray1544 == null
+                ? 0 : animation.anIntArray1544.length;
+        return "anim=" + animationId + " frames=" + frames;
+    }
+
+    /**
+     * Applies one exact frame from the source object's RuneScape sequence to a
+     * clone of the cached base Model. The cached generated geometry never
+     * accumulates frame transforms; every rendered frame starts from that base.
+     *
+     * V1 intentionally uses exact frame stepping instead of interpolation. This
+     * proves that the isolated/authored geometry still carries the source model
+     * animation groups before adding interpolation polish.
+     */
+    static Model sourceAnimatedCopy(ObjectDefinitions definition,
+            Model base, int finalFlags) {
+        if (definition == null || base == null) return base;
+
+        int animationId = firstSourceAnimationId(definition);
+        if (animationId < 0) return base;
+
+        AnimationDefinition animation =
+                ClientConsoleRotsBridge.getAnimationDefinition(animationId);
+        if (animation == null || animation.anIntArray1544 == null
+                || animation.anIntArray1544.length == 0
+                || animation.aClass92_1559 == null) {
+            return base;
+        }
+
+        int frameIndex = sourceAnimationFrame(animation);
+        if (frameIndex < 0 || frameIndex >= animation.anIntArray1544.length) {
+            return base;
+        }
+
+        int packedFrame = animation.anIntArray1544[frameIndex];
+        Class572_Sub12_Sub7 frameSet =
+                animation.aClass92_1559.method1522(packedFrame >>> 16, -1457820512);
+        if (frameSet == null) return base;
+
+        Model animated;
+        try {
+            animated = base.method1351((byte) 0, base.method1353(), true);
+            if (animated == null) return base;
+            animated.method1367(frameSet, packedFrame & 0xffff);
+            animated.method1450(finalFlags);
+            return animated;
+        } catch (RuntimeException ex) {
+            return base;
+        }
+    }
+
+    private static int sourceAnimationFrame(AnimationDefinition animation) {
+        int[] frames = animation.anIntArray1544;
+        if (frames == null || frames.length == 0) return -1;
+        int[] durations = animation.anIntArray1546;
+        if (durations == null || durations.length == 0) {
+            return Math.floorMod(client.cycles, frames.length);
+        }
+
+        int count = Math.min(frames.length, durations.length);
+        if (count <= 0) return -1;
+        int total = 0;
+        for (int i = 0; i < count; i++) {
+            int duration = Math.max(1, durations[i]);
+            if (total > Integer.MAX_VALUE - duration) {
+                total = Integer.MAX_VALUE;
+                break;
+            }
+            total += duration;
+        }
+        if (total <= 0) return 0;
+
+        int phase = Math.floorMod(client.cycles, total);
+        for (int i = 0; i < count; i++) {
+            phase -= Math.max(1, durations[i]);
+            if (phase < 0) return i;
+        }
+        return count - 1;
     }
 
     private static ObjectDefinitions definitionFor(int id) {
@@ -1604,7 +1736,8 @@ public final class LiveModelEditorPreview {
                 + " type=" + objectType + " rot=" + objectRotation
                 + " scale=" + scaleXPercent + "/" + scaleYPercent + "/" + scaleZPercent
                 + " move=" + translateX + "/" + translateY + "/" + translateZ
-                + " yaw=" + yawDegrees;
+                + " yaw=" + yawDegrees
+                + (sourceAnimationPreviewEnabled ? " sourceAnim=ON" : " sourceAnim=OFF");
     }
 
     private static int percentToModelScale(int percent) {
