@@ -1887,3 +1887,12 @@
 - Trace compares the real AnimationDefinition frame transform groups against decoded Class159 vertex skin groups, face groups and textured faces for every connected source component.
 - Trace reports sequence transform types, spatial/non-spatial group overlap, per-part texture ids and a bounded classification to select the next exact reverse-engineering seam.
 - No animation ids, cache data, editor transforms, server state, ConveyorRun persistence or physical logistics ownership are changed by the trace.
+
+2026-09-29 - Group-Aware Source Animation V1.2
+- ANIM TRACE identified object 46298 animation 12394 with 19 loaded frames and real source mesh transform-group overlap.
+- Verified the prior Model.method1367 frame application was non-grouped and therefore bypassed the skeleton's per-slot target arrays required by this object.
+- Replaced sourceAnimatedCopy animation application with Matrix3 Model.method1364 -> method1422 -> method1499 group-aware routing.
+- Exact-frame stepping remains intentional for this proof; no interpolation was added.
+- OpenGL transform type 5 is face-alpha animation; trace evidence shows authored conveyor part 8 intersects those non-spatial groups.
+- Live Model Editor and ConveyorRun share the same sourceAnimatedCopy helper, so both now use the corrected group-aware animation path.
+- Cached base geometry is still cloned per displayed animation frame; saved editor transforms and procedural run length remain unchanged.
