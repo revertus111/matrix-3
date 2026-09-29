@@ -1520,3 +1520,14 @@ Live Model Editor / ConveyorRun — Source Object Animation Reuse V1 (2026-09-29
 [ ] Show Conveyor A->B Demo. SHORT/MEDIUM/LONG all animate from the same source sequence without rebuilding/changing their procedural lengths.
 [ ] Watch several loops: no cumulative stretching, drifting, exploding geometry, or progressive offset appears.
 [ ] Regression: Live Model Editor selection/picking/transform gizmos, Construction ghost preview, normal scene rendering and Hide Conveyor Demo still behave normally.
+
+Live Model Editor — Conveyor Animation Path Diagnostics V1.1 (2026-09-29)
+[x] Runtime evidence recorded: SOURCE ANIM ON produced no visible motion; V1 sequence-reuse is not accepted as the conveyor animation solution.
+[x] ANIM TRACE is read-only and compares source sequence transform groups with Class159 vertex skin groups, face groups and textured-face metadata.
+[x] Trace covers every connected source part and separates spatial sequence overlap from non-spatial vertex/face overlap.
+[x] Trace prints one bounded classification instead of guessing another animation id.
+[ ] Pull/rebuild/restart Client, load the saved object 46298 conveyor project, and click ANIM TRACE once.
+[ ] Client console prints a block beginning exactly: === LIVE MODEL SOURCE ANIM TRACE ===
+[ ] Trace identifies objectAnimationIds, source models 49717/49718, sequence frame/load state, transformTypes, spatialGroups/otherGroups, raw textured faces/textures and per-part overlaps.
+[ ] Copy the full trace block back into the Construction workstream before another animation implementation patch.
+[ ] Do not retest SOURCE ANIM visually unless the trace points back to the sequence application path.
