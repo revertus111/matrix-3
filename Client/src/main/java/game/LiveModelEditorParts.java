@@ -234,13 +234,19 @@ final class LiveModelEditorParts {
 
     synchronized boolean setSelectedTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
+        return setSelectedTransform(sx, sy, sz, mx, my, mz, yaw, false);
+    }
+
+    synchronized boolean setSelectedTransform(int sx, int sy, int sz,
+            int mx, int my, int mz, int yaw, boolean groupScale) {
         PartState primary = selectedState();
         if (primary == null || primary.deleted || selection.isEmpty()) return false;
         int[] target = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
         int[] current = transformOf(primary);
         if (sameTransform(primary, target)) return false;
         pushUndo();
-        boolean changed = applySelectionDelta(transformDelta(current, target), null);
+        boolean changed = applySelectionDelta(
+                transformDelta(current, target), null, groupScale);
         if (changed) markGeometryChanged();
         return changed;
     }
@@ -286,13 +292,131 @@ final class LiveModelEditorParts {
 
     synchronized boolean updateGestureTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
+        return updateGestureTransform(sx, sy, sz, mx, my, mz, yaw, false);
+    }
+
+    synchronized boolean updateGestureTransform(int sx, int sy, int sz,
+            int mx, int my, int mz, int yaw, boolean groupScale) {
         if (!gestureActive) return false;
         int[] primaryStart = gestureStarts.get(Integer.valueOf(selected));
         if (primaryStart == null) return false;
         int[] target = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
-        boolean changed = applySelectionDelta(transformDelta(primaryStart, target), gestureStarts);
+        boolean changed = applySelectionDelta(
+                transformDelta(primaryStart, target), gestureStarts, groupScale);
         if (changed) markGeometryChanged();
         return changed;
+    }
+
+    /**
+     * Uniformly shrinks the current editable selection so its X/Z footprint is
+     * no larger than one logical tile. Geometry and part-center offsets scale
+     * together around the same shared selection pivot used by multi transforms.
+     *
+     * This operation is intentionally shrink-only; it never enlarges a model
+     * that already fits inside the requested footprint.
+     */
+    synchronized boolean fitSelectionToFootprint(int footprintUnits) {
+        if (source == null || selection.isEmpty() || footprintUnits <= 0) return false;
+        int[] before = getSelectionBounds();
+        if (before == null) return false;
+        int footprint = Math.max(before[0], before[2]);
+        if (footprint <= footprintUnits) return false;
+
+        double factor = footprintUnits / (double) footprint;
+        double[] pivot = selectionPivot3DForTransforms(null);
+        if (pivot == null || factor <= 0.0 || factor >= 1.0) return false;
+
+        pushUndo();
+        boolean changed = false;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null || state.deleted) continue;
+            Component component = source.components[state.sourcePart];
+
+            double centerX = component.centerX + state.moveX;
+            double centerY = component.centerY + state.moveY;
+            double centerZ = component.centerZ + state.moveZ;
+            double scaledX = pivot[0] + (centerX - pivot[0]) * factor;
+            double scaledY = pivot[1] + (centerY - pivot[1]) * factor;
+            double scaledZ = pivot[2] + (centerZ - pivot[2]) * factor;
+
+            int[] values = sanitizeTransform(
+                    (int) Math.round(state.scaleX * factor),
+                    (int) Math.round(state.scaleY * factor),
+                    (int) Math.round(state.scaleZ * factor),
+                    state.moveX + (int) Math.round(scaledX - centerX),
+                    state.moveY + (int) Math.round(scaledY - centerY),
+                    state.moveZ + (int) Math.round(scaledZ - centerZ),
+                    state.yaw);
+            if (!sameTransform(state, values)) {
+                applyTransform(state, values);
+                changed = true;
+            }
+        }
+        if (changed) markGeometryChanged();
+        return changed;
+    }
+
+    /**
+     * Current transformed selection dimensions in source-model units:
+     * {sizeX, sizeY, sizeZ}. Hidden parts still count; deleted parts do not.
+     */
+    synchronized int[] getSelectionBounds() {
+        if (source == null || selection.isEmpty()) return null;
+        Class159 raw = source.decode();
+        if (raw == null) return null;
+
+        double minX = Double.POSITIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY;
+        double minZ = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+        double maxZ = Double.NEGATIVE_INFINITY;
+        boolean found = false;
+
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state == null || state.deleted) continue;
+            Component component = source.components[state.sourcePart];
+            if (component.vertices.length == 0) continue;
+
+            double cx = 0.0, cy = 0.0, cz = 0.0;
+            for (int vertex : component.vertices) {
+                cx += raw.anIntArray1782[vertex];
+                cy += raw.anIntArray1777[vertex];
+                cz += raw.anIntArray1797[vertex];
+            }
+            cx /= component.vertices.length;
+            cy /= component.vertices.length;
+            cz /= component.vertices.length;
+
+            double radians = Math.toRadians(state.yaw);
+            double sin = Math.sin(radians);
+            double cos = Math.cos(radians);
+            for (int vertex : component.vertices) {
+                double x = (raw.anIntArray1782[vertex] - cx) * state.scaleX / 100.0;
+                double y = (raw.anIntArray1777[vertex] - cy) * state.scaleY / 100.0;
+                double z = (raw.anIntArray1797[vertex] - cz) * state.scaleZ / 100.0;
+                double rx = x * cos + z * sin;
+                double rz = z * cos - x * sin;
+                double tx = cx + rx + state.moveX;
+                double ty = cy + y + state.moveY;
+                double tz = cz + rz + state.moveZ;
+                if (tx < minX) minX = tx;
+                if (tx > maxX) maxX = tx;
+                if (ty < minY) minY = ty;
+                if (ty > maxY) maxY = ty;
+                if (tz < minZ) minZ = tz;
+                if (tz > maxZ) maxZ = tz;
+                found = true;
+            }
+        }
+        if (!found) return null;
+        return new int[] {
+                Math.max(1, (int) Math.ceil(maxX - minX)),
+                Math.max(1, (int) Math.ceil(maxY - minY)),
+                Math.max(1, (int) Math.ceil(maxZ - minZ))
+        };
     }
 
     synchronized void endGesture() {
@@ -977,10 +1101,24 @@ final class LiveModelEditorParts {
         };
     }
 
-    private boolean applySelectionDelta(int[] delta, Map<Integer, int[]> starts) {
+    private boolean applySelectionDelta(int[] delta, Map<Integer, int[]> starts,
+            boolean groupScale) {
         boolean changed = false;
+        int[] primaryBase = starts == null
+                ? transformOf(selectedState()) : starts.get(Integer.valueOf(selected));
+        boolean scaleAroundPivot = groupScale && primaryBase != null
+                && (delta[0] != 0 || delta[1] != 0 || delta[2] != 0);
         boolean sharedYawPivot = selection.size() > 1 && delta[6] != 0;
-        double[] pivot = sharedYawPivot ? selectionPivotForTransforms(starts) : null;
+        double[] pivot3D = (scaleAroundPivot || sharedYawPivot)
+                ? selectionPivot3DForTransforms(starts) : null;
+
+        double scaleRatioX = scaleAroundPivot
+                ? (primaryBase[0] + delta[0]) / (double) Math.max(1, primaryBase[0]) : 1.0;
+        double scaleRatioY = scaleAroundPivot
+                ? (primaryBase[1] + delta[1]) / (double) Math.max(1, primaryBase[1]) : 1.0;
+        double scaleRatioZ = scaleAroundPivot
+                ? (primaryBase[2] + delta[2]) / (double) Math.max(1, primaryBase[2]) : 1.0;
+
         double radians = sharedYawPivot ? Math.toRadians(delta[6]) : 0.0;
         double sin = sharedYawPivot ? Math.sin(radians) : 0.0;
         double cos = sharedYawPivot ? Math.cos(radians) : 1.0;
@@ -991,23 +1129,47 @@ final class LiveModelEditorParts {
             int[] base = starts == null ? transformOf(state) : starts.get(index);
             if (base == null) continue;
 
+            int scaleX = scaleAroundPivot
+                    ? (int) Math.round(base[0] * scaleRatioX) : base[0] + delta[0];
+            int scaleY = scaleAroundPivot
+                    ? (int) Math.round(base[1] * scaleRatioY) : base[1] + delta[1];
+            int scaleZ = scaleAroundPivot
+                    ? (int) Math.round(base[2] * scaleRatioZ) : base[2] + delta[2];
+
             int moveX = base[3] + delta[3];
+            int moveY = base[4] + delta[4];
             int moveZ = base[5] + delta[5];
-            if (pivot != null && source != null) {
+            if (pivot3D != null && source != null) {
                 Component component = source.components[state.sourcePart];
                 double centerX = component.centerX + base[3];
+                double centerY = component.centerY + base[4];
                 double centerZ = component.centerZ + base[5];
-                double dx = centerX - pivot[0];
-                double dz = centerZ - pivot[1];
-                double rotatedX = pivot[0] + dx * cos + dz * sin;
-                double rotatedZ = pivot[1] + dz * cos - dx * sin;
-                moveX += (int) Math.round(rotatedX - centerX);
-                moveZ += (int) Math.round(rotatedZ - centerZ);
+
+                if (scaleAroundPivot) {
+                    double scaledX = pivot3D[0] + (centerX - pivot3D[0]) * scaleRatioX;
+                    double scaledY = pivot3D[1] + (centerY - pivot3D[1]) * scaleRatioY;
+                    double scaledZ = pivot3D[2] + (centerZ - pivot3D[2]) * scaleRatioZ;
+                    moveX += (int) Math.round(scaledX - centerX);
+                    moveY += (int) Math.round(scaledY - centerY);
+                    moveZ += (int) Math.round(scaledZ - centerZ);
+                    centerX = scaledX;
+                    centerY = scaledY;
+                    centerZ = scaledZ;
+                }
+
+                if (sharedYawPivot) {
+                    double dx = centerX - pivot3D[0];
+                    double dz = centerZ - pivot3D[2];
+                    double rotatedX = pivot3D[0] + dx * cos + dz * sin;
+                    double rotatedZ = pivot3D[2] + dz * cos - dx * sin;
+                    moveX += (int) Math.round(rotatedX - centerX);
+                    moveZ += (int) Math.round(rotatedZ - centerZ);
+                }
             }
 
             int[] values = sanitizeTransform(
-                    base[0] + delta[0], base[1] + delta[1], base[2] + delta[2],
-                    moveX, base[4] + delta[4], moveZ,
+                    scaleX, scaleY, scaleZ,
+                    moveX, moveY, moveZ,
                     base[6] + delta[6]);
             if (!sameTransform(state, values)) {
                 applyTransform(state, values);
@@ -1018,12 +1180,13 @@ final class LiveModelEditorParts {
     }
 
     /**
-     * Returns the X/Z shared center represented by either the active gesture's
+     * Returns the shared XYZ center represented by either the active gesture's
      * frozen start transforms or the current authoring transforms.
      */
-    private double[] selectionPivotForTransforms(Map<Integer, int[]> starts) {
+    private double[] selectionPivot3DForTransforms(Map<Integer, int[]> starts) {
         if (source == null || selection.isEmpty()) return null;
         double x = 0.0;
+        double y = 0.0;
         double z = 0.0;
         int count = 0;
         for (Integer index : selection) {
@@ -1033,10 +1196,13 @@ final class LiveModelEditorParts {
             if (base == null) continue;
             Component component = source.components[state.sourcePart];
             x += component.centerX + base[3];
+            y += component.centerY + base[4];
             z += component.centerZ + base[5];
             count++;
         }
-        return count == 0 ? null : new double[] { x / count, z / count };
+        return count == 0 ? null : new double[] {
+                x / count, y / count, z / count
+        };
     }
 
     private void markGeometryChanged() {
