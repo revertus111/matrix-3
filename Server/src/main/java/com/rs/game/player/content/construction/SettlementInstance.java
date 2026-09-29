@@ -340,7 +340,7 @@ public final class SettlementInstance {
             return "Settlement conveyor clear is unavailable while the settlement is loading.";
         }
         int removed = state.clearConveyorRuns();
-        syncConveyorRunsToClient();
+        clearConveyorRunsOnClient();
         if (debug != null) {
             debug.record("conveyor",
                     "Cleared persistent ConveyorRuns count=" + removed + ".",
