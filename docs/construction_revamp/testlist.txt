@@ -1566,3 +1566,25 @@ RTS/editor visual terrain apron regression — IMPLEMENTED / NEEDS RUNTIME TEST 
 - Persistence regression: existing build coordinates and worker/resource positions must remain unchanged after exit/re-entry; the visual apron must create no saved pieces or resources.
 - Cleanup regression: leave and recreate the settlement several times; padded dynamic regions must be released/reallocated without leaking or overlapping another instance.
 - Camera regression: continuous-click movement, 2.0x default RTS speed, MMB orbit direction, vertical pitch, wheel zoom and minimap focus remain unchanged.
+
+Live Model Editor / ConveyorRun — Visual Role Cleanup V1 (2026-09-29)
+[x] Native source animation is marked non-blocking carryover; procedural ConveyorRun no longer clones/applies animation every frame.
+[x] Live Model project v5 persists conveyorRole per source part and still loads v1-v4 projects.
+[x] Part/Multi selection exposes UNASSIGNED, BELT_SURFACE, START_CAP, END_CAP, FIXED_DETAIL, REPEAT_DETAIL, SUPPORT, SCALE_POSITION and IGNORE.
+[x] Old non-default edited v4 assembly parts fall back to FIXED_DETAIL; untouched original sawmill parts remain excluded from role recipes.
+[x] Apply To Demo validates at least one BELT_SURFACE and rejects duplicate source-part ownership.
+[x] Role-driven generator owns belt stretch, endpoint caps, fixed/scale-position detail, one-tile repeat detail and 3-tile max-span support stations.
+[ ] Pull/rebuild/restart Client and load the saved object 46298 conveyor project.
+[ ] Confirm the old v4 project loads normally and existing geometry/transforms are unchanged.
+[ ] Use Solo/Isolate to identify the actual belt surface component(s); select them, choose BELT_SURFACE, click Set Role, and confirm the list label shows [BELT_SURFACE].
+[ ] Tag obvious endpoint pieces START_CAP / END_CAP where applicable.
+[ ] Tag any repeated posts/rollers as REPEAT_DETAIL and an authored leg/brace group as SUPPORT only when visually identified; use IGNORE for pieces that should never enter the conveyor.
+[ ] Save the project. Reopen it and confirm all explicit role tags persist in project v5.
+[ ] Click Apply To Demo; status reports CONVEYOR ROLE RECIPE READY rather than missing BELT_SURFACE.
+[ ] Show Conveyor A->B Demo. SHORT/MEDIUM/LONG use the role recipe and contain no untouched sawmill geometry.
+[ ] BELT_SURFACE changes longitudinal length only; width remains stable.
+[ ] START_CAP/END_CAP stay fixed-size at A/B with no rail overhang from proportional spreading.
+[ ] FIXED_DETAIL/SCALE_POSITION parts remain authored size.
+[ ] REPEAT_DETAIL copies stay fixed-size and appear at roughly one-tile spacing as length grows.
+[ ] SUPPORT copies stay fixed-size; 2t has no interior support, 5t has one, and 9t has two interior support stations under the 3-tile max-span rule.
+[ ] Hide Conveyor Demo removes all three runs; normal editor/build ghost/world rendering remains unaffected.
