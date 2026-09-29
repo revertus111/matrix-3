@@ -1873,3 +1873,9 @@
 - ConveyorRun now reuses the same source-object sequence automatically on SHORT/MEDIUM/LONG procedural runs. The generated A->B raw/base model remains cached; only the renderer Model clone changes each animation frame.
 - No new cache object, custom animation id, server state, settlement persistence, collision, storage, item transport, or per-tile conveyor ownership was introduced.
 - Runtime goal: prove the custom eight-part conveyor assembly still preserves the animation groups inherited from object 46298 after editor transforms and procedural run-length generation.
+
+
+2026-09-29 - RTS MMB horizontal orbit direction correction
+- Runtime report: holding the mouse wheel/MMB and dragging left/right in RTS camera mode orbited horizontally in the opposite direction from the drag.
+- Corrected only the horizontal mouse-orbit yaw sign in ConstructionBuildCamera. Vertical MMB pitch, wheel zoom, WASD/arrow pan and Q/E keyboard orbit are unchanged.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
