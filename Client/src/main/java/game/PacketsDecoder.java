@@ -1453,7 +1453,8 @@ public class PacketsDecoder implements Interface52 {
 			String string = buf.readString(1295706626);
 			int i_244_ = buf.readUnsignedShort(647518597);
 			Class565_Sub1.method8259(-1272079270);
-			MapSize.method1547(i_244_, string, 826363092);
+			if (!ConveyorRunPreview.handleSettlementSyncSignal(i_244_, string))
+				MapSize.method1547(i_244_, string, 826363092);
 			class195.currentPacket = null;
 			return true;
 		}
@@ -1733,7 +1734,8 @@ public class PacketsDecoder implements Interface52 {
 			String string = buf.readString(1295706626);
 			int i_284_ = buf.readUnsignedShort128((byte) 72);
 			Class565_Sub1.method8259(1556461833);
-			MapSize.method1547(i_284_, string, 997354524);
+			if (!ConveyorRunPreview.handleSettlementSyncSignal(i_284_, string))
+				MapSize.method1547(i_284_, string, 997354524);
 			class195.currentPacket = null;
 			return true;
 		}
