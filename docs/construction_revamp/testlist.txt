@@ -1609,23 +1609,14 @@ Conveyor Gameplay V1 — Persistent ConveyorRun gate (2026-09-29)
 [ ] Renderer regression: Show Conveyor A->B Demo still shows SHORT/MEDIUM/LONG; Hide Conveyor Demo removes only those demo runs.
 [ ] If all checks pass, mark persistence accepted and advance to smooth Log 1511 payload progress on a persistent run.
 
-RTS Vanilla Camera Owner Migration — IMPLEMENTED / NEEDS RUNTIME TEST
+RTS Vanilla Camera Owner Migration — RUNTIME REJECTED / ROLLED BACK
 [x] Source: Class343 normal camera path calculates through Class246.method3359(...).
 [x] Source: detached Class24/Class411 submission bypasses the normal camera globals while Class24.aBool157 is active.
 [x] RTS now calls ConstructionBuildCamera.tickVanillaRtsCamera(viewportHeight) after stock camera calculation and before shake/clamp/scene setup.
 [x] RTS keeps Class24.aBool157 false and uses Matrix3's ordinary render transform.
 [x] Free Build retains the late detached ConstructionBuildCamera.tick() path.
 [x] RTS pan/screen-drag basis derives from owned yaw instead of detached Class423_Sub2/Class658_Sub2 look-vector discovery.
-[ ] Pull, clean/build and restart Client.
-[ ] Enter settlement; initial RTS view is above terrain with usable accepted pitch/zoom and no blank/underside view.
-[ ] W/A/S/D + arrows pan camera-relative while the player remains planted.
-[ ] Hold movement while clicking world/chest/worker targets; movement continues without click-stop regression.
-[ ] Q/E orbit direction remains accepted.
-[ ] MMB horizontal/vertical orbit direction and bounded pitch remain accepted.
-[ ] Wheel zoom works across the accepted range without blank/underside frames.
-[ ] Pan toward settlement edges; terrain/object/NPC/fog behavior visually matches the normal vanilla-camera branch as closely as the same loaded scene permits.
-[ ] Minimap focus moves the RTS pivot while preserving current yaw/pitch/zoom.
-[ ] RTS -> Free Build handoff has no severe position jump; Free Build W/A/S/D/Q/E/mouse-look still work.
-[ ] Free Build -> RTS disables detached rendering and restores the saved RTS pivot/yaw/pitch/zoom.
-[ ] Exit settlement restores ordinary Matrix3 camera behavior.
-[ ] Exit/re-enter settlement restores a valid saved RTS view for the rebuilt scene.
+[x] Runtime rejection: migrated RTS camera became non-functional.
+[x] Rollback: restored the last known working detached Class24/Class411 RTS implementation.
+[ ] Confirm after pull/rebuild that normal RTS pan/orbit/zoom behavior is restored.
+[ ] Before any future vanilla-owner migration, runtime-log the active `Class18.anInt143` value and actual `Class343` render branch during ordinary gameplay.
