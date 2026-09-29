@@ -962,7 +962,12 @@ public final class ConveyorRunPreview {
             return false;
         }
 
-        Model payloadModel = getPayloadModel(renderer);
+        ConveyorPayloadVisualProfiles.Resolution payloadResolution =
+                ConveyorPayloadVisualProfiles.resolveForRender(payloadItemId);
+        ConveyorPayloadVisualProfiles.Profile payloadProfile =
+                payloadResolution.profile;
+        Model payloadModel = getPayloadModel(
+                renderer, payloadItemId, payloadProfile.scalePercent);
         if (payloadModel == null) {
             return false;
         }
@@ -996,7 +1001,8 @@ public final class ConveyorRunPreview {
                 (System.nanoTime() - PAYLOAD_EPOCH_NANOS) / 1000000000.0;
         double runOffsetTiles = (run.runId % 7L) * 0.37;
         double distanceTiles =
-                (elapsedSeconds * payloadSpeedTilesPerSecond + runOffsetTiles)
+                (elapsedSeconds * CONVEYOR_TEST_SPEED_TILES_PER_SECOND
+                        + runOffsetTiles)
                 % lengthTiles;
         double progress = distanceTiles / lengthTiles;
 
@@ -1005,8 +1011,8 @@ public final class ConveyorRunPreview {
         double deltaY = endLocalY - startLocalY;
         double directionX = deltaX / lengthTiles;
         double directionY = deltaY / lengthTiles;
-        double alongTiles = payloadAlongOffset / (double) TILE_UNITS;
-        double sideTiles = payloadSideOffset / (double) TILE_UNITS;
+        double alongTiles = payloadProfile.alongOffset / (double) TILE_UNITS;
+        double sideTiles = payloadProfile.sideOffset / (double) TILE_UNITS;
 
         double localX = startLocalX + deltaX * progress
                 + directionX * alongTiles - directionY * sideTiles;
@@ -1023,13 +1029,14 @@ public final class ConveyorRunPreview {
         int midSceneX = (int) Math.round(midLocalX * tileSize + tileSize * 0.5);
         int midSceneZ = (int) Math.round(midLocalY * tileSize + tileSize * 0.5);
         int sceneY = ground.method2718(midSceneX, midSceneZ, 0)
-                + payloadHeightOffset;
+                + payloadProfile.heightOffset;
 
         PAYLOAD_TRANSFORM.method3594();
 
-        int pitch = degreesToAngle(payloadPitchDegrees);
-        int yaw = (run.headingYaw() + degreesToAngle(payloadYawDegrees)) & 0x3fff;
-        int roll = degreesToAngle(payloadRollDegrees);
+        int pitch = degreesToAngle(payloadProfile.pitchDegrees);
+        int yaw = (run.headingYaw()
+                + degreesToAngle(payloadProfile.yawDegrees)) & 0x3fff;
+        int roll = degreesToAngle(payloadProfile.rollDegrees);
 
         if (pitch != 0) {
             PAYLOAD_TRANSFORM.method3576(
@@ -1049,12 +1056,11 @@ public final class ConveyorRunPreview {
         return true;
     }
 
-    private static Model getPayloadModel(Class106 renderer) {
+    private static Model getPayloadModel(
+            Class106 renderer, int itemId, int scalePercent) {
         if (renderer == null) {
             return null;
         }
-        int itemId = payloadItemId;
-        int scalePercent = payloadScalePercent;
         if (cachedPayloadRenderer == renderer && cachedPayloadModel != null
                 && cachedPayloadItemId == itemId
                 && cachedPayloadScalePercent == scalePercent) {
