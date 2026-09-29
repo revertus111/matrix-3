@@ -3,6 +3,7 @@ package game.console;
 import game.ClientConsoleBridge;
 import game.ConstructionPaletteOverlay;
 import game.ConstructionRadialSelection;
+import game.ConveyorPayloadVisualProfiles;
 import game.ConveyorRunPreview;
 
 import java.awt.Dimension;
@@ -647,89 +648,154 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     }
 
     private JPanel createConveyorPayloadTunerCard() {
-        JPanel card = ConsoleTheme.createCard("Conveyor Payload Tuner");
+        JPanel card = ConsoleTheme.createCard("Conveyor Payload Visual Profiles");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Live-tune the moving payload relative to the conveyor. "
-                + "Forward/Side/Height use model units (512 = one tile). "
-                + "Rotation is relative to the run direction. Save makes the preset load automatically next client start.",
-                5));
+                "Tune how item models sit on conveyors. Resolution is exact Item Override -> Category -> Global Default. "
+                + "Forward/Side/Height use model units (512 = one tile), and rotation is relative to the conveyor direction. "
+                + "Movement speed is owned by the conveyor, not these visual profiles.",
+                6));
         card.add(Box.createVerticalStrut(8));
 
-        ConveyorRunPreview.PayloadTuning initial =
-                ConveyorRunPreview.getPayloadTuning();
+        int initialItemId = ConveyorRunPreview.getPayloadTestItemId();
+        ConveyorPayloadVisualProfiles.Resolution initial =
+                ConveyorPayloadVisualProfiles.resolve(initialItemId);
+        ConveyorPayloadVisualProfiles.Profile initialProfile = initial.profile;
 
         final JSpinner itemId = new JSpinner(new SpinnerNumberModel(
-                initial.itemId, 0, 100000, 1));
+                initialItemId, 0, 100000, 1));
+        final JComboBox<String> category = new JComboBox<String>(
+                ConveyorPayloadVisualProfiles.getCategoryNames());
+        category.setSelectedItem(initial.category.name());
+
         final JSpinner forward = new JSpinner(new SpinnerNumberModel(
-                initial.alongOffset, -4096, 4096, 16));
+                initialProfile.alongOffset, -4096, 4096, 16));
         final JSpinner side = new JSpinner(new SpinnerNumberModel(
-                initial.sideOffset, -4096, 4096, 16));
+                initialProfile.sideOffset, -4096, 4096, 16));
         final JSpinner height = new JSpinner(new SpinnerNumberModel(
-                initial.heightOffset, -2048, 2048, 16));
+                initialProfile.heightOffset, -2048, 2048, 16));
         final JSpinner scale = new JSpinner(new SpinnerNumberModel(
-                initial.scalePercent, 10, 400, 5));
+                initialProfile.scalePercent, 10, 400, 5));
         final JSpinner pitch = new JSpinner(new SpinnerNumberModel(
-                initial.pitchDegrees, -180, 180, 5));
+                initialProfile.pitchDegrees, -180, 180, 5));
         final JSpinner yaw = new JSpinner(new SpinnerNumberModel(
-                initial.yawDegrees, -180, 180, 5));
+                initialProfile.yawDegrees, -180, 180, 5));
         final JSpinner roll = new JSpinner(new SpinnerNumberModel(
-                initial.rollDegrees, -180, 180, 5));
-        final JSpinner speed = new JSpinner(new SpinnerNumberModel(
-                initial.speedTilesPerSecond, 0.05, 20.0, 0.05));
+                initialProfile.rollDegrees, -180, 180, 5));
 
         JSpinner[] spinners = {
-                itemId, forward, side, height, scale, pitch, yaw, roll, speed
+                itemId, forward, side, height, scale, pitch, yaw, roll
         };
         for (JSpinner spinner : spinners) {
             spinner.setMaximumSize(new Dimension(110, 30));
             spinner.setFocusable(false);
         }
+        category.setMaximumSize(new Dimension(160, 30));
+        category.setFocusable(false);
 
         final boolean[] syncing = { false };
-        javax.swing.event.ChangeListener liveChange = e -> {
+
+        class ProfileFields {
+            int item() {
+                return ((Number) itemId.getValue()).intValue();
+            }
+
+            String categoryName() {
+                Object value = category.getSelectedItem();
+                return value == null ? "MISC" : value.toString();
+            }
+
+            ConveyorPayloadVisualProfiles.Profile read() {
+                return new ConveyorPayloadVisualProfiles.Profile(
+                        ((Number) forward.getValue()).intValue(),
+                        ((Number) side.getValue()).intValue(),
+                        ((Number) height.getValue()).intValue(),
+                        ((Number) scale.getValue()).intValue(),
+                        ((Number) pitch.getValue()).intValue(),
+                        ((Number) yaw.getValue()).intValue(),
+                        ((Number) roll.getValue()).intValue());
+            }
+
+            void apply(ConveyorPayloadVisualProfiles.Profile profile) {
+                if (profile == null) return;
+                syncing[0] = true;
+                try {
+                    forward.setValue(Integer.valueOf(profile.alongOffset));
+                    side.setValue(Integer.valueOf(profile.sideOffset));
+                    height.setValue(Integer.valueOf(profile.heightOffset));
+                    scale.setValue(Integer.valueOf(profile.scalePercent));
+                    pitch.setValue(Integer.valueOf(profile.pitchDegrees));
+                    yaw.setValue(Integer.valueOf(profile.yawDegrees));
+                    roll.setValue(Integer.valueOf(profile.rollDegrees));
+                } finally {
+                    syncing[0] = false;
+                }
+            }
+
+            void loadResolved() {
+                ConveyorRunPreview.setPayloadTestItemId(item());
+                ConveyorRunPreview.resetPayloadVisualPreview();
+                ConveyorPayloadVisualProfiles.Resolution resolution =
+                        ConveyorPayloadVisualProfiles.resolve(item());
+                syncing[0] = true;
+                try {
+                    category.setSelectedItem(resolution.category.name());
+                } finally {
+                    syncing[0] = false;
+                }
+                apply(resolution.profile);
+            }
+
+            void applyLivePreview() {
+                ConveyorPayloadVisualProfiles.Profile profile = read();
+                setStatus(ConveyorRunPreview.setPayloadVisualPreview(
+                        item(),
+                        profile.alongOffset,
+                        profile.sideOffset,
+                        profile.heightOffset,
+                        profile.scalePercent,
+                        profile.pitchDegrees,
+                        profile.yawDegrees,
+                        profile.rollDegrees));
+            }
+        }
+
+        final ProfileFields fields = new ProfileFields();
+
+        itemId.addChangeListener(e -> {
             if (syncing[0]) return;
-            setStatus(ConveyorRunPreview.setPayloadTuning(
-                    ((Number) itemId.getValue()).intValue(),
-                    ((Number) forward.getValue()).intValue(),
-                    ((Number) side.getValue()).intValue(),
-                    ((Number) height.getValue()).intValue(),
-                    ((Number) scale.getValue()).intValue(),
-                    ((Number) pitch.getValue()).intValue(),
-                    ((Number) yaw.getValue()).intValue(),
-                    ((Number) roll.getValue()).intValue(),
-                    ((Number) speed.getValue()).doubleValue()));
+            fields.loadResolved();
+            setStatus(ConveyorPayloadVisualProfiles.describe(fields.item()));
+        });
+
+        javax.swing.event.ChangeListener liveChange = e -> {
+            if (!syncing[0]) {
+                fields.applyLivePreview();
+            }
         };
-        for (JSpinner spinner : spinners) {
+        for (JSpinner spinner : new JSpinner[] {
+                forward, side, height, scale, pitch, yaw, roll
+        }) {
             spinner.addChangeListener(liveChange);
         }
 
-        Runnable syncFields = () -> {
-            ConveyorRunPreview.PayloadTuning tuning =
-                    ConveyorRunPreview.getPayloadTuning();
-            syncing[0] = true;
-            try {
-                itemId.setValue(Integer.valueOf(tuning.itemId));
-                forward.setValue(Integer.valueOf(tuning.alongOffset));
-                side.setValue(Integer.valueOf(tuning.sideOffset));
-                height.setValue(Integer.valueOf(tuning.heightOffset));
-                scale.setValue(Integer.valueOf(tuning.scalePercent));
-                pitch.setValue(Integer.valueOf(tuning.pitchDegrees));
-                yaw.setValue(Integer.valueOf(tuning.yawDegrees));
-                roll.setValue(Integer.valueOf(tuning.rollDegrees));
-                speed.setValue(Double.valueOf(tuning.speedTilesPerSecond));
-            } finally {
-                syncing[0] = false;
+        category.addActionListener(e -> {
+            if (!syncing[0]) {
+                setStatus("Selected category " + fields.categoryName()
+                        + ". Save Category changes its visual profile; "
+                        + "Assign Item -> Category changes this item's classification.");
             }
-        };
+        });
 
         JPanel values = new JPanel(new GridLayout(0, 2, 7, 7));
         values.setOpaque(false);
         values.setAlignmentX(LEFT_ALIGNMENT);
-        values.setMaximumSize(new Dimension(Integer.MAX_VALUE, 286));
+        values.setMaximumSize(new Dimension(Integer.MAX_VALUE, 270));
 
-        values.add(ConsoleTheme.createWrappedText("Item ID", 1));
+        values.add(ConsoleTheme.createWrappedText("Test item ID", 1));
         values.add(itemId);
+        values.add(ConsoleTheme.createWrappedText("Category", 1));
+        values.add(category);
         values.add(ConsoleTheme.createWrappedText("Forward offset", 1));
         values.add(forward);
         values.add(ConsoleTheme.createWrappedText("Side offset", 1));
@@ -744,43 +810,107 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         values.add(yaw);
         values.add(ConsoleTheme.createWrappedText("Roll", 1));
         values.add(roll);
-        values.add(ConsoleTheme.createWrappedText("Speed tiles/sec", 1));
-        values.add(speed);
         card.add(values);
         card.add(Box.createVerticalStrut(8));
 
-        JButton save = new JButton("Save Payload Preset");
-        JButton reload = new JButton("Reload Saved Preset");
-        JButton reset = new JButton("Reset Defaults");
-        JButton tunerStatus = new JButton("Payload Tuner Status");
-        styleButton(save);
-        styleButton(reload);
-        styleButton(reset);
-        styleButton(tunerStatus);
+        JButton loadCategory = new JButton("Load Selected Category");
+        JButton saveCategory = new JButton("Save Category");
+        JButton saveItem = new JButton("Save Item Override");
+        JButton removeItem = new JButton("Remove Item Override");
+        JButton assignCategory = new JButton("Assign Item -> Category");
+        JButton autoCategory = new JButton("Use Auto Category");
+        JButton saveGlobal = new JButton("Save Global Default");
+        JButton reload = new JButton("Reload Profiles");
+        JButton resetPreview = new JButton("Reset To Resolved");
+        JButton profileStatus = new JButton("Profile Status");
 
-        save.addActionListener(e ->
-                setStatus(ConveyorRunPreview.savePayloadTuning()));
+        JButton[] buttonsToStyle = {
+                loadCategory, saveCategory, saveItem, removeItem,
+                assignCategory, autoCategory, saveGlobal, reload,
+                resetPreview, profileStatus
+        };
+        for (JButton button : buttonsToStyle) {
+            styleButton(button);
+        }
+
+        loadCategory.addActionListener(e -> {
+            ConveyorPayloadVisualProfiles.Profile profile =
+                    ConveyorPayloadVisualProfiles.getCategoryProfile(
+                            fields.categoryName());
+            fields.apply(profile);
+            fields.applyLivePreview();
+        });
+
+        saveCategory.addActionListener(e -> {
+            ConveyorPayloadVisualProfiles.Profile profile = fields.read();
+            String result = ConveyorPayloadVisualProfiles.saveCategory(
+                    fields.categoryName(), profile);
+            fields.applyLivePreview();
+            setStatus(result);
+        });
+
+        saveItem.addActionListener(e -> {
+            String result = ConveyorPayloadVisualProfiles.saveItemOverride(
+                    fields.item(), fields.read());
+            fields.loadResolved();
+            setStatus(result);
+        });
+
+        removeItem.addActionListener(e -> {
+            String result = ConveyorPayloadVisualProfiles.removeItemOverride(
+                    fields.item());
+            fields.loadResolved();
+            setStatus(result);
+        });
+
+        assignCategory.addActionListener(e -> {
+            String result = ConveyorPayloadVisualProfiles.assignItemCategory(
+                    fields.item(), fields.categoryName());
+            fields.loadResolved();
+            setStatus(result);
+        });
+
+        autoCategory.addActionListener(e -> {
+            String result = ConveyorPayloadVisualProfiles.useAutomaticCategory(
+                    fields.item());
+            fields.loadResolved();
+            setStatus(result);
+        });
+
+        saveGlobal.addActionListener(e -> {
+            String result = ConveyorPayloadVisualProfiles.saveGlobal(fields.read());
+            fields.loadResolved();
+            setStatus(result);
+        });
+
         reload.addActionListener(e -> {
-            String result = ConveyorRunPreview.reloadPayloadTuning();
-            syncFields.run();
+            String result = ConveyorPayloadVisualProfiles.reload();
+            fields.loadResolved();
             setStatus(result);
         });
-        reset.addActionListener(e -> {
-            String result = ConveyorRunPreview.resetPayloadTuning();
-            syncFields.run();
-            setStatus(result);
+
+        resetPreview.addActionListener(e -> {
+            fields.loadResolved();
+            setStatus(ConveyorPayloadVisualProfiles.describe(fields.item()));
         });
-        tunerStatus.addActionListener(e ->
-                setStatus(ConveyorRunPreview.getPayloadTuningStatus()));
+
+        profileStatus.addActionListener(e ->
+                setStatus(ConveyorPayloadVisualProfiles.describe(fields.item())));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
-        buttons.add(save);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+        buttons.add(loadCategory);
+        buttons.add(saveCategory);
+        buttons.add(saveItem);
+        buttons.add(removeItem);
+        buttons.add(assignCategory);
+        buttons.add(autoCategory);
+        buttons.add(saveGlobal);
         buttons.add(reload);
-        buttons.add(reset);
-        buttons.add(tunerStatus);
+        buttons.add(resetPreview);
+        buttons.add(profileStatus);
         card.add(buttons);
         return card;
     }
