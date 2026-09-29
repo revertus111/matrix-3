@@ -273,6 +273,44 @@ public final class LiveModelEditorPreview {
                 + " id=" + animationId
                 + (frames > 0 ? " frames=" + frames : " (definition waiting)");
     }
+
+    /**
+     * Emits a full source-animation/mesh-group trace to the client console.
+     * The short return value is suitable for the compact editor status label.
+     */
+    public static String runSourceAnimationTrace() {
+        ObjectDefinitions definition = currentDefinition();
+        if (definition == null) {
+            status = "ANIM TRACE WAIT object definition";
+            return status;
+        }
+
+        int partCount = PARTS.ensureSource(definition, objectId, objectType);
+        if (partCount <= 0) {
+            status = "ANIM TRACE WAIT source mesh parts";
+            return status;
+        }
+
+        int animationId = firstSourceAnimationId(definition);
+        AnimationDefinition animation = animationId < 0
+                ? null : ClientConsoleRotsBridge.getAnimationDefinition(animationId);
+        String trace = PARTS.sourceAnimationDiagnostics(definition, animation);
+        System.out.println(trace);
+
+        String classification = "UNKNOWN";
+        int marker = trace.lastIndexOf("classification=");
+        if (marker >= 0) {
+            int start = marker + "classification=".length();
+            int end = trace.indexOf('\n', start);
+            classification = (end < 0 ? trace.substring(start)
+                    : trace.substring(start, end)).trim();
+        }
+
+        status = "ANIM TRACE " + classification
+                + " | " + getSourceAnimationPreviewStatus()
+                + " | full trace in client console";
+        return status;
+    }
     public static int getAngleSnapDegrees() { return angleSnapDegrees; }
     public static int getWorldHoveredPart() { return worldHoveredPart; }
 
