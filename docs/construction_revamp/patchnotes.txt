@@ -1975,3 +1975,12 @@
 - Save writes data/construction/conveyor_payload_tuning.properties; the client auto-loads that preset on startup. Reload and Reset Defaults are also exposed.
 - No server persistence schema, chest/machine inventory, backpressure, payload ownership, or ConveyorRun geometry changed.
 - Status: IMPLEMENTED / NEEDS RUNTIME TUNING.
+
+2026-09-29 - Conveyor Payload Visual Profiles V2
+- Replaced the single payload tuning preset with Global -> Category -> exact Item Override resolution for arbitrary real item ids.
+- Added LOGS/PLANKS/ORES/BARS/STONE/FISH/FOOD/HERBS/SEEDS/POTIONS/WEAPONS/ARMOUR/TOOLS/RUNES/GEMS/BONES/CLOTH/MISC visual categories.
+- Real Matrix3 item names provide automatic category hints; saved manual item-category assignments override automatic detection.
+- Visual profiles persist forward/side/height/scale/pitch/yaw/roll only. Payload speed was removed by user decision; ConveyorRun/belt ownership controls movement speed.
+- Con Revamp tuner now supports Save Category, Save/Remove Item Override, explicit item-category assignment, Global Default, profile reload/reset/status and live arbitrary-item preview.
+- New store: data/construction/conveyor_payload_profiles.properties. Legacy conveyor_payload_tuning.properties is import-only; its transform migrates to LOGS/1511 and legacy speed is ignored.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
