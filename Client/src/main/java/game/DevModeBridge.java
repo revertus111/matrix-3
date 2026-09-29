@@ -247,7 +247,14 @@ public final class DevModeBridge {
             return true;
         }
         if (normalizedAction == MATRIX3_TILE_ACTION && ConstructionBuildCamera.isRequested()) {
-            ConstructionBuildCamera.stopMovement();
+            /*
+             * Free Build keeps its accepted click-stop placement behavior.
+             * RTS is continuous camera control: world clicks/orders must not
+             * zero velocity or force held movement keys to be released.
+             */
+            if (!ConstructionBuildCamera.isRtsMode()) {
+                ConstructionBuildCamera.stopMovement();
+            }
             if (ConstructionPlacementController.eraseAtLocalTile(payloadA, payloadB)) {
                 return true;
             }
