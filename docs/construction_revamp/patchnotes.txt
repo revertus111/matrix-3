@@ -1896,3 +1896,12 @@
 - OpenGL transform type 5 is face-alpha animation; trace evidence shows authored conveyor part 8 intersects those non-spatial groups.
 - Live Model Editor and ConveyorRun share the same sourceAnimatedCopy helper, so both now use the corrected group-aware animation path.
 - Cached base geometry is still cloned per displayed animation frame; saved editor transforms and procedural run length remain unchanged.
+
+
+2026-09-29 - RTS camera continuity, speed and vanilla-render parity correction
+- Removed RTS world-click ownership from the legacy camera stop/latch path. RTS clicks/orders no longer zero camera velocity or require held movement keys to be released before pan resumes; Free Build keeps click-stop placement semantics.
+- Raised the fresh-client/default RTS movement multiplier from 1.0x to 2.0x while preserving the existing 0.50x-3.00x adjustable preset range.
+- Added ConstructionBuildCamera.getRtsRenderFocusLocalTile() to expose the managed RTS pivot as a safe local scene focus.
+- Class343 now passes that RTS focus into Matrix3's existing Class523 scene render/culling call while RTS is active. Stock render radius, fog and visibility arrays are untouched.
+- The previous full-scene Class523 radius override remains removed; this patch changes culling center only.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
