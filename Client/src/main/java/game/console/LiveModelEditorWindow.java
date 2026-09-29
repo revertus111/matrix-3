@@ -138,6 +138,7 @@ public final class LiveModelEditorWindow {
     private final JButton rtsCameraButton = rsButton("RTS");
     private final JButton freeCameraButton = rsButton("FREE");
     private final JButton snapButton = rsButton("SNAP OFF");
+    private final JButton sourceAnimationButton = rsButton("SOURCE ANIM OFF");
     private final JButton groupScaleButton = rsButton("GROUP SCALE OFF");
     private final JButton fitOneTileButton = rsButton("FIT 1 TILE");
     private final JSpinner moveSnapSpinner = spinner(16, 1, 512, 1);
@@ -613,6 +614,14 @@ public final class LiveModelEditorWindow {
         panel.add(createSpinnerGrid(
                 new String[] { "MOVE SNAP", "ANGLE SNAP" },
                 new JSpinner[] { moveSnapSpinner, angleSnapSpinner }));
+        panel.add(Box.createVerticalStrut(4));
+
+        sourceAnimationButton.setToolTipText(
+                "Preview the source object's RuneScape animation on the edited assembly. "
+                + "Editing stays static when this is OFF.");
+        JPanel animationRow = actionRow(1);
+        animationRow.add(sourceAnimationButton);
+        panel.add(animationRow);
         panel.add(Box.createVerticalStrut(6));
 
         panel.add(createTransformInspector());
@@ -727,6 +736,13 @@ public final class LiveModelEditorWindow {
             LiveModelEditorPreview.setTransformSnapEnabled(
                     !LiveModelEditorPreview.isTransformSnapEnabled());
             syncSnapPanel();
+        });
+
+        sourceAnimationButton.addActionListener(e -> {
+            LiveModelEditorPreview.setSourceAnimationPreviewEnabled(
+                    !LiveModelEditorPreview.isSourceAnimationPreviewEnabled());
+            syncControlState();
+            statusLabel.setText(LiveModelEditorPreview.getSourceAnimationPreviewStatus());
         });
 
         rebuild.addActionListener(e -> initializeParts());
@@ -1082,6 +1098,10 @@ public final class LiveModelEditorWindow {
         setActiveButton(yAxisButton, axis == LiveModelEditorPreview.AxisConstraint.Y);
         setActiveButton(zAxisButton, axis == LiveModelEditorPreview.AxisConstraint.Z);
         setActiveButton(isolateButton, LiveModelEditorPreview.isPartIsolated());
+
+        boolean sourceAnimation = LiveModelEditorPreview.isSourceAnimationPreviewEnabled();
+        sourceAnimationButton.setText(sourceAnimation ? "SOURCE ANIM ON" : "SOURCE ANIM OFF");
+        setActiveButton(sourceAnimationButton, sourceAnimation);
 
         boolean groupScale = LiveModelEditorPreview.isGroupScaleEnabled();
         groupScaleButton.setText(groupScale ? "GROUP SCALE ON" : "GROUP SCALE OFF");
