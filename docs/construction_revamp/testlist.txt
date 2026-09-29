@@ -1501,3 +1501,18 @@ Phase 3 side slice — Procedural ConveyorRun Visual Generator V0.1
 [ ] Hide Conveyor Demo removes all generated visuals immediately.
 [ ] Regression: normal scene rendering, Build Palette ghost preview, Live Model Editor and ordinary settlement interaction still render/operate normally.
 [ ] After the corrected source passes, explicitly author/identify support geometry before re-enabling the locked automatic support-spacing rule.
+
+Live Model Editor / ConveyorRun — Source Object Animation Reuse V1 (2026-09-29)
+[x] Source animation ids come from the active ObjectDefinitions for object 46298; no new/fake conveyor animation id is hardcoded.
+[x] Live Model Editor exposes SOURCE ANIM OFF/ON and keeps OFF as the static-authoring default.
+[x] Animation preview loads the real AnimationDefinition, uses its packed frames + frame-duration table, and applies exact source frames through Matrix3 Model animation.
+[x] Each animated draw clones the cached authored base Model first, so source animation cannot accumulate transforms onto the saved assembly.
+[x] ConveyorRun keeps the procedural raw/base Model cached and applies the same source-object animation to a per-frame renderer clone.
+[ ] Load the saved conveyor project. With SOURCE ANIM OFF, the authored assembly remains completely static and editing/selection/gizmos behave normally.
+[ ] Toggle SOURCE ANIM ON. Output/status reports a real source animation id and frame count rather than "no animation id" or "definition waiting".
+[ ] The authored conveyor visibly moves using the source object's animation while the unrelated sawmill geometry remains absent.
+[ ] Toggle SOURCE ANIM OFF again. Motion stops immediately and the assembly returns to the unchanged authored pose.
+[ ] Save/reload the project after animation preview; all saved part scale/move values remain identical because animation preview is transient only.
+[ ] Show Conveyor A->B Demo. SHORT/MEDIUM/LONG all animate from the same source sequence without rebuilding/changing their procedural lengths.
+[ ] Watch several loops: no cumulative stretching, drifting, exploding geometry, or progressive offset appears.
+[ ] Regression: Live Model Editor selection/picking/transform gizmos, Construction ghost preview, normal scene rendering and Hide Conveyor Demo still behave normally.
