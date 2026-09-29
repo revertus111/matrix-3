@@ -2991,6 +2991,90 @@ public final class Commands {
 		    player.getPackets().sendGameMessage(conveyorClear.clearConveyorRuns());
 		}
 		return true;
+	    case "settlementconveyorpayloadadd":
+		SettlementInstance conveyorPayloadAdd = SettlementInstance.getActive(player);
+		if (conveyorPayloadAdd == null) return true;
+		if (cmd.length < 3 || cmd.length > 4) {
+		    player.getPackets().sendGameMessage(
+			    "Payload add requires: runId(0=first) itemId [amount].");
+		    return true;
+		}
+		try {
+		    long runId = Long.parseLong(cmd[1]);
+		    int itemId = Integer.parseInt(cmd[2]);
+		    int amount = cmd.length >= 4 ? Integer.parseInt(cmd[3]) : 1;
+		    player.getPackets().sendGameMessage(
+			    conveyorPayloadAdd.addConveyorPayload(runId, itemId, amount));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid conveyor payload number.");
+		}
+		return true;
+	    case "settlementconveyorpayloadfill":
+		SettlementInstance conveyorPayloadFill = SettlementInstance.getActive(player);
+		if (conveyorPayloadFill == null) return true;
+		try {
+		    long runId = cmd.length >= 2 ? Long.parseLong(cmd[1]) : 0L;
+		    player.getPackets().sendGameMessage(
+			    conveyorPayloadFill.fillConveyorPayloads(runId));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid ConveyorRun id.");
+		}
+		return true;
+	    case "settlementconveyorpayloadclear":
+		SettlementInstance conveyorPayloadClear = SettlementInstance.getActive(player);
+		if (conveyorPayloadClear == null) return true;
+		try {
+		    long runId = cmd.length >= 2 ? Long.parseLong(cmd[1]) : 0L;
+		    player.getPackets().sendGameMessage(
+			    conveyorPayloadClear.clearConveyorPayloads(runId));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid ConveyorRun id.");
+		}
+		return true;
+	    case "settlementconveyoroutput":
+		SettlementInstance conveyorOutput = SettlementInstance.getActive(player);
+		if (conveyorOutput == null) return true;
+		if (cmd.length < 2 || cmd.length > 3) {
+		    player.getPackets().sendGameMessage(
+			    "Conveyor output requires: [runId] block|open.");
+		    return true;
+		}
+		try {
+		    long runId;
+		    String mode;
+		    if (cmd.length == 2) {
+			runId = 0L;
+			mode = cmd[1];
+		    } else {
+			runId = Long.parseLong(cmd[1]);
+			mode = cmd[2];
+		    }
+		    boolean blocked;
+		    if ("block".equalsIgnoreCase(mode) || "blocked".equalsIgnoreCase(mode)) {
+			blocked = true;
+		    } else if ("open".equalsIgnoreCase(mode)) {
+			blocked = false;
+		    } else {
+			player.getPackets().sendGameMessage("Output mode must be block or open.");
+			return true;
+		    }
+		    player.getPackets().sendGameMessage(
+			    conveyorOutput.setConveyorDevelopmentOutputBlocked(runId, blocked));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid ConveyorRun id.");
+		}
+		return true;
+	    case "settlementconveyortransportstatus":
+		SettlementInstance conveyorTransportStatus = SettlementInstance.getActive(player);
+		if (conveyorTransportStatus == null) return true;
+		try {
+		    long runId = cmd.length >= 2 ? Long.parseLong(cmd[1]) : 0L;
+		    player.getPackets().sendGameMessage(
+			    conveyorTransportStatus.getConveyorTransportStatus(runId));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid ConveyorRun id.");
+		}
+		return true;
 	    case "settlementrailreplacebegin":
 		SettlementInstance railStageBegin = SettlementInstance.getActive(player);
 		if (railStageBegin != null) {
