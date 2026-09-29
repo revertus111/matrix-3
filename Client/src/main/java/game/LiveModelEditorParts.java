@@ -93,6 +93,211 @@ final class LiveModelEditorParts {
         return source.components[state.sourcePart].faces.length;
     }
 
+    /**
+     * Read-only reverse-engineering trace for source-object animation.
+     *
+     * Compares the decoded Class159 skin/face groups and textured faces against
+     * the transform groups referenced by the real AnimationDefinition frames.
+     * This does not mutate editor state or cache geometry.
+     */
+    synchronized String sourceAnimationDiagnostics(ObjectDefinitions definition,
+            AnimationDefinition animation) {
+        StringBuilder out = new StringBuilder(4096);
+        out.append("=== LIVE MODEL SOURCE ANIM TRACE ===\n");
+        out.append("object=").append(source == null ? -1 : source.objectId)
+                .append(" type=").append(source == null ? -1 : source.objectType)
+                .append(" models=").append(source == null
+                        ? "[]" : Arrays.toString(source.modelIds)).append('\n');
+
+        int[] animationIds = definition == null ? null : definition.method6053((byte) 0);
+        out.append("objectAnimationIds=")
+                .append(animationIds == null ? "[]" : Arrays.toString(animationIds))
+                .append('\n');
+
+        if (source == null) {
+            out.append("classification=NO_SOURCE\n");
+            return out.toString();
+        }
+
+        Class159 raw = source.decode();
+        if (raw == null) {
+            out.append("classification=SOURCE_DECODE_FAILED\n");
+            return out.toString();
+        }
+
+        LinkedHashSet<Integer> sourceVertexGroups = new LinkedHashSet<Integer>();
+        int skinnedVertices = 0;
+        if (raw.anIntArray1813 != null) {
+            for (int i = 0; i < raw.anInt1791 && i < raw.anIntArray1813.length; i++) {
+                int group = raw.anIntArray1813[i];
+                if (group >= 0) {
+                    skinnedVertices++;
+                    sourceVertexGroups.add(Integer.valueOf(group));
+                }
+            }
+        }
+
+        LinkedHashSet<Integer> sourceFaceGroups = new LinkedHashSet<Integer>();
+        if (raw.anIntArray1780 != null) {
+            for (int i = 0; i < raw.anInt1778 && i < raw.anIntArray1780.length; i++) {
+                int group = raw.anIntArray1780[i];
+                if (group >= 0) sourceFaceGroups.add(Integer.valueOf(group));
+            }
+        }
+
+        LinkedHashSet<Integer> sourceTextures = new LinkedHashSet<Integer>();
+        int texturedFaces = 0;
+        if (raw.faceTextures != null) {
+            for (int i = 0; i < raw.anInt1778 && i < raw.faceTextures.length; i++) {
+                int texture = raw.faceTextures[i];
+                if (texture >= 0) {
+                    texturedFaces++;
+                    sourceTextures.add(Integer.valueOf(texture));
+                }
+            }
+        }
+
+        out.append("raw vertices=").append(raw.anInt1791)
+                .append(" faces=").append(raw.anInt1778)
+                .append(" skinnedVertices=").append(skinnedVertices)
+                .append(" vertexSkinGroups=").append(sourceVertexGroups)
+                .append(" faceGroups=").append(sourceFaceGroups)
+                .append(" texturedFaces=").append(texturedFaces)
+                .append(" textures=").append(sourceTextures)
+                .append('\n');
+
+        LinkedHashSet<Integer> sequenceSpatialGroups = new LinkedHashSet<Integer>();
+        LinkedHashSet<Integer> sequenceOtherGroups = new LinkedHashSet<Integer>();
+        Map<Integer, Integer> transformTypeCounts = new LinkedHashMap<Integer, Integer>();
+        int sequenceFrames = animation == null || animation.anIntArray1544 == null
+                ? 0 : animation.anIntArray1544.length;
+        int loadedFrames = 0;
+
+        if (animation != null && animation.anIntArray1544 != null
+                && animation.aClass92_1559 != null) {
+            for (int packedFrame : animation.anIntArray1544) {
+                Class572_Sub12_Sub7 frameSet =
+                        animation.aClass92_1559.method1522(
+                                packedFrame >>> 16, -1457820512);
+                if (frameSet == null || frameSet.aClass99Array11373 == null) continue;
+                int frameIndex = packedFrame & 0xffff;
+                if (frameIndex < 0 || frameIndex >= frameSet.aClass99Array11373.length) continue;
+                Class99 frame = frameSet.aClass99Array11373[frameIndex];
+                if (frame == null || frame.aClass572_Sub23_1269 == null) continue;
+                loadedFrames++;
+
+                Class572_Sub23 skeleton = frame.aClass572_Sub23_1269;
+                for (int i = 0; i < frame.anInt1271; i++) {
+                    int slot = frame.aShortArray1272[i] & 0xffff;
+                    if (slot < 0 || slot >= skeleton.anIntArray9196.length
+                            || slot >= skeleton.anIntArrayArray9197.length) continue;
+                    int type = skeleton.anIntArray9196[slot];
+                    Integer previous = transformTypeCounts.get(Integer.valueOf(type));
+                    transformTypeCounts.put(Integer.valueOf(type),
+                            Integer.valueOf(previous == null ? 1 : previous.intValue() + 1));
+                    int[] groups = skeleton.anIntArrayArray9197[slot];
+                    if (groups == null) continue;
+                    LinkedHashSet<Integer> target = type >= 1 && type <= 3
+                            ? sequenceSpatialGroups : sequenceOtherGroups;
+                    for (int group : groups) {
+                        if (group >= 0) target.add(Integer.valueOf(group));
+                    }
+                }
+            }
+        }
+
+        out.append("sequence frames=").append(sequenceFrames)
+                .append(" loadedFrames=").append(loadedFrames)
+                .append(" transformTypes=").append(transformTypeCounts)
+                .append(" spatialGroups=").append(sequenceSpatialGroups)
+                .append(" otherGroups=").append(sequenceOtherGroups)
+                .append('\n');
+
+        boolean anySpatialOverlap = false;
+        boolean anyOtherOverlap = false;
+        for (int part = 0; part < source.components.length; part++) {
+            Component component = source.components[part];
+            LinkedHashSet<Integer> vertexGroups = new LinkedHashSet<Integer>();
+            if (raw.anIntArray1813 != null) {
+                for (int vertex : component.vertices) {
+                    if (vertex < 0 || vertex >= raw.anIntArray1813.length) continue;
+                    int group = raw.anIntArray1813[vertex];
+                    if (group >= 0) vertexGroups.add(Integer.valueOf(group));
+                }
+            }
+
+            LinkedHashSet<Integer> faceGroups = new LinkedHashSet<Integer>();
+            LinkedHashSet<Integer> textures = new LinkedHashSet<Integer>();
+            int partTexturedFaces = 0;
+            for (int face : component.faces) {
+                if (raw.anIntArray1780 != null
+                        && face >= 0 && face < raw.anIntArray1780.length) {
+                    int group = raw.anIntArray1780[face];
+                    if (group >= 0) faceGroups.add(Integer.valueOf(group));
+                }
+                if (raw.faceTextures != null
+                        && face >= 0 && face < raw.faceTextures.length) {
+                    int texture = raw.faceTextures[face];
+                    if (texture >= 0) {
+                        partTexturedFaces++;
+                        textures.add(Integer.valueOf(texture));
+                    }
+                }
+            }
+
+            LinkedHashSet<Integer> spatialOverlap =
+                    intersection(vertexGroups, sequenceSpatialGroups);
+            LinkedHashSet<Integer> otherVertexOverlap =
+                    intersection(vertexGroups, sequenceOtherGroups);
+            LinkedHashSet<Integer> otherFaceOverlap =
+                    intersection(faceGroups, sequenceOtherGroups);
+            if (!spatialOverlap.isEmpty()) anySpatialOverlap = true;
+            if (!otherVertexOverlap.isEmpty() || !otherFaceOverlap.isEmpty())
+                anyOtherOverlap = true;
+
+            out.append("part ").append(part)
+                    .append(" verts=").append(component.vertices.length)
+                    .append(" faces=").append(component.faces.length)
+                    .append(" vertexGroups=").append(vertexGroups)
+                    .append(" faceGroups=").append(faceGroups)
+                    .append(" texturedFaces=").append(partTexturedFaces)
+                    .append(" textures=").append(textures)
+                    .append(" spatialOverlap=").append(spatialOverlap)
+                    .append(" otherVertexOverlap=").append(otherVertexOverlap)
+                    .append(" otherFaceOverlap=").append(otherFaceOverlap)
+                    .append('\n');
+        }
+
+        String classification;
+        if (animation == null) {
+            classification = texturedFaces > 0
+                    ? "NO_SEQUENCE_DEFINITION + TEXTURED_GEOMETRY_PRESENT"
+                    : "NO_SEQUENCE_DEFINITION";
+        } else if (sequenceFrames > 0 && loadedFrames == 0) {
+            classification = "SEQUENCE_FRAME_DATA_WAIT";
+        } else if (anySpatialOverlap) {
+            classification = "SEQUENCE_SPATIAL_GROUP_OVERLAP";
+        } else if (anyOtherOverlap) {
+            classification = "SEQUENCE_NONSPATIAL_GROUP_OVERLAP";
+        } else if (texturedFaces > 0) {
+            classification = "NO_SEQUENCE_GROUP_OVERLAP + TEXTURED_GEOMETRY_PRESENT";
+        } else {
+            classification = "NO_SEQUENCE_GROUP_OVERLAP";
+        }
+        out.append("classification=").append(classification).append('\n');
+        return out.toString();
+    }
+
+    private static LinkedHashSet<Integer> intersection(
+            LinkedHashSet<Integer> a, LinkedHashSet<Integer> b) {
+        LinkedHashSet<Integer> out = new LinkedHashSet<Integer>();
+        if (a == null || b == null || a.isEmpty() || b.isEmpty()) return out;
+        for (Integer value : a) {
+            if (b.contains(value)) out.add(value);
+        }
+        return out;
+    }
+
     synchronized boolean hover(int index) {
         int next = index >= 0 && index < getPartCount() ? index : -1;
         if (hovered == next) return false;
