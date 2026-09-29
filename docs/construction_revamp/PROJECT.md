@@ -2175,6 +2175,17 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Source texture data on the authored assembly remains intact. UV/texture-repeat work remains a later renderer slice; texture density is not accepted by this checkpoint.
 - Runtime gate: show the three demo runs and verify the only visible geometry is the custom authored conveyor, with no sawmill crates/blades/extra parts. Confirm SHORT/MEDIUM/LONG extend from that same source, fixed details stay sane, Hide removes all three, and normal world/Construction ghost rendering is unaffected. Support spacing is not part of this retest.
 
+### Implementation checkpoint — Source Object Animation Reuse V1 — 2026-09-29
+
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- Object 46298's decoded animation ids remain authoritative; no custom/fake conveyor animation id was introduced.
+- Live Model Editor now has `SOURCE ANIM OFF/ON`. OFF preserves the existing static authoring workflow. ON resolves the first valid source-object animation id, loads the real Matrix3 `AnimationDefinition`, advances exact source frames using the sequence frame-duration table, and applies the current frame to the edited main assembly preview.
+- Animation is non-destructive: the cached authored renderer Model keeps animation-capable groups; each displayed animation frame starts from a fresh Model clone, applies the source frame, then renders. Frame transforms therefore cannot accumulate onto the authored base geometry.
+- ConveyorRun V0.1 now uses the same source-animation seam automatically. The cached procedural A->B base Model is not rebuilt per frame; only a renderer-model clone receives the current source frame before drawing.
+- V1 intentionally uses exact frame stepping rather than interpolation. This gate answers the load-bearing question first: whether the isolated custom conveyor assembly still preserves the source object's animation groups after authoring/procedural length transforms.
+- If source animation does not visibly affect the authored conveyor, treat that as evidence that the required animated group/component was excluded or its grouping data is incompatible with the generated assembly. Do not replace it with a fake belt animation until that result is understood.
+- Runtime gate: load the saved conveyor project in Live Model Editor; confirm static editing with SOURCE ANIM OFF, enable SOURCE ANIM ON and confirm the source sequence visibly animates without changing saved transforms; then show the SHORT/MEDIUM/LONG ConveyorRun demo and confirm the same source motion appears on all three generated runs without geometry drift.
+
 ### Canonical conveyor visual source
 
 - The cache source remains RuneScape **object 46298** using source models **49717 / 49718**, but gameplay must **not** use the whole object. The canonical visual source is the saved custom Live Model Editor assembly built from connected-component indexes **4, 5, 8, 16, 17, 18, 19, 21** with their saved transforms.
@@ -2243,5 +2254,5 @@ Build three straight test runs from the same authored conveyor source (short, me
 - deleting the run removes the whole generated conveyor;
 - once visual generation is accepted, a real Log (1511) can be rendered moving continuously from A toward B.
 
-**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. Pull/rebuild/restart the client, enter the settlement, then use Con Revamp -> Development Tools -> Show Conveyor A->B Demo. The corrected gate is: only the custom authored conveyor assembly is visible, no sawmill leftovers appear, and SHORT/MEDIUM/LONG extend from that same source. Inspect Conveyor Status for the bounded authored-part STRETCH/fixed summary. Do not add support generation, chest automation, payload transport, persistence, or per-tile belt objects until this corrected visual source passes.
+**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. Pull/rebuild/restart the client. First load the saved 46298 conveyor project in Live Model Editor and toggle SOURCE ANIM ON; verify the edited assembly visibly inherits the source object sequence while OFF remains static. Then show the SHORT/MEDIUM/LONG ConveyorRun demo and verify the same source motion is present on all generated runs with no geometry drift. If animation is absent or corrupt, inspect the source animation/group preservation next. Do not add support generation, chest automation, payload transport, persistence, fake belt animation, or per-tile belt objects before this animation-reuse gate is understood.
 
