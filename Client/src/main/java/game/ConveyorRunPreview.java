@@ -27,13 +27,6 @@ public final class ConveyorRunPreview {
 
     private static final int DEFAULT_PAYLOAD_ITEM_ID = 1511;
 
-    /*
-     * Temporary belt-owned movement speed for the visual proof. Payload visual
-     * profiles deliberately do not own speed; future conveyor tiers/runtime
-     * state replace this constant without touching item presentation profiles.
-     */
-    private static final double CONVEYOR_TEST_SPEED_TILES_PER_SECOND = 1.25;
-    private static final long PAYLOAD_EPOCH_NANOS = System.nanoTime();
     private static volatile int payloadItemId = DEFAULT_PAYLOAD_ITEM_ID;
 
     private static final double STRETCH_MIN_LONG_FRACTION = 0.60;
@@ -89,10 +82,23 @@ public final class ConveyorRunPreview {
     private static int cachedRevision = Integer.MIN_VALUE;
     private static Model[] cachedModels = new Model[0];
 
+    private static final int MAX_PAYLOAD_MODEL_CACHE = 64;
+    private static final double MAX_PAYLOAD_EXTRAPOLATION_SECONDS = 1.2;
+
+    private static volatile ConveyorPayload[] settlementPayloads =
+            new ConveyorPayload[0];
+    private static volatile PayloadRunState[] payloadRunStates =
+            new PayloadRunState[0];
+    private static final List<ConveyorPayload> pendingSettlementPayloads =
+            new ArrayList<ConveyorPayload>();
+    private static final List<PayloadRunState> pendingPayloadRunStates =
+            new ArrayList<PayloadRunState>();
+    private static boolean payloadSyncOpen;
+    private static volatile long payloadSnapshotNanos = System.nanoTime();
+
     private static Class106 cachedPayloadRenderer;
-    private static Model cachedPayloadModel;
-    private static int cachedPayloadItemId = -1;
-    private static int cachedPayloadScalePercent = -1;
+    private static final LinkedHashMap<Long, Model> cachedPayloadModels =
+            new LinkedHashMap<Long, Model>();
 
     private ConveyorRunPreview() {
     }
@@ -309,10 +315,96 @@ public final class ConveyorRunPreview {
             pendingSettlementRuns.clear();
             settlementSyncOpen = false;
             settlementRuns = new ConveyorRun[0];
+            pendingSettlementPayloads.clear();
+            pendingPayloadRunStates.clear();
+            payloadSyncOpen = false;
+            settlementPayloads = new ConveyorPayload[0];
+            payloadRunStates = new PayloadRunState[0];
+            payloadSnapshotNanos = System.nanoTime();
             revision++;
             invalidateModels();
             lastRenderedCycle = Integer.MIN_VALUE;
             status = demoActive ? "PERSISTENT CLEARED; demo active" : "HIDDEN";
+            return true;
+        }
+        if ("PBEGIN".equals(payload)) {
+            pendingSettlementPayloads.clear();
+            pendingPayloadRunStates.clear();
+            payloadSyncOpen = true;
+            return true;
+        }
+        if ("PEND".equals(payload)) {
+            if (!payloadSyncOpen) {
+                return true;
+            }
+            Collections.sort(pendingSettlementPayloads,
+                    new Comparator<ConveyorPayload>() {
+                        @Override
+                        public int compare(ConveyorPayload a, ConveyorPayload b) {
+                            int run = Long.compare(a.runId, b.runId);
+                            if (run != 0) return run;
+                            int distance = Double.compare(
+                                    b.distanceTiles, a.distanceTiles);
+                            if (distance != 0) return distance;
+                            return Long.compare(a.payloadId, b.payloadId);
+                        }
+                    });
+            settlementPayloads = pendingSettlementPayloads.toArray(
+                    new ConveyorPayload[pendingSettlementPayloads.size()]);
+            payloadRunStates = pendingPayloadRunStates.toArray(
+                    new PayloadRunState[pendingPayloadRunStates.size()]);
+            pendingSettlementPayloads.clear();
+            pendingPayloadRunStates.clear();
+            payloadSyncOpen = false;
+            payloadSnapshotNanos = System.nanoTime();
+            return true;
+        }
+        if (payload.startsWith("PSTATE,")) {
+            if (!payloadSyncOpen) {
+                return true;
+            }
+            String[] values = payload.split(",");
+            if (values.length != 5) {
+                status = "PAYLOAD SYNC rejected malformed PSTATE";
+                return true;
+            }
+            try {
+                long runId = Long.parseLong(values[1]);
+                double speed = Long.parseLong(values[2]) / 1000.0;
+                double spacing = Long.parseLong(values[3]) / 1000.0;
+                boolean blocked = Integer.parseInt(values[4]) != 0;
+                if (runId > 0L && speed >= 0.0 && spacing > 0.0) {
+                    pendingPayloadRunStates.add(new PayloadRunState(
+                            runId, speed, spacing, blocked));
+                }
+            } catch (NumberFormatException ex) {
+                status = "PAYLOAD SYNC rejected malformed PSTATE numbers";
+            }
+            return true;
+        }
+        if (payload.startsWith("PAYLOAD,")) {
+            if (!payloadSyncOpen) {
+                return true;
+            }
+            String[] values = payload.split(",");
+            if (values.length != 6) {
+                status = "PAYLOAD SYNC rejected malformed PAYLOAD";
+                return true;
+            }
+            try {
+                long runId = Long.parseLong(values[1]);
+                long payloadId = Long.parseLong(values[2]);
+                int itemId = Integer.parseInt(values[3]);
+                int amount = Integer.parseInt(values[4]);
+                double distanceTiles = Long.parseLong(values[5]) / 1000.0;
+                if (runId > 0L && payloadId > 0L
+                        && itemId >= 0 && amount > 0 && distanceTiles >= 0.0) {
+                    pendingSettlementPayloads.add(new ConveyorPayload(
+                            runId, payloadId, itemId, amount, distanceTiles));
+                }
+            } catch (NumberFormatException ex) {
+                status = "PAYLOAD SYNC rejected malformed PAYLOAD numbers";
+            }
             return true;
         }
         if (payload.startsWith("RUN,")) {
@@ -349,6 +441,12 @@ public final class ConveyorRunPreview {
         pendingSettlementRuns.clear();
         settlementSyncOpen = false;
         settlementRuns = new ConveyorRun[0];
+        pendingSettlementPayloads.clear();
+        pendingPayloadRunStates.clear();
+        payloadSyncOpen = false;
+        settlementPayloads = new ConveyorPayload[0];
+        payloadRunStates = new PayloadRunState[0];
+        payloadSnapshotNanos = System.nanoTime();
         revision++;
         invalidateModels();
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -357,6 +455,7 @@ public final class ConveyorRunPreview {
 
     public static String getStatus() {
         return status + " | persistent=" + settlementRuns.length
+                + " payloads=" + settlementPayloads.length
                 + " demo=" + (demoActive ? demoRuns.length : 0)
                 + " | " + roleSummary;
     }
@@ -409,9 +508,9 @@ public final class ConveyorRunPreview {
                 failed++;
             }
 
-            if (current[i].runId > 0L
-                    && renderPayload(current[i], scene, renderer, sceneBase)) {
-                payloads++;
+            if (current[i].runId > 0L) {
+                payloads += renderPayloads(
+                        current[i], scene, renderer, sceneBase);
             }
         }
 
@@ -955,19 +1054,65 @@ public final class ConveyorRunPreview {
         return model;
     }
 
-    private static boolean renderPayload(ConveyorRun run,
+    private static int renderPayloads(ConveyorRun run,
             Class523 scene, Class106 renderer, Class497 sceneBase) {
         if (run == null || run.runId <= 0L || renderer == null
                 || scene == null || sceneBase == null) {
-            return false;
+            return 0;
         }
 
+        PayloadRunState runState = payloadRunState(run.runId);
+        if (runState == null) {
+            return 0;
+        }
+
+        ConveyorPayload[] payloads = settlementPayloads;
+        if (payloads.length == 0) {
+            return 0;
+        }
+
+        double elapsedSeconds =
+                (System.nanoTime() - payloadSnapshotNanos) / 1000000000.0;
+        elapsedSeconds = Math.max(0.0,
+                Math.min(MAX_PAYLOAD_EXTRAPOLATION_SECONDS, elapsedSeconds));
+        double advance = runState.speedTilesPerSecond * elapsedSeconds;
+        double lengthTiles = Math.max(0.001, run.lengthTiles());
+        double leaderDistance = Double.POSITIVE_INFINITY;
+        int rendered = 0;
+
+        for (ConveyorPayload payload : payloads) {
+            if (payload == null || payload.runId != run.runId) {
+                continue;
+            }
+
+            double distance = Math.min(
+                    lengthTiles, payload.distanceTiles + advance);
+            if (!Double.isInfinite(leaderDistance)) {
+                distance = Math.min(
+                        distance,
+                        Math.max(0.0,
+                                leaderDistance - runState.spacingTiles));
+            }
+            leaderDistance = distance;
+
+            if (renderPayloadAtDistance(
+                    run, payload, distance,
+                    scene, renderer, sceneBase)) {
+                rendered++;
+            }
+        }
+        return rendered;
+    }
+
+    private static boolean renderPayloadAtDistance(
+            ConveyorRun run, ConveyorPayload payload, double distanceTiles,
+            Class523 scene, Class106 renderer, Class497 sceneBase) {
         ConveyorPayloadVisualProfiles.Resolution payloadResolution =
-                ConveyorPayloadVisualProfiles.resolveForRender(payloadItemId);
+                ConveyorPayloadVisualProfiles.resolveForRender(payload.itemId);
         ConveyorPayloadVisualProfiles.Profile payloadProfile =
                 payloadResolution.profile;
         Model payloadModel = getPayloadModel(
-                renderer, payloadItemId, payloadProfile.scalePercent);
+                renderer, payload.itemId, payloadProfile.scalePercent);
         if (payloadModel == null) {
             return false;
         }
@@ -997,14 +1142,8 @@ public final class ConveyorRunPreview {
         }
 
         double lengthTiles = Math.max(0.001, run.lengthTiles());
-        double elapsedSeconds =
-                (System.nanoTime() - PAYLOAD_EPOCH_NANOS) / 1000000000.0;
-        double runOffsetTiles = (run.runId % 7L) * 0.37;
-        double distanceTiles =
-                (elapsedSeconds * CONVEYOR_TEST_SPEED_TILES_PER_SECOND
-                        + runOffsetTiles)
-                % lengthTiles;
-        double progress = distanceTiles / lengthTiles;
+        double progress = Math.max(0.0,
+                Math.min(1.0, distanceTiles / lengthTiles));
 
         int tileSize = ground.anInt2087 * 2129890771;
         double deltaX = endLocalX - startLocalX;
@@ -1021,9 +1160,6 @@ public final class ConveyorRunPreview {
         int sceneX = (int) Math.round(localX * tileSize + tileSize * 0.5);
         int sceneZ = (int) Math.round(localY * tileSize + tileSize * 0.5);
 
-        // ConveyorRun itself is a straight generated deck positioned from the
-        // run midpoint, so keep the payload on that same horizontal deck rather
-        // than making it bob with every terrain sample under the span.
         double midLocalX = (startLocalX + endLocalX) * 0.5;
         double midLocalY = (startLocalY + endLocalY) * 0.5;
         int midSceneX = (int) Math.round(midLocalX * tileSize + tileSize * 0.5);
@@ -1050,10 +1186,21 @@ public final class ConveyorRunPreview {
             PAYLOAD_TRANSFORM.method3576(
                     0.0F, 0.0F, 1.0F, Class325.method4146(roll));
         }
-        PAYLOAD_TRANSFORM.method3580((float) sceneX, (float) sceneY, (float) sceneZ);
+        PAYLOAD_TRANSFORM.method3580(
+                (float) sceneX, (float) sceneY, (float) sceneZ);
 
         payloadModel.method1375(PAYLOAD_TRANSFORM, null, 0);
         return true;
+    }
+
+    private static PayloadRunState payloadRunState(long runId) {
+        PayloadRunState[] states = payloadRunStates;
+        for (PayloadRunState state : states) {
+            if (state != null && state.runId == runId) {
+                return state;
+            }
+        }
+        return null;
     }
 
     private static Model getPayloadModel(
@@ -1061,10 +1208,17 @@ public final class ConveyorRunPreview {
         if (renderer == null) {
             return null;
         }
-        if (cachedPayloadRenderer == renderer && cachedPayloadModel != null
-                && cachedPayloadItemId == itemId
-                && cachedPayloadScalePercent == scalePercent) {
-            return cachedPayloadModel;
+
+        if (cachedPayloadRenderer != renderer) {
+            cachedPayloadRenderer = renderer;
+            cachedPayloadModels.clear();
+        }
+
+        long cacheKey = ((long) itemId << 32)
+                ^ (scalePercent & 0xffffffffL);
+        Model cached = cachedPayloadModels.get(Long.valueOf(cacheKey));
+        if (cached != null) {
+            return cached;
         }
 
         Class639_Sub5 itemDefinitions =
@@ -1100,10 +1254,10 @@ public final class ConveyorRunPreview {
             }
 
             model.method1450(MODEL_FLAGS);
-            cachedPayloadRenderer = renderer;
-            cachedPayloadModel = model;
-            cachedPayloadItemId = itemId;
-            cachedPayloadScalePercent = scalePercent;
+            if (cachedPayloadModels.size() >= MAX_PAYLOAD_MODEL_CACHE) {
+                cachedPayloadModels.clear();
+            }
+            cachedPayloadModels.put(Long.valueOf(cacheKey), model);
             return model;
         } catch (RuntimeException ex) {
             System.err.println("[ConveyorRunPreview] Payload item model build failed: "
@@ -1397,6 +1551,38 @@ public final class ConveyorRunPreview {
         cachedRenderer = null;
         cachedRevision = Integer.MIN_VALUE;
         cachedModels = new Model[0];
+    }
+
+    private static final class ConveyorPayload {
+        final long runId;
+        final long payloadId;
+        final int itemId;
+        final int amount;
+        final double distanceTiles;
+
+        ConveyorPayload(long runId, long payloadId, int itemId,
+                int amount, double distanceTiles) {
+            this.runId = runId;
+            this.payloadId = payloadId;
+            this.itemId = itemId;
+            this.amount = amount;
+            this.distanceTiles = distanceTiles;
+        }
+    }
+
+    private static final class PayloadRunState {
+        final long runId;
+        final double speedTilesPerSecond;
+        final double spacingTiles;
+        final boolean outputBlocked;
+
+        PayloadRunState(long runId, double speedTilesPerSecond,
+                double spacingTiles, boolean outputBlocked) {
+            this.runId = runId;
+            this.speedTilesPerSecond = speedTilesPerSecond;
+            this.spacingTiles = spacingTiles;
+            this.outputBlocked = outputBlocked;
+        }
     }
 
     private static final class ConveyorRun {
