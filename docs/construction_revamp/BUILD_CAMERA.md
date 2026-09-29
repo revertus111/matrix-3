@@ -2,217 +2,162 @@
 
 ## Purpose
 
-Construction uses Matrix3's detached Class411 camera as the rendering carrier, while Construction owns its build-mode controls.
+Construction uses a hybrid Matrix3-native camera architecture:
 
-The player remains physically server-owned and stationary unless normal gameplay movement is explicitly triggered. The camera never becomes world-object, collision, persistence or placement authority.
+- **RTS** owns only its movable pivot, yaw, pitch, zoom and input state, then feeds those inputs into Matrix3's existing vanilla `Class246.method3359(...)` camera solver.
+- **Free Build** retains Matrix3's detached `Class24.aClass411_Sub1_158` / Class411 developer camera and the already-accepted free-flight controls.
+
+The player remains server-owned and stationary unless normal gameplay movement is explicitly triggered. Neither camera mode owns world objects, collision, persistence or settlement placement.
 
 ## Rejected paths
 
 ### Legacy Orb interface — RUNTIME REJECTED
 
 - `InterfaceManager.gazeOrbOfOculus()` attempts legacy root/component `475/57`.
-- Current client crashes during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`.
-- Construction must never reopen that path.
+- The current client crashes during `SET_INTERFACE` with `ArrayIndexOutOfBoundsException: 57`.
+- Construction must not reopen that path.
 
-### Generic renderer-global camera — RUNTIME REJECTED
+### Standalone renderer-global camera owner — RUNTIME REJECTED
 
-- Writing `Class36.anInt387`, `Class572_Sub13_Sub2.anInt11451`, `Class49.anInt490`, `Class455.anInt5187` and `Class406.anInt4765` did not reproduce the live detached camera.
-- Runtime produced invalid/empty-looking views.
-- Construction must not return to that ownership model.
+The Sep-17 prototype directly wrote final camera globals and attempted to become an independent camera owner. Runtime produced invalid/empty-looking views.
 
-## Detached camera evidence
+That failed prototype is **not** the current RTS design.
 
-Runtime CAM DEBUG established that the observed moving view renders through the Class411 family while generic XYZ remained zero in that capture.
+Current RTS reuses Matrix3's verified vanilla solver, `Class246.method3359(...)`, at the same viewport stage where Matrix3 already calculates the normal player camera. Construction supplies only a different focus/pivot, pitch, yaw and distance.
 
-Source tracing established the detached developer camera object and lifecycle:
+## Verified camera ownership
 
-- Ctrl+backtick enters through `Class102_Sub5.method9948(...)`.
-- Active state is `IncomingPacket.method4113(...)` -> `Class24.aBool157`.
-- Detached camera object is `Class24.aClass411_Sub1_158`.
-- `Class343.method4302(...)` renders that object whenever detached-camera state is active.
-- `RSSocket.method7604(...)` closes it.
+### Vanilla path
 
-The first Construction control patch placed WASD/Q/E inside `Class24.method711()`. Runtime proved only camera detachment worked; the new keys did not. Targeted tracing then showed that method was not reached by the current Construction runtime path, so that patch location is rejected.
+`Class343.method4302(...)` normally calls `Class246.method3359(...)`, which calculates:
 
-## Current implementation — live viewport tick
+- `Class36.anInt387` — camera X
+- `Class572_Sub13_Sub2.anInt11451` — camera height
+- `Class49.anInt490` — camera Z
+- `Class455.anInt5187` — pitch
+- `Class406.anInt4765` — yaw
 
-Opening Construction:
+When detached-camera state is false, `Class343` submits those normal Matrix3 camera values to the renderer.
 
-1. Reuses an already-active detached Class411 camera if one exists.
-2. Otherwise creates the same detached `Class24.aClass411_Sub1_158` camera through `Class102_Sub5.method9948(...)`.
-3. Records whether Construction owns that activation.
-4. Starts Construction's live control tick.
+### Detached path
 
-`ConstructionBuildCamera.tick()` is called from `Class343.method4302(...)` immediately before the active Class411 transform is submitted to the scene.
+- Activation: `Class102_Sub5.method9948(...)`
+- Active flag: `IncomingPacket.method4113(...)` -> `Class24.aBool157`
+- Camera object: `Class24.aClass411_Sub1_158`
+- Close: `RSSocket.method7604(...)`
 
-The tick is guarded to once per `client.cycles`.
+When `Class24.aBool157` is true, `Class343` renders the detached Class411 transform instead of the vanilla globals.
 
-This keeps the camera object/render path Matrix3-owned while ensuring Construction controls run on a seam that is runtime-live.
+This branch split is the verified-static reason the old RTS render-parity workarounds could not fully reproduce normal player-camera rendering while RTS still owned the detached branch.
 
-Closing Construction:
+## Current implementation
 
-- closes the detached camera only when Construction created it;
-- preserves a detached camera that was already active before Construction opened.
+### RTS — vanilla camera owner
 
-## Controls — current acceptance build
+`ConstructionBuildCamera.tickVanillaRtsCamera(viewportHeight)` runs in `Class343.method4302(...)`:
 
-Construction's live tick reads Matrix3's current keyboard state:
+1. Matrix3 calculates its normal camera first.
+2. Construction updates RTS pivot/yaw/pitch/zoom state.
+3. Construction calls the existing `Class246.method3359(...)` with the RTS inputs.
+4. Matrix3 then applies its ordinary camera shake, clamps, scene setup and normal render transform.
 
-- **W** / Up Arrow -> forward
-- **S** / Down Arrow -> backward
-- **A** / Left Arrow -> strafe left
-- **D** / Right Arrow -> strafe right
-- **E** -> vertical up
-- **Q** -> vertical down
-- **Shift** -> fast max speed
-- **Ctrl** -> precision max speed
-- mouse look -> existing Class411 quaternion/look path
+RTS does **not** submit a Class411 detached transform.
 
-Movement input is normalized before it is transformed by the detached camera orientation, so diagonal input does not receive a free speed boost.
+The detached active flag is forced false while RTS is active, even if a detached object is being retained for later Free Build use.
 
-## Modern smoothing
+### Free Build — detached camera owner
 
-Implemented on the verified live Class411 control seam:
+The existing late `ConstructionBuildCamera.tick()` seam remains Free Build-only.
 
-- movement is time-based from `System.nanoTime()`, with delta time clamped to 5-50 ms to avoid stalls causing camera jumps;
-- normal speed = 1250 camera units/sec;
-- Shift fast speed = 3000 units/sec;
-- Ctrl precision speed = 400 units/sec;
-- acceleration uses exponential response `10.0`;
-- deceleration uses exponential response `7.0`;
-- velocity is world-space, so releasing input coasts smoothly instead of stopping instantly;
-- near-zero velocity settles to zero to prevent a permanent micro-drift.
+Free Build:
 
-These constants are `NEEDS TEST` for feel and can be tuned without reopening camera ownership discovery.
+- lazily creates/reuses `Class24.aClass411_Sub1_158`;
+- seeds the detached position from the current rendered camera when switching from RTS;
+- keeps the accepted Class423_Sub2 position and Class658_Sub2 look-controller path;
+- preserves W/A/S/D, Q/E vertical movement, Shift/Ctrl speeds, mouse-look, smoothing and click-stop behavior.
 
-### Click-to-stop
+### Mode handoff
 
-Matrix3 action 23 is the verified ground-click seam.
+**RTS -> Free Build**
 
-While Construction Free Build is active:
+- restore the RTS minimap marker snapshot;
+- activate/reuse the detached Class411 camera;
+- seed it from the current RTS rendered camera;
+- keep the detached branch active only while Free Build owns the view.
 
-1. action 23 calls `ConstructionBuildCamera.stopMovement()`;
-2. all camera velocity is zeroed immediately;
-3. if a movement key is still held, movement remains latched off until all movement keys are released once;
-4. an armed Paint placement is still confirmed through the existing server-authoritative Dev placement path;
-5. the action is consumed so the same click does not become player Walk Here.
+**Free Build -> RTS**
 
-Outside Construction Free Build, normal Dev Paint behavior remains unchanged.
+- disable the detached render-owner flag without necessarily destroying the retained object;
+- reset transient RTS state;
+- restore the saved RTS pivot/yaw/pitch/zoom when still valid for the loaded scene;
+- resume the vanilla `Class246.method3359(...)` path.
 
-## Placement ownership
+If a detached camera was already active before Construction entered, Construction temporarily disables that render branch for RTS and restores it on Construction exit when it still exists.
 
-The camera does not own placement.
+## RTS controls
 
-- Matrix3 continues resolving the hovered world tile.
-- `ConstructionGhostPreview` remains client-only and unregistered.
-- Confirmed objects remain server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
-- Free Build now owns action 23 while active: it stops camera momentum, optionally confirms Paint placement and consumes the action so the player remains planted.
+- **W/S/A/D + arrows** — view-relative ground-plane pan
+- **Q/E** — pivot-relative yaw orbit
+- **MMB horizontal drag** — yaw orbit
+- **MMB vertical drag** — bounded pitch
+- **wheel** — orbit distance
+- **Shift/Ctrl** — fast/precision modifiers
+- palette speed presets — `0.50x` through `3.00x`, default `2.0x`
+- minimap click — moves only the RTS pivot and preserves yaw/pitch/zoom
 
-## Diagnostics
+RTS yaw keeps the already-accepted Construction semantics: yaw 0 faces +Z and positive yaw faces +X. Matrix3's vanilla solver uses the opposite yaw sign, so the sign conversion happens only at the `Class246.method3359(...)` boundary.
 
-No camera debug overlay is active.
+RTS movement no longer depends on `Class423_Sub2` / `Class658_Sub2` to discover the camera look vector; the movement basis is derived directly from the owned RTS yaw.
 
-Construction sends bounded one-shot diagnostics through the existing owner-only client->server command bridge. The **server console** should show:
+## Free Build controls
 
-```text
-[ConstructionBuildCamera] ENTER ...
-[ConstructionBuildCamera] TICK live
-[ConstructionBuildCamera] INPUT W=... A=... S=... D=... Q=... E=... shift=... ctrl=...
-[ConstructionBuildCamera] STOP click
-[ConstructionBuildCamera] EXIT ...
-```
+- **W/S/A/D + arrows** — free-flight movement
+- **Q/E** — vertical movement
+- **Shift** — fast
+- **Ctrl** — precision
+- mouse-look — existing Class411 quaternion/look path
 
-Failure states may emit:
+Movement remains time-based and normalized, with the accepted smoothing/click-stop behavior.
 
-```text
-[ConstructionBuildCamera] FAIL detached-camera-not-active
-[ConstructionBuildCamera] FAIL tick-exception-...
-```
+## Rendering and scene ownership
 
-Only the first live tick and first movement input are reported per Construction session to avoid spam.
+RTS now uses the same vanilla camera solver and renderer branch as ordinary Matrix3 gameplay.
 
-## Accepted view roadmap
+Separate scene systems remain separate owners:
 
-### Free Build
+- `Class523` retains scene visibility/culling.
+- Settlement RTS may provide its pivot as the scene-culling focus tile.
+- The settlement visual terrain apron remains real generated terrain, not a renderer-radius/fog hack.
+- Normal Matrix3 fog/visibility/radius arrays remain untouched.
 
-Current target. Detached Class411 render carrier with Construction-owned modern controls.
+The vanilla-camera migration is intended to remove the need for detached-camera render-parity workarounds, but runtime acceptance is still required before retiring any compatibility code.
 
-### RTS
+## Runtime acceptance — vanilla RTS migration
 
-Default Construction camera.
+Status: **IMPLEMENTED / NEEDS RUNTIME TEST**
 
-- Opening the Construction palette explicitly selects RTS before entering the detached Class411 camera; closing and reopening therefore returns to RTS even if Free Build was selected previously.
-- Initial activation preserves the current horizontal heading, applies the accepted fixed downward pitch, stores the pre-backoff world position as the RTS pivot, then places the camera on a 3600-unit orbit radius.
-- W/A/S/D and arrow keys pan on the view-relative ground plane and translate both the camera and pivot together.
-- Q/E changes yaw and repositions the camera around the stored pivot at the current orbit distance; this is an orbital turn like the vanilla player camera rather than first-person in-place rotation.
-- Mouse wheel changes orbit distance inside the accepted safe range while keeping the same pivot.
-- Shift fast / Ctrl precision modifiers remain active.
-- Palette header `- / +` controls select RTS pan multipliers `0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x, 2.5x, 3.0x`; `1.0x` is default and the selection survives Construction close/reopen for the current client session.
-- The multiplier applies only to RTS pan and scales normal, Shift-fast and Ctrl-precision speeds together; Free Build movement constants remain unchanged.
-- Minimap-originated action-23 movement type 1 is intercepted before Matrix3 sends the player-walk packet. The already-resolved local destination becomes the RTS pivot instead; current yaw, pitch and orbit distance are preserved.
-- RTS reuses Matrix3's existing minimap destination-marker state as a camera-focus marker. Keyboard pan and minimap focus clicks keep that marker synchronized with the pivot without hardcoding minimap screen coordinates or layout dimensions.
-- Entering RTS snapshots the prior minimap-marker state; leaving RTS restores it. Normal world Walk Here and Bundle 2.4 double-click worker/self movement remain separate.
-- The minimap itself still uses Matrix3's vanilla heading. A rotating RTS heading chevron remains deferred until the actual minimap render/angle owner is verified.
-- Free Build remains an explicit palette option for close-up detached movement and mouse-look.
+On a fresh client pull/rebuild:
 
-The RTS base view/orientation and the default-open + pivot-orbit revision are runtime VERIFIED. Minimap click-to-focus + pivot marker are IMPLEMENTED / NEEDS RUNTIME TEST.
-
-### Top Down
-
-Near-vertical layout view for floors, room planning and production layouts.
-
-### Orbit / Focus
-
-Focus/orbit around a selected tile, structure or worker.
-
-### Player View
-
-Return to normal Matrix3 gameplay camera without changing Construction state.
-
-Preset values remain UNKNOWN until Free Build is runtime accepted.
-
-## Runtime acceptance — current gate
-
-Runtime VERIFIED in the user's acceptance sweep:
-
-- Opening Construction automatically activates the detached Class411 camera.
-- W/S move forward/back.
-- A/D strafe.
-- Shift and Ctrl change speed.
-- Q/E move vertically with the accepted direction.
-- Existing mouse-look works.
-- Closing Construction restores the normal camera when Construction owned the detached camera.
-- Reopening Construction starts Free Build cleanly.
-
-Runtime VERIFIED in the smoothed Free Build acceptance run:
-
-- acceleration ramps smoothly from rest;
-- releasing input decelerates cleanly without excessive drift or jitter;
-- diagonal input is normalized;
-- Shift fast and Ctrl precision remain usable;
-- clicking ground while moving stops camera motion immediately;
-- if a movement key is still held, click-stop stays latched until release/re-press;
-- the player remains planted on the build click instead of Walk Here;
-- one Paint click creates exactly one server-authoritative real object;
-- the white/translucent ghost remains stable while detached;
-- no camera/render instability or ghost duplication/flicker appeared in the acceptance run.
-
-Still pending explicit edge verification:
-
-- server console receives the complete `ENTER -> TICK -> INPUT -> STOP click -> EXIT` sequence without a `FAIL` state;
-- existing arrow aliases move the same detached camera;
-- pre-existing detached camera state is preserved when Construction did not own activation;
-- full ghost interaction completeness remains tracked in the separate ghost checklist (all rotations/piece switches/terrain/cancel-stale-hover cases).
+1. Enter a settlement. RTS should open without a detached/freecam render branch.
+2. Verify the initial view is above terrain and approximately matches the accepted RTS pitch/zoom.
+3. Pan with W/A/S/D and arrows; direction must remain camera-relative and the player must stay planted.
+4. Hold movement while clicking world/chest/worker targets; camera motion must continue.
+5. Orbit with Q/E and MMB; horizontal direction must match the already-accepted direction.
+6. Wheel zoom through the accepted range; no blank/underside camera.
+7. Pan toward the edge of the settlement and compare terrain/object/NPC/fog behavior to normal vanilla camera behavior.
+8. Click several minimap positions; pivot moves while yaw/pitch/zoom remain stable.
+9. Switch **RTS -> Free Build**; the view should hand off without a severe position jump and Free Build W/A/S/D/Q/E/mouse-look must still work.
+10. Switch **Free Build -> RTS**; the saved RTS pivot/yaw/pitch/zoom should return and detached rendering must stop.
+11. Exit the settlement; ordinary Matrix3 camera behavior must resume.
+12. Re-enter and verify saved RTS view restoration remains valid for the rebuilt scene.
 
 ## Classification
 
-- `VERIFIED`: legacy Orb interface path is incompatible with the current client and rejected.
-- `VERIFIED`: generic renderer-global camera implementation failed runtime acceptance and is rejected.
-- `VERIFIED`: first Class24 reuse test detached the camera but Construction W/A/S/D/Q/E did not run.
-- `verified-static`: detached render ownership is `Class24.aClass411_Sub1_158`, activated through `Class102_Sub5.method9948(...)` and closed through `RSSocket.method7604(...)`.
-- `verified-static`: Construction controls now execute from the live `Class343.method4302(...)` viewport seam and mutate the detached Class411 position/orientation directly.
-- `VERIFIED`: automatic Construction activation, W/S/A/D movement, Shift/Ctrl speed modifiers, Q/E vertical movement, mouse-look, normal-camera restore and close/reopen lifecycle passed the user's runtime sweep.
-- `verified-static`: smoothing is now time-based/world-velocity-driven on the live Class411 tick, and Free Build action 23 now owns click-to-stop + Walk Here suppression without changing server-authoritative placement.
-- `VERIFIED`: smoothing feel, normalized diagonals, Shift/Ctrl under smoothing, click-to-stop latch, planted-player build click, exactly-one authoritative Paint placement/no Walk Here, detached ghost stability and combined camera/render stability passed the user's runtime acceptance run.
-- `NEEDS TEST`: full server-console diagnostic sequence, arrow aliases, pre-existing-freecam preservation and the separate ghost completeness checklist.
-- `UNKNOWN`: final RTS/top-down/orbit preset values and transition feel.
+- `VERIFIED`: legacy Orb interface path is incompatible and rejected.
+- `VERIFIED`: the standalone direct-final-global camera prototype failed runtime acceptance and is rejected.
+- `VERIFIED`: detached Class411 Free Build controls, smoothing, click-stop, placement integration and lifecycle have passed prior runtime acceptance.
+- `verified-static`: Matrix3 normal camera calculation is `Class246.method3359(...)`.
+- `verified-static`: `Class343` chooses between detached Class411 submission and the normal camera-global render transform.
+- `verified-static`: RTS now invokes the vanilla solver before camera shake/clamp/scene setup and suppresses the detached render-owner flag.
+- `verified-static`: Free Build remains on the existing late Class411 tick.
+- `NEEDS RUNTIME TEST`: vanilla RTS render parity, RTS controls after migration, RTS <-> Free Build handoff, and saved-view restoration.
