@@ -1685,3 +1685,29 @@ Conveyor Payload Visual Profiles V2 — category/item inheritance gate (2026-09-
 [ ] Different conveyor headings keep the same tuned centering/orientation because Forward/Side/Yaw are run-relative.
 [ ] Clear Persistent Conveyors; payload visuals disappear with their owning runs.
 [ ] After acceptance, advance to multiple real payloads + spacing + stopped-end/backpressure.
+
+Conveyor Transport Core V1.4/V1.5 — multi-payload/backpressure gate (2026-09-29)
+[x] verified-static: SettlementState schema v15 persists payload lists inside existing ConveyorRuns and normalizes old runs with empty payload state.
+[x] verified-static: transport executes from SettlementControler.process() on the normal Matrix3 game tick; no separate repeating executor owns belt movement.
+[x] verified-static: conveyor owns 1.25 tiles/sec speed; payload visual profiles own no speed.
+[x] verified-static: server enforces 0.85-tile front-to-back spacing and blocked Point B queues followers behind the leader.
+[x] verified-static: payload-only PBEGIN/PSTATE/PAYLOAD/PEND sync does not invalidate/rebuild ConveyorRun geometry every tick.
+[x] verified-static: client renders each payload using its own real item id + resolved visual profile and smooths between authoritative snapshots with bounded extrapolation.
+[x] verified-static: debug Open Output is transient endpoint acceptance only; it is not persisted and does not replace future chest/machine ownership.
+[ ] Pull latest main, Eclipse clean/build Server + Client with Java 8, then restart both.
+[ ] Enter settlement and create/restore one persistent conveyor.
+[ ] V1.3 deferred profile check: tune/save LOGS if needed; switch among 1511/1521/440/960 and confirm category/item visuals still resolve correctly.
+[ ] Click Block Output, then Fill Mixed Belt. Multiple Logs/Oak/Iron Ore/Plank appear on the same ConveyorRun.
+[ ] Watch movement for several seconds: items move smoothly rather than hopping every server tick.
+[ ] With Point B blocked, the front item stops at B and followers stop behind it at visible spacing with no overlap/passing.
+[ ] Transport Status reports payload count, belt-owned speed ~1.25t/s, spacing ~0.85t and output=BLOCKED.
+[ ] Click Open Output (Debug Sink). Front payloads leave at B and the queue advances/drains in order.
+[ ] Block Output again. Add Current Test Item / Log / Oak / Ore / Plank one at a time; Point A rejects a new payload while minimum inlet spacing is occupied, then accepts after space opens.
+[ ] Clear Payloads removes all items immediately without deleting the ConveyorRun.
+[ ] Refill with output blocked, exit/re-enter settlement and confirm remaining payload ids/items/distances restore and continue moving/queuing.
+[ ] Fully relog/re-enter and confirm remaining payload state persists without duplication.
+[ ] Clear Persistent Conveyors removes the run and all owned payload state; no payload visual remains.
+[ ] Regression: Show Conveyor A->B Demo remains payload-free; Hide Demo does not affect persistent transport.
+[ ] Regression: storage, workers, rails, processing, RTS camera, Live Model Editor and normal world rendering remain stable.
+[ ] After focused acceptance, run the full docs/rs3/SMOKE_TEST.md because this bundle changes persistence schema and client/server sync.
+[ ] If accepted, advance to physical chest -> conveyor -> chest using the existing SettlementStorageContainer contract.
