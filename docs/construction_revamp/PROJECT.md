@@ -2295,3 +2295,16 @@ Build three straight test runs from the same authored conveyor source (short, me
 - No full-scene radius override is reintroduced. The removed Class523.anInt5865 expansion hack remains removed.
 - Existing MMB horizontal orbit direction fix, vertical pitch, wheel zoom, Q/E orbit, minimap focus and loaded-scene pivot clamp remain unchanged.
 - Runtime gate: pan away from the stationary player and verify terrain/NPC/object visibility follows the RTS view with the same effective vanilla radius/fog behavior; hold a movement key while clicking world/chest/worker targets and verify motion continues; verify 2.0x default speed is usable.
+
+
+## RTS/editor render boundary root correction — visual terrain apron — 2026-09-29
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the existing SAP AAA camera regression approval.
+- Runtime screenshot after the client culling-focus correction still showed a hard gray scene edge. Historical Sep-24 evidence already rejected scene-focus, full Class523 radius expansion and terrain-fog bypass as complete fixes.
+- Root cause is now verified-static on the server: SettlementInstance generated terrain for exactly the persistent 64x64 plot (8x8 chunks). Detached RTS/editor cameras can see past that generated dynamic-map boundary even though vanilla player camera normally cannot.
+- Settlement allocation now reserves/generates a visual-only 3-chunk (24-tile) terrain apron on every side: 14x14 generated chunks / 112x112 terrain around the unchanged inner 8x8 / 64x64 settlement.
+- boundChunks continues to identify the inner persistent/playable plot origin. A separate runtime allocatedChunks owns the full visual allocation and cleanup.
+- Building, persistence, worker/resource positions, rails, storage and all plot-relative state remain 64x64.
+- SettlementControler.checkWalkStep now rejects ordinary player steps outside the inner 64x64 plot so the terrain apron cannot silently become extra playable/buildable land.
+- Instance destruction frees the full padded allocation; old/no-padding runtime instances retain backward-safe cleanup fallback.
+- Client renderer radius/fog hacks are NOT reintroduced. The visual fix supplies real terrain data for the detached camera to render.
+- Runtime requires settlement exit/re-entry after pull so a fresh padded dynamic instance is generated.
