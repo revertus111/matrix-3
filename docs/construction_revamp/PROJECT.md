@@ -2204,6 +2204,17 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - This diagnostic does not mutate editor state, cache geometry, ConveyorRun state, server state or persistence.
 - Runtime gate: load the saved 46298 project and click **ANIM TRACE** once. Copy the full `=== LIVE MODEL SOURCE ANIM TRACE ===` console block back into the workstream. Do not continue guessing animation ids or add a fake belt animation before reading that result.
 
+### Implementation checkpoint — Group-Aware Source Animation V1.2 — 2026-09-29
+
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- Runtime trace identified source animation **12394**, 19 loaded frames, and real transform-group overlap in object 46298. The prior SOURCE ANIM path used `Model.method1367(...)`, which applies frame values without the skeleton's per-slot target-group arrays and therefore was the wrong application seam for this object.
+- **verified-static:** Matrix3's group-aware path is `Model.method1364(...)` -> `method1422(...)` -> `method1499(...)`, passing each skeleton slot's `anIntArrayArray9197` target groups into the renderer model.
+- **verified-static:** OpenGL transform type 5 changes per-face alpha. The 46298 trace showed authored conveyor part 8 intersects non-spatial type-5 face groups, while other source parts also carry spatial sequence overlap.
+- Live Model Editor `sourceAnimatedCopy(...)` now applies the exact current frame through `method1364(frameSet, frameIndex, null, -1, 0, 0, 0, false)`. V1.2 remains exact-frame with interpolation intentionally deferred.
+- The cached authored/procedural base Model is still cloned before animation, so group-aware transforms remain transient and cannot accumulate into saved editor geometry or ConveyorRun length state.
+- ConveyorRun inherits this fix automatically because SHORT/MEDIUM/LONG renders reuse the same `sourceAnimatedCopy(...)` helper; no separate conveyor animation owner was introduced.
+- Runtime gate: load the saved 46298 conveyor project, toggle SOURCE ANIM ON, and verify visible source animation now occurs without geometry drift. Then show the A->B conveyor demo and verify the same source animation appears on all three generated run lengths. If motion is still absent, use the existing ANIM TRACE output to identify whether the visible belt effect depends on source parts outside the current authored eight-part assembly rather than guessing another sequence id.
+
 ### Canonical conveyor visual source
 
 - The cache source remains RuneScape **object 46298** using source models **49717 / 49718**, but gameplay must **not** use the whole object. The canonical visual source is the saved custom Live Model Editor assembly built from connected-component indexes **4, 5, 8, 16, 17, 18, 19, 21** with their saved transforms.
@@ -2272,5 +2283,5 @@ Build three straight test runs from the same authored conveyor source (short, me
 - deleting the run removes the whole generated conveyor;
 - once visual generation is accepted, a real Log (1511) can be rendered moving continuously from A toward B.
 
-**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. Runtime already proved SOURCE ANIM ON produces no visible conveyor motion, so do not repeat that acceptance test or guess another animation id. Pull/rebuild/restart the client, load the saved 46298 conveyor project, click **ANIM TRACE** once, and return the full `=== LIVE MODEL SOURCE ANIM TRACE ===` console block. Use its classification/group/texture evidence to choose the next exact seam: sequence application/flags, non-spatial sequence state, material/texture animation, or the normal world-object runtime animation owner. Do not add support generation, chest automation, payload transport, persistence, fake belt animation, or per-tile belt objects before this trace is classified.
+**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. The ANIM TRACE is now classified: object 46298 uses animation 12394 with 19 loaded frames; the old preview used the wrong non-grouped `Model.method1367(...)` path. V1.2 now uses Matrix3's group-aware `method1364(...)` path. Pull/rebuild/restart Client, load the saved conveyor project, toggle SOURCE ANIM ON, and observe whether the authored conveyor now visibly animates. Then show SHORT/MEDIUM/LONG ConveyorRun demo and verify the same motion on all three with no cumulative drift. If still static, inspect which animated source components from the trace are missing from the authored eight-part assembly; do not guess another animation id or add fake belt motion.
 
