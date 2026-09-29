@@ -77,7 +77,7 @@ import javax.swing.event.ChangeListener;
  */
 public final class LiveModelEditorWindow {
 
-    private static final int PROJECT_VERSION = 4;
+    private static final int PROJECT_VERSION = 5;
     private static final File PROJECT_DIR = new File("dev-model-projects");
     private static final File ASSET_DIR = new File("dev-model-assets");
 
@@ -175,6 +175,8 @@ public final class LiveModelEditorWindow {
 
     private final DefaultListModel<String> partListModel = new DefaultListModel<String>();
     private final JList<String> partList = new JList<String>(partListModel);
+    private final JComboBox<String> conveyorRoleCombo =
+            new JComboBox<String>(LiveModelEditorPreview.getConveyorRoleOptions());
 
     private static final int[] HUD_ROOT_COMPONENTS = {
             165, 176, 198, 382, 219, 230, 57, 132, 154, 252, 296, 263,
@@ -235,6 +237,9 @@ public final class LiveModelEditorWindow {
         replacementCombo.setFont(RS_SMALL_FONT);
         replacementCombo.setForeground(RS_TEXT);
         replacementCombo.setBackground(RS_INPUT);
+        conveyorRoleCombo.setFont(RS_SMALL_FONT);
+        conveyorRoleCombo.setForeground(RS_TEXT);
+        conveyorRoleCombo.setBackground(RS_INPUT);
         for (int i = 0; i < HUD_ROOT_COMPONENTS.length; i++)
             hudListModel.addElement("Root " + HUD_ROOT_COMPONENTS[i]
                     + "  ->  interface " + HUD_INTERFACE_IDS[i]);
@@ -688,6 +693,28 @@ public final class LiveModelEditorWindow {
         partActions2.add(delete);
         partActions2.add(undo);
         panel.add(partActions2);
+        panel.add(Box.createVerticalStrut(5));
+
+        JLabel conveyorRoleLabel = new JLabel("Conveyor role");
+        conveyorRoleLabel.setFont(RS_SMALL_FONT);
+        conveyorRoleLabel.setForeground(RS_MUTED);
+        conveyorRoleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(conveyorRoleLabel);
+        panel.add(Box.createVerticalStrut(3));
+
+        JButton setConveyorRole = rsButton("Set Role");
+        JButton applyConveyorRoles = rsButton("Apply To Demo");
+        setConveyorRole.setToolTipText(
+                "Assign the selected Part/Multi meshes a procedural conveyor role. "
+                + "Roles are saved in project v5.");
+        applyConveyorRoles.setToolTipText(
+                "Snapshot the tagged roles/transforms into ConveyorRunPreview. "
+                + "Requires at least one BELT_SURFACE role.");
+        JPanel conveyorRoleRow = actionRow(3);
+        conveyorRoleRow.add(conveyorRoleCombo);
+        conveyorRoleRow.add(setConveyorRole);
+        conveyorRoleRow.add(applyConveyorRoles);
+        panel.add(conveyorRoleRow);
 
         wholeModeButton.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.WHOLE));
         partModeButton.addActionListener(e -> setSelectionMode(LiveModelEditorPreview.SelectionMode.PART));
@@ -759,6 +786,18 @@ public final class LiveModelEditorWindow {
         duplicate.addActionListener(e -> duplicateSelected());
         delete.addActionListener(e -> deleteSelected());
         undo.addActionListener(e -> undoPartEdit());
+        setConveyorRole.addActionListener(e -> {
+            Object selectedRole = conveyorRoleCombo.getSelectedItem();
+            String role = selectedRole == null ? "UNASSIGNED" : selectedRole.toString();
+            if (LiveModelEditorPreview.setSelectedConveyorRole(role)) {
+                refreshPartList();
+                statusLabel.setText("Conveyor role " + role + " applied to selection.");
+            } else {
+                statusLabel.setText("Conveyor role unchanged or no parts selected.");
+            }
+        });
+        applyConveyorRoles.addActionListener(e ->
+                statusLabel.setText(LiveModelEditorPreview.applyConveyorRolesToPreview()));
         return panel;
     }
 
@@ -2041,6 +2080,8 @@ public final class LiveModelEditorWindow {
         } finally {
             suppressPartRefresh = false;
         }
+        String conveyorRole = LiveModelEditorPreview.getSelectedConveyorRole();
+        if (!"MIXED".equals(conveyorRole)) conveyorRoleCombo.setSelectedItem(conveyorRole);
         if (labels.length == 0) {
             partStatusLabel.setText("NO PARTS");
         } else {
