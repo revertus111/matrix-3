@@ -2,8 +2,10 @@ package com.rs.game.player.content.construction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import com.rs.executor.GameExecutorManager;
@@ -43,6 +45,8 @@ public final class SettlementInstance {
     private static final int ENTRY_OFFSET = PLOT_TILES / 2;
     // Reserved client bridge intercepted by ConveyorRunPreview before normal CSVar storage.
     private static final int CONVEYOR_SYNC_CS_VAR = 65534;
+    private static final double CONVEYOR_GAME_TICK_SECONDS = 0.6;
+    private static final int[] CONVEYOR_DEVELOPMENT_MIX = { 1511, 1521, 440, 960 };
     private static final double PASSIVE_CONSTRUCTION_XP_PER_RESOURCE = 1.0;
     // V1 presentation placeholder until a dedicated mine-cart NPC/model is accepted.
     private static final int RAIL_CART_NPC_ID = 1;
@@ -90,6 +94,12 @@ public final class SettlementInstance {
     // Short-lived server-owned staging for packet-safe atomic rail endpoint edits.
     private final List<int[]> pendingRailOld = new ArrayList<int[]>();
     private final List<String[]> pendingRailNew = new ArrayList<String[]>();
+    /*
+     * Development-only endpoint acceptance switch. Real endpoint ownership will
+     * later come from connected chests/machines; absent a sink, Point B blocks.
+     */
+    private final Set<Long> conveyorDevelopmentOpenOutputs =
+            new HashSet<Long>();
 
     private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
         this.player = player;
@@ -319,6 +329,109 @@ public final class SettlementInstance {
                 + " (" + String.format("%.2f", run.getLengthTiles()) + " tiles).";
     }
 
+    public synchronized void processGameTick() {
+        if (!loaded || destroyed) {
+            return;
+        }
+        boolean changed = false;
+        for (SettlementConveyorRun run : state.snapshotConveyorRuns()) {
+            if (run == null || !run.isValid()) {
+                continue;
+            }
+            boolean outputAccepts = conveyorDevelopmentOpenOutputs.contains(
+                    Long.valueOf(run.getRunId()));
+            if (run.advancePayloads(CONVEYOR_GAME_TICK_SECONDS, outputAccepts)) {
+                changed = true;
+            }
+        }
+        if (changed) {
+            syncConveyorPayloadsToClient();
+        }
+    }
+
+    public synchronized String addConveyorPayload(
+            long runId, int itemId, int amount) {
+        if (!loaded || destroyed) {
+            return "Settlement conveyor transport is unavailable while loading.";
+        }
+        SettlementConveyorRun run = state.findConveyorRun(runId);
+        if (run == null) {
+            return "No ConveyorRun is available for payload injection.";
+        }
+        SettlementConveyorPayload payload = run.addPayload(itemId, amount);
+        if (payload == null) {
+            return "ConveyorRun #" + run.getRunId()
+                    + " Point A is blocked; wait for payload spacing.";
+        }
+        syncConveyorPayloadsToClient();
+        return "Added item " + itemId + " x" + amount
+                + " as payload #" + payload.getPayloadId()
+                + " on ConveyorRun #" + run.getRunId() + ".";
+    }
+
+    public synchronized String fillConveyorPayloads(long runId) {
+        if (!loaded || destroyed) {
+            return "Settlement conveyor transport is unavailable while loading.";
+        }
+        SettlementConveyorRun run = state.findConveyorRun(runId);
+        if (run == null) {
+            return "No ConveyorRun is available for payload fill.";
+        }
+        int count = run.fillPayloadsForDevelopment(CONVEYOR_DEVELOPMENT_MIX);
+        syncConveyorPayloadsToClient();
+        return "Filled ConveyorRun #" + run.getRunId()
+                + " with " + count + " mixed test payloads.";
+    }
+
+    public synchronized String clearConveyorPayloads(long runId) {
+        if (!loaded || destroyed) {
+            return "Settlement conveyor transport is unavailable while loading.";
+        }
+        SettlementConveyorRun run = state.findConveyorRun(runId);
+        if (run == null) {
+            return "No ConveyorRun is available for payload clear.";
+        }
+        int removed = run.clearPayloads();
+        syncConveyorPayloadsToClient();
+        return "Cleared " + removed + " payload"
+                + (removed == 1 ? "" : "s")
+                + " from ConveyorRun #" + run.getRunId() + ".";
+    }
+
+    public synchronized String setConveyorDevelopmentOutputBlocked(
+            long runId, boolean blocked) {
+        if (!loaded || destroyed) {
+            return "Settlement conveyor transport is unavailable while loading.";
+        }
+        SettlementConveyorRun run = state.findConveyorRun(runId);
+        if (run == null) {
+            return "No ConveyorRun is available for output control.";
+        }
+        Long key = Long.valueOf(run.getRunId());
+        if (blocked) {
+            conveyorDevelopmentOpenOutputs.remove(key);
+        } else {
+            conveyorDevelopmentOpenOutputs.add(key);
+        }
+        syncConveyorPayloadsToClient();
+        return "ConveyorRun #" + run.getRunId() + " output="
+                + (blocked ? "BLOCKED" : "OPEN DEBUG SINK") + ".";
+    }
+
+    public synchronized String getConveyorTransportStatus(long runId) {
+        SettlementConveyorRun run = state.findConveyorRun(runId);
+        if (run == null) {
+            return "No ConveyorRun is available.";
+        }
+        boolean open = conveyorDevelopmentOpenOutputs.contains(
+                Long.valueOf(run.getRunId()));
+        return "ConveyorRun #" + run.getRunId()
+                + " payloads=" + run.getPayloadCount()
+                + " speed=" + String.format("%.2f", run.getSpeedTilesPerSecond())
+                + "t/s spacing=" + String.format("%.2f", run.getPayloadSpacingTiles())
+                + "t output=" + (open ? "OPEN DEBUG SINK" : "BLOCKED");
+    }
+
     public synchronized String removeConveyorRun(long runId) {
         if (!loaded || destroyed) {
             return "Settlement conveyor removal is unavailable while the settlement is loading.";
@@ -326,6 +439,7 @@ public final class SettlementInstance {
         if (!state.removeConveyorRun(runId)) {
             return "ConveyorRun #" + runId + " was not found.";
         }
+        conveyorDevelopmentOpenOutputs.remove(Long.valueOf(runId));
         syncConveyorRunsToClient();
         if (debug != null) {
             debug.record("conveyor#" + runId,
@@ -340,6 +454,7 @@ public final class SettlementInstance {
             return "Settlement conveyor clear is unavailable while the settlement is loading.";
         }
         int removed = state.clearConveyorRuns();
+        conveyorDevelopmentOpenOutputs.clear();
         clearConveyorRunsOnClient();
         if (debug != null) {
             debug.record("conveyor",
@@ -368,6 +483,38 @@ public final class SettlementInstance {
                     + "," + run.getPlane());
         }
         player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR, "END");
+        syncConveyorPayloadsToClient();
+    }
+
+    private void syncConveyorPayloadsToClient() {
+        if (destroyed || boundChunks == null) {
+            return;
+        }
+        player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR, "PBEGIN");
+        for (SettlementConveyorRun run : state.snapshotConveyorRuns()) {
+            if (run == null || !run.isValid()) {
+                continue;
+            }
+            boolean blocked = !conveyorDevelopmentOpenOutputs.contains(
+                    Long.valueOf(run.getRunId()));
+            player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR,
+                    "PSTATE," + run.getRunId()
+                    + "," + Math.round(run.getSpeedTilesPerSecond() * 1000.0)
+                    + "," + Math.round(run.getPayloadSpacingTiles() * 1000.0)
+                    + "," + (blocked ? 1 : 0));
+            for (SettlementConveyorPayload payload : run.snapshotPayloads()) {
+                if (payload == null) {
+                    continue;
+                }
+                player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR,
+                        "PAYLOAD," + run.getRunId()
+                        + "," + payload.getPayloadId()
+                        + "," + payload.getItemId()
+                        + "," + payload.getAmount()
+                        + "," + Math.round(payload.getDistanceTiles() * 1000.0));
+            }
+        }
+        player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR, "PEND");
     }
 
     private void clearConveyorRunsOnClient() {
