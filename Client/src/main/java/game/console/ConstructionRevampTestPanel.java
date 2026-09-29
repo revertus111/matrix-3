@@ -54,6 +54,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private final java.util.Map<String, JCheckBox> workerJobCheckBoxByKey =
             new java.util.HashMap<String, JCheckBox>();
 
+    private long physicalStorageClearAllArmedUntil;
+
     public ConstructionRevampTestPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
@@ -427,10 +429,12 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
 
         JButton statusButton = new JButton("Storage Status");
         JButton overview = new JButton("Physical Storage Overview");
+        JButton clearPhysical = new JButton("Clear All Physical Storage");
         JButton reset = new JButton("Reset Legacy Storage");
 
         styleButton(statusButton);
         styleButton(overview);
+        styleButton(clearPhysical);
         styleButton(reset);
 
         statusButton.addActionListener(e -> queue(
@@ -439,6 +443,19 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         overview.addActionListener(e -> queue(
                 "itembrowser settlement storageoverview",
                 "Physical Storage Overview opened."));
+        clearPhysical.addActionListener(e -> {
+            long now = System.currentTimeMillis();
+            if (now > physicalStorageClearAllArmedUntil) {
+                physicalStorageClearAllArmedUntil = now + 5000L;
+                clearPhysical.setText("Confirm Clear ALL");
+                setStatus("Clear All Physical Storage armed for 5 seconds. Click the same button again to confirm.");
+                return;
+            }
+            physicalStorageClearAllArmedUntil = 0L;
+            clearPhysical.setText("Clear All Physical Storage");
+            queue("itembrowser settlement storageclearallphysical confirm",
+                    "Physical chest contents clear queued. Policies/builds/machine buffers are preserved.");
+        });
         reset.addActionListener(e -> queue(
                 "itembrowser settlement storagereset",
                 "Legacy settlement resource storage reset queued."));
@@ -449,6 +466,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
         buttons.add(statusButton);
         buttons.add(overview);
+        buttons.add(clearPhysical);
         buttons.add(reset);
         card.add(buttons);
         return card;
