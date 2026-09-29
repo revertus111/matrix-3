@@ -2154,12 +2154,25 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 
 ## Conveyor System — Locked A→B Procedural Run Architecture — 2026-09-29
 
-- **Status:** DESIGN LOCKED / NOT YET IMPLEMENTED. This is the accepted direction for the Construction factory-logistics conveyor layer. It does not change the Canonical Main-Goal Status table by itself.
+- **Status:** DESIGN LOCKED; PROCEDURAL VISUAL GENERATOR V0 IMPLEMENTED / NEEDS RUNTIME TEST. This is the accepted direction for the Construction factory-logistics conveyor layer. It does not change the Canonical Main-Goal Status table by itself.
 - **Core ownership:** one player placement creates one persistent/logical `ConveyorRun`, not one settlement/world object per tile and not a chain of independent belt pieces.
 - **Placement UX:** choose/drag **Point A -> Point B**. The resulting conveyor is one straight span between those endpoints. Conveyor curves are explicitly out of scope; changing direction requires another run/junction/transfer piece rather than deforming one run through a bend.
 - **Run identity/state:** the logical run owns at minimum its stable identity, start/end, plane, heading, length, transport speed, payload positions, endpoint links and later configuration/upgrades. Deleting/configuring/clicking the conveyor acts on the whole run.
 - **Continuous transport coordinate:** payloads move by distance/progress along the run (for example `0.0 .. runLength`) rather than hopping between separately-owned tile belts. This is the intended basis for smooth Logs/Planks/item motion and backpressure.
 - **Physical endpoint contract:** chest, workstation and later loader/unloader transfer must reuse the existing physical item/storage/machine-buffer ownership. A conveyor transports real item identity/amount between those endpoints; it must not create a second inventory/resource economy.
+
+### Implementation checkpoint — Procedural ConveyorRun Visual Generator V0 — 2026-09-29
+
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- Added a dedicated client-only `ConveyorRunPreview`; it owns transient A/B run specs and generated renderer Models only. It does not register scene objects, mutate SettlementState, create collision, move items, or create one belt object per tile.
+- Con Revamp -> Development Tools now exposes Show Conveyor A->B Demo / Hide Conveyor Demo / Conveyor Status. Show creates three parallel logical runs near the player: 2-tile SHORT, 5-tile MEDIUM and 9-tile LONG.
+- V0 decodes fresh canonical source geometry directly from object 46298's model cache using models 49717 + 49718, combines them as `Class159`, detects disconnected mesh components, and generates one composite raw model per run before renderer `Model` creation.
+- Longitudinal behavior is procedural: long-span components stretch along the detected source axis; smaller fixed details keep their authored size and have only their longitudinal position remapped as run length changes.
+- Supports are removed from the stretched base and regenerated as fixed-size component copies. Interior support count follows the locked rule `max(0, ceil(runLength / maxSupportSpan) - 1)` with a V0 maximum unsupported span of 3 tiles; endpoint support stations are also generated for the visual proof.
+- Generated Models are cached by preview revision/renderer and rendered through the existing post-scene direct-render seam in `Class343`; no per-frame raw-model rebuild is intended.
+- **HYPOTHESIS:** V0 automatically classifies 49717/49718 connected components into STRETCH / SUPPORT / fixed-position roles from component bounds. Runtime inspection must confirm the exact belt/support/detail mapping before that mapping is promoted to authored/verified data. If the heuristic selects the wrong support, use the reported role diagnostics to lock explicit component roles rather than tuning blindly.
+- V0 intentionally preserves source texture data on the primary stretched raw but strips texture-coordinate mapping from generated support copies for renderer safety. UV/texture repeat remains the later planned renderer slice; texture density is not accepted by this checkpoint.
+- Runtime gate: show the three demo runs, verify all three are visible as continuous one-run visuals, width/fixed details remain stable, MEDIUM/LONG gain additional fixed-size supports, Hide removes all three, normal world rendering and Construction ghost preview remain unaffected, and Conveyor Status reports a useful HYPOTHESIS role summary.
 
 ### Canonical conveyor visual source
 
@@ -2229,5 +2242,5 @@ Build three straight test runs from the same authored conveyor source (short, me
 - deleting the run removes the whole generated conveyor;
 - once visual generation is accepted, a real Log (1511) can be rendered moving continuously from A toward B.
 
-**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. For the conveyor side slice, first prove the one-run procedural visual generator from the normalized 46298 / 49717+49718 source. Do not start by wiring chest automation or per-tile belt objects.
+**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. For the conveyor side slice, rebuild/restart the client, enter the settlement, then use Con Revamp -> Development Tools -> Show Conveyor A->B Demo. Accept/reject the SHORT/MEDIUM/LONG generated geometry and inspect Conveyor Status for the HYPOTHESIS component-role summary. If role classification is wrong, lock explicit source-component roles next; do not wire chest automation, payload transport, persistence, or per-tile belt objects before this visual gate passes.
 
