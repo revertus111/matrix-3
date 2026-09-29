@@ -251,6 +251,34 @@ public final class LiveModelEditorPreview {
     public static boolean isSourceAnimationPreviewEnabled() { return sourceAnimationPreviewEnabled; }
     public static int getMoveSnapStep() { return moveSnapStep; }
 
+    public static String[] getConveyorRoleOptions() {
+        return PARTS.getConveyorRoleOptions();
+    }
+
+    public static String getSelectedConveyorRole() {
+        return PARTS.getSelectedConveyorRoleName();
+    }
+
+    public static boolean setSelectedConveyorRole(String roleName) {
+        boolean changed = PARTS.setSelectedConveyorRole(roleName);
+        if (changed) {
+            invalidateVisualModels();
+            status = "CONVEYOR ROLE " + roleName + " -> "
+                    + PARTS.getSelectedCount() + " selected part(s)";
+        }
+        return changed;
+    }
+
+    public static String applyConveyorRolesToPreview() {
+        if (objectId != 46298) {
+            status = "CONVEYOR ROLES require source object 46298";
+            return status;
+        }
+        LiveModelEditorParts.ConveyorRecipePart[] recipe = PARTS.buildConveyorRecipe();
+        status = ConveyorRunPreview.setAuthoringRecipe(recipe);
+        return status;
+    }
+
     public static void setSourceAnimationPreviewEnabled(boolean enabled) {
         sourceAnimationPreviewEnabled = enabled;
         invalidateVisualModels();
