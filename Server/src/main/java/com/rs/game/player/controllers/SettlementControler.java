@@ -2,6 +2,7 @@ package com.rs.game.player.controllers;
 
 import com.rs.Settings;
 import com.rs.game.WorldObject;
+import com.rs.game.WorldTile;
 import com.rs.game.npc.NPC;
 import com.rs.game.player.content.construction.SettlementInstance;
 
@@ -23,6 +24,20 @@ public final class SettlementControler extends Controller {
 
     public SettlementInstance getInstance() {
         return instance;
+    }
+
+    @Override
+    public boolean checkWalkStep(int lastX, int lastY, int nextX, int nextY) {
+        if (instance == null) {
+            return true;
+        }
+        /*
+         * The dynamic settlement now includes a visual-only terrain apron for
+         * detached RTS/editor cameras. Ordinary player movement remains owned
+         * by the persistent 64x64 settlement plot.
+         */
+        return instance.containsWorldTile(
+                new WorldTile(nextX, nextY, player.getPlane()));
     }
 
     @Override
