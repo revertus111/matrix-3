@@ -2152,3 +2152,82 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
   - LiveModelEditorWindow exposes GROUP SCALE ON/OFF + FIT 1 TILE in the Edit/Transform card.
 - Resume Here: load the saved Conveyor belt 46298 / source models 49717+49718 project, Multi-select the intended conveyor assembly, prove Group Scale contracts spacing with geometry, then use Fit 1 Tile and Ctrl+Z. If runtime accepted, continue the conveyor transport prototype using the one-tile authored belt visual.
 
+## Conveyor System — Locked A→B Procedural Run Architecture — 2026-09-29
+
+- **Status:** DESIGN LOCKED / NOT YET IMPLEMENTED. This is the accepted direction for the Construction factory-logistics conveyor layer. It does not change the Canonical Main-Goal Status table by itself.
+- **Core ownership:** one player placement creates one persistent/logical `ConveyorRun`, not one settlement/world object per tile and not a chain of independent belt pieces.
+- **Placement UX:** choose/drag **Point A -> Point B**. The resulting conveyor is one straight span between those endpoints. Conveyor curves are explicitly out of scope; changing direction requires another run/junction/transfer piece rather than deforming one run through a bend.
+- **Run identity/state:** the logical run owns at minimum its stable identity, start/end, plane, heading, length, transport speed, payload positions, endpoint links and later configuration/upgrades. Deleting/configuring/clicking the conveyor acts on the whole run.
+- **Continuous transport coordinate:** payloads move by distance/progress along the run (for example `0.0 .. runLength`) rather than hopping between separately-owned tile belts. This is the intended basis for smooth Logs/Planks/item motion and backpressure.
+- **Physical endpoint contract:** chest, workstation and later loader/unloader transfer must reuse the existing physical item/storage/machine-buffer ownership. A conveyor transports real item identity/amount between those endpoints; it must not create a second inventory/resource economy.
+
+### Canonical conveyor visual source
+
+- Current authored source evidence remains the RuneScape **Conveyor belt object 46298** using source models **49717 / 49718**.
+- Live Model Editor / Asset Studio is the authoring layer used to isolate/normalize the reusable conveyor components.
+- The recently-added Group Scale / Fit 1 Tile tooling remains useful for normalizing or compacting source art, but **runtime conveyor length must not be implemented as naive whole-model scaling**.
+- Once the source conveyor assembly is normalized, gameplay treats it as a procedural source recipe rather than repeatedly placing that source object into the settlement.
+
+### Procedural Stretch Rig
+
+The accepted renderer direction is a generated conveyor assembly. Different authored parts receive different longitudinal behavior instead of every mesh component sharing one scale rule.
+
+Suggested authoring/runtime roles:
+
+- **BELT_SURFACE / STRETCH** — the continuous belt surface may extend from A to B along the run's length axis.
+- **UV_TILE / REPEAT_TEXTURE** — stretched belt/frame surfaces should preserve visual texture density by repeating/tile-style mapping where the renderer/model path permits it, rather than smearing one texture across the whole span.
+- **START_CAP** — fixed-size geometry anchored at Point A.
+- **END_CAP** — fixed-size geometry anchored at Point B.
+- **FIXED_DETAIL** — rollers, gears, braces or other details that keep their authored dimensions.
+- **REPEAT_DETAIL** — fixed-size geometry duplicated/repositioned along the run at an authored spacing rule.
+- **SUPPORT** — fixed-size support geometry generated according to the support-span rule below.
+- **SCALE_POSITION** — geometry that keeps its own size while its position is remapped proportionally along the longer/shorter conveyor.
+
+Where practical in Matrix3, the runtime should compose these raw pieces into **one generated composite render model for the ConveyorRun** (for example by composing/offsetting decoded `Class159` geometry before renderer `Model` creation). The important contract is that these generated sub-parts are visual members of one ConveyorRun, **not separate persistent Construction/world objects**.
+
+### Automatic support rule
+
+- Long conveyors automatically gain additional supports; supports are not stretched with the belt.
+- Authoring should expose a **maximum unsupported span** (or equivalent support spacing rule) in tile/model units.
+- Runtime derives the needed interior support count from run length, then redistributes supports evenly so the final segment does not produce an awkward tiny leftover gap.
+- Conceptual rule:
+  - `interiorSupports = max(0, ceil(runLength / maxSupportSpan) - 1)`
+  - distribute those supports at even fractions between A and B.
+- Endpoint supports/caps may be separate authored rules rather than being counted as interior supports.
+- Later terrain-aware polish may allow generated support legs to extend vertically to the ground while the conveyor deck remains level. That is not required for the first runtime proof.
+
+### Explicit non-goals / rejected approaches
+
+- Do **not** persist one conveyor object per tile.
+- Do **not** render gameplay length by blindly multiplying the entire source model's longitudinal scale; that would deform rollers, supports, details and texture density.
+- Do **not** require curved conveyor geometry.
+- Do **not** create a parallel conveyor-only resource store; use real physical item identities and existing storage/machine endpoint contracts.
+- Do **not** require animated belt-surface visuals for the first transport proof. Static belt geometry with smoothly moving item payloads is acceptable first.
+
+### Planned implementation order
+
+1. Author/confirm the reusable conveyor source components from object 46298 / models 49717+49718.
+2. Build a client-only procedural stretch-rig prototype from Point A -> Point B.
+3. Prove one logical run can generate short/medium/long visual spans without whole-model deformation.
+4. Add the first support rule and verify supports remain fixed-size while count/positions change with run length.
+5. Verify belt/frame texture behavior; add UV/texture-repeat handling only through a proven Matrix3 model seam.
+6. Promote the run to server-authoritative persistent Construction state.
+7. Add smooth real-item payload rendering/transport along continuous run progress.
+8. Add backpressure/spacing and stopped-end behavior.
+9. Connect chest -> conveyor -> chest using the existing physical container contract.
+10. Connect conveyor endpoints to `SettlementMachineBuffer` input/output for the sawmill/processing chain.
+11. Later add splitters, filters, loaders/unloaders, speed tiers and synchronized belt-surface animation without changing the one-run ownership model.
+
+### First runtime acceptance target
+
+Build three straight test runs from the same authored conveyor source (short, medium and long) and prove:
+- each is treated as one ConveyorRun;
+- extending B changes the generated length without creating persistent per-tile belts;
+- belt width/details remain visually consistent;
+- supports appear automatically once the configured unsupported-span threshold is exceeded;
+- supports remain normal size and are evenly distributed;
+- deleting the run removes the whole generated conveyor;
+- once visual generation is accepted, a real Log (1511) can be rendered moving continuously from A toward B.
+
+**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. For the conveyor side slice, first prove the one-run procedural visual generator from the normalized 46298 / 49717+49718 source. Do not start by wiring chest automation or per-tile belt objects.
+
