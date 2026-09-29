@@ -1630,3 +1630,20 @@ Persistent ConveyorRun clear regression retest (2026-09-29)
 [ ] Exit/re-enter settlement; cleared conveyor(s) do not return.
 [ ] Optional relog/re-enter; cleared conveyor(s) remain deleted.
 [ ] Show Conveyor A->B Demo remains independent and is not removed by persistent CLEAR.
+
+Conveyor Gameplay V1.1 — smooth Log 1511 payload proof (2026-09-29)
+[x] Persistent ConveyorRun clear regression is runtime accepted by user: Clear Persistent Conveyors now removes the visible run.
+[x] Payload uses the real Matrix3 item-definition/model path for item 1511; no hardcoded replacement mesh/model id.
+[x] Only persistent server-synced runs (runId > 0) receive payloads; the optional SHORT/MEDIUM/LONG demo remains visual-only.
+[x] Motion is continuous render-time A->B interpolation at 1.25 tiles/second, not per-tile hopping.
+[x] This proof does not mutate chest/machine inventory or persist payload progress.
+[ ] Pull/build Client and restart it. Server restart is not required for this client-only payload patch if already on the persistent-run server build.
+[ ] Enter settlement and create/restore one persistent conveyor. A real Log 1511 model appears on the conveyor and moves smoothly from Point A toward Point B.
+[ ] Watch one complete pass: the log reaches B and loops cleanly to A without pausing, teleporting mid-run, or stepping tile-by-tile.
+[ ] Log sits on/just above the conveyor deck rather than underground or floating excessively. If vertical alignment is off, report whether it is too high or too low.
+[ ] Create a second persistent run; each run gets one moving log and belt rendering remains stable.
+[ ] Conveyor Status reports log1511=<persistent payload count> while runs render.
+[ ] Clear Persistent Conveyors; both conveyor(s) and their moving log payload(s) disappear immediately.
+[ ] Show Conveyor A->B Demo; demo runs do not gain Log 1511 payloads.
+[ ] Regression: RTS camera, normal scene rendering, Live Model Editor and Construction ghost remain stable.
+[ ] After acceptance, advance to payload spacing + stopped-end/backpressure behavior before physical chest transfer.
