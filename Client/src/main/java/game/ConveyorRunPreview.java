@@ -1,5 +1,9 @@
 package game;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -8,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * Client-only procedural conveyor visual proof.
@@ -24,10 +29,31 @@ public final class ConveyorRunPreview {
     private static final int[] SOURCE_MODEL_IDS = { 49717, 49718 };
 
     private static final int TILE_UNITS = 512;
-    private static final int PAYLOAD_ITEM_ID = 1511;
-    private static final double PAYLOAD_SPEED_TILES_PER_SECOND = 1.25;
-    private static final int PAYLOAD_HEIGHT_OFFSET = -96;
+
+    private static final int DEFAULT_PAYLOAD_ITEM_ID = 1511;
+    private static final double DEFAULT_PAYLOAD_SPEED_TILES_PER_SECOND = 1.25;
+    private static final int DEFAULT_PAYLOAD_ALONG_OFFSET = 0;
+    private static final int DEFAULT_PAYLOAD_SIDE_OFFSET = 0;
+    private static final int DEFAULT_PAYLOAD_HEIGHT_OFFSET = -96;
+    private static final int DEFAULT_PAYLOAD_SCALE_PERCENT = 100;
+    private static final int DEFAULT_PAYLOAD_PITCH_DEGREES = 0;
+    private static final int DEFAULT_PAYLOAD_YAW_DEGREES = 0;
+    private static final int DEFAULT_PAYLOAD_ROLL_DEGREES = 0;
+
+    private static final File PAYLOAD_TUNING_FILE =
+            new File("data/construction/conveyor_payload_tuning.properties");
     private static final long PAYLOAD_EPOCH_NANOS = System.nanoTime();
+
+    private static volatile int payloadItemId = DEFAULT_PAYLOAD_ITEM_ID;
+    private static volatile double payloadSpeedTilesPerSecond =
+            DEFAULT_PAYLOAD_SPEED_TILES_PER_SECOND;
+    private static volatile int payloadAlongOffset = DEFAULT_PAYLOAD_ALONG_OFFSET;
+    private static volatile int payloadSideOffset = DEFAULT_PAYLOAD_SIDE_OFFSET;
+    private static volatile int payloadHeightOffset = DEFAULT_PAYLOAD_HEIGHT_OFFSET;
+    private static volatile int payloadScalePercent = DEFAULT_PAYLOAD_SCALE_PERCENT;
+    private static volatile int payloadPitchDegrees = DEFAULT_PAYLOAD_PITCH_DEGREES;
+    private static volatile int payloadYawDegrees = DEFAULT_PAYLOAD_YAW_DEGREES;
+    private static volatile int payloadRollDegrees = DEFAULT_PAYLOAD_ROLL_DEGREES;
 
     private static final double STRETCH_MIN_LONG_FRACTION = 0.60;
     private static final double REPEAT_DETAIL_SPACING_TILES = 1.0;
@@ -58,6 +84,7 @@ public final class ConveyorRunPreview {
     private static final int RAW_BUILD_FLAGS = MODEL_FLAGS | 0x1f01f | 0x80000;
 
     private static final Class261 TRANSFORM = new Class261();
+    private static final Class261 PAYLOAD_TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
 
     // Reserved Construction-only CSVar-string transport. PacketsDecoder
@@ -83,8 +110,229 @@ public final class ConveyorRunPreview {
 
     private static Class106 cachedPayloadRenderer;
     private static Model cachedPayloadModel;
+    private static int cachedPayloadItemId = -1;
+    private static int cachedPayloadScalePercent = -1;
+
+    static {
+        loadPayloadTuningFromDisk();
+    }
 
     private ConveyorRunPreview() {
+    }
+
+    public static final class PayloadTuning {
+        public final int itemId;
+        public final int alongOffset;
+        public final int sideOffset;
+        public final int heightOffset;
+        public final int scalePercent;
+        public final int pitchDegrees;
+        public final int yawDegrees;
+        public final int rollDegrees;
+        public final double speedTilesPerSecond;
+
+        PayloadTuning(int itemId, int alongOffset, int sideOffset,
+                int heightOffset, int scalePercent,
+                int pitchDegrees, int yawDegrees, int rollDegrees,
+                double speedTilesPerSecond) {
+            this.itemId = itemId;
+            this.alongOffset = alongOffset;
+            this.sideOffset = sideOffset;
+            this.heightOffset = heightOffset;
+            this.scalePercent = scalePercent;
+            this.pitchDegrees = pitchDegrees;
+            this.yawDegrees = yawDegrees;
+            this.rollDegrees = rollDegrees;
+            this.speedTilesPerSecond = speedTilesPerSecond;
+        }
+    }
+
+    public static PayloadTuning getPayloadTuning() {
+        return new PayloadTuning(
+                payloadItemId,
+                payloadAlongOffset,
+                payloadSideOffset,
+                payloadHeightOffset,
+                payloadScalePercent,
+                payloadPitchDegrees,
+                payloadYawDegrees,
+                payloadRollDegrees,
+                payloadSpeedTilesPerSecond);
+    }
+
+    public static synchronized String setPayloadTuning(
+            int itemId, int alongOffset, int sideOffset, int heightOffset,
+            int scalePercent, int pitchDegrees, int yawDegrees, int rollDegrees,
+            double speedTilesPerSecond) {
+        int nextItemId = Math.max(0, itemId);
+        int nextScale = clamp(scalePercent, 10, 400);
+        double nextSpeed = Math.max(0.05, Math.min(20.0, speedTilesPerSecond));
+
+        boolean rebuildPayload = nextItemId != payloadItemId
+                || nextScale != payloadScalePercent;
+
+        payloadItemId = nextItemId;
+        payloadAlongOffset = clamp(alongOffset, -4096, 4096);
+        payloadSideOffset = clamp(sideOffset, -4096, 4096);
+        payloadHeightOffset = clamp(heightOffset, -2048, 2048);
+        payloadScalePercent = nextScale;
+        payloadPitchDegrees = normalizeDegrees(pitchDegrees);
+        payloadYawDegrees = normalizeDegrees(yawDegrees);
+        payloadRollDegrees = normalizeDegrees(rollDegrees);
+        payloadSpeedTilesPerSecond = nextSpeed;
+
+        if (rebuildPayload) {
+            invalidatePayloadModel();
+        }
+
+        return getPayloadTuningStatus();
+    }
+
+    public static synchronized String savePayloadTuning() {
+        Properties properties = new Properties();
+        properties.setProperty("itemId", Integer.toString(payloadItemId));
+        properties.setProperty("alongOffset", Integer.toString(payloadAlongOffset));
+        properties.setProperty("sideOffset", Integer.toString(payloadSideOffset));
+        properties.setProperty("heightOffset", Integer.toString(payloadHeightOffset));
+        properties.setProperty("scalePercent", Integer.toString(payloadScalePercent));
+        properties.setProperty("pitchDegrees", Integer.toString(payloadPitchDegrees));
+        properties.setProperty("yawDegrees", Integer.toString(payloadYawDegrees));
+        properties.setProperty("rollDegrees", Integer.toString(payloadRollDegrees));
+        properties.setProperty("speedTilesPerSecond",
+                Double.toString(payloadSpeedTilesPerSecond));
+
+        File parent = PAYLOAD_TUNING_FILE.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            return "Payload preset save failed: could not create " + parent.getPath();
+        }
+
+        FileOutputStream out = null;
+        try {
+            out = new FileOutputStream(PAYLOAD_TUNING_FILE);
+            properties.store(out, "Matrix3 Construction conveyor payload tuning");
+            return "Payload preset saved: " + PAYLOAD_TUNING_FILE.getPath();
+        } catch (IOException ex) {
+            return "Payload preset save failed: " + ex.getMessage();
+        } finally {
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ignored) {
+                    // Best-effort developer-tool cleanup.
+                }
+            }
+        }
+    }
+
+    public static synchronized String reloadPayloadTuning() {
+        boolean loaded = loadPayloadTuningFromDisk();
+        return loaded
+                ? "Payload preset reloaded. " + getPayloadTuningStatus()
+                : "No saved payload preset found; current values unchanged.";
+    }
+
+    public static synchronized String resetPayloadTuning() {
+        setPayloadTuning(
+                DEFAULT_PAYLOAD_ITEM_ID,
+                DEFAULT_PAYLOAD_ALONG_OFFSET,
+                DEFAULT_PAYLOAD_SIDE_OFFSET,
+                DEFAULT_PAYLOAD_HEIGHT_OFFSET,
+                DEFAULT_PAYLOAD_SCALE_PERCENT,
+                DEFAULT_PAYLOAD_PITCH_DEGREES,
+                DEFAULT_PAYLOAD_YAW_DEGREES,
+                DEFAULT_PAYLOAD_ROLL_DEGREES,
+                DEFAULT_PAYLOAD_SPEED_TILES_PER_SECOND);
+        return "Payload tuner reset to defaults (not saved).";
+    }
+
+    public static String getPayloadTuningStatus() {
+        return "Payload item=" + payloadItemId
+                + " along=" + payloadAlongOffset
+                + " side=" + payloadSideOffset
+                + " height=" + payloadHeightOffset
+                + " scale=" + payloadScalePercent + "%"
+                + " rot=(" + payloadPitchDegrees
+                + "," + payloadYawDegrees
+                + "," + payloadRollDegrees + ")"
+                + " speed=" + String.format("%.2f", payloadSpeedTilesPerSecond) + "t/s";
+    }
+
+    private static synchronized boolean loadPayloadTuningFromDisk() {
+        if (!PAYLOAD_TUNING_FILE.isFile()) {
+            return false;
+        }
+
+        Properties properties = new Properties();
+        FileInputStream in = null;
+        try {
+            in = new FileInputStream(PAYLOAD_TUNING_FILE);
+            properties.load(in);
+
+            int itemId = parseInt(properties, "itemId", DEFAULT_PAYLOAD_ITEM_ID);
+            int along = parseInt(properties, "alongOffset", DEFAULT_PAYLOAD_ALONG_OFFSET);
+            int side = parseInt(properties, "sideOffset", DEFAULT_PAYLOAD_SIDE_OFFSET);
+            int height = parseInt(properties, "heightOffset", DEFAULT_PAYLOAD_HEIGHT_OFFSET);
+            int scale = parseInt(properties, "scalePercent", DEFAULT_PAYLOAD_SCALE_PERCENT);
+            int pitch = parseInt(properties, "pitchDegrees", DEFAULT_PAYLOAD_PITCH_DEGREES);
+            int yaw = parseInt(properties, "yawDegrees", DEFAULT_PAYLOAD_YAW_DEGREES);
+            int roll = parseInt(properties, "rollDegrees", DEFAULT_PAYLOAD_ROLL_DEGREES);
+            double speed = parseDouble(properties, "speedTilesPerSecond",
+                    DEFAULT_PAYLOAD_SPEED_TILES_PER_SECOND);
+
+            setPayloadTuning(itemId, along, side, height, scale,
+                    pitch, yaw, roll, speed);
+            return true;
+        } catch (IOException ex) {
+            System.err.println("[ConveyorRunPreview] Payload preset load failed: "
+                    + ex.getMessage());
+            return false;
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ignored) {
+                    // Best-effort developer-tool cleanup.
+                }
+            }
+        }
+    }
+
+    private static int parseInt(Properties properties, String key, int fallback) {
+        try {
+            return Integer.parseInt(properties.getProperty(key,
+                    Integer.toString(fallback)).trim());
+        } catch (RuntimeException ex) {
+            return fallback;
+        }
+    }
+
+    private static double parseDouble(
+            Properties properties, String key, double fallback) {
+        try {
+            return Double.parseDouble(properties.getProperty(key,
+                    Double.toString(fallback)).trim());
+        } catch (RuntimeException ex) {
+            return fallback;
+        }
+    }
+
+    private static int normalizeDegrees(int value) {
+        int normalized = value % 360;
+        if (normalized > 180) normalized -= 360;
+        if (normalized < -180) normalized += 360;
+        return normalized;
+    }
+
+    private static int degreesToAngle(int degrees) {
+        return ((int) Math.round(normalizeDegrees(degrees)
+                * 16384.0 / 360.0)) & 0x3fff;
+    }
+
+    private static void invalidatePayloadModel() {
+        cachedPayloadRenderer = null;
+        cachedPayloadModel = null;
+        cachedPayloadItemId = -1;
+        cachedPayloadScalePercent = -1;
     }
 
     public static String setAuthoringRecipe(
@@ -927,13 +1175,22 @@ public final class ConveyorRunPreview {
                 (System.nanoTime() - PAYLOAD_EPOCH_NANOS) / 1000000000.0;
         double runOffsetTiles = (run.runId % 7L) * 0.37;
         double distanceTiles =
-                (elapsedSeconds * PAYLOAD_SPEED_TILES_PER_SECOND + runOffsetTiles)
+                (elapsedSeconds * payloadSpeedTilesPerSecond + runOffsetTiles)
                 % lengthTiles;
         double progress = distanceTiles / lengthTiles;
 
         int tileSize = ground.anInt2087 * 2129890771;
-        double localX = startLocalX + (endLocalX - startLocalX) * progress;
-        double localY = startLocalY + (endLocalY - startLocalY) * progress;
+        double deltaX = endLocalX - startLocalX;
+        double deltaY = endLocalY - startLocalY;
+        double directionX = deltaX / lengthTiles;
+        double directionY = deltaY / lengthTiles;
+        double alongTiles = payloadAlongOffset / (double) TILE_UNITS;
+        double sideTiles = payloadSideOffset / (double) TILE_UNITS;
+
+        double localX = startLocalX + deltaX * progress
+                + directionX * alongTiles - directionY * sideTiles;
+        double localY = startLocalY + deltaY * progress
+                + directionY * alongTiles + directionX * sideTiles;
         int sceneX = (int) Math.round(localX * tileSize + tileSize * 0.5);
         int sceneZ = (int) Math.round(localY * tileSize + tileSize * 0.5);
 
@@ -945,10 +1202,29 @@ public final class ConveyorRunPreview {
         int midSceneX = (int) Math.round(midLocalX * tileSize + tileSize * 0.5);
         int midSceneZ = (int) Math.round(midLocalY * tileSize + tileSize * 0.5);
         int sceneY = ground.method2718(midSceneX, midSceneZ, 0)
-                + PAYLOAD_HEIGHT_OFFSET;
+                + payloadHeightOffset;
 
-        TRANSFORM.method3588(sceneX, sceneY, sceneZ);
-        payloadModel.method1375(TRANSFORM, null, 0);
+        PAYLOAD_TRANSFORM.method3594();
+
+        int pitch = degreesToAngle(payloadPitchDegrees);
+        int yaw = (run.headingYaw() + degreesToAngle(payloadYawDegrees)) & 0x3fff;
+        int roll = degreesToAngle(payloadRollDegrees);
+
+        if (pitch != 0) {
+            PAYLOAD_TRANSFORM.method3576(
+                    1.0F, 0.0F, 0.0F, Class325.method4146(pitch));
+        }
+        if (yaw != 0) {
+            PAYLOAD_TRANSFORM.method3576(
+                    0.0F, 1.0F, 0.0F, Class325.method4146(yaw));
+        }
+        if (roll != 0) {
+            PAYLOAD_TRANSFORM.method3576(
+                    0.0F, 0.0F, 1.0F, Class325.method4146(roll));
+        }
+        PAYLOAD_TRANSFORM.method3580((float) sceneX, (float) sceneY, (float) sceneZ);
+
+        payloadModel.method1375(PAYLOAD_TRANSFORM, null, 0);
         return true;
     }
 
@@ -956,21 +1232,25 @@ public final class ConveyorRunPreview {
         if (renderer == null) {
             return null;
         }
-        if (cachedPayloadRenderer == renderer && cachedPayloadModel != null) {
+        int itemId = payloadItemId;
+        int scalePercent = payloadScalePercent;
+        if (cachedPayloadRenderer == renderer && cachedPayloadModel != null
+                && cachedPayloadItemId == itemId
+                && cachedPayloadScalePercent == scalePercent) {
             return cachedPayloadModel;
         }
 
         Class639_Sub5 itemDefinitions =
                 ClientConsoleItemBridge.getRegisteredItemDefinitions();
         if (itemDefinitions == null
-                || PAYLOAD_ITEM_ID < 0
-                || PAYLOAD_ITEM_ID >= itemDefinitions.method45()) {
+                || itemId < 0
+                || itemId >= itemDefinitions.method45()) {
             return null;
         }
 
         try {
             ItemDefinitions definition = (ItemDefinitions)
-                    itemDefinitions.getDefinition(PAYLOAD_ITEM_ID, 0);
+                    itemDefinitions.getDefinition(itemId, 0);
             if (definition == null) {
                 return null;
             }
@@ -985,12 +1265,21 @@ public final class ConveyorRunPreview {
             if (model == null) {
                 return null;
             }
+
+            int modelScale = Math.max(1,
+                    (int) Math.round(128.0 * scalePercent / 100.0));
+            if (modelScale != 128) {
+                model.method1464(modelScale, modelScale, modelScale);
+            }
+
             model.method1450(MODEL_FLAGS);
             cachedPayloadRenderer = renderer;
             cachedPayloadModel = model;
+            cachedPayloadItemId = itemId;
+            cachedPayloadScalePercent = scalePercent;
             return model;
         } catch (RuntimeException ex) {
-            System.err.println("[ConveyorRunPreview] Log 1511 model build failed: "
+            System.err.println("[ConveyorRunPreview] Payload item model build failed: "
                     + ex.getClass().getSimpleName() + ": " + ex.getMessage());
             return null;
         }
