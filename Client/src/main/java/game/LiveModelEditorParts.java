@@ -173,12 +173,27 @@ final class LiveModelEditorParts {
         if (source == null) return new ConveyorRecipePart[0];
         List<ConveyorRecipePart> recipe = new ArrayList<ConveyorRecipePart>();
         for (PartState state : originals) {
-            if (state.deleted || state.hidden
-                    || state.replacementObjectId >= 0
-                    || state.conveyorRole == ConveyorRole.UNASSIGNED) {
+            if (state.deleted || state.hidden || state.replacementObjectId >= 0) {
                 continue;
             }
-            recipe.add(new ConveyorRecipePart(state.sourcePart, state.conveyorRole,
+
+            ConveyorRole role = state.conveyorRole;
+            if (role == ConveyorRole.UNASSIGNED) {
+                /*
+                 * Backward-compatible project-v4 behavior: the user's existing
+                 * authored assembly is exactly the set of non-default edited
+                 * source components. Preserve those as FIXED_DETAIL until the
+                 * author explicitly assigns a procedural role. Untouched
+                 * sawmill components remain excluded.
+                 */
+                boolean authored = state.scaleX != 100 || state.scaleY != 100
+                        || state.scaleZ != 100 || state.moveX != 0
+                        || state.moveY != 0 || state.moveZ != 0 || state.yaw != 0;
+                if (!authored) continue;
+                role = ConveyorRole.FIXED_DETAIL;
+            }
+
+            recipe.add(new ConveyorRecipePart(state.sourcePart, role,
                     state.scaleX, state.scaleY, state.scaleZ,
                     state.moveX, state.moveY, state.moveZ, state.yaw));
         }
