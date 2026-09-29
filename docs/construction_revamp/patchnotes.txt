@@ -1966,3 +1966,12 @@
 - Payload follows the generated run's horizontal deck height and loops for this motion proof.
 - No chest inventory consumption, transfer, spacing, backpressure, machine I/O, or persistent payload state added yet.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-29 - Conveyor Payload Tuner V1
+- Runtime screenshot proved the real Log 1511 model renders/moves but is visually misaligned from the conveyor deck; further hardcoded offset guessing is rejected.
+- Added live Con Revamp -> Conveyor Payload Tuner controls for item id, forward/side/height offsets, scale, pitch/yaw/roll, and speed.
+- Forward/side are run-relative so one saved preset remains valid when a conveyor changes world heading; yaw is also relative to run heading.
+- Tuner changes apply live while the client is running. Item/scale changes rebuild only the cached payload model; transform/speed edits do not rebuild conveyor geometry.
+- Save writes data/construction/conveyor_payload_tuning.properties; the client auto-loads that preset on startup. Reload and Reset Defaults are also exposed.
+- No server persistence schema, chest/machine inventory, backpressure, payload ownership, or ConveyorRun geometry changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME TUNING.
