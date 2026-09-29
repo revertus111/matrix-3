@@ -117,14 +117,6 @@ public class Class343 {
 					Class246.method3359(Entity.anInt11674 * 1007135537, (Class314.method4072(325769767 * client.anInt8675, -1702297057 * client.anInt8792, Class274.anInt2911 * -374189215, -1808650936) - client.anInt8684 * 1915481369), -1126693191 * Class165.anInt2050, i_17_, i_18_, (i_17_ >> 3) * 3 + 600 << 2, i_11_, -2058613347);
 				} else if (Class18.anInt143 * 625220759 == 2)
 					Class371.method4607(i_11_, -1619636191);
-
-				/*
-				 * Settlement RTS reuses Matrix3's vanilla Class246 camera solver.
-				 * Run its pivot/yaw/pitch override after the stock camera is
-				 * calculated but before shake/clamp/scene setup. Free Build keeps
-				 * the existing late detached-camera tick below.
-				 */
-				ConstructionBuildCamera.tickVanillaRtsCamera(i_11_);
 				int i_19_ = Class36.anInt387 * 386814715;
 				int i_20_ = Class572_Sub13_Sub2.anInt11451 * -1094666305;
 				int i_21_ = Class49.anInt490 * -999214779;
