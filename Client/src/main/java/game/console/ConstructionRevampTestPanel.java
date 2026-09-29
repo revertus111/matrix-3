@@ -597,18 +597,22 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
                 "Asset Studio remains the primary Construction object/rail discovery tool. "
-                + "ConveyorRun V0 is a client-only procedural visual proof from canonical "
-                + "object 46298 / models 49717+49718; it creates no settlement/world belt objects.",
+                + "ConveyorRun now has a server-owned persistent A->B test path; the original "
+                + "short/medium/long visual demo remains available separately.",
                 5));
         card.add(Box.createVerticalStrut(8));
 
         JButton studio = new JButton("Open Asset Studio");
         JButton conveyorDemo = new JButton("Show Conveyor A->B Demo");
         JButton conveyorHide = new JButton("Hide Conveyor Demo");
+        JButton conveyorPersist = new JButton("Create Persistent Conveyor");
+        JButton conveyorClear = new JButton("Clear Persistent Conveyors");
         JButton conveyorStatus = new JButton("Conveyor Status");
         styleButton(studio);
         styleButton(conveyorDemo);
         styleButton(conveyorHide);
+        styleButton(conveyorPersist);
+        styleButton(conveyorClear);
         styleButton(conveyorStatus);
 
         studio.addActionListener(e -> {
@@ -619,16 +623,22 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 setStatus(ConveyorRunPreview.showDemoNearPlayer()));
         conveyorHide.addActionListener(e ->
                 setStatus(ConveyorRunPreview.hide()));
+        conveyorPersist.addActionListener(e ->
+                setStatus(ConveyorRunPreview.createPersistentTestNearPlayer()));
+        conveyorClear.addActionListener(e ->
+                setStatus(ConveyorRunPreview.clearPersistentRuns()));
         conveyorStatus.addActionListener(e ->
                 setStatus(ConveyorRunPreview.getStatus()));
 
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 123));
         buttons.add(studio);
         buttons.add(conveyorDemo);
         buttons.add(conveyorHide);
+        buttons.add(conveyorPersist);
+        buttons.add(conveyorClear);
         buttons.add(conveyorStatus);
         card.add(buttons);
         return card;
