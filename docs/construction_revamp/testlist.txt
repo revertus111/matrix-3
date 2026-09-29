@@ -1485,16 +1485,19 @@ Live Model Editor — Group Scale / Fit 1 Tile gate (2026-09-29)
 [ ] Save/reload the project and confirm resulting per-part scale/move values persist exactly.
 
 
-Phase 3 side slice — Procedural ConveyorRun Visual Generator V0
-[x] Client-only ConveyorRunPreview owns transient logical A/B runs; no server/SettlementState/scene-object/per-tile-belt ownership added.
-[x] Canonical source is decoded from object 46298 model cache entries 49717 + 49718 into fresh Class159 geometry.
-[x] Generator stretches long-span components, remaps fixed-detail positions, and regenerates fixed-size support component copies.
-[x] Interior support count uses max(0, ceil(runLength / 3 tiles) - 1); generated Models are cached by renderer/preview revision.
-[x] Con Revamp Development Tools exposes Show Conveyor A->B Demo, Hide Conveyor Demo and Conveyor Status.
-[ ] Rebuild/restart client, enter settlement, click Show Conveyor A->B Demo; SHORT 2t, MEDIUM 5t and LONG 9t are all visible.
-[ ] All three visuals read as continuous one-run conveyors rather than separate per-tile world objects.
-[ ] Width and non-support fixed details keep normal authored size while longitudinal run length changes.
-[ ] MEDIUM/LONG add extra supports automatically; support geometry remains normal size and evenly distributed.
-[ ] Conveyor Status reports a useful HYPOTHESIS role summary; visually identify any misclassified 49717/49718 component before changing role rules.
+Phase 3 side slice — Procedural ConveyorRun Visual Generator V0.1
+[x] Client-only ConveyorRunPreview still owns transient logical A/B runs; no server/SettlementState/scene-object/per-tile-belt ownership added.
+[x] Cache source remains object 46298 / models 49717+49718, but the runtime source recipe now includes only authored components 4,5,8,16,17,18,19,21.
+[x] Saved Live Model Editor transforms for those eight components are reproduced before procedural run generation.
+[x] Every untouched original-sawmill component is hidden before procedural generation; the prior whole-object/support-guess path is no longer active.
+[x] Procedural length changes still stretch long-span authored components and remap smaller authored details without scaling the whole object.
+[x] Automatic support generation is deliberately deferred until an explicit support component is authored/identified from the corrected source.
+[x] Con Revamp Development Tools still exposes Show Conveyor A->B Demo, Hide Conveyor Demo and Conveyor Status.
+[ ] Pull/rebuild/restart client, enter settlement, click Show Conveyor A->B Demo; SHORT 2t, MEDIUM 5t and LONG 9t are all visible.
+[ ] The only visible source geometry is the user's custom conveyor assembly. No sawmill crates, blades, detached boxes or other untouched 46298 pieces appear.
+[ ] SHORT/MEDIUM/LONG all extend from the same authored conveyor source and remain continuous one-run visuals.
+[ ] Width and smaller authored details remain visually sane while run length changes.
+[ ] Conveyor Status reports AUTHORED sourceParts=4,5,8,16,17,18,19,21 and a bounded stretch/fixed count.
 [ ] Hide Conveyor Demo removes all generated visuals immediately.
 [ ] Regression: normal scene rendering, Build Palette ghost preview, Live Model Editor and ordinary settlement interaction still render/operate normally.
+[ ] After the corrected source passes, explicitly author/identify support geometry before re-enabling the locked automatic support-spacing rule.
