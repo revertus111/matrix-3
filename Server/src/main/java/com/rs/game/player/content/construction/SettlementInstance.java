@@ -31,6 +31,15 @@ public final class SettlementInstance {
     public static final int PLOT_CHUNKS = PLOT_TILES / 8;
     public static final int PLOT_PLANE = SettlementState.PLOT_PLANE;
 
+    /*
+     * The persistent/playable settlement remains exactly 64x64. RTS/editor
+     * cameras can see well beyond that square, though, so generate terrain-only
+     * padding around the plot instead of exposing the edge of the dynamic map.
+     */
+    private static final int VISUAL_PADDING_CHUNKS = 3; // 24 tiles per side
+    private static final int INSTANCE_CHUNKS =
+            PLOT_CHUNKS + VISUAL_PADDING_CHUNKS * 2;
+
     private static final int ENTRY_OFFSET = PLOT_TILES / 2;
     private static final double PASSIVE_CONSTRUCTION_XP_PER_RESOURCE = 1.0;
     // V1 presentation placeholder until a dedicated mine-cart NPC/model is accepted.
@@ -42,7 +51,10 @@ public final class SettlementInstance {
     private final SettlementDebug debug;
     private final WorldTile returnTile;
 
+    // Inner 64x64 persistent/buildable plot origin.
     private volatile int[] boundChunks;
+    // Full terrain allocation origin, including the visual-only apron.
+    private volatile int[] allocatedChunks;
     private volatile boolean loaded;
     private volatile boolean destroyed;
 
@@ -137,25 +149,39 @@ public final class SettlementInstance {
 
     private void load() {
         try {
-            int[] allocated = MapBuilder.findEmptyChunkBound(PLOT_CHUNKS, PLOT_CHUNKS);
-            if (allocated == null || allocated.length < 2 || allocated[0] < 0 || allocated[1] < 0) {
+            int[] allocated = MapBuilder.findEmptyChunkBound(
+                    INSTANCE_CHUNKS, INSTANCE_CHUNKS);
+            if (allocated == null || allocated.length < 2
+                    || allocated[0] < 0 || allocated[1] < 0) {
                 failLoad("No free dynamic map area was available for the settlement.");
                 return;
             }
-            boundChunks = allocated;
+            allocatedChunks = new int[] { allocated[0], allocated[1] };
+            boundChunks = new int[] {
+                    allocated[0] + VISUAL_PADDING_CHUNKS,
+                    allocated[1] + VISUAL_PADDING_CHUNKS
+            };
 
-            for (int chunkX = 0; chunkX < PLOT_CHUNKS; chunkX++) {
-                for (int chunkY = 0; chunkY < PLOT_CHUNKS; chunkY++) {
+            /*
+             * Copy the same proven base terrain across the full visual allocation.
+             * Only the inner PLOT_CHUNKS square is settlement-owned for gameplay;
+             * the surrounding chunks exist solely so detached cameras see terrain
+             * instead of the hard dynamic-map edge.
+             */
+            for (int chunkX = 0; chunkX < INSTANCE_CHUNKS; chunkX++) {
+                for (int chunkY = 0; chunkY < INSTANCE_CHUNKS; chunkY++) {
+                    int worldChunkX = allocatedChunks[0] + chunkX;
+                    int worldChunkY = allocatedChunks[1] + chunkY;
                     MapBuilder.copyChunk(
                             HouseConstants.LAND[0],
                             HouseConstants.LAND[1],
                             0,
-                            boundChunks[0] + chunkX,
-                            boundChunks[1] + chunkY,
+                            worldChunkX,
+                            worldChunkY,
                             PLOT_PLANE,
                             0);
                     for (int plane = 1; plane < 4; plane++) {
-                        MapBuilder.cutChunk(boundChunks[0] + chunkX, boundChunks[1] + chunkY, plane);
+                        MapBuilder.cutChunk(worldChunkX, worldChunkY, plane);
                     }
                 }
             }
@@ -3148,8 +3174,12 @@ public final class SettlementInstance {
         removeRailCarts();
         removeStarterResourceNodes();
 
-        final int[] bounds = boundChunks;
+        final int[] bounds = allocatedChunks != null
+                ? allocatedChunks : boundChunks;
+        final int destroyChunks = allocatedChunks != null
+                ? INSTANCE_CHUNKS : PLOT_CHUNKS;
         boundChunks = null;
+        allocatedChunks = null;
         if (bounds == null) {
             return;
         }
@@ -3158,7 +3188,8 @@ public final class SettlementInstance {
             @Override
             public void run() {
                 try {
-                    MapBuilder.destroyMap(bounds[0], bounds[1], PLOT_CHUNKS, PLOT_CHUNKS);
+                    MapBuilder.destroyMap(
+                            bounds[0], bounds[1], destroyChunks, destroyChunks);
                 } catch (Throwable e) {
                     Logger.handle(e);
                 }
