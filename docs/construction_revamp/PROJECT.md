@@ -2302,7 +2302,7 @@ Build three straight test runs from the same authored conveyor source (short, me
 - deleting the run removes the whole generated conveyor;
 - once visual generation is accepted, a real Log (1511) can be rendered moving continuously from A toward B.
 
-**Resume Here:** native conveyor animation is CARRYOVER / NON-BLOCKING after runtime rejection. Continue the conveyor visual-role gate instead. Pull/rebuild/restart Client, load the saved 46298 project, identify the belt mesh with Solo/Isolate, assign `BELT_SURFACE`, then tag any obvious `START_CAP`, `END_CAP`, `REPEAT_DETAIL`, `SUPPORT`, `SCALE_POSITION`, or `IGNORE` parts as appropriate. Untagged but already-edited v4 assembly parts automatically remain `FIXED_DETAIL`. Save the project (v5), click **Apply To Demo**, then show SHORT/MEDIUM/LONG and accept/reject endpoint anchoring, fixed detail size, repeat spacing and support spacing. Do not start persistence, chest automation or payload transport until this role-driven visual source is accepted.
+**Resume Here:** conveyor visuals are accepted as-is by user decision; native belt animation and extra role/cap/support polish remain CARRYOVER / NON-BLOCKING. Conveyor Gameplay V1 persistent ownership is now IMPLEMENTED / NEEDS RUNTIME TEST. Pull/build Client + Server, enter the settlement, use **Create Persistent Conveyor**, verify one server-owned 5-tile run appears, exit/re-enter and relog to prove persistence, then use **Clear Persistent Conveyors** and verify it stays deleted. Do not start payload motion until this persistence/restore/delete gate passes.
 
 
 
@@ -2327,3 +2327,19 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Instance destruction frees the full padded allocation; old/no-padding runtime instances retain backward-safe cleanup fallback.
 - Client renderer radius/fog hacks are NOT reintroduced. The visual fix supplies real terrain data for the detached camera to render.
 - Runtime requires settlement exit/re-entry after pull so a fresh padded dynamic instance is generated.
+
+
+### Implementation checkpoint — Conveyor Gameplay V1: Persistent ConveyorRun — 2026-09-29
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit AAA.
+- User accepted the current conveyor visual output as-is. Further cap/detail/support cleanup and native belt-surface animation are non-blocking carryover.
+- Added server-owned `SettlementConveyorRun` identity with stable run id plus plot-relative Point A / Point B / plane. One logical run is persisted regardless of visual length; no per-tile conveyor objects are created.
+- `SettlementState` schema advances to v14 and owns `nextConveyorRunId` + the conveyor-run list. Old saves normalize with an empty list; malformed/duplicate ids are discarded and the next id is recovered from live state.
+- `SettlementInstance` owns world projection and lifecycle sync. Saved plot-relative endpoints are converted back to runtime world coordinates only while the settlement instance is active.
+- Server -> client restore uses reserved Construction-only CSVar-string id **65534** as a staged `BEGIN -> RUN... -> END` snapshot. `PacketsDecoder` intercepts this id before Matrix3's normal CSVar-string store, so no cache CSVar definition or new protocol packet is required.
+- Client `ConveyorRunPreview` now renders persistent synced runs alongside the optional short/medium/long visual demo. Persistent runs keep stable server ids for the later payload/backpressure layer.
+- Settlement exit/teleport/logout sends `CLEAR` so transient client visuals do not leak outside the active settlement.
+- Added normal Construction bridge commands: `settlementconveyorcreate`, `settlementconveyorremove`, and `settlementconveyorclear`.
+- Con Revamp Development Tools adds **Create Persistent Conveyor** (5-tile test run near the player) and **Clear Persistent Conveyors**. These call the real server owner; they do not fake local persistence.
+- Runtime gate: create -> visible sync -> exit/re-entry -> relog -> delete/clear -> exit/re-entry. Existing visual demo must remain independent and no saved build-piece count/per-tile world objects may be created.
+- Next after acceptance: smooth real Log 1511 payload progress on one persistent run, then spacing/backpressure.
