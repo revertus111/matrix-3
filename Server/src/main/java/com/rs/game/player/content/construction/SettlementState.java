@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 13;
+    private static final int CURRENT_SCHEMA_VERSION = 14;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -46,6 +46,9 @@ public final class SettlementState implements Serializable {
             new HashMap<Long, SettlementStorageContainer>();
     private Map<Long, SettlementMachineBuffer> machineBuffers =
             new HashMap<Long, SettlementMachineBuffer>();
+    private long nextConveyorRunId = 1L;
+    private List<SettlementConveyorRun> conveyorRuns =
+            new ArrayList<SettlementConveyorRun>();
     private Set<String> savedBuildTiles = new HashSet<String>();
     private Map<Long, SettlementRallyPoint> rallyPoints =
             new HashMap<Long, SettlementRallyPoint>();
@@ -73,6 +76,9 @@ public final class SettlementState implements Serializable {
         }
         if (machineBuffers == null) {
             machineBuffers = new HashMap<Long, SettlementMachineBuffer>();
+        }
+        if (conveyorRuns == null) {
+            conveyorRuns = new ArrayList<SettlementConveyorRun>();
         }
         if (savedBuildTiles == null) {
             savedBuildTiles = new HashSet<String>();
@@ -218,6 +224,27 @@ public final class SettlementState implements Serializable {
                 resourceIterator.remove();
             }
         }
+        Set<Long> liveConveyorRunIds = new HashSet<Long>();
+        long highestConveyorRunId = 0L;
+        Iterator<SettlementConveyorRun> conveyorIterator = conveyorRuns.iterator();
+        while (conveyorIterator.hasNext()) {
+            SettlementConveyorRun run = conveyorIterator.next();
+            if (run == null || !run.isValid()
+                    || !liveConveyorRunIds.add(Long.valueOf(run.getRunId()))) {
+                conveyorIterator.remove();
+                continue;
+            }
+            if (run.getRunId() > highestConveyorRunId) {
+                highestConveyorRunId = run.getRunId();
+            }
+        }
+        if (nextConveyorRunId <= highestConveyorRunId) {
+            nextConveyorRunId = highestConveyorRunId + 1L;
+        }
+        if (nextConveyorRunId <= 0L) {
+            nextConveyorRunId = 1L;
+        }
+
         schemaVersion = CURRENT_SCHEMA_VERSION;
 
         long highestId = 0L;
@@ -242,6 +269,55 @@ public final class SettlementState implements Serializable {
     public synchronized List<SettlementPlacedPiece> snapshotPieces() {
         normalize();
         return new ArrayList<SettlementPlacedPiece>(pieces);
+    }
+
+    public synchronized int getConveyorRunCount() {
+        normalize();
+        return conveyorRuns.size();
+    }
+
+    public synchronized List<SettlementConveyorRun> snapshotConveyorRuns() {
+        normalize();
+        return new ArrayList<SettlementConveyorRun>(conveyorRuns);
+    }
+
+    public synchronized SettlementConveyorRun addConveyorRun(
+            int startPlotX, int startPlotY,
+            int endPlotX, int endPlotY, int plane) {
+        normalize();
+        if (!isValidPlotLocation(startPlotX, startPlotY, plane)
+                || !isValidPlotLocation(endPlotX, endPlotY, plane)
+                || (startPlotX == endPlotX && startPlotY == endPlotY)) {
+            return null;
+        }
+        SettlementConveyorRun run = new SettlementConveyorRun(
+                nextConveyorRunId++, startPlotX, startPlotY,
+                endPlotX, endPlotY, plane);
+        conveyorRuns.add(run);
+        return run;
+    }
+
+    public synchronized boolean removeConveyorRun(long runId) {
+        normalize();
+        if (runId <= 0L) {
+            return false;
+        }
+        Iterator<SettlementConveyorRun> iterator = conveyorRuns.iterator();
+        while (iterator.hasNext()) {
+            SettlementConveyorRun run = iterator.next();
+            if (run != null && run.getRunId() == runId) {
+                iterator.remove();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized int clearConveyorRuns() {
+        normalize();
+        int removed = conveyorRuns.size();
+        conveyorRuns.clear();
+        return removed;
     }
 
     public synchronized boolean saveBuildTile(int plotX, int plotY, int plane) {
