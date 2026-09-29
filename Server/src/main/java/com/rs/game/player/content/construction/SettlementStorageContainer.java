@@ -275,6 +275,24 @@ public final class SettlementStorageContainer implements Serializable {
         return amount - remaining;
     }
 
+    /**
+     * Clears item contents only. Logistics mode, filters, access flags,
+     * priority and capacity upgrades remain untouched.
+     */
+    public synchronized long clearItems() {
+        normalize();
+        long cleared = 0L;
+        for (int slot = 0; slot < items.getSize(); slot++) {
+            Item item = items.get(slot);
+            if (item != null) {
+                cleared += item.getAmount();
+                items.set(slot, null);
+            }
+        }
+        items.shift();
+        return cleared;
+    }
+
     public synchronized int removeItem(int itemId, int amount) {
         normalize();
         if (itemId < 0 || amount <= 0) {
