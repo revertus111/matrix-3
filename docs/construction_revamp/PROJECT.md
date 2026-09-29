@@ -2117,17 +2117,19 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
 - Scope intentionally reuses the already-landed Construction Debug Framework V1 rather than creating another debug system.
 - Physical chest containers now expose a contents-only clear primitive. Clearing items preserves the chest build, mode, item filters, worker Deposit/Withdraw flags, logistics priority, slot/stack upgrades and all unrelated settlement state.
-- World chest context adds `Clear Chest` with a five-second same-chest confirmation flow. The first click only arms the action; reopening the same chest menu within the window exposes `Confirm Clear Chest`, which queues the server-authoritative clear.
+- World chest context exposes a direct developer/test `Clear Chest` action for the exact selected physical chest. Clear All retains the stronger second-click confirmation because of its wider destructive scope.
 - Client Console -> Con Revamp -> Storage adds `Clear All Physical Storage` with a second-click five-second confirmation. This wipes physical chest contents only; machine buffers and legacy SettlementResource counters remain untouched.
 - Both one-chest and all-chest clear operations release transient physical source/destination reservations so workers cannot retain claims against removed inventory.
 - Clearing refreshes the exact currently-open bank-shell chest immediately through the existing event-driven lightweight refresh path.
 - When Construction debug is enabled, destructive physical clear operations emit Storage + Logistics events through the existing SettlementDebug bus.
 - Chest menu clutter is reduced without changing normal object ownership:
-  - Matrix3-native duplicate `Open` / `View Storage` entries for settlement chest object 18804 are suppressed while the canonical settlement `View Storage` entry remains;
+  - fixed the menu-entry duplicate detector to read Matrix3's action-text field rather than the target-name field, so the canonical settlement `View Storage` is inserted only once even though the mirror seam observes multiple native chest options;
+  - Matrix3-native duplicate `Open` / `View Storage` entries for settlement chest object 18804 are suppressed while one canonical settlement `View Storage` entry remains;
   - Saved Tile / Unsave Tile authoring entries are suppressed when the active context is a physical chest;
   - normal Remove / Examine / Walk here remain, while Take From Here / Deliver Here appear only with selected workers.
 - Clear operations do not pause workers. If production remains active, workers may legitimately refill an emptied chest immediately; pause/disable relevant jobs when a stable empty-state test is required.
-- Next gate: confirm menu de-duplication, clear-one confirmation/policy preservation/open-bank refresh, clear-all scope/reservation cleanup, then continue the existing 3.5C explicit-logistics/runtime-debug acceptance session.
+- Worker Debug overhead speech is now rate-limited to at most one ForceTalk per worker every 2 seconds; full transition logging to console/buffer/export remains unthrottled.
+- Next gate: confirm one canonical View Storage entry, no Save/Unsave chest clutter, direct Clear Chest/policy preservation/open-bank refresh, Clear All scope/reservation cleanup, and readable debug speech cadence; then continue the existing 3.5C explicit-logistics/runtime-debug acceptance session.
 
 ## Rail Studio viewport-width ownership correction — 2026-09-29
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST under AAA.
