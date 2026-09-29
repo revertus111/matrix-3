@@ -1,11 +1,11 @@
 package game;
 
 /**
- * Construction hybrid camera controller.
+ * Construction lifecycle/controller for Matrix3's detached Class24/Class411
+ * developer camera.
  *
- * RTS owns a movable world pivot plus yaw/pitch/zoom inputs, but feeds those
- * inputs into Matrix3's existing vanilla Class246 camera solver. Free Build
- * retains the proven detached Class24/Class411 developer-camera path.
+ * Construction owns only the build-mode controls. The camera object/render path
+ * remains Matrix3's existing Class411 free-camera path.
  */
 public final class ConstructionBuildCamera {
 
@@ -69,7 +69,6 @@ public final class ConstructionBuildCamera {
 
     private static volatile boolean active;
     private static volatile boolean ownsFreeCamera;
-    private static volatile boolean restoreExternalFreeCamera;
     private static volatile boolean settlementAutoMode;
     private static volatile CameraMode cameraMode = CameraMode.RTS;
 
@@ -159,8 +158,8 @@ public final class ConstructionBuildCamera {
 
     /**
      * Vanilla scene visibility is normally centered around the player's local
-     * scene tile. Settlement RTS keeps the player planted, so expose its
-     * managed vanilla-camera pivot as the equivalent render-focus tile.
+     * scene tile. Settlement RTS keeps the player planted, so expose the
+     * detached camera's managed look pivot as the equivalent render-focus tile.
      *
      * This changes only the focus passed into Matrix3's stock scene culling.
      * It does not alter the renderer radius, fog or visibility arrays.
@@ -213,27 +212,14 @@ public final class ConstructionBuildCamera {
             return;
         }
 
-        CameraMode previousMode = cameraMode;
-        if (active && previousMode == CameraMode.RTS && nextMode == CameraMode.FREE_BUILD) {
+        if (active && cameraMode == CameraMode.RTS && nextMode != CameraMode.RTS) {
             restoreRtsMinimapMarker();
-            if (!enableDetachedFreeBuildCamera()) {
-                snapshotRtsMinimapMarker();
-                reportToServer("FAIL free-build-camera-activation");
-                return;
-            }
-            lastMouseX = Class26.aClass564_216.method6657((short) -1);
-            lastMouseY = Class26.aClass564_216.method6658((byte) -1);
-        } else if (active && previousMode == CameraMode.FREE_BUILD && nextMode == CameraMode.RTS) {
-            // Keep the detached object available for a later Free Build return,
-            // but hand rendering back to Matrix3's ordinary camera branch.
-            Class24.aBool157 = false;
         }
 
         clearVelocity();
         clickStopLatched = false;
         inputReported = false;
         stopReported = false;
-        lastTickCycle = Integer.MIN_VALUE;
         lastTickNanos = System.nanoTime();
         resetRtsState();
         cameraMode = nextMode;
@@ -242,7 +228,7 @@ public final class ConstructionBuildCamera {
             snapshotRtsMinimapMarker();
         }
         if (active) {
-            reportToServer("MODE " + previousMode.name() + "-to-" + nextMode.name());
+            reportToServer("MODE " + nextMode.name());
         }
     }
 
@@ -283,30 +269,13 @@ public final class ConstructionBuildCamera {
     }
 
     /**
-     * Convert a screen-space drag into a ground-plane delta. RTS derives the
-     * basis directly from its owned yaw, while Free Build keeps using Matrix3's
-     * real detached-camera look vector.
+     * Convert a screen-space drag into a ground-plane delta using the actual
+     * detached camera look vector. Screen-right follows camera-right and
+     * screen-down follows camera-backward. At the accepted north reference this
+     * reduces to the editor's previous -X/+Z mapping.
      */
     public static int[] mapScreenDragToGround(int deltaX, int deltaY, int unitsPerPixel) {
-        if (!active || unitsPerPixel <= 0) {
-            return null;
-        }
-
-        if (cameraMode == CameraMode.RTS && rtsOrientationInitialized) {
-            float forwardX = (float) Math.sin(rtsYawRadians);
-            float forwardZ = (float) Math.cos(rtsYawRadians);
-            float rightX = forwardZ;
-            float rightZ = -forwardX;
-            float scale = unitsPerPixel;
-
-            int worldX = Math.round(deltaX * scale * rightX
-                    - deltaY * scale * forwardX);
-            int worldZ = Math.round(deltaX * scale * rightZ
-                    - deltaY * scale * forwardZ);
-            return new int[] { worldX, worldZ };
-        }
-
-        if (Class24.aClass411_Sub1_158 == null) {
+        if (!active || Class24.aClass411_Sub1_158 == null || unitsPerPixel <= 0) {
             return null;
         }
         try {
@@ -397,14 +366,14 @@ public final class ConstructionBuildCamera {
             return "Construction camera is waiting for the local player.";
         }
 
-        restoreExternalFreeCamera =
-                IncomingPacket.method4113((byte) 0) && Class24.aClass411_Sub1_158 != null;
-        ownsFreeCamera = false;
+        boolean existingFreeCamera = IncomingPacket.method4113((byte) 0);
+        ownsFreeCamera = !existingFreeCamera;
 
-        // RTS must render through Matrix3's ordinary Class246 camera branch.
-        // Preserve an already-existing detached camera object, but temporarily
-        // disable its render-owner flag so it can be restored on exit.
-        Class24.aBool157 = false;
+        if (ownsFreeCamera) {
+            Class102_Sub5.method9948(
+                    Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.method273((byte) -63),
+                    0);
+        }
 
         active = true;
         lastTickCycle = Integer.MIN_VALUE;
@@ -420,7 +389,9 @@ public final class ConstructionBuildCamera {
         resetRtsState();
         snapshotRtsMinimapMarker();
 
-        reportToServer("ENTER vanilla-rts external-detached=" + restoreExternalFreeCamera);
+        reportToServer("ENTER active=" + IncomingPacket.method4113((byte) 0)
+                + " owned=" + ownsFreeCamera
+                + " mode=" + cameraMode.name());
         return "Construction " + cameraMode.getDisplayName() + " camera active.";
     }
 
@@ -429,71 +400,30 @@ public final class ConstructionBuildCamera {
             return "Construction build camera is not active.";
         }
 
-        restoreRtsMinimapMarker();
-
-        if (ownsFreeCamera) {
+        boolean freeCameraWasActive = IncomingPacket.method4113((byte) 0);
+        if (ownsFreeCamera && freeCameraWasActive) {
             RSSocket.method7604(0);
-        } else {
-            Class24.aBool157 = restoreExternalFreeCamera && Class24.aClass411_Sub1_158 != null;
         }
 
+        restoreRtsMinimapMarker();
         active = false;
         ownsFreeCamera = false;
-        restoreExternalFreeCamera = false;
         lastTickCycle = Integer.MIN_VALUE;
         lastTickNanos = 0L;
         clearVelocity();
         clickStopLatched = false;
         resetRtsState();
 
-        reportToServer("EXIT detached-active=" + IncomingPacket.method4113((byte) 0));
+        reportToServer("EXIT active=" + IncomingPacket.method4113((byte) 0));
         return "Construction camera closed.";
     }
 
     /**
-     * RTS hook called immediately after Matrix3 calculates its normal camera and
-     * before camera shake/clamp/scene setup. This substitutes only the normal
-     * camera inputs by reusing Class246.method3359(...); it does not become a
-     * second renderer or directly own final camera globals.
-     */
-    public static void tickVanillaRtsCamera(int viewportHeight) {
-        if (!active || cameraMode != CameraMode.RTS || lastTickCycle == client.cycles) {
-            return;
-        }
-        lastTickCycle = client.cycles;
-
-        // The Class343 render branch is selected by this flag. Keep it off for
-        // RTS even when a detached object is retained for Free Build.
-        Class24.aBool157 = false;
-
-        try {
-            if (!rtsOrientationInitialized) {
-                initializeRtsVanillaHeading();
-            }
-
-            if (!tickReported) {
-                tickReported = true;
-                reportToServer("TICK vanilla-rts");
-            }
-
-            float dt = consumeDeltaSeconds();
-            updateRtsCamera(dt);
-            applyRtsVanillaCamera(viewportHeight);
-        } catch (RuntimeException ex) {
-            if (!failureReported) {
-                failureReported = true;
-                reportToServer("FAIL vanilla-rts-" + ex.getClass().getSimpleName());
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * Free Build retains the proven detached Class411 path. This hook remains at
-     * the existing late Class343 seam immediately before detached submission.
+     * Called from the live viewport before the active camera transform is
+     * submitted. Guarded to one update per client cycle.
      */
     public static void tick() {
-        if (!active || cameraMode != CameraMode.FREE_BUILD || lastTickCycle == client.cycles) {
+        if (!active || lastTickCycle == client.cycles) {
             return;
         }
         lastTickCycle = client.cycles;
@@ -501,25 +431,27 @@ public final class ConstructionBuildCamera {
         if (!IncomingPacket.method4113((byte) 0) || Class24.aClass411_Sub1_158 == null) {
             if (!failureReported) {
                 failureReported = true;
-                reportToServer("FAIL detached-free-build-not-active");
+                reportToServer("FAIL detached-camera-not-active");
             }
             return;
         }
 
         try {
-            Class423_Sub2 positionController =
-                    (Class423_Sub2) Class24.aClass411_Sub1_158.method4990((byte) -37);
-            Class658_Sub2 lookController =
-                    (Class658_Sub2) Class24.aClass411_Sub1_158.method4991(-589573040);
+            Class423_Sub2 positionController = (Class423_Sub2) Class24.aClass411_Sub1_158.method4990((byte) -37);
+            Class658_Sub2 lookController = (Class658_Sub2) Class24.aClass411_Sub1_158.method4991(-589573040);
             Class240 position = positionController.method5159((byte) -54);
 
             if (!tickReported) {
                 tickReported = true;
-                reportToServer("TICK detached-free-build");
+                reportToServer("TICK live mode=" + cameraMode.name());
             }
 
             float dt = consumeDeltaSeconds();
-            updateFreeBuildCamera(lookController, position, dt);
+            if (cameraMode == CameraMode.RTS) {
+                updateRtsCamera(lookController, position, dt);
+            } else {
+                updateFreeBuildCamera(lookController, position, dt);
+            }
 
             Class572_Sub17 target = new Class572_Sub17(
                     0,
@@ -541,7 +473,7 @@ public final class ConstructionBuildCamera {
         } catch (RuntimeException ex) {
             if (!failureReported) {
                 failureReported = true;
-                reportToServer("FAIL free-build-tick-" + ex.getClass().getSimpleName());
+                reportToServer("FAIL tick-exception-" + ex.getClass().getSimpleName());
                 ex.printStackTrace();
             }
         }
@@ -610,7 +542,10 @@ public final class ConstructionBuildCamera {
         position.aFloat2657 += velocityZ * dt;
     }
 
-    private static void updateRtsCamera(float dt) {
+    private static void updateRtsCamera(Class658_Sub2 lookController, Class240 position, float dt) {
+        if (!rtsOrientationInitialized) {
+            initializeRtsHeading(lookController, position);
+        }
         if (pendingRtsMinimapFocus) {
             int localX = pendingRtsMinimapFocusX;
             int localY = pendingRtsMinimapFocusY;
@@ -627,6 +562,20 @@ public final class ConstructionBuildCamera {
 
         boolean anyCameraKey = forward || backward || left || right || rotateLeft || rotateRight;
         reportInputOnce(anyCameraKey);
+
+        if (clickStopLatched) {
+            if (anyCameraKey) {
+                forward = false;
+                backward = false;
+                left = false;
+                right = false;
+                rotateLeft = false;
+                rotateRight = false;
+                anyCameraKey = false;
+            } else {
+                clickStopLatched = false;
+            }
+        }
 
         float rotationInput = (rotateRight ? 1.0F : 0.0F) - (rotateLeft ? 1.0F : 0.0F);
         int[] mouseOrbit = consumeRtsOrbitPixels();
@@ -647,6 +596,17 @@ public final class ConstructionBuildCamera {
                     RTS_MAX_PITCH_RADIANS);
             orbitChanged = true;
         }
+        if (orbitChanged) {
+            rememberRtsView();
+        }
+
+        // Apply the requested orbit first, then use Matrix3's real rendered look
+        // vector to place the camera on the circle around the stored pivot.
+        applyRtsOrientation(lookController);
+        Class240 viewDirection = getViewDirection(lookController, position);
+        if (orbitChanged && viewDirection != null) {
+            setPositionFromRtsPivot(position, viewDirection);
+        }
 
         float localX = (right ? 1.0F : 0.0F) - (left ? 1.0F : 0.0F);
         float localZ = (forward ? 1.0F : 0.0F) - (backward ? 1.0F : 0.0F);
@@ -660,175 +620,129 @@ public final class ConstructionBuildCamera {
         float targetX = 0.0F;
         float targetZ = 0.0F;
 
-        if (panning) {
-            // Keep the already-accepted RTS yaw semantics: yaw 0 faces +Z and
-            // positive yaw faces +X. Class246 uses the opposite yaw sign, which
-            // is converted only at the vanilla-solver boundary.
-            float forwardX = (float) Math.sin(rtsYawRadians);
-            float forwardZ = (float) Math.cos(rtsYawRadians);
-            float rightX = forwardZ;
-            float rightZ = -forwardX;
-            float speed = rtsMovementSpeed();
+        if (panning && viewDirection != null) {
+            float planarLength = (float) Math.sqrt(
+                    viewDirection.aFloat2653 * viewDirection.aFloat2653
+                            + viewDirection.aFloat2657 * viewDirection.aFloat2657);
+            if (planarLength > 0.001F) {
+                float forwardX = viewDirection.aFloat2653 / planarLength;
+                float forwardZ = viewDirection.aFloat2657 / planarLength;
+                float rightX = forwardZ;
+                float rightZ = -forwardX;
+                float speed = rtsMovementSpeed();
 
-            targetX = (localX * rightX + localZ * forwardX) * speed;
-            targetZ = (localX * rightZ + localZ * forwardZ) * speed;
+                targetX = (localX * rightX + localZ * forwardX) * speed;
+                targetZ = (localX * rightZ + localZ * forwardZ) * speed;
+            }
         }
 
-        updateVelocity(targetX, 0.0F, targetZ, panning, dt);
+        updateVelocity(targetX, 0.0F, targetZ, panning && viewDirection != null, dt);
 
-        rtsPivotX += velocityX * dt;
-        rtsPivotZ += velocityZ * dt;
+        float panX = velocityX * dt;
+        float panZ = velocityZ * dt;
+        rtsPivotX += panX;
+        rtsPivotZ += panZ;
         clampRtsPivotToLoadedScene();
+        if (viewDirection != null) {
+            setPositionFromRtsPivot(position, viewDirection);
+        }
+        rememberRtsView();
 
         int wheelSteps = consumeRtsZoomSteps();
-        if (wheelSteps != 0) {
-            rtsOrbitDistance = clamp(
-                    rtsOrbitDistance + wheelSteps * RTS_ZOOM_STEP,
-                    RTS_MIN_ORBIT_DISTANCE,
-                    RTS_MAX_ORBIT_DISTANCE);
-        }
-
-        rtsPivotY = resolveRtsPivotHeight();
-        if (orbitChanged || panning || wheelSteps != 0) {
-            rememberRtsView();
-        } else if (!savedRtsView) {
+        if (wheelSteps != 0 && viewDirection != null) {
+            applyRtsZoom(position, viewDirection, wheelSteps);
             rememberRtsView();
         }
 
         syncRtsMinimapMarker();
     }
 
-    private static void initializeRtsVanillaHeading() {
+    private static void initializeRtsHeading(Class658_Sub2 lookController, Class240 position) {
         if (savedRtsView && isSavedRtsPivotInLoadedScene()) {
             rtsYawRadians = savedRtsYawRadians;
             rtsPitchRadians = clamp(savedRtsPitchRadians,
                     RTS_MIN_PITCH_RADIANS, RTS_MAX_PITCH_RADIANS);
-            rtsOrbitDistance = clamp(
-                    savedRtsOrbitDistance,
-                    RTS_MIN_ORBIT_DISTANCE,
-                    RTS_MAX_ORBIT_DISTANCE);
+            rtsOrbitDistance = clamp(savedRtsOrbitDistance, RTS_MIN_ORBIT_DISTANCE, RTS_MAX_ORBIT_DISTANCE);
             rtsPivotX = savedRtsPivotX;
+            rtsPivotY = savedRtsPivotY;
             rtsPivotZ = savedRtsPivotZ;
-            rtsPivotY = resolveRtsPivotHeight();
             rtsOrientationInitialized = true;
             clampRtsPivotToLoadedScene();
+            applyRtsOrientation(lookController);
+            Class240 savedDirection = getViewDirection(lookController, position);
+            if (savedDirection != null) {
+                setPositionFromRtsPivot(position, savedDirection);
+            }
             return;
         }
-
+        // Dynamic settlement regions can be rebuilt at a different scene base.
+        // Never restore absolute camera coordinates from the previous loaded scene.
         savedRtsView = false;
 
-        // Reuse Matrix3's already-calculated normal-camera focus as the first RTS
-        // pivot. This avoids importing detached-camera coordinate conventions.
-        rtsPivotX = Entity.anInt11674 * 1007135537;
-        rtsPivotZ = Class165.anInt2050 * -1126693191;
-        clampRtsPivotToLoadedScene();
-        rtsPivotY = resolveRtsPivotHeight();
+        Class240 forwardPoint = lookController.method7736(0);
+        float deltaX = forwardPoint.aFloat2653 - position.aFloat2653;
+        float deltaZ = forwardPoint.aFloat2657 - position.aFloat2657;
 
-        // Preserve the user's current vanilla heading. RTS historically uses the
-        // opposite yaw sign from Class246, so invert only at this initialization
-        // and again at the solver boundary to keep established Q/E/MMB behavior.
-        int vanillaYaw = Class406.anInt4765 * 426389501 & 0x3fff;
-        rtsYawRadians = normalizeRadians(-angleUnitsToRadians(vanillaYaw));
+        if (!Float.isNaN(deltaX) && !Float.isNaN(deltaZ)
+                && Math.abs(deltaX) + Math.abs(deltaZ) > 0.001F) {
+            rtsYawRadians = (float) Math.atan2(deltaX, deltaZ);
+        } else {
+            rtsYawRadians = 0.0F;
+        }
+
         rtsPitchRadians = RTS_DEFAULT_PITCH_RADIANS;
-        rtsOrbitDistance = RTS_INITIAL_BACKOFF;
         rtsOrientationInitialized = true;
+        applyRtsOrientation(lookController);
+
+        // The detached camera begins at the point we want to manage. Preserve that
+        // point as the RTS pivot, then move the camera backward along the verified
+        // Class411 look vector to establish the initial orbit radius.
+        rtsPivotX = position.aFloat2653;
+        rtsPivotY = position.aFloat2656;
+        rtsPivotZ = position.aFloat2657;
+        clampRtsPivotToLoadedScene();
+        rtsOrbitDistance = RTS_INITIAL_BACKOFF;
         rememberRtsView();
-    }
 
-    private static void applyRtsVanillaCamera(int viewportHeight) {
-        rtsPivotY = resolveRtsPivotHeight();
-        int pitch = radiansToAngleUnits(rtsPitchRadians);
-        int yaw = radiansToAngleUnits(-rtsYawRadians);
-
-        Class246.method3359(
-                Math.round(rtsPivotX),
-                Math.round(rtsPivotY),
-                Math.round(rtsPivotZ),
-                pitch,
-                yaw,
-                Math.round(rtsOrbitDistance),
-                viewportHeight,
-                -1798877514);
-    }
-
-    private static float resolveRtsPivotHeight() {
-        return Class314.method4072(
-                (int) rtsPivotX,
-                (int) rtsPivotZ,
-                Class274.anInt2911 * -374189215,
-                -2063621494) - client.anInt8684 * 1915481369;
-    }
-
-    /**
-     * Lazily activates Matrix3's detached camera only when Free Build actually
-     * needs it, then seeds it from the currently rendered camera to avoid a
-     * jarring RTS -> Free Build position jump.
-     */
-    private static boolean enableDetachedFreeBuildCamera() {
-        try {
-            if (Class24.aClass411_Sub1_158 == null) {
-                Class102_Sub5.method9948(
-                        new Class572_Sub17(
-                                0,
-                                Class36.anInt387 * 386814715,
-                                Class572_Sub13_Sub2.anInt11451 * -1094666305,
-                                Class49.anInt490 * -999214779),
-                        0);
-                ownsFreeCamera = true;
-            }
-
-            if (Class24.aClass411_Sub1_158 == null) {
-                return false;
-            }
-
-            Class423_Sub2 positionController =
-                    (Class423_Sub2) Class24.aClass411_Sub1_158.method4990((byte) -37);
-            Class658_Sub2 lookController =
-                    (Class658_Sub2) Class24.aClass411_Sub1_158.method4991(-589573040);
-
-            positionController.method9278(
-                    new Class572_Sub17(
-                            0,
-                            Class36.anInt387 * 386814715,
-                            Class572_Sub13_Sub2.anInt11451 * -1094666305,
-                            Class49.anInt490 * -999214779),
-                    (byte) 3);
-
-            if (rtsOrientationInitialized) {
-                applyRtsOrientation(lookController);
-            }
-
-            Class24.aBool157 = true;
-            return true;
-        } catch (RuntimeException ex) {
-            if (ownsFreeCamera) {
-                RSSocket.method7604(0);
-                ownsFreeCamera = false;
-            }
-            return false;
+        Class240 viewDirection = getViewDirection(lookController, position);
+        if (viewDirection != null) {
+            setPositionFromRtsPivot(position, viewDirection);
         }
     }
 
-    /**
-     * Detached Free Build uses Matrix3's existing Class658_Sub2 look controller.
-     * This conversion is retained only for the RTS -> Free Build handoff.
-     */
     private static void applyRtsOrientation(Class658_Sub2 lookController) {
         float horizontal = (float) Math.cos(rtsPitchRadians) * RTS_LOOK_DISTANCE;
         int x = Math.round((float) Math.sin(rtsYawRadians) * horizontal);
+        // method8927 negates its Y target internally; negative here means look down in world space.
         int y = -Math.round((float) Math.sin(rtsPitchRadians) * RTS_LOOK_DISTANCE);
         int z = Math.round((float) Math.cos(rtsYawRadians) * horizontal);
         lookController.method8927(x, y, z, 0);
     }
 
-    private static int radiansToAngleUnits(float radians) {
-        return Math.round(radians * (16384.0F / (float) (Math.PI * 2.0))) & 0x3fff;
+    private static void applyRtsZoom(Class240 position, Class240 viewDirection, int wheelSteps) {
+        float nextDistance = clamp(
+                rtsOrbitDistance + wheelSteps * RTS_ZOOM_STEP,
+                RTS_MIN_ORBIT_DISTANCE,
+                RTS_MAX_ORBIT_DISTANCE);
+        if (nextDistance == rtsOrbitDistance) {
+            return;
+        }
+
+        rtsOrbitDistance = nextDistance;
+        setPositionFromRtsPivot(position, viewDirection);
     }
 
-    private static float angleUnitsToRadians(int angle) {
-        return (angle & 0x3fff) * ((float) (Math.PI * 2.0) / 16384.0F);
+    private static void setPositionFromRtsPivot(Class240 position, Class240 viewDirection) {
+        position.aFloat2653 = rtsPivotX - viewDirection.aFloat2653 * rtsOrbitDistance;
+        position.aFloat2656 = rtsPivotY - viewDirection.aFloat2656 * rtsOrbitDistance;
+        position.aFloat2657 = rtsPivotZ - viewDirection.aFloat2657 * rtsOrbitDistance;
     }
 
+    /**
+     * Matrix3's detached camera uses obfuscated coordinate/sign conventions.
+     * Derive movement from the real Class411 look vector instead of assuming
+     * world-axis signs so RTS pan/zoom stay aligned with the rendered view.
+     */
     private static Class240 getViewDirection(Class658_Sub2 lookController, Class240 position) {
         Class240 forwardPoint = lookController.method7736(0);
         float x = forwardPoint.aFloat2653 - position.aFloat2653;
@@ -1097,10 +1011,9 @@ public final class ConstructionBuildCamera {
     }
 
     /**
-     * Keep the RTS look pivot inside Matrix3's currently loaded scene. The
-     * vanilla solver may place the rendered camera outside this rectangle at long
-     * orbit distances; the important invariant is that its focus remains on
-     * loaded terrain.
+     * Keep the RTS look pivot inside Matrix3's currently loaded scene. Detached
+     * camera position may sit outside this rectangle at long orbit distances; the
+     * important invariant is that its look target remains on loaded terrain.
      */
     private static float[] getLoadedSceneBounds() {
         try {
