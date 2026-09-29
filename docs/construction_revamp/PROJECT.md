@@ -1938,7 +1938,7 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Resume Here: open Rail Classifier and verify CURRENT CANDIDATE is populated immediately; Place Current must work before touching any other card.
 
 ## Multi-object Junction/Splitter prefab integration — 2026-09-27
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
+- Status: IMPLEMENTED / NEEDS RUNTIME RETEST under explicit AAA. The first runtime test exposed an invalid source assumption and V0.1 now uses the authored conveyor assembly only.
 - Scope is a rail-authoring side slice; the canonical Construction main-goal table and active Phase 3 logistics milestone remain unchanged.
 - Preserved existing logical rail topology. Junction/Splitter are still explicit special-node tools; the change replaces the old one-object visual assumption with authored multi-object prefab resolution.
 - Existing authored special fallback: if the canonical JUNCTION/SPLITTER file entry is absent or still a one-object placeholder, RailCompositeLibrary prefers a matching multi-object authored layout (for example junction_LAYOUT_01).
@@ -2166,18 +2166,19 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST under explicit AAA.
 - Added a dedicated client-only `ConveyorRunPreview`; it owns transient A/B run specs and generated renderer Models only. It does not register scene objects, mutate SettlementState, create collision, move items, or create one belt object per tile.
 - Con Revamp -> Development Tools now exposes Show Conveyor A->B Demo / Hide Conveyor Demo / Conveyor Status. Show creates three parallel logical runs near the player: 2-tile SHORT, 5-tile MEDIUM and 9-tile LONG.
-- V0 decodes fresh canonical source geometry directly from object 46298's model cache using models 49717 + 49718, combines them as `Class159`, detects disconnected mesh components, and generates one composite raw model per run before renderer `Model` creation.
-- Longitudinal behavior is procedural: long-span components stretch along the detected source axis; smaller fixed details keep their authored size and have only their longitudinal position remapped as run length changes.
-- Supports are removed from the stretched base and regenerated as fixed-size component copies. Interior support count follows the locked rule `max(0, ceil(runLength / maxSupportSpan) - 1)` with a V0 maximum unsupported span of 3 tiles; endpoint support stations are also generated for the visual proof.
-- Generated Models are cached by preview revision/renderer and rendered through the existing post-scene direct-render seam in `Class343`; no per-frame raw-model rebuild is intended.
-- **HYPOTHESIS:** V0 automatically classifies 49717/49718 connected components into STRETCH / SUPPORT / fixed-position roles from component bounds. Runtime inspection must confirm the exact belt/support/detail mapping before that mapping is promoted to authored/verified data. If the heuristic selects the wrong support, use the reported role diagnostics to lock explicit component roles rather than tuning blindly.
-- V0 intentionally preserves source texture data on the primary stretched raw but strips texture-coordinate mapping from generated support copies for renderer safety. UV/texture repeat remains the later planned renderer slice; texture density is not accepted by this checkpoint.
-- Runtime gate: show the three demo runs, verify all three are visible as continuous one-run visuals, width/fixed details remain stable, MEDIUM/LONG gain additional fixed-size supports, Hide removes all three, normal world rendering and Construction ghost preview remain unaffected, and Conveyor Status reports a useful HYPOTHESIS role summary.
+- V0.1 decodes fresh source geometry from object 46298 / models 49717+49718, detects connected components using the same ordering as the Live Model Editor, then reproduces the saved custom conveyor assembly only. The canonical authored component recipe is indexes `4, 5, 8, 16, 17, 18, 19, 21`; every untouched sawmill component is hidden before procedural run generation.
+- The saved editor transforms are now part of the runtime source recipe: parts 4/5 use X scale 45% and move (-744,0,-1140); parts 8/16/17/18/19/21 retain 100% scale and move (-36,0,-1140). This reproduces the custom conveyor assembly instead of the original sawmill.
+- Longitudinal behavior remains procedural inside that authored assembly: long-span authored components stretch along the detected source axis; smaller authored details keep their own size and only remap longitudinal position as run length changes.
+- Generated Models remain cached by preview revision/renderer and render through the existing post-scene direct-render seam in `Class343`; no per-frame raw-model rebuild is intended.
+- The prior automatic SUPPORT classifier is removed from the active generator because runtime proved it was classifying unrelated sawmill geometry. The locked support-spacing formula remains the design target, but support generation is **deferred until a support component is explicitly authored/identified from the custom conveyor source**.
+- Remaining **HYPOTHESIS:** within the eight authored conveyor components, the V0.1 size-based split between STRETCH and fixed-position detail still needs visual confirmation. It is bounded to the actual conveyor assembly and can no longer select untouched sawmill geometry.
+- Source texture data on the authored assembly remains intact. UV/texture-repeat work remains a later renderer slice; texture density is not accepted by this checkpoint.
+- Runtime gate: show the three demo runs and verify the only visible geometry is the custom authored conveyor, with no sawmill crates/blades/extra parts. Confirm SHORT/MEDIUM/LONG extend from that same source, fixed details stay sane, Hide removes all three, and normal world/Construction ghost rendering is unaffected. Support spacing is not part of this retest.
 
 ### Canonical conveyor visual source
 
-- Current authored source evidence remains the RuneScape **Conveyor belt object 46298** using source models **49717 / 49718**.
-- Live Model Editor / Asset Studio is the authoring layer used to isolate/normalize the reusable conveyor components.
+- The cache source remains RuneScape **object 46298** using source models **49717 / 49718**, but gameplay must **not** use the whole object. The canonical visual source is the saved custom Live Model Editor assembly built from connected-component indexes **4, 5, 8, 16, 17, 18, 19, 21** with their saved transforms.
+- Live Model Editor / Asset Studio is the authoring layer for that runtime source recipe. Untouched source components belong to the original sawmill and are excluded from the conveyor.
 - The recently-added Group Scale / Fit 1 Tile tooling remains useful for normalizing or compacting source art, but **runtime conveyor length must not be implemented as naive whole-model scaling**.
 - Once the source conveyor assembly is normalized, gameplay treats it as a procedural source recipe rather than repeatedly placing that source object into the settlement.
 
@@ -2237,10 +2238,10 @@ Build three straight test runs from the same authored conveyor source (short, me
 - each is treated as one ConveyorRun;
 - extending B changes the generated length without creating persistent per-tile belts;
 - belt width/details remain visually consistent;
-- supports appear automatically once the configured unsupported-span threshold is exceeded;
-- supports remain normal size and are evenly distributed;
+- the first corrected-source retest contains no unrelated sawmill geometry;
+- automatic supports are deferred until an explicit authored support component is identified; once authored, the locked unsupported-span rule must add fixed-size, evenly distributed supports;
 - deleting the run removes the whole generated conveyor;
 - once visual generation is accepted, a real Log (1511) can be rendered moving continuously from A toward B.
 
-**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. For the conveyor side slice, rebuild/restart the client, enter the settlement, then use Con Revamp -> Development Tools -> Show Conveyor A->B Demo. Accept/reject the SHORT/MEDIUM/LONG generated geometry and inspect Conveyor Status for the HYPOTHESIS component-role summary. If role classification is wrong, lock explicit source-component roles next; do not wire chest automation, payload transport, persistence, or per-tile belt objects before this visual gate passes.
+**Resume Here:** keep the current physical worker/storage/machine runtime gate independent. Pull/rebuild/restart the client, enter the settlement, then use Con Revamp -> Development Tools -> Show Conveyor A->B Demo. The corrected gate is: only the custom authored conveyor assembly is visible, no sawmill leftovers appear, and SHORT/MEDIUM/LONG extend from that same source. Inspect Conveyor Status for the bounded authored-part STRETCH/fixed summary. Do not add support generation, chest automation, payload transport, persistence, or per-tile belt objects until this corrected visual source passes.
 
