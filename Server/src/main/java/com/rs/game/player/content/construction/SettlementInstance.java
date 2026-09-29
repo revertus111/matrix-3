@@ -777,6 +777,63 @@ public final class SettlementInstance {
         return true;
     }
 
+    public synchronized String clearPhysicalStorage(
+            int objectId, WorldTile source) {
+        if (!loaded || destroyed || source == null || !containsWorldTile(source)) {
+            return "Clear chest target must be inside the active settlement plot.";
+        }
+        SettlementPlacedPiece piece = findSavedPiece(objectId, source);
+        if (!isPhysicalStoragePiece(piece)) {
+            return "Clear chest target is not a persistent physical chest.";
+        }
+        SettlementStorageContainer container =
+                state.findStorageContainer(piece.getPieceId());
+        if (container == null) {
+            return "That physical storage container is unavailable.";
+        }
+
+        long cleared = container.clearItems();
+        releaseAllPhysicalStorageReservations();
+        SettlementStorageInterface.refreshOpenChest(player, piece.getPieceId());
+        if (debug != null) {
+            debug.record("storage#" + piece.getPieceId(),
+                    "Cleared physical chest items=" + cleared + ".",
+                    SettlementDebug.Category.STORAGE,
+                    SettlementDebug.Category.LOGISTICS);
+        }
+        return "Cleared chest#" + piece.getPieceId() + " physical items=" + cleared
+                + ". Storage mode/filter/access/priority preserved.";
+    }
+
+    public synchronized String clearAllPhysicalStorage() {
+        if (!loaded || destroyed) {
+            return "Physical storage clear unavailable; settlement runtime is not ready.";
+        }
+
+        int chests = 0;
+        long cleared = 0L;
+        for (SettlementStorageContainer container : state.snapshotStorageContainers()) {
+            if (container == null) {
+                continue;
+            }
+            chests++;
+            cleared += container.clearItems();
+            SettlementStorageInterface.refreshOpenChest(
+                    player, container.getPieceId());
+        }
+        releaseAllPhysicalStorageReservations();
+        if (debug != null) {
+            debug.record("storage",
+                    "Cleared ALL physical chest contents: chests=" + chests
+                            + ", items=" + cleared + ".",
+                    SettlementDebug.Category.STORAGE,
+                    SettlementDebug.Category.LOGISTICS);
+        }
+        return "Cleared all physical chest contents: " + cleared
+                + " item(s) across " + chests
+                + " chest(s). Policies/builds/machine buffers preserved.";
+    }
+
     public synchronized String configurePhysicalStorage(
             WorldTile source, String setting, String value) {
         if (!loaded || source == null || !containsWorldTile(source)) {
