@@ -139,6 +139,7 @@ public final class LiveModelEditorWindow {
     private final JButton freeCameraButton = rsButton("FREE");
     private final JButton snapButton = rsButton("SNAP OFF");
     private final JButton sourceAnimationButton = rsButton("SOURCE ANIM OFF");
+    private final JButton sourceAnimationTraceButton = rsButton("ANIM TRACE");
     private final JButton groupScaleButton = rsButton("GROUP SCALE OFF");
     private final JButton fitOneTileButton = rsButton("FIT 1 TILE");
     private final JSpinner moveSnapSpinner = spinner(16, 1, 512, 1);
@@ -619,8 +620,12 @@ public final class LiveModelEditorWindow {
         sourceAnimationButton.setToolTipText(
                 "Preview the source object's RuneScape animation on the edited assembly. "
                 + "Editing stays static when this is OFF.");
-        JPanel animationRow = actionRow(1);
+        sourceAnimationTraceButton.setToolTipText(
+                "Compare source sequence transform groups against mesh skin/face groups "
+                + "and textured faces; full trace prints to the client console.");
+        JPanel animationRow = actionRow(2);
         animationRow.add(sourceAnimationButton);
+        animationRow.add(sourceAnimationTraceButton);
         panel.add(animationRow);
         panel.add(Box.createVerticalStrut(6));
 
@@ -744,6 +749,8 @@ public final class LiveModelEditorWindow {
             syncControlState();
             statusLabel.setText(LiveModelEditorPreview.getSourceAnimationPreviewStatus());
         });
+        sourceAnimationTraceButton.addActionListener(e ->
+                statusLabel.setText(LiveModelEditorPreview.runSourceAnimationTrace()));
 
         rebuild.addActionListener(e -> initializeParts());
         isolateButton.addActionListener(e -> toggleIsolateSelection());
