@@ -1396,9 +1396,9 @@ Bundle 3.5C Explicit Logistics Control + Live Storage V1 gate — IMPLEMENTED / 
 - Regression: View Storage, Storage Settings, Close/reopen, Rally, Auto/Orders behavior, needs and persistence remain unchanged.
 
 Bundle 3.5D Storage Test UX + Chest Menu Cleanup gate — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-29)
-- Chest menu cleanup: right-click settlement chest 18804 with no worker selection. Expected canonical entries include one View Storage, one Storage Settings, Clear Chest, Remove, Examine and Walk here; duplicate native Open/View Storage and Saved Tile/Unsave Tile must not appear.
+- Chest menu cleanup: right-click settlement chest 18804 with no worker selection. Expected canonical entries include exactly one View Storage, one Storage Settings, Clear Chest, Remove, Examine and Walk here; duplicate native Open/View Storage and Saved Tile/Unsave Tile must not appear.
 - Selected-worker chest menu: with one or more committed workers, Take From Here and Deliver Here appear in addition to the cleaned normal storage entries; no duplicate View Storage/Open entries return.
-- Clear-one confirmation: choose Clear Chest once. Nothing is deleted. Reopen the SAME chest menu within 5 seconds; option must read Confirm Clear Chest. Confirming clears that chest's physical items only.
+- Clear-one action: choose Clear Chest once. That exact physical chest must clear immediately; no second confirmation is required for the single-chest developer/test reset.
 - Clear-one safety: after clear, the chest object remains placed and its Storage/Supply/Request/Buffer mode, priority, filters and Deposit/Withdraw settings remain unchanged.
 - Clear-one live UI: leave that exact chest interface open via another test path or reopen immediately after clear; visible contents/used slots must show empty without requiring settlement re-entry.
 - Clear-one reservation cleanup: have workers targeting the chest, clear it before pickup/deposit completion, and verify stale physical source/destination claims are released; workers may rescore/retry but no dupes/negative quantities/stuck reservation.
@@ -1406,6 +1406,7 @@ Bundle 3.5D Storage Test UX + Chest Menu Cleanup gate — IMPLEMENTED / NEEDS RU
 - Clear-all scope: all physical chest contents become empty. Chest builds, storage policies, machine input/output buffers, legacy SettlementResource counters, workers, buildings and rails must remain untouched.
 - Active-production note: workers are NOT paused by clear. If Process Wood/gathering remains enabled, legitimate refilling after the clear is expected; pause workers or disable jobs when testing the stable-empty state.
 - Debug integration: with Construction Debug Master + Storage/Logistics enabled, clear-one and clear-all emit concise events through the existing debug bus. With Master OFF, no debug spam is expected.
+- Worker Speech cadence: enable Master Debug + Worker Speech and let multiple workers process/haul for at least 20 seconds. Each worker may speak at most once every 2 seconds; console/buffer/export must still record every state transition without the speech throttle.
 - Regression: View Storage still opens the bank-shell chest; Storage Settings still opens/close/reopens; Remove still refuses a non-empty chest before clear and may remove it after it is empty.
 - Regression: existing 3.5C live-refresh, Take From Here, Deliver Here, Work Here, request/supply/buffer scoring and physical 1 Log -> 2 Planks loop remain functional.
 
