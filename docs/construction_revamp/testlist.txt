@@ -1531,3 +1531,17 @@ Live Model Editor — Conveyor Animation Path Diagnostics V1.1 (2026-09-29)
 [ ] Trace identifies objectAnimationIds, source models 49717/49718, sequence frame/load state, transformTypes, spatialGroups/otherGroups, raw textured faces/textures and per-part overlaps.
 [ ] Copy the full trace block back into the Construction workstream before another animation implementation patch.
 [ ] Do not retest SOURCE ANIM visually unless the trace points back to the sequence application path.
+
+Live Model Editor / ConveyorRun — Group-Aware Source Animation V1.2 (2026-09-29)
+[x] Trace confirmed object 46298 animation id 12394 and all 19 frame sets load.
+[x] Trace confirmed source sequence transform-group overlap and type-5/non-spatial group overlap on authored conveyor part 8.
+[x] OpenGL type 5 is verified-static as face-alpha animation.
+[x] sourceAnimatedCopy now uses Model.method1364 group-aware skeleton target routing instead of non-grouped Model.method1367.
+[x] Editor and ConveyorRun share the corrected helper; no second animation implementation was added.
+[ ] Pull/rebuild/restart Client and load the saved 46298 conveyor project.
+[ ] With SOURCE ANIM OFF, authored conveyor remains static and editor transforms/picking remain normal.
+[ ] Toggle SOURCE ANIM ON. Confirm visible source animation now occurs; note exactly which authored conveyor geometry changes.
+[ ] Toggle OFF again. The model immediately returns to the unchanged authored pose.
+[ ] Show Conveyor A->B Demo. SHORT/MEDIUM/LONG preserve their generated lengths while inheriting the same visible source animation.
+[ ] Watch multiple loops for cumulative drift, progressive scale/offset changes, exploding geometry or stale alpha state.
+[ ] If still visually static, do not test random animation ids; compare the trace's animated source parts against the current authored parts 4,5,8,16,17,18,19,21.
