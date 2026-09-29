@@ -1830,3 +1830,11 @@
 - Candidate/assembly/saved nested lists also disable horizontal scrolling so long rows cannot widen the Studio.
 - Candidate preview status is shortened on-screen to ID/state/world tile; full ObjectLabPreview detail remains available as a tooltip.
 - Validation/status output now uses wrapped text areas instead of long single-line/HTML labels that could force the panel wider than the dock.
+
+
+2026-09-29 - Bundle 3.5D runtime regression correction
+- Runtime screenshot proved the chest menu still showed three mirrored View Storage entries plus Saved Tile/Unsave Tile. Root cause: hasMenuText(...) compared Matrix3's target-name field (Treasure chest) instead of its action-text field (View Storage), so duplicate detection never succeeded across repeated native object-option observations.
+- Corrected menu duplicate detection to use Class572_Sub12_Sub10.aString11393 (action text). One canonical View Storage entry now owns settlement chest access, and the existing chest-context guard can suppress Saved Tile/Unsave Tile reliably.
+- Simplified single-chest Clear Chest to a direct developer/test reset. Clear All Physical Storage keeps the stronger second-click confirmation. Server scope/policy/reservation/live-refresh safety is unchanged.
+- Worker Debug overhead ForceTalk is now throttled per worker to one line every 2000 ms so readable speech is not overwritten by rapid state transitions. Console event recording, in-memory buffering and export remain full-fidelity and unthrottled.
+- Status remains IMPLEMENTED / NEEDS RUNTIME TEST.
