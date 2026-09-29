@@ -14,10 +14,9 @@ import java.util.Map;
  *
  * V0 deliberately owns no settlement state, collision, scene registration,
  * inventories, or transport logic. One ConveyorRun produces one generated
- * renderer Model from the canonical 46298 / 49717+49718 source geometry.
- *
- * Connected-component role classification is a HYPOTHESIS until runtime
- * inspection confirms the exact authored belt/support/detail submeshes.
+ * renderer Model from the canonical custom conveyor assembly authored from
+ * object 46298 / models 49717+49718. The untouched sawmill source components
+ * are excluded before procedural run generation.
  */
 public final class ConveyorRunPreview {
 
@@ -25,10 +24,26 @@ public final class ConveyorRunPreview {
     private static final int[] SOURCE_MODEL_IDS = { 49717, 49718 };
 
     private static final int TILE_UNITS = 512;
-    private static final double MAX_SUPPORT_SPAN_TILES = 3.0;
     private static final double STRETCH_MIN_LONG_FRACTION = 0.60;
-    private static final double SUPPORT_MAX_LONG_FRACTION = 0.45;
-    private static final double SUPPORT_MIN_HEIGHT_FRACTION = 0.30;
+
+    /*
+     * Canonical authored conveyor assembly from the saved Matrix3 Live Model
+     * project object_46298_model_49717(1).json.
+     *
+     * The source object contains the entire sawmill. Only these non-default
+     * edited connected components were moved/scaled into the custom conveyor.
+     * Runtime must never render the untouched sawmill components.
+     */
+    private static final AuthoredPart[] AUTHORED_PARTS = {
+            new AuthoredPart(4, 45, 100, 100, -744, 0, -1140, 0),
+            new AuthoredPart(5, 45, 100, 100, -744, 0, -1140, 0),
+            new AuthoredPart(8, 100, 100, 100, -36, 0, -1140, 0),
+            new AuthoredPart(16, 100, 100, 100, -36, 0, -1140, 0),
+            new AuthoredPart(17, 100, 100, 100, -36, 0, -1140, 0),
+            new AuthoredPart(18, 100, 100, 100, -36, 0, -1140, 0),
+            new AuthoredPart(19, 100, 100, 100, -36, 0, -1140, 0),
+            new AuthoredPart(21, 100, 100, 100, -36, 0, -1140, 0)
+    };
 
     private static final int BASE_MODEL_FLAGS = 2048;
     private static final int TRANSFORM_FLAGS = 0x0f;
@@ -86,7 +101,7 @@ public final class ConveyorRunPreview {
         revision++;
         invalidateModels();
         status = "READY ConveyorRun V0: short=2t medium=5t long=9t; "
-                + "source=46298 models=49717/49718";
+                + "source=authored conveyor assembly (46298 / 49717+49718)";
         return status;
     }
 
@@ -187,19 +202,45 @@ public final class ConveyorRunPreview {
     }
 
     private static Generation generateRaw(ObjectDefinitions definition, ConveyorRun run) {
-        Class159 pristine = decodeSource(definition);
         Class159 working = decodeSource(definition);
-        if (pristine == null || working == null
-                || pristine.anInt1791 <= 0 || pristine.anInt1778 <= 0) {
+        if (working == null || working.anInt1791 <= 0 || working.anInt1778 <= 0) {
             status = "SOURCE decode failed for 49717/49718";
             return null;
         }
 
-        Bounds all = bounds(pristine);
-        Component[] components = detectComponents(pristine);
-        populateComponentBounds(pristine, components);
-        if (all == null || components.length == 0) {
+        Component[] components = detectComponents(working);
+        if (components.length == 0) {
             status = "SOURCE connected-component analysis failed";
+            return null;
+        }
+
+        for (AuthoredPart authored : AUTHORED_PARTS) {
+            if (authored.index < 0 || authored.index >= components.length) {
+                status = "SOURCE authored component " + authored.index
+                        + " unavailable; detected=" + components.length;
+                return null;
+            }
+        }
+
+        /*
+         * Reproduce the user's saved Live Model Editor assembly first.
+         * Everything not in AUTHORED_PARTS is hidden before any procedural
+         * run-length work, so the original sawmill can never appear.
+         */
+        ensureFaceAlpha(working);
+        for (int i = 0; i < components.length; i++) {
+            AuthoredPart authored = authoredPart(i);
+            if (authored == null) {
+                hideFaces(working, components[i]);
+            } else {
+                applyAuthoredTransform(working, components[i], authored);
+            }
+        }
+
+        populateComponentBounds(working, components);
+        Bounds all = boundsForAuthoredParts(working, components);
+        if (all == null) {
+            status = "SOURCE authored conveyor bounds unavailable";
             return null;
         }
 
@@ -212,93 +253,106 @@ public final class ConveyorRunPreview {
         double stretchFactor = targetLength / sourceLength;
 
         ArrayList<Component> stretch = new ArrayList<Component>();
-        ArrayList<Component> support = new ArrayList<Component>();
         ArrayList<Component> positioned = new ArrayList<Component>();
 
-        double fullHeight = Math.max(1.0, all.sizeY);
-        for (Component component : components) {
+        for (AuthoredPart authored : AUTHORED_PARTS) {
+            Component component = components[authored.index];
             double longSize = axisX ? component.sizeX : component.sizeZ;
             double longFraction = longSize / sourceLength;
             if (longFraction >= STRETCH_MIN_LONG_FRACTION) {
                 stretch.add(component);
-                continue;
-            }
-
-            boolean supportCandidate = component.sizeY >= fullHeight * SUPPORT_MIN_HEIGHT_FRACTION
-                    && longFraction <= SUPPORT_MAX_LONG_FRACTION;
-            if (supportCandidate) {
-                support.add(component);
             } else {
                 positioned.add(component);
             }
         }
 
-        boolean supportFallback = false;
-        if (support.isEmpty() && !positioned.isEmpty()) {
-            Component best = positioned.get(0);
-            for (Component candidate : positioned) {
-                if (candidate.sizeY > best.sizeY) best = candidate;
-            }
-            positioned.remove(best);
-            support.add(best);
-            supportFallback = true;
+        /*
+         * If the authored source does not expose an obvious long-span mesh,
+         * fail visibly rather than stretching every detail as a fallback.
+         */
+        if (stretch.isEmpty()) {
+            status = "SOURCE authored conveyor has no stretch candidate; "
+                    + "inspect authored component bounds";
+            return null;
         }
 
-        ensureFaceAlpha(working);
         for (Component component : stretch) {
             scaleComponentAxis(working, component, axisX, sourceCenter, stretchFactor);
-        }
-        for (Component component : support) {
-            hideFaces(working, component);
         }
         for (Component component : positioned) {
             remapComponentPosition(working, component, axisX,
                     sourceMin, sourceLength, sourceCenter, targetLength);
         }
 
-        ArrayList<Class159> generated = new ArrayList<Class159>();
-        generated.add(working);
-
-        int interiorSupports = Math.max(0,
-                (int) Math.ceil(run.lengthTiles() / MAX_SUPPORT_SPAN_TILES) - 1);
-        int supportStations = support.isEmpty() ? 0 : interiorSupports + 2;
-        if (!support.isEmpty()) {
-            double groupCenter = 0.0;
-            for (Component component : support) {
-                groupCenter += axisX ? component.centerX : component.centerZ;
-            }
-            groupCenter /= support.size();
-
-            for (int station = 0; station < supportStations; station++) {
-                double fraction = supportStations == 1
-                        ? 0.5 : station / (double) (supportStations - 1);
-                double targetCenter = sourceCenter + (fraction - 0.5) * targetLength;
-                int shift = (int) Math.round(targetCenter - groupCenter);
-                for (Component component : support) {
-                    Class159 copy = componentOnlyTranslatedRaw(
-                            pristine, component, axisX, shift);
-                    if (copy != null) generated.add(copy);
-                }
-            }
-        }
-
-        Class159 raw;
-        if (generated.size() == 1) {
-            raw = generated.get(0);
-        } else {
-            Class159[] raws = generated.toArray(new Class159[generated.size()]);
-            raw = new Class159(raws, raws.length);
-        }
-
-        String summary = "HYPOTHESIS axis=" + (axisX ? "X" : "Z")
-                + " components=" + components.length
+        String summary = "AUTHORED sourceParts=4,5,8,16,17,18,19,21"
+                + " axis=" + (axisX ? "X" : "Z")
                 + " stretch=" + stretch.size()
-                + " supportParts=" + support.size()
                 + " fixed=" + positioned.size()
-                + " supportStations(short/med/long vary)"
-                + (supportFallback ? " supportFallback=YES" : "")
+                + " support=DEFERRED"
                 + " sourceSpan=" + Math.round(sourceLength);
-        return new Generation(raw, axisX, summary);
+        return new Generation(working, axisX, summary);
+    }
+
+    private static AuthoredPart authoredPart(int componentIndex) {
+        for (AuthoredPart authored : AUTHORED_PARTS) {
+            if (authored.index == componentIndex) return authored;
+        }
+        return null;
+    }
+
+    private static void applyAuthoredTransform(Class159 raw, Component component,
+            AuthoredPart state) {
+        if (raw == null || component == null || component.vertices.length == 0) return;
+
+        long cx = 0L;
+        long cy = 0L;
+        long cz = 0L;
+        for (int vertex : component.vertices) {
+            cx += raw.anIntArray1782[vertex];
+            cy += raw.anIntArray1777[vertex];
+            cz += raw.anIntArray1797[vertex];
+        }
+        cx /= component.vertices.length;
+        cy /= component.vertices.length;
+        cz /= component.vertices.length;
+
+        double radians = Math.toRadians(state.yaw);
+        double sin = Math.sin(radians);
+        double cos = Math.cos(radians);
+        for (int vertex : component.vertices) {
+            double x = (raw.anIntArray1782[vertex] - cx) * state.scaleX / 100.0;
+            double y = (raw.anIntArray1777[vertex] - cy) * state.scaleY / 100.0;
+            double z = (raw.anIntArray1797[vertex] - cz) * state.scaleZ / 100.0;
+            double rx = x * cos + z * sin;
+            double rz = z * cos - x * sin;
+            raw.anIntArray1782[vertex] = (int) Math.round(cx + rx + state.moveX);
+            raw.anIntArray1777[vertex] = (int) Math.round(cy + y + state.moveY);
+            raw.anIntArray1797[vertex] = (int) Math.round(cz + rz + state.moveZ);
+        }
+    }
+
+    private static Bounds boundsForAuthoredParts(Class159 raw, Component[] components) {
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        boolean found = false;
+
+        for (AuthoredPart authored : AUTHORED_PARTS) {
+            Component component = components[authored.index];
+            for (int vertex : component.vertices) {
+                int x = raw.anIntArray1782[vertex];
+                int y = raw.anIntArray1777[vertex];
+                int z = raw.anIntArray1797[vertex];
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+                if (z < minZ) minZ = z;
+                if (z > maxZ) maxZ = z;
+                found = true;
+            }
+        }
+
+        return found ? new Bounds(minX, minY, minZ, maxX, maxY, maxZ) : null;
     }
 
     private static Class159 decodeSource(ObjectDefinitions definition) {
@@ -696,6 +750,29 @@ public final class ConveyorRunPreview {
         int headingYaw() {
             double angle = Math.atan2(endY - startY, endX - startX);
             return ((int) Math.round(angle * 16384.0 / (Math.PI * 2.0))) & 0x3fff;
+        }
+    }
+
+    private static final class AuthoredPart {
+        final int index;
+        final int scaleX;
+        final int scaleY;
+        final int scaleZ;
+        final int moveX;
+        final int moveY;
+        final int moveZ;
+        final int yaw;
+
+        AuthoredPart(int index, int scaleX, int scaleY, int scaleZ,
+                int moveX, int moveY, int moveZ, int yaw) {
+            this.index = index;
+            this.scaleX = scaleX;
+            this.scaleY = scaleY;
+            this.scaleZ = scaleZ;
+            this.moveX = moveX;
+            this.moveY = moveY;
+            this.moveZ = moveZ;
+            this.yaw = yaw;
         }
     }
 
