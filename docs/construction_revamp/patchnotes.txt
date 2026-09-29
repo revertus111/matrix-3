@@ -1957,3 +1957,12 @@
 - Fixed Clear Persistent Conveyors to emit the explicit client CLEAR signal after server state is emptied instead of encoding zero runs as an empty BEGIN/END snapshot.
 - Server persistence ownership is unchanged; create/restore sync continues to use BEGIN/RUN/END snapshots.
 - Status: IMPLEMENTED / NEEDS RUNTIME RETEST.
+
+2026-09-29 - Conveyor Gameplay V1.1 moving Log 1511 payload proof
+- Runtime accepted the explicit persistent CLEAR correction: visible persistent ConveyorRuns now clear correctly.
+- Added one client-rendered real item model (Log item 1511) to every server-synced persistent ConveyorRun.
+- Payload position is continuous A->B interpolation at 1.25 tiles/second using render-time nanosecond progress, so motion is smooth rather than tile-hopping.
+- Reuses Matrix3 ItemDefinitions.method7526(...) through the already-registered Class639_Sub5 item-definition owner; no fake log mesh/model id was introduced.
+- Payload follows the generated run's horizontal deck height and loops for this motion proof.
+- No chest inventory consumption, transfer, spacing, backpressure, machine I/O, or persistent payload state added yet.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
