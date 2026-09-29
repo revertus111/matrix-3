@@ -2129,3 +2129,11 @@ Runtime-test the Bundle 1.4 gather/haul vertical slice in one consolidated sessi
 - Clear operations do not pause workers. If production remains active, workers may legitimately refill an emptied chest immediately; pause/disable relevant jobs when a stable empty-state test is required.
 - Next gate: confirm menu de-duplication, clear-one confirmation/policy preservation/open-bank refresh, clear-all scope/reservation cleanup, then continue the existing 3.5C explicit-logistics/runtime-debug acceptance session.
 
+## Rail Studio viewport-width ownership correction — 2026-09-29
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under AAA.
+- Runtime screenshot proved the prior approach only hid the horizontal scrollbar; oversized child preferred widths still caused right-edge clipping.
+- verified-static cause: the Studio root was a normal BoxLayout JPanel inside JScrollPane, so long labels/status content could preserve a preferred width larger than the viewport.
+- Correction: the root now implements Scrollable with getScrollableTracksViewportWidth() = true. Cards therefore inherit the actual dock width; nested list scroll panes also suppress horizontal scrolling.
+- Long candidate/debug/validation text no longer owns layout width: the candidate status is concise with full detail in a tooltip, and Validation/status content uses wrapped text areas.
+- Font sizing and current narrow-safe control layout remain unchanged.
+- Resume Here: runtime-check the Studio once at narrow and wide console widths. If clipping remains, inspect only the specific child that violates width tracking; do not shrink fonts again.
