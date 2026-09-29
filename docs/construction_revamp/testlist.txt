@@ -1588,3 +1588,23 @@ Live Model Editor / ConveyorRun — Visual Role Cleanup V1 (2026-09-29)
 [ ] REPEAT_DETAIL copies stay fixed-size and appear at roughly one-tile spacing as length grows.
 [ ] SUPPORT copies stay fixed-size; 2t has no interior support, 5t has one, and 9t has two interior support stations under the 3-tile max-span rule.
 [ ] Hide Conveyor Demo removes all three runs; normal editor/build ghost/world rendering remains unaffected.
+
+Conveyor Gameplay V1 — Persistent ConveyorRun gate (2026-09-29)
+[x] One server-owned SettlementConveyorRun stores stable id + plot-relative A/B endpoints + plane; no per-tile belt objects are persisted.
+[x] SettlementState schema v14 initializes old saves with an empty conveyor list and recovers next run id from live saved runs.
+[x] SettlementInstance projects saved plot coordinates to runtime world coordinates only while the instance is active.
+[x] Client restore uses staged BEGIN/RUN/END snapshot sync and atomically swaps the persistent render list.
+[x] Settlement leave/logout/teleport clears transient persistent conveyor visuals from the client.
+[x] Development Tools create/clear controls call the real server owner through the existing console-command bridge.
+[ ] Pull latest main; Eclipse clean/build both Server and Client with Java 8.
+[ ] Enter the settlement and click Create Persistent Conveyor once. One 5-tile conveyor appears near the player and chat reports Created ConveyorRun #<id>.
+[ ] Conveyor Status reports persistent=1. The run is one continuous generated visual; no chain of per-tile world objects appears.
+[ ] Exit and re-enter the settlement. The same saved run automatically reappears without clicking the create button again.
+[ ] Fully relog, re-enter the settlement and confirm the run still reappears with no duplicate copy.
+[ ] Create a second persistent conveyor. Status reports persistent=2 and both remain visible after exit/re-entry.
+[ ] Click Hide Conveyor Demo if a visual demo is active; persistent conveyors remain visible because demo visibility is independent.
+[ ] Click Clear Persistent Conveyors. All persistent runs disappear together and chat reports the removed run count.
+[ ] Exit/re-enter after clear. No persistent conveyor returns.
+[ ] Old settlement content regression: existing walls/floors/chests/workstations/rails/workers and physical storage remain unchanged.
+[ ] Renderer regression: Show Conveyor A->B Demo still shows SHORT/MEDIUM/LONG; Hide Conveyor Demo removes only those demo runs.
+[ ] If all checks pass, mark persistence accepted and advance to smooth Log 1511 payload progress on a persistent run.
