@@ -80,6 +80,8 @@ public final class ConstructionRadialSelection {
     private static final int TAKE_FROM_HERE_MENU_ACTION = 1537;
     private static final int DELIVER_HERE_MENU_ACTION = 1538;
     private static final int WORK_HERE_MENU_ACTION = 1539;
+    private static final int CLEAR_STORAGE_MENU_ACTION = 1540;
+    private static final long CLEAR_STORAGE_CONFIRM_WINDOW_MS = 5000L;
     private static final int MATRIX3_FIRST_OBJECT_ACTION = 3;
     private static final int MATRIX3_FIRST_NPC_ACTION = 9;
     private static final int STARTER_TREE_OBJECT_ID = 1276;
@@ -115,6 +117,9 @@ public final class ConstructionRadialSelection {
     private static volatile float liveRadiusTiles = MIN_RADIUS_TILES;
     private static volatile float liveDirectionWorldX;
     private static volatile float liveDirectionWorldY;
+
+    private static volatile long pendingClearStorageUid = -1L;
+    private static volatile long pendingClearStorageUntilMillis;
 
     private static volatile int committedStartWorldX = -1;
     private static volatile int committedStartWorldY = -1;
@@ -487,6 +492,25 @@ public final class ConstructionRadialSelection {
      * SettlementControler. No owner/dev command is involved in physical chest
      * access.
      */
+    static boolean shouldSuppressSettlementStorageNativeEntry(
+            String actionText, int sourceAction, long targetUid) {
+        if (!ConstructionBuildCamera.isSettlementAutoMode()
+                || actionText == null || Class25.aBool165) {
+            return false;
+        }
+        int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
+        if (!isObjectMenuSourceAction(normalizedAction)) {
+            return false;
+        }
+        int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
+        if (objectId != BASIC_STORAGE_CHEST_OBJECT_ID) {
+            return false;
+        }
+        String normalized = actionText.trim();
+        return "Open".equalsIgnoreCase(normalized)
+                || "View Storage".equalsIgnoreCase(normalized);
+    }
+
     static void mirrorStorageViewEntry(String targetName, int sourceAction,
             long targetUid, int localX, int localY) {
         if (!ConstructionBuildCamera.isSettlementAutoMode()
@@ -515,6 +539,18 @@ public final class ConstructionRadialSelection {
                         STORAGE_SETTINGS_MENU_ACTION, -1, targetUid, localX, localY,
                         true, false, 0L, true);
                 Class412.method5075(settings, 722976984);
+            }
+            long now = System.currentTimeMillis();
+            boolean confirmClear = pendingClearStorageUid == targetUid
+                    && now <= pendingClearStorageUntilMillis;
+            if (!hasMenuAction(CLEAR_STORAGE_MENU_ACTION)) {
+                Class572_Sub12_Sub10 clear = new Class572_Sub12_Sub10(
+                        confirmClear ? "Confirm Clear Chest" : "Clear Chest",
+                        target,
+                        -646491435 * client.anInt8751,
+                        CLEAR_STORAGE_MENU_ACTION, -1, targetUid, localX, localY,
+                        true, false, 0L, true);
+                Class412.method5075(clear, 722976984);
             }
             if (isRtsWorldInputAvailable() && committedWorkerNpcIndexes.length > 0) {
                 if (!hasMenuAction(TAKE_FROM_HERE_MENU_ACTION)) {
@@ -563,6 +599,12 @@ public final class ConstructionRadialSelection {
         }
         int normalizedAction = sourceAction >= 2000 ? sourceAction - 2000 : sourceAction;
         if (normalizedAction != MATRIX3_TILE_ACTION) {
+            return;
+        }
+        if (hasMenuText("View Storage")
+                || hasMenuText("Storage Settings")
+                || hasMenuText("Clear Chest")
+                || hasMenuText("Confirm Clear Chest")) {
             return;
         }
         if (!hasMenuAction(SAVE_BUILD_TILE_MENU_ACTION)) {
@@ -1914,6 +1956,34 @@ public final class ConstructionRadialSelection {
             }
             return true;
         }
+        if (normalizedAction == CLEAR_STORAGE_MENU_ACTION) {
+            WorldPoint point = resolveWorldPoint(localX, localY);
+            if (point == null) {
+                return true;
+            }
+            long now = System.currentTimeMillis();
+            if (pendingClearStorageUid != targetUid
+                    || now > pendingClearStorageUntilMillis) {
+                pendingClearStorageUid = targetUid;
+                pendingClearStorageUntilMillis =
+                        now + CLEAR_STORAGE_CONFIRM_WINDOW_MS;
+                lastEventState = "Clear Chest armed for 5 seconds; right-click the same chest and choose Confirm Clear Chest.";
+                return true;
+            }
+
+            pendingClearStorageUid = -1L;
+            pendingClearStorageUntilMillis = 0L;
+            int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
+            String error = ClientConsoleBridge.queueConsoleCommand(
+                    "itembrowser settlement storageclearone "
+                    + objectId + " " + point.worldX + " " + point.worldY
+                    + " " + point.plane + " confirm");
+            lastEventState = error == null
+                    ? "Physical chest clear queued."
+                    : "Physical chest clear failed: " + error;
+            return true;
+        }
+
         if (normalizedAction == TAKE_FROM_HERE_MENU_ACTION
                 || normalizedAction == DELIVER_HERE_MENU_ACTION
                 || normalizedAction == WORK_HERE_MENU_ACTION) {
