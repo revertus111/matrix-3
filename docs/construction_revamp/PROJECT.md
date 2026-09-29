@@ -2373,12 +2373,38 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ### Conveyor Gameplay V1.2 — Live Payload Tuner — 2026-09-29
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TUNING** under SAP AAA.
-- Runtime evidence: the real Log 1511 model is visible and moving, but the initial hardcoded transform is significantly offset from the accepted conveyor visual. The user explicitly chose a self-service tuning workflow rather than repeated code patches for visual alignment.
-- Con Revamp now exposes a live **Conveyor Payload Tuner** with Item ID, Forward, Side, Height, Scale, Pitch, Yaw, Roll and Speed.
-- Forward/Side use model units where 512 = one tile and are relative to the run direction. Yaw is applied relative to the run heading, so a saved visual preset is reusable across differently oriented straight conveyors.
-- Tuning is client-side presentation only. Changing Item ID or Scale invalidates/rebuilds the payload model cache; offsets/rotation/speed update live without rebuilding ConveyorRun geometry.
-- **Save Payload Preset** writes `data/construction/conveyor_payload_tuning.properties`; ConveyorRunPreview auto-loads the file on client startup. Reload and unsaved Reset Defaults are available from the same card.
-- This saved file becomes the accepted payload visual baseline once the user tunes Log 1511 and confirms it survives a client restart. Do not replace it with new hardcoded alignment guesses after acceptance.
-- No chest/machine transfer, item consumption, spacing/backpressure or persistent payload progress is added by this tool.
-- **Resume Here (conveyor):** pull/build/restart Client, use the live Payload Tuner until Log 1511 is centered and correctly oriented/raised on the belt, click Save Payload Preset, then restart once to verify auto-load. After that acceptance, proceed directly to multi-payload spacing + stopped-end/backpressure.
+- Status: **SUPERSEDED BY V1.3 VISUAL PROFILES**.
+- Runtime evidence: the real Log 1511 model is visible but the initial hardcoded transform is significantly offset from the accepted conveyor visual.
+- The first tuner proved live Forward/Side/Height/Scale/Pitch/Yaw/Roll editing, but its single saved preset and payload-owned Speed field were rejected as the long-term design.
+- User decision: **payloads own presentation only; conveyors/belt tiers own speed.**
+- Legacy `data/construction/conveyor_payload_tuning.properties` remains migration input only so an already-tuned Log preset can be preserved.
+
+
+### Conveyor Gameplay V1.3 — Payload Visual Profiles — 2026-09-29
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- The moving Log 1511 is now explicitly just a test payload. Conveyor rendering resolves visual presentation for **any real item id**.
+- Added client-side `ConveyorPayloadVisualProfiles` with locked resolution order:
+  1. exact **Item Override**;
+  2. saved **Category Profile**;
+  3. **Global Default**.
+- Visual profiles contain only **Forward, Side, Height, Scale, Pitch, Yaw and Roll**. They contain no speed.
+- ConveyorRun retains movement-speed ownership. The current 1.25 tiles/sec value is a temporary belt-owned proof constant until conveyor tiers/runtime speed are introduced; changing item/category presentation never changes travel speed.
+- Initial categories: LOGS, PLANKS, ORES, BARS, STONE, FISH, FOOD, HERBS, SEEDS, POTIONS, WEAPONS, ARMOUR, TOOLS, RUNES, GEMS, BONES, CLOTH and MISC.
+- Category detection uses the real Matrix3 item name as a convenience. Manual `item -> category` assignment is authoritative for ambiguous/odd items and survives restart.
+- Con Revamp now exposes **Conveyor Payload Visual Profiles**:
+  - live Test Item ID;
+  - category selector;
+  - live Forward/Side/Height/Scale/Pitch/Yaw/Roll;
+  - Load Selected Category;
+  - Save Category;
+  - Save Item Override / Remove Item Override;
+  - Assign Item -> Category / Use Auto Category;
+  - Save Global Default;
+  - Reload Profiles / Reset To Resolved / Profile Status.
+- Category saving and item-category assignment are intentionally separate operations: changing a category look does not silently reclassify an item.
+- Profiles persist to `data/construction/conveyor_payload_profiles.properties`.
+- Backward compatibility: if the new profile file does not exist but the old single-preset tuning file does, its transform is imported as the LOGS category profile and item 1511 is assigned to LOGS. Legacy Speed is ignored.
+- Forward/Side offsets and Yaw remain run-relative, so the same category/item profile can be reused on conveyors with different world headings.
+- No server persistence schema, inventory ownership, item consumption, spacing/backpressure, machine I/O or physical chest transfer changed.
+- **Resume Here (conveyor):** pull/build/restart Client. Use item 1511 to tune/save a LOGS category profile, then switch Test Item ID to another log and confirm it inherits CATEGORY LOGS without an exact override. Save one deliberately different Item Override and verify resolution changes to ITEM <id>; remove it and verify category inheritance returns. Restart once and confirm profiles + manual assignments persist. After acceptance, proceed to multi-payload spacing + stopped-end/backpressure.
