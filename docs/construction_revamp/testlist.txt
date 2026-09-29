@@ -1648,18 +1648,40 @@ Conveyor Gameplay V1.1 — smooth Log 1511 payload proof (2026-09-29)
 [ ] Regression: RTS camera, normal scene rendering, Live Model Editor and Construction ghost remain stable.
 [ ] After acceptance, advance to payload spacing + stopped-end/backpressure behavior before physical chest transfer.
 
-Conveyor Payload Tuner V1 — alignment acceptance (2026-09-29)
+Conveyor Payload Tuner V1 — HISTORICAL / SUPERSEDED BY VISUAL PROFILES V2 (2026-09-29)
 [x] Runtime screenshot confirms Log 1511 renders, but the initial hardcoded transform is not aligned to the conveyor.
-[x] Con Revamp exposes live Item ID, Forward, Side, Height, Scale, Pitch, Yaw, Roll and Speed controls.
+[-] Historical V1 exposed one global Item ID/transform/Speed preset; V2 removes payload-owned Speed and adds profile inheritance.
 [x] Forward/Side and Yaw are relative to ConveyorRun direction rather than fixed world axes.
-[x] Save persists to data/construction/conveyor_payload_tuning.properties and startup auto-loads the saved preset.
+[-] Historical V1 save file is now import-only; V2 persists data/construction/conveyor_payload_profiles.properties.
 [x] Reload Saved Preset and Reset Defaults do not mutate server settlement state.
 [ ] Pull/build/restart Client and enter a settlement with one persistent conveyor.
 [ ] Change Forward/Side/Height and confirm the moving payload updates live without client restart.
 [ ] Change Scale and Pitch/Yaw/Roll and confirm size/orientation update live.
-[ ] Change Speed and confirm travel speed updates live.
-[ ] Tune Log 1511 so it sits centered on the belt at an acceptable height/orientation, then click Save Payload Preset.
-[ ] Restart Client, restore/create a persistent conveyor, and confirm the saved transform loads automatically with no retuning.
+[-] Removed by user decision: payload visual profiles do not own speed; conveyor/belt runtime owns speed.
+[-] Superseded: tune Log 1511 and save it as LOGS category or an exact item override through Visual Profiles V2.
+[-] Superseded by V2 profile persistence/restart gate below.
 [ ] Create a conveyor with a different heading and confirm the same saved preset remains centered because offsets/rotation are run-relative.
 [ ] Clear Persistent Conveyors; payload disappears with its owning run.
 [ ] Once accepted, treat the saved payload preset as the visual baseline and continue to multi-payload spacing/backpressure.
+
+Conveyor Payload Visual Profiles V2 — category/item inheritance gate (2026-09-29)
+[x] verified-static: resolution order is exact Item Override -> Category Profile -> Global Default.
+[x] verified-static: visual profiles contain Forward/Side/Height/Scale/Pitch/Yaw/Roll only; no speed field is stored.
+[x] verified-static: current proof travel speed remains ConveyorRun-owned and independent of item/category visual profile.
+[x] verified-static: real item name can auto-select a category; saved manual item-category assignment takes precedence.
+[x] verified-static: category profile saving does not silently assign/reclassify the current item.
+[x] verified-static: new profile store is data/construction/conveyor_payload_profiles.properties; old single-preset file is import-only and ignores legacy speed.
+[ ] Pull/build/restart Client; no Server restart is required for this client-side profile patch.
+[ ] Enter settlement with one persistent conveyor. Test Item ID 1511 renders and Forward/Side/Height/Scale/Pitch/Yaw/Roll update live.
+[ ] Select LOGS, tune 1511 correctly, click Save Category. Profile Status reports category=LOGS and source=CATEGORY LOGS once preview is reset/resolved.
+[ ] Change Test Item ID to a second log item (for example Oak logs). It inherits CATEGORY LOGS without creating an exact Item Override.
+[ ] Save a visibly different Item Override for that second item. Profile Status changes source to ITEM <id>, and only that item uses the override.
+[ ] Remove Item Override. The item immediately falls back to CATEGORY LOGS.
+[ ] Pick an ambiguous/misc item, Assign Item -> Category, restart Client, and confirm the manual category assignment persists.
+[ ] Click Use Auto Category and confirm the explicit assignment is removed and automatic name classification resumes.
+[ ] Save Global Default, then inspect an item/category with no explicit profile and confirm source=GLOBAL.
+[ ] Confirm no Speed field exists anywhere in the visual-profile UI and changing item/category profiles does not change belt travel speed.
+[ ] Restart Client and confirm saved Global/Category/Item profiles and manual category assignments reload from conveyor_payload_profiles.properties.
+[ ] Different conveyor headings keep the same tuned centering/orientation because Forward/Side/Yaw are run-relative.
+[ ] Clear Persistent Conveyors; payload visuals disappear with their owning runs.
+[ ] After acceptance, advance to multiple real payloads + spacing + stopped-end/backpressure.
