@@ -27,6 +27,13 @@ public final class SettlementControler extends Controller {
     }
 
     @Override
+    public void process() {
+        if (instance != null) {
+            instance.processGameTick();
+        }
+    }
+
+    @Override
     public boolean checkWalkStep(int lastX, int lastY, int nextX, int nextY) {
         if (instance == null) {
             return true;
