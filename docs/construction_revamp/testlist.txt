@@ -1647,3 +1647,19 @@ Conveyor Gameplay V1.1 — smooth Log 1511 payload proof (2026-09-29)
 [ ] Show Conveyor A->B Demo; demo runs do not gain Log 1511 payloads.
 [ ] Regression: RTS camera, normal scene rendering, Live Model Editor and Construction ghost remain stable.
 [ ] After acceptance, advance to payload spacing + stopped-end/backpressure behavior before physical chest transfer.
+
+Conveyor Payload Tuner V1 — alignment acceptance (2026-09-29)
+[x] Runtime screenshot confirms Log 1511 renders, but the initial hardcoded transform is not aligned to the conveyor.
+[x] Con Revamp exposes live Item ID, Forward, Side, Height, Scale, Pitch, Yaw, Roll and Speed controls.
+[x] Forward/Side and Yaw are relative to ConveyorRun direction rather than fixed world axes.
+[x] Save persists to data/construction/conveyor_payload_tuning.properties and startup auto-loads the saved preset.
+[x] Reload Saved Preset and Reset Defaults do not mutate server settlement state.
+[ ] Pull/build/restart Client and enter a settlement with one persistent conveyor.
+[ ] Change Forward/Side/Height and confirm the moving payload updates live without client restart.
+[ ] Change Scale and Pitch/Yaw/Roll and confirm size/orientation update live.
+[ ] Change Speed and confirm travel speed updates live.
+[ ] Tune Log 1511 so it sits centered on the belt at an acceptable height/orientation, then click Save Payload Preset.
+[ ] Restart Client, restore/create a persistent conveyor, and confirm the saved transform loads automatically with no retuning.
+[ ] Create a conveyor with a different heading and confirm the same saved preset remains centered because offsets/rotation are run-relative.
+[ ] Clear Persistent Conveyors; payload disappears with its owning run.
+[ ] Once accepted, treat the saved payload preset as the visual baseline and continue to multi-payload spacing/backpressure.
