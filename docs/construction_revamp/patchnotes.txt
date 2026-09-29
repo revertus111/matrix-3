@@ -1984,3 +1984,13 @@
 - Con Revamp tuner now supports Save Category, Save/Remove Item Override, explicit item-category assignment, Global Default, profile reload/reset/status and live arbitrary-item preview.
 - New store: data/construction/conveyor_payload_profiles.properties. Legacy conveyor_payload_tuning.properties is import-only; its transform migrates to LOGS/1511 and legacy speed is ignored.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-29 - Conveyor Transport Core V1.4/V1.5
+- Added persistent SettlementConveyorPayload state (payload id, item id, amount, distance) inside server-owned ConveyorRuns; SettlementState schema is now v15 with old-save normalization.
+- Conveyor transport now advances on SettlementControler.process() game ticks at belt-owned 1.25 tiles/sec with 0.85-tile minimum spacing.
+- Blocked Point B now causes real front-to-back backpressure; development Open Output acts as a transient accepting sink for drain testing.
+- Added payload-only PBEGIN/PSTATE/PAYLOAD/PEND client sync so moving items update without rebuilding/resending conveyor geometry each tick.
+- Client now renders multiple mixed real item ids with bounded smooth extrapolation and per-item visual-profile resolution; removed the old looping single-Log proof.
+- Added transport harness controls for arbitrary/current item injection, Logs/Oak/Iron Ore/Plank, mixed fill, output block/open, clear and status.
+- Payload transport state persists with the ConveyorRun. No chest/machine transfer, splitters, filters or belt tiers yet.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
