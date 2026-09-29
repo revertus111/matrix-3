@@ -1945,3 +1945,10 @@
 - RTS movement and screen-drag basis now derive from owned yaw instead of the detached Class423_Sub2/Class658_Sub2 look vector.
 - Existing RTS speed/orbit/zoom/minimap/saved-pivot behavior is preserved by design; runtime verification is required for render parity and RTS <-> Free Build handoff.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-29 - RTS Vanilla Camera Migration Rollback
+- Runtime rejected the Class246-based RTS owner migration: settlement RTS camera controls stopped functioning.
+- Identified an incomplete ownership assumption in Class343: normal gameplay can render Class133_Sub1.aClass411_Sub1_9827 when Class18.anInt143 == 1, bypassing the Class246 final camera globals.
+- Restored ConstructionBuildCamera and Class343 to the last known working detached Class24/Class411 RTS implementation.
+- Restored BUILD_CAMERA documentation and marked the vanilla-owner attempt RUNTIME REJECTED / ROLLED BACK.
+- Future parity work must verify the active ordinary-gameplay camera branch at runtime before changing RTS ownership again.
