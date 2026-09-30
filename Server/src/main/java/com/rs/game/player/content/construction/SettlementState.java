@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 15;
+    private static final int CURRENT_SCHEMA_VERSION = 16;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
