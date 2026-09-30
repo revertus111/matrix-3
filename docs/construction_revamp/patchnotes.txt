@@ -2003,3 +2003,11 @@
 - Settlement largeSceneView state is now restored on exit instead of leaking outside the instance.
 - No client camera, Class343, Class411, Class246, fog or Class523 render-radius changes.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-30 - Detached RTS projection-depth parity
+- Runtime screenshot proved the 168x168 scene/176x176 terrain fix alone did not remove the hard cyan cutoff.
+- verified-static: Class411 detached camera defaults to near/far 50..10000, while Matrix3's normal current-scene projection uses Class613 near/far values (~14332 far on 104-tile scene; ~23156 far on 168-tile scene).
+- RTS max orbit is 10000, so maximum zoom could place the RTS focus at the detached camera's far clipping plane and clip all terrain behind it.
+- ConstructionBuildCamera now applies Matrix3's live vanilla near/far projection to the detached Class411 camera through its existing method4983(...) setter each active tick.
+- No camera-owner migration, Class523 radius override, fog bypass or hardcoded oversized far plane.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
