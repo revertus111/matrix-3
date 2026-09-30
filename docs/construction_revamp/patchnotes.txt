@@ -2017,3 +2017,12 @@
 - Accepted combined fix: native 168x168 settlement scene, 176x176 generated visual terrain, and detached Class411 near/far projection synchronized to Matrix3's live vanilla scene projection.
 - RTS camera remains functional; no further camera-owner migration is required.
 - Camera/render gate is closed. Resume Population / Processing / Logistics mainline.
+
+2026-09-30 - Conveyor Gameplay V1.6 physical chest transport
+- Wired Point A / Point B physical STORAGE endpoints into the existing server-owned ConveyorRun transport: one real source-chest item withdraws into a payload and full accepted payloads deposit into the destination chest.
+- ConveyorRun is endpoint-neutral; it moves/queues only. SettlementInstance owns atomic chest transfer and destination filter/capacity backpressure.
+- SettlementState schema is v16. Payloads now distinguish physical-inventory ownership from development/test payloads; old payloads default to test provenance and cannot enter real chests.
+- Locked unsafe development operations on physical runs: fake payload add/fill, debug sink, destructive payload clear, and conveyor deletion while payloads are owned.
+- Added settlementconveyorchestlink plus Con Revamp -> Conveyor Transport Core -> Link First Two Chests for a deterministic real-ownership test.
+- No machine endpoint, inserter, splitter/filter routing, belt tier or alternate inventory system added.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
