@@ -462,7 +462,7 @@ public final class LiveInspectOverlay {
         panel.add(row("Runtime", runtimeLabel));
         panel.add(Box.createVerticalStrut(7));
 
-        JLabel timeShortcuts = new JLabel("F5 step   F6 pause/resume   F7 speed");
+        JLabel timeShortcuts = new JLabel("Ctrl+F8 step   Ctrl+F9 pause/resume   Ctrl+F10 speed");
         timeShortcuts.setFont(ConsoleTheme.SMALL_FONT);
         timeShortcuts.setForeground(ConsoleTheme.MUTED_TEXT);
         panel.add(timeShortcuts);

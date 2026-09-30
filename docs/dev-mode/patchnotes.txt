@@ -1,3 +1,9 @@
+2026-09-30 - Visual Dev Time hotkey collision correction
+- Removed the Dev Time use of bare F5/F6/F7 after runtime feedback confirmed those keys are already owned elsewhere in Matrix3.
+- Dev Time now uses Ctrl+F8 = single visual step, Ctrl+F9 = pause/resume, Ctrl+F10 = speed cycle.
+- Modifier handlers run before the existing bare F8/F9/F10 Live Inspect handlers, so F8 open-tool, F9 lock and F10 toggle remain unchanged.
+- Updated the Live Inspect shortcut hint and Dev Mode workstream docs/tests; no simulation behavior changed.
+
 2026-09-30 - Visual Dev Time runtime tick ownership correction
 - Static verification found the initial client-cycle hook landed in decompiled duplicate method6912 rather than the actual Class584-owned method6932 runtime tick.
 - Moved DevTimeController.beginClientCycle(...) to method6932 immediately after client.cycles increments and removed it from the duplicate alias.

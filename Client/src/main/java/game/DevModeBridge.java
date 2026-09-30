@@ -712,23 +712,25 @@ public final class DevModeBridge {
                     if (!enabled || !isOwnerSession() || keyEvent.getSource() != Class584.aCanvas7745) {
                         return;
                     }
+                    if (LiveInspectOverlay.isEnabled() && keyEvent.isControlDown()) {
+                        if (keyEvent.getKeyCode() == KeyEvent.VK_F8) {
+                            DevTimeController.stepOnce();
+                            keyEvent.consume();
+                            return;
+                        }
+                        if (keyEvent.getKeyCode() == KeyEvent.VK_F9) {
+                            DevTimeController.togglePaused();
+                            keyEvent.consume();
+                            return;
+                        }
+                        if (keyEvent.getKeyCode() == KeyEvent.VK_F10) {
+                            DevTimeController.cycleSpeed();
+                            keyEvent.consume();
+                            return;
+                        }
+                    }
                     if (keyEvent.getKeyCode() == KeyEvent.VK_F10) {
                         LiveInspectOverlay.toggle();
-                        keyEvent.consume();
-                        return;
-                    }
-                    if (keyEvent.getKeyCode() == KeyEvent.VK_F5 && LiveInspectOverlay.isEnabled()) {
-                        DevTimeController.stepOnce();
-                        keyEvent.consume();
-                        return;
-                    }
-                    if (keyEvent.getKeyCode() == KeyEvent.VK_F6 && LiveInspectOverlay.isEnabled()) {
-                        DevTimeController.togglePaused();
-                        keyEvent.consume();
-                        return;
-                    }
-                    if (keyEvent.getKeyCode() == KeyEvent.VK_F7 && LiveInspectOverlay.isEnabled()) {
-                        DevTimeController.cycleSpeed();
                         keyEvent.consume();
                         return;
                     }

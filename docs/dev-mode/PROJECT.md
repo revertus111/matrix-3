@@ -285,9 +285,9 @@ This table is the authoritative user-facing milestone table across chats.
 
 **Controls:**
 
-- `F5` - arm one visual simulation tick and remain paused.
-- `F6` - pause/resume visual simulation.
-- `F7` - cycle 1.00x -> 0.50x -> 0.25x -> 0.10x -> 1.00x.
+- `Ctrl+F8` - arm one visual simulation tick and remain paused.
+- `Ctrl+F9` - pause/resume visual simulation.
+- `Ctrl+F10` - cycle 1.00x -> 0.50x -> 0.25x -> 0.10x -> 1.00x.
 - F10 Live Inspect shows the current Visual Time state.
 - Closing Live Inspect/F10 resets Visual Time to RUN 1.00x so a hidden paused state cannot be left behind.
 
@@ -297,7 +297,7 @@ This table is the authoritative user-facing milestone table across chats.
 - [x] Gate the verified stationary GFX animation-advance owner.
 - [x] Hold projectile motion/lifetime safely on skipped visual ticks while keeping already-started projectiles rendered.
 - [x] Patch both equivalent Matrix3 projectile update aliases found in the decompiled client.
-- [x] Add pause/resume, speed cycle, and one-tick step controls.
+- [x] Add pause/resume, speed cycle, and one-tick step controls without taking over Matrix3's existing bare F5/F6/F7 bindings.
 - [x] Surface Visual Time status in Live Inspect and Ctrl+C diagnostics.
 - [x] Auto-reset Visual Time when Live Inspect closes/Dev Mode disables.
 - [ ] Runtime-verify pause, 0.50x/0.25x/0.10x, one-step, projectile lifetime hold, and normal networking/input/rendering.
@@ -334,7 +334,7 @@ This table is the authoritative user-facing milestone table across chats.
 - Bundle: Bundle 2.5 - Visual Dev Time V1
 - Bundle status: NEEDS TEST
 - Approval state: SAP AAA approved 2026-09-30; implementation complete statically.
-- Current checklist item: Runtime-check F5/F6/F7 visual time using one stationary GFX and one projectile, then immediately re-run the Bundle 2.3 hover gate while time is slowed/paused.
+- Current checklist item: Runtime-check Ctrl+F8/Ctrl+F9/Ctrl+F10 visual time using one stationary GFX and one projectile, then immediately re-run the Bundle 2.3 hover gate while time is slowed/paused.
 - Current objective: Provide a safe visual-only pause/slow/step layer that makes transient Live Inspect targets practical without stopping Matrix3 networking/input/rendering/server authority.
 
 ## Checklist / patch status
@@ -432,7 +432,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Next checklist item:**
 
-- One bundled runtime session: F6 pause/resume, F7 slow speeds, F5 single-step; verify a projectile remains visible/frozen and advances one step, then F9/Ctrl+C the now-practical GFX/Projectile Live Inspect target.
+- One bundled runtime session: Ctrl+F9 pause/resume, Ctrl+F10 slow speeds, Ctrl+F8 single-step; verify a projectile remains visible/frozen and advances one step, then F9/Ctrl+C the now-practical GFX/Projectile Live Inspect target.
 - Fold the Bundle 2.4 Object/NPC/Tile F8 route checks into the same launch if convenient.
 
 **Current state / next action:**
