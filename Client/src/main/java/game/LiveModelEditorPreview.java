@@ -2130,12 +2130,11 @@ public final class LiveModelEditorPreview {
         cachedMainModel = null;
         cachedDuplicateModels = new Model[0];
         cachedReplacementModels = new Model[0];
-        if (targetMode == EditorTargetMode.CONVEYOR_PAYLOAD) {
-            cachedPayloadEditorRenderer = null;
-            cachedPayloadEditorItemId = -1;
-            cachedPayloadEditorScale = -1;
-            cachedPayloadEditorModel = null;
-        }
+        /*
+         * Payload item models are keyed by renderer + item id + uniform scale.
+         * Move/rotation/height edits only change the render transform, so keep
+         * the item model cached instead of rebuilding it every drag frame.
+         */
         lastRenderedCycle = Integer.MIN_VALUE;
     }
 
