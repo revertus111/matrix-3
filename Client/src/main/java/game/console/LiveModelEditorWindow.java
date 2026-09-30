@@ -428,6 +428,9 @@ public final class LiveModelEditorWindow {
 
         installListeners();
         refreshTransformContext();
+        if (payloadMode) {
+            syncPayloadPreviewFromRuntime();
+        }
         syncCameraPanel();
         syncSnapPanel();
         syncControlState();
@@ -841,6 +844,160 @@ public final class LiveModelEditorWindow {
         });
         applyConveyorRoles.addActionListener(e ->
                 statusLabel.setText(LiveModelEditorPreview.applyConveyorRolesToPreview()));
+        return panel;
+    }
+
+    private JPanel createPayloadPanel() {
+        JPanel panel = toolPanel("CONVEYOR PAYLOAD");
+
+        JLabel hint = new JLabel("Belt = locked reference. Item = editable.");
+        hint.setFont(RS_SMALL_FONT);
+        hint.setForeground(RS_MUTED);
+        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(hint);
+        panel.add(Box.createVerticalStrut(7));
+
+        panel.add(createSpinnerGrid(
+                new String[] { "ITEM ID", "PITCH", "ROLL" },
+                new JSpinner[] {
+                        payloadItemSpinner, payloadPitchSpinner, payloadRollSpinner }));
+        panel.add(Box.createVerticalStrut(5));
+
+        JPanel categoryRow = new JPanel(new BorderLayout(5, 0));
+        categoryRow.setOpaque(false);
+        categoryRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel categoryLabel = new JLabel("CATEGORY");
+        categoryLabel.setFont(RS_SMALL_FONT);
+        categoryLabel.setForeground(RS_GOLD_DIM);
+        categoryRow.add(categoryLabel, BorderLayout.WEST);
+        payloadCategoryCombo.setFont(RS_SMALL_FONT);
+        payloadCategoryCombo.setForeground(RS_TEXT);
+        payloadCategoryCombo.setBackground(RS_INPUT);
+        categoryRow.add(payloadCategoryCombo, BorderLayout.CENTER);
+        panel.add(categoryRow);
+        panel.add(Box.createVerticalStrut(8));
+
+        JLabel axes = new JLabel("Gizmo: X=Forward   Y=Height   Z=Side");
+        axes.setFont(RS_SMALL_FONT);
+        axes.setForeground(RS_GOLD);
+        axes.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(axes);
+        panel.add(Box.createVerticalStrut(3));
+
+        JLabel scaleHint = new JLabel(
+                "Payload scale is uniform; use Move / Rotate / Scale in EDIT.");
+        scaleHint.setFont(RS_SMALL_FONT);
+        scaleHint.setForeground(RS_MUTED);
+        scaleHint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(scaleHint);
+        panel.add(Box.createVerticalStrut(8));
+
+        JPanel row0 = actionRow(2);
+        JButton edit = rsButton("Open Transform");
+        JButton resolved = rsButton("Load Resolved");
+        row0.add(edit);
+        row0.add(resolved);
+        panel.add(row0);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel row1 = actionRow(2);
+        JButton loadCategory = rsButton("Load Category");
+        JButton saveCategory = rsButton("Save Category");
+        row1.add(loadCategory);
+        row1.add(saveCategory);
+        panel.add(row1);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel row2 = actionRow(2);
+        JButton saveItem = rsButton("Save Item Override");
+        JButton removeItem = rsButton("Remove Override");
+        row2.add(saveItem);
+        row2.add(removeItem);
+        panel.add(row2);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel row3 = actionRow(2);
+        JButton assign = rsButton("Assign Category");
+        JButton auto = rsButton("Use Auto Category");
+        row3.add(assign);
+        row3.add(auto);
+        panel.add(row3);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel row4 = actionRow(2);
+        JButton saveGlobal = rsButton("Save Global");
+        JButton status = rsButton("Profile Status");
+        row4.add(saveGlobal);
+        row4.add(status);
+        panel.add(row4);
+
+        edit.addActionListener(e -> showTool("EDIT"));
+        resolved.addActionListener(e -> loadResolvedPayloadProfile());
+
+        loadCategory.addActionListener(e -> {
+            String category = String.valueOf(payloadCategoryCombo.getSelectedItem());
+            ConveyorPayloadVisualProfiles.Profile profile =
+                    ConveyorPayloadVisualProfiles.getCategoryProfile(category);
+            suppressPayloadRefresh = true;
+            suppressLiveRefresh = true;
+            try {
+                payloadPitchSpinner.setValue(Integer.valueOf(profile.pitchDegrees));
+                payloadRollSpinner.setValue(Integer.valueOf(profile.rollDegrees));
+                scaleXSpinner.setValue(Integer.valueOf(profile.scalePercent));
+                scaleYSpinner.setValue(Integer.valueOf(profile.scalePercent));
+                scaleZSpinner.setValue(Integer.valueOf(profile.scalePercent));
+                moveXSpinner.setValue(Integer.valueOf(profile.alongOffset));
+                moveYSpinner.setValue(Integer.valueOf(profile.heightOffset));
+                moveZSpinner.setValue(Integer.valueOf(profile.sideOffset));
+                yawSpinner.setValue(Integer.valueOf(profile.yawDegrees));
+            } finally {
+                suppressLiveRefresh = false;
+                suppressPayloadRefresh = false;
+            }
+            LiveModelEditorPreview.showConveyorPayload(
+                    number(payloadItemSpinner), profile);
+            syncTransformInspector();
+            syncControlState();
+            syncPayloadPreviewFromRuntime();
+            statusLabel.setText("Loaded " + category + " category profile.");
+        });
+
+        saveCategory.addActionListener(e -> {
+            String category = String.valueOf(payloadCategoryCombo.getSelectedItem());
+            statusLabel.setText(ConveyorPayloadVisualProfiles.saveCategory(
+                    category, payloadProfileFromEditor()));
+            syncPayloadPreviewFromRuntime();
+        });
+        saveItem.addActionListener(e -> {
+            statusLabel.setText(ConveyorPayloadVisualProfiles.saveItemOverride(
+                    number(payloadItemSpinner), payloadProfileFromEditor()));
+            syncPayloadPreviewFromRuntime();
+        });
+        removeItem.addActionListener(e -> {
+            statusLabel.setText(ConveyorPayloadVisualProfiles.removeItemOverride(
+                    number(payloadItemSpinner)));
+            loadResolvedPayloadProfile();
+        });
+        assign.addActionListener(e -> {
+            statusLabel.setText(ConveyorPayloadVisualProfiles.assignItemCategory(
+                    number(payloadItemSpinner),
+                    String.valueOf(payloadCategoryCombo.getSelectedItem())));
+            loadResolvedPayloadProfile();
+        });
+        auto.addActionListener(e -> {
+            statusLabel.setText(ConveyorPayloadVisualProfiles.useAutomaticCategory(
+                    number(payloadItemSpinner)));
+            loadResolvedPayloadProfile();
+        });
+        saveGlobal.addActionListener(e -> {
+            statusLabel.setText(ConveyorPayloadVisualProfiles.saveGlobal(
+                    payloadProfileFromEditor()));
+            syncPayloadPreviewFromRuntime();
+        });
+        status.addActionListener(e -> statusLabel.setText(
+                ConveyorPayloadVisualProfiles.describe(
+                        number(payloadItemSpinner))));
+
         return panel;
     }
 
@@ -1549,6 +1706,15 @@ public final class LiveModelEditorWindow {
 
     private void applyInspectorTransform(int[] transform) {
         if (transform == null || transform.length < 7) return;
+        if (payloadMode) {
+            int uniform = transform[0];
+            LiveModelEditorPreview.setWholeTransform(
+                    uniform, uniform, uniform,
+                    transform[3], transform[4], transform[5], transform[6]);
+            loadWholeEditors();
+            syncPayloadPreviewFromRuntime();
+            return;
+        }
         if (LiveModelEditorPreview.getSelectionMode() == LiveModelEditorPreview.SelectionMode.WHOLE) {
             suppressLiveRefresh = true;
             try {
@@ -1606,8 +1772,8 @@ public final class LiveModelEditorWindow {
         inspectorPosZField.setEnabled(enabled);
         inspectorYawField.setEnabled(enabled);
         inspectorScaleXField.setEnabled(enabled);
-        inspectorScaleYField.setEnabled(enabled);
-        inspectorScaleZField.setEnabled(enabled);
+        inspectorScaleYField.setEnabled(enabled && !payloadMode);
+        inspectorScaleZField.setEnabled(enabled && !payloadMode);
     }
 
     private static void setInspectorText(JTextField field, String value) {
@@ -1671,6 +1837,17 @@ public final class LiveModelEditorWindow {
                 LiveModelEditorPreview.setMoveSnapStep(number(moveSnapSpinner)));
         angleSnapSpinner.addChangeListener(e ->
                 LiveModelEditorPreview.setAngleSnapDegrees(number(angleSnapSpinner)));
+
+        payloadItemSpinner.addChangeListener(e -> {
+            if (!payloadMode || suppressPayloadRefresh) return;
+            loadResolvedPayloadProfile();
+        });
+        payloadPitchSpinner.addChangeListener(e -> {
+            if (payloadMode && !suppressPayloadRefresh) refreshPayloadPreviewFromControls();
+        });
+        payloadRollSpinner.addChangeListener(e -> {
+            if (payloadMode && !suppressPayloadRefresh) refreshPayloadPreviewFromControls();
+        });
 
         partList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         partList.addListSelectionListener(e -> {
@@ -1759,8 +1936,13 @@ public final class LiveModelEditorWindow {
     }
 
     private static void closeEditorSession() {
+        boolean closingPayload = instance != null && instance.payloadMode;
         LiveModelEditorPreview.clearPartPreview();
         LiveModelEditorPreview.hide();
+        if (closingPayload) {
+            ConveyorRunPreview.resetPayloadVisualPreview();
+            instance.payloadMode = false;
+        }
         modelLeftDragActive = false;
         editorCtrlDown = false;
         exitEditorHud();
@@ -2281,6 +2463,20 @@ public final class LiveModelEditorWindow {
         partList.repaint();
     }
 
+    private void syncPayloadPreviewFromRuntime() {
+        if (!payloadMode) return;
+        int[] transform = LiveModelEditorPreview.getWholeTransform();
+        ConveyorRunPreview.setPayloadVisualPreview(
+                number(payloadItemSpinner),
+                transform[3],
+                transform[5],
+                transform[4],
+                transform[0],
+                number(payloadPitchSpinner),
+                transform[6],
+                number(payloadRollSpinner));
+    }
+
     private void syncRuntimeState() {
         int[] selected = LiveModelEditorPreview.getSelectedParts();
         if (!Arrays.equals(partList.getSelectedIndices(), selected)) {
@@ -2298,16 +2494,27 @@ public final class LiveModelEditorWindow {
         syncSnapPanel();
         syncControlState();
         int hovered = LiveModelEditorPreview.getWorldHoveredPart();
-        partStatusLabel.setText(LiveModelEditorPreview.getSelectionMode() + " | "
-                + LiveModelEditorPreview.getSelectedPartCount() + " selected"
-                + (hovered >= 0 ? " | HOVER P" + hovered : "")
-                + " | " + LiveModelEditorPreview.getTransformMode() + " "
-                + LiveModelEditorPreview.getAxisConstraint()
-                + (LiveModelEditorPreview.isTransformSnapEnabled() ? " | SNAP" : " | FREE")
-                + (LiveModelEditorPreview.isPartIsolated() ? " | ISOLATE" : ""));
+        if (payloadMode) {
+            partStatusLabel.setText("PAYLOAD WHOLE | "
+                    + LiveModelEditorPreview.getTransformMode() + " "
+                    + LiveModelEditorPreview.getAxisConstraint()
+                    + (LiveModelEditorPreview.isTransformSnapEnabled()
+                            ? " | SNAP" : " | FREE"));
+        } else {
+            partStatusLabel.setText(LiveModelEditorPreview.getSelectionMode() + " | "
+                    + LiveModelEditorPreview.getSelectedPartCount() + " selected"
+                    + (hovered >= 0 ? " | HOVER P" + hovered : "")
+                    + " | " + LiveModelEditorPreview.getTransformMode() + " "
+                    + LiveModelEditorPreview.getAxisConstraint()
+                    + (LiveModelEditorPreview.isTransformSnapEnabled() ? " | SNAP" : " | FREE")
+                    + (LiveModelEditorPreview.isPartIsolated() ? " | ISOLATE" : ""));
+        }
     }
 
     private void setSelectionMode(LiveModelEditorPreview.SelectionMode mode) {
+        if (payloadMode) {
+            mode = LiveModelEditorPreview.SelectionMode.WHOLE;
+        }
         LiveModelEditorPreview.setSelectionMode(mode);
         applySelectionModeToList();
         refreshPartList();
