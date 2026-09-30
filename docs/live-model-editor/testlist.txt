@@ -409,3 +409,13 @@ Bundle 2.8 - Conveyor Payload Target Reuse
 [ ] Reopen Conveyor 46298 through normal Dev -> Edit Model Live and verify Whole/Part/Multi, Move/Rotate/Scale, Snap, Material/Object/Project and source-object suppression are unchanged.
 [ ] Camera regression: RTS/FREE, MMB orbit, wheel zoom and WASD pan remain usable in both object and payload modes.
 [ ] No cache/server-world write occurs from payload authoring; only the existing client visual-profile properties store changes when Save is pressed.
+
+Bundle 2.8 - Belt Anchor follow-up
+[x] verified-static: Save Belt Anchor applies movement delta to the shared Forward/Side/Height anchor rather than overwriting or duplicating the resolved item profile.
+[x] verified-static: Reset Belt Anchor removes only the shared lane correction.
+[x] verified-static: payload model cache is reused while Move/Rotate/Height changes; item/scale mismatch causes a rebuild through the existing cache key.
+[ ] With a payload loaded, move it an obvious distance and click Save Belt Anchor. The item must not jump when saved.
+[ ] Close payload mode and verify all moving payload item IDs receive the same lane correction.
+[ ] Reopen the edited item and confirm the saved position does not double on load.
+[ ] Save Category/Item offsets after an anchor exists and confirm those offsets remain relative to the shared anchor.
+[ ] Reset Belt Anchor and confirm only the common lane shift disappears.
