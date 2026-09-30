@@ -1,3 +1,15 @@
+2026-09-30 - Dev Mode Live Inspect V1.1/V1.2 polish + target expansion
+- Runtime evidence confirmed Live Inspect opens, resolves NPC targets, locks with F9 and copies a locked diagnostic block; it also exposed clipping and visible flashing.
+- Removed the 180ms stale-hover expiry so a valid target no longer disappears simply because the cursor stopped moving.
+- Stopped calling pack()/resizing the heavyweight JWindow every refresh tick; overlay bounds now update only when the actual desired rectangle changes.
+- Widened the card to 430px, switched data rows to bounded two-column layout, and added full-value tooltips so long names/IDs cannot paint off-card.
+- Ctrl+C continues to copy the current target in either HOVER or LOCKED state; F9 is now purely a target-freeze convenience.
+- Added Region/local and Chunk/local coordinates to the live card and copied diagnostic block.
+- Added read-only Tile inspection from verified Matrix3 action 23.
+- Added read-only Ground Item inspection from verified-static actions 18-22/1004; item names reuse ClientConsoleItemBridge and the normal target UID supplies the item definition ID.
+- Added per-pointer target priority: NPC/Object > Ground Item > Tile, preventing Walk Here tile resolution from overwriting a more specific hovered target.
+- No second scene picker, cache mutation, server mutation, or persistence ownership was introduced.
+
 2026-09-30 - Dev Mode Live Inspect V1
 - Added owner-only F10 Live Inspect overlay using DevModeBridge's existing Matrix3-resolved NPC/object targets; no second scene picker or world/cache mutation path was introduced.
 - Added compact hover data for type/name/definition ID/world tile/runtime reference plus cache-backed object model IDs and object animation IDs.

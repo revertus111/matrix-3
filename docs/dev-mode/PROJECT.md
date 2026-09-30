@@ -172,7 +172,7 @@ This table is the authoritative user-facing milestone table across chats.
 
 **Purpose:** Replace repetitive right-click inspection/copy actions with a fast non-destructive live hover inspector that can be locked and copied as one diagnostic block.
 
-**Status:** NEEDS TEST
+**Status:** RUNTIME PARTIAL / FOLLOW-UP ACTIVE
 
 **Checklist / patches:**
 
@@ -183,14 +183,35 @@ This table is the authoritative user-facing milestone table across chats.
 - [x] Add Ctrl+C copy of the complete current inspection block for direct sharing/debugging.
 - [x] While Live Inspect is active, suppress redundant Inspect/Copy ID/Copy Tile Dev menu entries while preserving Edit/Live Model/Move/Rotate/Duplicate/Delete tools.
 - [x] Disabling Dev Mode also closes Live Inspect and clears transient lock/hover state.
-- [ ] Runtime-verify hover targeting, lock, clipboard, menu cleanup, and normal interaction regression.
+- [x] Runtime proof: user confirmed the overlay opens, NPC hover resolves Overseer 8904 / runtime index 79, F9 lock works, and the locked block copies successfully.
+- [ ] Full acceptance remains pending after the V1.1 layout/flicker correction below.
+
+#### Bundle 2.2 - Live Inspect Polish + Target Expansion
+
+**Purpose:** Make Live Inspect stable enough to leave on during normal development and expand the same zero-right-click workflow to ground items and tiles.
+
+**Status:** NEEDS TEST
+
+**Checklist / patches:**
+
+- [x] Remove the 180 ms hover-expiry behavior that could clear a valid target after the mouse stopped.
+- [x] Stop repacking/resizing the heavyweight overlay every refresh tick; bounds now change only when the canvas/window geometry actually changes.
+- [x] Widen the compact card and use bounded two-column rows/tooltips so long values stay inside the overlay.
+- [x] Keep Ctrl+C valid in HOVER state; locking is optional and only freezes target selection.
+- [x] Add Region + region-local and Chunk + chunk-local context to both the HUD and copied block.
+- [x] Add live world-tile inspection from verified Matrix3 action 23.
+- [x] Add ground-item inspection from verified-static Matrix3 actions 18-22/1004 using the existing item-definition bridge for names.
+- [x] Add per-pointer target priority so NPC/object > ground item > tile and the ordinary Walk Here tile cannot overwrite a more specific hovered target.
+- [ ] Runtime-verify stable rendering, unlocked copy, tile targeting, ground-item targeting, and priority behavior.
 
 **Runtime tests:**
 
-- Use object 46298 if convenient to verify object ID/model/animation output.
-- Hover an NPC and verify exact definition ID/tile/runtime index.
-- Lock with F9, move away, copy with Ctrl+C, then unlock and confirm hover follows again.
-- Toggle F10 off/on and confirm redundant inspect/copy menu entries return only while Live Inspect is off.
+- Hover an NPC/object without locking and press Ctrl+C; paste should report `State: HOVER`.
+- Stop moving the mouse over a target for several seconds; the overlay should remain stable with no flashing.
+- Verify long names/model lists stay inside the card; full values remain available through the copied block/tooltips.
+- Hover empty ground and verify Tile + world/region/chunk coordinates.
+- Hover a ground item and verify its item name/definition ID/tile replaces the lower-priority Tile target.
+- Hover an NPC/object on a tile containing a ground item and verify the entity wins the display priority.
 
 ### Phase 3 - World / Tile Creation
 
@@ -218,7 +239,7 @@ This table is the authoritative user-facing milestone table across chats.
 - Bundle status: NEEDS TEST
 - Approval state: SAP AAA approved 2026-09-08; implementation complete statically.
 - Current checklist item: Deferred combined Bundle 1.2 + 1.3 runtime gate.
-- Current objective: Preserve all pending Phase 1 runtime checks in one queue. Safe-independent Phase 2 Bundle 2.1 Live Inspect V1 is implemented / NEEDS TEST without changing Phase 1's deferred gate.
+- Current objective: Preserve all pending Phase 1 runtime checks in one queue. Phase 2 Bundle 2.2 Live Inspect Polish + Target Expansion is implemented / NEEDS TEST after the user's partial V1 runtime proof.
 
 ## Checklist / patch status
 
@@ -236,7 +257,8 @@ This table is the authoritative user-facing milestone table across chats.
 | Placement cancellation | 1 | 1.3 | NEEDS TEST | Browser/tile explicit cancel plus non-consuming AWT Escape observation. |
 | Object placement rotation | 1 | 1.3 | NEEDS TEST | Fixed, Cycle, Random 0-3. |
 | Phase 1 combined runtime gate | 1 | 1.2 + 1.3 | NEEDS TEST | Intentionally deferred; accumulated queue is in `docs/dev-mode/testlist.txt`. |
-| Live Inspect V1 | 2 | 2.1 | NEEDS TEST | F10 hover HUD + F9 lock + Ctrl+C copy; reuses Matrix3-resolved targets and trims redundant inspect/copy menu entries while active. |
+| Live Inspect V1 | 2 | 2.1 | NEEDS TEST | Runtime partially proven: overlay/NPC hover/F9 lock/locked Ctrl+C work; final acceptance waits on V1.1 polish retest. |
+| Live Inspect polish + Tile/Ground Item targets | 2 | 2.2 | NEEDS TEST | Removes flicker/clipping path, supports unlocked Ctrl+C, adds region/chunk context and Matrix3-resolved Tile/Ground Item inspection. |
 
 ## Decisions / new ideas
 
@@ -253,6 +275,8 @@ This table is the authoritative user-facing milestone table across chats.
 - 2026-09-08: Starting Move/Duplicate cancels active spawn placement and starting Continuous/Paint cancels active Move/Duplicate, giving Dev Mode one active placement tool at a time.
 - 2026-09-30: Live Inspect becomes the preferred fast read-only inspection path: F10 toggles, F9 locks the current hover target, and Ctrl+C copies one shareable diagnostic block. It reuses existing Matrix3-resolved Dev targets rather than adding another picker.
 - 2026-09-30: While Live Inspect is active, redundant Inspect/Copy ID/Copy Tile right-click actions are hidden; mutation/editor routes remain available. Turning Live Inspect off restores the legacy menu actions.
+- 2026-09-30: Runtime proved the first Live Inspect target/copy concept, but exposed two UX defects: long row values clipped outside the 360px card and the overlay flashed. V1.1 removes per-tick pack/resize plus the stale-hover expiry instead of masking the symptoms.
+- 2026-09-30: Live Inspect target expansion remains read-only and reuses normal Matrix3 menu resolution. Tile action 23 feeds scene coordinates; ground-item actions 18-22/1004 feed item ID + tile; entity targets outrank item targets, which outrank tiles.
 
 ## Testing
 
@@ -291,7 +315,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Safe-independent Phase 2 Bundle 2.1 Live Inspect V1 implementation: F10 toggle, Matrix3-resolved NPC/object hover HUD, F9 lock/unlock, Ctrl+C full-block copy, and redundant Inspect/Copy menu suppression while Live Inspect is active.
+- Phase 2 Bundle 2.2 Live Inspect Polish + Target Expansion: corrected heavyweight overlay flicker/clipping, kept Ctrl+C usable while merely hovering, added region/chunk context, and extended Matrix3-resolved inspection to world tiles and ground items.
 
 **Current phase:**
 
@@ -299,11 +323,11 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Active bundle:**
 
-- Bundle 2.1 Live Inspect V1 is `NEEDS TEST`. Phase 1 Bundles 1.2 and 1.3 remain `NEEDS TEST` with their combined runtime gate intentionally deferred.
+- Bundle 2.2 Live Inspect Polish + Target Expansion is `NEEDS TEST`. Bundle 2.1 has partial runtime proof; Phase 1 Bundles 1.2 and 1.3 remain `NEEDS TEST` with their combined runtime gate intentionally deferred.
 
 **Next checklist item:**
 
-- Runtime-check Live Inspect V1 in the next convenient client session; this is a short client-only acceptance pass and can be bundled with other pending tests.
+- Runtime-check Live Inspect V1.1/V1.2 in one short pass: no flashing/clipping, Ctrl+C while HOVER, Tile inspection, Ground Item inspection, and target priority.
 - The older combined Phase 1 manipulation/paint gate remains deferred and unchanged.
 
 **Current state / next action:**
@@ -337,7 +361,8 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Pending runtime verification:**
 
-- Bundle 2.1 Live Inspect V1.
+- Bundle 2.2 Live Inspect Polish + Target Expansion.
+- Bundle 2.1 Live Inspect V1 final acceptance after polish retest.
 - Bundle 1.2 World Manipulation.
 - Bundle 1.3 Continuous / Paint Placement.
 - Combined Phase 1 gate.
@@ -353,4 +378,4 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 ## Next recommended work
 
-Runtime-verify Live Inspect V1 when convenient. After acceptance, expand the same hover/copy contract to the next high-value target classes (ground items, tiles/scene data, graphics/projectiles) before adding more contextual editing UI. Phase 1 manipulation/paint remains a separate deferred runtime gate.
+Runtime-verify the bundled Live Inspect V1.1/V1.2 pass. After acceptance, the next high-value target class is graphics/spotanims + projectiles, followed by richer definition relationships; Phase 1 manipulation/paint remains a separate deferred runtime gate.

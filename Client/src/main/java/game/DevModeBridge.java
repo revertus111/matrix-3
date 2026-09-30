@@ -156,6 +156,14 @@ public final class DevModeBridge {
             return;
         }
 
+        if (LiveInspectOverlay.isEnabled()) {
+            WorldTileTarget liveInspectTile = resolveWorldTile(localX, localY);
+            if (liveInspectTile != null) {
+                LiveInspectOverlay.observeTile(
+                        liveInspectTile.worldX, liveInspectTile.worldY, liveInspectTile.plane);
+            }
+        }
+
         addTileEntry("Dev > Edit Tile", TILE_EDIT_MENU_ACTION, localX, localY);
         addTileEntry("Dev > Spawn...", TILE_SPAWN_MENU_ACTION, localX, localY);
 
@@ -238,6 +246,15 @@ public final class DevModeBridge {
                     targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
             addEntityEntry("Dev > Delete Development Spawn", targetText, cursor, OBJECT_DELETE_DEV_MENU_ACTION,
                     sourceParam, targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+        } else if (isGroundItemSourceAction(normalizedAction) && LiveInspectOverlay.isEnabled()) {
+            int itemId = (int) targetUid;
+            WorldTileTarget tile = resolveWorldTile(localX, localY);
+            if (tile != null) {
+                ClientConsoleItemBridge.ItemInfo info = ClientConsoleItemBridge.getItemInfo(itemId);
+                String name = info == null ? "Item" : info.getName();
+                LiveInspectOverlay.observeGroundItem(
+                        itemId, name, tile.worldX, tile.worldY, tile.plane);
+            }
         }
     }
 
@@ -566,6 +583,15 @@ public final class DevModeBridge {
 
     private static boolean isObjectSourceAction(int action) {
         return action >= 3 && action <= 6 || action == 1001 || action == 1002;
+    }
+
+    /**
+     * verified-static: Class319 dispatches ground-item options 18-22 plus
+     * examine 1004 with the menu target UID cast to the item definition ID and
+     * the normal local scene X/Y carried beside it.
+     */
+    private static boolean isGroundItemSourceAction(int action) {
+        return action >= 18 && action <= 22 || action == 1004;
     }
 
     private static boolean isNormalWorldEntityAction(int action) {

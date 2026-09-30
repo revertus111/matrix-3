@@ -5,16 +5,20 @@ DEFERRED RUNTIME QUEUE - run when PC/runtime time is available
 Build gate
 [ ] Eclipse/Java 8: clean/build Client and Server with no compilation errors.
 
-Live Inspect V1 - quick gate
-[ ] With Dev Mode ON, press F10 and confirm the compact LIVE INSPECT overlay opens; F10 again closes it.
-[ ] Hover object 46298 if available and confirm object name/definition ID, model IDs, animation IDs and world tile populate without right-clicking.
-[ ] Hover an NPC and confirm name/definition ID, world tile and exact runtime NPC index populate.
-[ ] Press F9 on a target, move the cursor away and confirm the card remains LOCKED; press F9 again and confirm hover tracking resumes.
-[ ] Press Ctrl+C while a target is shown, paste into a text editor/chat, and confirm the full Matrix3 Live Inspect block is copied.
+Live Inspect V1.1/V1.2 - quick gate
+[x] V1 partial proof: overlay opens, Overseer NPC 8904 resolves with runtime index 79, F9 lock works, and locked Ctrl+C copy works.
+[ ] Hover an NPC/object WITHOUT locking -> Ctrl+C -> paste and confirm `State: HOVER` plus the current target block.
+[ ] Stop moving the cursor over one target for several seconds; confirm the overlay does not flash/disappear.
+[ ] Confirm long Name/Model/Animation values remain inside the card; copied output still contains full values.
+[ ] Hover empty world ground and confirm Type=Tile plus World Tile, Region/local and Chunk/local values.
+[ ] Hover a ground item and confirm Type=Ground Item, cache item name/definition ID and exact world tile.
+[ ] Hover an NPC/object where a Tile and/or Ground Item target also exists; confirm NPC/Object wins rather than flickering to Tile.
+[ ] Press F9, move across several targets, confirm the locked target stays fixed; F9 again resumes live targeting.
+[ ] Hover object 46298 if convenient and confirm object model/animation IDs still resolve.
 [ ] While Live Inspect is ON, confirm redundant Inspect/Copy ID/Copy Tile Dev menu entries are absent but Edit/Live Model/Move/Rotate/Duplicate/Delete routes remain.
 [ ] Turn Live Inspect OFF and confirm legacy Inspect/Copy menu entries return.
 [ ] Disable Dev Mode while Live Inspect is open and confirm the overlay closes/clears.
-[ ] Confirm normal NPC/object actions and normal mouse movement remain unchanged.
+[ ] Confirm normal NPC/object/ground-item/Walk Here actions and normal mouse movement remain unchanged.
 
 Bundle 1.2 - World Manipulation high-value checks
 [ ] Spawn a Dev NPC -> Move -> Duplicate -> Delete the duplicate.

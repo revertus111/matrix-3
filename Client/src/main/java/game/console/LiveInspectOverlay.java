@@ -8,11 +8,14 @@ import game.DevModeBridge.TargetType;
 import java.awt.BorderLayout;
 import java.awt.Canvas;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.IllegalComponentStateException;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.datatransfer.StringSelection;
+import java.util.Arrays;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -20,6 +23,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JWindow;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
@@ -32,16 +36,20 @@ import javax.swing.Timer;
  */
 public final class LiveInspectOverlay {
 
-    private static final int WIDTH = 360;
+    private static final int WIDTH = 430;
     private static final int MARGIN = 10;
-    private static final long STALE_HOVER_NANOS = 180000000L;
+
+    private static final int PRIORITY_TILE = 10;
+    private static final int PRIORITY_GROUND_ITEM = 20;
+    private static final int PRIORITY_ENTITY = 30;
 
     private static volatile boolean enabled;
     private static volatile boolean locked;
-    private static volatile DevTarget hoverTarget;
-    private static volatile DevTarget lockedTarget;
-    private static volatile long lastPointerMoveNanos;
-    private static volatile long lastObservedNanos;
+    private static volatile Snapshot hoverTarget;
+    private static volatile Snapshot lockedTarget;
+    private static volatile long pointerGeneration;
+    private static volatile long observedGeneration = -1L;
+    private static volatile int observedPriority = -1;
 
     private static JWindow window;
     private static Window owner;
@@ -54,6 +62,8 @@ public final class LiveInspectOverlay {
     private static final JLabel modelsLabel = valueLabel();
     private static final JLabel animationsLabel = valueLabel();
     private static final JLabel tileLabel = valueLabel();
+    private static final JLabel regionLabel = valueLabel();
+    private static final JLabel chunkLabel = valueLabel();
     private static final JLabel runtimeLabel = valueLabel();
 
     private LiveInspectOverlay() {
@@ -78,8 +88,10 @@ public final class LiveInspectOverlay {
             locked = false;
             hoverTarget = null;
             lockedTarget = null;
+            observedGeneration = -1L;
+            observedPriority = -1;
         } else {
-            lastPointerMoveNanos = System.nanoTime();
+            pointerGeneration++;
             ensureRefreshTimer();
         }
         refreshSoon();
@@ -95,7 +107,7 @@ public final class LiveInspectOverlay {
             refreshSoon();
             return false;
         }
-        DevTarget target = hoverTarget;
+        Snapshot target = hoverTarget;
         if (target == null) {
             return false;
         }
@@ -105,9 +117,16 @@ public final class LiveInspectOverlay {
         return true;
     }
 
+    /**
+     * Marks a new pointer sample so multiple Matrix3 menu entries produced for
+     * the same cursor position can be ranked without tile entries overwriting
+     * an entity/item target. The current target is intentionally not cleared
+     * here; Matrix3 may resolve the scene target on the following game tick.
+     */
     public static void pointerMoved() {
         if (enabled && !locked) {
-            lastPointerMoveNanos = System.nanoTime();
+            pointerGeneration++;
+            observedPriority = -1;
         }
     }
 
@@ -115,28 +134,108 @@ public final class LiveInspectOverlay {
         if (!enabled || locked || target == null) {
             return;
         }
-        lastObservedNanos = System.nanoTime();
-        if (!sameTarget(hoverTarget, target)) {
-            hoverTarget = target;
-            refreshSoon();
+
+        Snapshot current = hoverTarget;
+        if (current != null && current.matches(target)) {
+            observe(current, PRIORITY_ENTITY);
+            return;
         }
+
+        int[] models = new int[0];
+        int[] animations = new int[0];
+        String runtime;
+        if (target.getType() == TargetType.OBJECT && target.getId() >= 0) {
+            models = DevDefinitionBridge.getObjectModelIds(target.getId());
+            DevDefinitionBridge.DefinitionInfo info =
+                    DevDefinitionBridge.getObjectInfoAny(target.getId());
+            animations = info == null ? new int[0] : info.getAnimationIds();
+            runtime = "Scene object";
+        } else {
+            runtime = target.getRuntimeIndex() >= 0
+                    ? "NPC index " + target.getRuntimeIndex()
+                    : "NPC";
+        }
+
+        observe(new Snapshot(
+                target.getType().getDisplayName(),
+                target.getName(),
+                target.getId(),
+                target.getWorldX(),
+                target.getWorldY(),
+                target.getPlane(),
+                runtime,
+                models,
+                animations),
+                PRIORITY_ENTITY);
+    }
+
+    public static void observeGroundItem(int itemId, String name, int worldX, int worldY, int plane) {
+        if (!enabled || locked) {
+            return;
+        }
+        observe(new Snapshot(
+                "Ground Item",
+                name == null || name.length() == 0 ? "Item" : name,
+                itemId,
+                worldX,
+                worldY,
+                plane,
+                "Scene ground item",
+                new int[0],
+                new int[0]),
+                PRIORITY_GROUND_ITEM);
+    }
+
+    public static void observeTile(int worldX, int worldY, int plane) {
+        if (!enabled || locked) {
+            return;
+        }
+        observe(new Snapshot(
+                "Tile",
+                "World tile",
+                -1,
+                worldX,
+                worldY,
+                plane,
+                "Scene tile",
+                new int[0],
+                new int[0]),
+                PRIORITY_TILE);
     }
 
     public static boolean copyCurrentToClipboard() {
-        final DevTarget target = getCurrentTarget();
+        final Snapshot target = getCurrentTarget();
         if (!enabled || target == null) {
             return false;
         }
         final String text = buildCopyText(target);
         try {
-            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
+            Toolkit.getDefaultToolkit().getSystemClipboard()
+                    .setContents(new StringSelection(text), null);
             return true;
         } catch (RuntimeException ex) {
             return false;
         }
     }
 
-    private static DevTarget getCurrentTarget() {
+    private static void observe(Snapshot target, int priority) {
+        long generation = pointerGeneration;
+        if (observedGeneration != generation) {
+            observedGeneration = generation;
+            observedPriority = priority;
+        } else if (priority < observedPriority) {
+            return;
+        } else {
+            observedPriority = priority;
+        }
+
+        if (!target.equalsIdentity(hoverTarget)) {
+            hoverTarget = target;
+            refreshSoon();
+        }
+    }
+
+    private static Snapshot getCurrentTarget() {
         return locked ? lockedTarget : hoverTarget;
     }
 
@@ -145,7 +244,7 @@ public final class LiveInspectOverlay {
             @Override
             public void run() {
                 if (refreshTimer == null) {
-                    refreshTimer = new Timer(100, e -> refreshWindow());
+                    refreshTimer = new Timer(150, e -> refreshWindow());
                     refreshTimer.setCoalesce(true);
                 }
                 if (!refreshTimer.isRunning()) {
@@ -180,12 +279,6 @@ public final class LiveInspectOverlay {
             return;
         }
 
-        if (!locked && hoverTarget != null
-                && lastPointerMoveNanos > lastObservedNanos
-                && System.nanoTime() - lastPointerMoveNanos >= STALE_HOVER_NANOS) {
-            hoverTarget = null;
-        }
-
         Canvas canvas = Class584.aCanvas7745;
         if (canvas == null || !canvas.isDisplayable() || !canvas.isVisible()) {
             if (window != null) {
@@ -199,8 +292,7 @@ public final class LiveInspectOverlay {
             return;
         }
 
-        DevTarget target = getCurrentTarget();
-        updateLabels(target);
+        updateLabels(getCurrentTarget());
 
         Point screen;
         try {
@@ -210,12 +302,14 @@ public final class LiveInspectOverlay {
             return;
         }
 
-        window.pack();
-        int width = Math.min(WIDTH, Math.max(260, canvas.getWidth() - MARGIN * 2));
-        int height = window.getPreferredSize().height;
+        int width = Math.min(WIDTH, Math.max(300, canvas.getWidth() - MARGIN * 2));
+        int height = Math.max(window.getPreferredSize().height, window.getHeight());
         int x = screen.x + Math.max(MARGIN, canvas.getWidth() - width - MARGIN);
         int y = screen.y + MARGIN;
-        window.setBounds(x, y, width, height);
+        Rectangle desired = new Rectangle(x, y, width, height);
+        if (!desired.equals(window.getBounds())) {
+            window.setBounds(desired);
+        }
         if (!window.isVisible()) {
             window.setVisible(true);
         }
@@ -238,6 +332,8 @@ public final class LiveInspectOverlay {
         window.setAutoRequestFocus(false);
         window.getContentPane().setLayout(new BorderLayout());
         window.getContentPane().add(buildPanel(), BorderLayout.CENTER);
+        window.pack();
+        window.setSize(WIDTH, window.getPreferredSize().height);
     }
 
     private static JPanel buildPanel() {
@@ -247,6 +343,7 @@ public final class LiveInspectOverlay {
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ConsoleTheme.ACCENT_DARK),
                 BorderFactory.createEmptyBorder(9, 10, 9, 10)));
+
         JLabel title = new JLabel("LIVE INSPECT");
         title.setFont(ConsoleTheme.SECTION_FONT);
         title.setForeground(ConsoleTheme.TEXT);
@@ -263,10 +360,12 @@ public final class LiveInspectOverlay {
         panel.add(row("Model IDs", modelsLabel));
         panel.add(row("Animation IDs", animationsLabel));
         panel.add(row("World tile", tileLabel));
+        panel.add(row("Region", regionLabel));
+        panel.add(row("Chunk", chunkLabel));
         panel.add(row("Runtime", runtimeLabel));
         panel.add(Box.createVerticalStrut(7));
 
-        JLabel shortcuts = new JLabel("F9 lock/unlock   Ctrl+C copy all   F10 close");
+        JLabel shortcuts = new JLabel("F9 lock/unlock   Ctrl+C copy current   F10 close");
         shortcuts.setFont(ConsoleTheme.SMALL_FONT);
         shortcuts.setForeground(ConsoleTheme.MUTED_TEXT);
         panel.add(shortcuts);
@@ -274,7 +373,7 @@ public final class LiveInspectOverlay {
     }
 
     private static JPanel row(String key, JLabel value) {
-        JPanel row = new JPanel(new BorderLayout(8, 0));
+        JPanel row = new JPanel(new GridLayout(1, 2, 8, 0));
         row.setOpaque(false);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 21));
 
@@ -282,8 +381,8 @@ public final class LiveInspectOverlay {
         label.setFont(ConsoleTheme.SMALL_FONT);
         label.setForeground(ConsoleTheme.MUTED_TEXT);
 
-        row.add(label, BorderLayout.WEST);
-        row.add(value, BorderLayout.EAST);
+        row.add(label);
+        row.add(value);
         return row;
     }
 
@@ -291,74 +390,76 @@ public final class LiveInspectOverlay {
         JLabel label = new JLabel("-");
         label.setFont(ConsoleTheme.SMALL_FONT);
         label.setForeground(ConsoleTheme.TEXT);
+        label.setHorizontalAlignment(SwingConstants.LEFT);
         return label;
     }
 
-    private static void updateLabels(DevTarget target) {
+    private static void updateLabels(Snapshot target) {
         stateLabel.setText(locked ? "LOCKED" : "HOVER");
         if (target == null) {
-            typeLabel.setText("-");
-            nameLabel.setText("Move cursor over an NPC or object");
-            idLabel.setText("-");
-            modelsLabel.setText("-");
-            animationsLabel.setText("-");
-            tileLabel.setText("-");
-            runtimeLabel.setText("-");
+            setValue(typeLabel, "-");
+            setValue(nameLabel, "Move cursor over the world");
+            setValue(idLabel, "-");
+            setValue(modelsLabel, "-");
+            setValue(animationsLabel, "-");
+            setValue(tileLabel, "-");
+            setValue(regionLabel, "-");
+            setValue(chunkLabel, "-");
+            setValue(runtimeLabel, "-");
             return;
         }
 
-        typeLabel.setText(target.getType().getDisplayName());
-        nameLabel.setText(target.getName());
-        idLabel.setText(target.getId() >= 0 ? Integer.toString(target.getId()) : "Unresolved");
-        tileLabel.setText(target.getWorldX() + ", " + target.getWorldY() + ", " + target.getPlane());
-        runtimeLabel.setText(target.getRuntimeIndex() >= 0
-                ? "NPC index " + target.getRuntimeIndex()
-                : "Scene object");
-
-        if (target.getType() == TargetType.OBJECT && target.getId() >= 0) {
-            int[] models = DevDefinitionBridge.getObjectModelIds(target.getId());
-            DevDefinitionBridge.DefinitionInfo info = DevDefinitionBridge.getObjectInfoAny(target.getId());
-            int[] animations = info == null ? new int[0] : info.getAnimationIds();
-            modelsLabel.setText(displayIds(models, 7));
-            animationsLabel.setText(displayIds(animations, 7));
-        } else {
-            modelsLabel.setText("-");
-            animationsLabel.setText("-");
-        }
+        setValue(typeLabel, target.type);
+        setValue(nameLabel, target.name);
+        setValue(idLabel, target.definitionId >= 0
+                ? Integer.toString(target.definitionId) : "-");
+        setValue(modelsLabel, displayIds(target.modelIds, 5));
+        setValue(animationsLabel, displayIds(target.animationIds, 5));
+        setValue(tileLabel, target.worldX + ", " + target.worldY + ", " + target.plane);
+        setValue(regionLabel, regionText(target.worldX, target.worldY));
+        setValue(chunkLabel, chunkText(target.worldX, target.worldY));
+        setValue(runtimeLabel, target.runtime);
     }
 
-    private static String buildCopyText(DevTarget target) {
-        StringBuilder out = new StringBuilder(256);
+    private static void setValue(JLabel label, String value) {
+        label.setText(value);
+        label.setToolTipText(value);
+    }
+
+    private static String buildCopyText(Snapshot target) {
+        StringBuilder out = new StringBuilder(320);
         out.append("Matrix3 Live Inspect\n");
         out.append("State: ").append(locked ? "LOCKED" : "HOVER").append('\n');
-        out.append("Type: ").append(target.getType().getDisplayName()).append('\n');
-        out.append("Name: ").append(target.getName()).append('\n');
-        out.append("Definition ID: ").append(target.getId()).append('\n');
-
-        if (target.getType() == TargetType.OBJECT && target.getId() >= 0) {
-            int[] models = DevDefinitionBridge.getObjectModelIds(target.getId());
-            DevDefinitionBridge.DefinitionInfo info = DevDefinitionBridge.getObjectInfoAny(target.getId());
-            int[] animations = info == null ? new int[0] : info.getAnimationIds();
-            out.append("Model IDs: ").append(joinIds(models)).append('\n');
-            out.append("Animation IDs: ").append(joinIds(animations)).append('\n');
-        } else {
-            out.append("Model IDs: -\n");
-            out.append("Animation IDs: -\n");
-        }
-
+        out.append("Type: ").append(target.type).append('\n');
+        out.append("Name: ").append(target.name).append('\n');
+        out.append("Definition ID: ")
+                .append(target.definitionId >= 0 ? Integer.toString(target.definitionId) : "-")
+                .append('\n');
+        out.append("Model IDs: ").append(joinIds(target.modelIds)).append('\n');
+        out.append("Animation IDs: ").append(joinIds(target.animationIds)).append('\n');
         out.append("World Tile: ")
-                .append(target.getWorldX()).append(", ")
-                .append(target.getWorldY()).append(", ")
-                .append(target.getPlane()).append('\n');
-        out.append("Runtime: ").append(target.getRuntimeIndex() >= 0
-                ? "NPC index " + target.getRuntimeIndex()
-                : "Scene object");
+                .append(target.worldX).append(", ")
+                .append(target.worldY).append(", ")
+                .append(target.plane).append('\n');
+        out.append("Region: ").append(regionText(target.worldX, target.worldY)).append('\n');
+        out.append("Chunk: ").append(chunkText(target.worldX, target.worldY)).append('\n');
+        out.append("Runtime: ").append(target.runtime);
         return out.toString();
+    }
+
+    private static String regionText(int worldX, int worldY) {
+        int regionId = (worldX >> 6 << 8) | worldY >> 6;
+        return regionId + "  local " + (worldX & 63) + ", " + (worldY & 63);
+    }
+
+    private static String chunkText(int worldX, int worldY) {
+        return (worldX >> 3) + ", " + (worldY >> 3)
+                + "  local " + (worldX & 7) + ", " + (worldY & 7);
     }
 
     private static String displayIds(int[] ids, int max) {
         if (ids == null || ids.length == 0) {
-            return "None / unresolved";
+            return "-";
         }
         StringBuilder out = new StringBuilder();
         int count = Math.min(ids.length, max);
@@ -374,7 +475,7 @@ public final class LiveInspectOverlay {
 
     private static String joinIds(int[] ids) {
         if (ids == null || ids.length == 0) {
-            return "None / unresolved";
+            return "-";
         }
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < ids.length; i++) {
@@ -384,14 +485,53 @@ public final class LiveInspectOverlay {
         return out.toString();
     }
 
-    private static boolean sameTarget(DevTarget a, DevTarget b) {
-        if (a == b) return true;
-        if (a == null || b == null) return false;
-        return a.getType() == b.getType()
-                && a.getId() == b.getId()
-                && a.getWorldX() == b.getWorldX()
-                && a.getWorldY() == b.getWorldY()
-                && a.getPlane() == b.getPlane()
-                && a.getRuntimeIndex() == b.getRuntimeIndex();
+    private static final class Snapshot {
+        private final String type;
+        private final String name;
+        private final int definitionId;
+        private final int worldX;
+        private final int worldY;
+        private final int plane;
+        private final String runtime;
+        private final int[] modelIds;
+        private final int[] animationIds;
+
+        private Snapshot(String type, String name, int definitionId,
+                int worldX, int worldY, int plane, String runtime,
+                int[] modelIds, int[] animationIds) {
+            this.type = type;
+            this.name = name;
+            this.definitionId = definitionId;
+            this.worldX = worldX;
+            this.worldY = worldY;
+            this.plane = plane;
+            this.runtime = runtime;
+            this.modelIds = modelIds == null ? new int[0] : modelIds.clone();
+            this.animationIds = animationIds == null ? new int[0] : animationIds.clone();
+        }
+
+        private boolean matches(DevTarget target) {
+            if (target == null) return false;
+            return type.equals(target.getType().getDisplayName())
+                    && definitionId == target.getId()
+                    && worldX == target.getWorldX()
+                    && worldY == target.getWorldY()
+                    && plane == target.getPlane()
+                    && (target.getType() != TargetType.NPC
+                        || runtime.equals("NPC index " + target.getRuntimeIndex()));
+        }
+
+        private boolean equalsIdentity(Snapshot other) {
+            if (other == null) return false;
+            return definitionId == other.definitionId
+                    && worldX == other.worldX
+                    && worldY == other.worldY
+                    && plane == other.plane
+                    && type.equals(other.type)
+                    && name.equals(other.name)
+                    && runtime.equals(other.runtime)
+                    && Arrays.equals(modelIds, other.modelIds)
+                    && Arrays.equals(animationIds, other.animationIds);
+        }
     }
 }
