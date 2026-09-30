@@ -17,7 +17,7 @@ This table is the authoritative user-facing milestone table across chats.
 | Move / Rotate / Duplicate / Paint | 🔵 In Progress |
 | Contextual Inspector + NPC editor | 🟡 Foundation |
 | World / Tile creation | 🟡 Foundation |
-| Assets / relationships | ❌ Not started |
+| Assets / relationships | 🟡 Foundation |
 | History / undo / saved-vs-live | ❌ Not started |
 
 ## Scope
