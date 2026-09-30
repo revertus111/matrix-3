@@ -1765,3 +1765,27 @@ Conveyor Gameplay V1.6 — Physical chest -> conveyor -> chest gate (2026-09-30)
 [ ] Regression: ordinary disconnected development ConveyorRuns still support Add/Fill/Debug Sink/Clear Payloads for transport testing.
 [ ] Regression: worker physical storage routing, machine buffers/Process Wood, chest UI/filter/policy controls, RTS camera/rendering, rails and Live Model Editor remain stable.
 [ ] After focused acceptance, run full docs/rs3/SMOKE_TEST.md because persisted SettlementState schema changed from v15 to v16.
+
+Conveyor Payload Live Editor — visual-authoring gate (2026-09-30)
+[x] verified-static: payload authoring reuses LiveModelEditorPreview/Window; no second gizmo/editor framework was added.
+[x] verified-static: ConveyorRunPreview supplies only the first persistent run reference and suppresses normal moving payload visuals while payload edit mode is active.
+[x] verified-static: ConveyorPayloadVisualProfiles remains the only Global -> Category -> exact Item Override persistence authority.
+[x] verified-static: payload gizmo coordinates are run-relative X=Forward, Y=Height, Z=Side; yaw is relative to run heading.
+[x] verified-static: payload Scale is uniform to match the one-scale profile schema; Pitch/Roll are preserved through the payload drawer.
+[x] verified-static: closing the editor clears the transient preview and re-enables normal conveyor payload rendering without touching server transport state.
+[ ] Pull/build/restart Client. A Server restart is not required for this editor-only slice unless testing V1.6 physical transport in the same session.
+[ ] Enter settlement with at least one persistent ConveyorRun visible.
+[ ] In Con Revamp -> Conveyor Payload Visual Profiles choose item 1511 and click Edit Current Item Live.
+[ ] The belt remains visible/locked; normal moving payload visuals disappear; exactly one editable Log 1511 is frozen at the belt midpoint.
+[ ] Move [G] + X changes Forward only, Y changes Height only, and Z changes Side only. Free move stays intuitive and resolves back to Forward/Side.
+[ ] Rotate [R] changes payload-relative Yaw while the belt remains untouched.
+[ ] Scale [V] changes the payload uniformly; X/Y/Z profile scale cannot diverge.
+[ ] Change Pitch/Roll in the P / Conveyor Payload drawer and confirm the frozen item updates live.
+[ ] Save LOGS Category, close the editor, and confirm normal moving payloads immediately return using the saved LOGS profile.
+[ ] Switch to another log item and confirm it inherits CATEGORY LOGS without requiring another transform.
+[ ] Save a deliberately different exact Item Override; reopen/close the editor and confirm only that item uses the override.
+[ ] Ctrl+S in payload mode saves the exact Item Override. Ctrl+O reloads the currently resolved profile.
+[ ] Assign Item -> Category / Use Auto Category / Save Global behave the same as the existing profile tuner because both call the same profile owner.
+[ ] Reopen ordinary object 46298 through Dev -> Edit Model Live and confirm Part/Multi, gizmos, material/object/project drawers and source-object suppression still behave normally.
+[ ] Regression: payload editor mode does not alter belt speed, spacing, backpressure, physical chest item ownership or persistent ConveyorRun state.
+[ ] If also testing V1.6, continue directly into the existing Physical chest -> conveyor -> chest conservation/backpressure gate after closing payload edit mode.
