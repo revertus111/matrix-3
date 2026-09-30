@@ -2026,3 +2026,12 @@
 - Added settlementconveyorchestlink plus Con Revamp -> Conveyor Transport Core -> Link First Two Chests for a deterministic real-ownership test.
 - No machine endpoint, inserter, splitter/filter routing, belt tier or alternate inventory system added.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-30 - Conveyor payload Live Editor integration
+- Reused the existing modular Live Model Editor instead of creating a separate payload positioning tool.
+- Added a locked-belt / editable-item target: one real item freezes at the first persistent ConveyorRun midpoint while normal moving payload visuals are temporarily hidden.
+- Existing gizmos now author payload-relative X=Forward, Y=Height, Z=Side; yaw is run-relative and profile scale is uniform. Pitch/Roll remain available in the payload drawer.
+- Live Editor payload drawer saves directly through the existing Global/Category/Item visual-profile authority; Ctrl+S saves Item Override and Ctrl+O reloads resolved inheritance.
+- Added Con Revamp -> Conveyor Payload Visual Profiles -> Edit Current Item Live.
+- Client/tooling only: no server transport, schema, speed, spacing, chest ownership or V1.6 physical logistics behavior changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
