@@ -215,3 +215,14 @@
 - Native text beside the 3D gizmo remains non-blocking CARRYOVER because no verified Matrix3 renderer-font seam was established; no second Swing viewport overlay was added.
 
 - Added modal-dialog shortcut suppression so the centralized editor hotkeys cannot interfere with Load/Save file chooser navigation.
+
+2026-09-30
+- Added Bundle 2.8 Conveyor Payload Target Reuse.
+- Live Model Editor now supports OBJECT and CONVEYOR_PAYLOAD target modes; payload mode reuses the existing overlay, camera lease, inspector, snapping and native Move/Rotate/Scale gizmos.
+- One real item model freezes at the midpoint of the first persistent ConveyorRun while the belt stays visible/locked and ordinary moving payload visuals are temporarily suppressed.
+- Payload-local gizmo axes are X=Forward, Y=Height, Z=Side; Yaw is relative to run heading and Free ground movement resolves back into Forward/Side.
+- Payload editing is Whole-only with uniform Scale to match the existing visual-profile schema; Pitch/Roll are exposed in the payload drawer.
+- Added P / Conveyor Payload drawer with item/category selection plus Global/Category/Item profile save/reload actions through ConveyorPayloadVisualProfiles.
+- Ctrl+S saves Item Override and Ctrl+O reloads resolved profile in payload mode.
+- Closing payload mode restores normal moving payload rendering and clears only transient preview state.
+- No cache writes, server persistence writes, conveyor speed/transport ownership or second profile store added.
