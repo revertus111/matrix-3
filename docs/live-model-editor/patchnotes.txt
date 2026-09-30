@@ -226,3 +226,9 @@
 - Ctrl+S saves Item Override and Ctrl+O reloads resolved profile in payload mode.
 - Closing payload mode restores normal moving payload rendering and clears only transient preview state.
 - No cache writes, server persistence writes, conveyor speed/transport ownership or second profile store added.
+
+2026-09-30
+- Bundle 2.8 follow-up: added shared Conveyor Payload Belt Anchor controls to the existing P drawer.
+- Save Belt Anchor applies only the Forward/Side/Height movement delta since the last loaded/saved state to the global lane anchor; Reset Belt Anchor restores 0/0/0.
+- Global anchor is additive before Global/Category/Item profile offsets and uses the existing conveyor_payload_profiles.properties store.
+- Payload editor item Model now remains cached while moving/rotating/raising the item; renderer/item/scale changes rebuild it as needed.
