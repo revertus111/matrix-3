@@ -13,6 +13,7 @@ import com.rs.game.Region;
 import com.rs.game.World;
 import com.rs.game.WorldObject;
 import com.rs.game.WorldTile;
+import com.rs.game.item.Item;
 import com.rs.game.map.MapBuilder;
 import com.rs.game.npc.NPC;
 import com.rs.game.player.Player;
@@ -360,15 +361,127 @@ public final class SettlementInstance {
             if (run == null || !run.isValid()) {
                 continue;
             }
-            boolean outputAccepts = conveyorDevelopmentOpenOutputs.contains(
-                    Long.valueOf(run.getRunId()));
-            if (run.advancePayloads(CONVEYOR_GAME_TICK_SECONDS, outputAccepts)) {
+
+            /*
+             * Endpoint ownership is explicit:
+             * - Point A may withdraw one real item from a physical chest when the
+             *   conveyor inlet has spacing.
+             * - Point B may deposit the complete payload into a physical chest.
+             * - Without an accepting endpoint, transport remains blocked and
+             *   existing backpressure behavior is preserved.
+             *
+             * The development sink remains available as an override for transport
+             * testing, but production chest transfer never deletes inventory.
+             */
+            if (processConveyorOutput(run)) {
+                changed = true;
+            }
+            if (run.advancePayloads(CONVEYOR_GAME_TICK_SECONDS, false)) {
+                changed = true;
+            }
+            if (processConveyorOutput(run)) {
+                changed = true;
+            }
+            if (processConveyorInput(run)) {
                 changed = true;
             }
         }
         if (changed) {
             syncConveyorPayloadsToClient();
         }
+    }
+
+    private boolean processConveyorOutput(SettlementConveyorRun run) {
+        SettlementConveyorPayload payload = run.getFrontPayloadAtOutput();
+        if (payload == null) {
+            return false;
+        }
+
+        Long runKey = Long.valueOf(run.getRunId());
+        if (conveyorDevelopmentOpenOutputs.contains(runKey)) {
+            return run.removePayload(payload.getPayloadId());
+        }
+
+        SettlementStorageContainer destination = findStorageAtPlot(
+                run.getEndPlotX(), run.getEndPlotY(), run.getPlane());
+        if (destination == null
+                || !destination.acceptsItem(payload.getItemId())
+                || destination.getAvailableCapacityForItem(payload.getItemId())
+                        < payload.getAmount()) {
+            return false;
+        }
+
+        int accepted = destination.addItem(payload.getItemId(), payload.getAmount());
+        if (accepted != payload.getAmount()) {
+            if (accepted > 0) {
+                destination.removeItem(payload.getItemId(), accepted);
+            }
+            return false;
+        }
+
+        if (!run.removePayload(payload.getPayloadId())) {
+            destination.removeItem(payload.getItemId(), payload.getAmount());
+            return false;
+        }
+
+        SettlementStorageInterface.refreshOpenChest(
+                player, destination.getPieceId());
+        return true;
+    }
+
+    private boolean processConveyorInput(SettlementConveyorRun run) {
+        if (!run.isInletAvailable()) {
+            return false;
+        }
+
+        SettlementStorageContainer source = findStorageAtPlot(
+                run.getStartPlotX(), run.getStartPlotY(), run.getPlane());
+        if (source == null) {
+            return false;
+        }
+
+        Item[] items = source.snapshotItems();
+        for (int slot = 0; slot < items.length; slot++) {
+            Item item = items[slot];
+            if (item == null || item.getAmount() <= 0) {
+                continue;
+            }
+
+            int itemId = item.getId();
+            int removed = source.removeItemFromSlot(slot, 1);
+            if (removed <= 0) {
+                continue;
+            }
+
+            SettlementConveyorPayload payload = run.addPayload(itemId, removed);
+            if (payload == null) {
+                source.addItem(itemId, removed);
+                return false;
+            }
+
+            SettlementStorageInterface.refreshOpenChest(player, source.getPieceId());
+            return true;
+        }
+        return false;
+    }
+
+    private SettlementStorageContainer findStorageAtPlot(
+            int plotX, int plotY, int plane) {
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (piece == null
+                    || piece.getPlotX() != plotX
+                    || piece.getPlotY() != plotY
+                    || piece.getPlane() != plane) {
+                continue;
+            }
+            SettlementBuildPiece definition =
+                    SettlementBuildPiece.forKey(piece.getDefinitionKey());
+            if (definition != null
+                    && definition.getRole() == SettlementBuildRole.STORAGE) {
+                return state.findStorageContainer(piece.getPieceId());
+            }
+        }
+        return null;
     }
 
     public synchronized String addConveyorPayload(
@@ -447,11 +560,83 @@ public final class SettlementInstance {
         }
         boolean open = conveyorDevelopmentOpenOutputs.contains(
                 Long.valueOf(run.getRunId()));
+        SettlementStorageContainer source = findStorageAtPlot(
+                run.getStartPlotX(), run.getStartPlotY(), run.getPlane());
+        SettlementStorageContainer destination = findStorageAtPlot(
+                run.getEndPlotX(), run.getEndPlotY(), run.getPlane());
+        String sourceLabel = source == null
+                ? "NO CHEST" : "CHEST#" + source.getPieceId();
+        String outputLabel = open
+                ? "OPEN DEBUG SINK"
+                : destination == null
+                        ? "BLOCKED/NO CHEST"
+                        : "CHEST#" + destination.getPieceId();
         return "ConveyorRun #" + run.getRunId()
                 + " payloads=" + run.getPayloadCount()
                 + " speed=" + String.format("%.2f", run.getSpeedTilesPerSecond())
                 + "t/s spacing=" + String.format("%.2f", run.getPayloadSpacingTiles())
-                + "t output=" + (open ? "OPEN DEBUG SINK" : "BLOCKED");
+                + "t source=" + sourceLabel
+                + " output=" + outputLabel;
+    }
+
+    /**
+     * Development-only real-ownership harness. Connects the first two persistent
+     * physical chests by piece id without creating fake chest inventory.
+     */
+    public synchronized String createConveyorBetweenFirstTwoStorageChests() {
+        if (!loaded || destroyed) {
+            return "Settlement conveyor chest-link test is unavailable while loading.";
+        }
+
+        List<SettlementPlacedPiece> storagePieces =
+                new ArrayList<SettlementPlacedPiece>();
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (!isPhysicalStoragePiece(piece)) {
+                continue;
+            }
+            storagePieces.add(piece);
+        }
+        if (storagePieces.size() < 2) {
+            return "Place at least two physical settlement chests first.";
+        }
+
+        java.util.Collections.sort(storagePieces,
+                new java.util.Comparator<SettlementPlacedPiece>() {
+                    @Override
+                    public int compare(
+                            SettlementPlacedPiece a, SettlementPlacedPiece b) {
+                        return Long.compare(a.getPieceId(), b.getPieceId());
+                    }
+                });
+
+        SettlementPlacedPiece source = storagePieces.get(0);
+        SettlementPlacedPiece destination = storagePieces.get(1);
+
+        for (SettlementConveyorRun existing : state.snapshotConveyorRuns()) {
+            if (existing != null
+                    && existing.getStartPlotX() == source.getPlotX()
+                    && existing.getStartPlotY() == source.getPlotY()
+                    && existing.getEndPlotX() == destination.getPlotX()
+                    && existing.getEndPlotY() == destination.getPlotY()
+                    && existing.getPlane() == source.getPlane()) {
+                return "Chest conveyor already exists: run #"
+                        + existing.getRunId()
+                        + " CHEST#" + source.getPieceId()
+                        + " -> CHEST#" + destination.getPieceId() + ".";
+            }
+        }
+
+        return createConveyorRun(
+                new WorldTile(
+                        toWorldX(source.getPlotX()),
+                        toWorldY(source.getPlotY()),
+                        source.getPlane()),
+                new WorldTile(
+                        toWorldX(destination.getPlotX()),
+                        toWorldY(destination.getPlotY()),
+                        destination.getPlane()))
+                + " CHEST#" + source.getPieceId()
+                + " -> CHEST#" + destination.getPieceId() + ".";
     }
 
     public synchronized String removeConveyorRun(long runId) {
