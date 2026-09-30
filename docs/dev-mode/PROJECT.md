@@ -233,13 +233,13 @@ This table is the authoritative user-facing milestone table across chats.
 
 ## Current execution state
 
-- Phase: Phase 1 - Live Interaction and World Manipulation
-- Phase status: NEEDS TEST
-- Bundle: Bundle 1.3 - Continuous / Paint Placement
+- Phase: Phase 2 - Contextual Editors
+- Phase status: ACTIVE
+- Bundle: Bundle 2.2 - Live Inspect Polish + Target Expansion
 - Bundle status: NEEDS TEST
-- Approval state: SAP AAA approved 2026-09-08; implementation complete statically.
-- Current checklist item: Deferred combined Bundle 1.2 + 1.3 runtime gate.
-- Current objective: Preserve all pending Phase 1 runtime checks in one queue. Phase 2 Bundle 2.2 Live Inspect Polish + Target Expansion is implemented / NEEDS TEST after the user's partial V1 runtime proof.
+- Approval state: SAP AAA approved 2026-09-30; implementation complete statically.
+- Current checklist item: Runtime acceptance for no-flicker/no-clipping HOVER copy plus Tile/Ground Item target expansion.
+- Current objective: Accept Live Inspect V1.1/V1.2 as the fast read-only dev inspection path. The older Phase 1 Bundle 1.2/1.3 combined runtime gate remains preserved as carryover and is not treated as complete.
 
 ## Checklist / patch status
 
@@ -319,7 +319,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Current phase:**
 
-- Phase 1 - Live Interaction and World Manipulation (`NEEDS TEST`).
+- Phase 2 - Contextual Editors (`ACTIVE`). Phase 1 remains `NEEDS TEST` as preserved runtime carryover.
 
 **Active bundle:**
 
