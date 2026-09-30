@@ -807,7 +807,6 @@ public final class client extends Class584 {
 				aBool8856 = false;
 			}
 			cycles++;
-			DevTimeController.beginClientCycle(cycles);
 			if (cycles % 1000 == 1) {
 				GregorianCalendar gregoriancalendar = new GregorianCalendar();
 				Class439.anInt5093 = (gregoriancalendar.get(11) * 600 + gregoriancalendar.get(12) * 10 + gregoriancalendar.get(13) / 6);
@@ -2554,6 +2553,7 @@ public final class client extends Class584 {
 				aBool8856 = false;
 			}
 			cycles++;
+			DevTimeController.beginClientCycle(cycles);
 			if (cycles % 1000 == 1) {
 				GregorianCalendar gregoriancalendar = new GregorianCalendar();
 				Class439.anInt5093 = (gregoriancalendar.get(11) * 600 + gregoriancalendar.get(12) * 10 + gregoriancalendar.get(13) / 6);

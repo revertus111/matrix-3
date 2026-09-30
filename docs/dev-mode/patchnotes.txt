@@ -1,3 +1,8 @@
+2026-09-30 - Visual Dev Time runtime tick ownership correction
+- Static verification found the initial client-cycle hook landed in decompiled duplicate method6912 rather than the actual Class584-owned method6932 runtime tick.
+- Moved DevTimeController.beginClientCycle(...) to method6932 immediately after client.cycles increments and removed it from the duplicate alias.
+- This correction is required for pause/slow/step decisions to drive the real runtime visual update path.
+
 2026-09-30 - Dev Mode Visual Dev Time V1 controls
 - Added F5 one-tick step, F6 visual pause/resume and F7 speed cycling (1.00x/0.50x/0.25x/0.10x) while Live Inspect is active.
 - Added Visual Time status to the Live Inspect HUD and Ctrl+C diagnostic block.
