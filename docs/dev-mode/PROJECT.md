@@ -162,11 +162,35 @@ This table is the authoritative user-facing milestone table across chats.
 
 ### Phase 2 - Contextual Editors
 
-**Status:** PLANNED
+**Status:** ACTIVE
 
 **Purpose:** Expand the shared Inspector into verified live NPC/object/item editing surfaces.
 
 **Safe-independent note:** the user explicitly requested development continue while Phase 1 runtime testing is deferred. Phase 2 work may be entered before the Phase 1 runtime gate only when the chosen slice depends solely on already-VERIFIED foundation (for example read-only/runtime Inspector data), does not rely on unverified manipulation/paint correctness, and Phase 1 remains `NEEDS TEST` rather than being treated as complete.
+
+#### Bundle 2.1 - Live Inspect V1
+
+**Purpose:** Replace repetitive right-click inspection/copy actions with a fast non-destructive live hover inspector that can be locked and copied as one diagnostic block.
+
+**Status:** NEEDS TEST
+
+**Checklist / patches:**
+
+- [x] Add owner-only F10 Live Inspect toggle using the existing Dev Mode input listener.
+- [x] Reuse Matrix3-resolved NPC/object targets from `DevModeBridge`; do not add a second scene picker.
+- [x] Add compact in-client hover HUD with type, name, definition ID, object model IDs, object animation IDs, world tile, and runtime reference.
+- [x] Add F9 lock/unlock so the current target remains inspectable while the cursor moves.
+- [x] Add Ctrl+C copy of the complete current inspection block for direct sharing/debugging.
+- [x] While Live Inspect is active, suppress redundant Inspect/Copy ID/Copy Tile Dev menu entries while preserving Edit/Live Model/Move/Rotate/Duplicate/Delete tools.
+- [x] Disabling Dev Mode also closes Live Inspect and clears transient lock/hover state.
+- [ ] Runtime-verify hover targeting, lock, clipboard, menu cleanup, and normal interaction regression.
+
+**Runtime tests:**
+
+- Use object 46298 if convenient to verify object ID/model/animation output.
+- Hover an NPC and verify exact definition ID/tile/runtime index.
+- Lock with F9, move away, copy with Ctrl+C, then unlock and confirm hover follows again.
+- Toggle F10 off/on and confirm redundant inspect/copy menu entries return only while Live Inspect is off.
 
 ### Phase 3 - World / Tile Creation
 
@@ -194,7 +218,7 @@ This table is the authoritative user-facing milestone table across chats.
 - Bundle status: NEEDS TEST
 - Approval state: SAP AAA approved 2026-09-08; implementation complete statically.
 - Current checklist item: Deferred combined Bundle 1.2 + 1.3 runtime gate.
-- Current objective: Preserve all pending runtime checks in one queue while allowing safe independent development to continue when the user says `next`.
+- Current objective: Preserve all pending Phase 1 runtime checks in one queue. Safe-independent Phase 2 Bundle 2.1 Live Inspect V1 is implemented / NEEDS TEST without changing Phase 1's deferred gate.
 
 ## Checklist / patch status
 
@@ -212,6 +236,7 @@ This table is the authoritative user-facing milestone table across chats.
 | Placement cancellation | 1 | 1.3 | NEEDS TEST | Browser/tile explicit cancel plus non-consuming AWT Escape observation. |
 | Object placement rotation | 1 | 1.3 | NEEDS TEST | Fixed, Cycle, Random 0-3. |
 | Phase 1 combined runtime gate | 1 | 1.2 + 1.3 | NEEDS TEST | Intentionally deferred; accumulated queue is in `docs/dev-mode/testlist.txt`. |
+| Live Inspect V1 | 2 | 2.1 | NEEDS TEST | F10 hover HUD + F9 lock + Ctrl+C copy; reuses Matrix3-resolved targets and trims redundant inspect/copy menu entries while active. |
 
 ## Decisions / new ideas
 
@@ -226,6 +251,8 @@ This table is the authoritative user-facing milestone table across chats.
 - 2026-09-08: User explicitly deferred runtime testing because PC/runtime time is unavailable and requested safe independent development continue; this does not satisfy or bypass the Phase 1 verification gate.
 - 2026-09-08: Continuous uses repeated explicit tile Dev placement; Paint uses normal left-click tile action 23 and does not consume Matrix3 Walk Here.
 - 2026-09-08: Starting Move/Duplicate cancels active spawn placement and starting Continuous/Paint cancels active Move/Duplicate, giving Dev Mode one active placement tool at a time.
+- 2026-09-30: Live Inspect becomes the preferred fast read-only inspection path: F10 toggles, F9 locks the current hover target, and Ctrl+C copies one shareable diagnostic block. It reuses existing Matrix3-resolved Dev targets rather than adding another picker.
+- 2026-09-30: While Live Inspect is active, redundant Inspect/Copy ID/Copy Tile right-click actions are hidden; mutation/editor routes remain available. Turning Live Inspect off restores the legacy menu actions.
 
 ## Testing
 
@@ -264,7 +291,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Bundle 1.3 Continuous / Paint Placement implementation and static verification. Once/Continuous/Paint state, last-used target, object rotation behaviors, contextual tile actions, Paint-on-action-23, explicit/Escape cancellation, documentation, and deferred tests are committed.
+- Safe-independent Phase 2 Bundle 2.1 Live Inspect V1 implementation: F10 toggle, Matrix3-resolved NPC/object hover HUD, F9 lock/unlock, Ctrl+C full-block copy, and redundant Inspect/Copy menu suppression while Live Inspect is active.
 
 **Current phase:**
 
@@ -272,12 +299,12 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Active bundle:**
 
-- No active implementation bundle. Bundles 1.2 and 1.3 are both `NEEDS TEST` with runtime intentionally deferred.
+- Bundle 2.1 Live Inspect V1 is `NEEDS TEST`. Phase 1 Bundles 1.2 and 1.3 remain `NEEDS TEST` with their combined runtime gate intentionally deferred.
 
 **Next checklist item:**
 
-- Preferred gate: run the combined deferred Phase 1 runtime queue when PC time is available.
-- If the user says `next` before testing: choose only a safe independent Phase 2 contextual-editor slice that depends on the already-VERIFIED target/Inspector foundation, and keep Phase 1 `NEEDS TEST`.
+- Runtime-check Live Inspect V1 in the next convenient client session; this is a short client-only acceptance pass and can be bundled with other pending tests.
+- The older combined Phase 1 manipulation/paint gate remains deferred and unchanged.
 
 **Current state / next action:**
 
@@ -310,6 +337,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Pending runtime verification:**
 
+- Bundle 2.1 Live Inspect V1.
 - Bundle 1.2 World Manipulation.
 - Bundle 1.3 Continuous / Paint Placement.
 - Combined Phase 1 gate.
@@ -325,4 +353,4 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 ## Next recommended work
 
-When runtime time is available, run the short deferred queue. If testing remains unavailable and the user explicitly says `next`, the next safe independent implementation target is the Phase 2 contextual NPC Inspector/read-only runtime-data slice, while Phase 1 remains `NEEDS TEST`.
+Runtime-verify Live Inspect V1 when convenient. After acceptance, expand the same hover/copy contract to the next high-value target classes (ground items, tiles/scene data, graphics/projectiles) before adding more contextual editing UI. Phase 1 manipulation/paint remains a separate deferred runtime gate.

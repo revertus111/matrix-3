@@ -1,3 +1,10 @@
+2026-09-30 - Dev Mode Live Inspect V1
+- Added owner-only F10 Live Inspect overlay using DevModeBridge's existing Matrix3-resolved NPC/object targets; no second scene picker or world/cache mutation path was introduced.
+- Added compact hover data for type/name/definition ID/world tile/runtime reference plus cache-backed object model IDs and object animation IDs.
+- Added F9 lock/unlock and Ctrl+C copy of the complete current inspection block for fast diagnostics/sharing.
+- While Live Inspect is active, redundant Inspect/Copy ID/Copy Tile Dev menu actions are suppressed; edit/live-model/manipulation actions remain available and legacy inspection actions return when F10 is off.
+- Disabling Dev Mode closes Live Inspect and clears transient hover/lock state.
+
 2026-09-08 - Dev Mode Continuous / Paint Placement bundle
 - Added shared client-side Dev Spawn placement state with Once, Continuous, and Paint modes while reusing the existing owner-only server `devspawn` authority for every actual placement.
 - Continuous mode stays armed and adds a contextual tile placement entry for repeated NPC/object/item placement.

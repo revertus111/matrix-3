@@ -5,11 +5,13 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.AWTEventListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 
 import javax.swing.SwingUtilities;
 
 import game.console.DevInspectorWindow;
 import game.console.LiveModelEditorWindow;
+import game.console.LiveInspectOverlay;
 import game.console.DevSpawnBrowserWindow;
 import game.console.DevTileEditorWindow;
 
@@ -74,6 +76,7 @@ public final class DevModeBridge {
             currentTarget = null;
             clearManipulationPlacement();
             DevSpawnPlacement.cancel();
+            LiveInspectOverlay.setEnabled(false);
         }
     }
 
@@ -192,13 +195,16 @@ public final class DevModeBridge {
         int normalizedAction = normalizeAction(sourceAction);
         if (isNpcSourceAction(normalizedAction)) {
             int npcIndex = (int) targetUid;
-            addEntityEntry("Dev > Inspect NPC", targetText, cursor, NPC_INSPECT_MENU_ACTION, sourceParam,
-                    targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
+            LiveInspectOverlay.observeTarget(resolveNpcTarget(npcIndex));
+            if (!LiveInspectOverlay.isEnabled()) {
+                addEntityEntry("Dev > Inspect NPC", targetText, cursor, NPC_INSPECT_MENU_ACTION, sourceParam,
+                        targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
+                addEntityEntry("Dev > Copy NPC ID", targetText, cursor, NPC_COPY_ID_MENU_ACTION, sourceParam,
+                        targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
+                addEntityEntry("Dev > Copy NPC Tile", targetText, cursor, NPC_COPY_TILE_MENU_ACTION, sourceParam,
+                        targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
+            }
             addEntityEntry("Dev > Edit NPC", targetText, cursor, NPC_EDIT_MENU_ACTION, sourceParam,
-                    targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
-            addEntityEntry("Dev > Copy NPC ID", targetText, cursor, NPC_COPY_ID_MENU_ACTION, sourceParam,
-                    targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
-            addEntityEntry("Dev > Copy NPC Tile", targetText, cursor, NPC_COPY_TILE_MENU_ACTION, sourceParam,
                     targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
             addEntityEntry("Dev > Move NPC", targetText, cursor, NPC_MOVE_MENU_ACTION, sourceParam,
                     targetUid, npcIndex, 0, bool, bool5, groupUid, bool7);
@@ -209,15 +215,18 @@ public final class DevModeBridge {
         } else if (isObjectSourceAction(normalizedAction)) {
             int objectId = (int) (targetUid >>> 32) & 0x7fffffff;
             int packedTile = packLocalCoordinates(localX, localY);
-            addEntityEntry("Dev > Inspect Object", targetText, cursor, OBJECT_INSPECT_MENU_ACTION, sourceParam,
-                    targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+            LiveInspectOverlay.observeTarget(resolveObjectTarget(objectId, packedTile));
+            if (!LiveInspectOverlay.isEnabled()) {
+                addEntityEntry("Dev > Inspect Object", targetText, cursor, OBJECT_INSPECT_MENU_ACTION, sourceParam,
+                        targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+                addEntityEntry("Dev > Copy Object ID", targetText, cursor, OBJECT_COPY_ID_MENU_ACTION, sourceParam,
+                        targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+                addEntityEntry("Dev > Copy Object Tile", targetText, cursor, OBJECT_COPY_TILE_MENU_ACTION, sourceParam,
+                        targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
+            }
             addEntityEntry("Dev > Edit Model Live", targetText, cursor, OBJECT_EDIT_MODEL_MENU_ACTION, sourceParam,
                     targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
             addEntityEntry("Dev > Edit Object", targetText, cursor, OBJECT_EDIT_MENU_ACTION, sourceParam,
-                    targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
-            addEntityEntry("Dev > Copy Object ID", targetText, cursor, OBJECT_COPY_ID_MENU_ACTION, sourceParam,
-                    targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
-            addEntityEntry("Dev > Copy Object Tile", targetText, cursor, OBJECT_COPY_TILE_MENU_ACTION, sourceParam,
                     targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
             addEntityEntry("Dev > Move Object", targetText, cursor, OBJECT_MOVE_MENU_ACTION, sourceParam,
                     targetUid, objectId, packedTile, bool, bool5, groupUid, bool7);
@@ -653,16 +662,47 @@ public final class DevModeBridge {
             Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
                 @Override
                 public void eventDispatched(AWTEvent event) {
+                    if (event instanceof MouseEvent) {
+                        MouseEvent mouseEvent = (MouseEvent) event;
+                        if (enabled && LiveInspectOverlay.isEnabled()
+                                && mouseEvent.getSource() == Class584.aCanvas7745
+                                && mouseEvent.getID() == MouseEvent.MOUSE_MOVED) {
+                            LiveInspectOverlay.pointerMoved();
+                        }
+                        return;
+                    }
                     if (!(event instanceof KeyEvent)) {
                         return;
                     }
                     KeyEvent keyEvent = (KeyEvent) event;
-                    if (keyEvent.getID() == KeyEvent.KEY_PRESSED && keyEvent.getKeyCode() == KeyEvent.VK_ESCAPE
+                    if (keyEvent.getID() != KeyEvent.KEY_PRESSED) {
+                        return;
+                    }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_ESCAPE
                             && enabled && hasAnyPlacementArmed()) {
                         notifyPlacementStatus(cancelPlacement());
+                        return;
+                    }
+                    if (!enabled || !isOwnerSession() || keyEvent.getSource() != Class584.aCanvas7745) {
+                        return;
+                    }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_F10) {
+                        LiveInspectOverlay.toggle();
+                        keyEvent.consume();
+                        return;
+                    }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_F9 && LiveInspectOverlay.isEnabled()) {
+                        LiveInspectOverlay.toggleLock();
+                        keyEvent.consume();
+                        return;
+                    }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_C && keyEvent.isControlDown()
+                            && LiveInspectOverlay.isEnabled()) {
+                        LiveInspectOverlay.copyCurrentToClipboard();
+                        keyEvent.consume();
                     }
                 }
-            }, AWTEvent.KEY_EVENT_MASK);
+            }, AWTEvent.KEY_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
             escapeListenerInstalled = true;
         } catch (RuntimeException ex) {
             // Escape is a convenience cancellation path. Explicit Cancel remains available.
