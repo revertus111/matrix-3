@@ -437,6 +437,8 @@ public final class ConstructionBuildCamera {
         }
 
         try {
+            syncDetachedProjectionToVanillaScene();
+
             Class423_Sub2 positionController = (Class423_Sub2) Class24.aClass411_Sub1_158.method4990((byte) -37);
             Class658_Sub2 lookController = (Class658_Sub2) Class24.aClass411_Sub1_158.method4991(-589573040);
             Class240 position = positionController.method5159((byte) -54);
@@ -475,6 +477,34 @@ public final class ConstructionBuildCamera {
                 failureReported = true;
                 reportToServer("FAIL tick-exception-" + ex.getClass().getSimpleName());
                 ex.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * VERIFIED-STATIC projection parity:
+     * Matrix3's normal viewport uses Class613.method7284()/method7313() as the
+     * current scene near/far clip planes. Class411 defaults its detached camera
+     * to 50..10000, which is shorter than even the stock 104-tile scene and much
+     * shorter than the settlement's native 168-tile scene.
+     *
+     * Keep the accepted detached camera owner, but feed it the same projection
+     * depth Matrix3 already calculated for the currently loaded scene.
+     */
+    private static void syncDetachedProjectionToVanillaScene() {
+        if (Class24.aClass411_Sub1_158 == null || client.aClass613_8605 == null) {
+            return;
+        }
+        try {
+            float nearClip = (float) client.aClass613_8605.method7284(155221149);
+            float farClip = (float) client.aClass613_8605.method7313((byte) -111);
+            if (nearClip >= 1.0F && farClip > nearClip) {
+                Class24.aClass411_Sub1_158.method4983(nearClip, farClip, 0);
+            }
+        } catch (Exception_Sub4 ex) {
+            if (!failureReported) {
+                failureReported = true;
+                reportToServer("FAIL detached-projection-sync");
             }
         }
     }
