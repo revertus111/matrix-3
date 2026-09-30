@@ -224,3 +224,12 @@ Still pending explicit edge verification:
 - Therefore "vanilla camera = Class246 globals" is not a complete ownership model and must not be used again without tracing the active normal-camera mode at runtime.
 - The code has been restored to the last known working detached Class24/Class411 RTS implementation.
 - Future vanilla parity work must first identify which normal Matrix3 camera branch is active during ordinary gameplay, then adapt RTS at that real owner instead of writing a branch that may not be rendered.
+
+## Loaded-scene render boundary finding — 2026-09-30
+
+- The detached RTS camera remains the runtime-accepted owner.
+- The hard gray boundary is **not** a reason to replace that camera owner.
+- verified-static: Matrix3's default scene is 104x104 tiles and Class523 rendering is bounded by the allocated scene dimensions.
+- Settlement RTS can move independently from the player and therefore approach/out-run that player-centered loaded scene even when the Class523 culling focus follows the RTS pivot.
+- Correct ownership: settlement lifecycle now requests Matrix3's native 168x168 scene and supplies 176x176 generated dynamic terrain. Camera transforms, fog, viewport math and Class523 render radius remain stock.
+- Do not reopen the rejected vanilla-camera migration unless separate runtime evidence shows an actual camera-owner defect.
