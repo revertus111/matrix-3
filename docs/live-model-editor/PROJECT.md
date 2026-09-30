@@ -371,11 +371,13 @@ Status: IMPLEMENTED / NEEDS TEST
 - [x] Temporarily suppress ordinary moving payload visuals while payload mode is active; server conveyor/chest transport remains untouched.
 - [x] Map payload-local gizmo axes to **X=Forward**, **Y=Height**, **Z=Side** and convert Free ground movement back into run-relative Forward/Side values.
 - [x] Keep payload Yaw relative to the ConveyorRun heading.
+- [x] Add shared **Belt Anchor** authoring for global Forward/Side/Height lane correction before per-profile offsets; Save Belt Anchor records only the current movement delta, Reset Belt Anchor restores 0/0/0.
 - [x] Reuse Whole transform mode only; Part/Multi/Isolate and object-only Material/Object/Project/source-animation actions are disabled during payload editing.
 - [x] Force uniform Scale because `ConveyorPayloadVisualProfiles.Profile` currently owns one scale percentage.
 - [x] Expose Pitch/Roll in the payload drawer while the existing Rotate gizmo owns Yaw.
 - [x] Add **P / Conveyor Payload** drawer with item id, category and authoritative Global/Category/Item profile operations.
 - [x] Route saves directly through `ConveyorPayloadVisualProfiles`; no editor-specific profile file/store.
+- [x] Keep payload item Model cached during Move/Rotate/Height edits; renderer/item/scale changes are the only reasons to rebuild the item model.
 - [x] `Ctrl+S` saves current exact Item Override; `Ctrl+O` reloads resolved inheritance while in payload mode.
 - [x] Closing payload mode clears transient preview state and restores normal moving payload rendering.
 - [x] Add Construction-panel launcher **Edit Current Item Live**.
@@ -409,4 +411,4 @@ Status: IMPLEMENTED / NEEDS TEST
 - ConveyorRun payload profile inheritance;
 - shared Construction RTS camera lease.
 
-**Important uncertainty:** Bundle 2.8 is verified-static only until the Client clean-build/runtime gate. Payload Pitch/Roll use the payload drawer rather than new 3D rotation rings; the current profile schema intentionally keeps one uniform Scale value. Whole-transform undo still inherits the existing Live Model Editor limitation and was not expanded by this integration.
+**Important uncertainty:** Bundle 2.8 is verified-static only until the Client clean-build/runtime gate. Payload Pitch/Roll use the payload drawer rather than new 3D rotation rings; the current profile schema intentionally keeps one uniform Scale value. Belt Anchor owns position only and is additive before the resolved profile. Whole-transform undo still inherits the existing Live Model Editor limitation and was not expanded by this integration.
