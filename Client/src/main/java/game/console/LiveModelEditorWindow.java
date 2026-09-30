@@ -5,6 +5,8 @@ import game.ClientConsoleBridge;
 import game.ConstructionBuildCamera;
 import game.ConstructionPaletteOverlay;
 import game.ConstructionPlacementController;
+import game.ConveyorPayloadVisualProfiles;
+import game.ConveyorRunPreview;
 import game.DevDefinitionBridge;
 import game.DevModeBridge.DevTarget;
 import game.DevModeBridge.TargetType;
@@ -177,6 +179,14 @@ public final class LiveModelEditorWindow {
     private final JList<String> partList = new JList<String>(partListModel);
     private final JComboBox<String> conveyorRoleCombo =
             new JComboBox<String>(LiveModelEditorPreview.getConveyorRoleOptions());
+    private final JSpinner payloadItemSpinner =
+            spinner(1511, 0, 100000, 1);
+    private final JComboBox<String> payloadCategoryCombo =
+            new JComboBox<String>(ConveyorPayloadVisualProfiles.getCategoryNames());
+    private final JSpinner payloadPitchSpinner =
+            spinner(0, -180, 180, 5);
+    private final JSpinner payloadRollSpinner =
+            spinner(0, -180, 180, 5);
 
     private static final int[] HUD_ROOT_COMPONENTS = {
             165, 176, 198, 382, 219, 230, 57, 132, 154, 252, 296, 263,
@@ -224,6 +234,8 @@ public final class LiveModelEditorWindow {
     private int sourceY;
     private int sourcePlane;
     private boolean hasSource;
+    private boolean payloadMode;
+    private boolean suppressPayloadRefresh;
     private boolean suppressLiveRefresh;
     private boolean suppressPartRefresh;
     private boolean suppressInspectorRefresh;
@@ -366,6 +378,7 @@ public final class LiveModelEditorWindow {
 
         toolCards.setBackground(RS_BG);
         toolCards.add(createEditPanel(), "EDIT");
+        toolCards.add(createPayloadPanel(), "PAYLOAD");
         toolCards.add(createMaterialPanel(), "MATERIAL");
         toolCards.add(createCameraPanel(), "CAMERA");
         toolCards.add(createObjectPanel(), "OBJECT");
@@ -461,6 +474,8 @@ public final class LiveModelEditorWindow {
         rail.setPreferredSize(new Dimension(TAB_RAIL_WIDTH, OVERLAY_HEIGHT));
 
         rail.add(railButton("E", "Edit / parts + transform", "EDIT"));
+        rail.add(Box.createVerticalStrut(3));
+        rail.add(railButton("P", "Conveyor payload profile", "PAYLOAD"));
         rail.add(Box.createVerticalStrut(3));
         rail.add(railButton("M", "Material replacement", "MATERIAL"));
         rail.add(Box.createVerticalStrut(3));
