@@ -2486,11 +2486,14 @@ Build three straight test runs from the same authored conveyor source (short, me
   - **X = Forward** along the ConveyorRun;
   - **Y = Height**;
   - **Z = Side** across the belt.
+- Added a separate persistent **Belt Anchor** layer (Forward / Side / Height) that is applied additively before the resolved Global/Category/Item profile. This is for whole-lane corrections such as "every payload is two tiles south" without contaminating every item/category profile.
+- **Save Belt Anchor** stores only the position delta since the last loaded/saved payload state, so existing per-item/category offsets are not double-baked. **Reset Belt Anchor** returns the shared lane offset to 0/0/0.
 - Free/screen-plane Move is converted back into the same run-relative Forward/Side coordinates. Yaw remains relative to the conveyor heading.
 - Payload profile scale remains uniform because the existing profile schema owns one scale value. Pitch/Roll remain editable from the payload drawer while the existing Rotate gizmo owns Yaw.
 - Added Live Editor **P / Conveyor Payload** drawer with item id, category, pitch/roll, Load Resolved/Category, Save Category, Save Item Override, Remove Override, Assign/Auto Category, Save Global and Profile Status.
 - Payload mode is Whole-only. Object-only Part/Multi/Isolate/Material/Object/Project/source-animation controls are disabled rather than silently editing the locked belt reference.
 - `Ctrl+S` saves the current exact Item Override in payload mode; `Ctrl+O` reloads the resolved inherited profile.
+- Belt Anchor is stored in the same `conveyor_payload_profiles.properties` file as `anchor.alongOffset / anchor.sideOffset / anchor.heightOffset`; it is not a new profile store or server state.
 - Con Revamp -> Conveyor Payload Visual Profiles now includes **Edit Current Item Live** as the primary visual-authoring entry point. The existing numeric profile controls remain available as a precision/debug fallback.
 - Closing payload edit mode clears only the transient preview and immediately restores normal moving payload rendering. Saved Global/Category/Item profiles remain authoritative.
 - No server code, SettlementState schema, chest/conveyor inventory ownership, belt speed, spacing, backpressure or V1.6 physical transport behavior changed by this editor integration.
