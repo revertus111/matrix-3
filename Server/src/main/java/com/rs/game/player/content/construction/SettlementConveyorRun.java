@@ -169,6 +169,55 @@ public final class SettlementConveyorRun implements Serializable {
         return payload;
     }
 
+    /**
+     * True when Point A has enough spacing for one more payload.
+     */
+    public synchronized boolean isInletAvailable() {
+        if (!normalize()) {
+            return false;
+        }
+        for (SettlementConveyorPayload payload : payloads) {
+            if (payload != null
+                    && payload.getDistanceTiles() < PAYLOAD_SPACING_TILES - EPSILON) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns the leading payload only when it is physically waiting at Point B.
+     * Endpoint ownership/acceptance remains with SettlementInstance.
+     */
+    public synchronized SettlementConveyorPayload getFrontPayloadAtOutput() {
+        if (!normalize() || payloads.isEmpty()) {
+            return null;
+        }
+        sortFrontFirst(payloads);
+        SettlementConveyorPayload front = payloads.get(0);
+        return front != null
+                && front.getDistanceTiles() >= getLengthTiles() - EPSILON
+                ? front : null;
+    }
+
+    /**
+     * Removes one server-owned payload after an endpoint has accepted ownership.
+     */
+    public synchronized boolean removePayload(long payloadId) {
+        if (!normalize() || payloadId <= 0L) {
+            return false;
+        }
+        java.util.Iterator<SettlementConveyorPayload> iterator = payloads.iterator();
+        while (iterator.hasNext()) {
+            SettlementConveyorPayload payload = iterator.next();
+            if (payload != null && payload.getPayloadId() == payloadId) {
+                iterator.remove();
+                return true;
+            }
+        }
+        return false;
+    }
+
     public synchronized int clearPayloads() {
         normalize();
         int removed = payloads.size();
