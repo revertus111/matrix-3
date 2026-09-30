@@ -2446,3 +2446,13 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Payloads persist with the run across settlement exit/re-entry/relog unless they are cleared or accepted by an open endpoint.
 - No chest withdrawal/deposit, machine-buffer transfer, splitter/filter logic, belt tiers or production item source is added yet.
 - **Resume Here (conveyor):** next runtime session should test V1.3 profiles and V1.4/V1.5 transport together: create/restore one persistent run, Fill Mixed Belt with output blocked, verify mixed models move smoothly and queue at B without overlap, open the debug sink and verify the queue drains, block again and add payloads one-by-one, then exit/re-enter/relog to verify remaining payload state persists. Run the full RS3 smoke test after the focused transport gate because this bundle changes persistence and client/server sync. If accepted, next main slice is physical chest -> conveyor -> chest.
+
+## Detached RTS projection-depth parity — 2026-09-30
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the existing render-fix SAP AAA.
+- Runtime screenshot after the native 168x168 settlement-scene patch still showed a hard cyan/sky cutoff behind the RTS focus. This proves scene allocation alone was not the complete cause.
+- **verified-static root cause:** Matrix3's normal viewport projection uses `Class613.method7284()` / `method7313()` for the current scene near/far clip. At 104 tiles the vanilla far plane is approximately 14,332 camera units; at the settlement 168-tile scene it is approximately 23,156. The detached `Class411` camera resets to a fixed 50..10,000 projection.
+- Construction RTS also permits an orbit distance up to 10,000, meaning the managed RTS pivot can sit at the detached camera's far clip plane at maximum zoom. Terrain behind the focus is then projection-clipped even though it is loaded and generated.
+- `ConstructionBuildCamera.tick()` now synchronizes the active detached camera's projection through the existing `Class411.method4983(near, far,...)` setter using Matrix3's live vanilla scene near/far values.
+- No camera ownership, RTS movement/orbit math, Class523 render radius, fog bypass, or standalone hardcoded giant far plane was introduced.
+- The native 168x168 settlement scene + 176x176 visual terrain remains in place; projection parity now lets the detached camera actually see the scene depth Matrix3 already computed.
+- Resume Here: pull/build/restart Client + Server, enter a fresh settlement, reproduce the exact max-zoom view from the cyan-cutoff screenshot, then pan/orbit all four directions. If the hard cutoff remains, next inspect the detached-vs-normal environment pitch/yaw seam in Class343; do not reopen scene-size or camera-owner experiments first.
