@@ -1557,10 +1557,12 @@ RTS camera continuity/speed/render-parity regression — IMPLEMENTED / NEEDS RUN
 - Minimap regression: click-to-focus/RTS minimap marker and loaded-scene boundary clamp continue to work.
 
 
-RTS/editor visual terrain apron regression — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-29)
-- Pull/build, then EXIT and RE-ENTER the settlement before testing; an already-loaded instance remains the old 64x64 allocation until rebuilt.
-- From the middle of the settlement, zoom/orbit the shared RTS camera to the same distance that previously exposed the gray dynamic-map edge. Terrain should continue beyond the 64x64 playable boundary instead of terminating immediately at the plot edge.
-- Pan/orbit around all four plot edges. The generated visual backdrop is 24 tiles beyond each side of the playable plot; no former 64x64 hard terrain edge should be visible during normal settlement/editor framing.
+RTS/editor native large-scene render boundary — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-30)
+- Pull/build/restart Server, then EXIT and RE-ENTER the settlement; the active instance must be rebuilt to receive the new 176x176 terrain allocation and native 168x168 client scene.
+- Confirm normal RTS pan/orbit/zoom still works; this patch intentionally does not modify ConstructionBuildCamera or Class343.
+- From the middle of the settlement, max-zoom/orbit to the same framing that previously exposed the hard gray scene wall.
+- Pan/orbit around all four plot edges. The client scene is now Matrix3's native 168x168 size and the generated visual backdrop is 56 tiles beyond each side of the 64x64 playable plot.
+- The former hard gray loaded-scene boundary should not appear during normal RTS framing.
 - Player-boundary safety: attempt to Walk Here / path beyond each 64x64 settlement edge. Ordinary player movement must stop at the playable plot even though terrain remains visible beyond it.
 - Build-boundary safety: placement, rails, chests and other persistent Construction actions must still reject tiles outside the original 64x64 plot.
 - Persistence regression: existing build coordinates and worker/resource positions must remain unchanged after exit/re-entry; the visual apron must create no saved pieces or resources.
@@ -1618,7 +1620,7 @@ RTS Vanilla Camera Owner Migration — RUNTIME REJECTED / ROLLED BACK
 [x] RTS pan/screen-drag basis derives from owned yaw instead of detached Class423_Sub2/Class658_Sub2 look-vector discovery.
 [x] Runtime rejection: migrated RTS camera became non-functional.
 [x] Rollback: restored the last known working detached Class24/Class411 RTS implementation.
-[ ] Confirm after pull/rebuild that normal RTS pan/orbit/zoom behavior is restored.
+[x] Runtime confirmed after rollback: normal RTS camera works again.
 [ ] Before any future vanilla-owner migration, runtime-log the active `Class18.anInt143` value and actual `Class343` render branch during ordinary gameplay.
 
 Persistent ConveyorRun clear regression retest (2026-09-29)
@@ -1711,3 +1713,16 @@ Conveyor Transport Core V1.4/V1.5 — multi-payload/backpressure gate (2026-09-2
 [ ] Regression: storage, workers, rails, processing, RTS camera, Live Model Editor and normal world rendering remain stable.
 [ ] After focused acceptance, run the full docs/rs3/SMOKE_TEST.md because this bundle changes persistence schema and client/server sync.
 [ ] If accepted, advance to physical chest -> conveyor -> chest using the existing SettlementStorageContainer contract.
+
+
+Settlement large-scene lifecycle regression (2026-09-30)
+[x] verified-static: Matrix3 map-size index 3 maps to a native 168x168 client scene.
+[x] verified-static: SettlementInstance generates 22x22 chunks / 176x176 terrain, covering that scene with one chunk of slack.
+[x] verified-static: playable/buildable ownership remains bound to the inner 64x64 plot.
+[ ] Enter settlement and confirm workers, objects, storage, rails and conveyors load normally.
+[ ] Max-zoom/pan/orbit around all four edges and confirm no hard gray scene wall during normal RTS framing.
+[ ] Attempt normal player movement beyond each plot edge; movement remains blocked at the 64x64 boundary.
+[ ] Place/build near each plot edge; persistence still rejects anything outside the 64x64 plot.
+[ ] Leave to the normal world and confirm ordinary map loading/render distance behaves normally.
+[ ] Re-enter/leave twice to confirm map-size switching and 176x176 dynamic allocation cleanup remain stable.
+[ ] Logout from inside the settlement, log back in and confirm settlement map-size/large-scene state does not leak into the normal world.
