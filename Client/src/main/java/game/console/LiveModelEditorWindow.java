@@ -236,6 +236,9 @@ public final class LiveModelEditorWindow {
     private boolean hasSource;
     private boolean payloadMode;
     private boolean suppressPayloadRefresh;
+    private int payloadAnchorBaselineForward;
+    private int payloadAnchorBaselineHeight;
+    private int payloadAnchorBaselineSide;
     private boolean suppressLiveRefresh;
     private boolean suppressPartRefresh;
     private boolean suppressInspectorRefresh;
@@ -2330,6 +2333,8 @@ public final class LiveModelEditorWindow {
         LiveModelEditorPreview.setSelectionMode(
                 LiveModelEditorPreview.SelectionMode.WHOLE);
         LiveModelEditorPreview.showConveyorPayload(id, profile);
+        capturePayloadAnchorBaseline();
+        loadWholeEditors();
         targetLabel.setText("CONVEYOR PAYLOAD   item #" + id);
         sourceLabel.setText("X=Forward   Y=Height   Z=Side   |   belt locked as reference");
         partListModel.clear();
@@ -2394,22 +2399,14 @@ public final class LiveModelEditorWindow {
     private void refreshPayloadPreviewFromControls() {
         if (!payloadMode || suppressPayloadRefresh) return;
         int itemId = number(payloadItemSpinner);
+        int[] transform = LiveModelEditorPreview.getWholeTransform();
         LiveModelEditorPreview.setConveyorPayloadItemId(itemId);
         LiveModelEditorPreview.setConveyorPayloadPitchRoll(
                 number(payloadPitchSpinner), number(payloadRollSpinner));
         LiveModelEditorPreview.setWholeTransform(
-                number(scaleXSpinner), number(scaleXSpinner), number(scaleXSpinner),
-                number(moveXSpinner), number(moveYSpinner), number(moveZSpinner),
-                number(yawSpinner));
-        ConveyorRunPreview.setPayloadVisualPreview(
-                itemId,
-                number(moveXSpinner),
-                number(moveZSpinner),
-                number(moveYSpinner),
-                number(scaleXSpinner),
-                number(payloadPitchSpinner),
-                number(yawSpinner),
-                number(payloadRollSpinner));
+                transform[0], transform[0], transform[0],
+                transform[3], transform[4], transform[5], transform[6]);
+        syncPayloadPreviewFromRuntime();
         updateTargetLabels();
         syncTransformInspector();
         statusLabel.setText(LiveModelEditorPreview.getStatus());
@@ -2417,14 +2414,40 @@ public final class LiveModelEditorWindow {
 
     private ConveyorPayloadVisualProfiles.Profile payloadProfileFromEditor() {
         int[] transform = LiveModelEditorPreview.getWholeTransform();
+        ConveyorPayloadVisualProfiles.Anchor anchor =
+                ConveyorPayloadVisualProfiles.getGlobalAnchor();
         return new ConveyorPayloadVisualProfiles.Profile(
-                transform[3],
-                transform[5],
-                transform[4],
+                transform[3] - anchor.alongOffset,
+                transform[5] - anchor.sideOffset,
+                transform[4] - anchor.heightOffset,
                 transform[0],
                 number(payloadPitchSpinner),
                 transform[6],
                 number(payloadRollSpinner));
+    }
+
+    private void capturePayloadAnchorBaseline() {
+        int[] transform = LiveModelEditorPreview.getWholeTransform();
+        payloadAnchorBaselineForward = transform[3];
+        payloadAnchorBaselineHeight = transform[4];
+        payloadAnchorBaselineSide = transform[5];
+    }
+
+    private void saveBeltAnchorFromEditor() {
+        if (!payloadMode) return;
+        int[] transform = LiveModelEditorPreview.getWholeTransform();
+        ConveyorPayloadVisualProfiles.Anchor current =
+                ConveyorPayloadVisualProfiles.getGlobalAnchor();
+        int forward = current.alongOffset
+                + (transform[3] - payloadAnchorBaselineForward);
+        int side = current.sideOffset
+                + (transform[5] - payloadAnchorBaselineSide);
+        int height = current.heightOffset
+                + (transform[4] - payloadAnchorBaselineHeight);
+        statusLabel.setText(ConveyorPayloadVisualProfiles.saveGlobalAnchor(
+                forward, side, height));
+        capturePayloadAnchorBaseline();
+        syncPayloadPreviewFromRuntime();
     }
 
     private void loadResolvedPayloadProfile() {
@@ -2450,6 +2473,8 @@ public final class LiveModelEditorWindow {
             suppressPayloadRefresh = false;
         }
         LiveModelEditorPreview.showConveyorPayload(itemId, profile);
+        capturePayloadAnchorBaseline();
+        loadWholeEditors();
         ConveyorRunPreview.setPayloadVisualPreview(
                 itemId,
                 profile.alongOffset,
@@ -2512,11 +2537,13 @@ public final class LiveModelEditorWindow {
     private void syncPayloadPreviewFromRuntime() {
         if (!payloadMode) return;
         int[] transform = LiveModelEditorPreview.getWholeTransform();
+        ConveyorPayloadVisualProfiles.Anchor anchor =
+                ConveyorPayloadVisualProfiles.getGlobalAnchor();
         ConveyorRunPreview.setPayloadVisualPreview(
                 number(payloadItemSpinner),
-                transform[3],
-                transform[5],
-                transform[4],
+                transform[3] - anchor.alongOffset,
+                transform[5] - anchor.sideOffset,
+                transform[4] - anchor.heightOffset,
                 transform[0],
                 number(payloadPitchSpinner),
                 transform[6],
