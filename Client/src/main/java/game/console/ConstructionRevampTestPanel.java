@@ -815,6 +815,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(values);
         card.add(Box.createVerticalStrut(8));
 
+        JButton editLive = new JButton("Edit Current Item Live");
         JButton loadCategory = new JButton("Load Selected Category");
         JButton saveCategory = new JButton("Save Category");
         JButton saveItem = new JButton("Save Item Override");
@@ -827,13 +828,19 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton profileStatus = new JButton("Profile Status");
 
         JButton[] buttonsToStyle = {
-                loadCategory, saveCategory, saveItem, removeItem,
+                editLive, loadCategory, saveCategory, saveItem, removeItem,
                 assignCategory, autoCategory, saveGlobal, reload,
                 resetPreview, profileStatus
         };
         for (JButton button : buttonsToStyle) {
             styleButton(button);
         }
+
+        editLive.addActionListener(e -> {
+            int id = fields.item();
+            ConveyorRunPreview.setPayloadTestItemId(id);
+            setStatus(LiveModelEditorWindow.openConveyorPayload(id));
+        });
 
         loadCategory.addActionListener(e -> {
             ConveyorPayloadVisualProfiles.Profile profile =
@@ -902,7 +909,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 205));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 235));
+        buttons.add(editLive);
         buttons.add(loadCategory);
         buttons.add(saveCategory);
         buttons.add(saveItem);
