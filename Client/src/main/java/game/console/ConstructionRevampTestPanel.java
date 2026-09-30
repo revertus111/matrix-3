@@ -997,7 +997,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 215));
         for (JButton button : controls) {
             buttons.add(button);
         }
