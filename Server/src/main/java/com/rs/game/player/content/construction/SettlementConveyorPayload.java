@@ -15,14 +15,26 @@ public final class SettlementConveyorPayload implements Serializable {
     private final long payloadId;
     private final int itemId;
     private final int amount;
+    /*
+     * Added in schema v16. Old serialized payloads deserialize false and remain
+     * development/test payloads; only true payloads may enter physical storage.
+     */
+    private boolean physicalInventoryOwned;
     private double distanceTiles;
 
     public SettlementConveyorPayload(
             long payloadId, int itemId, int amount, double distanceTiles) {
+        this(payloadId, itemId, amount, distanceTiles, false);
+    }
+
+    public SettlementConveyorPayload(
+            long payloadId, int itemId, int amount, double distanceTiles,
+            boolean physicalInventoryOwned) {
         this.payloadId = payloadId;
         this.itemId = itemId;
         this.amount = amount;
         this.distanceTiles = distanceTiles;
+        this.physicalInventoryOwned = physicalInventoryOwned;
     }
 
     public long getPayloadId() {
@@ -39,6 +51,10 @@ public final class SettlementConveyorPayload implements Serializable {
 
     public double getDistanceTiles() {
         return distanceTiles;
+    }
+
+    public boolean isPhysicalInventoryOwned() {
+        return physicalInventoryOwned;
     }
 
     void setDistanceTiles(double distanceTiles) {
