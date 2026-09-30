@@ -289,6 +289,34 @@ public final class LiveModelEditorWindow {
         startOverlayTimer();
     }
 
+    public static String openConveyorPayload(final int itemId) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    openConveyorPayload(itemId);
+                }
+            });
+            return "Conveyor payload Live Editor open queued.";
+        }
+        if (ConveyorRunPreview.getPayloadEditorReference() == null) {
+            return "Create or restore a persistent ConveyorRun before opening the payload editor.";
+        }
+        ensureOverlayWindow();
+        if (instance == null || overlayWindow == null) {
+            return "Live Model Editor overlay is unavailable.";
+        }
+        installInputGate();
+        editorCtrlDown = false;
+        enterEditorRtsCamera();
+        instance.capturePayload(itemId);
+        refreshOverlayBounds();
+        overlayWindow.setVisible(true);
+        overlayWindow.toFront();
+        startOverlayTimer();
+        return "Live Editor payload mode opened for item " + Math.max(0, itemId) + ".";
+    }
+
     private static void ensureOverlayWindow() {
         Canvas canvas = Class584.aCanvas7745;
         if (canvas == null) {
@@ -2010,6 +2038,8 @@ public final class LiveModelEditorWindow {
     }
 
     private void capture(DevTarget target) {
+        payloadMode = false;
+        activeTool = "EDIT";
         objectId = target.getId();
         objectName = target.getName() == null ? "Object" : target.getName();
         sourceModelIds = DevDefinitionBridge.getObjectModelIds(objectId);
@@ -2029,13 +2059,73 @@ public final class LiveModelEditorWindow {
         }
 
         updateTargetLabels();
+        toolCardLayout.show(toolCards, activeTool);
         refreshPreview();
         initializeParts();
         syncTransformInspector();
         statusLabel.setText("Live editor ready for " + objectName + " #" + objectId + ".");
     }
 
+    private void capturePayload(int itemId) {
+        payloadMode = true;
+        hasSource = false;
+        objectId = -1;
+        objectName = "Conveyor Payload";
+        sourceModelIds = new int[0];
+        activeTool = "PAYLOAD";
+
+        int id = Math.max(0, itemId);
+        ConveyorPayloadVisualProfiles.Resolution resolution =
+                ConveyorPayloadVisualProfiles.resolve(id);
+        ConveyorPayloadVisualProfiles.Profile profile = resolution.profile;
+
+        suppressPayloadRefresh = true;
+        suppressLiveRefresh = true;
+        try {
+            payloadItemSpinner.setValue(Integer.valueOf(id));
+            payloadCategoryCombo.setSelectedItem(resolution.category.name());
+            payloadPitchSpinner.setValue(Integer.valueOf(profile.pitchDegrees));
+            payloadRollSpinner.setValue(Integer.valueOf(profile.rollDegrees));
+
+            scaleXSpinner.setValue(Integer.valueOf(profile.scalePercent));
+            scaleYSpinner.setValue(Integer.valueOf(profile.scalePercent));
+            scaleZSpinner.setValue(Integer.valueOf(profile.scalePercent));
+            moveXSpinner.setValue(Integer.valueOf(profile.alongOffset));
+            moveYSpinner.setValue(Integer.valueOf(profile.heightOffset));
+            moveZSpinner.setValue(Integer.valueOf(profile.sideOffset));
+            yawSpinner.setValue(Integer.valueOf(profile.yawDegrees));
+        } finally {
+            suppressLiveRefresh = false;
+            suppressPayloadRefresh = false;
+        }
+
+        LiveModelEditorPreview.setSelectionMode(
+                LiveModelEditorPreview.SelectionMode.WHOLE);
+        LiveModelEditorPreview.showConveyorPayload(id, profile);
+        targetLabel.setText("CONVEYOR PAYLOAD   item #" + id);
+        sourceLabel.setText("X=Forward   Y=Height   Z=Side   |   belt locked as reference");
+        partListModel.clear();
+        partStatusLabel.setText("PAYLOAD WHOLE");
+        toolCardLayout.show(toolCards, activeTool);
+        syncTransformInspector();
+        syncControlState();
+        statusLabel.setText("Payload editor ready: "
+                + resolution.itemName + " #" + id
+                + " | source=" + resolution.source + ".");
+    }
+
     private void updateTargetLabels() {
+        if (payloadMode) {
+            int itemId = number(payloadItemSpinner);
+            ConveyorPayloadVisualProfiles.Resolution resolution =
+                    ConveyorPayloadVisualProfiles.resolve(itemId);
+            targetLabel.setText("CONVEYOR PAYLOAD   " + resolution.itemName
+                    + "   #" + itemId);
+            sourceLabel.setText("X=Forward   Y=Height   Z=Side"
+                    + "   |   " + resolution.category.name()
+                    + "   |   belt locked");
+            return;
+        }
         targetLabel.setText(objectName + "   #" + objectId
                 + "   model " + joinIds(sourceModelIds));
         sourceLabel.setText("World " + sourceX + ", " + sourceY + ", " + sourcePlane
@@ -2043,13 +2133,22 @@ public final class LiveModelEditorWindow {
     }
 
     private void refreshIfActive() {
-        if (!suppressLiveRefresh && hasSource && LiveModelEditorPreview.isActive()
+        if (suppressLiveRefresh) return;
+        if (payloadMode) {
+            refreshPayloadPreviewFromControls();
+            return;
+        }
+        if (hasSource && LiveModelEditorPreview.isActive()
                 && LiveModelEditorPreview.getObjectId() == objectId) {
             refreshPreview();
         }
     }
 
     private void refreshPreview() {
+        if (payloadMode) {
+            refreshPayloadPreviewFromControls();
+            return;
+        }
         if (!hasSource || objectId < 0) {
             statusLabel.setText("Capture a valid object target first.");
             return;
@@ -2062,6 +2161,81 @@ public final class LiveModelEditorWindow {
                 number(moveXSpinner), number(moveYSpinner), number(moveZSpinner),
                 number(yawSpinner));
         statusLabel.setText(LiveModelEditorPreview.getStatus());
+    }
+
+    private void refreshPayloadPreviewFromControls() {
+        if (!payloadMode || suppressPayloadRefresh) return;
+        int itemId = number(payloadItemSpinner);
+        LiveModelEditorPreview.setConveyorPayloadItemId(itemId);
+        LiveModelEditorPreview.setConveyorPayloadPitchRoll(
+                number(payloadPitchSpinner), number(payloadRollSpinner));
+        LiveModelEditorPreview.setWholeTransform(
+                number(scaleXSpinner), number(scaleXSpinner), number(scaleXSpinner),
+                number(moveXSpinner), number(moveYSpinner), number(moveZSpinner),
+                number(yawSpinner));
+        ConveyorRunPreview.setPayloadVisualPreview(
+                itemId,
+                number(moveXSpinner),
+                number(moveZSpinner),
+                number(moveYSpinner),
+                number(scaleXSpinner),
+                number(payloadPitchSpinner),
+                number(yawSpinner),
+                number(payloadRollSpinner));
+        updateTargetLabels();
+        syncTransformInspector();
+        statusLabel.setText(LiveModelEditorPreview.getStatus());
+    }
+
+    private ConveyorPayloadVisualProfiles.Profile payloadProfileFromEditor() {
+        int[] transform = LiveModelEditorPreview.getWholeTransform();
+        return new ConveyorPayloadVisualProfiles.Profile(
+                transform[3],
+                transform[5],
+                transform[4],
+                transform[0],
+                number(payloadPitchSpinner),
+                transform[6],
+                number(payloadRollSpinner));
+    }
+
+    private void loadResolvedPayloadProfile() {
+        int itemId = number(payloadItemSpinner);
+        ConveyorPayloadVisualProfiles.Resolution resolution =
+                ConveyorPayloadVisualProfiles.resolve(itemId);
+        ConveyorPayloadVisualProfiles.Profile profile = resolution.profile;
+        suppressPayloadRefresh = true;
+        suppressLiveRefresh = true;
+        try {
+            payloadCategoryCombo.setSelectedItem(resolution.category.name());
+            payloadPitchSpinner.setValue(Integer.valueOf(profile.pitchDegrees));
+            payloadRollSpinner.setValue(Integer.valueOf(profile.rollDegrees));
+            scaleXSpinner.setValue(Integer.valueOf(profile.scalePercent));
+            scaleYSpinner.setValue(Integer.valueOf(profile.scalePercent));
+            scaleZSpinner.setValue(Integer.valueOf(profile.scalePercent));
+            moveXSpinner.setValue(Integer.valueOf(profile.alongOffset));
+            moveYSpinner.setValue(Integer.valueOf(profile.heightOffset));
+            moveZSpinner.setValue(Integer.valueOf(profile.sideOffset));
+            yawSpinner.setValue(Integer.valueOf(profile.yawDegrees));
+        } finally {
+            suppressLiveRefresh = false;
+            suppressPayloadRefresh = false;
+        }
+        LiveModelEditorPreview.showConveyorPayload(itemId, profile);
+        ConveyorRunPreview.setPayloadVisualPreview(
+                itemId,
+                profile.alongOffset,
+                profile.sideOffset,
+                profile.heightOffset,
+                profile.scalePercent,
+                profile.pitchDegrees,
+                profile.yawDegrees,
+                profile.rollDegrees);
+        updateTargetLabels();
+        syncTransformInspector();
+        syncControlState();
+        statusLabel.setText("Loaded resolved payload profile: "
+                + resolution.source + ".");
     }
 
     private void initializeParts() {
