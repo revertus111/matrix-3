@@ -376,7 +376,7 @@ public final class SettlementInstance {
             if (processConveyorOutput(run)) {
                 changed = true;
             }
-            if (run.advancePayloads(CONVEYOR_GAME_TICK_SECONDS, false)) {
+            if (run.advancePayloads(CONVEYOR_GAME_TICK_SECONDS)) {
                 changed = true;
             }
             if (processConveyorOutput(run)) {
