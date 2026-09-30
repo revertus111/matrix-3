@@ -484,6 +484,14 @@ public final class SettlementInstance {
         return null;
     }
 
+    private boolean hasPhysicalConveyorEndpoint(SettlementConveyorRun run) {
+        return run != null
+                && (findStorageAtPlot(
+                        run.getStartPlotX(), run.getStartPlotY(), run.getPlane()) != null
+                    || findStorageAtPlot(
+                        run.getEndPlotX(), run.getEndPlotY(), run.getPlane()) != null);
+    }
+
     public synchronized String addConveyorPayload(
             long runId, int itemId, int amount) {
         if (!loaded || destroyed) {
@@ -492,6 +500,9 @@ public final class SettlementInstance {
         SettlementConveyorRun run = state.findConveyorRun(runId);
         if (run == null) {
             return "No ConveyorRun is available for payload injection.";
+        }
+        if (hasPhysicalConveyorEndpoint(run)) {
+            return "Debug payload injection is disabled on a physical chest-connected conveyor.";
         }
         SettlementConveyorPayload payload = run.addPayload(itemId, amount);
         if (payload == null) {
@@ -512,6 +523,9 @@ public final class SettlementInstance {
         if (run == null) {
             return "No ConveyorRun is available for payload fill.";
         }
+        if (hasPhysicalConveyorEndpoint(run)) {
+            return "Mixed debug fill is disabled on a physical chest-connected conveyor.";
+        }
         int count = run.fillPayloadsForDevelopment(CONVEYOR_DEVELOPMENT_MIX);
         syncConveyorPayloadsToClient();
         return "Filled ConveyorRun #" + run.getRunId()
@@ -525,6 +539,9 @@ public final class SettlementInstance {
         SettlementConveyorRun run = state.findConveyorRun(runId);
         if (run == null) {
             return "No ConveyorRun is available for payload clear.";
+        }
+        if (hasPhysicalConveyorEndpoint(run) && run.getPayloadCount() > 0) {
+            return "Cannot clear payloads from a physical chest-connected conveyor; drain the real items first.";
         }
         int removed = run.clearPayloads();
         syncConveyorPayloadsToClient();
@@ -546,6 +563,9 @@ public final class SettlementInstance {
         if (blocked) {
             conveyorDevelopmentOpenOutputs.remove(key);
         } else {
+            if (hasPhysicalConveyorEndpoint(run)) {
+                return "Debug sink is disabled on a physical chest-connected conveyor.";
+            }
             conveyorDevelopmentOpenOutputs.add(key);
         }
         syncConveyorPayloadsToClient();
@@ -643,7 +663,16 @@ public final class SettlementInstance {
         if (!loaded || destroyed) {
             return "Settlement conveyor removal is unavailable while the settlement is loading.";
         }
-        if (!state.removeConveyorRun(runId)) {
+        SettlementConveyorRun run = state.findConveyorRun(runId);
+        if (run == null) {
+            return "ConveyorRun #" + runId + " was not found.";
+        }
+        if (run.getPayloadCount() > 0) {
+            return "ConveyorRun #" + run.getRunId()
+                    + " still owns " + run.getPayloadCount()
+                    + " payload(s); drain the belt before removal.";
+        }
+        if (!state.removeConveyorRun(run.getRunId())) {
             return "ConveyorRun #" + runId + " was not found.";
         }
         conveyorDevelopmentOpenOutputs.remove(Long.valueOf(runId));
@@ -659,6 +688,13 @@ public final class SettlementInstance {
     public synchronized String clearConveyorRuns() {
         if (!loaded || destroyed) {
             return "Settlement conveyor clear is unavailable while the settlement is loading.";
+        }
+        for (SettlementConveyorRun run : state.snapshotConveyorRuns()) {
+            if (run != null && run.getPayloadCount() > 0) {
+                return "Cannot clear persistent conveyors while ConveyorRun #"
+                        + run.getRunId() + " still owns "
+                        + run.getPayloadCount() + " payload(s). Drain belts first.";
+            }
         }
         int removed = state.clearConveyorRuns();
         conveyorDevelopmentOpenOutputs.clear();
