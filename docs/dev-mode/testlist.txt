@@ -1,3 +1,15 @@
+Visual Dev Time V1 - bundled quick gate
+[ ] F10 Live Inspect ON -> Visual Time initially shows RUN 1.00x.
+[ ] Trigger a visible stationary GFX -> F6 -> confirm its animation freezes while mouse/input/UI/rendering remain responsive.
+[ ] Press F5 once while paused -> confirm the visual advances one simulation tick and returns to PAUSED.
+[ ] Press F7 through 0.50x, 0.25x and 0.10x -> resume with F6 and confirm the visual advances progressively slower.
+[ ] Trigger a projectile -> pause before it expires -> confirm it remains visible/frozen instead of disappearing against real client time.
+[ ] F5-step the paused projectile and confirm it advances once; F6 resumes it.
+[ ] While paused/slowed, complete the Live Inspect GFX/Projectile hover + F9 lock + Ctrl+C check.
+[ ] Verify chat/input/camera/menu/rendering/network session remain responsive throughout visual pause.
+[ ] F10 OFF while paused/slowed -> F10 ON again -> confirm Visual Time reset to RUN 1.00x.
+[ ] Confirm NPC/player/world/server behavior remains normal speed; Visual Dev Time V1 must not claim whole-world time dilation.
+
 Live Inspect V1.4 - relationships / F8 quick gate
 [ ] Hover an Object and confirm Relationship shows Object -> Model(s) -> Animation(s); press F8 and confirm Live Model Editor opens on that exact object.
 [ ] Hover an NPC and confirm Relationship shows NPC definition -> runtime NPC index; press F8 and confirm Dev Inspector opens on that exact NPC.

@@ -1,3 +1,9 @@
+2026-09-30 - Dev Mode Visual Dev Time V1 controls
+- Added F5 one-tick step, F6 visual pause/resume and F7 speed cycling (1.00x/0.50x/0.25x/0.10x) while Live Inspect is active.
+- Added Visual Time status to the Live Inspect HUD and Ctrl+C diagnostic block.
+- Closing Live Inspect or disabling Dev Mode resets visual time to RUN 1.00x so a hidden paused state cannot persist.
+- This UI/control patch sits on the visual-only DevTimeController core; no additional world/server ownership was introduced.
+
 2026-09-30 - Dev Mode Visual Dev Time V1 core
 - Added DevTimeController as a visual-only simulation clock; the real Matrix3 client tick, networking, input, rendering, client.cycles and server simulation continue normally.
 - Stationary GFX/spot-animation advancement now respects the visual clock at its verified method10596(...) owner.

@@ -270,6 +270,45 @@ This table is the authoritative user-facing milestone table across chats.
 - Reason: transient effects/projectiles are too short-lived for a practical manual hover gate at normal game speed.
 - Resume that test after a safe client pause/slow-time/freeze developer control exists; do not mark the render mapping VERIFIED before then.
 
+#### Bundle 2.5 - Visual Dev Time V1
+
+**Purpose:** Make transient GFX/projectile inspection practical without freezing Matrix3 networking, input, rendering, or server simulation.
+
+**Status:** NEEDS TEST
+
+**Safety boundary / verified-static:**
+
+- The full client logic tick cannot be paused safely because it owns networking/input/session work in addition to visual simulation.
+- V1 controls only transient client visual simulation: stationary GraphicsDefinition-backed spot animations and moving projectiles.
+- The real `client.cycles` counter continues normally. Rendering and Live Inspect continue normally.
+- Projectile start/end cycles are shifted on skipped visual ticks so paused/slowed projectiles do not expire against the still-running real client clock.
+
+**Controls:**
+
+- `F5` - arm one visual simulation tick and remain paused.
+- `F6` - pause/resume visual simulation.
+- `F7` - cycle 1.00x -> 0.50x -> 0.25x -> 0.10x -> 1.00x.
+- F10 Live Inspect shows the current Visual Time state.
+- Closing Live Inspect/F10 resets Visual Time to RUN 1.00x so a hidden paused state cannot be left behind.
+
+**Checklist / patches:**
+
+- [x] Add one visual-time decision per real Matrix3 client cycle without gating the real client tick.
+- [x] Gate the verified stationary GFX animation-advance owner.
+- [x] Hold projectile motion/lifetime safely on skipped visual ticks while keeping already-started projectiles rendered.
+- [x] Patch both equivalent Matrix3 projectile update aliases found in the decompiled client.
+- [x] Add pause/resume, speed cycle, and one-tick step controls.
+- [x] Surface Visual Time status in Live Inspect and Ctrl+C diagnostics.
+- [x] Auto-reset Visual Time when Live Inspect closes/Dev Mode disables.
+- [ ] Runtime-verify pause, 0.50x/0.25x/0.10x, one-step, projectile lifetime hold, and normal networking/input/rendering.
+- [ ] Re-run deferred Bundle 2.3 GFX/Projectile hover inspection while paused/slowed.
+
+**Explicit V1 limit:**
+
+- This is **Visual Dev Time**, not whole-world/server time dilation.
+- NPC/player movement, workers, construction AI, conveyors, server processing and multiplayer world simulation are unchanged.
+- Broader time control requires separate server-authority design and is not implied by this patch.
+
 ### Phase 3 - World / Tile Creation
 
 **Status:** PLANNED
@@ -292,11 +331,11 @@ This table is the authoritative user-facing milestone table across chats.
 
 - Phase: Phase 2 - Contextual Editors
 - Phase status: ACTIVE
-- Bundle: Bundle 2.4 - Live Inspect Relationships + Contextual Open
+- Bundle: Bundle 2.5 - Visual Dev Time V1
 - Bundle status: NEEDS TEST
 - Approval state: SAP AAA approved 2026-09-30; implementation complete statically.
-- Current checklist item: Runtime-check F8 routing for Object/NPC/Tile and copied Relationship/Open Route text.
-- Current objective: Make Live Inspect the low-friction front door into existing dev tools. Bundle 2.3 transient-visual hover testing is deferred until safe pause/slow-time/freeze tooling makes that test practical.
+- Current checklist item: Runtime-check F5/F6/F7 visual time using one stationary GFX and one projectile, then immediately re-run the Bundle 2.3 hover gate while time is slowed/paused.
+- Current objective: Provide a safe visual-only pause/slow/step layer that makes transient Live Inspect targets practical without stopping Matrix3 networking/input/rendering/server authority.
 
 ## Checklist / patch status
 
@@ -318,6 +357,7 @@ This table is the authoritative user-facing milestone table across chats.
 | Live Inspect polish + Tile/Ground Item targets | 2 | 2.2 | NEEDS TEST | Object + Ground Item display/copy runtime-proven; tile/flicker final gate remains pending. |
 | Live Inspect GFX + Projectile targets | 2 | 2.3 | NEEDS TEST | Static implementation complete; runtime hover gate deferred until pause/slow-time/freeze makes transient targets practical to inspect. |
 | Live Inspect relationships + contextual open | 2 | 2.4 | NEEDS TEST | Relationship chain + F8 handoff to existing Object/NPC/Tile tools; no new right-click actions. |
+| Visual Dev Time V1 | 2 | 2.5 | NEEDS TEST | F5 step/F6 pause/F7 speed controls transient GFX/projectile simulation only; networking/input/rendering/server simulation remain live. |
 
 ## Decisions / new ideas
 
@@ -340,6 +380,8 @@ This table is the authoritative user-facing milestone table across chats.
 - 2026-09-30: GFX/projectiles cannot reuse menu picking because their scene classes deliberately return false from `method8297(...)`. Live Inspect therefore uses their already-built renderer Model + transform and Matrix3's native `Model.method1376(...)` hit test only while F10 inspection is enabled.
 - 2026-09-30: Manual GFX/projectile hover verification is deferred until safe pause/slow-time/freeze tooling exists; normal-speed transient visuals are not a reasonable acceptance gate.
 - 2026-09-30: F8 is Live Inspect's contextual-open key. It routes only to already-owned tools with verified entry points (Object -> Live Model Editor, NPC -> Dev Inspector, Tile -> Tile Editor); unsupported families state that no verified route exists instead of adding speculative integrations.
+- 2026-09-30: Dev Time V1 is intentionally visual-only. The full client logic tick remains live because it owns networking/input/session work; only spot-animation/projectile advancement is paused/slowed/stepped.
+- 2026-09-30: Projectile timelines are shifted forward on skipped visual ticks so real `client.cycles` can continue without causing frozen projectiles to expire.
 
 ## Testing
 
@@ -378,7 +420,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Phase 2 Bundle 2.4 Live Inspect Relationships + Contextual Open: added relationship chains to HUD/copy output and F8 handoff into the existing Live Model Editor, Dev Inspector, and Tile Editor.
+- Phase 2 Bundle 2.5 Visual Dev Time V1: added safe visual-only pause/resume, slow-motion and single-step controls for spot animations/projectiles while leaving Matrix3 networking/input/rendering/server simulation live.
 
 **Current phase:**
 
@@ -386,12 +428,12 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Active bundle:**
 
-- Bundle 2.4 Live Inspect Relationships + Contextual Open is `NEEDS TEST`. Bundle 2.3 remains deferred runtime verification until pause/slow-time/freeze tooling exists; Phase 1 Bundles 1.2 and 1.3 remain deferred runtime carryover.
+- Bundle 2.5 Visual Dev Time V1 is `NEEDS TEST`. Bundle 2.3 GFX/Projectile inspection can now be tested in the same runtime session using pause/slow-time; Bundle 2.4 F8 routing remains a compatible pending check.
 
 **Next checklist item:**
 
-- In one normal client session, use F8 on an Object, NPC, and Tile; verify each opens the correct existing tool and relationship text copies cleanly.
-- Do not block on GFX/Projectile hover acceptance; resume that after time-control tooling exists.
+- One bundled runtime session: F6 pause/resume, F7 slow speeds, F5 single-step; verify a projectile remains visible/frozen and advances one step, then F9/Ctrl+C the now-practical GFX/Projectile Live Inspect target.
+- Fold the Bundle 2.4 Object/NPC/Tile F8 route checks into the same launch if convenient.
 
 **Current state / next action:**
 
@@ -424,8 +466,9 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Pending runtime verification:**
 
+- Bundle 2.5 Visual Dev Time V1.
 - Bundle 2.4 Live Inspect Relationships + Contextual Open.
-- Bundle 2.3 Live Inspect GFX + Projectile Targets (deferred until pause/slow-time/freeze tooling).
+- Bundle 2.3 Live Inspect GFX + Projectile Targets (now testable with Bundle 2.5 controls).
 - Bundle 2.2 Tile/flicker final acceptance (Object + Ground Item are runtime-proven).
 - Bundle 2.1 Live Inspect V1 final acceptance after polish retest.
 - Bundle 1.2 World Manipulation.
@@ -443,4 +486,4 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 ## Next recommended work
 
-Runtime-verify Bundle 2.4 F8 routing and relationship output in a normal development session. After acceptance, the next useful Dev Mode step is a safe time-control/freeze developer utility so transient GFX/projectile inspection and animation debugging become practical.
+Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Projectile Live Inspect gate + F8 contextual routing. After that, decide whether to broaden time control to additional client animation families or design a separate guarded server/dev simulation clock.

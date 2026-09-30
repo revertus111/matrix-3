@@ -4,6 +4,7 @@ import game.Class106;
 import game.Class261;
 import game.Class584;
 import game.DevDefinitionBridge;
+import game.DevTimeController;
 import game.Model;
 import game.DevModeBridge.DevTarget;
 import game.DevModeBridge.TargetType;
@@ -70,6 +71,7 @@ public final class LiveInspectOverlay {
     private static final JLabel animationsLabel = valueLabel();
     private static final JLabel relationshipLabel = valueLabel();
     private static final JLabel routeLabel = valueLabel();
+    private static final JLabel visualTimeLabel = valueLabel();
     private static final JLabel tileLabel = valueLabel();
     private static final JLabel regionLabel = valueLabel();
     private static final JLabel chunkLabel = valueLabel();
@@ -94,6 +96,7 @@ public final class LiveInspectOverlay {
     public static void setEnabled(boolean value) {
         enabled = value;
         if (!value) {
+            DevTimeController.reset();
             locked = false;
             hoverTarget = null;
             lockedTarget = null;
@@ -452,11 +455,18 @@ public final class LiveInspectOverlay {
         panel.add(row("Animation IDs", animationsLabel));
         panel.add(row("Relationship", relationshipLabel));
         panel.add(row("Open route", routeLabel));
+        panel.add(row("Visual time", visualTimeLabel));
         panel.add(row("World tile", tileLabel));
         panel.add(row("Region", regionLabel));
         panel.add(row("Chunk", chunkLabel));
         panel.add(row("Runtime", runtimeLabel));
         panel.add(Box.createVerticalStrut(7));
+
+        JLabel timeShortcuts = new JLabel("F5 step   F6 pause/resume   F7 speed");
+        timeShortcuts.setFont(ConsoleTheme.SMALL_FONT);
+        timeShortcuts.setForeground(ConsoleTheme.MUTED_TEXT);
+        panel.add(timeShortcuts);
+        panel.add(Box.createVerticalStrut(2));
 
         JLabel shortcuts = new JLabel("F8 open tool   F9 lock/unlock   Ctrl+C copy current   F10 close");
         shortcuts.setFont(ConsoleTheme.SMALL_FONT);
@@ -497,6 +507,7 @@ public final class LiveInspectOverlay {
             setValue(animationsLabel, "-");
             setValue(relationshipLabel, "-");
             setValue(routeLabel, "-");
+            setValue(visualTimeLabel, DevTimeController.getStatusText());
             setValue(tileLabel, "-");
             setValue(regionLabel, "-");
             setValue(chunkLabel, "-");
@@ -512,6 +523,7 @@ public final class LiveInspectOverlay {
         setValue(animationsLabel, displayIds(target.animationIds, 5));
         setValue(relationshipLabel, relationshipText(target));
         setValue(routeLabel, routeText(target));
+        setValue(visualTimeLabel, DevTimeController.getStatusText());
         setValue(tileLabel, target.worldX + ", " + target.worldY + ", " + target.plane);
         setValue(regionLabel, regionText(target.worldX, target.worldY));
         setValue(chunkLabel, chunkText(target.worldX, target.worldY));
@@ -536,6 +548,7 @@ public final class LiveInspectOverlay {
         out.append("Animation IDs: ").append(joinIds(target.animationIds)).append('\n');
         out.append("Relationship: ").append(relationshipText(target)).append('\n');
         out.append("Open Route: ").append(routeText(target)).append('\n');
+        out.append("Visual Time: ").append(DevTimeController.getStatusText()).append('\n');
         out.append("World Tile: ")
                 .append(target.worldX).append(", ")
                 .append(target.worldY).append(", ")

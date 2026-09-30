@@ -717,6 +717,21 @@ public final class DevModeBridge {
                         keyEvent.consume();
                         return;
                     }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_F5 && LiveInspectOverlay.isEnabled()) {
+                        DevTimeController.stepOnce();
+                        keyEvent.consume();
+                        return;
+                    }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_F6 && LiveInspectOverlay.isEnabled()) {
+                        DevTimeController.togglePaused();
+                        keyEvent.consume();
+                        return;
+                    }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_F7 && LiveInspectOverlay.isEnabled()) {
+                        DevTimeController.cycleSpeed();
+                        keyEvent.consume();
+                        return;
+                    }
                     if (keyEvent.getKeyCode() == KeyEvent.VK_F8 && LiveInspectOverlay.isEnabled()) {
                         if (LiveInspectOverlay.openCurrentTool()) {
                             keyEvent.consume();
