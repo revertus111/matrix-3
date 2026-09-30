@@ -903,6 +903,18 @@ public final class LiveModelEditorWindow {
         panel.add(row0);
         panel.add(Box.createVerticalStrut(4));
 
+        JPanel anchorRow = actionRow(2);
+        JButton saveAnchor = rsButton("Save Belt Anchor");
+        JButton resetAnchor = rsButton("Reset Belt Anchor");
+        saveAnchor.setToolTipText(
+                "Apply the position delta since the last loaded/saved state to every conveyor payload.");
+        resetAnchor.setToolTipText(
+                "Reset the shared conveyor payload lane offset to Forward/Side/Height = 0.");
+        anchorRow.add(saveAnchor);
+        anchorRow.add(resetAnchor);
+        panel.add(anchorRow);
+        panel.add(Box.createVerticalStrut(4));
+
         JPanel row1 = actionRow(2);
         JButton loadCategory = rsButton("Load Category");
         JButton saveCategory = rsButton("Save Category");
@@ -936,6 +948,11 @@ public final class LiveModelEditorWindow {
 
         edit.addActionListener(e -> showTool("EDIT"));
         resolved.addActionListener(e -> loadResolvedPayloadProfile());
+        saveAnchor.addActionListener(e -> saveBeltAnchorFromEditor());
+        resetAnchor.addActionListener(e -> {
+            statusLabel.setText(ConveyorPayloadVisualProfiles.resetGlobalAnchor());
+            loadResolvedPayloadProfile();
+        });
 
         loadCategory.addActionListener(e -> {
             String category = String.valueOf(payloadCategoryCombo.getSelectedItem());
@@ -959,6 +976,8 @@ public final class LiveModelEditorWindow {
             }
             LiveModelEditorPreview.showConveyorPayload(
                     number(payloadItemSpinner), profile);
+            capturePayloadAnchorBaseline();
+            loadWholeEditors();
             syncTransformInspector();
             syncControlState();
             syncPayloadPreviewFromRuntime();
@@ -969,11 +988,13 @@ public final class LiveModelEditorWindow {
             String category = String.valueOf(payloadCategoryCombo.getSelectedItem());
             statusLabel.setText(ConveyorPayloadVisualProfiles.saveCategory(
                     category, payloadProfileFromEditor()));
+            capturePayloadAnchorBaseline();
             syncPayloadPreviewFromRuntime();
         });
         saveItem.addActionListener(e -> {
             statusLabel.setText(ConveyorPayloadVisualProfiles.saveItemOverride(
                     number(payloadItemSpinner), payloadProfileFromEditor()));
+            capturePayloadAnchorBaseline();
             syncPayloadPreviewFromRuntime();
         });
         removeItem.addActionListener(e -> {
@@ -995,6 +1016,7 @@ public final class LiveModelEditorWindow {
         saveGlobal.addActionListener(e -> {
             statusLabel.setText(ConveyorPayloadVisualProfiles.saveGlobal(
                     payloadProfileFromEditor()));
+            capturePayloadAnchorBaseline();
             syncPayloadPreviewFromRuntime();
         });
         status.addActionListener(e -> statusLabel.setText(
@@ -1278,6 +1300,7 @@ public final class LiveModelEditorWindow {
         if (!payloadMode) return;
         statusLabel.setText(ConveyorPayloadVisualProfiles.saveItemOverride(
                 number(payloadItemSpinner), payloadProfileFromEditor()));
+        capturePayloadAnchorBaseline();
         syncPayloadPreviewFromRuntime();
     }
 
