@@ -1994,3 +1994,12 @@
 - Added transport harness controls for arbitrary/current item injection, Logs/Oak/Iron Ore/Plank, mixed fill, output block/open, clear and status.
 - Payload transport state persists with the ConveyorRun. No chest/machine transfer, splitters, filters or belt tiers yet.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-30 - Settlement native large-scene render-boundary fix
+- verified-static root cause: detached RTS could outrun the default 104x104 player-centered client scene; Class523 visibility clamps cannot render outside the allocated scene even when culling focus follows the RTS pivot.
+- SettlementInstance now uses Matrix3's native map-size index 3 (168x168) while active and restores the player's prior map size on return/logout/teleport.
+- Expanded transient visual terrain from 14x14 chunks / 112x112 tiles to 22x22 chunks / 176x176 tiles (7 visual chunks per side) so the entire native 168x168 scene has generated terrain.
+- Inner persistent/buildable settlement remains 64x64; movement/build/storage/worker/rail ownership is unchanged.
+- Settlement largeSceneView state is now restored on exit instead of leaking outside the instance.
+- No client camera, Class343, Class411, Class246, fog or Class523 render-radius changes.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
