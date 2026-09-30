@@ -2971,6 +2971,16 @@ public final class Commands {
 		    player.getPackets().sendGameMessage("Invalid ConveyorRun endpoint number.");
 		}
 		return true;
+	    case "settlementconveyorchestlink":
+		SettlementInstance conveyorChestLink = SettlementInstance.getActive(player);
+		if (conveyorChestLink == null) {
+		    player.getPackets().sendGameMessage(
+			    "Enter your settlement before linking physical chests.");
+		    return true;
+		}
+		player.getPackets().sendGameMessage(
+			conveyorChestLink.createConveyorBetweenFirstTwoStorageChests());
+		return true;
 	    case "settlementconveyorremove":
 		SettlementInstance conveyorRemove = SettlementInstance.getActive(player);
 		if (conveyorRemove == null) return true;
