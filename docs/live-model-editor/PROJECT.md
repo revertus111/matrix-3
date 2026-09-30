@@ -351,36 +351,6 @@ Runtime reference found in-world through Dev Inspector:
 
 This is now the preferred asset-source experiment for the Construction automation belt. The immediate test is not to rebuild the full object: open 46298 in Live Model Editor, isolate the belt surface/strip, and determine whether it is a standalone connected component or one of the two source models. If separable, duplicate that belt component and translate copies end-to-end. That could provide the actual RuneScape belt visual while the Construction system owns routing/automation logic independently.
 
-## Resume Here
-
-**Last completed:** Bundle 2.7C-F interaction polish is in source: live EDIT readout, numeric field scrubbing/wheel adjustment, active-state highlighting, centralized shortcut dispatch, Alt+Arrow nudging, Ctrl+O / Shift+H / I / Tab shortcuts, and removal of obsolete duplicate Parts/Transform panel methods. D/E Snap + Rotate + Scale core behavior is runtime-confirmed by the user.
-
-**Current phase:** Phase 2 - Mesh Parts + In-World Selection.
-
-**Active bundle:** Bundle 2.7C - Professional transform tool (`ACTIVE / NEEDS TEST`).
-
-**Next action:** one consolidated 2.7C-F runtime gate on Conveyor 46298. If F passes, close the professional transform vertical slice and return to using the editor on the conveyor/construction workflow. Native text physically beside the 3D gizmo is non-blocking CARRYOVER pending a verified renderer-font seam.
-
-**Files/systems already inspected:**
-- `Client/src/main/java/game/ObjectDefinitions.java`
-- `Client/src/main/java/game/ObjectLabPreview.java`
-- `Client/src/main/java/game/ObjectCompositePreview.java`
-- `Client/src/main/java/game/Class578.java`
-- `Client/src/main/java/game/DevDefinitionBridge.java`
-- `Client/src/main/java/game/DevModeBridge.java`
-- `Client/src/main/java/game/console/DevInspectorWindow.java`
-- `Client/src/main/java/game/LiveModelEditorPreview.java`
-- `Client/src/main/java/game/LiveModelEditorParts.java`
-- `Client/src/main/java/game/console/LiveModelEditorWindow.java`
-
-**Do not rescan without new evidence:**
-- Object definition model-ID decode.
-- Existing Class578 direct-render hook.
-- Object Lab direct-render scene coordinate math.
-- Dev Mode object ID/tile target route.
-
-**Important uncertainty:** Conveyor 46298 runtime-confirmed the contextual inspector, pivot, Move gizmo, and the corrected D/E Snap + Rotate + Scale core workflow on 2026-09-26. Bundle 2.7C-F is verified-static only until its consolidated runtime gate passes. Numeric scrubbing reuses the existing Part/Multi gesture transaction; Whole transform history still inherits the older no-unified-undo limitation. Native text physically beside the 3D gizmo is CARRYOVER because the bounded Matrix3 renderer-text lookup did not establish a safe font seam; the patch intentionally avoids a second Swing viewport overlay. Visual alignment on mirrored/terrain-contoured definitions remains UNKNOWN outside the Conveyor reference.
-
 ### Bundle 2.7 compact-control follow-up — HUD moved into Camera/View
 
 - [x] Remove standalone H / HUD rail tab.
@@ -389,3 +359,54 @@ This is now the preferred asset-source experiment for the Construction automatio
 - [x] Keep RTS/FREE camera controls and manual HUD controls available from the same drawer.
 - [x] Reduce HUD list height so Camera/View remains usable on the 16-inch layout.
 - [ ] Runtime verify H still hides selected model part and never changes editor tabs.
+
+### Bundle 2.8 - Conveyor Payload Target Reuse
+
+Status: IMPLEMENTED / NEEDS TEST
+
+- [x] Reuse the existing Live Model Editor overlay, input gate, RTS/FREE camera lease, numeric inspector, snapping and Matrix3-native Move/Rotate/Scale gizmos; no parallel payload editor framework.
+- [x] Add explicit `EditorTargetMode.CONVEYOR_PAYLOAD` beside normal OBJECT editing.
+- [x] Use the first persistent Construction ConveyorRun as a read-only reference and freeze one real item model at its midpoint for authoring.
+- [x] Keep the conveyor belt itself locked/non-editable in payload mode.
+- [x] Temporarily suppress ordinary moving payload visuals while payload mode is active; server conveyor/chest transport remains untouched.
+- [x] Map payload-local gizmo axes to **X=Forward**, **Y=Height**, **Z=Side** and convert Free ground movement back into run-relative Forward/Side values.
+- [x] Keep payload Yaw relative to the ConveyorRun heading.
+- [x] Reuse Whole transform mode only; Part/Multi/Isolate and object-only Material/Object/Project/source-animation actions are disabled during payload editing.
+- [x] Force uniform Scale because `ConveyorPayloadVisualProfiles.Profile` currently owns one scale percentage.
+- [x] Expose Pitch/Roll in the payload drawer while the existing Rotate gizmo owns Yaw.
+- [x] Add **P / Conveyor Payload** drawer with item id, category and authoritative Global/Category/Item profile operations.
+- [x] Route saves directly through `ConveyorPayloadVisualProfiles`; no editor-specific profile file/store.
+- [x] `Ctrl+S` saves current exact Item Override; `Ctrl+O` reloads resolved inheritance while in payload mode.
+- [x] Closing payload mode clears transient preview state and restores normal moving payload rendering.
+- [x] Add Construction-panel launcher **Edit Current Item Live**.
+- [ ] Eclipse/Java 8 Client clean-build.
+- [ ] Runtime verify frozen midpoint item + locked belt reference on a persistent ConveyorRun.
+- [ ] Runtime verify G/R/V gizmos and Free/X/Y/Z semantics in the payload-relative coordinate system.
+- [ ] Runtime verify Category/Item/Global save/reload and close/resume behavior.
+- [ ] Regression-test ordinary object editing on Conveyor 46298 after leaving payload mode.
+
+## Resume Here
+
+**Last completed:** Bundle 2.8 Conveyor Payload Target Reuse is implemented in source under SAP AAA. The existing modular Live Model Editor now edits a real conveyor payload item at the midpoint of a persistent ConveyorRun using the same native gizmos/inspector instead of a duplicate payload editor. Construction's existing Global -> Category -> Item visual-profile store remains authoritative.
+
+**Current phase:** Phase 2 - Mesh Parts + In-World Selection.
+
+**Active bundle:** Bundle 2.8 - Conveyor Payload Target Reuse (`IMPLEMENTED / NEEDS TEST`). Bundle 2.7C-F interaction polish remains a regression/carryover gate; the core Move/Snap/Rotate/Scale workflow was already runtime-confirmed on Conveyor 46298.
+
+**Next action:** pull/clean-build Client, enter a settlement with one persistent ConveyorRun, launch **Edit Current Item Live**, and verify locked belt + frozen item + X=Forward/Y=Height/Z=Side + relative Yaw + uniform Scale. Save a LOGS category and one exact Item Override, close the editor, and confirm normal moving payloads return with the saved profile. Then reopen ordinary object 46298 and verify the normal Part/Multi editor still works.
+
+**Files/systems already inspected for this integration:**
+- `Client/src/main/java/game/LiveModelEditorPreview.java`
+- `Client/src/main/java/game/LiveModelEditorParts.java`
+- `Client/src/main/java/game/console/LiveModelEditorWindow.java`
+- `Client/src/main/java/game/ConveyorRunPreview.java`
+- `Client/src/main/java/game/ConveyorPayloadVisualProfiles.java`
+- `Client/src/main/java/game/console/ConstructionRevampTestPanel.java`
+
+**Do not rescan without new evidence:**
+- existing Move/Rotate/Scale gizmo ownership and projection;
+- object-definition model decode / Class578 direct-render seam;
+- ConveyorRun payload profile inheritance;
+- shared Construction RTS camera lease.
+
+**Important uncertainty:** Bundle 2.8 is verified-static only until the Client clean-build/runtime gate. Payload Pitch/Roll use the payload drawer rather than new 3D rotation rings; the current profile schema intentionally keeps one uniform Scale value. Whole-transform undo still inherits the existing Live Model Editor limitation and was not expanded by this integration.
