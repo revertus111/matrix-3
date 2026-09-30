@@ -1159,6 +1159,8 @@ public final class ConveyorRunPreview {
                 ConveyorPayloadVisualProfiles.resolveForRender(payload.itemId);
         ConveyorPayloadVisualProfiles.Profile payloadProfile =
                 payloadResolution.profile;
+        ConveyorPayloadVisualProfiles.Anchor payloadAnchor =
+                ConveyorPayloadVisualProfiles.getGlobalAnchor();
         Model payloadModel = getPayloadModel(
                 renderer, payload.itemId, payloadProfile.scalePercent);
         if (payloadModel == null) {
@@ -1198,8 +1200,10 @@ public final class ConveyorRunPreview {
         double deltaY = endLocalY - startLocalY;
         double directionX = deltaX / lengthTiles;
         double directionY = deltaY / lengthTiles;
-        double alongTiles = payloadProfile.alongOffset / (double) TILE_UNITS;
-        double sideTiles = payloadProfile.sideOffset / (double) TILE_UNITS;
+        double alongTiles = (payloadAnchor.alongOffset
+                + payloadProfile.alongOffset) / (double) TILE_UNITS;
+        double sideTiles = (payloadAnchor.sideOffset
+                + payloadProfile.sideOffset) / (double) TILE_UNITS;
 
         double localX = startLocalX + deltaX * progress
                 + directionX * alongTiles - directionY * sideTiles;
@@ -1213,7 +1217,7 @@ public final class ConveyorRunPreview {
         int midSceneX = (int) Math.round(midLocalX * tileSize + tileSize * 0.5);
         int midSceneZ = (int) Math.round(midLocalY * tileSize + tileSize * 0.5);
         int sceneY = ground.method2718(midSceneX, midSceneZ, 0)
-                + payloadProfile.heightOffset;
+                + payloadAnchor.heightOffset + payloadProfile.heightOffset;
 
         PAYLOAD_TRANSFORM.method3594();
 
