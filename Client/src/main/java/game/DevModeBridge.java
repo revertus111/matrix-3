@@ -717,6 +717,12 @@ public final class DevModeBridge {
                         keyEvent.consume();
                         return;
                     }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_F8 && LiveInspectOverlay.isEnabled()) {
+                        if (LiveInspectOverlay.openCurrentTool()) {
+                            keyEvent.consume();
+                        }
+                        return;
+                    }
                     if (keyEvent.getKeyCode() == KeyEvent.VK_F9 && LiveInspectOverlay.isEnabled()) {
                         LiveInspectOverlay.toggleLock();
                         keyEvent.consume();

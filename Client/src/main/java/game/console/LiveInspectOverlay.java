@@ -68,6 +68,8 @@ public final class LiveInspectOverlay {
     private static final JLabel idLabel = valueLabel();
     private static final JLabel modelsLabel = valueLabel();
     private static final JLabel animationsLabel = valueLabel();
+    private static final JLabel relationshipLabel = valueLabel();
+    private static final JLabel routeLabel = valueLabel();
     private static final JLabel tileLabel = valueLabel();
     private static final JLabel regionLabel = valueLabel();
     private static final JLabel chunkLabel = valueLabel();
@@ -193,7 +195,8 @@ public final class LiveInspectOverlay {
                 target.getPlane(),
                 runtime,
                 models,
-                animations),
+                animations,
+                target),
                 PRIORITY_ENTITY);
     }
 
@@ -210,7 +213,8 @@ public final class LiveInspectOverlay {
                 plane,
                 "Scene ground item",
                 new int[0],
-                new int[0]),
+                new int[0],
+                null),
                 PRIORITY_GROUND_ITEM);
     }
 
@@ -228,7 +232,8 @@ public final class LiveInspectOverlay {
                 plane,
                 "Scene spot animation",
                 ids(modelId),
-                ids(animationId)),
+                ids(animationId),
+                null),
                 PRIORITY_SPOT_ANIMATION);
     }
 
@@ -246,7 +251,8 @@ public final class LiveInspectOverlay {
                 plane,
                 "Scene projectile",
                 ids(modelId),
-                ids(animationId)),
+                ids(animationId),
+                null),
                 PRIORITY_PROJECTILE);
     }
 
@@ -263,8 +269,29 @@ public final class LiveInspectOverlay {
                 plane,
                 "Scene tile",
                 new int[0],
-                new int[0]),
+                new int[0],
+                null),
                 PRIORITY_TILE);
+    }
+
+    public static boolean openCurrentTool() {
+        final Snapshot target = getCurrentTarget();
+        if (!enabled || target == null) {
+            return false;
+        }
+        if ("Object".equals(target.type) && target.routeTarget != null) {
+            LiveModelEditorWindow.open(target.routeTarget);
+            return true;
+        }
+        if ("NPC".equals(target.type) && target.routeTarget != null) {
+            DevInspectorWindow.open(target.routeTarget, true);
+            return true;
+        }
+        if ("Tile".equals(target.type)) {
+            DevTileEditorWindow.open(target.worldX, target.worldY, target.plane);
+            return true;
+        }
+        return false;
     }
 
     public static boolean copyCurrentToClipboard() {
@@ -423,13 +450,15 @@ public final class LiveInspectOverlay {
         panel.add(row("Definition ID", idLabel));
         panel.add(row("Model IDs", modelsLabel));
         panel.add(row("Animation IDs", animationsLabel));
+        panel.add(row("Relationship", relationshipLabel));
+        panel.add(row("Open route", routeLabel));
         panel.add(row("World tile", tileLabel));
         panel.add(row("Region", regionLabel));
         panel.add(row("Chunk", chunkLabel));
         panel.add(row("Runtime", runtimeLabel));
         panel.add(Box.createVerticalStrut(7));
 
-        JLabel shortcuts = new JLabel("F9 lock/unlock   Ctrl+C copy current   F10 close");
+        JLabel shortcuts = new JLabel("F8 open tool   F9 lock/unlock   Ctrl+C copy current   F10 close");
         shortcuts.setFont(ConsoleTheme.SMALL_FONT);
         shortcuts.setForeground(ConsoleTheme.MUTED_TEXT);
         panel.add(shortcuts);
@@ -466,6 +495,8 @@ public final class LiveInspectOverlay {
             setValue(idLabel, "-");
             setValue(modelsLabel, "-");
             setValue(animationsLabel, "-");
+            setValue(relationshipLabel, "-");
+            setValue(routeLabel, "-");
             setValue(tileLabel, "-");
             setValue(regionLabel, "-");
             setValue(chunkLabel, "-");
@@ -479,6 +510,8 @@ public final class LiveInspectOverlay {
                 ? Integer.toString(target.definitionId) : "-");
         setValue(modelsLabel, displayIds(target.modelIds, 5));
         setValue(animationsLabel, displayIds(target.animationIds, 5));
+        setValue(relationshipLabel, relationshipText(target));
+        setValue(routeLabel, routeText(target));
         setValue(tileLabel, target.worldX + ", " + target.worldY + ", " + target.plane);
         setValue(regionLabel, regionText(target.worldX, target.worldY));
         setValue(chunkLabel, chunkText(target.worldX, target.worldY));
@@ -501,6 +534,8 @@ public final class LiveInspectOverlay {
                 .append('\n');
         out.append("Model IDs: ").append(joinIds(target.modelIds)).append('\n');
         out.append("Animation IDs: ").append(joinIds(target.animationIds)).append('\n');
+        out.append("Relationship: ").append(relationshipText(target)).append('\n');
+        out.append("Open Route: ").append(routeText(target)).append('\n');
         out.append("World Tile: ")
                 .append(target.worldX).append(", ")
                 .append(target.worldY).append(", ")
@@ -509,6 +544,40 @@ public final class LiveInspectOverlay {
         out.append("Chunk: ").append(chunkText(target.worldX, target.worldY)).append('\n');
         out.append("Runtime: ").append(target.runtime);
         return out.toString();
+    }
+
+    private static String relationshipText(Snapshot target) {
+        if (target == null) return "-";
+        if ("Object".equals(target.type)) {
+            return "Object " + target.definitionId + " -> Model(s) " + joinIds(target.modelIds)
+                    + " -> Animation(s) " + joinIds(target.animationIds);
+        }
+        if ("GFX / SpotAnim".equals(target.type) || "Projectile".equals(target.type)) {
+            return "Graphics " + target.definitionId + " -> Model " + joinIds(target.modelIds)
+                    + " -> Animation " + joinIds(target.animationIds);
+        }
+        if ("Ground Item".equals(target.type)) {
+            return "Item " + target.definitionId + " -> Item definition";
+        }
+        if ("NPC".equals(target.type)) {
+            return "NPC " + target.definitionId + " -> " + target.runtime;
+        }
+        if ("Tile".equals(target.type)) {
+            return "Tile -> Region " + regionText(target.worldX, target.worldY)
+                    + " -> Chunk " + chunkText(target.worldX, target.worldY);
+        }
+        return "-";
+    }
+
+    private static String routeText(Snapshot target) {
+        if (target == null) return "-";
+        if ("Object".equals(target.type)) return "F8 -> Live Model Editor";
+        if ("NPC".equals(target.type)) return "F8 -> Dev Inspector";
+        if ("Tile".equals(target.type)) return "F8 -> Tile Editor";
+        if ("Ground Item".equals(target.type)) return "No direct item editor route yet";
+        if ("GFX / SpotAnim".equals(target.type) || "Projectile".equals(target.type))
+            return "Specialist visual route not verified yet";
+        return "-";
     }
 
     private static String regionText(int worldX, int worldY) {
@@ -563,10 +632,11 @@ public final class LiveInspectOverlay {
         private final String runtime;
         private final int[] modelIds;
         private final int[] animationIds;
+        private final DevTarget routeTarget;
 
         private Snapshot(String type, String name, int definitionId,
                 int worldX, int worldY, int plane, String runtime,
-                int[] modelIds, int[] animationIds) {
+                int[] modelIds, int[] animationIds, DevTarget routeTarget) {
             this.type = type;
             this.name = name;
             this.definitionId = definitionId;
@@ -576,6 +646,7 @@ public final class LiveInspectOverlay {
             this.runtime = runtime;
             this.modelIds = modelIds == null ? new int[0] : modelIds.clone();
             this.animationIds = animationIds == null ? new int[0] : animationIds.clone();
+            this.routeTarget = routeTarget;
         }
 
         private boolean matches(DevTarget target) {
