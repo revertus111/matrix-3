@@ -597,7 +597,7 @@ Construction Build Camera v1 state:
 - The old standalone renderer-global camera-owner prototype is runtime-rejected; it produced invalid/empty-looking views. This does not reject Matrix3's own vanilla `Class246.method3359(...)` solver, which is now the RTS migration target.
 - Runtime diagnostics plus source tracing established `Class24.aClass411_Sub1_158` as the detached Class411 camera object used by the developer camera path.
 - The first Class24 reuse patch detached correctly but its W/A/S/D/Q/E changes were placed in unreached `Class24.method711()`; that patch location is runtime-rejected and `Class24.java` is restored to stock.
-- Current camera implementation is restored to the last known working detached Class24/Class411 owner for both RTS and Free Build. The attempted vanilla-owner migration was runtime-rejected on 2026-09-29 and rolled back.
+- Current camera implementation is the runtime-accepted detached Class24/Class411 owner for both RTS and Free Build. The attempted vanilla-owner migration was runtime-rejected and rolled back. The remaining hard render boundary is now owned by settlement scene loading: native 168x168 scene + 176x176 generated terrain is IMPLEMENTED / NEEDS RUNTIME TEST.
 - Runtime VERIFIED in the user's acceptance sweep: automatic activation, W/S/A/D movement, Shift fast, Ctrl precision, Q/E vertical movement, mouse-look, normal-camera restore on close, and clean reopen.
 - Camera ownership remains client-side; confirmed object placement remains server-authoritative through the existing Dev placement / `itembrowser devspawn` path.
 - Smooth acceleration/deceleration and click-to-stop are now implemented on the live controller: normalized input feeds time-based world-space velocity; action 23 clears velocity, latches movement off until key release, optionally confirms Paint placement and is consumed so the player remains planted. Runtime feel/integration acceptance is pending.
@@ -2316,17 +2316,18 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Runtime gate: pan away from the stationary player and verify terrain/NPC/object visibility follows the RTS view with the same effective vanilla radius/fog behavior; hold a movement key while clicking world/chest/worker targets and verify motion continues; verify 2.0x default speed is usable.
 
 
-## RTS/editor render boundary root correction — visual terrain apron — 2026-09-29
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the existing SAP AAA camera regression approval.
-- Runtime screenshot after the client culling-focus correction still showed a hard gray scene edge. Historical Sep-24 evidence already rejected scene-focus, full Class523 radius expansion and terrain-fog bypass as complete fixes.
-- Root cause is now verified-static on the server: SettlementInstance generated terrain for exactly the persistent 64x64 plot (8x8 chunks). Detached RTS/editor cameras can see past that generated dynamic-map boundary even though vanilla player camera normally cannot.
-- Settlement allocation now reserves/generates a visual-only 3-chunk (24-tile) terrain apron on every side: 14x14 generated chunks / 112x112 terrain around the unchanged inner 8x8 / 64x64 settlement.
-- boundChunks continues to identify the inner persistent/playable plot origin. A separate runtime allocatedChunks owns the full visual allocation and cleanup.
-- Building, persistence, worker/resource positions, rails, storage and all plot-relative state remain 64x64.
-- SettlementControler.checkWalkStep now rejects ordinary player steps outside the inner 64x64 plot so the terrain apron cannot silently become extra playable/buildable land.
-- Instance destruction frees the full padded allocation; old/no-padding runtime instances retain backward-safe cleanup fallback.
-- Client renderer radius/fog hacks are NOT reintroduced. The visual fix supplies real terrain data for the detached camera to render.
-- Runtime requires settlement exit/re-entry after pull so a fresh padded dynamic instance is generated.
+## RTS/editor render boundary root correction — native large settlement scene — 2026-09-30
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Runtime proved the earlier culling-focus correction and 112x112 terrain apron were insufficient: the hard gray boundary remained even though the detached RTS camera itself was working.
+- **verified-static root cause:** Matrix3's default map-size index 0 allocates a 104x104 client scene. The detached RTS camera can move independently while that scene remains player-centered, and Class523.method6240(...) clamps visibility to the allocated scene dimensions. Culling-focus changes cannot render tiles outside that loaded scene.
+- Matrix3 already supports native map-size index 3 = 168x168. SettlementInstance now switches the player to that native scene size for the settlement and restores the player's prior map-size value on every return/logout/teleport exit path.
+- Settlement terrain padding is expanded to 7 chunks / 56 tiles per side: 22x22 generated chunks / 176x176 terrain around the unchanged inner 8x8 / 64x64 playable plot. This fully covers the 168x168 loaded client scene with one chunk of allocation slack.
+- boundChunks remains the inner persistent/playable plot origin; allocatedChunks owns only the larger transient visual terrain and cleanup.
+- Building, persistence, worker/resource positions, rails, storage and plot-relative state remain exactly 64x64.
+- SettlementControler.checkWalkStep continues to reject ordinary player movement outside the inner 64x64 plot.
+- Settlement entry already enables large-scene NPC updates; this patch now also restores the player's previous largeSceneView flag on exit instead of leaking settlement-specific networking state.
+- No ConstructionBuildCamera, Class343, Class411, Class246, fog, viewport-transform or Class523 radius ownership is changed. The detached RTS camera remains the runtime-accepted camera baseline.
+- Runtime requires a fresh settlement instance after pull/restart so the 176x176 dynamic allocation and 168x168 client scene are rebuilt.
 
 
 ### Implementation checkpoint — Conveyor Gameplay V1: Persistent ConveyorRun — 2026-09-29
@@ -2352,7 +2353,7 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Restored `ConstructionBuildCamera.java`, `Class343.java`, and `BUILD_CAMERA.md` to the last known working detached RTS implementation.
 - No further vanilla-camera migration should be attempted until the active ordinary-gameplay camera mode/owner is identified at runtime.
 
-**Resume Here:** the detached RTS camera is the protected working baseline again. Next camera investigation, if pursued, must first add/read a bounded runtime diagnostic for `Class18.anInt143` and the actual `Class343` render branch during ordinary gameplay, then compare that owner with settlement RTS. Do not modify the working RTS camera until that owner is verified.
+**Resume Here:** the detached RTS camera is runtime-confirmed working and remains protected. Pull/build/restart Server, exit/re-enter the settlement to force a fresh instance, then max-zoom/pan/orbit around all four plot edges. The expected fix is that the former hard gray client-scene wall is no longer visible during normal RTS framing. Verify leaving the settlement restores normal-world scene behavior. Do not modify camera ownership unless this large-scene gate fails with new evidence.
 
 
 
