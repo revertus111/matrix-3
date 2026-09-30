@@ -40,6 +40,8 @@ public class Class456_Sub1_Sub2_Sub4 extends Class456_Sub1_Sub2 {
 	}
 
 	public final void method10596(int i, int i_0_) {
+		if (!DevTimeController.shouldAdvanceVisuals())
+			return;
 		if (null != ((Class456_Sub1_Sub2_Sub4) this).aClass663_11700 && !((Class456_Sub1_Sub2_Sub4) this).aClass663_11700.method7800(-24083291))
 			((Class456_Sub1_Sub2_Sub4) this).aClass663_11700.method7802(i, -1619629657);
 	}

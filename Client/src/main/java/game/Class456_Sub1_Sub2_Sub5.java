@@ -50,6 +50,19 @@ public class Class456_Sub1_Sub2_Sub5 extends Class456_Sub1_Sub2 {
 		return ((Class456_Sub1_Sub2_Sub5) this).anInt11760 * 2014733073;
 	}
 
+	/**
+	 * Dev-only visual-time hold. The real client cycle keeps advancing for
+	 * networking/input, so skipped visual ticks move this projectile's start/end
+	 * schedule forward by one real cycle to preserve its relative lifetime.
+	 */
+	public boolean devTimeHoldCycleIfNeeded() {
+		if (DevTimeController.shouldAdvanceVisuals())
+			return false;
+		anInt11748 += 1897232843;
+		anInt11739 -= 1289127095;
+		return true;
+	}
+
 	Class531 method8350(Class106 class106, int i) {
 		Model model = method10646(class106, 2048, (byte) 1);
 		if (null == model)

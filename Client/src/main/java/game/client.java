@@ -807,6 +807,7 @@ public final class client extends Class584 {
 				aBool8856 = false;
 			}
 			cycles++;
+			DevTimeController.beginClientCycle(cycles);
 			if (cycles % 1000 == 1) {
 				GregorianCalendar gregoriancalendar = new GregorianCalendar();
 				Class439.anInt5093 = (gregoriancalendar.get(11) * 600 + gregoriancalendar.get(12) * 10 + gregoriancalendar.get(13) / 6);
@@ -4622,6 +4623,11 @@ public final class client extends Class584 {
 	static final void method8041() {
 		for (Class572_Sub12_Sub6 class572_sub12_sub6 = (Class572_Sub12_Sub6) aClass675_8774.method7932((byte) 50); class572_sub12_sub6 != null; class572_sub12_sub6 = ((Class572_Sub12_Sub6) aClass675_8774.method7926(188725425))) {
 			Class456_Sub1_Sub2_Sub5 class456_sub1_sub2_sub5 = (((Class572_Sub12_Sub6) class572_sub12_sub6).aClass456_Sub1_Sub2_Sub5_11367);
+			if (class456_sub1_sub2_sub5.devTimeHoldCycleIfNeeded()) {
+				if (cycles >= class456_sub1_sub2_sub5.anInt11748 * 1176691683)
+					aClass613_8605.method7285(1249499313).method6232(class456_sub1_sub2_sub5, true, -1034712561);
+				continue;
+			}
 			if (cycles > class456_sub1_sub2_sub5.anInt11739 * 1095263993) {
 				class572_sub12_sub6.method6794((byte) 47);
 				class456_sub1_sub2_sub5.method10642((byte) -115);
@@ -5034,6 +5040,11 @@ public final class client extends Class584 {
 	static final void method8051() {
 		for (Class572_Sub12_Sub6 class572_sub12_sub6 = (Class572_Sub12_Sub6) aClass675_8774.method7932((byte) 50); class572_sub12_sub6 != null; class572_sub12_sub6 = ((Class572_Sub12_Sub6) aClass675_8774.method7926(979724126))) {
 			Class456_Sub1_Sub2_Sub5 class456_sub1_sub2_sub5 = (((Class572_Sub12_Sub6) class572_sub12_sub6).aClass456_Sub1_Sub2_Sub5_11367);
+			if (class456_sub1_sub2_sub5.devTimeHoldCycleIfNeeded()) {
+				if (cycles >= class456_sub1_sub2_sub5.anInt11748 * 1176691683)
+					aClass613_8605.method7285(1685056510).method6232(class456_sub1_sub2_sub5, true, 769627053);
+				continue;
+			}
 			if (cycles > class456_sub1_sub2_sub5.anInt11739 * 1095263993) {
 				class572_sub12_sub6.method6794((byte) -13);
 				class456_sub1_sub2_sub5.method10642((byte) -21);

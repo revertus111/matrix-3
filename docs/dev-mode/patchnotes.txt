@@ -1,3 +1,9 @@
+2026-09-30 - Dev Mode Visual Dev Time V1 core
+- Added DevTimeController as a visual-only simulation clock; the real Matrix3 client tick, networking, input, rendering, client.cycles and server simulation continue normally.
+- Stationary GFX/spot-animation advancement now respects the visual clock at its verified method10596(...) owner.
+- Projectile update loops now hold start/end lifetime forward on skipped visual ticks before expiry checks, keeping already-started projectiles rendered while paused/slowed instead of letting real client.cycles delete them.
+- V1 intentionally does not time-dilate NPC/player movement, workers, construction AI, conveyors, server processing or multiplayer world state.
+
 2026-09-30 - Dev Mode Live Inspect V1.4 relationships + contextual open
 - Added Relationship and Open Route rows to the Live Inspect HUD and Ctrl+C diagnostic block.
 - Added F8 contextual-open without adding any new right-click menu actions.
