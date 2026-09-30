@@ -35,10 +35,15 @@ public final class SettlementInstance {
 
     /*
      * The persistent/playable settlement remains exactly 64x64. RTS/editor
-     * cameras can see well beyond that square, though, so generate terrain-only
-     * padding around the plot instead of exposing the edge of the dynamic map.
+     * cameras can see well beyond that square, though, so the settlement uses
+     * Matrix3's native 168x168 scene (map-size index 3) plus enough terrain-only
+     * padding to cover that loaded scene without exposing a hard dynamic-map edge.
+     *
+     * 8 playable chunks + 7 visual chunks per side = 22 chunks / 176 tiles.
+     * The client scene itself is 168 tiles, leaving one chunk of allocation slack.
      */
-    private static final int VISUAL_PADDING_CHUNKS = 3; // 24 tiles per side
+    private static final int SETTLEMENT_MAP_SIZE = 3; // Settings.MAP_SIZES[3] = 168
+    private static final int VISUAL_PADDING_CHUNKS = 7; // 56 tiles per side
     private static final int INSTANCE_CHUNKS =
             PLOT_CHUNKS + VISUAL_PADDING_CHUNKS * 2;
 
@@ -56,6 +61,8 @@ public final class SettlementInstance {
     private final SettlementState state;
     private final SettlementDebug debug;
     private final WorldTile returnTile;
+    private final int returnMapSize;
+    private final boolean returnLargeSceneView;
 
     // Inner 64x64 persistent/buildable plot origin.
     private volatile int[] boundChunks;
@@ -106,6 +113,8 @@ public final class SettlementInstance {
         this.state = state;
         this.debug = new SettlementDebug();
         this.returnTile = returnTile;
+        this.returnMapSize = player.getMapSize();
+        this.returnLargeSceneView = player.hasLargeSceneView();
     }
 
     public static String enter(Player player) {
@@ -225,8 +234,21 @@ public final class SettlementInstance {
         refreshRailLogistics();
         ensureSettlementWorkersRuntime();
 
+        /*
+         * The detached RTS camera can move independently of the player. The stock
+         * 104x104 scene therefore becomes the real render wall near settlement
+         * edges even when culling focus follows the RTS pivot. Use Matrix3's
+         * native largest scene instead of altering Class523 render/fog ownership.
+         *
+         * setMapSize(...) performs the same map-region refresh previously issued
+         * here. The pending teleport then rebuilds the dynamic scene at this size.
+         */
         player.setForceNextMapLoadRefresh(true);
-        player.loadMapRegions();
+        if (player.getMapSize() != SETTLEMENT_MAP_SIZE) {
+            player.setMapSize(SETTLEMENT_MAP_SIZE);
+        } else {
+            player.loadMapRegions();
+        }
         player.lock(2);
         player.setNextWorldTile(entryTile);
         loaded = true;
@@ -3324,6 +3346,7 @@ public final class SettlementInstance {
         clearConveyorRunsOnClient();
         player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
+        restorePlayerSceneMode();
         player.setForceNextMapLoadRefresh(true);
         player.setNextWorldTile(returnTile);
         destroy();
@@ -3337,6 +3360,7 @@ public final class SettlementInstance {
         player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
         player.setLocation(returnTile);
+        restorePlayerSceneMode();
         destroy();
     }
 
@@ -3347,7 +3371,16 @@ public final class SettlementInstance {
         clearConveyorRunsOnClient();
         player.getPackets().sendCSVarInteger(2835, 0);
         player.getControlerManager().removeControlerWithoutCheck();
+        restorePlayerSceneMode();
         destroy();
+    }
+
+    private void restorePlayerSceneMode() {
+        player.setLargeSceneView(returnLargeSceneView);
+        if (player.getMapSize() != returnMapSize) {
+            player.setForceNextMapLoadRefresh(true);
+            player.setMapSize(returnMapSize);
+        }
     }
 
     private SettlementPlacedPiece findSavedPiece(int objectId, WorldTile worldTile) {
