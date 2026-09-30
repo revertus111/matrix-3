@@ -258,12 +258,11 @@ public final class SettlementConveyorRun implements Serializable {
     /**
      * Advances all payloads front-to-back while preserving minimum spacing.
      *
-     * If outputAccepts is false, the leading payload stops at Point B and every
-     * following payload queues behind it. If true, payloads that cross Point B
-     * are accepted by the caller's endpoint contract and removed from this run.
+     * Point B is always a hard ownership boundary here. Payloads stop at the
+     * endpoint and remain owned by this run until SettlementInstance performs a
+     * real endpoint transfer and explicitly removes the accepted payload.
      */
-    public synchronized boolean advancePayloads(
-            double elapsedSeconds, boolean outputAccepts) {
+    public synchronized boolean advancePayloads(double elapsedSeconds) {
         if (!normalize() || payloads.isEmpty() || elapsedSeconds <= 0.0) {
             return false;
         }
@@ -274,20 +273,9 @@ public final class SettlementConveyorRun implements Serializable {
         double leaderDistance = Double.POSITIVE_INFINITY;
         boolean changed = false;
 
-        List<SettlementConveyorPayload> survivors =
-                new ArrayList<SettlementConveyorPayload>(payloads.size());
         for (SettlementConveyorPayload payload : payloads) {
             double oldDistance = payload.getDistanceTiles();
-            double proposed = oldDistance + delta;
-
-            if (Double.isInfinite(leaderDistance)
-                    && outputAccepts
-                    && proposed >= length - EPSILON) {
-                changed = true;
-                continue;
-            }
-
-            double nextDistance = Math.min(length, proposed);
+            double nextDistance = Math.min(length, oldDistance + delta);
             if (!Double.isInfinite(leaderDistance)) {
                 nextDistance = Math.min(
                         nextDistance,
@@ -298,13 +286,7 @@ public final class SettlementConveyorRun implements Serializable {
                 payload.setDistanceTiles(nextDistance);
                 changed = true;
             }
-            survivors.add(payload);
             leaderDistance = nextDistance;
-        }
-
-        if (survivors.size() != payloads.size()) {
-            payloads = survivors;
-            changed = true;
         }
         return changed;
     }
