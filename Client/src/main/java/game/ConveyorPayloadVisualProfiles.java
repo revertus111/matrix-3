@@ -60,6 +60,18 @@ public final class ConveyorPayloadVisualProfiles {
         }
     }
 
+    public static final class Anchor {
+        public final int alongOffset;
+        public final int sideOffset;
+        public final int heightOffset;
+
+        public Anchor(int alongOffset, int sideOffset, int heightOffset) {
+            this.alongOffset = clamp(alongOffset, -4096, 4096);
+            this.sideOffset = clamp(sideOffset, -4096, 4096);
+            this.heightOffset = clamp(heightOffset, -2048, 2048);
+        }
+    }
+
     public static final class Resolution {
         public final int itemId;
         public final String itemName;
@@ -84,6 +96,7 @@ public final class ConveyorPayloadVisualProfiles {
 
     private static final Profile DEFAULT_PROFILE =
             new Profile(0, 0, -96, 100, 0, 0, 0);
+    private static final Anchor DEFAULT_ANCHOR = new Anchor(0, 0, 0);
 
     private static final Map<Category, Profile> CATEGORY_PROFILES =
             new LinkedHashMap<Category, Profile>();
@@ -93,6 +106,7 @@ public final class ConveyorPayloadVisualProfiles {
             new LinkedHashMap<Integer, Category>();
 
     private static Profile globalProfile = DEFAULT_PROFILE;
+    private static Anchor globalAnchor = DEFAULT_ANCHOR;
     private static int previewItemId = -1;
     private static Profile previewProfile;
 
@@ -130,6 +144,36 @@ public final class ConveyorPayloadVisualProfiles {
     public static synchronized void clearPreview() {
         previewItemId = -1;
         previewProfile = null;
+    }
+
+    public static synchronized Anchor getGlobalAnchor() {
+        return globalAnchor == null ? DEFAULT_ANCHOR : globalAnchor;
+    }
+
+    public static synchronized String saveGlobalAnchor(
+            int alongOffset, int sideOffset, int heightOffset) {
+        globalAnchor = new Anchor(alongOffset, sideOffset, heightOffset);
+        if (!saveToDisk()) {
+            return "Belt anchor changed, but disk save failed.";
+        }
+        return "Saved BELT ANCHOR forward=" + globalAnchor.alongOffset
+                + " side=" + globalAnchor.sideOffset
+                + " height=" + globalAnchor.heightOffset + ".";
+    }
+
+    public static synchronized String resetGlobalAnchor() {
+        globalAnchor = DEFAULT_ANCHOR;
+        if (!saveToDisk()) {
+            return "Belt anchor reset in memory, but disk save failed.";
+        }
+        return "Reset BELT ANCHOR to 0/0/0.";
+    }
+
+    public static synchronized String describeAnchor() {
+        Anchor anchor = getGlobalAnchor();
+        return "Belt anchor forward=" + anchor.alongOffset
+                + " side=" + anchor.sideOffset
+                + " height=" + anchor.heightOffset;
     }
 
     public static synchronized String saveGlobal(Profile profile) {
@@ -238,7 +282,8 @@ public final class ConveyorPayloadVisualProfiles {
                 + " scale=" + resolution.profile.scalePercent + "%"
                 + " rot=(" + resolution.profile.pitchDegrees
                 + "," + resolution.profile.yawDegrees
-                + "," + resolution.profile.rollDegrees + ")";
+                + "," + resolution.profile.rollDegrees + ")"
+                + " | " + describeAnchor();
     }
 
     private static Resolution resolveInternal(int itemId, boolean includePreview) {
@@ -364,6 +409,10 @@ public final class ConveyorPayloadVisualProfiles {
             ITEM_PROFILES.clear();
             ITEM_CATEGORIES.clear();
             globalProfile = readProfile(properties, "global", DEFAULT_PROFILE);
+            globalAnchor = new Anchor(
+                    parseInt(properties, "anchor.alongOffset", 0),
+                    parseInt(properties, "anchor.sideOffset", 0),
+                    parseInt(properties, "anchor.heightOffset", 0));
 
             for (Category category : Category.values()) {
                 String prefix = "category." + category.name();
@@ -418,6 +467,13 @@ public final class ConveyorPayloadVisualProfiles {
     private static synchronized boolean saveToDisk() {
         Properties properties = new Properties();
         writeProfile(properties, "global", globalProfile);
+        Anchor anchor = getGlobalAnchor();
+        properties.setProperty("anchor.alongOffset",
+                Integer.toString(anchor.alongOffset));
+        properties.setProperty("anchor.sideOffset",
+                Integer.toString(anchor.sideOffset));
+        properties.setProperty("anchor.heightOffset",
+                Integer.toString(anchor.heightOffset));
 
         for (Map.Entry<Category, Profile> entry : CATEGORY_PROFILES.entrySet()) {
             writeProfile(properties, "category." + entry.getKey().name(),
