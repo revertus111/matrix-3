@@ -99,12 +99,57 @@ public final class ConveyorRunPreview {
     private static Class106 cachedPayloadRenderer;
     private static final LinkedHashMap<Long, Model> cachedPayloadModels =
             new LinkedHashMap<Long, Model>();
+    private static volatile boolean payloadEditorActive;
+
+    public static final class PayloadEditorReference {
+        public final long runId;
+        public final int startX;
+        public final int startY;
+        public final int endX;
+        public final int endY;
+        public final int plane;
+        public final int headingYaw;
+
+        PayloadEditorReference(ConveyorRun run) {
+            this.runId = run.runId;
+            this.startX = run.startX;
+            this.startY = run.startY;
+            this.endX = run.endX;
+            this.endY = run.endY;
+            this.plane = run.plane;
+            this.headingYaw = run.headingYaw();
+        }
+
+        public double lengthTiles() {
+            double dx = endX - startX;
+            double dy = endY - startY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+    }
 
     private ConveyorRunPreview() {
     }
 
     public static int getPayloadTestItemId() {
         return payloadItemId;
+    }
+
+    public static synchronized PayloadEditorReference getPayloadEditorReference() {
+        ConveyorRun[] runs = settlementRuns;
+        for (ConveyorRun run : runs) {
+            if (run != null && run.runId > 0L) {
+                return new PayloadEditorReference(run);
+            }
+        }
+        return null;
+    }
+
+    public static void setPayloadEditorActive(boolean active) {
+        payloadEditorActive = active;
+    }
+
+    public static boolean isPayloadEditorActive() {
+        return payloadEditorActive;
     }
 
     public static synchronized String setPayloadTestItemId(int itemId) {
@@ -1056,6 +1101,9 @@ public final class ConveyorRunPreview {
 
     private static int renderPayloads(ConveyorRun run,
             Class523 scene, Class106 renderer, Class497 sceneBase) {
+        if (payloadEditorActive) {
+            return 0;
+        }
         if (run == null || run.runId <= 0L || renderer == null
                 || scene == null || sceneBase == null) {
             return 0;
