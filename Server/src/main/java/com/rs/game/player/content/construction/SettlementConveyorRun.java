@@ -152,6 +152,16 @@ public final class SettlementConveyorRun implements Serializable {
      */
     public synchronized SettlementConveyorPayload addPayload(
             int itemId, int amount) {
+        return addPayloadInternal(itemId, amount, false);
+    }
+
+    public synchronized SettlementConveyorPayload addPhysicalPayload(
+            int itemId, int amount) {
+        return addPayloadInternal(itemId, amount, true);
+    }
+
+    private SettlementConveyorPayload addPayloadInternal(
+            int itemId, int amount, boolean physicalInventoryOwned) {
         if (!normalize() || itemId < 0 || amount <= 0) {
             return null;
         }
@@ -163,7 +173,7 @@ public final class SettlementConveyorRun implements Serializable {
         }
 
         SettlementConveyorPayload payload = new SettlementConveyorPayload(
-                nextPayloadId++, itemId, amount, 0.0);
+                nextPayloadId++, itemId, amount, 0.0, physicalInventoryOwned);
         payloads.add(payload);
         sortFrontFirst(payloads);
         return payload;
@@ -212,6 +222,18 @@ public final class SettlementConveyorRun implements Serializable {
             SettlementConveyorPayload payload = iterator.next();
             if (payload != null && payload.getPayloadId() == payloadId) {
                 iterator.remove();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized boolean hasPhysicalInventoryPayloads() {
+        if (!normalize()) {
+            return false;
+        }
+        for (SettlementConveyorPayload payload : payloads) {
+            if (payload != null && payload.isPhysicalInventoryOwned()) {
                 return true;
             }
         }
