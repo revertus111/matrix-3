@@ -171,6 +171,8 @@ public final class LiveModelEditorPreview {
         }
         ConveyorPayloadVisualProfiles.Profile resolved = profile == null
                 ? ConveyorPayloadVisualProfiles.resolve(itemId).profile : profile;
+        ConveyorPayloadVisualProfiles.Anchor anchor =
+                ConveyorPayloadVisualProfiles.getGlobalAnchor();
 
         targetMode = EditorTargetMode.CONVEYOR_PAYLOAD;
         objectId = -1;
@@ -188,9 +190,9 @@ public final class LiveModelEditorPreview {
         scaleXPercent = resolved.scalePercent;
         scaleYPercent = resolved.scalePercent;
         scaleZPercent = resolved.scalePercent;
-        translateX = resolved.alongOffset;
-        translateY = resolved.heightOffset;
-        translateZ = resolved.sideOffset;
+        translateX = anchor.alongOffset + resolved.alongOffset;
+        translateY = anchor.heightOffset + resolved.heightOffset;
+        translateZ = anchor.sideOffset + resolved.sideOffset;
         yawDegrees = normalizeDegrees(resolved.yawDegrees);
         selectionMode = SelectionMode.WHOLE;
         PARTS.clear();
