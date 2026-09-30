@@ -404,6 +404,9 @@ public final class SettlementInstance {
 
         SettlementStorageContainer destination = findStorageAtPlot(
                 run.getEndPlotX(), run.getEndPlotY(), run.getPlane());
+        if (!payload.isPhysicalInventoryOwned()) {
+            return false;
+        }
         if (destination == null
                 || !destination.acceptsItem(payload.getItemId())
                 || destination.getAvailableCapacityForItem(payload.getItemId())
@@ -453,7 +456,7 @@ public final class SettlementInstance {
                 continue;
             }
 
-            SettlementConveyorPayload payload = run.addPayload(itemId, removed);
+            SettlementConveyorPayload payload = run.addPhysicalPayload(itemId, removed);
             if (payload == null) {
                 source.addItem(itemId, removed);
                 return false;
@@ -501,8 +504,8 @@ public final class SettlementInstance {
         if (run == null) {
             return "No ConveyorRun is available for payload injection.";
         }
-        if (hasPhysicalConveyorEndpoint(run)) {
-            return "Debug payload injection is disabled on a physical chest-connected conveyor.";
+        if (hasPhysicalConveyorEndpoint(run) || run.hasPhysicalInventoryPayloads()) {
+            return "Debug payload injection is disabled on a conveyor carrying/connected to physical inventory.";
         }
         SettlementConveyorPayload payload = run.addPayload(itemId, amount);
         if (payload == null) {
@@ -523,8 +526,8 @@ public final class SettlementInstance {
         if (run == null) {
             return "No ConveyorRun is available for payload fill.";
         }
-        if (hasPhysicalConveyorEndpoint(run)) {
-            return "Mixed debug fill is disabled on a physical chest-connected conveyor.";
+        if (hasPhysicalConveyorEndpoint(run) || run.hasPhysicalInventoryPayloads()) {
+            return "Mixed debug fill is disabled on a conveyor carrying/connected to physical inventory.";
         }
         int count = run.fillPayloadsForDevelopment(CONVEYOR_DEVELOPMENT_MIX);
         syncConveyorPayloadsToClient();
@@ -540,8 +543,10 @@ public final class SettlementInstance {
         if (run == null) {
             return "No ConveyorRun is available for payload clear.";
         }
-        if (hasPhysicalConveyorEndpoint(run) && run.getPayloadCount() > 0) {
-            return "Cannot clear payloads from a physical chest-connected conveyor; drain the real items first.";
+        if (run.getPayloadCount() > 0
+                && (hasPhysicalConveyorEndpoint(run)
+                        || run.hasPhysicalInventoryPayloads())) {
+            return "Cannot clear physical conveyor payloads; drain the real items first.";
         }
         int removed = run.clearPayloads();
         syncConveyorPayloadsToClient();
@@ -563,8 +568,9 @@ public final class SettlementInstance {
         if (blocked) {
             conveyorDevelopmentOpenOutputs.remove(key);
         } else {
-            if (hasPhysicalConveyorEndpoint(run)) {
-                return "Debug sink is disabled on a physical chest-connected conveyor.";
+            if (hasPhysicalConveyorEndpoint(run)
+                    || run.hasPhysicalInventoryPayloads()) {
+                return "Debug sink is disabled on a conveyor carrying/connected to physical inventory.";
             }
             conveyorDevelopmentOpenOutputs.add(key);
         }
