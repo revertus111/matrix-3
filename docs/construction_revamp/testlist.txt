@@ -1739,3 +1739,29 @@ Detached RTS projection-depth parity gate — RUNTIME VERIFIED (2026-09-30)
 [x] RTS camera remains functional after projection-depth correction.
 [ ] Confirm Free Build remains functional with the shared detached camera projection.
 [ ] Leave settlement and confirm normal-world camera/rendering remains unchanged.
+
+Conveyor Gameplay V1.6 — Physical chest -> conveyor -> chest gate (2026-09-30)
+[x] verified-static: Point A exact STORAGE tile resolves the existing SettlementStorageContainer as source; Point B exact STORAGE tile resolves the existing container as destination.
+[x] verified-static: ConveyorRun movement no longer accepts/deletes endpoint payloads; it always stops at B until SettlementInstance explicitly transfers ownership.
+[x] verified-static: source removes one real item only after inlet spacing is available; failed belt insertion restores the removed item.
+[x] verified-static: destination requires full item acceptance/capacity before deposit; rejected/full/filtered output remains belt-owned and backpressures followers.
+[x] verified-static: schema v16 tags physicalInventoryOwned payload provenance; v15/older payloads deserialize false and cannot materialize into a physical chest.
+[x] verified-static: debug add/fill/sink/clear are locked out on connected/physical-inventory runs, and persistent run deletion/clear is blocked while payloads exist.
+[x] verified-static: Link First Two Chests uses real saved STORAGE pieces and the existing persistent createConveyorRun(...) owner; it does not create fake chest inventory.
+[ ] Pull latest main; Eclipse clean/build Server + Client with Java 8, then restart both.
+[ ] Enter a fresh settlement and place/identify at least two physical Wooden chests. Put several real items (start with Logs 1511) into the lowest-id/oldest chest; leave the next chest with capacity.
+[ ] In Con Revamp -> Conveyor Transport Core click Link First Two Chests. Chat reports the persistent run plus CHEST#source -> CHEST#destination.
+[ ] Click Transport Status. It reports source=CHEST#... and output=CHEST#..., not BLOCKED/NO CHEST.
+[ ] Watch at least three items: source chest decreases one item per accepted inlet, real payloads travel smoothly with existing spacing, and destination chest increases only when each payload reaches Point B.
+[ ] Conservation check: source count + belt payload amount + destination count stays constant for the tested real item; no duplicate and no loss.
+[ ] Put mixed real item ids in the source. V1.6 chooses the first occupied source slot and transports one item per payload; each rendered payload keeps its real item id/profile.
+[ ] Make destination unable to accept the front item (fill capacity or apply an item filter). The front payload remains at B, followers queue behind it, and upstream injection stops naturally as spacing/backpressure reaches Point A.
+[ ] Restore destination acceptance/capacity. The stopped payload deposits, the queue advances, and source transfer resumes without manual payload recreation.
+[ ] Exit/re-enter with at least one physical payload still on the belt. The same payload item/amount/distance restores and continues; chest totals remain conserved.
+[ ] Fully relog/re-enter mid-transfer and repeat the conservation check; no payload/chest duplication or loss.
+[ ] On the physical run try Add Current Test Item / Fill Mixed Belt / Open Output (Debug Sink) / Clear Payloads. Server rejects unsafe development mutation instead of creating/deleting real inventory.
+[ ] Try Clear Persistent Conveyors while the physical belt owns payloads. It is rejected. Empty/remove source items, let the belt drain, then clear/delete succeeds once payload count reaches zero.
+[ ] Remove/disable destination acceptance while payloads exist, then restore/rebuild a valid destination on Point B; ownership remains on the belt until acceptance returns.
+[ ] Regression: ordinary disconnected development ConveyorRuns still support Add/Fill/Debug Sink/Clear Payloads for transport testing.
+[ ] Regression: worker physical storage routing, machine buffers/Process Wood, chest UI/filter/policy controls, RTS camera/rendering, rails and Live Model Editor remain stable.
+[ ] After focused acceptance, run full docs/rs3/SMOKE_TEST.md because persisted SettlementState schema changed from v15 to v16.
