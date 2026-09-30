@@ -2035,3 +2035,9 @@
 - Added Con Revamp -> Conveyor Payload Visual Profiles -> Edit Current Item Live.
 - Client/tooling only: no server transport, schema, speed, spacing, chest ownership or V1.6 physical logistics behavior changed.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-30 - Conveyor payload shared Belt Anchor
+- Added one additive Forward/Side/Height Belt Anchor before Global/Category/Item visual profiles so a whole payload lane can be shifted once without retuning every item.
+- Live Editor Save Belt Anchor applies only the movement delta since the last loaded/saved payload state, preventing category/item offsets from being double-baked.
+- Reset Belt Anchor restores 0/0/0. Anchor values persist in the existing conveyor_payload_profiles.properties file.
+- Payload item model caching now survives move/rotate/height edits and rebuilds only when renderer/item/scale changes, keeping gizmo movement lightweight.
