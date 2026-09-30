@@ -902,7 +902,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 205));
         buttons.add(loadCategory);
         buttons.add(saveCategory);
         buttons.add(saveItem);
@@ -922,11 +922,13 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
                 "Server-owned payload test harness for the first persistent conveyor (runId 0 resolves to the first run). "
-                + "Point B is blocked by default. Open Output enables a development sink so accepted payloads leave the belt. "
-                + "These controls exercise the real persistent payload/spacing/backpressure owner; they do not create client-only fake items.",
+                + "Link First Two Chests creates a real persistent A->B run from the lowest-id physical chest to the next chest. "
+                + "A connected Point A withdraws real chest items; Point B deposits into the connected chest with capacity/filter backpressure. "
+                + "Open Output remains a development sink override. No client-only fake inventory is created.",
                 6));
         card.add(Box.createVerticalStrut(8));
 
+        JButton linkChests = new JButton("Link First Two Chests");
         JButton addCurrent = new JButton("Add Current Test Item");
         JButton addLog = new JButton("Add Log 1511");
         JButton addOak = new JButton("Add Oak Log 1521");
@@ -939,13 +941,17 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton transportStatus = new JButton("Transport Status");
 
         JButton[] controls = {
-                addCurrent, addLog, addOak, addOre, addPlank,
+                linkChests, addCurrent, addLog, addOak, addOre, addPlank,
                 fillMixed, blockOutput, openOutput,
                 clearPayloads, transportStatus
         };
         for (JButton button : controls) {
             styleButton(button);
         }
+
+        linkChests.addActionListener(e -> queue(
+                "settlementconveyorchestlink",
+                "Physical chest conveyor link queued. Check game chat."));
 
         addCurrent.addActionListener(e -> {
             int itemId = ConveyorRunPreview.getPayloadTestItemId();
