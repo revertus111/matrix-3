@@ -2474,3 +2474,24 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Client payload sync protocol and visual interpolation are unchanged; the client still renders server-owned item id/amount/distance only.
 - No machine endpoint, inserter/loader object, splitter/filter routing, belt tier, conveyor-specific chest permission, or multi-item source selection policy beyond first occupied slot is added in this slice.
 - **Resume Here (conveyor):** pull/build/restart Client + Server. Place two physical chests, put real items in the first, click **Link First Two Chests**, then verify chest A count decreases -> real payload travels/queues -> chest B count increases with total item conservation. Fill/filter chest B to force backpressure, restore acceptance to verify recovery, then exit/re-enter and relog mid-transfer. Confirm debug injection/sink/clear and conveyor deletion refuse unsafe operations on the physical run. Run the full `docs/rs3/SMOKE_TEST.md` after the focused gate because schema v16 changes persisted Construction state. If accepted, the next logistics slice can generalize the same endpoint contract to machine input/output rather than creating another transport owner.
+
+### Conveyor Payload Live Editor Integration — 2026-09-30
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- User decision: do **not** create a second payload editor. The existing modular Live Model Editor is the authoritative transform/gizmo UX for conveyor payload positioning.
+- Construction remains data/runtime authority: `ConveyorRunPreview` supplies the persistent run reference and `ConveyorPayloadVisualProfiles` remains the only Global -> Category -> Item visual-profile store.
+- Added a Live Editor **CONVEYOR_PAYLOAD** target mode. The belt remains visible and locked as reference while one real item model is frozen at the midpoint of the first persistent ConveyorRun.
+- Normal moving payload visuals are suppressed only while payload edit mode is active so they do not overlap the frozen authoring item. Server conveyor/chest transport keeps running unchanged.
+- Existing Matrix3-native Move / Rotate / Scale gizmos are reused. In payload mode the local axes are:
+  - **X = Forward** along the ConveyorRun;
+  - **Y = Height**;
+  - **Z = Side** across the belt.
+- Free/screen-plane Move is converted back into the same run-relative Forward/Side coordinates. Yaw remains relative to the conveyor heading.
+- Payload profile scale remains uniform because the existing profile schema owns one scale value. Pitch/Roll remain editable from the payload drawer while the existing Rotate gizmo owns Yaw.
+- Added Live Editor **P / Conveyor Payload** drawer with item id, category, pitch/roll, Load Resolved/Category, Save Category, Save Item Override, Remove Override, Assign/Auto Category, Save Global and Profile Status.
+- Payload mode is Whole-only. Object-only Part/Multi/Isolate/Material/Object/Project/source-animation controls are disabled rather than silently editing the locked belt reference.
+- `Ctrl+S` saves the current exact Item Override in payload mode; `Ctrl+O` reloads the resolved inherited profile.
+- Con Revamp -> Conveyor Payload Visual Profiles now includes **Edit Current Item Live** as the primary visual-authoring entry point. The existing numeric profile controls remain available as a precision/debug fallback.
+- Closing payload edit mode clears only the transient preview and immediately restores normal moving payload rendering. Saved Global/Category/Item profiles remain authoritative.
+- No server code, SettlementState schema, chest/conveyor inventory ownership, belt speed, spacing, backpressure or V1.6 physical transport behavior changed by this editor integration.
+- **Resume Here (conveyor):** next runtime session can combine the editor and V1.6 gates. Create/restore a persistent conveyor, choose item 1511 and click **Edit Current Item Live**; verify the belt stays fixed while one item freezes at its midpoint, then Move/Rotate/Scale it and save LOGS or an Item Override. Close the editor and confirm normal moving payloads resume using the saved profile. Then run the existing two-chest V1.6 conservation/backpressure test. If both gates pass, next logistics slice is machine input/output using the same endpoint contract.
