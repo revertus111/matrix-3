@@ -247,8 +247,6 @@ public final class LiveInspectOverlay {
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ConsoleTheme.ACCENT_DARK),
                 BorderFactory.createEmptyBorder(9, 10, 9, 10)));
-        panel.setPreferredSize(new Dimension(WIDTH, 0));
-
         JLabel title = new JLabel("LIVE INSPECT");
         title.setFont(ConsoleTheme.SECTION_FONT);
         title.setForeground(ConsoleTheme.TEXT);

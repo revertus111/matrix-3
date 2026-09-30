@@ -4,6 +4,7 @@
 - Added F9 lock/unlock and Ctrl+C copy of the complete current inspection block for fast diagnostics/sharing.
 - While Live Inspect is active, redundant Inspect/Copy ID/Copy Tile Dev menu actions are suppressed; edit/live-model/manipulation actions remain available and legacy inspection actions return when F10 is off.
 - Disabling Dev Mode closes Live Inspect and clears transient hover/lock state.
+- Static verification correction: removed a zero-height preferred-size override so the Swing overlay packs to its real row content height.
 
 2026-09-08 - Dev Mode Continuous / Paint Placement bundle
 - Added shared client-side Dev Spawn placement state with Once, Continuous, and Paint modes while reusing the existing owner-only server `devspawn` authority for every actual placement.
