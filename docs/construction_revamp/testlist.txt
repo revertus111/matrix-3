@@ -1789,3 +1789,14 @@ Conveyor Payload Live Editor — visual-authoring gate (2026-09-30)
 [ ] Reopen ordinary object 46298 through Dev -> Edit Model Live and confirm Part/Multi, gizmos, material/object/project drawers and source-object suppression still behave normally.
 [ ] Regression: payload editor mode does not alter belt speed, spacing, backpressure, physical chest item ownership or persistent ConveyorRun state.
 [ ] If also testing V1.6, continue directly into the existing Physical chest -> conveyor -> chest conservation/backpressure gate after closing payload edit mode.
+
+Conveyor Payload Belt Anchor follow-up (2026-09-30)
+[x] verified-static: Belt Anchor is additive to resolved item/category/global offsets and owns position only (Forward/Side/Height).
+[x] verified-static: Save Belt Anchor applies editor movement delta to the existing anchor instead of copying/double-baking the resolved profile offset.
+[x] verified-static: anchor persists in the existing conveyor_payload_profiles.properties store; no server/schema change.
+[x] verified-static: payload item model cache is retained through move/rotate/height edits and keyed by renderer/item/scale.
+[ ] Open payload mode from a correctly resolved item, move it by an obvious lane correction, click Save Belt Anchor, then close the editor.
+[ ] Verify every subsequently rendered payload shifts by the same global correction while each Category/Item-specific orientation/scale/offset remains intact.
+[ ] Reopen the original item: its total visual position is unchanged from the saved authoring position, with no doubled offset.
+[ ] Reset Belt Anchor: all payloads lose only the shared lane correction and retain their individual visual profiles.
+[ ] Restart Client and confirm the saved Belt Anchor reloads from conveyor_payload_profiles.properties.
