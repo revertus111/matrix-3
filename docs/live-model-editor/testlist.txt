@@ -387,3 +387,25 @@ Bundle 2.7C-F - professional interaction polish
 [ ] Expected: text readout is currently in the EDIT workspace, not physically beside the 3D gizmo; native gizmo text is recorded CARRYOVER pending a verified Matrix3 renderer-font seam.
 
 [ ] Open Load Project / Save Selection file chooser and use arrows/Tab/Delete/typing; editor transform/selection shortcuts must not fire behind the modal dialog.
+
+Bundle 2.8 - Conveyor Payload Target Reuse
+[x] verified-static: payload mode uses the existing LiveModelEditorWindow/Preview and native gizmo path; no second editor framework exists.
+[x] verified-static: first persistent ConveyorRun is reference-only and normal moving payload visuals are suppressed only while the payload editor is active.
+[x] verified-static: profile save/load delegates to ConveyorPayloadVisualProfiles rather than editor-local persistence.
+[x] verified-static: local gizmo mapping is X=Forward, Y=Height, Z=Side with run-relative Yaw and uniform Scale.
+[ ] Eclipse/Java 8 clean-build Client.
+[ ] Enter settlement with at least one persistent ConveyorRun and open Con Revamp -> Conveyor Payload Visual Profiles -> Edit Current Item Live.
+[ ] Live Editor opens on P / Conveyor Payload; belt remains visible and cannot be selected/modified.
+[ ] Exactly one real selected item is frozen at the belt midpoint; ordinary moving payloads are hidden during the session.
+[ ] Open Transform and Move [G]: X moves Forward/Back along belt, Y raises/lowers Height, Z moves Side-to-Side.
+[ ] Move FREE remains visually intuitive and updates Forward/Side rather than raw world X/Z.
+[ ] Rotate [R] changes relative Yaw around the payload pivot; changing conveyor heading later preserves profile orientation relative to belt.
+[ ] Scale [V] is uniform and cannot create divergent X/Y/Z profile scale.
+[ ] P drawer Pitch and Roll update the frozen item live.
+[ ] Save Category and verify Profile Status resolves CATEGORY <name>; save Item Override and verify exact item wins.
+[ ] Ctrl+S saves current exact Item Override; modify values then Ctrl+O and confirm resolved profile reloads.
+[ ] Close/Escape payload editor. Normal moving payloads return immediately and use the saved visual profile.
+[ ] Reopen payload mode and confirm the saved resolved profile initializes the gizmo/inspector.
+[ ] Reopen Conveyor 46298 through normal Dev -> Edit Model Live and verify Whole/Part/Multi, Move/Rotate/Scale, Snap, Material/Object/Project and source-object suppression are unchanged.
+[ ] Camera regression: RTS/FREE, MMB orbit, wheel zoom and WASD pan remain usable in both object and payload modes.
+[ ] No cache/server-world write occurs from payload authoring; only the existing client visual-profile properties store changes when Save is pressed.
