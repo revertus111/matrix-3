@@ -35,10 +35,17 @@ public final class LiveModelEditorPreview {
     private static final int GIZMO_PIVOT_COLOR = 0xffe9e3d5;
 
     private static final Class261 TRANSFORM = new Class261();
+    private static final Class261 PAYLOAD_EDIT_TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
     private static final LiveModelEditorParts PARTS = new LiveModelEditorParts();
 
+    public enum EditorTargetMode {
+        OBJECT,
+        CONVEYOR_PAYLOAD
+    }
+
     private static volatile boolean active;
+    private static volatile EditorTargetMode targetMode = EditorTargetMode.OBJECT;
     private static volatile int objectId = -1;
     private static volatile String objectName = "Object";
     private static volatile int objectType = 10;
@@ -56,6 +63,9 @@ public final class LiveModelEditorPreview {
     private static volatile int translateY;
     private static volatile int translateZ;
     private static volatile int yawDegrees;
+    private static volatile int payloadItemId = -1;
+    private static volatile int payloadPitchDegrees;
+    private static volatile int payloadRollDegrees;
 
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String status = "IDLE";
@@ -78,6 +88,11 @@ public final class LiveModelEditorPreview {
     private static Model cachedMainModel;
     private static Model[] cachedDuplicateModels = new Model[0];
     private static Model[] cachedReplacementModels = new Model[0];
+
+    private static Class106 cachedPayloadEditorRenderer;
+    private static int cachedPayloadEditorItemId = -1;
+    private static int cachedPayloadEditorScale = -1;
+    private static Model cachedPayloadEditorModel;
 
     private static Class106 cachedPickRenderer;
     private static int cachedPickRevision = Integer.MIN_VALUE;
@@ -119,6 +134,8 @@ public final class LiveModelEditorPreview {
             int tileOffsetX, int tileOffsetY,
             int sxPercent, int syPercent, int szPercent,
             int moveX, int moveY, int moveZ, int yaw) {
+        targetMode = EditorTargetMode.OBJECT;
+        ConveyorRunPreview.setPayloadEditorActive(false);
         int previousId = objectId;
         int previousType = objectType;
         objectName = name == null || name.trim().length() == 0 ? "Object" : name;
@@ -143,7 +160,119 @@ public final class LiveModelEditorPreview {
         status = active ? describe("READY") : "INVALID object id";
     }
 
+    public static boolean showConveyorPayload(int itemId,
+            ConveyorPayloadVisualProfiles.Profile profile) {
+        ConveyorRunPreview.PayloadEditorReference reference =
+                ConveyorRunPreview.getPayloadEditorReference();
+        if (reference == null) {
+            active = false;
+            status = "PAYLOAD EDIT requires one persistent ConveyorRun";
+            return false;
+        }
+        ConveyorPayloadVisualProfiles.Profile resolved = profile == null
+                ? ConveyorPayloadVisualProfiles.resolve(itemId).profile : profile;
+
+        targetMode = EditorTargetMode.CONVEYOR_PAYLOAD;
+        objectId = -1;
+        objectName = "Payload item " + Math.max(0, itemId);
+        objectType = 10;
+        objectRotation = 0;
+        sourceX = reference.startX;
+        sourceY = reference.startY;
+        plane = reference.plane;
+        previewOffsetX = 0;
+        previewOffsetY = 0;
+        payloadItemId = Math.max(0, itemId);
+        payloadPitchDegrees = normalizeDegrees(resolved.pitchDegrees);
+        payloadRollDegrees = normalizeDegrees(resolved.rollDegrees);
+        scaleXPercent = resolved.scalePercent;
+        scaleYPercent = resolved.scalePercent;
+        scaleZPercent = resolved.scalePercent;
+        translateX = resolved.alongOffset;
+        translateY = resolved.heightOffset;
+        translateZ = resolved.sideOffset;
+        yawDegrees = normalizeDegrees(resolved.yawDegrees);
+        selectionMode = SelectionMode.WHOLE;
+        PARTS.clear();
+        ConveyorRunPreview.setPayloadTestItemId(payloadItemId);
+        ConveyorRunPreview.setPayloadEditorActive(true);
+        invalidateModels();
+        active = true;
+        status = "PAYLOAD EDIT READY item=" + payloadItemId
+                + " run=" + reference.runId;
+        return true;
+    }
+
+    public static void setConveyorPayloadItemId(int itemId) {
+        if (targetMode != EditorTargetMode.CONVEYOR_PAYLOAD) return;
+        payloadItemId = Math.max(0, itemId);
+        ConveyorRunPreview.setPayloadTestItemId(payloadItemId);
+        cachedPayloadEditorItemId = -1;
+        cachedPayloadEditorModel = null;
+        invalidateVisualModels();
+    }
+
+    public static int getConveyorPayloadItemId() {
+        return payloadItemId;
+    }
+
+    public static void setConveyorPayloadPitchRoll(int pitch, int roll) {
+        payloadPitchDegrees = normalizeDegrees(pitch);
+        payloadRollDegrees = normalizeDegrees(roll);
+        invalidateVisualModels();
+    }
+
+    public static int getConveyorPayloadPitchDegrees() {
+        return payloadPitchDegrees;
+    }
+
+    public static int getConveyorPayloadRollDegrees() {
+        return payloadRollDegrees;
+    }
+
+    public static EditorTargetMode getTargetMode() {
+        return targetMode;
+    }
+
+    public static boolean isConveyorPayloadMode() {
+        return active && targetMode == EditorTargetMode.CONVEYOR_PAYLOAD;
+    }
+
+    public static boolean setWholeTransform(int sx, int sy, int sz,
+            int mx, int my, int mz, int yaw) {
+        if (!active) return false;
+        if (targetMode == EditorTargetMode.CONVEYOR_PAYLOAD) {
+            int uniform = clamp(sx, 10, 400);
+            sx = uniform;
+            sy = uniform;
+            sz = uniform;
+        } else {
+            sx = clamp(sx, 10, 400);
+            sy = clamp(sy, 10, 400);
+            sz = clamp(sz, 10, 400);
+        }
+        mx = clamp(mx, -4096, 4096);
+        my = clamp(my, -4096, 4096);
+        mz = clamp(mz, -4096, 4096);
+        yaw = normalizeDegrees(yaw);
+        boolean changed = sx != scaleXPercent || sy != scaleYPercent
+                || sz != scaleZPercent || mx != translateX
+                || my != translateY || mz != translateZ || yaw != yawDegrees;
+        scaleXPercent = sx;
+        scaleYPercent = sy;
+        scaleZPercent = sz;
+        translateX = mx;
+        translateY = my;
+        translateZ = mz;
+        yawDegrees = yaw;
+        if (changed) invalidateGeometryModels();
+        return changed;
+    }
+
     public static void hide() {
+        if (targetMode == EditorTargetMode.CONVEYOR_PAYLOAD) {
+            ConveyorRunPreview.setPayloadEditorActive(false);
+        }
         active = false;
         dragging = false;
         draggingWhole = false;
@@ -156,15 +285,19 @@ public final class LiveModelEditorPreview {
         PARTS.hover(-1);
         lastRenderedCycle = Integer.MIN_VALUE;
         status = "HIDDEN";
+        targetMode = EditorTargetMode.OBJECT;
+        payloadItemId = -1;
     }
 
     public static boolean isActive() { return active; }
-    public static boolean isEditSessionActive() { return active && objectId >= 0; }
+    public static boolean isEditSessionActive() { return active; }
     public static int getObjectId() { return objectId; }
     public static String getStatus() { return status; }
 
     public static boolean matchesSource(int id, int worldX, int worldY, int worldPlane) {
-        return objectId == id && sourceX == worldX && sourceY == worldY && plane == worldPlane;
+        return targetMode == EditorTargetMode.OBJECT
+                && objectId == id && sourceX == worldX
+                && sourceY == worldY && plane == worldPlane;
     }
 
     /**
@@ -553,8 +686,23 @@ public final class LiveModelEditorPreview {
                 else if (axisConstraint == AxisConstraint.Y) my += amountY;
                 else if (axisConstraint == AxisConstraint.Z) mz += amountY;
                 else if (cameraGroundDrag != null) {
-                    mx += cameraGroundDrag[0];
-                    mz += cameraGroundDrag[1];
+                    if (targetMode == EditorTargetMode.CONVEYOR_PAYLOAD) {
+                        ConveyorRunPreview.PayloadEditorReference reference =
+                                ConveyorRunPreview.getPayloadEditorReference();
+                        if (reference != null) {
+                            double angle = reference.headingYaw
+                                    * (Math.PI * 2.0 / 16384.0);
+                            double cos = Math.cos(angle);
+                            double sin = Math.sin(angle);
+                            int worldDx = cameraGroundDrag[0];
+                            int worldDz = cameraGroundDrag[1];
+                            mx += (int) Math.round(worldDx * cos + worldDz * sin);
+                            mz += (int) Math.round(-worldDx * sin + worldDz * cos);
+                        }
+                    } else {
+                        mx += cameraGroundDrag[0];
+                        mz += cameraGroundDrag[1];
+                    }
                 } else {
                     mx += amountX;
                     mz += amountY;
@@ -564,15 +712,22 @@ public final class LiveModelEditorPreview {
             } else {
                 int delta = gizmoActiveAxis != null
                         ? gizmoScaleDelta : (dx - dy) / 2;
-                AxisConstraint scaleAxis = gizmoActiveAxis != null
-                        ? gizmoActiveAxis : axisConstraint;
-                if (scaleAxis == AxisConstraint.X) sx += delta;
-                else if (scaleAxis == AxisConstraint.Y) sy += delta;
-                else if (scaleAxis == AxisConstraint.Z) sz += delta;
-                else {
-                    sx += delta;
-                    sy += delta;
-                    sz += delta;
+                if (targetMode == EditorTargetMode.CONVEYOR_PAYLOAD) {
+                    int uniform = dragStartWholeTransform[0] + delta;
+                    sx = uniform;
+                    sy = uniform;
+                    sz = uniform;
+                } else {
+                    AxisConstraint scaleAxis = gizmoActiveAxis != null
+                            ? gizmoActiveAxis : axisConstraint;
+                    if (scaleAxis == AxisConstraint.X) sx += delta;
+                    else if (scaleAxis == AxisConstraint.Y) sy += delta;
+                    else if (scaleAxis == AxisConstraint.Z) sz += delta;
+                    else {
+                        sx += delta;
+                        sy += delta;
+                        sz += delta;
+                    }
                 }
             }
 
@@ -827,13 +982,19 @@ public final class LiveModelEditorPreview {
     }
 
     static void render(Class523 scene, Class106 renderer) {
-        if (!active || objectId < 0 || scene == null || renderer == null) return;
+        if (!active || scene == null || renderer == null) return;
         int cycle = client.cycles;
         if (lastRenderedCycle == cycle) return;
         lastRenderedCycle = cycle;
 
         Class613 region = client.aClass613_8605;
         if (region == null || region.method7285(0) != scene) return;
+
+        if (targetMode == EditorTargetMode.CONVEYOR_PAYLOAD) {
+            renderConveyorPayloadTarget(scene, renderer, region);
+            return;
+        }
+        if (objectId < 0) return;
 
         Class497 sceneBase = region.method7280((byte) -102);
         Class639_Sub16 definitions = region.method7288(0);
@@ -913,6 +1074,180 @@ public final class LiveModelEditorPreview {
         updateGizmoProjection(renderer, definition,
                 sceneX, sceneY, sceneZ, renderRotation);
         status = describe("DRAW") + " at=" + worldX + "," + worldY + "," + renderPlane;
+    }
+
+    private static void renderConveyorPayloadTarget(
+            Class523 scene, Class106 renderer, Class613 region) {
+        ConveyorRunPreview.PayloadEditorReference reference =
+                ConveyorRunPreview.getPayloadEditorReference();
+        if (reference == null) {
+            status = "PAYLOAD EDIT WAIT persistent ConveyorRun";
+            gizmoScreen = GizmoScreenState.hidden();
+            return;
+        }
+
+        Class497 sceneBase = region.method7280((byte) -102);
+        if (sceneBase == null || reference.plane < 0
+                || reference.plane >= scene.aClass174Array5838.length) {
+            status = "PAYLOAD EDIT WAIT scene";
+            return;
+        }
+        Class174 ground = scene.aClass174Array5838[reference.plane];
+        if (ground == null) {
+            status = "PAYLOAD EDIT WAIT terrain";
+            return;
+        }
+
+        int baseWorldX = sceneBase.localX * -2109597897;
+        int baseWorldY = sceneBase.localY * 417324155;
+        double startLocalX = reference.startX - baseWorldX;
+        double startLocalY = reference.startY - baseWorldY;
+        double endLocalX = reference.endX - baseWorldX;
+        double endLocalY = reference.endY - baseWorldY;
+        double lengthTiles = Math.max(0.001, reference.lengthTiles());
+        double directionX = (endLocalX - startLocalX) / lengthTiles;
+        double directionY = (endLocalY - startLocalY) / lengthTiles;
+        double midLocalX = (startLocalX + endLocalX) * 0.5;
+        double midLocalY = (startLocalY + endLocalY) * 0.5;
+
+        int tileSize = ground.anInt2087 * 2129890771;
+        double alongTiles = translateX / 512.0;
+        double sideTiles = translateZ / 512.0;
+        double localX = midLocalX
+                + directionX * alongTiles - directionY * sideTiles;
+        double localY = midLocalY
+                + directionY * alongTiles + directionX * sideTiles;
+        int sceneX = (int) Math.round(localX * tileSize + tileSize * 0.5);
+        int sceneZ = (int) Math.round(localY * tileSize + tileSize * 0.5);
+
+        int midSceneX = (int) Math.round(midLocalX * tileSize + tileSize * 0.5);
+        int midSceneZ = (int) Math.round(midLocalY * tileSize + tileSize * 0.5);
+        int sceneY = ground.method2718(midSceneX, midSceneZ, 0) + translateY;
+
+        Model model = getPayloadEditorModel(
+                renderer, payloadItemId, scaleXPercent);
+        if (model == null) {
+            status = "PAYLOAD EDIT item model unavailable #" + payloadItemId;
+            return;
+        }
+
+        PAYLOAD_EDIT_TRANSFORM.method3594();
+        int pitch = degreesToAngle(payloadPitchDegrees);
+        int yaw = (reference.headingYaw + degreesToAngle(yawDegrees)) & 0x3fff;
+        int roll = degreesToAngle(payloadRollDegrees);
+        if (pitch != 0) {
+            PAYLOAD_EDIT_TRANSFORM.method3576(
+                    1.0F, 0.0F, 0.0F, Class325.method4146(pitch));
+        }
+        if (yaw != 0) {
+            PAYLOAD_EDIT_TRANSFORM.method3576(
+                    0.0F, 1.0F, 0.0F, Class325.method4146(yaw));
+        }
+        if (roll != 0) {
+            PAYLOAD_EDIT_TRANSFORM.method3576(
+                    0.0F, 0.0F, 1.0F, Class325.method4146(roll));
+        }
+        PAYLOAD_EDIT_TRANSFORM.method3580(
+                (float) sceneX, (float) sceneY, (float) sceneZ);
+        model.method1375(PAYLOAD_EDIT_TRANSFORM, RENDER_BOUNDS, 0);
+
+        updatePayloadGizmoProjection(
+                renderer, sceneX, sceneY, sceneZ, reference.headingYaw);
+        status = "DRAW PAYLOAD item=" + payloadItemId
+                + " run=" + reference.runId
+                + " forward=" + translateX
+                + " side=" + translateZ
+                + " height=" + translateY
+                + " scale=" + scaleXPercent + "%"
+                + " yaw=" + yawDegrees;
+    }
+
+    private static Model getPayloadEditorModel(
+            Class106 renderer, int itemId, int scalePercent) {
+        if (renderer == null || itemId < 0) return null;
+        if (cachedPayloadEditorRenderer == renderer
+                && cachedPayloadEditorModel != null
+                && cachedPayloadEditorItemId == itemId
+                && cachedPayloadEditorScale == scalePercent) {
+            return cachedPayloadEditorModel;
+        }
+
+        Class639_Sub5 definitions =
+                ClientConsoleItemBridge.getRegisteredItemDefinitions();
+        if (definitions == null || itemId >= definitions.method45()) {
+            return null;
+        }
+        try {
+            ItemDefinitions definition = (ItemDefinitions)
+                    definitions.getDefinition(itemId, 0);
+            if (definition == null) return null;
+            Model built = definition.method7526(
+                    renderer, EDIT_MODEL_FLAGS, 1,
+                    null, null, 0, 0, 0, 0, 0);
+            if (built == null) return null;
+            Model model = built.method1351(
+                    (byte) 0, EDIT_MODEL_FLAGS, true);
+            if (model == null) return null;
+            int modelScale = percentToModelScale(scalePercent);
+            if (modelScale != 128) {
+                model.method1464(modelScale, modelScale, modelScale);
+            }
+            model.method1450(EDIT_MODEL_FLAGS);
+            cachedPayloadEditorRenderer = renderer;
+            cachedPayloadEditorItemId = itemId;
+            cachedPayloadEditorScale = scalePercent;
+            cachedPayloadEditorModel = model;
+            return model;
+        } catch (RuntimeException ex) {
+            status = "PAYLOAD EDIT model failed "
+                    + ex.getClass().getSimpleName();
+            return null;
+        }
+    }
+
+    private static void updatePayloadGizmoProjection(
+            Class106 renderer, int sceneX, int sceneY, int sceneZ,
+            int headingYaw) {
+        if (renderer == null) {
+            gizmoScreen = GizmoScreenState.hidden();
+            return;
+        }
+
+        double angle = headingYaw * (Math.PI * 2.0 / 16384.0);
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        double sample = GIZMO_AXIS_SAMPLE_UNITS;
+
+        float[] center = project(renderer, sceneX, sceneY, sceneZ);
+        float[] x = project(renderer,
+                sceneX + cos * sample, sceneY, sceneZ + sin * sample);
+        float[] y = project(renderer,
+                sceneX, sceneY + sample, sceneZ);
+        float[] z = project(renderer,
+                sceneX - sin * sample, sceneY, sceneZ + cos * sample);
+        if (center == null) {
+            gizmoScreen = GizmoScreenState.hidden();
+            gizmoHoveredAxis = null;
+            return;
+        }
+
+        int[] xEnd = fixedAxisEndpoint(center, x);
+        int[] yEnd = fixedAxisEndpoint(center, y);
+        int[] zEnd = fixedAxisEndpoint(center, z);
+        gizmoScreen = new GizmoScreenState(true,
+                Math.round(center[0]), Math.round(center[1]),
+                xEnd[0], xEnd[1],
+                yEnd[0], yEnd[1],
+                zEnd[0], zEnd[1],
+                xEnd[2] != 0, yEnd[2] != 0, zEnd[2] != 0);
+        if (!dragging && !draggingWhole && pointerInside) {
+            gizmoHoveredAxis = hitTransformGizmo(pointerX, pointerY);
+        }
+    }
+
+    private static int degreesToAngle(int degrees) {
+        return ((int) Math.round(normalizeDegrees(degrees)
+                * 16384.0 / 360.0)) & 0x3fff;
     }
 
     /**
@@ -1793,6 +2128,12 @@ public final class LiveModelEditorPreview {
         cachedMainModel = null;
         cachedDuplicateModels = new Model[0];
         cachedReplacementModels = new Model[0];
+        if (targetMode == EditorTargetMode.CONVEYOR_PAYLOAD) {
+            cachedPayloadEditorRenderer = null;
+            cachedPayloadEditorItemId = -1;
+            cachedPayloadEditorScale = -1;
+            cachedPayloadEditorModel = null;
+        }
         lastRenderedCycle = Integer.MIN_VALUE;
     }
 
