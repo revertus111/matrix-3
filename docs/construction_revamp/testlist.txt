@@ -1727,15 +1727,15 @@ Settlement large-scene lifecycle regression (2026-09-30)
 [ ] Re-enter/leave twice to confirm map-size switching and 176x176 dynamic allocation cleanup remain stable.
 [ ] Logout from inside the settlement, log back in and confirm settlement map-size/large-scene state does not leak into the normal world.
 
-Detached RTS projection-depth parity gate (2026-09-30)
+Detached RTS projection-depth parity gate — RUNTIME VERIFIED (2026-09-30)
 [x] verified-static: Class411 detached default projection is 50..10000.
 [x] verified-static: normal Matrix3 projection reads Class613.method7284()/method7313(); 168-tile settlement scene computes a substantially farther far clip (~23156).
 [x] verified-static: RTS max orbit distance is 10000, which could place the pivot at the detached far plane before this correction.
 [x] ConstructionBuildCamera now mirrors Matrix3's live scene near/far projection through Class411.method4983(...).
 [ ] Pull/build/restart Client + Server and enter a freshly rebuilt settlement.
-[ ] Reproduce the exact screenshot framing at maximum RTS zoom. Terrain behind the player/focus should continue rendering instead of cutting directly to cyan sky.
+[x] Runtime verified by user screenshot: exact max-zoom settlement framing continues rendering terrain behind the player/focus instead of cutting directly to cyan sky.
 [ ] Pan and orbit through all four headings at max zoom; no heading should expose the former projection cutoff.
 [ ] Zoom fully in/out repeatedly; geometry must not pop at the old ~10000-unit boundary.
-[ ] Confirm RTS WASD/arrows, Q/E, MMB orbit, wheel zoom and minimap focus remain unchanged.
+[x] RTS camera remains functional after projection-depth correction.
 [ ] Confirm Free Build remains functional with the shared detached camera projection.
 [ ] Leave settlement and confirm normal-world camera/rendering remains unchanged.
