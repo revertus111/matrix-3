@@ -2011,3 +2011,9 @@
 - ConstructionBuildCamera now applies Matrix3's live vanilla near/far projection to the detached Class411 camera through its existing method4983(...) setter each active tick.
 - No camera-owner migration, Class523 radius override, fog bypass or hardcoded oversized far plane.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-30 - Detached RTS render boundary runtime accepted
+- User screenshot verified the former hard cyan far-plane cutoff is gone at the same wide RTS framing.
+- Accepted combined fix: native 168x168 settlement scene, 176x176 generated visual terrain, and detached Class411 near/far projection synchronized to Matrix3's live vanilla scene projection.
+- RTS camera remains functional; no further camera-owner migration is required.
+- Camera/render gate is closed. Resume Population / Processing / Logistics mainline.
