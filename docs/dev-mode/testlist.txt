@@ -1,3 +1,15 @@
+Live Inspect V1.4 - relationships / F8 quick gate
+[ ] Hover an Object and confirm Relationship shows Object -> Model(s) -> Animation(s); press F8 and confirm Live Model Editor opens on that exact object.
+[ ] Hover an NPC and confirm Relationship shows NPC definition -> runtime NPC index; press F8 and confirm Dev Inspector opens on that exact NPC.
+[ ] Hover empty ground until Type=Tile; press F8 and confirm Tile Editor opens on the exact same world X/Y/plane.
+[ ] Ctrl+C each of the above and confirm Relationship + Open Route lines are included.
+[ ] Hover Ground Item and confirm Open Route says no direct item editor route yet; F8 must not open an unrelated tool.
+[ ] GFX/Projectile F8 route remains unavailable until a specialist visual route is verified.
+
+DEFERRED - Live Inspect V1.3 GFX / Projectile hover gate
+[ ] Resume after safe pause/slow-time/freeze tooling exists; normal-speed transient targets are not a practical manual hover acceptance test.
+[ ] Then verify stationary GFX, moving Projectile, F9 lock/copy, overlap priority, and F10-off regression.
+
 Matrix3 Dev Mode - targeted runtime test list
 
 DEFERRED RUNTIME QUEUE - run when PC/runtime time is available
