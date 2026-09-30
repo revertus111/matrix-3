@@ -1,3 +1,11 @@
+2026-09-30 - Dev Mode Live Inspect V1.3 GFX + Projectile targets
+- Verified-static Class456_Sub1_Sub2_Sub4 as the stationary GraphicsDefinition-backed scene visual (GFX/spot animation) and Class456_Sub1_Sub2_Sub5 as the moving projectile scene entity; both deliberately return false from normal Matrix3 menu hit-testing.
+- Live Inspect now remembers the current canvas pointer coordinates and exposes one bounded native Model.method1376(...) hit test only while F10 inspection is active/unlocked.
+- Hooked the existing shared render-prep seams method10600(...) for GFX/spot animations and method10639(...) for projectiles, avoiding duplicate instrumentation across their multiple renderer entry methods.
+- On a real model hit, Live Inspect reports Type, GraphicsDefinition ID, source model ID, source animation ID, current world tile, Region and Chunk using the exact GraphicsDefinition consumed by the renderer.
+- Target priority is Projectile > GFX/SpotAnim > NPC/Object > Ground Item > Tile; F9 lock freezes the selected transient visual snapshot for copy even after it moves/expires.
+- F10 OFF performs no visual model hit tests; no renderer semantics, cache data, server state, combat behavior, or persistence ownership changed.
+
 2026-09-30 - Dev Mode Live Inspect V1.1/V1.2 polish + target expansion
 - Runtime evidence confirmed Live Inspect opens, resolves NPC targets, locks with F9 and copies a locked diagnostic block; it also exposed clipping and visible flashing.
 - Removed the 180ms stale-hover expiry so a valid target no longer disappears simply because the cursor stopped moving.

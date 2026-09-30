@@ -5,8 +5,16 @@ DEFERRED RUNTIME QUEUE - run when PC/runtime time is available
 Build gate
 [ ] Eclipse/Java 8: clean/build Client and Server with no compilation errors.
 
+Live Inspect V1.3 - GFX / Projectile quick gate
+[ ] With F10 active, trigger a stationary GFX/spot animation and hover directly over its visible model; confirm Type=GFX / SpotAnim plus GraphicsDefinition/model/animation IDs.
+[ ] Trigger/fire a moving projectile and hover its visible model; confirm Type=Projectile and its World Tile changes as the projectile moves.
+[ ] F9-lock the GFX/projectile, let it move/expire, then Ctrl+C and confirm the locked diagnostic snapshot remains copyable.
+[ ] Hover an overlapping NPC/object + visual and confirm Projectile/GFX wins while the pointer is over the visual model.
+[ ] F10 OFF: confirm no visual target appears and normal combat/effect rendering is unchanged.
+
 Live Inspect V1.1/V1.2 - quick gate
 [x] V1 partial proof: overlay opens, Overseer NPC 8904 resolves with runtime index 79, F9 lock works, and locked Ctrl+C copy works.
+[x] Runtime proof: Object + Ground Item inspection display/copy with Definition ID, World Tile, Region and Chunk.
 [ ] Hover an NPC/object WITHOUT locking -> Ctrl+C -> paste and confirm `State: HOVER` plus the current target block.
 [ ] Stop moving the cursor over one target for several seconds; confirm the overlay does not flash/disappear.
 [ ] Confirm long Name/Model/Animation values remain inside the card; copied output still contains full values.

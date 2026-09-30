@@ -1,7 +1,10 @@
 package game.console;
 
+import game.Class106;
+import game.Class261;
 import game.Class584;
 import game.DevDefinitionBridge;
+import game.Model;
 import game.DevModeBridge.DevTarget;
 import game.DevModeBridge.TargetType;
 
@@ -42,6 +45,8 @@ public final class LiveInspectOverlay {
     private static final int PRIORITY_TILE = 10;
     private static final int PRIORITY_GROUND_ITEM = 20;
     private static final int PRIORITY_ENTITY = 30;
+    private static final int PRIORITY_SPOT_ANIMATION = 40;
+    private static final int PRIORITY_PROJECTILE = 50;
 
     private static volatile boolean enabled;
     private static volatile boolean locked;
@@ -50,6 +55,8 @@ public final class LiveInspectOverlay {
     private static volatile long pointerGeneration;
     private static volatile long observedGeneration = -1L;
     private static volatile int observedPriority = -1;
+    private static volatile int pointerX = -1;
+    private static volatile int pointerY = -1;
 
     private static JWindow window;
     private static Window owner;
@@ -90,6 +97,8 @@ public final class LiveInspectOverlay {
             lockedTarget = null;
             observedGeneration = -1L;
             observedPriority = -1;
+            pointerX = -1;
+            pointerY = -1;
         } else {
             pointerGeneration++;
             ensureRefreshTimer();
@@ -123,10 +132,29 @@ public final class LiveInspectOverlay {
      * an entity/item target. The current target is intentionally not cleared
      * here; Matrix3 may resolve the scene target on the following game tick.
      */
-    public static void pointerMoved() {
+    public static void pointerMoved(int x, int y) {
         if (enabled && !locked) {
+            pointerX = x;
+            pointerY = y;
             pointerGeneration++;
             observedPriority = -1;
+        }
+    }
+
+    /**
+     * Narrow renderer-side hit test used only by visual families that Matrix3
+     * intentionally excludes from ordinary menu picking (spot animations and
+     * projectiles). The real renderer Model owns the hit-test math.
+     */
+    public static boolean isPointerOverModel(Model model, Class261 transform) {
+        if (!enabled || locked || model == null || transform == null
+                || pointerX < 0 || pointerY < 0) {
+            return false;
+        }
+        try {
+            return model.method1376(pointerX, pointerY, transform, false, 0);
+        } catch (RuntimeException ex) {
+            return false;
         }
     }
 
@@ -184,6 +212,42 @@ public final class LiveInspectOverlay {
                 new int[0],
                 new int[0]),
                 PRIORITY_GROUND_ITEM);
+    }
+
+    public static void observeSpotAnimation(int graphicsId, int modelId, int animationId,
+            int worldX, int worldY, int plane) {
+        if (!enabled || locked) {
+            return;
+        }
+        observe(new Snapshot(
+                "GFX / SpotAnim",
+                "Graphics " + graphicsId,
+                graphicsId,
+                worldX,
+                worldY,
+                plane,
+                "Scene spot animation",
+                ids(modelId),
+                ids(animationId)),
+                PRIORITY_SPOT_ANIMATION);
+    }
+
+    public static void observeProjectile(int graphicsId, int modelId, int animationId,
+            int worldX, int worldY, int plane) {
+        if (!enabled || locked) {
+            return;
+        }
+        observe(new Snapshot(
+                "Projectile",
+                "Graphics " + graphicsId,
+                graphicsId,
+                worldX,
+                worldY,
+                plane,
+                "Scene projectile",
+                ids(modelId),
+                ids(animationId)),
+                PRIORITY_PROJECTILE);
     }
 
     public static void observeTile(int worldX, int worldY, int plane) {
@@ -455,6 +519,10 @@ public final class LiveInspectOverlay {
     private static String chunkText(int worldX, int worldY) {
         return (worldX >> 3) + ", " + (worldY >> 3)
                 + "  local " + (worldX & 7) + ", " + (worldY & 7);
+    }
+
+    private static int[] ids(int value) {
+        return value >= 0 ? new int[] { value } : new int[0];
     }
 
     private static String displayIds(int[] ids, int max) {

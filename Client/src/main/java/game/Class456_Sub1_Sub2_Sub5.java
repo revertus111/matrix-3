@@ -1,5 +1,7 @@
 package game;
 
+import game.console.LiveInspectOverlay;
+
 /* Class456_Sub1_Sub2_Sub5 - Decompiled by JODE
  * Visit http://jode.sourceforge.net/
  */
@@ -224,6 +226,22 @@ public class Class456_Sub1_Sub2_Sub5 extends Class456_Sub1_Sub2 {
 	}
 
 	void method10639(Class106 class106, Model model, Class261 class261, int i) {
+		if (LiveInspectOverlay.isPointerOverModel(model, class261)) {
+			int graphicsId = ((Class456_Sub1_Sub2_Sub5) this).anInt11745 * -219470065;
+			GraphicsDefinition definition = (GraphicsDefinition) Class667.aClass639_Sub10_8509
+					.getDefinition(graphicsId, 1649984170);
+			int modelId = definition == null ? -1 : definition.anInt8426 * 1787366821;
+			int animationId = definition == null ? -1 : definition.anInt8433 * 1281094747;
+			Class497 sceneBase = client.aClass613_8605 == null
+					? null : client.aClass613_8605.method7280((byte) -102);
+			if (sceneBase != null) {
+				Class240 position = method5394().aClass240_2647;
+				int worldX = sceneBase.localX * -2109597897 + ((int) position.aFloat2653 >> 9);
+				int worldY = sceneBase.localY * 417324155 + ((int) position.aFloat2657 >> 9);
+				LiveInspectOverlay.observeProjectile(
+						graphicsId, modelId, animationId, worldX, worldY, aByte9009 & 0xff);
+			}
+		}
 		model.method1426(class261);
 		Class84[] class84s = model.method1394();
 		Class175[] class175s = model.method1507();

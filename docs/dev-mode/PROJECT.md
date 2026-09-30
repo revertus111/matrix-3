@@ -213,6 +213,36 @@ This table is the authoritative user-facing milestone table across chats.
 - Hover a ground item and verify its item name/definition ID/tile replaces the lower-priority Tile target.
 - Hover an NPC/object on a tile containing a ground item and verify the entity wins the display priority.
 
+#### Bundle 2.3 - Live Inspect GFX + Projectile Targets
+
+**Purpose:** Inspect transient visual entities that Matrix3 deliberately excludes from normal right-click/menu picking.
+
+**Status:** NEEDS TEST
+
+**Verified-static ownership:**
+
+- `Class456_Sub1_Sub2_Sub4` is the stationary GraphicsDefinition-backed scene visual (GFX/spot animation). Its normal `method8297(...)` pick path returns false.
+- `Class456_Sub1_Sub2_Sub5` is the moving GraphicsDefinition-backed projectile entity with ballistic/target tracking. Its normal `method8297(...)` pick path also returns false.
+- Both render owners already build the real Matrix3 `Model` + `Class261` transform required by `Model.method1376(...)` screen hit testing.
+
+**Checklist / patches:**
+
+- [x] Capture live canvas pointer X/Y only while Live Inspect is enabled.
+- [x] Add a bounded renderer-side model hit test through Matrix3 `Model.method1376(...)`; no custom geometry/raycast implementation.
+- [x] Publish GFX/SpotAnim targets from `Class456_Sub1_Sub2_Sub4.method10600(...)`.
+- [x] Publish Projectile targets from `Class456_Sub1_Sub2_Sub5.method10639(...)`.
+- [x] Resolve GraphicsDefinition model ID + animation ID from the same definition used by the real renderer.
+- [x] Convert current scene-model position into world tile/region/chunk context for the copied Live Inspect block.
+- [x] Priority order is Projectile > GFX/SpotAnim > NPC/Object > Ground Item > Tile.
+- [ ] Runtime-verify at least one stationary GFX and one moving projectile.
+
+**Runtime tests:**
+
+- Trigger any known stationary GFX/spot animation, place the cursor directly over its visible model, and confirm Type=`GFX / SpotAnim` with graphics/model/animation IDs.
+- Fire or trigger any visible projectile and hover its model while moving; confirm Type=`Projectile` and the world tile follows its current position.
+- F9-lock either transient visual and verify it stays copyable after the visual moves/expires.
+- Confirm F10 OFF adds no visual hit-test behavior and normal rendering/combat/menu interaction is unchanged.
+
 ### Phase 3 - World / Tile Creation
 
 **Status:** PLANNED
@@ -235,11 +265,11 @@ This table is the authoritative user-facing milestone table across chats.
 
 - Phase: Phase 2 - Contextual Editors
 - Phase status: ACTIVE
-- Bundle: Bundle 2.2 - Live Inspect Polish + Target Expansion
+- Bundle: Bundle 2.3 - Live Inspect GFX + Projectile Targets
 - Bundle status: NEEDS TEST
 - Approval state: SAP AAA approved 2026-09-30; implementation complete statically.
-- Current checklist item: Runtime acceptance for no-flicker/no-clipping HOVER copy plus Tile/Ground Item target expansion.
-- Current objective: Accept Live Inspect V1.1/V1.2 as the fast read-only dev inspection path. The older Phase 1 Bundle 1.2/1.3 combined runtime gate remains preserved as carryover and is not treated as complete.
+- Current checklist item: Runtime acceptance for one stationary GFX/spot animation and one moving projectile.
+- Current objective: Extend the proven Live Inspect hover/copy workflow to transient renderer-owned visuals without changing renderer/world ownership. Bundle 2.2 remains partially runtime-verified from the user's object/ground-item proof.
 
 ## Checklist / patch status
 
@@ -258,7 +288,8 @@ This table is the authoritative user-facing milestone table across chats.
 | Object placement rotation | 1 | 1.3 | NEEDS TEST | Fixed, Cycle, Random 0-3. |
 | Phase 1 combined runtime gate | 1 | 1.2 + 1.3 | NEEDS TEST | Intentionally deferred; accumulated queue is in `docs/dev-mode/testlist.txt`. |
 | Live Inspect V1 | 2 | 2.1 | NEEDS TEST | Runtime partially proven: overlay/NPC hover/F9 lock/locked Ctrl+C work; final acceptance waits on V1.1 polish retest. |
-| Live Inspect polish + Tile/Ground Item targets | 2 | 2.2 | NEEDS TEST | Removes flicker/clipping path, supports unlocked Ctrl+C, adds region/chunk context and Matrix3-resolved Tile/Ground Item inspection. |
+| Live Inspect polish + Tile/Ground Item targets | 2 | 2.2 | NEEDS TEST | Object + Ground Item display/copy runtime-proven; tile/flicker final gate remains pending. |
+| Live Inspect GFX + Projectile targets | 2 | 2.3 | NEEDS TEST | Renderer-side native Model hit test only while F10 is active; publishes GraphicsDefinition ID/model/animation + live world tile. |
 
 ## Decisions / new ideas
 
@@ -277,6 +308,8 @@ This table is the authoritative user-facing milestone table across chats.
 - 2026-09-30: While Live Inspect is active, redundant Inspect/Copy ID/Copy Tile right-click actions are hidden; mutation/editor routes remain available. Turning Live Inspect off restores the legacy menu actions.
 - 2026-09-30: Runtime proved the first Live Inspect target/copy concept, but exposed two UX defects: long row values clipped outside the 360px card and the overlay flashed. V1.1 removes per-tick pack/resize plus the stale-hover expiry instead of masking the symptoms.
 - 2026-09-30: Live Inspect target expansion remains read-only and reuses normal Matrix3 menu resolution. Tile action 23 feeds scene coordinates; ground-item actions 18-22/1004 feed item ID + tile; entity targets outrank item targets, which outrank tiles.
+- 2026-09-30: User runtime-confirmed Object + Ground Item Live Inspect output including Definition ID, world tile, Region and Chunk context.
+- 2026-09-30: GFX/projectiles cannot reuse menu picking because their scene classes deliberately return false from `method8297(...)`. Live Inspect therefore uses their already-built renderer Model + transform and Matrix3's native `Model.method1376(...)` hit test only while F10 inspection is enabled.
 
 ## Testing
 
@@ -315,7 +348,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Phase 2 Bundle 2.2 Live Inspect Polish + Target Expansion: corrected heavyweight overlay flicker/clipping, kept Ctrl+C usable while merely hovering, added region/chunk context, and extended Matrix3-resolved inspection to world tiles and ground items.
+- Phase 2 Bundle 2.3 Live Inspect GFX + Projectile Targets: added opt-in native model hit testing at the two transient visual render owners and publishes GraphicsDefinition/model/animation/world-position evidence into the existing Live Inspect HUD/copy block.
 
 **Current phase:**
 
@@ -323,12 +356,12 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Active bundle:**
 
-- Bundle 2.2 Live Inspect Polish + Target Expansion is `NEEDS TEST`. Bundle 2.1 has partial runtime proof; Phase 1 Bundles 1.2 and 1.3 remain `NEEDS TEST` with their combined runtime gate intentionally deferred.
+- Bundle 2.3 Live Inspect GFX + Projectile Targets is `NEEDS TEST`. Bundle 2.2 has object/ground-item runtime proof with tile/flicker final acceptance still pending; Phase 1 Bundles 1.2 and 1.3 remain deferred runtime carryover.
 
 **Next checklist item:**
 
-- Runtime-check Live Inspect V1.1/V1.2 in one short pass: no flashing/clipping, Ctrl+C while HOVER, Tile inspection, Ground Item inspection, and target priority.
-- The older combined Phase 1 manipulation/paint gate remains deferred and unchanged.
+- In one client session, hover one stationary GFX and one moving projectile with F10 active; verify IDs/world position and F9-lock/copy.
+- Fold the remaining Bundle 2.2 tile/flicker checks into that same session rather than another restart.
 
 **Current state / next action:**
 
@@ -361,7 +394,8 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Pending runtime verification:**
 
-- Bundle 2.2 Live Inspect Polish + Target Expansion.
+- Bundle 2.3 Live Inspect GFX + Projectile Targets.
+- Bundle 2.2 Tile/flicker final acceptance (Object + Ground Item are runtime-proven).
 - Bundle 2.1 Live Inspect V1 final acceptance after polish retest.
 - Bundle 1.2 World Manipulation.
 - Bundle 1.3 Continuous / Paint Placement.
@@ -378,4 +412,4 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 ## Next recommended work
 
-Runtime-verify the bundled Live Inspect V1.1/V1.2 pass. After acceptance, the next high-value target class is graphics/spotanims + projectiles, followed by richer definition relationships; Phase 1 manipulation/paint remains a separate deferred runtime gate.
+Runtime-verify Bundle 2.3 GFX + Projectile inspection together with the remaining Bundle 2.2 tile/flicker checks. After that, add richer definition relationships/cross-links instead of expanding to another target family immediately.

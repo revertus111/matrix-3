@@ -693,7 +693,7 @@ public final class DevModeBridge {
                         if (enabled && LiveInspectOverlay.isEnabled()
                                 && mouseEvent.getSource() == Class584.aCanvas7745
                                 && mouseEvent.getID() == MouseEvent.MOUSE_MOVED) {
-                            LiveInspectOverlay.pointerMoved();
+                            LiveInspectOverlay.pointerMoved(mouseEvent.getX(), mouseEvent.getY());
                         }
                         return;
                     }
