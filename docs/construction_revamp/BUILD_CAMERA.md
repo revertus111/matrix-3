@@ -241,3 +241,9 @@ Still pending explicit edge verification:
 - Settlement RTS permits orbit distance up to 10000. With the old detached default, max zoom could put the RTS focus itself at the far clip plane, causing loaded terrain behind the focus to disappear into the background.
 - Construction now retains the accepted detached owner and synchronizes only its projection near/far to Matrix3's current vanilla scene values via `Class411.method4983(...)`.
 - This is projection parity, not a render-radius expansion or camera-owner replacement.
+
+## Runtime acceptance — 2026-09-30
+
+- **VERIFIED:** the hard cyan settlement cutoff is gone in the previously failing wide RTS view.
+- Accepted architecture: detached Class24/Class411 RTS owner + native 168x168 settlement scene + 176x176 generated terrain + Matrix3-live near/far projection depth.
+- Do not replace the working detached camera owner or reopen render-distance experiments unless a new runtime regression appears.
