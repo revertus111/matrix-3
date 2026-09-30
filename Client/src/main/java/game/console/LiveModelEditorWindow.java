@@ -1271,6 +1271,13 @@ public final class LiveModelEditorWindow {
         return panel;
     }
 
+    private void saveCurrentPayloadItemOverride() {
+        if (!payloadMode) return;
+        statusLabel.setText(ConveyorPayloadVisualProfiles.saveItemOverride(
+                number(payloadItemSpinner), payloadProfileFromEditor()));
+        syncPayloadPreviewFromRuntime();
+    }
+
     private void refreshTransformContext() {
         LiveModelEditorPreview.SelectionMode mode = LiveModelEditorPreview.getSelectionMode();
         if (mode == LiveModelEditorPreview.SelectionMode.WHOLE) {
@@ -1353,13 +1360,30 @@ public final class LiveModelEditorWindow {
         groupScaleButton.setText(groupScale ? "GROUP SCALE ON" : "GROUP SCALE OFF");
         setActiveButton(groupScaleButton, groupScale);
         boolean partSelection = selection != LiveModelEditorPreview.SelectionMode.WHOLE;
-        groupScaleButton.setEnabled(partSelection);
-        fitOneTileButton.setEnabled(partSelection
+        groupScaleButton.setEnabled(!payloadMode && partSelection);
+        fitOneTileButton.setEnabled(!payloadMode && partSelection
                 && LiveModelEditorPreview.getSelectedPartCount() > 0);
+        partModeButton.setEnabled(!payloadMode);
+        multiModeButton.setEnabled(!payloadMode);
+        isolateButton.setEnabled(!payloadMode);
+        sourceAnimationButton.setEnabled(!payloadMode);
+        sourceAnimationTraceButton.setEnabled(!payloadMode);
+        partList.setEnabled(!payloadMode && selection != LiveModelEditorPreview.SelectionMode.WHOLE);
 
         for (JButton button : railButtons) {
             Object tool = button.getClientProperty("toolName");
-            setActiveButton(button, drawerExpanded && activeTool.equals(tool));
+            String toolName = tool == null ? "" : tool.toString();
+            boolean enabled = true;
+            if ("PAYLOAD".equals(toolName)) {
+                enabled = payloadMode;
+            } else if (payloadMode && ("MATERIAL".equals(toolName)
+                    || "OBJECT".equals(toolName)
+                    || "PROJECT".equals(toolName))) {
+                enabled = false;
+            }
+            button.setEnabled(enabled);
+            setActiveButton(button, enabled && drawerExpanded
+                    && activeTool.equals(toolName));
         }
 
         transformReadoutLabel.setText(buildTransformReadout());
@@ -1390,6 +1414,16 @@ public final class LiveModelEditorWindow {
         LiveModelEditorPreview.AxisConstraint axis =
                 LiveModelEditorPreview.getAxisConstraint();
         if (mode == LiveModelEditorPreview.TransformMode.MOVE) {
+            if (payloadMode) {
+                if (axis == LiveModelEditorPreview.AxisConstraint.X)
+                    return "PAYLOAD  |  FORWARD  |  " + transform[3];
+                if (axis == LiveModelEditorPreview.AxisConstraint.Y)
+                    return "PAYLOAD  |  HEIGHT  |  " + transform[4];
+                if (axis == LiveModelEditorPreview.AxisConstraint.Z)
+                    return "PAYLOAD  |  SIDE  |  " + transform[5];
+                return "PAYLOAD  |  MOVE FREE  |  FWD " + transform[3]
+                        + "  SIDE " + transform[5];
+            }
             if (axis == LiveModelEditorPreview.AxisConstraint.X)
                 return context + "  |  MOVE X  |  " + transform[3];
             if (axis == LiveModelEditorPreview.AxisConstraint.Y)
@@ -1399,8 +1433,12 @@ public final class LiveModelEditorWindow {
             return context + "  |  MOVE FREE  |  X " + transform[3] + "  Z " + transform[5];
         }
         if (mode == LiveModelEditorPreview.TransformMode.ROTATE) {
-            return context + "  |  ROTATE  |  YAW " + transform[6] + " deg";
+            return (payloadMode ? "PAYLOAD" : context)
+                    + "  |  ROTATE  |  YAW " + transform[6] + " deg";
         }
+        if (payloadMode)
+            return "PAYLOAD  |  SCALE UNIFORM  |  "
+                    + formatScaleRatio(transform[0]);
         if (axis == LiveModelEditorPreview.AxisConstraint.X)
             return context + "  |  SCALE X  |  " + formatScaleRatio(transform[0]);
         if (axis == LiveModelEditorPreview.AxisConstraint.Y)
@@ -2127,13 +2165,21 @@ public final class LiveModelEditorWindow {
         }
         if (ctrl && code == KeyEvent.VK_S) {
             if (instance != null) {
-                if (key.isShiftDown()) instance.saveSelectionAsset();
-                else instance.saveProject();
+                if (instance.payloadMode) {
+                    instance.saveCurrentPayloadItemOverride();
+                } else if (key.isShiftDown()) {
+                    instance.saveSelectionAsset();
+                } else {
+                    instance.saveProject();
+                }
             }
             return true;
         }
         if (ctrl && code == KeyEvent.VK_O) {
-            if (instance != null) instance.loadProject();
+            if (instance != null) {
+                if (instance.payloadMode) instance.loadResolvedPayloadProfile();
+                else instance.loadProject();
+            }
             return true;
         }
         if (ctrl && code == KeyEvent.VK_Z) {
