@@ -255,4 +255,4 @@ Still pending explicit edge verification:
 - The Construction settlement's native 168x168 dynamic scene now receives a minimum radius of 64 tiles during `Class523` construction.
 - Normal world scenes and smaller dynamic instances retain Matrix3's original radius selection.
 - This does not change the accepted detached Class24/Class411 RTS camera owner, live near/far projection synchronization, fog, generated 176x176 terrain, or 64x64 gameplay/build boundary.
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST**. The reported distant-object cutoff is a runtime hypothesis until the 64-tile radius is visually accepted.
+- **RUNTIME VERIFIED 2026-10-01:** the 64-tile settlement visibility radius removed the reported distant terrain/object cutoff in the wide RTS view. Normal world and smaller-instance radii remain unchanged by this patch.
