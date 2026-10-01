@@ -1990,6 +1990,16 @@ public final class LiveModelEditorWindow {
         }
     }
 
+    private void redoPartEdit() {
+        if (LiveModelEditorPreview.redoPartEdit()) {
+            refreshPartList();
+            loadSelectedPartEditors();
+            statusLabel.setText("Redo: restored next part edit.");
+        } else {
+            statusLabel.setText("Nothing to redo.");
+        }
+    }
+
     private boolean matchesTarget(DevTarget target) {
         return target != null && hasSource
                 && objectId == target.getId()
@@ -2220,6 +2230,10 @@ public final class LiveModelEditorWindow {
         }
         if (ctrl && code == KeyEvent.VK_Z) {
             if (instance != null) instance.undoPartEdit();
+            return true;
+        }
+        if (ctrl && code == KeyEvent.VK_Y) {
+            if (instance != null) instance.redoPartEdit();
             return true;
         }
         if (ctrl && code == KeyEvent.VK_D) {
