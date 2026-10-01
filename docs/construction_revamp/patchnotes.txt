@@ -2126,3 +2126,9 @@
 - Runtime review confirmed only the minimap raster follows RTS yaw; the stock compass overlay remains frozen on the heading captured before/at settlement entry.
 - Example: entering while facing south leaves the compass showing south while RTS Q/E/MMB rotates the camera and minimap raster.
 - Compass synchronization remains OPEN; prior raster-heading acceptance is retained.
+
+2026-10-01 - RTS compass heading synchronization
+- verified-static: Class107.method2061(...) is the stock compass renderer dispatched by the compass special-interface branch in Class348.method4343(...).
+- Compass heading now uses ConstructionBuildCamera.getRtsMinimapYawUnits() while settlement RTS owns heading, matching the already-accepted stock minimap yaw source/sign convention.
+- Vanilla Class133_Sub1/client.aFloat8678 compass heading remains unchanged outside RTS; no camera-owner, minimap renderer, interface or sprite ownership changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
