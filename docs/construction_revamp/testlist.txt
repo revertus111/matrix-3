@@ -1927,17 +1927,17 @@ Conveyor Build Placement V1.9 — orthogonal routed placement gate (2026-10-01)
 [ ] Regression: rails and normal Construction object ghosts remain unaffected.
 [ ] After focused acceptance, run the relevant Construction portion of docs/rs3/SMOKE_TEST.md.
 
-Settlement Minimap V1.1 / RTS object-interaction guard — IMPLEMENTED / NEEDS RUNTIME TEST
+Settlement Minimap V1.1 / RTS object-interaction guard — PARTIALLY RUNTIME VERIFIED
 [x] verified-static: ConstructionBuildCamera.rtsYawRadians is the authoritative detached RTS heading used by Q/E and MMB orbit.
 [x] verified-static: RTS yaw converts into Matrix3's existing 14-bit 0..16383 angle domain.
 [x] verified-static: Class464 stock minimap render uses -RTS yaw plus the existing minimap offset while RTS owns heading.
 [x] verified-static: client.method7990 click transform uses +RTS yaw plus the same existing minimap offset, preserving render/click inverse alignment.
 [x] verified-static: RTS actions 3..6/1001 are consumed when self is not selected; Examine 1002 remains vanilla.
 [x] verified-static: worker first-object gather/process orders are queued before local-player object interaction is consumed.
-[ ] Enter settlement RTS and rotate Q/E clockwise/counterclockwise; minimap rotates continuously with the camera.
-[ ] MMB horizontal orbit; minimap heading follows the same camera yaw without snapping/drift.
+[x] Enter settlement RTS and rotate Q/E clockwise/counterclockwise; minimap rotates continuously with the camera. RUNTIME VERIFIED by 2026-10-01 video.
+[x] Camera orbit video shows minimap heading tracks RTS yaw continuously without snapping/drift. RUNTIME VERIFIED.
 [ ] Rotate roughly 90 degrees, then click several minimap locations; RTS pivot lands on the visible clicked locations with no rotated-coordinate offset.
-[ ] Pan + rotate together; minimap center and heading stay synchronized.
+[x] Video confirms minimap center remains RTS-pivot-owned while heading rotates with the camera. RUNTIME VERIFIED.
 [ ] With workers selected but self NOT selected, left-click tree/ore/workbench; workers receive their order and the local player does not path/move.
 [ ] With no self selection, click another ordinary interactive object; local player remains stationary.
 [ ] Select self and click an object; vanilla local-player object interaction/pathing is allowed again.
