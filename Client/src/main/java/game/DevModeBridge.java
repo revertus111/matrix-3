@@ -12,7 +12,7 @@ import javax.swing.SwingUtilities;
 import game.console.DevInspectorWindow;
 import game.console.LiveModelEditorWindow;
 import game.console.LiveInspectOverlay;
-import game.console.DevTileEditorWindow;
+import game.console.DevObjectLibraryOverlay;
 
 /**
  * Client-side Dev Mode state and the narrow bridge between Matrix3's existing
@@ -25,12 +25,13 @@ import game.console.DevTileEditorWindow;
 public final class DevModeBridge {
 
     public static final int TILE_SPAWN_MENU_ACTION = 1500;
-    public static final int TILE_EDIT_MENU_ACTION = 1501;
     public static final int TILE_MOVE_HERE_MENU_ACTION = 1502;
     public static final int TILE_DUPLICATE_HERE_MENU_ACTION = 1503;
     public static final int TILE_PLACE_ACTIVE_MENU_ACTION = 1504;
     public static final int TILE_PLACE_LAST_MENU_ACTION = 1505;
     public static final int TILE_CANCEL_PLACEMENT_MENU_ACTION = 1506;
+    public static final int TILE_SAVE_OBJECT_DEF_MENU_ACTION = 1507;
+    public static final int TILE_OPEN_OBJECT_LIBRARY_MENU_ACTION = 1508;
 
     public static final int NPC_INSPECT_MENU_ACTION = 1510;
     public static final int NPC_EDIT_MENU_ACTION = 1511;
@@ -137,6 +138,21 @@ public final class DevModeBridge {
         return result;
     }
 
+    public static boolean openSavedObjectInLiveModelEditor(int objectId,
+            int worldX, int worldY, int plane) {
+        if (!enabled || !isOwnerSession() || objectId < 0) {
+            return false;
+        }
+        DevDefinitionBridge.DefinitionInfo info = DevDefinitionBridge.getObjectInfoAny(objectId);
+        String name = info == null || info.getName() == null ? "Object" : info.getName();
+        clearManipulationPlacement();
+        DevSpawnPlacement.cancel();
+        DevObjectPlacementPreview.cancel();
+        LiveModelEditorWindow.open(new DevTarget(
+                TargetType.OBJECT, objectId, name, worldX, worldY, plane, -1));
+        return true;
+    }
+
     public static String cancelPlacement() {
         boolean hadManipulation = placementTarget != null || placementMode != PlacementMode.NONE;
         clearManipulationPlacement();
@@ -200,7 +216,10 @@ public final class DevModeBridge {
                     hoveredTile.worldX, hoveredTile.worldY, hoveredTile.plane);
         }
 
-        addTileEntry("Dev > Edit Tile", TILE_EDIT_MENU_ACTION, localX, localY);
+        if (DevObjectPlacementPreview.isActive()) {
+            addTileEntry("Dev > Save Object Definition", TILE_SAVE_OBJECT_DEF_MENU_ACTION, localX, localY);
+        }
+        addTileEntry("Dev > Object Library", TILE_OPEN_OBJECT_LIBRARY_MENU_ACTION, localX, localY);
 
         if (placementTarget != null && placementMode == PlacementMode.MOVE) {
             addTileEntry("Dev > Move Here", TILE_MOVE_HERE_MENU_ACTION, localX, localY);
@@ -440,6 +459,29 @@ public final class DevModeBridge {
             notifyPlacementStatus(cancelPlacement());
             return true;
         }
+        if (action == TILE_SAVE_OBJECT_DEF_MENU_ACTION) {
+            final DevObjectLibrary.SavedObject saved = DevObjectLibrary.saveCurrentPreview();
+            if (saved == null) {
+                notifyPlacementStatus("No active Live Place object is available to save.");
+            } else {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        DevObjectLibraryOverlay.open(saved.getId());
+                    }
+                });
+            }
+            return true;
+        }
+        if (action == TILE_OPEN_OBJECT_LIBRARY_MENU_ACTION) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    DevObjectLibraryOverlay.open(-1);
+                }
+            });
+            return true;
+        }
 
         WorldTileTarget tile = resolveWorldTile(localX, localY);
         if (tile == null) {
@@ -459,17 +501,6 @@ public final class DevModeBridge {
             return true;
         }
 
-        if (action == TILE_EDIT_MENU_ACTION) {
-            final int worldX = tile.worldX;
-            final int worldY = tile.worldY;
-            final int plane = tile.plane;
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    DevTileEditorWindow.open(worldX, worldY, plane);
-                }
-            });
-        }
         return true;
     }
 
@@ -650,10 +681,11 @@ public final class DevModeBridge {
     }
 
     private static boolean isTileDevAction(int action) {
-        return action == TILE_EDIT_MENU_ACTION
-                || action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION
+        return action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION
                 || action == TILE_PLACE_ACTIVE_MENU_ACTION || action == TILE_PLACE_LAST_MENU_ACTION
-                || action == TILE_CANCEL_PLACEMENT_MENU_ACTION;
+                || action == TILE_CANCEL_PLACEMENT_MENU_ACTION
+                || action == TILE_SAVE_OBJECT_DEF_MENU_ACTION
+                || action == TILE_OPEN_OBJECT_LIBRARY_MENU_ACTION;
     }
 
     private static int normalizeAction(int action) {

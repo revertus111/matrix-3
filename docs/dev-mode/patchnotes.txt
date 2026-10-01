@@ -1,3 +1,10 @@
+2026-09-30 - Saved Object Definition Library + Tile Editor retirement
+- Live Place right-click now exposes Save Object Definition and Object Library.
+- Saved snapshots persist to dev-object-library/objects.tsv with definition ID/name, valid types, selected type, rotation, model IDs, animation IDs, decoded size and saved world tile.
+- Added a compact in-client Saved Object Definitions library: Enter/Place re-arms Live Place, Delete/Remove deletes the entry, F8 opens the saved definition in Live Model Editor, Escape closes.
+- Removed Dev > Edit Tile, removed Live Inspect Tile -> F8 editor routing, and removed the standalone DevTileEditorWindow source; tile inspection itself remains available.
+- Server/world/cache authority is unchanged; the library is developer-owned metadata only.
+
 2026-09-30 - Live Inspect O hotkey routing fix
 - Replaced the exact Canvas KeyEvent-source requirement with active Matrix3 game-window ownership for Dev Mode keyboard shortcuts.
 - O now arms from the current Live Inspect Object snapshot and seeds Live Place with that object's exact world tile so the preview appears immediately.

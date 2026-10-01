@@ -1,3 +1,16 @@
+Saved Object Definition Library quick gate
+[ ] Eclipse/Java 8 clean-build Client.
+[ ] Dev Mode + Live Inspect -> hover an Object -> O -> confirm Live Place still works.
+[ ] While Live Place is active, right-click the preview tile and choose Dev > Save Object Definition.
+[ ] Confirm SAVED OBJECT DEFINITIONS opens in-client and shows ID/name, saved type, valid types, models, animations, size and tile.
+[ ] Close/reopen via right-click Dev > Object Library and confirm the saved entry persists from dev-object-library/objects.tsv.
+[ ] Select the saved entry and press Enter (or Place); confirm Live Place re-arms that exact ID at its saved tile.
+[ ] Reopen the library, select the entry and press F8; confirm Live Model Editor opens that saved definition.
+[ ] Reopen the library, Delete/Remove the entry, reopen again and confirm it stays removed.
+[ ] Right-click an ordinary tile: confirm Dev > Edit Tile is gone and Dev > Object Library is present.
+[ ] Hover a Tile in Live Inspect and press F8: confirm no Tile Editor opens; tile inspection data remains visible/copyable.
+[ ] Regression: Object F8 -> Live Model Editor, NPC F8 -> Dev Inspector, O Live Place, 1/2 ID browsing and LMB placement still work.
+
 Bundle 1.4 - Real Object Placement Preview quick gate
 [ ] Eclipse/Java 8: clean/build Client with no compilation errors.
 [ ] Dev Mode + F10 Live Inspect ON -> hover a real Object and press O; confirm Live Place arms without opening the standalone Spawn Browser and the preview appears immediately on the hovered object's tile.

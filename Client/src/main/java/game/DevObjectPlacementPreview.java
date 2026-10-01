@@ -54,6 +54,34 @@ public final class DevObjectPlacementPreview {
         return active;
     }
 
+    public static int getObjectId() {
+        return objectId;
+    }
+
+    public static int getObjectType() {
+        return objectType;
+    }
+
+    public static int getRotation() {
+        return rotation;
+    }
+
+    public static int getHoveredWorldX() {
+        return hoveredWorldX;
+    }
+
+    public static int getHoveredWorldY() {
+        return hoveredWorldY;
+    }
+
+    public static int getHoveredPlane() {
+        return hoveredPlane;
+    }
+
+    public static boolean hasHoveredTile() {
+        return hoveredWorldX >= 0 && hoveredWorldY >= 0 && hoveredPlane >= 0;
+    }
+
     public static String updateObject(int id) {
         if (!active) {
             return "Live object placement is not active.";

@@ -149,6 +149,22 @@ public final class DevDefinitionBridge {
         return types.length == 0 ? 10 : types[0];
     }
 
+    public static int[] getObjectSize(int id) {
+        Interface18 definitions = objectDefinitions;
+        if (definitions == null || id < 0 || id >= definitions.method45()) return new int[] { 1, 1 };
+        try {
+            Interface17 value = definitions.getDefinition(id, 0);
+            if (!(value instanceof ObjectDefinitions)) return new int[] { 1, 1 };
+            ObjectDefinitions object = (ObjectDefinitions) value;
+            return new int[] {
+                    object.sizeX * -876498849,
+                    object.sizeY * 1922784011
+            };
+        } catch (RuntimeException ex) {
+            return new int[] { 1, 1 };
+        }
+    }
+
     private static int count(Interface18 definitions) {
         if (definitions == null) {
             return 0;

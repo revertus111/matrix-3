@@ -84,7 +84,7 @@ This table is the authoritative user-facing milestone table across chats.
 
 ## Dependencies
 
-- Client: `DevModeBridge`, `DevSpawnPlacement`, `DevInspectorWindow`, `DevSpawnBrowserWindow`, tile menu hook, `ClientConsoleBridge`.
+- Client: `DevModeBridge`, `DevSpawnPlacement`, `DevObjectLibrary`, Live Inspect, Live Model Editor, tile menu hook, `ClientConsoleBridge`.
 - Server: `ItemBrowserCommandBridge`, `DevModeRuntimeManager`, Matrix3 `World`/`NPC`/`WorldObject` runtime APIs.
 - Runtime: Admin+ owner session with Dev Mode enabled.
 
@@ -380,12 +380,12 @@ This table is the authoritative user-facing milestone table across chats.
 | Last-used placement target | 1 | 1.3 | NEEDS TEST | Session-only Place Last tile action. |
 | Placement cancellation | 1 | 1.3 | NEEDS TEST | Browser/tile explicit cancel plus non-consuming AWT Escape observation. |
 | Object placement rotation | 1 | 1.3 | NEEDS TEST | Fixed, Cycle, Random 0-3. |
-| Real object placement preview | 1 | 1.4 | NEEDS TEST | Fully rendered client-only object follows hovered tile; 1/2 cycle current search results and LMB places through existing devspawn authority. |
+| Real object placement preview | 1 | 1.4 | NEEDS TEST | Live Inspect O arms a fully rendered client-only object; 1/2 browse raw IDs with auto type, right-click saves definition snapshots to the in-client Object Library. |
 | Phase 1 combined runtime gate | 1 | 1.2 + 1.3 | NEEDS TEST | Intentionally deferred; accumulated queue is in `docs/dev-mode/testlist.txt`. |
 | Live Inspect V1 | 2 | 2.1 | NEEDS TEST | Runtime partially proven: overlay/NPC hover/F9 lock/locked Ctrl+C work; final acceptance waits on V1.1 polish retest. |
 | Live Inspect polish + Tile/Ground Item targets | 2 | 2.2 | NEEDS TEST | Object + Ground Item display/copy runtime-proven; tile/flicker final gate remains pending. |
 | Live Inspect GFX + Projectile targets | 2 | 2.3 | NEEDS TEST | Static implementation complete; runtime hover gate deferred until pause/slow-time/freeze makes transient targets practical to inspect. |
-| Live Inspect relationships + contextual open | 2 | 2.4 | NEEDS TEST | Relationship chain + F8 handoff to existing Object/NPC/Tile tools; no new right-click actions. |
+| Live Inspect relationships + contextual open | 2 | 2.4 | NEEDS TEST | Relationship chain + F8 handoff to Object/NPC tools; Tile remains inspection-only after Tile Editor retirement. |
 | Visual Dev Time V1 | 2 | 2.5 | NEEDS TEST | F5 step/F6 pause/F7 speed controls transient GFX/projectile simulation only; networking/input/rendering/server simulation remain live. |
 
 ## Decisions / new ideas
@@ -408,7 +408,7 @@ This table is the authoritative user-facing milestone table across chats.
 - 2026-09-30: User runtime-confirmed Object + Ground Item Live Inspect output including Definition ID, world tile, Region and Chunk context.
 - 2026-09-30: GFX/projectiles cannot reuse menu picking because their scene classes deliberately return false from `method8297(...)`. Live Inspect therefore uses their already-built renderer Model + transform and Matrix3's native `Model.method1376(...)` hit test only while F10 inspection is enabled.
 - 2026-09-30: Manual GFX/projectile hover verification is deferred until safe pause/slow-time/freeze tooling exists; normal-speed transient visuals are not a reasonable acceptance gate.
-- 2026-09-30: F8 is Live Inspect's contextual-open key. It routes only to already-owned tools with verified entry points (Object -> Live Model Editor, NPC -> Dev Inspector, Tile -> Tile Editor); unsupported families state that no verified route exists instead of adding speculative integrations.
+- 2026-09-30: F8 is Live Inspect's contextual-open key for supported entity tools (Object -> Live Model Editor, NPC -> Dev Inspector). Tile Editor was later retired; tile targets remain read-only inspection context.
 - 2026-09-30: Dev Time V1 is intentionally visual-only. The full client logic tick remains live because it owns networking/input/session work; only spot-animation/projectile advancement is paused/slowed/stepped.
 - 2026-09-30: Projectile timelines are shifted forward on skipped visual ticks so real `client.cycles` can continue without causing frozen projectiles to expire.
 
@@ -427,7 +427,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 - Normal NPC/object right-click actions remain intact.
 - Normal Walk Here remains intact, including during Paint.
-- Existing Dev Spawn/Tile Editor/Inspector and Item Browser remain functional.
+- Existing Dev Spawn/Inspector and Item Browser remain functional; Tile Editor is intentionally retired.
 - Server restart removes runtime Dev placements and does not persist them as map/source data.
 
 ## Carryover / blockers
@@ -449,7 +449,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Phase 1 Bundle 1.4 Real Object Placement Preview: corrected the non-firing O path by replacing the brittle exact-Canvas key-source gate with active-game-window ownership and seeding the preview from the inspected object's tile.
+- Phase 1 Bundle 1.4 Real Object Placement Preview: added persistent saved object-definition snapshots and an in-client Object Library; Tile Editor routing/source is retired from Dev Mode.
 
 **Current phase:**
 
@@ -462,7 +462,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Next checklist item:**
 
-- One short Client runtime gate: enable Live Inspect, hover an object and press O; confirm the preview appears immediately on that object's tile, then use 1/2 across IDs that previously needed different types, place several with LMB, and Escape cleanly.
+- One short Client runtime gate: Live Place -> right-click Save Object Definition -> verify the in-client Object Library persists the snapshot, Enter/Place re-arms it, F8 opens it in Live Model Editor, Delete removes it, and no Tile Editor entry/F8 route remains.
 
 **Current state / next action:**
 

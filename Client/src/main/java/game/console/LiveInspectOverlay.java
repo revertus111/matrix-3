@@ -299,10 +299,6 @@ public final class LiveInspectOverlay {
             DevInspectorWindow.open(target.routeTarget, true);
             return true;
         }
-        if ("Tile".equals(target.type)) {
-            DevTileEditorWindow.open(target.worldX, target.worldY, target.plane);
-            return true;
-        }
         return false;
     }
 
@@ -598,7 +594,7 @@ public final class LiveInspectOverlay {
                     + ")   F8 -> Live Model Editor";
         }
         if ("NPC".equals(target.type)) return "F8 -> Dev Inspector";
-        if ("Tile".equals(target.type)) return "F8 -> Tile Editor";
+        if ("Tile".equals(target.type)) return "Tile inspection only";
         if ("Ground Item".equals(target.type)) return "No direct item editor route yet";
         if ("GFX / SpotAnim".equals(target.type) || "Projectile".equals(target.type))
             return "Specialist visual route not verified yet";
