@@ -229,4 +229,5 @@
 - Tile Snap uses the existing Part/Multi undo/redo owner.
 - Corrected transformed selection-bounds math to match current scale + stable-yaw pivot semantics so snapping uses the same visible geometry basis as rendering.
 - Existing MOVE SNAP, 90-degree ROT SNAP, whole-object transforms and world/cache/server ownership are unchanged.
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+- Runtime accepted by user: Tile Snap works with no issues.
+- Status: RUNTIME VERIFIED.
