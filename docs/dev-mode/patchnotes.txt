@@ -198,3 +198,10 @@
 - New edits after undo clear redo history; source/session reset clears both history stacks.
 - Construction undo, cache/server/world ownership and saved project files are unchanged.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-10-01 - Live Model Editor stable ROT pivot + 90-degree snap
+- Fixed Part/Multi rotation drift by making mesh vertex transforms use the same cached component bounds center as the gizmo and shared selection rotation math.
+- Removed the conflicting average-vertex centroid from the per-part render transform path.
+- Rotation snap now defaults to 90 degrees and is labeled ROT SNAP in the transform controls.
+- Existing SNAP/Ctrl inversion, undo/redo, save/load, Construction undo and world/cache/server ownership are unchanged.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
