@@ -1207,17 +1207,18 @@ final class LiveModelEditorParts {
 
     private static void transformVertices(Class159 raw, Component component, PartState state) {
         if (component.vertices.length == 0) return;
-        long cx = 0, cy = 0, cz = 0;
         for (int vertex : component.vertices) {
             if (!hasVertexCoordinates(raw, vertex)) return;
-            cx += raw.anIntArray1782[vertex];
-            cy += raw.anIntArray1777[vertex];
-            cz += raw.anIntArray1797[vertex];
         }
-        cx /= component.vertices.length;
-        cy /= component.vertices.length;
-        cz /= component.vertices.length;
-        transformVerticesAround(raw, component.vertices, cx, cy, cz, state);
+
+        /*
+         * The editor gizmo, shared Multi pivot and authored move offsets all use
+         * the component's cached bounds center. Rotate/scale the actual vertices
+         * around that same center so the visible mesh cannot orbit away from the
+         * gizmo while yaw changes.
+         */
+        transformVerticesAround(raw, component.vertices,
+                component.centerX, component.centerY, component.centerZ, state);
     }
 
     private static void transformAllAround(Class159 raw, int cx, int cy, int cz,
