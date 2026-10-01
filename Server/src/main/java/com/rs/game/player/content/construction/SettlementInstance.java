@@ -332,11 +332,17 @@ public final class SettlementInstance {
                 || !containsWorldTile(start) || !containsWorldTile(end)) {
             return "Conveyor endpoints must both be inside the active settlement plot.";
         }
+
+        WorldTile requestedStart = start;
+        WorldTile requestedEnd = end;
+        start = snapConveyorEndpoint(start);
+        end = snapConveyorEndpoint(end);
+
         if (start.getPlane() != end.getPlane()) {
             return "Conveyor endpoints must be on the same plane.";
         }
         if (start.getX() == end.getX() && start.getY() == end.getY()) {
-            return "Conveyor Point A and Point B must be different tiles.";
+            return "Conveyor Point A and Point B must be different tiles after endpoint snapping.";
         }
 
         SettlementConveyorRun run = state.addConveyorRun(
@@ -356,8 +362,70 @@ public final class SettlementInstance {
                             + ") length=" + String.format("%.2f", run.getLengthTiles()) + "t.",
                     SettlementDebug.Category.LOGISTICS);
         }
+        boolean snappedStart = requestedStart.getX() != start.getX()
+                || requestedStart.getY() != start.getY();
+        boolean snappedEnd = requestedEnd.getX() != end.getX()
+                || requestedEnd.getY() != end.getY();
         return "Created ConveyorRun #" + run.getRunId()
-                + " (" + String.format("%.2f", run.getLengthTiles()) + " tiles).";
+                + " (" + String.format("%.2f", run.getLengthTiles()) + " tiles)"
+                + (snappedStart || snappedEnd
+                        ? " | endpoint snap:"
+                                + (snappedStart ? " A" : "")
+                                + (snappedEnd ? " B" : "")
+                        : "")
+                + ".";
+    }
+
+    /**
+     * Player-facing placement tolerance. The client previews the raw hovered
+     * tile, while persistence snaps to the actual origin of a nearby physical
+     * conveyor endpoint so clicking the edge of a chest/machine still connects.
+     * Free-ground ConveyorRuns remain valid when no endpoint is nearby.
+     */
+    private WorldTile snapConveyorEndpoint(WorldTile requested) {
+        if (requested == null || !containsWorldTile(requested)) {
+            return requested;
+        }
+
+        int requestedPlotX = toPlotX(requested.getX());
+        int requestedPlotY = toPlotY(requested.getY());
+        SettlementPlacedPiece best = null;
+        int bestDistance = Integer.MAX_VALUE;
+
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (!isConveyorEndpointPiece(piece)
+                    || piece.getPlane() != requested.getPlane()) {
+                continue;
+            }
+            int distance = Math.abs(piece.getPlotX() - requestedPlotX)
+                    + Math.abs(piece.getPlotY() - requestedPlotY);
+            if (distance > 1) {
+                continue;
+            }
+            if (best == null || distance < bestDistance
+                    || distance == bestDistance
+                        && piece.getPieceId() < best.getPieceId()) {
+                best = piece;
+                bestDistance = distance;
+            }
+        }
+
+        return best == null ? requested
+                : new WorldTile(
+                        toWorldX(best.getPlotX()),
+                        toWorldY(best.getPlotY()),
+                        best.getPlane());
+    }
+
+    private boolean isConveyorEndpointPiece(SettlementPlacedPiece piece) {
+        if (piece == null) {
+            return false;
+        }
+        SettlementBuildPiece definition =
+                SettlementBuildPiece.forKey(piece.getDefinitionKey());
+        return definition != null
+                && (definition.getRole() == SettlementBuildRole.STORAGE
+                    || definition.getRole() == SettlementBuildRole.WORKSTATION);
     }
 
     public synchronized void processGameTick() {
