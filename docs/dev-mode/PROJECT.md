@@ -548,11 +548,11 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 
 ### Live Model Editor — Stable ROT Pivot + 90° Snap — 2026-10-01
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit AAA.
-- Runtime video showed Part/Multi ROT visually orbiting/drifting away from the white rotation gizmo instead of rotating around one fixed pivot.
+- Status: **RUNTIME VERIFIED** under explicit AAA.
+- Runtime video originally showed Part/Multi ROT visually orbiting/drifting away from the white rotation gizmo instead of rotating around one fixed pivot; the user has now confirmed the corrected pivot behavior and 90-degree snapping work at runtime.
 - **verified-static root cause:** the gizmo, selection pivot and Multi rotation math use each component's cached bounds center, while `transformVertices(...)` recomputed an average-vertex centroid and rotated/scaled the visible mesh around that different point.
 - Corrected `LiveModelEditorParts.transformVertices(...)` so yaw rotates the visible component around the same cached bounds center already owned by the editor gizmo and shared Multi transform math. Existing per-part scale still uses its prior average-vertex centroid, preserving saved scale placement at yaw=0.
 - Reused the existing transform snap system; rotation angle snap now defaults to **90 degrees** and the UI identifies the control as ROT SNAP.
 - SNAP behavior is unchanged otherwise: SNAP ON applies the configured move/rotation steps; Ctrl temporarily bypasses it. With SNAP OFF, Ctrl temporarily applies snap.
 - No new transform/history system, Construction undo owner, cache writer, world mutation or server persistence path was introduced.
-- **Resume Here (Live Model Editor):** rotate one asymmetric Part and one Multi selection through 90/180/270/360 with ROT SNAP=90. The white pivot must remain fixed and 360 must return to the exact starting placement; then verify Ctrl free/snap inversion plus Ctrl+Z/Ctrl+Y around snapped rotations.
+- **Runtime acceptance:** stable ROT pivot + 90-degree snap are accepted. Optional deeper checks remain for Ctrl snap/free inversion and Ctrl+Z/Ctrl+Y around snapped rotations.
