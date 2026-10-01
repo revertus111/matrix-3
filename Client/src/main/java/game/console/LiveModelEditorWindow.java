@@ -80,7 +80,7 @@ import javax.swing.event.ChangeListener;
  */
 public final class LiveModelEditorWindow {
 
-    private static final int PROJECT_VERSION = 5;
+    private static final int PROJECT_VERSION = 6;
     private static final File PROJECT_DIR = new File("dev-model-projects");
     private static final File ASSET_DIR = new File("dev-model-assets");
 
@@ -750,6 +750,18 @@ public final class LiveModelEditorWindow {
         partActions2.add(delete);
         partActions2.add(undo);
         panel.add(partActions2);
+        panel.add(Box.createVerticalStrut(3));
+
+        JPanel groupRow = actionRow(2);
+        JButton group = rsButton("Group [Ctrl+G]");
+        JButton ungroup = rsButton("Ungroup [Ctrl+Shift+G]");
+        group.setToolTipText(
+                "Glue the current Part/Multi selection into one persistent assembly with a shared transform pivot.");
+        ungroup.setToolTipText(
+                "Remove group membership while keeping the current parts selected and in place.");
+        groupRow.add(group);
+        groupRow.add(ungroup);
+        panel.add(groupRow);
         panel.add(Box.createVerticalStrut(5));
 
         JLabel conveyorRoleLabel = new JLabel("Conveyor role");
@@ -841,6 +853,8 @@ public final class LiveModelEditorWindow {
         duplicate.addActionListener(e -> duplicateSelected());
         delete.addActionListener(e -> deleteSelected());
         undo.addActionListener(e -> undoPartEdit());
+        group.addActionListener(e -> groupSelected());
+        ungroup.addActionListener(e -> ungroupSelected());
         setConveyorRole.addActionListener(e -> {
             Object selectedRole = conveyorRoleCombo.getSelectedItem();
             String role = selectedRole == null ? "UNASSIGNED" : selectedRole.toString();
@@ -2247,6 +2261,13 @@ public final class LiveModelEditorWindow {
             if (instance != null) instance.duplicateSelected();
             return true;
         }
+        if (ctrl && code == KeyEvent.VK_G) {
+            if (instance != null) {
+                if (key.isShiftDown()) instance.ungroupSelected();
+                else instance.groupSelected();
+            }
+            return true;
+        }
 
         if (code == KeyEvent.VK_TAB) {
             if (instance != null) instance.toggleDrawer();
@@ -2572,8 +2593,13 @@ public final class LiveModelEditorWindow {
         try {
             partListModel.clear();
             for (String label : labels) partListModel.addElement(label);
-            partList.setSelectedIndices(selected);
             int primary = LiveModelEditorPreview.getSelectedPart();
+            if (LiveModelEditorPreview.getSelectionMode()
+                    == LiveModelEditorPreview.SelectionMode.PART && primary >= 0) {
+                partList.setSelectedIndex(primary);
+            } else {
+                partList.setSelectedIndices(selected);
+            }
             if (primary >= 0 && primary < labels.length) partList.ensureIndexIsVisible(primary);
         } finally {
             suppressPartRefresh = false;
@@ -2583,8 +2609,10 @@ public final class LiveModelEditorWindow {
         if (labels.length == 0) {
             partStatusLabel.setText("NO PARTS");
         } else {
+            int groupId = LiveModelEditorPreview.getSelectedGroupId();
             partStatusLabel.setText(LiveModelEditorPreview.getSelectionMode() + " | "
                     + LiveModelEditorPreview.getSelectedPartCount() + "/" + labels.length + " SELECTED"
+                    + (groupId > 0 ? " | GROUP #" + groupId : "")
                     + (LiveModelEditorPreview.isPartIsolated() ? " | ISOLATE" : ""));
         }
         partList.repaint();
@@ -2608,11 +2636,18 @@ public final class LiveModelEditorWindow {
 
     private void syncRuntimeState() {
         int[] selected = LiveModelEditorPreview.getSelectedParts();
-        if (!Arrays.equals(partList.getSelectedIndices(), selected)) {
+        int primary = LiveModelEditorPreview.getSelectedPart();
+        boolean partGroupDisplay = LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.PART
+                && selected.length > 1 && primary >= 0;
+        boolean selectionOutOfSync = partGroupDisplay
+                ? partList.getSelectedIndex() != primary
+                : !Arrays.equals(partList.getSelectedIndices(), selected);
+        if (selectionOutOfSync) {
             suppressPartRefresh = true;
             try {
-                partList.setSelectedIndices(selected);
-                int primary = LiveModelEditorPreview.getSelectedPart();
+                if (partGroupDisplay) partList.setSelectedIndex(primary);
+                else partList.setSelectedIndices(selected);
                 if (primary >= 0 && primary < partListModel.size()) partList.ensureIndexIsVisible(primary);
             } finally {
                 suppressPartRefresh = false;
@@ -2749,8 +2784,41 @@ public final class LiveModelEditorWindow {
         if (LiveModelEditorPreview.duplicateSelectedPart()) {
             refreshPartList();
             loadSelectedPartEditors();
-            statusLabel.setText("Duplicated selected mesh part(s).");
+            int groupId = LiveModelEditorPreview.getSelectedGroupId();
+            statusLabel.setText(groupId > 0
+                    ? "Duplicated grouped assembly as independent group #" + groupId + "."
+                    : "Duplicated selected mesh part(s).");
         }
+    }
+
+    private void groupSelected() {
+        if (LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            statusLabel.setText("Group: use Part or Multi selection.");
+            return;
+        }
+        if (LiveModelEditorPreview.groupSelectedParts()) {
+            refreshPartList();
+            loadSelectedPartEditors();
+            syncTransformInspector();
+            statusLabel.setText(LiveModelEditorPreview.getStatus());
+        } else {
+            statusLabel.setText(LiveModelEditorPreview.getStatus());
+        }
+    }
+
+    private void ungroupSelected() {
+        if (LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            statusLabel.setText("Ungroup: use Part or Multi selection.");
+            return;
+        }
+        if (LiveModelEditorPreview.ungroupSelectedParts()) {
+            refreshPartList();
+            loadSelectedPartEditors();
+            syncTransformInspector();
+        }
+        statusLabel.setText(LiveModelEditorPreview.getStatus());
     }
 
     private void deleteSelected() {
