@@ -2626,8 +2626,8 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Settlement RTS visibility radius extension is **RUNTIME VERIFIED**: Class613 now gives only native large dynamic scenes (the 168x168 Construction settlement signature) a 64-tile minimum Class523 visibility radius; normal world and smaller instances retain stock graphics-setting radii. The 64-tile minimum removed the reported distant terrain/object culling at wide RTS zoom without reopening camera ownership or projection depth.
 - Rotated minimap click alignment is **RUNTIME VERIFIED**: clicking the rotated RTS minimap lands the camera focus on the intended world tile.
 - RTS object-interaction self-move guard is **RUNTIME VERIFIED**: scene-object interaction no longer moves the player when self is not selected.
-- RTS minimap yaw handedness correction is **IMPLEMENTED / NEEDS RUNTIME TEST**: Q/E and horizontal MMB still own the same accepted camera orbit, while the shared RTS-to-Matrix3 minimap heading conversion now inverts handedness once. Raster, compass, dots/icons and rotated-click inverse consumers remain structurally unchanged.
-- **Resume Here:** pull/build Client and test Q/E + horizontal MMB direction first. Confirm minimap/compass now rotate intuitively with the camera, NPC/player/map-icon dots remain aligned, and rotated minimap click-to-focus still lands on the visible clicked tile.
+- RTS minimap yaw handedness correction is **RUNTIME VERIFIED**: Q/E and horizontal MMB still own the same accepted camera orbit, while the shared RTS-to-Matrix3 minimap heading conversion now inverts handedness once. Raster, compass, dots/icons and rotated-click inverse consumers remain structurally unchanged.
+- **Resume Here:** RTS minimap yaw handedness is runtime accepted. Current RTS-camera defect: clicking/dragging the minimap to focus the camera also arms/renders the RTS drag-selection ring. Trace only minimap UI input ownership versus ConstructionRadialSelection before patching.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
