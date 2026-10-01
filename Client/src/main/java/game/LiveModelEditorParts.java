@@ -1127,9 +1127,9 @@ final class LiveModelEditorParts {
         selection.clear();
         int[] loadedSelection = readIntArray(json, "partSelection");
         for (int index : loadedSelection) {
-            if (index >= 0 && index < getPartCount()) selection.add(Integer.valueOf(index));
+            if (index >= 0 && index < getPartCount()) addIndexWithGroup(selection, index);
         }
-        if (selection.isEmpty() && selected >= 0) selection.add(Integer.valueOf(selected));
+        if (selection.isEmpty() && selected >= 0) addIndexWithGroup(selection, selected);
         if (selected < 0 && !selection.isEmpty()) selected = lastSelectionIndex();
         hovered = -1;
         isolate = readBoolean(json, "partIsolate", false);
