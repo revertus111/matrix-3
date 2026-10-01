@@ -386,6 +386,21 @@ public final class ConstructionRadialSelection {
         return null;
     }
 
+    /**
+     * Clears only transient client RTS selection/input state at a login-session
+     * boundary. No command is queued because the network session is closing.
+     */
+    public static void resetForSessionBoundary() {
+        cancelActiveDrag();
+        clearCommittedSelectionLocal();
+        hoveredWorldX = -1;
+        hoveredWorldY = -1;
+        hoveredPlane = -1;
+        hoveredAtMillis = 0L;
+        lastEventState = "RTS session reset; no committed selection.";
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
     public static void clearCommittedRadius() {
         clearCommittedSelectionLocal();
         lastEventState = "RWS-5 committed selection cleared.";
