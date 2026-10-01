@@ -596,6 +596,33 @@ public final class LiveModelEditorPreview {
         return changed;
     }
 
+    public static boolean groupSelectedParts() {
+        boolean changed = PARTS.groupSelected();
+        if (changed) {
+            invalidateVisualModels();
+            status = "GROUP created #" + PARTS.getSelectedGroupId()
+                    + " with " + PARTS.getSelectedCount() + " part(s)";
+        } else {
+            status = "GROUP requires at least two selected parts";
+        }
+        return changed;
+    }
+
+    public static boolean ungroupSelectedParts() {
+        boolean changed = PARTS.ungroupSelected();
+        if (changed) {
+            invalidateVisualModels();
+            status = "GROUP removed from current selection";
+        } else {
+            status = "UNGROUP requires a grouped selection";
+        }
+        return changed;
+    }
+
+    public static int getSelectedGroupId() {
+        return PARTS.getSelectedGroupId();
+    }
+
     public static boolean resetSelectedPartTransforms() {
         boolean changed = PARTS.resetSelectedTransforms();
         if (changed) invalidateGeometryModels();
