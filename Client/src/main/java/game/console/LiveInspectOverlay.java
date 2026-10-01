@@ -277,6 +277,12 @@ public final class LiveInspectOverlay {
                 PRIORITY_TILE);
     }
 
+    public static String armCurrentObjectPlacement() {
+        final Snapshot target = getCurrentTarget();
+        if (!enabled || target == null || !"Object".equals(target.type) || target.definitionId < 0) return null;
+        return DevModeBridge.armLiveObjectPlacement(target.definitionId, 0);
+    }
+
     public static boolean openCurrentTool() {
         final Snapshot target = getCurrentTarget();
         if (!enabled || target == null) {
@@ -468,7 +474,7 @@ public final class LiveInspectOverlay {
         panel.add(timeShortcuts);
         panel.add(Box.createVerticalStrut(2));
 
-        JLabel shortcuts = new JLabel("F8 open tool   F9 lock/unlock   Ctrl+C copy current   F10 close");
+        JLabel shortcuts = new JLabel("O live-place object   F8 open tool   F9 lock/unlock   Ctrl+C copy   F10 close");
         shortcuts.setFont(ConsoleTheme.SMALL_FONT);
         shortcuts.setForeground(ConsoleTheme.MUTED_TEXT);
         panel.add(shortcuts);
@@ -584,7 +590,10 @@ public final class LiveInspectOverlay {
 
     private static String routeText(Snapshot target) {
         if (target == null) return "-";
-        if ("Object".equals(target.type)) return "F8 -> Live Model Editor";
+        if ("Object".equals(target.type)) {
+            return "O -> Live Place (auto type " + DevDefinitionBridge.getPreferredObjectType(target.definitionId)
+                    + ")   F8 -> Live Model Editor";
+        }
         if ("NPC".equals(target.type)) return "F8 -> Dev Inspector";
         if ("Tile".equals(target.type)) return "F8 -> Tile Editor";
         if ("Ground Item".equals(target.type)) return "No direct item editor route yet";

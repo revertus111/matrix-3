@@ -125,6 +125,30 @@ public final class DevDefinitionBridge {
         }
     }
 
+    /**
+     * Exact object shape/type values decoded beside each opcode-1 model group.
+     */
+    public static int[] getObjectTypes(int id) {
+        Interface18 definitions = objectDefinitions;
+        if (definitions == null || id < 0 || id >= definitions.method45()) return new int[0];
+        try {
+            Interface17 value = definitions.getDefinition(id, 0);
+            if (!(value instanceof ObjectDefinitions)) return new int[0];
+            ObjectDefinitions object = (ObjectDefinitions) value;
+            if (object.aByteArray5644 == null || object.aByteArray5644.length == 0) return new int[0];
+            int[] types = new int[object.aByteArray5644.length];
+            for (int i = 0; i < types.length; i++) types[i] = object.aByteArray5644[i] & 0xff;
+            return types;
+        } catch (RuntimeException ex) {
+            return new int[0];
+        }
+    }
+
+    public static int getPreferredObjectType(int id) {
+        int[] types = getObjectTypes(id);
+        return types.length == 0 ? 10 : types[0];
+    }
+
     private static int count(Interface18 definitions) {
         if (definitions == null) {
             return 0;

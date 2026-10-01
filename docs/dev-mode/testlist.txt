@@ -1,15 +1,17 @@
 Bundle 1.4 - Real Object Placement Preview quick gate
 [ ] Eclipse/Java 8: clean/build Client with no compilation errors.
-[ ] Dev Mode ON -> open Dev Spawn -> Object and choose any usable starting object ID.
-[ ] Select one result, set a valid type/rotation, click Live Place Object, and confirm the Spawn Browser hides/focus returns to the game canvas.
+[ ] Dev Mode + F10 Live Inspect ON -> hover a real Object and press O; confirm Live Place arms without opening the standalone Spawn Browser.
+[ ] Confirm the Live Inspect Object route shows O -> Live Place with the automatically resolved cache type.
 [ ] Move across world tiles and confirm one fully rendered normal-material object follows the hovered tile with no white ghost tint or transparency.
 [ ] Stop moving the mouse and confirm the preview remains on the last hovered tile rather than expiring/flickering.
-[ ] Press 1 and confirm the active preview changes to object ID-1; press 2 and confirm it changes to ID+1. Repeat with numpad 1/2 if convenient. Type/rotation must stay unchanged and the browser search list must not control stepping.
-[ ] Left-click three tiles and confirm three real Dev-owned runtime objects spawn while the player does not Walk Here and the live preview remains armed.
+[ ] Start on an object ID that renders with a non-10 type if available; confirm it appears without manually entering a type.
+[ ] Press 1/2 across nearby IDs that use different cache types and confirm each visible preview re-resolves type automatically while rotation stays unchanged.
+[ ] Left-click three tiles and confirm three real Dev-owned runtime objects spawn while the player does not Walk Here and Live Place remains armed.
 [ ] Press Escape and confirm the preview disappears immediately; subsequent 1/2 and left-click behavior returns to normal.
-[ ] Re-arm Live Place, then switch to Once/Continuous/Paint or Move/Duplicate and confirm the live preview clears instead of overlapping another placement owner.
-[ ] Disable Dev Mode while Live Place is active and confirm the preview/input ownership clears.
-[ ] Regression: ordinary NPC/item/object Spawn Browser placement and Construction ghost placement still behave as before.
+[ ] Right-click an ordinary tile and confirm the old Dev > Spawn... entry is gone.
+[ ] Open Tile Editor and confirm the old Open Spawn Browser button is gone.
+[ ] Disable Dev Mode while Live Place is active and confirm preview/input ownership clears.
+[ ] Regression: Live Inspect F8/F9/F10/Ctrl+C, Construction ghost placement, and existing Dev-owned placement/manipulation paths still behave as before.
 
 Visual Dev Time V1 - bundled quick gate
 [ ] F10 Live Inspect ON -> Visual Time initially shows RUN 1.00x.

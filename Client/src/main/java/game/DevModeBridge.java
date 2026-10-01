@@ -12,7 +12,6 @@ import javax.swing.SwingUtilities;
 import game.console.DevInspectorWindow;
 import game.console.LiveModelEditorWindow;
 import game.console.LiveInspectOverlay;
-import game.console.DevSpawnBrowserWindow;
 import game.console.DevTileEditorWindow;
 
 /**
@@ -112,17 +111,21 @@ public final class DevModeBridge {
         return DevSpawnPlacement.arm(request, mode);
     }
 
-    public static String armLiveObjectPlacement(int objectId, int objectType, int rotation) {
+    public static String armLiveObjectPlacement(int objectId, int rotation) {
         if (!enabled || !isOwnerSession()) {
             return "Live object placement requires an Admin+ live session with Dev Mode enabled.";
         }
         clearManipulationPlacement();
         DevSpawnPlacement.cancel();
-        String result = DevObjectPlacementPreview.arm(objectId, objectType, rotation);
+        String result = DevObjectPlacementPreview.arm(objectId, rotation);
         if (DevObjectPlacementPreview.isActive() && Class584.aCanvas7745 != null) {
             Class584.aCanvas7745.requestFocusInWindow();
         }
         return result;
+    }
+
+    public static String armLiveObjectPlacement(int objectId, int ignoredObjectType, int rotation) {
+        return armLiveObjectPlacement(objectId, rotation);
     }
 
     public static String cancelPlacement() {
@@ -189,7 +192,6 @@ public final class DevModeBridge {
         }
 
         addTileEntry("Dev > Edit Tile", TILE_EDIT_MENU_ACTION, localX, localY);
-        addTileEntry("Dev > Spawn...", TILE_SPAWN_MENU_ACTION, localX, localY);
 
         if (placementTarget != null && placementMode == PlacementMode.MOVE) {
             addTileEntry("Dev > Move Here", TILE_MOVE_HERE_MENU_ACTION, localX, localY);
@@ -448,20 +450,17 @@ public final class DevModeBridge {
             return true;
         }
 
-        final boolean editTile = action == TILE_EDIT_MENU_ACTION;
-        final int worldX = tile.worldX;
-        final int worldY = tile.worldY;
-        final int plane = tile.plane;
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                if (editTile) {
+        if (action == TILE_EDIT_MENU_ACTION) {
+            final int worldX = tile.worldX;
+            final int worldY = tile.worldY;
+            final int plane = tile.plane;
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
                     DevTileEditorWindow.open(worldX, worldY, plane);
-                } else {
-                    DevSpawnBrowserWindow.open(worldX, worldY, plane);
                 }
-            }
-        });
+            });
+        }
         return true;
     }
 
@@ -642,7 +641,7 @@ public final class DevModeBridge {
     }
 
     private static boolean isTileDevAction(int action) {
-        return action == TILE_SPAWN_MENU_ACTION || action == TILE_EDIT_MENU_ACTION
+        return action == TILE_EDIT_MENU_ACTION
                 || action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION
                 || action == TILE_PLACE_ACTIVE_MENU_ACTION || action == TILE_PLACE_LAST_MENU_ACTION
                 || action == TILE_CANCEL_PLACEMENT_MENU_ACTION;
@@ -691,7 +690,6 @@ public final class DevModeBridge {
             @Override
             public void run() {
                 DevInspectorWindow.showStatus(message);
-                DevSpawnBrowserWindow.showStatus(message);
             }
         });
     }
@@ -774,6 +772,14 @@ public final class DevModeBridge {
                         }
                         if (keyEvent.getKeyCode() == KeyEvent.VK_F10) {
                             DevTimeController.cycleSpeed();
+                            keyEvent.consume();
+                            return;
+                        }
+                    }
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_O && LiveInspectOverlay.isEnabled()) {
+                        String placement = LiveInspectOverlay.armCurrentObjectPlacement();
+                        if (placement != null) {
+                            notifyPlacementStatus(placement);
                             keyEvent.consume();
                             return;
                         }

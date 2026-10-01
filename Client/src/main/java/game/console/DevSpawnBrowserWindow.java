@@ -306,7 +306,7 @@ public final class DevSpawnBrowserWindow {
                     return;
                 }
                 statusLabel.setText(DevModeBridge.armLiveObjectPlacement(
-                        objectId.intValue(), type.intValue(), rotation.intValue()));
+                        objectId.intValue(), rotation.intValue()));
                 if (DevObjectPlacementPreview.isActive() && frame != null) {
                     frame.setVisible(false);
                 }

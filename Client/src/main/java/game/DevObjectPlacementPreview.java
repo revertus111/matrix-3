@@ -31,12 +31,12 @@ public final class DevObjectPlacementPreview {
     private DevObjectPlacementPreview() {
     }
 
-    public static String arm(int id, int type, int newRotation) {
-        if (id < 0 || type < 0 || type > 22 || newRotation < 0 || newRotation > 3) {
-            return "Live object placement requires a valid object ID, type 0-22 and rotation 0-3.";
+    public static String arm(int id, int newRotation) {
+        if (id < 0 || newRotation < 0 || newRotation > 3) {
+            return "Live object placement requires a valid object ID and rotation 0-3.";
         }
         objectId = id;
-        objectType = type;
+        objectType = DevDefinitionBridge.getPreferredObjectType(id);
         rotation = newRotation & 0x3;
         objectName = resolveName(id);
         active = true;
@@ -44,6 +44,10 @@ public final class DevObjectPlacementPreview {
         lastRenderedCycle = Integer.MIN_VALUE;
         return "Live placement: " + objectName + " (" + objectId + "). Move the mouse over the world; "
                 + "1/2 change object ID, left-click places, Escape cancels.";
+    }
+
+    public static String arm(int id, int ignoredType, int newRotation) {
+        return arm(id, newRotation);
     }
 
     public static boolean isActive() {
@@ -58,6 +62,7 @@ public final class DevObjectPlacementPreview {
             return "Choose a valid object.";
         }
         objectId = id;
+        objectType = DevDefinitionBridge.getPreferredObjectType(id);
         objectName = resolveName(id);
         lastRenderedCycle = Integer.MIN_VALUE;
         return describeCurrent();
@@ -84,6 +89,7 @@ public final class DevObjectPlacementPreview {
         }
 
         objectId = next;
+        objectType = DevDefinitionBridge.getPreferredObjectType(next);
         objectName = resolveName(next);
         lastRenderedCycle = Integer.MIN_VALUE;
         return describeCurrent();

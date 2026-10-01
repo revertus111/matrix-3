@@ -124,16 +124,10 @@ public final class DevTileEditorWindow {
     private JPanel createActionsCard() {
         JPanel card = card("Live contents");
 
-        JLabel description = new JLabel("<html><div style='width:500px'>Spawn NPCs, objects, or ground items directly onto this exact tile using the existing Matrix3 Dev Spawn bridge.</div></html>");
+        JLabel description = new JLabel("<html><div style='width:500px'>Object placement is now live-world-first: enable Live Inspect, hover an object, then press O. Use 1/2 to browse adjacent object IDs and left-click to place.</div></html>");
         description.setFont(ConsoleTheme.SMALL_FONT);
         description.setForeground(ConsoleTheme.MUTED_TEXT);
         description.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton spawn = new JButton("Open Spawn Browser for this tile");
-        spawn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        spawn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        ConsoleTheme.styleButton(spawn);
-        spawn.addActionListener(e -> DevSpawnBrowserWindow.open(targetX, targetY, targetPlane));
 
         JButton copy = new JButton("Copy tile coordinates");
         copy.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -144,8 +138,6 @@ public final class DevTileEditorWindow {
         card.add(Box.createVerticalStrut(9));
         card.add(description);
         card.add(Box.createVerticalStrut(12));
-        card.add(spawn);
-        card.add(Box.createVerticalStrut(7));
         card.add(copy);
         return card;
     }

@@ -169,17 +169,19 @@ This table is the authoritative user-facing milestone table across chats.
 
 **Checklist / patches:**
 
-- [x] Add a dedicated Live Place Object action to the existing Object Spawn Browser.
+- [x] Add Live Inspect object hotkey `O` as the primary Live Place entry; the standalone Spawn Browser is removed from normal Dev Mode entry points.
 - [x] Render the selected object through Matrix3's normal ObjectDefinitions model factory at the currently hovered world tile.
 - [x] Keep the preview client-only: no scene registration, clipping, persistence or server object exists before confirmation.
 - [x] Render the object with its normal material/lighting; do not apply Construction ghost tint or face alpha.
 - [x] Left-click the hovered world tile to place through the existing owner-validated `devspawn object` path and consume Walk Here while the tool owns placement.
 - [x] Keep placement armed after confirmation for rapid repeated object spawning.
-- [x] 1 / 2 step the active raw object definition ID backward/forward while preserving type and rotation; the browser search list is not involved.
+- [x] 1 / 2 step the active raw object definition ID backward/forward; each ID change re-resolves its cache-declared shape/type automatically while preserving rotation.
 - [x] Escape / Cancel / Dev Mode OFF cleanly clears the placement preview.
 - [x] Keep Live Place mutually exclusive with ordinary Once/Continuous/Paint and Move/Duplicate placement modes.
 - [ ] Eclipse/Java 8 Client clean-build.
-- [ ] Runtime verify real-material preview, mouse-follow, 1/2 cycling, repeated LMB placement and Escape cleanup.
+- [x] Resolve placement type from ObjectDefinitions' opcode-1 shape/model-group table instead of hardcoding type 10.
+- [x] Remove the old Dev > Spawn... tile entry and Tile Editor Spawn Browser button so the standalone JFrame is no longer a normal workflow.
+- [ ] Runtime verify O-entry, auto type resolution across mixed object IDs, real-material preview, 1/2 cycling, repeated LMB placement and Escape cleanup.
 
 **Ownership note:** `DevObjectPlacementPreview` owns only transient client presentation. `DevSpawnPlacement` + the existing server `devspawn` bridge remain the placement authority.
 
@@ -445,7 +447,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Phase 1 Bundle 1.4 Real Object Placement Preview: corrected 1/2 hotkeys to step raw adjacent object definition IDs directly instead of depending on the browser's visible search-result list.
+- Phase 1 Bundle 1.4 Real Object Placement Preview: moved object placement entry into Live Inspect (O), added cache-native automatic object type resolution, and retired the standalone Spawn Browser from normal Dev Mode entry points.
 
 **Current phase:**
 
@@ -458,7 +460,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Next checklist item:**
 
-- One short Client runtime gate: choose any valid object, click Live Place Object, verify normal non-ghost rendering follows the hovered tile, use 1/2 to move to ID-1/ID+1, left-click several placements without walking, then Escape and confirm the preview disappears.
+- One short Client runtime gate: enable Live Inspect, hover an object and press O; verify the preview uses the object's cache-declared type, then use 1/2 across IDs that previously needed different types, place several with LMB, and Escape cleanly.
 
 **Current state / next action:**
 

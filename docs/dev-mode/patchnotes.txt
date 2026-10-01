@@ -1,3 +1,9 @@
+2026-09-30 - Live Inspect object placement entry + automatic object type
+- Added O on the current Live Inspect Object target to arm Live Place directly from the in-world hover/locked target.
+- DevDefinitionBridge now exposes ObjectDefinitions opcode-1 shape/type bytes; Live Place selects the first cache-declared supported type and re-resolves it after every 1/2 raw-ID change.
+- Removed Dev > Spawn... from normal tile menus and removed the Tile Editor Spawn Browser button, retiring the standalone JFrame from the normal object-placement workflow.
+- Existing server devspawn remains the only confirmed placement authority; preview/type selection remains client tooling only.
+
 2026-09-30 - Dev live object placement raw-ID cycling fix
 - Changed active Live Place hotkeys from browser-search-result cycling to direct adjacent object-definition ID stepping.
 - 1 now selects ID-1 and 2 selects ID+1 (with cache-range wrap); object type and rotation remain unchanged.
