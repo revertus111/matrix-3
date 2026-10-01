@@ -295,3 +295,16 @@ Live Model Editor — Stable ROT Pivot + 90° Snap gate (2026-10-01)
 [ ] With SNAP ON, hold Ctrl during a rotation and verify rotation becomes free; release Ctrl and verify 90-degree snapping resumes.
 [ ] With SNAP OFF, hold Ctrl during a rotation and verify temporary 90-degree snapping engages.
 [ ] Perform a snapped 90-degree rotation, Ctrl+Z, then Ctrl+Y; verify both history directions restore the exact transform and pivot placement.
+
+Live Model Editor — Duplicate ROT Pivot regression retest (2026-10-01)
+[x] verified-static: duplicate compact raw vertices remain in source component coordinate space.
+[x] verified-static: duplicate compact Component now inherits the source component center/bounds before transform application.
+[x] verified-static: duplicate state move offset is still applied after yaw around that inherited center.
+[ ] Eclipse clean/build Client with Java 8.
+[ ] Select one asymmetric original part and duplicate it.
+[ ] Move only the duplicate a clearly visible distance away from the source.
+[ ] Rotate the moved duplicate to 90, 180, 270 and 360 degrees with ROT SNAP=90.
+[ ] Verify the duplicate rotates around its own moved white pivot instead of orbiting model/world origin.
+[ ] At 360 degrees, verify the duplicate returns exactly to the moved starting placement.
+[ ] Recheck the original part rotation path; it must remain stable.
+[ ] Ctrl+Z and Ctrl+Y the duplicate move + snapped rotation and verify exact transform restoration.
