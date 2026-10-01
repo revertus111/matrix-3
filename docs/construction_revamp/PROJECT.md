@@ -2499,3 +2499,21 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Closing payload edit mode clears only the transient preview and immediately restores normal moving payload rendering. Saved Global/Category/Item profiles remain authoritative.
 - No server code, SettlementState schema, chest/conveyor inventory ownership, belt speed, spacing, backpressure or V1.6 physical transport behavior changed by this editor integration.
 - **Resume Here (conveyor):** next runtime session can combine the editor and V1.6 gates. Create/restore a persistent conveyor, choose item 1511 and click **Edit Current Item Live**; verify the belt stays fixed while one item freezes at its midpoint, then Move/Rotate/Scale it and save LOGS or an Item Override. Close the editor and confirm normal moving payloads resume using the saved profile. Then run the existing two-chest V1.6 conservation/backpressure test. If both gates pass, next logistics slice is machine input/output using the same endpoint contract.
+
+### RTS logout/session lifecycle reset — 2026-09-30
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAAA.
+- Runtime symptom: logout while inside a settlement, log back into the same client process, then re-enter the settlement -> player/RTS input becomes unusable.
+- **verified-static root cause:** server logout attempts to send settlement CSVar `2835=0`, but the session can close before the client processes it. Matrix3's real client logout boundary `Class439.method5276(...)` always destroys the detached camera through `RSSocket.method7604(...)`, while Construction's static `active` / `settlementAutoMode` state previously survived.
+- This produced a split-brain session: Construction believed RTS was already active, while Matrix3 had already destroyed the actual detached `Class411` camera. The next settlement entry therefore returned early from `enter()` instead of recreating the camera, while RTS input ownership could still remain active.
+- `Class439.method5276(...)` now calls `ConstructionBuildCamera.resetForSessionBoundary()` before Matrix3's global detached-camera teardown.
+- Session reset clears settlement auto mode, active/owned camera flags, transient camera velocity/pivot state, minimap transient ownership, committed/local RTS selection state, and palette/MMB input capture without sending commands over the closing network session.
+- `ConstructionBuildCamera.enter()` now self-heals independently: if `active=true` but Matrix3's detached camera flag/object is missing, it treats the session as stale, performs the same local reset, then creates a fresh RTS camera.
+- Normal live settlement entry/exit ownership and the accepted detached Class24/Class411 render architecture are unchanged.
+- **Resume Here:** pull/build/restart Client only. Enter settlement -> move/orbit RTS -> logout directly while still inside -> log back in -> verify normal-world movement -> enter settlement again -> verify RTS recreates and WASD/arrows/QE/MMB/wheel all work. Repeat once with a committed worker selection before logout. If accepted, mark this lifecycle gate VERIFIED and continue the V1.6 physical conveyor deep gate.
+
+### Future conveyor routing decision — splitter filters
+- Chest filters remain **storage acceptance policy**: what that storage is allowed to hold.
+- A future splitter filter should be **routing policy**: which branch a payload should take.
+- Default behavior when the selected branch is blocked should be to hold/backpressure the item at the splitter rather than silently route it down an incorrect branch. Optional overflow routing can be a later policy.
+- Implementation is **CARRYOVER / MODEL PENDING** until an accepted splitter model/asset is identified.
