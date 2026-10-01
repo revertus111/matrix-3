@@ -52,6 +52,13 @@ public final class Class439 {
 		client.aClass613_8605.method7295((byte) -1);
 		client.aClass613_8605.method7299(1928248706);
 		Class537.method6386(1139548088);
+		/*
+		 * Construction RTS owns static client-side session state in addition to
+		 * Matrix3's detached Class411 camera. Reset it before the global camera
+		 * teardown so a missed settlement-exit packet cannot leak RTS ownership
+		 * across logout/login.
+		 */
+		ConstructionBuildCamera.resetForSessionBoundary();
 		RSSocket.method7604(-1259126911);
 		Class272_Sub2.method8875(true, 767234281);
 		Class334.method4223((byte) -33);
