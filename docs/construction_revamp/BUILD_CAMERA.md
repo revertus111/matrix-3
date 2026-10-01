@@ -231,7 +231,7 @@ Still pending explicit edge verification:
 - The hard gray boundary is **not** a reason to replace that camera owner.
 - verified-static: Matrix3's default scene is 104x104 tiles and Class523 rendering is bounded by the allocated scene dimensions.
 - Settlement RTS can move independently from the player and therefore approach/out-run that player-centered loaded scene even when the Class523 culling focus follows the RTS pivot.
-- Correct ownership: settlement lifecycle now requests Matrix3's native 168x168 scene and supplies 176x176 generated dynamic terrain. Camera transforms, fog, viewport math and Class523 render radius remain stock.
+- Correct ownership: settlement lifecycle requests Matrix3's native 168x168 scene and supplies 176x176 generated dynamic terrain. Camera transforms, fog and viewport math remain stock. As of 2026-10-01, only the large dynamic settlement scene receives a 64-tile minimum Class523 visibility radius; normal world and smaller instances retain their stock radius.
 - Do not reopen the rejected vanilla-camera migration unless separate runtime evidence shows an actual camera-owner defect.
 
 ## Detached projection depth — 2026-09-30
@@ -240,10 +240,19 @@ Still pending explicit edge verification:
 - Matrix3 normal viewport projection instead uses `Class613.method7284()` and `Class613.method7313()`, whose far distance scales with the loaded scene (approximately 14332 for 104 tiles and 23156 for 168 tiles).
 - Settlement RTS permits orbit distance up to 10000. With the old detached default, max zoom could put the RTS focus itself at the far clip plane, causing loaded terrain behind the focus to disappear into the background.
 - Construction now retains the accepted detached owner and synchronizes only its projection near/far to Matrix3's current vanilla scene values via `Class411.method4983(...)`.
-- This is projection parity, not a render-radius expansion or camera-owner replacement.
+- This projection change remains projection parity, not a camera-owner replacement. A separate 2026-10-01 patch now raises only the native large dynamic settlement's Class523 visibility radius to a 64-tile minimum.
 
 ## Runtime acceptance — 2026-09-30
 
 - **VERIFIED:** the hard cyan settlement cutoff is gone in the previously failing wide RTS view.
 - Accepted architecture: detached Class24/Class411 RTS owner + native 168x168 settlement scene + 176x176 generated terrain + Matrix3-live near/far projection depth.
 - Do not replace the working detached camera owner or reopen render-distance experiments unless a new runtime regression appears.
+
+## Settlement RTS visibility radius — 2026-10-01
+
+- **verified-static:** `Class613.method7311(...)` derives the `Class523` visibility radius from Matrix3's graphics-setting tier: 32 / 40 / 48 tiles, with the existing renderer capability increment preserved.
+- **verified-static:** `Class569.method6755(...)` is the dynamic-map path, and `Class613.method7347(...)` / `method7278(...)` expose the native scene width/height.
+- The Construction settlement's native 168x168 dynamic scene now receives a minimum radius of 64 tiles during `Class523` construction.
+- Normal world scenes and smaller dynamic instances retain Matrix3's original radius selection.
+- This does not change the accepted detached Class24/Class411 RTS camera owner, live near/far projection synchronization, fog, generated 176x176 terrain, or 64x64 gameplay/build boundary.
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST**. The reported distant-object cutoff is a runtime hypothesis until the 64-tile radius is visually accepted.
