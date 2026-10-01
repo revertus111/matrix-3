@@ -2054,3 +2054,11 @@
 - Split Asset Studio launching from conveyor runtime controls so developer tooling and conveyor testing no longer share one mixed card.
 - Existing command strings, worker/RTS behavior, settlement gameplay, storage/processing ownership and conveyor runtime logic are unchanged.
 - The selected Con Revamp sub-tab is naturally retained while the Test Console panel instance remains alive.
+
+2026-09-30 - RTS logout/session lifecycle reset
+- verified-static: Matrix3 logout always destroys the detached Class411 camera in Class439 -> RSSocket, but Construction static active/settlementAutoMode previously could survive if the final settlement CSVar=0 was not processed.
+- Added ConstructionBuildCamera.resetForSessionBoundary() and call it from Matrix3's real client logout boundary before global camera teardown.
+- Added stale-session self-heal in ConstructionBuildCamera.enter(): active=true + missing detached camera now resets and recreates instead of returning "already active."
+- Added local-only RTS selection reset and palette/MMB capture release; logout cleanup queues no server commands.
+- No RTS camera ownership/render/projection changes.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
