@@ -2518,3 +2518,31 @@ Build three straight test runs from the same authored conveyor source (short, me
 - A future splitter filter should be **routing policy**: which branch a payload should take.
 - Default behavior when the selected branch is blocked should be to hold/backpressure the item at the splitter rather than silently route it down an incorrect branch. Optional overflow routing can be a later policy.
 - Implementation is **CARRYOVER / MODEL PENDING** until an accepted splitter model/asset is identified.
+
+
+### Conveyor Gameplay V1.7 — Conveyor Machine Endpoint / Sawmill Automation — 2026-09-30
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- User runtime feedback confirms the core V1.6 physical Chest -> Conveyor -> Chest transfer path works. Extended relog/backpressure regression checks remain useful, but the direct physical-transfer gate is accepted.
+- First machine endpoint reuses the existing persistent `SettlementMachineBuffer` and atomic `SettlementProcessingTransaction`; no second machine inventory or recipe system was introduced.
+- Current compatible machine definition is `WOODEN_WORKBENCH` / WORKSTATION using `SAW_PLANKS`. This is the logistics owner for now; the final sawmill visual can replace the placeholder art later without changing endpoint semantics.
+- Conveyor endpoint behavior now supports:
+  - physical STORAGE -> ConveyorRun input;
+  - ConveyorRun output -> compatible WORKSTATION input buffer;
+  - WORKSTATION output buffer -> ConveyorRun input;
+  - ConveyorRun output -> physical STORAGE.
+- The saw-planks machine accepts only the recipe input mapping (Logs item 1511) into its input buffer and emits only the recipe output mapping (Planks item 960) from its output buffer.
+- Automatic machine processing runs only when the workstation is actually connected to at least one ConveyorRun. Ordinary unconnected worker-driven workbenches remain unchanged.
+- Automation uses the existing 4-tick processing cadence. Conversion remains atomic: **1 Log 1511 -> 2 Planks 960**.
+- Machine automation pauses whenever `processingWorkstationReservations` shows a worker owns that workstation, preventing worker + automation double-processing.
+- Output-buffer backpressure is native: if the output belt/chest cannot drain Planks, the machine output fills; the transaction stops when output capacity is insufficient; machine input fills; the incoming belt eventually blocks at the machine; source chest withdrawal then stops through normal inlet spacing/backpressure.
+- Automatic progress is intentionally transient. Logout/re-entry may reset partial timer progress, but input/output inventory is persistent and no item is consumed until the atomic conversion completes, so partial progress cannot duplicate or lose inventory.
+- Existing development debug payload/sink protections now treat machine endpoints as physical endpoints too, preventing fake payload injection/deletion on machine-connected physical runs.
+- Added deterministic Con Revamp **Build Sawmill Test Line** harness:
+  - requires at least two physical chests and one compatible WORKSTATION;
+  - requires existing ConveyorRuns to be drained/cleared first;
+  - creates **oldest chest -> first compatible machine -> next chest** as two persistent ConveyorRuns;
+  - rolls back the input run if the output run cannot be created.
+- Added **Sawmill Status** showing connection state, input Logs, output Planks and transient processing progress.
+- No SettlementState schema change, belt tier, splitter, filter-routing, inserter, custom sawmill asset placement or animation ownership change in this slice.
+- **Resume Here (conveyor):** pull/build/restart Server + Client. Place/keep two physical chests and one Wooden workbench, drain/clear old ConveyorRuns, put Logs 1511 in the oldest chest, click Build Sawmill Test Line, then watch Logs travel into the machine, convert 1->2, Planks leave on the output belt and deposit into the second chest. Next block/fill the destination to prove backpressure propagates all the way to the source chest. If accepted, the next logistics slice is splitter/routing infrastructure or replacing the placeholder workstation art with the accepted sawmill prefab without changing machine ownership.
