@@ -1279,6 +1279,9 @@ public final class client extends Class584 {
 											i_70_ = (int) ((double) (Class133_Sub1.aClass411_Sub1_9827.method5000(69787938)) * 2607.5945876176133);
 										else
 											i_70_ = ((anInt8766 * -777638353 + (int) aFloat8678) & 0x3fff);
+										int rtsMinimapYaw = ConstructionBuildCamera.getRtsMinimapYawUnits();
+										if (rtsMinimapYaw >= 0)
+											i_70_ = (rtsMinimapYaw + anInt8766 * -777638353) & 0x3fff;
 										int i_71_ = Class325.anIntArray4103[i_70_];
 										int i_72_ = Class325.anIntArray4105[i_70_];
 										if (6 != 625220759 * Class18.anInt143) {
