@@ -1971,10 +1971,10 @@ Settlement Minimap V1.1 / RTS object-interaction guard — PARTIALLY RUNTIME VER
 RTS minimap yaw handedness correction — IMPLEMENTED / NEEDS RUNTIME TEST (2026-10-01)
 [x] verified-static: Q/E and horizontal MMB orbit both mutate the same authoritative ConstructionBuildCamera.rtsYawRadians value.
 [x] verified-static: getRtsMinimapYawUnits() now negates RTS yaw once before converting it into Matrix3's 14-bit heading domain.
-[ ] DIRECTION: press Q then E from a known heading; the minimap and compass must visually rotate in the same intuitive direction as the RTS camera orbit, not opposite it.
-[ ] DIRECTION: drag MMB left/right; minimap and compass rotation must follow the same corrected handedness as the RTS camera orbit.
-[ ] REGRESSION: NPC/player/map-icon dots remain attached to their correct world positions while Q/E/MMB rotates the minimap.
-[ ] REGRESSION: after roughly 90 degrees of RTS rotation, minimap click-to-focus still lands on the visible clicked tile with no mirror/inversion/offset.
+[x] DIRECTION: press Q then E from a known heading; the minimap and compass must visually rotate in the same intuitive direction as the RTS camera orbit, not opposite it. RUNTIME VERIFIED 2026-10-01.
+[x] DIRECTION: drag MMB left/right; minimap and compass rotation must follow the same corrected handedness as the RTS camera orbit. RUNTIME VERIFIED 2026-10-01.
+[x] REGRESSION: NPC/player/map-icon dots remain attached to their correct world positions while Q/E/MMB rotates the minimap. RUNTIME VERIFIED 2026-10-01.
+[x] REGRESSION: after roughly 90 degrees of RTS rotation, minimap click-to-focus still lands on the visible clicked tile with no mirror/inversion/offset. RUNTIME VERIFIED 2026-10-01.
 
 
 Resource World Foundation V1A/V1B — finite persistent nodes (2026-10-01)
