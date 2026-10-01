@@ -2136,3 +2136,9 @@
 2026-10-01 - RTS compass heading runtime accepted
 - User confirmed the stock compass now follows current RTS Q/E/MMB heading instead of remaining frozen on settlement-entry heading.
 - Compass synchronization gate is closed; vanilla compass behavior remains unchanged outside settlement RTS.
+
+2026-10-01 - RTS minimap overlay rotation synchronization
+- verified-static: Class267/Class328 feed NPC/player offsets through Class561.method6631(...) into shared Class12.method558(...) minimap-dot rotation.
+- Class12.method558(...) now substitutes ConstructionBuildCamera.getRtsMinimapYawUnits() while settlement RTS owns heading, preserving its existing positive-yaw overlay convention against the raster's negative-yaw render convention.
+- This aligns stock NPC/player/map-icon overlays with the already-accepted RTS minimap raster without changing NPC movement, camera ownership, compass, raster generation or vanilla behavior outside RTS.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
