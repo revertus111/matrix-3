@@ -2153,3 +2153,7 @@
 2026-10-01 - Settlement RTS visibility radius runtime accepted
 - User confirmed the 64-tile minimum removes the distant terrain/object cutoff in the previously failing wide RTS view.
 - Settlement visibility-radius gate is closed; accepted architecture remains detached Class24/Class411 RTS + native 168x168 scene + 176x176 generated terrain + live projection sync + settlement-only 64-tile Class523 visibility radius.
+
+2026-10-01 - RTS minimap overlay runtime accepted
+- User confirmed NPC/player/map-icon minimap overlays now move and rotate correctly with the RTS minimap raster.
+- Shared Class12 overlay-yaw synchronization gate is closed; rotated minimap click alignment and the RTS object-interaction self-selection guard remain separate pending checks.
