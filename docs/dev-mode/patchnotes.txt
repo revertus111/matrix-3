@@ -204,4 +204,5 @@
 - Preserved the prior average-vertex centroid for per-part scaling so existing scaled projects keep their yaw=0 placement.
 - Rotation snap now defaults to 90 degrees and is labeled ROT SNAP in the transform controls.
 - Existing SNAP/Ctrl inversion, undo/redo, save/load, Construction undo and world/cache/server ownership are unchanged.
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+- Runtime accepted by user: stable ROT pivot and 90-degree snapping both work.
+- Status: RUNTIME VERIFIED.
