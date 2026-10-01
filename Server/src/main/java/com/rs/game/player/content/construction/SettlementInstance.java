@@ -53,6 +53,7 @@ public final class SettlementInstance {
     private static final int CONVEYOR_SYNC_CS_VAR = 65534;
     private static final double CONVEYOR_GAME_TICK_SECONDS = 0.6;
     private static final int[] CONVEYOR_DEVELOPMENT_MIX = { 1511, 1521, 440, 960 };
+    private static final int AUTOMATED_MACHINE_PROCESS_TICKS = 4;
     private static final double PASSIVE_CONSTRUCTION_XP_PER_RESOURCE = 1.0;
     // V1 presentation placeholder until a dedicated mine-cart NPC/model is accepted.
     private static final int RAIL_CART_NPC_ID = 1;
@@ -108,6 +109,13 @@ public final class SettlementInstance {
      */
     private final Set<Long> conveyorDevelopmentOpenOutputs =
             new HashSet<Long>();
+    /*
+     * Transient progress only. Machine input/output items are persistent and the
+     * conversion itself is atomic, so a logout may lose partial timer progress
+     * but can never lose or duplicate inventory.
+     */
+    private final Map<Long, Integer> automatedMachineProgressTicks =
+            new HashMap<Long, Integer>();
 
     private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
         this.player = player;
@@ -386,9 +394,77 @@ public final class SettlementInstance {
                 changed = true;
             }
         }
+        if (processAutomatedConveyorMachines()) {
+            changed = true;
+        }
         if (changed) {
             syncConveyorPayloadsToClient();
         }
+    }
+
+    private boolean processAutomatedConveyorMachines() {
+        boolean changed = false;
+        SettlementProcessingRecipe recipe = SettlementProcessingRecipe.SAW_PLANKS;
+        SettlementFactoryItem input =
+                SettlementFactoryItem.forResource(recipe.getInputResource());
+        SettlementFactoryItem output =
+                SettlementFactoryItem.forResource(recipe.getOutputResource());
+        if (input == null || output == null) {
+            return false;
+        }
+
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (!isAutomatedMachinePiece(piece)
+                    || !isWorkstationConnectedToConveyor(piece)) {
+                continue;
+            }
+
+            long pieceId = piece.getPieceId();
+            Long key = Long.valueOf(pieceId);
+            /*
+             * A worker holding the workstation reservation remains authoritative
+             * for that station. Automatic processing pauses rather than doubling
+             * production on top of worker processing.
+             */
+            if (processingWorkstationReservations.containsKey(key)) {
+                continue;
+            }
+
+            SettlementMachineBuffer buffer = state.findMachineBuffer(pieceId);
+            if (buffer == null
+                    || buffer.getInputAmount(input.getItemId())
+                            < recipe.getInputAmount()
+                    || buffer.getOutputCapacityForItem(output.getItemId())
+                            < recipe.getOutputAmount()) {
+                automatedMachineProgressTicks.remove(key);
+                continue;
+            }
+
+            Integer previous = automatedMachineProgressTicks.get(key);
+            int ticks = previous == null ? 1 : previous.intValue() + 1;
+            if (ticks < AUTOMATED_MACHINE_PROCESS_TICKS) {
+                automatedMachineProgressTicks.put(key, Integer.valueOf(ticks));
+                continue;
+            }
+
+            SettlementProcessingTransaction.Result result =
+                    SettlementProcessingTransaction.apply(
+                            buffer, recipe,
+                            input.getItemId(), output.getItemId(), 1);
+            automatedMachineProgressTicks.remove(key);
+            if (!result.isSuccess()) {
+                continue;
+            }
+
+            changed = true;
+            if (debug != null) {
+                debug.record("machine#" + pieceId,
+                        "Automated " + recipe.getDisplayName()
+                                + ": " + result.getSummary(),
+                        SettlementDebug.Category.PROCESSING);
+            }
+        }
+        return changed;
     }
 
     private boolean processConveyorOutput(SettlementConveyorRun run) {
@@ -402,33 +478,67 @@ public final class SettlementInstance {
             return run.removePayload(payload.getPayloadId());
         }
 
-        SettlementStorageContainer destination = findStorageAtPlot(
-                run.getEndPlotX(), run.getEndPlotY(), run.getPlane());
         if (!payload.isPhysicalInventoryOwned()) {
             return false;
         }
-        if (destination == null
-                || !destination.acceptsItem(payload.getItemId())
-                || destination.getAvailableCapacityForItem(payload.getItemId())
+
+        SettlementStorageContainer destination = findStorageAtPlot(
+                run.getEndPlotX(), run.getEndPlotY(), run.getPlane());
+        if (destination != null) {
+            if (!destination.acceptsItem(payload.getItemId())
+                    || destination.getAvailableCapacityForItem(payload.getItemId())
+                            < payload.getAmount()) {
+                return false;
+            }
+
+            int accepted = destination.addItem(
+                    payload.getItemId(), payload.getAmount());
+            if (accepted != payload.getAmount()) {
+                if (accepted > 0) {
+                    destination.removeItem(payload.getItemId(), accepted);
+                }
+                return false;
+            }
+
+            if (!run.removePayload(payload.getPayloadId())) {
+                destination.removeItem(payload.getItemId(), payload.getAmount());
+                return false;
+            }
+
+            SettlementStorageInterface.refreshOpenChest(
+                    player, destination.getPieceId());
+            return true;
+        }
+
+        SettlementPlacedPiece machinePiece = findWorkstationAtPlot(
+                run.getEndPlotX(), run.getEndPlotY(), run.getPlane());
+        SettlementProcessingRecipe recipe = getAutomatedMachineRecipe(machinePiece);
+        if (machinePiece == null || recipe == null) {
+            return false;
+        }
+        SettlementFactoryItem input =
+                SettlementFactoryItem.forResource(recipe.getInputResource());
+        SettlementMachineBuffer machine =
+                state.findMachineBuffer(machinePiece.getPieceId());
+        if (input == null || machine == null
+                || payload.getItemId() != input.getItemId()
+                || machine.getInputCapacityForItem(payload.getItemId())
                         < payload.getAmount()) {
             return false;
         }
 
-        int accepted = destination.addItem(payload.getItemId(), payload.getAmount());
+        int accepted = machine.addInput(
+                payload.getItemId(), payload.getAmount());
         if (accepted != payload.getAmount()) {
             if (accepted > 0) {
-                destination.removeItem(payload.getItemId(), accepted);
+                machine.removeInput(payload.getItemId(), accepted);
             }
             return false;
         }
-
         if (!run.removePayload(payload.getPayloadId())) {
-            destination.removeItem(payload.getItemId(), payload.getAmount());
+            machine.removeInput(payload.getItemId(), payload.getAmount());
             return false;
         }
-
-        SettlementStorageInterface.refreshOpenChest(
-                player, destination.getPieceId());
         return true;
     }
 
@@ -439,33 +549,60 @@ public final class SettlementInstance {
 
         SettlementStorageContainer source = findStorageAtPlot(
                 run.getStartPlotX(), run.getStartPlotY(), run.getPlane());
-        if (source == null) {
+        if (source != null) {
+            Item[] items = source.snapshotItems();
+            for (int slot = 0; slot < items.length; slot++) {
+                Item item = items[slot];
+                if (item == null || item.getAmount() <= 0) {
+                    continue;
+                }
+
+                int itemId = item.getId();
+                int removed = source.removeItemFromSlot(slot, 1);
+                if (removed <= 0) {
+                    continue;
+                }
+
+                SettlementConveyorPayload payload =
+                        run.addPhysicalPayload(itemId, removed);
+                if (payload == null) {
+                    source.addItem(itemId, removed);
+                    return false;
+                }
+
+                SettlementStorageInterface.refreshOpenChest(
+                        player, source.getPieceId());
+                return true;
+            }
             return false;
         }
 
-        Item[] items = source.snapshotItems();
-        for (int slot = 0; slot < items.length; slot++) {
-            Item item = items[slot];
-            if (item == null || item.getAmount() <= 0) {
-                continue;
-            }
-
-            int itemId = item.getId();
-            int removed = source.removeItemFromSlot(slot, 1);
-            if (removed <= 0) {
-                continue;
-            }
-
-            SettlementConveyorPayload payload = run.addPhysicalPayload(itemId, removed);
-            if (payload == null) {
-                source.addItem(itemId, removed);
-                return false;
-            }
-
-            SettlementStorageInterface.refreshOpenChest(player, source.getPieceId());
-            return true;
+        SettlementPlacedPiece machinePiece = findWorkstationAtPlot(
+                run.getStartPlotX(), run.getStartPlotY(), run.getPlane());
+        SettlementProcessingRecipe recipe = getAutomatedMachineRecipe(machinePiece);
+        if (machinePiece == null || recipe == null) {
+            return false;
         }
-        return false;
+        SettlementFactoryItem output =
+                SettlementFactoryItem.forResource(recipe.getOutputResource());
+        SettlementMachineBuffer machine =
+                state.findMachineBuffer(machinePiece.getPieceId());
+        if (output == null || machine == null
+                || machine.getOutputAmount(output.getItemId()) <= 0L) {
+            return false;
+        }
+
+        int removed = machine.removeOutput(output.getItemId(), 1);
+        if (removed <= 0) {
+            return false;
+        }
+        SettlementConveyorPayload payload =
+                run.addPhysicalPayload(output.getItemId(), removed);
+        if (payload == null) {
+            machine.addOutput(output.getItemId(), removed);
+            return false;
+        }
+        return true;
     }
 
     private SettlementStorageContainer findStorageAtPlot(
@@ -487,11 +624,68 @@ public final class SettlementInstance {
         return null;
     }
 
+    private SettlementPlacedPiece findWorkstationAtPlot(
+            int plotX, int plotY, int plane) {
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (piece == null
+                    || piece.getPlotX() != plotX
+                    || piece.getPlotY() != plotY
+                    || piece.getPlane() != plane) {
+                continue;
+            }
+            SettlementBuildPiece definition =
+                    SettlementBuildPiece.forKey(piece.getDefinitionKey());
+            if (definition != null
+                    && definition.getRole() == SettlementBuildRole.WORKSTATION) {
+                return piece;
+            }
+        }
+        return null;
+    }
+
+    private SettlementProcessingRecipe getAutomatedMachineRecipe(
+            SettlementPlacedPiece piece) {
+        if (piece == null) {
+            return null;
+        }
+        SettlementBuildPiece definition =
+                SettlementBuildPiece.forKey(piece.getDefinitionKey());
+        return definition == SettlementBuildPiece.WOODEN_WORKBENCH
+                ? SettlementProcessingRecipe.SAW_PLANKS : null;
+    }
+
+    private boolean isAutomatedMachinePiece(SettlementPlacedPiece piece) {
+        return getAutomatedMachineRecipe(piece) != null;
+    }
+
+    private boolean isWorkstationConnectedToConveyor(
+            SettlementPlacedPiece piece) {
+        if (piece == null) {
+            return false;
+        }
+        for (SettlementConveyorRun run : state.snapshotConveyorRuns()) {
+            if (run == null || run.getPlane() != piece.getPlane()) {
+                continue;
+            }
+            if ((run.getStartPlotX() == piece.getPlotX()
+                    && run.getStartPlotY() == piece.getPlotY())
+                    || (run.getEndPlotX() == piece.getPlotX()
+                        && run.getEndPlotY() == piece.getPlotY())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean hasPhysicalConveyorEndpoint(SettlementConveyorRun run) {
         return run != null
                 && (findStorageAtPlot(
                         run.getStartPlotX(), run.getStartPlotY(), run.getPlane()) != null
                     || findStorageAtPlot(
+                        run.getEndPlotX(), run.getEndPlotY(), run.getPlane()) != null
+                    || findWorkstationAtPlot(
+                        run.getStartPlotX(), run.getStartPlotY(), run.getPlane()) != null
+                    || findWorkstationAtPlot(
                         run.getEndPlotX(), run.getEndPlotY(), run.getPlane()) != null);
     }
 
@@ -590,13 +784,22 @@ public final class SettlementInstance {
                 run.getStartPlotX(), run.getStartPlotY(), run.getPlane());
         SettlementStorageContainer destination = findStorageAtPlot(
                 run.getEndPlotX(), run.getEndPlotY(), run.getPlane());
-        String sourceLabel = source == null
-                ? "NO CHEST" : "CHEST#" + source.getPieceId();
+        SettlementPlacedPiece sourceMachine = findWorkstationAtPlot(
+                run.getStartPlotX(), run.getStartPlotY(), run.getPlane());
+        SettlementPlacedPiece destinationMachine = findWorkstationAtPlot(
+                run.getEndPlotX(), run.getEndPlotY(), run.getPlane());
+        String sourceLabel = source != null
+                ? "CHEST#" + source.getPieceId()
+                : sourceMachine != null
+                        ? "MACHINE#" + sourceMachine.getPieceId()
+                        : "NO ENDPOINT";
         String outputLabel = open
                 ? "OPEN DEBUG SINK"
-                : destination == null
-                        ? "BLOCKED/NO CHEST"
-                        : "CHEST#" + destination.getPieceId();
+                : destination != null
+                        ? "CHEST#" + destination.getPieceId()
+                        : destinationMachine != null
+                                ? "MACHINE#" + destinationMachine.getPieceId()
+                                : "BLOCKED/NO ENDPOINT";
         return "ConveyorRun #" + run.getRunId()
                 + " payloads=" + run.getPayloadCount()
                 + " speed=" + String.format("%.2f", run.getSpeedTilesPerSecond())
@@ -663,6 +866,115 @@ public final class SettlementInstance {
                         destination.getPlane()))
                 + " CHEST#" + source.getPieceId()
                 + " -> CHEST#" + destination.getPieceId() + ".";
+    }
+
+    /**
+     * Deterministic first-machine harness:
+     * oldest chest -> first saw-planks workstation -> next chest.
+     *
+     * The workstation visual is currently the accepted WOODEN_WORKBENCH
+     * placeholder; endpoint ownership is the persistent machine buffer, so a
+     * future sawmill asset swap does not change transport semantics.
+     */
+    public synchronized String createSawmillAutomationTestLine() {
+        if (!loaded || destroyed) {
+            return "Sawmill automation test is unavailable while loading.";
+        }
+        if (!state.snapshotConveyorRuns().isEmpty()) {
+            return "Drain/clear existing ConveyorRuns before building the deterministic sawmill test line.";
+        }
+
+        List<SettlementPlacedPiece> storagePieces =
+                new ArrayList<SettlementPlacedPiece>();
+        List<SettlementPlacedPiece> machinePieces =
+                new ArrayList<SettlementPlacedPiece>();
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (isPhysicalStoragePiece(piece)) {
+                storagePieces.add(piece);
+            } else if (isAutomatedMachinePiece(piece)) {
+                machinePieces.add(piece);
+            }
+        }
+        if (storagePieces.size() < 2 || machinePieces.isEmpty()) {
+            return "Place at least two physical chests and one Wooden workbench/sawmill workstation first.";
+        }
+
+        java.util.Comparator<SettlementPlacedPiece> byPieceId =
+                new java.util.Comparator<SettlementPlacedPiece>() {
+                    @Override
+                    public int compare(
+                            SettlementPlacedPiece a, SettlementPlacedPiece b) {
+                        return Long.compare(a.getPieceId(), b.getPieceId());
+                    }
+                };
+        java.util.Collections.sort(storagePieces, byPieceId);
+        java.util.Collections.sort(machinePieces, byPieceId);
+
+        SettlementPlacedPiece source = storagePieces.get(0);
+        SettlementPlacedPiece machine = machinePieces.get(0);
+        SettlementPlacedPiece destination = storagePieces.get(1);
+
+        SettlementConveyorRun inputRun = state.addConveyorRun(
+                source.getPlotX(), source.getPlotY(),
+                machine.getPlotX(), machine.getPlotY(),
+                source.getPlane());
+        if (inputRun == null) {
+            return "Could not create source chest -> machine ConveyorRun.";
+        }
+
+        SettlementConveyorRun outputRun = state.addConveyorRun(
+                machine.getPlotX(), machine.getPlotY(),
+                destination.getPlotX(), destination.getPlotY(),
+                machine.getPlane());
+        if (outputRun == null) {
+            state.removeConveyorRun(inputRun.getRunId());
+            return "Could not create machine -> destination chest ConveyorRun; input run rolled back.";
+        }
+
+        syncConveyorRunsToClient();
+        return "Sawmill test line ready: CHEST#" + source.getPieceId()
+                + " -> MACHINE#" + machine.getPieceId()
+                + " -> CHEST#" + destination.getPieceId()
+                + " | inputRun#" + inputRun.getRunId()
+                + " outputRun#" + outputRun.getRunId() + ".";
+    }
+
+    public synchronized String getAutomatedMachineStatus() {
+        StringBuilder summary = new StringBuilder();
+        SettlementProcessingRecipe recipe = SettlementProcessingRecipe.SAW_PLANKS;
+        SettlementFactoryItem input =
+                SettlementFactoryItem.forResource(recipe.getInputResource());
+        SettlementFactoryItem output =
+                SettlementFactoryItem.forResource(recipe.getOutputResource());
+
+        for (SettlementPlacedPiece piece : state.snapshotPieces()) {
+            if (!isAutomatedMachinePiece(piece)) {
+                continue;
+            }
+            SettlementMachineBuffer buffer =
+                    state.findMachineBuffer(piece.getPieceId());
+            if (buffer == null || input == null || output == null) {
+                continue;
+            }
+            if (summary.length() > 0) {
+                summary.append(" | ");
+            }
+            Integer ticks = automatedMachineProgressTicks.get(
+                    Long.valueOf(piece.getPieceId()));
+            summary.append("MACHINE#").append(piece.getPieceId())
+                    .append(" connected=")
+                    .append(isWorkstationConnectedToConveyor(piece))
+                    .append(" logs=")
+                    .append(buffer.getInputAmount(input.getItemId()))
+                    .append(" planks=")
+                    .append(buffer.getOutputAmount(output.getItemId()))
+                    .append(" progress=")
+                    .append(ticks == null ? 0 : ticks.intValue())
+                    .append("/").append(AUTOMATED_MACHINE_PROCESS_TICKS);
+        }
+        return summary.length() == 0
+                ? "No saw-planks workstation is available."
+                : summary.toString();
     }
 
     public synchronized String removeConveyorRun(long runId) {
