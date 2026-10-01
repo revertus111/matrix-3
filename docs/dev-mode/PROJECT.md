@@ -548,11 +548,13 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 
 ### Live Model Editor — Stable ROT Pivot + 90° Snap — 2026-10-01
 
-- Status: **RUNTIME VERIFIED** under explicit AAA.
-- Runtime video originally showed Part/Multi ROT visually orbiting/drifting away from the white rotation gizmo instead of rotating around one fixed pivot; the user has now confirmed the corrected pivot behavior and 90-degree snapping work at runtime.
-- **verified-static root cause:** the gizmo, selection pivot and Multi rotation math use each component's cached bounds center, while `transformVertices(...)` recomputed an average-vertex centroid and rotated/scaled the visible mesh around that different point.
-- Corrected `LiveModelEditorParts.transformVertices(...)` so yaw rotates the visible component around the same cached bounds center already owned by the editor gizmo and shared Multi transform math. Existing per-part scale still uses its prior average-vertex centroid, preserving saved scale placement at yaw=0.
-- Reused the existing transform snap system; rotation angle snap now defaults to **90 degrees** and the UI identifies the control as ROT SNAP.
-- SNAP behavior is unchanged otherwise: SNAP ON applies the configured move/rotation steps; Ctrl temporarily bypasses it. With SNAP OFF, Ctrl temporarily applies snap.
+- Status: **IMPLEMENTED / NEEDS RUNTIME RETEST** under explicit AAA.
+- Runtime video originally showed Part/Multi ROT visually orbiting/drifting away from the white rotation gizmo instead of rotating around one fixed pivot.
+- The first correction runtime-verified the original-part path and 90-degree snapping, but follow-up testing isolated a duplicate-only regression: moved duplicated parts still orbited badly when rotated.
+- **verified-static original-path root cause:** the gizmo, selection pivot and Multi rotation math use each component's cached bounds center, while `transformVertices(...)` had recomputed an average-vertex centroid for yaw.
+- **verified-static duplicate-path root cause:** `componentOnlyRaw(...)` creates a compact temporary `Component` for duplicate rendering but previously left its cached center at the default `0,0,0`. The duplicate's visible yaw therefore rotated around model origin even though editor state/gizmo used the source component center.
+- Corrected duplicate rendering to preserve the source component's cached center/bounds/signature on the compact local component before applying transforms.
+- Existing per-part scale still uses its prior average-vertex centroid, preserving saved scale placement at yaw=0.
+- Rotation angle snap remains **90 degrees** by default through the existing ROT SNAP control.
 - No new transform/history system, Construction undo owner, cache writer, world mutation or server persistence path was introduced.
-- **Runtime acceptance:** stable ROT pivot + 90-degree snap are accepted. Optional deeper checks remain for Ctrl snap/free inversion and Ctrl+Z/Ctrl+Y around snapped rotations.
+- **Resume Here (Live Model Editor):** duplicate an asymmetric part, move the duplicate away from its source, then rotate it through 90/180/270/360 with ROT SNAP=90. Its white pivot must remain fixed at the moved location and 360 must return exactly to that moved placement. Recheck the original part as a regression.
