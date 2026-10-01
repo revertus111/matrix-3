@@ -2574,7 +2574,8 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ### Settlement Minimap V1 — RTS viewport ownership + structural refresh — 2026-10-01
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA. This is a bounded Construction/RTS usability slice; the Canonical Main-Goal Status table remains unchanged and **Population, processing and logistics expansion** stays 🔵 In Progress.
+- Status: **RUNTIME VERIFIED**. This is a bounded Construction/RTS usability slice; the Canonical Main-Goal Status table remains unchanged and **Population, processing and logistics expansion** stays 🔵 In Progress.
+- Runtime acceptance: user confirmed the stock minimap follows the RTS pivot while the player remains stationary, build removal removes the corresponding stock minimap geometry, and the starter tree/stone/ore objects appear through Matrix3's native minimap/object metadata. No custom fallback icon layer is required for V1.
 - **verified-static renderer ownership:** interface special content 1338 is dispatched by Class348 to Class464.method5484(...). That method uses one center pair (i_16_/i_17_) for the stock minimap raster and the map-scene/icon/dot overlays drawn around it.
 - While Construction RTS is active and initialized, ConstructionBuildCamera now exposes its managed look pivot in the exact scene-local 512-units-per-tile coordinate domain consumed by that stock renderer. Class464 substitutes only the center pair; normal player centering is untouched when RTS does not own the view.
 - client.method7990() uses the same RTS center for the minimap click-to-world transform. The already-accepted action-23/minimap-movement intercept therefore receives coordinates resolved against what the player actually sees, rather than the stationary player's old center.
@@ -2584,7 +2585,19 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Repeated 2835=1 while settlement RTS already owns the session is refresh-only: it invalidates the stock raster and returns without calling setMode(...), enter(), or otherwise resetting the current camera mode.
 - Initial settlement entry also invalidates once after the dynamic scene is ready, so saved builds plus starter object resource nodes are eligible for the stock minimap pass.
 - Starter tree 1276, stone 11933 and ore 11936 remain ordinary Matrix3 object definitions. V1 deliberately reuses whatever stock map-scene/map-icon metadata those definitions expose; no guessed Construction fallback icon IDs were introduced. The NPC-backed food spot remains under stock NPC/dot presentation.
-- **Resume Here:** pull/build/restart Client + Server. Enter a settlement and keep the player stationary while panning RTS; the minimap should scroll with the RTS pivot. Move the player separately to prove it no longer owns the center during RTS, then click multiple minimap points and verify the camera focuses exactly where clicked without player movement. Place/remove/move/rotate walls/fences/floors and use Clear All/one rail batch to prove the stock minimap rebuilds to the final scene. Check tree/stone/ore stock icons if their cache definitions supply them. Exit RTS/settlement and confirm vanilla player-centered minimap behavior returns. If accepted, return to the Conveyor Gameplay V1.8 runtime gate unless reprioritized.
+- **Resume Here:** V1 center/structural/resource gate is closed as RUNTIME VERIFIED. Broad Clear All/rail-batch regression remains useful but is not blocking V1 acceptance. Current RTS-camera polish moves to V1.1 heading synchronization and object-interaction self-selection below.
+
+### Settlement Minimap V1.1 — RTS heading synchronization + object-interaction self-selection — 2026-10-01
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- ConstructionBuildCamera.rtsYawRadians remains the authoritative RTS yaw used by Q/E and horizontal MMB orbit. A small read-only helper converts that yaw into Matrix3's existing 14-bit 0..16383 minimap-angle domain; no second camera heading owner is introduced.
+- Class464.method5484(...) keeps its stock minimap renderer. While RTS owns heading, the render angle uses the same vanilla relationship already present in Matrix3: negative camera yaw plus the existing minimap offset. Outside RTS the old angle path is untouched.
+- client.method7990() uses positive RTS yaw plus that same offset for the inverse minimap click transform. This keeps rotated visual coordinates and clicked world coordinates aligned.
+- Object-click regression root cause was ConstructionRadialSelection.handleMenuAction(...): supported worker object clicks intentionally queued a worker order and then returned false, allowing Matrix3's native player object packet to continue even when self was not selected.
+- RTS object actions 3..6/1001 now require committed self selection for the local-player interaction to continue. First-object worker gather/process orders still queue normally before the local-player action is consumed. Examine 1002 remains vanilla/non-moving.
+- Ground-movement ownership is unchanged: this patch targets object interactions only. Existing Build Palette/editor suspension rules and non-RTS Matrix3 behavior are unchanged.
+- Process rule updated in root AGENTS.md: explicit runtime confirmation of an already-AAA-approved checkpoint authorizes immediate verification/status bookkeeping for that exact work without another AAA; any new code behavior/scope still requires normal AAA.
+- **Resume Here:** pull/build/restart the Client. In settlement RTS, rotate with Q/E and horizontal MMB and verify the minimap spins exactly with camera heading; after ~90 degrees, click the minimap and confirm the RTS pivot lands where clicked. Then leave self unselected and click a tree/ore/workbench plus one ordinary object: workers may receive their mirrored order, but the local player must not move. Select self and repeat to prove vanilla object interaction is restored. Exit settlement and confirm vanilla minimap/object behavior.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
