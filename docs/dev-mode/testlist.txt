@@ -316,3 +316,20 @@ Live Model Editor — Duplicate ROT Pivot regression retest (2026-10-01)
 [ ] At 360 degrees, verify the duplicate returns exactly to the moved starting placement.
 [ ] Recheck the original part rotation path; it must remain stable.
 [ ] Ctrl+Z and Ctrl+Y the duplicate move + snapped rotation and verify exact transform restoration.
+
+Live Model Editor — Anchored Tile Snap gate (2026-10-01)
+[x] verified-static: main transform UI no longer exposes Fit 1 Tile.
+[x] verified-static: Tile Snap is Part/Multi-only and uses a 512-model-unit X/Z grid.
+[x] verified-static: anchors available are NW/N/NE/W/Center/E/SW/S/SE.
+[x] verified-static: snapping applies one shared moveX/moveZ delta and does not modify scale, moveY, yaw, hidden/deleted state, or geometry.
+[x] verified-static: transformed selection extents mirror current render semantics: average-vertex scale center plus cached component-center yaw.
+[x] verified-static: Tile Snap goes through existing pushUndo history; no Construction/world/cache/server owner changed.
+[ ] Eclipse clean/build Client with Java 8.
+[ ] Select one asymmetric Part, record scale/yaw, move it visibly off-grid, choose Center, and click Snap To Tile.
+[ ] Verify only X/Z position changes; scale and yaw remain exactly unchanged.
+[ ] Move it off-grid again and test at least one edge anchor (N/E/S/W); verify that selected bounds edge lands on the nearest 512-unit grid line/intersection.
+[ ] Move it off-grid again and test at least one corner anchor (NW/NE/SW/SE); verify that corner lands on the nearest 512-unit X/Z grid intersection.
+[ ] Multi-select two or more separated parts, snap Center, and verify all parts move by the same delta with spacing unchanged.
+[ ] Duplicate a part, move the duplicate away, Snap To Tile, then rotate it 90/180/270/360; verify the duplicate pivot remains stable after snapping.
+[ ] Ctrl+Z the Tile Snap and verify the exact prior off-grid position returns; Ctrl+Y and verify the snapped position returns.
+[ ] Regression: normal MOVE SNAP remains configurable/usable and ROT SNAP still defaults to 90 degrees.
