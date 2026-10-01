@@ -1,3 +1,11 @@
+Live Model Editor duplicate face-index fix - 2026-10-01
+[x] VERIFIED-STATIC: componentOnlyRaw validates sourceA/sourceB/sourceD against map.length before any remap-table access.
+[x] VERIFIED-STATIC: duplicate raw generation reuses one decoded source raw per rebuild and does not mutate that source.
+[x] VERIFIED-STATIC: an invalid duplicate face returns null for that duplicate raw instead of throwing ArrayIndexOutOfBoundsException.
+[ ] RUNTIME: reproduce the exact duplicated sawmill/conveyor-part state that spammed stage=authoring-duplicates and confirm the spam is gone.
+[ ] RUNTIME: duplicate several different components, then move/rotate/scale/highlight them and confirm valid duplicates render normally.
+[ ] RUNTIME: save/reload a project containing duplicates and confirm duplicate transforms remain intact.
+
 Live Model Editor authoring-raw guard V2 - 2026-10-01
 [x] VERIFIED-STATIC: highlightAllFaces checks every optional face table before indexing.
 [x] VERIFIED-STATIC: replacement auto-fit rejects incomplete coordinate tables instead of indexing by declared vertex count.

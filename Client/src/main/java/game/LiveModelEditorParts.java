@@ -934,6 +934,8 @@ final class LiveModelEditorParts {
 
     synchronized List<Class159> buildDuplicateRaws() {
         if (source == null || duplicates.isEmpty()) return Collections.emptyList();
+        Class159 sourceRaw = source.decode();
+        if (sourceRaw == null) return Collections.emptyList();
         List<Class159> raws = new ArrayList<Class159>();
         for (int i = 0; i < duplicates.size(); i++) {
             int combinedIndex = originals.size() + i;
@@ -942,7 +944,7 @@ final class LiveModelEditorParts {
             if (state.hidden || state.deleted || state.replacementObjectId >= 0
                     || (isolate && !selection.contains(Integer.valueOf(combinedIndex)))
                     || !validSourcePart(state)) continue;
-            Class159 raw = componentOnlyRaw(source.decode(),
+            Class159 raw = componentOnlyRaw(sourceRaw,
                     source.components[state.sourcePart], state);
             if (raw == null) continue;
             if (highlighted) highlightAllFaces(raw);
@@ -1352,9 +1354,14 @@ final class LiveModelEditorParts {
         for (int i = 0; i < component.faces.length; i++) {
             int face = component.faces[i];
             if (!hasFaceIndices(sourceRaw, face)) return null;
-            int a = map[sourceRaw.aShortArray1786[face] & 0xffff];
-            int b = map[sourceRaw.aShortArray1787[face] & 0xffff];
-            int d = map[sourceRaw.aShortArray1789[face] & 0xffff];
+            int sourceA = sourceRaw.aShortArray1786[face] & 0xffff;
+            int sourceB = sourceRaw.aShortArray1787[face] & 0xffff;
+            int sourceD = sourceRaw.aShortArray1789[face] & 0xffff;
+            if (sourceA >= map.length || sourceB >= map.length || sourceD >= map.length)
+                return null;
+            int a = map[sourceA];
+            int b = map[sourceB];
+            int d = map[sourceD];
             if (a < 0 || b < 0 || d < 0
                     || a >= raw.anInt1775 || b >= raw.anInt1775 || d >= raw.anInt1775) {
                 return null;

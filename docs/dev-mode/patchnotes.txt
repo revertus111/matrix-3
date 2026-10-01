@@ -1,3 +1,10 @@
+2026-10-01 - Live Model Editor duplicate face-index fix
+- Runtime V2 diagnostics isolated the remaining ArrayIndexOutOfBoundsException to authoring-duplicates.
+- componentOnlyRaw now validates each decoded face vertex id against the source vertex-map length before indexing the remap table.
+- Duplicate raw generation decodes the immutable source geometry once per rebuild instead of re-decoding it once per duplicate.
+- Invalid/mismatched duplicate component faces now fail-soft by skipping that raw instead of throwing through the whole duplicate render branch.
+- No project JSON, cache writes, world/server ownership, or transform semantics changed.
+
 2026-10-01 - Live Model Editor authoring-raw guard V2
 - Runtime evidence showed ArrayIndexOutOfBoundsException still escaped the first raw-geometry guard.
 - Hardened whole-face highlighting, replacement auto-fit coordinate access, source-part lookup, and one-tile selection-bounds access.
