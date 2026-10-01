@@ -632,45 +632,39 @@ final class LiveModelEditorParts {
     }
 
     /**
-     * Uniformly shrinks the current editable selection so its X/Z footprint is
-     * no larger than one logical tile. Geometry and part-center offsets scale
-     * together around the same shared selection pivot used by multi transforms.
+     * Translate the current Part/Multi selection so the requested X/Z bounds
+     * anchor lands on the nearest logical tile-grid intersection.
      *
-     * This operation is intentionally shrink-only; it never enlarges a model
-     * that already fits inside the requested footprint.
+     * anchorX/anchorZ use -1=min edge, 0=center, +1=max edge.
+     * Geometry size/yaw are untouched; every selected part receives the same
+     * move delta so relative spacing is preserved and the edit stays undoable.
      */
-    synchronized boolean fitSelectionToFootprint(int footprintUnits) {
-        if (source == null || selection.isEmpty() || footprintUnits <= 0) return false;
-        int[] before = getSelectionBounds();
-        if (before == null) return false;
-        int footprint = Math.max(before[0], before[2]);
-        if (footprint <= footprintUnits) return false;
+    synchronized boolean snapSelectionToGrid(int gridUnits, int anchorX, int anchorZ) {
+        if (source == null || selection.isEmpty() || gridUnits <= 0) return false;
+        double[] extents = selectionExtents();
+        if (extents == null) return false;
 
-        double factor = footprintUnits / (double) footprint;
-        double[] pivot = selectionPivot3DForTransforms(null);
-        if (pivot == null || factor <= 0.0 || factor >= 1.0) return false;
+        int ax = clamp(anchorX, -1, 1);
+        int az = clamp(anchorZ, -1, 1);
+        double anchorValueX = ax < 0 ? extents[0]
+                : ax > 0 ? extents[3] : (extents[0] + extents[3]) * 0.5;
+        double anchorValueZ = az < 0 ? extents[2]
+                : az > 0 ? extents[5] : (extents[2] + extents[5]) * 0.5;
+
+        double snappedX = Math.round(anchorValueX / gridUnits) * (double) gridUnits;
+        double snappedZ = Math.round(anchorValueZ / gridUnits) * (double) gridUnits;
+        int deltaX = (int) Math.round(snappedX - anchorValueX);
+        int deltaZ = (int) Math.round(snappedZ - anchorValueZ);
+        if (deltaX == 0 && deltaZ == 0) return false;
 
         pushUndo();
         boolean changed = false;
         for (Integer index : selection) {
             PartState state = stateAt(index.intValue());
             if (state == null || state.deleted) continue;
-            Component component = source.components[state.sourcePart];
-
-            double centerX = component.centerX + state.moveX;
-            double centerY = component.centerY + state.moveY;
-            double centerZ = component.centerZ + state.moveZ;
-            double scaledX = pivot[0] + (centerX - pivot[0]) * factor;
-            double scaledY = pivot[1] + (centerY - pivot[1]) * factor;
-            double scaledZ = pivot[2] + (centerZ - pivot[2]) * factor;
-
             int[] values = sanitizeTransform(
-                    (int) Math.round(state.scaleX * factor),
-                    (int) Math.round(state.scaleY * factor),
-                    (int) Math.round(state.scaleZ * factor),
-                    state.moveX + (int) Math.round(scaledX - centerX),
-                    state.moveY + (int) Math.round(scaledY - centerY),
-                    state.moveZ + (int) Math.round(scaledZ - centerZ),
+                    state.scaleX, state.scaleY, state.scaleZ,
+                    state.moveX + deltaX, state.moveY, state.moveZ + deltaZ,
                     state.yaw);
             if (!sameTransform(state, values)) {
                 applyTransform(state, values);
@@ -686,6 +680,23 @@ final class LiveModelEditorParts {
      * {sizeX, sizeY, sizeZ}. Hidden parts still count; deleted parts do not.
      */
     synchronized int[] getSelectionBounds() {
+        double[] extents = selectionExtents();
+        if (extents == null) return null;
+        return new int[] {
+                Math.max(1, (int) Math.ceil(extents[3] - extents[0])),
+                Math.max(1, (int) Math.ceil(extents[4] - extents[1])),
+                Math.max(1, (int) Math.ceil(extents[5] - extents[2]))
+        };
+    }
+
+    /**
+     * Transformed selection extents in source-model coordinates:
+     * {minX, minY, minZ, maxX, maxY, maxZ}.
+     *
+     * This mirrors transformVertices(...): scaling retains the legacy
+     * average-vertex centroid while yaw uses the cached component bounds center.
+     */
+    private double[] selectionExtents() {
         if (source == null || selection.isEmpty()) return null;
         Class159 raw = source.decode();
         if (raw == null) return null;
@@ -700,39 +711,45 @@ final class LiveModelEditorParts {
 
         for (Integer index : selection) {
             PartState state = stateAt(index.intValue());
-            if (state == null || state.deleted) continue;
-            if (!validSourcePart(state)) continue;
+            if (state == null || state.deleted || !validSourcePart(state)) continue;
             Component component = source.components[state.sourcePart];
             if (component.vertices.length == 0) continue;
 
-            double cx = 0.0, cy = 0.0, cz = 0.0;
+            double scaleCx = 0.0, scaleCy = 0.0, scaleCz = 0.0;
             boolean validVertices = true;
             for (int vertex : component.vertices) {
                 if (!hasVertexCoordinates(raw, vertex)) {
                     validVertices = false;
                     break;
                 }
-                cx += raw.anIntArray1782[vertex];
-                cy += raw.anIntArray1777[vertex];
-                cz += raw.anIntArray1797[vertex];
+                scaleCx += raw.anIntArray1782[vertex];
+                scaleCy += raw.anIntArray1777[vertex];
+                scaleCz += raw.anIntArray1797[vertex];
             }
             if (!validVertices) continue;
-            cx /= component.vertices.length;
-            cy /= component.vertices.length;
-            cz /= component.vertices.length;
+            scaleCx /= component.vertices.length;
+            scaleCy /= component.vertices.length;
+            scaleCz /= component.vertices.length;
 
             double radians = Math.toRadians(state.yaw);
             double sin = Math.sin(radians);
             double cos = Math.cos(radians);
             for (int vertex : component.vertices) {
-                double x = (raw.anIntArray1782[vertex] - cx) * state.scaleX / 100.0;
-                double y = (raw.anIntArray1777[vertex] - cy) * state.scaleY / 100.0;
-                double z = (raw.anIntArray1797[vertex] - cz) * state.scaleZ / 100.0;
+                double scaledX = scaleCx
+                        + (raw.anIntArray1782[vertex] - scaleCx) * state.scaleX / 100.0;
+                double scaledY = scaleCy
+                        + (raw.anIntArray1777[vertex] - scaleCy) * state.scaleY / 100.0;
+                double scaledZ = scaleCz
+                        + (raw.anIntArray1797[vertex] - scaleCz) * state.scaleZ / 100.0;
+
+                double x = scaledX - component.centerX;
+                double z = scaledZ - component.centerZ;
                 double rx = x * cos + z * sin;
                 double rz = z * cos - x * sin;
-                double tx = cx + rx + state.moveX;
-                double ty = cy + y + state.moveY;
-                double tz = cz + rz + state.moveZ;
+                double tx = component.centerX + rx + state.moveX;
+                double ty = scaledY + state.moveY;
+                double tz = component.centerZ + rz + state.moveZ;
+
                 if (tx < minX) minX = tx;
                 if (tx > maxX) maxX = tx;
                 if (ty < minY) minY = ty;
@@ -742,12 +759,10 @@ final class LiveModelEditorParts {
                 found = true;
             }
         }
-        if (!found) return null;
-        return new int[] {
-                Math.max(1, (int) Math.ceil(maxX - minX)),
-                Math.max(1, (int) Math.ceil(maxY - minY)),
-                Math.max(1, (int) Math.ceil(maxZ - minZ))
-        };
+
+        return found ? new double[] {
+                minX, minY, minZ, maxX, maxY, maxZ
+        } : null;
     }
 
     synchronized void endGesture() {
