@@ -5,7 +5,7 @@ Saved Object Definition Library quick gate
 [ ] Confirm SAVED OBJECT DEFINITIONS opens in-client and shows ID/name, saved type, valid types, models, animations, size and tile.
 [ ] Close/reopen via right-click Dev > Object Library and confirm the saved entry persists from dev-object-library/objects.tsv.
 [ ] Select the saved entry and press Enter (or Place); confirm Live Place re-arms that exact ID at its saved tile.
-[ ] Reopen the library, select the entry and press F8; confirm Live Model Editor opens that saved definition.
+[ ] Reopen the library, select the entry and press F8; confirm Live Model Editor opens that saved definition and its type spinner starts on the cache-resolved type (including a known non-10 object).
 [ ] Reopen the library, Delete/Remove the entry, reopen again and confirm it stays removed.
 [ ] Right-click an ordinary tile: confirm Dev > Edit Tile is gone and Dev > Object Library is present.
 [ ] Hover a Tile in Live Inspect and press F8: confirm no Tile Editor opens; tile inspection data remains visible/copyable.

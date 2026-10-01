@@ -2,6 +2,7 @@
 - Live Place right-click now exposes Save Object Definition and Object Library.
 - Saved snapshots persist to dev-object-library/objects.tsv with definition ID/name, valid types, selected type, rotation, model IDs, animation IDs, decoded size and saved world tile.
 - Added a compact in-client Saved Object Definitions library: Enter/Place re-arms Live Place, Delete/Remove deletes the entry, F8 opens the saved definition in Live Model Editor, Escape closes.
+- Live Model Editor capture now initializes its object type from the definition's cache-native preferred type instead of hardcoded type 10, so saved non-10 definitions remain visible on F8 handoff.
 - Removed Dev > Edit Tile, removed Live Inspect Tile -> F8 editor routing, and removed the standalone DevTileEditorWindow source; tile inspection itself remains available.
 - Server/world/cache authority is unchanged; the library is developer-owned metadata only.
 

@@ -2308,6 +2308,8 @@ public final class LiveModelEditorWindow {
         suppressLiveRefresh = true;
         try {
             resetEditorsOnly();
+            typeSpinner.setValue(Integer.valueOf(
+                    DevDefinitionBridge.getPreferredObjectType(objectId)));
         } finally {
             suppressLiveRefresh = false;
         }
