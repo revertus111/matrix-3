@@ -2079,3 +2079,11 @@
 - Machine endpoints are now treated as physical endpoints for debug-payload/sink safety checks.
 - No SettlementState schema change.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-30 - Conveyor Build Placement V1.8
+- Added Logistics -> Conveyor to the Construction palette as a logical two-click A->B build tool.
+- Reused ConveyorRunPreview for full-appearance live placement preview; no second belt renderer.
+- Left click sets A / commits B, right click cancels pending A, Escape cancels A before closing Build Mode, and the tool stays armed after a successful queue.
+- Server now snaps requested endpoints within one tile to persistent STORAGE/WORKSTATION origins before saving the ConveyorRun; free-ground endpoints remain supported.
+- Conveyor orientation is A->B owned; object ghost/rotation paths no longer touch the logical conveyor tool.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
