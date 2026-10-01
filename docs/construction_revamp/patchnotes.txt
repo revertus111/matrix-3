@@ -2132,3 +2132,7 @@
 - Compass heading now uses ConstructionBuildCamera.getRtsMinimapYawUnits() while settlement RTS owns heading, matching the already-accepted stock minimap yaw source/sign convention.
 - Vanilla Class133_Sub1/client.aFloat8678 compass heading remains unchanged outside RTS; no camera-owner, minimap renderer, interface or sprite ownership changed.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-10-01 - RTS compass heading runtime accepted
+- User confirmed the stock compass now follows current RTS Q/E/MMB heading instead of remaining frozen on settlement-entry heading.
+- Compass synchronization gate is closed; vanilla compass behavior remains unchanged outside settlement RTS.
