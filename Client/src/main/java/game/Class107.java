@@ -77,6 +77,14 @@ public class Class107 {
 					i_12_ = (int) -((double) Class133_Sub1.aClass411_Sub1_9827.method5000(69787938) * 2607.5945876176133);
 				else
 					i_12_ = (int) -client.aFloat8678;
+				/*
+				 * verified-static: this is the stock compass heading owner. Settlement
+				 * RTS uses the same authoritative 14-bit yaw already consumed by the
+				 * stock minimap; outside RTS the original vanilla camera heading remains.
+				 */
+				int rtsCompassYaw = ConstructionBuildCamera.getRtsMinimapYawUnits();
+				if (rtsCompassYaw >= 0)
+					i_12_ = -rtsCompassYaw;
 				i_12_ = -1555276706 * client.anInt8766 + i_12_ & 0x3fff;
 				i_12_ <<= 2;
 				Class121.aClass161_1478.method2605((float) i + (float) (class73.anInt764 * 669238293) / 2.0F, ((float) (class73.anInt765 * 1360982075) / 2.0F + (float) i_10_), 4290, i_12_, class71.aClass167_709, i, i_10_);
