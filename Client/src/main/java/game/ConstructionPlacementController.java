@@ -16,6 +16,7 @@ public final class ConstructionPlacementController {
         FLOORS("Floors"),
         DOORS("Doors"),
         FURNITURE("Furniture"),
+        LOGISTICS("Logistics"),
         RAILS("Rails");
 
         private final String displayName;
@@ -67,6 +68,8 @@ public final class ConstructionPlacementController {
                     "Phase 3 workstation; baseline processing is 1 Wood/log unit into 2 Planks."),
             new BuildPiece("basic-storage-chest", "Wooden chest", Category.FURNITURE, 18804, 10,
                     "Physical 16-slot settlement storage; each stack is capped at 100 items in V1."),
+            new BuildPiece("conveyor", "Conveyor", Category.LOGISTICS, -1, -1,
+                    "Click Point A, move for a live full-appearance preview, then click Point B."),
             new BuildPiece("basic-rail", "Rail route", Category.RAILS, 46353, 22,
                     "Factorio-style rail network: drag track, then start from existing track to extend or branch."),
             new BuildPiece("rail-splitter", "Splitter", Category.RAILS, 46353, 22,
@@ -122,6 +125,7 @@ public final class ConstructionPlacementController {
     public static String setEraserMode(boolean enabled) {
         eraserMode = enabled;
         if (enabled) {
+            ConveyorPlacementController.cancel();
             RailRoutePreview.setEnabled(false);
             DevModeBridge.cancelPlacement();
             status = "Eraser armed. Click a settlement build tile to remove it.";
@@ -166,7 +170,15 @@ public final class ConstructionPlacementController {
     }
 
     public static boolean isArmed() {
-        return DevSpawnPlacement.hasActive() || isRailRouteSelected();
+        return DevSpawnPlacement.hasActive()
+                || isRailRouteSelected()
+                || isConveyorSelected();
+    }
+
+    public static boolean isConveyorSelected() {
+        BuildPiece piece = selectedPiece;
+        return piece != null && "conveyor".equals(piece.getKey())
+                && ConveyorPlacementController.isEnabled();
     }
 
     public static boolean isRailRouteSelected() {
@@ -209,6 +221,7 @@ public final class ConstructionPlacementController {
          * none of them may remain as stale RTS-arbiter blockers afterward.
          */
         RailRoutePreview.setEnabled(false);
+        ConveyorPlacementController.cancel();
         eraserMode = false;
         if (cancelPlacement) {
             status = DevModeBridge.cancelPlacement();
@@ -272,6 +285,7 @@ public final class ConstructionPlacementController {
         hoveredWorldY = worldY;
         hoveredPlane = plane;
         hoveredAtMillis = System.currentTimeMillis();
+        ConveyorPlacementController.onHoveredTileChanged();
     }
 
     public static HoverTile getHoveredTile() {
@@ -289,6 +303,7 @@ public final class ConstructionPlacementController {
             return status;
         }
         eraserMode = false;
+        ConveyorPlacementController.cancel();
         selectedPiece = piece;
         rotation = 0;
         return armSelected();
@@ -310,6 +325,10 @@ public final class ConstructionPlacementController {
         if (delta != -1 && delta != 1) {
             return status;
         }
+        if (isConveyorSelected()) {
+            status = "Conveyor uses Point A -> Point B heading; rotation is automatic.";
+            return status;
+        }
         rotation = (rotation + delta) & 0x3;
         if (isRailSplitterSelected()) {
             status = RailRoutePreview.setSpecialItemRotation(rotation);
@@ -325,7 +344,11 @@ public final class ConstructionPlacementController {
     public static String cancel() {
         eraserMode = false;
         RailRoutePreview.setEnabled(false);
+        ConveyorPlacementController.cancel();
         status = DevModeBridge.cancelPlacement();
+        if ("No placement is armed.".equals(status)) {
+            status = "Placement cancelled.";
+        }
         return status;
     }
 
@@ -598,6 +621,13 @@ public final class ConstructionPlacementController {
         }
 
         DevModeBridge.setEnabled(true);
+        if ("conveyor".equals(piece.getKey())) {
+            RailRoutePreview.setEnabled(false);
+            DevModeBridge.cancelPlacement();
+            status = ConveyorPlacementController.setEnabled(true);
+            return status;
+        }
+        ConveyorPlacementController.cancel();
         if ("basic-rail".equals(piece.getKey())) {
             DevModeBridge.cancelPlacement();
             RailRoutePreview.configure("Settlement rail", 46353, 22, 3,
