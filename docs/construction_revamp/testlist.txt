@@ -1814,3 +1814,19 @@ Con Revamp console sub-tab organization
 [ ] Output/status remains visible while switching between all six sub-tabs.
 [ ] Switching away from Con Revamp and back during the same client session preserves the selected Con Revamp sub-tab.
 [ ] Existing buttons still invoke the same commands/client actions as before the UI reorganization.
+
+RTS logout/relogin lifecycle regression — IMPLEMENTED / NEEDS RUNTIME TEST (2026-09-30)
+[x] verified-static: Class439.method5276(...) is Matrix3's actual logout reset and always calls RSSocket.method7604(...), destroying the detached Class411 camera.
+[x] verified-static: ConstructionBuildCamera static active/settlementAutoMode were not reset by that boundary before this patch.
+[x] verified-static: enter() previously returned early whenever active=true even if the detached Class411 camera no longer existed.
+[x] Class439 now resets Construction RTS state before Matrix3's global detached-camera teardown.
+[x] enter() self-heals stale active state when IncomingPacket.method4113(...) is false or Class24.aClass411_Sub1_158 is null.
+[x] session cleanup clears transient radial selection and palette/MMB capture locally without server synchronization.
+[ ] Pull latest main; Eclipse clean/build Client with Java 8 and restart Client. Server rebuild is not required for this patch.
+[ ] Enter settlement and confirm current RTS camera works before logout: WASD/arrows pan, Q/E rotate, MMB orbit and wheel zoom.
+[ ] Logout directly while still inside the settlement; do not use Exit Settlement first.
+[ ] Log back in and confirm ordinary world movement/camera works immediately.
+[ ] Enter the settlement again. RTS must initialize normally; player movement/input must not be frozen and no stale "already active" state should block camera creation.
+[ ] Repeat logout/relogin once while a worker/player RTS selection is committed. After login/re-entry there must be no stale committed selection/input capture from the previous session.
+[ ] Optional disconnect-equivalent confidence check: if the client experiences a session reset where 2835=0 is missed, next settlement enter must still self-heal via missing detached-camera detection.
+[ ] After focused acceptance, run the normal RS3 smoke pass because this touches the Matrix3 client logout/session boundary.
