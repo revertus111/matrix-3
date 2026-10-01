@@ -2047,3 +2047,10 @@
 - Core endpoint wiring and visible transport path are accepted.
 - Full V1.6 acceptance remains open for backpressure/recovery, persistence across exit/relog, total item conservation, and unsafe debug/delete rejection.
 - Status: BASIC VERTICAL SLICE RUNTIME VERIFIED / DEEP GATE PENDING.
+
+2026-09-30 - Con Revamp console sub-tab cleanup
+- Reorganized the monolithic Test Console -> Con Revamp workspace into Settlement, Workers, Production, Conveyors, Debug and Tools sub-tabs.
+- Each section now has its own vertical scroll area while the shared Output/status card stays visible below the tabs.
+- Split Asset Studio launching from conveyor runtime controls so developer tooling and conveyor testing no longer share one mixed card.
+- Existing command strings, worker/RTS behavior, settlement gameplay, storage/processing ownership and conveyor runtime logic are unchanged.
+- The selected Con Revamp sub-tab is naturally retained while the Test Console panel instance remains alive.

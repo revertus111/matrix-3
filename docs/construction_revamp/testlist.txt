@@ -1801,3 +1801,16 @@ Conveyor Payload Belt Anchor follow-up (2026-09-30)
 [ ] Reopen the original item: its total visual position is unchanged from the saved authoring position, with no doubled offset.
 [ ] Reset Belt Anchor: all payloads lose only the shared lane correction and retain their individual visual profiles.
 [ ] Restart Client and confirm the saved Belt Anchor reloads from conveyor_payload_profiles.properties.
+
+Con Revamp console sub-tab organization
+[ ] Test Console -> Con Revamp shows Settlement, Workers, Production, Conveyors, Debug and Tools sub-tabs.
+[ ] Settlement contains enter/exit/status/build-palette controls.
+[ ] Workers contains RTS control, selected-worker commands, worker diagnostics and Needs HUD debug.
+[ ] Production contains Storage and Processing controls.
+[ ] Conveyors contains persistent/demo run controls, Conveyor Transport Core and Conveyor Payload Visual Profiles.
+[ ] Debug contains the existing Construction debug master/categories plus Clear/Export.
+[ ] Tools contains Asset Studio without duplicating conveyor runtime controls.
+[ ] Each Con Revamp sub-tab scrolls independently without horizontal scrolling.
+[ ] Output/status remains visible while switching between all six sub-tabs.
+[ ] Switching away from Con Revamp and back during the same client session preserves the selected Con Revamp sub-tab.
+[ ] Existing buttons still invoke the same commands/client actions as before the UI reorganization.

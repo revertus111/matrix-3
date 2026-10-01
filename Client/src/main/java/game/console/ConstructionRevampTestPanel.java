@@ -6,6 +6,7 @@ import game.ConstructionRadialSelection;
 import game.ConveyorPayloadVisualProfiles;
 import game.ConveyorRunPreview;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Point;
@@ -20,6 +21,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
+import javax.swing.JTabbedPane;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
@@ -38,6 +40,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
             "Ready. Construction development controls loaded.", 4);
+
+    private final JTabbedPane sectionTabs = new JTabbedPane();
 
     private final JSpinner workerSelector =
             new JSpinner(new SpinnerNumberModel(1, 1, 999999, 1));
@@ -59,46 +63,86 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
     private long physicalStorageClearAllArmedUntil;
 
     public ConstructionRevampTestPanel() {
-        ViewportWidthPanel content = new ViewportWidthPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        ViewportFillPanel content = new ViewportFillPanel();
+        content.setLayout(new BorderLayout());
         content.setBackground(ConsoleTheme.PANEL);
-        content.setBorder(ConsoleTheme.panelPadding(18, 16, 18, 16));
         content.setMinimumSize(new Dimension(0, 0));
 
-        content.add(ConsoleTheme.titleLabel("CON REVAMP"));
-        content.add(Box.createVerticalStrut(4));
-        content.add(ConsoleTheme.subtitleLabel("Construction Development"));
-        content.add(Box.createVerticalStrut(16));
+        content.add(createHeader(), BorderLayout.NORTH);
 
-        content.add(createSettlementCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createWorkerControlCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createAllowedJobsCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createWorkerDiagnosticsCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createDebugCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createStorageCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createProcessingCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createNeedsHudCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createDevelopmentToolsCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createConveyorPayloadTunerCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createConveyorTransportCard());
-        content.add(Box.createVerticalStrut(12));
-        content.add(createStatusCard());
-        content.add(Box.createVerticalGlue());
+        configureSectionTabs();
+        content.add(sectionTabs, BorderLayout.CENTER);
+
+        JPanel statusHost = new JPanel(new BorderLayout());
+        statusHost.setOpaque(false);
+        statusHost.setBorder(ConsoleTheme.panelPadding(0, 16, 16, 16));
+        statusHost.add(createStatusCard(), BorderLayout.CENTER);
+        content.add(statusHost, BorderLayout.SOUTH);
 
         setViewportView(content);
         setHorizontalScrollBarPolicy(HORIZONTAL_SCROLLBAR_NEVER);
-        setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_AS_NEEDED);
+        setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_NEVER);
         ConsoleTheme.styleScrollPane(this);
+    }
+
+    private JPanel createHeader() {
+        JPanel header = new JPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        header.setBackground(ConsoleTheme.PANEL);
+        header.setOpaque(true);
+        header.setBorder(ConsoleTheme.panelPadding(18, 16, 8, 16));
+        header.add(ConsoleTheme.titleLabel("CON REVAMP"));
+        header.add(Box.createVerticalStrut(4));
+        header.add(ConsoleTheme.subtitleLabel("Construction Development"));
+        return header;
+    }
+
+    private void configureSectionTabs() {
+        sectionTabs.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+        sectionTabs.setFont(ConsoleTheme.SMALL_FONT);
+        sectionTabs.setForeground(ConsoleTheme.TEXT);
+        sectionTabs.setBackground(ConsoleTheme.PANEL);
+
+        sectionTabs.addTab("Settlement", createSectionTab(
+                createSettlementCard()));
+        sectionTabs.addTab("Workers", createSectionTab(
+                createWorkerControlCard(),
+                createAllowedJobsCard(),
+                createWorkerDiagnosticsCard(),
+                createNeedsHudCard()));
+        sectionTabs.addTab("Production", createSectionTab(
+                createStorageCard(),
+                createProcessingCard()));
+        sectionTabs.addTab("Conveyors", createSectionTab(
+                createConveyorToolsCard(),
+                createConveyorTransportCard(),
+                createConveyorPayloadTunerCard()));
+        sectionTabs.addTab("Debug", createSectionTab(
+                createDebugCard()));
+        sectionTabs.addTab("Tools", createSectionTab(
+                createToolsCard()));
+    }
+
+    private JScrollPane createSectionTab(JPanel... cards) {
+        ViewportWidthPanel section = new ViewportWidthPanel();
+        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+        section.setBackground(ConsoleTheme.PANEL);
+        section.setBorder(ConsoleTheme.panelPadding(12, 8, 12, 8));
+        section.setMinimumSize(new Dimension(0, 0));
+
+        for (int i = 0; i < cards.length; i++) {
+            if (i > 0) {
+                section.add(Box.createVerticalStrut(12));
+            }
+            section.add(cards[i]);
+        }
+        section.add(Box.createVerticalGlue());
+
+        JScrollPane scroll = new JScrollPane(section);
+        scroll.setHorizontalScrollBarPolicy(HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_AS_NEEDED);
+        ConsoleTheme.styleScrollPane(scroll);
+        return scroll;
     }
 
     private JPanel createSettlementCard() {
@@ -597,33 +641,26 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         return card;
     }
 
-    private JPanel createDevelopmentToolsCard() {
-        JPanel card = ConsoleTheme.createCard("Development Tools");
+    private JPanel createConveyorToolsCard() {
+        JPanel card = ConsoleTheme.createCard("Conveyor Runs");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Asset Studio remains the primary Construction object/rail discovery tool. "
-                + "ConveyorRun now has a server-owned persistent A->B test path; the original "
-                + "short/medium/long visual demo remains available separately.",
-                5));
+                "ConveyorRun has a server-owned persistent A->B test path. "
+                + "The original short/medium/long visual demo remains available separately.",
+                4));
         card.add(Box.createVerticalStrut(8));
 
-        JButton studio = new JButton("Open Asset Studio");
         JButton conveyorDemo = new JButton("Show Conveyor A->B Demo");
         JButton conveyorHide = new JButton("Hide Conveyor Demo");
         JButton conveyorPersist = new JButton("Create Persistent Conveyor");
         JButton conveyorClear = new JButton("Clear Persistent Conveyors");
         JButton conveyorStatus = new JButton("Conveyor Status");
-        styleButton(studio);
         styleButton(conveyorDemo);
         styleButton(conveyorHide);
         styleButton(conveyorPersist);
         styleButton(conveyorClear);
         styleButton(conveyorStatus);
 
-        studio.addActionListener(e -> {
-            ObjectLabWindow.openEmpty();
-            setStatus("Matrix3 Asset Studio opened.");
-        });
         conveyorDemo.addActionListener(e ->
                 setStatus(ConveyorRunPreview.showDemoNearPlayer()));
         conveyorHide.addActionListener(e ->
@@ -639,12 +676,35 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
         buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 123));
-        buttons.add(studio);
         buttons.add(conveyorDemo);
         buttons.add(conveyorHide);
         buttons.add(conveyorPersist);
         buttons.add(conveyorClear);
         buttons.add(conveyorStatus);
+        card.add(buttons);
+        return card;
+    }
+
+    private JPanel createToolsCard() {
+        JPanel card = ConsoleTheme.createCard("Construction Tools");
+        card.add(Box.createVerticalStrut(9));
+        card.add(ConsoleTheme.createWrappedText(
+                "Construction-specific developer utilities that do not belong to settlement runtime control, worker control, production, conveyors, or debug.",
+                4));
+        card.add(Box.createVerticalStrut(8));
+
+        JButton studio = new JButton("Open Asset Studio");
+        styleButton(studio);
+        studio.addActionListener(e -> {
+            ObjectLabWindow.openEmpty();
+            setStatus("Matrix3 Asset Studio opened.");
+        });
+
+        JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
+        buttons.setOpaque(false);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        buttons.add(studio);
         card.add(buttons);
         return card;
     }
@@ -1050,6 +1110,37 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
                 getViewport().setViewPosition(viewPosition);
             }
         });
+    }
+
+    private static final class ViewportFillPanel extends JPanel implements Scrollable {
+
+        private static final long serialVersionUID = 3229413296637931164L;
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 16;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            int extent = orientation == SwingConstants.VERTICAL ? visibleRect.height : visibleRect.width;
+            return Math.max(16, extent - 16);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return true;
+        }
     }
 
     private static final class ViewportWidthPanel extends JPanel implements Scrollable {
