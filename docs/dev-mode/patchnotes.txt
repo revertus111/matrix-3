@@ -253,3 +253,14 @@
 - Group IDs are included in PartState snapshots and project/selection JSON; project format is now v6 while v1-v5 remain readable.
 - Added visible group labels/status in the editor.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+2026-10-01 - Live Model Editor clear-selection hotkey + reusable Part / Assembly Library V1
+- Added C as the Part/Multi Clear Selection hotkey and updated the Clear button label.
+- Renamed selection-asset controls to Save Part / Assembly and Add Part / Assembly.
+- Selection assets are now importable into a different live object edit session.
+- Asset format v2 stores donor object/type ownership per part so cache-backed components can be re-resolved from another object without embedding raw mesh bytes.
+- Imported donor parts render/pick through their owning cache source and participate in normal move/rotate/scale/group/duplicate/Tile Snap/history workflows.
+- Imported list labels show donor object ID + donor part index.
+- Project format is now v7 so imported source ownership survives project save/load; older v1-v6 projects remain readable.
+- Group / Glue core runtime accepted by user: clicking one grouped member correctly selects the whole group.
+- No cache writer or server/world ownership changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST for cross-object asset import.
