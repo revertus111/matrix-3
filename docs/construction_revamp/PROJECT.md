@@ -2612,8 +2612,8 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ### Settlement Minimap V1.1 — RTS heading synchronization + object-interaction self-selection — 2026-10-01
 
-- Status: **PARTIALLY RUNTIME VERIFIED**. RTS minimap heading synchronization is runtime accepted; rotated-click alignment and object-interaction self-selection still need focused confirmation.
-- ConstructionBuildCamera.rtsYawRadians remains the authoritative RTS yaw used by Q/E and horizontal MMB orbit. A small read-only helper converts that yaw into Matrix3's existing 14-bit 0..16383 minimap-angle domain; no second camera heading owner is introduced.
+- Status: **PARTIALLY RUNTIME VERIFIED**. Minimap center, compass synchronization, NPC/player/map-icon overlay synchronization, rotated-click alignment and the no-self object-move guard have runtime acceptance. The new shared yaw-handedness correction for Q/E/MMB is IMPLEMENTED / NEEDS RUNTIME TEST, and the remaining broader object-interaction regressions stay separate.
+- ConstructionBuildCamera.rtsYawRadians remains the authoritative RTS yaw used by Q/E and horizontal MMB orbit. Runtime evidence showed detached RTS yaw has the opposite handedness from Matrix3's minimap heading domain, so the shared helper now negates yaw once during 14-bit conversion; no second heading owner is introduced.
 - Class464.method5484(...) keeps its stock minimap renderer. While RTS owns heading, the render angle uses the same vanilla relationship already present in Matrix3: negative camera yaw plus the existing minimap offset. Outside RTS the old angle path is untouched.
 - client.method7990() uses positive RTS yaw plus that same offset for the inverse minimap click transform. This keeps rotated visual coordinates and clicked world coordinates aligned.
 - Object-click regression root cause was ConstructionRadialSelection.handleMenuAction(...): supported worker object clicks intentionally queued a worker order and then returned false, allowing Matrix3's native player object packet to continue even when self was not selected.
@@ -2626,7 +2626,8 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Settlement RTS visibility radius extension is **RUNTIME VERIFIED**: Class613 now gives only native large dynamic scenes (the 168x168 Construction settlement signature) a 64-tile minimum Class523 visibility radius; normal world and smaller instances retain stock graphics-setting radii. The 64-tile minimum removed the reported distant terrain/object culling at wide RTS zoom without reopening camera ownership or projection depth.
 - Rotated minimap click alignment is **RUNTIME VERIFIED**: clicking the rotated RTS minimap lands the camera focus on the intended world tile.
 - RTS object-interaction self-move guard is **RUNTIME VERIFIED**: scene-object interaction no longer moves the player when self is not selected.
-- **Resume Here:** current RTS-camera defect is minimap rotation direction: Q/E and MMB orbit rotate the minimap in the opposite visual direction from the desired RTS behavior. Trace only the shared yaw-sign/inverse seam before patching.
+- RTS minimap yaw handedness correction is **IMPLEMENTED / NEEDS RUNTIME TEST**: Q/E and horizontal MMB still own the same accepted camera orbit, while the shared RTS-to-Matrix3 minimap heading conversion now inverts handedness once. Raster, compass, dots/icons and rotated-click inverse consumers remain structurally unchanged.
+- **Resume Here:** pull/build Client and test Q/E + horizontal MMB direction first. Confirm minimap/compass now rotate intuitively with the camera, NPC/player/map-icon dots remain aligned, and rotated minimap click-to-focus still lands on the visible clicked tile.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
