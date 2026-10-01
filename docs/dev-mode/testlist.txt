@@ -1,10 +1,10 @@
 Bundle 1.4 - Real Object Placement Preview quick gate
 [ ] Eclipse/Java 8: clean/build Client with no compilation errors.
-[ ] Dev Mode ON -> open Dev Spawn -> Object and search a term that returns multiple usable object results.
+[ ] Dev Mode ON -> open Dev Spawn -> Object and choose any usable starting object ID.
 [ ] Select one result, set a valid type/rotation, click Live Place Object, and confirm the Spawn Browser hides/focus returns to the game canvas.
 [ ] Move across world tiles and confirm one fully rendered normal-material object follows the hovered tile with no white ghost tint or transparency.
 [ ] Stop moving the mouse and confirm the preview remains on the last hovered tile rather than expiring/flickering.
-[ ] Press 1 and 2 (also numpad 1/2 if convenient) and confirm selection cycles backward/forward through the current Object Spawn search results while type/rotation stay unchanged.
+[ ] Press 1 and confirm the active preview changes to object ID-1; press 2 and confirm it changes to ID+1. Repeat with numpad 1/2 if convenient. Type/rotation must stay unchanged and the browser search list must not control stepping.
 [ ] Left-click three tiles and confirm three real Dev-owned runtime objects spawn while the player does not Walk Here and the live preview remains armed.
 [ ] Press Escape and confirm the preview disappears immediately; subsequent 1/2 and left-click behavior returns to normal.
 [ ] Re-arm Live Place, then switch to Once/Continuous/Paint or Move/Duplicate and confirm the live preview clears instead of overlapping another placement owner.

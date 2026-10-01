@@ -1,3 +1,8 @@
+2026-09-30 - Dev live object placement raw-ID cycling fix
+- Changed active Live Place hotkeys from browser-search-result cycling to direct adjacent object-definition ID stepping.
+- 1 now selects ID-1 and 2 selects ID+1 (with cache-range wrap); object type and rotation remain unchanged.
+- Hotkeys are still consumed only while Live Place is active, so normal 1/2 ownership is unaffected outside the tool.
+
 2026-09-30 - Dev Mode real object placement preview
 - Added Live Place Object to the existing Dev Spawn Object browser.
 - Selected objects render client-only at the hovered world tile through Matrix3's normal ObjectDefinitions model path with no Construction ghost tint/alpha.

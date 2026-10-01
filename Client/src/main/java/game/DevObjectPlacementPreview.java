@@ -43,7 +43,7 @@ public final class DevObjectPlacementPreview {
         clearHoveredTile();
         lastRenderedCycle = Integer.MIN_VALUE;
         return "Live placement: " + objectName + " (" + objectId + "). Move the mouse over the world; "
-                + "1/2 cycle search results, left-click places, Escape cancels.";
+                + "1/2 change object ID, left-click places, Escape cancels.";
     }
 
     public static boolean isActive() {
@@ -60,8 +60,33 @@ public final class DevObjectPlacementPreview {
         objectId = id;
         objectName = resolveName(id);
         lastRenderedCycle = Integer.MIN_VALUE;
-        return "Live placement: " + objectName + " (" + objectId + "), type " + objectType
-                + ", rotation " + rotation + ".";
+        return describeCurrent();
+    }
+
+    public static String cycleObjectId(int delta) {
+        if (!active) {
+            return "Live object placement is not active.";
+        }
+        if (delta != -1 && delta != 1) {
+            return describeCurrent();
+        }
+
+        int count = DevDefinitionBridge.getObjectCount();
+        int next = objectId + delta;
+        if (count > 0) {
+            if (next < 0) {
+                next = count - 1;
+            } else if (next >= count) {
+                next = 0;
+            }
+        } else if (next < 0) {
+            next = 0;
+        }
+
+        objectId = next;
+        objectName = resolveName(next);
+        lastRenderedCycle = Integer.MIN_VALUE;
+        return describeCurrent();
     }
 
     static void observeWorldTile(int worldX, int worldY, int plane) {
@@ -185,6 +210,11 @@ public final class DevObjectPlacementPreview {
         } else {
             model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
         }
+    }
+
+    private static String describeCurrent() {
+        return "Live placement: " + objectName + " (" + objectId + "), type " + objectType
+                + ", rotation " + rotation + ".";
     }
 
     private static String resolveName(int id) {

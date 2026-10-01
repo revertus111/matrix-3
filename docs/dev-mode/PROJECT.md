@@ -175,7 +175,7 @@ This table is the authoritative user-facing milestone table across chats.
 - [x] Render the object with its normal material/lighting; do not apply Construction ghost tint or face alpha.
 - [x] Left-click the hovered world tile to place through the existing owner-validated `devspawn object` path and consume Walk Here while the tool owns placement.
 - [x] Keep placement armed after confirmation for rapid repeated object spawning.
-- [x] 1 / 2 cycle backward/forward through the current Object Spawn search results while preserving type and rotation.
+- [x] 1 / 2 step the active raw object definition ID backward/forward while preserving type and rotation; the browser search list is not involved.
 - [x] Escape / Cancel / Dev Mode OFF cleanly clears the placement preview.
 - [x] Keep Live Place mutually exclusive with ordinary Once/Continuous/Paint and Move/Duplicate placement modes.
 - [ ] Eclipse/Java 8 Client clean-build.
@@ -445,7 +445,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Phase 1 Bundle 1.4 Real Object Placement Preview: added a client-only normal-material object cursor to Dev Spawn, current-search-result cycling on 1/2, repeated LMB confirmation through the existing server devspawn path, and clean Escape/mode teardown.
+- Phase 1 Bundle 1.4 Real Object Placement Preview: corrected 1/2 hotkeys to step raw adjacent object definition IDs directly instead of depending on the browser's visible search-result list.
 
 **Current phase:**
 
@@ -458,7 +458,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Next checklist item:**
 
-- One short Client runtime gate: search for an object query with multiple results, choose one, click Live Place Object, verify normal non-ghost rendering follows the hovered tile, use 1/2 to cycle results, left-click several placements without walking, then Escape and confirm the preview disappears.
+- One short Client runtime gate: choose any valid object, click Live Place Object, verify normal non-ghost rendering follows the hovered tile, use 1/2 to move to ID-1/ID+1, left-click several placements without walking, then Escape and confirm the preview disappears.
 
 **Current state / next action:**
 

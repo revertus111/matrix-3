@@ -750,13 +750,13 @@ public final class DevModeBridge {
                     if (DevObjectPlacementPreview.isActive()) {
                         if (keyEvent.getKeyCode() == KeyEvent.VK_1
                                 || keyEvent.getKeyCode() == KeyEvent.VK_NUMPAD1) {
-                            DevSpawnBrowserWindow.cyclePreviewObject(-1);
+                            notifyPlacementStatus(DevObjectPlacementPreview.cycleObjectId(-1));
                             keyEvent.consume();
                             return;
                         }
                         if (keyEvent.getKeyCode() == KeyEvent.VK_2
                                 || keyEvent.getKeyCode() == KeyEvent.VK_NUMPAD2) {
-                            DevSpawnBrowserWindow.cyclePreviewObject(1);
+                            notifyPlacementStatus(DevObjectPlacementPreview.cycleObjectId(1));
                             keyEvent.consume();
                             return;
                         }
