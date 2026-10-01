@@ -1207,18 +1207,48 @@ final class LiveModelEditorParts {
 
     private static void transformVertices(Class159 raw, Component component, PartState state) {
         if (component.vertices.length == 0) return;
-        for (int vertex : component.vertices) {
-            if (!hasVertexCoordinates(raw, vertex)) return;
-        }
 
         /*
-         * The editor gizmo, shared Multi pivot and authored move offsets all use
-         * the component's cached bounds center. Rotate/scale the actual vertices
-         * around that same center so the visible mesh cannot orbit away from the
-         * gizmo while yaw changes.
+         * Preserve the editor's existing per-part scale semantics (scale around
+         * the average vertex centroid), but rotate the resulting geometry around
+         * the cached bounds center used by the ROT gizmo and Multi pivot math.
+         * This keeps old scaled projects stable at yaw=0 while preventing yaw
+         * from making asymmetric parts orbit away from the visible pivot.
          */
-        transformVerticesAround(raw, component.vertices,
-                component.centerX, component.centerY, component.centerZ, state);
+        long scaleCx = 0L, scaleCy = 0L, scaleCz = 0L;
+        for (int vertex : component.vertices) {
+            if (!hasVertexCoordinates(raw, vertex)) return;
+            scaleCx += raw.anIntArray1782[vertex];
+            scaleCy += raw.anIntArray1777[vertex];
+            scaleCz += raw.anIntArray1797[vertex];
+        }
+        scaleCx /= component.vertices.length;
+        scaleCy /= component.vertices.length;
+        scaleCz /= component.vertices.length;
+
+        double radians = Math.toRadians(state.yaw);
+        double sin = Math.sin(radians);
+        double cos = Math.cos(radians);
+        for (int vertex : component.vertices) {
+            double scaledX = scaleCx
+                    + (raw.anIntArray1782[vertex] - scaleCx) * state.scaleX / 100.0;
+            double scaledY = scaleCy
+                    + (raw.anIntArray1777[vertex] - scaleCy) * state.scaleY / 100.0;
+            double scaledZ = scaleCz
+                    + (raw.anIntArray1797[vertex] - scaleCz) * state.scaleZ / 100.0;
+
+            double x = scaledX - component.centerX;
+            double z = scaledZ - component.centerZ;
+            double rx = x * cos + z * sin;
+            double rz = z * cos - x * sin;
+
+            raw.anIntArray1782[vertex] =
+                    (int) Math.round(component.centerX + rx + state.moveX);
+            raw.anIntArray1777[vertex] =
+                    (int) Math.round(scaledY + state.moveY);
+            raw.anIntArray1797[vertex] =
+                    (int) Math.round(component.centerZ + rz + state.moveZ);
+        }
     }
 
     private static void transformAllAround(Class159 raw, int cx, int cy, int cz,
