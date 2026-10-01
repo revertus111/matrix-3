@@ -1,3 +1,11 @@
+Live Model Editor duplicate preview cache race fix - 2026-10-01
+[x] VERIFIED-STATIC: duplicate Model[] is local during construction and assigned to cachedDuplicateModels only after the fill loop completes.
+[x] VERIFIED-STATIC: replacement Model[] uses the same publish-after-build pattern to avoid the equivalent race.
+[x] VERIFIED-STATIC: no geometry, saved-project, cache-write or world/server behavior changed.
+[ ] RUNTIME: reproduce continuous duplicate editing/revisions and confirm stage=authoring-duplicates at LiveModelEditorPreview.renderPartModels:1375 no longer appears.
+[ ] RUNTIME: rapidly move/rotate/scale/select duplicated parts while the preview is rendering and confirm duplicates remain visible/stable.
+[ ] RUNTIME: exercise replacement parts during rapid editing and confirm no authoring-replacements array race appears.
+
 Live Model Editor duplicate face-index fix - 2026-10-01
 [x] VERIFIED-STATIC: componentOnlyRaw validates sourceA/sourceB/sourceD against map.length before any remap-table access.
 [x] VERIFIED-STATIC: duplicate raw generation reuses one decoded source raw per rebuild and does not mutate that source.

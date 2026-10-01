@@ -1,3 +1,9 @@
+2026-10-01 - Live Model Editor duplicate preview cache race fix
+- Runtime stack location identified the remaining authoring-duplicates ArrayIndexOutOfBoundsException at LiveModelEditorPreview.renderPartModels while filling cachedDuplicateModels.
+- Duplicate and replacement Model arrays are now built entirely in local variables and published to the shared preview cache only after the array is complete.
+- This removes the race where another render/revision pass could replace a shared cache array while an earlier pass was still writing indexed entries into it.
+- Geometry decoding, duplicate transforms, project persistence and cache/world ownership are unchanged.
+
 2026-10-01 - Live Model Editor duplicate face-index fix
 - Runtime V2 diagnostics isolated the remaining ArrayIndexOutOfBoundsException to authoring-duplicates.
 - componentOnlyRaw now validates each decoded face vertex id against the source vertex-map length before indexing the remap table.

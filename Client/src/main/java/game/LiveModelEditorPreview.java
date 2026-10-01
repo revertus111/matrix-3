@@ -1370,13 +1370,14 @@ public final class LiveModelEditorPreview {
 
             try {
                 List<Class159> duplicateRaws = PARTS.buildDuplicateRaws();
-                cachedDuplicateModels = new Model[duplicateRaws.size()];
+                Model[] duplicateModels = new Model[duplicateRaws.size()];
                 for (int i = 0; i < duplicateRaws.size(); i++) {
-                    cachedDuplicateModels[i] = safeBuildDefinitionModel(
+                    duplicateModels[i] = safeBuildDefinitionModel(
                             "duplicate", i, renderer, definition, definition,
                             duplicateRaws.get(i), rotation,
                             ground, upperGround, sceneX, sceneY, sceneZ);
                 }
+                cachedDuplicateModels = duplicateModels;
             } catch (RuntimeException ex) {
                 cachedDuplicateModels = new Model[0];
                 recordPartRenderFault("authoring-duplicates", -1, revision, ex);
@@ -1384,15 +1385,16 @@ public final class LiveModelEditorPreview {
 
             try {
                 List<LiveModelEditorParts.ReplacementRaw> replacements = PARTS.buildReplacementRaws();
-                cachedReplacementModels = new Model[replacements.size()];
+                Model[] replacementModels = new Model[replacements.size()];
                 for (int i = 0; i < replacements.size(); i++) {
                     LiveModelEditorParts.ReplacementRaw replacement = replacements.get(i);
                     ObjectDefinitions material = definitionFor(replacement.objectId);
-                    cachedReplacementModels[i] = material == null ? null
+                    replacementModels[i] = material == null ? null
                             : safeBuildDefinitionModel("replacement", replacement.partIndex,
                                     renderer, material, definition, replacement.raw, rotation,
                                     ground, upperGround, sceneX, sceneY, sceneZ);
                 }
+                cachedReplacementModels = replacementModels;
             } catch (RuntimeException ex) {
                 cachedReplacementModels = new Model[0];
                 recordPartRenderFault("authoring-replacements", -1, revision, ex);
