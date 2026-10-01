@@ -574,7 +574,7 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 
 ### Live Model Editor — Group / Glue V1 — 2026-10-01
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Status: **CORE RUNTIME VERIFIED / DEEPER GATE PENDING** under explicit SAP AAA.
 - Added durable Part/Multi group membership as the first Glue/assembly slice.
 - **Ctrl+G** groups the current editable selection; **Ctrl+Shift+G** ungroups it. Bare **G** remains the existing Move hotkey.
 - Clicking/selecting any member of a group expands the editor selection to the full active group, including viewport picking and Part-list selection.
@@ -587,4 +587,23 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Group membership is stored on PartState, travels through the existing 64-step Undo/Redo snapshots, and is serialized in project/selection JSON. Project format advances from v5 to **v6**; older v1-v5 projects remain loadable with ungrouped default state.
 - Part labels/status now expose group IDs so assembly membership is visible during authoring.
 - No second transform engine, renderer owner, cache writer, world/server mutation, Construction placement, or persistent game-state path was introduced.
-- **Resume Here (Live Model Editor):** Multi-select 3+ pieces -> Ctrl+G -> click one member and confirm the whole group reselects -> move/rotate/scale/Snap To Tile -> Ctrl+D and verify the copy is an independent group -> Ctrl+Shift+G on the copy -> Ctrl+Z/Ctrl+Y -> save/load project and verify membership survives.
+- **Runtime acceptance:** user confirmed grouping works and specifically verified the key UX win: clicking one member reselects the whole grouped assembly. Deeper transform/duplicate/save-load checks remain pending.
+### Live Model Editor — Clear Selection + Reusable Part / Assembly Library V1 — 2026-10-01
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Added **C = Clear Selection** for Part/Multi editing. The existing Clear button now advertises `[C]`; Whole mode is intentionally not cleared by this shortcut.
+- Reworked the existing selection-asset path into the first reusable **Part / Assembly Library** workflow:
+  - open a donor object in Live Model Editor;
+  - Matrix3's existing connected-component scan lists/highlights its detected parts;
+  - select one donor part or a grouped/multi-part assembly;
+  - **Save Part / Assembly** into `dev-model-assets`;
+  - reopen/load the target project and choose **Add Part / Assembly**;
+  - imported parts are appended to the current edit session and remain fully editable.
+- Selection-asset format advances from v1 to **v2**. Assets remain lightweight/cache-backed: each reusable part records its donor object ID/type, donor component index, transforms, grouping and authored state rather than embedding raw mesh bytes.
+- Added per-part donor ownership to PartState plus a small resolved-source cache so imported geometry can come from a different object definition while still using the current Live Model Editor transform/history authority.
+- Imported parts participate in picking/highlighting, move/rotate/scale, Group/Glue, Ctrl+D, Tile Snap, replacements, Undo/Redo and project persistence.
+- Project format advances from v6 to **v7** so imported donor ownership survives save/load; older v1-v6 projects remain loadable.
+- Imported list entries identify their donor as `Asset #<objectId> Part <n> [imported]`.
+- Current V1 intentionally reuses the existing donor-object editor as the scanner. Save the current target project before opening a donor object; a side-by-side donor scanner/browser is future UX work if this round-trip proves too slow.
+- No cache writer, raw geometry export, server/world mutation, Construction placement ownership or persistent game-state path was added.
+- **Resume Here (Live Model Editor):** press C to clear selection; save the current conveyor project; open a donor wooden object, click/highlight the desired plank component, Save Part / Assembly; reload the conveyor project, Add Part / Assembly, then move/rotate/group/snap the imported plank into place and save/reload once.
