@@ -360,7 +360,20 @@ public final class ConstructionBuildCamera {
         // Free Build remains an explicit in-session palette choice.
         cameraMode = CameraMode.RTS;
         if (active) {
-            return "Construction " + cameraMode.getDisplayName() + " camera is already active.";
+            /*
+             * A logout can tear down Matrix3's detached Class411 camera before
+             * the final settlement CSVar=0 reaches this client. In that case the
+             * Construction static session survives while its actual camera owner
+             * is gone. Treat that combination as stale and rebuild cleanly.
+             */
+            if (!IncomingPacket.method4113((byte) 0)
+                    || Class24.aClass411_Sub1_158 == null) {
+                resetForSessionBoundary();
+                cameraMode = CameraMode.RTS;
+            } else {
+                return "Construction " + cameraMode.getDisplayName()
+                        + " camera is already active.";
+            }
         }
         if (Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976 == null) {
             return "Construction camera is waiting for the local player.";
@@ -393,6 +406,39 @@ public final class ConstructionBuildCamera {
                 + " owned=" + ownsFreeCamera
                 + " mode=" + cameraMode.name());
         return "Construction " + cameraMode.getDisplayName() + " camera active.";
+    }
+
+    /**
+     * Client-session hard reset. This deliberately does not depend on the server
+     * settlement-exit packet because logout/disconnect may close the connection
+     * before that packet is processed.
+     */
+    public static void resetForSessionBoundary() {
+        settlementAutoMode = false;
+
+        boolean freeCameraWasActive =
+                IncomingPacket.method4113((byte) 0)
+                && Class24.aClass411_Sub1_158 != null;
+        if (ownsFreeCamera && freeCameraWasActive) {
+            RSSocket.method7604(0);
+        }
+
+        restoreRtsMinimapMarker();
+        active = false;
+        ownsFreeCamera = false;
+        cameraMode = CameraMode.RTS;
+        lastTickCycle = Integer.MIN_VALUE;
+        lastTickNanos = 0L;
+        clearVelocity();
+        clickStopLatched = false;
+        tickReported = false;
+        inputReported = false;
+        stopReported = false;
+        failureReported = false;
+        resetRtsState();
+
+        ConstructionRadialSelection.resetForSessionBoundary();
+        ConstructionPaletteOverlay.resetForSessionBoundary();
     }
 
     public static String exit() {
