@@ -30,7 +30,6 @@ public final class DevModeBridge {
     public static final int TILE_PLACE_ACTIVE_MENU_ACTION = 1504;
     public static final int TILE_PLACE_LAST_MENU_ACTION = 1505;
     public static final int TILE_CANCEL_PLACEMENT_MENU_ACTION = 1506;
-    public static final int TILE_SAVE_OBJECT_DEF_MENU_ACTION = 1507;
     public static final int TILE_OPEN_OBJECT_LIBRARY_MENU_ACTION = 1508;
 
     public static final int NPC_INSPECT_MENU_ACTION = 1510;
@@ -216,9 +215,6 @@ public final class DevModeBridge {
                     hoveredTile.worldX, hoveredTile.worldY, hoveredTile.plane);
         }
 
-        if (DevObjectPlacementPreview.isActive()) {
-            addTileEntry("Dev > Save Object Definition", TILE_SAVE_OBJECT_DEF_MENU_ACTION, localX, localY);
-        }
         addTileEntry("Dev > Object Library", TILE_OPEN_OBJECT_LIBRARY_MENU_ACTION, localX, localY);
 
         if (placementTarget != null && placementMode == PlacementMode.MOVE) {
@@ -459,20 +455,6 @@ public final class DevModeBridge {
             notifyPlacementStatus(cancelPlacement());
             return true;
         }
-        if (action == TILE_SAVE_OBJECT_DEF_MENU_ACTION) {
-            final DevObjectLibrary.SavedObject saved = DevObjectLibrary.saveCurrentPreview();
-            if (saved == null) {
-                notifyPlacementStatus("No active Live Place object is available to save.");
-            } else {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        DevObjectLibraryOverlay.open(saved.getId());
-                    }
-                });
-            }
-            return true;
-        }
         if (action == TILE_OPEN_OBJECT_LIBRARY_MENU_ACTION) {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
@@ -684,7 +666,6 @@ public final class DevModeBridge {
         return action == TILE_MOVE_HERE_MENU_ACTION || action == TILE_DUPLICATE_HERE_MENU_ACTION
                 || action == TILE_PLACE_ACTIVE_MENU_ACTION || action == TILE_PLACE_LAST_MENU_ACTION
                 || action == TILE_CANCEL_PLACEMENT_MENU_ACTION
-                || action == TILE_SAVE_OBJECT_DEF_MENU_ACTION
                 || action == TILE_OPEN_OBJECT_LIBRARY_MENU_ACTION;
     }
 
@@ -787,6 +768,17 @@ public final class DevModeBridge {
                         return;
                     }
                     if (DevObjectPlacementPreview.isActive()) {
+                        if (keyEvent.getKeyCode() == KeyEvent.VK_S && keyEvent.isControlDown()) {
+                            DevObjectLibrary.SavedObject saved = DevObjectLibrary.saveCurrentPreview();
+                            if (saved == null) {
+                                notifyPlacementStatus("No active Live Place object is available to save.");
+                            } else {
+                                notifyPlacementStatus("Saved object definition: "
+                                        + saved.getLabel() + " (#" + saved.getId() + ").");
+                            }
+                            keyEvent.consume();
+                            return;
+                        }
                         if (keyEvent.getKeyCode() == KeyEvent.VK_1
                                 || keyEvent.getKeyCode() == KeyEvent.VK_NUMPAD1) {
                             notifyPlacementStatus(DevObjectPlacementPreview.cycleObjectId(-1));

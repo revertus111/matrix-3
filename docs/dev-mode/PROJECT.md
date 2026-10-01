@@ -380,7 +380,7 @@ This table is the authoritative user-facing milestone table across chats.
 | Last-used placement target | 1 | 1.3 | NEEDS TEST | Session-only Place Last tile action. |
 | Placement cancellation | 1 | 1.3 | NEEDS TEST | Browser/tile explicit cancel plus non-consuming AWT Escape observation. |
 | Object placement rotation | 1 | 1.3 | NEEDS TEST | Fixed, Cycle, Random 0-3. |
-| Real object placement preview | 1 | 1.4 | NEEDS TEST | Live Inspect O arms a fully rendered client-only object; 1/2 browse raw IDs with auto type, right-click saves definition snapshots to the in-client Object Library. |
+| Real object placement preview | 1 | 1.4 | NEEDS TEST | Live Inspect O arms a fully rendered client-only object; 1/2 browse raw IDs with auto type, Ctrl+S saves snapshots, and the in-client Object Library supports editable labels. |
 | Phase 1 combined runtime gate | 1 | 1.2 + 1.3 | NEEDS TEST | Intentionally deferred; accumulated queue is in `docs/dev-mode/testlist.txt`. |
 | Live Inspect V1 | 2 | 2.1 | NEEDS TEST | Runtime partially proven: overlay/NPC hover/F9 lock/locked Ctrl+C work; final acceptance waits on V1.1 polish retest. |
 | Live Inspect polish + Tile/Ground Item targets | 2 | 2.2 | NEEDS TEST | Object + Ground Item display/copy runtime-proven; tile/flicker final gate remains pending. |
@@ -411,6 +411,7 @@ This table is the authoritative user-facing milestone table across chats.
 - 2026-09-30: F8 is Live Inspect's contextual-open key for supported entity tools (Object -> Live Model Editor, NPC -> Dev Inspector). Tile Editor was later retired; tile targets remain read-only inspection context.
 - 2026-09-30: Dev Time V1 is intentionally visual-only. The full client logic tick remains live because it owns networking/input/session work; only spot-animation/projectile advancement is paused/slowed/stepped.
 - 2026-09-30: Projectile timelines are shifted forward on skipped visual ticks so real `client.cycles` can continue without causing frozen projectiles to expire.
+- 2026-10-01: Dev tool save actions should converge on Ctrl+S where practical. Live Place now saves object-definition snapshots with Ctrl+S instead of a right-click save action; Object Library uses Ctrl+S for label edits.
 
 ## Testing
 
@@ -449,7 +450,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Phase 1 Bundle 1.4 Real Object Placement Preview: added persistent saved object-definition snapshots and an in-client Object Library; Tile Editor routing/source is retired from Dev Mode.
+- Phase 1 Bundle 1.4 Real Object Placement Preview: standardized saving on Ctrl+S, added draggable Object Library positioning, and split editable labels from real cache names while preserving existing saved entries.
 
 **Current phase:**
 
@@ -462,7 +463,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Next checklist item:**
 
-- One short Client runtime gate: Live Place -> right-click Save Object Definition -> verify the in-client Object Library persists the snapshot, Enter/Place re-arms it, F8 opens it in Live Model Editor, Delete removes it, and no Tile Editor entry/F8 route remains.
+- One short Client runtime gate: Live Place -> Ctrl+S several IDs -> open Object Library -> drag it, label unnamed entries and Ctrl+S, reopen to verify persistence, then check Enter/Place, F8 editor handoff, Delete removal, and no Tile Editor route.
 
 **Current state / next action:**
 

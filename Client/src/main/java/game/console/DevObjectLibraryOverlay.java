@@ -7,13 +7,18 @@ import game.DevObjectLibrary.SavedObject;
 
 import java.awt.BorderLayout;
 import java.awt.Canvas;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.IllegalComponentStateException;
 import java.awt.Point;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.util.List;
 
 import javax.swing.AbstractAction;
@@ -27,6 +32,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextField;
 import javax.swing.JWindow;
 import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
@@ -48,6 +54,7 @@ public final class DevObjectLibraryOverlay {
     private static final DefaultListModel<SavedObject> model = new DefaultListModel<SavedObject>();
     private static final JList<SavedObject> list = new JList<SavedObject>(model);
 
+    private static final JTextField labelField = new JTextField();
     private static final JLabel nameLabel = valueLabel();
     private static final JLabel idLabel = valueLabel();
     private static final JLabel typeLabel = valueLabel();
@@ -59,6 +66,11 @@ public final class DevObjectLibraryOverlay {
     private static final JLabel statusLabel = new JLabel("Right-click a Live Place preview and choose Save Object Definition.");
 
     private static boolean built;
+    private static Point dragAnchorScreen;
+    private static Point dragWindowOrigin;
+    private static boolean customPosition;
+    private static int rememberedOffsetX = MARGIN;
+    private static int rememberedOffsetY = MARGIN;
 
     private DevObjectLibraryOverlay() {
     }
@@ -134,7 +146,7 @@ public final class DevObjectLibraryOverlay {
         title.setFont(ConsoleTheme.SECTION_FONT);
         title.setForeground(ConsoleTheme.TEXT);
 
-        JLabel hint = new JLabel("F8 editor   Enter place   Delete remove   Esc close");
+        JLabel hint = new JLabel("Drag header   Ctrl+S label   F8 editor   Enter place   Delete remove   Esc close");
         hint.setFont(ConsoleTheme.SMALL_FONT);
         hint.setForeground(ConsoleTheme.MUTED_TEXT);
 
@@ -142,6 +154,9 @@ public final class DevObjectLibraryOverlay {
         header.add(Box.createVerticalStrut(3));
         header.add(hint);
         header.add(Box.createVerticalStrut(8));
+        installDragHandle(header);
+        installDragHandle(title);
+        installDragHandle(hint);
         root.add(header, BorderLayout.NORTH);
 
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -159,9 +174,16 @@ public final class DevObjectLibraryOverlay {
         JScrollPane scroll = new JScrollPane(list);
         scroll.setBorder(BorderFactory.createLineBorder(ConsoleTheme.ACCENT_DARK));
 
-        JPanel details = new JPanel(new GridLayout(8, 2, 7, 5));
+        labelField.setFont(ConsoleTheme.SMALL_FONT);
+        labelField.setForeground(ConsoleTheme.TEXT);
+        labelField.setBackground(ConsoleTheme.WINDOW);
+        labelField.setCaretColor(ConsoleTheme.TEXT);
+        labelField.setBorder(BorderFactory.createLineBorder(ConsoleTheme.ACCENT_DARK));
+
+        JPanel details = new JPanel(new GridLayout(9, 2, 7, 5));
         details.setOpaque(false);
-        addRow(details, "Name", nameLabel);
+        addComponentRow(details, "Label", labelField);
+        addRow(details, "Cache name", nameLabel);
         addRow(details, "Definition ID", idLabel);
         addRow(details, "Saved type", typeLabel);
         addRow(details, "Valid types", typesLabel);
@@ -180,22 +202,26 @@ public final class DevObjectLibraryOverlay {
 
         JButton place = new JButton("Place");
         JButton editor = new JButton("F8 - Live Model Editor");
+        JButton saveLabel = new JButton("Save Label");
         JButton remove = new JButton("Remove");
         JButton close = new JButton("Close");
         ConsoleTheme.styleButton(place);
         ConsoleTheme.styleButton(editor);
+        ConsoleTheme.styleButton(saveLabel);
         ConsoleTheme.styleButton(remove);
         ConsoleTheme.styleButton(close);
 
         place.addActionListener(e -> placeSelected());
         editor.addActionListener(e -> openSelectedInEditor());
+        saveLabel.addActionListener(e -> saveSelectedLabel());
         remove.addActionListener(e -> removeSelected());
         close.addActionListener(e -> close());
 
-        JPanel buttons = new JPanel(new GridLayout(1, 4, 6, 0));
+        JPanel buttons = new JPanel(new GridLayout(1, 5, 4, 0));
         buttons.setOpaque(false);
         buttons.add(place);
         buttons.add(editor);
+        buttons.add(saveLabel);
         buttons.add(remove);
         buttons.add(close);
 
@@ -219,7 +245,18 @@ public final class DevObjectLibraryOverlay {
         bind(KeyEvent.VK_ENTER, "place", new Runnable() {
             @Override
             public void run() {
-                placeSelected();
+                if (labelField.isFocusOwner()) {
+                    saveSelectedLabel();
+                } else {
+                    placeSelected();
+                }
+            }
+        });
+        bind(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK),
+                "saveLabel", new Runnable() {
+            @Override
+            public void run() {
+                saveSelectedLabel();
             }
         });
         bind(KeyEvent.VK_DELETE, "remove", new Runnable() {
@@ -237,8 +274,11 @@ public final class DevObjectLibraryOverlay {
     }
 
     private static void bind(int keyCode, String name, final Runnable action) {
-        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
-                .put(KeyStroke.getKeyStroke(keyCode, 0), name);
+        bind(KeyStroke.getKeyStroke(keyCode, 0), name, action);
+    }
+
+    private static void bind(KeyStroke stroke, String name, final Runnable action) {
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(stroke, name);
         root.getActionMap().put(name, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -295,6 +335,23 @@ public final class DevObjectLibraryOverlay {
         }
     }
 
+    private static void saveSelectedLabel() {
+        SavedObject entry = list.getSelectedValue();
+        if (entry == null) {
+            statusLabel.setText("Select a saved object first.");
+            return;
+        }
+        SavedObject updated = DevObjectLibrary.updateLabel(entry.getId(), labelField.getText());
+        if (updated == null) {
+            statusLabel.setText("Unable to update that saved label.");
+            return;
+        }
+        reload(updated.getId());
+        labelField.requestFocusInWindow();
+        labelField.selectAll();
+        statusLabel.setText("Saved label for object #" + updated.getId() + ".");
+    }
+
     private static void removeSelected() {
         SavedObject entry = list.getSelectedValue();
         if (entry == null) {
@@ -310,6 +367,8 @@ public final class DevObjectLibraryOverlay {
 
     private static void updateDetails(SavedObject entry) {
         if (entry == null) {
+            labelField.setText("");
+            labelField.setEnabled(false);
             set(nameLabel, "-");
             set(idLabel, "-");
             set(typeLabel, "-");
@@ -320,7 +379,9 @@ public final class DevObjectLibraryOverlay {
             set(tileLabel, "-");
             return;
         }
-        set(nameLabel, entry.getName());
+        labelField.setEnabled(true);
+        labelField.setText(entry.getLabel());
+        set(nameLabel, entry.getCacheName().length() == 0 ? "(unnamed in cache)" : entry.getCacheName());
         set(idLabel, Integer.toString(entry.getId()));
         set(typeLabel, Integer.toString(entry.getSelectedType()));
         set(typesLabel, join(entry.getTypes()));
@@ -332,6 +393,10 @@ public final class DevObjectLibraryOverlay {
     }
 
     private static void addRow(JPanel panel, String labelText, JLabel value) {
+        addComponentRow(panel, labelText, value);
+    }
+
+    private static void addComponentRow(JPanel panel, String labelText, JComponent value) {
         JLabel label = new JLabel(labelText);
         label.setFont(ConsoleTheme.SMALL_FONT);
         label.setForeground(ConsoleTheme.MUTED_TEXT);
@@ -367,6 +432,39 @@ public final class DevObjectLibraryOverlay {
         return out.toString();
     }
 
+    private static void installDragHandle(final JComponent component) {
+        component.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        component.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (window == null) {
+                    return;
+                }
+                dragAnchorScreen = e.getLocationOnScreen();
+                dragWindowOrigin = window.getLocation();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                rememberCurrentPosition();
+                dragAnchorScreen = null;
+                dragWindowOrigin = null;
+            }
+        });
+        component.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (window == null || dragAnchorScreen == null || dragWindowOrigin == null) {
+                    return;
+                }
+                Point now = e.getLocationOnScreen();
+                moveWindowClamped(
+                        dragWindowOrigin.x + now.x - dragAnchorScreen.x,
+                        dragWindowOrigin.y + now.y - dragAnchorScreen.y);
+            }
+        });
+    }
+
     private static void positionWindow() {
         Canvas canvas = Class584.aCanvas7745;
         if (window == null || canvas == null) {
@@ -375,9 +473,52 @@ public final class DevObjectLibraryOverlay {
         try {
             Point screen = canvas.getLocationOnScreen();
             int height = Math.min(HEIGHT, Math.max(360, canvas.getHeight() - MARGIN * 2));
-            window.setBounds(screen.x + MARGIN, screen.y + MARGIN, WIDTH, height);
+            window.setSize(WIDTH, height);
+            int x = screen.x + (customPosition ? rememberedOffsetX : MARGIN);
+            int y = screen.y + (customPosition ? rememberedOffsetY : MARGIN);
+            moveWindowClamped(x, y);
+            if (!customPosition) {
+                customPosition = true;
+            }
         } catch (IllegalComponentStateException ex) {
             // The overlay will be positioned on the next successful open.
+        }
+    }
+
+    private static void moveWindowClamped(int requestedX, int requestedY) {
+        Canvas canvas = Class584.aCanvas7745;
+        if (window == null || canvas == null) {
+            return;
+        }
+        try {
+            Point screen = canvas.getLocationOnScreen();
+            int minX = screen.x;
+            int minY = screen.y;
+            int maxX = screen.x + Math.max(0, canvas.getWidth() - window.getWidth());
+            int maxY = screen.y + Math.max(0, canvas.getHeight() - window.getHeight());
+            int x = Math.max(minX, Math.min(requestedX, maxX));
+            int y = Math.max(minY, Math.min(requestedY, maxY));
+            window.setLocation(x, y);
+            rememberedOffsetX = x - screen.x;
+            rememberedOffsetY = y - screen.y;
+            customPosition = true;
+        } catch (IllegalComponentStateException ex) {
+            // Keep the last valid placement.
+        }
+    }
+
+    private static void rememberCurrentPosition() {
+        Canvas canvas = Class584.aCanvas7745;
+        if (window == null || canvas == null) {
+            return;
+        }
+        try {
+            Point screen = canvas.getLocationOnScreen();
+            rememberedOffsetX = window.getX() - screen.x;
+            rememberedOffsetY = window.getY() - screen.y;
+            customPosition = true;
+        } catch (IllegalComponentStateException ex) {
+            // Keep the last valid placement.
         }
     }
 }

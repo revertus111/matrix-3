@@ -1,13 +1,16 @@
 Saved Object Definition Library quick gate
 [ ] Eclipse/Java 8 clean-build Client.
 [ ] Dev Mode + Live Inspect -> hover an Object -> O -> confirm Live Place still works.
-[ ] While Live Place is active, right-click the preview tile and choose Dev > Save Object Definition.
-[ ] Confirm SAVED OBJECT DEFINITIONS opens in-client and shows ID/name, saved type, valid types, models, animations, size and tile.
-[ ] Close/reopen via right-click Dev > Object Library and confirm the saved entry persists from dev-object-library/objects.tsv.
+[ ] While Live Place is active, press Ctrl+S on several IDs and confirm each save is non-modal: no library/window opens and 1/2 browsing remains active.
+[ ] Right-click the world -> Dev > Object Library; confirm SAVED OBJECT DEFINITIONS opens in-client and shows editable Label plus Cache name, ID, saved type, valid types, models, animations, size and tile.
+[ ] Drag the library by its header, close/reopen it and confirm the moved position is retained for the current client session.
+[ ] Rename an unnamed/id-* entry in Label, press Ctrl+S, close/reopen and confirm the custom label persists while Cache name remains separately shown.
+[ ] Re-save the same object from Live Place with Ctrl+S and confirm its custom label is preserved while the definition snapshot updates.
+[ ] Existing v1 objects.tsv rows still load and are rewritten safely as v2 after the next save/label edit.
 [ ] Select the saved entry and press Enter (or Place); confirm Live Place re-arms that exact ID at its saved tile.
 [ ] Reopen the library, select the entry and press F8; confirm Live Model Editor opens that saved definition and its type spinner starts on the cache-resolved type (including a known non-10 object).
 [ ] Reopen the library, Delete/Remove the entry, reopen again and confirm it stays removed.
-[ ] Right-click an ordinary tile: confirm Dev > Edit Tile is gone and Dev > Object Library is present.
+[ ] Right-click an ordinary tile: confirm Dev > Edit Tile and Dev > Save Object Definition are gone, while Dev > Object Library remains present.
 [ ] Hover a Tile in Live Inspect and press F8: confirm no Tile Editor opens; tile inspection data remains visible/copyable.
 [ ] Regression: Object F8 -> Live Model Editor, NPC F8 -> Dev Inspector, O Live Place, 1/2 ID browsing and LMB placement still work.
 

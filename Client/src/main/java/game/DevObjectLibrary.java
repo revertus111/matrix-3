@@ -20,7 +20,7 @@ public final class DevObjectLibrary {
 
     private static final File DIRECTORY = new File("dev-object-library");
     private static final File FILE = new File(DIRECTORY, "objects.tsv");
-    private static final String HEADER = "# Matrix3 Dev Object Library v1";
+    private static final String HEADER = "# Matrix3 Dev Object Library v2";
 
     private DevObjectLibrary() {
     }
@@ -31,14 +31,25 @@ public final class DevObjectLibrary {
         }
 
         int id = DevObjectPlacementPreview.getObjectId();
-        DevDefinitionBridge.DefinitionInfo info = DevDefinitionBridge.getObjectInfoAny(id);
-        String name = info == null || info.getName() == null ? "Object" : info.getName();
+        DevDefinitionBridge.DefinitionInfo namedInfo = DevDefinitionBridge.getObjectInfo(id);
+        DevDefinitionBridge.DefinitionInfo anyInfo = DevDefinitionBridge.getObjectInfoAny(id);
+        String cacheName = namedInfo == null || namedInfo.getName() == null ? "" : namedInfo.getName();
         int[] size = DevDefinitionBridge.getObjectSize(id);
-        int[] animations = info == null ? new int[0] : info.getAnimationIds();
+        int[] animations = anyInfo == null ? new int[0] : anyInfo.getAnimationIds();
+
+        List<SavedObject> entries = loadInternal();
+        String label = defaultLabel(id, cacheName);
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            if (entries.get(i).id == id) {
+                label = entries.get(i).label;
+                entries.remove(i);
+            }
+        }
 
         SavedObject saved = new SavedObject(
                 id,
-                name,
+                label,
+                cacheName,
                 DevObjectPlacementPreview.getObjectType(),
                 DevObjectPlacementPreview.getRotation(),
                 DevDefinitionBridge.getObjectTypes(id),
@@ -50,12 +61,6 @@ public final class DevObjectLibrary {
                 DevObjectPlacementPreview.getHoveredWorldY(),
                 DevObjectPlacementPreview.getHoveredPlane());
 
-        List<SavedObject> entries = loadInternal();
-        for (int i = entries.size() - 1; i >= 0; i--) {
-            if (entries.get(i).id == id) {
-                entries.remove(i);
-            }
-        }
         entries.add(0, saved);
         writeInternal(entries);
         return saved;
@@ -78,6 +83,25 @@ public final class DevObjectLibrary {
             writeInternal(entries);
         }
         return removed;
+    }
+
+    public static synchronized SavedObject updateLabel(int objectId, String requestedLabel) {
+        List<SavedObject> entries = loadInternal();
+        for (int i = 0; i < entries.size(); i++) {
+            SavedObject entry = entries.get(i);
+            if (entry.id != objectId) {
+                continue;
+            }
+            String label = requestedLabel == null ? "" : requestedLabel.trim();
+            if (label.length() == 0) {
+                label = defaultLabel(entry.id, entry.cacheName);
+            }
+            SavedObject updated = entry.withLabel(label);
+            entries.set(i, updated);
+            writeInternal(entries);
+            return updated;
+        }
+        return null;
     }
 
     private static List<SavedObject> loadInternal() {
@@ -140,7 +164,8 @@ public final class DevObjectLibrary {
 
     private static String format(SavedObject e) {
         return e.id + "\t"
-                + escape(e.name) + "\t"
+                + escape(e.label) + "\t"
+                + escape(e.cacheName) + "\t"
                 + e.selectedType + "\t"
                 + e.rotation + "\t"
                 + join(e.types) + "\t"
@@ -155,23 +180,43 @@ public final class DevObjectLibrary {
 
     private static SavedObject parse(String line) {
         String[] parts = line.split("\\t", -1);
-        if (parts.length < 12) {
-            return null;
-        }
         try {
-            return new SavedObject(
-                    Integer.parseInt(parts[0]),
-                    unescape(parts[1]),
-                    Integer.parseInt(parts[2]),
-                    Integer.parseInt(parts[3]),
-                    parseInts(parts[4]),
-                    parseInts(parts[5]),
-                    parseInts(parts[6]),
-                    Integer.parseInt(parts[7]),
-                    Integer.parseInt(parts[8]),
-                    Integer.parseInt(parts[9]),
-                    Integer.parseInt(parts[10]),
-                    Integer.parseInt(parts[11]));
+            if (parts.length >= 13) {
+                return new SavedObject(
+                        Integer.parseInt(parts[0]),
+                        unescape(parts[1]),
+                        unescape(parts[2]),
+                        Integer.parseInt(parts[3]),
+                        Integer.parseInt(parts[4]),
+                        parseInts(parts[5]),
+                        parseInts(parts[6]),
+                        parseInts(parts[7]),
+                        Integer.parseInt(parts[8]),
+                        Integer.parseInt(parts[9]),
+                        Integer.parseInt(parts[10]),
+                        Integer.parseInt(parts[11]),
+                        Integer.parseInt(parts[12]));
+            }
+            if (parts.length >= 12) {
+                int id = Integer.parseInt(parts[0]);
+                String legacyName = unescape(parts[1]);
+                String cacheName = legacyName.equals("id-" + id) ? "" : legacyName;
+                return new SavedObject(
+                        id,
+                        legacyName,
+                        cacheName,
+                        Integer.parseInt(parts[2]),
+                        Integer.parseInt(parts[3]),
+                        parseInts(parts[4]),
+                        parseInts(parts[5]),
+                        parseInts(parts[6]),
+                        Integer.parseInt(parts[7]),
+                        Integer.parseInt(parts[8]),
+                        Integer.parseInt(parts[9]),
+                        Integer.parseInt(parts[10]),
+                        Integer.parseInt(parts[11]));
+            }
+            return null;
         } catch (RuntimeException ex) {
             return null;
         }
@@ -236,9 +281,16 @@ public final class DevObjectLibrary {
         return out.toString();
     }
 
+    private static String defaultLabel(int id, String cacheName) {
+        return cacheName == null || cacheName.trim().length() == 0
+                ? "id-" + id
+                : cacheName.trim();
+    }
+
     public static final class SavedObject {
         private final int id;
-        private final String name;
+        private final String label;
+        private final String cacheName;
         private final int selectedType;
         private final int rotation;
         private final int[] types;
@@ -250,11 +302,13 @@ public final class DevObjectLibrary {
         private final int worldY;
         private final int plane;
 
-        private SavedObject(int id, String name, int selectedType, int rotation,
+        private SavedObject(int id, String label, String cacheName, int selectedType, int rotation,
                 int[] types, int[] modelIds, int[] animationIds,
                 int sizeX, int sizeY, int worldX, int worldY, int plane) {
             this.id = id;
-            this.name = name == null ? "Object" : name;
+            this.cacheName = cacheName == null ? "" : cacheName.trim();
+            String cleanLabel = label == null ? "" : label.trim();
+            this.label = cleanLabel.length() == 0 ? defaultLabel(id, this.cacheName) : cleanLabel;
             this.selectedType = selectedType;
             this.rotation = rotation & 0x3;
             this.types = types == null ? new int[0] : types.clone();
@@ -268,7 +322,9 @@ public final class DevObjectLibrary {
         }
 
         public int getId() { return id; }
-        public String getName() { return name; }
+        public String getName() { return label; }
+        public String getLabel() { return label; }
+        public String getCacheName() { return cacheName; }
         public int getSelectedType() { return selectedType; }
         public int getRotation() { return rotation; }
         public int[] getTypes() { return types.clone(); }
@@ -280,9 +336,14 @@ public final class DevObjectLibrary {
         public int getWorldY() { return worldY; }
         public int getPlane() { return plane; }
 
+        private SavedObject withLabel(String newLabel) {
+            return new SavedObject(id, newLabel, cacheName, selectedType, rotation,
+                    types, modelIds, animationIds, sizeX, sizeY, worldX, worldY, plane);
+        }
+
         @Override
         public String toString() {
-            return name + "   #" + id + "   type " + selectedType;
+            return label + "   #" + id + "   type " + selectedType;
         }
     }
 }

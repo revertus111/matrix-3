@@ -1,3 +1,10 @@
+2026-10-01 - Object Library Ctrl+S + movable/label QoL
+- Replaced the Live Place right-click Save Object Definition action with Ctrl+S; saving is silent/non-modal so 1/2 ID browsing can continue uninterrupted.
+- Right-click Dev > Object Library remains the explicit library-open action.
+- Object Library is draggable by its header, clamped to the Matrix3 canvas, and remembers its position for the current client session.
+- Saved entries now persist editable labels separately from real cache names; unnamed cache definitions show as unnamed until labeled, and Ctrl+S in the library saves the current label.
+- TSV format advances to v2 while reading legacy v1 rows so existing saved definitions are preserved; re-saving an ID updates its snapshot without overwriting a custom label.
+
 2026-10-01 - Live Inspect compile import fix
 - Added the missing game.DevModeBridge import required by LiveInspectOverlay.armCurrentObjectPlacement().
 - No runtime behavior changed.
