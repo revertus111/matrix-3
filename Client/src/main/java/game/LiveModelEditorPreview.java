@@ -1341,7 +1341,11 @@ public final class LiveModelEditorPreview {
                         : safeBuildDefinitionModel("main", -1, renderer,
                                 definition, definition, mainRaw, rotation,
                                 ground, upperGround, sceneX, sceneY, sceneZ);
+            } catch (RuntimeException ex) {
+                recordPartRenderFault("authoring-main", -1, revision, ex);
+            }
 
+            try {
                 List<Class159> duplicateRaws = PARTS.buildDuplicateRaws();
                 cachedDuplicateModels = new Model[duplicateRaws.size()];
                 for (int i = 0; i < duplicateRaws.size(); i++) {
@@ -1350,7 +1354,12 @@ public final class LiveModelEditorPreview {
                             duplicateRaws.get(i), rotation,
                             ground, upperGround, sceneX, sceneY, sceneZ);
                 }
+            } catch (RuntimeException ex) {
+                cachedDuplicateModels = new Model[0];
+                recordPartRenderFault("authoring-duplicates", -1, revision, ex);
+            }
 
+            try {
                 List<LiveModelEditorParts.ReplacementRaw> replacements = PARTS.buildReplacementRaws();
                 cachedReplacementModels = new Model[replacements.size()];
                 for (int i = 0; i < replacements.size(); i++) {
@@ -1362,7 +1371,8 @@ public final class LiveModelEditorPreview {
                                     ground, upperGround, sceneX, sceneY, sceneZ);
                 }
             } catch (RuntimeException ex) {
-                recordPartRenderFault("authoring-raw", -1, revision, ex);
+                cachedReplacementModels = new Model[0];
+                recordPartRenderFault("authoring-replacements", -1, revision, ex);
             }
 
             cachedRenderer = renderer;
@@ -1526,9 +1536,13 @@ public final class LiveModelEditorPreview {
             lastPartRenderFaultRevision = revision;
             lastPartRenderFault = message;
             System.err.println("[LiveModelEditor] " + message);
-            if (ex != null)
+            if (ex != null) {
+                StackTraceElement[] trace = ex.getStackTrace();
+                String where = trace != null && trace.length > 0
+                        ? " at " + trace[0].toString() : "";
                 System.err.println("[LiveModelEditor] "
-                        + ex.getClass().getName() + ": " + ex.getMessage());
+                        + ex.getClass().getName() + ": " + ex.getMessage() + where);
+            }
         }
     }
 

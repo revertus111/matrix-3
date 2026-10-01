@@ -1,3 +1,14 @@
+Live Model Editor authoring-raw guard V2 - 2026-10-01
+[x] VERIFIED-STATIC: highlightAllFaces checks every optional face table before indexing.
+[x] VERIFIED-STATIC: replacement auto-fit rejects incomplete coordinate tables instead of indexing by declared vertex count.
+[x] VERIFIED-STATIC: main/duplicate/replacement/pick builders reject invalid saved source-part indices.
+[x] VERIFIED-STATIC: main, duplicate and replacement raw generation fail independently and identify their stage.
+[x] VERIFIED-STATIC: any remaining RuntimeException log includes its first stack location.
+[ ] RUNTIME: reproduce the previous sawmill/conveyor editing flow and confirm the repeating generic stage=authoring-raw error is gone.
+[ ] RUNTIME: if a fault remains, capture the new stage=authoring-main/duplicates/replacements line plus its "at ..." source location.
+[ ] RUNTIME: select/highlight duplicates and replacements, move/rotate/scale them, and verify healthy branches continue rendering.
+[ ] RUNTIME: FIT 1 TILE still computes selection bounds without client exceptions.
+
 Live Model Editor raw-geometry guard - 2026-10-01
 [x] VERIFIED-STATIC: component detection rejects a face unless all three decoded vertex indices are in range.
 [x] VERIFIED-STATIC: component bounds/transforms and face mutation paths guard raw Class159 array bounds.

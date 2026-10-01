@@ -1,3 +1,10 @@
+2026-10-01 - Live Model Editor authoring-raw guard V2
+- Runtime evidence showed ArrayIndexOutOfBoundsException still escaped the first raw-geometry guard.
+- Hardened whole-face highlighting, replacement auto-fit coordinate access, source-part lookup, and one-tile selection-bounds access.
+- Split main/duplicate/replacement raw generation into independent fail-soft stages so one malformed authored branch no longer suppresses the others.
+- Render-fault diagnostics now include the first throwing stack location, making any remaining cache-specific failure directly traceable instead of reporting only generic authoring-raw.
+- No cache writes, server/world ownership, saved-project format, or authored transform semantics changed.
+
 2026-10-01 - Live Model Editor raw-geometry render guard
 - Hardened connected-component extraction so malformed faces cannot inject out-of-range vertex ids into authored parts.
 - Added bounds-safe vertex transforms, component bounds, component-only raw copies, face hiding and highlighting.

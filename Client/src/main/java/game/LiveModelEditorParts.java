@@ -701,15 +701,22 @@ final class LiveModelEditorParts {
         for (Integer index : selection) {
             PartState state = stateAt(index.intValue());
             if (state == null || state.deleted) continue;
+            if (!validSourcePart(state)) continue;
             Component component = source.components[state.sourcePart];
             if (component.vertices.length == 0) continue;
 
             double cx = 0.0, cy = 0.0, cz = 0.0;
+            boolean validVertices = true;
             for (int vertex : component.vertices) {
+                if (!hasVertexCoordinates(raw, vertex)) {
+                    validVertices = false;
+                    break;
+                }
                 cx += raw.anIntArray1782[vertex];
                 cy += raw.anIntArray1777[vertex];
                 cz += raw.anIntArray1797[vertex];
             }
+            if (!validVertices) continue;
             cx /= component.vertices.length;
             cy /= component.vertices.length;
             cz /= component.vertices.length;
@@ -909,6 +916,7 @@ final class LiveModelEditorParts {
         ensureFaceAlpha(raw);
         for (int i = 0; i < originals.size(); i++) {
             PartState state = originals.get(i);
+            if (!validSourcePart(state)) continue;
             Component component = source.components[state.sourcePart];
             boolean highlighted = isHighlighted(i);
             boolean visible = !state.hidden && !state.deleted
@@ -932,7 +940,8 @@ final class LiveModelEditorParts {
             PartState state = duplicates.get(i);
             boolean highlighted = isHighlighted(combinedIndex);
             if (state.hidden || state.deleted || state.replacementObjectId >= 0
-                    || (isolate && !selection.contains(Integer.valueOf(combinedIndex)))) continue;
+                    || (isolate && !selection.contains(Integer.valueOf(combinedIndex)))
+                    || !validSourcePart(state)) continue;
             Class159 raw = componentOnlyRaw(source.decode(),
                     source.components[state.sourcePart], state);
             if (raw == null) continue;
@@ -950,7 +959,8 @@ final class LiveModelEditorParts {
             PartState state = stateAt(index);
             boolean highlighted = isHighlighted(index);
             if (state == null || state.hidden || state.deleted || state.replacementObjectId < 0
-                    || (isolate && !selection.contains(Integer.valueOf(index)))) continue;
+                    || (isolate && !selection.contains(Integer.valueOf(index)))
+                    || !validSourcePart(state)) continue;
             Class159 raw = replacementRaw(state, source.components[state.sourcePart]);
             if (raw == null) continue;
             if (highlighted) highlightAllFaces(raw);
@@ -967,7 +977,8 @@ final class LiveModelEditorParts {
         for (int index = 0; index < total; index++) {
             PartState state = stateAt(index);
             if (state == null || state.hidden || state.deleted
-                    || (isolate && !selection.contains(Integer.valueOf(index)))) continue;
+                    || (isolate && !selection.contains(Integer.valueOf(index)))
+                    || !validSourcePart(state)) continue;
             if (state.replacementObjectId >= 0) {
                 Class159 replacement = replacementRaw(state,
                         source.components[state.sourcePart]);
@@ -1106,7 +1117,7 @@ final class LiveModelEditorParts {
         if (replacement == null) return null;
         Class159 raw = replacement.decode();
         if (raw == null || raw.anInt1791 <= 0) return null;
-        autoFitReplacement(raw, target);
+        if (!autoFitReplacement(raw, target)) return null;
         transformAllAround(raw, target.centerX, target.centerY, target.centerZ, state);
         return raw;
     }
@@ -1234,7 +1245,13 @@ final class LiveModelEditorParts {
         }
     }
 
-    private static void autoFitReplacement(Class159 raw, Component target) {
+    private static boolean autoFitReplacement(Class159 raw, Component target) {
+        if (raw == null || target == null || raw.anInt1791 <= 0
+                || raw.anIntArray1782 == null || raw.anIntArray1782.length < raw.anInt1791
+                || raw.anIntArray1777 == null || raw.anIntArray1777.length < raw.anInt1791
+                || raw.anIntArray1797 == null || raw.anIntArray1797.length < raw.anInt1791) {
+            return false;
+        }
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
         for (int i = 0; i < raw.anInt1791; i++) {
@@ -1268,6 +1285,7 @@ final class LiveModelEditorParts {
             raw.anIntArray1777[i] = (int) Math.round(target.centerY + y * scale);
             raw.anIntArray1797[i] = (int) Math.round(target.centerZ + z * scale);
         }
+        return true;
     }
 
     private static Class159 componentOnlyRaw(Class159 sourceRaw,
@@ -1374,12 +1392,17 @@ final class LiveModelEditorParts {
     }
 
     private static void highlightAllFaces(Class159 raw) {
+        if (raw == null || raw.anInt1778 < 0) return;
         ensureFaceAlpha(raw);
         for (int face = 0; face < raw.anInt1778; face++) {
-            raw.faceAlpha[face] = 0;
-            raw.faceColours[face] = HIGHLIGHT_COLOUR;
-            if (raw.faceTextures != null) raw.faceTextures[face] = (short) -1;
-            if (raw.faceTextureIndexes != null) raw.faceTextureIndexes[face] = (short) -1;
+            if (raw.faceAlpha != null && face < raw.faceAlpha.length)
+                raw.faceAlpha[face] = 0;
+            if (raw.faceColours != null && face < raw.faceColours.length)
+                raw.faceColours[face] = HIGHLIGHT_COLOUR;
+            if (raw.faceTextures != null && face < raw.faceTextures.length)
+                raw.faceTextures[face] = (short) -1;
+            if (raw.faceTextureIndexes != null && face < raw.faceTextureIndexes.length)
+                raw.faceTextureIndexes[face] = (short) -1;
         }
     }
 
@@ -1400,6 +1423,11 @@ final class LiveModelEditorParts {
                 && raw.aShortArray1786 != null && face < raw.aShortArray1786.length
                 && raw.aShortArray1787 != null && face < raw.aShortArray1787.length
                 && raw.aShortArray1789 != null && face < raw.aShortArray1789.length;
+    }
+
+    private boolean validSourcePart(PartState state) {
+        return source != null && state != null
+                && state.sourcePart >= 0 && state.sourcePart < source.components.length;
     }
 
     synchronized String selectionAssetJson() {
