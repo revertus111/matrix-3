@@ -220,3 +220,13 @@
 - Preserved source component center/bounds/signature on the compact duplicate component before applying scale/yaw/move transforms.
 - Original-part rotation behavior and 90-degree ROT SNAP remain unchanged.
 - Status: IMPLEMENTED / NEEDS RUNTIME RETEST.
+
+2026-10-01 - Live Model Editor anchored Tile Snap
+- Removed the main Fit 1 Tile action, which resized geometry, and replaced it with translation-only Snap To Tile for Part/Multi selections.
+- Added NW/N/NE/W/Center/E/SW/S/SE selection-bounds anchors.
+- The chosen anchor snaps to the nearest 512-unit local X/Z tile-grid intersection with one shared move delta across the selection.
+- Scale, yaw, geometry and Multi relative spacing are preserved.
+- Tile Snap uses the existing Part/Multi undo/redo owner.
+- Corrected transformed selection-bounds math to match current scale + stable-yaw pivot semantics so snapping uses the same visible geometry basis as rendering.
+- Existing MOVE SNAP, 90-degree ROT SNAP, whole-object transforms and world/cache/server ownership are unchanged.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
