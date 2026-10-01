@@ -1945,7 +1945,7 @@ Conveyor Build Placement V1.9 — orthogonal routed placement gate (2026-10-01)
 
 Settlement Minimap V1.1 / RTS object-interaction guard — PARTIALLY RUNTIME VERIFIED
 [x] verified-static: ConstructionBuildCamera.rtsYawRadians is the authoritative detached RTS heading used by Q/E and MMB orbit.
-[x] verified-static: RTS yaw converts into Matrix3's existing 14-bit 0..16383 angle domain.
+[x] verified-static: RTS yaw converts into Matrix3's existing 14-bit 0..16383 angle domain with the detached-camera-to-minimap handedness inverted once in ConstructionBuildCamera.getRtsMinimapYawUnits().
 [x] verified-static: Class464 stock minimap render uses -RTS yaw plus the existing minimap offset while RTS owns heading.
 [x] verified-static: client.method7990 click transform uses +RTS yaw plus the same existing minimap offset, preserving render/click inverse alignment.
 [x] verified-static: RTS actions 3..6/1001 are consumed when self is not selected; Examine 1002 remains vanilla.
@@ -1967,6 +1967,14 @@ Settlement Minimap V1.1 / RTS object-interaction guard — PARTIALLY RUNTIME VER
 [x] verified-static: Class12.method558(...) is the shared stock minimap overlay rotation seam and now uses +RTS yaw while RTS owns heading.
 [x] MINIMAP OVERLAY REGRESSION: keep NPCs/workers visible on the minimap and rotate/pan RTS with Q/E/MMB/WASD; NPC/player/map-icon dots must move/rotate with the raster instead of remaining visually fixed. RUNTIME VERIFIED 2026-10-01.
 [ ] Exit settlement RTS and confirm stock NPC/player/map-icon minimap overlays return to vanilla heading/centering unchanged.
+
+RTS minimap yaw handedness correction — IMPLEMENTED / NEEDS RUNTIME TEST (2026-10-01)
+[x] verified-static: Q/E and horizontal MMB orbit both mutate the same authoritative ConstructionBuildCamera.rtsYawRadians value.
+[x] verified-static: getRtsMinimapYawUnits() now negates RTS yaw once before converting it into Matrix3's 14-bit heading domain.
+[ ] DIRECTION: press Q then E from a known heading; the minimap and compass must visually rotate in the same intuitive direction as the RTS camera orbit, not opposite it.
+[ ] DIRECTION: drag MMB left/right; minimap and compass rotation must follow the same corrected handedness as the RTS camera orbit.
+[ ] REGRESSION: NPC/player/map-icon dots remain attached to their correct world positions while Q/E/MMB rotates the minimap.
+[ ] REGRESSION: after roughly 90 degrees of RTS rotation, minimap click-to-focus still lands on the visible clicked tile with no mirror/inversion/offset.
 
 
 Resource World Foundation V1A/V1B — finite persistent nodes (2026-10-01)
