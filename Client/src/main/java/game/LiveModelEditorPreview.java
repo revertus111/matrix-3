@@ -108,7 +108,7 @@ public final class LiveModelEditorPreview {
     private static volatile boolean groupScaleEnabled;
     private static volatile boolean sourceAnimationPreviewEnabled;
     private static volatile int moveSnapStep = 16;
-    private static volatile int angleSnapDegrees = 15;
+    private static volatile int angleSnapDegrees = 90;
     private static volatile boolean pointerInside;
     private static volatile int pointerX;
     private static volatile int pointerY;
