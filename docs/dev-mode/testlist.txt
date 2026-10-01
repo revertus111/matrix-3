@@ -253,3 +253,18 @@ Live Model Editor — Restore Cache Original gate (2026-10-01)
 [ ] Save an edited project before restore, restore the cache original, then Load Project; saved authored state must still load.
 [ ] Save a selection asset before restore; verify the asset file remains available afterward.
 [ ] Regression: Rebuild Parts does not become destructive and Reset Object retains its existing transform-reset behavior.
+
+Live Model Editor — Ctrl+Y Redo gate (2026-10-01)
+[x] verified-static: Ctrl+Y is consumed by the Live Model Editor shortcut gate and routes only to LiveModelEditorPreview.redoPartEdit().
+[x] verified-static: redo uses the same Part/Multi Snapshot format as undo and is bounded to the same 64-entry history limit.
+[x] verified-static: undo captures the current state onto redo before restoring the previous snapshot.
+[x] verified-static: any new pushUndo edit clears redo; source/session reset clears both undo and redo.
+[x] verified-static: Construction Ctrl+Z ownership and server/cache/world state are untouched.
+[ ] Eclipse clean/build Client with Java 8.
+[ ] Make three visible Part/Multi edits (for example move, scale, hide/duplicate).
+[ ] Press Ctrl+Z twice; verify the last two edits unwind one at a time.
+[ ] Press Ctrl+Y once; verify exactly one undone edit returns.
+[ ] Press Ctrl+Y again; verify the second undone edit returns.
+[ ] Press Ctrl+Y with no redo entries left; verify the editor reports Nothing to redo and state does not change.
+[ ] Undo once, make a different new Part/Multi edit, then press Ctrl+Y; verify the old redo branch was discarded.
+[ ] Use Restore Original, then press Ctrl+Y; verify discarded pre-restore state cannot return.
