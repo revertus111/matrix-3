@@ -267,4 +267,5 @@ Live Model Editor — Ctrl+Y Redo gate (2026-10-01)
 [ ] Press Ctrl+Y again; verify the second undone edit returns.
 [ ] Press Ctrl+Y with no redo entries left; verify the editor reports Nothing to redo and state does not change.
 [ ] Undo once, make a different new Part/Multi edit, then press Ctrl+Y; verify the old redo branch was discarded.
+[ ] Undo once, start/cancel a drag without changing the transform, then press Ctrl+Y; verify the redo branch is still available.
 [ ] Use Restore Original, then press Ctrl+Y; verify discarded pre-restore state cannot return.
