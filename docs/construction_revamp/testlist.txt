@@ -1740,7 +1740,7 @@ Detached RTS projection-depth parity gate — RUNTIME VERIFIED (2026-09-30)
 [ ] Confirm Free Build remains functional with the shared detached camera projection.
 [ ] Leave settlement and confirm normal-world camera/rendering remains unchanged.
 
-Conveyor Gameplay V1.6 — Physical chest -> conveyor -> chest gate (2026-09-30)
+Conveyor Gameplay V1.6 — Physical chest -> conveyor -> chest gate — BASIC SLICE VERIFIED (2026-09-30)
 [x] verified-static: Point A exact STORAGE tile resolves the existing SettlementStorageContainer as source; Point B exact STORAGE tile resolves the existing container as destination.
 [x] verified-static: ConveyorRun movement no longer accepts/deletes endpoint payloads; it always stops at B until SettlementInstance explicitly transfers ownership.
 [x] verified-static: source removes one real item only after inlet spacing is available; failed belt insertion restores the removed item.
@@ -1750,9 +1750,10 @@ Conveyor Gameplay V1.6 — Physical chest -> conveyor -> chest gate (2026-09-30)
 [x] verified-static: Link First Two Chests uses real saved STORAGE pieces and the existing persistent createConveyorRun(...) owner; it does not create fake chest inventory.
 [ ] Pull latest main; Eclipse clean/build Server + Client with Java 8, then restart both.
 [ ] Enter a fresh settlement and place/identify at least two physical Wooden chests. Put several real items (start with Logs 1511) into the lowest-id/oldest chest; leave the next chest with capacity.
-[ ] In Con Revamp -> Conveyor Transport Core click Link First Two Chests. Chat reports the persistent run plus CHEST#source -> CHEST#destination.
+[x] Runtime verified by user: Link First Two Chests creates the real in-world physical chest -> ConveyorRun -> physical chest topology.
 [ ] Click Transport Status. It reports source=CHEST#... and output=CHEST#..., not BLOCKED/NO CHEST.
-[ ] Watch at least three items: source chest decreases one item per accepted inlet, real payloads travel smoothly with existing spacing, and destination chest increases only when each payload reaches Point B.
+[x] Basic runtime vertical slice verified visually: the physical conveyor path between the two real chests is active and transporting through the existing server-owned ConveyorRun path.
+[ ] Deep transfer check: watch at least three items and verify source chest decreases one item per accepted inlet while destination chest increases only when each payload reaches Point B.
 [ ] Conservation check: source count + belt payload amount + destination count stays constant for the tested real item; no duplicate and no loss.
 [ ] Put mixed real item ids in the source. V1.6 chooses the first occupied source slot and transports one item per payload; each rendered payload keeps its real item id/profile.
 [ ] Make destination unable to accept the front item (fill capacity or apply an item filter). The front payload remains at B, followers queue behind it, and upstream injection stops naturally as spacing/backpressure reaches Point A.
