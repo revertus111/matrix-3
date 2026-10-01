@@ -942,7 +942,9 @@ final class LiveModelEditorParts {
                 }
             }
             for (PartState candidate : duplicates) {
-                if (!candidate.deleted && signature.equals(source.components[candidate.sourcePart].signature)) {
+                Component candidateComponent = componentFor(candidate);
+                if (!candidate.deleted && candidateComponent != null
+                        && signature.equals(candidateComponent.signature)) {
                     candidate.replacementObjectId = replacementObjectId;
                     candidate.replacementObjectType = replacementObjectType;
                     candidate.hidden = false;
