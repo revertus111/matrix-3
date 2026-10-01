@@ -997,6 +997,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         card.add(Box.createVerticalStrut(8));
 
         JButton linkChests = new JButton("Link First Two Chests");
+        JButton sawmillLine = new JButton("Build Sawmill Test Line");
+        JButton sawmillStatus = new JButton("Sawmill Status");
         JButton addCurrent = new JButton("Add Current Test Item");
         JButton addLog = new JButton("Add Log 1511");
         JButton addOak = new JButton("Add Oak Log 1521");
@@ -1009,7 +1011,8 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JButton transportStatus = new JButton("Transport Status");
 
         JButton[] controls = {
-                linkChests, addCurrent, addLog, addOak, addOre, addPlank,
+                linkChests, sawmillLine, sawmillStatus,
+                addCurrent, addLog, addOak, addOre, addPlank,
                 fillMixed, blockOutput, openOutput,
                 clearPayloads, transportStatus
         };
@@ -1020,6 +1023,13 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         linkChests.addActionListener(e -> queue(
                 "settlementconveyorchestlink",
                 "Physical chest conveyor link queued. Check game chat."));
+
+        sawmillLine.addActionListener(e -> queue(
+                "settlementsawmilltestline",
+                "Sawmill automation test-line build queued. Check game chat."));
+        sawmillStatus.addActionListener(e -> queue(
+                "settlementsawmillstatus",
+                "Sawmill automation status queued. Check game chat."));
 
         addCurrent.addActionListener(e -> {
             int itemId = ConveyorRunPreview.getPayloadTestItemId();
@@ -1057,7 +1067,7 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         JPanel buttons = new JPanel(new GridLayout(0, 2, 7, 7));
         buttons.setOpaque(false);
         buttons.setAlignmentX(LEFT_ALIGNMENT);
-        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 215));
+        buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 255));
         for (JButton button : controls) {
             buttons.add(button);
         }
