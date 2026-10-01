@@ -1,17 +1,18 @@
 package com.rs.game.player.content.construction;
 
 /**
- * Fixed Phase-1 starter resource nodes inside the settlement plot.
+ * Static resource-node definition catalog.
  *
- * Runtime visuals are provisional cache assets; plot ownership and resource
- * identity are stable. Nodes deposit directly into settlement storage.
+ * Plot coordinates are only the starter/default projection used to migrate the
+ * original fixed Phase-1 nodes. Persistent node identity, location and
+ * depletion now live in SettlementResourceNodeState.
  */
 public enum SettlementResourceNode {
 
-    WOOD_TREE("wood-tree", SettlementResource.WOOD, SourceKind.OBJECT, 1276, 10, 8, 8, 879),
-    FOOD_SPOT("food-spot", SettlementResource.FOOD, SourceKind.NPC, 327, -1, 12, 8, 621),
-    STONE_OUTCROP("stone-outcrop", SettlementResource.STONE, SourceKind.OBJECT, 11933, 10, 16, 8, 625),
-    ORE_OUTCROP("ore-outcrop", SettlementResource.BASIC_ORE, SourceKind.OBJECT, 11936, 10, 20, 8, 625);
+    WOOD_TREE("wood-tree", SettlementResource.WOOD, SourceKind.OBJECT, 1276, 10, 8, 8, 879, 10L),
+    FOOD_SPOT("food-spot", SettlementResource.FOOD, SourceKind.NPC, 327, -1, 12, 8, 621, 10L),
+    STONE_OUTCROP("stone-outcrop", SettlementResource.STONE, SourceKind.OBJECT, 11933, 10, 16, 8, 625, 10L),
+    ORE_OUTCROP("ore-outcrop", SettlementResource.BASIC_ORE, SourceKind.OBJECT, 11936, 10, 20, 8, 625, 10L);
 
     public enum SourceKind {
         OBJECT,
@@ -26,10 +27,11 @@ public enum SettlementResourceNode {
     private final int plotX;
     private final int plotY;
     private final int animationId;
+    private final long defaultStartingAmount;
 
     SettlementResourceNode(String key, SettlementResource resource,
             SourceKind sourceKind, int runtimeId, int objectType,
-            int plotX, int plotY, int animationId) {
+            int plotX, int plotY, int animationId, long defaultStartingAmount) {
         this.key = key;
         this.resource = resource;
         this.sourceKind = sourceKind;
@@ -38,50 +40,35 @@ public enum SettlementResourceNode {
         this.plotX = plotX;
         this.plotY = plotY;
         this.animationId = animationId;
+        this.defaultStartingAmount = defaultStartingAmount;
     }
 
-    public String getKey() {
-        return key;
-    }
-
-    public SettlementResource getResource() {
-        return resource;
-    }
-
-    public SourceKind getSourceKind() {
-        return sourceKind;
-    }
-
-    public int getRuntimeId() {
-        return runtimeId;
-    }
-
-    public int getObjectType() {
-        return objectType;
-    }
-
-    public int getPlotX() {
-        return plotX;
-    }
-
-    public int getPlotY() {
-        return plotY;
-    }
-
-    public int getAnimationId() {
-        return animationId;
-    }
+    public String getKey() { return key; }
+    public SettlementResource getResource() { return resource; }
+    public SourceKind getSourceKind() { return sourceKind; }
+    public int getRuntimeId() { return runtimeId; }
+    public int getObjectType() { return objectType; }
+    public int getPlotX() { return plotX; }
+    public int getPlotY() { return plotY; }
+    public int getAnimationId() { return animationId; }
+    public long getDefaultStartingAmount() { return defaultStartingAmount; }
 
     public boolean occupies(int x, int y, int plane) {
         return plane == SettlementState.PLOT_PLANE && plotX == x && plotY == y;
     }
 
+    public static SettlementResourceNode forKey(String key) {
+        if (key == null) return null;
+        for (SettlementResourceNode node : values()) {
+            if (key.equals(node.key)) return node;
+        }
+        return null;
+    }
+
     public static SettlementResourceNode forObject(int id, int plotX, int plotY, int plane) {
         for (SettlementResourceNode node : values()) {
             if (node.sourceKind == SourceKind.OBJECT
-                    && node.runtimeId == id && node.occupies(plotX, plotY, plane)) {
-                return node;
-            }
+                    && node.runtimeId == id && node.occupies(plotX, plotY, plane)) return node;
         }
         return null;
     }
@@ -89,19 +76,13 @@ public enum SettlementResourceNode {
     public static SettlementResourceNode forNpc(int id, int plotX, int plotY, int plane) {
         for (SettlementResourceNode node : values()) {
             if (node.sourceKind == SourceKind.NPC
-                    && node.runtimeId == id && node.occupies(plotX, plotY, plane)) {
-                return node;
-            }
+                    && node.runtimeId == id && node.occupies(plotX, plotY, plane)) return node;
         }
         return null;
     }
 
     public static boolean occupiesPlotTile(int plotX, int plotY, int plane) {
-        for (SettlementResourceNode node : values()) {
-            if (node.occupies(plotX, plotY, plane)) {
-                return true;
-            }
-        }
+        for (SettlementResourceNode node : values()) if (node.occupies(plotX, plotY, plane)) return true;
         return false;
     }
 }

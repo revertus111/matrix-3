@@ -1967,3 +1967,17 @@ Settlement Minimap V1.1 / RTS object-interaction guard — PARTIALLY RUNTIME VER
 [x] verified-static: Class12.method558(...) is the shared stock minimap overlay rotation seam and now uses +RTS yaw while RTS owns heading.
 [x] MINIMAP OVERLAY REGRESSION: keep NPCs/workers visible on the minimap and rotate/pan RTS with Q/E/MMB/WASD; NPC/player/map-icon dots must move/rotate with the raster instead of remaining visually fixed. RUNTIME VERIFIED 2026-10-01.
 [ ] Exit settlement RTS and confirm stock NPC/player/map-icon minimap overlays return to vanilla heading/centering unchanged.
+
+
+Resource World Foundation V1A/V1B — finite persistent nodes (2026-10-01)
+[x] verified-static: schema v18 owns node id/definition/location/max/remaining state and retains depleted records.
+[x] verified-static: player and worker gathering consume the same finite node authority.
+[x] verified-static: player action repeats until depletion/storage/interruption; depleted runtime sources are removed and minimap refresh is queued.
+[ ] Pull latest main; Eclipse clean/build Server with Java 8 and restart server/client.
+[ ] Click one starter node once; confirm gathering repeats without re-clicking until the 10-unit node depletes.
+[ ] Confirm the depleted object/NPC disappears and minimap projection clears.
+[ ] Exit/re-enter, then logout/relog/re-enter; the depleted source must remain absent.
+[ ] Let a worker gather/haul a finite node; confirm it consumes the same pool and retargets another active source after depletion.
+[ ] Player + worker concurrency on a nearly depleted node must never exceed remaining amount or duplicate resource.
+[ ] Full matching storage must stop gathering without consuming an extra node unit.
+[ ] Regression: starter shelter, needs, storage, processing and conveyors still operate normally.

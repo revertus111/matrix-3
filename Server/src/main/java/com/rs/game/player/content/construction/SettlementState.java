@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 17;
+    private static final int CURRENT_SCHEMA_VERSION = 18;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -54,6 +54,9 @@ public final class SettlementState implements Serializable {
             new HashMap<Long, SettlementRallyPoint>();
     private long nextRallyPointId = 1L;
     private Map<String, Long> resources = new HashMap<String, Long>();
+    private long nextResourceNodeId = 1L;
+    private List<SettlementResourceNodeState> resourceNodes =
+            new ArrayList<SettlementResourceNodeState>();
     /**
      * Legacy serialized shared-cap field. Kept so existing player saves remain
      * deserializable; active storage capacity is resource-specific.
@@ -166,6 +169,32 @@ public final class SettlementState implements Serializable {
         if (resources == null) {
             resources = new HashMap<String, Long>();
         }
+        if (resourceNodes == null) {
+            resourceNodes = new ArrayList<SettlementResourceNodeState>();
+        }
+        if (resourceNodes.isEmpty()) {
+            for (SettlementResourceNode definition : SettlementResourceNode.values()) {
+                resourceNodes.add(new SettlementResourceNodeState(
+                        nextResourceNodeId++, definition.getKey(),
+                        definition.getPlotX(), definition.getPlotY(), PLOT_PLANE,
+                        definition.getDefaultStartingAmount(),
+                        definition.getDefaultStartingAmount()));
+            }
+        }
+        long highestResourceNodeId = 0L;
+        Set<Long> resourceNodeIds = new HashSet<Long>();
+        Iterator<SettlementResourceNodeState> resourceNodeIterator = resourceNodes.iterator();
+        while (resourceNodeIterator.hasNext()) {
+            SettlementResourceNodeState node = resourceNodeIterator.next();
+            if (node == null || !node.normalize()
+                    || !resourceNodeIds.add(Long.valueOf(node.getNodeId()))) {
+                resourceNodeIterator.remove();
+                continue;
+            }
+            if (node.getNodeId() > highestResourceNodeId) highestResourceNodeId = node.getNodeId();
+        }
+        if (nextResourceNodeId <= highestResourceNodeId) nextResourceNodeId = highestResourceNodeId + 1L;
+        if (nextResourceNodeId <= 0L) nextResourceNodeId = 1L;
         if (storageCapacity <= 0) {
             storageCapacity = STARTER_STORAGE_CAPACITY;
         }
@@ -877,6 +906,82 @@ public final class SettlementState implements Serializable {
     public synchronized List<SettlementMachineBuffer> snapshotMachineBuffers() {
         normalize();
         return new ArrayList<SettlementMachineBuffer>(machineBuffers.values());
+    }
+
+    public synchronized List<SettlementResourceNodeState> snapshotResourceNodes() {
+        normalize();
+        return new ArrayList<SettlementResourceNodeState>(resourceNodes);
+    }
+
+    public synchronized List<SettlementResourceNodeState> snapshotActiveResourceNodes() {
+        normalize();
+        List<SettlementResourceNodeState> active = new ArrayList<SettlementResourceNodeState>();
+        for (SettlementResourceNodeState node : resourceNodes) {
+            if (node != null && !node.isDepleted()) active.add(node);
+        }
+        return active;
+    }
+
+    public synchronized SettlementResourceNodeState findResourceNode(long nodeId) {
+        normalize();
+        return findResourceNodeInternal(nodeId);
+    }
+
+    public synchronized SettlementResourceNodeState findResourceNode(
+            SettlementResourceNode.SourceKind sourceKind,
+            int runtimeId, int plotX, int plotY, int plane) {
+        normalize();
+        if (sourceKind == null) return null;
+        for (SettlementResourceNodeState node : resourceNodes) {
+            if (node == null || node.isDepleted()
+                    || node.getSourceKind() != sourceKind
+                    || node.getRuntimeId() != runtimeId
+                    || node.getPlotX() != plotX || node.getPlotY() != plotY
+                    || node.getPlane() != plane) continue;
+            return node;
+        }
+        return null;
+    }
+
+    public synchronized boolean hasActiveResourceNodeAt(int plotX, int plotY, int plane) {
+        normalize();
+        for (SettlementResourceNodeState node : resourceNodes) {
+            if (node != null && !node.isDepleted()
+                    && node.getPlotX() == plotX && node.getPlotY() == plotY
+                    && node.getPlane() == plane) return true;
+        }
+        return false;
+    }
+
+    public synchronized long harvestResourceNode(long nodeId, long amount) {
+        normalize();
+        if (amount <= 0L) return 0L;
+        SettlementResourceNodeState node = findResourceNodeInternal(nodeId);
+        return node == null ? 0L : node.harvest(amount);
+    }
+
+    public synchronized long harvestResourceNodeToStorage(long nodeId, long amount) {
+        normalize();
+        if (amount <= 0L) return 0L;
+        SettlementResourceNodeState node = findResourceNodeInternal(nodeId);
+        SettlementResourceNode definition = node == null ? null : node.getDefinition();
+        if (definition == null || node.isDepleted()) return 0L;
+        long accepted = Math.min(amount,
+                Math.min(node.getRemainingAmount(), getStorageRemaining(definition.getResource())));
+        if (accepted <= 0L) return 0L;
+        long harvested = node.harvest(accepted);
+        if (harvested <= 0L) return 0L;
+        SettlementResource resource = definition.getResource();
+        resources.put(resource.getKey(), Long.valueOf(getResourceAmount(resource) + harvested));
+        return harvested;
+    }
+
+    private SettlementResourceNodeState findResourceNodeInternal(long nodeId) {
+        if (nodeId <= 0L) return null;
+        for (SettlementResourceNodeState node : resourceNodes) {
+            if (node != null && node.getNodeId() == nodeId) return node;
+        }
+        return null;
     }
 
     public synchronized int getPhysicalStorageContainerCount() {

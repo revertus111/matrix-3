@@ -2157,3 +2157,10 @@
 2026-10-01 - RTS minimap overlay runtime accepted
 - User confirmed NPC/player/map-icon minimap overlays now move and rotate correctly with the RTS minimap raster.
 - Shared Class12 overlay-yaw synchronization gate is closed; rotated minimap click alignment and the RTS object-interaction self-selection guard remain separate pending checks.
+
+
+2026-10-01 - Resource World Foundation V1A/V1B finite nodes
+- Added persistent SettlementResourceNodeState ownership and SettlementState schema v18 migration.
+- Player gathering repeats until depletion/storage/interruption; workers consume the same finite node pool before carrying resources.
+- Depleted projections disappear and remain saved at zero across re-entry/relog.
+- Recorded seeded generation, flowing biomes, chunk locks, planting/saplings and water/fishing direction in PROJECT.md.

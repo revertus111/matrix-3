@@ -1833,74 +1833,94 @@ public final class SettlementInstance {
     }
 
     public boolean handleStarterResourceObjectClick(WorldObject object) {
-        if (!loaded || object == null || !containsWorldTile(object)) {
-            return false;
-        }
-        SettlementResourceNode node = SettlementResourceNode.forObject(
-                object.getId(),
-                toPlotX(object.getX()),
-                toPlotY(object.getY()),
-                object.getPlane());
-        if (node == null) {
-            return false;
-        }
+        if (!loaded || object == null || !containsWorldTile(object)) return false;
+        SettlementResourceNodeState node = state.findResourceNode(
+                SettlementResourceNode.SourceKind.OBJECT, object.getId(),
+                toPlotX(object.getX()), toPlotY(object.getY()), object.getPlane());
+        if (node == null) return false;
         player.getActionManager().setAction(new SettlementGatherAction(this, node));
         return true;
     }
 
     public boolean handleStarterResourceNpcClick(NPC npc) {
-        if (!loaded || npc == null || boundChunks == null || npc.getPlane() != PLOT_PLANE) {
-            return false;
-        }
-        int plotX = toPlotX(npc.getX());
-        int plotY = toPlotY(npc.getY());
-        if (plotX < 0 || plotX >= PLOT_TILES || plotY < 0 || plotY >= PLOT_TILES) {
-            return false;
-        }
-        SettlementResourceNode node = SettlementResourceNode.forNpc(
-                npc.getId(), plotX, plotY, npc.getPlane());
-        if (node == null) {
-            return false;
-        }
+        if (!loaded || npc == null || boundChunks == null || npc.getPlane() != PLOT_PLANE) return false;
+        int plotX = toPlotX(npc.getX()), plotY = toPlotY(npc.getY());
+        if (plotX < 0 || plotX >= PLOT_TILES || plotY < 0 || plotY >= PLOT_TILES) return false;
+        SettlementResourceNodeState node = state.findResourceNode(
+                SettlementResourceNode.SourceKind.NPC, npc.getId(), plotX, plotY, npc.getPlane());
+        if (node == null) return false;
         player.getActionManager().setAction(new SettlementGatherAction(this, node));
         return true;
     }
 
-    public boolean isStarterResourceNodeAvailable(SettlementResourceNode node) {
-        if (!loaded || destroyed || node == null || boundChunks == null) {
-            return false;
-        }
-
+    public boolean isStarterResourceNodeAvailable(SettlementResourceNodeState node) {
+        if (!loaded || destroyed || node == null || node.isDepleted() || boundChunks == null) return false;
         if (node.getSourceKind() == SettlementResourceNode.SourceKind.OBJECT) {
-            WorldTile tile = new WorldTile(
-                    toWorldX(node.getPlotX()),
-                    toWorldY(node.getPlotY()),
-                    PLOT_PLANE);
+            WorldTile tile = new WorldTile(toWorldX(node.getPlotX()), toWorldY(node.getPlotY()), node.getPlane());
             WorldObject live = World.getObjectWithType(tile, node.getObjectType());
             return live != null && live.getId() == node.getRuntimeId();
         }
-
         for (NPC npc : starterResourceNpcs) {
-            if (npc != null && !npc.hasFinished()
-                    && npc.getId() == node.getRuntimeId()
-                    && toPlotX(npc.getX()) == node.getPlotX()
-                    && toPlotY(npc.getY()) == node.getPlotY()
-                    && npc.getPlane() == PLOT_PLANE) {
-                return true;
-            }
+            if (npc != null && !npc.hasFinished() && npc.getId() == node.getRuntimeId()
+                    && toPlotX(npc.getX()) == node.getPlotX() && toPlotY(npc.getY()) == node.getPlotY()
+                    && npc.getPlane() == node.getPlane()) return true;
         }
         return false;
     }
 
-    public long gatherStarterResource(SettlementResourceNode node) {
-        if (!isStarterResourceNodeAvailable(node)) {
-            return 0L;
-        }
-        long added = state.addResource(node.getResource(), 1L);
+    public long gatherStarterResource(SettlementResourceNodeState node) {
+        if (!isStarterResourceNodeAvailable(node)) return 0L;
+        long added = state.harvestResourceNodeToStorage(node.getNodeId(), 1L);
         if (added > 0L) {
+            handleResourceNodePostHarvest(node);
             checkStarterShelterMilestone();
         }
         return added;
+    }
+
+    public int harvestWorkerResource(SettlementResourceNodeState node, int amount) {
+        if (amount <= 0 || !isStarterResourceNodeAvailable(node)) return 0;
+        long harvested = state.harvestResourceNode(node.getNodeId(), amount);
+        if (harvested > 0L) handleResourceNodePostHarvest(node);
+        return (int) Math.min((long) Integer.MAX_VALUE, harvested);
+    }
+
+    public List<SettlementResourceNodeState> snapshotActiveResourceNodes() {
+        return state.snapshotActiveResourceNodes();
+    }
+
+    private void handleResourceNodePostHarvest(SettlementResourceNodeState node) {
+        if (node == null || !node.isDepleted()) return;
+        removeProjectedResourceNode(node);
+        queueSettlementMinimapRefresh();
+    }
+
+    private void removeProjectedResourceNode(SettlementResourceNodeState node) {
+        if (node == null || boundChunks == null) return;
+        WorldTile tile = new WorldTile(toWorldX(node.getPlotX()), toWorldY(node.getPlotY()), node.getPlane());
+        if (node.getSourceKind() == SettlementResourceNode.SourceKind.OBJECT) {
+            WorldObject live = World.getObjectWithType(tile, node.getObjectType());
+            if (live != null && live.getId() == node.getRuntimeId()) World.removeObject(live);
+            WorldObject stored = null;
+            for (WorldObject resourceObject : starterResourceObjects) {
+                if (resourceObject != null && resourceObject.getId() == node.getRuntimeId()
+                        && resourceObject.getType() == node.getObjectType()
+                        && resourceObject.getX() == tile.getX() && resourceObject.getY() == tile.getY()
+                        && resourceObject.getPlane() == tile.getPlane()) { stored = resourceObject; break; }
+            }
+            if (stored != null) starterResourceObjects.remove(stored);
+            return;
+        }
+        NPC stored = null;
+        for (NPC npc : starterResourceNpcs) {
+            if (npc != null && !npc.hasFinished() && npc.getId() == node.getRuntimeId()
+                    && npc.getX() == tile.getX() && npc.getY() == tile.getY()
+                    && npc.getPlane() == tile.getPlane()) { stored = npc; break; }
+        }
+        if (stored != null) {
+            stored.finish();
+            starterResourceNpcs.remove(stored);
+        }
     }
 
     private void checkStarterShelterMilestone() {
@@ -2281,9 +2301,8 @@ public final class SettlementInstance {
         }
         int plotX = toPlotX(worldX);
         int plotY = toPlotY(worldY);
-        SettlementResourceNode node = sourceKind == SettlementResourceNode.SourceKind.NPC
-                ? SettlementResourceNode.forNpc(runtimeId, plotX, plotY, plane)
-                : SettlementResourceNode.forObject(runtimeId, plotX, plotY, plane);
+        SettlementResourceNodeState node = state.findResourceNode(
+                sourceKind, runtimeId, plotX, plotY, plane);
         if (node == null || !isStarterResourceNodeAvailable(node)) {
             return "RTS gather target is not an active settlement resource node.";
         }
@@ -2490,7 +2509,7 @@ public final class SettlementInstance {
     }
 
     public boolean isWorkerNodeAllowedByRally(
-            SettlementWorkerState worker, SettlementResourceNode node) {
+            SettlementWorkerState worker, SettlementResourceNodeState node) {
         return node != null && isWorkerPlotAllowedByRally(
                 worker, node.getPlotX(), node.getPlotY(), SettlementState.PLOT_PLANE);
     }
@@ -2601,7 +2620,7 @@ public final class SettlementInstance {
         return "Worker #" + workerId + " runtime NPC is not active.";
     }
 
-    public WorldTile getWorkerNodeRouteTarget(SettlementResourceNode node) {
+    public WorldTile getWorkerNodeRouteTarget(SettlementResourceNodeState node) {
         if (!loaded || destroyed || boundChunks == null || node == null) {
             return null;
         }
@@ -3674,42 +3693,24 @@ public final class SettlementInstance {
     }
 
     private boolean isReservedInfrastructureTile(int plotX, int plotY, int plane) {
-        return SettlementResourceNode.occupiesPlotTile(plotX, plotY, plane)
+        return state.hasActiveResourceNodeAt(plotX, plotY, plane)
                 || SettlementWorkerDefinition.isReservedArrivalTile(plotX, plotY, plane)
                 || state.hasWorkerHomeAt(plotX, plotY, plane);
     }
 
     private void spawnStarterResourceNodes() {
-        if (boundChunks == null || destroyed) {
-            return;
-        }
+        if (boundChunks == null || destroyed) return;
         removeStarterResourceNodes();
-
-        for (SettlementResourceNode node : SettlementResourceNode.values()) {
-            WorldTile tile = new WorldTile(
-                    toWorldX(node.getPlotX()),
-                    toWorldY(node.getPlotY()),
-                    PLOT_PLANE);
+        for (SettlementResourceNodeState node : state.snapshotActiveResourceNodes()) {
+            WorldTile tile = new WorldTile(toWorldX(node.getPlotX()), toWorldY(node.getPlotY()), node.getPlane());
             if (node.getSourceKind() == SettlementResourceNode.SourceKind.OBJECT) {
-                WorldObject object = new WorldObject(
-                        node.getRuntimeId(),
-                        node.getObjectType(),
-                        0,
-                        tile.getX(),
-                        tile.getY(),
-                        tile.getPlane());
+                WorldObject object = new WorldObject(node.getRuntimeId(), node.getObjectType(), 0,
+                        tile.getX(), tile.getY(), tile.getPlane());
                 World.spawnObject(object);
                 starterResourceObjects.add(object);
             } else {
-                NPC npc = World.spawnNPC(
-                        node.getRuntimeId(),
-                        tile,
-                        -1,
-                        false,
-                        true);
-                if (npc != null) {
-                    starterResourceNpcs.add(npc);
-                }
+                NPC npc = World.spawnNPC(node.getRuntimeId(), tile, -1, false, true);
+                if (npc != null) starterResourceNpcs.add(npc);
             }
         }
         queueSettlementMinimapRefresh();

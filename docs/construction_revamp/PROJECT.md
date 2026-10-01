@@ -57,6 +57,29 @@ The system should remain useful long-term instead of becoming a short furniture-
 
 ---
 
+## Planned Procedural Resource World Foundation
+
+- Resource nodes are persistent finite state: id, plot position, maximum amount and remaining amount.
+- Player gathering continues until depletion, matching storage fills, or normal interruption. Workers consume the same depletion authority.
+- Depleted sources disappear from runtime but remain saved at zero so re-entry/relog/restart cannot regenerate them.
+- Settlement generation will use a persistent seed, controlled spacing/density and guaranteed early essentials; entering never rerolls the world.
+- Territory progression is Dungeoneering-style across the existing 8x8-tile chunk grid. Locked terrain may stay visible for RTS continuity, but locked chunks contain no active gameplay content and reject movement/building/workers/resources until unlocked.
+- Unlocks expand contiguously from owned territory. Exact costs remain behind one settlement-owned unlock seam for later Construction/resources/Settlement Wealth progression.
+- Biomes must flow coherently across multiple chunks; random per-chunk checkerboarding is rejected. Biome fields later drive terrain, water, vegetation, ores, wildlife and resource weighting.
+- Trees are finite. Sustainable wood later comes from player-planted trees; depleted trees may later roll saplings. Growth/species/sapling balance is deferred.
+- Water belongs to terrain/biome generation. Fishing sources spawn only in valid water and may vary by water/biome.
+- SettlementResourceNode is the static definition catalog; SettlementResourceNodeState + future seed/chunk/biome data belong to SettlementState; SettlementInstance only projects persistent state into Matrix3 runtime.
+
+Ordered implementation:
+1. Finite persistent nodes + shared depletion.
+2. Continuous player gathering + worker depletion/retargeting.
+3. Seeded per-chunk resource generation.
+4. Flowing biome field + biome-weighted resources.
+5. Locked/unlocked chunk restrictions.
+6. Later planting/saplings and water/fishing populations.
+
+---
+
 # 1. Core Building System
 
 ## Accepted — B01-B25
@@ -2619,3 +2642,12 @@ Build three straight test runs from the same authored conveyor source (short, me
 - The current bend is a square overlap of the two accepted straight conveyor meshes. A dedicated curved/elbow mesh remains visual polish and does not own routing/transport semantics.
 - No splitter topology, machine port-direction metadata, inserters, belt tiers or alternate transport owner added.
 - **Resume Here (conveyor):** pull/build/restart Client + Server. Select Logistics -> Conveyor, click Point A, move first horizontally or vertically to lock the first leg, then aim elsewhere. Confirm the preview stays orthogonal and stable, commit it, and watch payloads follow the first leg, turn 90 degrees, then reach Point B. Also verify straight runs, endpoint snapping, right-click/Escape cancellation and chest -> machine -> chest conservation.
+
+
+## Resource World Foundation V1A/V1B — finite persistent nodes — 2026-10-01
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- SettlementState schema v18 now owns persistent finite resource nodes; current starter definitions seed one 10-unit migration node each.
+- Player gathering repeats until depletion/storage/interruption. Workers consume the same node before creating carried resources and skip exhausted sources.
+- Depleted records persist at zero and their runtime object/NPC projection is removed immediately.
+- Procedural placement, biomes, chunk locks, planting/saplings and water/fishing remain deferred.
+- Resume Here: runtime-test depletion/persistence/concurrency. If accepted, implement seeded resource generation + flowing biome metadata, then chunk locking/unlocking before returning to broader revamp foundation.

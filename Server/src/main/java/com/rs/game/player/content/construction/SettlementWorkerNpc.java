@@ -48,7 +48,7 @@ public final class SettlementWorkerNpc extends NPC {
     private final SettlementWorkerState workerState;
 
     private WorkState workState = WorkState.IDLE;
-    private SettlementResourceNode targetNode;
+    private SettlementResourceNodeState targetNode;
     private SettlementResource carriedResource;
     private int carriedAmount;
     private int carriedItemId = -1;
@@ -59,7 +59,7 @@ public final class SettlementWorkerNpc extends NPC {
     private int recoveryTicksRemaining;
     private boolean emergencyFoodForage;
     private WorldTile manualMoveTarget;
-    private SettlementResourceNode manualGatherNode;
+    private SettlementResourceNodeState manualGatherNode;
     private boolean manualGatherActive;
     private boolean manualHaulActive;
     private SettlementProcessingRecipe manualProcessingRecipe;
@@ -324,14 +324,20 @@ public final class SettlementWorkerNpc extends NPC {
             return;
         }
 
-        carriedResource = targetNode.getResource();
-        carriedAmount = CARRY_CAPACITY;
-        if (manualGatherActive) {
-            manualHaulActive = true;
+        int gathered = settlement.harvestWorkerResource(targetNode, CARRY_CAPACITY);
+        if (gathered <= 0) {
+            gatherTicksRemaining = 0;
+            manualGatherActive = false;
+            clearTarget();
+            idle("Resource node depleted.");
+            return;
         }
+        carriedResource = targetNode.getResource();
+        carriedAmount = gathered;
+        if (manualGatherActive) manualHaulActive = true;
         workerState.applyWorkCycleCost();
         workerState.addSkillXp(job.getSkill(), job.getWorkerXp());
-        nextGatherIndex = (targetNode.ordinal() + 1) % SettlementResourceNode.values().length;
+        nextGatherIndex++;
         statusDetail = "Gathered " + carriedResource.getDisplayName() + "; awaiting haul.";
         targetNode = null;
         manualGatherActive = false;
@@ -527,7 +533,7 @@ public final class SettlementWorkerNpc extends NPC {
         statusDetail = "Manual order: moving to " + target.getX() + "," + target.getY() + ".";
     }
 
-    public void assignManualGatherOrder(SettlementResourceNode node) {
+    public void assignManualGatherOrder(SettlementResourceNodeState node) {
         if (node == null) {
             return;
         }
@@ -567,7 +573,7 @@ public final class SettlementWorkerNpc extends NPC {
         if (manualGatherNode == null) {
             return;
         }
-        SettlementResourceNode node = manualGatherNode;
+        SettlementResourceNodeState node = manualGatherNode;
         if (!settlement.isStarterResourceNodeAvailable(node)) {
             manualGatherNode = null;
             idle("Manual resource target unavailable.");
@@ -1228,49 +1234,38 @@ public final class SettlementWorkerNpc extends NPC {
         return item == null ? "item #" + itemId : item.getDisplayName();
     }
 
-    private SettlementResourceNode selectNextGatherNode() {
-        SettlementResourceNode[] nodes = SettlementResourceNode.values();
-        if (nodes.length == 0) {
-            return null;
-        }
+    private SettlementResourceNodeState selectNextGatherNode() {
+        List<SettlementResourceNodeState> nodes = settlement.snapshotActiveResourceNodes();
+        if (nodes.isEmpty()) return null;
         if (emergencyFoodForage) {
-            for (SettlementResourceNode node : nodes) {
+            for (SettlementResourceNodeState node : nodes) {
                 if (node.getResource() == SettlementResource.FOOD
                         && workerState.isJobAllowed(SettlementWorkerJob.GATHER_FOOD)
                         && settlement.hasWorkerStorageSpace(workerId, SettlementResource.FOOD)
-                        && settlement.isStarterResourceNodeAvailable(node)) {
-                    return node;
-                }
+                        && settlement.isStarterResourceNodeAvailable(node)) return node;
             }
             return null;
         }
-        for (int offset = 0; offset < nodes.length; offset++) {
-            int index = (nextGatherIndex + offset) % nodes.length;
-            SettlementResourceNode node = nodes[index];
+        for (int offset = 0; offset < nodes.size(); offset++) {
+            int index = (nextGatherIndex + offset) % nodes.size();
+            SettlementResourceNodeState node = nodes.get(index);
             SettlementWorkerJob job = findGatherJob(node.getResource());
             if (job != null && workerState.isJobAllowed(job)
                     && settlement.isWorkerNodeAllowedByRally(workerState, node)
                     && settlement.hasWorkerStorageSpace(workerId, node.getResource())
-                    && settlement.isStarterResourceNodeAvailable(node)) {
-                return node;
-            }
+                    && settlement.isStarterResourceNodeAvailable(node)) return node;
         }
         return null;
     }
 
     private boolean canEmergencyForageFood() {
-        if (workerState.isPaused()
-                || !workerState.needsFood()
+        if (workerState.isPaused() || !workerState.needsFood()
                 || !workerState.isJobAllowed(SettlementWorkerJob.GATHER_FOOD)
                 || !workerState.isJobAllowed(SettlementWorkerJob.HAUL)
-                || !settlement.hasWorkerStorageSpace(workerId, SettlementResource.FOOD)) {
-            return false;
-        }
-        for (SettlementResourceNode node : SettlementResourceNode.values()) {
+                || !settlement.hasWorkerStorageSpace(workerId, SettlementResource.FOOD)) return false;
+        for (SettlementResourceNodeState node : settlement.snapshotActiveResourceNodes()) {
             if (node.getResource() == SettlementResource.FOOD
-                    && settlement.isStarterResourceNodeAvailable(node)) {
-                return true;
-            }
+                    && settlement.isStarterResourceNodeAvailable(node)) return true;
         }
         return false;
     }
