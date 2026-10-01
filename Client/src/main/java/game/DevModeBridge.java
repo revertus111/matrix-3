@@ -76,6 +76,7 @@ public final class DevModeBridge {
             currentTarget = null;
             clearManipulationPlacement();
             DevSpawnPlacement.cancel();
+            DevObjectPlacementPreview.cancel();
             LiveInspectOverlay.setEnabled(false);
         }
     }
@@ -98,6 +99,7 @@ public final class DevModeBridge {
         }
         clearManipulationPlacement();
         DevSpawnPlacement.cancel();
+        DevObjectPlacementPreview.cancel();
         return DevSpawnPlacement.placeOnce(request, x, y, plane);
     }
 
@@ -106,14 +108,31 @@ public final class DevModeBridge {
             return "Dev Spawn requires an Admin+ live session with Dev Mode enabled.";
         }
         clearManipulationPlacement();
+        DevObjectPlacementPreview.cancel();
         return DevSpawnPlacement.arm(request, mode);
+    }
+
+    public static String armLiveObjectPlacement(int objectId, int objectType, int rotation) {
+        if (!enabled || !isOwnerSession()) {
+            return "Live object placement requires an Admin+ live session with Dev Mode enabled.";
+        }
+        clearManipulationPlacement();
+        DevSpawnPlacement.cancel();
+        String result = DevObjectPlacementPreview.arm(objectId, objectType, rotation);
+        if (DevObjectPlacementPreview.isActive() && Class584.aCanvas7745 != null) {
+            Class584.aCanvas7745.requestFocusInWindow();
+        }
+        return result;
     }
 
     public static String cancelPlacement() {
         boolean hadManipulation = placementTarget != null || placementMode != PlacementMode.NONE;
         clearManipulationPlacement();
         boolean hadSpawn = DevSpawnPlacement.cancel();
-        return hadManipulation || hadSpawn ? "Placement cancelled." : "No placement is armed.";
+        boolean hadObjectPreview = DevObjectPlacementPreview.cancel();
+        return hadManipulation || hadSpawn || hadObjectPreview
+                ? "Placement cancelled."
+                : "No placement is armed.";
     }
 
     public static String rotateTarget(DevTarget target, int delta) {
@@ -156,12 +175,17 @@ public final class DevModeBridge {
             return;
         }
 
-        if (LiveInspectOverlay.isEnabled()) {
-            WorldTileTarget liveInspectTile = resolveWorldTile(localX, localY);
-            if (liveInspectTile != null) {
-                LiveInspectOverlay.observeTile(
-                        liveInspectTile.worldX, liveInspectTile.worldY, liveInspectTile.plane);
-            }
+        WorldTileTarget hoveredTile = null;
+        if (DevObjectPlacementPreview.isActive() || LiveInspectOverlay.isEnabled()) {
+            hoveredTile = resolveWorldTile(localX, localY);
+        }
+        if (DevObjectPlacementPreview.isActive() && hoveredTile != null) {
+            DevObjectPlacementPreview.observeWorldTile(
+                    hoveredTile.worldX, hoveredTile.worldY, hoveredTile.plane);
+        }
+        if (LiveInspectOverlay.isEnabled() && hoveredTile != null) {
+            LiveInspectOverlay.observeTile(
+                    hoveredTile.worldX, hoveredTile.worldY, hoveredTile.plane);
         }
 
         addTileEntry("Dev > Edit Tile", TILE_EDIT_MENU_ACTION, localX, localY);
@@ -272,6 +296,15 @@ public final class DevModeBridge {
         if (LiveModelEditorPreview.isEditSessionActive() && isNormalWorldEntityAction(normalizedAction)) {
             return true;
         }
+        if (normalizedAction == MATRIX3_TILE_ACTION && enabled && isOwnerSession()
+                && DevObjectPlacementPreview.isActive()) {
+            WorldTileTarget tile = resolveWorldTile(payloadA, payloadB);
+            if (tile != null) {
+                notifyPlacementStatus(DevObjectPlacementPreview.placeAt(
+                        tile.worldX, tile.worldY, tile.plane));
+            }
+            return true;
+        }
         if (normalizedAction == MATRIX3_TILE_ACTION && ConstructionBuildCamera.isRequested()) {
             /*
              * Free Build keeps its accepted click-stop placement behavior.
@@ -378,6 +411,7 @@ public final class DevModeBridge {
             return "Select a valid NPC or object first.";
         }
         DevSpawnPlacement.cancel();
+        DevObjectPlacementPreview.cancel();
         placementMode = mode;
         placementTarget = target;
         currentTarget = target;
@@ -677,7 +711,8 @@ public final class DevModeBridge {
     }
 
     private static boolean hasAnyPlacementArmed() {
-        return placementTarget != null || placementMode != PlacementMode.NONE || DevSpawnPlacement.hasActive();
+        return placementTarget != null || placementMode != PlacementMode.NONE
+                || DevSpawnPlacement.hasActive() || DevObjectPlacementPreview.isActive();
     }
 
     private static synchronized void ensureEscapeListener() {
@@ -711,6 +746,20 @@ public final class DevModeBridge {
                     }
                     if (!enabled || !isOwnerSession() || keyEvent.getSource() != Class584.aCanvas7745) {
                         return;
+                    }
+                    if (DevObjectPlacementPreview.isActive()) {
+                        if (keyEvent.getKeyCode() == KeyEvent.VK_1
+                                || keyEvent.getKeyCode() == KeyEvent.VK_NUMPAD1) {
+                            DevSpawnBrowserWindow.cyclePreviewObject(-1);
+                            keyEvent.consume();
+                            return;
+                        }
+                        if (keyEvent.getKeyCode() == KeyEvent.VK_2
+                                || keyEvent.getKeyCode() == KeyEvent.VK_NUMPAD2) {
+                            DevSpawnBrowserWindow.cyclePreviewObject(1);
+                            keyEvent.consume();
+                            return;
+                        }
                     }
                     if (LiveInspectOverlay.isEnabled() && keyEvent.isControlDown()) {
                         if (keyEvent.getKeyCode() == KeyEvent.VK_F8) {

@@ -57,6 +57,7 @@ public class Class578 {
 				if (ConstructionPlacementController.isHoverTracking())
 					ConstructionGhostPreview.debugClass578RenderCall();
 				ConstructionGhostPreview.render(scene, Class272_Sub2.aClass106_9517);
+				DevObjectPlacementPreview.render(scene, Class272_Sub2.aClass106_9517);
 				ConstructionRadialSelection.render(scene, Class272_Sub2.aClass106_9517);
 				ObjectLabPreview.render(scene, Class272_Sub2.aClass106_9517);
 				LiveModelEditorPreview.render(scene, Class272_Sub2.aClass106_9517);

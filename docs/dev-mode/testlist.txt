@@ -1,3 +1,16 @@
+Bundle 1.4 - Real Object Placement Preview quick gate
+[ ] Eclipse/Java 8: clean/build Client with no compilation errors.
+[ ] Dev Mode ON -> open Dev Spawn -> Object and search a term that returns multiple usable object results.
+[ ] Select one result, set a valid type/rotation, click Live Place Object, and confirm the Spawn Browser hides/focus returns to the game canvas.
+[ ] Move across world tiles and confirm one fully rendered normal-material object follows the hovered tile with no white ghost tint or transparency.
+[ ] Stop moving the mouse and confirm the preview remains on the last hovered tile rather than expiring/flickering.
+[ ] Press 1 and 2 (also numpad 1/2 if convenient) and confirm selection cycles backward/forward through the current Object Spawn search results while type/rotation stay unchanged.
+[ ] Left-click three tiles and confirm three real Dev-owned runtime objects spawn while the player does not Walk Here and the live preview remains armed.
+[ ] Press Escape and confirm the preview disappears immediately; subsequent 1/2 and left-click behavior returns to normal.
+[ ] Re-arm Live Place, then switch to Once/Continuous/Paint or Move/Duplicate and confirm the live preview clears instead of overlapping another placement owner.
+[ ] Disable Dev Mode while Live Place is active and confirm the preview/input ownership clears.
+[ ] Regression: ordinary NPC/item/object Spawn Browser placement and Construction ghost placement still behave as before.
+
 Visual Dev Time V1 - bundled quick gate
 [ ] F10 Live Inspect ON -> Visual Time initially shows RUN 1.00x.
 [ ] Trigger a visible stationary GFX -> Ctrl+F9 -> confirm its animation freezes while mouse/input/UI/rendering remain responsive.

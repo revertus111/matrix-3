@@ -1,6 +1,7 @@
 package game.console;
 
 import game.DevModeBridge;
+import game.DevObjectPlacementPreview;
 import game.DevSpawnPlacement;
 
 import java.awt.BorderLayout;
@@ -58,6 +59,7 @@ public final class DevSpawnBrowserWindow {
 
     private final JButton npcSpawnButton = new JButton();
     private final JButton objectSpawnButton = new JButton();
+    private final JButton objectLivePlaceButton = new JButton("Live Place Object");
     private final JButton itemSpawnButton = new JButton();
 
     private final DevSpawnSearchPanel npcSearch = new DevSpawnSearchPanel(
@@ -76,7 +78,11 @@ public final class DevSpawnBrowserWindow {
                 @Override
                 public void selected(int id, String name) {
                     objectIdField.setText(Integer.toString(id));
-                    statusLabel.setText("Selected object: " + name + " (" + id + ").");
+                    if (DevObjectPlacementPreview.isActive()) {
+                        statusLabel.setText(DevObjectPlacementPreview.updateObject(id));
+                    } else {
+                        statusLabel.setText("Selected object: " + name + " (" + id + ").");
+                    }
                 }
             });
 
@@ -110,6 +116,18 @@ public final class DevSpawnBrowserWindow {
         if (instance != null && message != null) {
             instance.statusLabel.setText(message);
         }
+    }
+
+    public static boolean cyclePreviewObject(int delta) {
+        if (instance == null || !DevObjectPlacementPreview.isActive()) {
+            return false;
+        }
+        int selectedId = instance.objectSearch.cycleSelection(delta);
+        if (selectedId < 0) {
+            instance.statusLabel.setText("No object search results are available to cycle.");
+            return false;
+        }
+        return true;
     }
 
     private static void ensureWindow() {
@@ -251,7 +269,7 @@ public final class DevSpawnBrowserWindow {
 
     private JPanel createObjectCard() {
         JPanel card = createCard("Spawn Object",
-                "Place an object with explicit type plus Fixed, Cycle, or Random rotation behavior for repeated placement.");
+                "Place normally, or enter Live Place to move a fully rendered object under the mouse. In Live Place: 1 = previous search result, 2 = next, left-click = place, Escape = cancel.");
         objectSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(objectSearch);
         card.add(Box.createVerticalStrut(14));
@@ -277,6 +295,24 @@ public final class DevSpawnBrowserWindow {
             }
         });
         card.add(objectSpawnButton);
+        card.add(Box.createVerticalStrut(8));
+        configureSpawnButton(objectLivePlaceButton, new Runnable() {
+            @Override
+            public void run() {
+                Integer objectId = parseNonNegative(objectIdField, "Object ID");
+                Integer type = parseRange(objectTypeField, "Object type", 0, 22);
+                Integer rotation = parseRange(objectRotationField, "Object rotation", 0, 3);
+                if (objectId == null || type == null || rotation == null) {
+                    return;
+                }
+                statusLabel.setText(DevModeBridge.armLiveObjectPlacement(
+                        objectId.intValue(), type.intValue(), rotation.intValue()));
+                if (DevObjectPlacementPreview.isActive() && frame != null) {
+                    frame.setVisible(false);
+                }
+            }
+        });
+        card.add(objectLivePlaceButton);
         return card;
     }
 

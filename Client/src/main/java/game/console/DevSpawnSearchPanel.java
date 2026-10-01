@@ -324,6 +324,27 @@ public final class DevSpawnSearchPanel extends JPanel {
         thread.start();
     }
 
+    public int cycleSelection(int delta) {
+        if (delta != -1 && delta != 1) {
+            return -1;
+        }
+        int size = model.getSize();
+        if (size <= 0) {
+            return -1;
+        }
+        int current = list.getSelectedIndex();
+        int next;
+        if (current < 0) {
+            next = delta < 0 ? size - 1 : 0;
+        } else {
+            next = (current + delta + size) % size;
+        }
+        list.setSelectedIndex(next);
+        list.ensureIndexIsVisible(next);
+        Entry entry = model.getElementAt(next);
+        return entry == null ? -1 : entry.id;
+    }
+
     private void selectionChanged() {
         Entry entry = list.getSelectedValue();
         if (entry == null) {

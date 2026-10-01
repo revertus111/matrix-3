@@ -1,3 +1,10 @@
+2026-09-30 - Dev Mode real object placement preview
+- Added Live Place Object to the existing Dev Spawn Object browser.
+- Selected objects render client-only at the hovered world tile through Matrix3's normal ObjectDefinitions model path with no Construction ghost tint/alpha.
+- 1/2 cycle the current object search results while preserving type/rotation; left-click places through the existing validated devspawn path and keeps the tool armed.
+- Escape, Cancel, Dev Mode disable, and switching to other placement modes clear the preview; live placement consumes Walk Here so the player stays planted.
+- No scene registration, clipping, persistence, cache write, or new server placement owner was added.
+
 2026-09-30 - Visual Dev Time hotkey collision correction
 - Removed the Dev Time use of bare F5/F6/F7 after runtime feedback confirmed those keys are already owned elsewhere in Matrix3.
 - Dev Time now uses Ctrl+F8 = single visual step, Ctrl+F9 = pause/resume, Ctrl+F10 = speed cycle.

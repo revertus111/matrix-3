@@ -160,6 +160,29 @@ This table is the authoritative user-facing milestone table across chats.
 - Fixed/Cycle/Random object rotation behavior.
 - Place Last, explicit cancel, Escape cancel, mode replacement, and Dev Mode disable/re-enable cleanup.
 
+
+#### Bundle 1.4 - Real Object Placement Preview
+
+**Purpose:** Give Dev Spawn a Build-Palette-style object placement cursor without creating a second world/object owner.
+
+**Status:** NEEDS TEST
+
+**Checklist / patches:**
+
+- [x] Add a dedicated Live Place Object action to the existing Object Spawn Browser.
+- [x] Render the selected object through Matrix3's normal ObjectDefinitions model factory at the currently hovered world tile.
+- [x] Keep the preview client-only: no scene registration, clipping, persistence or server object exists before confirmation.
+- [x] Render the object with its normal material/lighting; do not apply Construction ghost tint or face alpha.
+- [x] Left-click the hovered world tile to place through the existing owner-validated `devspawn object` path and consume Walk Here while the tool owns placement.
+- [x] Keep placement armed after confirmation for rapid repeated object spawning.
+- [x] 1 / 2 cycle backward/forward through the current Object Spawn search results while preserving type and rotation.
+- [x] Escape / Cancel / Dev Mode OFF cleanly clears the placement preview.
+- [x] Keep Live Place mutually exclusive with ordinary Once/Continuous/Paint and Move/Duplicate placement modes.
+- [ ] Eclipse/Java 8 Client clean-build.
+- [ ] Runtime verify real-material preview, mouse-follow, 1/2 cycling, repeated LMB placement and Escape cleanup.
+
+**Ownership note:** `DevObjectPlacementPreview` owns only transient client presentation. `DevSpawnPlacement` + the existing server `devspawn` bridge remain the placement authority.
+
 ### Phase 2 - Contextual Editors
 
 **Status:** ACTIVE
@@ -329,13 +352,14 @@ This table is the authoritative user-facing milestone table across chats.
 
 ## Current execution state
 
-- Phase: Phase 2 - Contextual Editors
-- Phase status: ACTIVE
-- Bundle: Bundle 2.5 - Visual Dev Time V1
+- Phase: Phase 1 priority side-slice; Phase 2 Contextual Editors remains ACTIVE carryover.
+- Phase status: NEEDS TEST
+- Bundle: Bundle 1.4 - Real Object Placement Preview
 - Bundle status: NEEDS TEST
-- Approval state: SAP AAA approved 2026-09-30; implementation complete statically.
-- Current checklist item: Runtime-check Ctrl+F8/Ctrl+F9/Ctrl+F10 visual time using one stationary GFX and one projectile, then immediately re-run the Bundle 2.3 hover gate while time is slowed/paused.
-- Current objective: Provide a safe visual-only pause/slow/step layer that makes transient Live Inspect targets practical without stopping Matrix3 networking/input/rendering/server authority.
+- Approval state: AAA approved 2026-09-30; implementation complete statically.
+- Current checklist item: Eclipse/Java 8 clean-build, then runtime-check one multi-result object search with real-material mouse-follow preview, 1/2 cycling, repeated left-click placement and Escape cleanup.
+- Current objective: Make Dev Spawn object placement behave like an in-world build palette while retaining the existing validated Dev Spawn server authority.
+- Carryover: Bundle 2.5 Visual Dev Time V1 remains NEEDS TEST; no Visual Dev Time state was discarded by this priority change.
 
 ## Checklist / patch status
 
@@ -352,6 +376,7 @@ This table is the authoritative user-facing milestone table across chats.
 | Last-used placement target | 1 | 1.3 | NEEDS TEST | Session-only Place Last tile action. |
 | Placement cancellation | 1 | 1.3 | NEEDS TEST | Browser/tile explicit cancel plus non-consuming AWT Escape observation. |
 | Object placement rotation | 1 | 1.3 | NEEDS TEST | Fixed, Cycle, Random 0-3. |
+| Real object placement preview | 1 | 1.4 | NEEDS TEST | Fully rendered client-only object follows hovered tile; 1/2 cycle current search results and LMB places through existing devspawn authority. |
 | Phase 1 combined runtime gate | 1 | 1.2 + 1.3 | NEEDS TEST | Intentionally deferred; accumulated queue is in `docs/dev-mode/testlist.txt`. |
 | Live Inspect V1 | 2 | 2.1 | NEEDS TEST | Runtime partially proven: overlay/NPC hover/F9 lock/locked Ctrl+C work; final acceptance waits on V1.1 polish retest. |
 | Live Inspect polish + Tile/Ground Item targets | 2 | 2.2 | NEEDS TEST | Object + Ground Item display/copy runtime-proven; tile/flicker final gate remains pending. |
@@ -420,24 +445,24 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Phase 2 Bundle 2.5 Visual Dev Time V1: added safe visual-only pause/resume, slow-motion and single-step controls for spot animations/projectiles while leaving Matrix3 networking/input/rendering/server simulation live.
+- Phase 1 Bundle 1.4 Real Object Placement Preview: added a client-only normal-material object cursor to Dev Spawn, current-search-result cycling on 1/2, repeated LMB confirmation through the existing server devspawn path, and clean Escape/mode teardown.
 
 **Current phase:**
 
-- Phase 2 - Contextual Editors (`ACTIVE`). Phase 1 remains `NEEDS TEST` as preserved runtime carryover.
+- Phase 1 priority side-slice is `NEEDS TEST`; Phase 2 - Contextual Editors remains `ACTIVE` carryover rather than being reset.
 
 **Active bundle:**
 
-- Bundle 2.5 Visual Dev Time V1 is `NEEDS TEST`. Bundle 2.3 GFX/Projectile inspection can now be tested in the same runtime session using pause/slow-time; Bundle 2.4 F8 routing remains a compatible pending check.
+- Bundle 1.4 Real Object Placement Preview is `NEEDS TEST`.
+- Bundle 2.5 Visual Dev Time V1 remains `NEEDS TEST` and is unchanged.
 
 **Next checklist item:**
 
-- One bundled runtime session: Ctrl+F9 pause/resume, Ctrl+F10 slow speeds, Ctrl+F8 single-step; verify a projectile remains visible/frozen and advances one step, then F9/Ctrl+C the now-practical GFX/Projectile Live Inspect target.
-- Fold the Bundle 2.4 Object/NPC/Tile F8 route checks into the same launch if convenient.
+- One short Client runtime gate: search for an object query with multiple results, choose one, click Live Place Object, verify normal non-ghost rendering follows the hovered tile, use 1/2 to cycle results, left-click several placements without walking, then Escape and confirm the preview disappears.
 
 **Current state / next action:**
 
-- Do not ask the user to test immediately unless they indicate runtime time is available. Preserve the queue and continue safe independent work when explicitly requested.
+- Bundle 1.4 is statically implemented. Preserve all previous Visual Dev Time / Live Inspect runtime carryover after this focused placement check.
 
 **Files/systems already inspected:**
 
@@ -466,6 +491,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Pending runtime verification:**
 
+- Bundle 1.4 Real Object Placement Preview.
 - Bundle 2.5 Visual Dev Time V1.
 - Bundle 2.4 Live Inspect Relationships + Contextual Open.
 - Bundle 2.3 Live Inspect GFX + Projectile Targets (now testable with Bundle 2.5 controls).
