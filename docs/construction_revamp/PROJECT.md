@@ -2589,7 +2589,7 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ### Settlement Minimap V1.1 — RTS heading synchronization + object-interaction self-selection — 2026-10-01
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- Status: **PARTIALLY RUNTIME VERIFIED**. RTS minimap heading synchronization is runtime accepted; rotated-click alignment and object-interaction self-selection still need focused confirmation.
 - ConstructionBuildCamera.rtsYawRadians remains the authoritative RTS yaw used by Q/E and horizontal MMB orbit. A small read-only helper converts that yaw into Matrix3's existing 14-bit 0..16383 minimap-angle domain; no second camera heading owner is introduced.
 - Class464.method5484(...) keeps its stock minimap renderer. While RTS owns heading, the render angle uses the same vanilla relationship already present in Matrix3: negative camera yaw plus the existing minimap offset. Outside RTS the old angle path is untouched.
 - client.method7990() uses positive RTS yaw plus that same offset for the inverse minimap click transform. This keeps rotated visual coordinates and clicked world coordinates aligned.
@@ -2597,7 +2597,8 @@ Build three straight test runs from the same authored conveyor source (short, me
 - RTS object actions 3..6/1001 now require committed self selection for the local-player interaction to continue. First-object worker gather/process orders still queue normally before the local-player action is consumed. Examine 1002 remains vanilla/non-moving.
 - Ground-movement ownership is unchanged: this patch targets object interactions only. Existing Build Palette/editor suspension rules and non-RTS Matrix3 behavior are unchanged.
 - Process rule updated in root AGENTS.md: explicit runtime confirmation of an already-AAA-approved checkpoint authorizes immediate verification/status bookkeeping for that exact work without another AAA; any new code behavior/scope still requires normal AAA.
-- **Resume Here:** pull/build/restart the Client. In settlement RTS, rotate with Q/E and horizontal MMB and verify the minimap spins exactly with camera heading; after ~90 degrees, click the minimap and confirm the RTS pivot lands where clicked. Then leave self unselected and click a tree/ore/workbench plus one ordinary object: workers may receive their mirrored order, but the local player must not move. Select self and repeat to prove vanilla object interaction is restored. Exit settlement and confirm vanilla minimap/object behavior.
+- Runtime acceptance: 2026-10-01 video confirms the stock minimap spins with RTS camera yaw while its center remains tied to the RTS pivot; no visible snap/drift was observed.
+- **Resume Here:** heading synchronization is accepted. Focus only the two remaining checks: rotate about 90 degrees and click several minimap points to confirm rotated click alignment, then leave self unselected and click a tree/ore/workbench plus one ordinary object to confirm the local player does not move. Select self and repeat to prove vanilla object interaction is restored. Exit settlement and confirm vanilla behavior.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
