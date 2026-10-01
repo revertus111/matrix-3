@@ -368,6 +368,29 @@ public final class LiveModelEditorPreview {
         return count;
     }
 
+    /**
+     * Destructive live-session reset only. Drops every authored Part/Multi
+     * mutation and forces LiveModelEditorParts to decode the current object/type
+     * again from Matrix3's cache-backed ObjectDefinitions/model source.
+     *
+     * Saved project/asset JSON files are intentionally untouched.
+     */
+    public static int restoreCacheOriginalParts() {
+        if (!active || targetMode != EditorTargetMode.OBJECT || objectId < 0) {
+            status = "RESTORE ORIGINAL requires an active object target";
+            return 0;
+        }
+        PARTS.clear();
+        invalidateModels();
+        int count = initializeParts();
+        status = count > 0
+                ? "RESTORED CACHE ORIGINAL " + objectName + " #" + objectId
+                        + " | parts=" + count
+                : "RESTORE ORIGINAL failed for " + objectName + " #" + objectId
+                        + " type=" + objectType;
+        return count;
+    }
+
     public static String[] getPartLabels() { return PARTS.getLabels(); }
     public static int getSelectedPart() { return PARTS.getSelected(); }
     public static int[] getSelectedParts() { return PARTS.getSelectedIndices(); }

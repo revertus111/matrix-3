@@ -57,6 +57,7 @@ import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
@@ -1251,14 +1252,23 @@ public final class LiveModelEditorWindow {
 
         JPanel row2 = actionRow(2);
         JButton reset = rsButton("Reset Object");
+        JButton restoreOriginal = rsButton("Restore Original");
+        restoreOriginal.setToolTipText(
+                "Discard this live session's part edits and re-decode the object from Matrix3 cache. Saved projects/assets are not deleted.");
+        row2.add(reset); row2.add(restoreOriginal);
+        panel.add(row2);
+        panel.add(Box.createVerticalStrut(4));
+
+        JPanel row3 = actionRow(1);
         JButton exit = rsButton("Exit Edit");
         exit.setBackground(RS_DANGER);
-        row2.add(reset); row2.add(exit);
-        panel.add(row2);
+        row3.add(exit);
+        panel.add(row3);
 
         refresh.addActionListener(e -> refreshPreview());
         rebuild.addActionListener(e -> initializeParts());
         reset.addActionListener(e -> resetTransforms());
+        restoreOriginal.addActionListener(e -> restoreCacheOriginal());
         exit.addActionListener(e -> closeEditorSession());
         return panel;
     }
@@ -2827,6 +2837,57 @@ public final class LiveModelEditorWindow {
         }
         refreshPreview();
         initializeParts();
+    }
+
+    private void restoreCacheOriginal() {
+        if (!hasSource || objectId < 0) {
+            statusLabel.setText("Restore Original requires a live object target.");
+            return;
+        }
+
+        int answer = JOptionPane.showConfirmDialog(
+                overlayWindow,
+                "Discard all unsaved Part/Multi edits for "
+                        + objectName + " #" + objectId + " and reload its original cache geometry?\n\n"
+                        + "Moved/scaled/rotated parts, hidden/deleted parts, duplicates, replacements, "
+                        + "conveyor roles and undo history will be cleared.\n"
+                        + "Saved project and selection-asset JSON files will NOT be deleted.",
+                "Restore Cache Original",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (answer != JOptionPane.YES_OPTION) {
+            statusLabel.setText("Restore Original cancelled.");
+            return;
+        }
+
+        suppressLiveRefresh = true;
+        try {
+            resetEditorsOnly();
+            typeSpinner.setValue(Integer.valueOf(
+                    DevDefinitionBridge.getPreferredObjectType(objectId)));
+        } finally {
+            suppressLiveRefresh = false;
+        }
+
+        refreshPreview();
+        int count = LiveModelEditorPreview.restoreCacheOriginalParts();
+        hoveredListIndex = -1;
+        refreshPartList();
+        if (count > 0
+                && LiveModelEditorPreview.getSelectionMode()
+                        == LiveModelEditorPreview.SelectionMode.PART) {
+            suppressPartRefresh = true;
+            try {
+                partList.setSelectedIndex(0);
+                LiveModelEditorPreview.selectPart(0);
+            } finally {
+                suppressPartRefresh = false;
+            }
+            loadSelectedPartEditors();
+        }
+        syncTransformInspector();
+        syncControlState();
+        statusLabel.setText(LiveModelEditorPreview.getStatus());
     }
 
     private void resetEditorsOnly() {

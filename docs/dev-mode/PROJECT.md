@@ -518,3 +518,18 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 ## Next recommended work
 
 Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Projectile Live Inspect gate + F8 contextual routing. After that, decide whether to broaden time control to additional client animation families or design a separate guarded server/dev simulation clock.
+
+### Live Model Editor — Restore Cache Original — 2026-10-01
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under AAA.
+- Problem: reopening/rebuilding the same object could preserve the current Live Model Editor part session, so object 46298 could reopen as the previously modified conveyor/sawmill assembly instead of the untouched cache source.
+- Added **Object / Source -> Restore Original** as a separate destructive action from Reset Object and Rebuild Parts.
+- Restore Original:
+  - prompts before destructive reset;
+  - resets whole-object editor controls to defaults and restores the preferred cache object type;
+  - clears the in-memory LiveModelEditorParts source/session, including part transforms, hidden/deleted state, duplicates, replacements, conveyor-role tags, selection/isolate state and undo history;
+  - immediately re-decodes the current object/type from Matrix3's cache-backed ObjectDefinitions/model source.
+- Saved files under dev-model-projects and dev-model-assets are intentionally untouched and may be loaded again afterward.
+- Rebuild Parts remains non-destructive for the current session; Reset Object remains the ordinary whole-object transform reset.
+- No cache writing, object-definition mutation, world mutation, Construction transport ownership or persistent player state changed.
+- **Resume Here (Live Model Editor):** edit object 46298, intentionally move/delete/duplicate several parts, click Restore Original and accept the warning. Verify the untouched sawmill returns, the part count/list is rebuilt, Undo cannot resurrect the discarded session, and a previously saved project can still be loaded afterward.

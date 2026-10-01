@@ -230,3 +230,19 @@ Live Model Editor integration
 [ ] Right-click an object with Dev Mode ON and confirm exactly one `Dev > Edit Model Live` action appears.
 [ ] Confirm normal object options plus Inspect/Edit/Move/Rotate/Duplicate/Delete Dev actions remain available and target the same object.
 [ ] Open the Inspector and confirm `Edit model live...` opens the same Live Model Editor target.
+
+Live Model Editor — Restore Cache Original gate (2026-10-01)
+[x] verified-static: Restore Original is separate from Rebuild Parts and Reset Object.
+[x] verified-static: destructive confirmation explicitly lists live-session state that will be discarded and states saved JSON files are retained.
+[x] verified-static: restore calls LiveModelEditorParts.clear(), invalidating the cached source/session before initializeParts() re-decodes the current ObjectDefinitions/model source.
+[x] verified-static: saved dev-model-projects and dev-model-assets files are not read, deleted or overwritten by restore.
+[x] verified-static: no server/world/cache-write path is touched.
+[ ] Eclipse clean/build Client with Java 8.
+[ ] Edit sawmill object 46298 and move/scale/rotate at least two parts; duplicate one and hide/delete another.
+[ ] Click Object / Source -> Restore Original -> No; verify current authored session remains unchanged.
+[ ] Click Restore Original -> Yes; verify the untouched cache sawmill returns and all source components/part list rebuild.
+[ ] Verify whole-object move/scale/yaw/tile offsets reset and preferred object type is restored.
+[ ] Press Undo after restore; discarded pre-restore edits must not return.
+[ ] Save an edited project before restore, restore the cache original, then Load Project; saved authored state must still load.
+[ ] Save a selection asset before restore; verify the asset file remains available afterward.
+[ ] Regression: Rebuild Parts does not become destructive and Reset Object retains its existing transform-reset behavior.

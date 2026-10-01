@@ -49,6 +49,10 @@ Use this checklist after meaningful core changes. Run the targeted section for i
 - [ ] A representative interface opens and responds.
 - [ ] Bank/interface closing returns control normally.
 
+## Dev tooling / Live Model Editor
+
+- [ ] On an edited live object, **Restore Original** reloads untouched cache geometry, clears the discarded live-session undo/part state, and leaves saved project/asset files available.
+
 ## Shutdown
 
 - [ ] Logout/shutdown path does not corrupt player state.

@@ -169,3 +169,12 @@
 - Added an owner-only `Dev > Edit Model Live` object action and Inspector shortcut.
 - The action opens the separate Live Model Editor workstream; existing Dev object manipulation ownership is unchanged.
 - Live model editing is client-only visual authoring in this bundle and does not grant permanent map/cache mutation.
+
+2026-10-01 - Live Model Editor Restore Cache Original
+- Added Object / Source -> Restore Original with destructive confirmation.
+- Restore Original clears the current in-memory Part/Multi editing session and forces a fresh decode from Matrix3 cache-backed object/model definitions.
+- Clears part transforms, hidden/deleted state, duplicates, replacements, conveyor roles, selection/isolate state and undo history.
+- Resets whole-object editor controls and restores the preferred object type before rebuilding the source.
+- Saved project and selection-asset JSON files are never deleted or overwritten by restore.
+- Rebuild Parts and Reset Object keep their existing meanings; no cache writer or world/server mutation was added.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
