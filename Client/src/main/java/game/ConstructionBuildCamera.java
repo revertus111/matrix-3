@@ -228,9 +228,10 @@ public final class ConstructionBuildCamera {
 
     /**
      * verified-static: Matrix3 minimap render/click angles use a 14-bit
-     * 0..16383 turn domain. RTS yaw is already the authoritative detached-camera
-     * heading, so convert it once and let the stock minimap render/click owners
-     * apply their existing opposite-sign render/inverse-click relationship.
+     * 0..16383 turn domain. Runtime acceptance showed the detached RTS camera yaw
+     * uses the opposite handedness from Matrix3's stock minimap heading, so invert
+     * it once here and let raster/compass/overlay/click owners keep their existing
+     * render-vs-inverse-click sign relationship.
      *
      * @return RTS yaw in Matrix3 angle units, or -1 when RTS does not own heading.
      */
@@ -238,7 +239,7 @@ public final class ConstructionBuildCamera {
         if (!active || cameraMode != CameraMode.RTS || !rtsOrientationInitialized) {
             return -1;
         }
-        return ((int) (rtsYawRadians * 2607.5945876176133)) & 0x3fff;
+        return ((int) (-rtsYawRadians * 2607.5945876176133)) & 0x3fff;
     }
 
     public static void adjustRtsMoveSpeed(int delta) {
