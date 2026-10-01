@@ -256,3 +256,12 @@ Still pending explicit edge verification:
 - Normal world scenes and smaller dynamic instances retain Matrix3's original radius selection.
 - This does not change the accepted detached Class24/Class411 RTS camera owner, live near/far projection synchronization, fog, generated 176x176 terrain, or 64x64 gameplay/build boundary.
 - **RUNTIME VERIFIED 2026-10-01:** the 64-tile settlement visibility radius removed the reported distant terrain/object cutoff in the wide RTS view. Normal world and smaller-instance radii remain unchanged by this patch.
+
+## RTS minimap yaw handedness — 2026-10-01
+
+- **verified-static:** Q/E and horizontal MMB both mutate the same `rtsYawRadians` used by the detached RTS camera orientation.
+- Runtime polish found that detached RTS yaw and Matrix3's stock minimap heading domain have opposite handedness: camera orbit direction was correct, while minimap/compass visual rotation appeared backwards.
+- `ConstructionBuildCamera.getRtsMinimapYawUnits()` now negates `rtsYawRadians` once during conversion into Matrix3's 14-bit 0..16383 heading domain.
+- `Class464` raster, `Class107` compass, `Class12` overlay dots/icons and the client minimap click transform retain their already-established render/inverse sign relationships.
+- No camera orbit input, pivot math, detached owner, projection, render focus or visibility radius changed.
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST**.
