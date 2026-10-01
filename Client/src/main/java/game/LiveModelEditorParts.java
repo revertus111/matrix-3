@@ -600,7 +600,7 @@ final class LiveModelEditorParts {
         PartState primary = selectedState();
         if (selection.isEmpty() || primary == null || primary.deleted) return false;
         if (!gestureActive) {
-            pushUndo();
+            pushUndo(false);
             gestureStarts.clear();
             for (Integer index : selection) {
                 PartState state = stateAt(index.intValue());
@@ -624,7 +624,10 @@ final class LiveModelEditorParts {
         int[] target = sanitizeTransform(sx, sy, sz, mx, my, mz, yaw);
         boolean changed = applySelectionDelta(
                 transformDelta(primaryStart, target), gestureStarts, groupScale);
-        if (changed) markGeometryChanged();
+        if (changed) {
+            redo.clear();
+            markGeometryChanged();
+        }
         return changed;
     }
 
@@ -1440,7 +1443,11 @@ final class LiveModelEditorParts {
     }
 
     private void pushUndo() {
-        redo.clear();
+        pushUndo(true);
+    }
+
+    private void pushUndo(boolean clearRedo) {
+        if (clearRedo) redo.clear();
         pushHistory(undo, snapshotCurrent());
     }
 
