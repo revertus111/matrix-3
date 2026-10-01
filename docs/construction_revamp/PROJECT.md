@@ -2597,8 +2597,9 @@ Build three straight test runs from the same authored conveyor source (short, me
 - RTS object actions 3..6/1001 now require committed self selection for the local-player interaction to continue. First-object worker gather/process orders still queue normally before the local-player action is consumed. Examine 1002 remains vanilla/non-moving.
 - Ground-movement ownership is unchanged: this patch targets object interactions only. Existing Build Palette/editor suspension rules and non-RTS Matrix3 behavior are unchanged.
 - Process rule updated in root AGENTS.md: explicit runtime confirmation of an already-AAA-approved checkpoint authorizes immediate verification/status bookkeeping for that exact work without another AAA; any new code behavior/scope still requires normal AAA.
-- Runtime acceptance correction: 2026-10-01 video confirms the minimap raster spins with RTS camera yaw while its center remains tied to the RTS pivot, but the stock compass overlay remains frozen on the vanilla heading captured at settlement entry (for example south). Compass synchronization is therefore still OPEN.
-- **Resume Here:** minimap raster heading is accepted, but compass synchronization is OPEN. Trace/patch the stock compass heading owner so it reads current RTS yaw rather than the entry/vanilla heading; then verify rotated minimap click alignment and the object-interaction self-selection guard.
+- Runtime acceptance correction: 2026-10-01 video confirms the minimap raster spins with RTS camera yaw while its center remains tied to the RTS pivot, but the stock compass overlay remained frozen on the vanilla heading captured at settlement entry (for example south).
+- Compass synchronization is now **IMPLEMENTED / NEEDS RUNTIME TEST**: verified-static ownership is Class107.method2061(...), and it now consumes ConstructionBuildCamera.getRtsMinimapYawUnits() while RTS owns heading. Outside RTS the original vanilla compass source remains unchanged.
+- **Resume Here:** pull/build Client and runtime-test the compass by entering settlement facing a known direction, then rotate RTS with Q/E/MMB and confirm the stock compass follows current RTS yaw. After that, verify rotated minimap click alignment and the object-interaction self-selection guard.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
