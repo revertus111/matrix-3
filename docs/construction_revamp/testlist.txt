@@ -1954,3 +1954,7 @@ Settlement Minimap V1.1 / RTS object-interaction guard — PARTIALLY RUNTIME VER
 [x] verified-static: Class348 compass special-interface dispatch reaches Class107.method2061(...), separate from Class464 stock minimap rendering.
 [x] verified-static: Class107 compass angle now consumes ConstructionBuildCamera.getRtsMinimapYawUnits() only while RTS owns heading; vanilla heading remains the fallback everywhere else.
 [x] COMPASS REGRESSION: enter settlement facing a known direction (for example south), rotate RTS with Q/E/MMB, and confirm the stock compass rotates with current RTS yaw instead of staying frozen on the entry heading. RUNTIME VERIFIED 2026-10-01.
+[x] verified-static: NPC/player minimap offsets already use the RTS-owned center before reaching the shared overlay renderer.
+[x] verified-static: Class12.method558(...) is the shared stock minimap overlay rotation seam and now uses +RTS yaw while RTS owns heading.
+[ ] MINIMAP OVERLAY REGRESSION: keep NPCs/workers visible on the minimap and rotate/pan RTS with Q/E/MMB/WASD; NPC/player/map-icon dots must move/rotate with the raster instead of remaining visually fixed.
+[ ] Exit settlement RTS and confirm stock NPC/player/map-icon minimap overlays return to vanilla heading/centering unchanged.
