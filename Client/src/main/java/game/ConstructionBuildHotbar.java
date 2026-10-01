@@ -196,7 +196,8 @@ public final class ConstructionBuildHotbar {
     private static void rememberSelectedObject() {
         BuildPiece selected = ConstructionPlacementController.getSelectedPiece();
         if (selected == null || "basic-rail".equals(selected.getKey())
-                || "rail-splitter".equals(selected.getKey())) {
+                || "rail-splitter".equals(selected.getKey())
+                || "conveyor".equals(selected.getKey())) {
             return;
         }
         lastObjectKey = selected.getKey();
