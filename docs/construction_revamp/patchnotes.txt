@@ -2176,3 +2176,8 @@
 - Existing owners remain unchanged: Class464 raster/compass render use their stock negative-heading relationship, Class12 overlays and client minimap click use their existing positive/inverse relationship.
 - Scope intentionally excludes camera orbit math, detached camera ownership, minimap center, render distance, projection depth and object-interaction handling.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+
+2026-10-01 - Resource World V1A/V1B compile compatibility follow-up
+- Added SettlementResourceNodeState.getKey() compatibility for worker diagnostics.
+- Updated Bundle 1.3 final check to validate active persisted resource nodes instead of fixed enum nodes, so legitimate depletion is not treated as a failure.

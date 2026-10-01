@@ -49,9 +49,9 @@ public final class SettlementBundle13FinalCheck {
             return "NOT READY: enter the settlement first. " + state.getStarterShelterStatus();
         }
 
-        for (SettlementResourceNode node : SettlementResourceNode.values()) {
+        for (SettlementResourceNodeState node : state.snapshotActiveResourceNodes()) {
             if (!active.isStarterResourceNodeAvailable(node)) {
-                return "FAIL: live starter node unavailable: " + node.getKey() + ".";
+                return "FAIL: live active resource node unavailable: " + node.getKey() + ".";
             }
         }
 

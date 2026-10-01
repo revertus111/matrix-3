@@ -41,6 +41,7 @@ public final class SettlementResourceNodeState implements Serializable {
 
     public long getNodeId() { return nodeId; }
     public String getDefinitionKey() { return definitionKey; }
+    public String getKey() { return definitionKey; }
     public SettlementResourceNode getDefinition() { return SettlementResourceNode.forKey(definitionKey); }
     public SettlementResource getResource() {
         SettlementResourceNode d = getDefinition();
