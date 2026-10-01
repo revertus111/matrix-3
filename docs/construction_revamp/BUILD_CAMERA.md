@@ -264,4 +264,4 @@ Still pending explicit edge verification:
 - `ConstructionBuildCamera.getRtsMinimapYawUnits()` now negates `rtsYawRadians` once during conversion into Matrix3's 14-bit 0..16383 heading domain.
 - `Class464` raster, `Class107` compass, `Class12` overlay dots/icons and the client minimap click transform retain their already-established render/inverse sign relationships.
 - No camera orbit input, pivot math, detached owner, projection, render focus or visibility radius changed.
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST**.
+- **RUNTIME VERIFIED 2026-10-01:** Q/E and horizontal MMB now rotate the minimap/compass in the intended direction; NPC/player/map-icon overlays remain aligned and rotated minimap click-to-focus still lands correctly.
