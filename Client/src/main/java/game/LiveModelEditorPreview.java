@@ -83,6 +83,33 @@ public final class LiveModelEditorPreview {
         WHOLE, PART, MULTI
     }
 
+    public enum TileAnchor {
+        NORTH_WEST("NW", -1, 1),
+        NORTH("N", 0, 1),
+        NORTH_EAST("NE", 1, 1),
+        WEST("W", -1, 0),
+        CENTER("Center", 0, 0),
+        EAST("E", 1, 0),
+        SOUTH_WEST("SW", -1, -1),
+        SOUTH("S", 0, -1),
+        SOUTH_EAST("SE", 1, -1);
+
+        private final String label;
+        final int anchorX;
+        final int anchorZ;
+
+        TileAnchor(String label, int anchorX, int anchorZ) {
+            this.label = label;
+            this.anchorX = anchorX;
+            this.anchorZ = anchorZ;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
     private static Class106 cachedRenderer;
     private static int cachedRevision = Integer.MIN_VALUE;
     private static Model cachedMainModel;
@@ -933,23 +960,19 @@ public final class LiveModelEditorPreview {
     }
 
     /**
-     * Shrink the current part/multi selection to one 512-unit tile footprint.
-     * The parts system owns the actual pivot-aware geometry/offset transaction.
+     * Align the requested Part/Multi bounds anchor to the nearest 512-unit
+     * source-model tile-grid intersection without resizing the geometry.
      */
-    public static boolean fitSelectedToOneTile() {
-        boolean changed = PARTS.fitSelectionToFootprint(512);
+    public static boolean snapSelectedToTile(TileAnchor anchor) {
+        if (anchor == null) anchor = TileAnchor.CENTER;
+        boolean changed = PARTS.snapSelectionToGrid(512, anchor.anchorX, anchor.anchorZ);
         if (changed) {
             invalidateGeometryModels();
-            int[] bounds = PARTS.getSelectionBounds();
-            status = bounds == null ? "FIT 1 TILE applied"
-                    : "FIT 1 TILE " + bounds[0] + "x" + bounds[2]
-                            + " footprint (" + bounds[1] + " high)";
+            status = "TILE SNAP " + anchor + " -> nearest 512-unit grid";
         } else {
-            int[] bounds = PARTS.getSelectionBounds();
-            status = bounds == null
-                    ? "FIT 1 TILE requires one or more selected parts"
-                    : "FIT 1 TILE no change: footprint "
-                            + bounds[0] + "x" + bounds[2] + " already fits";
+            status = PARTS.getSelectionBounds() == null
+                    ? "TILE SNAP requires one or more selected parts"
+                    : "TILE SNAP " + anchor + " already aligned";
         }
         return changed;
     }
