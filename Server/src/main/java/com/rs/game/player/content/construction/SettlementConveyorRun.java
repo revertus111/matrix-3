@@ -26,6 +26,10 @@ public final class SettlementConveyorRun implements Serializable {
     public static final double BASIC_SPEED_TILES_PER_SECOND = 1.25;
     public static final double PAYLOAD_SPACING_TILES = 0.85;
 
+    public static final int ROUTE_AUTO = 0;
+    public static final int ROUTE_X_FIRST = 1;
+    public static final int ROUTE_Y_FIRST = 2;
+
     private static final double EPSILON = 0.0001;
     private static final int MAX_DEVELOPMENT_PAYLOADS = 128;
 
@@ -35,6 +39,13 @@ public final class SettlementConveyorRun implements Serializable {
     private final int endPlotX;
     private final int endPlotY;
     private final int plane;
+
+    /*
+     * Route axis was added after the first persistent-run schema. Zero is
+     * intentionally AUTO so old Java-serialized saves normalize without a
+     * migration rewrite.
+     */
+    private int routeAxis = ROUTE_AUTO;
 
     /*
      * Added after the first persistent-run schema. These are intentionally
@@ -48,12 +59,21 @@ public final class SettlementConveyorRun implements Serializable {
     public SettlementConveyorRun(long runId,
             int startPlotX, int startPlotY,
             int endPlotX, int endPlotY, int plane) {
+        this(runId, startPlotX, startPlotY,
+                endPlotX, endPlotY, plane, ROUTE_AUTO);
+    }
+
+    public SettlementConveyorRun(long runId,
+            int startPlotX, int startPlotY,
+            int endPlotX, int endPlotY, int plane, int routeAxis) {
         this.runId = runId;
         this.startPlotX = startPlotX;
         this.startPlotY = startPlotY;
         this.endPlotX = endPlotX;
         this.endPlotY = endPlotY;
         this.plane = plane;
+        this.routeAxis = resolveRouteAxis(
+                routeAxis, startPlotX, startPlotY, endPlotX, endPlotY);
     }
 
     public long getRunId() {
@@ -99,6 +119,8 @@ public final class SettlementConveyorRun implements Serializable {
         if (!isValid()) {
             return false;
         }
+        routeAxis = resolveRouteAxis(
+                routeAxis, startPlotX, startPlotY, endPlotX, endPlotY);
         if (payloads == null) {
             payloads = new ArrayList<SettlementConveyorPayload>();
         }
@@ -130,10 +152,32 @@ public final class SettlementConveyorRun implements Serializable {
         return true;
     }
 
+    public int getRouteAxis() {
+        return resolveRouteAxis(
+                routeAxis, startPlotX, startPlotY, endPlotX, endPlotY);
+    }
+
+    public int getBendPlotX() {
+        return getRouteAxis() == ROUTE_X_FIRST ? endPlotX : startPlotX;
+    }
+
+    public int getBendPlotY() {
+        return getRouteAxis() == ROUTE_X_FIRST ? startPlotY : endPlotY;
+    }
+
     public double getLengthTiles() {
-        double dx = endPlotX - startPlotX;
-        double dy = endPlotY - startPlotY;
-        return Math.sqrt(dx * dx + dy * dy);
+        return Math.abs(endPlotX - startPlotX)
+                + Math.abs(endPlotY - startPlotY);
+    }
+
+    public static int resolveRouteAxis(int requested,
+            int startX, int startY, int endX, int endY) {
+        if (requested == ROUTE_X_FIRST || requested == ROUTE_Y_FIRST) {
+            return requested;
+        }
+        int dx = Math.abs(endX - startX);
+        int dy = Math.abs(endY - startY);
+        return dx >= dy ? ROUTE_X_FIRST : ROUTE_Y_FIRST;
     }
 
     public synchronized int getPayloadCount() {

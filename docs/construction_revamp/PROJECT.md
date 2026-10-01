@@ -2585,3 +2585,20 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Initial settlement entry also invalidates once after the dynamic scene is ready, so saved builds plus starter object resource nodes are eligible for the stock minimap pass.
 - Starter tree 1276, stone 11933 and ore 11936 remain ordinary Matrix3 object definitions. V1 deliberately reuses whatever stock map-scene/map-icon metadata those definitions expose; no guessed Construction fallback icon IDs were introduced. The NPC-backed food spot remains under stock NPC/dot presentation.
 - **Resume Here:** pull/build/restart Client + Server. Enter a settlement and keep the player stationary while panning RTS; the minimap should scroll with the RTS pivot. Move the player separately to prove it no longer owns the center during RTS, then click multiple minimap points and verify the camera focuses exactly where clicked without player movement. Place/remove/move/rotate walls/fences/floors and use Clear All/one rail batch to prove the stock minimap rebuilds to the final scene. Check tree/stone/ore stock icons if their cache definitions supply them. Exit RTS/settlement and confirm vanilla player-centered minimap behavior returns. If accepted, return to the Conveyor Gameplay V1.8 runtime gate unless reprioritized.
+
+### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- Runtime video rejected V1.8's free-angle A->B visual behavior: the logical run was correct, but one stretched diagonal model made placement feel like rotating a board instead of building factory conveyors.
+- V1.9 keeps one server-owned `SettlementConveyorRun` but gives it an orthogonal route axis:
+  - aligned endpoints remain one straight segment;
+  - non-aligned endpoints render/travel as two straight legs with one 90-degree bend;
+  - the first-leg axis is locked by the first meaningful mouse movement after Point A, so the route does not flip while aiming.
+- Client preview and committed server route share the same route-axis token. Endpoint snapping still occurs server-side before persistence.
+- Persistent run length is now Manhattan/path length rather than Euclidean diagonal distance. Payload spacing, speed, backpressure and ownership continue to operate on one logical run.
+- Payload rendering samples the active path leg and rotates items with that leg when they pass the bend.
+- Existing diagonal V1.8 saves deserialize with routeAxis=AUTO and normalize to a deterministic orthogonal route; SettlementState schema is v17.
+- Server RUN sync remains backward-tolerant on the client: legacy seven-field RUN packets resolve AUTO, new packets include route axis.
+- The current bend is a square overlap of the two accepted straight conveyor meshes. A dedicated curved/elbow mesh remains visual polish and does not own routing/transport semantics.
+- No splitter topology, machine port-direction metadata, inserters, belt tiers or alternate transport owner added.
+- **Resume Here (conveyor):** pull/build/restart Client + Server. Select Logistics -> Conveyor, click Point A, move first horizontally or vertically to lock the first leg, then aim elsewhere. Confirm the preview stays orthogonal and stable, commit it, and watch payloads follow the first leg, turn 90 degrees, then reach Point B. Also verify straight runs, endpoint snapping, right-click/Escape cancellation and chest -> machine -> chest conservation.

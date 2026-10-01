@@ -329,6 +329,12 @@ public final class SettlementInstance {
      * One call creates one logical ConveyorRun regardless of its visual length.
      */
     public synchronized String createConveyorRun(WorldTile start, WorldTile end) {
+        return createConveyorRun(
+                start, end, SettlementConveyorRun.ROUTE_AUTO);
+    }
+
+    public synchronized String createConveyorRun(
+            WorldTile start, WorldTile end, int routeAxis) {
         if (!loaded || destroyed) {
             return "Settlement conveyor placement is unavailable while the settlement is loading.";
         }
@@ -349,10 +355,17 @@ public final class SettlementInstance {
             return "Conveyor Point A and Point B must be different tiles after endpoint snapping.";
         }
 
+        int startPlotX = toPlotX(start.getX());
+        int startPlotY = toPlotY(start.getY());
+        int endPlotX = toPlotX(end.getX());
+        int endPlotY = toPlotY(end.getY());
+        int resolvedRouteAxis = SettlementConveyorRun.resolveRouteAxis(
+                routeAxis, startPlotX, startPlotY, endPlotX, endPlotY);
+
         SettlementConveyorRun run = state.addConveyorRun(
-                toPlotX(start.getX()), toPlotY(start.getY()),
-                toPlotX(end.getX()), toPlotY(end.getY()),
-                start.getPlane());
+                startPlotX, startPlotY,
+                endPlotX, endPlotY,
+                start.getPlane(), resolvedRouteAxis);
         if (run == null) {
             return "ConveyorRun could not be saved.";
         }
@@ -363,7 +376,9 @@ public final class SettlementInstance {
                     "Created persistent ConveyorRun A=("
                             + run.getStartPlotX() + "," + run.getStartPlotY()
                             + ") B=(" + run.getEndPlotX() + "," + run.getEndPlotY()
-                            + ") length=" + String.format("%.2f", run.getLengthTiles()) + "t.",
+                            + ") route=" + (run.getRouteAxis() == SettlementConveyorRun.ROUTE_X_FIRST
+                                    ? "X_FIRST" : "Y_FIRST")
+                            + " length=" + String.format("%.2f", run.getLengthTiles()) + "t.",
                     SettlementDebug.Category.LOGISTICS);
         }
         boolean snappedStart = requestedStart.getX() != start.getX()
@@ -1118,7 +1133,8 @@ public final class SettlementInstance {
                     + "," + toWorldY(run.getStartPlotY())
                     + "," + toWorldX(run.getEndPlotX())
                     + "," + toWorldY(run.getEndPlotY())
-                    + "," + run.getPlane());
+                    + "," + run.getPlane()
+                    + "," + run.getRouteAxis());
         }
         player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR, "END");
         syncConveyorPayloadsToClient();

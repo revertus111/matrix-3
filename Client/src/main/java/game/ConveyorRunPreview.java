@@ -25,6 +25,10 @@ public final class ConveyorRunPreview {
 
     private static final int TILE_UNITS = 512;
 
+    public static final int ROUTE_AUTO = 0;
+    public static final int ROUTE_X_FIRST = 1;
+    public static final int ROUTE_Y_FIRST = 2;
+
     private static final int DEFAULT_PAYLOAD_ITEM_ID = 1511;
 
     private static volatile int payloadItemId = DEFAULT_PAYLOAD_ITEM_ID;
@@ -81,7 +85,7 @@ public final class ConveyorRunPreview {
 
     private static Class106 cachedRenderer;
     private static int cachedRevision = Integer.MIN_VALUE;
-    private static Model[] cachedModels = new Model[0];
+    private static Model[][] cachedModels = new Model[0][];
 
     private static final int MAX_PAYLOAD_MODEL_CACHE = 64;
     private static final double MAX_PAYLOAD_EXTRAPOLATION_SECONDS = 1.2;
@@ -112,13 +116,15 @@ public final class ConveyorRunPreview {
         public final int headingYaw;
 
         PayloadEditorReference(ConveyorRun run) {
+            ConveyorRun[] segments = run.segmentRuns();
+            ConveyorRun segment = segments.length == 0 ? run : segments[0];
             this.runId = run.runId;
-            this.startX = run.startX;
-            this.startY = run.startY;
-            this.endX = run.endX;
-            this.endY = run.endY;
+            this.startX = segment.startX;
+            this.startY = segment.startY;
+            this.endX = segment.endX;
+            this.endY = segment.endY;
             this.plane = run.plane;
-            this.headingYaw = run.headingYaw();
+            this.headingYaw = segment.headingYaw();
         }
 
         public double lengthTiles() {
@@ -458,7 +464,7 @@ public final class ConveyorRunPreview {
                 return true;
             }
             String[] values = payload.split(",");
-            if (values.length != 7) {
+            if (values.length != 7 && values.length != 8) {
                 status = "PERSISTENT SYNC rejected malformed RUN";
                 return true;
             }
@@ -469,10 +475,12 @@ public final class ConveyorRunPreview {
                 int endX = Integer.parseInt(values[4]);
                 int endY = Integer.parseInt(values[5]);
                 int plane = Integer.parseInt(values[6]);
+                int routeAxis = values.length == 8
+                        ? Integer.parseInt(values[7]) : ROUTE_AUTO;
                 if (runId > 0L && (startX != endX || startY != endY)) {
                     pendingSettlementRuns.add(new ConveyorRun(
                             runId, "RUN#" + runId,
-                            startX, startY, endX, endY, plane));
+                            startX, startY, endX, endY, plane, routeAxis));
                 }
             } catch (NumberFormatException ex) {
                 status = "PERSISTENT SYNC rejected malformed numbers";
@@ -508,20 +516,25 @@ public final class ConveyorRunPreview {
     }
 
     public static synchronized void setPlacementPreview(
-            int startX, int startY, int endX, int endY, int plane) {
+            int startX, int startY, int endX, int endY,
+            int plane, int routeAxis) {
         if (startX == endX && startY == endY) {
             clearPlacementPreview();
             return;
         }
+        int resolvedRouteAxis = ConveyorRun.resolveRouteAxis(
+                routeAxis, startX, startY, endX, endY);
         ConveyorRun current = placementRun;
         if (current != null
                 && current.startX == startX && current.startY == startY
                 && current.endX == endX && current.endY == endY
-                && current.plane == plane) {
+                && current.plane == plane
+                && current.routeAxis == resolvedRouteAxis) {
             return;
         }
         placementRun = new ConveyorRun(
-                -2L, "PLACEMENT", startX, startY, endX, endY, plane);
+                -2L, "PLACEMENT", startX, startY, endX, endY,
+                plane, resolvedRouteAxis);
         revision++;
         invalidateModels();
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -575,15 +588,25 @@ public final class ConveyorRunPreview {
 
         int rendered = 0;
         int failed = 0;
+        int renderedSegments = 0;
         int payloads = 0;
         for (int i = 0; i < current.length; i++) {
-            Model model = i < cachedModels.length ? cachedModels[i] : null;
-            if (model != null && renderOne(current[i], model, definition,
-                    scene, renderer, sceneBase)) {
-                rendered++;
-            } else {
-                failed++;
+            ConveyorRun[] segments = current[i].segmentRuns();
+            Model[] models = i < cachedModels.length ? cachedModels[i] : null;
+            boolean complete = models != null && models.length == segments.length;
+            for (int segmentIndex = 0; complete && segmentIndex < segments.length;
+                    segmentIndex++) {
+                Model model = models[segmentIndex];
+                if (model != null && renderOne(
+                        segments[segmentIndex], model, definition,
+                        scene, renderer, sceneBase)) {
+                    renderedSegments++;
+                } else {
+                    complete = false;
+                }
             }
+            if (complete) rendered++;
+            else failed++;
 
             if (current[i].runId > 0L) {
                 payloads += renderPayloads(
@@ -592,6 +615,7 @@ public final class ConveyorRunPreview {
         }
 
         status = "DRAW ConveyorRun Transport " + rendered + "/" + current.length
+                + " segments=" + renderedSegments
                 + " payloads=" + payloads
                 + " testItem=" + payloadItemId
                 + (failed == 0 ? "" : " failed=" + failed);
@@ -627,24 +651,30 @@ public final class ConveyorRunPreview {
 
     private static void rebuildModels(Class106 renderer, ObjectDefinitions definition,
             ConveyorRun[] current) {
-        Model[] built = new Model[current.length];
+        Model[][] built = new Model[current.length][];
         String summary = "roles unavailable";
 
         for (int i = 0; i < current.length; i++) {
-            Generation generation = generateRaw(definition, current[i]);
-            if (generation == null || generation.raw == null) {
-                built[i] = null;
-                continue;
+            ConveyorRun[] segments = current[i].segmentRuns();
+            built[i] = new Model[segments.length];
+            for (int segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
+                ConveyorRun segment = segments[segmentIndex];
+                Generation generation = generateRaw(definition, segment);
+                if (generation == null || generation.raw == null) {
+                    built[i][segmentIndex] = null;
+                    continue;
+                }
+                summary = generation.summary;
+                built[i][segmentIndex] = buildModel(
+                        renderer, definition, generation.raw,
+                        generation.sourceAxisX, segment.headingYaw());
             }
-            summary = generation.summary;
-            built[i] = buildModel(renderer, definition, generation.raw,
-                    generation.sourceAxisX, current[i].headingYaw());
         }
 
         cachedModels = built;
         cachedRenderer = renderer;
         cachedRevision = revision;
-        roleSummary = summary + " | static-belt visual";
+        roleSummary = summary + " | routed static-belt visual";
         System.out.println("[ConveyorRunPreview] " + roleSummary);
     }
 
@@ -1215,51 +1245,36 @@ public final class ConveyorRunPreview {
 
         int baseWorldX = sceneBase.localX * -2109597897;
         int baseWorldY = sceneBase.localY * 417324155;
-        int startLocalX = run.startX - baseWorldX;
-        int startLocalY = run.startY - baseWorldY;
-        int endLocalX = run.endX - baseWorldX;
-        int endLocalY = run.endY - baseWorldY;
+        PathPoint point = run.sampleAtDistance(distanceTiles);
+        double localX = point.worldX - baseWorldX;
+        double localY = point.worldY - baseWorldY;
 
         int sceneWidth = scene.anInt5833 * -1396185127;
         int sceneHeight = scene.anInt5834 * -1519623925;
-        if (startLocalX < 0 || startLocalY < 0 || endLocalX < 0 || endLocalY < 0
-                || startLocalX >= sceneWidth || endLocalX >= sceneWidth
-                || startLocalY >= sceneHeight || endLocalY >= sceneHeight) {
+        if (localX < 0.0 || localY < 0.0
+                || localX >= sceneWidth || localY >= sceneHeight) {
             return false;
         }
 
-        double lengthTiles = Math.max(0.001, run.lengthTiles());
-        double progress = Math.max(0.0,
-                Math.min(1.0, distanceTiles / lengthTiles));
-
         int tileSize = ground.anInt2087 * 2129890771;
-        double deltaX = endLocalX - startLocalX;
-        double deltaY = endLocalY - startLocalY;
-        double directionX = deltaX / lengthTiles;
-        double directionY = deltaY / lengthTiles;
+        double directionX = point.directionX;
+        double directionY = point.directionY;
         double alongTiles = (payloadAnchor.alongOffset
                 + payloadProfile.alongOffset) / (double) TILE_UNITS;
         double sideTiles = (payloadAnchor.sideOffset
                 + payloadProfile.sideOffset) / (double) TILE_UNITS;
 
-        double localX = startLocalX + deltaX * progress
-                + directionX * alongTiles - directionY * sideTiles;
-        double localY = startLocalY + deltaY * progress
-                + directionY * alongTiles + directionX * sideTiles;
+        localX += directionX * alongTiles - directionY * sideTiles;
+        localY += directionY * alongTiles + directionX * sideTiles;
         int sceneX = (int) Math.round(localX * tileSize + tileSize * 0.5);
         int sceneZ = (int) Math.round(localY * tileSize + tileSize * 0.5);
-
-        double midLocalX = (startLocalX + endLocalX) * 0.5;
-        double midLocalY = (startLocalY + endLocalY) * 0.5;
-        int midSceneX = (int) Math.round(midLocalX * tileSize + tileSize * 0.5);
-        int midSceneZ = (int) Math.round(midLocalY * tileSize + tileSize * 0.5);
-        int sceneY = ground.method2718(midSceneX, midSceneZ, 0)
+        int sceneY = ground.method2718(sceneX, sceneZ, 0)
                 + payloadAnchor.heightOffset + payloadProfile.heightOffset;
 
         PAYLOAD_TRANSFORM.method3594();
 
         int pitch = degreesToAngle(payloadProfile.pitchDegrees);
-        int yaw = (run.headingYaw()
+        int yaw = (point.headingYaw
                 + degreesToAngle(payloadProfile.yawDegrees)) & 0x3fff;
         int roll = degreesToAngle(payloadProfile.rollDegrees);
 
@@ -1639,7 +1654,7 @@ public final class ConveyorRunPreview {
     private static void invalidateModels() {
         cachedRenderer = null;
         cachedRevision = Integer.MIN_VALUE;
-        cachedModels = new Model[0];
+        cachedModels = new Model[0][];
     }
 
     private static final class ConveyorPayload {
@@ -1682,9 +1697,15 @@ public final class ConveyorRunPreview {
         final int endX;
         final int endY;
         final int plane;
+        final int routeAxis;
 
         ConveyorRun(long runId, String name, int startX, int startY,
                 int endX, int endY, int plane) {
+            this(runId, name, startX, startY, endX, endY, plane, ROUTE_AUTO);
+        }
+
+        ConveyorRun(long runId, String name, int startX, int startY,
+                int endX, int endY, int plane, int routeAxis) {
             this.runId = runId;
             this.name = name;
             this.startX = startX;
@@ -1692,17 +1713,105 @@ public final class ConveyorRunPreview {
             this.endX = endX;
             this.endY = endY;
             this.plane = plane;
+            this.routeAxis = resolveRouteAxis(
+                    routeAxis, startX, startY, endX, endY);
+        }
+
+        static int resolveRouteAxis(
+                int requested, int startX, int startY, int endX, int endY) {
+            if (requested == ROUTE_X_FIRST || requested == ROUTE_Y_FIRST) {
+                return requested;
+            }
+            int dx = Math.abs(endX - startX);
+            int dy = Math.abs(endY - startY);
+            return dx >= dy ? ROUTE_X_FIRST : ROUTE_Y_FIRST;
         }
 
         double lengthTiles() {
-            double dx = endX - startX;
-            double dy = endY - startY;
-            return Math.sqrt(dx * dx + dy * dy);
+            return Math.abs(endX - startX) + Math.abs(endY - startY);
         }
 
         int headingYaw() {
+            ConveyorRun[] segments = segmentRuns();
+            return segments.length == 0 ? 0 : segments[0].straightHeadingYaw();
+        }
+
+        private int straightHeadingYaw() {
             double angle = Math.atan2(endY - startY, endX - startX);
             return ((int) Math.round(angle * 16384.0 / (Math.PI * 2.0))) & 0x3fff;
+        }
+
+        ConveyorRun[] segmentRuns() {
+            if (startX == endX || startY == endY) {
+                return new ConveyorRun[] {
+                        new ConveyorRun(runId, name + "-S0",
+                                startX, startY, endX, endY, plane,
+                                routeAxis)
+                };
+            }
+
+            int bendX = routeAxis == ROUTE_X_FIRST ? endX : startX;
+            int bendY = routeAxis == ROUTE_X_FIRST ? startY : endY;
+            return new ConveyorRun[] {
+                    new ConveyorRun(runId, name + "-S0",
+                            startX, startY, bendX, bendY, plane,
+                            routeAxis),
+                    new ConveyorRun(runId, name + "-S1",
+                            bendX, bendY, endX, endY, plane,
+                            routeAxis)
+            };
+        }
+
+        PathPoint sampleAtDistance(double distanceTiles) {
+            ConveyorRun[] segments = segmentRuns();
+            if (segments.length == 0) {
+                return new PathPoint(startX, startY, 1.0, 0.0, 0);
+            }
+
+            double remaining = Math.max(0.0,
+                    Math.min(lengthTiles(), distanceTiles));
+            for (int i = 0; i < segments.length; i++) {
+                ConveyorRun segment = segments[i];
+                double length = Math.max(0.001, segment.lengthTiles());
+                if (remaining <= length || i == segments.length - 1) {
+                    double progress = Math.max(0.0,
+                            Math.min(1.0, remaining / length));
+                    double dx = segment.endX - segment.startX;
+                    double dy = segment.endY - segment.startY;
+                    double directionX = dx / length;
+                    double directionY = dy / length;
+                    return new PathPoint(
+                            segment.startX + dx * progress,
+                            segment.startY + dy * progress,
+                            directionX, directionY,
+                            segment.straightHeadingYaw());
+                }
+                remaining -= length;
+            }
+            ConveyorRun last = segments[segments.length - 1];
+            double length = Math.max(0.001, last.lengthTiles());
+            return new PathPoint(
+                    last.endX, last.endY,
+                    (last.endX - last.startX) / length,
+                    (last.endY - last.startY) / length,
+                    last.straightHeadingYaw());
+        }
+    }
+
+    private static final class PathPoint {
+        final double worldX;
+        final double worldY;
+        final double directionX;
+        final double directionY;
+        final int headingYaw;
+
+        PathPoint(double worldX, double worldY,
+                double directionX, double directionY, int headingYaw) {
+            this.worldX = worldX;
+            this.worldY = worldY;
+            this.directionX = directionX;
+            this.directionY = directionY;
+            this.headingYaw = headingYaw;
         }
     }
 

@@ -1900,3 +1900,29 @@ Settlement Minimap V1 — IMPLEMENTED / NEEDS RUNTIME TEST
 [ ] Rotate/move/duplicate/erase/Clear All and a rail batch; minimap rebuild is coalesced and reflects the final authoritative scene.
 [ ] Switch RTS -> Free Build or leave the settlement; ordinary player-centered minimap behavior returns unchanged.
 [ ] Confirm minimap heading remains current vanilla behavior; heading ownership is not part of this slice.
+
+Conveyor Build Placement V1.8 — runtime rejection / supersession (2026-10-01)
+[x] RUNTIME REJECTED: video showed the free-angle stretched A->B belt swings diagonally with the cursor and does not feel like a factory conveyor builder.
+[x] Superseded by Conveyor Build Placement V1.9 orthogonal routing; V1.8 backend endpoint ownership remains reused.
+
+Conveyor Build Placement V1.9 — orthogonal routed placement gate (2026-10-01)
+[x] verified-static: one persistent SettlementConveyorRun still owns endpoints, payloads, transport and physical inventory provenance.
+[x] verified-static: route axis is persisted as X-first/Y-first; legacy routeAxis=0 resolves deterministically during normalization.
+[x] verified-static: run/path length is Manhattan distance and payload server advancement still uses the same speed/spacing/backpressure owner.
+[x] verified-static: client RUN sync accepts legacy 7-field packets and new 8-field route-axis packets.
+[x] verified-static: routed visuals reuse the existing accepted straight conveyor generator per path leg; no per-tile world objects were introduced.
+[x] verified-static: payload interpolation samples the active path leg and uses that leg's yaw across the bend.
+[ ] Pull latest main; Eclipse clean/build Client + Server with Java 8 and restart both.
+[ ] Select Logistics -> Conveyor and set Point A. Move first mostly east/west; confirm the preview locks X-first and remains an orthogonal L while moving Point B around.
+[ ] Cancel and repeat with first movement mostly north/south; confirm Y-first locks and remains stable.
+[ ] Place an exactly horizontal and exactly vertical run; confirm each renders as one straight segment with no artificial bend.
+[ ] Commit a non-aligned run; persistent replacement must match the preview's first-leg route instead of collapsing to a diagonal.
+[ ] Put a real payload on the routed run and confirm it travels the first leg, turns 90 degrees at the bend, rotates with the second leg and reaches Point B.
+[ ] Confirm payload spacing/backpressure remains continuous across the bend and total physical item ownership is conserved.
+[ ] Build chest -> machine and machine -> chest with routed belts; confirm 1 Log 1511 -> 2 Planks 960 automation still works.
+[ ] Click one tile beside chest/workstation endpoints and confirm server endpoint snapping still binds to the actual persistent build.
+[ ] Right-click and Escape cancel pending Point A without leaving stale routed preview/input ownership.
+[ ] Exit/re-enter or relog and confirm routed run axis/geometry and payload state restore correctly.
+[ ] Regression: Conveyor Payload Live Editor still opens against a real straight leg of the first persistent run.
+[ ] Regression: rails and normal Construction object ghosts remain unaffected.
+[ ] After focused acceptance, run the relevant Construction portion of docs/rs3/SMOKE_TEST.md.

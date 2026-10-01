@@ -2094,3 +2094,12 @@
 - Authoritative settlement object/resource spawn-remove mutations now queue a 75 ms coalesced refresh signal; repeated lifecycle 2835=1 invalidates Matrix3's stock minimap raster through Class192.method2901() without re-entering RTS.
 - Walls/fences/floors/map-scene content and resource objects continue through Matrix3's stock raster/object-definition metadata; no custom minimap renderer or icon registry was added.
 - Minimap heading/rotation ownership is intentionally unchanged and remains a separate renderer seam.
+
+2026-10-01 - Conveyor Build Placement V1.9 orthogonal routing
+- Replaced free-angle stretched A->B placement with one logical orthogonal ConveyorRun: straight when aligned, otherwise two straight legs with one 90-degree bend.
+- Placement locks X-first or Y-first from the first mouse movement after Point A and sends that route choice to the server.
+- SettlementConveyorRun now persists route axis, uses Manhattan/path length, and normalizes old runs from AUTO; SettlementState schema is v17.
+- Client RUN sync carries route axis, renders each run as one/two straight conveyor models, and moves/rotates payloads along the active path leg.
+- Existing endpoint snapping, chest/machine ownership, speed, spacing, backpressure and processing authority are unchanged.
+- Dedicated curved elbow art remains deferred; V1.9 uses a square overlap at the bend.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.

@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 16;
+    private static final int CURRENT_SCHEMA_VERSION = 17;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -302,6 +302,13 @@ public final class SettlementState implements Serializable {
     public synchronized SettlementConveyorRun addConveyorRun(
             int startPlotX, int startPlotY,
             int endPlotX, int endPlotY, int plane) {
+        return addConveyorRun(startPlotX, startPlotY,
+                endPlotX, endPlotY, plane, SettlementConveyorRun.ROUTE_AUTO);
+    }
+
+    public synchronized SettlementConveyorRun addConveyorRun(
+            int startPlotX, int startPlotY,
+            int endPlotX, int endPlotY, int plane, int routeAxis) {
         normalize();
         if (!isValidPlotLocation(startPlotX, startPlotY, plane)
                 || !isValidPlotLocation(endPlotX, endPlotY, plane)
@@ -310,7 +317,7 @@ public final class SettlementState implements Serializable {
         }
         SettlementConveyorRun run = new SettlementConveyorRun(
                 nextConveyorRunId++, startPlotX, startPlotY,
-                endPlotX, endPlotY, plane);
+                endPlotX, endPlotY, plane, routeAxis);
         conveyorRuns.add(run);
         return run;
     }

@@ -49,6 +49,7 @@ import com.rs.game.npc.randomEvent.CombatEventNPC;
 import com.rs.game.player.Player;
 import com.rs.game.player.Skills;
 import com.rs.game.player.content.construction.SettlementInstance;
+import com.rs.game.player.content.construction.SettlementConveyorRun;
 import com.rs.game.player.SlayerManager;
 import com.rs.game.player.actions.HomeTeleport;
 import com.rs.game.player.content.DonatorZone;
@@ -2953,9 +2954,9 @@ public final class Commands {
 		    player.getPackets().sendGameMessage("Enter your settlement before creating a ConveyorRun.");
 		    return true;
 		}
-		if (cmd.length != 6) {
+		if (cmd.length != 6 && cmd.length != 7) {
 		    player.getPackets().sendGameMessage(
-			    "Conveyor create requires: startX startY endX endY plane.");
+			    "Conveyor create requires: startX startY endX endY plane [routeAxis].");
 		    return true;
 		}
 		try {
@@ -2964,9 +2965,13 @@ public final class Commands {
 		    int endX = Integer.parseInt(cmd[3]);
 		    int endY = Integer.parseInt(cmd[4]);
 		    int plane = Integer.parseInt(cmd[5]);
+		    int routeAxis = cmd.length == 7
+			    ? Integer.parseInt(cmd[6])
+			    : SettlementConveyorRun.ROUTE_AUTO;
 		    player.getPackets().sendGameMessage(conveyorCreate.createConveyorRun(
 			    new WorldTile(startX, startY, plane),
-			    new WorldTile(endX, endY, plane)));
+			    new WorldTile(endX, endY, plane),
+			    routeAxis));
 		} catch (NumberFormatException ex) {
 		    player.getPackets().sendGameMessage("Invalid ConveyorRun endpoint number.");
 		}
