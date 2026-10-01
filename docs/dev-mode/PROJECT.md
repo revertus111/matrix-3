@@ -533,3 +533,15 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Rebuild Parts remains non-destructive for the current session; Reset Object remains the ordinary whole-object transform reset.
 - No cache writing, object-definition mutation, world mutation, Construction transport ownership or persistent player state changed.
 - **Resume Here (Live Model Editor):** edit object 46298, intentionally move/delete/duplicate several parts, click Restore Original and accept the warning. Verify the untouched sawmill returns, the part count/list is rebuilt, Undo cannot resurrect the discarded session, and a previously saved project can still be loaded afterward.
+
+### Live Model Editor — Ctrl+Y Redo — 2026-10-01
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Reused the existing `LiveModelEditorParts` snapshot authority; no second editor-history system was introduced.
+- Added a bounded redo stack paired with the existing 64-step undo history.
+- `Ctrl+Z` now moves the current Part/Multi state onto redo before restoring the previous snapshot; `Ctrl+Y` moves forward through those undone states one edit at a time.
+- Any new Part/Multi edit after an undo clears the redo branch, matching normal editor behavior.
+- Source/session resets clear both undo and redo, so Restore Original cannot resurrect discarded authored state.
+- Selection, duplicates, hidden/deleted state, replacements, conveyor roles, transforms and isolate state continue to travel through the existing snapshot format.
+- No Construction Ctrl+Z path, cache writer, server/world state, or persistent settlement ownership changed.
+- **Resume Here (Live Model Editor):** make three visible Part/Multi edits, press Ctrl+Z twice, Ctrl+Y twice, then undo once and make a new edit; verify Ctrl+Y reports Nothing to redo after the branch changes.
