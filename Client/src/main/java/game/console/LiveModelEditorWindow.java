@@ -80,7 +80,7 @@ import javax.swing.event.ChangeListener;
  */
 public final class LiveModelEditorWindow {
 
-    private static final int PROJECT_VERSION = 6;
+    private static final int PROJECT_VERSION = 7;
     private static final File PROJECT_DIR = new File("dev-model-projects");
     private static final File ASSET_DIR = new File("dev-model-assets");
 
@@ -615,7 +615,7 @@ public final class LiveModelEditorWindow {
 
         JPanel selectionActions = actionRow(3);
         JButton selectAll = rsButton("All");
-        JButton clearSelection = rsButton("Clear");
+        JButton clearSelection = rsButton("Clear [C]");
         JButton resetSelection = rsButton("Reset");
         selectionActions.add(selectAll);
         selectionActions.add(clearSelection);
@@ -793,11 +793,7 @@ public final class LiveModelEditorWindow {
             LiveModelEditorPreview.selectAllParts();
             refreshPartList();
         });
-        clearSelection.addActionListener(e -> {
-            setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
-            LiveModelEditorPreview.clearPartSelection();
-            refreshPartList();
-        });
+        clearSelection.addActionListener(e -> clearPartSelection());
         resetSelection.addActionListener(e -> resetSelectedTransforms());
 
         moveModeButton.addActionListener(e -> setEditMode(LiveModelEditorPreview.TransformMode.MOVE));
@@ -1293,8 +1289,8 @@ public final class LiveModelEditorWindow {
     }
 
     private JPanel createProjectPanel() {
-        JPanel panel = toolPanel("PROJECT / ASSET");
-        JLabel hint = new JLabel("JSON authoring + reusable selection assets");
+        JPanel panel = toolPanel("PROJECT / PART LIBRARY");
+        JLabel hint = new JLabel("Save donor parts/assemblies and add them to another object");
         hint.setFont(RS_SMALL_FONT);
         hint.setForeground(RS_MUTED);
         panel.add(hint);
@@ -1313,15 +1309,23 @@ public final class LiveModelEditorWindow {
         panel.add(row2);
         panel.add(Box.createVerticalStrut(5));
 
-        JPanel row3 = actionRow(1);
-        JButton saveAsset = rsButton("Save Selection Asset");
+        JPanel row3 = actionRow(2);
+        JButton saveAsset = rsButton("Save Part / Assembly");
+        JButton addAsset = rsButton("Add Part / Assembly");
         saveAsset.putClientProperty("keepEditorFocus", Boolean.TRUE);
+        addAsset.putClientProperty("keepEditorFocus", Boolean.TRUE);
+        saveAsset.setToolTipText(
+                "Save the selected donor part/group as a reusable cache-backed asset.");
+        addAsset.setToolTipText(
+                "Add a previously saved part/group from another cache object into this edit session.");
         row3.add(saveAsset);
+        row3.add(addAsset);
         panel.add(row3);
 
         save.addActionListener(e -> saveProject());
         load.addActionListener(e -> loadProject());
         saveAsset.addActionListener(e -> saveSelectionAsset());
+        addAsset.addActionListener(e -> loadSelectionAsset());
         return panel;
     }
 
@@ -2268,6 +2272,10 @@ public final class LiveModelEditorWindow {
             }
             return true;
         }
+        if (!ctrl && code == KeyEvent.VK_C) {
+            if (instance != null) instance.clearPartSelection();
+            return true;
+        }
 
         if (code == KeyEvent.VK_TAB) {
             if (instance != null) instance.toggleDrawer();
@@ -2780,6 +2788,21 @@ public final class LiveModelEditorWindow {
         }
     }
 
+    private void clearPartSelection() {
+        if (payloadMode || LiveModelEditorPreview.getSelectionMode()
+                == LiveModelEditorPreview.SelectionMode.WHOLE) {
+            statusLabel.setText("Clear Selection: switch to Part or Multi mode.");
+            return;
+        }
+        if (LiveModelEditorPreview.clearPartSelection()) {
+            refreshPartList();
+            syncTransformInspector();
+            statusLabel.setText("Selection cleared. [C]");
+        } else {
+            statusLabel.setText("Selection already clear.");
+        }
+    }
+
     private void duplicateSelected() {
         if (LiveModelEditorPreview.duplicateSelectedPart()) {
             refreshPartList();
@@ -3030,8 +3053,11 @@ public final class LiveModelEditorWindow {
             }
             JFileChooser chooser = new JFileChooser(ASSET_DIR);
             chooser.setDialogTitle("Save Matrix3 custom model selection");
+            int selectedGroup = LiveModelEditorPreview.getSelectedGroupId();
             chooser.setSelectedFile(new File(ASSET_DIR,
-                    safeFileStem(objectName) + "_" + objectId + "_selection.json"));
+                    safeFileStem(objectName) + "_" + objectId
+                            + (selectedGroup > 0 ? "_group_" + selectedGroup : "_part")
+                            + ".json"));
             if (chooser.showSaveDialog(overlayWindow) != JFileChooser.APPROVE_OPTION) return;
             File file = chooser.getSelectedFile();
             if (!file.getName().toLowerCase().endsWith(".json")) {
@@ -3043,6 +3069,37 @@ public final class LiveModelEditorWindow {
             statusLabel.setText("Saved custom selection asset: " + file.getPath());
         } catch (Exception ex) {
             statusLabel.setText("Selection save failed: " + rootMessage(ex));
+        }
+    }
+
+    private void loadSelectionAsset() {
+        if (payloadMode || !hasSource) {
+            statusLabel.setText("Add Part / Assembly requires a live object edit target.");
+            return;
+        }
+        if (!ASSET_DIR.exists()) ASSET_DIR.mkdirs();
+        JFileChooser chooser = new JFileChooser(ASSET_DIR);
+        chooser.setDialogTitle("Add Matrix3 reusable part / assembly");
+        if (chooser.showOpenDialog(overlayWindow) != JFileChooser.APPROVE_OPTION) return;
+        File file = chooser.getSelectedFile();
+        try {
+            String json = readFile(file);
+            int count = LiveModelEditorPreview.importSelectionAssetJson(json);
+            if (count <= 0) {
+                statusLabel.setText(LiveModelEditorPreview.getStatus());
+                return;
+            }
+            if (count > 1) {
+                setSelectionMode(LiveModelEditorPreview.SelectionMode.MULTI);
+            }
+            refreshPartList();
+            loadSelectedPartEditors();
+            syncTransformInspector();
+            syncControlState();
+            statusLabel.setText("Added " + count + " part(s) from " + file.getName()
+                    + ". Move/rotate/snap them into place.");
+        } catch (Exception ex) {
+            statusLabel.setText("Add asset failed: " + rootMessage(ex));
         }
     }
 
