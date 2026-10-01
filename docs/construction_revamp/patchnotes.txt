@@ -2169,3 +2169,10 @@
 - User confirmed rotated minimap click-to-focus lands on the intended world tile.
 - User confirmed RTS scene-object interaction no longer moves the local player when self is not selected.
 - Those two V1.1 runtime gates are closed; a separate minimap rotation-direction defect remains open for Q/E and MMB orbit.
+
+2026-10-01 - RTS minimap yaw handedness correction
+- Runtime acceptance identified one remaining polish defect: Q/E and horizontal MMB orbit moved the RTS camera correctly, but the minimap/compass visual rotation ran in the opposite direction.
+- ConstructionBuildCamera.getRtsMinimapYawUnits() now inverts detached RTS yaw once when converting into Matrix3's 14-bit minimap heading domain.
+- Existing owners remain unchanged: Class464 raster/compass render use their stock negative-heading relationship, Class12 overlays and client minimap click use their existing positive/inverse relationship.
+- Scope intentionally excludes camera orbit math, detached camera ownership, minimap center, render distance, projection depth and object-interaction handling.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
