@@ -487,6 +487,8 @@ public final class ConstructionPaletteOverlay {
                 if (searchFocused) {
                     searchFocused = false;
                     repaintSurface();
+                } else if (ConveyorPlacementController.cancelPendingEndpoint()) {
+                    repaintSurface();
                 } else {
                     hide(true);
                 }
@@ -658,8 +660,11 @@ public final class ConstructionPaletteOverlay {
             g.drawString(card.piece.getDisplayName(), card.bounds.x + 10, card.bounds.y + 18);
             g.setFont(SMALL_FONT);
             g.setColor(MUTED);
-            g.drawString("Object " + card.piece.getObjectId() + "  •  type " + card.piece.getObjectType(),
-                    card.bounds.x + 10, card.bounds.y + 35);
+            String identity = card.piece.getObjectId() < 0
+                    ? "Logical build tool"
+                    : "Object " + card.piece.getObjectId()
+                            + "  •  type " + card.piece.getObjectType();
+            g.drawString(identity, card.bounds.x + 10, card.bounds.y + 35);
             String note = trimToWidth(g, card.piece.getNote(), card.bounds.width - 20);
             g.drawString(note, card.bounds.x + 10, card.bounds.y + 52);
         }
