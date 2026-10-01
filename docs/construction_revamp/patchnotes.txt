@@ -2181,3 +2181,8 @@
 2026-10-01 - Resource World V1A/V1B compile compatibility follow-up
 - Added SettlementResourceNodeState.getKey() compatibility for worker diagnostics.
 - Updated Bundle 1.3 final check to validate active persisted resource nodes instead of fixed enum nodes, so legitimate depletion is not treated as a failure.
+
+2026-10-01 - RTS minimap yaw handedness runtime accepted
+- User confirmed Q/E and horizontal MMB now rotate the minimap/compass in the intended direction.
+- NPC/player/map-icon overlays remain aligned, and rotated minimap click-to-focus still lands correctly.
+- Yaw-handedness gate is closed; a separate minimap-click versus RTS drag-selection input conflict is now open.
