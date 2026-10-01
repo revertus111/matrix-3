@@ -999,6 +999,12 @@ public final class LiveModelEditorPreview {
         return changed;
     }
 
+    public static boolean redoPartEdit() {
+        boolean changed = PARTS.redo();
+        if (changed) invalidateModels();
+        return changed;
+    }
+
     public static String getPartProjectJsonFields() { return PARTS.projectJsonFields(); }
 
     public static void loadPartProjectJson(String json) {
