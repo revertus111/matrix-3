@@ -68,6 +68,7 @@ public final class ConveyorRunPreview {
     private static volatile boolean demoActive;
     private static volatile ConveyorRun[] demoRuns = new ConveyorRun[0];
     private static volatile ConveyorRun[] settlementRuns = new ConveyorRun[0];
+    private static volatile ConveyorRun placementRun;
     private static final List<ConveyorRun> pendingSettlementRuns =
             new ArrayList<ConveyorRun>();
     private static boolean settlementSyncOpen;
@@ -501,8 +502,39 @@ public final class ConveyorRunPreview {
     public static String getStatus() {
         return status + " | persistent=" + settlementRuns.length
                 + " payloads=" + settlementPayloads.length
+                + " placement=" + (placementRun == null ? 0 : 1)
                 + " demo=" + (demoActive ? demoRuns.length : 0)
                 + " | " + roleSummary;
+    }
+
+    public static synchronized void setPlacementPreview(
+            int startX, int startY, int endX, int endY, int plane) {
+        if (startX == endX && startY == endY) {
+            clearPlacementPreview();
+            return;
+        }
+        ConveyorRun current = placementRun;
+        if (current != null
+                && current.startX == startX && current.startY == startY
+                && current.endX == endX && current.endY == endY
+                && current.plane == plane) {
+            return;
+        }
+        placementRun = new ConveyorRun(
+                -2L, "PLACEMENT", startX, startY, endX, endY, plane);
+        revision++;
+        invalidateModels();
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
+    public static synchronized void clearPlacementPreview() {
+        if (placementRun == null) {
+            return;
+        }
+        placementRun = null;
+        revision++;
+        invalidateModels();
+        lastRenderedCycle = Integer.MIN_VALUE;
     }
 
     static void render(Class523 scene, Class106 renderer) {
@@ -568,15 +600,20 @@ public final class ConveyorRunPreview {
     private static ConveyorRun[] visibleRuns() {
         ConveyorRun[] persistent = settlementRuns;
         ConveyorRun[] demo = demoActive ? demoRuns : new ConveyorRun[0];
-        if (demo.length == 0) {
-            return persistent;
+        ConveyorRun placement = placementRun;
+        int count = persistent.length + demo.length + (placement == null ? 0 : 1);
+        if (count == 0) {
+            return new ConveyorRun[0];
         }
-        if (persistent.length == 0) {
-            return demo;
+        ConveyorRun[] combined = new ConveyorRun[count];
+        int index = 0;
+        System.arraycopy(persistent, 0, combined, index, persistent.length);
+        index += persistent.length;
+        System.arraycopy(demo, 0, combined, index, demo.length);
+        index += demo.length;
+        if (placement != null) {
+            combined[index] = placement;
         }
-        ConveyorRun[] combined = new ConveyorRun[persistent.length + demo.length];
-        System.arraycopy(persistent, 0, combined, 0, persistent.length);
-        System.arraycopy(demo, 0, combined, persistent.length, demo.length);
         return combined;
     }
 
