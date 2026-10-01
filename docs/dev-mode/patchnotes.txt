@@ -1,3 +1,8 @@
+2026-10-01 - Live Model Editor duplicate preview cache race runtime verified
+- Runtime retest after a clean Eclipse rebuild confirmed the authoring-duplicates ArrayIndexOutOfBoundsException spam is gone.
+- The publish-after-build local Model[] cache pattern is accepted at runtime for duplicated authored parts.
+- No additional code changes were required.
+
 2026-10-01 - Live Model Editor duplicate preview cache race fix
 - Runtime stack location identified the remaining authoring-duplicates ArrayIndexOutOfBoundsException at LiveModelEditorPreview.renderPartModels while filling cachedDuplicateModels.
 - Duplicate and replacement Model arrays are now built entirely in local variables and published to the shared preview cache only after the array is complete.
