@@ -318,6 +318,7 @@ Live Model Editor — Duplicate ROT Pivot regression retest (2026-10-01)
 [ ] Ctrl+Z and Ctrl+Y the duplicate move + snapped rotation and verify exact transform restoration.
 
 Live Model Editor — Anchored Tile Snap gate (2026-10-01)
+[x] Runtime verified: user confirmed Snap To Tile works with no issues in normal use.
 [x] verified-static: main transform UI no longer exposes Fit 1 Tile.
 [x] verified-static: Tile Snap is Part/Multi-only and uses a 512-model-unit X/Z grid.
 [x] verified-static: anchors available are NW/N/NE/W/Center/E/SW/S/SE and Center is the default.
