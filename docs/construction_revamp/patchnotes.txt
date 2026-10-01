@@ -2149,3 +2149,7 @@
 - Class613 now applies a 64-tile minimum only when the loaded scene is dynamic and at least 168x168. Normal world maps and smaller instances retain their stock radius.
 - No detached-camera ownership, near/far projection, fog, scene allocation, NPC movement, minimap or server behavior changed.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-10-01 - Settlement RTS visibility radius runtime accepted
+- User confirmed the 64-tile minimum removes the distant terrain/object cutoff in the previously failing wide RTS view.
+- Settlement visibility-radius gate is closed; accepted architecture remains detached Class24/Class411 RTS + native 168x168 scene + 176x176 generated terrain + live projection sync + settlement-only 64-tile Class523 visibility radius.
