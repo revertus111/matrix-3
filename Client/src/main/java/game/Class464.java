@@ -158,6 +158,9 @@ public final class Class464 {
 						i_18_ = ((int) -((double) Class133_Sub1.aClass411_Sub1_9827.method5000(69787938) * 2607.5945876176133) + -777638353 * client.anInt8766) & 0x3fff;
 					else
 						i_18_ = ((int) -client.aFloat8678 + -777638353 * client.anInt8766) & 0x3fff;
+					int rtsMinimapYaw = ConstructionBuildCamera.getRtsMinimapYawUnits();
+					if (rtsMinimapYaw >= 0)
+						i_18_ = (-rtsMinimapYaw + -777638353 * client.anInt8766) & 0x3fff;
 					i_19_ = 4096 - client.anInt8670 * 626807696;
 				}
 				int i_20_ = 48 + i_16_ / 128;
