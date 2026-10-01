@@ -2460,7 +2460,7 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ### Conveyor Gameplay V1.6 — Physical Chest -> Conveyor -> Physical Chest — 2026-09-30
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- Status: **BASIC VERTICAL SLICE RUNTIME VERIFIED / DEEP GATE PENDING**.
 - This slice reuses the existing persistent `SettlementStorageContainer` and `SettlementConveyorRun` owners. No second chest inventory, per-tile belt inventory, or client-authoritative item state was added.
 - Endpoint topology is direct for V1.6: a physical STORAGE piece on Point A is the source chest; a physical STORAGE piece on Point B is the destination chest. The development **Link First Two Chests** harness creates one real persistent run from the lowest piece-id chest to the next chest for fast testing.
 - Source ownership is atomic: when Point A has legal inlet spacing, the server removes **one real item** from the first occupied source-chest slot and creates one physical conveyor payload. If payload insertion fails, the item is restored to the source chest.
@@ -2473,7 +2473,8 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Physical payloads remain persisted inside the existing ConveyorRun state across settlement exit/re-entry and relog. A missing/full/filtered destination leaves ownership on the belt until a valid endpoint can accept it.
 - Client payload sync protocol and visual interpolation are unchanged; the client still renders server-owned item id/amount/distance only.
 - No machine endpoint, inserter/loader object, splitter/filter routing, belt tier, conveyor-specific chest permission, or multi-item source selection policy beyond first occupied slot is added in this slice.
-- **Resume Here (conveyor):** pull/build/restart Client + Server. Place two physical chests, put real items in the first, click **Link First Two Chests**, then verify chest A count decreases -> real payload travels/queues -> chest B count increases with total item conservation. Fill/filter chest B to force backpressure, restore acceptance to verify recovery, then exit/re-enter and relog mid-transfer. Confirm debug injection/sink/clear and conveyor deletion refuse unsafe operations on the physical run. Run the full `docs/rs3/SMOKE_TEST.md` after the focused gate because schema v16 changes persisted Construction state. If accepted, the next logistics slice can generalize the same endpoint contract to machine input/output rather than creating another transport owner.
+- Runtime acceptance: user screenshot confirmed the core physical topology is live in-world: two physical chests linked by a real ConveyorRun with the transport path rendering/operating between them.
+- **Resume Here (conveyor):** core chest -> belt -> chest vertical slice is runtime verified. Next prove the deep ownership gate: destination full/filter backpressure, automatic recovery, exit/re-entry mid-transfer, relog mid-transfer, conservation/no-dupe/no-loss, and unsafe debug/delete rejection. Run the full `docs/rs3/SMOKE_TEST.md` only after those focused checks pass because schema v16 changes persisted Construction state. If accepted, the next logistics slice can generalize the same endpoint contract to machine input/output rather than creating another transport owner.
 
 ### Conveyor Payload Live Editor Integration — 2026-09-30
 
