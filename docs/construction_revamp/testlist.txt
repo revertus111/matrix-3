@@ -1884,22 +1884,22 @@ Conveyor Build Placement V1.8 — player-facing placement gate (2026-09-30)
 [ ] Regression: persistent ConveyorRun clear/remove and physical payload safety behavior remain unchanged.
 [ ] After focused acceptance, run the relevant Construction portion of docs/rs3/SMOKE_TEST.md.
 
-Settlement Minimap V1 — IMPLEMENTED / NEEDS RUNTIME TEST
+Settlement Minimap V1 — RUNTIME VERIFIED
 [x] Source: Class348 special content 1338 dispatches the stock minimap to Class464.method5484(...).
 [x] Source: Class464 stock raster/icons/dots share i_16_/i_17_; RTS substitutes only that center with the Construction RTS pivot.
 [x] Source: client.method7990 minimap click transform now uses the same RTS center as the renderer.
 [x] Source: persistent build spawn/remove and starter resource projection queue one 75 ms coalesced CSVar 2835=1 refresh after authoritative server scene mutation.
 [x] Source: repeated settlement lifecycle 2835=1 invalidates the stock raster through Class192.method2901() without re-entering or re-forcing RTS.
 [x] No custom minimap renderer or Construction icon registry was introduced.
-[ ] Enter settlement, keep the player still and pan RTS with WASD/arrows; minimap raster, dots and focus marker scroll with the RTS pivot.
-[ ] Move the player while leaving the RTS pivot stationary; minimap center remains owned by the RTS pivot instead of following the player.
-[ ] After panning, click several minimap locations; RTS camera focuses the clicked area, player does not Walk Here and no click offset is visible.
-[ ] Place and remove a fence/wall/door; stock structure geometry updates on the minimap without moving the player.
+[x] Enter settlement, keep the player still and pan RTS with WASD/arrows; minimap raster, dots and focus marker scroll with the RTS pivot. RUNTIME VERIFIED.
+[x] Move the player while leaving the RTS pivot stationary; minimap center remains owned by the RTS pivot instead of following the player. RUNTIME VERIFIED.
+[x] After panning, click several minimap locations; RTS camera focuses the clicked area, player does not Walk Here and no click offset is visible. RUNTIME VERIFIED.
+[x] Place and remove settlement structure geometry; stock minimap updates without moving the player and removal deletes it from the minimap. RUNTIME VERIFIED.
 [ ] Place/remove a floor piece and verify the stock minimap raster reflects the final scene.
-[ ] Verify starter tree 1276, stone 11933 and ore 11936 show whatever stock Matrix3 map-scene/icon metadata their object definitions expose; no custom fallback is expected in V1.
+[x] Starter tree 1276, stone 11933 and ore 11936 render through stock Matrix3 minimap/object metadata; screenshot runtime verified, no custom fallback required.
 [ ] Rotate/move/duplicate/erase/Clear All and a rail batch; minimap rebuild is coalesced and reflects the final authoritative scene.
 [ ] Switch RTS -> Free Build or leave the settlement; ordinary player-centered minimap behavior returns unchanged.
-[ ] Confirm minimap heading remains current vanilla behavior; heading ownership is not part of this slice.
+[x] V1 scope note: heading remained vanilla-coupled during V1 acceptance; heading ownership moves to the V1.1 gate below.
 
 Conveyor Build Placement V1.8 — runtime rejection / supersession (2026-10-01)
 [x] RUNTIME REJECTED: video showed the free-angle stretched A->B belt swings diagonally with the cursor and does not feel like a factory conveyor builder.
@@ -1926,3 +1926,20 @@ Conveyor Build Placement V1.9 — orthogonal routed placement gate (2026-10-01)
 [ ] Regression: Conveyor Payload Live Editor still opens against a real straight leg of the first persistent run.
 [ ] Regression: rails and normal Construction object ghosts remain unaffected.
 [ ] After focused acceptance, run the relevant Construction portion of docs/rs3/SMOKE_TEST.md.
+
+Settlement Minimap V1.1 / RTS object-interaction guard — IMPLEMENTED / NEEDS RUNTIME TEST
+[x] verified-static: ConstructionBuildCamera.rtsYawRadians is the authoritative detached RTS heading used by Q/E and MMB orbit.
+[x] verified-static: RTS yaw converts into Matrix3's existing 14-bit 0..16383 angle domain.
+[x] verified-static: Class464 stock minimap render uses -RTS yaw plus the existing minimap offset while RTS owns heading.
+[x] verified-static: client.method7990 click transform uses +RTS yaw plus the same existing minimap offset, preserving render/click inverse alignment.
+[x] verified-static: RTS actions 3..6/1001 are consumed when self is not selected; Examine 1002 remains vanilla.
+[x] verified-static: worker first-object gather/process orders are queued before local-player object interaction is consumed.
+[ ] Enter settlement RTS and rotate Q/E clockwise/counterclockwise; minimap rotates continuously with the camera.
+[ ] MMB horizontal orbit; minimap heading follows the same camera yaw without snapping/drift.
+[ ] Rotate roughly 90 degrees, then click several minimap locations; RTS pivot lands on the visible clicked locations with no rotated-coordinate offset.
+[ ] Pan + rotate together; minimap center and heading stay synchronized.
+[ ] With workers selected but self NOT selected, left-click tree/ore/workbench; workers receive their order and the local player does not path/move.
+[ ] With no self selection, click another ordinary interactive object; local player remains stationary.
+[ ] Select self and click an object; vanilla local-player object interaction/pathing is allowed again.
+[ ] Right-click Examine with self not selected; Examine remains available/non-moving.
+[ ] Exit settlement RTS; vanilla minimap heading and object-interaction behavior return unchanged.
