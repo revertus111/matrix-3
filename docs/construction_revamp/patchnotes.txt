@@ -2116,3 +2116,8 @@
 - Runtime video confirmed the stock minimap rotates continuously with the RTS camera heading while remaining centered on the RTS pivot.
 - Q/E/MMB-orbit heading synchronization is accepted with no visible snap/drift in the captured test.
 - Rotated minimap click alignment and the RTS object-interaction self-selection guard remain separate pending checks.
+
+2026-10-01 - RTS compass verification correction
+- Runtime review confirmed only the minimap raster follows RTS yaw; the stock compass overlay remains frozen on the heading captured before/at settlement entry.
+- Example: entering while facing south leaves the compass showing south while RTS Q/E/MMB rotates the camera and minimap raster.
+- Compass synchronization remains OPEN; prior raster-heading acceptance is retained.
