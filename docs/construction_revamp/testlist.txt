@@ -1559,7 +1559,7 @@ RTS camera continuity/speed/render-parity regression — IMPLEMENTED / NEEDS RUN
 - Free Build regression: switch to Free Build/placement and confirm its intentional click-stop placement behavior still works.
 - Default speed: fresh client/session RTS pan starts at 2.0x. Movement must feel materially faster than the previous 1.0x default; speed presets still step from 0.50x through 3.00x.
 - Render focus: leave the player stationary and pan the RTS pivot several tiles away. Terrain, objects and NPC visibility/culling must follow the RTS view instead of disappearing based on distance from the player's tile.
-- Vanilla parity: fog and effective scene radius must remain Matrix3 stock behavior around the RTS focus. Do not render the entire loaded scene and do not disable fog.
+- Vanilla parity: fog and normal-world/smaller-instance scene radii remain Matrix3 stock behavior around their normal focus. The native 168x168 Construction settlement may use the dedicated 64-tile minimum visibility radius; do not render the entire loaded scene and do not disable fog.
 - Orbit regression: MMB left/right follows drag direction; vertical MMB pitch, wheel zoom and Q/E orbit remain unchanged.
 - Minimap regression: click-to-focus/RTS minimap marker and loaded-scene boundary clamp continue to work.
 
@@ -1575,6 +1575,15 @@ RTS/editor native large-scene render boundary — IMPLEMENTED / NEEDS RUNTIME TE
 - Persistence regression: existing build coordinates and worker/resource positions must remain unchanged after exit/re-entry; the visual apron must create no saved pieces or resources.
 - Cleanup regression: leave and recreate the settlement several times; padded dynamic regions must be released/reallocated without leaking or overlapping another instance.
 - Camera regression: continuous-click movement, 2.0x default RTS speed, MMB orbit direction, vertical pitch, wheel zoom and minimap focus remain unchanged.
+
+Settlement RTS visibility radius extension — IMPLEMENTED / NEEDS RUNTIME TEST (2026-10-01)
+[x] verified-static: Class613's Class523 radius comes from Matrix3's graphics-setting radius (32/40/48 tiles, plus the existing renderer increment where applicable).
+[x] verified-static: the Construction settlement is the native 168x168 dynamic scene, and Class613 now applies a 64-tile minimum only to dynamic scenes at least that size.
+[ ] Pull/build/restart Client, then EXIT and RE-ENTER the settlement so Class523 is reconstructed with the new radius.
+[ ] From a wide RTS zoom/orbit like the reported screenshot, confirm distant terrain/objects remain continuously rendered instead of dropping at a square near-distance boundary.
+[ ] Pan the RTS pivot through the plot and toward each side; visibility must continue following the RTS focus without exposing the former 48-or-less tile culling edge.
+[ ] Performance regression: orbit/pan at wide zoom with workers/builds visible and confirm no material hitching or unusable FPS regression from the 64-tile visibility window.
+[ ] Vanilla regression: leave the settlement and confirm normal world and smaller instanced scenes retain their normal graphics-setting render distance/fog.
 
 Live Model Editor / ConveyorRun — Visual Role Cleanup V1 (2026-09-29)
 [x] Native source animation is marked non-blocking carryover; procedural ConveyorRun no longer clones/applies animation every frame.
