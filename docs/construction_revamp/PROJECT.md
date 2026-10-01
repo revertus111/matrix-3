@@ -2598,8 +2598,8 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Ground-movement ownership is unchanged: this patch targets object interactions only. Existing Build Palette/editor suspension rules and non-RTS Matrix3 behavior are unchanged.
 - Process rule updated in root AGENTS.md: explicit runtime confirmation of an already-AAA-approved checkpoint authorizes immediate verification/status bookkeeping for that exact work without another AAA; any new code behavior/scope still requires normal AAA.
 - Runtime acceptance correction: 2026-10-01 video confirms the minimap raster spins with RTS camera yaw while its center remains tied to the RTS pivot, but the stock compass overlay remained frozen on the vanilla heading captured at settlement entry (for example south).
-- Compass synchronization is now **IMPLEMENTED / NEEDS RUNTIME TEST**: verified-static ownership is Class107.method2061(...), and it now consumes ConstructionBuildCamera.getRtsMinimapYawUnits() while RTS owns heading. Outside RTS the original vanilla compass source remains unchanged.
-- **Resume Here:** pull/build Client and runtime-test the compass by entering settlement facing a known direction, then rotate RTS with Q/E/MMB and confirm the stock compass follows current RTS yaw. After that, verify rotated minimap click alignment and the object-interaction self-selection guard.
+- Compass synchronization is **RUNTIME VERIFIED**: Class107.method2061(...) consumes ConstructionBuildCamera.getRtsMinimapYawUnits() while RTS owns heading, and the stock compass now follows RTS Q/E/MMB rotation. Outside RTS the original vanilla compass source remains unchanged.
+- **Resume Here:** compass synchronization is runtime accepted. Current minimap defect: NPC/dot overlays remain visually fixed while the RTS minimap raster rotates/pans. Trace the stock overlay transform path from Class464.method5484(...) and patch only that seam after AAA; rotated minimap click alignment and the object-interaction self-selection guard remain pending.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
