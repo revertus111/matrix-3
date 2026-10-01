@@ -545,3 +545,14 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Selection, duplicates, hidden/deleted state, replacements, conveyor roles, transforms and isolate state continue to travel through the existing snapshot format.
 - No Construction Ctrl+Z path, cache writer, server/world state, or persistent settlement ownership changed.
 - **Resume Here (Live Model Editor):** make three visible Part/Multi edits, press Ctrl+Z twice, Ctrl+Y twice, then undo once and make a new edit; verify Ctrl+Y reports Nothing to redo after the branch changes.
+
+### Live Model Editor — Stable ROT Pivot + 90° Snap — 2026-10-01
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit AAA.
+- Runtime video showed Part/Multi ROT visually orbiting/drifting away from the white rotation gizmo instead of rotating around one fixed pivot.
+- **verified-static root cause:** the gizmo, selection pivot and Multi rotation math use each component's cached bounds center, while `transformVertices(...)` recomputed an average-vertex centroid and rotated/scaled the visible mesh around that different point.
+- Corrected `LiveModelEditorParts.transformVertices(...)` to rotate/scale actual component vertices around the same cached bounds center already owned by the editor gizmo and shared Multi transform math.
+- Reused the existing transform snap system; rotation angle snap now defaults to **90 degrees** and the UI identifies the control as ROT SNAP.
+- SNAP behavior is unchanged otherwise: SNAP ON applies the configured move/rotation steps; Ctrl temporarily bypasses it. With SNAP OFF, Ctrl temporarily applies snap.
+- No new transform/history system, Construction undo owner, cache writer, world mutation or server persistence path was introduced.
+- **Resume Here (Live Model Editor):** rotate one asymmetric Part and one Multi selection through 90/180/270/360 with ROT SNAP=90. The white pivot must remain fixed and 360 must return to the exact starting placement; then verify Ctrl free/snap inversion plus Ctrl+Z/Ctrl+Y around snapped rotations.
