@@ -1860,3 +1860,26 @@ Conveyor Machine Endpoint / Sawmill Automation V1.7 — runtime gate (2026-09-30
 [ ] Regression: an unconnected Wooden workbench still uses the existing worker Process Wood flow and does not auto-process by itself.
 [ ] Regression: direct Chest -> Conveyor -> Chest V1.6 remains functional.
 [ ] After focused acceptance, run full docs/rs3/SMOKE_TEST.md because this changes server transport/processing interaction even though persistence schema is unchanged.
+
+Conveyor Build Placement V1.8 — player-facing placement gate (2026-09-30)
+[x] verified-static: Conveyor is a logical Logistics palette tool and does not use a fake persistent build object.
+[x] verified-static: two-click client owner queues existing server settlementconveyorcreate; persistence remains SettlementState/SettlementConveyorRun owned.
+[x] verified-static: live placement preview reuses ConveyorRunPreview and carries runId <0, so it never renders physical payloads.
+[x] verified-static: ConstructionGhostPreview skips Conveyor and cannot request ObjectDefinitions for object id -1.
+[x] verified-static: server snaps A/B within Manhattan distance 1 to persistent STORAGE/WORKSTATION origins before run validation/storage.
+[x] verified-static: no nearby physical endpoint leaves the clicked free-ground tile unchanged.
+[ ] Pull latest main; Eclipse clean/build Client + Server with Java 8 and restart both.
+[ ] Enter settlement, open Construction palette and confirm Logistics tab contains Conveyor.
+[ ] Select Conveyor. Click an empty valid tile for A, move the cursor and confirm a full-appearance A->B belt preview follows hovered tiles.
+[ ] Click B. Preview disappears and one persistent ConveyorRun appears at the submitted/synced endpoints; tool remains armed for another A.
+[ ] Build chest -> machine and machine -> chest manually using only the Conveyor palette tool; no Build Sawmill Test Line command/button is required.
+[ ] Put Logs 1511 in the source chest and confirm the manually built line still feeds machine input, processes 1->2 Planks 960 and drains to the destination chest.
+[ ] Click one tile beside a physical chest for A or B; server chat reports endpoint snap A/B and the persistent run terminates on the actual chest origin.
+[ ] Repeat adjacent snap against the workstation and confirm machine endpoint ownership works.
+[ ] Right-click after setting A: pending preview cancels but Conveyor remains armed.
+[ ] Set A then press Escape: pending preview cancels without closing Build Mode; pressing Escape again may close the palette normally.
+[ ] Select another build piece or Eraser: Conveyor preview/input ownership is released immediately.
+[ ] Regression: Rail route/splitter placement remains unchanged and cannot overlap Conveyor tool ownership.
+[ ] Regression: ordinary furniture/wall/floor/door ghost placement still renders through ConstructionGhostPreview.
+[ ] Regression: persistent ConveyorRun clear/remove and physical payload safety behavior remain unchanged.
+[ ] After focused acceptance, run the relevant Construction portion of docs/rs3/SMOKE_TEST.md.
