@@ -70,6 +70,7 @@ final class LiveModelEditorParts {
     private final List<PartState> originals = new ArrayList<PartState>();
     private final List<PartState> duplicates = new ArrayList<PartState>();
     private final ArrayDeque<Snapshot> undo = new ArrayDeque<Snapshot>();
+    private final ArrayDeque<Snapshot> redo = new ArrayDeque<Snapshot>();
     private final LinkedHashSet<Integer> selection = new LinkedHashSet<Integer>();
     private final Map<Integer, int[]> gestureStarts = new LinkedHashMap<Integer, int[]>();
     private int selected = -1;
@@ -87,6 +88,7 @@ final class LiveModelEditorParts {
         originals.clear();
         duplicates.clear();
         undo.clear();
+        redo.clear();
         selection.clear();
         gestureStarts.clear();
         selected = -1;
@@ -105,6 +107,7 @@ final class LiveModelEditorParts {
         originals.clear();
         duplicates.clear();
         undo.clear();
+        redo.clear();
         selection.clear();
         gestureStarts.clear();
         selected = -1;
@@ -882,21 +885,16 @@ final class LiveModelEditorParts {
 
     synchronized boolean undo() {
         if (undo.isEmpty()) return false;
-        Snapshot snapshot = undo.removeLast();
-        originals.clear();
-        for (PartState state : snapshot.originals) originals.add(state.copy());
-        duplicates.clear();
-        for (PartState state : snapshot.duplicates) duplicates.add(state.copy());
-        selected = snapshot.selected;
-        selection.clear();
-        for (int index : snapshot.selection) {
-            if (index >= 0 && index < getPartCount()) selection.add(Integer.valueOf(index));
-        }
-        if (selected >= 0 && !selection.contains(Integer.valueOf(selected))) selected = lastSelectionIndex();
-        hovered = -1;
-        isolate = snapshot.isolate;
-        gestureActive = false;
-        gestureStarts.clear();
+        pushHistory(redo, snapshotCurrent());
+        restoreSnapshot(undo.removeLast());
+        markGeometryChanged();
+        return true;
+    }
+
+    synchronized boolean redo() {
+        if (redo.isEmpty()) return false;
+        pushHistory(undo, snapshotCurrent());
+        restoreSnapshot(redo.removeLast());
         markGeometryChanged();
         return true;
     }
@@ -1442,8 +1440,36 @@ final class LiveModelEditorParts {
     }
 
     private void pushUndo() {
-        if (undo.size() >= MAX_UNDO) undo.removeFirst();
-        undo.addLast(new Snapshot(originals, duplicates, selected, selectionArray(), isolate));
+        redo.clear();
+        pushHistory(undo, snapshotCurrent());
+    }
+
+    private Snapshot snapshotCurrent() {
+        return new Snapshot(originals, duplicates, selected, selectionArray(), isolate);
+    }
+
+    private void pushHistory(ArrayDeque<Snapshot> history, Snapshot snapshot) {
+        if (history.size() >= MAX_UNDO) history.removeFirst();
+        history.addLast(snapshot);
+    }
+
+    private void restoreSnapshot(Snapshot snapshot) {
+        originals.clear();
+        for (PartState state : snapshot.originals) originals.add(state.copy());
+        duplicates.clear();
+        for (PartState state : snapshot.duplicates) duplicates.add(state.copy());
+        selected = snapshot.selected;
+        selection.clear();
+        for (int index : snapshot.selection) {
+            if (index >= 0 && index < getPartCount()) selection.add(Integer.valueOf(index));
+        }
+        if (selected >= 0 && !selection.contains(Integer.valueOf(selected))) {
+            selected = lastSelectionIndex();
+        }
+        hovered = -1;
+        isolate = snapshot.isolate;
+        gestureActive = false;
+        gestureStarts.clear();
     }
 
     private int[] selectionArray() {
