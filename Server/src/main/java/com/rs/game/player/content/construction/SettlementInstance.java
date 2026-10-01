@@ -475,7 +475,12 @@ public final class SettlementInstance {
 
         Long runKey = Long.valueOf(run.getRunId());
         if (conveyorDevelopmentOpenOutputs.contains(runKey)) {
-            return run.removePayload(payload.getPayloadId());
+            if (!payload.isPhysicalInventoryOwned()
+                    && !hasPhysicalConveyorEndpoint(run)) {
+                return run.removePayload(payload.getPayloadId());
+            }
+            // Physical ownership always wins over a stale development flag.
+            conveyorDevelopmentOpenOutputs.remove(runKey);
         }
 
         if (!payload.isPhysicalInventoryOwned()) {
