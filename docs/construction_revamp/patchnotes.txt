@@ -2041,3 +2041,9 @@
 - Live Editor Save Belt Anchor applies only the movement delta since the last loaded/saved payload state, preventing category/item offsets from being double-baked.
 - Reset Belt Anchor restores 0/0/0. Anchor values persist in the existing conveyor_payload_profiles.properties file.
 - Payload item model caching now survives move/rotate/height edits and rebuilds only when renderer/item/scale changes, keeping gizmo movement lightweight.
+
+2026-09-30 - Conveyor Gameplay V1.6 basic runtime acceptance
+- User runtime screenshot confirmed the first real physical chest -> ConveyorRun -> physical chest topology works in-world.
+- Core endpoint wiring and visible transport path are accepted.
+- Full V1.6 acceptance remains open for backpressure/recovery, persistence across exit/relog, total item conservation, and unsafe debug/delete rejection.
+- Status: BASIC VERTICAL SLICE RUNTIME VERIFIED / DEEP GATE PENDING.
