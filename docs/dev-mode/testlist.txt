@@ -342,3 +342,26 @@ Live Model Editor — Anchored Tile Snap gate (2026-10-01)
 [ ] Duplicate a part, move the duplicate away, Snap To Tile, then rotate it 90/180/270/360; verify the duplicate pivot remains stable after snapping.
 [ ] Ctrl+Z the Tile Snap and verify the exact prior off-grid position returns; Ctrl+Y and verify the snapped position returns.
 [ ] Regression: normal MOVE SNAP remains configurable/usable and ROT SNAP still defaults to 90 degrees.
+
+Live Model Editor — Group / Glue V1 gate (2026-10-01)
+[x] verified-static: Ctrl+G routes to Group and Ctrl+Shift+G routes to Ungroup before the existing bare-G Move shortcut.
+[x] verified-static: grouped PartState membership is copied by Undo/Redo snapshots and serialized as groupId.
+[x] verified-static: project format is v6 and older v1-v5 projects load with groupId defaulting to 0.
+[x] verified-static: selecting a grouped member expands selection to all non-deleted members of that group.
+[x] verified-static: grouped scaling forces shared-pivot scaling even when manual Group Scale is OFF.
+[x] verified-static: grouped duplication remaps each copied group to a new independent group ID.
+[x] verified-static: Snap To Tile and existing Multi move/rotate operate on the expanded grouped selection.
+[x] verified-static: no Construction/world/cache/server ownership changed.
+[ ] Eclipse clean/build Client with Java 8.
+[ ] Multi-select at least three visible parts and press Ctrl+G; verify every selected label shows the same group ID.
+[ ] Clear/change selection, then click one member of the group; verify the full group becomes selected/highlighted.
+[ ] Move the group and verify every member receives the same translation with spacing unchanged.
+[ ] Rotate the group 90/180/270/360 and verify one shared pivot is used with no orbit/drift.
+[ ] Scale the group with GROUP SCALE OFF; verify geometry and member spacing scale around the shared pivot as one assembly.
+[ ] Snap the group to a tile anchor; verify the assembly moves together and internal spacing stays unchanged.
+[ ] Press Ctrl+D; verify the duplicate assembly is selected, offset from the source, and has a different group ID.
+[ ] Move/rotate the duplicated group and verify the original group does not follow it.
+[ ] Press Ctrl+Shift+G on the duplicate; click one former member and verify it now selects independently.
+[ ] Ctrl+Z then Ctrl+Y across group/ungroup or grouped transform operations and verify membership/transforms restore exactly.
+[ ] Save the project, reload it, click one grouped member, and verify group membership and shared behavior persist.
+[ ] Regression: bare G still switches to Move mode; Ctrl+G must not change the transform mode.
