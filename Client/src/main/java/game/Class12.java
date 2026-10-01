@@ -134,6 +134,14 @@ public class Class12 {
 				i_7_ = (int) client.aFloat8678 & 0x3fff;
 			else
 				i_7_ = (client.anInt8766 * -777638353 + (int) client.aFloat8678 & 0x3fff);
+			/*
+			 * verified-static: minimap dots/icons are rotated independently from the
+			 * raster. While settlement RTS owns heading, use the same authoritative
+			 * 14-bit yaw as the stock minimap so overlays rotate with the map.
+			 */
+			int rtsMinimapYaw = ConstructionBuildCamera.getRtsMinimapYawUnits();
+			if (rtsMinimapYaw >= 0)
+				i_7_ = (client.anInt8766 * -777638353 + rtsMinimapYaw) & 0x3fff;
 			int i_8_ = (Math.max(class73.anInt764 * 669238293 / 2, 1360982075 * class73.anInt765 / 2) + 10);
 			int i_9_ = i_4_ * i_4_ + i_5_ * i_5_;
 			if (i_9_ <= i_8_ * i_8_) {
