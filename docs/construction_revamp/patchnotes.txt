@@ -2164,3 +2164,8 @@
 - Player gathering repeats until depletion/storage/interruption; workers consume the same finite node pool before carrying resources.
 - Depleted projections disappear and remain saved at zero across re-entry/relog.
 - Recorded seeded generation, flowing biomes, chunk locks, planting/saplings and water/fishing direction in PROJECT.md.
+
+2026-10-01 - RTS rotated minimap click and object guard runtime accepted
+- User confirmed rotated minimap click-to-focus lands on the intended world tile.
+- User confirmed RTS scene-object interaction no longer moves the local player when self is not selected.
+- Those two V1.1 runtime gates are closed; a separate minimap rotation-direction defect remains open for Q/E and MMB orbit.
