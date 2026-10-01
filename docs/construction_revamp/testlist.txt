@@ -1953,4 +1953,4 @@ Settlement Minimap V1.1 / RTS object-interaction guard — PARTIALLY RUNTIME VER
 
 [x] verified-static: Class348 compass special-interface dispatch reaches Class107.method2061(...), separate from Class464 stock minimap rendering.
 [x] verified-static: Class107 compass angle now consumes ConstructionBuildCamera.getRtsMinimapYawUnits() only while RTS owns heading; vanilla heading remains the fallback everywhere else.
-[ ] COMPASS REGRESSION: enter settlement facing a known direction (for example south), rotate RTS with Q/E/MMB, and confirm the stock compass rotates with current RTS yaw instead of staying frozen on the entry heading.
+[x] COMPASS REGRESSION: enter settlement facing a known direction (for example south), rotate RTS with Q/E/MMB, and confirm the stock compass rotates with current RTS yaw instead of staying frozen on the entry heading. RUNTIME VERIFIED 2026-10-01.
