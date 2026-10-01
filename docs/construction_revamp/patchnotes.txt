@@ -2062,3 +2062,9 @@
 - Added local-only RTS selection reset and palette/MMB capture release; logout cleanup queues no server commands.
 - No RTS camera ownership/render/projection changes.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-09-30 - RTS logout/session lifecycle runtime accepted
+- User confirmed direct logout while inside settlement -> login -> settlement re-entry now works normally.
+- Normal-world movement returns after login and a fresh detached RTS camera initializes on re-entry.
+- Stale Construction active/settlementAutoMode state no longer survives Matrix3 logout teardown in a way that freezes movement.
+- Status: RUNTIME VERIFIED.
