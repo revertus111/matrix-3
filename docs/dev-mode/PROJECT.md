@@ -564,7 +564,7 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
 - Replaced the destructive main-panel **Fit 1 Tile** workflow with a translation-only **Snap To Tile** workflow for Part/Multi selections.
 - Tile Snap uses the Matrix3 model-space tile size of **512 units** and never changes selection scale, yaw, geometry, or relative spacing.
-- Added nine selection-bounds anchors: **NW / N / NE / W / Center / E / SW / S / SE**. The selected anchor is aligned to the nearest 512-unit local X/Z grid intersection.
+- Added nine selection-bounds anchors: **NW / N / NE / W / Center / E / SW / S / SE**. **Center is the default.** The selected anchor is aligned to the nearest 512-unit local X/Z grid intersection.
 - The parts owner performs the snap as one shared X/Z move delta across the current selection, so Multi assemblies remain rigid and the operation travels through the existing undo/redo history.
 - Selection-extents math now mirrors the current render transform semantics: legacy average-vertex scaling plus cached component-center yaw. This keeps snapping consistent with the stable ROT-pivot work and duplicate component-center correction.
 - Existing incremental MOVE SNAP and 90-degree ROT SNAP remain separate controls and are unchanged.
