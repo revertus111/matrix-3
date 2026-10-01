@@ -675,6 +675,10 @@ public final class ConstructionRadialSelection {
                 || action == 1001 || action == 1002;
     }
 
+    private static boolean isObjectInteractionRequiringSelfSelection(int action) {
+        return action >= 3 && action <= 6 || action == 1001;
+    }
+
     private static boolean isWorldMenuSourceAction(int action) {
         return action == MATRIX3_TILE_ACTION
                 || isObjectMenuSourceAction(action)
@@ -1945,11 +1949,11 @@ public final class ConstructionRadialSelection {
      * Walk Here is allowed to continue for the local player; otherwise it is
      * consumed so only the selected workers move.
      *
-     * Object action 3 is Matrix3's first object option. Supported worker
-     * resource/workstation actions mirror the same click into a worker order,
-     * then allow Matrix3's vanilla object action to continue for the player.
-     * The local player therefore never needs to be part of the RTS selection
-     * just to path to/interact with the clicked object.
+     * Object actions 3..6/1001 are player interactions that may path the local
+     * player. During settlement RTS they are allowed to continue only when self
+     * is selected. Supported worker resource/workstation action 3 still mirrors
+     * the click into a worker order before the player action is consumed/allowed.
+     * Examine (1002) remains non-moving vanilla behavior.
      */
     static boolean handleMenuAction(int action, int localX, int localY, long targetUid) {
         int normalizedAction = action >= 2000 ? action - 2000 : action;
@@ -2059,7 +2063,11 @@ public final class ConstructionRadialSelection {
          * Automatic RTS ownership is context-sensitive. Build/editor tools may
          * suspend world RTS input without clearing the committed selection.
          */
-        if (!isRtsWorldInputAvailable() || !hasCommittedSelection()) {
+        if (!isRtsWorldInputAvailable()) {
+            return false;
+        }
+        boolean playerObjectInteraction = isObjectInteractionRequiringSelfSelection(normalizedAction);
+        if (!hasCommittedSelection() && !playerObjectInteraction) {
             return false;
         }
 
@@ -2077,7 +2085,7 @@ public final class ConstructionRadialSelection {
 
         WorldPoint point = resolveWorldPoint(localX, localY);
         if (point == null) {
-            return false;
+            return playerObjectInteraction && !committedPlayerSelected;
         }
 
         if (normalizedAction == MATRIX3_TILE_ACTION) {
@@ -2104,13 +2112,14 @@ public final class ConstructionRadialSelection {
             if (isStarterResourceObjectId(objectId)) {
                 queueSelectionOrder("workerselectiongather object " + objectId + " "
                         + point.worldX + " " + point.worldY + " " + point.plane);
-                return false;
-            }
-            if (objectId == WOODEN_WORKBENCH_OBJECT_ID) {
+            } else if (objectId == WOODEN_WORKBENCH_OBJECT_ID) {
                 queueSelectionOrder("workerselectionprocess " + objectId + " "
                         + point.worldX + " " + point.worldY + " " + point.plane);
-                return false;
             }
+        }
+        if (playerObjectInteraction && !committedPlayerSelected) {
+            lastEventState = "RTS object interaction consumed; self is not selected.";
+            return true;
         }
         if (normalizedAction == MATRIX3_FIRST_NPC_ACTION && committedWorkerNpcIndexes.length > 0) {
             ResourceNpcTarget npcTarget = resolveResourceNpcTarget(targetUid);
