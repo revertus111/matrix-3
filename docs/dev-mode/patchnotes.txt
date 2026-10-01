@@ -184,3 +184,10 @@
 - Saved project and selection-asset JSON files are never deleted or overwritten by restore.
 - Rebuild Parts and Reset Object keep their existing meanings; no cache writer or world/server mutation was added.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-10-01 - Live Model Editor Ctrl+Y Redo
+- Added bounded redo history to the existing LiveModelEditorParts snapshot owner.
+- Ctrl+Y reapplies the most recently undone Part/Multi edit; repeated Ctrl+Y walks forward one snapshot at a time.
+- New edits after undo clear redo history; source/session reset clears both history stacks.
+- Construction undo, cache/server/world ownership and saved project files are unchanged.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
