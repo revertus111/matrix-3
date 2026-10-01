@@ -657,6 +657,7 @@ public final class LiveModelEditorWindow {
 
         groupScaleButton.setToolTipText(
                 "Scale selected geometry and its spacing together around the shared pivot.");
+        tileAnchorCombo.setSelectedItem(LiveModelEditorPreview.TileAnchor.CENTER);
         tileAnchorCombo.setToolTipText(
                 "Choose which selection-bounds anchor snaps to the local 512-unit tile grid.");
         snapToTileButton.setToolTipText(
