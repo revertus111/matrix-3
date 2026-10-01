@@ -237,3 +237,14 @@
 - Existing MOVE SNAP, 90-degree ROT SNAP, whole-object transforms and world/cache/server ownership are unchanged.
 - Runtime accepted by user: Tile Snap works with no issues.
 - Status: RUNTIME VERIFIED.
+
+2026-10-01 - Live Model Editor Group / Glue V1
+- Added persistent assembly grouping for Part/Multi selections.
+- Ctrl+G groups; Ctrl+Shift+G ungroups; the existing bare G Move hotkey is unchanged.
+- Selecting one grouped member automatically selects the whole group.
+- Grouped move/rotate reuse existing Multi shared transforms; grouped scale automatically uses the shared pivot.
+- Snap To Tile works on grouped assemblies without changing relative spacing.
+- Ctrl+D duplicates a grouped assembly into a new independent group rather than sharing membership with the source.
+- Group IDs are included in PartState snapshots and project/selection JSON; project format is now v6 while v1-v5 remain readable.
+- Added visible group labels/status in the editor.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
