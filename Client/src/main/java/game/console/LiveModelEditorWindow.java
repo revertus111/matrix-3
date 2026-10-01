@@ -144,7 +144,10 @@ public final class LiveModelEditorWindow {
     private final JButton sourceAnimationButton = rsButton("SOURCE ANIM OFF");
     private final JButton sourceAnimationTraceButton = rsButton("ANIM TRACE");
     private final JButton groupScaleButton = rsButton("GROUP SCALE OFF");
-    private final JButton fitOneTileButton = rsButton("FIT 1 TILE");
+    private final JComboBox<LiveModelEditorPreview.TileAnchor> tileAnchorCombo =
+            new JComboBox<LiveModelEditorPreview.TileAnchor>(
+                    LiveModelEditorPreview.TileAnchor.values());
+    private final JButton snapToTileButton = rsButton("SNAP TO TILE");
     private final JSpinner moveSnapSpinner = spinner(16, 1, 512, 1);
     private final JSpinner angleSnapSpinner = spinner(90, 1, 90, 1);
 
@@ -654,11 +657,14 @@ public final class LiveModelEditorWindow {
 
         groupScaleButton.setToolTipText(
                 "Scale selected geometry and its spacing together around the shared pivot.");
-        fitOneTileButton.setToolTipText(
-                "Shrink the current Part/Multi selection to a maximum 1-tile X/Z footprint.");
-        JPanel groupScaleRow = actionRow(2);
+        tileAnchorCombo.setToolTipText(
+                "Choose which selection-bounds anchor snaps to the local 512-unit tile grid.");
+        snapToTileButton.setToolTipText(
+                "Move the selected Part/Multi assembly so the chosen anchor lands on the nearest tile grid point. Geometry size is unchanged.");
+        JPanel groupScaleRow = actionRow(3);
         groupScaleRow.add(groupScaleButton);
-        groupScaleRow.add(fitOneTileButton);
+        groupScaleRow.add(tileAnchorCombo);
+        groupScaleRow.add(snapToTileButton);
         panel.add(groupScaleRow);
         panel.add(Box.createVerticalStrut(3));
 
@@ -796,22 +802,20 @@ public final class LiveModelEditorWindow {
                     ? "Group Scale ON: selected parts shrink/grow toward the shared pivot."
                     : "Group Scale OFF: selected parts scale in place.");
         });
-        fitOneTileButton.addActionListener(e -> {
+        snapToTileButton.addActionListener(e -> {
             if (LiveModelEditorPreview.getSelectionMode()
                     == LiveModelEditorPreview.SelectionMode.WHOLE) {
-                statusLabel.setText("Fit 1 Tile: use Part/Multi selection (All is fine) so the edit is undoable.");
+                statusLabel.setText("Snap To Tile: use Part/Multi selection so the edit is undoable.");
                 return;
             }
-            LiveModelEditorPreview.fitSelectedToOneTile();
+            LiveModelEditorPreview.TileAnchor anchor =
+                    (LiveModelEditorPreview.TileAnchor) tileAnchorCombo.getSelectedItem();
+            LiveModelEditorPreview.snapSelectedToTile(anchor);
             loadSelectedPartEditors();
             refreshPartList();
             syncTransformInspector();
             syncControlState();
-            int[] bounds = LiveModelEditorPreview.getSelectedBounds();
-            statusLabel.setText(bounds == null
-                    ? "Fit 1 Tile: select one or more parts first."
-                    : "Fit 1 Tile: selection footprint is now "
-                            + bounds[0] + " x " + bounds[2] + " model units.");
+            statusLabel.setText(LiveModelEditorPreview.getStatus());
         });
 
         snapButton.addActionListener(e -> {
@@ -1397,7 +1401,9 @@ public final class LiveModelEditorWindow {
         setActiveButton(groupScaleButton, groupScale);
         boolean partSelection = selection != LiveModelEditorPreview.SelectionMode.WHOLE;
         groupScaleButton.setEnabled(!payloadMode && partSelection);
-        fitOneTileButton.setEnabled(!payloadMode && partSelection
+        tileAnchorCombo.setEnabled(!payloadMode && partSelection
+                && LiveModelEditorPreview.getSelectedPartCount() > 0);
+        snapToTileButton.setEnabled(!payloadMode && partSelection
                 && LiveModelEditorPreview.getSelectedPartCount() > 0);
         partModeButton.setEnabled(!payloadMode);
         multiModeButton.setEnabled(!payloadMode);
