@@ -2981,6 +2981,26 @@ public final class Commands {
 		player.getPackets().sendGameMessage(
 			conveyorChestLink.createConveyorBetweenFirstTwoStorageChests());
 		return true;
+	    case "settlementsawmilltestline":
+		SettlementInstance sawmillTestLine = SettlementInstance.getActive(player);
+		if (sawmillTestLine == null) {
+		    player.getPackets().sendGameMessage(
+			    "Enter your settlement before building the sawmill automation test line.");
+		    return true;
+		}
+		player.getPackets().sendGameMessage(
+			sawmillTestLine.createSawmillAutomationTestLine());
+		return true;
+	    case "settlementsawmillstatus":
+		SettlementInstance sawmillStatus = SettlementInstance.getActive(player);
+		if (sawmillStatus == null) {
+		    player.getPackets().sendGameMessage(
+			    "Enter your settlement before checking sawmill automation.");
+		    return true;
+		}
+		player.getPackets().sendGameMessage(
+			sawmillStatus.getAutomatedMachineStatus());
+		return true;
 	    case "settlementconveyorremove":
 		SettlementInstance conveyorRemove = SettlementInstance.getActive(player);
 		if (conveyorRemove == null) return true;
