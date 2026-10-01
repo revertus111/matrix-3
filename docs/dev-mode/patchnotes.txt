@@ -223,7 +223,7 @@
 
 2026-10-01 - Live Model Editor anchored Tile Snap
 - Removed the main Fit 1 Tile action, which resized geometry, and replaced it with translation-only Snap To Tile for Part/Multi selections.
-- Added NW/N/NE/W/Center/E/SW/S/SE selection-bounds anchors.
+- Added NW/N/NE/W/Center/E/SW/S/SE selection-bounds anchors, with Center as the default.
 - The chosen anchor snaps to the nearest 512-unit local X/Z tile-grid intersection with one shared move delta across the selection.
 - Scale, yaw, geometry and Multi relative spacing are preserved.
 - Tile Snap uses the existing Part/Multi undo/redo owner.
