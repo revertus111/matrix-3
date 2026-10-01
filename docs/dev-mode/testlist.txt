@@ -320,7 +320,7 @@ Live Model Editor — Duplicate ROT Pivot regression retest (2026-10-01)
 Live Model Editor — Anchored Tile Snap gate (2026-10-01)
 [x] verified-static: main transform UI no longer exposes Fit 1 Tile.
 [x] verified-static: Tile Snap is Part/Multi-only and uses a 512-model-unit X/Z grid.
-[x] verified-static: anchors available are NW/N/NE/W/Center/E/SW/S/SE.
+[x] verified-static: anchors available are NW/N/NE/W/Center/E/SW/S/SE and Center is the default.
 [x] verified-static: snapping applies one shared moveX/moveZ delta and does not modify scale, moveY, yaw, hidden/deleted state, or geometry.
 [x] verified-static: transformed selection extents mirror current render semantics: average-vertex scale center plus cached component-center yaw.
 [x] verified-static: Tile Snap goes through existing pushUndo history; no Construction/world/cache/server owner changed.
