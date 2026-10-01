@@ -58,6 +58,7 @@ public final class SettlementInstance {
     // V1 presentation placeholder until a dedicated mine-cart NPC/model is accepted.
     private static final int RAIL_CART_NPC_ID = 1;
     private static final long RAIL_WOOD_PAYLOAD = 1L;
+    private static final long MINIMAP_REFRESH_DELAY_MS = 75L;
 
     private final Player player;
     private final SettlementState state;
@@ -72,6 +73,8 @@ public final class SettlementInstance {
     private volatile int[] allocatedChunks;
     private volatile boolean loaded;
     private volatile boolean destroyed;
+    private volatile boolean minimapRefreshEnabled;
+    private boolean minimapRefreshQueued;
 
     private final List<WorldObject> starterResourceObjects = new ArrayList<WorldObject>();
     private final List<NPC> starterResourceNpcs = new ArrayList<NPC>();
@@ -276,6 +279,7 @@ public final class SettlementInstance {
             public void run() {
                 if (!destroyed && loaded && getActive(player) == SettlementInstance.this) {
                     player.getPackets().sendCSVarInteger(2835, 1);
+                    minimapRefreshEnabled = true;
                     syncConveyorRunsToClient();
                 }
             }
@@ -3692,6 +3696,7 @@ public final class SettlementInstance {
                 }
             }
         }
+        queueSettlementMinimapRefresh();
     }
 
     private void removeStarterResourceNodes() {
@@ -3716,6 +3721,7 @@ public final class SettlementInstance {
             }
         }
         starterResourceNpcs.clear();
+        queueSettlementMinimapRefresh();
     }
 
     private void removeSettlementWorkers() {
@@ -4003,6 +4009,33 @@ public final class SettlementInstance {
                 worldTile.getPlane());
     }
 
+    /**
+     * Coalesce authoritative settlement scene mutations into one delayed stock
+     * minimap invalidation. The delay lets object spawn/remove packets reach the
+     * client before the existing lifecycle packet requests a raster rebuild.
+     */
+    private void queueSettlementMinimapRefresh() {
+        synchronized (this) {
+            if (!minimapRefreshEnabled || minimapRefreshQueued || destroyed || !loaded
+                    || getActive(player) != this) {
+                return;
+            }
+            minimapRefreshQueued = true;
+        }
+        GameExecutorManager.slowExecutor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (SettlementInstance.this) {
+                    minimapRefreshQueued = false;
+                }
+                if (!destroyed && loaded && minimapRefreshEnabled
+                        && getActive(player) == SettlementInstance.this) {
+                    player.getPackets().sendCSVarInteger(2835, 1);
+                }
+            }
+        }, MINIMAP_REFRESH_DELAY_MS, TimeUnit.MILLISECONDS);
+    }
+
     private void spawnProjectedPiece(SettlementPlacedPiece piece) {
         if (piece == null || boundChunks == null
                 || !SettlementState.isValidPlotLocation(
@@ -4021,6 +4054,7 @@ public final class SettlementInstance {
                 toWorldX(piece.getPlotX()),
                 toWorldY(piece.getPlotY()),
                 piece.getPlane()));
+        queueSettlementMinimapRefresh();
     }
 
     private void removeProjectedPiece(SettlementPlacedPiece piece) {
@@ -4039,6 +4073,7 @@ public final class SettlementInstance {
         WorldObject live = World.getObjectWithType(tile, definition.getObjectType());
         if (live != null && live.getId() == definition.getObjectId()) {
             World.removeObject(live);
+            queueSettlementMinimapRefresh();
         }
     }
 
@@ -4064,6 +4099,7 @@ public final class SettlementInstance {
         }
         destroyed = true;
         loaded = false;
+        minimapRefreshEnabled = false;
         player.getActionbar().endConstructionMode();
         removeSettlementWorkers();
         removeRailCarts();

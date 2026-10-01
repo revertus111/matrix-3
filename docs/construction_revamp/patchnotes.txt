@@ -2087,3 +2087,10 @@
 - Server now snaps requested endpoints within one tile to persistent STORAGE/WORKSTATION origins before saving the ConveyorRun; free-ground endpoints remain supported.
 - Conveyor orientation is A->B owned; object ghost/rotation paths no longer touch the logical conveyor tool.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-10-01 - Settlement Minimap V1
+- Stock minimap center now follows the Construction RTS look pivot while RTS owns the settlement camera; vanilla/player centering is unchanged outside RTS.
+- Minimap click-to-world math uses the same RTS center, preventing click offset while the detached camera is panned.
+- Authoritative settlement object/resource spawn-remove mutations now queue a 75 ms coalesced refresh signal; repeated lifecycle 2835=1 invalidates Matrix3's stock minimap raster through Class192.method2901() without re-entering RTS.
+- Walls/fences/floors/map-scene content and resource objects continue through Matrix3's stock raster/object-definition metadata; no custom minimap renderer or icon registry was added.
+- Minimap heading/rotation ownership is intentionally unchanged and remains a separate renderer seam.

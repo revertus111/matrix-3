@@ -143,6 +143,17 @@ public final class Class464 {
 					Class240 class240 = (Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.method5394().aClass240_2647);
 					i_16_ = (int) class240.aFloat2653;
 					i_17_ = (int) class240.aFloat2657;
+					/*
+					 * verified-static: i_16_/i_17_ are the single stock minimap center
+					 * consumed by raster, map icons, dots and destination overlays below.
+					 * Settlement RTS substitutes only that center; vanilla heading/zoom
+					 * ownership remains unchanged.
+					 */
+					long rtsMinimapCenter = ConstructionBuildCamera.getRtsMinimapCenterSceneUnitsPacked();
+					if (rtsMinimapCenter != Long.MIN_VALUE) {
+						i_16_ = (int) (rtsMinimapCenter >> 32);
+						i_17_ = (int) rtsMinimapCenter;
+					}
 					if (1 == 625220759 * Class18.anInt143)
 						i_18_ = ((int) -((double) Class133_Sub1.aClass411_Sub1_9827.method5000(69787938) * 2607.5945876176133) + -777638353 * client.anInt8766) & 0x3fff;
 					else

@@ -1297,6 +1297,17 @@ public final class client extends Class584 {
 											Class240 class240 = (Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.method5394().aClass240_2647);
 											i_75_ = ((i_73_ >> 2) + (((int) (class240.aFloat2653) - i_77_) >> 9));
 											i_76_ = (((int) class240.aFloat2657 - i_77_) >> 9) - (i_74_ >> 2);
+											long rtsMinimapCenter = ConstructionBuildCamera.getRtsMinimapCenterSceneUnitsPacked();
+											if (rtsMinimapCenter != Long.MIN_VALUE) {
+												/*
+												 * verified-static: keep minimap click-to-world math centered on
+												 * the same RTS pivot used by Class464's stock minimap renderer.
+												 */
+												int rtsCenterX = (int) (rtsMinimapCenter >> 32);
+												int rtsCenterZ = (int) rtsMinimapCenter;
+												i_75_ = (i_73_ >> 2) + (rtsCenterX >> 9);
+												i_76_ = (rtsCenterZ >> 9) - (i_74_ >> 2);
+											}
 										}
 										if (aBool8754 && 0 != ((-1613657659 * Class8.anInt43) & 0x40)) {
 											InterfaceDefinitions class73_78_ = (Class530.method6338((Class167.interfaceHash * -806385553), 654388253 * anInt8755, -1045905273));

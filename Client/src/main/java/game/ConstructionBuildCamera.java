@@ -191,6 +191,41 @@ public final class ConstructionBuildCamera {
         }
     }
 
+    /**
+     * verified-static: Class464.method5484(...) centers Matrix3's stock minimap
+     * with scene-local X/Z values in the same 512-units-per-tile domain as the
+     * local player. Settlement RTS keeps the player planted, so expose the
+     * managed look pivot in that exact coordinate space without spoofing player
+     * movement or replacing the stock minimap renderer.
+     *
+     * @return high 32 bits = scene-local X, low 32 bits = scene-local Z, or
+     *         Long.MIN_VALUE when RTS does not own the minimap center.
+     */
+    public static long getRtsMinimapCenterSceneUnitsPacked() {
+        if (!active || cameraMode != CameraMode.RTS || !rtsOrientationInitialized
+                || client.aClass613_8605 == null) {
+            return Long.MIN_VALUE;
+        }
+        try {
+            Class497 sceneBase = client.aClass613_8605.method7280((byte) -115);
+            if (sceneBase == null) {
+                return Long.MIN_VALUE;
+            }
+            int baseX = (sceneBase.localX * -2109597897) << 9;
+            int baseZ = (sceneBase.localY * 417324155) << 9;
+            int localX = Math.round(rtsPivotX) - baseX;
+            int localZ = Math.round(rtsPivotZ) - baseZ;
+            int maxX = client.aClass613_8605.method7347(-740581830) << 9;
+            int maxZ = client.aClass613_8605.method7278(277214477) << 9;
+            if (localX < 0 || localZ < 0 || localX >= maxX || localZ >= maxZ) {
+                return Long.MIN_VALUE;
+            }
+            return ((long) localX << 32) | (localZ & 0xffffffffL);
+        } catch (RuntimeException ex) {
+            return Long.MIN_VALUE;
+        }
+    }
+
     public static void adjustRtsMoveSpeed(int delta) {
         if (delta == 0) {
             return;
@@ -337,6 +372,17 @@ public final class ConstructionBuildCamera {
         }
         if (value == 1) {
             /*
+             * Once settlement RTS already owns the session, a repeated lifecycle
+             * value is an event-driven minimap refresh signal from authoritative
+             * server scene mutation. Do not re-enter RTS or force the current
+             * camera mode; just invalidate Matrix3's stock minimap raster.
+             */
+            if (settlementAutoMode && active) {
+                Class192.method2901();
+                return;
+            }
+
+            /*
              * Settlement RTS is camera-only. The build palette must remain an
              * independent UI: closing it must not tear down the settlement camera.
              * Reuse the proven RTS camera session directly without showing palette.
@@ -345,6 +391,9 @@ public final class ConstructionBuildCamera {
             ConstructionPaletteOverlay.installRtsInputListener();
             enter();
             settlementAutoMode = active;
+            if (settlementAutoMode) {
+                Class192.method2901();
+            }
             reportToServer("SETTLEMENT_SIGNAL enter-existing-rts");
             return;
         }
