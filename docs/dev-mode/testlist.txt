@@ -1,3 +1,10 @@
+Live Model Editor raw-geometry guard - 2026-10-01
+[x] VERIFIED-STATIC: component detection rejects a face unless all three decoded vertex indices are in range.
+[x] VERIFIED-STATIC: component bounds/transforms and face mutation paths guard raw Class159 array bounds.
+[x] VERIFIED-STATIC: component-only copies guard optional source/target face and vertex tables before indexing.
+[ ] RUNTIME: open the authored conveyor/sawmill project that previously spammed PART RENDER SKIP authoring-raw and confirm no repeating ArrayIndexOutOfBoundsException appears while hovering/editing parts.
+[ ] RUNTIME: isolate/highlight/duplicate/move/rotate/scale authored parts and confirm rendering remains stable.
+
 Saved Object Definition Library quick gate
 [ ] Eclipse/Java 8 clean-build Client.
 [ ] Dev Mode + Live Inspect -> hover an Object -> O -> confirm Live Place still works.

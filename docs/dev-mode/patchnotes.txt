@@ -1,3 +1,9 @@
+2026-10-01 - Live Model Editor raw-geometry render guard
+- Hardened connected-component extraction so malformed faces cannot inject out-of-range vertex ids into authored parts.
+- Added bounds-safe vertex transforms, component bounds, component-only raw copies, face hiding and highlighting.
+- Optional Class159 face/vertex tables are copied only when both source and target arrays contain the requested entry.
+- Authoring render failures remain fail-soft, but malformed cache geometry should now be skipped before repeated ArrayIndexOutOfBoundsException rebuilds.
+
 2026-10-01 - Object Library Ctrl+S + movable/label QoL
 - Replaced the Live Place right-click Save Object Definition action with Ctrl+S; saving is silent/non-modal so 1/2 ID browsing can continue uninterrupted.
 - Right-click Dev > Object Library remains the explicit library-open action.

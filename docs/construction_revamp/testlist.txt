@@ -1,3 +1,10 @@
+Conveyor/debug console noise cleanup - 2026-10-01
+[x] VERIFIED-STATIC: repeated ConveyorRunPreview rebuilds do not re-log an unchanged authored-role summary.
+[x] VERIFIED-STATIC: LoginServerPacketsDecoder still processes every PLAYERFILETRANSMITPART and suppresses only its generic DEBUG log line.
+[ ] RUNTIME: leave the game server running through normal autosaves and confirm PLAYERFILETRANSMITINIT may appear while the per-chunk PLAYERFILETRANSMITPART flood is gone.
+[ ] RUNTIME: rebuild/move conveyor previews repeatedly and confirm the unchanged AUTHORED sourceParts summary is not continuously printed.
+[ ] REGRESSION: logout/relog still preserves player + settlement state after the logging-only server change.
+
 Construction Revamp — targeted acceptance list
 
 Legend: `[x]` accepted/verified; `[ ]` active blocking acceptance; `[-]` historical/superseded/non-blocking evidence retained for archaeology.

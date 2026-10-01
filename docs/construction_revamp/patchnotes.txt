@@ -1,3 +1,8 @@
+2026-10-01 - Conveyor/debug console noise cleanup
+- ConveyorRunPreview now logs an authored-role summary only when the summary changes instead of on every model rebuild.
+- Login-server DEBUG output no longer prints every PACKET_PLAYERFILETRANSMITPART chunk; PLAYERFILETRANSMITINIT and transfer behavior are unchanged.
+- No persistence, player-save cadence, conveyor transport, or renderer ownership changed.
+
 2026-09-16 - Matrix3 Construction Revamp preservation/reset
 - Established `revertus111/matrix-3` as the only implementation repository for this workstream.
 - Preserved the approved Construction settlement design in a Matrix3-native workstream document.

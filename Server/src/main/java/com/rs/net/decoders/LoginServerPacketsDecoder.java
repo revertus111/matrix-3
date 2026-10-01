@@ -17,7 +17,7 @@ public class LoginServerPacketsDecoder {
 
 	public static void decodeIncomingPacket(GameWorld world, InputStream stream) {
 		int opcode = stream.readUnsignedByte();
-		if (Settings.DEBUG)
+		if (Settings.DEBUG && opcode != LoginProtocol.PACKET_PLAYERFILETRANSMITPART)
 			Logger.log("Login server", "Received packet[W" + world.getId() + "]:" + LoginProtocol.getOpcodeName(opcode));
 		switch (opcode) {
 		case LoginProtocol.PACKET_PINGPONG:

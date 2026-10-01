@@ -1126,7 +1126,9 @@ final class LiveModelEditorParts {
         Map<Integer, Builder> byRoot = new LinkedHashMap<Integer, Builder>();
         for (int face = 0; face < raw.anInt1778; face++) {
             int a = raw.aShortArray1786[face] & 0xffff;
-            if (a >= vertices) continue;
+            int b = raw.aShortArray1787[face] & 0xffff;
+            int c = raw.aShortArray1789[face] & 0xffff;
+            if (a >= vertices || b >= vertices || c >= vertices) continue;
             int root = find(parent, a);
             Builder builder = byRoot.get(Integer.valueOf(root));
             if (builder == null) {
@@ -1135,8 +1137,8 @@ final class LiveModelEditorParts {
             }
             builder.faces.add(Integer.valueOf(face));
             builder.vertices.add(Integer.valueOf(a));
-            builder.vertices.add(Integer.valueOf(raw.aShortArray1787[face] & 0xffff));
-            builder.vertices.add(Integer.valueOf(raw.aShortArray1789[face] & 0xffff));
+            builder.vertices.add(Integer.valueOf(b));
+            builder.vertices.add(Integer.valueOf(c));
         }
         List<Builder> builders = new ArrayList<Builder>(byRoot.values());
         Collections.sort(builders, new Comparator<Builder>() {
@@ -1159,7 +1161,9 @@ final class LiveModelEditorParts {
         for (Component component : components) {
             int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
             int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+            boolean found = false;
             for (int vertex : component.vertices) {
+                if (!hasVertexCoordinates(raw, vertex)) continue;
                 int x = raw.anIntArray1782[vertex];
                 int y = raw.anIntArray1777[vertex];
                 int z = raw.anIntArray1797[vertex];
@@ -1169,13 +1173,19 @@ final class LiveModelEditorParts {
                 if (y > maxY) maxY = y;
                 if (z < minZ) minZ = z;
                 if (z > maxZ) maxZ = z;
+                found = true;
             }
-            component.centerX = (minX + maxX) / 2;
-            component.centerY = (minY + maxY) / 2;
-            component.centerZ = (minZ + maxZ) / 2;
-            component.sizeX = Math.max(1, maxX - minX);
-            component.sizeY = Math.max(1, maxY - minY);
-            component.sizeZ = Math.max(1, maxZ - minZ);
+            if (!found) {
+                component.centerX = component.centerY = component.centerZ = 0;
+                component.sizeX = component.sizeY = component.sizeZ = 1;
+            } else {
+                component.centerX = (minX + maxX) / 2;
+                component.centerY = (minY + maxY) / 2;
+                component.centerZ = (minZ + maxZ) / 2;
+                component.sizeX = Math.max(1, maxX - minX);
+                component.sizeY = Math.max(1, maxY - minY);
+                component.sizeZ = Math.max(1, maxZ - minZ);
+            }
             int[] sorted = { component.sizeX, component.sizeY, component.sizeZ };
             Arrays.sort(sorted);
             component.signature = component.faces.length + ":" + component.vertices.length
@@ -1187,6 +1197,7 @@ final class LiveModelEditorParts {
         if (component.vertices.length == 0) return;
         long cx = 0, cy = 0, cz = 0;
         for (int vertex : component.vertices) {
+            if (!hasVertexCoordinates(raw, vertex)) return;
             cx += raw.anIntArray1782[vertex];
             cy += raw.anIntArray1777[vertex];
             cz += raw.anIntArray1797[vertex];
@@ -1210,6 +1221,7 @@ final class LiveModelEditorParts {
         double sin = Math.sin(radians);
         double cos = Math.cos(radians);
         for (int vertex : vertices) {
+            if (!hasVertexCoordinates(raw, vertex)) continue;
             double x = (raw.anIntArray1782[vertex] - cx) * state.scaleX / 100.0;
             double y = (raw.anIntArray1777[vertex] - cy) * state.scaleY / 100.0;
             double z = (raw.anIntArray1797[vertex] - cz) * state.scaleZ / 100.0;
@@ -1259,7 +1271,11 @@ final class LiveModelEditorParts {
 
     private static Class159 componentOnlyRaw(Class159 sourceRaw,
             Component component, PartState state) {
-        if (sourceRaw == null || component == null) return null;
+        if (sourceRaw == null || component == null
+                || sourceRaw.anInt1791 <= 0 || sourceRaw.anInt1778 < 0) return null;
+        for (int vertex : component.vertices) {
+            if (!hasVertexCoordinates(sourceRaw, vertex)) return null;
+        }
         int[] map = new int[sourceRaw.anInt1791];
         Arrays.fill(map, -1);
         Class159 raw = new Class159(component.vertices.length, component.faces.length, 0);
@@ -1278,12 +1294,14 @@ final class LiveModelEditorParts {
             raw.anIntArray1782[i] = sourceRaw.anIntArray1782[old];
             raw.anIntArray1777[i] = sourceRaw.anIntArray1777[old];
             raw.anIntArray1797[i] = sourceRaw.anIntArray1797[old];
-            if (sourceRaw.anIntArray1813 != null && old < sourceRaw.anIntArray1813.length)
+            if (sourceRaw.anIntArray1813 != null && old < sourceRaw.anIntArray1813.length
+                    && raw.anIntArray1813 != null && i < raw.anIntArray1813.length)
                 raw.anIntArray1813[i] = sourceRaw.anIntArray1813[old];
         }
 
         for (int i = 0; i < component.faces.length; i++) {
             int face = component.faces[i];
+            if (!hasFaceIndices(sourceRaw, face)) return null;
             int a = map[sourceRaw.aShortArray1786[face] & 0xffff];
             int b = map[sourceRaw.aShortArray1787[face] & 0xffff];
             int d = map[sourceRaw.aShortArray1789[face] & 0xffff];
@@ -1294,13 +1312,28 @@ final class LiveModelEditorParts {
             raw.aShortArray1786[i] = (short) a;
             raw.aShortArray1787[i] = (short) b;
             raw.aShortArray1789[i] = (short) d;
-            raw.faceColours[i] = sourceRaw.faceColours == null ? 0 : sourceRaw.faceColours[face];
-            raw.faceAlpha[i] = sourceRaw.faceAlpha == null ? 0 : sourceRaw.faceAlpha[face];
-            raw.faceTextures[i] = -1;
-            raw.faceTextureIndexes[i] = -1;
-            raw.aByteArray1792[i] = sourceRaw.aByteArray1792 == null ? 0 : sourceRaw.aByteArray1792[face];
-            raw.aByteArray1799[i] = sourceRaw.aByteArray1799 == null ? 0 : sourceRaw.aByteArray1799[face];
-            raw.anIntArray1780[i] = sourceRaw.anIntArray1780 == null ? 0 : sourceRaw.anIntArray1780[face];
+            if (raw.faceColours != null && i < raw.faceColours.length)
+                raw.faceColours[i] = sourceRaw.faceColours != null
+                        && face < sourceRaw.faceColours.length ? sourceRaw.faceColours[face] : 0;
+            if (raw.faceAlpha != null && i < raw.faceAlpha.length)
+                raw.faceAlpha[i] = sourceRaw.faceAlpha != null
+                        && face < sourceRaw.faceAlpha.length ? sourceRaw.faceAlpha[face] : 0;
+            if (raw.faceTextures != null && i < raw.faceTextures.length)
+                raw.faceTextures[i] = -1;
+            if (raw.faceTextureIndexes != null && i < raw.faceTextureIndexes.length)
+                raw.faceTextureIndexes[i] = -1;
+            if (raw.aByteArray1792 != null && i < raw.aByteArray1792.length)
+                raw.aByteArray1792[i] = sourceRaw.aByteArray1792 != null
+                        && face < sourceRaw.aByteArray1792.length
+                        ? sourceRaw.aByteArray1792[face] : 0;
+            if (raw.aByteArray1799 != null && i < raw.aByteArray1799.length)
+                raw.aByteArray1799[i] = sourceRaw.aByteArray1799 != null
+                        && face < sourceRaw.aByteArray1799.length
+                        ? sourceRaw.aByteArray1799[face] : 0;
+            if (raw.anIntArray1780 != null && i < raw.anIntArray1780.length)
+                raw.anIntArray1780[i] = sourceRaw.anIntArray1780 != null
+                        && face < sourceRaw.anIntArray1780.length
+                        ? sourceRaw.anIntArray1780[face] : 0;
         }
 
         PartState local = state.copy();
@@ -1317,15 +1350,25 @@ final class LiveModelEditorParts {
     }
 
     private static void hideFaces(Class159 raw, Component component) {
-        for (int face : component.faces) raw.faceAlpha[face] = (byte) 0xff;
+        if (raw == null || component == null || raw.faceAlpha == null) return;
+        for (int face : component.faces) {
+            if (face >= 0 && face < raw.faceAlpha.length)
+                raw.faceAlpha[face] = (byte) 0xff;
+        }
     }
 
     private static void highlightFaces(Class159 raw, Component component) {
+        if (raw == null || component == null) return;
         for (int face : component.faces) {
-            raw.faceAlpha[face] = 0;
-            raw.faceColours[face] = HIGHLIGHT_COLOUR;
-            if (raw.faceTextures != null) raw.faceTextures[face] = (short) -1;
-            if (raw.faceTextureIndexes != null) raw.faceTextureIndexes[face] = (short) -1;
+            if (face < 0 || face >= raw.anInt1778) continue;
+            if (raw.faceAlpha != null && face < raw.faceAlpha.length)
+                raw.faceAlpha[face] = 0;
+            if (raw.faceColours != null && face < raw.faceColours.length)
+                raw.faceColours[face] = HIGHLIGHT_COLOUR;
+            if (raw.faceTextures != null && face < raw.faceTextures.length)
+                raw.faceTextures[face] = (short) -1;
+            if (raw.faceTextureIndexes != null && face < raw.faceTextureIndexes.length)
+                raw.faceTextureIndexes[face] = (short) -1;
         }
     }
 
@@ -1342,6 +1385,20 @@ final class LiveModelEditorParts {
     private static void ensureFaceAlpha(Class159 raw) {
         if (raw.faceAlpha == null || raw.faceAlpha.length < raw.anInt1778)
             raw.faceAlpha = new byte[raw.anInt1778];
+    }
+
+    private static boolean hasVertexCoordinates(Class159 raw, int vertex) {
+        return raw != null && vertex >= 0 && vertex < raw.anInt1791
+                && raw.anIntArray1782 != null && vertex < raw.anIntArray1782.length
+                && raw.anIntArray1777 != null && vertex < raw.anIntArray1777.length
+                && raw.anIntArray1797 != null && vertex < raw.anIntArray1797.length;
+    }
+
+    private static boolean hasFaceIndices(Class159 raw, int face) {
+        return raw != null && face >= 0 && face < raw.anInt1778
+                && raw.aShortArray1786 != null && face < raw.aShortArray1786.length
+                && raw.aShortArray1787 != null && face < raw.aShortArray1787.length
+                && raw.aShortArray1789 != null && face < raw.aShortArray1789.length;
     }
 
     synchronized String selectionAssetJson() {

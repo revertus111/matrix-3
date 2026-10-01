@@ -80,6 +80,7 @@ public final class ConveyorRunPreview {
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String status = "HIDDEN";
     private static volatile String roleSummary = "roles not generated";
+    private static volatile String lastLoggedRoleSummary = "";
     private static volatile LiveModelEditorParts.ConveyorRecipePart[] authoringRecipe =
             new LiveModelEditorParts.ConveyorRecipePart[0];
 
@@ -675,7 +676,10 @@ public final class ConveyorRunPreview {
         cachedRenderer = renderer;
         cachedRevision = revision;
         roleSummary = summary + " | routed static-belt visual";
-        System.out.println("[ConveyorRunPreview] " + roleSummary);
+        if (!roleSummary.equals(lastLoggedRoleSummary)) {
+            lastLoggedRoleSummary = roleSummary;
+            System.out.println("[ConveyorRunPreview] " + roleSummary);
+        }
     }
 
     private static Generation generateRaw(ObjectDefinitions definition, ConveyorRun run) {
