@@ -551,7 +551,7 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit AAA.
 - Runtime video showed Part/Multi ROT visually orbiting/drifting away from the white rotation gizmo instead of rotating around one fixed pivot.
 - **verified-static root cause:** the gizmo, selection pivot and Multi rotation math use each component's cached bounds center, while `transformVertices(...)` recomputed an average-vertex centroid and rotated/scaled the visible mesh around that different point.
-- Corrected `LiveModelEditorParts.transformVertices(...)` to rotate/scale actual component vertices around the same cached bounds center already owned by the editor gizmo and shared Multi transform math.
+- Corrected `LiveModelEditorParts.transformVertices(...)` so yaw rotates the visible component around the same cached bounds center already owned by the editor gizmo and shared Multi transform math. Existing per-part scale still uses its prior average-vertex centroid, preserving saved scale placement at yaw=0.
 - Reused the existing transform snap system; rotation angle snap now defaults to **90 degrees** and the UI identifies the control as ROT SNAP.
 - SNAP behavior is unchanged otherwise: SNAP ON applies the configured move/rotation steps; Ctrl temporarily bypasses it. With SNAP OFF, Ctrl temporarily applies snap.
 - No new transform/history system, Construction undo owner, cache writer, world mutation or server persistence path was introduced.
