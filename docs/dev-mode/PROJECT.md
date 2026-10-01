@@ -181,7 +181,9 @@ This table is the authoritative user-facing milestone table across chats.
 - [ ] Eclipse/Java 8 Client clean-build.
 - [x] Resolve placement type from ObjectDefinitions' opcode-1 shape/model-group table instead of hardcoding type 10.
 - [x] Remove the old Dev > Spawn... tile entry and Tile Editor Spawn Browser button so the standalone JFrame is no longer a normal workflow.
-- [ ] Runtime verify O-entry, auto type resolution across mixed object IDs, real-material preview, 1/2 cycling, repeated LMB placement and Escape cleanup.
+- [x] Harden Live Inspect O hotkey ownership to the active Matrix3 game window instead of requiring the KeyEvent source to be the Canvas.
+- [x] Seed Live Place from the inspected object's exact world tile so the preview appears immediately when O arms it.
+- [ ] Runtime verify O-entry, immediate seeded preview, auto type resolution across mixed object IDs, 1/2 cycling, repeated LMB placement and Escape cleanup.
 
 **Ownership note:** `DevObjectPlacementPreview` owns only transient client presentation. `DevSpawnPlacement` + the existing server `devspawn` bridge remain the placement authority.
 
@@ -447,7 +449,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Last completed:**
 
-- Phase 1 Bundle 1.4 Real Object Placement Preview: moved object placement entry into Live Inspect (O), added cache-native automatic object type resolution, and retired the standalone Spawn Browser from normal Dev Mode entry points.
+- Phase 1 Bundle 1.4 Real Object Placement Preview: corrected the non-firing O path by replacing the brittle exact-Canvas key-source gate with active-game-window ownership and seeding the preview from the inspected object's tile.
 
 **Current phase:**
 
@@ -460,7 +462,7 @@ The authoritative accumulated runtime queue is `docs/dev-mode/testlist.txt`. The
 
 **Next checklist item:**
 
-- One short Client runtime gate: enable Live Inspect, hover an object and press O; verify the preview uses the object's cache-declared type, then use 1/2 across IDs that previously needed different types, place several with LMB, and Escape cleanly.
+- One short Client runtime gate: enable Live Inspect, hover an object and press O; confirm the preview appears immediately on that object's tile, then use 1/2 across IDs that previously needed different types, place several with LMB, and Escape cleanly.
 
 **Current state / next action:**
 

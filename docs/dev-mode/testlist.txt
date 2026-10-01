@@ -1,6 +1,7 @@
 Bundle 1.4 - Real Object Placement Preview quick gate
 [ ] Eclipse/Java 8: clean/build Client with no compilation errors.
-[ ] Dev Mode + F10 Live Inspect ON -> hover a real Object and press O; confirm Live Place arms without opening the standalone Spawn Browser.
+[ ] Dev Mode + F10 Live Inspect ON -> hover a real Object and press O; confirm Live Place arms without opening the standalone Spawn Browser and the preview appears immediately on the hovered object's tile.
+[ ] Confirm O works while the Matrix3 game window is active even when the KeyEvent source is not the raw game Canvas; verify it does not trigger when another application/window owns focus.
 [ ] Confirm the Live Inspect Object route shows O -> Live Place with the automatically resolved cache type.
 [ ] Move across world tiles and confirm one fully rendered normal-material object follows the hovered tile with no white ghost tint or transparency.
 [ ] Stop moving the mouse and confirm the preview remains on the last hovered tile rather than expiring/flickering.

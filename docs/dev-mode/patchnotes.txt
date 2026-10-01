@@ -1,3 +1,8 @@
+2026-09-30 - Live Inspect O hotkey routing fix
+- Replaced the exact Canvas KeyEvent-source requirement with active Matrix3 game-window ownership for Dev Mode keyboard shortcuts.
+- O now arms from the current Live Inspect Object snapshot and seeds Live Place with that object's exact world tile so the preview appears immediately.
+- Live Inspect and game-window gating remain authoritative; the shortcut does not become a desktop-global hotkey.
+
 2026-09-30 - Live Inspect object placement entry + automatic object type
 - Added O on the current Live Inspect Object target to arm Live Place directly from the in-world hover/locked target.
 - DevDefinitionBridge now exposes ObjectDefinitions opcode-1 shape/type bytes; Live Place selects the first cache-declared supported type and re-resolves it after every 1/2 raw-ID change.

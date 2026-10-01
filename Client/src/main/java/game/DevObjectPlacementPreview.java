@@ -42,8 +42,8 @@ public final class DevObjectPlacementPreview {
         active = true;
         clearHoveredTile();
         lastRenderedCycle = Integer.MIN_VALUE;
-        return "Live placement: " + objectName + " (" + objectId + "). Move the mouse over the world; "
-                + "1/2 change object ID, left-click places, Escape cancels.";
+        return "Live placement: " + objectName + " (" + objectId + "), type " + objectType
+                + ". 1/2 change object ID, left-click places, Escape cancels.";
     }
 
     public static String arm(int id, int ignoredType, int newRotation) {

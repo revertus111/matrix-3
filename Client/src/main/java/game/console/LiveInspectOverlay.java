@@ -279,8 +279,11 @@ public final class LiveInspectOverlay {
 
     public static String armCurrentObjectPlacement() {
         final Snapshot target = getCurrentTarget();
-        if (!enabled || target == null || !"Object".equals(target.type) || target.definitionId < 0) return null;
-        return DevModeBridge.armLiveObjectPlacement(target.definitionId, 0);
+        if (!enabled || target == null || !"Object".equals(target.type) || target.definitionId < 0) {
+            return null;
+        }
+        return DevModeBridge.armLiveObjectPlacementAt(
+                target.definitionId, 0, target.worldX, target.worldY, target.plane);
     }
 
     public static boolean openCurrentTool() {

@@ -128,6 +128,15 @@ public final class DevModeBridge {
         return armLiveObjectPlacement(objectId, rotation);
     }
 
+    public static String armLiveObjectPlacementAt(int objectId, int rotation,
+            int worldX, int worldY, int plane) {
+        String result = armLiveObjectPlacement(objectId, rotation);
+        if (DevObjectPlacementPreview.isActive()) {
+            DevObjectPlacementPreview.observeWorldTile(worldX, worldY, plane);
+        }
+        return result;
+    }
+
     public static String cancelPlacement() {
         boolean hadManipulation = placementTarget != null || placementMode != PlacementMode.NONE;
         clearManipulationPlacement();
@@ -742,7 +751,7 @@ public final class DevModeBridge {
                         notifyPlacementStatus(cancelPlacement());
                         return;
                     }
-                    if (!enabled || !isOwnerSession() || keyEvent.getSource() != Class584.aCanvas7745) {
+                    if (!enabled || !isOwnerSession() || !isDevKeyContextActive()) {
                         return;
                     }
                     if (DevObjectPlacementPreview.isActive()) {
@@ -811,6 +820,19 @@ public final class DevModeBridge {
         } catch (RuntimeException ex) {
             // Escape is a convenience cancellation path. Explicit Cancel remains available.
         }
+    }
+
+    private static boolean isDevKeyContextActive() {
+        if (Class584.aCanvas7745 == null || !Class584.aCanvas7745.isDisplayable()) {
+            return false;
+        }
+        java.awt.Window gameWindow = SwingUtilities.getWindowAncestor(Class584.aCanvas7745);
+        if (gameWindow == null) {
+            return false;
+        }
+        java.awt.Window activeWindow = java.awt.KeyboardFocusManager
+                .getCurrentKeyboardFocusManager().getActiveWindow();
+        return activeWindow == gameWindow;
     }
 
     private static boolean hasDevAction(int targetAction) {
