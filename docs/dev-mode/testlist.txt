@@ -344,6 +344,7 @@ Live Model Editor — Anchored Tile Snap gate (2026-10-01)
 [ ] Regression: normal MOVE SNAP remains configurable/usable and ROT SNAP still defaults to 90 degrees.
 
 Live Model Editor — Group / Glue V1 gate (2026-10-01)
+[x] Runtime verified: clicking one member of a group selects/highlights the whole group.
 [x] verified-static: Ctrl+G routes to Group and Ctrl+Shift+G routes to Ungroup before the existing bare-G Move shortcut.
 [x] verified-static: grouped PartState membership is copied by Undo/Redo snapshots and serialized as groupId.
 [x] verified-static: project format is v6 and older v1-v5 projects load with groupId defaulting to 0.
@@ -365,3 +366,26 @@ Live Model Editor — Group / Glue V1 gate (2026-10-01)
 [ ] Ctrl+Z then Ctrl+Y across group/ungroup or grouped transform operations and verify membership/transforms restore exactly.
 [ ] Save the project, reload it, click one grouped member, and verify group membership and shared behavior persist.
 [ ] Regression: bare G still switches to Move mode; Ctrl+G must not change the transform mode.
+Live Model Editor — Clear Selection + Reusable Part / Assembly Library V1 gate (2026-10-01)
+[x] verified-static: bare C clears Part/Multi selection through the editor shortcut gate and does not replace Ctrl+C behavior in text-entry fields.
+[x] verified-static: Whole mode is excluded from Clear Selection.
+[x] verified-static: selection-asset format is v2 and records per-part donor sourceObjectId/sourceObjectType.
+[x] verified-static: imported parts resolve donor Source/Component from Matrix3 ObjectDefinitions and do not embed/write raw cache geometry.
+[x] verified-static: duplicate rendering, picking, selection pivots/extents and shared transform math resolve the owning donor component for imported parts.
+[x] verified-static: imported group IDs are remapped to new local group IDs to avoid colliding with groups already in the target project.
+[x] verified-static: imported donor ownership is copied by duplicate/history snapshots and serialized in project v7.
+[x] verified-static: older project v1-v6 and selection-asset v1 remain readable with current-source fallback behavior.
+[x] verified-static: no cache writer, server/world mutation or Construction ownership changed.
+[ ] Eclipse clean/build Client with Java 8.
+[ ] In Part or Multi mode, select one or more parts and press C; verify selection clears without changing transforms.
+[ ] Save the current target project before switching to a donor object.
+[ ] Open a donor wooden object and click through its scanned Part list/world parts until the desired plank/rail component is identified by highlight.
+[ ] Select that donor component and click Save Part / Assembly; verify a JSON asset is created in dev-model-assets.
+[ ] Reopen/load the target conveyor project and click Add Part / Assembly; verify the donor plank appears and is selected.
+[ ] Verify the imported list row identifies Asset #<donorObjectId> Part <n> [imported].
+[ ] Move, rotate and scale the imported plank; verify its pivot stays attached and the target object's original parts do not move.
+[ ] Snap the imported plank to a tile anchor, group it with current-object parts, then click one grouped member and verify the whole mixed-source assembly selects.
+[ ] Ctrl+D the mixed-source group and verify imported donor geometry remains visible/editable in the independent copy.
+[ ] Ctrl+Z then Ctrl+Y across the import or a mixed-source transform and verify exact state restoration.
+[ ] Save the v7 target project, reload it, and verify the imported donor part/group still renders and edits correctly.
+[ ] Regression: existing v1 selection assets and v1-v6 projects still load.
