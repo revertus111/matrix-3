@@ -1389,6 +1389,19 @@ final class LiveModelEditorParts {
         PartState local = state.copy();
         Component localComponent = new Component(sequence(component.faces.length),
                 sequence(component.vertices.length));
+        /*
+         * componentOnlyRaw keeps the copied vertices in the source component's
+         * original coordinate space. Preserve that component's cached bounds so
+         * duplicate rotation uses the same pivot as the original part instead of
+         * the new compact Component's default 0,0,0 center.
+         */
+        localComponent.centerX = component.centerX;
+        localComponent.centerY = component.centerY;
+        localComponent.centerZ = component.centerZ;
+        localComponent.sizeX = component.sizeX;
+        localComponent.sizeY = component.sizeY;
+        localComponent.sizeZ = component.sizeZ;
+        localComponent.signature = component.signature;
         transformVertices(raw, localComponent, local);
         return raw;
     }
