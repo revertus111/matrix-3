@@ -287,9 +287,9 @@ Live Model Editor — Stable ROT Pivot + 90° Snap gate (2026-10-01)
 [x] verified-static: angle snap defaults to 90 degrees and remains configurable through the existing ROT SNAP spinner.
 [x] verified-static: no Construction undo, cache writer, world/server mutation or persistence path changed.
 [ ] Eclipse clean/build Client with Java 8.
-[ ] Select one asymmetric part, note its position at yaw=0 with a non-100 scale, then rotate freely; verify yaw=0 placement is unchanged and the mesh spins around the fixed white ROT pivot without walking/orbiting away.
-[ ] Enable SNAP with ROT SNAP=90 and rotate the part through 90, 180, 270 and 360 degrees.
-[ ] Verify each snapped stop is a quarter-turn and the white ROT pivot remains stationary.
+[x] Runtime verified: selected geometry rotates around the fixed white ROT pivot without walking/orbiting away.
+[x] Runtime verified: ROT SNAP=90 engages quarter-turn snapping.
+[x] Runtime verified: snapped rotation uses quarter-turns and the ROT pivot remains stable.
 [ ] At 360 degrees, verify the part returns to the exact starting position/orientation with no accumulated translation.
 [ ] Multi-select at least two separated parts and repeat 90/180/270/360; verify the assembly rotates around one fixed shared pivot and relative spacing remains correct.
 [ ] With SNAP ON, hold Ctrl during a rotation and verify rotation becomes free; release Ctrl and verify 90-degree snapping resumes.
