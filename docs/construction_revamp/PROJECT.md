@@ -2546,3 +2546,28 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Added **Sawmill Status** showing connection state, input Logs, output Planks and transient processing progress.
 - No SettlementState schema change, belt tier, splitter, filter-routing, inserter, custom sawmill asset placement or animation ownership change in this slice.
 - **Resume Here (conveyor):** pull/build/restart Server + Client. Place/keep two physical chests and one Wooden workbench, drain/clear old ConveyorRuns, put Logs 1511 in the oldest chest, click Build Sawmill Test Line, then watch Logs travel into the machine, convert 1->2, Planks leave on the output belt and deposit into the second chest. Next block/fill the destination to prove backpressure propagates all the way to the source chest. If accepted, the next logistics slice is splitter/routing infrastructure or replacing the placeholder workstation art with the accepted sawmill prefab without changing machine ownership.
+
+### Conveyor Gameplay V1.8 — Player Conveyor Build Placement — 2026-09-30
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under SAP AAA.
+- Added a real player-facing **Logistics -> Conveyor** entry to the existing Construction palette. Conveyor is a logical build tool, not a fake world object id.
+- Placement flow is now two-click:
+  1. select Conveyor;
+  2. click Point A;
+  3. move the mouse to see the existing accepted conveyor renderer draw a full-appearance live A->B preview;
+  4. click Point B;
+  5. client queues the normal server-authoritative `settlementconveyorcreate` command;
+  6. tool remains armed for the next run.
+- Live preview reuses `ConveyorRunPreview`; no duplicate belt renderer or per-tile world-object preview was introduced.
+- The ordinary Construction object ghost explicitly ignores the Conveyor tool so object id -1 is never sent through Matrix3 object-definition rendering.
+- Right-click cancels only the pending Point A. Escape cancels Point A first; a second Escape can close Build Mode normally.
+- Conveyor heading is derived from A->B; rotate/wheel input does not own conveyor orientation.
+- Server `createConveyorRun(...)` now performs authoritative endpoint snapping:
+  - exact/adjacent (Manhattan <=1 tile) STORAGE or WORKSTATION build origins are eligible;
+  - nearest endpoint wins, then lowest persistent piece id as deterministic tie-break;
+  - free-ground endpoints remain valid when no compatible build is nearby.
+- Endpoint snap happens before persistence, so chest/machine logistics bind to the real persistent build tile even if the click lands on its edge/adjacent tile.
+- Existing server validation still owns plot bounds, plane match and non-zero run length after snapping.
+- Added a **Logistics** palette category. Existing Walls/Floors/Doors/Furniture/Rails behavior is unchanged.
+- No splitter/branch topology, port-direction authoring, resource cost, belt tier or support-placement policy is added in V1.8.
+- **Resume Here (conveyor):** pull/build/restart Client + Server, open Construction palette -> Logistics -> Conveyor. Click chest A, move toward a machine/chest and confirm the full belt preview follows the cursor; click B and confirm one persistent run appears and starts transporting when valid endpoints/inventory exist. Test clicking one tile beside a chest/workstation and verify server snap connects to the actual build. Right-click/Escape should cancel only pending A. If accepted, the next player-facing logistics slice is splitter/routing placement and machine port direction/branch UX.
