@@ -561,7 +561,7 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 
 ### Live Model Editor — Anchored Tile Snap — 2026-10-01
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Status: **RUNTIME VERIFIED** under explicit SAP AAA.
 - Replaced the destructive main-panel **Fit 1 Tile** workflow with a translation-only **Snap To Tile** workflow for Part/Multi selections.
 - Tile Snap uses the Matrix3 model-space tile size of **512 units** and never changes selection scale, yaw, geometry, or relative spacing.
 - Added nine selection-bounds anchors: **NW / N / NE / W / Center / E / SW / S / SE**. **Center is the default.** The selected anchor is aligned to the nearest 512-unit local X/Z grid intersection.
@@ -570,4 +570,4 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Existing incremental MOVE SNAP and 90-degree ROT SNAP remain separate controls and are unchanged.
 - Whole-object mode and conveyor-payload mode are not changed by this slice; Tile Snap is Part/Multi authoring only.
 - No cache writer, world/server mutation, Construction placement, or persistence ownership changed.
-- **Resume Here (Live Model Editor):** select or duplicate an asymmetric part, move it off-grid, snap Center then an edge/corner anchor, verify only move X/Z changes and the chosen anchor lands on the 512-unit grid; repeat with Multi, then Ctrl+Z/Ctrl+Y and rotate the snapped duplicate as a regression.
+- **Runtime acceptance:** user confirmed Tile Snap works with no issues. Deeper edge/corner, Multi, undo/redo, and duplicate-rotation regression checks remain optional follow-up coverage unless separately confirmed.
