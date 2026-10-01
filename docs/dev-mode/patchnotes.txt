@@ -206,3 +206,10 @@
 - Existing SNAP/Ctrl inversion, undo/redo, save/load, Construction undo and world/cache/server ownership are unchanged.
 - Runtime accepted by user: stable ROT pivot and 90-degree snapping both work.
 - Status: RUNTIME VERIFIED.
+
+2026-10-01 - Live Model Editor duplicate ROT pivot correction
+- Follow-up runtime testing isolated the remaining rotation bug to duplicated parts after movement.
+- verified-static: componentOnlyRaw created a compact duplicate Component with default center 0,0,0, while duplicate editor state/gizmo still referenced the source component center.
+- Preserved source component center/bounds/signature on the compact duplicate component before applying scale/yaw/move transforms.
+- Original-part rotation behavior and 90-degree ROT SNAP remain unchanged.
+- Status: IMPLEMENTED / NEEDS RUNTIME RETEST.
