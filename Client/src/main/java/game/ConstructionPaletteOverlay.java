@@ -115,6 +115,17 @@ public final class ConstructionPaletteOverlay {
         hide(true);
     }
 
+    /**
+     * Logout/session cleanup for transient palette and RTS mouse ownership.
+     */
+    public static void resetForSessionBoundary() {
+        rtsMiddleDragging = false;
+        rtsMiddleLastX = 0;
+        rtsMiddleLastY = 0;
+        clearBuildsConfirmUntil = 0L;
+        hide(true);
+    }
+
     private static void hide(boolean cancelPlacement) {
         visible = false;
         searchFocused = false;
