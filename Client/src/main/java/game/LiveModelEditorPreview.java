@@ -961,6 +961,17 @@ public final class LiveModelEditorPreview {
         return PARTS.selectionAssetJson();
     }
 
+    public static int importSelectionAssetJson(String json) {
+        int count = PARTS.importSelectionAssetJson(json);
+        if (count > 0) {
+            invalidateModels();
+            status = "ADDED " + count + " reusable part(s) from asset";
+        } else {
+            status = "ADD ASSET failed: no compatible cached parts found";
+        }
+        return count;
+    }
+
     public static boolean setSelectedPartTransform(int sx, int sy, int sz,
             int mx, int my, int mz, int yaw) {
         boolean changed = PARTS.setSelectedTransform(
