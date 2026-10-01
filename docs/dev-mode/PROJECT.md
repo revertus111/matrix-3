@@ -571,3 +571,20 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Whole-object mode and conveyor-payload mode are not changed by this slice; Tile Snap is Part/Multi authoring only.
 - No cache writer, world/server mutation, Construction placement, or persistence ownership changed.
 - **Runtime acceptance:** user confirmed Tile Snap works with no issues. Deeper edge/corner, Multi, undo/redo, and duplicate-rotation regression checks remain optional follow-up coverage unless separately confirmed.
+
+### Live Model Editor — Group / Glue V1 — 2026-10-01
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Added durable Part/Multi group membership as the first Glue/assembly slice.
+- **Ctrl+G** groups the current editable selection; **Ctrl+Shift+G** ungroups it. Bare **G** remains the existing Move hotkey.
+- Clicking/selecting any member of a group expands the editor selection to the full active group, including viewport picking and Part-list selection.
+- Groups reuse the existing Multi transform authority:
+  - Move applies one shared delta.
+  - Rotate uses the existing shared selection pivot.
+  - Scale automatically uses the shared pivot for a complete grouped selection even when manual Group Scale is OFF.
+  - Snap To Tile applies one shared 512-unit X/Z translation and preserves internal spacing.
+- Ctrl+D duplicates a grouped assembly as a **new independent group ID**, preserving internal grouping without linking the copy back to the source group.
+- Group membership is stored on PartState, travels through the existing 64-step Undo/Redo snapshots, and is serialized in project/selection JSON. Project format advances from v5 to **v6**; older v1-v5 projects remain loadable with ungrouped default state.
+- Part labels/status now expose group IDs so assembly membership is visible during authoring.
+- No second transform engine, renderer owner, cache writer, world/server mutation, Construction placement, or persistent game-state path was introduced.
+- **Resume Here (Live Model Editor):** Multi-select 3+ pieces -> Ctrl+G -> click one member and confirm the whole group reselects -> move/rotate/scale/Snap To Tile -> Ctrl+D and verify the copy is an independent group -> Ctrl+Shift+G on the copy -> Ctrl+Z/Ctrl+Y -> save/load project and verify membership survives.
