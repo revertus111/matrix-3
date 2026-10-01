@@ -1830,3 +1830,33 @@ RTS logout/relogin lifecycle regression — RUNTIME VERIFIED (2026-09-30)
 [ ] Repeat logout/relogin once while a worker/player RTS selection is committed. After login/re-entry there must be no stale committed selection/input capture from the previous session.
 [ ] Optional disconnect-equivalent confidence check: if the client experiences a session reset where 2835=0 is missed, next settlement enter must still self-heal via missing detached-camera detection.
 [ ] After focused acceptance, run the normal RS3 smoke pass because this touches the Matrix3 client logout/session boundary.
+
+Conveyor Machine Endpoint / Sawmill Automation V1.7 — runtime gate (2026-09-30)
+[x] verified-static: machine endpoint reuses persistent SettlementMachineBuffer input/output inventory.
+[x] verified-static: automated conversion calls the existing atomic SettlementProcessingTransaction for SAW_PLANKS.
+[x] verified-static: recipe mapping is Logs 1511 input -> Planks 960 output at 1 -> 2.
+[x] verified-static: automation runs only on a compatible WORKSTATION connected to at least one ConveyorRun.
+[x] verified-static: worker workstation reservation pauses automation and prevents worker+machine double-processing.
+[x] verified-static: conveyor output into a machine accepts only the machine recipe input item and only when full payload capacity exists; failed acceptance leaves ownership on the belt.
+[x] verified-static: machine output removes one real Plank only after output-belt inlet spacing is available; failed belt insertion restores it.
+[x] verified-static: machine-connected runs are classified as physical endpoints, so fake debug payload fill/sink/clear remains blocked.
+[x] verified-static: deterministic Build Sawmill Test Line requires two chests + one compatible workstation and no existing ConveyorRuns; second-run failure rolls back the first.
+[x] verified-static: no SettlementState schema change; partial processing timer is transient while machine inventories remain persistent.
+[ ] Pull latest main; Eclipse clean/build Server + Client with Java 8, restart both, enter settlement.
+[ ] Have at least two physical Wooden chests and one Wooden workbench/sawmill workstation. Drain/clear any existing ConveyorRuns first.
+[ ] Put several Logs 1511 in the oldest/lowest-id chest; leave the second chest with free capacity.
+[ ] Click Con Revamp -> Conveyor Transport Core -> Build Sawmill Test Line. Chat reports CHEST#source -> MACHINE#workstation -> CHEST#destination plus two run ids.
+[ ] Click Sawmill Status. It reports connected=true, current Logs input, Planks output and progress 0/4..3/4.
+[ ] Watch Logs leave the source chest, travel on the input ConveyorRun, enter machine input, then convert after the 4-tick cadence.
+[ ] Confirm exactly 1 Log disappears from machine input and exactly 2 Planks appear in machine output per completed processing cycle.
+[ ] Watch Planks leave machine output as real physical payloads, travel on the output ConveyorRun and deposit in the destination chest.
+[ ] Conservation check across one cycle: source Logs + input-belt Logs + machine input Logs decreases by exactly 1 only when 2 Planks are produced; machine/output-belt/destination Planks increase by exactly 2 with no duplicate/loss.
+[ ] Fill/block destination chest for Planks. Output belt backs up, machine output fills, processing stops when output capacity is insufficient, machine input fills, input belt backs up and source chest withdrawal eventually stops.
+[ ] Restore destination capacity. The queued Planks drain first, processing resumes, then upstream Logs begin moving again without recreating the line.
+[ ] Put a non-Logs item at the front of the source chest. It may travel toward the machine but must remain blocked at the machine endpoint rather than entering the saw-planks input buffer or disappearing.
+[ ] While a worker owns/processes the same workstation, automatic machine processing pauses; no doubled 1->4-style output occurs.
+[ ] Exit/re-enter or relog with Logs/Planks stored in machine buffers and confirm inventories persist. Partial 1..3/4 timer progress may restart at 0 by design, with no item loss/duplication.
+[ ] Try Add Current Test Item / Fill Mixed Belt / Open Output / Clear Payloads on either machine-connected physical run. Unsafe debug mutation is rejected.
+[ ] Regression: an unconnected Wooden workbench still uses the existing worker Process Wood flow and does not auto-process by itself.
+[ ] Regression: direct Chest -> Conveyor -> Chest V1.6 remains functional.
+[ ] After focused acceptance, run full docs/rs3/SMOKE_TEST.md because this changes server transport/processing interaction even though persistence schema is unchanged.
