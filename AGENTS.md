@@ -16,6 +16,7 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 - Before AAA, follow repository scan discipline and report findings, likely files, implementation, and important uncertainty.
 - After AAA, patch the established files directly; do not restart discovery unless new evidence requires it.
 - AAA may approve a clearly defined workstream bundle containing multiple related patches. Do not stop for another AAA between its listed patches unless the requested scope materially changes.
+- Exception for runtime verification bookkeeping: when the user explicitly runtime-verifies an already-AAA-approved patch/checkpoint, immediately update only that exact work's verification/status documentation (for example `PROJECT.md`, testlist, patchnotes, and `Resume Here`) without asking for another AAA. This exception does not authorize new code behavior, fixes, refactors, unrelated documentation changes, or scope expansion; those still require normal AAA approval.
 
 ## Workstream workflow
 
