@@ -2103,3 +2103,11 @@
 - Existing endpoint snapping, chest/machine ownership, speed, spacing, backpressure and processing authority are unchanged.
 - Dedicated curved elbow art remains deferred; V1.9 uses a square overlap at the bend.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-10-01 - Settlement minimap runtime acceptance + RTS heading/object guard
+- Settlement Minimap V1 core gate is runtime verified: RTS pivot owns minimap scrolling, authoritative build removal clears stock map geometry, and starter tree/stone/ore objects render through stock Matrix3 minimap metadata.
+- Added RTS yaw -> Matrix3 14-bit minimap-angle conversion; Class464 render rotation and client.method7990 click inverse now share the same RTS heading while RTS is active.
+- Settlement RTS object interactions (actions 3..6/1001) are consumed unless self is selected; worker first-object resource/workstation orders still mirror before consumption. Examine remains vanilla.
+- Outside settlement RTS, vanilla minimap and object-interaction behavior is unchanged.
+- Root AGENTS.md now permits verification/status bookkeeping for an already-approved patch immediately after explicit runtime confirmation without a second AAA; new code/scope still requires AAA.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST for heading/object guard; Settlement Minimap V1 center/build/resource gate RUNTIME VERIFIED.
