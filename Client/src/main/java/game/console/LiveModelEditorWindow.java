@@ -146,7 +146,7 @@ public final class LiveModelEditorWindow {
     private final JButton groupScaleButton = rsButton("GROUP SCALE OFF");
     private final JButton fitOneTileButton = rsButton("FIT 1 TILE");
     private final JSpinner moveSnapSpinner = spinner(16, 1, 512, 1);
-    private final JSpinner angleSnapSpinner = spinner(15, 1, 90, 1);
+    private final JSpinner angleSnapSpinner = spinner(90, 1, 90, 1);
 
     private final JButton wholeModeButton = rsButton("Whole [1]");
     private final JButton partModeButton = rsButton("Part [2]");
@@ -662,13 +662,13 @@ public final class LiveModelEditorWindow {
         panel.add(groupScaleRow);
         panel.add(Box.createVerticalStrut(3));
 
-        snapButton.setToolTipText("Normal drag is free. Ctrl temporarily snaps; when SNAP is ON, Ctrl temporarily bypasses snap.");
+        snapButton.setToolTipText("Normal drag is free. Ctrl temporarily snaps; when SNAP is ON, Ctrl temporarily bypasses snap. Rotation defaults to 90-degree quarter-turns.");
         JPanel snapMode = actionRow(1);
         snapMode.add(snapButton);
         panel.add(snapMode);
         panel.add(Box.createVerticalStrut(3));
         panel.add(createSpinnerGrid(
-                new String[] { "MOVE SNAP", "ANGLE SNAP" },
+                new String[] { "MOVE SNAP", "ROT SNAP °" },
                 new JSpinner[] { moveSnapSpinner, angleSnapSpinner }));
         panel.add(Box.createVerticalStrut(4));
 
