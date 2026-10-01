@@ -477,10 +477,11 @@ final class LiveModelEditorParts {
 
     synchronized boolean select(int index) {
         if (index < 0 || index >= getPartCount()) return clearSelection();
-        boolean changed = selection.size() != 1
-                || !selection.contains(Integer.valueOf(index)) || selected != index;
+        LinkedHashSet<Integer> next = new LinkedHashSet<Integer>();
+        addIndexWithGroup(next, index);
+        boolean changed = !selection.equals(next) || selected != index;
         selection.clear();
-        selection.add(Integer.valueOf(index));
+        selection.addAll(next);
         selected = index;
         if (changed) revision++;
         return true;
@@ -492,7 +493,7 @@ final class LiveModelEditorParts {
         if (indices != null) {
             for (int index : indices) {
                 if (index >= 0 && index < getPartCount()) {
-                    next.add(Integer.valueOf(index));
+                    addIndexWithGroup(next, index);
                     nextPrimary = index;
                 }
             }
@@ -507,7 +508,9 @@ final class LiveModelEditorParts {
 
     synchronized boolean addSelection(int index) {
         if (index < 0 || index >= getPartCount()) return false;
-        boolean changed = selection.add(Integer.valueOf(index));
+        int before = selection.size();
+        addIndexWithGroup(selection, index);
+        boolean changed = selection.size() != before;
         if (selected != index) {
             selected = index;
             changed = true;
@@ -518,12 +521,18 @@ final class LiveModelEditorParts {
 
     synchronized boolean toggleSelection(int index) {
         if (index < 0 || index >= getPartCount()) return false;
-        Integer key = Integer.valueOf(index);
-        if (selection.contains(key)) {
-            selection.remove(key);
-            if (selected == index) selected = lastSelectionIndex();
+        PartState state = stateAt(index);
+        if (state == null) return false;
+        LinkedHashSet<Integer> affected = new LinkedHashSet<Integer>();
+        addIndexWithGroup(affected, index);
+        boolean remove = selection.contains(Integer.valueOf(index));
+        if (remove) {
+            selection.removeAll(affected);
+            if (selected == index || !selection.contains(Integer.valueOf(selected))) {
+                selected = lastSelectionIndex();
+            }
         } else {
-            selection.add(key);
+            selection.addAll(affected);
             selected = index;
         }
         revision++;
@@ -551,6 +560,48 @@ final class LiveModelEditorParts {
         selected = -1;
         revision++;
         return true;
+    }
+
+    synchronized boolean groupSelected() {
+        int editable = 0;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && !state.deleted) editable++;
+        }
+        if (editable < 2) return false;
+
+        int groupId = nextGroupId();
+        pushUndo();
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && !state.deleted) state.groupId = groupId;
+        }
+        revision++;
+        return true;
+    }
+
+    synchronized boolean ungroupSelected() {
+        boolean changed = false;
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null && state.groupId > 0) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) return false;
+
+        pushUndo();
+        for (Integer index : selection) {
+            PartState state = stateAt(index.intValue());
+            if (state != null) state.groupId = 0;
+        }
+        revision++;
+        return true;
+    }
+
+    synchronized int getSelectedGroupId() {
+        return isSelectionSingleGroup() ? selectedState().groupId : 0;
     }
 
     synchronized boolean setSelectedTransform(int sx, int sy, int sz,
@@ -814,6 +865,7 @@ final class LiveModelEditorParts {
         int[] sourceSelection = selectionArray();
         pushUndo();
         LinkedHashSet<Integer> created = new LinkedHashSet<Integer>();
+        Map<Integer, Integer> copiedGroups = new LinkedHashMap<Integer, Integer>();
         for (int index : sourceSelection) {
             PartState state = stateAt(index);
             if (state == null || state.deleted) continue;
@@ -821,6 +873,14 @@ final class LiveModelEditorParts {
             copy.hidden = false;
             copy.deleted = false;
             copy.moveX = clamp(copy.moveX + 128, -4096, 4096);
+            if (copy.groupId > 0) {
+                Integer mapped = copiedGroups.get(Integer.valueOf(copy.groupId));
+                if (mapped == null) {
+                    mapped = Integer.valueOf(nextGroupId());
+                    copiedGroups.put(Integer.valueOf(copy.groupId), mapped);
+                }
+                copy.groupId = mapped.intValue();
+            }
             duplicates.add(copy);
             created.add(Integer.valueOf(originals.size() + duplicates.size() - 1));
         }
@@ -1573,6 +1633,43 @@ final class LiveModelEditorParts {
         gestureStarts.clear();
     }
 
+    private void addIndexWithGroup(LinkedHashSet<Integer> target, int index) {
+        PartState state = stateAt(index);
+        if (state == null || state.deleted) return;
+        if (state.groupId <= 0) {
+            target.add(Integer.valueOf(index));
+            return;
+        }
+        for (int i = 0; i < getPartCount(); i++) {
+            PartState member = stateAt(i);
+            if (member != null && !member.deleted && member.groupId == state.groupId) {
+                target.add(Integer.valueOf(i));
+            }
+        }
+    }
+
+    private int nextGroupId() {
+        int max = 0;
+        for (PartState state : originals) if (state.groupId > max) max = state.groupId;
+        for (PartState state : duplicates) if (state.groupId > max) max = state.groupId;
+        return max == Integer.MAX_VALUE ? 1 : max + 1;
+    }
+
+    private boolean isSelectionSingleGroup() {
+        if (selection.size() < 2) return false;
+        PartState primary = selectedState();
+        if (primary == null || primary.groupId <= 0) return false;
+        int groupId = primary.groupId;
+        int activeMembers = 0;
+        for (int i = 0; i < getPartCount(); i++) {
+            PartState state = stateAt(i);
+            if (state == null || state.deleted || state.groupId != groupId) continue;
+            activeMembers++;
+            if (!selection.contains(Integer.valueOf(i))) return false;
+        }
+        return activeMembers == selection.size();
+    }
+
     private int[] selectionArray() {
         int[] values = new int[selection.size()];
         int i = 0;
@@ -1608,7 +1705,8 @@ final class LiveModelEditorParts {
         boolean changed = false;
         int[] primaryBase = starts == null
                 ? transformOf(selectedState()) : starts.get(Integer.valueOf(selected));
-        boolean scaleAroundPivot = groupScale && primaryBase != null
+        boolean scaleAroundPivot = (groupScale || isSelectionSingleGroup())
+                && primaryBase != null
                 && (delta[0] != 0 || delta[1] != 0 || delta[2] != 0);
         boolean sharedYawPivot = selection.size() > 1 && delta[6] != 0;
         double[] pivot3D = (scaleAroundPivot || sharedYawPivot)
@@ -1718,6 +1816,8 @@ final class LiveModelEditorParts {
         else if (state.hidden) suffix.append("  [hidden]");
         if (state.replacementObjectId >= 0)
             suffix.append("  [replace #").append(state.replacementObjectId).append(']');
+        if (state.groupId > 0)
+            suffix.append("  [group #").append(state.groupId).append(']');
         if (state.conveyorRole != ConveyorRole.UNASSIGNED)
             suffix.append("  [").append(state.conveyorRole.name()).append(']');
         return suffix.toString();
@@ -1736,6 +1836,7 @@ final class LiveModelEditorParts {
                 .append(", \"moveY\": ").append(state.moveY)
                 .append(", \"moveZ\": ").append(state.moveZ)
                 .append(", \"yaw\": ").append(state.yaw)
+                .append(", \"groupId\": ").append(state.groupId)
                 .append(", \"hidden\": ").append(state.hidden)
                 .append(", \"deleted\": ").append(state.deleted)
                 .append(", \"replacementObjectId\": ").append(state.replacementObjectId)
@@ -1752,6 +1853,7 @@ final class LiveModelEditorParts {
         state.moveY = clamp(readInt(body, "moveY", 0), -4096, 4096);
         state.moveZ = clamp(readInt(body, "moveZ", 0), -4096, 4096);
         state.yaw = normalizeDegrees(readInt(body, "yaw", 0));
+        state.groupId = Math.max(0, readInt(body, "groupId", 0));
         state.hidden = readBoolean(body, "hidden", false);
         state.deleted = readBoolean(body, "deleted", false);
         state.replacementObjectId = readInt(body, "replacementObjectId", -1);
@@ -1915,6 +2017,7 @@ final class LiveModelEditorParts {
         final int sourcePart;
         int scaleX = 100, scaleY = 100, scaleZ = 100;
         int moveX, moveY, moveZ, yaw;
+        int groupId;
         boolean hidden, deleted;
         int replacementObjectId = -1;
         int replacementObjectType = 10;
@@ -1926,6 +2029,7 @@ final class LiveModelEditorParts {
             PartState copy = new PartState(sourcePart);
             copy.scaleX = scaleX; copy.scaleY = scaleY; copy.scaleZ = scaleZ;
             copy.moveX = moveX; copy.moveY = moveY; copy.moveZ = moveZ; copy.yaw = yaw;
+            copy.groupId = groupId;
             copy.hidden = hidden; copy.deleted = deleted;
             copy.replacementObjectId = replacementObjectId;
             copy.replacementObjectType = replacementObjectType;
