@@ -663,6 +663,17 @@ public class Class613 {
 		int i_98_ = (Class405.method4854(Class213.aClass572_Sub24_2463.aClass665_Sub27_9214.method9100(2142022900), (byte) 29).anInt4939 * 1818793048);
 		if (Class272_Sub2.aClass106_9517.method1679())
 			i_98_++;
+		/*
+		 * verified-static: Construction settlements use the native 168x168
+		 * dynamic scene. The vanilla 32/40/48-tile visibility radius can expose
+		 * its culling boundary at wide RTS zoom, so give only this large dynamic
+		 * scene enough headroom while leaving normal world/instance radii intact.
+		 */
+		if (((Class613) this).aClass569_7991.method6755(-427262641)
+				&& 1493989933 * ((Class613) this).anInt8000 >= 168
+				&& -415841877 * ((Class613) this).anInt8022 >= 168
+				&& i_98_ < 64)
+			i_98_ = 64;
 		method7300(180940374);
 		method7310(1859949593);
 		((Class613) this).aClass523_8002 = new Class523(Class272_Sub2.aClass106_9517, 9, 4, ((Class613) this).anInt8000 * 1493989933, ((Class613) this).anInt8022 * -415841877, i_98_, bool, Class272_Sub2.aClass106_9517.method1849() > 0);
