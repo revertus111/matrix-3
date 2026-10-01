@@ -200,8 +200,8 @@
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
 
 2026-10-01 - Live Model Editor stable ROT pivot + 90-degree snap
-- Fixed Part/Multi rotation drift by making mesh vertex transforms use the same cached component bounds center as the gizmo and shared selection rotation math.
-- Removed the conflicting average-vertex centroid from the per-part render transform path.
+- Fixed Part/Multi rotation drift by making yaw use the same cached component bounds center as the gizmo and shared selection rotation math.
+- Preserved the prior average-vertex centroid for per-part scaling so existing scaled projects keep their yaw=0 placement.
 - Rotation snap now defaults to 90 degrees and is labeled ROT SNAP in the transform controls.
 - Existing SNAP/Ctrl inversion, undo/redo, save/load, Construction undo and world/cache/server ownership are unchanged.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
