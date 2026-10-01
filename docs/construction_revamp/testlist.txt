@@ -1580,8 +1580,8 @@ Settlement RTS visibility radius extension — IMPLEMENTED / NEEDS RUNTIME TEST 
 [x] verified-static: Class613's Class523 radius comes from Matrix3's graphics-setting radius (32/40/48 tiles, plus the existing renderer increment where applicable).
 [x] verified-static: the Construction settlement is the native 168x168 dynamic scene, and Class613 now applies a 64-tile minimum only to dynamic scenes at least that size.
 [ ] Pull/build/restart Client, then EXIT and RE-ENTER the settlement so Class523 is reconstructed with the new radius.
-[ ] From a wide RTS zoom/orbit like the reported screenshot, confirm distant terrain/objects remain continuously rendered instead of dropping at a square near-distance boundary.
-[ ] Pan the RTS pivot through the plot and toward each side; visibility must continue following the RTS focus without exposing the former 48-or-less tile culling edge.
+[x] From a wide RTS zoom/orbit like the reported screenshot, confirm distant terrain/objects remain continuously rendered instead of dropping at a square near-distance boundary. RUNTIME VERIFIED 2026-10-01.
+[x] Pan the RTS pivot through the plot and toward each side; visibility must continue following the RTS focus without exposing the former 48-or-less tile culling edge. RUNTIME VERIFIED 2026-10-01.
 [ ] Performance regression: orbit/pan at wide zoom with workers/builds visible and confirm no material hitching or unusable FPS regression from the 64-tile visibility window.
 [ ] Vanilla regression: leave the settlement and confirm normal world and smaller instanced scenes retain their normal graphics-setting render distance/fog.
 
