@@ -2111,3 +2111,8 @@
 - Outside settlement RTS, vanilla minimap and object-interaction behavior is unchanged.
 - Root AGENTS.md now permits verification/status bookkeeping for an already-approved patch immediately after explicit runtime confirmation without a second AAA; new code/scope still requires AAA.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST for heading/object guard; Settlement Minimap V1 center/build/resource gate RUNTIME VERIFIED.
+
+2026-10-01 - RTS minimap heading runtime accepted
+- Runtime video confirmed the stock minimap rotates continuously with the RTS camera heading while remaining centered on the RTS pivot.
+- Q/E/MMB-orbit heading synchronization is accepted with no visible snap/drift in the captured test.
+- Rotated minimap click alignment and the RTS object-interaction self-selection guard remain separate pending checks.
