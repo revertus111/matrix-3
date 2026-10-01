@@ -2068,3 +2068,14 @@
 - Normal-world movement returns after login and a fresh detached RTS camera initializes on re-entry.
 - Stale Construction active/settlementAutoMode state no longer survives Matrix3 logout teardown in a way that freezes movement.
 - Status: RUNTIME VERIFIED.
+
+2026-09-30 - Conveyor Machine Endpoint / Sawmill Automation V1.7
+- Reused SettlementMachineBuffer + SettlementProcessingTransaction for conveyor-fed processing; no alternate machine inventory/recipe system.
+- Conveyor endpoints now support chest -> machine input and machine output -> chest transport using real physical payload ownership.
+- Connected WOODEN_WORKBENCH/Saw Planks workstations auto-process 1 Logs 1511 -> 2 Planks 960 on the existing 4-tick cadence; unconnected workstations remain worker-driven.
+- Automation pauses while a worker owns the workstation reservation.
+- Full output buffer stops processing and naturally propagates backpressure through machine input, incoming belt and source chest.
+- Added deterministic Build Sawmill Test Line and Sawmill Status developer controls.
+- Machine endpoints are now treated as physical endpoints for debug-payload/sink safety checks.
+- No SettlementState schema change.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
