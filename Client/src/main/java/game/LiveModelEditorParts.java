@@ -67,6 +67,7 @@ final class LiveModelEditorParts {
     private static final short HIGHLIGHT_COLOUR = (short) 0xffff;
 
     private Source source;
+    private final Map<String, Source> auxiliarySources = new LinkedHashMap<String, Source>();
     private final List<PartState> originals = new ArrayList<PartState>();
     private final List<PartState> duplicates = new ArrayList<PartState>();
     private final ArrayDeque<Snapshot> undo = new ArrayDeque<Snapshot>();
@@ -85,6 +86,7 @@ final class LiveModelEditorParts {
             return source.components.length;
         Source loaded = loadSource(definition, objectId, objectType);
         source = loaded;
+        auxiliarySources.clear();
         originals.clear();
         duplicates.clear();
         undo.clear();
@@ -104,6 +106,7 @@ final class LiveModelEditorParts {
 
     synchronized void clear() {
         source = null;
+        auxiliarySources.clear();
         originals.clear();
         duplicates.clear();
         undo.clear();
@@ -205,8 +208,8 @@ final class LiveModelEditorParts {
 
     synchronized int getFaceCount(int index) {
         PartState state = stateAt(index);
-        if (state == null || source == null) return Integer.MAX_VALUE;
-        return source.components[state.sourcePart].faces.length;
+        Component component = componentFor(state);
+        return component == null ? Integer.MAX_VALUE : component.faces.length;
     }
 
     /**
@@ -427,15 +430,24 @@ final class LiveModelEditorParts {
         String[] labels = new String[getPartCount()];
         for (int i = 0; i < originals.size(); i++) {
             PartState state = originals.get(i);
-            Component component = source.components[state.sourcePart];
-            labels[i] = "Part " + i + "  (" + component.faces.length + " faces, "
-                    + component.vertices.length + " verts)" + suffix(state);
+            Component component = componentFor(state);
+            labels[i] = component == null ? "Part " + i + "  [source unavailable]"
+                    : "Part " + i + "  (" + component.faces.length + " faces, "
+                            + component.vertices.length + " verts)" + suffix(state);
         }
         for (int i = 0; i < duplicates.size(); i++) {
             PartState state = duplicates.get(i);
-            Component component = source.components[state.sourcePart];
-            labels[originals.size() + i] = "Copy " + i + " -> Part " + state.sourcePart
-                    + "  (" + component.faces.length + " faces)" + suffix(state);
+            Component component = componentFor(state);
+            Source owner = sourceFor(state);
+            String prefix = state.sourceObjectId >= 0
+                    ? "Asset #" + state.sourceObjectId + " Part " + state.sourcePart
+                    : "Copy " + i + " -> Part " + state.sourcePart;
+            labels[originals.size() + i] = component == null
+                    ? prefix + "  [source unavailable]" + suffix(state)
+                    : prefix + "  (" + component.faces.length + " faces, "
+                            + component.vertices.length + " verts)"
+                            + (owner != null && owner != source ? " [imported]" : "")
+                            + suffix(state);
         }
         return labels;
     }
@@ -461,7 +473,8 @@ final class LiveModelEditorParts {
         for (Integer key : selection) {
             PartState state = stateAt(key.intValue());
             if (state == null || state.deleted) continue;
-            Component component = source.components[state.sourcePart];
+            Component component = componentFor(state);
+            if (component == null) continue;
             x += component.centerX + state.moveX;
             y += component.centerY + state.moveY;
             z += component.centerZ + state.moveZ;
@@ -749,9 +762,6 @@ final class LiveModelEditorParts {
      */
     private double[] selectionExtents() {
         if (source == null || selection.isEmpty()) return null;
-        Class159 raw = source.decode();
-        if (raw == null) return null;
-
         double minX = Double.POSITIVE_INFINITY;
         double minY = Double.POSITIVE_INFINITY;
         double minZ = Double.POSITIVE_INFINITY;
@@ -763,8 +773,10 @@ final class LiveModelEditorParts {
         for (Integer index : selection) {
             PartState state = stateAt(index.intValue());
             if (state == null || state.deleted || !validSourcePart(state)) continue;
-            Component component = source.components[state.sourcePart];
-            if (component.vertices.length == 0) continue;
+            Source owner = sourceFor(state);
+            Component component = componentFor(state);
+            Class159 raw = owner == null ? null : owner.decode();
+            if (component == null || raw == null || component.vertices.length == 0) continue;
 
             double scaleCx = 0.0, scaleCy = 0.0, scaleCz = 0.0;
             boolean validVertices = true;
@@ -914,13 +926,15 @@ final class LiveModelEditorParts {
         if (source == null || replacementObjectId < 0 || selection.isEmpty()) return false;
         PartState state = selectedState();
         if (state == null || state.deleted) return false;
-        Component selectedComponent = source.components[state.sourcePart];
+        Component selectedComponent = componentFor(state);
+        if (selectedComponent == null) return false;
         pushUndo();
         boolean changed = false;
         if (allMatching) {
             String signature = selectedComponent.signature;
             for (PartState candidate : originals) {
-                if (!candidate.deleted && signature.equals(source.components[candidate.sourcePart].signature)) {
+                if (!candidate.deleted && componentFor(candidate) != null
+                        && signature.equals(componentFor(candidate).signature)) {
                     candidate.replacementObjectId = replacementObjectId;
                     candidate.replacementObjectType = replacementObjectType;
                     candidate.hidden = false;
@@ -992,7 +1006,8 @@ final class LiveModelEditorParts {
         for (int i = 0; i < originals.size(); i++) {
             PartState state = originals.get(i);
             if (!validSourcePart(state)) continue;
-            Component component = source.components[state.sourcePart];
+            Component component = componentFor(state);
+            if (component == null) continue;
             boolean highlighted = isHighlighted(i);
             boolean visible = !state.hidden && !state.deleted
                     && state.replacementObjectId < 0
@@ -1009,8 +1024,6 @@ final class LiveModelEditorParts {
 
     synchronized List<Class159> buildDuplicateRaws() {
         if (source == null || duplicates.isEmpty()) return Collections.emptyList();
-        Class159 sourceRaw = source.decode();
-        if (sourceRaw == null) return Collections.emptyList();
         List<Class159> raws = new ArrayList<Class159>();
         for (int i = 0; i < duplicates.size(); i++) {
             int combinedIndex = originals.size() + i;
@@ -1019,8 +1032,11 @@ final class LiveModelEditorParts {
             if (state.hidden || state.deleted || state.replacementObjectId >= 0
                     || (isolate && !selection.contains(Integer.valueOf(combinedIndex)))
                     || !validSourcePart(state)) continue;
-            Class159 raw = componentOnlyRaw(sourceRaw,
-                    source.components[state.sourcePart], state);
+            Source owner = sourceFor(state);
+            Component component = componentFor(state);
+            Class159 sourceRaw = owner == null ? null : owner.decode();
+            if (sourceRaw == null || component == null) continue;
+            Class159 raw = componentOnlyRaw(sourceRaw, component, state);
             if (raw == null) continue;
             if (highlighted) highlightAllFaces(raw);
             raws.add(raw);
@@ -1038,7 +1054,8 @@ final class LiveModelEditorParts {
             if (state == null || state.hidden || state.deleted || state.replacementObjectId < 0
                     || (isolate && !selection.contains(Integer.valueOf(index)))
                     || !validSourcePart(state)) continue;
-            Class159 raw = replacementRaw(state, source.components[state.sourcePart]);
+            Component target = componentFor(state);
+            Class159 raw = target == null ? null : replacementRaw(state, target);
             if (raw == null) continue;
             if (highlighted) highlightAllFaces(raw);
             raws.add(new ReplacementRaw(index, state.replacementObjectId,
@@ -1057,17 +1074,23 @@ final class LiveModelEditorParts {
                     || (isolate && !selection.contains(Integer.valueOf(index)))
                     || !validSourcePart(state)) continue;
             if (state.replacementObjectId >= 0) {
-                Class159 replacement = replacementRaw(state,
-                        source.components[state.sourcePart]);
+                Component target = componentFor(state);
+                Class159 replacement = target == null ? null : replacementRaw(state, target);
                 if (replacement != null) {
                     raws.add(new PickRaw(index, state.replacementObjectId,
                             state.replacementObjectType, replacement));
                 }
             } else {
-                Class159 component = componentOnlyRaw(source.decode(),
-                        source.components[state.sourcePart], state);
+                Source owner = sourceFor(state);
+                Component sourceComponent = componentFor(state);
+                Class159 ownerRaw = owner == null ? null : owner.decode();
+                Class159 component = ownerRaw == null || sourceComponent == null
+                        ? null : componentOnlyRaw(ownerRaw, sourceComponent, state);
                 if (component != null) {
-                    raws.add(new PickRaw(index, source.objectId, source.objectType, component));
+                    raws.add(new PickRaw(index,
+                            owner == null ? source.objectId : owner.objectId,
+                            owner == null ? source.objectType : owner.objectType,
+                            component));
                 }
             }
         }
@@ -1551,9 +1574,32 @@ final class LiveModelEditorParts {
                 && raw.aShortArray1789 != null && face < raw.aShortArray1789.length;
     }
 
+    private Source sourceFor(PartState state) {
+        if (source == null || state == null) return null;
+        if (state.sourceObjectId < 0
+                || (state.sourceObjectId == source.objectId
+                && state.sourceObjectType == source.objectType)) {
+            return source;
+        }
+        String key = state.sourceObjectId + ":" + state.sourceObjectType;
+        Source owner = auxiliarySources.get(key);
+        if (owner != null) return owner;
+        owner = resolveSource(state.sourceObjectId, state.sourceObjectType);
+        if (owner != null) auxiliarySources.put(key, owner);
+        return owner;
+    }
+
+    private Component componentFor(PartState state) {
+        Source owner = sourceFor(state);
+        if (owner == null || state == null
+                || state.sourcePart < 0 || state.sourcePart >= owner.components.length) {
+            return null;
+        }
+        return owner.components[state.sourcePart];
+    }
+
     private boolean validSourcePart(PartState state) {
-        return source != null && state != null
-                && state.sourcePart >= 0 && state.sourcePart < source.components.length;
+        return componentFor(state) != null;
     }
 
     synchronized String selectionAssetJson() {
@@ -1567,7 +1613,7 @@ final class LiveModelEditorParts {
         StringBuilder out = new StringBuilder();
         out.append("{\n");
         out.append("  \"format\": \"matrix3-live-model-selection\",\n");
-        out.append("  \"version\": 1,\n");
+        out.append("  \"version\": 2,\n");
         out.append("  \"sourceObjectId\": ").append(source.objectId).append(",\n");
         out.append("  \"sourceObjectType\": ").append(source.objectType).append(",\n");
         out.append("  \"sourceModelIds\": ").append(intArrayJson(source.modelIds)).append(",\n");
@@ -1583,6 +1629,63 @@ final class LiveModelEditorParts {
         }
         out.append("\n  ]\n}\n");
         return out.toString();
+    }
+
+    synchronized int importSelectionAssetJson(String json) {
+        if (source == null || json == null) return 0;
+        if (!"matrix3-live-model-selection".equals(
+                readString(json, "format", ""))) return 0;
+        int version = readInt(json, "version", 1);
+        if (version < 1 || version > 2) return 0;
+
+        int fallbackObjectId = readInt(json, "sourceObjectId", -1);
+        int fallbackObjectType = readInt(json, "sourceObjectType", 10);
+        Matcher parts = Pattern.compile("\\\"parts\\\"\\s*:\\s*\\[(.*?)\\]",
+                Pattern.DOTALL).matcher(json);
+        if (!parts.find()) return 0;
+
+        ArrayList<PartState> staged = new ArrayList<PartState>();
+        Map<Integer, Integer> groupMap = new LinkedHashMap<Integer, Integer>();
+        int nextGroup = nextGroupId();
+        Matcher object = Pattern.compile("\\{([^}]*)\\}").matcher(parts.group(1));
+        while (object.find()) {
+            String body = object.group(1);
+            int sourcePart = readInt(body, "sourcePart",
+                    readInt(body, "index", -1));
+            int donorObjectId = readInt(body, "sourceObjectId", fallbackObjectId);
+            if (donorObjectId < 0) donorObjectId = fallbackObjectId;
+            int donorObjectType = readInt(body, "sourceObjectType", fallbackObjectType);
+            if (donorObjectId < 0 || sourcePart < 0) continue;
+
+            PartState state = new PartState(sourcePart);
+            readState(body, state);
+            state.sourceObjectId = donorObjectId;
+            state.sourceObjectType = donorObjectType;
+            state.hidden = false;
+            state.deleted = false;
+            if (!validSourcePart(state)) continue;
+
+            if (state.groupId > 0) {
+                Integer mapped = groupMap.get(Integer.valueOf(state.groupId));
+                if (mapped == null) {
+                    mapped = Integer.valueOf(nextGroup++);
+                    groupMap.put(Integer.valueOf(state.groupId), mapped);
+                }
+                state.groupId = mapped.intValue();
+            }
+            staged.add(state);
+        }
+        if (staged.isEmpty()) return 0;
+
+        pushUndo();
+        selection.clear();
+        for (PartState state : staged) {
+            duplicates.add(state);
+            selection.add(Integer.valueOf(originals.size() + duplicates.size() - 1));
+        }
+        selected = lastSelectionIndex();
+        markGeometryChanged();
+        return staged.size();
     }
 
     private PartState selectedState() {
@@ -1740,7 +1843,8 @@ final class LiveModelEditorParts {
             int moveY = base[4] + delta[4];
             int moveZ = base[5] + delta[5];
             if (pivot3D != null && source != null) {
-                Component component = source.components[state.sourcePart];
+                Component component = componentFor(state);
+                if (component == null) continue;
                 double centerX = component.centerX + base[3];
                 double centerY = component.centerY + base[4];
                 double centerZ = component.centerZ + base[5];
@@ -1794,7 +1898,8 @@ final class LiveModelEditorParts {
             if (state == null || state.deleted) continue;
             int[] base = starts == null ? transformOf(state) : starts.get(index);
             if (base == null) continue;
-            Component component = source.components[state.sourcePart];
+            Component component = componentFor(state);
+            if (component == null) continue;
             x += component.centerX + base[3];
             y += component.centerY + base[4];
             z += component.centerZ + base[5];
@@ -1829,7 +1934,9 @@ final class LiveModelEditorParts {
             out.append("\"copy\": ").append(index).append(", \"sourcePart\": ").append(state.sourcePart);
         else
             out.append("\"index\": ").append(index);
-        out.append(", \"scaleX\": ").append(state.scaleX)
+        out.append(", \"sourceObjectId\": ").append(state.sourceObjectId)
+                .append(", \"sourceObjectType\": ").append(state.sourceObjectType)
+                .append(", \"scaleX\": ").append(state.scaleX)
                 .append(", \"scaleY\": ").append(state.scaleY)
                 .append(", \"scaleZ\": ").append(state.scaleZ)
                 .append(", \"moveX\": ").append(state.moveX)
@@ -1846,6 +1953,8 @@ final class LiveModelEditorParts {
     }
 
     private static void readState(String body, PartState state) {
+        state.sourceObjectId = readInt(body, "sourceObjectId", -1);
+        state.sourceObjectType = readInt(body, "sourceObjectType", 10);
         state.scaleX = clamp(readInt(body, "scaleX", 100), 10, 400);
         state.scaleY = clamp(readInt(body, "scaleY", 100), 10, 400);
         state.scaleZ = clamp(readInt(body, "scaleZ", 100), 10, 400);
@@ -2015,6 +2124,8 @@ final class LiveModelEditorParts {
 
     private static final class PartState {
         final int sourcePart;
+        int sourceObjectId = -1;
+        int sourceObjectType = 10;
         int scaleX = 100, scaleY = 100, scaleZ = 100;
         int moveX, moveY, moveZ, yaw;
         int groupId;
@@ -2027,6 +2138,8 @@ final class LiveModelEditorParts {
 
         PartState copy() {
             PartState copy = new PartState(sourcePart);
+            copy.sourceObjectId = sourceObjectId;
+            copy.sourceObjectType = sourceObjectType;
             copy.scaleX = scaleX; copy.scaleY = scaleY; copy.scaleZ = scaleZ;
             copy.moveX = moveX; copy.moveY = moveY; copy.moveZ = moveZ; copy.yaw = yaw;
             copy.groupId = groupId;
