@@ -126,6 +126,9 @@ public final class ConstructionGhostPreview {
         ConstructionPlacementController.BuildPiece piece = ConstructionPlacementController.getSelectedPiece();
         ConstructionPlacementController.HoverTile tile = ConstructionPlacementController.getHoveredTile();
         Class613 region = client.aClass613_8605;
+        if (ConstructionPlacementController.isConveyorSelected()) {
+            return;
+        }
         if (piece == null) {
             diagnostic("WAIT_PIECE", "WAIT no selected Construction piece");
             return;
