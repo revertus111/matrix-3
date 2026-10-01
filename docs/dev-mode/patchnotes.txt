@@ -1,3 +1,7 @@
+2026-10-01 - Live Inspect compile import fix
+- Added the missing game.DevModeBridge import required by LiveInspectOverlay.armCurrentObjectPlacement().
+- No runtime behavior changed.
+
 2026-09-30 - Saved Object Definition Library + Tile Editor retirement
 - Live Place right-click now exposes Save Object Definition and Object Library.
 - Saved snapshots persist to dev-object-library/objects.tsv with definition ID/name, valid types, selected type, rotation, model IDs, animation IDs, decoded size and saved world tile.
