@@ -1952,10 +1952,10 @@ Settlement Minimap V1.1 / RTS object-interaction guard — PARTIALLY RUNTIME VER
 [x] verified-static: worker first-object gather/process orders are queued before local-player object interaction is consumed.
 [x] Minimap raster rotates continuously with RTS Q/E camera yaw. RUNTIME VERIFIED by 2026-10-01 video; compass overlay did NOT rotate.
 [x] Minimap raster tracks RTS orbit yaw continuously without visible snap/drift. RUNTIME VERIFIED; compass overlay remains locked to the entry heading.
-[ ] Rotate roughly 90 degrees, then click several minimap locations; RTS pivot lands on the visible clicked locations with no rotated-coordinate offset.
+[x] Rotate roughly 90 degrees, then click several minimap locations; RTS pivot lands on the visible clicked locations with no rotated-coordinate offset. RUNTIME VERIFIED 2026-10-01.
 [x] Video confirms minimap center remains RTS-pivot-owned while heading rotates with the camera. RUNTIME VERIFIED.
 [ ] With workers selected but self NOT selected, left-click tree/ore/workbench; workers receive their order and the local player does not path/move.
-[ ] With no self selection, click another ordinary interactive object; local player remains stationary.
+[x] With no self selection, click another ordinary interactive object; local player remains stationary. RUNTIME VERIFIED 2026-10-01.
 [ ] Select self and click an object; vanilla local-player object interaction/pathing is allowed again.
 [ ] Right-click Examine with self not selected; Examine remains available/non-moving.
 [ ] Exit settlement RTS; vanilla minimap heading and object-interaction behavior return unchanged.
