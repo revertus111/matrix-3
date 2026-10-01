@@ -2142,3 +2142,10 @@
 - Class12.method558(...) now substitutes ConstructionBuildCamera.getRtsMinimapYawUnits() while settlement RTS owns heading, preserving its existing positive-yaw overlay convention against the raster's negative-yaw render convention.
 - This aligns stock NPC/player/map-icon overlays with the already-accepted RTS minimap raster without changing NPC movement, camera ownership, compass, raster generation or vanilla behavior outside RTS.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-10-01 - Settlement RTS visibility radius extension
+- verified-static: Class613 constructs Class523 with Matrix3's graphics-setting radius (32/40/48 tiles, plus the existing renderer increment where applicable).
+- The Construction settlement is a native 168x168 dynamic scene; at wide RTS zoom the stock radius can expose a square culling boundary even though projection depth and RTS render focus are already correct.
+- Class613 now applies a 64-tile minimum only when the loaded scene is dynamic and at least 168x168. Normal world maps and smaller instances retain their stock radius.
+- No detached-camera ownership, near/far projection, fog, scene allocation, NPC movement, minimap or server behavior changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
