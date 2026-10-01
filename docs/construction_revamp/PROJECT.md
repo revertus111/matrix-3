@@ -2624,7 +2624,9 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Compass synchronization is **RUNTIME VERIFIED**: Class107.method2061(...) consumes ConstructionBuildCamera.getRtsMinimapYawUnits() while RTS owns heading, and the stock compass now follows RTS Q/E/MMB rotation. Outside RTS the original vanilla compass source remains unchanged.
 - Minimap overlay synchronization is **RUNTIME VERIFIED**: verified-static tracing shows Class267/Class328 feed stock NPC/player offsets through Class561.method6631(...) into Class12.method558(...), whose rotation previously remained vanilla-camera-owned. Class12 now substitutes the authoritative Construction RTS 14-bit yaw while RTS owns heading; vanilla overlay rotation remains unchanged outside RTS.
 - Settlement RTS visibility radius extension is **RUNTIME VERIFIED**: Class613 now gives only native large dynamic scenes (the 168x168 Construction settlement signature) a 64-tile minimum Class523 visibility radius; normal world and smaller instances retain stock graphics-setting radii. The 64-tile minimum removed the reported distant terrain/object culling at wide RTS zoom without reopening camera ownership or projection depth.
-- **Resume Here:** settlement RTS visibility radius and minimap NPC/player/map-icon overlay synchronization are runtime accepted. Rotated minimap click alignment and the object-interaction self-selection guard remain pending.
+- Rotated minimap click alignment is **RUNTIME VERIFIED**: clicking the rotated RTS minimap lands the camera focus on the intended world tile.
+- RTS object-interaction self-move guard is **RUNTIME VERIFIED**: scene-object interaction no longer moves the player when self is not selected.
+- **Resume Here:** current RTS-camera defect is minimap rotation direction: Q/E and MMB orbit rotate the minimap in the opposite visual direction from the desired RTS behavior. Trace only the shared yaw-sign/inverse seam before patching.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
