@@ -375,6 +375,7 @@ public final class ConstructionBuildCamera {
             return false;
         }
 
+        ConstructionRadialSelection.cancelTransientDragForMinimapFocus();
         focusRtsAtLocalTile(localX, localY);
         return true;
     }
