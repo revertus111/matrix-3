@@ -621,6 +621,19 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Existing v1/v2 assets and v1-v7 projects remain readable. Legacy assets use corrected donor-definition fallback; newly saved v3 assets pin the exact recipe.
 - JSON remains cache-reference-only: raw model bytes/vertices are not embedded and no cache write occurs.
 - **Runtime acceptance:** user confirmed the saved/imported ore now keeps the correct ore identity instead of changing from tin to runite.
-- **Open fidelity note:** imported geometry currently shows less texture/detail fidelity than the donor/live object. Treat this as a separate rendering-fidelity follow-up; the deterministic ore-identity bug itself is verified fixed.
+- **Open fidelity note:** imported geometry had less texture/detail fidelity than the donor/live object; the compact-part texture/UV preservation patch below is implemented and awaiting runtime verification.
 - **Resume Here:** inspect imported-vs-donor texture/detail parity next, then complete the deeper v8 save/reload + multiple-ore regression checks.
+
+### Live Model Editor — Reusable Part Texture / UV Fidelity — 2026-10-02
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Runtime note after deterministic ore-identity fix: imported reusable parts kept the correct ore identity but showed reduced texture/detail fidelity compared with the donor/live object.
+- **verified-static root cause:** `componentOnlyRaw(...)`, used by duplicates/imported parts, explicitly forced every compacted face's `faceTextures` and `faceTextureIndexes` to `-1` and constructed the compact `Class159` with zero texture triangles.
+- The extractor now preserves both Matrix3 texture-coordinate paths:
+  - classic `faceTextures + faceTextureIndexes -> anInt1803` texture-triangle mapping, including referenced type-0 mapping vertices and auxiliary texture-triangle parameters;
+  - newer `anInt1818` per-vertex UV tables plus per-face `uvCoordVertexA/B/C` offsets.
+- Type-0 texture-mapping vertices that sit outside the selected face component are included in the compact raw and receive the same authored transform, while only true component vertices contribute to the existing scale centroid/pivot semantics.
+- Face alpha, render bytes/groups, texture IDs and mapping indexes are copied instead of flattened.
+- This changes only compact duplicate/imported-part extraction. Native source-part geometry, cache definitions, Part Library v3 recipes, project v8 persistence, server/world ownership and cache-write behavior are unchanged.
+- **Resume Here:** compare one donor textured part in-place vs the same newly saved/imported part at matching transform/camera; then rotate, Tile Snap and Ctrl+D it. Texture/UV detail should remain visually equivalent rather than flattening after extraction.
 
