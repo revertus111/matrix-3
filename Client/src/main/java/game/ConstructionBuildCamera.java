@@ -60,6 +60,11 @@ public final class ConstructionBuildCamera {
     private static final float RTS_MAX_ORBIT_DISTANCE = 10000.0F;
     private static final int RTS_MAX_QUEUED_WHEEL_STEPS = 8;
     private static final float RTS_SCENE_EDGE_MARGIN = 768.0F;
+    // Minimap drag/group focus should feel like RTS navigation, not teleport spam.
+    // Reuse the player's current RTS speed preset but deliberately soften it.
+    private static final float RTS_SMOOTH_FOCUS_SPEED_MULTIPLIER = 0.75F;
+    private static final float RTS_SMOOTH_FOCUS_MIN_SPEED = 900.0F;
+    private static final float RTS_SMOOTH_FOCUS_SNAP_DISTANCE = 96.0F;
 
     // Matrix3 action 23 uses movement type 1 for minimap-originated walking.
     // Construction RTS consumes that already-resolved destination before a
@@ -115,6 +120,12 @@ public final class ConstructionBuildCamera {
     private static boolean pendingRtsMinimapFocus;
     private static int pendingRtsMinimapFocusX;
     private static int pendingRtsMinimapFocusY;
+
+    // Smooth target used by minimap drag and control-group Go/focus.
+    private static boolean rtsSmoothFocusActive;
+    private static boolean rtsSmoothFocusRequiresMouseDown;
+    private static float rtsSmoothFocusTargetX;
+    private static float rtsSmoothFocusTargetZ;
 
     // A placement click should stop motion even if a key is still physically held.
     // Movement can resume only after all camera movement keys are released once.
@@ -390,7 +401,7 @@ public final class ConstructionBuildCamera {
             return false;
         }
         ConstructionRadialSelection.cancelTransientDragForMinimapFocus();
-        focusRtsAtLocalTile(localX, localY, false);
+        queueSmoothRtsFocusLocalTile(localX, localY, true);
         return true;
     }
 
@@ -398,7 +409,7 @@ public final class ConstructionBuildCamera {
         if (!active || cameraMode != CameraMode.RTS) {
             return false;
         }
-        focusRtsAtLocalTile(localX, localY, false);
+        queueSmoothRtsFocusLocalTile(localX, localY, false);
         return true;
     }
 
@@ -859,8 +870,13 @@ public final class ConstructionBuildCamera {
 
         float panX = velocityX * dt;
         float panZ = velocityZ * dt;
+        if (panning) {
+            // Explicit WASD takes ownership immediately over any queued Go/drag chase.
+            clearSmoothRtsFocus();
+        }
         rtsPivotX += panX;
         rtsPivotZ += panZ;
+        applySmoothRtsFocus(dt);
         clampRtsPivotToLoadedScene();
         if (viewDirection != null) {
             setPositionFromRtsPivot(position, viewDirection);
@@ -1126,6 +1142,7 @@ public final class ConstructionBuildCamera {
 
     private static void focusRtsAtLocalTile(int localX, int localY, boolean report) {
         clearVelocity();
+        clearSmoothRtsFocus();
         clickStopLatched = false;
         if (!rtsOrientationInitialized) {
             pendingRtsMinimapFocus = true;
@@ -1133,30 +1150,95 @@ public final class ConstructionBuildCamera {
             pendingRtsMinimapFocusY = localY;
             return;
         }
-        if (client.aClass613_8605 == null) {
+
+        float[] target = resolveRtsLocalTileCenter(localX, localY);
+        if (target == null) {
             return;
         }
 
-        Class497 sceneBase = client.aClass613_8605.method7280((byte) -115);
-        if (sceneBase == null) {
-            return;
-        }
-
-        int baseTileX = sceneBase.localX * -2109597897;
-        int baseTileY = sceneBase.localY * 417324155;
-        int worldTileX = baseTileX + localX;
-        int worldTileY = baseTileY + localY;
-
-        // Matrix3 camera horizontal coordinates use 512 units per scene tile.
-        // Aim at tile center and preserve the current pivot height/orbit/yaw.
-        rtsPivotX = (worldTileX << 9) + 256.0F;
-        rtsPivotZ = (worldTileY << 9) + 256.0F;
+        rtsPivotX = target[0];
+        rtsPivotZ = target[1];
         clampRtsPivotToLoadedScene();
         rememberRtsView();
         syncRtsMinimapMarker();
         if (report) {
             reportToServer("RTS_MINIMAP_FOCUS local=" + localX + "," + localY);
         }
+    }
+
+    private static void queueSmoothRtsFocusLocalTile(
+            int localX, int localY, boolean requiresMouseDown) {
+        if (!rtsOrientationInitialized) {
+            pendingRtsMinimapFocus = true;
+            pendingRtsMinimapFocusX = localX;
+            pendingRtsMinimapFocusY = localY;
+            return;
+        }
+        float[] target = resolveRtsLocalTileCenter(localX, localY);
+        if (target == null) {
+            return;
+        }
+        rtsSmoothFocusTargetX = target[0];
+        rtsSmoothFocusTargetZ = target[1];
+        rtsSmoothFocusRequiresMouseDown = requiresMouseDown;
+        rtsSmoothFocusActive = true;
+        clearVelocity();
+        clickStopLatched = false;
+    }
+
+    private static float[] resolveRtsLocalTileCenter(int localX, int localY) {
+        if (client.aClass613_8605 == null) {
+            return null;
+        }
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -115);
+        if (sceneBase == null) {
+            return null;
+        }
+        int baseTileX = sceneBase.localX * -2109597897;
+        int baseTileY = sceneBase.localY * 417324155;
+        int worldTileX = baseTileX + localX;
+        int worldTileY = baseTileY + localY;
+        return new float[] {
+                (worldTileX << 9) + 256.0F,
+                (worldTileY << 9) + 256.0F
+        };
+    }
+
+    private static void applySmoothRtsFocus(float dt) {
+        if (!rtsSmoothFocusActive) {
+            return;
+        }
+        if (rtsSmoothFocusRequiresMouseDown
+                && !ConstructionPaletteOverlay.isRtsLeftMouseDown()) {
+            clearSmoothRtsFocus();
+            return;
+        }
+
+        float dx = rtsSmoothFocusTargetX - rtsPivotX;
+        float dz = rtsSmoothFocusTargetZ - rtsPivotZ;
+        float distance = (float) Math.sqrt(dx * dx + dz * dz);
+        if (distance <= RTS_SMOOTH_FOCUS_SNAP_DISTANCE) {
+            rtsPivotX = rtsSmoothFocusTargetX;
+            rtsPivotZ = rtsSmoothFocusTargetZ;
+            if (!rtsSmoothFocusRequiresMouseDown) {
+                clearSmoothRtsFocus();
+            }
+            return;
+        }
+
+        float speed = Math.max(
+                RTS_SMOOTH_FOCUS_MIN_SPEED,
+                rtsMovementSpeed() * RTS_SMOOTH_FOCUS_SPEED_MULTIPLIER);
+        float step = Math.min(distance, speed * dt);
+        rtsPivotX += dx / distance * step;
+        rtsPivotZ += dz / distance * step;
+    }
+
+    private static void clearSmoothRtsFocus() {
+        rtsSmoothFocusActive = false;
+        rtsSmoothFocusRequiresMouseDown = false;
+        rtsSmoothFocusTargetX = 0.0F;
+        rtsSmoothFocusTargetZ = 0.0F;
     }
 
     private static void snapshotRtsMinimapMarker() {
@@ -1292,6 +1374,7 @@ public final class ConstructionBuildCamera {
         pendingRtsMinimapFocus = false;
         pendingRtsMinimapFocusX = 0;
         pendingRtsMinimapFocusY = 0;
+        clearSmoothRtsFocus();
     }
 
     private static boolean keyDown(int internalKey) {
