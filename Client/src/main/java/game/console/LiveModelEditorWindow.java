@@ -80,7 +80,7 @@ import javax.swing.event.ChangeListener;
  */
 public final class LiveModelEditorWindow {
 
-    private static final int PROJECT_VERSION = 7;
+    private static final int PROJECT_VERSION = 8;
     private static final File PROJECT_DIR = new File("dev-model-projects");
     private static final File ASSET_DIR = new File("dev-model-assets");
 
