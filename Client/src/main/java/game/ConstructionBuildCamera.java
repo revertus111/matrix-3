@@ -376,8 +376,82 @@ public final class ConstructionBuildCamera {
         }
 
         ConstructionRadialSelection.cancelTransientDragForMinimapFocus();
-        focusRtsAtLocalTile(localX, localY);
+        focusRtsAtLocalTile(localX, localY, true);
         return true;
+    }
+
+    /**
+     * Continuous RTS minimap drag-pan. The caller is Matrix3's stock minimap
+     * component path after it has already resolved the rotated cursor target.
+     */
+    static boolean handleMinimapDragFocusTarget(int localX, int localY) {
+        if (!active || cameraMode != CameraMode.RTS
+                || !ConstructionPaletteOverlay.isRtsLeftMouseDown()) {
+            return false;
+        }
+        ConstructionRadialSelection.cancelTransientDragForMinimapFocus();
+        focusRtsAtLocalTile(localX, localY, false);
+        return true;
+    }
+
+    static boolean focusRtsAtLocalTileFromControlGroup(int localX, int localY) {
+        if (!active || cameraMode != CameraMode.RTS) {
+            return false;
+        }
+        focusRtsAtLocalTile(localX, localY, false);
+        return true;
+    }
+
+    /**
+     * Small RTS viewport footprint drawn over the stock minimap. It is centered
+     * on the authoritative RTS pivot, rotates with the RTS heading and expands
+     * with orbit distance so wide zooms remain visible at a glance.
+     */
+    static void renderRtsMinimapViewportFootprint(
+            Class106 renderer, InterfaceDefinitions component, int screenX, int screenY) {
+        if (!active || cameraMode != CameraMode.RTS || !rtsOrientationInitialized
+                || renderer == null || component == null) {
+            return;
+        }
+        int yawUnits = getRtsMinimapYawUnits();
+        if (yawUnits < 0) {
+            return;
+        }
+
+        int centerX = screenX + component.anInt764 * 669238293 / 2;
+        int centerY = screenY + component.anInt765 * 1360982075 / 2;
+        float zoom = clamp(rtsOrbitDistance / RTS_MAX_ORBIT_DISTANCE, 0.0F, 1.0F);
+        float halfWidth = 7.0F + zoom * 16.0F;
+        float halfHeight = 5.0F + zoom * 10.0F;
+        double angle = yawUnits * (Math.PI * 2.0 / 16384.0);
+        float cos = (float) Math.cos(angle);
+        float sin = (float) Math.sin(angle);
+
+        float[][] local = {
+            { -halfWidth, -halfHeight },
+            { halfWidth, -halfHeight },
+            { halfWidth, halfHeight },
+            { -halfWidth, halfHeight }
+        };
+        int[] xs = new int[4];
+        int[] ys = new int[4];
+        for (int i = 0; i < 4; i++) {
+            float lx = local[i][0];
+            float ly = local[i][1];
+            xs[i] = Math.round(centerX + lx * cos - ly * sin);
+            ys[i] = Math.round(centerY + lx * sin + ly * cos);
+        }
+
+        int color = 0xBFFFFFFF;
+        for (int i = 0; i < 4; i++) {
+            int next = (i + 1) & 3;
+            renderer.method1730(xs[i], ys[i], xs[next], ys[next], color, 1);
+        }
+
+        float forward = halfHeight + 5.0F;
+        int headingX = Math.round(centerX + forward * sin);
+        int headingY = Math.round(centerY - forward * cos);
+        renderer.method1730(centerX, centerY, headingX, headingY, color, 1);
     }
 
     private static final int SETTLEMENT_LIFECYCLE_CS_VAR = 2835;
@@ -505,6 +579,7 @@ public final class ConstructionBuildCamera {
 
         ConstructionRadialSelection.resetForSessionBoundary();
         ConstructionPaletteOverlay.resetForSessionBoundary();
+        ConstructionRtsControlOverlay.resetForSettlementBoundary();
     }
 
     public static String exit() {
@@ -518,6 +593,7 @@ public final class ConstructionBuildCamera {
         }
 
         restoreRtsMinimapMarker();
+        ConstructionRtsControlOverlay.resetForSettlementBoundary();
         active = false;
         ownsFreeCamera = false;
         lastTickCycle = Integer.MIN_VALUE;
@@ -566,6 +642,7 @@ public final class ConstructionBuildCamera {
             } else {
                 updateFreeBuildCamera(lookController, position, dt);
             }
+            ConstructionRtsControlOverlay.refresh();
 
             Class572_Sub17 target = new Class572_Sub17(
                     0,
@@ -1044,6 +1121,10 @@ public final class ConstructionBuildCamera {
     }
 
     private static void focusRtsAtLocalTile(int localX, int localY) {
+        focusRtsAtLocalTile(localX, localY, true);
+    }
+
+    private static void focusRtsAtLocalTile(int localX, int localY, boolean report) {
         clearVelocity();
         clickStopLatched = false;
         if (!rtsOrientationInitialized) {
@@ -1073,7 +1154,9 @@ public final class ConstructionBuildCamera {
         clampRtsPivotToLoadedScene();
         rememberRtsView();
         syncRtsMinimapMarker();
-        reportToServer("RTS_MINIMAP_FOCUS local=" + localX + "," + localY);
+        if (report) {
+            reportToServer("RTS_MINIMAP_FOCUS local=" + localX + "," + localY);
+        }
     }
 
     private static void snapshotRtsMinimapMarker() {
