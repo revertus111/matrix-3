@@ -2186,3 +2186,10 @@
 - User confirmed Q/E and horizontal MMB now rotate the minimap/compass in the intended direction.
 - NPC/player/map-icon overlays remain aligned, and rotated minimap click-to-focus still lands correctly.
 - Yaw-handedness gate is closed; a separate minimap-click versus RTS drag-selection input conflict is now open.
+
+2026-10-01 - RTS minimap focus vs radial drag ownership
+- verified-static: ConstructionRadialSelection receives canvas-level mouse press before Matrix3 resolves whether action 23 came from world ground or the minimap.
+- verified-static: Class319 dispatches RTS minimap action 23/movement type 1 to ConstructionBuildCamera.handleMinimapWalkAction(...) before ConstructionRadialSelection.handleMenuAction(...), so a transient drag could remain armed.
+- ConstructionRadialSelection now exposes a narrow cancelTransientDragForMinimapFocus() hook that clears only the in-progress drag, drag-release latch and ground-double-click state while preserving committed worker/self selection.
+- ConstructionBuildCamera invokes that cleanup only after Matrix3 has semantically identified an RTS minimap-focus action, then performs the existing focusRtsAtLocalTile(...). No minimap screen rectangle or hardcoded UI coordinates added.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
