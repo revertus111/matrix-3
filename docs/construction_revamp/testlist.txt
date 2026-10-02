@@ -1976,6 +1976,15 @@ RTS minimap yaw handedness correction — IMPLEMENTED / NEEDS RUNTIME TEST (2026
 [x] REGRESSION: NPC/player/map-icon dots remain attached to their correct world positions while Q/E/MMB rotates the minimap. RUNTIME VERIFIED 2026-10-01.
 [x] REGRESSION: after roughly 90 degrees of RTS rotation, minimap click-to-focus still lands on the visible clicked tile with no mirror/inversion/offset. RUNTIME VERIFIED 2026-10-01.
 
+RTS minimap focus vs radial drag ownership — IMPLEMENTED / NEEDS RUNTIME TEST (2026-10-01)
+[x] verified-static: minimap-originated action 23/movement type 1 is consumed by ConstructionBuildCamera before radial menu-action handling.
+[x] verified-static: cancelTransientDragForMinimapFocus() clears only transient drag/release/double-click state and preserves committed worker/self selection.
+[ ] Click the minimap to move the RTS camera; no red radial drag ring/selection shape should appear in the world.
+[ ] Click and slightly drag on the minimap before release; camera focus still updates and no transient radial selection remains rendered.
+[ ] With workers/self already committed, click the minimap; the committed selection rings remain selected after camera focus moves.
+[ ] Immediately after a minimap focus click, perform a normal world drag-selection; radial selection starts/commits normally with no stale latch or forced cancel.
+[ ] Regression: minimap yaw/compass direction, NPC/player/map-icon alignment and rotated click-to-focus remain correct.
+
 
 Resource World Foundation V1A/V1B — finite persistent nodes (2026-10-01)
 [x] verified-static: schema v18 owns node id/definition/location/max/remaining state and retains depleted records.
