@@ -52,6 +52,7 @@ public final class SettlementInstance {
     // Reserved client bridge intercepted by ConveyorRunPreview before normal CSVar storage.
     private static final int CONVEYOR_SYNC_CS_VAR = 65534;
     private static final double CONVEYOR_GAME_TICK_SECONDS = 0.6;
+    private static final double CONVEYOR_EPSILON = 0.0001;
     private static final int[] CONVEYOR_DEVELOPMENT_MIX = { 1511, 1521, 440, 960 };
     private static final int AUTOMATED_MACHINE_PROCESS_TICKS = 4;
     private static final double PASSIVE_CONSTRUCTION_XP_PER_RESOURCE = 1.0;
@@ -350,14 +351,15 @@ public final class SettlementInstance {
         WorldTile requestedStart = start;
         WorldTile requestedEnd = end;
         start = snapConveyorEndpoint(start);
-        end = snapConveyorEndpoint(end);
+        end = projectStraightConveyorEnd(start, requestedEnd, routeAxis);
+        WorldTile endpointSnap = snapConveyorEndpoint(end);
+        if (isAxisAligned(start, endpointSnap)) end = endpointSnap;
 
-        if (start.getPlane() != end.getPlane()) {
-            return "Conveyor endpoints must be on the same plane.";
-        }
+        if (start.getPlane() != end.getPlane()) return "Conveyor endpoints must be on the same plane.";
         if (start.getX() == end.getX() && start.getY() == end.getY()) {
-            return "Conveyor Point A and Point B must be different tiles after endpoint snapping.";
+            return "Conveyor Point A and Point B must be different tiles after straight projection.";
         }
+        if (!isAxisAligned(start, end)) return "ConveyorRuns must be straight north/south or east/west.";
         if (!isWorldTileUnlocked(start) || !isWorldTileUnlocked(end)) {
             return "Conveyor endpoints must be inside unlocked settlement chunks.";
         }
@@ -366,40 +368,104 @@ public final class SettlementInstance {
         int startPlotY = toPlotY(start.getY());
         int endPlotX = toPlotX(end.getX());
         int endPlotY = toPlotY(end.getY());
-        int resolvedRouteAxis = SettlementConveyorRun.resolveRouteAxis(
-                routeAxis, startPlotX, startPlotY, endPlotX, endPlotY);
+        int resolvedRouteAxis = startPlotY == endPlotY
+                ? SettlementConveyorRun.ROUTE_X_FIRST : SettlementConveyorRun.ROUTE_Y_FIRST;
+
+        boolean physicalEnd = hasPhysicalConveyorEndpointAt(
+                endPlotX, endPlotY, start.getPlane());
+        SettlementConveyorRun receiver = physicalEnd ? null
+                : findConveyorReceiverAt(endPlotX, endPlotY, start.getPlane(), 0L);
 
         SettlementConveyorRun run = state.addConveyorRun(
-                startPlotX, startPlotY,
-                endPlotX, endPlotY,
+                startPlotX, startPlotY, endPlotX, endPlotY,
                 start.getPlane(), resolvedRouteAxis);
-        if (run == null) {
-            return "ConveyorRun could not be saved.";
-        }
+        if (run == null) return "Straight ConveyorRun could not be saved.";
 
+        if (receiver != null) {
+            double insertion = receiver.getDistanceAtPlotTile(endPlotX, endPlotY);
+            if (insertion >= 0.0) run.setOutputConnection(receiver.getRunId(), insertion);
+        }
+        int incomingLinks = connectExistingConveyorEndsInto(run);
         syncConveyorRunsToClient();
+
         if (debug != null) {
             debug.record("conveyor#" + run.getRunId(),
-                    "Created persistent ConveyorRun A=("
-                            + run.getStartPlotX() + "," + run.getStartPlotY()
+                    "Created straight ConveyorRun A=(" + run.getStartPlotX() + "," + run.getStartPlotY()
                             + ") B=(" + run.getEndPlotX() + "," + run.getEndPlotY()
-                            + ") route=" + (run.getRouteAxis() == SettlementConveyorRun.ROUTE_X_FIRST
-                                    ? "X_FIRST" : "Y_FIRST")
+                            + ") output=" + (run.hasOutputConnection()
+                                    ? "BELT#" + run.getOutputRunId() + "@"
+                                            + String.format("%.2f", run.getOutputInsertDistanceTiles())
+                                    : physicalEnd ? "PHYSICAL" : "BLOCKED")
+                            + " incomingLinks=" + incomingLinks
                             + " length=" + String.format("%.2f", run.getLengthTiles()) + "t.",
                     SettlementDebug.Category.LOGISTICS);
         }
+
         boolean snappedStart = requestedStart.getX() != start.getX()
                 || requestedStart.getY() != start.getY();
-        boolean snappedEnd = requestedEnd.getX() != end.getX()
+        boolean projectedEnd = requestedEnd.getX() != end.getX()
                 || requestedEnd.getY() != end.getY();
-        return "Created ConveyorRun #" + run.getRunId()
+        return "Created straight ConveyorRun #" + run.getRunId()
                 + " (" + String.format("%.2f", run.getLengthTiles()) + " tiles)"
-                + (snappedStart || snappedEnd
-                        ? " | endpoint snap:"
-                                + (snappedStart ? " A" : "")
-                                + (snappedEnd ? " B" : "")
+                + (run.hasOutputConnection()
+                        ? " -> ConveyorRun #" + run.getOutputRunId() + " @"
+                                + String.format("%.2f", run.getOutputInsertDistanceTiles()) + "t"
                         : "")
-                + ".";
+                + (incomingLinks > 0 ? " | incoming linked=" + incomingLinks : "")
+                + (snappedStart ? " | Point A snapped" : "")
+                + (projectedEnd ? " | Point B projected/snapped" : "") + ".";
+    }
+
+    private WorldTile projectStraightConveyorEnd(
+            WorldTile start, WorldTile requestedEnd, int routeAxis) {
+        int dx = requestedEnd.getX() - start.getX();
+        int dy = requestedEnd.getY() - start.getY();
+        boolean horizontal = routeAxis == SettlementConveyorRun.ROUTE_X_FIRST
+                || routeAxis != SettlementConveyorRun.ROUTE_Y_FIRST
+                    && Math.abs(dx) >= Math.abs(dy);
+        return horizontal
+                ? new WorldTile(requestedEnd.getX(), start.getY(), start.getPlane())
+                : new WorldTile(start.getX(), requestedEnd.getY(), start.getPlane());
+    }
+
+    private static boolean isAxisAligned(WorldTile a, WorldTile b) {
+        return a != null && b != null && a.getPlane() == b.getPlane()
+                && (a.getX() == b.getX() || a.getY() == b.getY());
+    }
+
+    private boolean hasPhysicalConveyorEndpointAt(int plotX, int plotY, int plane) {
+        return findStorageAtPlot(plotX, plotY, plane) != null
+                || findWorkstationAtPlot(plotX, plotY, plane) != null;
+    }
+
+    private SettlementConveyorRun findConveyorReceiverAt(
+            int plotX, int plotY, int plane, long excludeRunId) {
+        SettlementConveyorRun best = null;
+        for (SettlementConveyorRun candidate : state.snapshotConveyorRuns()) {
+            if (candidate == null || candidate.getRunId() == excludeRunId
+                    || candidate.getPlane() != plane || !candidate.isStraight()
+                    || candidate.getDistanceAtPlotTile(plotX, plotY) < 0.0) continue;
+            if (best == null || candidate.getRunId() < best.getRunId()) best = candidate;
+        }
+        return best;
+    }
+
+    private int connectExistingConveyorEndsInto(SettlementConveyorRun newRun) {
+        if (newRun == null || !newRun.isStraight()) return 0;
+        int linked = 0;
+        double newLength = newRun.getLengthTiles();
+        for (SettlementConveyorRun existing : state.snapshotConveyorRuns()) {
+            if (existing == null || existing.getRunId() == newRun.getRunId()
+                    || !existing.isStraight() || existing.hasOutputConnection()
+                    || existing.getPlane() != newRun.getPlane()
+                    || hasPhysicalConveyorEndpointAt(
+                            existing.getEndPlotX(), existing.getEndPlotY(), existing.getPlane())) continue;
+            double insertion = newRun.getDistanceAtPlotTile(
+                    existing.getEndPlotX(), existing.getEndPlotY());
+            if (insertion < 0.0 || insertion >= newLength - CONVEYOR_EPSILON) continue;
+            if (existing.setOutputConnection(newRun.getRunId(), insertion)) linked++;
+        }
+        return linked;
     }
 
     /**
@@ -455,45 +521,22 @@ public final class SettlementInstance {
     }
 
     public synchronized void processGameTick() {
-        if (!loaded || destroyed) {
-            return;
-        }
+        if (!loaded || destroyed) return;
         boolean changed = false;
-        for (SettlementConveyorRun run : state.snapshotConveyorRuns()) {
-            if (run == null || !run.isValid()) {
-                continue;
-            }
+        List<SettlementConveyorRun> runs = state.snapshotConveyorRuns();
 
-            /*
-             * Endpoint ownership is explicit:
-             * - Point A may withdraw one real item from a physical chest when the
-             *   conveyor inlet has spacing.
-             * - Point B may deposit the complete payload into a physical chest.
-             * - Without an accepting endpoint, transport remains blocked and
-             *   existing backpressure behavior is preserved.
-             *
-             * The development sink remains available as an override for transport
-             * testing, but production chest transfer never deletes inventory.
-             */
-            if (processConveyorOutput(run)) {
-                changed = true;
-            }
-            if (run.advancePayloads(CONVEYOR_GAME_TICK_SECONDS)) {
-                changed = true;
-            }
-            if (processConveyorOutput(run)) {
-                changed = true;
-            }
-            if (processConveyorInput(run)) {
-                changed = true;
-            }
+        for (SettlementConveyorRun run : runs) {
+            if (run != null && run.isValid()
+                    && run.advancePayloads(CONVEYOR_GAME_TICK_SECONDS)) changed = true;
         }
-        if (processAutomatedConveyorMachines()) {
-            changed = true;
+        for (SettlementConveyorRun run : runs) {
+            if (run != null && run.isValid() && processConveyorOutput(run)) changed = true;
         }
-        if (changed) {
-            syncConveyorPayloadsToClient();
+        for (SettlementConveyorRun run : runs) {
+            if (run != null && run.isValid() && processConveyorInput(run)) changed = true;
         }
+        if (processAutomatedConveyorMachines()) changed = true;
+        if (changed) syncConveyorPayloadsToClient();
     }
 
     private boolean processAutomatedConveyorMachines() {
@@ -565,6 +608,29 @@ public final class SettlementInstance {
         SettlementConveyorPayload payload = run.getFrontPayloadAtOutput();
         if (payload == null) {
             return false;
+        }
+
+        if (run.hasOutputConnection()) {
+            SettlementConveyorRun receiver = state.findConveyorRun(run.getOutputRunId());
+            if (receiver == null || receiver == run || !receiver.isStraight()) {
+                run.clearOutputConnection();
+                return false;
+            }
+            double insertion = receiver.getDistanceAtPlotTile(
+                    run.getEndPlotX(), run.getEndPlotY());
+            if (insertion < 0.0) {
+                run.clearOutputConnection();
+                return false;
+            }
+            SettlementConveyorPayload accepted = receiver.addTransferredPayload(
+                    payload.getItemId(), payload.getAmount(),
+                    payload.isPhysicalInventoryOwned(), insertion);
+            if (accepted == null) return false;
+            if (!run.removePayload(payload.getPayloadId())) {
+                receiver.removePayload(accepted.getPayloadId());
+                return false;
+            }
+            return true;
         }
 
         Long runKey = Long.valueOf(run.getRunId());
@@ -892,13 +958,16 @@ public final class SettlementInstance {
                 : sourceMachine != null
                         ? "MACHINE#" + sourceMachine.getPieceId()
                         : "NO ENDPOINT";
-        String outputLabel = open
-                ? "OPEN DEBUG SINK"
-                : destination != null
-                        ? "CHEST#" + destination.getPieceId()
-                        : destinationMachine != null
-                                ? "MACHINE#" + destinationMachine.getPieceId()
-                                : "BLOCKED/NO ENDPOINT";
+        String outputLabel = run.hasOutputConnection()
+                ? "BELT#" + run.getOutputRunId() + "@"
+                        + String.format("%.2f", run.getOutputInsertDistanceTiles()) + "t"
+                : open
+                        ? "OPEN DEBUG SINK"
+                        : destination != null
+                                ? "CHEST#" + destination.getPieceId()
+                                : destinationMachine != null
+                                        ? "MACHINE#" + destinationMachine.getPieceId()
+                                        : "BLOCKED/NO ENDPOINT";
         return "ConveyorRun #" + run.getRunId()
                 + " payloads=" + run.getPayloadCount()
                 + " speed=" + String.format("%.2f", run.getSpeedTilesPerSecond())
@@ -1141,7 +1210,9 @@ public final class SettlementInstance {
                     + "," + toWorldX(run.getEndPlotX())
                     + "," + toWorldY(run.getEndPlotY())
                     + "," + run.getPlane()
-                    + "," + run.getRouteAxis());
+                    + "," + run.getRouteAxis()
+                    + "," + run.getOutputRunId()
+                    + "," + Math.round(run.getOutputInsertDistanceTiles() * 1000.0));
         }
         player.getPackets().sendCSVarString(CONVEYOR_SYNC_CS_VAR, "END");
         syncConveyorPayloadsToClient();

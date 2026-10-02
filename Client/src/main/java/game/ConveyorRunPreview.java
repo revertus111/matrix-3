@@ -465,7 +465,8 @@ public final class ConveyorRunPreview {
                 return true;
             }
             String[] values = payload.split(",");
-            if (values.length != 7 && values.length != 8) {
+            if (values.length != 7 && values.length != 8
+                    && values.length != 10) {
                 status = "PERSISTENT SYNC rejected malformed RUN";
                 return true;
             }
@@ -476,12 +477,17 @@ public final class ConveyorRunPreview {
                 int endX = Integer.parseInt(values[4]);
                 int endY = Integer.parseInt(values[5]);
                 int plane = Integer.parseInt(values[6]);
-                int routeAxis = values.length == 8
+                int routeAxis = values.length >= 8
                         ? Integer.parseInt(values[7]) : ROUTE_AUTO;
+                long outputRunId = values.length == 10
+                        ? Long.parseLong(values[8]) : 0L;
+                double outputInsertDistance = values.length == 10
+                        ? Long.parseLong(values[9]) / 1000.0 : -1.0;
                 if (runId > 0L && (startX != endX || startY != endY)) {
                     pendingSettlementRuns.add(new ConveyorRun(
                             runId, "RUN#" + runId,
-                            startX, startY, endX, endY, plane, routeAxis));
+                            startX, startY, endX, endY, plane, routeAxis,
+                            outputRunId, outputInsertDistance));
                 }
             } catch (NumberFormatException ex) {
                 status = "PERSISTENT SYNC rejected malformed numbers";
@@ -1702,14 +1708,24 @@ public final class ConveyorRunPreview {
         final int endY;
         final int plane;
         final int routeAxis;
+        final long outputRunId;
+        final double outputInsertDistanceTiles;
 
         ConveyorRun(long runId, String name, int startX, int startY,
                 int endX, int endY, int plane) {
-            this(runId, name, startX, startY, endX, endY, plane, ROUTE_AUTO);
+            this(runId, name, startX, startY, endX, endY, plane,
+                    ROUTE_AUTO, 0L, -1.0);
         }
 
         ConveyorRun(long runId, String name, int startX, int startY,
                 int endX, int endY, int plane, int routeAxis) {
+            this(runId, name, startX, startY, endX, endY, plane,
+                    routeAxis, 0L, -1.0);
+        }
+
+        ConveyorRun(long runId, String name, int startX, int startY,
+                int endX, int endY, int plane, int routeAxis,
+                long outputRunId, double outputInsertDistanceTiles) {
             this.runId = runId;
             this.name = name;
             this.startX = startX;
@@ -1719,6 +1735,10 @@ public final class ConveyorRunPreview {
             this.plane = plane;
             this.routeAxis = resolveRouteAxis(
                     routeAxis, startX, startY, endX, endY);
+            this.outputRunId = outputRunId > 0L ? outputRunId : 0L;
+            this.outputInsertDistanceTiles = outputRunId > 0L
+                    && outputInsertDistanceTiles >= 0.0
+                    ? outputInsertDistanceTiles : -1.0;
         }
 
         static int resolveRouteAxis(

@@ -23,7 +23,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 22;
+    private static final int CURRENT_SCHEMA_VERSION = 23;
     private static final int RESOURCE_WORLD_GENERATOR_VERSION = 2;
     private static final int BIOME_GENERATOR_VERSION = 1;
     private static final int CHUNK_OWNERSHIP_VERSION = 2;
@@ -316,6 +316,23 @@ public final class SettlementState implements Serializable {
         if (nextConveyorRunId <= 0L) {
             nextConveyorRunId = 1L;
         }
+        for (SettlementConveyorRun run : conveyorRuns) {
+            if (run == null || !run.hasOutputConnection()) continue;
+            SettlementConveyorRun target = null;
+            for (SettlementConveyorRun candidate : conveyorRuns) {
+                if (candidate != null && candidate.getRunId() == run.getOutputRunId()) {
+                    target = candidate;
+                    break;
+                }
+            }
+            double insertion = target == null || target == run
+                    || target.getPlane() != run.getPlane()
+                    ? -1.0
+                    : target.getDistanceAtPlotTile(
+                            run.getEndPlotX(), run.getEndPlotY());
+            if (insertion < 0.0) run.clearOutputConnection();
+            else run.setOutputConnection(target.getRunId(), insertion);
+        }
 
         schemaVersion = CURRENT_SCHEMA_VERSION;
 
@@ -385,6 +402,7 @@ public final class SettlementState implements Serializable {
         if (!isValidPlotLocation(startPlotX, startPlotY, plane)
                 || !isValidPlotLocation(endPlotX, endPlotY, plane)
                 || (startPlotX == endPlotX && startPlotY == endPlotY)
+                || (startPlotX != endPlotX && startPlotY != endPlotY)
                 || !isConveyorRouteUnlockedInternal(
                         startPlotX, startPlotY, endPlotX, endPlotY, plane, routeAxis)) {
             return null;
@@ -398,18 +416,24 @@ public final class SettlementState implements Serializable {
 
     public synchronized boolean removeConveyorRun(long runId) {
         normalize();
-        if (runId <= 0L) {
-            return false;
-        }
+        if (runId <= 0L) return false;
+        boolean removed = false;
         Iterator<SettlementConveyorRun> iterator = conveyorRuns.iterator();
         while (iterator.hasNext()) {
             SettlementConveyorRun run = iterator.next();
             if (run != null && run.getRunId() == runId) {
                 iterator.remove();
-                return true;
+                removed = true;
+                break;
             }
         }
-        return false;
+        if (!removed) return false;
+        for (SettlementConveyorRun run : conveyorRuns) {
+            if (run != null && run.getOutputRunId() == runId) {
+                run.clearOutputConnection();
+            }
+        }
+        return true;
     }
 
     public synchronized int clearConveyorRuns() {

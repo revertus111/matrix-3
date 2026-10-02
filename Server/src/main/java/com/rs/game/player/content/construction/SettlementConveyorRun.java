@@ -48,6 +48,13 @@ public final class SettlementConveyorRun implements Serializable {
     private int routeAxis = ROUTE_AUTO;
 
     /*
+     * V2.0 output connection. Zero means no conveyor receiver. The insertion
+     * distance is measured on the receiving run from its Point A.
+     */
+    private long outputRunId;
+    private double outputInsertDistanceTiles = -1.0;
+
+    /*
      * Added after the first persistent-run schema. These are intentionally
      * non-final so old Java-serialized saves deserialize with null/zero and can
      * be normalized safely.
@@ -121,6 +128,12 @@ public final class SettlementConveyorRun implements Serializable {
         }
         routeAxis = resolveRouteAxis(
                 routeAxis, startPlotX, startPlotY, endPlotX, endPlotY);
+        if (outputRunId <= 0L
+                || Double.isNaN(outputInsertDistanceTiles)
+                || Double.isInfinite(outputInsertDistanceTiles)
+                || outputInsertDistanceTiles < 0.0) {
+            clearOutputConnection();
+        }
         if (payloads == null) {
             payloads = new ArrayList<SettlementConveyorPayload>();
         }
@@ -168,6 +181,52 @@ public final class SettlementConveyorRun implements Serializable {
     public double getLengthTiles() {
         return Math.abs(endPlotX - startPlotX)
                 + Math.abs(endPlotY - startPlotY);
+    }
+
+    public boolean isStraight() {
+        return startPlotX == endPlotX || startPlotY == endPlotY;
+    }
+
+    public double getDistanceAtPlotTile(int plotX, int plotY) {
+        if (!isStraight()) return -1.0;
+        if (startPlotY == endPlotY) {
+            if (plotY != startPlotY
+                    || plotX < Math.min(startPlotX, endPlotX)
+                    || plotX > Math.max(startPlotX, endPlotX)) return -1.0;
+            return Math.abs(plotX - startPlotX);
+        }
+        if (plotX != startPlotX
+                || plotY < Math.min(startPlotY, endPlotY)
+                || plotY > Math.max(startPlotY, endPlotY)) return -1.0;
+        return Math.abs(plotY - startPlotY);
+    }
+
+    public synchronized boolean hasOutputConnection() {
+        return outputRunId > 0L && outputInsertDistanceTiles >= 0.0;
+    }
+
+    public synchronized long getOutputRunId() {
+        return hasOutputConnection() ? outputRunId : 0L;
+    }
+
+    public synchronized double getOutputInsertDistanceTiles() {
+        return hasOutputConnection() ? outputInsertDistanceTiles : -1.0;
+    }
+
+    public synchronized boolean setOutputConnection(
+            long targetRunId, double insertionDistanceTiles) {
+        if (targetRunId <= 0L || targetRunId == runId
+                || Double.isNaN(insertionDistanceTiles)
+                || Double.isInfinite(insertionDistanceTiles)
+                || insertionDistanceTiles < 0.0) return false;
+        outputRunId = targetRunId;
+        outputInsertDistanceTiles = insertionDistanceTiles;
+        return true;
+    }
+
+    public synchronized void clearOutputConnection() {
+        outputRunId = 0L;
+        outputInsertDistanceTiles = -1.0;
     }
 
     public static int resolveRouteAxis(int requested,
@@ -227,16 +286,34 @@ public final class SettlementConveyorRun implements Serializable {
      * True when Point A has enough spacing for one more payload.
      */
     public synchronized boolean isInletAvailable() {
-        if (!normalize()) {
-            return false;
-        }
+        return canAcceptPayloadAt(0.0);
+    }
+
+    public synchronized boolean canAcceptPayloadAt(double distanceTiles) {
+        if (!normalize()
+                || Double.isNaN(distanceTiles)
+                || Double.isInfinite(distanceTiles)
+                || distanceTiles < -EPSILON
+                || distanceTiles > getLengthTiles() + EPSILON) return false;
+        double clamped = Math.max(0.0, Math.min(getLengthTiles(), distanceTiles));
         for (SettlementConveyorPayload payload : payloads) {
             if (payload != null
-                    && payload.getDistanceTiles() < PAYLOAD_SPACING_TILES - EPSILON) {
-                return false;
-            }
+                    && Math.abs(payload.getDistanceTiles() - clamped)
+                            < PAYLOAD_SPACING_TILES - EPSILON) return false;
         }
         return true;
+    }
+
+    public synchronized SettlementConveyorPayload addTransferredPayload(
+            int itemId, int amount, boolean physicalInventoryOwned,
+            double distanceTiles) {
+        if (itemId < 0 || amount <= 0 || !canAcceptPayloadAt(distanceTiles)) return null;
+        double clamped = Math.max(0.0, Math.min(getLengthTiles(), distanceTiles));
+        SettlementConveyorPayload payload = new SettlementConveyorPayload(
+                nextPayloadId++, itemId, amount, clamped, physicalInventoryOwned);
+        payloads.add(payload);
+        sortFrontFirst(payloads);
+        return payload;
     }
 
     /**

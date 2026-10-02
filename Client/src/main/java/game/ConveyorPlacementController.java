@@ -17,7 +17,6 @@ public final class ConveyorPlacementController {
 
     private static volatile boolean enabled;
     private static volatile ConstructionPlacementController.HoverTile start;
-    private static volatile int routeAxis = ConveyorRunPreview.ROUTE_AUTO;
     private static volatile String status = "Conveyor: choose Point A.";
     private static boolean inputListenerInstalled;
 
@@ -30,7 +29,6 @@ public final class ConveyorPlacementController {
         }
         enabled = value;
         start = null;
-        routeAxis = ConveyorRunPreview.ROUTE_AUTO;
         ConveyorRunPreview.clearPlacementPreview();
         if (enabled) {
             ensureInputListener();
@@ -64,21 +62,18 @@ public final class ConveyorPlacementController {
             ConveyorRunPreview.clearPlacementPreview();
             return;
         }
-        if (routeAxis == ConveyorRunPreview.ROUTE_AUTO) {
-            int dx = hover.getWorldX() - start.getWorldX();
-            int dy = hover.getWorldY() - start.getWorldY();
-            routeAxis = Math.abs(dx) >= Math.abs(dy)
-                    ? ConveyorRunPreview.ROUTE_X_FIRST
-                    : ConveyorRunPreview.ROUTE_Y_FIRST;
-        }
+
+        int[] projected = projectStraightEnd(start, hover);
         ConveyorRunPreview.setPlacementPreview(
                 start.getWorldX(), start.getWorldY(),
-                hover.getWorldX(), hover.getWorldY(),
-                start.getPlane(), routeAxis);
+                projected[0], projected[1],
+                start.getPlane(), projected[2]);
         status = "Conveyor preview A=" + start.getWorldX() + "," + start.getWorldY()
-                + " -> B=" + hover.getWorldX() + "," + hover.getWorldY()
-                + " route=" + routeLabel(routeAxis)
-                + " (" + String.format("%.2f", distanceTiles(start, hover)) + " tiles).";
+                + " -> B=" + projected[0] + "," + projected[1]
+                + " straight=" + axisLabel(projected[2])
+                + " (" + String.format("%.2f",
+                        distanceTiles(start.getWorldX(), start.getWorldY(),
+                                projected[0], projected[1])) + " tiles).";
     }
 
     /**
@@ -89,7 +84,6 @@ public final class ConveyorPlacementController {
             return false;
         }
         start = null;
-        routeAxis = ConveyorRunPreview.ROUTE_AUTO;
         ConveyorRunPreview.clearPlacementPreview();
         status = "Conveyor Point A cancelled. Click a new Point A.";
         return true;
@@ -97,7 +91,6 @@ public final class ConveyorPlacementController {
 
     public static synchronized void cancel() {
         start = null;
-        routeAxis = ConveyorRunPreview.ROUTE_AUTO;
         ConveyorRunPreview.clearPlacementPreview();
         enabled = false;
         status = "Conveyor placement cancelled.";
@@ -116,8 +109,7 @@ public final class ConveyorPlacementController {
 
         if (start == null) {
             start = hover;
-            routeAxis = ConveyorRunPreview.ROUTE_AUTO;
-            ConveyorRunPreview.clearPlacementPreview();
+                ConveyorRunPreview.clearPlacementPreview();
             status = "Conveyor Point A set at "
                     + start.getWorldX() + "," + start.getWorldY()
                     + ". Move to Point B and click.";
@@ -134,44 +126,52 @@ public final class ConveyorPlacementController {
             return;
         }
 
-        int committedRouteAxis = routeAxis;
-        if (committedRouteAxis == ConveyorRunPreview.ROUTE_AUTO) {
-            int dx = hover.getWorldX() - start.getWorldX();
-            int dy = hover.getWorldY() - start.getWorldY();
-            committedRouteAxis = Math.abs(dx) >= Math.abs(dy)
-                    ? ConveyorRunPreview.ROUTE_X_FIRST
-                    : ConveyorRunPreview.ROUTE_Y_FIRST;
-        }
+        int[] projected = projectStraightEnd(start, hover);
         String command = "settlementconveyorcreate "
                 + start.getWorldX() + " " + start.getWorldY() + " "
-                + hover.getWorldX() + " " + hover.getWorldY() + " "
-                + start.getPlane() + " " + committedRouteAxis;
+                + projected[0] + " " + projected[1] + " "
+                + start.getPlane();
         String error = ClientConsoleBridge.queueConsoleCommand(command);
         if (error != null) {
             status = "Conveyor placement failed to queue: " + error;
             return;
         }
 
-        double length = distanceTiles(start, hover);
-        String committedRoute = routeLabel(committedRouteAxis);
+        double length = distanceTiles(
+                start.getWorldX(), start.getWorldY(), projected[0], projected[1]);
+        String committedAxis = axisLabel(projected[2]);
         start = null;
-        routeAxis = ConveyorRunPreview.ROUTE_AUTO;
         ConveyorRunPreview.clearPlacementPreview();
-        status = "ConveyorRun create queued (" + String.format("%.2f", length)
-                + " tiles, " + committedRoute
-                + "). Click a new Point A to keep building.";
+        status = "Straight ConveyorRun create queued ("
+                + String.format("%.2f", length) + " tiles, "
+                + committedAxis + "). Click a new Point A to keep building.";
+    }
+
+    private static int[] projectStraightEnd(
+            ConstructionPlacementController.HoverTile a,
+            ConstructionPlacementController.HoverTile b) {
+        int dx = b.getWorldX() - a.getWorldX();
+        int dy = b.getWorldY() - a.getWorldY();
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            return new int[] {
+                    b.getWorldX(), a.getWorldY(),
+                    ConveyorRunPreview.ROUTE_X_FIRST
+            };
+        }
+        return new int[] {
+                a.getWorldX(), b.getWorldY(),
+                ConveyorRunPreview.ROUTE_Y_FIRST
+        };
     }
 
     private static double distanceTiles(
-            ConstructionPlacementController.HoverTile a,
-            ConstructionPlacementController.HoverTile b) {
-        return Math.abs(b.getWorldX() - a.getWorldX())
-                + Math.abs(b.getWorldY() - a.getWorldY());
+            int startX, int startY, int endX, int endY) {
+        return Math.abs(endX - startX) + Math.abs(endY - startY);
     }
 
-    private static String routeLabel(int axis) {
+    private static String axisLabel(int axis) {
         return axis == ConveyorRunPreview.ROUTE_Y_FIRST
-                ? "Y-first" : "X-first";
+                ? "N/S" : "E/W";
     }
 
     private static synchronized void ensureInputListener() {
