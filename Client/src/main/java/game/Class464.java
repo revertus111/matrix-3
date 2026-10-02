@@ -211,6 +211,8 @@ public final class Class464 {
 					if (!Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.visible)
 						class106.method1720((i + 669238293 * class73.anInt764 / 2 - 1), (class73.anInt765 * 1360982075 / 2 + i_14_ - 1), 3, 3, -1, (byte) -80);
 				}
+				ConstructionBuildCamera.renderRtsMinimapViewportFootprint(
+						class106, class73, i, i_14_);
 				class106.method2004(Class192.anIntArray2305[0], Class192.anIntArray2305[1], Class192.anIntArray2305[2], Class192.anIntArray2305[3]);
 			} else if (class167 != null)
 				class106.method2029(-16777216, class167, i, i_14_);
