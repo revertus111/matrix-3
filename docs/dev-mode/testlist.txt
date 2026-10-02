@@ -411,3 +411,22 @@ Live Model Editor — Deterministic Part-Library Visual Recipe gate (2026-10-02)
 [ ] Ctrl+D the tin asset/group and verify the duplicate preserves the same pinned visual recipe.
 [ ] Regression: normal non-recolored donor parts still render/import as before.
 
+Live Model Editor — Reusable Part Texture / UV Fidelity gate (2026-10-02)
+[x] verified-static: old componentOnlyRaw explicitly wrote faceTextures=-1 and faceTextureIndexes=-1 for every compacted face.
+[x] verified-static: compact raw now copies source face texture IDs and remaps only texture triangles referenced by selected component faces.
+[x] verified-static: type-0 texture triangle vertex references are remapped to compact vertex IDs; extra mapping vertices are included when required.
+[x] verified-static: texture-triangle type/scale/orientation auxiliary arrays are copied when present.
+[x] verified-static: anInt1818 UV entries are compacted per copied vertex and uvCoordVertexA/B/C face offsets are preserved.
+[x] verified-static: extra texture-map vertices follow the same authored scale/yaw/move transform without contributing to the established component scale centroid.
+[x] verified-static: native source-part path, asset-v3 recipe ownership, project-v8 persistence and cache/server/world paths are unchanged.
+[ ] Eclipse clean/build Client with Java 8.
+[ ] Open a donor part with obvious surface texture/detail and observe it in its native Live Model Editor source state.
+[ ] Save/import that exact part into another object and compare from a similar camera/zoom; texture pattern/detail should closely match the donor instead of appearing flattened.
+[ ] Repeat with the tin ore part that previously showed reduced detail.
+[ ] Rotate imported part through 90/180/270/360; texture coordinates must stay attached to the surface with no swimming/smearing.
+[ ] Move and Snap To Tile the imported part; texture detail must remain unchanged.
+[ ] Ctrl+D the imported part; duplicate must preserve the same texture/UV detail.
+[ ] Group the imported part with native parts and rotate the group; imported texture mapping must remain stable.
+[ ] Save/reload the v8 project and verify texture/UV fidelity remains intact.
+[ ] Regression: untextured/recolor-only imported parts still render normally.
+
