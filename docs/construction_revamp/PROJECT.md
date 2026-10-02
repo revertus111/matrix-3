@@ -2673,7 +2673,7 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ## Resource World Foundation V1D — persistent locked/unlocked chunks — 2026-10-01
 
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the approved Resource World SAP AAA bundle.
+- Status: PARTIALLY RUNTIME VERIFIED under the approved Resource World SAP AAA bundle. Existing-save migration/status is runtime verified: the user's live settlement reported 21/64 unlocked, current chunk 4,4 unlocked=true, biome=Rocky, generatedResourceChunks=4. Boundary enforcement and unlock-generation persistence remain pending.
 - SettlementState schema v21 adds persistent chunk ownership with a versioned migration.
 - New settlements begin with only the central 2x2 chunks (3,3 / 4,3 / 3,4 / 4,4) unlocked.
 - Existing settlements preserve work: migration unlocks the central area plus connected Manhattan corridors to persistent pieces, worker homes, rally points, saved build tiles, resource records and every existing conveyor route. Existing content is not stranded behind the new lock system.

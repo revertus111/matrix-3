@@ -2032,7 +2032,7 @@ Resource World Foundation V1D — persistent chunk ownership (2026-10-01)
 [x] verified-static: adjacent unlock requires N/E/S/W adjacency, persists the chunk and invokes deterministic resource generation once.
 [x] verified-static: locked terrain remains visually rendered; resource projection is filtered by ownership rather than changing the dynamic map/render foundation.
 [ ] Pull latest main; Eclipse clean/build Server with Java 8 and restart server/client once for the combined V1C+V1D gate.
-[ ] Enter the existing settlement and run ::settlementchunkstatus. Confirm current chunk is unlocked and note unlocked count.
+[x] Enter the existing settlement and run ::settlementchunkstatus. RUNTIME VERIFIED 2026-10-02: chunks=21/64, current=4,4, unlocked=true, biome=Rocky, generatedResourceChunks=4.
 [ ] Walk toward a visible locked neighboring chunk. The player must stop at the chunk boundary while terrain remains visible beyond it.
 [ ] Try placing/moving/duplicating a build piece into locked territory. Server ownership must reject it and no persistent piece may appear there.
 [ ] Select worker(s) and issue an RTS move into a locked chunk. Server must reject the destination; workers stay inside owned territory.
