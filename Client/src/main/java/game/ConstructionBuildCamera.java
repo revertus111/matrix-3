@@ -414,9 +414,12 @@ public final class ConstructionBuildCamera {
     }
 
     /**
-     * Small RTS viewport footprint drawn over the stock minimap. It is centered
-     * on the authoritative RTS pivot, rotates with the RTS heading and expands
-     * with orbit distance so wide zooms remain visible at a glance.
+     * Small RTS viewport footprint drawn over the stock minimap.
+     *
+     * verified-static: the minimap raster already rotates by the inverse RTS
+     * heading, so the camera's screen-space footprint must stay screen-aligned.
+     * Applying RTS yaw here a second time makes the box point in the wrong
+     * direction even though the raster/compass are correct.
      */
     static void renderRtsMinimapViewportFootprint(
             Class106 renderer, InterfaceDefinitions component, int screenX, int screenY) {
@@ -424,45 +427,27 @@ public final class ConstructionBuildCamera {
                 || renderer == null || component == null) {
             return;
         }
-        int yawUnits = getRtsMinimapYawUnits();
-        if (yawUnits < 0) {
-            return;
-        }
 
         int centerX = screenX + component.anInt764 * 669238293 / 2;
         int centerY = screenY + component.anInt765 * 1360982075 / 2;
         float zoom = clamp(rtsOrbitDistance / RTS_MAX_ORBIT_DISTANCE, 0.0F, 1.0F);
-        float halfWidth = 7.0F + zoom * 16.0F;
-        float halfHeight = 5.0F + zoom * 10.0F;
-        double angle = yawUnits * (Math.PI * 2.0 / 16384.0);
-        float cos = (float) Math.cos(angle);
-        float sin = (float) Math.sin(angle);
+        int halfWidth = Math.round(7.0F + zoom * 16.0F);
+        int halfHeight = Math.round(5.0F + zoom * 10.0F);
 
-        float[][] local = {
-            { -halfWidth, -halfHeight },
-            { halfWidth, -halfHeight },
-            { halfWidth, halfHeight },
-            { -halfWidth, halfHeight }
-        };
-        int[] xs = new int[4];
-        int[] ys = new int[4];
-        for (int i = 0; i < 4; i++) {
-            float lx = local[i][0];
-            float ly = local[i][1];
-            xs[i] = Math.round(centerX + lx * cos - ly * sin);
-            ys[i] = Math.round(centerY + lx * sin + ly * cos);
-        }
+        int left = centerX - halfWidth;
+        int right = centerX + halfWidth;
+        int top = centerY - halfHeight;
+        int bottom = centerY + halfHeight;
 
         int color = 0xBFFFFFFF;
-        for (int i = 0; i < 4; i++) {
-            int next = (i + 1) & 3;
-            renderer.method1730(xs[i], ys[i], xs[next], ys[next], color, 1);
-        }
+        renderer.method1730(left, top, right, top, color, 1);
+        renderer.method1730(right, top, right, bottom, color, 1);
+        renderer.method1730(right, bottom, left, bottom, color, 1);
+        renderer.method1730(left, bottom, left, top, color, 1);
 
-        float forward = halfHeight + 5.0F;
-        int headingX = Math.round(centerX + forward * sin);
-        int headingY = Math.round(centerY - forward * cos);
-        renderer.method1730(centerX, centerY, headingX, headingY, color, 1);
+        // Forward is always toward the top of the rotating minimap viewport.
+        int headingY = top - 5;
+        renderer.method1730(centerX, centerY, centerX, headingY, color, 1);
     }
 
     private static final int SETTLEMENT_LIFECYCLE_CS_VAR = 2835;
