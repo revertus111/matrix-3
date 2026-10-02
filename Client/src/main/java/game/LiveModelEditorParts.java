@@ -1722,7 +1722,7 @@ final class LiveModelEditorParts {
         StringBuilder out = new StringBuilder();
         out.append("{\n");
         out.append("  \"format\": \"matrix3-live-model-selection\",\n");
-        out.append("  \"version\": 2,\n");
+        out.append("  \"version\": 3,\n");
         out.append("  \"sourceObjectId\": ").append(source.objectId).append(",\n");
         out.append("  \"sourceObjectType\": ").append(source.objectType).append(",\n");
         out.append("  \"sourceModelIds\": ").append(intArrayJson(source.modelIds)).append(",\n");
@@ -1745,7 +1745,7 @@ final class LiveModelEditorParts {
         if (!"matrix3-live-model-selection".equals(
                 readString(json, "format", ""))) return 0;
         int version = readInt(json, "version", 1);
-        if (version < 1 || version > 2) return 0;
+        if (version < 1 || version > 3) return 0;
 
         int fallbackObjectId = readInt(json, "sourceObjectId", -1);
         int fallbackObjectType = readInt(json, "sourceObjectType", 10);
@@ -2045,6 +2045,11 @@ final class LiveModelEditorParts {
             out.append("\"index\": ").append(index);
         out.append(", \"sourceObjectId\": ").append(state.sourceObjectId)
                 .append(", \"sourceObjectType\": ").append(state.sourceObjectType)
+                .append(", \"sourceModelIds\": ").append(intArrayJson(state.sourceModelIds))
+                .append(", \"sourceRecolorFrom\": ").append(shortArrayJson(state.sourceRecolorFrom))
+                .append(", \"sourceRecolorTo\": ").append(shortArrayJson(state.sourceRecolorTo))
+                .append(", \"sourceRetextureFrom\": ").append(shortArrayJson(state.sourceRetextureFrom))
+                .append(", \"sourceRetextureTo\": ").append(shortArrayJson(state.sourceRetextureTo))
                 .append(", \"scaleX\": ").append(state.scaleX)
                 .append(", \"scaleY\": ").append(state.scaleY)
                 .append(", \"scaleZ\": ").append(state.scaleZ)
@@ -2064,6 +2069,11 @@ final class LiveModelEditorParts {
     private static void readState(String body, PartState state) {
         state.sourceObjectId = readInt(body, "sourceObjectId", -1);
         state.sourceObjectType = readInt(body, "sourceObjectType", 10);
+        state.sourceModelIds = readIntArray(body, "sourceModelIds");
+        state.sourceRecolorFrom = readShortArray(body, "sourceRecolorFrom");
+        state.sourceRecolorTo = readShortArray(body, "sourceRecolorTo");
+        state.sourceRetextureFrom = readShortArray(body, "sourceRetextureFrom");
+        state.sourceRetextureTo = readShortArray(body, "sourceRetextureTo");
         state.scaleX = clamp(readInt(body, "scaleX", 100), 10, 400);
         state.scaleY = clamp(readInt(body, "scaleY", 100), 10, 400);
         state.scaleZ = clamp(readInt(body, "scaleZ", 100), 10, 400);
@@ -2112,6 +2122,25 @@ final class LiveModelEditorParts {
             catch (NumberFormatException ignored) {}
         }
         return count == values.length ? values : Arrays.copyOf(values, count);
+    }
+
+    private static short[] readShortArray(String text, String key) {
+        int[] ints = readIntArray(text, key);
+        if (ints.length == 0) return null;
+        short[] values = new short[ints.length];
+        for (int i = 0; i < ints.length; i++) values[i] = (short) ints[i];
+        return values;
+    }
+
+    private static String shortArrayJson(short[] values) {
+        StringBuilder out = new StringBuilder("[");
+        if (values != null) {
+            for (int i = 0; i < values.length; i++) {
+                if (i > 0) out.append(", ");
+                out.append(values[i] & 0xffff);
+            }
+        }
+        return out.append(']').toString();
     }
 
     private static String intArrayJson(int[] values) {
