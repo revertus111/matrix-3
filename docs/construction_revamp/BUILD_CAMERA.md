@@ -284,3 +284,10 @@ Still pending explicit edge verification:
 - The worker-control JWindow no longer owns a fixed forced rectangle. Its title bar moves it, a bottom-right grip resizes it, bounds are clamped to the Matrix3 canvas, and a scroll pane preserves all nine rows at smaller sizes.
 - Group X clears only the saved slot, not the current selected units.
 - Status: **IMPLEMENTED / NEEDS RUNTIME TEST**.
+
+### RTS minimap viewport footprint direction — 2026-10-02
+
+- Runtime screenshot rejected the initial footprint orientation: raster/compass were correct, but the footprint was rotated by RTS yaw again after the stock minimap had already applied inverse heading.
+- The footprint is now screen-space camera UI: axis-aligned rectangle centered on minimap center, forward line toward screen-top, zoom-scaled size.
+- The rotating minimap raster supplies world heading underneath that fixed camera frame.
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST**.
