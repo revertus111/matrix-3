@@ -2246,3 +2246,12 @@
 - ConstructionBuildCamera.renderRtsMinimapViewportFootprint(...) now keeps the footprint screen-aligned while the minimap rotates underneath it; forward is always toward the top of the minimap and zoom scaling is preserved.
 - No raster, compass, NPC/player/map-icon, click, drag, camera-orbit or yaw ownership changed.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+
+2026-10-02 - Foundation Territory V1 centered 4x4 + dev bypass + frontier
+- SettlementState schema v22 replaces schema-v21 corridor ownership with exactly 16 centered gameplay chunks (2..5 on X/Y), sharing plot center 32,32 with settlement entry.
+- Resource generator V2 expands deterministic generation to all 16 foundation chunks and prunes procedural resource state outside the foundation during the one-time migration while preserving retained-node depletion.
+- Existing persistent builds/workers/conveyors outside the foundation are preserved; normal gameplay authority cannot reach them.
+- Added transient Full Plot Testing server bypass, reset OFF on every settlement entry, plus Con Revamp Settlement checkbox. Removed the active settlementunlockchunk command path.
+- Added client ConstructionTerritoryBoundary using GFX 4171 frontier markers around the 32x32 gameplay square; bypass mode changes frontier tint but leaves the real boundary visible.
+- Frontier rendering reuses one isolated/tinted model per frame across the perimeter to limit old-client render overhead.

@@ -2029,22 +2029,27 @@ Resource World Foundation V1C — seeded starter generation + flowing biome fiel
 
 
 Resource World Foundation V1D — persistent chunk ownership (2026-10-01)
-[x] verified-static: schema v21 persists versioned unlocked-chunk ownership.
-[x] verified-static: new ownership starts at central chunks 3,3 / 4,3 / 3,4 / 4,4.
-[x] verified-static: existing-save migration connects central territory to persisted pieces, worker homes, rallies, saved tiles, resource records and conveyor routes rather than stranding old content.
-[x] verified-static: player checkWalkStep, build place/move/duplicate, rally creation, worker destination/manual RTS movement and conveyor routes consume the same chunk authority.
-[x] verified-static: adjacent unlock requires N/E/S/W adjacency, persists the chunk and invokes deterministic resource generation once.
-[x] verified-static: locked terrain remains visually rendered; resource projection is filtered by ownership rather than changing the dynamic map/render foundation.
-[ ] Pull latest main; Eclipse clean/build Server with Java 8 and restart server/client once for the combined V1C+V1D gate.
-[x] Enter the existing settlement and run ::settlementchunkstatus. RUNTIME VERIFIED 2026-10-02: chunks=21/64, current=4,4, unlocked=true, biome=Rocky, generatedResourceChunks=4.
-[ ] Walk toward a visible locked neighboring chunk. The player must stop at the chunk boundary while terrain remains visible beyond it.
-[ ] Try placing/moving/duplicating a build piece into locked territory. Server ownership must reject it and no persistent piece may appear there.
-[ ] Select worker(s) and issue an RTS move into a locked chunk. Server must reject the destination; workers stay inside owned territory.
-[ ] Try a ConveyorRun whose route crosses a locked chunk. Creation must fail even if an endpoint is inside owned territory.
-[ ] Pick an orthogonally adjacent locked chunk and run ::settlementunlockchunk <x> <y>. It must unlock successfully; a diagonal-only/non-adjacent chunk must be rejected.
-[ ] After unlock, walk into the new chunk and confirm its deterministic biome-weighted resources appear without restarting the settlement.
-[ ] Run the same unlock command again. It must report already unlocked and must not create duplicate resources.
-[ ] Exit/re-enter and relog/re-enter. Ownership and generated resource positions must remain unchanged.
-[ ] Restart server and re-enter. Ownership/seed/generated resources must remain unchanged.
-[ ] Existing-save regression: all previously placed structures, worker homes and conveyor lines remain in unlocked reachable territory after schema-v21 migration.
-[ ] After focused acceptance, run the relevant Construction/persistence/object portions of docs/rs3/SMOKE_TEST.md.
+[x] SUPERSEDED 2026-10-02 by Foundation Territory V1. Historical schema-v21 runtime evidence: 21/64 unlocked, current 4,4, biome=Rocky, generatedResourceChunks=4.
+[x] Do not resume adjacent-unlock or corridor-migration acceptance; schema v22 deliberately replaces that active model with the fixed centered 4x4 foundation.
+
+Foundation Territory V1 — centered 4x4 + Full Plot Testing + frontier (2026-10-02)
+[x] verified-static: schema v22 defines 4x4 gameplay chunks from the same plot-center constant used by SettlementInstance entry; center=32,32, chunks=2..5, tiles=16..47.
+[x] verified-static: schema-v22 ownership migration clears prior corridor/unlock state and persists exactly the 16 foundation chunks.
+[x] verified-static: resource generator V2 preserves the existing seed/biome field, prunes procedural node/generated-chunk state outside the foundation, preserves retained node remaining/depleted amounts, and ensures all 16 foundation chunks are generated.
+[x] verified-static: Full Plot Testing is transient SettlementState state, reset OFF by every new SettlementInstance, and is consumed by the same tile-access authority used by movement/build/worker/rally/conveyor validation.
+[x] verified-static: active ::settlementunlockchunk test path is removed; ::settlementchunkstatus and ::settlementfullplottest <on|off> remain development diagnostics.
+[x] verified-static: Con Revamp -> Settlement has a Full Plot Testing checkbox and client lifecycle resets frontier/bypass presentation on settlement/session boundaries.
+[x] verified-static: ConstructionTerritoryBoundary renders from the existing world-space scene hook without changing Matrix3 terrain/map ownership and reuses one isolated/tinted model per frame.
+[ ] Pull latest main; Eclipse clean/build both Client + Server with Java 8 and restart both once.
+[ ] Enter settlement and run ::settlementchunkstatus. Expect foundation=4x4, chunks=16/64, center=32,32, current around the center, fullPlotTesting=false, generatedResourceChunks=16.
+[ ] Confirm the player entry point is visually centered inside the frontier: roughly 16 playable tiles extend in each cardinal direction from the center junction.
+[ ] Confirm sparse frontier markers form one clean square around the 32x32 gameplay area and remain attached to world terrain while RTS pans/rotates/zooms.
+[ ] Walk into the frontier with Full Plot Testing OFF. Player movement must stop at the gameplay boundary while terrain outside remains visible.
+[ ] Try build placement/move/duplicate, rally creation, worker RTS move and a ConveyorRun crossing the frontier. Server authority must reject locked territory.
+[ ] Enable Con Revamp -> Settlement -> Full Plot Testing. Frontier remains visible with bypass tint, but player/build/worker/conveyor operations may use the full existing 64x64 plot.
+[ ] Disable Full Plot Testing. Enforcement returns immediately without changing the persisted 16 gameplay chunks.
+[ ] Exit and re-enter with Full Plot Testing previously ON. It must reset OFF on both server authority and client frontier state.
+[ ] Verify old persistent test builds outside the 4x4 still exist when Full Plot Testing is ON; schema v22 must not delete build/worker/conveyor persistence.
+[ ] Confirm generated resources exist only inside the 4x4 foundation and positions remain stable across exit/re-entry, relog and server restart.
+[ ] Regression: RTS camera/minimap/compass/render-distance behavior remains unchanged; frontier rendering must not noticeably degrade FPS.
+[ ] After focused acceptance, run the relevant Construction/object/persistence portion of docs/rs3/SMOKE_TEST.md.

@@ -2656,36 +2656,48 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ## Resource World Foundation V1A/V1B — finite persistent nodes — 2026-10-01
 - Status: PARTIALLY RUNTIME VERIFIED under SAP AAA. The v19 repair restored the missing tree on the affected existing save, and the player-facing continuous gather -> depletion -> runtime disappearance loop is runtime verified. Relog persistence, worker depletion/retargeting and concurrency remain pending.
-- SettlementState schema v21 now owns persistent finite resource nodes, the persistent seeded resource/biome world, and persistent chunk ownership. v19 remains the repair for the earlier missing-tree migration bug.
+- SettlementState schema v22 now owns persistent finite resource nodes, the persistent seeded resource/biome world, and the centered foundation-territory state. v19 remains the repair for the earlier missing-tree migration bug.
 - Player gathering repeats until depletion/storage/interruption. Workers consume the same node before creating carried resources and skip exhausted sources.
 - Depleted records persist at zero and their runtime object/NPC projection is removed immediately.
 - Procedural placement, biomes, chunk locks, planting/saplings and water/fishing remain deferred.
-- Resume Here: tree restore + continuous player depletion/disappearance are runtime verified. Continue the approved bundle with persistent seeded resource generation + flowing biome metadata; keep relog persistence, worker depletion/retargeting and concurrency on the consolidated runtime gate. Then implement chunk locking/unlocking before returning to broader revamp foundation.
+- Resume Here: tree restore + continuous player depletion/disappearance are runtime verified. Resource placement/biome metadata and territory ownership have now moved into Foundation Territory V1 below. Keep relog persistence, worker depletion/retargeting and concurrency on the consolidated runtime gate; do not expand into planting/fishing yet.
 
 
 ## Resource World Foundation V1C — seeded starter generation + flowing biome field — 2026-10-01
 
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the approved Resource World SAP AAA bundle.
-- SettlementState schema v20 adds one persistent resource-world seed, resource generator version, biome generator version and generated-resource-chunk set.
-- The initial resource world now owns only the central 2x2 chunk area (chunks 3,3 / 4,3 / 3,4 / 4,4). Outer chunks intentionally remain resource-empty until chunk locking/unlocking owns expansion.
+- Status: SUPERSEDED BY FOUNDATION TERRITORY V1 for active area sizing. The seeded world/biome ownership remains reused.
+- SettlementState schema v20 introduced the persistent resource-world seed, generator version, biome version and generated-resource-chunk set; schema v22 upgrades active generation to the centered 4x4 foundation.
+- Historical V1C generated only central chunks 3,3 / 4,3 / 3,4 / 4,4. That 2x2 sizing is no longer the active target.
 - One guaranteed starter definition is assigned to each central chunk (wood, food, stone, ore), but its tile is deterministically chosen from the settlement seed instead of the old fixed coordinates.
 - Existing node records are relocated rather than recreated, preserving current remaining/depleted amounts across the migration. A depleted tree therefore stays depleted even though its historical node position is migrated.
 - Each starter chunk receives a small deterministic amount of extra biome-weighted resources. Generation enforces a 3-tile minimum resource spacing and avoids placed pieces, saved build tiles, worker arrival/home tiles and persistent conveyor route tiles.
 - SettlementBiome V1 samples smooth low-frequency moisture/elevation fields across plot coordinates. Biome identity therefore flows spatially across chunk boundaries instead of choosing independent random chunk labels.
 - Biome metadata currently affects resource weighting only; it does not alter terrain, water or map visuals yet.
 - Public state seams now exist for biome lookup and ensureResourceChunkGenerated(chunkX, chunkY), which the next chunk-unlock patch can call without redesigning generation ownership.
-- Resume Here: runtime-check starter resource randomization/stability and spacing in one existing settlement. Then implement locked/unlocked chunks using the existing generated-chunk seam; generate outer-chunk resources only when territory unlocks.
+- Resume Here: V1C ownership is retained but its 2x2 active-area gate is superseded. Runtime acceptance now belongs to Foundation Territory V1.
 
 
 ## Resource World Foundation V1D — persistent locked/unlocked chunks — 2026-10-01
 
-- Status: PARTIALLY RUNTIME VERIFIED under the approved Resource World SAP AAA bundle. Existing-save migration/status is runtime verified: the user's live settlement reported 21/64 unlocked, current chunk 4,4 unlocked=true, biome=Rocky, generatedResourceChunks=4. Boundary enforcement and unlock-generation persistence remain pending.
-- SettlementState schema v21 adds persistent chunk ownership with a versioned migration.
-- New settlements begin with only the central 2x2 chunks (3,3 / 4,3 / 3,4 / 4,4) unlocked.
-- Existing settlements preserve work: migration unlocks the central area plus connected Manhattan corridors to persistent pieces, worker homes, rally points, saved build tiles, resource records and every existing conveyor route. Existing content is not stranded behind the new lock system.
-- Player walking now rejects locked chunks at SettlementControler.checkWalkStep.
-- Server build placement, move/duplicate, saved build tiles, rally creation, worker destination reservation/manual RTS movement and ConveyorRun routes all reject locked territory.
-- Persistent resource projection skips locked chunks. unlockAdjacentChunk(...) requires orthogonal adjacency, persists ownership and invokes the existing deterministic resource generator exactly once for the newly unlocked chunk.
-- Final unlock economy/cost is deliberately not hardcoded yet. Development commands ::settlementchunkstatus and ::settlementunlockchunk <chunkX> <chunkY> expose the real ownership API for runtime testing.
-- Terrain remains visually present in locked chunks; V1D locks gameplay ownership/content rather than trying to unload dynamic map terrain, preserving the proven RTS/minimap/render scene.
-- Resume Here: consolidate V1C+V1D runtime acceptance in one restart: verify seeded starter resources are stable, locked-border player movement is blocked, build/RTS/conveyor destinations reject locked territory, then unlock one adjacent chunk and confirm its resources appear once and persist. After that return to the actual Construction revamp foundation; tree planting/fishing/biome visuals remain later layers.
+- Status: SUPERSEDED BY FOUNDATION TERRITORY V1.
+- Historical runtime evidence remains valid for the old schema-v21 migration/status path: the live settlement reported 21/64 unlocked, current chunk 4,4, biome=Rocky, generatedResourceChunks=4.
+- The active design no longer auto-unlocks corridors to old content and no longer exposes player/development adjacent-unlock flow.
+- Expansion remains a future Dungeoneering-style progression layer. For now the real gameplay territory is the centered 4x4 foundation and old content outside it is preserved for Full Plot Testing only.
+- Resume Here: use Foundation Territory V1 below; do not resume the schema-v21 21/64 unlock checklist.
+
+
+
+## Foundation Territory V1 — centered 4x4 + dev bypass + frontier — 2026-10-02
+
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- SettlementState schema v22 resets persistent gameplay ownership to exactly 16 chunks: a centered 4x4 square.
+- The foundation center is derived from the same authoritative plot coordinate as settlement entry: plot 32,32. With an even 4x4 chunk square, entry sits at the center junction of the four middle chunks. Active gameplay chunks are 2..5 on both axes, covering plot tiles 16..47.
+- Schema-v22 resource generator V2 preserves the existing persistent seed and biome field, removes procedural resource-node/generated-chunk state outside the foundation during this one-time migration, and generates all 16 foundation chunks exactly once. Existing remaining/depleted amounts for nodes retained inside the foundation are preserved.
+- Existing build pieces/workers/conveyors outside the 4x4 are not deleted. They remain persistent data for development recovery/testing, but normal gameplay movement/build/worker/logistics authority stops at the 4x4 frontier.
+- Full Plot Testing is a transient server-side bypass. It resets OFF whenever a settlement instance is entered and is not serialized. When ON, the existing 64x64 plot becomes accessible to player movement, building, worker orders, rallies and conveyors without modifying persistent gameplay ownership.
+- Con Revamp -> Settlement now exposes a Full Plot Testing checkbox. The old ::settlementunlockchunk active test path is removed; ::settlementchunkstatus remains as territory diagnostics.
+- ConstructionTerritoryBoundary is a client-only presentation layer using the already-proven GFX 4171 world-space render path. It draws sparse frontier markers just outside the 32x32 gameplay square. Locked mode uses the normal frontier tint; dev bypass keeps the same real boundary visible with a different tint.
+- Frontier anchoring is captured on the settlement lifecycle enter signal from the local player's authoritative entry tile and resets on settlement/session exit. It does not own collision, persistence, scene terrain or map generation.
+- Runtime/performance safeguard: one isolated/tinted marker model is built per frame and reused across all perimeter draws instead of cloning one model per marker.
+- Expansion, player-facing unlock costs, saplings/planting, fishing and biome terrain/water visuals remain deferred.
+- Resume Here: pull/build Client + Server once. Verify status reports 16/64 and center=32,32; resource generation reports 16 chunks; frontier surrounds the centered playable square; movement/build/worker/conveyor actions stop at it; Full Plot Testing ON crosses it without moving the frontier; OFF restores enforcement; exit/re-entry resets bypass OFF. After this gate, return to the actual Construction revamp foundation.
