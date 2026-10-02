@@ -590,7 +590,7 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - **Runtime acceptance:** user confirmed grouping works and specifically verified the key UX win: clicking one member reselects the whole grouped assembly. Deeper transform/duplicate/save-load checks remain pending.
 ### Live Model Editor — Clear Selection + Reusable Part / Assembly Library V1 — 2026-10-01
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Status: **IMPLEMENTED / NEEDS RUNTIME RETEST** under explicit SAP AAA.
 - Added **C = Clear Selection** for Part/Multi editing. The existing Clear button now advertises `[C]`; Whole mode is intentionally not cleared by this shortcut.
 - Reworked the existing selection-asset path into the first reusable **Part / Assembly Library** workflow:
   - open a donor object in Live Model Editor;
@@ -607,3 +607,18 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Current V1 intentionally reuses the existing donor-object editor as the scanner. Save the current target project before opening a donor object; a side-by-side donor scanner/browser is future UX work if this round-trip proves too slow.
 - No cache writer, raw geometry export, server/world mutation, Construction placement ownership or persistent game-state path was added.
 - **Resume Here (Live Model Editor):** press C to clear selection; save the current conveyor project; open a donor wooden object, click/highlight the desired plank component, Save Part / Assembly; reload the conveyor project, Add Part / Assembly, then move/rotate/group/snap the imported plank into place and save/reload once.
+
+### Live Model Editor — Deterministic Part-Library Visual Recipe — 2026-10-02
+
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Runtime regression: a reusable part harvested from a tin ore object reloaded with a runite-looking ore visual.
+- **verified-static root cause:** Part Library V1 re-resolved donor geometry from raw cache model bytes, while Matrix3's real `ObjectDefinitions.method6063(...)` applies definition recolor and retexture mappings after model construction. The editor source path did not preserve/apply that visual recipe.
+- `LiveModelEditorParts.Source` now captures the donor definition's exact model IDs plus effective recolor and retexture maps, and applies those maps to decoded `Class159` face colours/textures before component detection/rendering.
+- Effective recolor targets mirror Matrix3 ownership: `aShortArray5613` source colours map through `aByteArray5615 -> ObjectDefinitions.aShortArray5606` when present, otherwise to `aShortArray5621`; textures map `aShortArray5618 -> aShortArray5617`.
+- Every detected PartState now pins its source visual recipe. Cross-object source caching keys include the full model/recolor/retexture recipe, so variants cannot silently share the wrong cached visual.
+- Selection-asset format advances from v2 to **v3** and persists per-part model IDs, recolor-from/to and retexture-from/to arrays.
+- Project format advances from v7 to **v8** so pinned donor visuals survive project save/load.
+- Existing v1/v2 assets and v1-v7 projects remain readable. Legacy assets use corrected donor-definition fallback; newly saved v3 assets pin the exact recipe.
+- JSON remains cache-reference-only: raw model bytes/vertices are not embedded and no cache write occurs.
+- **Resume Here:** load the existing tin asset as a legacy regression check; then re-harvest/save tin as v3, import it beside another ore variant, save/reload the v8 project, and verify each ore keeps its exact visual.
+
