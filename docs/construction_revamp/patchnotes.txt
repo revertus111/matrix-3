@@ -2230,3 +2230,12 @@
 - Existing settlement entered successfully after schema-v21 migration.
 - ::settlementchunkstatus reported chunks=21/64, current=4,4 unlocked=true, biome=Rocky, generatedResourceChunks=4.
 - This verifies live ownership/status migration only; locked-border enforcement and adjacent unlock generation remain pending.
+
+2026-10-02 - RTS Command & Navigation V1 runtime polish
+- Runtime showed continuous minimap drag worked but instant target snapping made it traverse the settlement far too quickly.
+- Replaced per-event drag teleporting with a capped smooth-focus chase. Minimap drag and control-group focus now move the RTS pivot at 75% of the active RTS movement-speed preset with a minimum 900 camera units/sec; WASD immediately cancels the chase.
+- Runtime showed control-group Set worked, while the X/remove action did not update reliably and the fixed overlay geometry was visually intrusive.
+- Reworked RTS Worker Control into a movable/resizable in-game-style panel: draggable title bar, bottom-right resize grip, canvas clamping, session-retained geometry and scrollable group rows so resizing does not clip controls.
+- Group X now removes the saved slot immediately and refreshes its label/status synchronously.
+- Group Go now always recalls the group and smoothly moves the RTS camera toward the selected-unit midpoint. Number-key single tap remains recall-only; double-tap remains recall + focus.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
