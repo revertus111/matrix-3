@@ -163,12 +163,18 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         styleButton(settlementStatus);
         styleButton(palette);
 
-        enter.addActionListener(e -> queue(
-                "itembrowser settlement enter",
-                "Enter Settlement queued."));
-        exit.addActionListener(e -> queue(
-                "itembrowser settlement exit",
-                "Exit Settlement queued."));
+        enter.addActionListener(e -> {
+            fullPlotTesting.setSelected(false);
+            ConstructionTerritoryBoundary.setFullPlotTesting(false);
+            queue("itembrowser settlement enter",
+                    "Enter Settlement queued.");
+        });
+        exit.addActionListener(e -> {
+            fullPlotTesting.setSelected(false);
+            ConstructionTerritoryBoundary.setFullPlotTesting(false);
+            queue("itembrowser settlement exit",
+                    "Exit Settlement queued.");
+        });
         settlementStatus.addActionListener(e -> queue(
                 "itembrowser settlement status",
                 "Settlement Status queued. Check game chat."));

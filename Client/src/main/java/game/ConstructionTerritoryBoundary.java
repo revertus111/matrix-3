@@ -101,6 +101,10 @@ public final class ConstructionTerritoryBoundary {
         if (definition == null) {
             return;
         }
+        Model marker = createFrontierModel(definition, renderer);
+        if (marker == null) {
+            return;
+        }
 
         int minPlayableX = centerWorldX - FOUNDATION_HALF_TILES;
         int minPlayableY = centerWorldY - FOUNDATION_HALF_TILES;
@@ -115,18 +119,18 @@ public final class ConstructionTerritoryBoundary {
         int rendered = 0;
         for (int worldY = minPlayableY; worldY <= maxPlayableY;
                 worldY += FRONTIER_SPACING_TILES) {
-            rendered += renderMarker(scene, renderer, sceneBase, ground, definition, west, worldY);
-            rendered += renderMarker(scene, renderer, sceneBase, ground, definition, east, worldY);
+            rendered += renderMarker(scene, sceneBase, ground, marker, west, worldY);
+            rendered += renderMarker(scene, sceneBase, ground, marker, east, worldY);
         }
         for (int worldX = minPlayableX; worldX <= maxPlayableX;
                 worldX += FRONTIER_SPACING_TILES) {
-            rendered += renderMarker(scene, renderer, sceneBase, ground, definition, worldX, south);
-            rendered += renderMarker(scene, renderer, sceneBase, ground, definition, worldX, north);
+            rendered += renderMarker(scene, sceneBase, ground, marker, worldX, south);
+            rendered += renderMarker(scene, sceneBase, ground, marker, worldX, north);
         }
-        rendered += renderMarker(scene, renderer, sceneBase, ground, definition, west, south);
-        rendered += renderMarker(scene, renderer, sceneBase, ground, definition, west, north);
-        rendered += renderMarker(scene, renderer, sceneBase, ground, definition, east, south);
-        rendered += renderMarker(scene, renderer, sceneBase, ground, definition, east, north);
+        rendered += renderMarker(scene, sceneBase, ground, marker, west, south);
+        rendered += renderMarker(scene, sceneBase, ground, marker, west, north);
+        rendered += renderMarker(scene, sceneBase, ground, marker, east, south);
+        rendered += renderMarker(scene, sceneBase, ground, marker, east, north);
 
         status = "Frontier " + (fullPlotTesting ? "DEV BYPASS" : "LOCKED")
                 + " | markers=" + rendered
@@ -153,28 +157,12 @@ public final class ConstructionTerritoryBoundary {
         return true;
     }
 
-    private static int renderMarker(
-            Class523 scene, Class106 renderer, Class497 sceneBase, Class174 ground,
-            GraphicsDefinition definition, int worldX, int worldY) {
-        int sceneBaseWorldX = sceneBase.localX * -2109597897;
-        int sceneBaseWorldY = sceneBase.localY * 417324155;
-        int localX = worldX - sceneBaseWorldX;
-        int localY = worldY - sceneBaseWorldY;
-        int sceneWidth = scene.anInt5833 * -1396185127;
-        int sceneHeight = scene.anInt5834 * -1519623925;
-        if (localX < 0 || localY < 0 || localX >= sceneWidth || localY >= sceneHeight) {
-            return 0;
-        }
-
-        int tileSize = ground.anInt2087 * 2129890771;
-        int sceneX = Math.round((localX + 0.5F) * tileSize);
-        int sceneZ = Math.round((localY + 0.5F) * tileSize);
-        int sceneY = ground.method2718(sceneX, sceneZ, 0);
-
+    private static Model createFrontierModel(
+            GraphicsDefinition definition, Class106 renderer) {
         Model marker = definition.method7764(
                 renderer, MODEL_FLAGS, 0, 0, 0, 0, null, (byte) 2, 1913622280);
         if (marker == null) {
-            return 0;
+            return null;
         }
 
         int minX = marker.method1380();
@@ -191,6 +179,26 @@ public final class ConstructionTerritoryBoundary {
                 Math.round(BASE_MODEL_SCALE * (FRONTIER_SCALE_PERCENT / 100.0F)));
         marker.method1464(runtimeScale, BASE_MODEL_SCALE, runtimeScale);
         applyTint(marker, fullPlotTesting ? BYPASS_FRONTIER_RGB : LOCKED_FRONTIER_RGB);
+        return marker;
+    }
+
+    private static int renderMarker(
+            Class523 scene, Class497 sceneBase, Class174 ground,
+            Model marker, int worldX, int worldY) {
+        int sceneBaseWorldX = sceneBase.localX * -2109597897;
+        int sceneBaseWorldY = sceneBase.localY * 417324155;
+        int localX = worldX - sceneBaseWorldX;
+        int localY = worldY - sceneBaseWorldY;
+        int sceneWidth = scene.anInt5833 * -1396185127;
+        int sceneHeight = scene.anInt5834 * -1519623925;
+        if (localX < 0 || localY < 0 || localX >= sceneWidth || localY >= sceneHeight) {
+            return 0;
+        }
+
+        int tileSize = ground.anInt2087 * 2129890771;
+        int sceneX = Math.round((localX + 0.5F) * tileSize);
+        int sceneZ = Math.round((localY + 0.5F) * tileSize);
+        int sceneY = ground.method2718(sceneX, sceneZ, 0);
 
         TRANSFORM.method3588(sceneX, sceneY, sceneZ);
         marker.method1375(TRANSFORM, RENDER_BOUNDS, 0);
