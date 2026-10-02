@@ -2649,9 +2649,9 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 
 ## Resource World Foundation V1A/V1B — finite persistent nodes — 2026-10-01
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
+- Status: PARTIALLY RUNTIME VERIFIED under SAP AAA. The v19 repair restored the missing tree on the affected existing save, and the player-facing continuous gather -> depletion -> runtime disappearance loop is runtime verified. Relog persistence, worker depletion/retargeting and concurrency remain pending.
 - SettlementState schema v19 now owns persistent finite resource nodes; v19 repairs the v18 migration bug that could drop the first starter tree because a newly deserialized node-id counter began at zero. Current starter definitions seed one 10-unit migration node each.
 - Player gathering repeats until depletion/storage/interruption. Workers consume the same node before creating carried resources and skip exhausted sources.
 - Depleted records persist at zero and their runtime object/NPC projection is removed immediately.
 - Procedural placement, biomes, chunk locks, planting/saplings and water/fishing remain deferred.
-- Resume Here: runtime-test depletion/persistence/concurrency. If accepted, implement seeded resource generation + flowing biome metadata, then chunk locking/unlocking before returning to broader revamp foundation.
+- Resume Here: tree restore + continuous player depletion/disappearance are runtime verified. Continue the approved bundle with persistent seeded resource generation + flowing biome metadata; keep relog persistence, worker depletion/retargeting and concurrency on the consolidated runtime gate. Then implement chunk locking/unlocking before returning to broader revamp foundation.

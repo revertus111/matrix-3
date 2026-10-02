@@ -2203,3 +2203,9 @@
 2026-10-01 - RTS minimap radial ownership runtime accepted
 - User confirmed minimap focus no longer leaves the red transient RTS radial-selection shape rendered.
 - Minimap focus/radial ownership gate is closed; committed selection preservation and normal post-minimap world drag remain covered by the existing regression gate.
+
+
+2026-10-01 - Resource World V1A/V1B partial runtime acceptance
+- User runtime-verified schema-v19 restoration of the missing starter tree on the affected save.
+- User runtime-verified one-click continuous tree gathering through finite depletion and live tree disappearance.
+- Relog persistence, worker depletion/retargeting and player+worker concurrency remain pending; no broader runtime claims added.

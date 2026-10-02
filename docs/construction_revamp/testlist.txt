@@ -1991,8 +1991,8 @@ Resource World Foundation V1A/V1B — finite persistent nodes (2026-10-01)
 [x] verified-static: player and worker gathering consume the same finite node authority.
 [x] verified-static: player action repeats until depletion/storage/interruption; depleted runtime sources are removed and minimap refresh is queued.
 [ ] Pull latest main; Eclipse clean/build Server with Java 8 and restart server/client.
-[ ] Click one starter node once; confirm gathering repeats without re-clicking until the 10-unit node depletes.
-[ ] Confirm the depleted object/NPC disappears and minimap projection clears.
+[x] Click one starter tree once; gathering repeats without re-clicking until depletion. RUNTIME VERIFIED 2026-10-01.
+[x] Depleted starter tree disappears from the live scene. RUNTIME VERIFIED 2026-10-01. Minimap refresh remains covered by the existing projection path; dedicated minimap depletion observation is not separately claimed.
 [ ] Exit/re-enter, then logout/relog/re-enter; the depleted source must remain absent.
 [ ] Let a worker gather/haul a finite node; confirm it consumes the same pool and retargets another active source after depletion.
 [ ] Player + worker concurrency on a nearly depleted node must never exceed remaining amount or duplicate resource.
@@ -2004,5 +2004,5 @@ Resource World V1A/V1B — schema-v19 migration repair (2026-10-01)
 [x] verified-static: v19 migration initializes the resource-node id counter above all persisted node ids before adding missing starter definitions.
 [x] verified-static: a missing v18 tree record is restored once with a positive node id.
 [x] verified-static: a legitimately depleted tree record at remaining=0 counts as present and is not recreated.
-[ ] Pull/build/restart and enter the existing settlement save that lost its tree under schema v18; tree must be restored.
+[x] Pull/build/restart and enter the existing settlement save that lost its tree under schema v18; tree is restored. RUNTIME VERIFIED 2026-10-01.
 [ ] Deplete the restored tree, exit/re-enter and relog/re-enter; it must remain absent after legitimate depletion.
