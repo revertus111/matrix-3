@@ -391,6 +391,8 @@ Live Model Editor — Clear Selection + Reusable Part / Assembly Library V1 gate
 [ ] Regression: existing v1 selection assets and v1-v6 projects still load.
 
 Live Model Editor — Deterministic Part-Library Visual Recipe gate (2026-10-02)
+[x] Runtime verified: imported ore keeps the correct saved ore identity instead of changing from tin to runite.
+[ ] Follow-up: compare donor/live-object texture and detail fidelity against the imported part; user reports the imported asset has less visible texture/detail.
 [x] verified-static: Matrix3 ObjectDefinitions.method6063 applies recolor source aShortArray5613 to palette/aShortArray5621 targets and retexture source aShortArray5618 to aShortArray5617 targets.
 [x] verified-static: LiveModelEditorParts Source now captures those effective mappings and applies them to decoded Class159 faceColours/faceTextures.
 [x] verified-static: every newly detected source part pins model IDs + recolor/retexture mappings in PartState.
@@ -402,7 +404,7 @@ Live Model Editor — Deterministic Part-Library Visual Recipe gate (2026-10-02)
 [ ] Load the existing legacy tin asset; verify whether corrected fallback now displays tin.
 [ ] Open the tin donor object and verify Live Model Editor displays the same tin appearance as the live object.
 [ ] Save that tin component again as a new v3 Part / Assembly asset.
-[ ] Import the new v3 tin asset into another object/project; verify it remains tin rather than becoming runite or another ore.
+[x] Runtime verified: imported tin remains tin rather than becoming runite or another ore.
 [ ] Import/save at least one different ore variant alongside it; verify both retain distinct visuals simultaneously.
 [ ] Move/rotate/Tile Snap/group the v3 tin asset; verify its appearance does not change during transforms.
 [ ] Save the target as a v8 project, reload it, and verify each imported ore keeps its exact saved appearance.
