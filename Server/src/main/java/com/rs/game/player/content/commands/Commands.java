@@ -2957,28 +2957,23 @@ public final class Commands {
 		}
 		player.getPackets().sendGameMessage(chunkStatus.getChunkOwnershipSummary());
 		return true;
-	    case "settlementunlockchunk":
-		SettlementInstance chunkUnlock = SettlementInstance.getActive(player);
-		if (chunkUnlock == null) {
+	    case "settlementfullplottest":
+		SettlementInstance fullPlotTest = SettlementInstance.getActive(player);
+		if (fullPlotTest == null) {
 		    player.getPackets().sendGameMessage(
-			    "Enter your settlement before unlocking settlement chunks.");
+			    "Enter your settlement before changing Full Plot Testing.");
 		    return true;
 		}
-		if (cmd.length != 3) {
+		if (cmd.length != 2
+			|| !("on".equalsIgnoreCase(cmd[1]) || "off".equalsIgnoreCase(cmd[1]))) {
 		    player.getPackets().sendGameMessage(
-			    "Use: ::settlementunlockchunk <chunkX 0..7> <chunkY 0..7>");
+			    "Use: ::settlementfullplottest <on|off>");
 		    return true;
 		}
-		try {
-		    int chunkX = Integer.parseInt(cmd[1]);
-		    int chunkY = Integer.parseInt(cmd[2]);
-		    player.getPackets().sendGameMessage(
-			    chunkUnlock.unlockDevelopmentChunk(chunkX, chunkY));
-		} catch (NumberFormatException ex) {
-		    player.getPackets().sendGameMessage("Invalid settlement chunk coordinate.");
-		}
+		player.getPackets().sendGameMessage(
+			fullPlotTest.setFullPlotTesting("on".equalsIgnoreCase(cmd[1])));
 		return true;
-	    case "settlementconveyorcreate":
+	    case "settlementconveyorcreate":	    case "settlementconveyorcreate":
 		SettlementInstance conveyorCreate = SettlementInstance.getActive(player);
 		if (conveyorCreate == null) {
 		    player.getPackets().sendGameMessage("Enter your settlement before creating a ConveyorRun.");

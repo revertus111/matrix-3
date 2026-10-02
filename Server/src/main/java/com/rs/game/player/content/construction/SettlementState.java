@@ -23,14 +23,22 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 21;
-    private static final int RESOURCE_WORLD_GENERATOR_VERSION = 1;
+    private static final int CURRENT_SCHEMA_VERSION = 22;
+    private static final int RESOURCE_WORLD_GENERATOR_VERSION = 2;
     private static final int BIOME_GENERATOR_VERSION = 1;
-    private static final int CHUNK_OWNERSHIP_VERSION = 1;
-    private static final int PLOT_CHUNK_SIZE = 8;
-    private static final int PLOT_CHUNKS = PLOT_TILES / PLOT_CHUNK_SIZE;
-    private static final int STARTER_CHUNK_MIN = 3;
-    private static final int STARTER_CHUNK_MAX = 4;
+    private static final int CHUNK_OWNERSHIP_VERSION = 2;
+
+    public static final int PLOT_CHUNK_SIZE = 8;
+    public static final int PLOT_CHUNKS = PLOT_TILES / PLOT_CHUNK_SIZE;
+    public static final int FOUNDATION_CHUNK_SPAN = 4;
+    public static final int FOUNDATION_CENTER_PLOT = PLOT_TILES / 2;
+    public static final int FOUNDATION_MIN_CHUNK =
+            (FOUNDATION_CENTER_PLOT / PLOT_CHUNK_SIZE) - (FOUNDATION_CHUNK_SPAN / 2);
+    public static final int FOUNDATION_MAX_CHUNK =
+            FOUNDATION_MIN_CHUNK + FOUNDATION_CHUNK_SPAN - 1;
+
+    private static final int LEGACY_STARTER_CHUNK_MIN = 3;
+    private static final int LEGACY_STARTER_CHUNK_MAX = 4;
     private static final int RESOURCE_MIN_SPACING = 3;
 
     /**
@@ -72,6 +80,7 @@ public final class SettlementState implements Serializable {
     private Set<String> generatedResourceChunks = new HashSet<String>();
     private int chunkOwnershipVersion;
     private Set<String> unlockedChunks = new HashSet<String>();
+    private transient boolean fullPlotTesting;
     /**
      * Legacy serialized shared-cap field. Kept so existing player saves remain
      * deserializable; active storage capacity is resource-specific.
@@ -197,8 +206,12 @@ public final class SettlementState implements Serializable {
         if (biomeGeneratorVersion <= 0) {
             biomeGeneratorVersion = BIOME_GENERATOR_VERSION;
         }
-        if (resourceWorldGeneratorVersion < RESOURCE_WORLD_GENERATOR_VERSION) {
+        if (resourceWorldGeneratorVersion < 1) {
             generateInitialResourceWorldV1();
+            resourceWorldGeneratorVersion = 1;
+        }
+        if (resourceWorldGeneratorVersion < RESOURCE_WORLD_GENERATOR_VERSION) {
+            generateFoundationResourceWorldV2();
             resourceWorldGeneratorVersion = RESOURCE_WORLD_GENERATOR_VERSION;
         }
         if (unlockedChunks == null) {
@@ -208,7 +221,7 @@ public final class SettlementState implements Serializable {
             workers = new ArrayList<SettlementWorkerState>();
         }
         if (chunkOwnershipVersion < CHUNK_OWNERSHIP_VERSION) {
-            initializeChunkOwnershipV1();
+            initializeFoundationTerritoryV2();
             chunkOwnershipVersion = CHUNK_OWNERSHIP_VERSION;
         }
         long highestResourceNodeId = 0L;
@@ -1019,10 +1032,10 @@ public final class SettlementState implements Serializable {
                 SettlementResourceNode.ORE_OUTCROP
         };
         int[][] starterChunks = {
-                { STARTER_CHUNK_MIN, STARTER_CHUNK_MIN },
-                { STARTER_CHUNK_MAX, STARTER_CHUNK_MIN },
-                { STARTER_CHUNK_MIN, STARTER_CHUNK_MAX },
-                { STARTER_CHUNK_MAX, STARTER_CHUNK_MAX }
+                { LEGACY_STARTER_CHUNK_MIN, LEGACY_STARTER_CHUNK_MIN },
+                { LEGACY_STARTER_CHUNK_MAX, LEGACY_STARTER_CHUNK_MIN },
+                { LEGACY_STARTER_CHUNK_MIN, LEGACY_STARTER_CHUNK_MAX },
+                { LEGACY_STARTER_CHUNK_MAX, LEGACY_STARTER_CHUNK_MAX }
         };
 
         for (int index = 0; index < guaranteed.length; index++) {
@@ -1057,9 +1070,35 @@ public final class SettlementState implements Serializable {
             }
         }
 
-        for (int chunkX = STARTER_CHUNK_MIN; chunkX <= STARTER_CHUNK_MAX; chunkX++) {
-            for (int chunkY = STARTER_CHUNK_MIN; chunkY <= STARTER_CHUNK_MAX; chunkY++) {
+        for (int chunkX = LEGACY_STARTER_CHUNK_MIN; chunkX <= LEGACY_STARTER_CHUNK_MAX; chunkX++) {
+            for (int chunkY = LEGACY_STARTER_CHUNK_MIN; chunkY <= LEGACY_STARTER_CHUNK_MAX; chunkY++) {
                 generateResourceChunkV1Internal(chunkX, chunkY, true);
+            }
+        }
+    }
+
+    private void generateFoundationResourceWorldV2() {
+        Iterator<SettlementResourceNodeState> nodeIterator = resourceNodes.iterator();
+        while (nodeIterator.hasNext()) {
+            SettlementResourceNodeState node = nodeIterator.next();
+            if (node == null || !isFoundationChunk(
+                    node.getPlotX() / PLOT_CHUNK_SIZE,
+                    node.getPlotY() / PLOT_CHUNK_SIZE)) {
+                nodeIterator.remove();
+            }
+        }
+
+        Iterator<String> generatedIterator = generatedResourceChunks.iterator();
+        while (generatedIterator.hasNext()) {
+            int[] chunk = parseResourceChunkKey(generatedIterator.next());
+            if (chunk == null || !isFoundationChunk(chunk[0], chunk[1])) {
+                generatedIterator.remove();
+            }
+        }
+
+        for (int chunkX = FOUNDATION_MIN_CHUNK; chunkX <= FOUNDATION_MAX_CHUNK; chunkX++) {
+            for (int chunkY = FOUNDATION_MIN_CHUNK; chunkY <= FOUNDATION_MAX_CHUNK; chunkY++) {
+                generateResourceChunkV1Internal(chunkX, chunkY, false);
             }
         }
     }
@@ -1159,8 +1198,8 @@ public final class SettlementState implements Serializable {
     private int[] findResourcePlacementInStarterAreaInternal(
             long seed, long ignoredNodeId) {
         Random random = new Random(seed);
-        int minTile = STARTER_CHUNK_MIN * PLOT_CHUNK_SIZE;
-        int maxTileExclusive = (STARTER_CHUNK_MAX + 1) * PLOT_CHUNK_SIZE;
+        int minTile = LEGACY_STARTER_CHUNK_MIN * PLOT_CHUNK_SIZE;
+        int maxTileExclusive = (LEGACY_STARTER_CHUNK_MAX + 1) * PLOT_CHUNK_SIZE;
         for (int attempt = 0; attempt < 96; attempt++) {
             int plotX = minTile + 1 + random.nextInt(maxTileExclusive - minTile - 2);
             int plotY = minTile + 1 + random.nextInt(maxTileExclusive - minTile - 2);
@@ -1271,6 +1310,29 @@ public final class SettlementState implements Serializable {
         return chunkX + ":" + chunkY;
     }
 
+    private static int[] parseResourceChunkKey(String key) {
+        if (key == null) {
+            return null;
+        }
+        String[] values = key.split(":");
+        if (values.length != 2) {
+            return null;
+        }
+        try {
+            int chunkX = Integer.parseInt(values[0]);
+            int chunkY = Integer.parseInt(values[1]);
+            return isValidChunk(chunkX, chunkY)
+                    ? new int[] { chunkX, chunkY } : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private static boolean isFoundationChunk(int chunkX, int chunkY) {
+        return chunkX >= FOUNDATION_MIN_CHUNK && chunkX <= FOUNDATION_MAX_CHUNK
+                && chunkY >= FOUNDATION_MIN_CHUNK && chunkY <= FOUNDATION_MAX_CHUNK;
+    }
+
     private static long mixResourceSeed(
             long seed, int chunkX, int chunkY, long salt) {
         long value = seed ^ salt;
@@ -1284,63 +1346,12 @@ public final class SettlementState implements Serializable {
         return value;
     }
 
-    private void initializeChunkOwnershipV1() {
+    private void initializeFoundationTerritoryV2() {
         unlockedChunks.clear();
-
-        for (int chunkX = STARTER_CHUNK_MIN; chunkX <= STARTER_CHUNK_MAX; chunkX++) {
-            for (int chunkY = STARTER_CHUNK_MIN; chunkY <= STARTER_CHUNK_MAX; chunkY++) {
+        for (int chunkX = FOUNDATION_MIN_CHUNK; chunkX <= FOUNDATION_MAX_CHUNK; chunkX++) {
+            for (int chunkY = FOUNDATION_MIN_CHUNK; chunkY <= FOUNDATION_MAX_CHUNK; chunkY++) {
                 addUnlockedChunkInternal(chunkX, chunkY);
             }
-        }
-
-        for (SettlementPlacedPiece piece : pieces) {
-            if (piece != null) {
-                unlockChunkPathInternal(
-                        piece.getPlotX() / PLOT_CHUNK_SIZE,
-                        piece.getPlotY() / PLOT_CHUNK_SIZE);
-            }
-        }
-        if (workers != null) {
-            for (SettlementWorkerState worker : workers) {
-                if (worker != null) {
-                    unlockChunkPathInternal(
-                            worker.getHomePlotX() / PLOT_CHUNK_SIZE,
-                            worker.getHomePlotY() / PLOT_CHUNK_SIZE);
-                }
-            }
-        }
-        for (SettlementRallyPoint rally : rallyPoints.values()) {
-            if (rally != null) {
-                unlockChunkPathInternal(
-                        rally.getPlotX() / PLOT_CHUNK_SIZE,
-                        rally.getPlotY() / PLOT_CHUNK_SIZE);
-            }
-        }
-        for (SettlementResourceNodeState node : resourceNodes) {
-            if (node != null) {
-                unlockChunkPathInternal(
-                        node.getPlotX() / PLOT_CHUNK_SIZE,
-                        node.getPlotY() / PLOT_CHUNK_SIZE);
-            }
-        }
-        for (String savedTile : savedBuildTiles) {
-            int[] plot = parseSavedBuildTileInternal(savedTile);
-            if (plot != null) {
-                unlockChunkPathInternal(
-                        plot[0] / PLOT_CHUNK_SIZE,
-                        plot[1] / PLOT_CHUNK_SIZE);
-            }
-        }
-        for (SettlementConveyorRun run : conveyorRuns) {
-            if (run == null) {
-                continue;
-            }
-            int bendX = run.getBendPlotX();
-            int bendY = run.getBendPlotY();
-            unlockSegmentChunksInternal(
-                    run.getStartPlotX(), run.getStartPlotY(), bendX, bendY);
-            unlockSegmentChunksInternal(
-                    bendX, bendY, run.getEndPlotX(), run.getEndPlotY());
         }
     }
 
@@ -1352,6 +1363,14 @@ public final class SettlementState implements Serializable {
     public synchronized boolean isPlotTileUnlocked(int plotX, int plotY, int plane) {
         normalize();
         return isPlotTileUnlockedInternal(plotX, plotY, plane);
+    }
+
+    public synchronized void setFullPlotTesting(boolean enabled) {
+        fullPlotTesting = enabled;
+    }
+
+    public synchronized boolean isFullPlotTesting() {
+        return fullPlotTesting;
     }
 
     public synchronized boolean canUnlockAdjacentChunk(int chunkX, int chunkY) {
@@ -1398,9 +1417,9 @@ public final class SettlementState implements Serializable {
 
     private boolean isPlotTileUnlockedInternal(int plotX, int plotY, int plane) {
         return isValidPlotLocation(plotX, plotY, plane)
-                && isChunkUnlockedInternal(
+                && (fullPlotTesting || isChunkUnlockedInternal(
                         plotX / PLOT_CHUNK_SIZE,
-                        plotY / PLOT_CHUNK_SIZE);
+                        plotY / PLOT_CHUNK_SIZE));
     }
 
     private void addUnlockedChunkInternal(int chunkX, int chunkY) {
@@ -1413,8 +1432,8 @@ public final class SettlementState implements Serializable {
         if (!isValidChunk(targetChunkX, targetChunkY)) {
             return;
         }
-        int chunkX = STARTER_CHUNK_MAX;
-        int chunkY = STARTER_CHUNK_MAX;
+        int chunkX = LEGACY_STARTER_CHUNK_MAX;
+        int chunkY = LEGACY_STARTER_CHUNK_MAX;
         addUnlockedChunkInternal(chunkX, chunkY);
         while (chunkX != targetChunkX) {
             chunkX += targetChunkX > chunkX ? 1 : -1;

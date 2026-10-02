@@ -479,12 +479,14 @@ public final class ConstructionBuildCamera {
             enter();
             settlementAutoMode = active;
             if (settlementAutoMode) {
+                ConstructionTerritoryBoundary.onSettlementEnter();
                 Class192.method2901();
             }
             reportToServer("SETTLEMENT_SIGNAL enter-existing-rts");
             return;
         }
         settlementAutoMode = false;
+        ConstructionTerritoryBoundary.resetForSettlementBoundary();
         if (active) {
             exit();
         }
@@ -576,6 +578,7 @@ public final class ConstructionBuildCamera {
         ConstructionRadialSelection.resetForSessionBoundary();
         ConstructionPaletteOverlay.resetForSessionBoundary();
         ConstructionRtsControlOverlay.resetForSettlementBoundary();
+        ConstructionTerritoryBoundary.resetForSettlementBoundary();
     }
 
     public static String exit() {
@@ -590,6 +593,7 @@ public final class ConstructionBuildCamera {
 
         restoreRtsMinimapMarker();
         ConstructionRtsControlOverlay.resetForSettlementBoundary();
+        ConstructionTerritoryBoundary.resetForSettlementBoundary();
         active = false;
         ownsFreeCamera = false;
         lastTickCycle = Integer.MIN_VALUE;

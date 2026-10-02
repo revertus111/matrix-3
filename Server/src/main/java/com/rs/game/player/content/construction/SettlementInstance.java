@@ -48,7 +48,7 @@ public final class SettlementInstance {
     private static final int INSTANCE_CHUNKS =
             PLOT_CHUNKS + VISUAL_PADDING_CHUNKS * 2;
 
-    private static final int ENTRY_OFFSET = PLOT_TILES / 2;
+    private static final int ENTRY_OFFSET = SettlementState.FOUNDATION_CENTER_PLOT;
     // Reserved client bridge intercepted by ConveyorRunPreview before normal CSVar storage.
     private static final int CONVEYOR_SYNC_CS_VAR = 65534;
     private static final double CONVEYOR_GAME_TICK_SECONDS = 0.6;
@@ -123,6 +123,7 @@ public final class SettlementInstance {
     private SettlementInstance(Player player, SettlementState state, WorldTile returnTile) {
         this.player = player;
         this.state = state;
+        this.state.setFullPlotTesting(false);
         this.debug = new SettlementDebug();
         this.returnTile = returnTile;
         this.returnMapSize = player.getMapSize();
@@ -3981,44 +3982,35 @@ public final class SettlementInstance {
 
     public synchronized String getChunkOwnershipSummary() {
         if (!loaded || destroyed || boundChunks == null) {
-            return "Settlement chunk ownership is unavailable while loading.";
+            return "Settlement territory status is unavailable while loading.";
         }
         int plotX = toPlotX(player.getX());
         int plotY = toPlotY(player.getY());
-        int chunkX = plotX / 8;
-        int chunkY = plotY / 8;
+        int chunkX = plotX / SettlementState.PLOT_CHUNK_SIZE;
+        int chunkY = plotY / SettlementState.PLOT_CHUNK_SIZE;
         SettlementBiome biome = state.getBiomeAtPlot(plotX, plotY);
-        return "chunks=" + state.getUnlockedChunkCount() + "/64"
+        return "foundation=" + SettlementState.FOUNDATION_CHUNK_SPAN + "x"
+                + SettlementState.FOUNDATION_CHUNK_SPAN
+                + " chunks=" + state.getUnlockedChunkCount() + "/64"
+                + " | center=" + SettlementState.FOUNDATION_CENTER_PLOT + ","
+                + SettlementState.FOUNDATION_CENTER_PLOT
                 + " | current=" + chunkX + "," + chunkY
-                + " unlocked=" + state.isChunkUnlocked(chunkX, chunkY)
+                + " gameplayUnlocked=" + state.isChunkUnlocked(chunkX, chunkY)
+                + " accessible=" + state.isPlotTileUnlocked(plotX, plotY, player.getPlane())
+                + " | fullPlotTesting=" + state.isFullPlotTesting()
                 + " | biome=" + (biome == null ? "unknown" : biome.getDisplayName())
                 + " | generatedResourceChunks=" + state.getGeneratedResourceChunkCount();
     }
 
-    public synchronized String unlockDevelopmentChunk(int chunkX, int chunkY) {
+    public synchronized String setFullPlotTesting(boolean enabled) {
         if (!loaded || destroyed || boundChunks == null) {
-            return "Settlement chunk unlock is unavailable while loading.";
+            return "Full Plot Testing is unavailable while the settlement is loading.";
         }
-        if (chunkX < 0 || chunkX >= 8 || chunkY < 0 || chunkY >= 8) {
-            return "Chunk coordinates must be 0..7.";
-        }
-        if (state.isChunkUnlocked(chunkX, chunkY)) {
-            return "Settlement chunk " + chunkX + "," + chunkY + " is already unlocked.";
-        }
-        if (!state.canUnlockAdjacentChunk(chunkX, chunkY)) {
-            return "Settlement chunk " + chunkX + "," + chunkY
-                    + " is not adjacent to unlocked territory.";
-        }
-        if (!state.unlockAdjacentChunk(chunkX, chunkY)) {
-            return "Settlement chunk " + chunkX + "," + chunkY + " could not be unlocked.";
-        }
-
-        spawnStarterResourceNodes();
-        SettlementBiome biome = state.getBiomeAtPlot(
-                (chunkX * 8) + 4, (chunkY * 8) + 4);
-        return "Unlocked settlement chunk " + chunkX + "," + chunkY
-                + " | biome=" + (biome == null ? "unknown" : biome.getDisplayName())
-                + " | resources generated once.";
+        state.setFullPlotTesting(enabled);
+        return "Full Plot Testing=" + (enabled ? "ON" : "OFF")
+                + " | gameplay foundation remains centered "
+                + SettlementState.FOUNDATION_CHUNK_SPAN + "x"
+                + SettlementState.FOUNDATION_CHUNK_SPAN + " chunks.";
     }
 
     public int getSavedPieceCount() {

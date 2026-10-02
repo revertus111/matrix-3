@@ -3,6 +3,7 @@ package game.console;
 import game.ClientConsoleBridge;
 import game.ConstructionPaletteOverlay;
 import game.ConstructionRadialSelection;
+import game.ConstructionTerritoryBoundary;
 import game.ConveyorPayloadVisualProfiles;
 import game.ConveyorRunPreview;
 
@@ -59,6 +60,9 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
             new java.util.ArrayList<JCheckBox>();
     private final java.util.Map<String, JCheckBox> workerJobCheckBoxByKey =
             new java.util.HashMap<String, JCheckBox>();
+
+    private final JCheckBox fullPlotTesting =
+            new JCheckBox("Full Plot Testing (developer bypass)");
 
     private long physicalStorageClearAllArmedUntil;
 
@@ -182,6 +186,21 @@ public final class ConstructionRevampTestPanel extends JScrollPane {
         buttons.add(settlementStatus);
         buttons.add(palette);
         card.add(buttons);
+        card.add(Box.createVerticalStrut(8));
+
+        fullPlotTesting.setOpaque(false);
+        fullPlotTesting.setForeground(ConsoleTheme.TEXT);
+        fullPlotTesting.setFont(ConsoleTheme.BODY_FONT);
+        fullPlotTesting.setFocusable(false);
+        fullPlotTesting.setAlignmentX(LEFT_ALIGNMENT);
+        fullPlotTesting.addActionListener(e -> {
+            boolean enabled = fullPlotTesting.isSelected();
+            ConstructionTerritoryBoundary.setFullPlotTesting(enabled);
+            queue("settlementfullplottest " + (enabled ? "on" : "off"),
+                    "Full Plot Testing=" + (enabled ? "ON" : "OFF")
+                            + ". The visible frontier still marks the real 4x4 gameplay foundation.");
+        });
+        card.add(fullPlotTesting);
         return card;
     }
 

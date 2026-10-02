@@ -825,6 +825,7 @@ public final class ConstructionRadialSelection {
      *   RWS-1 and ConstructionGhostPreview.
      */
     static void render(Class523 scene, Class106 renderer) {
+        ConstructionTerritoryBoundary.render(scene, renderer);
         if (workerControlEnabled && ConstructionBuildCamera.isSettlementAutoMode()) {
             ensureInputListener();
         }
