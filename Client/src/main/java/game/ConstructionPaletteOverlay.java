@@ -84,6 +84,7 @@ public final class ConstructionPaletteOverlay {
     private static Timer paintTimer;
     private static boolean inputListenerInstalled;
     private static boolean rtsMiddleDragging;
+    private static volatile boolean rtsLeftMouseDown;
     private static int rtsMiddleLastX;
     private static int rtsMiddleLastY;
     private static JWindow paletteWindow;
@@ -99,6 +100,10 @@ public final class ConstructionPaletteOverlay {
 
     public static void installRtsInputListener() {
         ensureInputListener();
+    }
+
+    static boolean isRtsLeftMouseDown() {
+        return rtsLeftMouseDown;
     }
 
     public static void show() {
@@ -120,6 +125,7 @@ public final class ConstructionPaletteOverlay {
      */
     public static void resetForSessionBoundary() {
         rtsMiddleDragging = false;
+        rtsLeftMouseDown = false;
         rtsMiddleLastX = 0;
         rtsMiddleLastY = 0;
         clearBuildsConfirmUntil = 0L;
@@ -178,7 +184,7 @@ public final class ConstructionPaletteOverlay {
                         return;
                     }
                     if (event instanceof MouseEvent && isLiveRtsCamera()) {
-                        handleRtsMiddleMouse((MouseEvent) event);
+                        handleRtsMouse((MouseEvent) event);
                         return;
                     }
                     if ((visible || ConstructionBuildCamera.isSettlementAutoMode()) && event instanceof KeyEvent) {
@@ -415,12 +421,19 @@ public final class ConstructionPaletteOverlay {
         return ConstructionBuildCamera.isRequested() && ConstructionBuildCamera.isRtsMode();
     }
 
-    private static void handleRtsMiddleMouse(MouseEvent event) {
+    private static void handleRtsMouse(MouseEvent event) {
         Canvas canvas = Class584.aCanvas7745;
         if (canvas == null || event.getSource() != canvas) {
             return;
         }
         int id = event.getID();
+
+        if (id == MouseEvent.MOUSE_PRESSED && event.getButton() == MouseEvent.BUTTON1) {
+            rtsLeftMouseDown = true;
+        } else if (id == MouseEvent.MOUSE_RELEASED && event.getButton() == MouseEvent.BUTTON1) {
+            rtsLeftMouseDown = false;
+        }
+
         if (id == MouseEvent.MOUSE_PRESSED && event.getButton() == MouseEvent.BUTTON2) {
             rtsMiddleDragging = true;
             rtsMiddleLastX = event.getX();
@@ -447,6 +460,7 @@ public final class ConstructionPaletteOverlay {
         }
         if (id == MouseEvent.MOUSE_EXITED) {
             rtsMiddleDragging = false;
+            rtsLeftMouseDown = false;
         }
     }
 
@@ -472,6 +486,10 @@ public final class ConstructionPaletteOverlay {
     }
 
     private static void handleKey(KeyEvent event) {
+        if (ConstructionRtsControlOverlay.handleKey(event)) {
+            repaintSurface();
+            return;
+        }
         if (event.getID() == KeyEvent.KEY_PRESSED) {
             if (event.getKeyCode() == KeyEvent.VK_Z && event.isControlDown()
                     && ConstructionBuildCamera.isSettlementAutoMode()) {
