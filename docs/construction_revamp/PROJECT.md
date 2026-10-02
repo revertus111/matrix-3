@@ -2650,7 +2650,7 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ## Resource World Foundation V1A/V1B — finite persistent nodes — 2026-10-01
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST under SAP AAA.
-- SettlementState schema v18 now owns persistent finite resource nodes; current starter definitions seed one 10-unit migration node each.
+- SettlementState schema v19 now owns persistent finite resource nodes; v19 repairs the v18 migration bug that could drop the first starter tree because a newly deserialized node-id counter began at zero. Current starter definitions seed one 10-unit migration node each.
 - Player gathering repeats until depletion/storage/interruption. Workers consume the same node before creating carried resources and skip exhausted sources.
 - Depleted records persist at zero and their runtime object/NPC projection is removed immediately.
 - Procedural placement, biomes, chunk locks, planting/saplings and water/fishing remain deferred.

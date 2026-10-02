@@ -1998,3 +1998,11 @@ Resource World Foundation V1A/V1B — finite persistent nodes (2026-10-01)
 [ ] Player + worker concurrency on a nearly depleted node must never exceed remaining amount or duplicate resource.
 [ ] Full matching storage must stop gathering without consuming an extra node unit.
 [ ] Regression: starter shelter, needs, storage, processing and conveyors still operate normally.
+
+
+Resource World V1A/V1B — schema-v19 migration repair (2026-10-01)
+[x] verified-static: v19 migration initializes the resource-node id counter above all persisted node ids before adding missing starter definitions.
+[x] verified-static: a missing v18 tree record is restored once with a positive node id.
+[x] verified-static: a legitimately depleted tree record at remaining=0 counts as present and is not recreated.
+[ ] Pull/build/restart and enter the existing settlement save that lost its tree under schema v18; tree must be restored.
+[ ] Deplete the restored tree, exit/re-enter and relog/re-enter; it must remain absent after legitimate depletion.

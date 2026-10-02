@@ -2193,3 +2193,9 @@
 - ConstructionRadialSelection now exposes a narrow cancelTransientDragForMinimapFocus() hook that clears only the in-progress drag, drag-release latch and ground-double-click state while preserving committed worker/self selection.
 - ConstructionBuildCamera invokes that cleanup only after Matrix3 has semantically identified an RTS minimap-focus action, then performs the existing focusRtsAtLocalTile(...). No minimap screen rectangle or hardcoded UI coordinates added.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+
+2026-10-01 - Resource World V1A/V1B schema-v19 tree migration repair
+- Fixed the v18 save migration bug where Java deserialization left nextResourceNodeId at 0, causing the first seeded node (wood tree) to receive invalid id 0 and be removed by normalize().
+- Schema v19 now establishes a positive node-id counter before migration and restores only missing starter-definition records once.
+- Legitimately depleted nodes are not respawned because their persisted zero-remaining record still counts as present.

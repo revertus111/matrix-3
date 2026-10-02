@@ -22,7 +22,7 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 18;
+    private static final int CURRENT_SCHEMA_VERSION = 19;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -172,14 +172,8 @@ public final class SettlementState implements Serializable {
         if (resourceNodes == null) {
             resourceNodes = new ArrayList<SettlementResourceNodeState>();
         }
-        if (resourceNodes.isEmpty()) {
-            for (SettlementResourceNode definition : SettlementResourceNode.values()) {
-                resourceNodes.add(new SettlementResourceNodeState(
-                        nextResourceNodeId++, definition.getKey(),
-                        definition.getPlotX(), definition.getPlotY(), PLOT_PLANE,
-                        definition.getDefaultStartingAmount(),
-                        definition.getDefaultStartingAmount()));
-            }
+        if (schemaVersion < 19) {
+            repairLegacyResourceNodeMigration();
         }
         long highestResourceNodeId = 0L;
         Set<Long> resourceNodeIds = new HashSet<Long>();
@@ -906,6 +900,55 @@ public final class SettlementState implements Serializable {
     public synchronized List<SettlementMachineBuffer> snapshotMachineBuffers() {
         normalize();
         return new ArrayList<SettlementMachineBuffer>(machineBuffers.values());
+    }
+
+    /**
+     * Schema-v19 repair for the first finite-resource migration.
+     *
+     * Java deserialization gives newly added primitive fields their zero value.
+     * The original v18 migration therefore assigned node id 0 to the first
+     * starter definition (the tree), and normalize() correctly removed it as
+     * invalid. Repair old/v18 saves once by establishing a positive id counter
+     * and restoring only starter definitions that have no persisted record.
+     *
+     * A depleted node still has a persisted record with remainingAmount=0, so
+     * this repair never respawns a legitimately depleted source.
+     */
+    private void repairLegacyResourceNodeMigration() {
+        long highestResourceNodeId = 0L;
+        for (SettlementResourceNodeState node : resourceNodes) {
+            if (node != null && node.getNodeId() > highestResourceNodeId) {
+                highestResourceNodeId = node.getNodeId();
+            }
+        }
+        if (nextResourceNodeId <= highestResourceNodeId) {
+            nextResourceNodeId = highestResourceNodeId + 1L;
+        }
+        if (nextResourceNodeId <= 0L) {
+            nextResourceNodeId = 1L;
+        }
+
+        for (SettlementResourceNode definition : SettlementResourceNode.values()) {
+            boolean present = false;
+            for (SettlementResourceNodeState node : resourceNodes) {
+                if (node != null
+                        && definition.getKey().equals(node.getDefinitionKey())) {
+                    present = true;
+                    break;
+                }
+            }
+            if (present) {
+                continue;
+            }
+            resourceNodes.add(new SettlementResourceNodeState(
+                    nextResourceNodeId++,
+                    definition.getKey(),
+                    definition.getPlotX(),
+                    definition.getPlotY(),
+                    PLOT_PLANE,
+                    definition.getDefaultStartingAmount(),
+                    definition.getDefaultStartingAmount()));
+        }
     }
 
     public synchronized List<SettlementResourceNodeState> snapshotResourceNodes() {
