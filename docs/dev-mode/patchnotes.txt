@@ -277,3 +277,12 @@
 - Follow-up: imported parts currently show reduced texture/detail fidelity versus the donor/live object.
 - Status: CORE RUNTIME VERIFIED / TEXTURE FIDELITY FOLLOW-UP.
 
+2026-10-02 - Live Model Editor reusable-part texture / UV fidelity
+- Fixed compact duplicate/imported-part extraction stripping texture detail.
+- verified-static root cause: componentOnlyRaw forced faceTextures and faceTextureIndexes to -1 and created zero texture triangles.
+- Compact extraction now preserves face texture IDs, remaps referenced classic texture triangles, and copies their mapping parameters.
+- Preserves newer Class159 per-vertex UV tables and per-face UV offsets.
+- Type-0 texture-map helper vertices are carried into the compact raw and transformed with the edited component without altering the component's established scale/rotation pivot.
+- Native source parts, deterministic Part Library v3 visual recipes, project v8 persistence and cache/server/world ownership are unchanged.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
