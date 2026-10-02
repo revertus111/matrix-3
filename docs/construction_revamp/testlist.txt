@@ -2022,3 +2022,25 @@ Resource World Foundation V1C — seeded starter generation + flowing biome fiel
 [ ] Confirm resources do not overlap current buildings, saved build tiles, worker homes/arrival tiles or conveyor route tiles.
 [ ] Walk into outer chunks before the lock patch: terrain may be visible/accessible temporarily, but no procedural resource nodes should be generated there yet.
 [ ] Spot-check biome metadata through a future/debug seam only if needed; no terrain/color/water visual change is expected in V1C.
+
+
+Resource World Foundation V1D — persistent chunk ownership (2026-10-01)
+[x] verified-static: schema v21 persists versioned unlocked-chunk ownership.
+[x] verified-static: new ownership starts at central chunks 3,3 / 4,3 / 3,4 / 4,4.
+[x] verified-static: existing-save migration connects central territory to persisted pieces, worker homes, rallies, saved tiles, resource records and conveyor routes rather than stranding old content.
+[x] verified-static: player checkWalkStep, build place/move/duplicate, rally creation, worker destination/manual RTS movement and conveyor routes consume the same chunk authority.
+[x] verified-static: adjacent unlock requires N/E/S/W adjacency, persists the chunk and invokes deterministic resource generation once.
+[x] verified-static: locked terrain remains visually rendered; resource projection is filtered by ownership rather than changing the dynamic map/render foundation.
+[ ] Pull latest main; Eclipse clean/build Server with Java 8 and restart server/client once for the combined V1C+V1D gate.
+[ ] Enter the existing settlement and run ::settlementchunkstatus. Confirm current chunk is unlocked and note unlocked count.
+[ ] Walk toward a visible locked neighboring chunk. The player must stop at the chunk boundary while terrain remains visible beyond it.
+[ ] Try placing/moving/duplicating a build piece into locked territory. Server ownership must reject it and no persistent piece may appear there.
+[ ] Select worker(s) and issue an RTS move into a locked chunk. Server must reject the destination; workers stay inside owned territory.
+[ ] Try a ConveyorRun whose route crosses a locked chunk. Creation must fail even if an endpoint is inside owned territory.
+[ ] Pick an orthogonally adjacent locked chunk and run ::settlementunlockchunk <x> <y>. It must unlock successfully; a diagonal-only/non-adjacent chunk must be rejected.
+[ ] After unlock, walk into the new chunk and confirm its deterministic biome-weighted resources appear without restarting the settlement.
+[ ] Run the same unlock command again. It must report already unlocked and must not create duplicate resources.
+[ ] Exit/re-enter and relog/re-enter. Ownership and generated resource positions must remain unchanged.
+[ ] Restart server and re-enter. Ownership/seed/generated resources must remain unchanged.
+[ ] Existing-save regression: all previously placed structures, worker homes and conveyor lines remain in unlocked reachable territory after schema-v21 migration.
+[ ] After focused acceptance, run the relevant Construction/persistence/object portions of docs/rs3/SMOKE_TEST.md.

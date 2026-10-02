@@ -2216,3 +2216,11 @@
 - Replaced fixed starter coordinates with deterministic seeded placement inside the central 2x2 chunk area while preserving existing node remaining/depleted amounts.
 - Added smooth continuous SettlementBiome V1 metadata and biome-weighted extra starter resources with spacing/build/worker/conveyor collision avoidance.
 - Outer chunks remain intentionally ungenerated until the chunk lock/unlock foundation owns expansion.
+
+
+2026-10-01 - Resource World V1D persistent chunk ownership
+- SettlementState schema v21 adds persistent unlocked chunks; new saves start with central 2x2 ownership.
+- Existing-save migration preserves prior work by unlocking connected corridors to persisted pieces/workers/rallies/saved tiles/resources/conveyors.
+- Player movement, placement/move/duplicate, rallies, worker destinations/RTS moves and conveyor routes now reject locked chunks.
+- Adjacent development unlocks persist ownership and generate that chunk's seeded biome-weighted resources exactly once.
+- Added ::settlementchunkstatus and ::settlementunlockchunk <x> <y> development commands; final gameplay unlock cost remains deferred.

@@ -2650,7 +2650,7 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ## Resource World Foundation V1A/V1B — finite persistent nodes — 2026-10-01
 - Status: PARTIALLY RUNTIME VERIFIED under SAP AAA. The v19 repair restored the missing tree on the affected existing save, and the player-facing continuous gather -> depletion -> runtime disappearance loop is runtime verified. Relog persistence, worker depletion/retargeting and concurrency remain pending.
-- SettlementState schema v20 now owns persistent finite resource nodes plus a persistent resource-world seed, generator version, biome version and generated-chunk set. v19 remains the repair for the earlier missing-tree migration bug.
+- SettlementState schema v21 now owns persistent finite resource nodes, the persistent seeded resource/biome world, and persistent chunk ownership. v19 remains the repair for the earlier missing-tree migration bug.
 - Player gathering repeats until depletion/storage/interruption. Workers consume the same node before creating carried resources and skip exhausted sources.
 - Depleted records persist at zero and their runtime object/NPC projection is removed immediately.
 - Procedural placement, biomes, chunk locks, planting/saplings and water/fishing remain deferred.
@@ -2669,3 +2669,17 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Biome metadata currently affects resource weighting only; it does not alter terrain, water or map visuals yet.
 - Public state seams now exist for biome lookup and ensureResourceChunkGenerated(chunkX, chunkY), which the next chunk-unlock patch can call without redesigning generation ownership.
 - Resume Here: runtime-check starter resource randomization/stability and spacing in one existing settlement. Then implement locked/unlocked chunks using the existing generated-chunk seam; generate outer-chunk resources only when territory unlocks.
+
+
+## Resource World Foundation V1D — persistent locked/unlocked chunks — 2026-10-01
+
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the approved Resource World SAP AAA bundle.
+- SettlementState schema v21 adds persistent chunk ownership with a versioned migration.
+- New settlements begin with only the central 2x2 chunks (3,3 / 4,3 / 3,4 / 4,4) unlocked.
+- Existing settlements preserve work: migration unlocks the central area plus connected Manhattan corridors to persistent pieces, worker homes, rally points, saved build tiles, resource records and every existing conveyor route. Existing content is not stranded behind the new lock system.
+- Player walking now rejects locked chunks at SettlementControler.checkWalkStep.
+- Server build placement, move/duplicate, saved build tiles, rally creation, worker destination reservation/manual RTS movement and ConveyorRun routes all reject locked territory.
+- Persistent resource projection skips locked chunks. unlockAdjacentChunk(...) requires orthogonal adjacency, persists ownership and invokes the existing deterministic resource generator exactly once for the newly unlocked chunk.
+- Final unlock economy/cost is deliberately not hardcoded yet. Development commands ::settlementchunkstatus and ::settlementunlockchunk <chunkX> <chunkY> expose the real ownership API for runtime testing.
+- Terrain remains visually present in locked chunks; V1D locks gameplay ownership/content rather than trying to unload dynamic map terrain, preserving the proven RTS/minimap/render scene.
+- Resume Here: consolidate V1C+V1D runtime acceptance in one restart: verify seeded starter resources are stable, locked-border player movement is blocked, build/RTS/conveyor destinations reject locked territory, then unlock one adjacent chunk and confirm its resources appear once and persist. After that return to the actual Construction revamp foundation; tree planting/fishing/biome visuals remain later layers.
