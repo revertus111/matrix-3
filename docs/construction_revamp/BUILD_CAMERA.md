@@ -273,4 +273,4 @@ Still pending explicit edge verification:
 - `ConstructionBuildCamera.handleMinimapWalkAction(...)` now calls `ConstructionRadialSelection.cancelTransientDragForMinimapFocus()` only after the action is semantically confirmed as RTS minimap focus.
 - The cleanup cancels only transient drag/release/double-click state. Existing committed worker/self selection remains untouched.
 - No minimap widget bounds, screen-coordinate hit tests, camera ownership, yaw math or world-selection geometry changed.
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST**.
+- **RUNTIME VERIFIED 2026-10-01:** minimap camera focus no longer leaves the red transient radial-selection shape armed.
