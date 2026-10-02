@@ -265,3 +265,12 @@ Still pending explicit edge verification:
 - `Class464` raster, `Class107` compass, `Class12` overlay dots/icons and the client minimap click transform retain their already-established render/inverse sign relationships.
 - No camera orbit input, pivot math, detached owner, projection, render focus or visibility radius changed.
 - **RUNTIME VERIFIED 2026-10-01:** Q/E and horizontal MMB now rotate the minimap/compass in the intended direction; NPC/player/map-icon overlays remain aligned and rotated minimap click-to-focus still lands correctly.
+
+## Minimap focus vs radial selection input ownership — 2026-10-01
+
+- **verified-static:** `ConstructionRadialSelection` uses a canvas-level AWT mouse listener, so the initial left press can arm a transient world drag before Matrix3 later classifies the resulting action.
+- **verified-static:** `Class319.method4094(...)` dispatches action 23 / movement type 1 to `ConstructionBuildCamera.handleMinimapWalkAction(...)` before `ConstructionRadialSelection.handleMenuAction(...)`; a consumed minimap action therefore bypassed radial cleanup.
+- `ConstructionBuildCamera.handleMinimapWalkAction(...)` now calls `ConstructionRadialSelection.cancelTransientDragForMinimapFocus()` only after the action is semantically confirmed as RTS minimap focus.
+- The cleanup cancels only transient drag/release/double-click state. Existing committed worker/self selection remains untouched.
+- No minimap widget bounds, screen-coordinate hit tests, camera ownership, yaw math or world-selection geometry changed.
+- Status: **IMPLEMENTED / NEEDS RUNTIME TEST**.
