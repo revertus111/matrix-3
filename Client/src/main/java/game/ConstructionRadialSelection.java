@@ -1921,6 +1921,23 @@ public final class ConstructionRadialSelection {
         syncCommittedSelectionToServer();
     }
 
+    /**
+     * VERIFIED-STATIC: Matrix3 resolves minimap-originated action 23 after the
+     * canvas-level mouse press has already reached the RTS drag listener. If that
+     * press armed a transient radial drag, clear only the in-progress gesture
+     * before the minimap action moves the RTS camera. Any committed worker/self
+     * selection remains untouched.
+     */
+    static void cancelTransientDragForMinimapFocus() {
+        if (dragging) {
+            cancelActiveDrag();
+        }
+        dragThresholdPassed = false;
+        selectionDragJustCommitted = false;
+        resetGroundMoveClick();
+        lastRenderedCycle = Integer.MIN_VALUE;
+    }
+
     private static void cancelActiveDrag() {
         dragging = false;
         originWorldX = -1;
