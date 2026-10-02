@@ -2255,3 +2255,6 @@
 - Added transient Full Plot Testing server bypass, reset OFF on every settlement entry, plus Con Revamp Settlement checkbox. Removed the active settlementunlockchunk command path.
 - Added client ConstructionTerritoryBoundary using GFX 4171 frontier markers around the 32x32 gameplay square; bypass mode changes frontier tint but leaves the real boundary visible.
 - Frontier rendering reuses one isolated/tinted model per frame across the perimeter to limit old-client render overhead.
+
+2026-10-02 - RTS minimap viewport footprint runtime accepted
+- User confirmed the corrected footprint direction works: the footprint stays screen-aligned while the minimap rotates beneath it.
