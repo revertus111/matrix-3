@@ -100,7 +100,11 @@ final class LiveModelEditorParts {
         revision++;
         geometryRevision++;
         if (loaded == null) return 0;
-        for (int i = 0; i < loaded.components.length; i++) originals.add(new PartState(i));
+        for (int i = 0; i < loaded.components.length; i++) {
+            PartState state = new PartState(i);
+            pinSourceRecipe(state, loaded);
+            originals.add(state);
+        }
         return loaded.components.length;
     }
 
@@ -1168,17 +1172,50 @@ final class LiveModelEditorParts {
         if (group < 0) return null;
 
         int[] modelIds = definition.anIntArrayArray5611[group].clone();
-        byte[][] bytes = new byte[modelIds.length][];
-        for (int i = 0; i < modelIds.length; i++) {
-            bytes[i] = definition.aClass518_5608.method6136(modelIds[i], 49248435);
-            if (bytes[i] == null) return null;
-        }
-        Source candidate = new Source(objectId, objectType, modelIds, bytes);
+        byte[][] bytes = loadModelBytes(definition, modelIds);
+        if (bytes == null) return null;
+        Source candidate = new Source(objectId, objectType, modelIds, bytes,
+                cloneShorts(definition.aShortArray5613),
+                effectiveRecolorTargets(definition),
+                cloneShorts(definition.aShortArray5618),
+                cloneShorts(definition.aShortArray5617));
         Class159 raw = candidate.decode();
         if (raw == null || raw.anInt1791 <= 0 || raw.anInt1778 <= 0) return null;
         candidate.components = detectComponents(raw);
         populateComponentBounds(raw, candidate.components);
         return candidate;
+    }
+
+    private static byte[][] loadModelBytes(ObjectDefinitions definition, int[] modelIds) {
+        if (definition == null || definition.aClass518_5608 == null
+                || modelIds == null || modelIds.length == 0) return null;
+        byte[][] bytes = new byte[modelIds.length][];
+        for (int i = 0; i < modelIds.length; i++) {
+            bytes[i] = definition.aClass518_5608.method6136(modelIds[i], 49248435);
+            if (bytes[i] == null) return null;
+        }
+        return bytes;
+    }
+
+    private static short[] effectiveRecolorTargets(ObjectDefinitions definition) {
+        if (definition == null || definition.aShortArray5613 == null) return null;
+        short[] targets = new short[definition.aShortArray5613.length];
+        for (int i = 0; i < targets.length; i++) {
+            if (definition.aByteArray5615 != null && i < definition.aByteArray5615.length) {
+                targets[i] = ObjectDefinitions.aShortArray5606[
+                        definition.aByteArray5615[i] & 0xff];
+            } else if (definition.aShortArray5621 != null
+                    && i < definition.aShortArray5621.length) {
+                targets[i] = definition.aShortArray5621[i];
+            } else {
+                targets[i] = definition.aShortArray5613[i];
+            }
+        }
+        return targets;
+    }
+
+    private static short[] cloneShorts(short[] values) {
+        return values == null ? null : values.clone();
     }
 
     private static int findModelGroup(ObjectDefinitions definition, int objectType) {
@@ -1578,6 +1615,16 @@ final class LiveModelEditorParts {
 
     private Source sourceFor(PartState state) {
         if (source == null || state == null) return null;
+        boolean pinned = state.sourceModelIds != null && state.sourceModelIds.length > 0;
+        if (pinned) {
+            if (sameRecipe(state, source)) return source;
+            String key = sourceRecipeKey(state);
+            Source owner = auxiliarySources.get(key);
+            if (owner != null) return owner;
+            owner = loadPinnedSource(state);
+            if (owner != null) auxiliarySources.put(key, owner);
+            return owner;
+        }
         if (state.sourceObjectId < 0
                 || (state.sourceObjectId == source.objectId
                 && state.sourceObjectType == source.objectType)) {
@@ -1589,6 +1636,66 @@ final class LiveModelEditorParts {
         owner = resolveSource(state.sourceObjectId, state.sourceObjectType);
         if (owner != null) auxiliarySources.put(key, owner);
         return owner;
+    }
+
+    private Source loadPinnedSource(PartState state) {
+        if (state == null || state.sourceModelIds == null
+                || state.sourceModelIds.length == 0) return null;
+        Class613 region = client.aClass613_8605;
+        if (region == null) return null;
+        Class639_Sub16 definitions = region.method7288(0);
+        if (definitions == null) return null;
+        int lookupId = state.sourceObjectId >= 0 ? state.sourceObjectId : source.objectId;
+        try {
+            ObjectDefinitions definition = (ObjectDefinitions) definitions.getDefinition(
+                    lookupId, -1356282071);
+            byte[][] bytes = loadModelBytes(definition, state.sourceModelIds);
+            if (bytes == null) return null;
+            Source candidate = new Source(lookupId, state.sourceObjectType,
+                    state.sourceModelIds.clone(), bytes,
+                    cloneShorts(state.sourceRecolorFrom),
+                    cloneShorts(state.sourceRecolorTo),
+                    cloneShorts(state.sourceRetextureFrom),
+                    cloneShorts(state.sourceRetextureTo));
+            Class159 raw = candidate.decode();
+            if (raw == null || raw.anInt1791 <= 0 || raw.anInt1778 <= 0) return null;
+            candidate.components = detectComponents(raw);
+            populateComponentBounds(raw, candidate.components);
+            return candidate;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private static void pinSourceRecipe(PartState state, Source owner) {
+        if (state == null || owner == null) return;
+        state.sourceObjectId = owner.objectId;
+        state.sourceObjectType = owner.objectType;
+        state.sourceModelIds = owner.modelIds.clone();
+        state.sourceRecolorFrom = cloneShorts(owner.recolorFrom);
+        state.sourceRecolorTo = cloneShorts(owner.recolorTo);
+        state.sourceRetextureFrom = cloneShorts(owner.retextureFrom);
+        state.sourceRetextureTo = cloneShorts(owner.retextureTo);
+    }
+
+    private static boolean sameRecipe(PartState state, Source owner) {
+        return state != null && owner != null
+                && state.sourceObjectId == owner.objectId
+                && state.sourceObjectType == owner.objectType
+                && Arrays.equals(state.sourceModelIds, owner.modelIds)
+                && Arrays.equals(state.sourceRecolorFrom, owner.recolorFrom)
+                && Arrays.equals(state.sourceRecolorTo, owner.recolorTo)
+                && Arrays.equals(state.sourceRetextureFrom, owner.retextureFrom)
+                && Arrays.equals(state.sourceRetextureTo, owner.retextureTo);
+    }
+
+    private static String sourceRecipeKey(PartState state) {
+        return state.sourceObjectId + ":" + state.sourceObjectType
+                + ":" + Arrays.toString(state.sourceModelIds)
+                + ":" + Arrays.toString(state.sourceRecolorFrom)
+                + ">" + Arrays.toString(state.sourceRecolorTo)
+                + ":" + Arrays.toString(state.sourceRetextureFrom)
+                + ">" + Arrays.toString(state.sourceRetextureTo);
     }
 
     private Component componentFor(PartState state) {
@@ -2128,6 +2235,9 @@ final class LiveModelEditorParts {
         final int sourcePart;
         int sourceObjectId = -1;
         int sourceObjectType = 10;
+        int[] sourceModelIds = new int[0];
+        short[] sourceRecolorFrom, sourceRecolorTo;
+        short[] sourceRetextureFrom, sourceRetextureTo;
         int scaleX = 100, scaleY = 100, scaleZ = 100;
         int moveX, moveY, moveZ, yaw;
         int groupId;
@@ -2142,6 +2252,11 @@ final class LiveModelEditorParts {
             PartState copy = new PartState(sourcePart);
             copy.sourceObjectId = sourceObjectId;
             copy.sourceObjectType = sourceObjectType;
+            copy.sourceModelIds = sourceModelIds == null ? new int[0] : sourceModelIds.clone();
+            copy.sourceRecolorFrom = cloneShorts(sourceRecolorFrom);
+            copy.sourceRecolorTo = cloneShorts(sourceRecolorTo);
+            copy.sourceRetextureFrom = cloneShorts(sourceRetextureFrom);
+            copy.sourceRetextureTo = cloneShorts(sourceRetextureTo);
             copy.scaleX = scaleX; copy.scaleY = scaleY; copy.scaleZ = scaleZ;
             copy.moveX = moveX; copy.moveY = moveY; copy.moveZ = moveZ; copy.yaw = yaw;
             copy.groupId = groupId;
@@ -2174,13 +2289,21 @@ final class LiveModelEditorParts {
         final int objectType;
         final int[] modelIds;
         final byte[][] bytes;
+        final short[] recolorFrom, recolorTo;
+        final short[] retextureFrom, retextureTo;
         Component[] components = new Component[0];
 
-        Source(int objectId, int objectType, int[] modelIds, byte[][] bytes) {
+        Source(int objectId, int objectType, int[] modelIds, byte[][] bytes,
+                short[] recolorFrom, short[] recolorTo,
+                short[] retextureFrom, short[] retextureTo) {
             this.objectId = objectId;
             this.objectType = objectType;
             this.modelIds = modelIds;
             this.bytes = bytes;
+            this.recolorFrom = recolorFrom;
+            this.recolorTo = recolorTo;
+            this.retextureFrom = retextureFrom;
+            this.retextureTo = retextureTo;
         }
 
         Class159 decode() {
@@ -2189,7 +2312,37 @@ final class LiveModelEditorParts {
                 raws[i] = new Class159(bytes[i]);
                 if (raws[i].anInt1773 < 13) raws[i].method2567(2);
             }
-            return raws.length == 1 ? raws[0] : new Class159(raws, raws.length);
+            Class159 raw = raws.length == 1 ? raws[0] : new Class159(raws, raws.length);
+            applyVisualRecipe(raw, recolorFrom, recolorTo, retextureFrom, retextureTo);
+            return raw;
+        }
+
+        private static void applyVisualRecipe(Class159 raw,
+                short[] recolorFrom, short[] recolorTo,
+                short[] retextureFrom, short[] retextureTo) {
+            if (raw == null) return;
+            if (raw.faceColours != null && recolorFrom != null && recolorTo != null) {
+                int count = Math.min(recolorFrom.length, recolorTo.length);
+                for (int face = 0; face < raw.faceColours.length; face++) {
+                    for (int i = 0; i < count; i++) {
+                        if (raw.faceColours[face] == recolorFrom[i]) {
+                            raw.faceColours[face] = recolorTo[i];
+                            break;
+                        }
+                    }
+                }
+            }
+            if (raw.faceTextures != null && retextureFrom != null && retextureTo != null) {
+                int count = Math.min(retextureFrom.length, retextureTo.length);
+                for (int face = 0; face < raw.faceTextures.length; face++) {
+                    for (int i = 0; i < count; i++) {
+                        if (raw.faceTextures[face] == retextureFrom[i]) {
+                            raw.faceTextures[face] = retextureTo[i];
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
 }
