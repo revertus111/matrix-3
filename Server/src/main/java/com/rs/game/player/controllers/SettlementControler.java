@@ -43,7 +43,7 @@ public final class SettlementControler extends Controller {
          * detached RTS/editor cameras. Ordinary player movement remains owned
          * by the persistent 64x64 settlement plot.
          */
-        return instance.containsWorldTile(
+        return instance.isWorldTileUnlocked(
                 new WorldTile(nextX, nextY, player.getPlane()));
     }
 

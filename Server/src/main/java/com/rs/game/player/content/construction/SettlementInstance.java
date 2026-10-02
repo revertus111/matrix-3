@@ -299,6 +299,9 @@ public final class SettlementInstance {
         if (!containsWorldTile(worldTile)) {
             return "That tile is outside the active settlement plot.";
         }
+        if (!isWorldTileUnlocked(worldTile)) {
+            return "That settlement chunk is locked.";
+        }
 
         SettlementBuildPiece definition = SettlementBuildPiece.forObject(objectId, objectType);
         if (definition == null) {
@@ -353,6 +356,9 @@ public final class SettlementInstance {
         }
         if (start.getX() == end.getX() && start.getY() == end.getY()) {
             return "Conveyor Point A and Point B must be different tiles after endpoint snapping.";
+        }
+        if (!isWorldTileUnlocked(start) || !isWorldTileUnlocked(end)) {
+            return "Conveyor endpoints must be inside unlocked settlement chunks.";
         }
 
         int startPlotX = toPlotX(start.getX());
@@ -2203,7 +2209,7 @@ public final class SettlementInstance {
 
     private boolean isWorkerDestinationTileValid(
             long workerId, WorldTile tile, boolean checkCurrentOccupancy) {
-        if (tile == null || !containsWorldTile(tile)
+        if (tile == null || !isWorldTileUnlocked(tile)
                 || !World.isFloorFree(tile.getPlane(), tile.getX(), tile.getY(), 1)) {
             return false;
         }
@@ -2267,6 +2273,9 @@ public final class SettlementInstance {
         int plotY = toPlotY(destination.getY());
         if (!SettlementState.isValidPlotLocation(plotX, plotY, destination.getPlane())) {
             return "RTS move target is outside the active settlement plot.";
+        }
+        if (!state.isPlotTileUnlocked(plotX, plotY, destination.getPlane())) {
+            return "RTS move target is inside a locked settlement chunk.";
         }
 
         List<SettlementWorkerState> selected = snapshotRuntimeWorkerSelection();
@@ -3702,6 +3711,10 @@ public final class SettlementInstance {
         if (boundChunks == null || destroyed) return;
         removeStarterResourceNodes();
         for (SettlementResourceNodeState node : state.snapshotActiveResourceNodes()) {
+            if (!state.isPlotTileUnlocked(
+                    node.getPlotX(), node.getPlotY(), node.getPlane())) {
+                continue;
+            }
             WorldTile tile = new WorldTile(toWorldX(node.getPlotX()), toWorldY(node.getPlotY()), node.getPlane());
             if (node.getSourceKind() == SettlementResourceNode.SourceKind.OBJECT) {
                 WorldObject object = new WorldObject(node.getRuntimeId(), node.getObjectType(), 0,
@@ -3954,6 +3967,58 @@ public final class SettlementInstance {
         int plotX = toPlotX(tile.getX());
         int plotY = toPlotY(tile.getY());
         return plotX >= 0 && plotX < PLOT_TILES && plotY >= 0 && plotY < PLOT_TILES;
+    }
+
+    public boolean isWorldTileUnlocked(WorldTile tile) {
+        if (!containsWorldTile(tile)) {
+            return false;
+        }
+        return state.isPlotTileUnlocked(
+                toPlotX(tile.getX()),
+                toPlotY(tile.getY()),
+                tile.getPlane());
+    }
+
+    public synchronized String getChunkOwnershipSummary() {
+        if (!loaded || destroyed || boundChunks == null) {
+            return "Settlement chunk ownership is unavailable while loading.";
+        }
+        int plotX = toPlotX(player.getX());
+        int plotY = toPlotY(player.getY());
+        int chunkX = plotX / 8;
+        int chunkY = plotY / 8;
+        SettlementBiome biome = state.getBiomeAtPlot(plotX, plotY);
+        return "chunks=" + state.getUnlockedChunkCount() + "/64"
+                + " | current=" + chunkX + "," + chunkY
+                + " unlocked=" + state.isChunkUnlocked(chunkX, chunkY)
+                + " | biome=" + (biome == null ? "unknown" : biome.getDisplayName())
+                + " | generatedResourceChunks=" + state.getGeneratedResourceChunkCount();
+    }
+
+    public synchronized String unlockDevelopmentChunk(int chunkX, int chunkY) {
+        if (!loaded || destroyed || boundChunks == null) {
+            return "Settlement chunk unlock is unavailable while loading.";
+        }
+        if (chunkX < 0 || chunkX >= 8 || chunkY < 0 || chunkY >= 8) {
+            return "Chunk coordinates must be 0..7.";
+        }
+        if (state.isChunkUnlocked(chunkX, chunkY)) {
+            return "Settlement chunk " + chunkX + "," + chunkY + " is already unlocked.";
+        }
+        if (!state.canUnlockAdjacentChunk(chunkX, chunkY)) {
+            return "Settlement chunk " + chunkX + "," + chunkY
+                    + " is not adjacent to unlocked territory.";
+        }
+        if (!state.unlockAdjacentChunk(chunkX, chunkY)) {
+            return "Settlement chunk " + chunkX + "," + chunkY + " could not be unlocked.";
+        }
+
+        spawnStarterResourceNodes();
+        SettlementBiome biome = state.getBiomeAtPlot(
+                (chunkX * 8) + 4, (chunkY * 8) + 4);
+        return "Unlocked settlement chunk " + chunkX + "," + chunkY
+                + " | biome=" + (biome == null ? "unknown" : biome.getDisplayName())
+                + " | resources generated once.";
     }
 
     public int getSavedPieceCount() {

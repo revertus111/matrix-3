@@ -2948,6 +2948,36 @@ public final class Commands {
 	    case "settlementbuildbarclose":
 		player.getActionbar().endConstructionMode();
 		return true;
+	    case "settlementchunkstatus":
+		SettlementInstance chunkStatus = SettlementInstance.getActive(player);
+		if (chunkStatus == null) {
+		    player.getPackets().sendGameMessage(
+			    "Enter your settlement before checking chunk ownership.");
+		    return true;
+		}
+		player.getPackets().sendGameMessage(chunkStatus.getChunkOwnershipSummary());
+		return true;
+	    case "settlementunlockchunk":
+		SettlementInstance chunkUnlock = SettlementInstance.getActive(player);
+		if (chunkUnlock == null) {
+		    player.getPackets().sendGameMessage(
+			    "Enter your settlement before unlocking settlement chunks.");
+		    return true;
+		}
+		if (cmd.length != 3) {
+		    player.getPackets().sendGameMessage(
+			    "Use: ::settlementunlockchunk <chunkX 0..7> <chunkY 0..7>");
+		    return true;
+		}
+		try {
+		    int chunkX = Integer.parseInt(cmd[1]);
+		    int chunkY = Integer.parseInt(cmd[2]);
+		    player.getPackets().sendGameMessage(
+			    chunkUnlock.unlockDevelopmentChunk(chunkX, chunkY));
+		} catch (NumberFormatException ex) {
+		    player.getPackets().sendGameMessage("Invalid settlement chunk coordinate.");
+		}
+		return true;
 	    case "settlementconveyorcreate":
 		SettlementInstance conveyorCreate = SettlementInstance.getActive(player);
 		if (conveyorCreate == null) {

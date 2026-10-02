@@ -23,9 +23,10 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 20;
+    private static final int CURRENT_SCHEMA_VERSION = 21;
     private static final int RESOURCE_WORLD_GENERATOR_VERSION = 1;
     private static final int BIOME_GENERATOR_VERSION = 1;
+    private static final int CHUNK_OWNERSHIP_VERSION = 1;
     private static final int PLOT_CHUNK_SIZE = 8;
     private static final int PLOT_CHUNKS = PLOT_TILES / PLOT_CHUNK_SIZE;
     private static final int STARTER_CHUNK_MIN = 3;
@@ -69,6 +70,8 @@ public final class SettlementState implements Serializable {
     private int resourceWorldGeneratorVersion;
     private int biomeGeneratorVersion;
     private Set<String> generatedResourceChunks = new HashSet<String>();
+    private int chunkOwnershipVersion;
+    private Set<String> unlockedChunks = new HashSet<String>();
     /**
      * Legacy serialized shared-cap field. Kept so existing player saves remain
      * deserializable; active storage capacity is resource-specific.
@@ -197,6 +200,16 @@ public final class SettlementState implements Serializable {
         if (resourceWorldGeneratorVersion < RESOURCE_WORLD_GENERATOR_VERSION) {
             generateInitialResourceWorldV1();
             resourceWorldGeneratorVersion = RESOURCE_WORLD_GENERATOR_VERSION;
+        }
+        if (unlockedChunks == null) {
+            unlockedChunks = new HashSet<String>();
+        }
+        if (workers == null) {
+            workers = new ArrayList<SettlementWorkerState>();
+        }
+        if (chunkOwnershipVersion < CHUNK_OWNERSHIP_VERSION) {
+            initializeChunkOwnershipV1();
+            chunkOwnershipVersion = CHUNK_OWNERSHIP_VERSION;
         }
         long highestResourceNodeId = 0L;
         Set<Long> resourceNodeIds = new HashSet<Long>();
@@ -358,7 +371,9 @@ public final class SettlementState implements Serializable {
         normalize();
         if (!isValidPlotLocation(startPlotX, startPlotY, plane)
                 || !isValidPlotLocation(endPlotX, endPlotY, plane)
-                || (startPlotX == endPlotX && startPlotY == endPlotY)) {
+                || (startPlotX == endPlotX && startPlotY == endPlotY)
+                || !isConveyorRouteUnlockedInternal(
+                        startPlotX, startPlotY, endPlotX, endPlotY, plane, routeAxis)) {
             return null;
         }
         SettlementConveyorRun run = new SettlementConveyorRun(
@@ -393,7 +408,8 @@ public final class SettlementState implements Serializable {
 
     public synchronized boolean saveBuildTile(int plotX, int plotY, int plane) {
         normalize();
-        if (!isValidPlotLocation(plotX, plotY, plane)) {
+        if (!isValidPlotLocation(plotX, plotY, plane)
+                || !isPlotTileUnlockedInternal(plotX, plotY, plane)) {
             return false;
         }
         return savedBuildTiles.add(savedBuildTileKey(plotX, plotY, plane));
@@ -421,7 +437,8 @@ public final class SettlementState implements Serializable {
     public synchronized SettlementRallyPoint findOrCreateRallyPoint(
             int plotX, int plotY, int plane) {
         normalize();
-        if (!isValidPlotLocation(plotX, plotY, plane)) {
+        if (!isValidPlotLocation(plotX, plotY, plane)
+                || !isPlotTileUnlockedInternal(plotX, plotY, plane)) {
             return null;
         }
         for (SettlementRallyPoint rally : rallyPoints.values()) {
@@ -453,6 +470,7 @@ public final class SettlementState implements Serializable {
             int plotX, int plotY, int plane, int rotation) {
         normalize();
         if (definition == null || !isValidPlotLocation(plotX, plotY, plane)
+                || !isPlotTileUnlockedInternal(plotX, plotY, plane)
                 || isOccupied(plotX, plotY, plane, definition.getObjectType(), -1L)) {
             return null;
         }
@@ -511,6 +529,7 @@ public final class SettlementState implements Serializable {
         SettlementPlacedPiece current = pieces.get(index);
         SettlementBuildPiece definition = SettlementBuildPiece.forKey(current.getDefinitionKey());
         if (definition == null || !isValidPlotLocation(plotX, plotY, plane)
+                || !isPlotTileUnlockedInternal(plotX, plotY, plane)
                 || isOccupied(plotX, plotY, plane, definition.getObjectType(), pieceId)) {
             return null;
         }
@@ -540,6 +559,7 @@ public final class SettlementState implements Serializable {
         SettlementPlacedPiece current = pieces.get(index);
         SettlementBuildPiece definition = SettlementBuildPiece.forKey(current.getDefinitionKey());
         if (definition == null || !isValidPlotLocation(plotX, plotY, plane)
+                || !isPlotTileUnlockedInternal(plotX, plotY, plane)
                 || isOccupied(plotX, plotY, plane, definition.getObjectType(), -1L)) {
             return null;
         }
@@ -761,7 +781,9 @@ public final class SettlementState implements Serializable {
         int y = definition.getArrivalPlotY();
         int plane = definition.getArrivalPlane();
         for (int x = definition.getArrivalPlotX(); x < PLOT_TILES; x += 2) {
-            if (!hasWorkerHomeAtInternal(x, y, plane) && !hasPlacedPieceAtInternal(x, y, plane)) {
+            if (isPlotTileUnlockedInternal(x, y, plane)
+                    && !hasWorkerHomeAtInternal(x, y, plane)
+                    && !hasPlacedPieceAtInternal(x, y, plane)) {
                 return x;
             }
         }
@@ -1260,6 +1282,223 @@ public final class SettlementState implements Serializable {
         value *= 0xc4ceb9fe1a85ec53L;
         value ^= value >>> 33;
         return value;
+    }
+
+    private void initializeChunkOwnershipV1() {
+        unlockedChunks.clear();
+
+        for (int chunkX = STARTER_CHUNK_MIN; chunkX <= STARTER_CHUNK_MAX; chunkX++) {
+            for (int chunkY = STARTER_CHUNK_MIN; chunkY <= STARTER_CHUNK_MAX; chunkY++) {
+                addUnlockedChunkInternal(chunkX, chunkY);
+            }
+        }
+
+        for (SettlementPlacedPiece piece : pieces) {
+            if (piece != null) {
+                unlockChunkPathInternal(
+                        piece.getPlotX() / PLOT_CHUNK_SIZE,
+                        piece.getPlotY() / PLOT_CHUNK_SIZE);
+            }
+        }
+        if (workers != null) {
+            for (SettlementWorkerState worker : workers) {
+                if (worker != null) {
+                    unlockChunkPathInternal(
+                            worker.getHomePlotX() / PLOT_CHUNK_SIZE,
+                            worker.getHomePlotY() / PLOT_CHUNK_SIZE);
+                }
+            }
+        }
+        for (SettlementRallyPoint rally : rallyPoints.values()) {
+            if (rally != null) {
+                unlockChunkPathInternal(
+                        rally.getPlotX() / PLOT_CHUNK_SIZE,
+                        rally.getPlotY() / PLOT_CHUNK_SIZE);
+            }
+        }
+        for (SettlementResourceNodeState node : resourceNodes) {
+            if (node != null) {
+                unlockChunkPathInternal(
+                        node.getPlotX() / PLOT_CHUNK_SIZE,
+                        node.getPlotY() / PLOT_CHUNK_SIZE);
+            }
+        }
+        for (String savedTile : savedBuildTiles) {
+            int[] plot = parseSavedBuildTileInternal(savedTile);
+            if (plot != null) {
+                unlockChunkPathInternal(
+                        plot[0] / PLOT_CHUNK_SIZE,
+                        plot[1] / PLOT_CHUNK_SIZE);
+            }
+        }
+        for (SettlementConveyorRun run : conveyorRuns) {
+            if (run == null) {
+                continue;
+            }
+            int bendX = run.getBendPlotX();
+            int bendY = run.getBendPlotY();
+            unlockSegmentChunksInternal(
+                    run.getStartPlotX(), run.getStartPlotY(), bendX, bendY);
+            unlockSegmentChunksInternal(
+                    bendX, bendY, run.getEndPlotX(), run.getEndPlotY());
+        }
+    }
+
+    public synchronized boolean isChunkUnlocked(int chunkX, int chunkY) {
+        normalize();
+        return isChunkUnlockedInternal(chunkX, chunkY);
+    }
+
+    public synchronized boolean isPlotTileUnlocked(int plotX, int plotY, int plane) {
+        normalize();
+        return isPlotTileUnlockedInternal(plotX, plotY, plane);
+    }
+
+    public synchronized boolean canUnlockAdjacentChunk(int chunkX, int chunkY) {
+        normalize();
+        return canUnlockAdjacentChunkInternal(chunkX, chunkY);
+    }
+
+    public synchronized boolean unlockAdjacentChunk(int chunkX, int chunkY) {
+        normalize();
+        if (!isValidChunk(chunkX, chunkY)) {
+            return false;
+        }
+        if (isChunkUnlockedInternal(chunkX, chunkY)) {
+            return true;
+        }
+        if (!canUnlockAdjacentChunkInternal(chunkX, chunkY)) {
+            return false;
+        }
+        addUnlockedChunkInternal(chunkX, chunkY);
+        generateResourceChunkV1Internal(chunkX, chunkY, false);
+        return true;
+    }
+
+    public synchronized int getUnlockedChunkCount() {
+        normalize();
+        return unlockedChunks.size();
+    }
+
+    private boolean canUnlockAdjacentChunkInternal(int chunkX, int chunkY) {
+        if (!isValidChunk(chunkX, chunkY)
+                || isChunkUnlockedInternal(chunkX, chunkY)) {
+            return false;
+        }
+        return isChunkUnlockedInternal(chunkX - 1, chunkY)
+                || isChunkUnlockedInternal(chunkX + 1, chunkY)
+                || isChunkUnlockedInternal(chunkX, chunkY - 1)
+                || isChunkUnlockedInternal(chunkX, chunkY + 1);
+    }
+
+    private boolean isChunkUnlockedInternal(int chunkX, int chunkY) {
+        return isValidChunk(chunkX, chunkY)
+                && unlockedChunks.contains(resourceChunkKey(chunkX, chunkY));
+    }
+
+    private boolean isPlotTileUnlockedInternal(int plotX, int plotY, int plane) {
+        return isValidPlotLocation(plotX, plotY, plane)
+                && isChunkUnlockedInternal(
+                        plotX / PLOT_CHUNK_SIZE,
+                        plotY / PLOT_CHUNK_SIZE);
+    }
+
+    private void addUnlockedChunkInternal(int chunkX, int chunkY) {
+        if (isValidChunk(chunkX, chunkY)) {
+            unlockedChunks.add(resourceChunkKey(chunkX, chunkY));
+        }
+    }
+
+    private void unlockChunkPathInternal(int targetChunkX, int targetChunkY) {
+        if (!isValidChunk(targetChunkX, targetChunkY)) {
+            return;
+        }
+        int chunkX = STARTER_CHUNK_MAX;
+        int chunkY = STARTER_CHUNK_MAX;
+        addUnlockedChunkInternal(chunkX, chunkY);
+        while (chunkX != targetChunkX) {
+            chunkX += targetChunkX > chunkX ? 1 : -1;
+            addUnlockedChunkInternal(chunkX, chunkY);
+        }
+        while (chunkY != targetChunkY) {
+            chunkY += targetChunkY > chunkY ? 1 : -1;
+            addUnlockedChunkInternal(chunkX, chunkY);
+        }
+    }
+
+    private void unlockSegmentChunksInternal(
+            int startX, int startY, int endX, int endY) {
+        int x = startX;
+        int y = startY;
+        unlockChunkPathInternal(x / PLOT_CHUNK_SIZE, y / PLOT_CHUNK_SIZE);
+        while (x != endX || y != endY) {
+            if (x != endX) {
+                x += endX > x ? 1 : -1;
+            } else if (y != endY) {
+                y += endY > y ? 1 : -1;
+            }
+            unlockChunkPathInternal(x / PLOT_CHUNK_SIZE, y / PLOT_CHUNK_SIZE);
+        }
+    }
+
+    private int[] parseSavedBuildTileInternal(String key) {
+        if (key == null) {
+            return null;
+        }
+        String[] values = key.split(",");
+        if (values.length != 3) {
+            return null;
+        }
+        try {
+            int plotX = Integer.parseInt(values[0]);
+            int plotY = Integer.parseInt(values[1]);
+            int plane = Integer.parseInt(values[2]);
+            if (!isValidPlotLocation(plotX, plotY, plane)) {
+                return null;
+            }
+            return new int[] { plotX, plotY, plane };
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private boolean isConveyorRouteUnlockedInternal(
+            int startX, int startY, int endX, int endY,
+            int plane, int routeAxis) {
+        if (!isPlotTileUnlockedInternal(startX, startY, plane)
+                || !isPlotTileUnlockedInternal(endX, endY, plane)) {
+            return false;
+        }
+        int resolved = SettlementConveyorRun.resolveRouteAxis(
+                routeAxis, startX, startY, endX, endY);
+        int bendX = resolved == SettlementConveyorRun.ROUTE_X_FIRST
+                ? endX : startX;
+        int bendY = resolved == SettlementConveyorRun.ROUTE_X_FIRST
+                ? startY : endY;
+        return isAxisAlignedSegmentUnlockedInternal(
+                startX, startY, bendX, bendY, plane)
+                && isAxisAlignedSegmentUnlockedInternal(
+                        bendX, bendY, endX, endY, plane);
+    }
+
+    private boolean isAxisAlignedSegmentUnlockedInternal(
+            int startX, int startY, int endX, int endY, int plane) {
+        int x = startX;
+        int y = startY;
+        if (!isPlotTileUnlockedInternal(x, y, plane)) {
+            return false;
+        }
+        while (x != endX || y != endY) {
+            if (x != endX) {
+                x += endX > x ? 1 : -1;
+            } else if (y != endY) {
+                y += endY > y ? 1 : -1;
+            }
+            if (!isPlotTileUnlockedInternal(x, y, plane)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public synchronized List<SettlementResourceNodeState> snapshotResourceNodes() {
