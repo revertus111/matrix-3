@@ -2199,3 +2199,7 @@
 - Fixed the v18 save migration bug where Java deserialization left nextResourceNodeId at 0, causing the first seeded node (wood tree) to receive invalid id 0 and be removed by normalize().
 - Schema v19 now establishes a positive node-id counter before migration and restores only missing starter-definition records once.
 - Legitimately depleted nodes are not respawned because their persisted zero-remaining record still counts as present.
+
+2026-10-01 - RTS minimap radial ownership runtime accepted
+- User confirmed minimap focus no longer leaves the red transient RTS radial-selection shape rendered.
+- Minimap focus/radial ownership gate is closed; committed selection preservation and normal post-minimap world drag remain covered by the existing regression gate.
