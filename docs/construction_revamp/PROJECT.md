@@ -2627,7 +2627,8 @@ Build three straight test runs from the same authored conveyor source (short, me
 - Rotated minimap click alignment is **RUNTIME VERIFIED**: clicking the rotated RTS minimap lands the camera focus on the intended world tile.
 - RTS object-interaction self-move guard is **RUNTIME VERIFIED**: scene-object interaction no longer moves the player when self is not selected.
 - RTS minimap yaw handedness correction is **RUNTIME VERIFIED**: Q/E and horizontal MMB still own the same accepted camera orbit, while the shared RTS-to-Matrix3 minimap heading conversion now inverts handedness once. Raster, compass, dots/icons and rotated-click inverse consumers remain structurally unchanged.
-- **Resume Here:** RTS minimap yaw handedness is runtime accepted. Current RTS-camera defect: clicking/dragging the minimap to focus the camera also arms/renders the RTS drag-selection ring. Trace only minimap UI input ownership versus ConstructionRadialSelection before patching.
+- RTS minimap focus vs radial drag ownership is **IMPLEMENTED / NEEDS RUNTIME TEST**: when Matrix3 identifies action 23/movement type 1 as a minimap-focus action, ConstructionBuildCamera now cancels only ConstructionRadialSelection's transient drag before moving the RTS pivot. Existing committed worker/self selection is preserved; no minimap screen-coordinate gate was added.
+- **Resume Here:** pull/build Client and click/drag the minimap to focus the RTS camera. Confirm no red radial selection shape appears, committed selection remains intact, and the next normal world drag-selection still works.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
