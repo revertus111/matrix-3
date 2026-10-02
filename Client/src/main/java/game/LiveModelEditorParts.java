@@ -1465,27 +1465,185 @@ final class LiveModelEditorParts {
         for (int vertex : component.vertices) {
             if (!hasVertexCoordinates(sourceRaw, vertex)) return null;
         }
+
+        /*
+         * Compact only the selected component, but preserve both texture systems
+         * used by Matrix3 Class159:
+         *
+         * 1) faceTextures + faceTextureIndexes -> anInt1803 texture triangles
+         * 2) anInt1818 per-vertex UV tables + per-face UV vertex offsets
+         *
+         * The old extractor intentionally blanked faceTextures/indexes and built
+         * zero texture triangles, which kept geometry/recolour but flattened the
+         * imported part's surface detail.
+         */
+        LinkedHashSet<Integer> copiedVertices = new LinkedHashSet<Integer>();
+        for (int vertex : component.vertices) copiedVertices.add(Integer.valueOf(vertex));
+
+        LinkedHashMap<Integer, Integer> textureTriangles =
+                new LinkedHashMap<Integer, Integer>();
+        if (sourceRaw.faceTextures != null && sourceRaw.faceTextureIndexes != null
+                && sourceRaw.anInt1803 > 0) {
+            for (int face : component.faces) {
+                if (face < 0 || face >= sourceRaw.anInt1778
+                        || face >= sourceRaw.faceTextures.length
+                        || face >= sourceRaw.faceTextureIndexes.length
+                        || sourceRaw.faceTextures[face] == -1) continue;
+                int textureIndex = sourceRaw.faceTextureIndexes[face];
+                if (textureIndex < 0 || textureIndex >= sourceRaw.anInt1803) continue;
+                if (!textureTriangles.containsKey(Integer.valueOf(textureIndex))) {
+                    textureTriangles.put(Integer.valueOf(textureIndex),
+                            Integer.valueOf(textureTriangles.size()));
+                    if (sourceRaw.aByteArray1804 != null
+                            && textureIndex < sourceRaw.aByteArray1804.length
+                            && (sourceRaw.aByteArray1804[textureIndex] & 0xff) == 0
+                            && sourceRaw.aShortArray1805 != null
+                            && sourceRaw.aShortArray1806 != null
+                            && sourceRaw.aShortArray1807 != null
+                            && textureIndex < sourceRaw.aShortArray1805.length
+                            && textureIndex < sourceRaw.aShortArray1806.length
+                            && textureIndex < sourceRaw.aShortArray1807.length) {
+                        copiedVertices.add(Integer.valueOf(
+                                sourceRaw.aShortArray1805[textureIndex] & 0xffff));
+                        copiedVertices.add(Integer.valueOf(
+                                sourceRaw.aShortArray1806[textureIndex] & 0xffff));
+                        copiedVertices.add(Integer.valueOf(
+                                sourceRaw.aShortArray1807[textureIndex] & 0xffff));
+                    }
+                }
+            }
+        }
+
+        int[] oldVertices = new int[copiedVertices.size()];
+        int p = 0;
+        for (Integer vertex : copiedVertices) oldVertices[p++] = vertex.intValue();
+
         int[] map = new int[sourceRaw.anInt1791];
         Arrays.fill(map, -1);
-        Class159 raw = new Class159(component.vertices.length, component.faces.length, 0);
+        Class159 raw = new Class159(oldVertices.length, component.faces.length,
+                textureTriangles.size());
         raw.anInt1773 = sourceRaw.anInt1773;
-        raw.anInt1791 = component.vertices.length;
-        // OpenGLModel sizes its per-vertex face-reference table from anInt1775.
-        // Decoded Class159 models leave this as the highest referenced vertex + 1.
-        // A component-only remap uses every copied vertex, so the used range is
-        // exactly the compact vertex count.
-        raw.anInt1775 = component.vertices.length;
+        raw.anInt1791 = oldVertices.length;
+        raw.anInt1775 = oldVertices.length;
         raw.anInt1778 = component.faces.length;
+        raw.anInt1803 = textureTriangles.size();
 
-        for (int i = 0; i < component.vertices.length; i++) {
-            int old = component.vertices[i];
-            map[old] = i;
-            raw.anIntArray1782[i] = sourceRaw.anIntArray1782[old];
-            raw.anIntArray1777[i] = sourceRaw.anIntArray1777[old];
-            raw.anIntArray1797[i] = sourceRaw.anIntArray1797[old];
-            if (sourceRaw.anIntArray1813 != null && old < sourceRaw.anIntArray1813.length
-                    && raw.anIntArray1813 != null && i < raw.anIntArray1813.length)
-                raw.anIntArray1813[i] = sourceRaw.anIntArray1813[old];
+        int totalUv = 0;
+        boolean copyUv = sourceRaw.anInt1818 > 0
+                && sourceRaw.anIntArray1774 != null
+                && sourceRaw.aFloatArray1771 != null
+                && sourceRaw.aFloatArray1784 != null;
+        if (copyUv) {
+            for (int old : oldVertices) {
+                if (old < 0 || old >= sourceRaw.anInt1791) continue;
+                int uvStart = sourceRaw.anIntArray1774[old];
+                int uvEnd = old < sourceRaw.anInt1791 - 1
+                        ? sourceRaw.anIntArray1774[old + 1] : sourceRaw.anInt1818;
+                if (uvStart >= 0 && uvEnd >= uvStart && uvEnd <= sourceRaw.anInt1818)
+                    totalUv += uvEnd - uvStart;
+            }
+            if (totalUv > 0) {
+                raw.anInt1818 = totalUv;
+                raw.anIntArray1774 = new int[oldVertices.length];
+                raw.aFloatArray1771 = new float[totalUv];
+                raw.aFloatArray1784 = new float[totalUv];
+                raw.uvCoordVertexA = new byte[component.faces.length];
+                raw.uvCoordVertexB = new byte[component.faces.length];
+                raw.uvCoordVertexC = new byte[component.faces.length];
+            } else {
+                copyUv = false;
+            }
+        }
+
+        int uvWrite = 0;
+        for (int i = 0; i < oldVertices.length; i++) {
+            int oldVertex = oldVertices[i];
+            if (!hasVertexCoordinates(sourceRaw, oldVertex)) return null;
+            map[oldVertex] = i;
+            raw.anIntArray1782[i] = sourceRaw.anIntArray1782[oldVertex];
+            raw.anIntArray1777[i] = sourceRaw.anIntArray1777[oldVertex];
+            raw.anIntArray1797[i] = sourceRaw.anIntArray1797[oldVertex];
+            if (sourceRaw.anIntArray1813 != null
+                    && oldVertex < sourceRaw.anIntArray1813.length
+                    && raw.anIntArray1813 != null && i < raw.anIntArray1813.length) {
+                raw.anIntArray1813[i] = sourceRaw.anIntArray1813[oldVertex];
+            }
+
+            if (copyUv) {
+                raw.anIntArray1774[i] = uvWrite;
+                int uvStart = sourceRaw.anIntArray1774[oldVertex];
+                int uvEnd = oldVertex < sourceRaw.anInt1791 - 1
+                        ? sourceRaw.anIntArray1774[oldVertex + 1] : sourceRaw.anInt1818;
+                for (int uv = uvStart; uv < uvEnd && uvWrite < totalUv; uv++) {
+                    raw.aFloatArray1771[uvWrite] = sourceRaw.aFloatArray1771[uv];
+                    raw.aFloatArray1784[uvWrite] = sourceRaw.aFloatArray1784[uv];
+                    uvWrite++;
+                }
+            }
+        }
+
+        for (Map.Entry<Integer, Integer> entry : textureTriangles.entrySet()) {
+            int oldTexture = entry.getKey().intValue();
+            int newTexture = entry.getValue().intValue();
+            int type = sourceRaw.aByteArray1804 != null
+                    && oldTexture < sourceRaw.aByteArray1804.length
+                    ? sourceRaw.aByteArray1804[oldTexture] & 0xff : 0;
+            raw.aByteArray1804[newTexture] = (byte) type;
+
+            if (sourceRaw.aShortArray1805 != null
+                    && oldTexture < sourceRaw.aShortArray1805.length) {
+                short value = sourceRaw.aShortArray1805[oldTexture];
+                if (type == 0) {
+                    int oldVertex = value & 0xffff;
+                    if (oldVertex >= map.length || map[oldVertex] < 0) return null;
+                    value = (short) map[oldVertex];
+                }
+                raw.aShortArray1805[newTexture] = value;
+            }
+            if (sourceRaw.aShortArray1806 != null
+                    && oldTexture < sourceRaw.aShortArray1806.length) {
+                short value = sourceRaw.aShortArray1806[oldTexture];
+                if (type == 0) {
+                    int oldVertex = value & 0xffff;
+                    if (oldVertex >= map.length || map[oldVertex] < 0) return null;
+                    value = (short) map[oldVertex];
+                }
+                raw.aShortArray1806[newTexture] = value;
+            }
+            if (sourceRaw.aShortArray1807 != null
+                    && oldTexture < sourceRaw.aShortArray1807.length) {
+                short value = sourceRaw.aShortArray1807[oldTexture];
+                if (type == 0) {
+                    int oldVertex = value & 0xffff;
+                    if (oldVertex >= map.length || map[oldVertex] < 0) return null;
+                    value = (short) map[oldVertex];
+                }
+                raw.aShortArray1807[newTexture] = value;
+            }
+            if (sourceRaw.anIntArray1788 != null
+                    && oldTexture < sourceRaw.anIntArray1788.length)
+                raw.anIntArray1788[newTexture] = sourceRaw.anIntArray1788[oldTexture];
+            if (sourceRaw.anIntArray1770 != null
+                    && oldTexture < sourceRaw.anIntArray1770.length)
+                raw.anIntArray1770[newTexture] = sourceRaw.anIntArray1770[oldTexture];
+            if (sourceRaw.anIntArray1810 != null
+                    && oldTexture < sourceRaw.anIntArray1810.length)
+                raw.anIntArray1810[newTexture] = sourceRaw.anIntArray1810[oldTexture];
+            if (sourceRaw.aByteArray1814 != null
+                    && oldTexture < sourceRaw.aByteArray1814.length)
+                raw.aByteArray1814[newTexture] = sourceRaw.aByteArray1814[oldTexture];
+            if (sourceRaw.aByteArray1815 != null
+                    && oldTexture < sourceRaw.aByteArray1815.length)
+                raw.aByteArray1815[newTexture] = sourceRaw.aByteArray1815[oldTexture];
+            if (sourceRaw.anIntArray1793 != null
+                    && oldTexture < sourceRaw.anIntArray1793.length)
+                raw.anIntArray1793[newTexture] = sourceRaw.anIntArray1793[oldTexture];
+            if (sourceRaw.anIntArray1812 != null
+                    && oldTexture < sourceRaw.anIntArray1812.length)
+                raw.anIntArray1812[newTexture] = sourceRaw.anIntArray1812[oldTexture];
+            if (sourceRaw.anIntArray1808 != null
+                    && oldTexture < sourceRaw.anIntArray1808.length)
+                raw.anIntArray1808[newTexture] = sourceRaw.anIntArray1808[oldTexture];
         }
 
         for (int i = 0; i < component.faces.length; i++) {
@@ -1512,10 +1670,32 @@ final class LiveModelEditorParts {
             if (raw.faceAlpha != null && i < raw.faceAlpha.length)
                 raw.faceAlpha[i] = sourceRaw.faceAlpha != null
                         && face < sourceRaw.faceAlpha.length ? sourceRaw.faceAlpha[face] : 0;
-            if (raw.faceTextures != null && i < raw.faceTextures.length)
-                raw.faceTextures[i] = -1;
-            if (raw.faceTextureIndexes != null && i < raw.faceTextureIndexes.length)
+            if (raw.faceTextures != null && i < raw.faceTextures.length) {
+                raw.faceTextures[i] = sourceRaw.faceTextures != null
+                        && face < sourceRaw.faceTextures.length
+                        ? sourceRaw.faceTextures[face] : (short) -1;
+            }
+            if (raw.faceTextureIndexes != null && i < raw.faceTextureIndexes.length) {
                 raw.faceTextureIndexes[i] = -1;
+                if (sourceRaw.faceTextureIndexes != null
+                        && face < sourceRaw.faceTextureIndexes.length) {
+                    int oldTexture = sourceRaw.faceTextureIndexes[face];
+                    Integer mappedTexture = oldTexture < 0 ? null
+                            : textureTriangles.get(Integer.valueOf(oldTexture));
+                    if (mappedTexture != null)
+                        raw.faceTextureIndexes[i] = (short) mappedTexture.intValue();
+                }
+            }
+            if (copyUv && sourceRaw.uvCoordVertexA != null
+                    && sourceRaw.uvCoordVertexB != null
+                    && sourceRaw.uvCoordVertexC != null
+                    && face < sourceRaw.uvCoordVertexA.length
+                    && face < sourceRaw.uvCoordVertexB.length
+                    && face < sourceRaw.uvCoordVertexC.length) {
+                raw.uvCoordVertexA[i] = sourceRaw.uvCoordVertexA[face];
+                raw.uvCoordVertexB[i] = sourceRaw.uvCoordVertexB[face];
+                raw.uvCoordVertexC[i] = sourceRaw.uvCoordVertexC[face];
+            }
             if (raw.aByteArray1792 != null && i < raw.aByteArray1792.length)
                 raw.aByteArray1792[i] = sourceRaw.aByteArray1792 != null
                         && face < sourceRaw.aByteArray1792.length
@@ -1523,31 +1703,60 @@ final class LiveModelEditorParts {
             if (raw.aByteArray1799 != null && i < raw.aByteArray1799.length)
                 raw.aByteArray1799[i] = sourceRaw.aByteArray1799 != null
                         && face < sourceRaw.aByteArray1799.length
-                        ? sourceRaw.aByteArray1799[face] : 0;
+                        ? sourceRaw.aByteArray1799[face] : sourceRaw.aByte1779;
             if (raw.anIntArray1780 != null && i < raw.anIntArray1780.length)
                 raw.anIntArray1780[i] = sourceRaw.anIntArray1780 != null
                         && face < sourceRaw.anIntArray1780.length
-                        ? sourceRaw.anIntArray1780[face] : 0;
+                        ? sourceRaw.anIntArray1780[face] : -1;
         }
 
-        PartState local = state.copy();
-        Component localComponent = new Component(sequence(component.faces.length),
-                sequence(component.vertices.length));
-        /*
-         * componentOnlyRaw keeps the copied vertices in the source component's
-         * original coordinate space. Preserve that component's cached bounds so
-         * duplicate rotation uses the same pivot as the original part instead of
-         * the new compact Component's default 0,0,0 center.
-         */
-        localComponent.centerX = component.centerX;
-        localComponent.centerY = component.centerY;
-        localComponent.centerZ = component.centerZ;
-        localComponent.sizeX = component.sizeX;
-        localComponent.sizeY = component.sizeY;
-        localComponent.sizeZ = component.sizeZ;
-        localComponent.signature = component.signature;
-        transformVertices(raw, localComponent, local);
+        transformCompactVertices(raw, component.vertices.length, component, state);
         return raw;
+    }
+
+    /**
+     * Apply the same authored transform as transformVertices(...), but allow the
+     * compact raw to contain extra type-0 texture-map vertices. Only the real
+     * component vertices contribute to the legacy scale centroid; mapping
+     * vertices follow the same affine transform without shifting the pivot.
+     */
+    private static void transformCompactVertices(Class159 raw, int geometryVertexCount,
+            Component component, PartState state) {
+        if (raw == null || geometryVertexCount <= 0 || component == null) return;
+        int count = Math.min(geometryVertexCount, raw.anInt1791);
+        long scaleCx = 0L, scaleCy = 0L, scaleCz = 0L;
+        for (int i = 0; i < count; i++) {
+            scaleCx += raw.anIntArray1782[i];
+            scaleCy += raw.anIntArray1777[i];
+            scaleCz += raw.anIntArray1797[i];
+        }
+        scaleCx /= count;
+        scaleCy /= count;
+        scaleCz /= count;
+
+        double radians = Math.toRadians(state.yaw);
+        double sin = Math.sin(radians);
+        double cos = Math.cos(radians);
+        for (int i = 0; i < raw.anInt1791; i++) {
+            double scaledX = scaleCx
+                    + (raw.anIntArray1782[i] - scaleCx) * state.scaleX / 100.0;
+            double scaledY = scaleCy
+                    + (raw.anIntArray1777[i] - scaleCy) * state.scaleY / 100.0;
+            double scaledZ = scaleCz
+                    + (raw.anIntArray1797[i] - scaleCz) * state.scaleZ / 100.0;
+
+            double x = scaledX - component.centerX;
+            double z = scaledZ - component.centerZ;
+            double rx = x * cos + z * sin;
+            double rz = z * cos - x * sin;
+
+            raw.anIntArray1782[i] =
+                    (int) Math.round(component.centerX + rx + state.moveX);
+            raw.anIntArray1777[i] =
+                    (int) Math.round(scaledY + state.moveY);
+            raw.anIntArray1797[i] =
+                    (int) Math.round(component.centerZ + rz + state.moveZ);
+        }
     }
 
     private static int[] sequence(int length) {
