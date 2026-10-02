@@ -2239,3 +2239,10 @@
 - Group X now removes the saved slot immediately and refreshes its label/status synchronously.
 - Group Go now always recalls the group and smoothly moves the RTS camera toward the selected-unit midpoint. Number-key single tap remains recall-only; double-tap remains recall + focus.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
+2026-10-02 - RTS minimap viewport footprint direction fix
+- Runtime screenshot showed the white RTS viewport footprint pointing in the wrong direction while minimap raster/compass orientation remained correct.
+- verified-static: the stock minimap raster already applies inverse RTS heading, so rotating the footprint again in screen space double-applied yaw.
+- ConstructionBuildCamera.renderRtsMinimapViewportFootprint(...) now keeps the footprint screen-aligned while the minimap rotates underneath it; forward is always toward the top of the minimap and zoom scaling is preserved.
+- No raster, compass, NPC/player/map-icon, click, drag, camera-orbit or yaw ownership changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
