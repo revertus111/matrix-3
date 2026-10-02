@@ -2633,7 +2633,8 @@ Build three straight test runs from the same authored conveyor source (short, me
   - the Worker Control panel is draggable, resizable, canvas-clamped and scrollable rather than fixed-size;
   - group X clears the saved slot immediately;
   - UI Go always recalls + smoothly focuses the camera on that group's current midpoint.
-- **Resume Here:** pull/build Client once. Verify smooth minimap drag speed, movable/resizable non-clipping overlay, Set -> X truly empties a group, Go smoothly focuses the group, then recheck the existing group hotkeys/footprint/Build Palette number-key ownership.
+- RTS minimap viewport footprint direction correction is **IMPLEMENTED / NEEDS RUNTIME TEST**: the footprint no longer applies RTS yaw a second time; it stays screen-aligned while the minimap raster rotates beneath it, with forward toward minimap top and zoom scaling preserved.
+- **Resume Here:** pull/build Client once. First verify the corrected footprint direction through several Q/E/MMB headings, then continue the same RTS Command & Navigation V1 gate: smooth minimap drag speed, movable/resizable non-clipping overlay, Set -> X truly empties a group, Go smoothly focuses the group, and Build Palette number-key ownership.
 
 ### Conveyor Gameplay V1.9 — Orthogonal Routed Placement — 2026-10-01
 
