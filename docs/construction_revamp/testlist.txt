@@ -1,3 +1,30 @@
+Conveyor V2.0 — straight runs + belt connections (2026-10-02)
+[x] verified-static: player placement preview/commit projects Point B to one cardinal axis; no new player-created auto-L route is submitted.
+[x] verified-static: server repeats straight projection and SettlementState rejects newly added diagonal ConveyorRuns.
+[x] verified-static: schema v23 persists outputRunId + receiver insertion distance while old V1.9 routeAxis data remains load-compatible.
+[x] verified-static: only a source output endpoint contacting a straight receiver creates a belt link; arbitrary span crossings do not auto-connect.
+[x] verified-static: receiver insertion validates spacing around the insertion point and preserves physicalInventoryOwned.
+[x] verified-static: source removal failure rolls back the just-created receiver payload.
+[x] verified-static: tick phases prevent a transferred payload from advancing/forwarding twice in one game tick.
+[x] verified-static: deleting a receiver clears incoming persisted connection references.
+[x] verified-static: RUN sync remains backward-compatible with 7/8-field packets and accepts V2.0 10-field connection packets.
+[ ] Pull latest main; Eclipse clean/build Client + Server with Java 8 and restart both.
+[ ] STRAIGHT PREVIEW: choose Conveyor, click A, move B diagonally; preview must remain one E/W or N/S straight belt and switch dominant axis naturally instead of drawing an L.
+[ ] STRAIGHT COMMIT: place several horizontal/vertical belts; persistent replacement must exactly match the straight preview after server snapping/projection.
+[ ] CHAIN BUILD: build Run #1 into empty space, then start Run #2 at #1's output and extend forward; #1 should auto-link into #2 at receiver distance 0.
+[ ] 90-DEGREE CONNECTION: terminate a new source belt on a perpendicular existing belt; items must leave the source and continue in the receiver's direction/speed.
+[ ] MID-BELT MERGE: terminate a source on the middle of a receiving run; payload appears at that exact insertion distance and continues downstream.
+[ ] CROSSING SAFETY: make two spans cross without either output ending on the other; they must remain independent.
+[ ] BACKPRESSURE: fill/block the receiver around the insertion point; source payload must wait at Point B and followers preserve spacing until receiver space opens.
+[ ] MERGE ORDER: connect two source belts into one receiver; simultaneous arrivals must serialize through receiver spacing with no duplication/loss.
+[ ] OWNERSHIP: chest -> source belt -> receiver belt -> chest conserves the exact physical item count.
+[ ] MACHINE: chest -> belt chain -> workbench input and workbench output -> belt chain -> chest still processes Logs 1511 -> Planks 960 correctly.
+[ ] DELETE TARGET: drain a receiving belt, remove it, and confirm connected source output becomes safely blocked rather than deleting payloads.
+[ ] PERSISTENCE: exit/re-enter and logout/relog; straight geometry, output target and receiver insertion point remain identical.
+[ ] LEGACY MIGRATION: any existing V1.9 routed run in the save remains visible/readable; newly created belts remain straight-only.
+[ ] SYNC REGRESSION: payload visuals move across a transfer without stale duplicates after PBEGIN/PEND refresh.
+[ ] After focused acceptance, run the full docs/rs3/SMOKE_TEST.md because this patch changes persistent settlement conveyor state.
+
 Conveyor/debug console noise cleanup - 2026-10-01
 [x] VERIFIED-STATIC: repeated ConveyorRunPreview rebuilds do not re-log an unchanged authored-role summary.
 [x] VERIFIED-STATIC: LoginServerPacketsDecoder still processes every PLAYERFILETRANSMITPART and suppresses only its generic DEBUG log line.

@@ -1,3 +1,16 @@
+2026-10-02 - Conveyor V2.0 straight runs + belt connections
+- Superseded player-facing V1.9 auto-L placement with one cardinal straight ConveyorRun per A->B gesture.
+- Client preview projects Point B onto the dominant E/W or N/S axis; server repeats the projection authoritatively and preserves chest/machine endpoint snapping only when the snap remains straight.
+- Added schema-v23 persistent conveyor output links: source run id -> receiving run id + insertion distance on the receiver.
+- Endpoint-to-middle and endpoint-to-start belt contact can connect; span crossings alone do not connect because only conveyor output endpoints are considered.
+- Building a downstream receiver from an existing blocked belt endpoint automatically links that existing output into the new run; existing explicit links and physical endpoints are not overwritten.
+- Conveyor-to-conveyor payload transfer preserves physical-inventory ownership, receiver spacing/backpressure and item amount, with rollback if source removal unexpectedly fails.
+- Conveyor ticking is phased advance -> output transfer -> input so a transferred payload cannot receive a second belt advance in the same game tick.
+- Removing a target belt clears persisted incoming references; load normalization repairs connection insertion distance from authoritative straight-run geometry and clears dangling targets.
+- Legacy persisted V1.9 routed runs remain readable for migration safety; new player-created runs are straight-only.
+- RUN sync now optionally carries outputRunId/outputInsertDistance for the upcoming authored corner/junction visual pass; current V2.0 gameplay does not yet render the custom corner asset.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
 2026-10-01 - Conveyor/debug console noise cleanup
 - ConveyorRunPreview now logs an authored-role summary only when the summary changes instead of on every model rebuild.
 - Login-server DEBUG output no longer prints every PACKET_PLAYERFILETRANSMITPART chunk; PLAYERFILETRANSMITINIT and transfer behavior are unchanged.

@@ -28,6 +28,7 @@ Use this checklist after meaningful core changes. Run the targeted section for i
 
 ## World / objects
 
+- [ ] Construction Conveyor V2.0: a persisted straight source -> receiver belt connection survives settlement exit/re-entry and logout/relog, and physical payload ownership remains conserved across the transfer.
 - [ ] A bank object opens and functions.
 - [ ] A non-bank object interaction succeeds.
 - [ ] A door/gate or other state-changing object interaction succeeds.
