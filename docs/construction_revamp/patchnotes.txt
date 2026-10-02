@@ -2209,3 +2209,10 @@
 - User runtime-verified schema-v19 restoration of the missing starter tree on the affected save.
 - User runtime-verified one-click continuous tree gathering through finite depletion and live tree disappearance.
 - Relog persistence, worker depletion/retargeting and player+worker concurrency remain pending; no broader runtime claims added.
+
+
+2026-10-01 - Resource World V1C seeded starter generation + biome field
+- SettlementState schema v20 now persists a resource-world seed, generator/biome versions and generated-resource-chunk ownership.
+- Replaced fixed starter coordinates with deterministic seeded placement inside the central 2x2 chunk area while preserving existing node remaining/depleted amounts.
+- Added smooth continuous SettlementBiome V1 metadata and biome-weighted extra starter resources with spacing/build/worker/conveyor collision avoidance.
+- Outer chunks remain intentionally ungenerated until the chunk lock/unlock foundation owns expansion.

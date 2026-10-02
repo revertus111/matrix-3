@@ -2650,8 +2650,22 @@ Build three straight test runs from the same authored conveyor source (short, me
 
 ## Resource World Foundation V1A/V1B — finite persistent nodes — 2026-10-01
 - Status: PARTIALLY RUNTIME VERIFIED under SAP AAA. The v19 repair restored the missing tree on the affected existing save, and the player-facing continuous gather -> depletion -> runtime disappearance loop is runtime verified. Relog persistence, worker depletion/retargeting and concurrency remain pending.
-- SettlementState schema v19 now owns persistent finite resource nodes; v19 repairs the v18 migration bug that could drop the first starter tree because a newly deserialized node-id counter began at zero. Current starter definitions seed one 10-unit migration node each.
+- SettlementState schema v20 now owns persistent finite resource nodes plus a persistent resource-world seed, generator version, biome version and generated-chunk set. v19 remains the repair for the earlier missing-tree migration bug.
 - Player gathering repeats until depletion/storage/interruption. Workers consume the same node before creating carried resources and skip exhausted sources.
 - Depleted records persist at zero and their runtime object/NPC projection is removed immediately.
 - Procedural placement, biomes, chunk locks, planting/saplings and water/fishing remain deferred.
 - Resume Here: tree restore + continuous player depletion/disappearance are runtime verified. Continue the approved bundle with persistent seeded resource generation + flowing biome metadata; keep relog persistence, worker depletion/retargeting and concurrency on the consolidated runtime gate. Then implement chunk locking/unlocking before returning to broader revamp foundation.
+
+
+## Resource World Foundation V1C — seeded starter generation + flowing biome field — 2026-10-01
+
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST under the approved Resource World SAP AAA bundle.
+- SettlementState schema v20 adds one persistent resource-world seed, resource generator version, biome generator version and generated-resource-chunk set.
+- The initial resource world now owns only the central 2x2 chunk area (chunks 3,3 / 4,3 / 3,4 / 4,4). Outer chunks intentionally remain resource-empty until chunk locking/unlocking owns expansion.
+- One guaranteed starter definition is assigned to each central chunk (wood, food, stone, ore), but its tile is deterministically chosen from the settlement seed instead of the old fixed coordinates.
+- Existing node records are relocated rather than recreated, preserving current remaining/depleted amounts across the migration. A depleted tree therefore stays depleted even though its historical node position is migrated.
+- Each starter chunk receives a small deterministic amount of extra biome-weighted resources. Generation enforces a 3-tile minimum resource spacing and avoids placed pieces, saved build tiles, worker arrival/home tiles and persistent conveyor route tiles.
+- SettlementBiome V1 samples smooth low-frequency moisture/elevation fields across plot coordinates. Biome identity therefore flows spatially across chunk boundaries instead of choosing independent random chunk labels.
+- Biome metadata currently affects resource weighting only; it does not alter terrain, water or map visuals yet.
+- Public state seams now exist for biome lookup and ensureResourceChunkGenerated(chunkX, chunkY), which the next chunk-unlock patch can call without redesigning generation ownership.
+- Resume Here: runtime-check starter resource randomization/stability and spacing in one existing settlement. Then implement locked/unlocked chunks using the existing generated-chunk seam; generate outer-chunk resources only when territory unlocks.

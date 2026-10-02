@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 /**
@@ -22,7 +23,14 @@ public final class SettlementState implements Serializable {
     public static final int PLOT_TILES = 64;
     public static final int PLOT_PLANE = 0;
 
-    private static final int CURRENT_SCHEMA_VERSION = 19;
+    private static final int CURRENT_SCHEMA_VERSION = 20;
+    private static final int RESOURCE_WORLD_GENERATOR_VERSION = 1;
+    private static final int BIOME_GENERATOR_VERSION = 1;
+    private static final int PLOT_CHUNK_SIZE = 8;
+    private static final int PLOT_CHUNKS = PLOT_TILES / PLOT_CHUNK_SIZE;
+    private static final int STARTER_CHUNK_MIN = 3;
+    private static final int STARTER_CHUNK_MAX = 4;
+    private static final int RESOURCE_MIN_SPACING = 3;
 
     /**
      * Legacy shared-cap field value retained only for Java-save compatibility.
@@ -57,6 +65,10 @@ public final class SettlementState implements Serializable {
     private long nextResourceNodeId = 1L;
     private List<SettlementResourceNodeState> resourceNodes =
             new ArrayList<SettlementResourceNodeState>();
+    private long resourceWorldSeed;
+    private int resourceWorldGeneratorVersion;
+    private int biomeGeneratorVersion;
+    private Set<String> generatedResourceChunks = new HashSet<String>();
     /**
      * Legacy serialized shared-cap field. Kept so existing player saves remain
      * deserializable; active storage capacity is resource-specific.
@@ -174,6 +186,17 @@ public final class SettlementState implements Serializable {
         }
         if (schemaVersion < 19) {
             repairLegacyResourceNodeMigration();
+        }
+        if (generatedResourceChunks == null) {
+            generatedResourceChunks = new HashSet<String>();
+        }
+        ensureResourceWorldSeed();
+        if (biomeGeneratorVersion <= 0) {
+            biomeGeneratorVersion = BIOME_GENERATOR_VERSION;
+        }
+        if (resourceWorldGeneratorVersion < RESOURCE_WORLD_GENERATOR_VERSION) {
+            generateInitialResourceWorldV1();
+            resourceWorldGeneratorVersion = RESOURCE_WORLD_GENERATOR_VERSION;
         }
         long highestResourceNodeId = 0L;
         Set<Long> resourceNodeIds = new HashSet<Long>();
@@ -949,6 +972,294 @@ public final class SettlementState implements Serializable {
                     definition.getDefaultStartingAmount(),
                     definition.getDefaultStartingAmount()));
         }
+    }
+
+    private void ensureResourceWorldSeed() {
+        if (resourceWorldSeed != 0L) {
+            return;
+        }
+        long seedBase = System.nanoTime()
+                ^ (System.currentTimeMillis() << 21)
+                ^ serialVersionUID;
+        resourceWorldSeed = mixResourceSeed(seedBase, 17, 29, 43L);
+        if (resourceWorldSeed == 0L) {
+            resourceWorldSeed = 1L;
+        }
+    }
+
+    private void generateInitialResourceWorldV1() {
+        generatedResourceChunks.clear();
+
+        SettlementResourceNode[] guaranteed = {
+                SettlementResourceNode.WOOD_TREE,
+                SettlementResourceNode.FOOD_SPOT,
+                SettlementResourceNode.STONE_OUTCROP,
+                SettlementResourceNode.ORE_OUTCROP
+        };
+        int[][] starterChunks = {
+                { STARTER_CHUNK_MIN, STARTER_CHUNK_MIN },
+                { STARTER_CHUNK_MAX, STARTER_CHUNK_MIN },
+                { STARTER_CHUNK_MIN, STARTER_CHUNK_MAX },
+                { STARTER_CHUNK_MAX, STARTER_CHUNK_MAX }
+        };
+
+        for (int index = 0; index < guaranteed.length; index++) {
+            int chunkX = starterChunks[index][0];
+            int chunkY = starterChunks[index][1];
+            SettlementResourceNode definition = guaranteed[index];
+            SettlementResourceNodeState existing =
+                    findFirstResourceNodeByDefinitionInternal(definition.getKey());
+            int[] placement = findResourcePlacementInChunkInternal(
+                    chunkX, chunkY,
+                    mixResourceSeed(resourceWorldSeed, chunkX, chunkY, index + 101L),
+                    existing == null ? -1L : existing.getNodeId());
+            if (placement == null) {
+                placement = findResourcePlacementInStarterAreaInternal(
+                        mixResourceSeed(resourceWorldSeed, chunkX, chunkY, index + 211L),
+                        existing == null ? -1L : existing.getNodeId());
+            }
+
+            if (placement != null) {
+                if (existing != null) {
+                    existing.relocate(placement[0], placement[1], PLOT_PLANE);
+                } else {
+                    resourceNodes.add(new SettlementResourceNodeState(
+                            nextResourceNodeId++,
+                            definition.getKey(),
+                            placement[0],
+                            placement[1],
+                            PLOT_PLANE,
+                            definition.getDefaultStartingAmount(),
+                            definition.getDefaultStartingAmount()));
+                }
+            }
+        }
+
+        for (int chunkX = STARTER_CHUNK_MIN; chunkX <= STARTER_CHUNK_MAX; chunkX++) {
+            for (int chunkY = STARTER_CHUNK_MIN; chunkY <= STARTER_CHUNK_MAX; chunkY++) {
+                generateResourceChunkV1Internal(chunkX, chunkY, true);
+            }
+        }
+    }
+
+    public synchronized boolean ensureResourceChunkGenerated(int chunkX, int chunkY) {
+        normalize();
+        return generateResourceChunkV1Internal(chunkX, chunkY, false);
+    }
+
+    public synchronized SettlementBiome getBiomeAtPlot(int plotX, int plotY) {
+        normalize();
+        if (!isValidPlotLocation(plotX, plotY, PLOT_PLANE)) {
+            return null;
+        }
+        return sampleBiomeInternal(plotX, plotY);
+    }
+
+    public synchronized long getResourceWorldSeed() {
+        normalize();
+        return resourceWorldSeed;
+    }
+
+    public synchronized int getGeneratedResourceChunkCount() {
+        normalize();
+        return generatedResourceChunks.size();
+    }
+
+    private boolean generateResourceChunkV1Internal(
+            int chunkX, int chunkY, boolean starterChunk) {
+        if (!isValidChunk(chunkX, chunkY)) {
+            return false;
+        }
+        String key = resourceChunkKey(chunkX, chunkY);
+        if (generatedResourceChunks.contains(key)) {
+            return true;
+        }
+
+        Random random = new Random(
+                mixResourceSeed(resourceWorldSeed, chunkX, chunkY, 0x52535731L));
+        int nodeCount;
+        if (starterChunk) {
+            nodeCount = 1 + (random.nextInt(100) < 35 ? 1 : 0);
+        } else {
+            nodeCount = random.nextInt(100) < 70 ? 1 : 0;
+            if (random.nextInt(100) < 25) {
+                nodeCount++;
+            }
+        }
+
+        for (int nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
+            addGeneratedResourceNodeInChunkInternal(
+                    chunkX, chunkY, random, nodeIndex);
+        }
+        generatedResourceChunks.add(key);
+        return true;
+    }
+
+    private void addGeneratedResourceNodeInChunkInternal(
+            int chunkX, int chunkY, Random random, int nodeIndex) {
+        for (int attempt = 0; attempt < 32; attempt++) {
+            int plotX = (chunkX * PLOT_CHUNK_SIZE) + 1 + random.nextInt(PLOT_CHUNK_SIZE - 2);
+            int plotY = (chunkY * PLOT_CHUNK_SIZE) + 1 + random.nextInt(PLOT_CHUNK_SIZE - 2);
+            if (!isResourcePlacementValidInternal(plotX, plotY, PLOT_PLANE, -1L)) {
+                continue;
+            }
+            SettlementBiome biome = sampleBiomeInternal(plotX, plotY);
+            SettlementResourceNode definition = biome.pickResourceDefinition(random);
+            resourceNodes.add(new SettlementResourceNodeState(
+                    nextResourceNodeId++,
+                    definition.getKey(),
+                    plotX,
+                    plotY,
+                    PLOT_PLANE,
+                    definition.getDefaultStartingAmount(),
+                    definition.getDefaultStartingAmount()));
+            return;
+        }
+    }
+
+    private int[] findResourcePlacementInChunkInternal(
+            int chunkX, int chunkY, long seed, long ignoredNodeId) {
+        if (!isValidChunk(chunkX, chunkY)) {
+            return null;
+        }
+        Random random = new Random(seed);
+        for (int attempt = 0; attempt < 48; attempt++) {
+            int plotX = (chunkX * PLOT_CHUNK_SIZE) + 1 + random.nextInt(PLOT_CHUNK_SIZE - 2);
+            int plotY = (chunkY * PLOT_CHUNK_SIZE) + 1 + random.nextInt(PLOT_CHUNK_SIZE - 2);
+            if (isResourcePlacementValidInternal(
+                    plotX, plotY, PLOT_PLANE, ignoredNodeId)) {
+                return new int[] { plotX, plotY };
+            }
+        }
+        return null;
+    }
+
+    private int[] findResourcePlacementInStarterAreaInternal(
+            long seed, long ignoredNodeId) {
+        Random random = new Random(seed);
+        int minTile = STARTER_CHUNK_MIN * PLOT_CHUNK_SIZE;
+        int maxTileExclusive = (STARTER_CHUNK_MAX + 1) * PLOT_CHUNK_SIZE;
+        for (int attempt = 0; attempt < 96; attempt++) {
+            int plotX = minTile + 1 + random.nextInt(maxTileExclusive - minTile - 2);
+            int plotY = minTile + 1 + random.nextInt(maxTileExclusive - minTile - 2);
+            if (isResourcePlacementValidInternal(
+                    plotX, plotY, PLOT_PLANE, ignoredNodeId)) {
+                return new int[] { plotX, plotY };
+            }
+        }
+        return null;
+    }
+
+    private boolean isResourcePlacementValidInternal(
+            int plotX, int plotY, int plane, long ignoredNodeId) {
+        if (!isValidPlotLocation(plotX, plotY, plane)
+                || hasPlacedPieceAtInternal(plotX, plotY, plane)
+                || savedBuildTiles.contains(savedBuildTileKey(plotX, plotY, plane))
+                || SettlementWorkerDefinition.isReservedArrivalTile(plotX, plotY, plane)
+                || isConveyorTileInternal(plotX, plotY, plane)) {
+            return false;
+        }
+        if (workers != null) {
+            for (SettlementWorkerState worker : workers) {
+                if (worker != null
+                        && worker.getHomePlotX() == plotX
+                        && worker.getHomePlotY() == plotY
+                        && worker.getHomePlane() == plane) {
+                    return false;
+                }
+            }
+        }
+        int spacingSquared = RESOURCE_MIN_SPACING * RESOURCE_MIN_SPACING;
+        for (SettlementResourceNodeState node : resourceNodes) {
+            if (node == null || node.getNodeId() == ignoredNodeId
+                    || node.getPlane() != plane) {
+                continue;
+            }
+            int dx = node.getPlotX() - plotX;
+            int dy = node.getPlotY() - plotY;
+            if ((dx * dx) + (dy * dy) < spacingSquared) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isConveyorTileInternal(int plotX, int plotY, int plane) {
+        for (SettlementConveyorRun run : conveyorRuns) {
+            if (run == null || run.getPlane() != plane) {
+                continue;
+            }
+            int bendX = run.getBendPlotX();
+            int bendY = run.getBendPlotY();
+            if (isPointOnAxisAlignedSegment(
+                    plotX, plotY,
+                    run.getStartPlotX(), run.getStartPlotY(),
+                    bendX, bendY)
+                    || isPointOnAxisAlignedSegment(
+                            plotX, plotY,
+                            bendX, bendY,
+                            run.getEndPlotX(), run.getEndPlotY())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isPointOnAxisAlignedSegment(
+            int x, int y, int startX, int startY, int endX, int endY) {
+        if (startX == endX) {
+            return x == startX
+                    && y >= Math.min(startY, endY)
+                    && y <= Math.max(startY, endY);
+        }
+        if (startY == endY) {
+            return y == startY
+                    && x >= Math.min(startX, endX)
+                    && x <= Math.max(startX, endX);
+        }
+        return false;
+    }
+
+    private SettlementResourceNodeState findFirstResourceNodeByDefinitionInternal(
+            String definitionKey) {
+        if (definitionKey == null) {
+            return null;
+        }
+        for (SettlementResourceNodeState node : resourceNodes) {
+            if (node != null && definitionKey.equals(node.getDefinitionKey())) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    private SettlementBiome sampleBiomeInternal(int plotX, int plotY) {
+        if (biomeGeneratorVersion == BIOME_GENERATOR_VERSION) {
+            return SettlementBiome.sampleV1(resourceWorldSeed, plotX, plotY);
+        }
+        return SettlementBiome.MEADOW;
+    }
+
+    private static boolean isValidChunk(int chunkX, int chunkY) {
+        return chunkX >= 0 && chunkX < PLOT_CHUNKS
+                && chunkY >= 0 && chunkY < PLOT_CHUNKS;
+    }
+
+    private static String resourceChunkKey(int chunkX, int chunkY) {
+        return chunkX + ":" + chunkY;
+    }
+
+    private static long mixResourceSeed(
+            long seed, int chunkX, int chunkY, long salt) {
+        long value = seed ^ salt;
+        value ^= ((long) chunkX * 0x9E3779B97F4A7C15L);
+        value ^= ((long) chunkY * 0xC2B2AE3D27D4EB4FL);
+        value ^= value >>> 33;
+        value *= 0xff51afd7ed558ccdL;
+        value ^= value >>> 33;
+        value *= 0xc4ceb9fe1a85ec53L;
+        value ^= value >>> 33;
+        return value;
     }
 
     public synchronized List<SettlementResourceNodeState> snapshotResourceNodes() {

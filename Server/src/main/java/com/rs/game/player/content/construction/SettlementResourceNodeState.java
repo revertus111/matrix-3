@@ -70,6 +70,16 @@ public final class SettlementResourceNodeState implements Serializable {
     public long getRemainingAmount() { return remainingAmount; }
     public boolean isDepleted() { return remainingAmount <= 0L; }
 
+    boolean relocate(int plotX, int plotY, int plane) {
+        if (!SettlementState.isValidPlotLocation(plotX, plotY, plane)) {
+            return false;
+        }
+        this.plotX = plotX;
+        this.plotY = plotY;
+        this.plane = plane;
+        return true;
+    }
+
     long harvest(long amount) {
         if (amount <= 0L || remainingAmount <= 0L) return 0L;
         long harvested = Math.min(amount, remainingAmount);

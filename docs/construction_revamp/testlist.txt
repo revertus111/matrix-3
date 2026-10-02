@@ -2006,3 +2006,19 @@ Resource World V1A/V1B — schema-v19 migration repair (2026-10-01)
 [x] verified-static: a legitimately depleted tree record at remaining=0 counts as present and is not recreated.
 [x] Pull/build/restart and enter the existing settlement save that lost its tree under schema v18; tree is restored. RUNTIME VERIFIED 2026-10-01.
 [ ] Deplete the restored tree, exit/re-enter and relog/re-enter; it must remain absent after legitimate depletion.
+
+
+Resource World Foundation V1C — seeded starter generation + flowing biome field (2026-10-01)
+[x] verified-static: schema v20 persists resource-world seed, generator version, biome version and generated-resource-chunk set.
+[x] verified-static: initial generation is limited to central chunks 3,3 / 4,3 / 3,4 / 4,4; outer chunks are not generated yet.
+[x] verified-static: wood/food/stone/ore each receive one deterministic starter placement and existing node remaining/depleted state is preserved during relocation.
+[x] verified-static: extra starter resources are biome-weighted, deterministic, minimum 3 tiles apart and avoid placed/saved build tiles, worker arrival/home tiles and persistent conveyor route tiles.
+[x] verified-static: SettlementBiome V1 uses smooth low-frequency fields across plot coordinates rather than independent random per-chunk biome rolls.
+[ ] Pull/build/restart and enter the existing settlement. Starter resources should now occupy seed-driven positions within the central 2x2 chunks instead of the four old fixed coordinates.
+[ ] Confirm the tree that was already legitimately depleted before v20 remains absent; v20 must not reset its remaining amount.
+[ ] Confirm several additional starter-area resources appear but are not visually cluttered or stacked together.
+[ ] Exit/re-enter and relog/re-enter. All generated resource positions must remain identical.
+[ ] Restart the server and re-enter. Positions must still remain identical because the saved seed/generated nodes are authoritative.
+[ ] Confirm resources do not overlap current buildings, saved build tiles, worker homes/arrival tiles or conveyor route tiles.
+[ ] Walk into outer chunks before the lock patch: terrain may be visible/accessible temporarily, but no procedural resource nodes should be generated there yet.
+[ ] Spot-check biome metadata through a future/debug seam only if needed; no terrain/color/water visual change is expected in V1C.
