@@ -264,3 +264,14 @@
 - Group / Glue core runtime accepted by user: clicking one grouped member correctly selects the whole group.
 - No cache writer or server/world ownership changed.
 - Status: IMPLEMENTED / NEEDS RUNTIME TEST for cross-object asset import.
+
+2026-10-02 - Live Model Editor deterministic reusable-part visual recipe
+- Fixed reusable assets such as tin ore reloading with a different ore appearance.
+- verified-static root cause: the editor rebuilt raw model bytes but did not preserve/apply ObjectDefinitions recolor/retexture mappings used by Matrix3's normal object-model path.
+- Source decoding now applies the effective definition recolor and retexture maps before connected-part detection/rendering.
+- PartState pins exact donor model IDs plus recolor/retexture maps; auxiliary-source caching keys include the complete visual recipe.
+- Selection assets advance to v3; projects advance to v8.
+- Legacy v1/v2 assets and v1-v7 projects remain readable through corrected fallback resolution.
+- No raw geometry is embedded in JSON and no cache/server/world mutation was added.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
