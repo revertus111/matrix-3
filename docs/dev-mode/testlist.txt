@@ -389,3 +389,23 @@ Live Model Editor — Clear Selection + Reusable Part / Assembly Library V1 gate
 [ ] Ctrl+Z then Ctrl+Y across the import or a mixed-source transform and verify exact state restoration.
 [ ] Save the v7 target project, reload it, and verify the imported donor part/group still renders and edits correctly.
 [ ] Regression: existing v1 selection assets and v1-v6 projects still load.
+
+Live Model Editor — Deterministic Part-Library Visual Recipe gate (2026-10-02)
+[x] verified-static: Matrix3 ObjectDefinitions.method6063 applies recolor source aShortArray5613 to palette/aShortArray5621 targets and retexture source aShortArray5618 to aShortArray5617 targets.
+[x] verified-static: LiveModelEditorParts Source now captures those effective mappings and applies them to decoded Class159 faceColours/faceTextures.
+[x] verified-static: every newly detected source part pins model IDs + recolor/retexture mappings in PartState.
+[x] verified-static: pinned auxiliary sources are keyed by the full visual recipe, not only donor object ID/type.
+[x] verified-static: selection-asset v3 persists the exact recipe per part; project v8 persists it through save/load.
+[x] verified-static: v1/v2 assets and v1-v7 projects remain accepted through legacy fallback behavior.
+[x] verified-static: JSON remains cache-reference-only; no raw vertex/model-byte persistence or cache write was introduced.
+[ ] Eclipse clean/build Client with Java 8.
+[ ] Load the existing legacy tin asset; verify whether corrected fallback now displays tin.
+[ ] Open the tin donor object and verify Live Model Editor displays the same tin appearance as the live object.
+[ ] Save that tin component again as a new v3 Part / Assembly asset.
+[ ] Import the new v3 tin asset into another object/project; verify it remains tin rather than becoming runite or another ore.
+[ ] Import/save at least one different ore variant alongside it; verify both retain distinct visuals simultaneously.
+[ ] Move/rotate/Tile Snap/group the v3 tin asset; verify its appearance does not change during transforms.
+[ ] Save the target as a v8 project, reload it, and verify each imported ore keeps its exact saved appearance.
+[ ] Ctrl+D the tin asset/group and verify the duplicate preserves the same pinned visual recipe.
+[ ] Regression: normal non-recolored donor parts still render/import as before.
+
