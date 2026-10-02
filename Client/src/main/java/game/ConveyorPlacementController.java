@@ -109,7 +109,7 @@ public final class ConveyorPlacementController {
 
         if (start == null) {
             start = hover;
-                ConveyorRunPreview.clearPlacementPreview();
+            ConveyorRunPreview.clearPlacementPreview();
             status = "Conveyor Point A set at "
                     + start.getWorldX() + "," + start.getWorldY()
                     + ". Move to Point B and click.";

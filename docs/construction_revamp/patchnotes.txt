@@ -1,3 +1,6 @@
+2026-10-02 - Conveyor V2.0 placement source cleanup
+- Normalized the Point A preview-clear indentation after the straight-placement rewrite; behavior is unchanged.
+
 2026-10-02 - Conveyor V2.0 straight runs + belt connections
 - Superseded player-facing V1.9 auto-L placement with one cardinal straight ConveyorRun per A->B gesture.
 - Client preview projects Point B onto the dominant E/W or N/S axis; server repeats the projection authoritatively and preserves chest/machine endpoint snapping only when the snap remains straight.
