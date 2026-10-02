@@ -273,5 +273,7 @@
 - Selection assets advance to v3; projects advance to v8.
 - Legacy v1/v2 assets and v1-v7 projects remain readable through corrected fallback resolution.
 - No raw geometry is embedded in JSON and no cache/server/world mutation was added.
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+- Runtime accepted by user: imported ore now keeps the correct tin visual instead of changing to runite.
+- Follow-up: imported parts currently show reduced texture/detail fidelity versus the donor/live object.
+- Status: CORE RUNTIME VERIFIED / TEXTURE FIDELITY FOLLOW-UP.
 
