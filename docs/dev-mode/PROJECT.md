@@ -590,7 +590,7 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - **Runtime acceptance:** user confirmed grouping works and specifically verified the key UX win: clicking one member reselects the whole grouped assembly. Deeper transform/duplicate/save-load checks remain pending.
 ### Live Model Editor — Clear Selection + Reusable Part / Assembly Library V1 — 2026-10-01
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME RETEST** under explicit SAP AAA.
+- Status: **CORE RUNTIME VERIFIED / DEEPER GATE PENDING** under explicit SAP AAA.
 - Added **C = Clear Selection** for Part/Multi editing. The existing Clear button now advertises `[C]`; Whole mode is intentionally not cleared by this shortcut.
 - Reworked the existing selection-asset path into the first reusable **Part / Assembly Library** workflow:
   - open a donor object in Live Model Editor;
@@ -610,7 +610,7 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 
 ### Live Model Editor — Deterministic Part-Library Visual Recipe — 2026-10-02
 
-- Status: **IMPLEMENTED / NEEDS RUNTIME TEST** under explicit SAP AAA.
+- Status: **CORE RUNTIME VERIFIED / TEXTURE FIDELITY FOLLOW-UP** under explicit SAP AAA.
 - Runtime regression: a reusable part harvested from a tin ore object reloaded with a runite-looking ore visual.
 - **verified-static root cause:** Part Library V1 re-resolved donor geometry from raw cache model bytes, while Matrix3's real `ObjectDefinitions.method6063(...)` applies definition recolor and retexture mappings after model construction. The editor source path did not preserve/apply that visual recipe.
 - `LiveModelEditorParts.Source` now captures the donor definition's exact model IDs plus effective recolor and retexture maps, and applies those maps to decoded `Class159` face colours/textures before component detection/rendering.
@@ -620,5 +620,7 @@ Run one short combined acceptance session for Visual Dev Time V1 + the GFX/Proje
 - Project format advances from v7 to **v8** so pinned donor visuals survive project save/load.
 - Existing v1/v2 assets and v1-v7 projects remain readable. Legacy assets use corrected donor-definition fallback; newly saved v3 assets pin the exact recipe.
 - JSON remains cache-reference-only: raw model bytes/vertices are not embedded and no cache write occurs.
-- **Resume Here:** load the existing tin asset as a legacy regression check; then re-harvest/save tin as v3, import it beside another ore variant, save/reload the v8 project, and verify each ore keeps its exact visual.
+- **Runtime acceptance:** user confirmed the saved/imported ore now keeps the correct ore identity instead of changing from tin to runite.
+- **Open fidelity note:** imported geometry currently shows less texture/detail fidelity than the donor/live object. Treat this as a separate rendering-fidelity follow-up; the deterministic ore-identity bug itself is verified fixed.
+- **Resume Here:** inspect imported-vs-donor texture/detail parity next, then complete the deeper v8 save/reload + multiple-ore regression checks.
 
