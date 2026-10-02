@@ -202,6 +202,68 @@ public final class ConstructionRadialSelection {
         return formatNpcIndexes(committedWorkerNpcIndexes);
     }
 
+    static int[] snapshotCommittedWorkerNpcIndexes() {
+        return java.util.Arrays.copyOf(
+                committedWorkerNpcIndexes, committedWorkerNpcIndexes.length);
+    }
+
+    static int getTotalSettlementWorkerCount() {
+        return collectActiveSettlementWorkerNpcIndexes().length;
+    }
+
+    static void selectAllWorkers() {
+        int[] allWorkers = collectActiveSettlementWorkerNpcIndexes();
+        applyExternalSelection(allWorkers, false, "Select All");
+    }
+
+    static boolean applyControlGroupSelection(int[] npcIndexes, boolean playerSelected) {
+        return applyExternalSelection(npcIndexes, playerSelected, "Control group");
+    }
+
+    static int[] getCommittedSelectionCenterLocalTile() {
+        if (!hasCommittedSelection()) {
+            return null;
+        }
+        long sumX = 0L;
+        long sumY = 0L;
+        int count = 0;
+
+        for (int npcIndex : committedWorkerNpcIndexes) {
+            LinkableObject link = client.aClass676_8622 == null
+                    ? null : (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+            if (link == null || !(link.anObject9081 instanceof NPC)) {
+                continue;
+            }
+            NPC npc = (NPC) link.anObject9081;
+            if (!isSettlementWorkerNpcIndex(npcIndex)
+                    || npc.screenX == null || npc.screenY == null
+                    || npc.screenX.length == 0 || npc.screenY.length == 0) {
+                continue;
+            }
+            sumX += npc.screenX[0];
+            sumY += npc.screenY[0];
+            count++;
+        }
+
+        if (committedPlayerSelected) {
+            Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
+            if (player != null && player.screenX != null && player.screenY != null
+                    && player.screenX.length > 0 && player.screenY.length > 0) {
+                sumX += player.screenX[0];
+                sumY += player.screenY[0];
+                count++;
+            }
+        }
+
+        if (count <= 0) {
+            return null;
+        }
+        return new int[] {
+                Math.round((float) sumX / (float) count),
+                Math.round((float) sumY / (float) count)
+        };
+    }
+
     public static boolean hasCommittedWorkerSelection() {
         return committed && committedWorkerNpcIndexes.length > 0;
     }
@@ -2190,6 +2252,156 @@ public final class ConstructionRadialSelection {
             }
         }
         return false;
+    }
+
+    private static int[] collectActiveSettlementWorkerNpcIndexes() {
+        if (client.aClass676_8622 == null || client.anIntArray8626 == null) {
+            return new int[0];
+        }
+        int activeCount = client.anInt8625 * 765313669;
+        if (activeCount < 0) {
+            activeCount = 0;
+        } else if (activeCount > client.anIntArray8626.length) {
+            activeCount = client.anIntArray8626.length;
+        }
+        int[] indexes = new int[activeCount];
+        int count = 0;
+        for (int i = 0; i < activeCount; i++) {
+            int npcIndex = client.anIntArray8626[i];
+            if (isSettlementWorkerNpcIndex(npcIndex)) {
+                indexes[count++] = npcIndex;
+            }
+        }
+        return count == indexes.length
+                ? indexes : java.util.Arrays.copyOf(indexes, count);
+    }
+
+    private static boolean applyExternalSelection(
+            int[] npcIndexes, boolean playerSelected, String source) {
+        if (!ConstructionBuildCamera.isSettlementAutoMode()
+                || !ConstructionBuildCamera.isRtsMode()
+                || client.aClass613_8605 == null) {
+            return false;
+        }
+
+        int[] requested = npcIndexes == null ? new int[0] : npcIndexes;
+        int[] valid = new int[requested.length];
+        int validCount = 0;
+        for (int npcIndex : requested) {
+            if (!isSettlementWorkerNpcIndex(npcIndex)) {
+                continue;
+            }
+            boolean duplicate = false;
+            for (int i = 0; i < validCount; i++) {
+                if (valid[i] == npcIndex) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (!duplicate) {
+                valid[validCount++] = npcIndex;
+            }
+        }
+        valid = java.util.Arrays.copyOf(valid, validCount);
+
+        Player localPlayer = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
+        boolean validSelf = playerSelected && localPlayer != null
+                && localPlayer.screenX != null && localPlayer.screenY != null
+                && localPlayer.screenX.length > 0 && localPlayer.screenY.length > 0;
+
+        if (valid.length == 0 && !validSelf) {
+            clearCommittedRadius();
+            return false;
+        }
+
+        Class497 sceneBase = client.aClass613_8605.method7280((byte) -102);
+        if (sceneBase == null) {
+            return false;
+        }
+
+        int baseWorldX = sceneBase.localX * -2109597897;
+        int baseWorldY = sceneBase.localY * 417324155;
+        float sumWorldX = 0.0F;
+        float sumWorldY = 0.0F;
+        int positionCount = 0;
+        int plane = validSelf ? (localPlayer.aByte9009 & 0xff) : -1;
+
+        for (int npcIndex : valid) {
+            LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+            if (link == null || !(link.anObject9081 instanceof NPC)) {
+                continue;
+            }
+            NPC npc = (NPC) link.anObject9081;
+            if (npc.screenX == null || npc.screenY == null
+                    || npc.screenX.length == 0 || npc.screenY.length == 0) {
+                continue;
+            }
+            if (plane < 0) {
+                plane = npc.aByte9009 & 0xff;
+            }
+            sumWorldX += baseWorldX + npc.screenX[0];
+            sumWorldY += baseWorldY + npc.screenY[0];
+            positionCount++;
+        }
+
+        if (validSelf) {
+            sumWorldX += baseWorldX + localPlayer.screenX[0];
+            sumWorldY += baseWorldY + localPlayer.screenY[0];
+            positionCount++;
+        }
+
+        if (positionCount <= 0 || plane < 0) {
+            return false;
+        }
+
+        float centerWorldX = sumWorldX / positionCount;
+        float centerWorldY = sumWorldY / positionCount;
+        float radius = 0.0F;
+        for (int npcIndex : valid) {
+            LinkableObject link = (LinkableObject) client.aClass676_8622.get((long) npcIndex);
+            if (link == null || !(link.anObject9081 instanceof NPC)) {
+                continue;
+            }
+            NPC npc = (NPC) link.anObject9081;
+            if (npc.screenX == null || npc.screenY == null
+                    || npc.screenX.length == 0 || npc.screenY.length == 0) {
+                continue;
+            }
+            float dx = baseWorldX + npc.screenX[0] - centerWorldX;
+            float dy = baseWorldY + npc.screenY[0] - centerWorldY;
+            radius = Math.max(radius, (float) Math.sqrt(dx * dx + dy * dy));
+        }
+        if (validSelf) {
+            float dx = baseWorldX + localPlayer.screenX[0] - centerWorldX;
+            float dy = baseWorldY + localPlayer.screenY[0] - centerWorldY;
+            radius = Math.max(radius, (float) Math.sqrt(dx * dx + dy * dy));
+        }
+
+        if (dragging) {
+            cancelActiveDrag();
+        }
+        committedWorkerNpcIndexes = valid;
+        committedPlayerSelected = validSelf;
+        committed = true;
+        committedCenterWorldX = centerWorldX;
+        committedCenterWorldY = centerWorldY;
+        committedStartWorldX = Math.round(centerWorldX);
+        committedStartWorldY = Math.round(centerWorldY);
+        committedPlane = plane;
+        committedRadiusTiles = radius;
+        liveDetectedWorkerNpcIndexes = java.util.Arrays.copyOf(valid, valid.length);
+        liveDetectedWorkerCount = valid.length;
+        livePlayerSelected = validSelf;
+        lastDetectedWorkers = formatNpcIndexes(valid);
+        dragThresholdPassed = false;
+        selectionDragJustCommitted = false;
+        resetGroundMoveClick();
+        lastRenderedCycle = Integer.MIN_VALUE;
+        lastRenderState = "committed worker rings pending";
+        lastEventState = source + " selected " + valid.length
+                + " worker(s)" + (validSelf ? " + self." : ".");
+        syncCommittedSelectionToServer();
+        return true;
     }
 
     private static boolean isSettlementWorkerNpcIndex(int npcIndex) {
