@@ -1312,6 +1312,12 @@ public final class client extends Class584 {
 												i_76_ = (rtsCenterZ >> 9) - (i_74_ >> 2);
 											}
 										}
+										/*
+										 * RTS drag-pan reuses this exact stock minimap cursor->world
+										 * transform while LMB is held. No duplicate minimap math or
+										 * hardcoded widget rectangle is introduced.
+										 */
+										ConstructionBuildCamera.handleMinimapDragFocusTarget(i_75_, i_76_);
 										if (aBool8754 && 0 != ((-1613657659 * Class8.anInt43) & 0x40)) {
 											InterfaceDefinitions class73_78_ = (Class530.method6338((Class167.interfaceHash * -806385553), 654388253 * anInt8755, -1045905273));
 											if (class73_78_ != null)
