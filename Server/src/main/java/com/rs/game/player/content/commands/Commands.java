@@ -2973,7 +2973,7 @@ public final class Commands {
 		player.getPackets().sendGameMessage(
 			fullPlotTest.setFullPlotTesting("on".equalsIgnoreCase(cmd[1])));
 		return true;
-	    case "settlementconveyorcreate":	    case "settlementconveyorcreate":
+	    case "settlementconveyorcreate":
 		SettlementInstance conveyorCreate = SettlementInstance.getActive(player);
 		if (conveyorCreate == null) {
 		    player.getPackets().sendGameMessage("Enter your settlement before creating a ConveyorRun.");
