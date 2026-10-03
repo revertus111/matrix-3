@@ -7,16 +7,18 @@ import java.awt.event.AWTEventListener;
 import java.awt.event.MouseEvent;
 
 /**
- * Player-facing two-click ConveyorRun placement tool.
+ * Player-facing continuous-chain ConveyorRun placement tool.
  *
  * Point A/B are selected from Matrix3's already-resolved Construction hovered
- * tile. The client owns only preview/input; the server remains authoritative for
- * endpoint snapping, plot validation and persistent ConveyorRun creation.
+ * tile. After a successful A -> B submission, B becomes the next Point A so the
+ * player can author A -> B -> C -> D without reselecting every seam. The client
+ * owns only preview/input; the server remains authoritative for endpoint
+ * snapping, plot validation, persistent ConveyorRun creation and belt links.
  */
 public final class ConveyorPlacementController {
 
     private static volatile boolean enabled;
-    private static volatile ConstructionPlacementController.HoverTile start;
+    private static volatile Anchor start;
     private static volatile String status = "Conveyor: choose Point A.";
     private static boolean inputListenerInstalled;
 
@@ -32,7 +34,7 @@ public final class ConveyorPlacementController {
         ConveyorRunPreview.clearPlacementPreview();
         if (enabled) {
             ensureInputListener();
-            status = "Conveyor armed: click Point A, then Point B. Right-click cancels A.";
+            status = "Conveyor armed: click Point A, then endpoints to continue the chain. Right-click ends the chain.";
         } else {
             status = "Conveyor placement disabled.";
         }
@@ -77,7 +79,8 @@ public final class ConveyorPlacementController {
     }
 
     /**
-     * Escape uses this before the palette itself closes.
+     * Escape uses this before the palette itself closes. For Conveyor, the first
+     * Escape/right-click ends the active chain but keeps the Conveyor tool armed.
      */
     public static synchronized boolean cancelPendingEndpoint() {
         if (!enabled || start == null) {
@@ -85,7 +88,7 @@ public final class ConveyorPlacementController {
         }
         start = null;
         ConveyorRunPreview.clearPlacementPreview();
-        status = "Conveyor Point A cancelled. Click a new Point A.";
+        status = "Conveyor chain ended. Click a new Point A.";
         return true;
     }
 
@@ -108,7 +111,8 @@ public final class ConveyorPlacementController {
         }
 
         if (start == null) {
-            start = hover;
+            start = new Anchor(
+                    hover.getWorldX(), hover.getWorldY(), hover.getPlane());
             ConveyorRunPreview.clearPlacementPreview();
             status = "Conveyor Point A set at "
                     + start.getWorldX() + "," + start.getWorldY()
@@ -140,15 +144,24 @@ public final class ConveyorPlacementController {
         double length = distanceTiles(
                 start.getWorldX(), start.getWorldY(), projected[0], projected[1]);
         String committedAxis = axisLabel(projected[2]);
-        start = null;
+        int plane = start.getPlane();
+
+        /*
+         * Continuous-chain ownership: the committed Point B becomes the next
+         * Point A immediately. The server's V2.0 connection resolver sees the
+         * previous run ending on the new run's start as insertion distance 0.
+         */
+        start = new Anchor(projected[0], projected[1], plane);
         ConveyorRunPreview.clearPlacementPreview();
         status = "Straight ConveyorRun create queued ("
                 + String.format("%.2f", length) + " tiles, "
-                + committedAxis + "). Click a new Point A to keep building.";
+                + committedAxis + "). Continue from B at "
+                + start.getWorldX() + "," + start.getWorldY()
+                + "; right-click/Escape ends the chain.";
     }
 
     private static int[] projectStraightEnd(
-            ConstructionPlacementController.HoverTile a,
+            Anchor a,
             ConstructionPlacementController.HoverTile b) {
         int dx = b.getWorldX() - a.getWorldX();
         int dy = b.getWorldY() - a.getWorldY();
@@ -202,5 +215,34 @@ public final class ConveyorPlacementController {
             }
         }, AWTEvent.MOUSE_EVENT_MASK);
         inputListenerInstalled = true;
+    }
+
+    /**
+     * Local immutable chain anchor. Construction's HoverTile constructor is
+     * intentionally private to its picker owner, so Conveyor stores only the
+     * resolved coordinates it needs between committed segments.
+     */
+    private static final class Anchor {
+        private final int worldX;
+        private final int worldY;
+        private final int plane;
+
+        Anchor(int worldX, int worldY, int plane) {
+            this.worldX = worldX;
+            this.worldY = worldY;
+            this.plane = plane;
+        }
+
+        int getWorldX() {
+            return worldX;
+        }
+
+        int getWorldY() {
+            return worldY;
+        }
+
+        int getPlane() {
+            return plane;
+        }
     }
 }
