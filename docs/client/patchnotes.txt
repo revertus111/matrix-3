@@ -1,3 +1,10 @@
+2026-10-03 - Scene-entry recycle semantic documentation
+- Documented Class578.method6834(...) as the verified-static Class531 scene-entry release/recycle seam used by Class545/Class523 removal paths.
+- Recorded the Class531 wrapper-pool behavior: wrapped Class456_Sub1 reference cleared before reuse, with the shared pool capped at 200 entries.
+- Documented the existing Construction/developer direct-render hook and its normal-world-terrain scene guard.
+- Added the reusable mapping to docs/client/CLIENT_MAP.md under Scene / renderer.
+- Preserved all obfuscated identifiers; no runtime behavior, scene ownership or Construction gameplay state changed.
+
 2026-10-03 - Minimap/compass semantic documentation
 - Documented Class464.method5484(...) as the stock world-minimap render pipeline, including the shared center/yaw/zoom contract consumed by raster and overlays.
 - Documented Class107.method2061(...) as the stock compass render path, including detached-vs-normal heading selection, 14-bit yaw handling and compass sprite 4290.
