@@ -1,3 +1,16 @@
+Conveyor V2.0 per-segment axis lock correction — 2026-10-03
+[x] RUNTIME REJECTED: video showed the preview repeatedly flipping between E/W and N/S while moving the cursor around one Point A.
+[x] verified-static: segmentAxis starts AUTO, locks once from the first non-zero hover movement, and is reused by preview plus commit for the rest of that segment.
+[x] verified-static: committing Point B resets segmentAxis to AUTO for the next chained segment while retaining B as the next Point A.
+[x] verified-static: right-click/Escape resets both chain anchor and segmentAxis.
+[x] verified-static: a cursor position perpendicular to the locked axis cannot submit a zero-length run.
+[ ] Pull latest main and Eclipse clean/build Client.
+[ ] AXIS STABILITY: click A and move mostly east/west until the preview locks E/W. Move the cursor far north/south and across the diagonal threshold; the existing segment must NOT rotate 90 degrees.
+[ ] LOCKED LENGTH: while E/W is locked, only the cursor's east/west tile coordinate should change belt length; perpendicular movement alone should clear/hold the zero-length projection rather than flip orientation.
+[ ] NEXT SEGMENT TURN: click B, then move north/south from B. The new segment may lock N/S independently, proving intentional A->B->C 90-degree chaining.
+[ ] CHAIN CONTINUITY: after clicking B or C, do not re-click that endpoint; the next preview must originate there automatically.
+[ ] CHAIN CANCEL: right-click/Escape once during a segment, then choose a fresh A; no stale axis lock may carry into the new chain.
+
 Conveyor V2.0 continuous-chain placement correction — 2026-10-03
 [x] RUNTIME REJECTED: straight-only run creation worked, but successful placement cleared Point A and did not continue from B as promised.
 [x] verified-static: after a successful create command is queued, projected Point B is retained as the next Conveyor-local chain anchor.
