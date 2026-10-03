@@ -46,6 +46,24 @@ public class Class578 {
 		((Cs2Executor) class441).intStackPtr -= -2084135730;
 	}
 
+	/**
+	 * verified-static: releases a temporary {@link Class531} scene-entry wrapper
+	 * and returns it to Matrix3's reusable wrapper pool.
+	 *
+	 * {@link Class545} and {@link Class523} call this when a wrapped scene entity is
+	 * removed immediately or drained from an ordered scene-entry list. The wrapped
+	 * {@link Class456_Sub1} reference is cleared before the wrapper is pushed back
+	 * onto {@code Class531.aStack5931}; the shared pool is capped at 200 entries.
+	 *
+	 * Matrix3 Construction and developer tools also use this narrow pre-recycle
+	 * seam for direct, client-only preview rendering. Those previews are submitted
+	 * only while the normal world-terrain scene is active
+	 * ({@code scene.aClass174Array5875 == scene.aClass174Array5838}), preventing the
+	 * Construction ghost, radial selection and editor overlays from being injected
+	 * into unrelated alternate scene passes.
+	 *
+	 * Original decompiled symbol: Class578.method6834(...).
+	 */
 	static void method6834(Class531 class531, int i) {
 		if (ConstructionPlacementController.isHoverTracking())
 			ConstructionGhostPreview.debugClass578Entry();
