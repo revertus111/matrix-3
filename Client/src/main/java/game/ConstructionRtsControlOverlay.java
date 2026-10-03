@@ -1,38 +1,29 @@
 package game;
 
-import java.awt.BasicStroke;
+import java.awt.AWTEvent;
 import java.awt.Canvas;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.IllegalComponentStateException;
-import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.RenderingHints;
-import java.awt.Window;
+import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-
-import javax.swing.JComponent;
-import javax.swing.JWindow;
-import javax.swing.SwingUtilities;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Compact player-facing RTS control interface.
  *
- * The visual language is intentionally RuneScape-like: one dense movable panel,
- * shallow tabs, compact hitboxes and no repeated form rows. The owned overlay
- * surface remains the proven heavyweight-canvas-safe host used by Construction
- * tools; all visible controls are custom drawn here rather than Swing widgets.
+ * This panel is rendered by Matrix3's native InterfaceDefinitions/Class348
+ * interface tree rather than a Swing/JWindow overlay. The preferred host is
+ * NIS root 1477 component 368, the stock minigame-HUD slot. If that slot is
+ * not large enough in the active layout, a neutral full-size root container is
+ * selected as a bounded fallback. Existing host children are preserved and
+ * restored exactly when RTS ownership ends.
  *
  * V1 control groups remain settlement-session scoped. Runtime NPC indexes are
- * never persisted as worker identity; the server resolves recalled selections
- * back to stable worker ids for authoritative orders.
+ * never persisted as worker identity; authoritative worker commands still flow
+ * through the existing server-owned selection bridge.
  */
 public final class ConstructionRtsControlOverlay {
 
@@ -47,6 +38,13 @@ public final class ConstructionRtsControlOverlay {
             this.label = label;
         }
     }
+
+    private static final int ROOT_INTERFACE_ID = 1477;
+    private static final int MINIGAME_HUD_COMPONENT_ID = 368;
+    private static final int MINIGAME_HUD_UID =
+            (ROOT_INTERFACE_ID << 16) | MINIGAME_HUD_COMPONENT_ID;
+    private static final int FALLBACK_FONT_INTERFACE_ID = 316;
+    private static final int SYNTHETIC_COMPONENT_BASE = 60000;
 
     private static final int GROUP_COUNT = 9;
     private static final long DOUBLE_TAP_MS = 400L;
@@ -63,64 +61,136 @@ public final class ConstructionRtsControlOverlay {
     private static final int TAB_HEIGHT = 21;
     private static final int STATUS_HEIGHT = 17;
     private static final int PAD = 5;
+    private static final int GAP = 3;
 
-    private static final Color PANEL = new Color(24, 29, 35);
-    private static final Color TITLE = new Color(31, 37, 44);
-    private static final Color CONTENT = new Color(20, 25, 31);
-    private static final Color ROW_ALT = new Color(29, 35, 42);
-    private static final Color BORDER = new Color(93, 104, 116);
-    private static final Color INNER_BORDER = new Color(48, 57, 67);
-    private static final Color TEXT = new Color(238, 238, 238);
-    private static final Color MUTED = new Color(174, 181, 188);
-    private static final Color ACCENT = new Color(195, 161, 82);
-    private static final Color TAB_ACTIVE = new Color(64, 73, 82);
-    private static final Color BUTTON = new Color(45, 53, 62);
-    private static final Color BUTTON_HOVER = new Color(62, 72, 83);
-    private static final Color GROUP_SAVED = new Color(63, 70, 52);
+    // Matrix3 obfuscated field encoders. Each is the modular inverse of the
+    // decode multiplier used by Class348/InterfaceDefinitions at render time.
+    private static final int TYPE_ENCODE = -26899943;
+    private static final int SELF_ID_ENCODE = 697947061;
+    private static final int SELF_ID_DECODE = -1718435171;
+    private static final int PARENT_ID_ENCODE = -374350987;
+    private static final int X_ENCODE = -1222476983;
+    private static final int Y_ENCODE = -314551123;
+    private static final int WIDTH_ENCODE = -628102339;
+    private static final int HEIGHT_ENCODE = -2088867597;
+    private static final int COLOR_ENCODE = 2018397577;
+    private static final int H_ALIGN_ENCODE = 835483205;
+    private static final int V_ALIGN_ENCODE = -949518223;
+    private static final int RECT_INDEX_DECODE = 1525996737;
 
-    private static final Font TITLE_FONT = new Font("SansSerif", Font.BOLD, 11);
-    private static final Font BODY_FONT = new Font("SansSerif", Font.PLAIN, 10);
-    private static final Font BOLD_FONT = new Font("SansSerif", Font.BOLD, 10);
-    private static final Font SMALL_FONT = new Font("SansSerif", Font.PLAIN, 9);
+    private static final int TYPE_CONTAINER = 0;
+    private static final int TYPE_RECTANGLE = 3;
+    private static final int TYPE_TEXT = 4;
+
+    private static final int COLOR_PANEL = 0x181d23;
+    private static final int COLOR_TITLE = 0x20262d;
+    private static final int COLOR_CONTENT = 0x14191f;
+    private static final int COLOR_BORDER = 0x5d6874;
+    private static final int COLOR_INNER_BORDER = 0x303943;
+    private static final int COLOR_TEXT = 0xeeeeee;
+    private static final int COLOR_MUTED = 0xaeb5bc;
+    private static final int COLOR_ACCENT = 0xc3a152;
+    private static final int COLOR_TAB_ACTIVE = 0x404952;
+    private static final int COLOR_BUTTON = 0x2d353e;
+    private static final int COLOR_GROUP_SAVED = 0x3f4634;
 
     private static final int[][] groupNpcIndexes = new int[GROUP_COUNT][];
     private static final boolean[] groupPlayerSelected = new boolean[GROUP_COUNT];
     private static final boolean[] numberKeyDown = new boolean[GROUP_COUNT];
 
-    private static JWindow window;
-    private static Window owner;
-    private static ControlSurface surface;
-
-    private static volatile long lastRefreshRequestMillis;
+    private static volatile long lastRefreshMillis;
     private static volatile int lastRecallSlot = -1;
     private static volatile long lastRecallMillis;
     private static volatile String status = "L=GO  CTRL+L=SET  R=CLEAR";
     private static volatile Tab activeTab = Tab.GROUPS;
 
-    // Panel geometry persists for the lifetime of this client session.
-    private static boolean boundsInitialized;
-    private static int overlayX;
-    private static int overlayY;
-    private static int overlayWidth = DEFAULT_WIDTH;
-    private static int overlayHeight = DEFAULT_HEIGHT;
+    private static volatile boolean inputListenerInstalled;
+    private static volatile boolean moving;
+    private static volatile boolean resizing;
+    private static volatile int dragOffsetX;
+    private static volatile int dragOffsetY;
+    private static volatile int resizeStartMouseX;
+    private static volatile int resizeStartMouseY;
+    private static volatile int resizeStartWidth;
+    private static volatile int resizeStartHeight;
 
-    private static volatile LayoutSnapshot latestLayout = LayoutSnapshot.empty();
+    private static boolean geometryInitialized;
+    private static int panelX = 4;
+    private static int panelY = 4;
+    private static int panelWidth = DEFAULT_WIDTH;
+    private static int panelHeight = DEFAULT_HEIGHT;
+
+    private static InterfaceDefinitions attachedHost;
+    private static InterfaceDefinitions[] originalHostChildren;
+    private static InterfaceDefinitions[] installedHostChildren;
+    private static int nativeFontEncoded = Integer.MIN_VALUE;
+    private static boolean treeDirty = true;
+    private static int nextSyntheticComponent;
+
+    private static volatile Rectangle hostScreenBounds = new Rectangle();
+    private static volatile Rectangle panelBounds = new Rectangle();
+    private static volatile Rectangle titleBounds = new Rectangle();
+    private static volatile Rectangle resizeBounds = new Rectangle();
+    private static final Rectangle[] tabBounds = new Rectangle[Tab.values().length];
+    private static final Rectangle[] groupBounds = new Rectangle[GROUP_COUNT];
+    private static volatile Rectangle unitsSelectAll = new Rectangle();
+    private static volatile Rectangle unitsClear = new Rectangle();
+    private static volatile Rectangle unitsFocus = new Rectangle();
+    private static volatile Rectangle speedDown = new Rectangle();
+    private static volatile Rectangle speedUp = new Rectangle();
+    private static volatile Rectangle cameraFocus = new Rectangle();
+    private static volatile Rectangle cameraCenter = new Rectangle();
+
+    private static InterfaceDefinitions titleSelectionText;
+    private static InterfaceDefinitions statusText;
+    private static InterfaceDefinitions unitsInfoText;
+    private static InterfaceDefinitions cameraSpeedText;
+    private static InterfaceDefinitions cameraDragText;
+    private static final InterfaceDefinitions[] groupText = new InterfaceDefinitions[GROUP_COUNT];
+    private static final InterfaceDefinitions[] groupRect = new InterfaceDefinitions[GROUP_COUNT];
 
     private ConstructionRtsControlOverlay() {
     }
 
     static void refresh() {
+        ensureInputListener();
+
         long now = System.currentTimeMillis();
-        if (now - lastRefreshRequestMillis < REFRESH_THROTTLE_MS) {
+        if (now - lastRefreshMillis < REFRESH_THROTTLE_MS) {
             return;
         }
-        lastRefreshRequestMillis = now;
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                refreshNow();
+        lastRefreshMillis = now;
+
+        if (!ConstructionBuildCamera.isSettlementAutoMode()
+                || !ConstructionBuildCamera.isRtsMode()) {
+            detachNativeTree();
+            return;
+        }
+
+        InterfaceDefinitions host = resolveNativeHost();
+        if (host == null) {
+            detachNativeTree();
+            return;
+        }
+        if (nativeFontEncoded == Integer.MIN_VALUE) {
+            nativeFontEncoded = resolveNativeFontEncoded();
+            if (nativeFontEncoded == Integer.MIN_VALUE) {
+                detachNativeTree();
+                return;
             }
-        });
+        }
+
+        attachToHost(host);
+        updateHostScreenBounds(host);
+        if (!clampPanelGeometry(host)) {
+            detachNativeTree();
+            return;
+        }
+
+        if (treeDirty || installedHostChildren == null) {
+            rebuildNativeTree();
+        }
+        updateDynamicComponents();
     }
 
     static boolean handleKey(KeyEvent event) {
@@ -160,7 +230,6 @@ public final class ConstructionRtsControlOverlay {
             lastRecallMillis = now;
         }
         event.consume();
-        repaintSurface();
         return true;
     }
 
@@ -174,12 +243,9 @@ public final class ConstructionRtsControlOverlay {
         lastRecallMillis = 0L;
         status = "L=GO  CTRL+L=SET  R=CLEAR";
         activeTab = Tab.GROUPS;
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                hideNow();
-            }
-        });
+        moving = false;
+        resizing = false;
+        detachNativeTree();
     }
 
     private static boolean isHotkeyContextAvailable() {
@@ -211,12 +277,12 @@ public final class ConstructionRtsControlOverlay {
             groupPlayerSelected[slot] = false;
             status = "GROUP " + (slot + 1) + " CLEARED - NOTHING SELECTED";
         } else {
-            groupNpcIndexes[slot] = java.util.Arrays.copyOf(selected, selected.length);
+            groupNpcIndexes[slot] = Arrays.copyOf(selected, selected.length);
             groupPlayerSelected[slot] = self;
             status = "GROUP " + (slot + 1) + " SAVED: " + selected.length + " WORKER"
                     + (selected.length == 1 ? "" : "S") + (self ? " + SELF" : "");
         }
-        repaintSurface();
+        updateDynamicComponents();
     }
 
     private static synchronized void clearGroup(int slot) {
@@ -230,7 +296,7 @@ public final class ConstructionRtsControlOverlay {
             lastRecallMillis = 0L;
         }
         status = "GROUP " + (slot + 1) + " REMOVED";
-        repaintSurface();
+        updateDynamicComponents();
     }
 
     private static synchronized void recallGroup(int slot, boolean focusCamera) {
@@ -238,16 +304,15 @@ public final class ConstructionRtsControlOverlay {
         boolean self = groupPlayerSelected[slot];
         if ((saved == null || saved.length == 0) && !self) {
             status = "GROUP " + (slot + 1) + " IS EMPTY";
-            repaintSurface();
+            updateDynamicComponents();
             return;
         }
 
-        int[] copy = saved == null ? new int[0]
-                : java.util.Arrays.copyOf(saved, saved.length);
+        int[] copy = saved == null ? new int[0] : Arrays.copyOf(saved, saved.length);
         boolean applied = ConstructionRadialSelection.applyControlGroupSelection(copy, self);
         if (!applied) {
             status = "GROUP " + (slot + 1) + " HAS NO ACTIVE UNITS";
-            repaintSurface();
+            updateDynamicComponents();
             return;
         }
 
@@ -255,7 +320,7 @@ public final class ConstructionRtsControlOverlay {
         if (focusCamera) {
             focusCurrentSelection("GROUP " + (slot + 1));
         }
-        repaintSurface();
+        updateDynamicComponents();
     }
 
     private static void focusCurrentSelection(String source) {
@@ -285,600 +350,570 @@ public final class ConstructionRtsControlOverlay {
         }
     }
 
-    private static void refreshNow() {
-        if (!ConstructionBuildCamera.isSettlementAutoMode()
-                || !ConstructionBuildCamera.isRtsMode()) {
-            hideNow();
-            return;
+    /**
+     * Preferred owner is 1477:368, Matrix3's NIS minigame HUD slot. If the
+     * current NIS layout gives that slot less space than this compact panel,
+     * choose the largest neutral root container instead of creating a desktop
+     * overlay or touching the game-screen scene component.
+     */
+    private static InterfaceDefinitions resolveNativeHost() {
+        InterfaceDefinitions preferred = Class512.method6083(MINIGAME_HUD_UID, (short) -19231);
+        if (isUsableHost(preferred)) {
+            return preferred;
         }
-        Canvas canvas = Class584.aCanvas7745;
-        if (canvas == null || !canvas.isDisplayable() || !canvas.isVisible()) {
-            hideNow();
-            return;
+        if (!Class569.method6760(ROOT_INTERFACE_ID, null, -532744879)) {
+            return null;
         }
-        if (!ensureWindow(canvas)) {
-            hideNow();
-            return;
-        }
-
-        Point canvasLocation;
-        try {
-            canvasLocation = canvas.getLocationOnScreen();
-        } catch (IllegalComponentStateException ex) {
-            hideNow();
-            return;
-        }
-        Rectangle canvasBounds = new Rectangle(
-                canvasLocation.x, canvasLocation.y,
-                Math.max(1, canvas.getWidth()), Math.max(1, canvas.getHeight()));
-
-        if (!boundsInitialized) {
-            overlayWidth = Math.min(DEFAULT_WIDTH, Math.max(MIN_WIDTH, canvasBounds.width - 8));
-            overlayHeight = Math.min(DEFAULT_HEIGHT, Math.max(MIN_HEIGHT, canvasBounds.height - 8));
-            overlayX = canvasBounds.x + 5;
-            overlayY = canvasBounds.y + Math.min(65,
-                    Math.max(4, canvasBounds.height - overlayHeight - 4));
-            boundsInitialized = true;
+        Class83 group = Class534.aClass83Array5975[ROOT_INTERFACE_ID];
+        if (group == null || group.aClass73Array1081 == null) {
+            return null;
         }
 
-        Rectangle clamped = clampBounds(
-                new Rectangle(overlayX, overlayY, overlayWidth, overlayHeight),
-                canvasBounds);
-        overlayX = clamped.x;
-        overlayY = clamped.y;
-        overlayWidth = clamped.width;
-        overlayHeight = clamped.height;
-
-        if (!clamped.equals(window.getBounds())) {
-            window.setBounds(clamped);
+        InterfaceDefinitions best = null;
+        long bestArea = -1L;
+        for (InterfaceDefinitions candidate : group.aClass73Array1081) {
+            if (!isUsableHost(candidate) || candidate.anInt854 != 0) {
+                continue;
+            }
+            int width = decodeWidth(candidate);
+            int height = decodeHeight(candidate);
+            long area = (long) width * (long) height;
+            if (area > bestArea) {
+                bestArea = area;
+                best = candidate;
+            }
         }
-        if (!window.isVisible()) {
-            window.setVisible(true);
-        }
-        repaintSurface();
+        return best;
     }
 
-    private static boolean ensureWindow(Canvas canvas) {
-        Window currentOwner = SwingUtilities.getWindowAncestor(canvas);
-        if (currentOwner == null) {
+    private static boolean isUsableHost(InterfaceDefinitions candidate) {
+        return candidate != null
+                && candidate.anInt752 * -1285279191 == TYPE_CONTAINER
+                && decodeWidth(candidate) >= MIN_WIDTH + 8
+                && decodeHeight(candidate) >= MIN_HEIGHT + 8;
+    }
+
+    private static int resolveNativeFontEncoded() {
+        int encoded = scanNativeFont(ROOT_INTERFACE_ID);
+        if (encoded != Integer.MIN_VALUE) {
+            return encoded;
+        }
+        return scanNativeFont(FALLBACK_FONT_INTERFACE_ID);
+    }
+
+    private static int scanNativeFont(int interfaceId) {
+        if (!Class569.method6760(interfaceId, null, -532744879)) {
+            return Integer.MIN_VALUE;
+        }
+        Class83 group = Class534.aClass83Array5975[interfaceId];
+        if (group == null || group.aClass73Array1081 == null) {
+            return Integer.MIN_VALUE;
+        }
+        for (InterfaceDefinitions definition : group.aClass73Array1081) {
+            if (definition != null
+                    && definition.anInt752 * -1285279191 == TYPE_TEXT
+                    && definition.anInt906 * 1036765709 != -1) {
+                return definition.anInt906;
+            }
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    private static void attachToHost(InterfaceDefinitions host) {
+        if (attachedHost != host) {
+            detachNativeTree();
+            attachedHost = host;
+            originalHostChildren = host.aClass73Array917;
+            installedHostChildren = null;
+            treeDirty = true;
+            geometryInitialized = false;
+        } else if (installedHostChildren != null
+                && host.aClass73Array917 != installedHostChildren) {
+            // A native script changed the host children while RTS was active.
+            // Preserve that newer state and append our panel again rather than
+            // silently taking ownership of the host's child list.
+            originalHostChildren = host.aClass73Array917;
+            installedHostChildren = null;
+            treeDirty = true;
+        }
+    }
+
+    private static void detachNativeTree() {
+        if (attachedHost != null && installedHostChildren != null
+                && attachedHost.aClass73Array917 == installedHostChildren) {
+            attachedHost.aClass73Array917 = originalHostChildren;
+        }
+        attachedHost = null;
+        originalHostChildren = null;
+        installedHostChildren = null;
+        clearComponentRefs();
+        hostScreenBounds = new Rectangle();
+        panelBounds = new Rectangle();
+        treeDirty = true;
+    }
+
+    private static void updateHostScreenBounds(InterfaceDefinitions host) {
+        int rectangleIndex = host.anInt927 * RECT_INDEX_DECODE;
+        if (rectangleIndex < 0 || rectangleIndex >= client.aRectangleArray8708.length
+                || client.aRectangleArray8708[rectangleIndex] == null) {
+            return;
+        }
+        Rectangle bounds = client.aRectangleArray8708[rectangleIndex];
+        hostScreenBounds = new Rectangle(bounds);
+        panelBounds = new Rectangle(
+                bounds.x + panelX, bounds.y + panelY, panelWidth, panelHeight);
+    }
+
+    private static boolean clampPanelGeometry(InterfaceDefinitions host) {
+        int hostWidth = decodeWidth(host);
+        int hostHeight = decodeHeight(host);
+        if (hostWidth < MIN_WIDTH + 8 || hostHeight < MIN_HEIGHT + 8) {
             return false;
         }
-        if (window != null && owner == currentOwner && surface != null) {
-            return true;
-        }
-        if (window != null) {
-            window.dispose();
+
+        int maxWidth = Math.min(MAX_WIDTH, hostWidth - 8);
+        int maxHeight = Math.min(MAX_HEIGHT, hostHeight - 8);
+        if (!geometryInitialized) {
+            panelWidth = Math.min(DEFAULT_WIDTH, maxWidth);
+            panelHeight = Math.min(DEFAULT_HEIGHT, maxHeight);
+            panelX = 4;
+            panelY = 4;
+            geometryInitialized = true;
+            treeDirty = true;
         }
 
-        owner = currentOwner;
-        surface = new ControlSurface();
-        surface.setOpaque(true);
-        surface.setBackground(PANEL);
-        installSurfaceInput(surface);
+        int previousWidth = panelWidth;
+        int previousHeight = panelHeight;
+        int previousX = panelX;
+        int previousY = panelY;
 
-        window = new JWindow(owner);
-        window.setFocusableWindowState(false);
-        window.setAutoRequestFocus(false);
-        window.setContentPane(surface);
+        panelWidth = clamp(panelWidth, Math.min(MIN_WIDTH, maxWidth), maxWidth);
+        panelHeight = clamp(panelHeight, Math.min(MIN_HEIGHT, maxHeight), maxHeight);
+        panelX = clamp(panelX, 4, Math.max(4, hostWidth - panelWidth - 4));
+        panelY = clamp(panelY, 4, Math.max(4, hostHeight - panelHeight - 4));
+
+        if (previousWidth != panelWidth || previousHeight != panelHeight
+                || previousX != panelX || previousY != panelY) {
+            treeDirty = true;
+        }
         return true;
     }
 
-    private static void installSurfaceInput(final JComponent component) {
-        MouseAdapter mouse = new MouseAdapter() {
-            private Point dragStartScreen;
-            private Point dragStartWindow;
-            private Dimension resizeStart;
-            private boolean moving;
-            private boolean resizing;
-
-            @Override
-            public void mousePressed(MouseEvent event) {
-                LayoutSnapshot layout = latestLayout;
-                if (event.getButton() == MouseEvent.BUTTON1 && layout.resize.contains(event.getPoint())) {
-                    resizing = true;
-                    resizeStart = window == null ? null : window.getSize();
-                    dragStartScreen = event.getLocationOnScreen();
-                    event.consume();
-                    return;
-                }
-                if (event.getButton() == MouseEvent.BUTTON1 && layout.title.contains(event.getPoint())) {
-                    moving = true;
-                    dragStartScreen = event.getLocationOnScreen();
-                    dragStartWindow = window == null ? null : window.getLocation();
-                    event.consume();
-                    return;
-                }
-
-                for (int i = 0; i < layout.tabs.length; i++) {
-                    if (layout.tabs[i].contains(event.getPoint())) {
-                        if (event.getButton() == MouseEvent.BUTTON1) {
-                            activeTab = Tab.values()[i];
-                            status = activeTab == Tab.GROUPS
-                                    ? "L=GO  CTRL+L=SET  R=CLEAR"
-                                    : activeTab.label;
-                            repaintSurface();
-                        }
-                        event.consume();
-                        return;
-                    }
-                }
-
-                if (activeTab == Tab.GROUPS) {
-                    for (int i = 0; i < layout.groups.length; i++) {
-                        if (!layout.groups[i].contains(event.getPoint())) {
-                            continue;
-                        }
-                        if (event.getButton() == MouseEvent.BUTTON3) {
-                            clearGroup(i);
-                        } else if (event.getButton() == MouseEvent.BUTTON1) {
-                            if (event.isControlDown()) {
-                                saveGroup(i);
-                            } else {
-                                // Mouse group recall behaves like classic RTS UI: select + focus.
-                                recallGroup(i, true);
-                            }
-                        }
-                        event.consume();
-                        return;
-                    }
-                } else if (activeTab == Tab.UNITS && event.getButton() == MouseEvent.BUTTON1) {
-                    if (layout.unitsSelectAll.contains(event.getPoint())) {
-                        ConstructionRadialSelection.selectAllWorkers();
-                        status = "ALL ACTIVE WORKERS SELECTED";
-                    } else if (layout.unitsClear.contains(event.getPoint())) {
-                        ConstructionRadialSelection.clearCommittedRadius();
-                        status = "SELECTION CLEARED";
-                    } else if (layout.unitsFocus.contains(event.getPoint())) {
-                        focusCurrentSelection("SELECTION");
-                    } else {
-                        return;
-                    }
-                    repaintSurface();
-                    event.consume();
-                    return;
-                } else if (activeTab == Tab.CAMERA && event.getButton() == MouseEvent.BUTTON1) {
-                    if (layout.speedDown.contains(event.getPoint())) {
-                        ConstructionBuildCamera.adjustRtsMoveSpeed(-1);
-                        status = "CAMERA SPEED " + ConstructionBuildCamera.getRtsMoveSpeedLabel();
-                    } else if (layout.speedUp.contains(event.getPoint())) {
-                        ConstructionBuildCamera.adjustRtsMoveSpeed(1);
-                        status = "CAMERA SPEED " + ConstructionBuildCamera.getRtsMoveSpeedLabel();
-                    } else if (layout.cameraFocus.contains(event.getPoint())) {
-                        focusCurrentSelection("SELECTION");
-                    } else if (layout.cameraCenter.contains(event.getPoint())) {
-                        centerSettlement();
-                    } else {
-                        return;
-                    }
-                    repaintSurface();
-                    event.consume();
-                }
-            }
-
-            @Override
-            public void mouseDragged(MouseEvent event) {
-                if (window == null || dragStartScreen == null) {
-                    return;
-                }
-                Point now = event.getLocationOnScreen();
-                if (moving && dragStartWindow != null) {
-                    int x = dragStartWindow.x + now.x - dragStartScreen.x;
-                    int y = dragStartWindow.y + now.y - dragStartScreen.y;
-                    setOverlayBoundsFromUser(x, y, window.getWidth(), window.getHeight());
-                    event.consume();
-                } else if (resizing && resizeStart != null) {
-                    int width = resizeStart.width + now.x - dragStartScreen.x;
-                    int height = resizeStart.height + now.y - dragStartScreen.y;
-                    setOverlayBoundsFromUser(window.getX(), window.getY(), width, height);
-                    event.consume();
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent event) {
-                moving = false;
-                resizing = false;
-                dragStartScreen = null;
-                dragStartWindow = null;
-                resizeStart = null;
-            }
-
-            @Override
-            public void mouseMoved(MouseEvent event) {
-                if (surface != null) {
-                    surface.hoverX = event.getX();
-                    surface.hoverY = event.getY();
-                    surface.repaint();
-                }
-            }
-
-            @Override
-            public void mouseExited(MouseEvent event) {
-                if (surface != null) {
-                    surface.hoverX = -1;
-                    surface.hoverY = -1;
-                    surface.repaint();
-                }
-            }
-        };
-        component.addMouseListener(mouse);
-        component.addMouseMotionListener(mouse);
-    }
-
-    private static void setOverlayBoundsFromUser(int x, int y, int width, int height) {
-        Canvas canvas = Class584.aCanvas7745;
-        if (window == null || canvas == null || !canvas.isShowing()) {
+    private static void rebuildNativeTree() {
+        if (attachedHost == null || nativeFontEncoded == Integer.MIN_VALUE) {
             return;
         }
-        Point canvasLocation;
-        try {
-            canvasLocation = canvas.getLocationOnScreen();
-        } catch (IllegalComponentStateException ex) {
-            return;
-        }
-        Rectangle canvasBounds = new Rectangle(
-                canvasLocation.x, canvasLocation.y,
-                Math.max(1, canvas.getWidth()), Math.max(1, canvas.getHeight()));
-        Rectangle clamped = clampBounds(
-                new Rectangle(x, y, width, height), canvasBounds);
-        overlayX = clamped.x;
-        overlayY = clamped.y;
-        overlayWidth = clamped.width;
-        overlayHeight = clamped.height;
-        boundsInitialized = true;
-        window.setBounds(clamped);
-        repaintSurface();
-    }
+        clearComponentRefs();
+        nextSyntheticComponent = SYNTHETIC_COMPONENT_BASE;
+        List<InterfaceDefinitions> controls = new ArrayList<InterfaceDefinitions>(40);
 
-    private static Rectangle clampBounds(Rectangle desired, Rectangle canvas) {
-        int maxWidth = Math.max(1, Math.min(MAX_WIDTH, canvas.width - 6));
-        int maxHeight = Math.max(1, Math.min(MAX_HEIGHT, canvas.height - 6));
-        int minWidth = Math.min(MIN_WIDTH, maxWidth);
-        int minHeight = Math.min(MIN_HEIGHT, maxHeight);
-        int width = Math.max(minWidth, Math.min(desired.width, maxWidth));
-        int height = Math.max(minHeight, Math.min(desired.height, maxHeight));
-
-        int minX = canvas.x + 3;
-        int minY = canvas.y + 3;
-        int maxX = canvas.x + canvas.width - width - 3;
-        int maxY = canvas.y + canvas.height - height - 3;
-        int x = Math.max(minX, Math.min(desired.x, Math.max(minX, maxX)));
-        int y = Math.max(minY, Math.min(desired.y, Math.max(minY, maxY)));
-        return new Rectangle(x, y, width, height);
-    }
-
-    private static void repaintSurface() {
-        if (surface != null) {
-            surface.repaint();
-        }
-    }
-
-    private static void hideNow() {
-        if (window != null && window.isVisible()) {
-            window.setVisible(false);
-        }
-    }
-
-    private static final class ControlSurface extends JComponent {
-        private static final long serialVersionUID = 1L;
-        int hoverX = -1;
-        int hoverY = -1;
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            super.paintComponent(graphics);
-            Graphics2D g = (Graphics2D) graphics.create();
-            try {
-                g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                        RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                g.setStroke(new BasicStroke(1.0F));
-
-                int width = getWidth();
-                int height = getHeight();
-                g.setColor(PANEL);
-                g.fillRect(0, 0, width, height);
-                g.setColor(BORDER);
-                g.drawRect(0, 0, Math.max(0, width - 1), Math.max(0, height - 1));
-
-                LayoutSnapshot layout = layout(width, height);
-                latestLayout = layout;
-
-                drawTitle(g, layout);
-                drawTabs(g, layout);
-                if (activeTab == Tab.UNITS) {
-                    drawUnits(g, layout);
-                } else if (activeTab == Tab.GROUPS) {
-                    drawGroups(g, layout);
-                } else {
-                    drawCamera(g, layout);
-                }
-                drawStatus(g, layout);
-            } finally {
-                g.dispose();
-            }
-        }
-
-        private void drawTitle(Graphics2D g, LayoutSnapshot layout) {
-            g.setColor(TITLE);
-            g.fillRect(layout.title.x, layout.title.y, layout.title.width, layout.title.height);
-            g.setColor(INNER_BORDER);
-            g.drawLine(0, TITLE_HEIGHT - 1, getWidth(), TITLE_HEIGHT - 1);
-
-            g.setFont(TITLE_FONT);
-            g.setColor(TEXT);
-            g.drawString("RTS CONTROL", PAD + 2, 14);
-
-            int selected = ConstructionRadialSelection.getCommittedWorkerCount();
-            int total = ConstructionRadialSelection.getTotalSettlementWorkerCount();
-            String summary = "SEL " + selected + "/" + total
-                    + (ConstructionRadialSelection.isLocalPlayerSelected() ? " +SELF" : "");
-            FontMetrics fm = g.getFontMetrics();
-            g.setColor(MUTED);
-            g.drawString(summary, Math.max(PAD + 78, getWidth() - fm.stringWidth(summary) - 8), 14);
-        }
-
-        private void drawTabs(Graphics2D g, LayoutSnapshot layout) {
-            g.setFont(BOLD_FONT);
-            for (int i = 0; i < layout.tabs.length; i++) {
-                Rectangle tab = layout.tabs[i];
-                boolean active = activeTab.ordinal() == i;
-                boolean hover = tab.contains(hoverX, hoverY);
-                g.setColor(active ? TAB_ACTIVE : (hover ? BUTTON_HOVER : BUTTON));
-                g.fillRect(tab.x, tab.y, tab.width, tab.height);
-                g.setColor(active ? ACCENT : INNER_BORDER);
-                g.drawRect(tab.x, tab.y, tab.width, tab.height);
-                drawCentered(g, Tab.values()[i].label, tab,
-                        active ? TEXT : MUTED, BOLD_FONT);
-            }
-        }
-
-        private void drawUnits(Graphics2D g, LayoutSnapshot layout) {
-            g.setColor(CONTENT);
-            g.fillRect(layout.content.x, layout.content.y,
-                    layout.content.width, layout.content.height);
-
-            int selected = ConstructionRadialSelection.getCommittedWorkerCount();
-            int total = ConstructionRadialSelection.getTotalSettlementWorkerCount();
-            boolean self = ConstructionRadialSelection.isLocalPlayerSelected();
-
-            g.setFont(BODY_FONT);
-            g.setColor(TEXT);
-            g.drawString("WORKERS  " + total + "    SELECTED  " + selected
-                    + "    SELF  " + (self ? "YES" : "NO"),
-                    layout.content.x + 6, layout.content.y + 18);
-
-            drawButton(g, layout.unitsSelectAll, "SELECT ALL");
-            drawButton(g, layout.unitsClear, "CLEAR");
-            drawButton(g, layout.unitsFocus, "FOCUS");
-        }
-
-        private void drawGroups(Graphics2D g, LayoutSnapshot layout) {
-            g.setColor(CONTENT);
-            g.fillRect(layout.content.x, layout.content.y,
-                    layout.content.width, layout.content.height);
-
-            synchronized (ConstructionRtsControlOverlay.class) {
-                for (int i = 0; i < GROUP_COUNT; i++) {
-                    Rectangle cell = layout.groups[i];
-                    int count = groupNpcIndexes[i] == null ? 0 : groupNpcIndexes[i].length;
-                    boolean self = groupPlayerSelected[i];
-                    boolean populated = count > 0 || self;
-                    boolean hover = cell.contains(hoverX, hoverY);
-                    g.setColor(populated ? GROUP_SAVED : ((i & 1) == 0 ? BUTTON : ROW_ALT));
-                    if (hover) {
-                        g.setColor(BUTTON_HOVER);
-                    }
-                    g.fillRect(cell.x, cell.y, cell.width, cell.height);
-                    g.setColor(populated ? ACCENT : INNER_BORDER);
-                    g.drawRect(cell.x, cell.y, cell.width, cell.height);
-
-                    String label = (i + 1) + "   " + (count == 0 ? "-" : count + "W")
-                            + (self ? "+S" : "");
-                    drawCentered(g, label, cell, populated ? TEXT : MUTED, BOLD_FONT);
-                }
-            }
-        }
-
-        private void drawCamera(Graphics2D g, LayoutSnapshot layout) {
-            g.setColor(CONTENT);
-            g.fillRect(layout.content.x, layout.content.y,
-                    layout.content.width, layout.content.height);
-
-            g.setFont(BODY_FONT);
-            g.setColor(TEXT);
-            g.drawString("SPEED", layout.content.x + 8, layout.content.y + 18);
-            drawButton(g, layout.speedDown, "-");
-            drawButton(g, layout.speedUp, "+");
-
-            Rectangle speedLabel = new Rectangle(
-                    layout.speedDown.x + layout.speedDown.width + 3,
-                    layout.speedDown.y,
-                    Math.max(42, layout.speedUp.x - layout.speedDown.x - layout.speedDown.width - 6),
-                    layout.speedDown.height);
-            drawCentered(g, ConstructionBuildCamera.getRtsMoveSpeedLabel(),
-                    speedLabel, ACCENT, BOLD_FONT);
-
-            drawButton(g, layout.cameraFocus, "FOCUS SELECTION");
-            drawButton(g, layout.cameraCenter, "CENTER SETTLEMENT");
-
-            g.setFont(SMALL_FONT);
-            g.setColor(MUTED);
-            g.drawString("MINIMAP DRAG: ON   Q/E ROTATE   MMB ORBIT",
-                    layout.content.x + 8,
-                    Math.min(layout.status.y - 5, layout.content.y + layout.content.height - 5));
-        }
-
-        private void drawStatus(Graphics2D g, LayoutSnapshot layout) {
-            g.setColor(TITLE);
-            g.fillRect(layout.status.x, layout.status.y,
-                    layout.status.width, layout.status.height);
-            g.setColor(INNER_BORDER);
-            g.drawLine(layout.status.x, layout.status.y,
-                    layout.status.x + layout.status.width, layout.status.y);
-            g.setFont(SMALL_FONT);
-            g.setColor(MUTED);
-            String clipped = clipText(g, status,
-                    Math.max(20, layout.status.width - 22));
-            g.drawString(clipped, layout.status.x + 5, layout.status.y + 12);
-
-            g.setColor(MUTED);
-            int gx = layout.resize.x + 2;
-            int gy = layout.resize.y + 2;
-            g.drawLine(gx + 3, gy + 7, gx + 7, gy + 3);
-            g.drawLine(gx + 5, gy + 7, gx + 7, gy + 5);
-        }
-
-        private void drawButton(Graphics2D g, Rectangle bounds, String label) {
-            boolean hover = bounds.contains(hoverX, hoverY);
-            g.setColor(hover ? BUTTON_HOVER : BUTTON);
-            g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
-            g.setColor(hover ? ACCENT : INNER_BORDER);
-            g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-            drawCentered(g, label, bounds, TEXT, BOLD_FONT);
-        }
-    }
-
-    private static LayoutSnapshot layout(int width, int height) {
-        Rectangle title = new Rectangle(1, 1,
-                Math.max(0, width - 2), TITLE_HEIGHT - 1);
+        addRect(controls, 0, 0, panelWidth, panelHeight, COLOR_BORDER);
+        addRect(controls, 1, 1, panelWidth - 2, panelHeight - 2, COLOR_PANEL);
+        addRect(controls, 2, 2, panelWidth - 4, TITLE_HEIGHT - 2, COLOR_TITLE);
+        addText(controls, "RTS CONTROL", 7, 4, panelWidth - 90, TITLE_HEIGHT - 5,
+                COLOR_TEXT, 0);
+        titleSelectionText = addText(controls, "", panelWidth - 86, 4, 78,
+                TITLE_HEIGHT - 5, COLOR_ACCENT, 2);
 
         int tabY = TITLE_HEIGHT;
-        int usable = Math.max(3, width - 2);
-        int baseTabWidth = usable / 3;
-        Rectangle[] tabs = new Rectangle[3];
-        for (int i = 0; i < 3; i++) {
-            int x = 1 + i * baseTabWidth;
-            int w = i == 2 ? width - 1 - x : baseTabWidth;
-            tabs[i] = new Rectangle(x, tabY, Math.max(1, w), TAB_HEIGHT);
+        int tabWidth = (panelWidth - 4) / 3;
+        for (int i = 0; i < Tab.values().length; i++) {
+            int x = 2 + i * tabWidth;
+            int width = i == Tab.values().length - 1
+                    ? panelWidth - 2 - x : tabWidth;
+            tabBounds[i] = new Rectangle(x, tabY, width, TAB_HEIGHT);
+            addRect(controls, x, tabY, width, TAB_HEIGHT,
+                    activeTab == Tab.values()[i] ? COLOR_TAB_ACTIVE : COLOR_BUTTON);
+            addText(controls, Tab.values()[i].label, x, tabY + 2, width,
+                    TAB_HEIGHT - 3,
+                    activeTab == Tab.values()[i] ? COLOR_ACCENT : COLOR_TEXT, 1);
         }
 
-        int contentY = TITLE_HEIGHT + TAB_HEIGHT + 1;
-        int statusY = Math.max(contentY + 1, height - STATUS_HEIGHT - 1);
-        Rectangle content = new Rectangle(1, contentY,
-                Math.max(1, width - 2), Math.max(1, statusY - contentY));
-        Rectangle statusBounds = new Rectangle(1, statusY,
-                Math.max(1, width - 2), Math.max(1, height - statusY - 1));
-        Rectangle resize = new Rectangle(Math.max(0, width - 13),
-                Math.max(0, height - 13), 12, 12);
+        int contentY = TITLE_HEIGHT + TAB_HEIGHT + 2;
+        int footerY = panelHeight - STATUS_HEIGHT;
+        int contentHeight = Math.max(1, footerY - contentY - 2);
+        addRect(controls, 2, contentY, panelWidth - 4, contentHeight, COLOR_CONTENT);
 
-        Rectangle[] groups = new Rectangle[GROUP_COUNT];
-        int gridX = content.x + PAD;
-        int gridY = content.y + 4;
-        int gridW = Math.max(3, content.width - PAD * 2);
-        int gridH = Math.max(3, content.height - 8);
-        int gap = 3;
-        int cellW = Math.max(1, (gridW - gap * 2) / 3);
-        int cellH = Math.max(1, (gridH - gap * 2) / 3);
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 3; col++) {
-                int index = row * 3 + col;
-                int x = gridX + col * (cellW + gap);
-                int y = gridY + row * (cellH + gap);
-                int w = col == 2 ? gridX + gridW - x : cellW;
-                int h = row == 2 ? gridY + gridH - y : cellH;
-                groups[index] = new Rectangle(x, y, Math.max(1, w), Math.max(1, h));
+        if (activeTab == Tab.GROUPS) {
+            buildGroupsTab(controls, contentY, contentHeight);
+        } else if (activeTab == Tab.UNITS) {
+            buildUnitsTab(controls, contentY, contentHeight);
+        } else {
+            buildCameraTab(controls, contentY, contentHeight);
+        }
+
+        addRect(controls, 2, footerY, panelWidth - 4, STATUS_HEIGHT - 2, COLOR_TITLE);
+        statusText = addText(controls, "", 7, footerY + 1,
+                panelWidth - 27, STATUS_HEIGHT - 3, COLOR_MUTED, 0);
+        addText(controls, "//", panelWidth - 20, footerY + 1, 14,
+                STATUS_HEIGHT - 3, COLOR_ACCENT, 2);
+
+        titleBounds = new Rectangle(0, 0, panelWidth, TITLE_HEIGHT);
+        resizeBounds = new Rectangle(panelWidth - 18, panelHeight - 18, 18, 18);
+
+        InterfaceDefinitions[] synthetic =
+                controls.toArray(new InterfaceDefinitions[controls.size()]);
+        int originalLength = originalHostChildren == null ? 0 : originalHostChildren.length;
+        InterfaceDefinitions[] combined =
+                new InterfaceDefinitions[originalLength + synthetic.length];
+        if (originalLength > 0) {
+            System.arraycopy(originalHostChildren, 0, combined, 0, originalLength);
+        }
+        System.arraycopy(synthetic, 0, combined, originalLength, synthetic.length);
+        installedHostChildren = combined;
+        attachedHost.aClass73Array917 = combined;
+        treeDirty = false;
+        updateDynamicComponents();
+    }
+
+    private static void buildGroupsTab(List<InterfaceDefinitions> controls,
+            int contentY, int contentHeight) {
+        int gridX = PAD;
+        int gridY = contentY + 4;
+        int gridWidth = panelWidth - PAD * 2;
+        int gridHeight = Math.max(1, contentHeight - 8);
+        int cellWidth = (gridWidth - GAP * 2) / 3;
+        int cellHeight = (gridHeight - GAP * 2) / 3;
+
+        for (int i = 0; i < GROUP_COUNT; i++) {
+            int col = i % 3;
+            int row = i / 3;
+            int x = gridX + col * (cellWidth + GAP);
+            int y = gridY + row * (cellHeight + GAP);
+            int width = col == 2 ? gridX + gridWidth - x : cellWidth;
+            int height = row == 2 ? gridY + gridHeight - y : cellHeight;
+            groupBounds[i] = new Rectangle(x, y, width, height);
+            groupRect[i] = addRect(controls, x, y, width, height, COLOR_BUTTON);
+            groupText[i] = addText(controls, "", x + 2, y + 1, width - 4,
+                    Math.max(1, height - 2), COLOR_TEXT, 1);
+        }
+    }
+
+    private static void buildUnitsTab(List<InterfaceDefinitions> controls,
+            int contentY, int contentHeight) {
+        unitsInfoText = addText(controls, "", PAD + 2, contentY + 5,
+                panelWidth - PAD * 2 - 4, 18, COLOR_TEXT, 0);
+
+        int y = contentY + Math.max(29, contentHeight / 2);
+        int available = panelWidth - PAD * 2;
+        int buttonWidth = (available - GAP * 2) / 3;
+        int buttonHeight = Math.min(27, Math.max(22, contentY + contentHeight - y - 4));
+        unitsSelectAll = new Rectangle(PAD, y, buttonWidth, buttonHeight);
+        unitsClear = new Rectangle(PAD + buttonWidth + GAP, y, buttonWidth, buttonHeight);
+        unitsFocus = new Rectangle(PAD + (buttonWidth + GAP) * 2, y,
+                available - (buttonWidth + GAP) * 2, buttonHeight);
+        addButton(controls, unitsSelectAll, "SELECT ALL");
+        addButton(controls, unitsClear, "CLEAR");
+        addButton(controls, unitsFocus, "FOCUS");
+    }
+
+    private static void buildCameraTab(List<InterfaceDefinitions> controls,
+            int contentY, int contentHeight) {
+        cameraSpeedText = addText(controls, "", PAD + 2, contentY + 4,
+                115, 19, COLOR_TEXT, 0);
+        speedDown = new Rectangle(PAD + 120, contentY + 3, 28, 21);
+        speedUp = new Rectangle(PAD + 152, contentY + 3, 28, 21);
+        addButton(controls, speedDown, "-");
+        addButton(controls, speedUp, "+");
+        cameraDragText = addText(controls, "MINIMAP DRAG: ON", PAD + 188,
+                contentY + 4, panelWidth - PAD - 188, 19, COLOR_MUTED, 0);
+
+        int y = contentY + Math.max(31, contentHeight / 2);
+        int available = panelWidth - PAD * 2;
+        int buttonWidth = (available - GAP) / 2;
+        int buttonHeight = Math.min(27, Math.max(22, contentY + contentHeight - y - 4));
+        cameraFocus = new Rectangle(PAD, y, buttonWidth, buttonHeight);
+        cameraCenter = new Rectangle(PAD + buttonWidth + GAP, y,
+                available - buttonWidth - GAP, buttonHeight);
+        addButton(controls, cameraFocus, "FOCUS SELECTION");
+        addButton(controls, cameraCenter, "CENTER SETTLEMENT");
+    }
+
+    private static void addButton(List<InterfaceDefinitions> controls,
+            Rectangle bounds, String label) {
+        addRect(controls, bounds.x, bounds.y, bounds.width, bounds.height, COLOR_BUTTON);
+        addText(controls, label, bounds.x + 2, bounds.y + 1,
+                Math.max(1, bounds.width - 4), Math.max(1, bounds.height - 2),
+                COLOR_TEXT, 1);
+    }
+
+    private static InterfaceDefinitions addRect(List<InterfaceDefinitions> controls,
+            int x, int y, int width, int height, int color) {
+        InterfaceDefinitions definition = createBaseComponent(
+                TYPE_RECTANGLE, x, y, width, height);
+        definition.anInt918 = color * COLOR_ENCODE;
+        definition.aBool779 = true;
+        controls.add(definition);
+        return definition;
+    }
+
+    private static InterfaceDefinitions addText(List<InterfaceDefinitions> controls,
+            String text, int x, int y, int width, int height, int color, int align) {
+        InterfaceDefinitions definition = createBaseComponent(
+                TYPE_TEXT, x, y, width, height);
+        definition.anInt906 = nativeFontEncoded;
+        definition.aString829 = text == null ? "" : text;
+        definition.anInt918 = color * COLOR_ENCODE;
+        definition.anInt891 = align * H_ALIGN_ENCODE;
+        definition.anInt832 = 1 * V_ALIGN_ENCODE;
+        definition.aBool919 = true;
+        controls.add(definition);
+        return definition;
+    }
+
+    private static InterfaceDefinitions createBaseComponent(
+            int type, int localX, int localY, int width, int height) {
+        InterfaceDefinitions definition = new InterfaceDefinitions();
+        int selfUid = (ROOT_INTERFACE_ID << 16)
+                | (nextSyntheticComponent++ & 0xffff);
+        int parentUid = attachedHost.selfId * SELF_ID_DECODE;
+        definition.selfId = selfUid * SELF_ID_ENCODE;
+        definition.anInt768 = parentUid * PARENT_ID_ENCODE;
+        definition.anInt752 = type * TYPE_ENCODE;
+        definition.anInt762 = (panelX + localX) * X_ENCODE;
+        definition.anInt842 = (panelY + localY) * Y_ENCODE;
+        definition.anInt764 = Math.max(1, width) * WIDTH_ENCODE;
+        definition.anInt765 = Math.max(1, height) * HEIGHT_ENCODE;
+        definition.anInt780 = 0;
+        definition.anInt854 = 0;
+        return definition;
+    }
+
+    private static synchronized void updateDynamicComponents() {
+        int selected = ConstructionRadialSelection.getCommittedWorkerCount();
+        int total = ConstructionRadialSelection.getTotalSettlementWorkerCount();
+        boolean self = ConstructionRadialSelection.isLocalPlayerSelected();
+
+        if (titleSelectionText != null) {
+            titleSelectionText.aString829 = "SEL " + selected + "/" + total
+                    + (self ? "+S" : "");
+        }
+        if (statusText != null) {
+            statusText.aString829 = status;
+        }
+        if (unitsInfoText != null) {
+            unitsInfoText.aString829 = "SELECTED " + selected + " / " + total
+                    + " WORKERS   SELF: " + (self ? "YES" : "NO");
+        }
+        if (cameraSpeedText != null) {
+            cameraSpeedText.aString829 = "SPEED " + ConstructionBuildCamera.getRtsMoveSpeedLabel();
+        }
+        if (cameraDragText != null) {
+            cameraDragText.aString829 = "MINIMAP DRAG: ON";
+        }
+        for (int i = 0; i < GROUP_COUNT; i++) {
+            int count = groupNpcIndexes[i] == null ? 0 : groupNpcIndexes[i].length;
+            if (groupText[i] != null) {
+                groupText[i].aString829 = (i + 1) + "  "
+                        + (count <= 0 && !groupPlayerSelected[i]
+                                ? "-" : count + "W" + (groupPlayerSelected[i] ? "+S" : ""));
+            }
+            if (groupRect[i] != null) {
+                boolean saved = count > 0 || groupPlayerSelected[i];
+                groupRect[i].anInt918 =
+                        (saved ? COLOR_GROUP_SAVED : COLOR_BUTTON) * COLOR_ENCODE;
+            }
+        }
+    }
+
+    private static void clearComponentRefs() {
+        titleSelectionText = null;
+        statusText = null;
+        unitsInfoText = null;
+        cameraSpeedText = null;
+        cameraDragText = null;
+        for (int i = 0; i < GROUP_COUNT; i++) {
+            groupText[i] = null;
+            groupRect[i] = null;
+            groupBounds[i] = new Rectangle();
+        }
+        for (int i = 0; i < tabBounds.length; i++) {
+            tabBounds[i] = new Rectangle();
+        }
+        unitsSelectAll = new Rectangle();
+        unitsClear = new Rectangle();
+        unitsFocus = new Rectangle();
+        speedDown = new Rectangle();
+        speedUp = new Rectangle();
+        cameraFocus = new Rectangle();
+        cameraCenter = new Rectangle();
+        titleBounds = new Rectangle();
+        resizeBounds = new Rectangle();
+    }
+
+    private static void ensureInputListener() {
+        if (inputListenerInstalled) {
+            return;
+        }
+        synchronized (ConstructionRtsControlOverlay.class) {
+            if (inputListenerInstalled) {
+                return;
+            }
+            Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
+                @Override
+                public void eventDispatched(AWTEvent event) {
+                    if (event instanceof MouseEvent) {
+                        handleMouseEvent((MouseEvent) event);
+                    }
+                }
+            }, AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
+            inputListenerInstalled = true;
+        }
+    }
+
+    private static void handleMouseEvent(MouseEvent event) {
+        Canvas canvas = Class584.aCanvas7745;
+        if (canvas == null || event.getSource() != canvas
+                || attachedHost == null
+                || !ConstructionBuildCamera.isSettlementAutoMode()
+                || !ConstructionBuildCamera.isRtsMode()) {
+            return;
+        }
+        Rectangle hostBounds = hostScreenBounds;
+        if (hostBounds.width <= 0 || hostBounds.height <= 0) {
+            return;
+        }
+
+        int id = event.getID();
+        int hostX = event.getX() - hostBounds.x;
+        int hostY = event.getY() - hostBounds.y;
+        int localX = hostX - panelX;
+        int localY = hostY - panelY;
+        boolean inside = localX >= 0 && localY >= 0
+                && localX < panelWidth && localY < panelHeight;
+
+        if (id == MouseEvent.MOUSE_PRESSED && inside) {
+            // Global RTS selection listens on the same heavyweight canvas. Clear
+            // any transient selection press this UI click may have armed while
+            // preserving committed workers/self.
+            ConstructionRadialSelection.cancelTransientDragForMinimapFocus();
+
+            if (event.getButton() == MouseEvent.BUTTON1
+                    && resizeBounds.contains(localX, localY)) {
+                resizing = true;
+                resizeStartMouseX = hostX;
+                resizeStartMouseY = hostY;
+                resizeStartWidth = panelWidth;
+                resizeStartHeight = panelHeight;
+                event.consume();
+                return;
+            }
+            if (event.getButton() == MouseEvent.BUTTON1
+                    && titleBounds.contains(localX, localY)) {
+                moving = true;
+                dragOffsetX = localX;
+                dragOffsetY = localY;
+                event.consume();
+                return;
+            }
+
+            for (int i = 0; i < tabBounds.length; i++) {
+                if (tabBounds[i].contains(localX, localY)) {
+                    if (event.getButton() == MouseEvent.BUTTON1) {
+                        activeTab = Tab.values()[i];
+                        status = activeTab == Tab.GROUPS
+                                ? "L=GO  CTRL+L=SET  R=CLEAR"
+                                : activeTab.label;
+                        treeDirty = true;
+                    }
+                    event.consume();
+                    return;
+                }
+            }
+
+            if (activeTab == Tab.GROUPS) {
+                for (int i = 0; i < GROUP_COUNT; i++) {
+                    if (!groupBounds[i].contains(localX, localY)) {
+                        continue;
+                    }
+                    if (event.getButton() == MouseEvent.BUTTON3) {
+                        clearGroup(i);
+                    } else if (event.getButton() == MouseEvent.BUTTON1) {
+                        if (event.isControlDown()) {
+                            saveGroup(i);
+                        } else {
+                            recallGroup(i, true);
+                        }
+                    }
+                    event.consume();
+                    return;
+                }
+            } else if (activeTab == Tab.UNITS
+                    && event.getButton() == MouseEvent.BUTTON1) {
+                if (unitsSelectAll.contains(localX, localY)) {
+                    ConstructionRadialSelection.selectAllWorkers();
+                    status = "ALL ACTIVE WORKERS SELECTED";
+                } else if (unitsClear.contains(localX, localY)) {
+                    ConstructionRadialSelection.clearCommittedRadius();
+                    status = "SELECTION CLEARED";
+                } else if (unitsFocus.contains(localX, localY)) {
+                    focusCurrentSelection("SELECTION");
+                } else {
+                    event.consume();
+                    return;
+                }
+                updateDynamicComponents();
+                event.consume();
+                return;
+            } else if (activeTab == Tab.CAMERA
+                    && event.getButton() == MouseEvent.BUTTON1) {
+                if (speedDown.contains(localX, localY)) {
+                    ConstructionBuildCamera.adjustRtsMoveSpeed(-1);
+                    status = "CAMERA SPEED " + ConstructionBuildCamera.getRtsMoveSpeedLabel();
+                } else if (speedUp.contains(localX, localY)) {
+                    ConstructionBuildCamera.adjustRtsMoveSpeed(1);
+                    status = "CAMERA SPEED " + ConstructionBuildCamera.getRtsMoveSpeedLabel();
+                } else if (cameraFocus.contains(localX, localY)) {
+                    focusCurrentSelection("SELECTION");
+                } else if (cameraCenter.contains(localX, localY)) {
+                    centerSettlement();
+                } else {
+                    event.consume();
+                    return;
+                }
+                updateDynamicComponents();
+                event.consume();
+                return;
+            }
+            event.consume();
+            return;
+        }
+
+        if (id == MouseEvent.MOUSE_DRAGGED) {
+            if (moving) {
+                panelX = hostX - dragOffsetX;
+                panelY = hostY - dragOffsetY;
+                clampPanelGeometry(attachedHost);
+                treeDirty = true;
+                event.consume();
+                return;
+            }
+            if (resizing) {
+                panelWidth = resizeStartWidth + hostX - resizeStartMouseX;
+                panelHeight = resizeStartHeight + hostY - resizeStartMouseY;
+                clampPanelGeometry(attachedHost);
+                treeDirty = true;
+                event.consume();
+                return;
             }
         }
 
-        int unitY = content.y + 31;
-        int unitGap = 4;
-        int unitW = Math.max(46, (content.width - PAD * 2 - unitGap * 2) / 3);
-        Rectangle unitsSelectAll = new Rectangle(content.x + PAD, unitY, unitW, 23);
-        Rectangle unitsClear = new Rectangle(unitsSelectAll.x + unitW + unitGap, unitY, unitW, 23);
-        Rectangle unitsFocus = new Rectangle(unitsClear.x + unitW + unitGap, unitY,
-                Math.max(1, content.x + content.width - PAD - (unitsClear.x + unitW + unitGap)), 23);
-
-        int cameraY = content.y + 7;
-        Rectangle speedDown = new Rectangle(content.x + 52, cameraY, 25, 22);
-        Rectangle speedUp = new Rectangle(content.x + 128, cameraY, 25, 22);
-        int buttonY = cameraY + 29;
-        int cameraButtonGap = 5;
-        int cameraButtonW = Math.max(70, (content.width - PAD * 2 - cameraButtonGap) / 2);
-        Rectangle cameraFocus = new Rectangle(content.x + PAD, buttonY, cameraButtonW, 23);
-        Rectangle cameraCenter = new Rectangle(cameraFocus.x + cameraButtonW + cameraButtonGap,
-                buttonY,
-                Math.max(1, content.x + content.width - PAD
-                        - (cameraFocus.x + cameraButtonW + cameraButtonGap)), 23);
-
-        return new LayoutSnapshot(
-                title, tabs, content, statusBounds, resize, groups,
-                unitsSelectAll, unitsClear, unitsFocus,
-                speedDown, speedUp, cameraFocus, cameraCenter);
+        if (id == MouseEvent.MOUSE_RELEASED && (moving || resizing)) {
+            moving = false;
+            resizing = false;
+            event.consume();
+        }
     }
 
-    private static void drawCentered(Graphics2D g, String text, Rectangle bounds,
-            Color color, Font font) {
-        g.setFont(font);
-        FontMetrics fm = g.getFontMetrics();
-        String clipped = clipText(g, text, Math.max(1, bounds.width - 6));
-        int x = bounds.x + Math.max(2, (bounds.width - fm.stringWidth(clipped)) / 2);
-        int y = bounds.y + Math.max(fm.getAscent() + 1,
-                (bounds.height - fm.getHeight()) / 2 + fm.getAscent());
-        g.setColor(color);
-        g.drawString(clipped, x, y);
+    private static int decodeWidth(InterfaceDefinitions definition) {
+        return definition.anInt764 * 669238293;
     }
 
-    private static String clipText(Graphics2D g, String text, int maxWidth) {
-        if (text == null) {
-            return "";
-        }
-        FontMetrics fm = g.getFontMetrics();
-        if (fm.stringWidth(text) <= maxWidth) {
-            return text;
-        }
-        String suffix = "...";
-        int limit = Math.max(0, maxWidth - fm.stringWidth(suffix));
-        String value = text;
-        while (value.length() > 0 && fm.stringWidth(value) > limit) {
-            value = value.substring(0, value.length() - 1);
-        }
-        return value + suffix;
+    private static int decodeHeight(InterfaceDefinitions definition) {
+        return definition.anInt765 * 1360982075;
     }
 
-    private static final class LayoutSnapshot {
-        final Rectangle title;
-        final Rectangle[] tabs;
-        final Rectangle content;
-        final Rectangle status;
-        final Rectangle resize;
-        final Rectangle[] groups;
-        final Rectangle unitsSelectAll;
-        final Rectangle unitsClear;
-        final Rectangle unitsFocus;
-        final Rectangle speedDown;
-        final Rectangle speedUp;
-        final Rectangle cameraFocus;
-        final Rectangle cameraCenter;
-
-        LayoutSnapshot(Rectangle title, Rectangle[] tabs, Rectangle content,
-                Rectangle status, Rectangle resize, Rectangle[] groups,
-                Rectangle unitsSelectAll, Rectangle unitsClear, Rectangle unitsFocus,
-                Rectangle speedDown, Rectangle speedUp,
-                Rectangle cameraFocus, Rectangle cameraCenter) {
-            this.title = title;
-            this.tabs = tabs;
-            this.content = content;
-            this.status = status;
-            this.resize = resize;
-            this.groups = groups;
-            this.unitsSelectAll = unitsSelectAll;
-            this.unitsClear = unitsClear;
-            this.unitsFocus = unitsFocus;
-            this.speedDown = speedDown;
-            this.speedUp = speedUp;
-            this.cameraFocus = cameraFocus;
-            this.cameraCenter = cameraCenter;
-        }
-
-        static LayoutSnapshot empty() {
-            Rectangle empty = new Rectangle();
-            return new LayoutSnapshot(
-                    empty,
-                    new Rectangle[] { empty, empty, empty },
-                    empty, empty, empty,
-                    new Rectangle[] { empty, empty, empty, empty, empty,
-                            empty, empty, empty, empty },
-                    empty, empty, empty, empty, empty, empty, empty);
-        }
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 }
