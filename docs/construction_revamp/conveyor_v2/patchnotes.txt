@@ -1,3 +1,15 @@
+2026-10-03 - Conveyor V2.0 one-tile repeated visual module
+- Runtime screenshots rejected the stretch/fixed visual strategy: as straight runs became longer, the stretched belt surface drifted visibly away from rollers/rails and several authored details began to distort.
+- ConveyorRunPreview now treats the complete visible authored straight assembly as one module instead of stretching selected roles across the logical run.
+- The authored module is normalized once to exactly 512 model units along its long axis, then cloned once per logical conveyor tile at exact 512-unit intervals.
+- Module copies use Matrix3's Class159 merge constructor so the source face, texture and UV structures stay attached to each intact module; all repeated modules are then merged into one generated raw and one cached renderer Model per straight segment.
+- One logical SettlementConveyorRun remains the server/persistence/transport owner. No per-tile Construction objects, scene registrations, collision entries or save records were introduced.
+- Live Model Editor conveyor roles currently act as inclusion/exclusion for the straight module; the old role-specific belt stretch, endpoint-cap spreading, repeat-detail spacing and automatic support-spacing renderer paths are superseded for straight belts.
+- The hardcoded fallback authored assembly uses the same one-tile module pipeline after a fresh client launch when no live editor recipe has been applied.
+- V2.0 payload interpolation, belt-to-belt connection metadata, backpressure, physical inventory ownership and server transport are unchanged.
+- Custom CORNER_1T / splitter / merger visuals remain later client presentation driven by the existing server-owned connection graph.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+
 2026-10-03 - Conveyor V2.0 per-segment axis lock correction
 - Runtime video showed the straight preview re-evaluating dominant X/Y movement on every hover update, causing the entire belt to snap repeatedly between horizontal and vertical as the cursor crossed the diagonal threshold.
 - Each authored segment now chooses E/W or N/S from the first meaningful movement after its Point A and keeps that axis locked until Point B is committed or the chain is cancelled.
