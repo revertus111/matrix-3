@@ -1,0 +1,24 @@
+RTS Control native interface shell — IMPLEMENTED / NEEDS RUNTIME TEST (2026-10-03)
+
+Static checks
+[x] 1477:368 is Matrix3 InterfaceManager.MINIGAME_HUD_COMPONENT_ID.
+[x] Class348.method4343(...) recursively renders InterfaceDefinitions.aClass73Array917 children.
+[x] Mounted subinterfaces are separately resolved from client.aClass676_8760.
+[x] RTS Control yields when 1477:368 already owns a mounted subinterface; no unrelated-root fallback remains.
+[x] Existing worker selection/server command authority remains in ConstructionRadialSelection + server workerselection bridge.
+
+Quick runtime gate
+[ ] Pull latest main, Eclipse clean/build Client with Java 8, then enter settlement RTS.
+[ ] PANEL: compact RTS CONTROL appears in the native HUD region at about 312x140, with no separate desktop/Swing window.
+[ ] TABS: UNITS / GROUPS / CAMERA switch cleanly with no clipping or stale controls.
+[ ] GROUP GRID: 3x3 slots all fit at default size. Ctrl+left-click saves/replaces, left-click recalls + smoothly focuses, right-click clears.
+[ ] HOTKEYS: Ctrl+1..9 save, 1..9 recall, double-tap recalls + focuses; Build Palette/editor number-key ownership remains unchanged.
+[ ] UNITS: Selected/Total updates; Select All, Clear and Focus work and preserve existing selection rings/server sync behavior.
+[ ] CAMERA: speed -/+ changes the current RTS speed label/value; Focus Selection and Center Settlement move the camera smoothly.
+[ ] MOVE/RESIZE: drag the title and resize grip; panel remains inside its native host and all tabs remain usable down to the minimum size.
+[ ] EXIT/RE-ENTER: leaving RTS removes the synthetic child tree and re-entering rebuilds it cleanly without duplicate controls.
+[ ] HUD OWNERSHIP: if a real minigame HUD is mounted in 1477:368, RTS Control yields instead of drawing over it; when the slot becomes free again, RTS Control may return.
+[ ] REGRESSION: minimap drag, viewport footprint, Q/E + MMB yaw, compass, NPC/player dots, click-to-focus and radial selection remain unchanged.
+
+Carryover
+[ ] V1.1: persistent named control groups across re-entry/relog require stable worker IDs and a server->client membership sync; never persist runtime NPC indexes.
