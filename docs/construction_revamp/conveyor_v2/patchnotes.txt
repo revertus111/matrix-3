@@ -1,3 +1,12 @@
+2026-10-03 - Conveyor V2.0 per-segment axis lock correction
+- Runtime video showed the straight preview re-evaluating dominant X/Y movement on every hover update, causing the entire belt to snap repeatedly between horizontal and vertical as the cursor crossed the diagonal threshold.
+- Each authored segment now chooses E/W or N/S from the first meaningful movement after its Point A and keeps that axis locked until Point B is committed or the chain is cancelled.
+- Committing Point B still promotes B to the next Point A, but the next chained segment receives a fresh axis lock so 90-degree turns remain intentional.
+- Moving only perpendicular to the locked axis clears the zero-length preview instead of flipping the belt orientation; status text explains the active lock.
+- Right-click/Escape clears both the retained chain anchor and its current axis lock.
+- Server transport graph, persistence schema, payload ownership, backpressure, chest/machine endpoints and custom corner visuals are unchanged.
+- Status: IMPLEMENTED / NEEDS RUNTIME RETEST.
+
 2026-10-03 - Conveyor V2.0 continuous-chain placement correction
 - Runtime screenshot verified straight-only run creation, but exposed a UX regression: each successful A->B commit cleared the client Point A, so the tool required a fresh start click instead of continuing from the just-placed endpoint.
 - Successful placement now promotes projected Point B to the next Point A; repeated endpoint clicks author A->B->C->D straight runs without reselecting every seam.
