@@ -3,3 +3,6 @@
 - Added dedicated workstream, interface, client-engine, server-gameplay, Construction/RTS, cache/asset, developer-tool, and reverse-engineering guidance.
 - Added docs/client/CLIENT_MAP.md as a searchable evidence-classified client knowledge base.
 - Client investigations must search/update the client map without loading it front-to-back or duplicating established mappings.
+- Added mandatory semantic source-comment guidance for established client behavior: explain what code represents, does, reads/mutates, affects, and any important lifecycle/ordering/units/ownership details without narrating obvious syntax.
+- Added evidence-based client semantic rename policy: UNKNOWN/HYPOTHESIS remain obfuscated; verified-static/VERIFIED mappings may be renamed when scope is understood.
+- Added docs/client/RENAMES.md as the permanent original-symbol -> readable-symbol ledger; approved renames preserve provenance and behavior/evidence context.
