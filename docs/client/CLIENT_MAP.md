@@ -121,7 +121,52 @@ _No mappings recorded yet._
 
 ## Scene / renderer
 
-_No mappings recorded yet._
+### Scene-entry release/recycle seam — Class578.method6834(...)
+
+**Subsystem:** Scene / renderer  
+**Evidence:** verified-static  
+**Tags:** Class578, method6834, Class531, Class545, Class523, scene entry, recycle, wrapper pool, aStack5931, ConstructionGhostPreview, ConstructionRadialSelection, direct render, preview hook
+
+**Exact symbols / IDs**
+- Release/recycle method: `Class578.method6834(Class531, int)`
+- Wrapper type: `Class531`
+- Wrapped scene entity: `Class531.aClass456_Sub1_5929`
+- Reuse pool: `Class531.aStack5931`
+- Ordered wrapper owner: `Class545.aList6110`
+- Scene normal-terrain guard: `Class523.aClass174Array5875 == Class523.aClass174Array5838`
+
+**Established responsibility**
+- `Class578.method6834(...)` releases a temporary `Class531` scene-entry wrapper.
+- The wrapped `Class456_Sub1` reference is cleared before the wrapper is returned to the shared `Class531.aStack5931` reuse pool.
+- The reuse pool is capped at 200 wrappers.
+- `Class545` calls this seam when ordered scene entries are removed or its list is drained; `Class523` also reaches it from immediate/nonqueued scene-entry cleanup paths.
+- Matrix3 Construction/developer rendering currently uses the pre-recycle point as a narrow direct-render hook for client-only previews.
+
+**Relationships / call flow**
+- scene entity -> `Class531` temporary wrapper -> optional `Class545` ordered list -> `Class578.method6834(...)` -> clear wrapped entity -> return wrapper to capped pool.
+- normal world-terrain scene -> pre-recycle Construction/dev preview dispatch -> `ConstructionGhostPreview`, `DevObjectPlacementPreview`, `ConstructionRadialSelection`, `ObjectLabPreview`, `LiveModelEditorPreview`, `ObjectCompositePreview`, `RailRoutePreview`, Live Model Editor gizmo overlay -> normal wrapper recycle.
+
+**Static evidence**
+- `Class545.method6449(...)`, `method6450()` and `method6451()` remove/drain `Class531` entries through `Class578.method6834(...)`.
+- `Class523` source reaches `Class578.method6834(...)` from both an ordered-list drain and an immediate wrapper path.
+- `Class578.method6834(...)` nulls `class531.aClass456_Sub1_5929`, synchronizes on `Class531.aStack5931`, and pushes the wrapper only while pool size is below `200`.
+- Preview dispatch is guarded by an active `Class523` plus `scene.aClass174Array5875 == scene.aClass174Array5838`, establishing the normal-world-terrain restriction for this hook.
+
+**Matrix3 usage / ownership notes**
+- Construction ghost, radial-selection and editor previews are client presentation only; this hook does not grant them scene ownership, collision, persistence, or gameplay authority.
+- Preserve the normal-terrain scene guard when using this direct-render seam so overlays are not submitted into unrelated alternate scene passes.
+- Wrapper recycling remains Matrix3-owned. Preview code must run before the wrapped reference is cleared and must not retain or mutate the recycled wrapper as persistent state.
+
+**Do not assume**
+- `Class578` is not established as a scene-only class; it also contains unrelated CS2/decompiled utility behavior.
+- `Class531` has not yet been semantically renamed; its broader lifetime and every use are not fully classified by this mapping.
+- The current Construction preview hook is a proven project integration point, not evidence that every future overlay belongs in this seam.
+
+**Related entries**
+- Construction ghost preview
+- Construction radial worker selection
+- Live Model Editor preview
+- `Class523` scene ownership
 
 ## Minimap / compass
 
