@@ -1,0 +1,6 @@
+2026-10-03 - Minimap/compass semantic documentation
+- Documented Class464.method5484(...) as the stock world-minimap render pipeline, including the shared center/yaw/zoom contract consumed by raster and overlays.
+- Documented Class107.method2061(...) as the stock compass render path, including detached-vs-normal heading selection, 14-bit yaw handling and compass sprite 4290.
+- Recorded both owners in docs/client/CLIENT_MAP.md with Construction RTS relationships and runtime/static evidence.
+- Preserved all obfuscated class/method/local names; this slice adds semantic comments and client-map knowledge only.
+- No runtime behavior, renderer ownership, camera ownership or Construction gameplay state changed.
