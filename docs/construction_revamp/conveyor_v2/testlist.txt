@@ -1,0 +1,13 @@
+Conveyor V2.0 continuous-chain placement correction — 2026-10-03
+[x] RUNTIME REJECTED: straight-only run creation worked, but successful placement cleared Point A and did not continue from B as promised.
+[x] verified-static: after a successful create command is queued, projected Point B is retained as the next Conveyor-local chain anchor.
+[x] verified-static: right-click/Escape clears only the retained chain anchor while leaving the Conveyor tool armed for a fresh Point A.
+[x] verified-static: server connectExistingConveyorEndsInto(...) accepts prior-output -> new-run-start as insertion distance 0.
+[ ] Pull latest main and Eclipse clean/build Client. If the V2.0 server build has not already been restarted, clean/build Server too.
+[ ] CHAIN UX RETEST: click A, click B to place Run #1, then WITHOUT clicking B again move toward C. The live preview must already originate from B.
+[ ] Click C. Run #2 must be B->C, and Run #1 must auto-link into Run #2 at receiver distance 0.
+[ ] Continue to D without re-clicking C. The tool must support A->B->C->D continuous authoring with each committed endpoint becoming the next start.
+[ ] CHAIN CANCEL: after one or more committed segments, right-click/Escape once; the retained endpoint clears and the next left-click starts a fresh unrelated Point A.
+[ ] 90-DEGREE TRANSPORT: send a payload through Run #1 -> Run #2 and confirm the item transfers and follows Run #2 direction/speed.
+[ ] MID-BELT MERGE: terminate another source output in the middle of an existing receiver and confirm exact-distance insertion/backpressure.
+[ ] CROSSING SAFETY: two belt spans crossing without an output endpoint terminating there remain independent.
