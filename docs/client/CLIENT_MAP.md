@@ -22,7 +22,7 @@ The goal is to preserve established client knowledge so future chats do not repe
 ## Evidence classification
 
 - `VERIFIED` — runtime-confirmed behavior.
-- `verified-static` — directly established from source/data but not runtime-confirmed.
+- `verified-static` — directly established from source/data without runtime confirmation.
 - `HYPOTHESIS` — plausible interpretation that still needs proof.
 - `UNKNOWN` — unresolved or insufficiently established.
 
@@ -137,7 +137,40 @@ _No mappings recorded yet._
 
 ## Interfaces / components / scripts
 
-_No mappings recorded yet._
+### NIS minigame HUD host — 1477:368
+
+**Subsystem:** Interfaces / components / scripts  
+**Evidence:** verified-static  
+**Tags:** 1477, 368, MINIGAME_HUD_COMPONENT_ID, InterfaceManager, InterfaceDefinitions, Class348, aClass73Array917, client.aClass676_8760, RTS Control
+
+**Exact symbols / IDs**
+- Server class: `com.rs.game.player.InterfaceManager`
+- Client classes: `InterfaceDefinitions`, `Class348`, `ConstructionRtsControlOverlay`
+- Root/interface slot: `1477:368`
+- Child array: `InterfaceDefinitions.aClass73Array917`
+- Mounted-subinterface table: `client.aClass676_8760`
+
+**Established responsibility**
+- Server `InterfaceManager.MINIGAME_HUD_COMPONENT_ID` is component `368` on root `1477`.
+- `InterfaceManager.sendMinigameInterface(int)` mounts player-facing interfaces into that slot.
+- `Class348.method4343(...)` recursively renders `InterfaceDefinitions.aClass73Array917` children and separately resolves mounted subinterfaces from `client.aClass676_8760` keyed by component UID.
+
+**Relationships / call flow**
+- Root `1477` component `368` -> native component tree children (`aClass73Array917`) -> `Class348.method4343(...)` render recursion.
+- Mounted minigame interface ownership is separate: component UID -> `client.aClass676_8760` -> mounted subinterface render.
+
+**Static evidence**
+- Server constants and `sendMinigameInterface(...)` establish `1477:368` as the minigame-HUD slot.
+- Client renderer source establishes child recursion plus separate mounted-subinterface dispatch.
+
+**Matrix3 usage / ownership notes**
+- Player-facing RTS Control may use `1477:368` only while the slot is structurally available and has no mounted subinterface.
+- If another real minigame HUD is mounted, RTS Control must yield instead of drawing on top of it or falling back to an unrelated root component.
+- Preserve/restore pre-existing `aClass73Array917` children exactly when temporary RTS children are attached.
+
+**Do not assume**
+- This static mapping does not prove every NIS layout gives `1477:368` enough dimensions for the RTS panel; runtime acceptance is still required.
+- This mapping does not make client-side RTS presentation authoritative for worker gameplay.
 
 ## Player rendering
 
