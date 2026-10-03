@@ -59,7 +59,7 @@ public class Class107 {
 					if (i_6_ > 0)
 						graphics.fillRect((Class656.anInt8418 * -1987897329 + i_8_ - i_6_), i_9_, i_6_, Class287.anInt3421 * -257945127);
 					if (i_7_ > 0)
-						graphics.fillRect(i_8_, (Class287.anInt3421 * -257945127 + i_9_ - i_7_), Class656.anInt8418 * -1987897329, i_7_);
+						graphics.fillRect(i_8_, (Class287.anInt3421 * -257945127 + i_9_ - i_7_), Class656.anInt8418 * -1987897329, i_7_, -1, (byte) -80);
 				} catch (Exception exception) {
 					/* empty */
 				}
@@ -67,6 +67,19 @@ public class Class107 {
 		}
 	}
 
+	/**
+	 * verified-static: renders the stock compass inside an interface component.
+	 *
+	 * The component's mask clips the draw. Camera heading comes from the detached
+	 * Class411 camera while camera mode 1 is active, otherwise from the normal
+	 * vanilla camera yaw. Construction RTS may substitute the same authoritative
+	 * 14-bit (0..16383) yaw used by the minimap so compass and minimap remain
+	 * synchronized. The client rotation offset is then applied, the heading is
+	 * wrapped with {@code 0x3fff}, shifted left two bits into the sprite renderer's
+	 * rotation domain, and compass sprite 4290 is drawn through the component mask.
+	 *
+	 * Original decompiled symbol: Class107.method2061(...).
+	 */
 	static void method2061(InterfaceDefinitions class73, int i, int i_10_, int i_11_) {
 		Class71 class71 = class73.method1099(Class272_Sub2.aClass106_9517, -682438025);
 		if (class71 != null) {
