@@ -1,3 +1,28 @@
+Conveyor V2.0 one-tile repeated visual module — 2026-10-03
+[x] RUNTIME REJECTED: stretch/fixed rendering let the belt surface move progressively farther from rollers/rails as the logical run became longer.
+[x] verified-static: one server-owned SettlementConveyorRun remains the gameplay/persistence owner; the client does not create per-tile Construction objects or save records.
+[x] verified-static: the complete visible authored straight assembly is normalized once to exactly 512 model units on its long axis.
+[x] verified-static: one intact raw module is cloned at exact 512-unit stations for each logical tile, then merged into one generated raw / cached Model per straight segment.
+[x] verified-static: module cloning/merging uses Matrix3 Class159 merge ownership so source face/texture/UV structures are copied with the intact module.
+[x] verified-static: old straight-run BELT_SURFACE stretch, cap spreading, detail repetition and support-spacing generation are no longer the active renderer path.
+[x] verified-static: payload interpolation, RUN/PAYLOAD sync, V2.0 output connection metadata, server speed/spacing/backpressure and physical-inventory ownership were not changed by this visual patch.
+[x] verified-static: editor-authored recipe parts that are visible/non-IGNORE become part of the repeated straight module; untouched/unassigned source sawmill geometry remains excluded.
+[x] verified-static: fresh-client fallback parts 4,5,8,16,17,18,19,21 use the same one-tile repetition path.
+[ ] Pull latest main and Eclipse Clean/Build the Client. Server rebuild is not required for this visual-only patch if the current V2.0 server is already running.
+[ ] DEMO 1T SHAPE: Show Conveyor A->B Demo and inspect the shortest run. One tile/module must look like the authored straight conveyor with no unwanted sawmill geometry.
+[ ] DEMO LENGTHS: inspect SHORT/MEDIUM/LONG (2/5/9 tiles). Every station must remain the same shape/width; belt surface, rollers, rails and braces must stay aligned from start to end with no progressive drift.
+[ ] MODULE SEAMS: repeated 512-unit modules must meet cleanly without visible gaps, overlap growth, cumulative offset or texture stretch.
+[ ] TEXTURE DETAIL: compare the repeated module to the Live Model Editor authored source; textures/details must remain present instead of degrading from compact-copy UV loss.
+[ ] BUILD PALETTE: Logistics -> Conveyor preview at 1/2/5/9 tile lengths must use the same repeated-module appearance before commit.
+[ ] ORIENTATION: build one E/W and one N/S straight run; the complete module rotates as one assembly and remains correctly centered on the logical path.
+[ ] AXIS-LOCK REGRESSION: after Point A chooses E/W or N/S, moving across the diagonal must not flip the current segment; committing B resets the lock for an intentional 90-degree next segment.
+[ ] CHAIN REGRESSION: A->B->C authoring keeps B/C as the next anchors without requiring a second click on the seam.
+[ ] PAYLOAD REGRESSION: real payload models still travel along the logical belt centerline and transfer between connected runs; repeated visual modules do not alter speed/spacing/backpressure.
+[ ] PERSISTENT VISUAL: exit/re-enter with a saved straight ConveyorRun; its logical endpoints and module count rebuild identically from sync.
+[ ] LIVE EDITOR: apply an authored conveyor recipe to the demo; visible tagged parts form the repeated module and IGNORE/untouched original-sawmill parts remain absent.
+[ ] PERFORMANCE: inspect at least one reasonably long straight run in RTS view; no material hitching or renderer failure from the merged repeated raw.
+[ ] If these visual checks pass, accept STRAIGHT_1T and move to CORNER_1T selection/rotation from existing V2.0 connection headings.
+
 Conveyor V2.0 per-segment axis lock correction — 2026-10-03
 [x] RUNTIME REJECTED: video showed the preview repeatedly flipping between E/W and N/S while moving the cursor around one Point A.
 [x] verified-static: segmentAxis starts AUTO, locks once from the first non-zero hover movement, and is reused by preview plus commit for the rest of that segment.
