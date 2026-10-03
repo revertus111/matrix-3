@@ -1,0 +1,5 @@
+2026-10-03
+- Split root AGENTS.md into mandatory global rules plus routed domain-specific agent files.
+- Added dedicated workstream, interface, client-engine, server-gameplay, Construction/RTS, cache/asset, developer-tool, and reverse-engineering guidance.
+- Added docs/client/CLIENT_MAP.md as a searchable evidence-classified client knowledge base.
+- Client investigations must search/update the client map without loading it front-to-back or duplicating established mappings.
