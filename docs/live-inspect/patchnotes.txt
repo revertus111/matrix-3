@@ -4,4 +4,5 @@
 - Added an immutable Live Inspect display snapshot so Client Console presentation reads inspector state without taking scene-picking ownership.
 - Added responsive Target, Assets, World, Runtime, and Actions cards with vertical scrolling and no horizontal scrollbar requirement at narrow console widths.
 - Added panel controls for enable/disable, lock/unlock, copy, verified tool opening, and live object placement.
+- Preserved action feedback long enough to read while the 150ms live refresh continues updating target data.
 - Kept Live Inspect developer-only and client-side; no server gameplay, cache, persistence, or Construction ownership changed.

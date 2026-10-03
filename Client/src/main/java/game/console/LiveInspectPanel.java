@@ -2,7 +2,6 @@ package game.console;
 
 import game.DevModeBridge;
 
-import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.awt.event.HierarchyEvent;
@@ -28,6 +27,7 @@ import javax.swing.Timer;
 public final class LiveInspectPanel extends JScrollPane {
 
     private static final long serialVersionUID = 5326796721667417358L;
+    private static final long ACTION_STATUS_MILLIS = 2500L;
 
     private final JToggleButton enabledButton = new JToggleButton();
     private final JButton lockButton = new JButton();
@@ -51,6 +51,7 @@ public final class LiveInspectPanel extends JScrollPane {
     private final JLabel runtimeValue = valueLabel();
 
     private final Timer refreshTimer = new Timer(150, e -> refreshFromInspector());
+    private long statusOverrideUntil;
 
     public LiveInspectPanel() {
         ViewportWidthPanel content = new ViewportWidthPanel();
@@ -105,9 +106,10 @@ public final class LiveInspectPanel extends JScrollPane {
         ConsoleTheme.styleButton(enabledButton);
         enabledButton.addActionListener(e -> {
             LiveInspectOverlay.setEnabled(enabledButton.isSelected());
+            statusOverrideUntil = 0L;
             refreshFromInspector();
             if (enabledButton.isSelected() && !DevModeBridge.isEnabled()) {
-                status.setText("Live Inspect is ON, but Dev Mode must be enabled in Settings for normal world targets.");
+                setActionStatus("Live Inspect is ON, but Dev Mode must be enabled in Settings for normal world targets.");
             }
         });
 
@@ -164,33 +166,31 @@ public final class LiveInspectPanel extends JScrollPane {
         configureAction(lockButton, e -> {
             LiveInspectOverlay.DisplayState before = LiveInspectOverlay.getDisplayState();
             if (!before.isEnabled()) {
-                status.setText("Enable Live Inspect before locking a target.");
+                setActionStatus("Enable Live Inspect before locking a target.");
             } else if (!before.hasTarget() && !before.isLocked()) {
-                status.setText("Hover a world target before locking it.");
+                setActionStatus("Hover a world target before locking it.");
             } else {
                 LiveInspectOverlay.toggleLock();
-                status.setText(LiveInspectOverlay.isLocked()
+                setActionStatus(LiveInspectOverlay.isLocked()
                         ? "Target locked. Hover updates are paused."
                         : "Target unlocked. Hover updates resumed.");
             }
             refreshFromInspector();
         });
 
-        configureAction(copyButton, e -> {
-            status.setText(LiveInspectOverlay.copyCurrentToClipboard()
-                    ? "Current Live Inspect snapshot copied."
-                    : "Nothing is available to copy.");
-        });
+        configureAction(copyButton, e -> setActionStatus(
+                LiveInspectOverlay.copyCurrentToClipboard()
+                        ? "Current Live Inspect snapshot copied."
+                        : "Nothing is available to copy."));
 
-        configureAction(openToolButton, e -> {
-            status.setText(LiveInspectOverlay.openCurrentTool()
-                    ? "Opened the verified specialist tool route."
-                    : "The current target has no verified direct tool route.");
-        });
+        configureAction(openToolButton, e -> setActionStatus(
+                LiveInspectOverlay.openCurrentTool()
+                        ? "Opened the verified specialist tool route."
+                        : "The current target has no verified direct tool route."));
 
         configureAction(placeButton, e -> {
             String result = LiveInspectOverlay.armCurrentObjectPlacement();
-            status.setText(result == null
+            setActionStatus(result == null
                     ? "Live place is available only for an inspected object."
                     : result);
         });
@@ -225,7 +225,6 @@ public final class LiveInspectPanel extends JScrollPane {
         label.setAlignmentX(LEFT_ALIGNMENT);
 
         value.setAlignmentX(LEFT_ALIGNMENT);
-        value.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         card.add(Box.createVerticalStrut(9));
         card.add(label);
@@ -259,17 +258,36 @@ public final class LiveInspectPanel extends JScrollPane {
         openToolButton.setEnabled(state.isEnabled() && state.canOpenTool());
         placeButton.setEnabled(state.isEnabled() && state.canPlaceObject());
 
-        if (!state.isEnabled()) {
-            status.setText("Live Inspect is OFF. Enable it here or press F10 in the game view.");
-        } else if (!DevModeBridge.isEnabled()) {
-            status.setText("Live Inspect is ON. Enable Dev Mode in Settings for normal world target inspection.");
-        } else if (state.isLocked()) {
-            status.setText("LOCKED - the current target is held until F9 or Unlock target.");
-        } else if (state.hasTarget()) {
-            status.setText("HOVER - live target data is updating from Matrix3 scene ownership.");
-        } else {
-            status.setText("HOVER - move the cursor over the game world.");
+        if (System.currentTimeMillis() >= statusOverrideUntil) {
+            setStatusText(baseStatus(state));
         }
+    }
+
+    private static String baseStatus(LiveInspectOverlay.DisplayState state) {
+        if (!state.isEnabled()) {
+            return "Live Inspect is OFF. Enable it here or press F10 in the game view.";
+        }
+        if (!DevModeBridge.isEnabled()) {
+            return "Live Inspect is ON. Enable Dev Mode in Settings for normal world target inspection.";
+        }
+        if (state.isLocked()) {
+            return "LOCKED - the current target is held until F9 or Unlock target.";
+        }
+        if (state.hasTarget()) {
+            return "HOVER - live target data is updating from Matrix3 scene ownership.";
+        }
+        return "HOVER - move the cursor over the game world.";
+    }
+
+    private void setActionStatus(String text) {
+        statusOverrideUntil = System.currentTimeMillis() + ACTION_STATUS_MILLIS;
+        setStatusText(text);
+    }
+
+    private void setStatusText(String text) {
+        String safe = text == null ? "" : text;
+        status.setText("<html>" + escapeHtml(safe) + "</html>");
+        status.setToolTipText(safe);
     }
 
     private static JLabel valueLabel() {
