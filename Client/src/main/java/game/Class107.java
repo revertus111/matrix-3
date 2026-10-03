@@ -59,7 +59,7 @@ public class Class107 {
 					if (i_6_ > 0)
 						graphics.fillRect((Class656.anInt8418 * -1987897329 + i_8_ - i_6_), i_9_, i_6_, Class287.anInt3421 * -257945127);
 					if (i_7_ > 0)
-						graphics.fillRect(i_8_, (Class287.anInt3421 * -257945127 + i_9_ - i_7_), Class656.anInt8418 * -1987897329, i_7_, -1, (byte) -80);
+						graphics.fillRect(i_8_, (Class287.anInt3421 * -257945127 + i_9_ - i_7_), Class656.anInt8418 * -1987897329, i_7_);
 				} catch (Exception exception) {
 					/* empty */
 				}
