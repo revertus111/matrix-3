@@ -1,0 +1,8 @@
+2026-10-03 - Conveyor V2.0 continuous-chain placement correction
+- Runtime screenshot verified straight-only run creation, but exposed a UX regression: each successful A->B commit cleared the client Point A, so the tool required a fresh start click instead of continuing from the just-placed endpoint.
+- Successful placement now promotes projected Point B to the next Point A; repeated endpoint clicks author A->B->C->D straight runs without reselecting every seam.
+- Right-click/Escape clears the retained chain anchor and returns the still-armed Conveyor tool to a fresh Point A.
+- Server connection behavior is unchanged and was reverified statically: an existing straight source ending on the new run start resolves insertion distance 0 and persists source->receiver linkage.
+- Retained placement state uses a Conveyor-local immutable coordinate anchor because ConstructionPlacementController.HoverTile construction remains private to its world-tile picker owner.
+- No payload transport, SettlementState schema, chest/machine ownership, connection graph, renderer, or custom corner visual changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME RETEST.
