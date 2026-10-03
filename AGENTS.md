@@ -1,6 +1,25 @@
 # Matrix3 Project Rules
 
+This root file is the mandatory entry point for every Matrix3 repository task.
+
 Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also read its authoritative `docs/<subject>/PROJECT.md`, `patchnotes.txt`, and test documentation when they exist.
+
+## Mandatory rule routing
+
+After reading this file, determine the task domain and read only the specialized agent files that actually apply before inspecting that system.
+
+- Persistent multi-patch workstream / phase / bundle / resume / canonical status work -> `agents/workstreams.md`
+- RuneScape interfaces / HUD / overlays / interface input -> `agents/interfaces.md`
+- Client engine / rendering / scene / camera / minimap / compass / input / client runtime behavior -> `agents/client-engine.md`
+- Server gameplay / combat / NPCs / world logic / persistence-backed gameplay -> `agents/server-gameplay.md`
+- Construction / settlement / RTS / workers / storage / logistics / processing -> `agents/construction.md`
+- Cache / revision-830 data / models / animations / sprites / textures / maps / GFX / particles / definitions -> `agents/cache-assets.md`
+- ForgeLabs / Live Editor / inspectors / Owner Console tooling / developer editors -> `agents/tools-editors.md`
+- Obfuscated/decompiled client, engine, protocol, cache, renderer, or other unfamiliar internals -> `agents/reverse-engineering.md`
+
+If a task crosses domains, read only the additional files required by the established implementation path. Do not load unrelated domain rules merely because they exist.
+
+For unfamiliar client work, use `docs/client/CLIENT_MAP.md` as a searchable knowledge base according to `agents/client-engine.md`. Do not read the entire map during normal development.
 
 ## Repository
 
@@ -17,44 +36,7 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 - After AAA, patch the established files directly; do not restart discovery unless new evidence requires it.
 - AAA may approve a clearly defined workstream bundle containing multiple related patches. Do not stop for another AAA between its listed patches unless the requested scope materially changes.
 - Exception for runtime verification bookkeeping: when the user explicitly runtime-verifies an already-AAA-approved patch/checkpoint, immediately update only that exact work's verification/status documentation (for example `PROJECT.md`, testlist, patchnotes, and `Resume Here`) without asking for another AAA. This exception does not authorize new code behavior, fixes, refactors, unrelated documentation changes, or scope expansion; those still require normal AAA approval.
-
-## Workstream workflow
-
-- Treat substantial ideas such as a boss, developer tool, combat framework, game mode, class system, or other multi-patch feature as a persistent workstream.
-- Use the hierarchy `Idea -> Phase -> Bundle -> Patch/Checklist`.
-- A phase is an ordered milestone of the workstream. A bundle is a related unit of work inside a phase. Patches/checklist items are the concrete implementation, discovery, documentation, or verification steps inside that bundle.
-- The user supplies the idea, goals, preferences, and decisions. The assistant owns architecture, phase decomposition, dependencies, discovery, implementation order, logical bundles, patch/checklist boundaries, tests, and carryover work.
-- Each persistent workstream has one authoritative project document, normally `docs/<subject>/PROJECT.md`.
-- Each normalized persistent workstream must keep a `Canonical Main-Goal Status` table in its authoritative `PROJECT.md`. That table is the source of truth for user-facing milestone rows across chats; phase/bundle/checklist state is a separate execution map.
-- Use `docs/rs3/WORKSTREAMS.md` as the lightweight registry and `docs/rs3/WORKSTREAM_TEMPLATE.md` when creating or normalizing a workstream document.
-- Do not create duplicate roadmap, ownership, backlog, status, or carryover documents when the authoritative workstream document can hold that information.
-- Group tasks into a bundle only when they share ownership, files, dependencies, implementation sequence, or runtime testing. Keep each logical patch independently understandable and revertible.
-- Prefer narrow, descriptive commits per logical patch when practical.
-- If one patch in an approved bundle becomes blocked, mark it `CARRYOVER` or `BLOCKED` and continue with other safe, independent approved patches.
-- New ideas for an existing workstream belong in the current phase/bundle, a future phase/bundle, or backlog/decisions. Do not interrupt active work unless the idea is a required dependency or the user explicitly changes priority.
-- Preserve discovery state using `VERIFIED`, `verified-static`, `HYPOTHESIS`, and `UNKNOWN` where useful.
-- Every persistent workstream must maintain a concise `Resume Here` state whenever work stops midstream. Record the last completed checkpoint, current phase/bundle/checklist item, next action, inspected files/systems, areas that should not be rescanned, blockers, pending runtime verification, and important uncertainty.
-- Do not rediscover information already established in the authoritative workstream document unless repository changes, runtime evidence, or contradictory evidence requires re-verification.
-- At the end of a bundle, persist each included patch/checklist item as appropriate: `READY`, `ACTIVE`, `NEEDS TEST`, `CARRYOVER`, `BLOCKED`, or `DONE`.
-
-## Phase/checklist discipline
-
-- Before inspecting or patching an existing persistent workstream, read its authoritative `docs/<subject>/PROJECT.md` and locate the current phase, bundle, checklist, `Canonical Main-Goal Status`, and `Resume Here` state.
-- Determine which phase/bundle is `ACTIVE` and which checklist items are already complete before deciding what work comes next.
-- Treat the workstream phase/checklist as the execution map for that project.
-- Do not redo completed checklist items or skip into later phases unless a dependency requires it or the user explicitly changes priority.
-- When the user says `continue`, `next`, or otherwise resumes an existing workstream, continue from the first valid unfinished checklist item in the active phase/bundle unless `Resume Here` specifies a more precise next action.
-- After completing work, update the authoritative checklist/phase state so another chat can immediately determine where the workstream stands.
-- If chat discussion and the saved workstream checklist disagree, stop before patching and identify the mismatch rather than guessing which state is correct.
-
-## Phase completion gates
-
-- A phase may be marked `DONE` only when all required checklist items for that phase are complete and any mandatory runtime verification has passed.
-- If required runtime verification is still pending, keep the phase in `NEEDS TEST` or equivalent rather than marking it complete.
-- Deferred verification must be explicitly recorded with the reason, affected checklist item(s), and what must be tested later.
-- Do not advance to the next phase merely because implementation work is finished if the current phase still has required verification or unresolved blockers.
-- A blocked or deferred item may allow later independent work only when the workstream explicitly records that it does not invalidate the phase gate or create a dependency risk.
-- When a phase closes, update the authoritative `PROJECT.md` with the completed gate state and set the next phase/bundle/checklist item as the new execution target.
+- Specialized agent files may define equally narrow documentation-bookkeeping exceptions for knowledge discovered inside an already-AAA-approved investigation. Those exceptions never authorize new runtime behavior or scope expansion.
 
 ## User-time optimization
 
@@ -73,7 +55,6 @@ Read `docs/rs3/PROJECT.md` before changing code. For the current subject, also r
 - Prefab tests must not silently rewrite persistent content, global live state, rollback history, drops, player saves, cache data, or unrelated world state. If temporary mutation is unavoidable, snapshot and restore it exactly or do not automate that check.
 - Rights/admin/developer gates remain authoritative. A self-test is never a bypass around normal permissions or engine ownership.
 - A prefab/self-test is the first-line confidence check, not a replacement for focused manual acceptance, persistence/restart verification, multiplayer behavior, or `docs/rs3/SMOKE_TEST.md` when those are required.
-- When designing a new substantial workstream, include a prefab/self-test checkpoint when practical after the architecture becomes stable enough; reuse proven harness patterns instead of inventing bespoke testing infrastructure for every feature.
 - When a runtime regression is found repeatedly, prefer strengthening the relevant prefab/self-test so the same failure becomes cheap to detect in future patches.
 
 ## Repository scan discipline
@@ -99,7 +80,7 @@ Use two execution lanes so Matrix3 work stays rigorous without allowing reverse-
 
 Use the Fast lane when ownership and the implementation path are already known, including normal UI/content changes, documentation, known APIs, established developer-tool paths, and bug fixes with clear evidence.
 
-- Read the required authority/workstream state and the smallest established file set.
+- Read the required authority/workstream/domain state and the smallest established file set.
 - Do not reopen settled architecture or re-trace known ownership merely because the task touches the same subsystem.
 - Once the patch path is established and AAA covers the task, move directly to implementation, documentation, and targeted verification.
 - Prefer one compact patch/test cycle over extra discovery passes.
@@ -108,20 +89,21 @@ Use the Fast lane when ownership and the implementation path are already known, 
 
 Use the Deep lane only when the task genuinely requires unfamiliar obfuscated/core behavior such as rendering, scene ownership, cache decoding, protocol internals, or another engine path whose semantics are not yet established.
 
-- After required authority/workstream reads, default to one bounded discovery pass of roughly 4-6 targeted source files plus at most one narrow fallback search/read when needed.
+- Read `agents/reverse-engineering.md` when this lane is entered for decompiled/obfuscated internals.
+- After required authority/workstream/domain reads, default to one bounded discovery pass of roughly 4-6 targeted source files plus at most one narrow fallback search/read when needed.
 - Fetch/search only the relevant symbols or line ranges from very large decompiled files where the tooling supports it; avoid repeated full-file retrieval.
 - Stop immediately when the ownership/implementation seam is sufficiently established for `verified-static`, `VERIFIED`, `HYPOTHESIS`, or `UNKNOWN` classification.
-- Do not perform additional "confidence scans" after the implementation path is established.
+- Do not perform additional confidence scans after the implementation path is established.
 - If new evidence genuinely requires more than the bounded pass, state the reason before expanding and keep the expansion narrowly tied to that evidence.
-- If the required seam is still unresolved after the bounded pass, persist the exact inspected files, findings, blocker, uncertainty, and next trace target in the authoritative workstream `Resume Here` instead of continuing an open-ended tool chain.
+- If the required seam is still unresolved after the bounded pass, persist the exact inspected files, findings, blocker, uncertainty, and next trace target in the authoritative workstream `Resume Here` when applicable instead of continuing an open-ended tool chain.
 - Break difficult work into `trace -> patch -> targeted test` checkpoints. Do not combine unrelated reverse-engineering questions into the same deep pass.
 
 ### Tool-latency and timeout discipline
 
 - Avoid long serial chains of repository/search calls when the next action can already be determined from existing evidence.
 - A slow/failed repository call gets one targeted retry or one narrower fallback, not repeated variants of the same request.
-- If tool latency or response size starts dominating the task, preserve the current evidence/checkpoint first, then continue from that exact point in a new turn/chat if necessary rather than risking loss to a timeout.
-- Large prior work does not justify a larger current scan; use the saved workstream state to skip already-settled discovery.
+- If tool latency or response size starts dominating the task, preserve the current evidence/checkpoint first, then continue from that exact point rather than restarting discovery.
+- Large prior work does not justify a larger current scan; use saved workstream/client-map state to skip already-settled discovery.
 - Speed rules never justify guessing. When the evidence is insufficient after the bounded pass, classify the uncertainty and preserve it rather than forcing a speculative patch.
 
 ## Matrix3 architecture rules
@@ -151,6 +133,17 @@ Use the Deep lane only when the task genuinely requires unfamiliar obfuscated/co
 - Consider future related systems enough to avoid obvious architectural dead ends, but never use that as a reason for unrelated refactoring.
 - Stability, RuneScape correctness, maintainability, performance, and user experience take priority over clever code.
 
+## Evidence classification
+
+Use these labels accurately wherever discovery state matters:
+
+- `VERIFIED`: runtime-confirmed behavior.
+- `verified-static`: directly established from source/data but not runtime-confirmed.
+- `HYPOTHESIS`: plausible but not proven.
+- `UNKNOWN`: not established enough to classify further.
+
+Never present guessed semantics as verified. Follow `Evidence -> classification -> minimal patch -> targeted test`.
+
 ## Communication standard
 
 - Give the maximum useful detail in the fewest words possible.
@@ -161,23 +154,6 @@ Use the Deep lane only when the task genuinely requires unfamiliar obfuscated/co
 - For complex subjects, compress the explanation without removing important risks, decisions, uncertainties, or test steps.
 - Keep optional deep technical detail separate from the main actionable answer.
 
-## Reverse engineering
-
-- Preserve original class, field, and method names unless the user explicitly approves renaming.
-- Trace only references needed for the requested behavior and stop once enough evidence exists to classify the finding.
-- Before expanding an unfamiliar obfuscated/decompiled trace, check the smallest relevant file set for existing developer/decompiler breadcrumbs such as `System.out`, `print`/`println`, `printStackTrace`, debug strings, comments, exception messages, temporary semantic labels, or similar diagnostics.
-- Treat debug/decompiler breadcrumbs as leads, not authority. Prior labels may reflect what an earlier developer believed a method did and must be checked against surrounding source/data and runtime behavior.
-- Use relevant breadcrumbs to narrow symbol/reference tracing and avoid unnecessary broad scans.
-- Promote breadcrumb-derived semantics to `verified-static` only when source/data supports them, and to `VERIFIED` only after runtime confirmation. Unsupported or contradictory labels remain `HYPOTHESIS` or `UNKNOWN`.
-- When a useful breadcrumb helps establish a stable mapping, preserve that verified mapping in the active subject documentation or a narrowly relevant source comment so future work does not rediscover it.
-- Use these labels accurately:
-  - `VERIFIED`: runtime-confirmed behavior.
-  - `verified-static`: directly established from source/data but not runtime-confirmed.
-  - `HYPOTHESIS`: plausible but not proven.
-  - `UNKNOWN`: not established enough to classify further.
-- Never present guessed semantics as verified.
-- Follow `Evidence -> classification -> minimal patch -> targeted test`.
-
 ## Documentation and testing
 
 - Every code change must update or create `docs/<subject>/patchnotes.txt`.
@@ -185,34 +161,8 @@ Use the Deep lane only when the task genuinely requires unfamiliar obfuscated/co
 - Add/update a subject test list when runtime behavior changes.
 - Run or request the relevant portion of `docs/rs3/SMOKE_TEST.md` after meaningful core changes. Cache/loading, object, networking, persistence, or broad engine changes require the full smoke test unless clearly unnecessary.
 - `docs/rs3/BASELINE.md` is the known-good reference point. Do not silently redefine it after regressions.
-- When workstream phase, checklist, status, backlog, or carryover changes, update the authoritative workstream `PROJECT.md`.
-
-## Goal-anchored status updates
-
-Status updates are a navigation aid for the user's original/main goal, not a changelog for the latest subtask.
-
-- Every status update, including required post-patch status, must stay anchored to the original/main goal of the active project or workstream.
-- For a normalized workstream, the authoritative `PROJECT.md` `Canonical Main-Goal Status` table is the only source of truth for the user-facing Area/Status milestone rows.
-- On every new chat, resume, `continue`, or `next`, read that canonical table before reporting status and reproduce its row names, row order, and current status values exactly. Do not reconstruct the table from memory, recent chat, phases, bundles, checklists, tests, or `Resume Here`.
-- Never derive, regenerate, rename, reorder, add, remove, or implicitly change canonical milestone rows from the active phase/bundle/checklist. The checklist is execution detail; the canonical table represents the main goal.
-- A phase/bundle/checklist item being `NEEDS TEST`, `BLOCKED`, `DONE`, or otherwise changing state does **not** automatically change a canonical milestone status. Mention that local state under `Just completed:`, `Current focus:`, or the optional blocker/runtime-verification note.
-- Change a canonical row/status only when the top-level milestone itself genuinely changes state or the user explicitly approves a revised main-goal roadmap. When that happens, update the canonical table in `PROJECT.md` in the same workstream-state patch so future chats inherit the change.
-- If an older workstream does not yet contain a canonical table, do not invent a replacement table in the status response. Treat the workstream as needing status normalization and preserve existing roadmap/checklist facts until the canonical table is explicitly established.
-- Put non-milestone work under `Just completed:` or `Current focus:` rather than turning it into a new main-goal row.
-- Show enough of the remaining main path that the user can return after a side track and immediately see what comes next.
-- If work moves temporarily to a side task, keep the canonical main-goal table unchanged and mention the side task separately.
-- End status updates with `Next main step:` using the next meaningful milestone/checkpoint from the authoritative plan.
-- Only change the status anchor or canonical milestone rows when the user explicitly changes the main goal, starts a separate workstream, approves a revised roadmap, or the saved top-level milestone itself reaches a new state.
-- Do not invent percentage-complete estimates unless grounded in an explicit checklist or measurable scope.
-- Use `✅ Complete`, `🟡 Foundation`, `🔵 In Progress`, `⚠️ Needs runtime verification` (or a concise audit note), and `❌ Not started` where applicable.
-
-Required post-patch status shape:
-
-1. `Main goal:` the original/main objective.
-2. `Just completed:` the patch or subtask that changed.
-3. The Area/Status table copied from the authoritative `Canonical Main-Goal Status` section without local reinterpretation.
-4. `Next main step:` the next meaningful checkpoint that advances the original goal.
-5. Optional blocker/runtime-verification note only when it materially affects that next step.
+- When workstream phase, checklist, status, backlog, or carryover changes, update the authoritative workstream `PROJECT.md` according to `agents/workstreams.md`.
+- When client investigation establishes reusable client knowledge, maintain `docs/client/CLIENT_MAP.md` according to `agents/client-engine.md` and, when applicable, `agents/reverse-engineering.md`.
 
 ## Priority discipline
 
