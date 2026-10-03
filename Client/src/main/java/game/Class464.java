@@ -112,6 +112,23 @@ public final class Class464 {
 			((Cs2Executor) class441).intStack[((((Cs2Executor) class441).intStackPtr += -1042067865) * 1369304407 - 1)] = Class213.aClass572_Sub24_2463.aClass665_Sub21_9210.method7863(i_13_, 381474842);
 	}
 
+	/**
+	 * verified-static: renders the stock world minimap and its overlays inside an
+	 * interface component.
+	 *
+	 * One scene-space center, 14-bit yaw and zoom value drive the minimap raster
+	 * and the relative positions of map icons, object markers, NPC/player dots and
+	 * destination overlays. Normal mode derives the center from the local player;
+	 * detached camera mode keeps the stock camera heading path. Construction RTS
+	 * substitutes only the shared minimap center and yaw through
+	 * {@link ConstructionBuildCamera}; the stock renderer, zoom, masks, icon
+	 * iteration and scene ownership remain authoritative.
+	 *
+	 * The heading is maintained in the RuneScape 0..16383 domain and shifted left
+	 * two bits only when passed to the raster sprite renderer.
+	 *
+	 * Original decompiled symbol: Class464.method5484(...).
+	 */
 	static void method5484(Class106 class106, InterfaceDefinitions class73, int i, int i_14_, int i_15_) {
 		if (null != Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976) {
 			class106.method1747();
