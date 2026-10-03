@@ -125,7 +125,87 @@ _No mappings recorded yet._
 
 ## Minimap / compass
 
-_No mappings recorded yet._
+### Stock world minimap renderer — Class464.method5484(...)
+
+**Subsystem:** Minimap / compass  
+**Evidence:** VERIFIED  
+**Tags:** Class464, method5484, minimap, raster, map icons, NPC dots, player dots, destination, RTS minimap, ConstructionBuildCamera, 14-bit yaw, 0x3fff
+
+**Exact symbols / IDs**
+- Class: `Class464`
+- Method: `Class464.method5484(Class106, InterfaceDefinitions, int, int, int)`
+- Construction bridge: `ConstructionBuildCamera.getRtsMinimapCenterSceneUnitsPacked()`
+- Construction bridge: `ConstructionBuildCamera.getRtsMinimapYawUnits()`
+
+**Established responsibility**
+- `Class464.method5484(...)` is the stock world-minimap rendering pipeline for an interface component.
+- One scene-space center, heading and zoom value drive the base minimap raster and the relative positions of map icons, object/map markers, NPC/player dots and destination overlays.
+- Normal mode derives the center from the local-player scene transform. The method also contains the stock detached-camera heading branch.
+- Minimap heading is maintained in the RuneScape 14-bit `0..16383` domain (`& 0x3fff`) and is shifted left two bits when passed into the raster sprite renderer.
+
+**Relationships / call flow**
+- player/detached camera state -> shared minimap center/yaw/zoom -> raster draw -> icon/object-marker loops -> NPC/player/destination overlay helpers.
+- Construction RTS -> `ConstructionBuildCamera` center/yaw bridge -> same stock minimap renderer and overlay pipeline.
+
+**Runtime evidence**
+- Construction RTS runtime testing confirmed that substituting the shared center makes the minimap follow the RTS camera instead of the player.
+- Runtime testing also confirmed the corrected RTS yaw handedness keeps the raster, compass, NPC/player/map-icon overlays and rotated minimap click-to-focus aligned.
+
+**Static evidence**
+- `i_16_` / `i_17_` are consumed by the raster center calculation and reused throughout icon/object/NPC/player/destination relative-position calculations.
+- `i_18_` is masked with `0x3fff` and passed to the raster renderer as `i_18_ << 2`.
+- `i_19_` is the stock zoom value (`4096 - client.anInt8670 * 626807696`) outside the special camera-mode branch.
+
+**Matrix3 usage / ownership notes**
+- Construction RTS intentionally substitutes only minimap presentation center/yaw. Stock rendering, masks, zoom, icon iteration and scene ownership remain authoritative.
+- Future minimap work should extend this owner rather than creating a second minimap renderer.
+
+**Do not assume**
+- The current obfuscated local variable names are not approved semantic renames yet.
+- `Class464` itself is a mixed utility/decompiler class and is not established as a minimap-only class owner.
+
+**Related entries**
+- Stock compass renderer — `Class107.method2061(...)`
+- `ConstructionBuildCamera`
+
+### Stock compass renderer — Class107.method2061(...)
+
+**Subsystem:** Minimap / compass  
+**Evidence:** VERIFIED  
+**Tags:** Class107, method2061, compass, sprite 4290, detached camera, RTS compass, ConstructionBuildCamera, 14-bit yaw, 0x3fff
+
+**Exact symbols / IDs**
+- Class: `Class107`
+- Method: `Class107.method2061(InterfaceDefinitions, int, int, int)`
+- Compass sprite ID: `4290`
+- Construction bridge: `ConstructionBuildCamera.getRtsMinimapYawUnits()`
+
+**Established responsibility**
+- `Class107.method2061(...)` renders the stock compass inside its interface-component mask.
+- Camera mode `1` derives heading from `Class133_Sub1.aClass411_Sub1_9827`; otherwise the normal vanilla camera yaw path is used.
+- Construction RTS may substitute the same authoritative 14-bit yaw consumed by the minimap.
+- The client rotation offset is applied, the heading is wrapped with `0x3fff`, then shifted left two bits before compass sprite `4290` is rendered.
+
+**Relationships / call flow**
+- vanilla/detached camera heading -> optional Construction RTS yaw substitution -> client rotation offset -> 14-bit wrap -> sprite-domain shift -> compass sprite `4290` draw through component mask.
+
+**Runtime evidence**
+- Construction RTS runtime testing confirmed the compass rotates with the RTS camera after the handedness correction and remains aligned with the minimap raster.
+
+**Static evidence**
+- Source directly selects detached-vs-normal heading, applies `ConstructionBuildCamera.getRtsMinimapYawUnits()`, masks with `0x3fff`, shifts left two bits and renders sprite `4290` through `Class121.aClass161_1478.method2605(...)`.
+
+**Matrix3 usage / ownership notes**
+- Compass presentation should continue to consume the same authoritative heading domain as the stock minimap.
+- Construction RTS is a presentation override only; it does not own general compass rendering or camera authority outside RTS mode.
+
+**Do not assume**
+- `Class107` is not established as a compass-only class; it also contains unrelated decompiled utility behavior.
+- `i_12_` is semantically the compass heading inside this method, but no source rename is approved in this patch.
+
+**Related entries**
+- Stock world minimap renderer — `Class464.method5484(...)`
+- `ConstructionBuildCamera`
 
 ## Input / mouse / keyboard
 
