@@ -1,7 +1,6 @@
 package game;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -10,19 +9,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Client-only procedural conveyor visual proof.
+ * Client-only procedural conveyor presentation.
  *
- * V0 deliberately owns no settlement state, collision, scene registration,
- * inventories, or transport logic. One ConveyorRun produces one generated
- * renderer Model from the canonical custom conveyor assembly authored from
- * object 46298 / models 49717+49718. The untouched sawmill source components
- * are excluded before procedural run generation.
+ * Gameplay/persistence remains server-owned. One logical ConveyorRun is rendered
+ * from an authored one-tile visual module repeated at exact 512-unit intervals,
+ * then merged into one cached renderer Model for that straight run.
  */
 public final class ConveyorRunPreview {
 
     private static final int SOURCE_OBJECT_ID = 46298;
     private static final int[] SOURCE_MODEL_IDS = { 49717, 49718 };
-
     private static final int TILE_UNITS = 512;
 
     public static final int ROUTE_AUTO = 0;
@@ -30,20 +26,12 @@ public final class ConveyorRunPreview {
     public static final int ROUTE_Y_FIRST = 2;
 
     private static final int DEFAULT_PAYLOAD_ITEM_ID = 1511;
-
     private static volatile int payloadItemId = DEFAULT_PAYLOAD_ITEM_ID;
 
-    private static final double STRETCH_MIN_LONG_FRACTION = 0.60;
-    private static final double REPEAT_DETAIL_SPACING_TILES = 1.0;
-    private static final double MAX_SUPPORT_SPAN_TILES = 3.0;
-
     /*
-     * Canonical authored conveyor assembly from the saved Matrix3 Live Model
-     * project object_46298_model_49717(1).json.
-     *
-     * The source object contains the entire sawmill. Only these non-default
-     * edited connected components were moved/scaled into the custom conveyor.
-     * Runtime must never render the untouched sawmill components.
+     * Canonical fallback authored conveyor assembly. Live Model Editor recipes
+     * override this when applied, but persistent/build-palette rendering must
+     * remain useful after a fresh client launch.
      */
     private static final AuthoredPart[] AUTHORED_PARTS = {
             new AuthoredPart(4, 45, 100, 100, -744, 0, -1140, 0),
@@ -65,8 +53,6 @@ public final class ConveyorRunPreview {
     private static final Class261 PAYLOAD_TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
 
-    // Reserved Construction-only CSVar-string transport. PacketsDecoder
-    // intercepts this id before Matrix3's normal CSVar store.
     public static final int SETTLEMENT_SYNC_CS_VAR = 65534;
 
     private static volatile boolean demoActive;
@@ -79,7 +65,7 @@ public final class ConveyorRunPreview {
     private static volatile int revision;
     private static volatile int lastRenderedCycle = Integer.MIN_VALUE;
     private static volatile String status = "HIDDEN";
-    private static volatile String roleSummary = "roles not generated";
+    private static volatile String roleSummary = "module not generated";
     private static volatile String lastLoggedRoleSummary = "";
     private static volatile LiveModelEditorParts.ConveyorRecipePart[] authoringRecipe =
             new LiveModelEditorParts.ConveyorRecipePart[0];
@@ -214,14 +200,13 @@ public final class ConveyorRunPreview {
                 * 16384.0 / 360.0)) & 0x3fff;
     }
 
-    public static String setAuthoringRecipe(
+    public static synchronized String setAuthoringRecipe(
             LiveModelEditorParts.ConveyorRecipePart[] recipe) {
         if (recipe == null || recipe.length == 0) {
-            status = "CONVEYOR ROLES: tag at least one BELT_SURFACE part first";
+            status = "CONVEYOR 1T MODULE: include at least one authored part";
             return status;
         }
 
-        int belts = 0;
         int included = 0;
         LinkedHashSet<Integer> sourceParts = new LinkedHashSet<Integer>();
         for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
@@ -230,39 +215,35 @@ public final class ConveyorRunPreview {
                 continue;
             }
             if (!sourceParts.add(Integer.valueOf(part.sourcePart))) {
-                status = "CONVEYOR ROLES: duplicate source part "
-                        + part.sourcePart + " is not supported in V1";
+                status = "CONVEYOR 1T MODULE: duplicate source part "
+                        + part.sourcePart + " is not supported";
                 return status;
             }
-            if (part.role != LiveModelEditorParts.ConveyorRole.IGNORE) included++;
-            if (part.role == LiveModelEditorParts.ConveyorRole.BELT_SURFACE) belts++;
+            if (part.role != LiveModelEditorParts.ConveyorRole.IGNORE) {
+                included++;
+            }
         }
 
-        if (belts == 0) {
-            status = "CONVEYOR ROLES: at least one BELT_SURFACE is required";
+        if (included == 0) {
+            status = "CONVEYOR 1T MODULE: recipe has no visible parts";
             return status;
         }
 
         authoringRecipe = recipe.clone();
         revision++;
         invalidateModels();
-        status = "CONVEYOR ROLE RECIPE READY included=" + included
-                + " belt=" + belts + " tagged=" + sourceParts.size();
+        status = "CONVEYOR 1T MODULE READY included=" + included
+                + " tagged=" + sourceParts.size();
         return status;
     }
 
-    /**
-     * Builds three parallel A->B visual proofs around the local player.
-     * No persistent Construction/world objects are created.
-     */
-    public static String showDemoNearPlayer() {
+    public static synchronized String showDemoNearPlayer() {
         Class613 region = client.aClass613_8605;
         Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
         if (region == null || player == null) {
             status = "WAIT active region/player";
             return status;
         }
-
         Class497 sceneBase = region.method7280((byte) -102);
         Class240 position = player.method5394().aClass240_2647;
         if (sceneBase == null || position == null) {
@@ -284,12 +265,11 @@ public final class ConveyorRunPreview {
         demoActive = true;
         revision++;
         invalidateModels();
-        status = "READY ConveyorRun V0: short=2t medium=5t long=9t; "
-                + "source=authored conveyor assembly (46298 / 49717+49718)";
+        status = "READY Conveyor 1T module demo: short=2t medium=5t long=9t";
         return status;
     }
 
-    public static String hide() {
+    public static synchronized String hide() {
         demoActive = false;
         demoRuns = new ConveyorRun[0];
         revision++;
@@ -338,12 +318,8 @@ public final class ConveyorRunPreview {
 
     public static synchronized boolean handleSettlementSyncSignal(
             int id, String payload) {
-        if (id != SETTLEMENT_SYNC_CS_VAR) {
-            return false;
-        }
-        if (payload == null) {
-            return true;
-        }
+        if (id != SETTLEMENT_SYNC_CS_VAR) return false;
+        if (payload == null) return true;
 
         if ("BEGIN".equals(payload)) {
             pendingSettlementRuns.clear();
@@ -351,9 +327,7 @@ public final class ConveyorRunPreview {
             return true;
         }
         if ("END".equals(payload)) {
-            if (!settlementSyncOpen) {
-                return true;
-            }
+            if (!settlementSyncOpen) return true;
             settlementRuns = pendingSettlementRuns.toArray(
                     new ConveyorRun[pendingSettlementRuns.size()]);
             pendingSettlementRuns.clear();
@@ -387,9 +361,7 @@ public final class ConveyorRunPreview {
             return true;
         }
         if ("PEND".equals(payload)) {
-            if (!payloadSyncOpen) {
-                return true;
-            }
+            if (!payloadSyncOpen) return true;
             Collections.sort(pendingSettlementPayloads,
                     new Comparator<ConveyorPayload>() {
                         @Override
@@ -413,9 +385,7 @@ public final class ConveyorRunPreview {
             return true;
         }
         if (payload.startsWith("PSTATE,")) {
-            if (!payloadSyncOpen) {
-                return true;
-            }
+            if (!payloadSyncOpen) return true;
             String[] values = payload.split(",");
             if (values.length != 5) {
                 status = "PAYLOAD SYNC rejected malformed PSTATE";
@@ -436,9 +406,7 @@ public final class ConveyorRunPreview {
             return true;
         }
         if (payload.startsWith("PAYLOAD,")) {
-            if (!payloadSyncOpen) {
-                return true;
-            }
+            if (!payloadSyncOpen) return true;
             String[] values = payload.split(",");
             if (values.length != 6) {
                 status = "PAYLOAD SYNC rejected malformed PAYLOAD";
@@ -461,9 +429,7 @@ public final class ConveyorRunPreview {
             return true;
         }
         if (payload.startsWith("RUN,")) {
-            if (!settlementSyncOpen) {
-                return true;
-            }
+            if (!settlementSyncOpen) return true;
             String[] values = payload.split(",");
             if (values.length != 7 && values.length != 8
                     && values.length != 10) {
@@ -494,7 +460,6 @@ public final class ConveyorRunPreview {
             }
             return true;
         }
-
         return true;
     }
 
@@ -548,9 +513,7 @@ public final class ConveyorRunPreview {
     }
 
     public static synchronized void clearPlacementPreview() {
-        if (placementRun == null) {
-            return;
-        }
+        if (placementRun == null) return;
         placementRun = null;
         revision++;
         invalidateModels();
@@ -559,21 +522,14 @@ public final class ConveyorRunPreview {
 
     static void render(Class523 scene, Class106 renderer) {
         ConveyorRun[] current = visibleRuns();
-        if (current.length == 0 || scene == null || renderer == null) {
-            return;
-        }
+        if (current.length == 0 || scene == null || renderer == null) return;
 
         int cycle = client.cycles;
-        if (lastRenderedCycle == cycle) {
-            return;
-        }
+        if (lastRenderedCycle == cycle) return;
         lastRenderedCycle = cycle;
 
         Class613 region = client.aClass613_8605;
-        if (region == null || region.method7285(0) != scene) {
-            return;
-        }
-
+        if (region == null || region.method7285(0) != scene) return;
         Class497 sceneBase = region.method7280((byte) -102);
         Class639_Sub16 definitions = region.method7288(0);
         if (sceneBase == null || definitions == null) {
@@ -601,7 +557,8 @@ public final class ConveyorRunPreview {
             ConveyorRun[] segments = current[i].segmentRuns();
             Model[] models = i < cachedModels.length ? cachedModels[i] : null;
             boolean complete = models != null && models.length == segments.length;
-            for (int segmentIndex = 0; complete && segmentIndex < segments.length;
+            for (int segmentIndex = 0;
+                    complete && segmentIndex < segments.length;
                     segmentIndex++) {
                 Model model = models[segmentIndex];
                 if (model != null && renderOne(
@@ -633,18 +590,14 @@ public final class ConveyorRunPreview {
         ConveyorRun[] demo = demoActive ? demoRuns : new ConveyorRun[0];
         ConveyorRun placement = placementRun;
         int count = persistent.length + demo.length + (placement == null ? 0 : 1);
-        if (count == 0) {
-            return new ConveyorRun[0];
-        }
+        if (count == 0) return new ConveyorRun[0];
         ConveyorRun[] combined = new ConveyorRun[count];
         int index = 0;
         System.arraycopy(persistent, 0, combined, index, persistent.length);
         index += persistent.length;
         System.arraycopy(demo, 0, combined, index, demo.length);
         index += demo.length;
-        if (placement != null) {
-            combined[index] = placement;
-        }
+        if (placement != null) combined[index] = placement;
         return combined;
     }
 
@@ -659,12 +612,14 @@ public final class ConveyorRunPreview {
     private static void rebuildModels(Class106 renderer, ObjectDefinitions definition,
             ConveyorRun[] current) {
         Model[][] built = new Model[current.length][];
-        String summary = "roles unavailable";
+        String summary = "module unavailable";
 
         for (int i = 0; i < current.length; i++) {
             ConveyorRun[] segments = current[i].segmentRuns();
             built[i] = new Model[segments.length];
-            for (int segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
+            for (int segmentIndex = 0;
+                    segmentIndex < segments.length;
+                    segmentIndex++) {
                 ConveyorRun segment = segments[segmentIndex];
                 Generation generation = generateRaw(definition, segment);
                 if (generation == null || generation.raw == null) {
@@ -681,14 +636,15 @@ public final class ConveyorRunPreview {
         cachedModels = built;
         cachedRenderer = renderer;
         cachedRevision = revision;
-        roleSummary = summary + " | routed static-belt visual";
+        roleSummary = summary + " | one-tile repeated visual";
         if (!roleSummary.equals(lastLoggedRoleSummary)) {
             lastLoggedRoleSummary = roleSummary;
             System.out.println("[ConveyorRunPreview] " + roleSummary);
         }
     }
 
-    private static Generation generateRaw(ObjectDefinitions definition, ConveyorRun run) {
+    private static Generation generateRaw(
+            ObjectDefinitions definition, ConveyorRun run) {
         LiveModelEditorParts.ConveyorRecipePart[] recipe = authoringRecipe;
         if (recipe != null && recipe.length > 0) {
             return generateRoleRaw(definition, run, recipe);
@@ -697,171 +653,8 @@ public final class ConveyorRunPreview {
     }
 
     private static Generation generateRoleRaw(ObjectDefinitions definition,
-            ConveyorRun run, LiveModelEditorParts.ConveyorRecipePart[] recipe) {
-        Class159 authored = decodeSource(definition);
-        Class159 working = decodeSource(definition);
-        if (authored == null || working == null
-                || working.anInt1791 <= 0 || working.anInt1778 <= 0) {
-            status = "SOURCE decode failed for 49717/49718";
-            return null;
-        }
-
-        Component[] components = detectComponents(working);
-        if (components.length == 0) {
-            status = "SOURCE connected-component analysis failed";
-            return null;
-        }
-
-        for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
-            if (part == null) continue;
-            if (part.sourcePart < 0 || part.sourcePart >= components.length) {
-                status = "CONVEYOR ROLE source part " + part.sourcePart
-                        + " unavailable; detected=" + components.length;
-                return null;
-            }
-        }
-
-        ensureFaceAlpha(working);
-        ensureFaceAlpha(authored);
-        for (int i = 0; i < components.length; i++) {
-            LiveModelEditorParts.ConveyorRecipePart part = recipePart(recipe, i);
-            if (part == null
-                    || part.role == LiveModelEditorParts.ConveyorRole.UNASSIGNED
-                    || part.role == LiveModelEditorParts.ConveyorRole.IGNORE) {
-                hideFaces(working, components[i]);
-                continue;
-            }
-            applyRecipeTransform(working, components[i], part);
-            applyRecipeTransform(authored, components[i], part);
-        }
-
-        populateComponentBounds(working, components);
-        Bounds all = boundsForRecipeParts(working, components, recipe);
-        if (all == null) {
-            status = "CONVEYOR ROLE recipe has no visible authored geometry";
-            return null;
-        }
-
-        boolean axisX = all.sizeX >= all.sizeZ;
-        double sourceMin = axisX ? all.minX : all.minZ;
-        double sourceMax = axisX ? all.maxX : all.maxZ;
-        double sourceCenter = (sourceMin + sourceMax) * 0.5;
-        double sourceLength = Math.max(1.0, sourceMax - sourceMin);
-        double targetLength = Math.max(TILE_UNITS, run.lengthTiles() * TILE_UNITS);
-        double stretchFactor = targetLength / sourceLength;
-
-        ArrayList<Component> repeat = new ArrayList<Component>();
-        ArrayList<Component> supports = new ArrayList<Component>();
-        int beltCount = 0;
-        int startCount = 0;
-        int endCount = 0;
-        int fixedCount = 0;
-
-        int startShift = (int) Math.round(
-                (sourceCenter - targetLength * 0.5) - sourceMin);
-        int endShift = (int) Math.round(
-                (sourceCenter + targetLength * 0.5) - sourceMax);
-
-        for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
-            if (part == null
-                    || part.role == LiveModelEditorParts.ConveyorRole.UNASSIGNED
-                    || part.role == LiveModelEditorParts.ConveyorRole.IGNORE) {
-                continue;
-            }
-            Component component = components[part.sourcePart];
-            switch (part.role) {
-            case BELT_SURFACE:
-                scaleComponentAxis(working, component, axisX,
-                        sourceCenter, stretchFactor);
-                beltCount++;
-                break;
-            case START_CAP:
-                translateComponentAxis(working, component, axisX, startShift);
-                startCount++;
-                break;
-            case END_CAP:
-                translateComponentAxis(working, component, axisX, endShift);
-                endCount++;
-                break;
-            case REPEAT_DETAIL:
-                hideFaces(working, component);
-                repeat.add(component);
-                break;
-            case SUPPORT:
-                hideFaces(working, component);
-                supports.add(component);
-                break;
-            case FIXED_DETAIL:
-            case SCALE_POSITION:
-                remapComponentPosition(working, component, axisX,
-                        sourceMin, sourceLength, sourceCenter, targetLength);
-                fixedCount++;
-                break;
-            default:
-                break;
-            }
-        }
-
-        if (beltCount == 0) {
-            status = "CONVEYOR ROLE recipe lost BELT_SURFACE";
-            return null;
-        }
-
-        ArrayList<Class159> generated = new ArrayList<Class159>();
-        generated.add(working);
-
-        int repeatStations = 0;
-        if (!repeat.isEmpty()) {
-            repeatStations = Math.max(1, (int) Math.floor(
-                    run.lengthTiles() / REPEAT_DETAIL_SPACING_TILES));
-            double groupCenter = roleGroupCenter(repeat, axisX);
-            for (int station = 0; station < repeatStations; station++) {
-                double fraction = (station + 0.5) / repeatStations;
-                double targetCenter = sourceCenter + (fraction - 0.5) * targetLength;
-                int shift = (int) Math.round(targetCenter - groupCenter);
-                for (Component component : repeat) {
-                    Class159 copy = componentOnlyTranslatedRaw(
-                            authored, component, axisX, shift);
-                    if (copy != null) generated.add(copy);
-                }
-            }
-        }
-
-        int supportStations = 0;
-        if (!supports.isEmpty()) {
-            supportStations = Math.max(0,
-                    (int) Math.ceil(run.lengthTiles() / MAX_SUPPORT_SPAN_TILES) - 1);
-            double groupCenter = roleGroupCenter(supports, axisX);
-            for (int station = 0; station < supportStations; station++) {
-                double fraction = (station + 1.0) / (supportStations + 1.0);
-                double targetCenter = sourceCenter + (fraction - 0.5) * targetLength;
-                int shift = (int) Math.round(targetCenter - groupCenter);
-                for (Component component : supports) {
-                    Class159 copy = componentOnlyTranslatedRaw(
-                            authored, component, axisX, shift);
-                    if (copy != null) generated.add(copy);
-                }
-            }
-        }
-
-        Class159 raw = generated.size() == 1
-                ? generated.get(0)
-                : new Class159(generated.toArray(new Class159[generated.size()]),
-                        generated.size());
-
-        String summary = "ROLES axis=" + (axisX ? "X" : "Z")
-                + " belt=" + beltCount
-                + " startCap=" + startCount
-                + " endCap=" + endCount
-                + " fixed=" + fixedCount
-                + " repeatParts=" + repeat.size()
-                + " repeatStations=" + repeatStations
-                + " supportParts=" + supports.size()
-                + " supportStations=" + supportStations;
-        return new Generation(raw, axisX, summary);
-    }
-
-    private static Generation generateLegacyRaw(ObjectDefinitions definition, ConveyorRun run) {
+            ConveyorRun run,
+            LiveModelEditorParts.ConveyorRecipePart[] recipe) {
         Class159 working = decodeSource(definition);
         if (working == null || working.anInt1791 <= 0 || working.anInt1778 <= 0) {
             status = "SOURCE decode failed for 49717/49718";
@@ -873,7 +666,59 @@ public final class ConveyorRunPreview {
             status = "SOURCE connected-component analysis failed";
             return null;
         }
+        for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
+            if (part != null
+                    && (part.sourcePart < 0 || part.sourcePart >= components.length)) {
+                status = "CONVEYOR MODULE source part " + part.sourcePart
+                        + " unavailable; detected=" + components.length;
+                return null;
+            }
+        }
 
+        ensureFaceAlpha(working);
+        ArrayList<Component> moduleParts = new ArrayList<Component>();
+        for (int i = 0; i < components.length; i++) {
+            LiveModelEditorParts.ConveyorRecipePart part = recipePart(recipe, i);
+            if (part == null
+                    || part.role == LiveModelEditorParts.ConveyorRole.UNASSIGNED
+                    || part.role == LiveModelEditorParts.ConveyorRole.IGNORE) {
+                hideFaces(working, components[i]);
+                continue;
+            }
+            applyRecipeTransform(working, components[i], part);
+            moduleParts.add(components[i]);
+        }
+
+        populateComponentBounds(working, components);
+        Bounds all = boundsForRecipeParts(working, components, recipe);
+        if (all == null || moduleParts.isEmpty()) {
+            status = "CONVEYOR 1T MODULE recipe has no visible geometry";
+            return null;
+        }
+        boolean axisX = all.sizeX >= all.sizeZ;
+        double sourceCenter = axisX
+                ? (all.minX + all.maxX) * 0.5
+                : (all.minZ + all.maxZ) * 0.5;
+        double sourceLength = Math.max(1.0, axisX ? all.sizeX : all.sizeZ);
+        return repeatOneTileModule(
+                working, moduleParts, axisX,
+                sourceCenter, sourceLength, run,
+                "EDITOR");
+    }
+
+    private static Generation generateLegacyRaw(
+            ObjectDefinitions definition, ConveyorRun run) {
+        Class159 working = decodeSource(definition);
+        if (working == null || working.anInt1791 <= 0 || working.anInt1778 <= 0) {
+            status = "SOURCE decode failed for 49717/49718";
+            return null;
+        }
+
+        Component[] components = detectComponents(working);
+        if (components.length == 0) {
+            status = "SOURCE connected-component analysis failed";
+            return null;
+        }
         for (AuthoredPart authored : AUTHORED_PARTS) {
             if (authored.index < 0 || authored.index >= components.length) {
                 status = "SOURCE authored component " + authored.index
@@ -882,75 +727,77 @@ public final class ConveyorRunPreview {
             }
         }
 
-        /*
-         * Reproduce the user's saved Live Model Editor assembly first.
-         * Everything not in AUTHORED_PARTS is hidden before any procedural
-         * run-length work, so the original sawmill can never appear.
-         */
         ensureFaceAlpha(working);
+        ArrayList<Component> moduleParts = new ArrayList<Component>();
         for (int i = 0; i < components.length; i++) {
             AuthoredPart authored = authoredPart(i);
             if (authored == null) {
                 hideFaces(working, components[i]);
             } else {
                 applyAuthoredTransform(working, components[i], authored);
+                moduleParts.add(components[i]);
             }
         }
 
         populateComponentBounds(working, components);
         Bounds all = boundsForAuthoredParts(working, components);
-        if (all == null) {
+        if (all == null || moduleParts.isEmpty()) {
             status = "SOURCE authored conveyor bounds unavailable";
             return null;
         }
-
         boolean axisX = all.sizeX >= all.sizeZ;
-        double sourceMin = axisX ? all.minX : all.minZ;
-        double sourceMax = axisX ? all.maxX : all.maxZ;
-        double sourceCenter = (sourceMin + sourceMax) * 0.5;
-        double sourceLength = Math.max(1.0, sourceMax - sourceMin);
-        double targetLength = Math.max(TILE_UNITS, run.lengthTiles() * TILE_UNITS);
-        double stretchFactor = targetLength / sourceLength;
+        double sourceCenter = axisX
+                ? (all.minX + all.maxX) * 0.5
+                : (all.minZ + all.maxZ) * 0.5;
+        double sourceLength = Math.max(1.0, axisX ? all.sizeX : all.sizeZ);
+        return repeatOneTileModule(
+                working, moduleParts, axisX,
+                sourceCenter, sourceLength, run,
+                "FALLBACK");
+    }
 
-        ArrayList<Component> stretch = new ArrayList<Component>();
-        ArrayList<Component> positioned = new ArrayList<Component>();
-
-        for (AuthoredPart authored : AUTHORED_PARTS) {
-            Component component = components[authored.index];
-            double longSize = axisX ? component.sizeX : component.sizeZ;
-            double longFraction = longSize / sourceLength;
-            if (longFraction >= STRETCH_MIN_LONG_FRACTION) {
-                stretch.add(component);
-            } else {
-                positioned.add(component);
-            }
-        }
-
-        /*
-         * If the authored source does not expose an obvious long-span mesh,
-         * fail visibly rather than stretching every detail as a fallback.
-         */
-        if (stretch.isEmpty()) {
-            status = "SOURCE authored conveyor has no stretch candidate; "
-                    + "inspect authored component bounds";
+    /**
+     * Normalizes the complete authored assembly to exactly one RuneScape tile
+     * along its long axis, recenters that axis at local zero, repeats the whole
+     * intact raw module at 512-unit intervals, then merges the copies into one
+     * Class159. Cloning through Matrix3's Class159 merge constructor preserves
+     * the source face/texture/UV tables instead of rebuilding partial faces.
+     */
+    private static Generation repeatOneTileModule(
+            Class159 working, List<Component> moduleParts,
+            boolean axisX, double sourceCenter, double sourceLength,
+            ConveyorRun run, String sourceLabel) {
+        if (working == null || moduleParts == null || moduleParts.isEmpty()) {
             return null;
         }
 
-        for (Component component : stretch) {
-            scaleComponentAxis(working, component, axisX, sourceCenter, stretchFactor);
-        }
-        for (Component component : positioned) {
-            remapComponentPosition(working, component, axisX,
-                    sourceMin, sourceLength, sourceCenter, targetLength);
+        double moduleScale = TILE_UNITS / Math.max(1.0, sourceLength);
+        int recenter = (int) Math.round(-sourceCenter);
+        for (Component component : moduleParts) {
+            scaleComponentAxis(
+                    working, component, axisX, sourceCenter, moduleScale);
+            translateComponentAxis(working, component, axisX, recenter);
         }
 
-        String summary = "AUTHORED sourceParts=4,5,8,16,17,18,19,21"
+        int modules = Math.max(1, (int) Math.round(run.lengthTiles()));
+        Class159[] copies = new Class159[modules];
+        for (int station = 0; station < modules; station++) {
+            double offset = ((station + 0.5) - modules * 0.5) * TILE_UNITS;
+            Class159 copy = new Class159(new Class159[] { working }, 1);
+            translateRawAxis(copy, axisX, (int) Math.round(offset));
+            copies[station] = copy;
+        }
+
+        Class159 raw = copies.length == 1
+                ? copies[0]
+                : new Class159(copies, copies.length);
+        String summary = "MODULE_1T source=" + sourceLabel
                 + " axis=" + (axisX ? "X" : "Z")
-                + " stretch=" + stretch.size()
-                + " fixed=" + positioned.size()
-                + " support=DEFERRED"
-                + " sourceSpan=" + Math.round(sourceLength);
-        return new Generation(working, axisX, summary);
+                + " parts=" + moduleParts.size()
+                + " modules=" + modules
+                + " sourceSpan=" + Math.round(sourceLength)
+                + " normalizedSpan=" + TILE_UNITS;
+        return new Generation(raw, axisX, summary);
     }
 
     private static LiveModelEditorParts.ConveyorRecipePart recipePart(
@@ -964,7 +811,6 @@ public final class ConveyorRunPreview {
     private static void applyRecipeTransform(Class159 raw, Component component,
             LiveModelEditorParts.ConveyorRecipePart state) {
         if (raw == null || component == null || component.vertices.length == 0) return;
-
         long cx = 0L, cy = 0L, cz = 0L;
         for (int vertex : component.vertices) {
             cx += raw.anIntArray1782[vertex];
@@ -995,7 +841,6 @@ public final class ConveyorRunPreview {
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
         boolean found = false;
-
         for (LiveModelEditorParts.ConveyorRecipePart part : recipe) {
             if (part == null
                     || part.role == LiveModelEditorParts.ConveyorRole.UNASSIGNED
@@ -1019,15 +864,6 @@ public final class ConveyorRunPreview {
         return found ? new Bounds(minX, minY, minZ, maxX, maxY, maxZ) : null;
     }
 
-    private static double roleGroupCenter(List<Component> components, boolean axisX) {
-        if (components == null || components.isEmpty()) return 0.0;
-        double total = 0.0;
-        for (Component component : components) {
-            total += axisX ? component.centerX : component.centerZ;
-        }
-        return total / components.size();
-    }
-
     private static AuthoredPart authoredPart(int componentIndex) {
         for (AuthoredPart authored : AUTHORED_PARTS) {
             if (authored.index == componentIndex) return authored;
@@ -1038,10 +874,7 @@ public final class ConveyorRunPreview {
     private static void applyAuthoredTransform(Class159 raw, Component component,
             AuthoredPart state) {
         if (raw == null || component == null || component.vertices.length == 0) return;
-
-        long cx = 0L;
-        long cy = 0L;
-        long cz = 0L;
+        long cx = 0L, cy = 0L, cz = 0L;
         for (int vertex : component.vertices) {
             cx += raw.anIntArray1782[vertex];
             cy += raw.anIntArray1777[vertex];
@@ -1066,11 +899,11 @@ public final class ConveyorRunPreview {
         }
     }
 
-    private static Bounds boundsForAuthoredParts(Class159 raw, Component[] components) {
+    private static Bounds boundsForAuthoredParts(
+            Class159 raw, Component[] components) {
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
         boolean found = false;
-
         for (AuthoredPart authored : AUTHORED_PARTS) {
             Component component = components[authored.index];
             for (int vertex : component.vertices) {
@@ -1086,7 +919,6 @@ public final class ConveyorRunPreview {
                 found = true;
             }
         }
-
         return found ? new Bounds(minX, minY, minZ, maxX, maxY, maxZ) : null;
     }
 
@@ -1106,7 +938,6 @@ public final class ConveyorRunPreview {
     private static Model buildModel(Class106 renderer, ObjectDefinitions definition,
             Class159 raw, boolean sourceAxisX, int runYaw) {
         if (renderer == null || definition == null || raw == null) return null;
-
         int ambient = definition.anInt5638 * 1878786655 + 64;
         int contrast = -69277109 * definition.anInt5639 + 850;
         Model model;
@@ -1122,7 +953,6 @@ public final class ConveyorRunPreview {
         if (model == null) return null;
 
         if (definition.aBool5647) model.method1359();
-
         if (definition.aShortArray5613 != null && definition.aShortArray5621 != null) {
             int count = Math.min(definition.aShortArray5613.length,
                     definition.aShortArray5621.length);
@@ -1136,7 +966,6 @@ public final class ConveyorRunPreview {
                 model.method1393(definition.aShortArray5613[i], replacement);
             }
         }
-
         if (definition.aShortArray5618 != null && definition.aShortArray5617 != null) {
             int count = Math.min(definition.aShortArray5618.length,
                     definition.aShortArray5617.length);
@@ -1145,7 +974,6 @@ public final class ConveyorRunPreview {
                         definition.aShortArray5617[i]);
             }
         }
-
         if (definition.aByte5666 != 0) {
             model.method1396(definition.aByte5616, definition.aByte5681,
                     definition.aByte5622, definition.aByte5666 & 0xff);
@@ -1157,7 +985,6 @@ public final class ConveyorRunPreview {
         if (dsx != 128 || dsy != 128 || dsz != 128) {
             model.method1464(dsx, dsy, dsz);
         }
-
         int dmx = definition.anInt5652 * -865773249;
         int dmy = definition.anInt5653 * -955267449;
         int dmz = definition.anInt5654 * -504975083;
@@ -1168,33 +995,20 @@ public final class ConveyorRunPreview {
         int yaw = runYaw;
         if (!sourceAxisX) yaw = (yaw + 4096) & 0x3fff;
         if (yaw != 0) model.method1412(yaw);
-
-        // Native source animation is intentionally non-blocking/carryover.
-        // Runtime conveyor proof stays static while payload motion becomes the
-        // gameplay movement layer.
         model.method1450(MODEL_FLAGS);
         return model;
     }
 
     private static int renderPayloads(ConveyorRun run,
             Class523 scene, Class106 renderer, Class497 sceneBase) {
-        if (payloadEditorActive) {
+        if (payloadEditorActive || run == null || run.runId <= 0L
+                || renderer == null || scene == null || sceneBase == null) {
             return 0;
         }
-        if (run == null || run.runId <= 0L || renderer == null
-                || scene == null || sceneBase == null) {
-            return 0;
-        }
-
         PayloadRunState runState = payloadRunState(run.runId);
-        if (runState == null) {
-            return 0;
-        }
-
+        if (runState == null) return 0;
         ConveyorPayload[] payloads = settlementPayloads;
-        if (payloads.length == 0) {
-            return 0;
-        }
+        if (payloads.length == 0) return 0;
 
         double elapsedSeconds =
                 (System.nanoTime() - payloadSnapshotNanos) / 1000000000.0;
@@ -1206,10 +1020,7 @@ public final class ConveyorRunPreview {
         int rendered = 0;
 
         for (ConveyorPayload payload : payloads) {
-            if (payload == null || payload.runId != run.runId) {
-                continue;
-            }
-
+            if (payload == null || payload.runId != run.runId) continue;
             double distance = Math.min(
                     lengthTiles, payload.distanceTiles + advance);
             if (!Double.isInfinite(leaderDistance)) {
@@ -1219,10 +1030,8 @@ public final class ConveyorRunPreview {
                                 leaderDistance - runState.spacingTiles));
             }
             leaderDistance = distance;
-
             if (renderPayloadAtDistance(
-                    run, payload, distance,
-                    scene, renderer, sceneBase)) {
+                    run, payload, distance, scene, renderer, sceneBase)) {
                 rendered++;
             }
         }
@@ -1240,18 +1049,12 @@ public final class ConveyorRunPreview {
                 ConveyorPayloadVisualProfiles.getGlobalAnchor();
         Model payloadModel = getPayloadModel(
                 renderer, payload.itemId, payloadProfile.scalePercent);
-        if (payloadModel == null) {
-            return false;
-        }
+        if (payloadModel == null) return false;
 
         int plane = run.plane;
-        if (plane < 0 || plane >= scene.aClass174Array5838.length) {
-            return false;
-        }
+        if (plane < 0 || plane >= scene.aClass174Array5838.length) return false;
         Class174 ground = scene.aClass174Array5838[plane];
-        if (ground == null) {
-            return false;
-        }
+        if (ground == null) return false;
 
         int baseWorldX = sceneBase.localX * -2109597897;
         int baseWorldY = sceneBase.localY * 417324155;
@@ -1262,9 +1065,7 @@ public final class ConveyorRunPreview {
         int sceneWidth = scene.anInt5833 * -1396185127;
         int sceneHeight = scene.anInt5834 * -1519623925;
         if (localX < 0.0 || localY < 0.0
-                || localX >= sceneWidth || localY >= sceneHeight) {
-            return false;
-        }
+                || localX >= sceneWidth || localY >= sceneHeight) return false;
 
         int tileSize = ground.anInt2087 * 2129890771;
         double directionX = point.directionX;
@@ -1282,12 +1083,10 @@ public final class ConveyorRunPreview {
                 + payloadAnchor.heightOffset + payloadProfile.heightOffset;
 
         PAYLOAD_TRANSFORM.method3594();
-
         int pitch = degreesToAngle(payloadProfile.pitchDegrees);
         int yaw = (point.headingYaw
                 + degreesToAngle(payloadProfile.yawDegrees)) & 0x3fff;
         int roll = degreesToAngle(payloadProfile.rollDegrees);
-
         if (pitch != 0) {
             PAYLOAD_TRANSFORM.method3576(
                     1.0F, 0.0F, 0.0F, Class325.method4146(pitch));
@@ -1302,7 +1101,6 @@ public final class ConveyorRunPreview {
         }
         PAYLOAD_TRANSFORM.method3580(
                 (float) sceneX, (float) sceneY, (float) sceneZ);
-
         payloadModel.method1375(PAYLOAD_TRANSFORM, null, 0);
         return true;
     }
@@ -1310,19 +1108,14 @@ public final class ConveyorRunPreview {
     private static PayloadRunState payloadRunState(long runId) {
         PayloadRunState[] states = payloadRunStates;
         for (PayloadRunState state : states) {
-            if (state != null && state.runId == runId) {
-                return state;
-            }
+            if (state != null && state.runId == runId) return state;
         }
         return null;
     }
 
     private static Model getPayloadModel(
             Class106 renderer, int itemId, int scalePercent) {
-        if (renderer == null) {
-            return null;
-        }
-
+        if (renderer == null) return null;
         if (cachedPayloadRenderer != renderer) {
             cachedPayloadRenderer = renderer;
             cachedPayloadModels.clear();
@@ -1331,42 +1124,27 @@ public final class ConveyorRunPreview {
         long cacheKey = ((long) itemId << 32)
                 ^ (scalePercent & 0xffffffffL);
         Model cached = cachedPayloadModels.get(Long.valueOf(cacheKey));
-        if (cached != null) {
-            return cached;
-        }
+        if (cached != null) return cached;
 
         Class639_Sub5 itemDefinitions =
                 ClientConsoleItemBridge.getRegisteredItemDefinitions();
         if (itemDefinitions == null
                 || itemId < 0
-                || itemId >= itemDefinitions.method45()) {
-            return null;
-        }
-
+                || itemId >= itemDefinitions.method45()) return null;
         try {
             ItemDefinitions definition = (ItemDefinitions)
                     itemDefinitions.getDefinition(itemId, 0);
-            if (definition == null) {
-                return null;
-            }
+            if (definition == null) return null;
             Model model = definition.method7526(
-                    renderer,
-                    MODEL_FLAGS,
-                    1,
-                    null,
-                    null,
-                    0, 0, 0, 0,
-                    0);
-            if (model == null) {
-                return null;
-            }
+                    renderer, MODEL_FLAGS, 1,
+                    null, null, 0, 0, 0, 0, 0);
+            if (model == null) return null;
 
             int modelScale = Math.max(1,
                     (int) Math.round(128.0 * scalePercent / 100.0));
             if (modelScale != 128) {
                 model.method1464(modelScale, modelScale, modelScale);
             }
-
             model.method1450(MODEL_FLAGS);
             if (cachedPayloadModels.size() >= MAX_PAYLOAD_MODEL_CACHE) {
                 cachedPayloadModels.clear();
@@ -1439,21 +1217,14 @@ public final class ConveyorRunPreview {
     private static void scaleComponentAxis(Class159 raw, Component component,
             boolean axisX, double center, double factor) {
         for (int vertex : component.vertices) {
-            int value = axisX ? raw.anIntArray1782[vertex] : raw.anIntArray1797[vertex];
-            int scaled = (int) Math.round(center + (value - center) * factor);
+            int value = axisX
+                    ? raw.anIntArray1782[vertex]
+                    : raw.anIntArray1797[vertex];
+            int scaled = (int) Math.round(
+                    center + (value - center) * factor);
             if (axisX) raw.anIntArray1782[vertex] = scaled;
             else raw.anIntArray1797[vertex] = scaled;
         }
-    }
-
-    private static void remapComponentPosition(Class159 raw, Component component,
-            boolean axisX, double sourceMin, double sourceLength,
-            double sourceCenter, double targetLength) {
-        double componentCenter = axisX ? component.centerX : component.centerZ;
-        double fraction = (componentCenter - sourceMin) / sourceLength;
-        double targetCenter = sourceCenter + (fraction - 0.5) * targetLength;
-        int shift = (int) Math.round(targetCenter - componentCenter);
-        translateComponentAxis(raw, component, axisX, shift);
     }
 
     private static void translateComponentAxis(Class159 raw, Component component,
@@ -1465,62 +1236,13 @@ public final class ConveyorRunPreview {
         }
     }
 
-    private static Class159 componentOnlyTranslatedRaw(Class159 sourceRaw,
-            Component component, boolean axisX, int shift) {
-        if (sourceRaw == null || component == null) return null;
-
-        int[] map = new int[sourceRaw.anInt1791];
-        Arrays.fill(map, -1);
-        Class159 raw = new Class159(component.vertices.length,
-                component.faces.length, 0);
-        raw.anInt1773 = sourceRaw.anInt1773;
-        raw.anInt1791 = component.vertices.length;
-        raw.anInt1775 = component.vertices.length;
-        raw.anInt1778 = component.faces.length;
-
-        for (int i = 0; i < component.vertices.length; i++) {
-            int old = component.vertices[i];
-            map[old] = i;
-            raw.anIntArray1782[i] = sourceRaw.anIntArray1782[old]
-                    + (axisX ? shift : 0);
-            raw.anIntArray1777[i] = sourceRaw.anIntArray1777[old];
-            raw.anIntArray1797[i] = sourceRaw.anIntArray1797[old]
-                    + (axisX ? 0 : shift);
-            if (sourceRaw.anIntArray1813 != null
-                    && old < sourceRaw.anIntArray1813.length) {
-                raw.anIntArray1813[i] = sourceRaw.anIntArray1813[old];
-            }
+    private static void translateRawAxis(
+            Class159 raw, boolean axisX, int shift) {
+        if (raw == null || shift == 0) return;
+        for (int vertex = 0; vertex < raw.anInt1791; vertex++) {
+            if (axisX) raw.anIntArray1782[vertex] += shift;
+            else raw.anIntArray1797[vertex] += shift;
         }
-
-        for (int i = 0; i < component.faces.length; i++) {
-            int face = component.faces[i];
-            int a = map[sourceRaw.aShortArray1786[face] & 0xffff];
-            int b = map[sourceRaw.aShortArray1787[face] & 0xffff];
-            int c = map[sourceRaw.aShortArray1789[face] & 0xffff];
-            if (a < 0 || b < 0 || c < 0) return null;
-
-            raw.aShortArray1786[i] = (short) a;
-            raw.aShortArray1787[i] = (short) b;
-            raw.aShortArray1789[i] = (short) c;
-            raw.faceColours[i] = sourceRaw.faceColours == null
-                    ? 0 : sourceRaw.faceColours[face];
-            raw.faceAlpha[i] = sourceRaw.faceAlpha == null
-                    ? 0 : sourceRaw.faceAlpha[face];
-
-            // Compact role copies keep the face texture id but drop explicit
-            // texture-triangle mapping because that mapping references source
-            // model texture triangles not copied into this compact raw.
-            raw.faceTextures[i] = sourceRaw.faceTextures == null
-                    ? (short) -1 : sourceRaw.faceTextures[face];
-            raw.faceTextureIndexes[i] = -1;
-            raw.aByteArray1792[i] = sourceRaw.aByteArray1792 == null
-                    ? 0 : sourceRaw.aByteArray1792[face];
-            raw.aByteArray1799[i] = sourceRaw.aByteArray1799 == null
-                    ? 0 : sourceRaw.aByteArray1799[face];
-            raw.anIntArray1780[i] = sourceRaw.anIntArray1780 == null
-                    ? 0 : sourceRaw.anIntArray1780[face];
-        }
-        return raw;
     }
 
     private static Component[] detectComponents(Class159 raw) {
@@ -1544,7 +1266,6 @@ public final class ConveyorRunPreview {
             int b = raw.aShortArray1787[face] & 0xffff;
             int c = raw.aShortArray1789[face] & 0xffff;
             if (a >= vertices || b >= vertices || c >= vertices) continue;
-
             int root = find(parent, a);
             Builder builder = byRoot.get(Integer.valueOf(root));
             if (builder == null) {
@@ -1577,7 +1298,8 @@ public final class ConveyorRunPreview {
         return components;
     }
 
-    private static void populateComponentBounds(Class159 raw, Component[] components) {
+    private static void populateComponentBounds(
+            Class159 raw, Component[] components) {
         for (Component component : components) {
             Bounds b = bounds(raw, component.vertices);
             if (b == null) continue;
@@ -1590,16 +1312,8 @@ public final class ConveyorRunPreview {
         }
     }
 
-    private static Bounds bounds(Class159 raw) {
-        if (raw == null || raw.anInt1791 <= 0) return null;
-        int[] vertices = new int[raw.anInt1791];
-        for (int i = 0; i < vertices.length; i++) vertices[i] = i;
-        return bounds(raw, vertices);
-    }
-
     private static Bounds bounds(Class159 raw, int[] vertices) {
         if (raw == null || vertices == null || vertices.length == 0) return null;
-
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
         for (int vertex : vertices) {
@@ -1618,13 +1332,20 @@ public final class ConveyorRunPreview {
 
     private static void ensureFaceAlpha(Class159 raw) {
         if (raw.faceAlpha == null || raw.faceAlpha.length < raw.anInt1778) {
-            raw.faceAlpha = new byte[raw.anInt1778];
+            byte[] replacement = new byte[raw.anInt1778];
+            if (raw.faceAlpha != null) {
+                System.arraycopy(raw.faceAlpha, 0, replacement, 0,
+                        Math.min(raw.faceAlpha.length, replacement.length));
+            }
+            raw.faceAlpha = replacement;
         }
     }
 
     private static void hideFaces(Class159 raw, Component component) {
         for (int face : component.faces) {
-            if (face >= 0 && face < raw.anInt1778) {
+            if (face >= 0 && face < raw.anInt1778
+                    && raw.faceAlpha != null
+                    && face < raw.faceAlpha.length) {
                 raw.faceAlpha[face] = (byte) 0xff;
             }
         }
@@ -1653,7 +1374,9 @@ public final class ConveyorRunPreview {
 
     private static int[] toInts(List<Integer> values) {
         int[] out = new int[values.size()];
-        for (int i = 0; i < values.size(); i++) out[i] = values.get(i).intValue();
+        for (int i = 0; i < values.size(); i++) {
+            out[i] = values.get(i).intValue();
+        }
         return out;
     }
 
@@ -1762,7 +1485,8 @@ public final class ConveyorRunPreview {
 
         private int straightHeadingYaw() {
             double angle = Math.atan2(endY - startY, endX - startX);
-            return ((int) Math.round(angle * 16384.0 / (Math.PI * 2.0))) & 0x3fff;
+            return ((int) Math.round(
+                    angle * 16384.0 / (Math.PI * 2.0))) & 0x3fff;
         }
 
         ConveyorRun[] segmentRuns() {
@@ -1791,7 +1515,6 @@ public final class ConveyorRunPreview {
             if (segments.length == 0) {
                 return new PathPoint(startX, startY, 1.0, 0.0, 0);
             }
-
             double remaining = Math.max(0.0,
                     Math.min(lengthTiles(), distanceTiles));
             for (int i = 0; i < segments.length; i++) {
