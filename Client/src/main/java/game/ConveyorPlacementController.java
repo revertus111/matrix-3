@@ -19,6 +19,7 @@ public final class ConveyorPlacementController {
 
     private static volatile boolean enabled;
     private static volatile Anchor start;
+    private static volatile int segmentAxis = ConveyorRunPreview.ROUTE_AUTO;
     private static volatile String status = "Conveyor: choose Point A.";
     private static boolean inputListenerInstalled;
 
@@ -31,6 +32,7 @@ public final class ConveyorPlacementController {
         }
         enabled = value;
         start = null;
+        segmentAxis = ConveyorRunPreview.ROUTE_AUTO;
         ConveyorRunPreview.clearPlacementPreview();
         if (enabled) {
             ensureInputListener();
@@ -65,14 +67,25 @@ public final class ConveyorPlacementController {
             return;
         }
 
-        int[] projected = projectStraightEnd(start, hover);
+        if (segmentAxis == ConveyorRunPreview.ROUTE_AUTO) {
+            segmentAxis = chooseSegmentAxis(start, hover);
+        }
+        int[] projected = projectStraightEnd(start, hover, segmentAxis);
+        if (projected[0] == start.getWorldX()
+                && projected[1] == start.getWorldY()) {
+            ConveyorRunPreview.clearPlacementPreview();
+            status = "Conveyor segment locked " + axisLabel(segmentAxis)
+                    + ": move along that axis or right-click/Escape to restart.";
+            return;
+        }
+
         ConveyorRunPreview.setPlacementPreview(
                 start.getWorldX(), start.getWorldY(),
                 projected[0], projected[1],
-                start.getPlane(), projected[2]);
+                start.getPlane(), segmentAxis);
         status = "Conveyor preview A=" + start.getWorldX() + "," + start.getWorldY()
                 + " -> B=" + projected[0] + "," + projected[1]
-                + " straight=" + axisLabel(projected[2])
+                + " straight=" + axisLabel(segmentAxis) + " LOCKED"
                 + " (" + String.format("%.2f",
                         distanceTiles(start.getWorldX(), start.getWorldY(),
                                 projected[0], projected[1])) + " tiles).";
@@ -87,6 +100,7 @@ public final class ConveyorPlacementController {
             return false;
         }
         start = null;
+        segmentAxis = ConveyorRunPreview.ROUTE_AUTO;
         ConveyorRunPreview.clearPlacementPreview();
         status = "Conveyor chain ended. Click a new Point A.";
         return true;
@@ -94,6 +108,7 @@ public final class ConveyorPlacementController {
 
     public static synchronized void cancel() {
         start = null;
+        segmentAxis = ConveyorRunPreview.ROUTE_AUTO;
         ConveyorRunPreview.clearPlacementPreview();
         enabled = false;
         status = "Conveyor placement cancelled.";
@@ -113,10 +128,11 @@ public final class ConveyorPlacementController {
         if (start == null) {
             start = new Anchor(
                     hover.getWorldX(), hover.getWorldY(), hover.getPlane());
+            segmentAxis = ConveyorRunPreview.ROUTE_AUTO;
             ConveyorRunPreview.clearPlacementPreview();
             status = "Conveyor Point A set at "
                     + start.getWorldX() + "," + start.getWorldY()
-                    + ". Move to Point B and click.";
+                    + ". Move toward Point B; the first movement locks this segment E/W or N/S.";
             return;
         }
 
@@ -130,7 +146,17 @@ public final class ConveyorPlacementController {
             return;
         }
 
-        int[] projected = projectStraightEnd(start, hover);
+        if (segmentAxis == ConveyorRunPreview.ROUTE_AUTO) {
+            segmentAxis = chooseSegmentAxis(start, hover);
+        }
+        int[] projected = projectStraightEnd(start, hover, segmentAxis);
+        if (projected[0] == start.getWorldX()
+                && projected[1] == start.getWorldY()) {
+            status = "Conveyor segment is locked " + axisLabel(segmentAxis)
+                    + "; move along that axis before placing Point B.";
+            return;
+        }
+
         String command = "settlementconveyorcreate "
                 + start.getWorldX() + " " + start.getWorldY() + " "
                 + projected[0] + " " + projected[1] + " "
@@ -143,37 +169,48 @@ public final class ConveyorPlacementController {
 
         double length = distanceTiles(
                 start.getWorldX(), start.getWorldY(), projected[0], projected[1]);
-        String committedAxis = axisLabel(projected[2]);
+        String committedAxis = axisLabel(segmentAxis);
         int plane = start.getPlane();
 
         /*
          * Continuous-chain ownership: the committed Point B becomes the next
-         * Point A immediately. The server's V2.0 connection resolver sees the
-         * previous run ending on the new run's start as insertion distance 0.
+         * Point A immediately. The next segment receives a fresh axis lock so a
+         * player can turn 90 degrees without the current segment flipping while
+         * the mouse moves around.
          */
         start = new Anchor(projected[0], projected[1], plane);
+        segmentAxis = ConveyorRunPreview.ROUTE_AUTO;
         ConveyorRunPreview.clearPlacementPreview();
         status = "Straight ConveyorRun create queued ("
                 + String.format("%.2f", length) + " tiles, "
                 + committedAxis + "). Continue from B at "
                 + start.getWorldX() + "," + start.getWorldY()
-                + "; right-click/Escape ends the chain.";
+                + "; move to lock the next segment axis. Right-click/Escape ends the chain.";
     }
 
-    private static int[] projectStraightEnd(
+    private static int chooseSegmentAxis(
             Anchor a,
             ConstructionPlacementController.HoverTile b) {
         int dx = b.getWorldX() - a.getWorldX();
         int dy = b.getWorldY() - a.getWorldY();
-        if (Math.abs(dx) >= Math.abs(dy)) {
+        return Math.abs(dx) >= Math.abs(dy)
+                ? ConveyorRunPreview.ROUTE_X_FIRST
+                : ConveyorRunPreview.ROUTE_Y_FIRST;
+    }
+
+    private static int[] projectStraightEnd(
+            Anchor a,
+            ConstructionPlacementController.HoverTile b,
+            int axis) {
+        if (axis == ConveyorRunPreview.ROUTE_Y_FIRST) {
             return new int[] {
-                    b.getWorldX(), a.getWorldY(),
-                    ConveyorRunPreview.ROUTE_X_FIRST
+                    a.getWorldX(), b.getWorldY(),
+                    ConveyorRunPreview.ROUTE_Y_FIRST
             };
         }
         return new int[] {
-                a.getWorldX(), b.getWorldY(),
-                ConveyorRunPreview.ROUTE_Y_FIRST
+                b.getWorldX(), a.getWorldY(),
+                ConveyorRunPreview.ROUTE_X_FIRST
         };
     }
 
