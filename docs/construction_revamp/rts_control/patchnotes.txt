@@ -1,0 +1,12 @@
+2026-10-03 - RTS Control native interface shell
+- Replaced the standalone RTS worker-control window with a compact Matrix3-native InterfaceDefinitions/Class348 panel hosted in root 1477 component 368, the stock MINIGAME_HUD slot.
+- Panel layout is compact/tabbed: UNITS, GROUPS and CAMERA. GROUPS uses a 3x3 slot grid instead of repeated Go/Set/X rows.
+- Existing control-group hotkeys remain: Ctrl+1..9 save, 1..9 recall, double-tap recall + focus.
+- Group-grid mouse behavior: left-click recalls + focuses, Ctrl+left-click saves/replaces, right-click clears.
+- UNITS exposes Selected/Total, Select All, Clear and Focus. CAMERA exposes RTS speed +/- plus Focus Selection and Center Settlement.
+- Panel remains movable/resizable inside the native host and preserves/restores pre-existing host children on RTS exit.
+- verified-static: server InterfaceManager defines 1477:368 as MINIGAME_HUD; client Class348.method4343(...) renders aClass73Array917 children and separately renders mounted subinterfaces from client.aClass676_8760.
+- Ownership hardening: RTS Control now uses only 1477:368 and yields if that slot is unavailable, undersized or already owns a mounted minigame interface. The previous arbitrary-root fallback was removed.
+- Default panel footprint tightened to 312x140; min 260x124; max 380x180.
+- No worker gameplay authority, camera ownership, minimap math, RWS selection geometry or server persistence changed.
+- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
