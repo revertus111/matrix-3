@@ -15,11 +15,12 @@ import java.util.List;
  * Compact player-facing RTS control interface.
  *
  * This panel is rendered by Matrix3's native InterfaceDefinitions/Class348
- * interface tree rather than a Swing/JWindow overlay. The preferred host is
- * NIS root 1477 component 368, the stock minigame-HUD slot. If that slot is
- * not large enough in the active layout, a neutral full-size root container is
- * selected as a bounded fallback. Existing host children are preserved and
- * restored exactly when RTS ownership ends.
+ * interface tree rather than a Swing/JWindow overlay. Its only host is NIS
+ * root 1477 component 368, Matrix3's stock minigame-HUD slot. If that slot is
+ * unavailable, too small, or already owns a mounted subinterface, RTS Control
+ * yields instead of hijacking another RuneScape interface region.
+ * Existing host children are preserved and restored exactly when RTS ownership
+ * ends.
  *
  * V1 control groups remain settlement-session scoped. Runtime NPC indexes are
  * never persisted as worker identity; authoritative worker commands still flow
@@ -50,12 +51,12 @@ public final class ConstructionRtsControlOverlay {
     private static final long DOUBLE_TAP_MS = 400L;
     private static final long REFRESH_THROTTLE_MS = 50L;
 
-    private static final int DEFAULT_WIDTH = 320;
-    private static final int DEFAULT_HEIGHT = 152;
-    private static final int MIN_WIDTH = 280;
-    private static final int MIN_HEIGHT = 138;
-    private static final int MAX_WIDTH = 440;
-    private static final int MAX_HEIGHT = 220;
+    private static final int DEFAULT_WIDTH = 312;
+    private static final int DEFAULT_HEIGHT = 140;
+    private static final int MIN_WIDTH = 260;
+    private static final int MIN_HEIGHT = 124;
+    private static final int MAX_WIDTH = 380;
+    private static final int MAX_HEIGHT = 180;
 
     private static final int TITLE_HEIGHT = 21;
     private static final int TAB_HEIGHT = 21;
@@ -351,39 +352,26 @@ public final class ConstructionRtsControlOverlay {
     }
 
     /**
-     * Preferred owner is 1477:368, Matrix3's NIS minigame HUD slot. If the
-     * current NIS layout gives that slot less space than this compact panel,
-     * choose the largest neutral root container instead of creating a desktop
-     * overlay or touching the game-screen scene component.
+     * verified-static: Matrix3 server InterfaceManager defines 1477:368 as the
+     * MINIGAME_HUD component. Class348 renders mounted subinterfaces separately
+     * from a host's aClass73Array917 children, so this client-owned RTS panel
+     * must yield whenever a real subinterface is mounted there.
      */
     private static InterfaceDefinitions resolveNativeHost() {
-        InterfaceDefinitions preferred = Class512.method6083(MINIGAME_HUD_UID, (short) -19231);
-        if (isUsableHost(preferred)) {
+        InterfaceDefinitions preferred = Class512.method6083(
+                MINIGAME_HUD_UID, (short) -19231);
+        if (isUsableHost(preferred) && !hasMountedSubInterface(preferred)) {
             return preferred;
         }
-        if (!Class569.method6760(ROOT_INTERFACE_ID, null, -532744879)) {
-            return null;
-        }
-        Class83 group = Class534.aClass83Array5975[ROOT_INTERFACE_ID];
-        if (group == null || group.aClass73Array1081 == null) {
-            return null;
-        }
+        return null;
+    }
 
-        InterfaceDefinitions best = null;
-        long bestArea = -1L;
-        for (InterfaceDefinitions candidate : group.aClass73Array1081) {
-            if (!isUsableHost(candidate) || candidate.anInt854 != 0) {
-                continue;
-            }
-            int width = decodeWidth(candidate);
-            int height = decodeHeight(candidate);
-            long area = (long) width * (long) height;
-            if (area > bestArea) {
-                bestArea = area;
-                best = candidate;
-            }
+    private static boolean hasMountedSubInterface(InterfaceDefinitions candidate) {
+        if (candidate == null || client.aClass676_8760 == null) {
+            return false;
         }
-        return best;
+        int uid = candidate.selfId * SELF_ID_DECODE;
+        return client.aClass676_8760.get((long) uid) != null;
     }
 
     private static boolean isUsableHost(InterfaceDefinitions candidate) {
