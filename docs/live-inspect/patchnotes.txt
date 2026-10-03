@@ -1,0 +1,7 @@
+2026-10-03
+- Replaced the fixed Live Inspect JWindow presentation with a responsive Test Console sub-tab.
+- Preserved existing Matrix3 scene/menu/render target ownership, target priority, lock state, clipboard copy, tool routing, live object placement, and inspection hotkeys.
+- Added an immutable Live Inspect display snapshot so Client Console presentation reads inspector state without taking scene-picking ownership.
+- Added responsive Target, Assets, World, Runtime, and Actions cards with vertical scrolling and no horizontal scrollbar requirement at narrow console widths.
+- Added panel controls for enable/disable, lock/unlock, copy, verified tool opening, and live object placement.
+- Kept Live Inspect developer-only and client-side; no server gameplay, cache, persistence, or Construction ownership changed.

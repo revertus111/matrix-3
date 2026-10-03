@@ -22,13 +22,14 @@ public final class TestConsolePanel extends JPanel {
     private static final int TAB_RAIL_STUDIO = 1;
     private static final int TAB_RAIL_CLASSIFIER = 2;
     private static final int TAB_OBJECT_EXPLORER = 3;
-    private static final int TAB_CONSTRUCTION = 4;
-    private static final int TAB_PLAYER = 5;
-    private static final int TAB_ITEMS = 6;
-    private static final int TAB_INTERFACES = 7;
-    private static final int TAB_VISUAL_EXPLORER = 8;
-    private static final int TAB_ATLAS = 9;
-    private static final int TAB_BOSS_RESEARCH = 10;
+    private static final int TAB_LIVE_INSPECT = 4;
+    private static final int TAB_CONSTRUCTION = 5;
+    private static final int TAB_PLAYER = 6;
+    private static final int TAB_ITEMS = 7;
+    private static final int TAB_INTERFACES = 8;
+    private static final int TAB_VISUAL_EXPLORER = 9;
+    private static final int TAB_ATLAS = 10;
+    private static final int TAB_BOSS_RESEARCH = 11;
 
     private final JTabbedPane tabs = new JTabbedPane();
 
@@ -36,6 +37,7 @@ public final class TestConsolePanel extends JPanel {
     private JComponent railStudioPanel;
     private JComponent railClassifierPanel;
     private JComponent objectExplorerPanel;
+    private JComponent liveInspectPanel;
     private JComponent constructionPanel;
     private JComponent playerPanel;
     private JComponent itemPanel;
@@ -61,6 +63,7 @@ public final class TestConsolePanel extends JPanel {
         tabs.addTab("Rail Studio", placeholder());
         tabs.addTab("Rail Classifier", placeholder());
         tabs.addTab("Object Explorer", placeholder());
+        tabs.addTab("Live Inspect", placeholder());
         tabs.addTab("Construction", placeholder());
         tabs.addTab("Player", placeholder());
         tabs.addTab("Items", placeholder());
@@ -133,6 +136,11 @@ public final class TestConsolePanel extends JPanel {
                     objectExplorerPanel = new ObjectExplorerPanel();
                 }
                 return objectExplorerPanel;
+            case TAB_LIVE_INSPECT:
+                if (liveInspectPanel == null) {
+                    liveInspectPanel = new LiveInspectPanel();
+                }
+                return liveInspectPanel;
             case TAB_CONSTRUCTION:
                 if (constructionPanel == null) {
                     constructionPanel = new ConstructionEditorPanel();

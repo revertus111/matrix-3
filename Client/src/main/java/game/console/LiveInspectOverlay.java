@@ -1,8 +1,6 @@
 package game.console;
 
-import game.Class106;
 import game.Class261;
-import game.Class584;
 import game.DevDefinitionBridge;
 import game.DevModeBridge;
 import game.DevTimeController;
@@ -10,39 +8,20 @@ import game.Model;
 import game.DevModeBridge.DevTarget;
 import game.DevModeBridge.TargetType;
 
-import java.awt.BorderLayout;
-import java.awt.Canvas;
-import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.awt.IllegalComponentStateException;
-import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.Toolkit;
-import java.awt.Window;
 import java.awt.datatransfer.StringSelection;
 import java.util.Arrays;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JWindow;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.Timer;
-
 /**
- * Compact owner-only hover inspector layered over the live Matrix3 canvas.
+ * Owner-only live scene inspection state.
  *
- * Target ownership stays in DevModeBridge: this overlay only displays targets
- * already resolved by Matrix3's normal scene/menu path. It never performs its
- * own scene pick and never mutates world/cache state.
+ * Target ownership stays in DevModeBridge: this class only records targets
+ * already resolved by Matrix3's normal scene/menu/render paths. It never
+ * performs its own scene pick and never mutates world/cache state. Presentation
+ * lives in LiveInspectPanel so inspection no longer requires a floating window
+ * over the game canvas.
  */
 public final class LiveInspectOverlay {
-
-    private static final int WIDTH = 430;
-    private static final int MARGIN = 10;
 
     private static final int PRIORITY_TILE = 10;
     private static final int PRIORITY_GROUND_ITEM = 20;
@@ -59,24 +38,6 @@ public final class LiveInspectOverlay {
     private static volatile int observedPriority = -1;
     private static volatile int pointerX = -1;
     private static volatile int pointerY = -1;
-
-    private static JWindow window;
-    private static Window owner;
-    private static Timer refreshTimer;
-
-    private static final JLabel stateLabel = valueLabel();
-    private static final JLabel typeLabel = valueLabel();
-    private static final JLabel nameLabel = valueLabel();
-    private static final JLabel idLabel = valueLabel();
-    private static final JLabel modelsLabel = valueLabel();
-    private static final JLabel animationsLabel = valueLabel();
-    private static final JLabel relationshipLabel = valueLabel();
-    private static final JLabel routeLabel = valueLabel();
-    private static final JLabel visualTimeLabel = valueLabel();
-    private static final JLabel tileLabel = valueLabel();
-    private static final JLabel regionLabel = valueLabel();
-    private static final JLabel chunkLabel = valueLabel();
-    private static final JLabel runtimeLabel = valueLabel();
 
     private LiveInspectOverlay() {
     }
@@ -107,9 +68,7 @@ public final class LiveInspectOverlay {
             pointerY = -1;
         } else {
             pointerGeneration++;
-            ensureRefreshTimer();
         }
-        refreshSoon();
     }
 
     public static boolean toggleLock() {
@@ -119,7 +78,6 @@ public final class LiveInspectOverlay {
         if (locked) {
             locked = false;
             lockedTarget = null;
-            refreshSoon();
             return false;
         }
         Snapshot target = hoverTarget;
@@ -128,7 +86,6 @@ public final class LiveInspectOverlay {
         }
         lockedTarget = target;
         locked = true;
-        refreshSoon();
         return true;
     }
 
@@ -318,6 +275,63 @@ public final class LiveInspectOverlay {
         }
     }
 
+    /**
+     * Immutable presentation snapshot consumed by the Client Console. This keeps
+     * Swing layout concerns out of the live scene inspection owner.
+     */
+    public static DisplayState getDisplayState() {
+        final boolean enabledNow = enabled;
+        final boolean lockedNow = locked;
+        final Snapshot target = lockedNow ? lockedTarget : hoverTarget;
+
+        if (target == null) {
+            return new DisplayState(
+                    enabledNow,
+                    lockedNow,
+                    false,
+                    enabledNow ? (lockedNow ? "LOCKED" : "HOVER") : "OFF",
+                    "-",
+                    enabledNow ? "Move cursor over the world" : "Live Inspect is disabled",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                    DevTimeController.getStatusText(),
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                    false,
+                    false);
+        }
+
+        return new DisplayState(
+                enabledNow,
+                lockedNow,
+                true,
+                lockedNow ? "LOCKED" : "HOVER",
+                target.type,
+                target.name,
+                target.definitionId >= 0 ? Integer.toString(target.definitionId) : "-",
+                displayIds(target.modelIds, 8),
+                displayIds(target.animationIds, 8),
+                relationshipText(target),
+                routeText(target),
+                DevTimeController.getStatusText(),
+                target.worldX + ", " + target.worldY + ", " + target.plane,
+                regionText(target.worldX, target.worldY),
+                chunkText(target.worldX, target.worldY),
+                target.runtime,
+                canOpenTool(target),
+                "Object".equals(target.type) && target.definitionId >= 0);
+    }
+
+    private static boolean canOpenTool(Snapshot target) {
+        return target != null && target.routeTarget != null
+                && ("Object".equals(target.type) || "NPC".equals(target.type));
+    }
+
     private static void observe(Snapshot target, int priority) {
         long generation = pointerGeneration;
         if (observedGeneration != generation) {
@@ -331,214 +345,11 @@ public final class LiveInspectOverlay {
 
         if (!target.equalsIdentity(hoverTarget)) {
             hoverTarget = target;
-            refreshSoon();
         }
     }
 
     private static Snapshot getCurrentTarget() {
         return locked ? lockedTarget : hoverTarget;
-    }
-
-    private static void ensureRefreshTimer() {
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                if (refreshTimer == null) {
-                    refreshTimer = new Timer(150, e -> refreshWindow());
-                    refreshTimer.setCoalesce(true);
-                }
-                if (!refreshTimer.isRunning()) {
-                    refreshTimer.start();
-                }
-            }
-        };
-        if (SwingUtilities.isEventDispatchThread()) {
-            task.run();
-        } else {
-            SwingUtilities.invokeLater(task);
-        }
-    }
-
-    private static void refreshSoon() {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                refreshWindow();
-            }
-        });
-    }
-
-    private static void refreshWindow() {
-        if (!enabled) {
-            if (window != null) {
-                window.setVisible(false);
-            }
-            if (refreshTimer != null) {
-                refreshTimer.stop();
-            }
-            return;
-        }
-
-        Canvas canvas = Class584.aCanvas7745;
-        if (canvas == null || !canvas.isDisplayable() || !canvas.isVisible()) {
-            if (window != null) {
-                window.setVisible(false);
-            }
-            return;
-        }
-
-        ensureWindow(canvas);
-        if (window == null) {
-            return;
-        }
-
-        updateLabels(getCurrentTarget());
-
-        Point screen;
-        try {
-            screen = canvas.getLocationOnScreen();
-        } catch (IllegalComponentStateException ex) {
-            window.setVisible(false);
-            return;
-        }
-
-        int width = Math.min(WIDTH, Math.max(300, canvas.getWidth() - MARGIN * 2));
-        int height = Math.max(window.getPreferredSize().height, window.getHeight());
-        int x = screen.x + Math.max(MARGIN, canvas.getWidth() - width - MARGIN);
-        int y = screen.y + MARGIN;
-        Rectangle desired = new Rectangle(x, y, width, height);
-        if (!desired.equals(window.getBounds())) {
-            window.setBounds(desired);
-        }
-        if (!window.isVisible()) {
-            window.setVisible(true);
-        }
-    }
-
-    private static void ensureWindow(Canvas canvas) {
-        Window newOwner = SwingUtilities.getWindowAncestor(canvas);
-        if (newOwner == null) {
-            return;
-        }
-        if (window != null && owner == newOwner) {
-            return;
-        }
-        if (window != null) {
-            window.dispose();
-        }
-        owner = newOwner;
-        window = new JWindow(owner);
-        window.setFocusableWindowState(false);
-        window.setAutoRequestFocus(false);
-        window.getContentPane().setLayout(new BorderLayout());
-        window.getContentPane().add(buildPanel(), BorderLayout.CENTER);
-        window.pack();
-        window.setSize(WIDTH, window.getPreferredSize().height);
-    }
-
-    private static JPanel buildPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(ConsoleTheme.WINDOW);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ConsoleTheme.ACCENT_DARK),
-                BorderFactory.createEmptyBorder(9, 10, 9, 10)));
-
-        JLabel title = new JLabel("LIVE INSPECT");
-        title.setFont(ConsoleTheme.SECTION_FONT);
-        title.setForeground(ConsoleTheme.TEXT);
-        panel.add(title);
-        panel.add(Box.createVerticalStrut(2));
-
-        stateLabel.setForeground(ConsoleTheme.ACCENT);
-        panel.add(stateLabel);
-        panel.add(Box.createVerticalStrut(7));
-
-        panel.add(row("Type", typeLabel));
-        panel.add(row("Name", nameLabel));
-        panel.add(row("Definition ID", idLabel));
-        panel.add(row("Model IDs", modelsLabel));
-        panel.add(row("Animation IDs", animationsLabel));
-        panel.add(row("Relationship", relationshipLabel));
-        panel.add(row("Open route", routeLabel));
-        panel.add(row("Visual time", visualTimeLabel));
-        panel.add(row("World tile", tileLabel));
-        panel.add(row("Region", regionLabel));
-        panel.add(row("Chunk", chunkLabel));
-        panel.add(row("Runtime", runtimeLabel));
-        panel.add(Box.createVerticalStrut(7));
-
-        JLabel timeShortcuts = new JLabel("Ctrl+F8 step   Ctrl+F9 pause/resume   Ctrl+F10 speed");
-        timeShortcuts.setFont(ConsoleTheme.SMALL_FONT);
-        timeShortcuts.setForeground(ConsoleTheme.MUTED_TEXT);
-        panel.add(timeShortcuts);
-        panel.add(Box.createVerticalStrut(2));
-
-        JLabel shortcuts = new JLabel("O live-place object   F8 open tool   F9 lock/unlock   Ctrl+C copy   F10 close");
-        shortcuts.setFont(ConsoleTheme.SMALL_FONT);
-        shortcuts.setForeground(ConsoleTheme.MUTED_TEXT);
-        panel.add(shortcuts);
-        return panel;
-    }
-
-    private static JPanel row(String key, JLabel value) {
-        JPanel row = new JPanel(new GridLayout(1, 2, 8, 0));
-        row.setOpaque(false);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 21));
-
-        JLabel label = new JLabel(key);
-        label.setFont(ConsoleTheme.SMALL_FONT);
-        label.setForeground(ConsoleTheme.MUTED_TEXT);
-
-        row.add(label);
-        row.add(value);
-        return row;
-    }
-
-    private static JLabel valueLabel() {
-        JLabel label = new JLabel("-");
-        label.setFont(ConsoleTheme.SMALL_FONT);
-        label.setForeground(ConsoleTheme.TEXT);
-        label.setHorizontalAlignment(SwingConstants.LEFT);
-        return label;
-    }
-
-    private static void updateLabels(Snapshot target) {
-        stateLabel.setText(locked ? "LOCKED" : "HOVER");
-        if (target == null) {
-            setValue(typeLabel, "-");
-            setValue(nameLabel, "Move cursor over the world");
-            setValue(idLabel, "-");
-            setValue(modelsLabel, "-");
-            setValue(animationsLabel, "-");
-            setValue(relationshipLabel, "-");
-            setValue(routeLabel, "-");
-            setValue(visualTimeLabel, DevTimeController.getStatusText());
-            setValue(tileLabel, "-");
-            setValue(regionLabel, "-");
-            setValue(chunkLabel, "-");
-            setValue(runtimeLabel, "-");
-            return;
-        }
-
-        setValue(typeLabel, target.type);
-        setValue(nameLabel, target.name);
-        setValue(idLabel, target.definitionId >= 0
-                ? Integer.toString(target.definitionId) : "-");
-        setValue(modelsLabel, displayIds(target.modelIds, 5));
-        setValue(animationsLabel, displayIds(target.animationIds, 5));
-        setValue(relationshipLabel, relationshipText(target));
-        setValue(routeLabel, routeText(target));
-        setValue(visualTimeLabel, DevTimeController.getStatusText());
-        setValue(tileLabel, target.worldX + ", " + target.worldY + ", " + target.plane);
-        setValue(regionLabel, regionText(target.worldX, target.worldY));
-        setValue(chunkLabel, chunkText(target.worldX, target.worldY));
-        setValue(runtimeLabel, target.runtime);
-    }
-
-    private static void setValue(JLabel label, String value) {
-        label.setText(value);
-        label.setToolTipText(value);
     }
 
     private static String buildCopyText(Snapshot target) {
@@ -642,6 +453,72 @@ public final class LiveInspectOverlay {
             out.append(ids[i]);
         }
         return out.toString();
+    }
+
+    public static final class DisplayState {
+        private final boolean enabled;
+        private final boolean locked;
+        private final boolean hasTarget;
+        private final String state;
+        private final String type;
+        private final String name;
+        private final String definitionId;
+        private final String modelIds;
+        private final String animationIds;
+        private final String relationship;
+        private final String route;
+        private final String visualTime;
+        private final String worldTile;
+        private final String region;
+        private final String chunk;
+        private final String runtime;
+        private final boolean canOpenTool;
+        private final boolean canPlaceObject;
+
+        private DisplayState(boolean enabled, boolean locked, boolean hasTarget,
+                String state, String type, String name, String definitionId,
+                String modelIds, String animationIds, String relationship,
+                String route, String visualTime, String worldTile, String region,
+                String chunk, String runtime, boolean canOpenTool,
+                boolean canPlaceObject) {
+            this.enabled = enabled;
+            this.locked = locked;
+            this.hasTarget = hasTarget;
+            this.state = state;
+            this.type = type;
+            this.name = name;
+            this.definitionId = definitionId;
+            this.modelIds = modelIds;
+            this.animationIds = animationIds;
+            this.relationship = relationship;
+            this.route = route;
+            this.visualTime = visualTime;
+            this.worldTile = worldTile;
+            this.region = region;
+            this.chunk = chunk;
+            this.runtime = runtime;
+            this.canOpenTool = canOpenTool;
+            this.canPlaceObject = canPlaceObject;
+        }
+
+        public boolean isEnabled() { return enabled; }
+        public boolean isLocked() { return locked; }
+        public boolean hasTarget() { return hasTarget; }
+        public String getState() { return state; }
+        public String getType() { return type; }
+        public String getName() { return name; }
+        public String getDefinitionId() { return definitionId; }
+        public String getModelIds() { return modelIds; }
+        public String getAnimationIds() { return animationIds; }
+        public String getRelationship() { return relationship; }
+        public String getRoute() { return route; }
+        public String getVisualTime() { return visualTime; }
+        public String getWorldTile() { return worldTile; }
+        public String getRegion() { return region; }
+        public String getChunk() { return chunk; }
+        public String getRuntime() { return runtime; }
+        public boolean canOpenTool() { return canOpenTool; }
+        public boolean canPlaceObject() { return canPlaceObject; }
     }
 
     private static final class Snapshot {

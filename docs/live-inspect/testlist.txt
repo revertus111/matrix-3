@@ -1,0 +1,18 @@
+Matrix3 Live Inspect - focused runtime acceptance
+
+1. Start Matrix3 normally in Eclipse/Java 8 and enable Dev Mode.
+2. Open Test Console -> Live Inspect. Confirm no floating Live Inspect window appears over the game canvas.
+3. Toggle Live Inspect ON from the panel. Confirm the status changes to HOVER and the game remains fully usable.
+4. Hover a tile, object, NPC, and ground item. Confirm Type/Name/Definition ID/World/Runtime values update and the highest-priority valid hovered target wins as before.
+5. Resize the Client Console from its minimum practical width through a wide layout. Confirm Live Inspect uses vertical scrolling, has no horizontal scrollbar, no controls are cut off, and long relationship/route text remains readable.
+6. Hover an object with models/animations. Confirm Model IDs, Animation IDs, relationship, preferred live-place route, region, chunk, and runtime values match the prior inspector behavior.
+7. Press F9 or use Lock target. Move the cursor elsewhere and confirm the inspected target stays fixed. Unlock and confirm live hover updates resume.
+8. Use Copy snapshot and Ctrl+C on a valid target. Confirm the clipboard text still contains the complete Matrix3 Live Inspect snapshot.
+9. On an object, use Open tool / F8 and confirm Live Model Editor opens for that same object. On an NPC, confirm the verified Dev Inspector route still opens.
+10. On an object, use Live place object / O and confirm the existing live placement path arms at the inspected object/tile without changing placement ownership.
+11. Verify F10 still toggles Live Inspect even when the Live Inspect tab is not active. Return to the tab and confirm its state reflects the hotkey change.
+12. Verify Ctrl+F8 step, Ctrl+F9 pause/resume, and Ctrl+F10 speed still report the current DevTimeController state in Visual time.
+13. If convenient, hover a runtime GFX/spot animation and projectile. Confirm their existing renderer-side hit test still feeds Live Inspect and no specialist route is falsely advertised.
+14. Toggle Live Inspect OFF. Confirm target/lock state clears, DevTimeController resets as before, and no floating window remains.
+
+Pass condition: Live Inspect retains the prior inspection/action behavior while all presentation lives inside the responsive Test Console tab and the game canvas remains unobstructed.
