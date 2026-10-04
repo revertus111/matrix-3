@@ -117,7 +117,37 @@ Copy this structure when adding a reusable mapping. Remove fields that genuinely
 
 ## Camera / viewport
 
-_No mappings recorded yet._
+### Live world viewport update seam — Class343.method4302(...)
+
+**Subsystem:** Camera / viewport, client lifecycle  
+**Evidence:** verified-static  
+**Tags:** Class343, method4302, viewport tick, live render, ConstructionBuildCamera, MarioJumpController, scene render
+
+**Exact symbols / IDs**
+- Method: `Class343.method4302(int, int, int, int, boolean, byte)`
+- Existing client extension: `ConstructionBuildCamera.tick()`
+- Mario POC extension: `MarioJumpController.tick()`
+
+**Established responsibility**
+- `Class343.method4302(...)` is the live world-viewport render/update path that prepares camera state and submits the active scene.
+- Matrix3 already uses this seam to tick the Construction detached camera immediately before the scene camera/renderer state is consumed.
+- The Mario vertical-movement POC uses the same established per-viewport seam and does not introduce a parallel Swing timer or secondary render loop.
+
+**Static evidence**
+- Source reads the local player's `Class240` transform near method entry, resolves active camera state, then calls `ConstructionBuildCamera.tick()` before building `Class403` camera state and rendering the world scene.
+- Historical Matrix3 commit `e028def6d22edf47f2978c1ccd44c85531f088b5` intentionally added the Construction tick at this point as the live viewport integration seam.
+
+**Matrix3 usage / ownership notes**
+- This is a client-presentation/update seam, not server gameplay authority.
+- New alternate-controller presentation should remain narrowly scoped here unless stronger evidence establishes another owner.
+
+**Do not assume**
+- A viewport tick is not automatically the correct owner for server-authoritative movement, collision, packets, or persistence.
+- The Mario POC runtime behavior remains unverified until tested in the live client.
+
+**Related entries**
+- Local-player scene transform — `Class611` / `Class456`
+- Matrix3 held-key state — `Class549_Sub1`
 
 ## Scene / renderer
 
@@ -254,7 +284,45 @@ _No mappings recorded yet._
 
 ## Input / mouse / keyboard
 
-_No mappings recorded yet._
+### Matrix3 held-key state — Class549_Sub1 / Class108.aClass549_1426
+
+**Subsystem:** Input / mouse / keyboard  
+**Evidence:** verified-static  
+**Tags:** Class549_Sub1, Class108, aClass549_1426, method6514, keyDown, Space, key 83, KeyEvent, ConstructionBuildCamera, MarioJumpController
+
+**Exact symbols / IDs**
+- Keyboard implementation: `Class549_Sub1`
+- Active keyboard owner reference: `Class108.aClass549_1426`
+- Held-state query used by Matrix3 extensions: `Class549.method6514(int, byte)` / `Class549_Sub1.method6514(int, byte)`
+- Java Space code: `KeyEvent.VK_SPACE == 32`
+- Matrix3 internal Space code: `83`
+- Mapping table: `Class549_Sub1.anIntArray8901`
+
+**Established responsibility**
+- `Class549_Sub1` receives AWT key press/release events, normalizes Java key codes through `anIntArray8901`, queues them, and maintains a 112-entry held-key state array.
+- Java Space index `32` maps to Matrix3 internal key `83`.
+- Existing Matrix3 client extensions poll the active keyboard owner through `Class108.aClass549_1426.method6514(...)` rather than installing a second keyboard owner.
+
+**Relationships / call flow**
+- AWT `KeyEvent` -> `Class549_Sub1.method8084(...)` -> normalized internal key -> queued event -> held-state array -> `method6514(...)` query -> client extension such as `ConstructionBuildCamera` / `MarioJumpController`.
+
+**Static evidence**
+- `Class549_Sub1.anIntArray8901[32]` is `83`.
+- `keyPressed` and `keyReleased` both route through `method8084(...)`.
+- `method6514(...)` returns the held state for the requested internal key when it is within `0..111`.
+- `ConstructionBuildCamera.keyDown(...)` already calls `Class108.aClass549_1426.method6514(...)`, establishing this as a project-used held-key seam.
+
+**Matrix3 usage / ownership notes**
+- Prefer polling this existing owner for held gameplay/developer keys rather than adding another AWT listener when event consumption is not required.
+- Input polling alone does not grant gameplay/server authority.
+
+**Do not assume**
+- Internal key numbers are Java/AWT key codes; they are Matrix3's normalized domain.
+- The Mario POC currently has no explicit mode gate, so Space can request a visual jump even while another UI/text context is active; that is a known POC limitation, not an input-owner mapping issue.
+
+**Related entries**
+- Live world viewport update seam — `Class343.method4302(...)`
+- Local-player scene transform — `Class611` / `Class456`
 
 ## Menu / actions / context options
 
@@ -299,7 +367,49 @@ _No mappings recorded yet._
 
 ## Player rendering
 
-_No mappings recorded yet._
+### Local-player scene transform — Class611 / Player / Class456
+
+**Subsystem:** Player rendering, pathing / movement presentation  
+**Evidence:** verified-static  
+**Tags:** Class611, Player, Class456, method5394, method5395, Class240, aFloat2653, aFloat2656, aFloat2657, local player, player transform, scene Y, Mario jump
+
+**Exact symbols / IDs**
+- Local player: `Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976`
+- Concrete type: `Player`
+- Transform read: `Class456.method5394().aClass240_2647`
+- Translation write: `Class456.method5395(float, float, float)`
+- Translation vector type: `Class240`
+- One movement interpolation caller: `Class611.method7272(Entity, short)`
+
+**Established responsibility**
+- The local player is stored in `Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976` and inherits the generic scene transform implementation from `Class456`.
+- `method5394()` exposes the current transformed `Class238`, whose `aClass240_2647` carries scene translation components.
+- `method5395(x,y,z)` writes the object's translation through `Class240.method3268(...)` and invalidates dependent cached transforms.
+- Player model rendering consumes the same transform lineage; `Player` rendering calls `method5394()` while constructing/submitting model transforms.
+- `Class611.method7272(...)` proves at least one normal entity movement interpolation path updates X/Z while explicitly preserving the current Y value.
+
+**Relationships / call flow**
+- local player pointer -> `Player` -> `Entity` -> `Class456` scene transform -> `Class240` translation -> renderer/model transform.
+- movement interpolation -> read current `Class240` -> calculate X/Z -> `method5395(newX, currentY, newZ)`.
+
+**Static evidence**
+- `Class611` declares the local-player field as `Player`.
+- `Class456.method5395(...)` directly writes `aClass238_5189.aClass240_2647.method3268(...)` and calls transform invalidation.
+- `Class611.method7272(...)` reads `method5394().aClass240_2647` and passes the existing `aFloat2656` as the middle/Y argument to `method5395(...)`.
+- `Class343.method4302(...)` uses the local player's X/Z transform for world bounds/culling while stock camera height math uses terrain height minus camera height, supporting the established smaller-Y-is-higher convention used by the jump POC.
+
+**Matrix3 usage / ownership notes**
+- The Mario Jump POC changes only local presentation Y through this existing transform API; normal X/Z, plane, clipping/pathing and server authority remain owned by Matrix3.
+- Future alternate-controller work should preserve this ownership boundary unless runtime evidence requires a different seam.
+
+**Do not assume**
+- One Y-preserving interpolation path does not prove every movement/grounding path preserves a custom Y offset.
+- `aFloat2656` is established as the vertical translation component in the relevant transform/camera usage, but broad semantic renaming of `Class240` fields has not been approved.
+- The current Mario jump is not `VERIFIED` until runtime confirms visible lift, landing and movement coexistence.
+
+**Related entries**
+- Live world viewport update seam — `Class343.method4302(...)`
+- Matrix3 held-key state — `Class549_Sub1`
 
 ## NPC rendering
 
