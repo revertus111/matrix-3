@@ -259,29 +259,42 @@ Default Mario mesh scale remains `2.0`:
 - [x] `AlternateCharacterController` is the single viewport-dispatch owner for imported-character drivers; Mario now runs as a driver behind the established `MarioJumpController.tick()` compatibility seam.
 - [x] Shared control vocabulary centralizes WASD movement, Space jump, F primary action, Shift modifier and camera-forward sampling. Future character drivers consume this state rather than installing another keyboard/controller path.
 - [x] `AlternateCharacterInputKeyboard` replaces the Mario-specific wrapper while preserving Matrix3's original keyboard listener/owner and the accepted WASD arbitration behavior.
-- [x] Real Matrix camera-forward X/Z is supplied to the character driver: Class411 detached/free views use their actual position/look vector; vanilla views use the `Class246.method3359(...)` 14-bit yaw domain.
-- [x] libsm64 camera-look X/Z is now part of the same immutable native input snapshot as stick/A/B/Z instead of hardcoded `(0,-1)`.
+- [x] Matrix camera-forward X/Z is supplied to the character driver: Class411 detached/free views use actual position/look geometry; vanilla views normally use resolved viewport camera-position -> focus-position geometry with yaw retained only as fallback.
+- [x] libsm64 camera-look X/Z is part of the same immutable native input snapshot as stick/A/B/Z instead of hardcoded `(0,-1)`.
 - [x] Existing native protocol already carried camera-look floats; **no `sm64_bridge.exe` rebuild is required**.
+- [x] The runtime steering mismatch persisted after the resolved-vector change; the rejected Mario-only stick-Y inversion is not part of the current path. `VERIFIED` regression 2026-10-04.
+- [x] `Mario64Diagnostics` now has a read-only pure-W alignment probe comparing Matrix camera-forward with normalized native libsm64 X/Z velocity, recording `dot/cross` every 500 ms once horizontal speed is meaningful. `verified-static`.
 - [x] `AlternateCharacterCombatBridge` does not calculate client damage. Mario's F/B rising edge sends the stock Matrix3 NPC attack packet (opcode 32) to the nearest loaded NPC within 12 tiles.
 - [x] Server-side `WorldPacketsDecoder` still validates the NPC and enters the existing `PlayerCombatNew(npc)` owner, preserving RuneScape combat stats/definitions, target/range/pathing rules, damage/XP and downstream NPC death/drop behavior.
 - [x] Mario currently advertises `MELEE` only through the character capability profile. Link can later advertise `MELEE` + `RANGED` without adding another controller/combat pipeline.
 - [x] `MarioVisualRenderer` has a 750 ms last-good-model grace path for transient native geometry/model-build gaps; cached fallback renders do not extend that deadline and mode/bridge loss remains immediate fail-open.
 
+### Steering direction diagnostic gate
+
+Use one client launch; no native rebuild. **Do not change another sign/axis before this capture.**
+
+1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch/login normally.
+2. [ ] Enter Mario mode and face the camera north.
+3. [ ] Hold **only W** for about one second. Preserve one console line beginning `[SM64 Direction] DIRECTION_W`.
+4. [ ] Repeat with the camera facing east, south and west. Do not hold A/D during any sample.
+5. [ ] Provide the four lines together. Each line includes `cam=(x,z)`, normalized `nativeVel=(x,z)`, `dot=` and `cross=`.
+6. [ ] Classify the transform from the evidence: `dot ~= +1` = aligned, `dot ~= -1` = 180-degree inversion, `dot ~= 0` with large `|cross|` = approximately 90-degree rotation/reflection. Mixed heading-dependent signs indicate a reflected/swapped basis.
+7. [ ] Patch only the transform proven by those four samples, then run the normal N/E/S/W + rotate-while-holding-W acceptance below.
+
 ### Consolidated runtime acceptance
 
 Use one client launch; no native rebuild:
 
-1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch/login normally.
-2. [ ] Enter Mario mode. Existing visual smoothing/textures/XYZ movement still work.
-3. [ ] Rotate the camera north/east/south/west. At every heading, hold W: Mario must move **forward relative to the camera**; A/D must remain screen-relative left/right rather than reversing on the south view.
-4. [ ] Rotate the camera continuously while Mario is moving; steering should track camera heading without the old fixed `(0,-1)` inversion.
-5. [ ] Let Mario sit idle for several seconds, then tap Space. Mario remains the visible replacement throughout the jump; the normal RuneScape body must not flash/reappear on the transition.
-6. [ ] Ctrl+M still restores the RuneScape body immediately; the 750 ms grace must never keep Mario visible after mode/bridge ownership ends.
-7. [ ] Stand near one simple attackable NPC while the server-side RuneScape player is still near that NPC; tap F once. Mario performs native B/punch behavior and the console prints `[Alt Character Combat] MELEE -> stock NPC attack index=...`.
-8. [ ] The NPC enters normal RuneScape combat and receives normal server-owned hits; confirm normal Attack/Strength-style combat behavior/XP rather than a client-only fake hit.
-9. [ ] Hold F: the bridge must not spam a new stock attack packet every client tick; only the F rising edge starts/restarts the server combat action.
-10. [ ] Move far enough that the local-only Mario presentation no longer matches the server position, then treat combat range/pathing as **Phase 3/server-authority carryover**, not as proof that client-local XYZ is authoritative.
-11. [ ] Ctrl+M out/in after combat; normal RuneScape input/combat remains usable and alternate-character target state does not leak across sessions.
+1. [ ] Enter Mario mode. Existing visual smoothing/textures/XYZ movement still work.
+2. [ ] Rotate the camera north/east/south/west. At every heading, hold W: Mario must move **forward relative to the camera**; A/D must remain screen-relative left/right rather than reversing on the south view.
+3. [ ] Rotate the camera continuously while Mario is moving; steering should track camera heading without the old fixed `(0,-1)` inversion.
+4. [ ] Let Mario sit idle for several seconds, then tap Space. Mario remains the visible replacement throughout the jump; the normal RuneScape body must not flash/reappear on the transition.
+5. [ ] Ctrl+M still restores the RuneScape body immediately; the 750 ms grace must never keep Mario visible after mode/bridge ownership ends.
+6. [ ] Stand near one simple attackable NPC while the server-side RuneScape player is still near that NPC; tap F once. Mario performs native B/punch behavior and the console prints `[Alt Character Combat] MELEE -> stock NPC attack index=...`.
+7. [ ] The NPC enters normal RuneScape combat and receives normal server-owned hits; confirm normal Attack/Strength-style combat behavior/XP rather than a client-only fake hit.
+8. [ ] Hold F: the bridge must not spam a new stock attack packet every client tick; only the F rising edge starts/restarts the server combat action.
+9. [ ] Move far enough that the local-only Mario presentation no longer matches the server position, then treat combat range/pathing as **Phase 3/server-authority carryover**, not as proof that client-local XYZ is authoritative.
+10. [ ] Ctrl+M out/in after combat; normal RuneScape input/combat remains usable and alternate-character target state does not leak across sessions.
 
 ### Known first-slice boundary
 
@@ -300,4 +313,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Runtime-test the master-controller bundle in one launch: camera-relative movement at four headings, idle-to-jump replacement stability, then one nearby NPC F/punch -> stock RuneScape combat proof. If those pass, the generic controller/combat foundation is strong enough to add Link capabilities without another control or damage system.
+Capture the four pure-W `[SM64 Direction]` lines at north/east/south/west first. Use their `dot/cross` evidence to patch the exact coordinate transform once; then rerun camera-relative movement/live rotation acceptance, followed by idle-to-jump replacement stability and one nearby NPC F/punch -> stock RuneScape combat proof.
