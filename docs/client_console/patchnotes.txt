@@ -5,6 +5,8 @@
 - Attached the same hover guard to the Test rail button so moving straight off the flask without entering the flyout also dismisses cleanly instead of leaving a stale menu open.
 - Primary tool hover now dismisses the Con Revamp submenu; Con Revamp hover/click opens the second-level menu in the same left-cascade direction.
 - The Test rail tooltip is disabled when the flyout is shown because the flyout itself is the hover affordance.
+- Runtime follow-up showed heavyweight flyout rows highlighted correctly but normal JButton ActionListener activation did not reliably switch Test Console content from a non-focusable JWindow.
+- Flyout rows now dispatch left-click selection directly from mouse press/release while preserving non-focusable windows, so Settlement/subtabs and primary tools can switch the console without stealing game keyboard focus.
 - Status: IMPLEMENTED / NEEDS RUNTIME UI RETEST.
 
 2026-10-03 - Test Console flyout navigation + 830-era console skin
