@@ -6,84 +6,125 @@
 Client Console -> N64 -> Mario 64 -> Equipment Workbench
 ```
 
-The workbench is a developer-only live editor for fitting revision-830 equipment onto the imported Mario presentation. It does not replace Matrix equipment definitions, libsm64 animation ownership, or the normal Mario renderer.
+The workbench is developer tooling over the established Mario renderer, attachment adapter and session calibration owners. It does not replace Matrix equipment definitions or libsm64 animation ownership.
 
-## Active equipment / preview
+## Protocol-v2 semantic geometry
 
-The top card shows:
+The preferred workflow requires the rebuilt semantic bridge.
 
-- Mario controller state.
-- active helmet item id/name.
-- 3D head-orientation availability.
-- whether the visible Mario pose is frozen.
-- how many libsm64 source triangles are currently removed by the head mask.
+Workbench status shows:
 
-`Freeze pose` freezes the Matrix-visible SM64 snapshot while the native 30 Hz sidecar continues running. Use this before visually fitting a helmet.
+- bridge protocol version;
+- semantic geometry availability;
+- active coverage profile;
+- shared semantic FACE width / height / depth;
+- protected part counts;
+- removable part counts;
+- masked source triangle count.
+
+Protocol-v2 part ids:
+
+```text
+FACE             protected
+EYES             protected
+MOUSTACHE        protected
+CAP              removable
+HAIR_SIDEBURN    removable
+HAIR_BACK        removable
+UNKNOWN          always preserved
+```
+
+The complete mixed FACE mesh is protected. Mario's nose is inside FACE and therefore cannot be removed by `FULL_HELM_SAFE`.
+
+## Coverage controls
+
+### Keep all Mario head parts
+
+No semantic head geometry is removed.
+
+Use this for hats/crowns or for before/after comparison.
+
+### Full helm safe
+
+Removes only:
+
+- CAP
+- HAIR_SIDEBURN
+- HAIR_BACK
+
+Keeps FACE, EYES, MOUSTACHE and all UNKNOWN geometry.
+
+This is deliberately conservative. If runtime testing proves some beige side/back skull inside FACE still needs removal, subdivide FACE later using source-local mesh evidence; do not return to a whole-body cylinder as the normal solution.
+
+`Apply semantic coverage only while a helmet is equipped` should normally remain enabled.
+
+## Shared fit reference
+
+Under protocol v2 the attachment adapter and auto-fit use the same display-list-local FACE reference.
+
+Static source evidence establishes:
+
+- FACE local Z = left/right;
+- FACE local +Y = face-out/front;
+- the remaining local axis supplies FACE height.
+
+Helmet baseline width therefore comes from FACE left/right width. Mario's forward-projecting nose depth does not force the helmet larger.
+
+The final helmet scale remains uniform. Revision-830 helmet outer bounds/cavity ratios are still approximations, so visual calibration remains useful.
 
 ## Helmet transform calibration
 
-The workbench edits the existing per-item session calibration used by `MarioEquipmentAdapter`.
-
 Controls:
 
-- **Scale multiplier** — uniform final size multiplier.
-- **Head-local X** — side-to-side seating.
-- **Head-local Y** — vertical seating.
-- **Head-local Z** — forward/back seating.
-- **Yaw delta** — item-specific yaw correction on top of Mario's base helmet yaw.
-- **Flip helmet 180°** — adds a one-click 180° item yaw correction for obviously reversed worn models.
-- **Reset transform** — returns the active helmet's session values to scale `1.0`, XYZ `0`, yaw `0`.
+- **Scale multiplier** — final uniform correction on the automatic baseline.
+- **Head-local X / Y / Z** — seating corrections.
+- **Yaw delta** — item correction on top of the established Mario helmet base yaw.
+- **Flip helmet 180°** — explicit item correction only.
+- **Reset / recalc fit** — clears session correction and lets the auto-fit baseline resolve again.
+- **Freeze pose** — freezes Matrix-visible Mario while the native worker remains live.
 
-Values can be typed directly or changed with the `-` / `+` buttons.
+## Legacy geometric cutter
 
-## Mario head masking
+The old body-height/radius cutter remains only for protocol-v1 debugging.
 
-The mask is a live presentation cut applied before Mario's Matrix model is built.
+When semantic protocol v2 metadata is available, those geometric controls are ignored.
 
-- **Enable live head cut** — turns the geometric cut on/off.
-- **Only cut while a helmet is equipped** — recommended default.
-- **Cut starts at body height %** — lower it to remove farther down Mario's head.
-- **Head cut radius %** — controls how wide the central cut volume is.
-- **Helmet-safe preset** — `72%` start / `40%` radius / helmet-only.
-- **Reset mask** — disables masking and restores preset defaults.
+Do not use the old cutter as the normal full-helmet solution; it cannot guarantee nose/face protection.
 
-Use the cutoff to remove Mario's cap/hair/top skull first. Keep the cut above the central face so the eyes, moustache, and nose remain visible.
+## Orientation truth
 
-## Orientation diagnostics
-
-The workbench permanently displays the accepted transform conventions rather than leaving them in chat history:
-
-- native `faceAngle` is the Mario facing authority;
-- worn helmets use a `180°` base yaw correction;
-- the first V4 full-head delta was runtime-proven backwards;
-- Matrix therefore consumes the inverse/transpose of that rigid head delta;
-- libsm64 Y is mirrored into Matrix presentation Y.
-
-Full evidence and anti-regression rules live in:
+Authoritative transform/sign notes remain in:
 
 ```text
 docs/n64/TRANSFORM_CONVENTIONS.md
 ```
 
+Important established rules:
+
+- native `faceAngle` remains world-facing authority;
+- Mario helmet base yaw remains the accepted worn-model correction;
+- the runtime-proven V4 opposite head delta is consumed as inverse/transpose;
+- source-local face axes are geometry metadata, not a replacement for runtime world-facing validation.
+
 ## Save / handoff
 
-`Save profile .md` explicitly writes the current active helmet and head-mask values to:
+`Save profile .md` writes:
 
 ```text
 docs/n64/MARIO_EQUIPMENT_RUNTIME.md
 ```
 
-This is a local developer calibration snapshot, not gameplay persistence. `Copy markdown` puts the same snapshot on the clipboard for chat/review.
+The snapshot includes helmet transform, protocol/semantic availability, coverage profile, FACE W/H/D and part counts. `Copy markdown` copies the same data.
 
-## Recommended fitting workflow
+## Recommended V7 workflow
 
-1. Equip the helmet in RuneScape appearance.
-2. Enter Mario mode.
-3. Open `Equipment Workbench`.
-4. Freeze the pose.
-5. Fix obvious yaw with `Flip helmet 180°` only if required.
-6. Adjust scale and head-local XYZ until the worn model seats correctly.
-7. Enable the head cut and lower the start height until cap/hair/top-skull clipping disappears.
-8. Keep Mario's central face/nose visible.
-9. Unfreeze and check idle/turn/jump/backflip/ground-pound.
-10. Save the `.md` profile when the result looks correct.
+1. Rebuild the native bridge with `make bootstrap`.
+2. Equip the target helmet and enter Mario mode.
+3. Confirm protocol `v2` and semantic metadata `AVAILABLE`.
+4. For a full helmet, press `Full helm safe`.
+5. Judge the silhouette before changing scale.
+6. Freeze Pose.
+7. Use Scale / X / Y / Z / Yaw only for small final seating corrections.
+8. Unfreeze and check idle/turn/jump/backflip/ground-pound.
+9. Compare `Keep all` vs `Full helm safe` if geometry looks suspicious.
+10. Save/copy the profile once the result is visually accepted.
