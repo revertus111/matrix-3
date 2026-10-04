@@ -11,6 +11,7 @@ Prefab I/O Logistics architecture — 2026-10-03
 [x] DESIGN LOCKED: prefab ports persist by stable prefab/piece identity + port key; local offset/facing rotate with the prefab.
 [x] DESIGN LOCKED: normal gameplay must not require Link First Two Chests / Build Sawmill Test Line or other debug topology commands.
 [x] DESIGN LOCKED: conveyor visual polish is deferred/non-blocking; STRAIGHT_1T remains the temporary visual baseline.
+[x] DESIGN LOCKED: player-facing port presentation will use simple red/green directional arrows rather than a large overlay; server INPUT/OUTPUT direction remains authoritative.
 
 PIO-1 — Generic endpoint framework
 [x] IMPLEMENTED / verified-static: SettlementLogisticsEndpoint provides stable ref, INPUT/OUTPUT direction, plot position, facing, item compatibility, available amount/capacity, extract and accept semantics.
@@ -21,18 +22,33 @@ PIO-1 — Generic endpoint framework
 [x] IMPLEMENTED / verified-static: missing/deleted piece or run refs resolve null/blocked and do not mutate owned inventory/payloads.
 [x] IMPLEMENTED / verified-static: chest stable keys are INPUT/OUTPUT; Sawmill stable keys are INPUT_LOGS/OUTPUT_PLANKS.
 [x] IMPLEMENTED / verified-static: Sawmill ports are deliberately anchor-local at 0,0 for PIO-1; PIO-3 may move prefab-local offsets without changing endpoint identity.
-[ ] Eclipse clean/build Server with Java 8; zero compile errors in the four new SettlementLogistics* classes.
-[ ] Rotation sanity: place/rotate a test workstation through rotations 0/1/2/3 and confirm resolved local port facing/offset follows the same quarter-turn convention as the placed object before PIO-3 assigns non-zero offsets.
+[x] VERIFIED: user confirmed Eclipse Java 8 clean/build Server completes with zero errors after PIO-1.
+[ ] Rotation sanity: before PIO-3 assigns non-zero authored offsets, place/rotate a test workstation through rotations 0/1/2/3 and confirm resolved local port facing/offset follows the same quarter-turn convention as the placed object.
 
-PIO-2 — Conveyor endpoint integration
-[ ] Conveyor Point B exposes the one forward OUTPUT through the live production transport path.
-[ ] A straight ConveyorRun exposes a distributed receiver input surface at arbitrary valid insertion distance.
-[ ] Incoming approach from receiver rear/left/right is accepted when spacing permits.
-[ ] Incoming approach through receiver forward/output side is rejected.
-[ ] Source OUTPUT -> receiver middle transfers payload ownership at exact insertion distance, then receiver direction/speed owns movement.
-[ ] Source OUTPUT -> perpendicular receiver produces a functional 90-degree transport turn without custom corner transport code.
-[ ] Two or more source runs merging into one receiver serialize deterministically through spacing/backpressure with no duplication/loss.
-[ ] Two crossing spans remain independent unless a source OUTPUT terminates on the receiver.
+PIO-2A — Conveyor endpoint semantics
+[x] IMPLEMENTED / verified-static: Facing exposes opposite() and INPUT acceptance can validate the actual source endpoint through canAcceptFrom(...).
+[x] IMPLEMENTED / verified-static: Conveyor Point B resolves as the one stable production OUTPUT endpoint.
+[x] IMPLEMENTED / verified-static: straight ConveyorRun exposes stable CONVEYOR:<runId>/INPUT identity with concrete contact/insertion resolved from persistent geometry.
+[x] IMPLEMENTED / verified-static: receiver start, middle and near-end contacts reuse canAcceptPayloadAt(insertionDistance) and the existing 0.85-tile spacing/backpressure rule.
+[x] IMPLEMENTED / verified-static: source flow matching receiver flow is accepted as rear entry; perpendicular source flow is accepted as left/right entry.
+[x] IMPLEMENTED / verified-static: source flow opposite receiver flow is rejected as entry through the receiver forward/output side.
+[x] IMPLEMENTED / verified-static: canConnectConveyorRuns requires source Point B to lie on the receiver, so visually crossing spans alone do not connect.
+[x] IMPLEMENTED / verified-static: connectConveyorRuns persists the existing receiverRunId + insertionDistance only after geometry/approach validation.
+[x] IMPLEMENTED / verified-static: transferConnectedConveyorOutput stages the receiver payload, extracts the exact physical source payload, and removes the staged payload if source extraction fails.
+[x] IMPLEMENTED / verified-static: synthetic development payloads remain excluded from the generic physical production transfer helper.
+[ ] Eclipse clean/build Server with Java 8 after PIO-2A; zero compile errors in SettlementLogisticsEndpoint / SettlementLogisticsEndpointResolver.
+
+PIO-2B — Live conveyor endpoint integration
+[ ] Replace the direct belt-to-belt branch in SettlementInstance.processConveyorOutput(...) with transferConnectedConveyorOutput(...), preserving physical ownership and existing tick order.
+[ ] Route newly authored source OUTPUT -> receiver INPUT links through canConnectConveyorRuns/connectConveyorRuns so forward-side entry cannot persist from normal placement.
+[ ] Route connectExistingConveyorEndsInto(...) through the same validation so auto-linking cannot create a forbidden forward-side connection.
+[ ] Invalid/missing receiver remains blocked/disconnected without deleting the source payload.
+[ ] STRAIGHT CHAIN: source OUTPUT -> receiver rear/start transfers at insertion 0 and receiver direction/speed owns movement.
+[ ] MID-BELT MERGE: source OUTPUT -> receiver middle transfers at exact insertion distance.
+[ ] 90-DEGREE TURN: perpendicular source -> receiver left/right transfers without custom corner transport code.
+[ ] FORWARD REJECTION: source approaching opposite receiver flow is rejected and remains blocked at source output.
+[ ] MERGE CONTENTION: two sources targeting occupied insertion serialize through spacing/backpressure with no duplication/loss.
+[ ] CROSSING SAFETY: two spans crossing without source Point B terminating on receiver remain independent.
 
 PIO-3 — Sawmill physical ports
 [ ] Persistent Sawmill/workstation exposes INPUT_LOGS and OUTPUT_PLANKS through the generic endpoint framework at final prefab-local offsets.
@@ -61,6 +77,7 @@ PIO-6 — Build Palette endpoint snapping
 [ ] Selecting Conveyor highlights/snaps to compatible OUTPUT sources spatially.
 [ ] Compatible building/chest INPUT ports highlight/snap as destinations.
 [ ] Existing conveyor rear/left/right input surface highlights at the actual insertion point.
+[ ] Use simple red/green directional arrows for INPUT/OUTPUT presentation rather than another large overlay.
 [ ] Forward/output-side receiver contact is visibly/authoritatively rejected.
 [ ] Server validates endpoint identity, direction, compatibility, territory and geometry before persistence.
 [ ] Complete Lumberyard -> Conveyor -> Sawmill -> Conveyor -> Chest topology can be authored without debug link/build-line commands.
@@ -84,9 +101,10 @@ First factory vertical slice acceptance
 [ ] Physical item reconciliation shows no unexplained duplication/loss across the chain.
 
 Resume Here
-[x] PIO-1 implementation committed: stable refs, endpoint contract, prefab-local port metadata and chest/machine/conveyor resolver adapters exist without replacing proven owners.
-[ ] Pull latest main and Eclipse clean/build Server.
-[ ] If clean, start PIO-2: route live conveyor OUTPUT transfer through the endpoint framework, then add distributed conveyor INPUT surface + rear/left/right approach validation while preserving existing spacing/backpressure.
+[x] PIO-1 Eclipse Java 8 Server clean-build verified by user; zero errors.
+[x] PIO-2A implemented: distributed ConveyorRun INPUT endpoint semantics, source-aware cardinal approach validation, validated connection helper and rollback-safe physical belt handoff helper.
+[ ] Pull latest main and Eclipse clean/build Server once.
+[ ] If clean, execute PIO-2B only: replace SettlementInstance direct belt-to-belt transfer/link creation with the PIO-2A resolver helpers; then runtime-test straight/rear, 90-degree, mid-belt, forbidden-forward, merge/backpressure and crossing safety together.
 
 Conveyor V2.0 per-segment axis lock correction — 2026-10-03
 [x] RUNTIME REJECTED: video showed the preview repeatedly flipping between E/W and N/S while moving the cursor around one Point A.
