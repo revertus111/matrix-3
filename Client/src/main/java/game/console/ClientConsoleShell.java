@@ -53,9 +53,11 @@ public final class ClientConsoleShell extends JPanel {
     private final JToggleButton settingsButton = new JToggleButton(ConsoleIcons.settings());
 
     private final DashboardPanel shellPanel;
+    private final TestConsoleFlyoutMenu testFlyout;
     private JComponent ownerPanel;
     private JComponent commandsPanel;
-    private JComponent testConsolePanel;
+    private TestConsolePanel testConsolePanel;
+    private JComponent testConsoleErrorPanel;
     private JComponent settingsPanel;
 
     private boolean consoleOpen = true;
@@ -74,6 +76,27 @@ public final class ClientConsoleShell extends JPanel {
         add(gameHost, BorderLayout.CENTER);
 
         shellPanel = new DashboardPanel();
+        testFlyout = new TestConsoleFlyoutMenu(new TestConsoleFlyoutMenu.Handler() {
+            @Override
+            public void select(String toolId, String sectionId) {
+                openTestTool(toolId, sectionId);
+            }
+
+            @Override
+            public String getSelectedToolId() {
+                return testConsolePanel == null
+                        ? TestConsolePanel.TOOL_CON_REVAMP
+                        : testConsolePanel.getSelectedToolId();
+            }
+
+            @Override
+            public String getSelectedConRevampSection() {
+                return testConsolePanel == null
+                        ? TestConsolePanel.SECTION_SETTLEMENT
+                        : testConsolePanel.getSelectedConRevampSection();
+            }
+        });
+
         configureDivider();
         configureDock();
         add(dockContainer, BorderLayout.EAST);
@@ -81,6 +104,7 @@ public final class ClientConsoleShell extends JPanel {
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
+                testFlyout.hideAll();
                 if (consoleOpen) {
                     applyConsoleWidth(expandedConsoleWidth, false);
                 }
@@ -148,8 +172,12 @@ public final class ClientConsoleShell extends JPanel {
         return rail;
     }
 
-    private void configureRailButton(JToggleButton button, String tooltip, String panelId) {
-        button.setToolTipText(tooltip + " - click active panel again to collapse");
+    private void configureRailButton(final JToggleButton button,
+            String tooltip, final String panelId) {
+        boolean testNavigation = PANEL_TESTS.equals(panelId);
+        button.setToolTipText(testNavigation
+                ? tooltip + " - hover for workspaces"
+                : tooltip + " - click active panel again to collapse");
         button.getAccessibleContext().setAccessibleName(tooltip);
         button.setAlignmentX(CENTER_ALIGNMENT);
         button.setHorizontalAlignment(SwingConstants.CENTER);
@@ -157,7 +185,21 @@ public final class ClientConsoleShell extends JPanel {
         button.setMaximumSize(new Dimension(RAIL_WIDTH, 44));
         button.setPreferredSize(new Dimension(RAIL_WIDTH, 44));
         ConsoleTheme.styleRailButton(button);
-        button.addActionListener(e -> activatePanel(panelId));
+
+        if (testNavigation) {
+            button.addActionListener(e -> {
+                openTestPanel();
+                showTestFlyout();
+            });
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    showTestFlyout();
+                }
+            });
+        } else {
+            button.addActionListener(e -> activatePanel(panelId));
+        }
     }
 
     private void configureDivider() {
@@ -200,6 +242,7 @@ public final class ClientConsoleShell extends JPanel {
     }
 
     private void activatePanel(String panelId) {
+        testFlyout.hideAll();
         String normalizedPanelId = normalizePanelId(panelId);
         if (consoleOpen && normalizedPanelId.equals(activePanelId)) {
             setConsoleOpen(false);
@@ -212,6 +255,33 @@ public final class ClientConsoleShell extends JPanel {
             consoleOpen = true;
         }
         applyConsoleState(true);
+    }
+
+    private void openTestPanel() {
+        activePanelId = PANEL_TESTS;
+        getOrCreateTestConsolePanel();
+        showActivePanel();
+        if (!consoleOpen) {
+            consoleOpen = true;
+        }
+        applyConsoleState(true);
+    }
+
+    private void openTestTool(String toolId, String sectionId) {
+        TestConsolePanel panel = getOrCreateTestConsolePanel();
+        if (panel != null) {
+            panel.showTool(toolId, sectionId);
+        }
+        activePanelId = PANEL_TESTS;
+        if (!consoleOpen) {
+            consoleOpen = true;
+        }
+        showActivePanel();
+        applyConsoleState(true);
+    }
+
+    private void showTestFlyout() {
+        testFlyout.showFor(testButton);
     }
 
     private void showActivePanel() {
@@ -245,15 +315,8 @@ public final class ClientConsoleShell extends JPanel {
             return commandsPanel;
         }
         if (PANEL_TESTS.equals(panelId)) {
-            if (testConsolePanel == null) {
-                try {
-                    testConsolePanel = new TestConsolePanel();
-                } catch (RuntimeException ex) {
-                    ex.printStackTrace();
-                    testConsolePanel = createPanelError("Test Console failed to initialize.");
-                }
-            }
-            return testConsolePanel;
+            TestConsolePanel panel = getOrCreateTestConsolePanel();
+            return panel != null ? panel : testConsoleErrorPanel;
         }
         if (PANEL_SETTINGS.equals(panelId)) {
             if (settingsPanel == null) {
@@ -267,6 +330,19 @@ public final class ClientConsoleShell extends JPanel {
             return settingsPanel;
         }
         return shellPanel;
+    }
+
+    private TestConsolePanel getOrCreateTestConsolePanel() {
+        if (testConsolePanel != null || testConsoleErrorPanel != null) {
+            return testConsolePanel;
+        }
+        try {
+            testConsolePanel = new TestConsolePanel();
+        } catch (RuntimeException ex) {
+            ex.printStackTrace();
+            testConsoleErrorPanel = createPanelError("Test Console failed to initialize.");
+        }
+        return testConsolePanel;
     }
 
     private JComponent createPanelError(String message) {
@@ -309,6 +385,9 @@ public final class ClientConsoleShell extends JPanel {
             return;
         }
         consoleOpen = open;
+        if (!consoleOpen) {
+            testFlyout.hideAll();
+        }
         if (consoleOpen) {
             showActivePanel();
         }
@@ -333,6 +412,9 @@ public final class ClientConsoleShell extends JPanel {
 
     public void setActivePanelId(String panelId) {
         activePanelId = normalizePanelId(panelId);
+        if (!PANEL_TESTS.equals(activePanelId)) {
+            testFlyout.hideAll();
+        }
         if (consoleOpen) {
             showActivePanel();
         }
@@ -372,6 +454,7 @@ public final class ClientConsoleShell extends JPanel {
     private void applyConsoleWidth(int requestedWidth, boolean notify) {
         expandedConsoleWidth = clampConsoleWidth(requestedWidth);
         if (consoleOpen) {
+            testFlyout.hideAll();
             applyDockPreferredWidth();
             revalidate();
             repaint();
