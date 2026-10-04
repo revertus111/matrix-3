@@ -1,0 +1,6 @@
+2026-10-04 - N64 Client Console workspace / Mario 64 flight recorder
+- Added a Test Console -> N64 workspace with a game-level tab container; Mario 64 is the first sub-tab.
+- Added a read-only Mario64Diagnostics recorder published from the existing Mario client tick. It snapshots controller mode, bridge/native frame state, action/animation, native XYZ/velocity, camera-relative input, physical Space/F/Shift, forwarded A/B/Z, airborne/height presentation and the actual Mario local-player suppression predicate.
+- Added a bounded 256-entry transition log for mode, bridge, geometry, frame-sequence gaps, native action/animation, Space/A/B/Z edges, RuneScape-body suppression changes and native fallback events.
+- Added Clear Events, Copy Snapshot, Copy Events, Pause Display and Auto-scroll controls. Pausing the Swing display does not pause runtime recording.
+- The N64 tool is observation-only: Matrix3 Mario movement, libsm64 stepping, rendering, combat, player suppression and server authority remain owned by their existing runtime classes.
