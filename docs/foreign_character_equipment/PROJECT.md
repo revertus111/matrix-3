@@ -28,17 +28,23 @@ The first proof target is Mario: equip a normal revision-830 helmet, enter Mario
 - Helmet V2 separates **head tracking** from **fit sizing**. It captures a broader head candidate region, trims the outer X/Z extremes, and records that trimmed span as the reference skull envelope. This is intended to stop protrusions such as Mario's nose from inflating helmet size while leaving the nose visually untouched.
 - V2 adds explicit per-side clearance around the reference head envelope: `max(minClearance, headSpan * clearanceFraction)`. The helmet target span is `headSpan + 2 * clearance`; uniform scaling preserves item proportions.
 - The default clearance is `5%` of head span per side with a `2.0` Matrix-unit minimum. Example: a `64`-unit head targets about `70.4` units before the optional final fit multiplier.
-- Helmet translation follows the animated head anchor. Yaw follows native `faceAngle` with calibration overrides; full head pitch/roll is intentionally deferred until the helmet proof is accepted.
+- Runtime evidence from Statius's full helm proved that comparing Mario's target skull span against the helmet's **outer** model bounds can still produce a visually undersized/buried full helm (`150.98 / 190.0 = 0.7946`). This is now treated as a calibration/fit-model limitation rather than evidence that attachment itself failed.
+- Helmet V3 adds `MarioHelmetCalibrationController`, a session-only live calibration owner. It applies per-item scale multiplier, head-local X/Z, Matrix Y and yaw-delta corrections on top of generic auto-fit without rebuilding the helmet model.
+- V3 starts Mario helmets with a `180` degree base yaw because the runtime Statius test showed the worn model facing backwards relative to Mario.
+- While calibration mode is active, Mario gameplay controls are held idle and calibration keys are hidden from the established Matrix held-key camera seam. The raw keyboard delegate still supplies the calibration controller.
+- Session calibration survives toggling calibration off and helmet swaps during the same client session, but is deliberately not persisted yet. A representative helmet sample will determine the common Mario defaults before permanent standard/per-item profiles are written.
+- Manual X/Z calibration is head-local and rotates through the same yaw as the helmet, preventing corrections from becoming fixed world-space offsets when Mario turns.
+- Helmet translation follows the animated head anchor. Full head pitch/roll is intentionally deferred until the helmet proof is accepted.
 - Rendering is fail-open: no helmet, invalid definitions/models/bounds, stale Mario replacement state, or attachment failure leaves the already-working Mario presentation untouched.
-- Mario body masking is deliberately not part of V2. If the correctly sized clearance shell still visually fights Mario's cap/hair, selective cap/hair/skull masking becomes the next presentation slice while preserving Mario's face/nose.
+- Mario body masking is deliberately not part of V3. Once the helmet transform is visually calibrated, cap/hair/skull masking can be judged independently while preserving Mario's face/nose.
 
 ## Current execution state
 
 - Phase: 1 - Attachment foundation
 - Bundle: 1.1 - Mario helmet vertical slice
 - Status: NEEDS TEST
-- Approval: user supplied `SAP AAA` for Helmet V2 envelope fitting on 2026-10-04.
-- Current objective: prove the revised full-head envelope + explicit-clearance fit produces a helmet that surrounds Mario's skull instead of sizing against the narrow cap/crown region, without changing libsm64, RuneScape equipment authority, or Mario's body renderer.
+- Approval: user supplied `SAP AAA` for live helmet calibration on 2026-10-04.
+- Current objective: visually calibrate representative 830 helmets on Mario, record the scale/XYZ/yaw values that actually look correct, then promote the common values into the standard Mario helmet profile instead of guessing from one outer-bounds formula.
 
 ## Phase 1 - Attachment foundation
 
@@ -62,12 +68,21 @@ The first proof target is Mario: equip a normal revision-830 helmet, enter Mario
 - [x] V2 broaden the upright head capture from the upper crown toward the full skull/face region.
 - [x] V2 trim reference X/Z extremes so protrusions such as the nose do not drive fit size.
 - [x] V2 add explicit per-side head clearance and fit the helmet to the expanded target envelope.
-- [ ] Runtime: V2 helmet size and vertical placement are sensible.
-- [ ] Runtime: V2 shell clears the head with little/no obvious skull clipping at idle.
-- [ ] Runtime: helmet yaw matches Mario facing while turning/running.
+- [x] Runtime: Statius's full helm V2 still renders too small/buried because generic fit compares against its 190-unit outer span; logged final fit was `0.7946148`. `VERIFIED` 2026-10-04.
+- [x] Runtime: Statius's full helm faces backwards on Mario. `VERIFIED` 2026-10-04.
+- [x] V3 make `180` degrees the default Mario helmet yaw correction.
+- [x] V3 add session-only per-item live scale/X/Y/Z/yaw calibration.
+- [x] V3 freeze Mario movement/action input while calibration is active.
+- [x] V3 suppress calibration keys from normal Matrix held-key consumers while preserving raw input for calibration.
+- [x] V3 rotate manual X/Z offsets through helmet yaw so corrections remain head-local.
+- [ ] Runtime: F6 toggles calibration cleanly and Mario remains stationary while calibrating.
+- [ ] Runtime: live scale/XYZ/yaw controls visibly update the helmet without restart/rebuild.
+- [ ] Runtime: print and report accepted Statius calibration values.
+- [ ] Runtime: repeat calibration on several different helmet shapes and identify common/default values versus true item exceptions.
+- [ ] Runtime: helmet yaw matches Mario facing while turning/running after the 180-degree correction.
 - [ ] Runtime: head translation remains attached through jump/backflip/ground-pound.
 - [ ] Runtime: determine whether full pitch/roll attachment is required for flips.
-- [ ] Runtime: determine whether cap/hair/skull masking is still needed after envelope fitting.
+- [ ] Runtime: determine whether cap/hair/skull masking is still needed after transform calibration.
 - [ ] Runtime: unequip/swap helmet updates cleanly with no stale model.
 - [ ] Runtime: Ctrl+M exit/re-entry leaves no floating helmet.
 
@@ -75,7 +90,8 @@ The first proof target is Mario: equip a normal revision-830 helmet, enter Mario
 
 **Status:** PLANNED AFTER 1.1
 
-- [ ] Promote helmet-specific measurements into reusable attachment-slot/profile structures.
+- [ ] Promote accepted Mario helmet defaults into reusable attachment-slot/profile structures.
+- [ ] Add optional per-item correction records only for helmets that materially deviate from the common profile.
 - [ ] Add neck/back/hand/foot anchor definitions for amulet, cape, weapons/shields, gloves and boots.
 - [ ] Keep character-specific measurements separate from generic 830 item-model loading/caching.
 
@@ -104,20 +120,38 @@ The first proof target is Mario: equip a normal revision-830 helmet, enter Mario
 - [ ] Extract reusable foreign-character profile contract after Mario proves the attachment architecture.
 - [ ] Add additional imported-character profiles without duplicating the Matrix equipment loader/renderer path.
 
-## Calibration
+## Live calibration
 
-Helmet V2 runtime overrides:
+Press `F6` while Mario mode is active and a helmet is equipped.
+
+```text
+Left / Right   = local X -/+
+Up / Down      = Matrix Y up/down
+PageUp/PageDn  = local Z +/−
+Home / End     = scale -/+
+[ / ]          = yaw delta -/+ 5 degrees
+Shift          = 5x step size
+R              = reset current helmet session values
+P              = print current values
+F6             = exit calibration (values keep applying this session)
+```
+
+Normal step sizes: `2.0` Matrix units for position, `0.02` for scale multiplier, `5` degrees for yaw. Hold Shift for `5x` coarse adjustment.
+
+The printed `yawDeltaDeg` is added to the Mario helmet base yaw of `180` degrees. Example: `yawDeltaDeg=-10` means final yaw correction `170` degrees.
+
+## JVM calibration overrides
 
 ```text
 -Dmatrix3.sm64.helmetClearanceFraction=<non-negative-float>  # default 0.05 per side
 -Dmatrix3.sm64.helmetMinClearance=<non-negative-float>       # default 2.0 Matrix units per side
--Dmatrix3.sm64.helmetFitPadding=<positive-float>             # default 1.0 final multiplier
+-Dmatrix3.sm64.helmetFitPadding=<positive-float>             # default 1.0 final auto-fit multiplier
 -Dmatrix3.sm64.helmetVerticalOffset=<float>                  # default 0
--Dmatrix3.sm64.helmetYawOffsetDegrees=<float>                # default 0
+-Dmatrix3.sm64.helmetYawOffsetDegrees=<float>                # default 180
 -Dmatrix3.sm64.helmetYawFlip=true|false                      # default false
 ```
 
-`helmetFitPadding` remains only as a final calibration multiplier. V2's normal anti-clipping space comes from the explicit clearance shell instead of a hidden `1.12` padding default.
+These remain global calibration inputs. The V3 session controller layers per-item visual corrections on top without persistence.
 
 ## Evidence
 
@@ -125,51 +159,60 @@ Helmet V2 runtime overrides:
 
 - The first revision-830 helmet attachment renders on Mario in the live client.
 - V1's helmet fit is visually too small/high and competes with Mario's existing cap/hair presentation.
+- V2 Statius's full helm uses `referenceHeadSpan=137.25165`, `targetSpan=150.9768`, `helmetSpan=190.0`, producing `fit=0.7946148`; visually it remains too small/buried.
+- Statius's full helm is backwards relative to Mario with the previous `0` degree yaw offset.
 
 ### verified-static
 
 - Normal player appearance uses revision-830 item definitions and worn raw models.
 - `ItemDefinitions.method7531(...)` builds the worn raw model and applies item recolour/retexture/customization data.
 - `Class261` supports runtime scale, rotation and translation transforms, so cached helmet geometry does not need per-frame rebuilding.
-- libsm64 binary frames already provide animated geometry plus native `faceAngle`; no protocol/native rebuild is required for V1/V2.
+- libsm64 binary frames already provide animated geometry plus native `faceAngle`; no protocol/native rebuild is required for helmet calibration.
 - V2 reference fitting uses a broader head candidate region plus trimmed X/Z bounds and explicit per-side clearance before uniform helmet scaling.
+- `Class549_Sub1.anIntArray8901` supplies the internal key mappings used by the V3 calibration controller; the existing alternate-character keyboard wrapper provides the raw held-state delegate and the proven held-key suppression seam.
+- V3 session calibration is presentation-only and does not modify item definitions, equipment state, libsm64 state, server authority, or cache data.
 
 ### HYPOTHESIS
 
+- A representative sample of normal/full/cosmetic helmets will cluster around a reusable Mario helmet scale/seat standard, leaving only unusual silhouettes as per-item overrides.
 - First-frame head-region capture remains stable across libsm64's geometry stream for later animation frames.
-- Default `5%` per-side clearance with a `2.0` minimum gives enough anti-clipping room without making normal helmets look oversized.
-- Trimming `6%` of X/Z candidate extremes removes nose-like protrusions without cutting meaningful skull width/depth from the fit envelope.
-- Native `faceAngle` sign/zero matches the revision-830 worn-model forward axis closely enough with the provided yaw calibration controls.
+- Yaw-only orientation may be sufficient for normal movement but may still need pitch/roll during full flips.
 
 ### UNKNOWN
 
-- Whether V2 envelope fitting alone is enough visually or Mario cap/hair/top-skull triangles should be selectively masked beneath equipped helmets.
-- Whether yaw-only orientation looks acceptable during Mario's full-body flips or the next slice must derive pitch/roll from stable head/torso geometry indices.
-- Whether unusual helmets with large horns/plumes need per-item fit metadata beyond generic bounds fitting.
+- The accepted standard Mario scale/X/Y/Z values across multiple 830 helmet families.
+- Which helmet families require true per-item or per-category overrides rather than one common profile.
+- Whether calibrated helmet placement alone is enough visually or Mario cap/hair/top-skull triangles should be selectively masked beneath equipped helmets.
+- Whether full head pitch/roll is required for backflip/ground-pound presentation.
 
 ## Resume Here
 
 **Last completed:**
 
-- Helmet V1 is runtime-proven to render on Mario but is visually undersized/high in the user's screenshots.
-- Helmet V2 is implemented statically on `main`.
-- V2 captures a broader head candidate region, trims X/Z extremes so Mario's nose does not drive sizing, records a stable reference skull span, and expands it with explicit per-side clearance before uniform helmet scaling.
-- V2 does not yet hide Mario cap/hair/skull geometry; that decision is intentionally deferred until the corrected shell fit is seen at runtime.
+- Helmet attachment is runtime-proven.
+- Statius V2 runtime data proved the generic outer-span fit still shrinks that full helm to `0.7946148` and the helmet faces backwards.
+- Helmet V3 live calibration is implemented on `main`.
+- Mario helmet base yaw is now `180` degrees.
+- `MarioHelmetCalibrationController` provides session scale/X/Y/Z/yaw tuning and prints exact per-item values.
+- Calibration mode freezes Mario controls and suppresses calibration keys from the normal held-key camera seam.
+- Session values keep applying after F6 exits calibration, but are intentionally not persisted yet.
 
 **Next checklist item:**
 
-1. Pull/build with Eclipse Java 8.
-2. Equip the same visible helmet used in the V1 screenshot and enter Mario mode.
-3. Confirm `[SM64 Equipment] Captured Mario HEAD envelope ... referenceSpan=...`.
-4. Confirm `[SM64 Equipment] Helmet ACTIVE ... referenceHeadSpan=... clearance=... targetSpan=...` and verify `targetSpan > referenceHeadSpan`.
-5. Inspect front/side if possible: helmet should be materially larger than V1 and should clear the skull rather than balancing on the cap crown.
-6. Turn/run and verify yaw/centering.
-7. Jump/backflip/ground-pound and verify attachment translation.
-8. If size is now correct but Mario cap/hair still visibly collide, advance to selective Mario head-region masking while preserving the face/nose.
+1. Pull/build with Eclipse Java 8; no native bridge rebuild.
+2. Equip Statius's full helm, enter Mario mode, press `F6`.
+3. Confirm Mario stops responding to gameplay controls while calibration is active.
+4. Use `End` to enlarge, arrows/PageUp/PageDown to seat, and `[`/`]` only if the new 180-degree base yaw still needs correction. Hold Shift for coarse changes.
+5. Press `P` or `F6` when it looks right and send the `[SM64 Equipment Calibration]` values.
+6. Repeat with several differently shaped helmets before promoting any scale/seat numbers to the permanent Mario standard.
+7. After the transform standard is accepted, decide cap/hair/skull masking and then move to reusable attachment profiles.
 
 **Files:**
 
 - `Client/src/main/java/game/MarioEquipmentAdapter.java`
+- `Client/src/main/java/game/MarioHelmetCalibrationController.java`
+- `Client/src/main/java/game/AlternateCharacterInputKeyboard.java`
+- `Client/src/main/java/game/AlternateCharacterController.java`
 - `Client/src/main/java/game/Class578.java`
 - `docs/foreign_character_equipment/PROJECT.md`
 - `docs/foreign_character_equipment/TESTLIST.md`
