@@ -4,6 +4,7 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Canvas;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.GradientPaint;
@@ -11,8 +12,12 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.IllegalComponentStateException;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Window;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.GeneralPath;
 
 import javax.swing.JComponent;
@@ -21,15 +26,17 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 /**
- * Static Player-Owned Ports style reference overlay for UI prototyping.
+ * Player-Owned Ports style reference overlay for Matrix3 UI prototyping.
  *
- * The composition intentionally uses the 576x324 reference coordinate space
- * without scaling so layout comparisons stay deterministic. It is split into
- * three owned JWindows (left, command cluster, right), leaving the uncovered
- * game canvas under the center of the reference fully owned by Matrix3.
+ * The overlay intentionally keeps the original 576x324 reference coordinate
+ * space for now. It is split into three owned JWindows so the uncovered center
+ * of the live game canvas remains owned by Matrix3.
  *
- * This is presentation-only test tooling. It owns no Construction, Ports,
- * settlement, inventory or visitor gameplay state.
+ * Resource/trade-good rows are data driven. Add a new DisplayEntry to the
+ * corresponding array instead of adding new painting code. The public amount
+ * setters provide a narrow seam for future live settlement/Ports state wiring.
+ *
+ * This remains presentation/test tooling and owns no gameplay authority.
  */
 public final class PlayerOwnedPortsTestOverlay {
 
@@ -42,71 +49,63 @@ public final class PlayerOwnedPortsTestOverlay {
     private static final int CENTER_HEIGHT = 77;
     private static final int RIGHT_X = 385;
     private static final int RIGHT_WIDTH = 191;
-
     private static final int FRAME_MS = 33;
 
-    private static final Color PANEL = new Color(9, 13, 20, 222);
-    private static final Color PANEL_SOFT = new Color(20, 22, 27, 214);
-    private static final Color BORDER = new Color(106, 103, 93, 235);
-    private static final Color BORDER_DARK = new Color(35, 33, 29, 245);
+    private static final Rectangle LEFT_DROPDOWN = new Rectangle(34, 1, 158, 22);
+    private static final Rectangle LEFT_DROPDOWN_ITEM = new Rectangle(34, 23, 158, 24);
+    private static final Rectangle RIGHT_DROPDOWN = new Rectangle(0, 1, RIGHT_WIDTH, 22);
+    private static final Rectangle RIGHT_DROPDOWN_ITEM = new Rectangle(0, 23, RIGHT_WIDTH, 24);
+
+    private static final Color PANEL_TOP = new Color(11, 16, 24, 208);
+    private static final Color PANEL_BOTTOM = new Color(7, 10, 16, 218);
+    private static final Color BORDER = new Color(115, 108, 91, 225);
+    private static final Color BORDER_DARK = new Color(31, 29, 25, 235);
     private static final Color GOLD = new Color(231, 211, 139);
     private static final Color GOLD_MUTED = new Color(191, 164, 91);
-    private static final Color TEXT = new Color(231, 224, 199);
-    private static final Color MUTED = new Color(183, 177, 157);
+    private static final Color TEXT = new Color(235, 229, 209);
+    private static final Color MUTED = new Color(179, 174, 157);
     private static final Color GREEN = new Color(140, 205, 95);
     private static final Color RED = new Color(190, 92, 75);
+    private static final Color HOVER_FILL = new Color(207, 173, 91, 42);
+    private static final Color HOVER_BORDER = new Color(226, 198, 121, 125);
+    private static final Color ROW_DIVIDER = new Color(104, 99, 86, 95);
 
     private static final Font TITLE_FONT = new Font("Serif", Font.BOLD, 13);
     private static final Font BODY_FONT = new Font("Serif", Font.PLAIN, 12);
     private static final Font SMALL_FONT = new Font("Serif", Font.PLAIN, 11);
     private static final Font SMALL_BOLD_FONT = new Font("Serif", Font.BOLD, 11);
+    private static final Font COIN_FONT = new Font("Serif", Font.BOLD, 9);
 
-    private static final String[][] RESOURCE_VALUES = {
-            { "201320", "260" },
-            { "9878", "10017" },
-            { "1606", "12873" },
-            { "37690", "0" },
-            { "0", "0" },
-            { "0", "0" }
+    /*
+     * Append entries here for future resource types. Painting/layout code does
+     * not need to change for additional rows while they fit in the reference.
+     */
+    private static final DisplayEntry[] PORT_RESOURCES = {
+            new DisplayEntry("wood", "Wood", 0L, IconKind.WOOD,
+                    new Color(151, 104, 58)),
+            new DisplayEntry("ore", "Ore", 0L, IconKind.ORE,
+                    new Color(132, 137, 142)),
+            new DisplayEntry("food", "Food", 0L, IconKind.FOOD,
+                    new Color(188, 93, 58)),
+            new DisplayEntry("water", "Water", 0L, IconKind.WATER,
+                    new Color(74, 146, 196))
     };
 
-    private static final String[][] TRADE_VALUES = {
-            { "78", "76" },
-            { "112", "12" },
-            { "14", "30" },
-            { "32", "0" },
-            { "32", "0" }
+    /*
+     * Ports Gold is the only current trade good. Add future trade goods here.
+     */
+    private static final DisplayEntry[] TRADE_GOODS = {
+            new DisplayEntry("ports-gold", "Ports Gold", 0L,
+                    IconKind.GOLD_COIN, new Color(224, 185, 67))
     };
 
-    private static final Color[] RESOURCE_COLORS = {
-            new Color(220, 181, 78),
-            new Color(102, 166, 81),
-            new Color(114, 109, 95),
-            new Color(124, 92, 65),
-            new Color(169, 91, 59),
-            new Color(84, 149, 183),
-            new Color(124, 175, 173),
-            new Color(142, 160, 188),
-            new Color(174, 161, 109),
-            new Color(105, 157, 201),
-            new Color(183, 118, 61),
-            new Color(96, 142, 178)
-    };
-
-    private static final Color[] TRADE_COLORS = {
-            new Color(176, 71, 54),
-            new Color(223, 200, 131),
-            new Color(205, 185, 102),
-            new Color(79, 142, 178),
-            new Color(116, 186, 184),
-            new Color(166, 90, 141),
-            new Color(112, 159, 103),
-            new Color(197, 136, 68),
-            new Color(208, 100, 57),
-            new Color(154, 115, 191)
-    };
+    private static final String[] LEFT_DROPDOWN_ITEMS = { "Null" };
+    private static final String[] RIGHT_DROPDOWN_ITEMS = { "Null" };
 
     private static volatile boolean visible;
+    private static volatile boolean leftDropdownOpen;
+    private static volatile boolean rightDropdownOpen;
+
     private static Timer paintTimer;
     private static Window owner;
     private static JWindow leftWindow;
@@ -130,7 +129,31 @@ public final class PlayerOwnedPortsTestOverlay {
 
     public static void hide() {
         visible = false;
+        leftDropdownOpen = false;
+        rightDropdownOpen = false;
         updateTimerState();
+    }
+
+    public static boolean setPortResourceAmount(String id, long amount) {
+        return setEntryAmount(PORT_RESOURCES, id, amount);
+    }
+
+    public static boolean setTradeGoodAmount(String id, long amount) {
+        return setEntryAmount(TRADE_GOODS, id, amount);
+    }
+
+    private static boolean setEntryAmount(DisplayEntry[] entries, String id, long amount) {
+        if (id == null) {
+            return false;
+        }
+        for (DisplayEntry entry : entries) {
+            if (entry.id.equalsIgnoreCase(id)) {
+                entry.amount = Math.max(0L, amount);
+                repaintSurfaces();
+                return true;
+            }
+        }
+        return false;
     }
 
     public static String getStatus() {
@@ -141,8 +164,9 @@ public final class PlayerOwnedPortsTestOverlay {
         if (canvas == null) {
             return "Ports reference overlay: waiting for Matrix3 canvas.";
         }
-        return "Ports reference overlay: visible at exact 576x324 reference coordinates. Canvas="
-                + canvas.getWidth() + "x" + canvas.getHeight() + ".";
+        return "Ports reference overlay: interactive 576x324 prototype. Resources="
+                + PORT_RESOURCES.length + ", tradeGoods=" + TRADE_GOODS.length
+                + ", canvas=" + canvas.getWidth() + "x" + canvas.getHeight() + ".";
     }
 
     private static void updateTimerState() {
@@ -206,9 +230,7 @@ public final class PlayerOwnedPortsTestOverlay {
                 RIGHT_WIDTH, REFERENCE_HEIGHT);
 
         setWindowsVisible(true);
-        leftSurface.repaint();
-        centerSurface.repaint();
-        rightSurface.repaint();
+        repaintSurfaces();
     }
 
     private static boolean ensureWindows(Canvas canvas) {
@@ -264,6 +286,12 @@ public final class PlayerOwnedPortsTestOverlay {
         }
     }
 
+    private static void repaintSurfaces() {
+        if (leftSurface != null) leftSurface.repaint();
+        if (centerSurface != null) centerSurface.repaint();
+        if (rightSurface != null) rightSurface.repaint();
+    }
+
     private static void disposeWindows() {
         if (leftWindow != null) leftWindow.dispose();
         if (centerWindow != null) centerWindow.dispose();
@@ -276,10 +304,74 @@ public final class PlayerOwnedPortsTestOverlay {
         rightSurface = null;
     }
 
+    private static void handleClick(Part part, int x, int y) {
+        if (part == Part.LEFT) {
+            if (LEFT_DROPDOWN.contains(x, y)) {
+                leftDropdownOpen = !leftDropdownOpen;
+                rightDropdownOpen = false;
+            } else if (leftDropdownOpen && LEFT_DROPDOWN_ITEM.contains(x, y)) {
+                leftDropdownOpen = false;
+            } else {
+                leftDropdownOpen = false;
+            }
+        } else if (part == Part.RIGHT) {
+            if (RIGHT_DROPDOWN.contains(x, y)) {
+                rightDropdownOpen = !rightDropdownOpen;
+                leftDropdownOpen = false;
+            } else if (rightDropdownOpen && RIGHT_DROPDOWN_ITEM.contains(x, y)) {
+                rightDropdownOpen = false;
+            } else {
+                rightDropdownOpen = false;
+            }
+        } else {
+            leftDropdownOpen = false;
+            rightDropdownOpen = false;
+        }
+        repaintSurfaces();
+    }
+
+    private static boolean isHandCursor(Part part, int x, int y) {
+        if (part == Part.LEFT) {
+            return LEFT_DROPDOWN.contains(x, y)
+                    || (leftDropdownOpen && LEFT_DROPDOWN_ITEM.contains(x, y));
+        }
+        if (part == Part.RIGHT) {
+            return RIGHT_DROPDOWN.contains(x, y)
+                    || (rightDropdownOpen && RIGHT_DROPDOWN_ITEM.contains(x, y));
+        }
+        return false;
+    }
+
     private enum Part {
         LEFT,
         CENTER,
         RIGHT
+    }
+
+    private enum IconKind {
+        WOOD,
+        ORE,
+        FOOD,
+        WATER,
+        GOLD_COIN,
+        GENERIC
+    }
+
+    private static final class DisplayEntry {
+        private final String id;
+        private final String name;
+        private final IconKind icon;
+        private final Color color;
+        private volatile long amount;
+
+        private DisplayEntry(String id, String name, long amount,
+                IconKind icon, Color color) {
+            this.id = id;
+            this.name = name;
+            this.amount = Math.max(0L, amount);
+            this.icon = icon == null ? IconKind.GENERIC : icon;
+            this.color = color == null ? GOLD_MUTED : color;
+        }
     }
 
     private static final class OverlaySurface extends JComponent {
@@ -287,11 +379,53 @@ public final class PlayerOwnedPortsTestOverlay {
         private static final long serialVersionUID = 2962782872680676786L;
 
         private final Part part;
+        private int hoverX = -1;
+        private int hoverY = -1;
 
         private OverlaySurface(Part part) {
             this.part = part;
             setOpaque(false);
             setFocusable(false);
+
+            addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
+                public void mouseMoved(MouseEvent event) {
+                    hoverX = event.getX();
+                    hoverY = event.getY();
+                    setCursor(isHandCursor(OverlaySurface.this.part, hoverX, hoverY)
+                            ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                            : Cursor.getDefaultCursor());
+                    repaint();
+                }
+
+                @Override
+                public void mouseDragged(MouseEvent event) {
+                    mouseMoved(event);
+                }
+            });
+
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseExited(MouseEvent event) {
+                    hoverX = -1;
+                    hoverY = -1;
+                    setCursor(Cursor.getDefaultCursor());
+                    repaint();
+                }
+
+                @Override
+                public void mousePressed(MouseEvent event) {
+                    if (event.getButton() == MouseEvent.BUTTON1) {
+                        handleClick(OverlaySurface.this.part,
+                                event.getX(), event.getY());
+                        event.consume();
+                    }
+                }
+            });
+        }
+
+        private boolean isHovered(Rectangle rectangle) {
+            return rectangle != null && rectangle.contains(hoverX, hoverY);
         }
 
         @Override
@@ -303,11 +437,11 @@ public final class PlayerOwnedPortsTestOverlay {
                 g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                         RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                 if (part == Part.LEFT) {
-                    paintLeft(g);
+                    paintLeft(g, this);
                 } else if (part == Part.CENTER) {
-                    paintCenter(g);
+                    paintCenter(g, this);
                 } else {
-                    paintRight(g);
+                    paintRight(g, this);
                 }
             } finally {
                 g.dispose();
@@ -315,42 +449,55 @@ public final class PlayerOwnedPortsTestOverlay {
         }
     }
 
-    private static void paintLeft(Graphics2D g) {
+    private static void paintLeft(Graphics2D g, OverlaySurface surface) {
         paintPanel(g, 0, 0, LEFT_WIDTH, REFERENCE_HEIGHT);
-        paintDropdown(g, 34, 1, 158, 22, "Resources");
-        drawCentered(g, "Port Resources", TITLE_FONT, GOLD, 0, 31, LEFT_WIDTH);
+        paintDropdown(g, LEFT_DROPDOWN, "Resources",
+                surface.isHovered(LEFT_DROPDOWN), leftDropdownOpen);
 
-        int firstY = 49;
-        for (int row = 0; row < RESOURCE_VALUES.length; row++) {
-            int y = firstY + row * 20;
-            int leftColor = row * 2;
-            int rightColor = leftColor + 1;
-            paintResourceIcon(g, 13, y - 9, RESOURCE_COLORS[leftColor], row);
-            paintResourceIcon(g, 101, y - 9, RESOURCE_COLORS[rightColor], row + 6);
-            drawText(g, RESOURCE_VALUES[row][0], BODY_FONT, TEXT, 31, y + 1);
-            drawText(g, RESOURCE_VALUES[row][1], BODY_FONT, TEXT, 119, y + 1);
-        }
+        drawCentered(g, "Port Resources", TITLE_FONT, GOLD,
+                0, 39, LEFT_WIDTH);
 
+        int resourceEnd = paintEntryList(g, surface, PORT_RESOURCES, 48, 27);
+        int dividerY = resourceEnd + 5;
         g.setColor(BORDER);
-        g.drawLine(8, 174, 183, 174);
-        drawCentered(g, "- Trade Goods -", SMALL_BOLD_FONT, GOLD,
-                0, 190, LEFT_WIDTH);
+        g.drawLine(8, dividerY, LEFT_WIDTH - 9, dividerY);
 
-        int goodsY = 209;
-        for (int row = 0; row < TRADE_VALUES.length; row++) {
-            int y = goodsY + row * 21;
-            int leftColor = row * 2;
-            int rightColor = leftColor + 1;
-            paintTradeIcon(g, 13, y - 10, TRADE_COLORS[leftColor], row);
-            paintTradeIcon(g, 101, y - 10, TRADE_COLORS[rightColor], row + 5);
-            drawText(g, TRADE_VALUES[row][0], BODY_FONT, TEXT, 31, y + 1);
-            if (!"0".equals(TRADE_VALUES[row][1])) {
-                drawText(g, TRADE_VALUES[row][1], BODY_FONT, TEXT, 119, y + 1);
-            }
+        int tradeTitleBaseline = dividerY + 18;
+        drawCentered(g, "- Trade Goods -", SMALL_BOLD_FONT, GOLD,
+                0, tradeTitleBaseline, LEFT_WIDTH);
+        paintEntryList(g, surface, TRADE_GOODS,
+                tradeTitleBaseline + 9, 27);
+
+        if (leftDropdownOpen) {
+            paintDropdownMenu(g, surface, LEFT_DROPDOWN_ITEM,
+                    LEFT_DROPDOWN_ITEMS[0]);
         }
     }
 
-    private static void paintCenter(Graphics2D g) {
+    private static int paintEntryList(Graphics2D g, OverlaySurface surface,
+            DisplayEntry[] entries, int startY, int rowHeight) {
+        int y = startY;
+        for (DisplayEntry entry : entries) {
+            Rectangle row = new Rectangle(7, y, LEFT_WIDTH - 14, rowHeight - 2);
+            if (surface.isHovered(row)) {
+                paintHover(g, row, 5);
+            }
+
+            paintEntryIcon(g, row.x + 5, row.y + 5, entry);
+            drawText(g, entry.name, BODY_FONT, TEXT,
+                    row.x + 30, row.y + 17);
+            drawRightText(g, Long.toString(entry.amount), BODY_FONT, TEXT,
+                    row.x + row.width - 7, row.y + 17);
+
+            g.setColor(ROW_DIVIDER);
+            g.drawLine(row.x + 29, row.y + row.height - 1,
+                    row.x + row.width - 5, row.y + row.height - 1);
+            y += rowHeight;
+        }
+        return y;
+    }
+
+    private static void paintCenter(Graphics2D g, OverlaySurface surface) {
         GeneralPath frame = new GeneralPath();
         frame.moveTo(0, 0);
         frame.lineTo(CENTER_WIDTH, 0);
@@ -360,7 +507,7 @@ public final class PlayerOwnedPortsTestOverlay {
         frame.lineTo(10, CENTER_HEIGHT - 8);
         frame.closePath();
 
-        g.setColor(new Color(10, 13, 18, 220));
+        g.setColor(new Color(10, 13, 18, 205));
         g.fill(frame);
         g.setColor(BORDER_DARK);
         g.setStroke(new BasicStroke(2F));
@@ -371,29 +518,38 @@ public final class PlayerOwnedPortsTestOverlay {
 
         int[] x = { 13, 72, 131 };
         for (int i = 0; i < x.length; i++) {
-            paintRoundCommand(g, x[i], 4, i);
-            paintRoundCommand(g, x[i], 39, i + 3);
+            paintRoundCommand(g, surface, x[i], 4, i);
+            paintRoundCommand(g, surface, x[i], 39, i + 3);
         }
     }
 
-    private static void paintRight(Graphics2D g) {
+    private static void paintRight(Graphics2D g, OverlaySurface surface) {
         paintPanel(g, 0, 0, RIGHT_WIDTH, REFERENCE_HEIGHT);
-        paintDropdown(g, 0, 1, RIGHT_WIDTH, 22, "Visitors");
+        paintDropdown(g, RIGHT_DROPDOWN, "Visitors",
+                surface.isHovered(RIGHT_DROPDOWN), rightDropdownOpen);
 
-        paintVisitor(g, 7, 31, "O", "Occultist", "Under Way", false);
-        paintVisitor(g, 7, 89, "A", "Assassin", "In Port", true);
-        paintVisitor(g, 7, 147, "C", "Captain for Hire", "Sebastian Rackham", true);
-        paintVisitor(g, 7, 205, "B", "Black Market", "Chinese", true);
+        paintVisitor(g, surface, 7, 31, "O", "Occultist", "Under Way", false);
+        paintVisitor(g, surface, 7, 89, "A", "Assassin", "In Port", true);
+        paintVisitor(g, surface, 7, 147, "C", "Captain for Hire", "Sebastian Rackham", true);
+        paintVisitor(g, surface, 7, 205, "B", "Black Market", "Chinese", true);
 
         g.setColor(BORDER);
         g.drawLine(8, 270, RIGHT_WIDTH - 9, 270);
-        paintReward(g, 45, 286, RED, "3", true);
-        paintReward(g, 111, 286, new Color(79, 137, 188), "2", false);
+        paintReward(g, surface, 45, 286, RED, "3", true);
+        paintReward(g, surface, 111, 286, new Color(79, 137, 188), "2", false);
+
+        if (rightDropdownOpen) {
+            paintDropdownMenu(g, surface, RIGHT_DROPDOWN_ITEM,
+                    RIGHT_DROPDOWN_ITEMS[0]);
+        }
     }
 
     private static void paintPanel(Graphics2D g, int x, int y, int width, int height) {
-        g.setColor(PANEL);
+        GradientPaint fill = new GradientPaint(x, y, PANEL_TOP,
+                x, y + height, PANEL_BOTTOM);
+        g.setPaint(fill);
         g.fillRect(x, y, width, height);
+
         g.setColor(BORDER_DARK);
         g.setStroke(new BasicStroke(2F));
         g.drawRect(x, y, width - 1, height - 1);
@@ -402,84 +558,155 @@ public final class PlayerOwnedPortsTestOverlay {
         g.drawRect(x + 2, y + 2, width - 5, height - 5);
     }
 
-    private static void paintDropdown(Graphics2D g, int x, int y, int width, int height,
-            String label) {
-        GradientPaint paint = new GradientPaint(x, y,
-                new Color(117, 92, 50, 245), x, y + height,
-                new Color(56, 42, 28, 245));
+    private static void paintDropdown(Graphics2D g, Rectangle bounds,
+            String label, boolean hovered, boolean open) {
+        GradientPaint paint = new GradientPaint(bounds.x, bounds.y,
+                open || hovered ? new Color(139, 108, 57, 248)
+                        : new Color(117, 92, 50, 242),
+                bounds.x, bounds.y + bounds.height,
+                open || hovered ? new Color(72, 52, 31, 248)
+                        : new Color(56, 42, 28, 242));
         g.setPaint(paint);
-        g.fillRect(x, y, width, height);
-        g.setColor(new Color(160, 127, 67));
-        g.drawRect(x, y, width - 1, height - 1);
+        g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        g.setColor(open || hovered ? HOVER_BORDER : new Color(160, 127, 67));
+        g.drawRect(bounds.x, bounds.y, bounds.width - 1, bounds.height - 1);
 
         GeneralPath triangle = new GeneralPath();
-        triangle.moveTo(x + 8, y + 8);
-        triangle.lineTo(x + 16, y + 8);
-        triangle.lineTo(x + 12, y + 14);
+        if (open) {
+            triangle.moveTo(bounds.x + 8, bounds.y + 14);
+            triangle.lineTo(bounds.x + 16, bounds.y + 14);
+            triangle.lineTo(bounds.x + 12, bounds.y + 8);
+        } else {
+            triangle.moveTo(bounds.x + 8, bounds.y + 8);
+            triangle.lineTo(bounds.x + 16, bounds.y + 8);
+            triangle.lineTo(bounds.x + 12, bounds.y + 14);
+        }
         triangle.closePath();
         g.setColor(GOLD_MUTED);
         g.fill(triangle);
 
-        drawText(g, label, SMALL_BOLD_FONT, TEXT, x + 22, y + 15);
+        drawText(g, label, SMALL_BOLD_FONT, TEXT,
+                bounds.x + 22, bounds.y + 15);
     }
 
-    private static void paintResourceIcon(Graphics2D g, int x, int y, Color color, int type) {
-        g.setColor(new Color(0, 0, 0, 150));
-        g.fillOval(x - 1, y - 1, 17, 17);
-        g.setColor(color);
-        if (type % 3 == 0) {
-            GeneralPath diamond = new GeneralPath();
-            diamond.moveTo(x + 8, y);
-            diamond.lineTo(x + 15, y + 8);
-            diamond.lineTo(x + 8, y + 15);
-            diamond.lineTo(x + 1, y + 8);
-            diamond.closePath();
-            g.fill(diamond);
-        } else if (type % 3 == 1) {
-            g.fillRoundRect(x + 1, y + 2, 14, 11, 5, 5);
-            g.setColor(color.brighter());
-            g.drawLine(x + 3, y + 4, x + 13, y + 11);
-        } else {
-            g.fillOval(x + 2, y + 1, 12, 14);
-            g.setColor(color.brighter());
-            g.fillOval(x + 5, y + 3, 4, 5);
+    private static void paintDropdownMenu(Graphics2D g, OverlaySurface surface,
+            Rectangle bounds, String label) {
+        g.setColor(new Color(18, 19, 20, 246));
+        g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        if (surface.isHovered(bounds)) {
+            paintHover(g, bounds, 0);
         }
-        g.setColor(new Color(230, 218, 176, 150));
-        g.drawOval(x, y, 15, 15);
+        g.setColor(BORDER);
+        g.drawRect(bounds.x, bounds.y, bounds.width - 1, bounds.height - 1);
+        drawText(g, label, SMALL_FONT, TEXT,
+                bounds.x + 11, bounds.y + 16);
     }
 
-    private static void paintTradeIcon(Graphics2D g, int x, int y, Color color, int type) {
-        g.setColor(new Color(0, 0, 0, 165));
-        g.fillRoundRect(x - 1, y - 1, 18, 18, 5, 5);
-        g.setColor(color);
-        if ((type & 1) == 0) {
+    private static void paintHover(Graphics2D g, Rectangle bounds, int arc) {
+        g.setColor(HOVER_FILL);
+        if (arc > 0) {
+            g.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, arc, arc);
+        } else {
+            g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        }
+        g.setColor(HOVER_BORDER);
+        if (arc > 0) {
+            g.drawRoundRect(bounds.x, bounds.y, bounds.width - 1,
+                    bounds.height - 1, arc, arc);
+        } else {
+            g.drawRect(bounds.x, bounds.y, bounds.width - 1, bounds.height - 1);
+        }
+    }
+
+    private static void paintEntryIcon(Graphics2D g, int x, int y, DisplayEntry entry) {
+        g.setColor(new Color(0, 0, 0, 135));
+        g.fillOval(x - 1, y - 1, 18, 18);
+        g.setColor(new Color(222, 210, 171, 115));
+        g.drawOval(x, y, 15, 15);
+
+        Color color = entry.color;
+        switch (entry.icon) {
+        case WOOD:
+            g.setColor(color);
+            g.fillRoundRect(x + 2, y + 5, 12, 7, 4, 4);
+            g.setColor(color.brighter());
+            g.drawOval(x + 9, y + 5, 5, 7);
+            g.drawLine(x + 4, y + 6, x + 10, y + 10);
+            break;
+        case ORE:
+            GeneralPath rock = new GeneralPath();
+            rock.moveTo(x + 3, y + 11);
+            rock.lineTo(x + 5, y + 4);
+            rock.lineTo(x + 10, y + 2);
+            rock.lineTo(x + 14, y + 7);
+            rock.lineTo(x + 12, y + 13);
+            rock.lineTo(x + 6, y + 14);
+            rock.closePath();
+            g.setColor(color);
+            g.fill(rock);
+            g.setColor(color.brighter());
+            g.drawLine(x + 6, y + 6, x + 10, y + 4);
+            break;
+        case FOOD:
+            g.setColor(color);
+            g.fillOval(x + 3, y + 4, 11, 10);
+            g.setColor(new Color(89, 138, 62));
+            g.fillOval(x + 9, y + 2, 5, 3);
+            g.setColor(new Color(97, 68, 43));
+            g.drawLine(x + 8, y + 5, x + 9, y + 2);
+            break;
+        case WATER:
+            GeneralPath drop = new GeneralPath();
+            drop.moveTo(x + 8, y + 1);
+            drop.curveTo(x + 6, y + 5, x + 3, y + 8, x + 3, y + 11);
+            drop.curveTo(x + 3, y + 15, x + 13, y + 15, x + 13, y + 11);
+            drop.curveTo(x + 13, y + 8, x + 10, y + 5, x + 8, y + 1);
+            drop.closePath();
+            g.setColor(color);
+            g.fill(drop);
+            g.setColor(color.brighter());
+            g.drawLine(x + 6, y + 8, x + 8, y + 5);
+            break;
+        case GOLD_COIN:
+            g.setColor(color.darker());
+            g.fillOval(x + 1, y + 1, 14, 14);
+            g.setColor(color);
             g.fillOval(x + 2, y + 2, 12, 12);
             g.setColor(color.brighter());
-            g.drawArc(x + 4, y + 4, 8, 8, 20, 240);
-        } else {
-            GeneralPath shard = new GeneralPath();
-            shard.moveTo(x + 8, y + 1);
-            shard.lineTo(x + 14, y + 7);
-            shard.lineTo(x + 10, y + 15);
-            shard.lineTo(x + 3, y + 11);
-            shard.lineTo(x + 4, y + 4);
-            shard.closePath();
-            g.fill(shard);
+            g.drawOval(x + 4, y + 4, 8, 8);
+            drawCentered(g, "P", COIN_FONT, new Color(108, 71, 18),
+                    x + 2, y + 11, 12);
+            break;
+        default:
+            GeneralPath diamond = new GeneralPath();
+            diamond.moveTo(x + 8, y + 1);
+            diamond.lineTo(x + 14, y + 8);
+            diamond.lineTo(x + 8, y + 14);
+            diamond.lineTo(x + 2, y + 8);
+            diamond.closePath();
+            g.setColor(color);
+            g.fill(diamond);
+            break;
         }
-        g.setColor(new Color(220, 205, 165, 130));
-        g.drawRect(x + 1, y + 1, 13, 13);
     }
 
-    private static void paintRoundCommand(Graphics2D g, int x, int y, int type) {
+    private static void paintRoundCommand(Graphics2D g, OverlaySurface surface,
+            int x, int y, int type) {
         int size = 49;
-        g.setColor(new Color(18, 14, 12, 235));
+        Rectangle hit = new Rectangle(x, y, size, size);
+        boolean hovered = surface.isHovered(hit);
+
+        g.setColor(hovered ? new Color(45, 35, 22, 242)
+                : new Color(18, 14, 12, 228));
         g.fillOval(x, y, size, size);
-        g.setColor(new Color(121, 93, 52));
-        g.setStroke(new BasicStroke(2F));
+        g.setColor(hovered ? new Color(198, 153, 76)
+                : new Color(121, 93, 52));
+        g.setStroke(new BasicStroke(hovered ? 3F : 2F));
         g.drawOval(x + 1, y + 1, size - 3, size - 3);
-        g.setColor(new Color(61, 46, 31));
+        g.setColor(hovered ? new Color(83, 61, 35)
+                : new Color(61, 46, 31));
         g.fillOval(x + 6, y + 6, size - 12, size - 12);
-        g.setColor(GOLD_MUTED);
+        g.setColor(hovered ? GOLD : GOLD_MUTED);
         g.setStroke(new BasicStroke(2F));
 
         int cx = x + size / 2;
@@ -535,11 +762,16 @@ public final class PlayerOwnedPortsTestOverlay {
         g.setStroke(new BasicStroke(1F));
     }
 
-    private static void paintVisitor(Graphics2D g, int x, int y, String initial,
-            String name, String state, boolean inPort) {
+    private static void paintVisitor(Graphics2D g, OverlaySurface surface,
+            int x, int y, String initial, String name, String state, boolean inPort) {
+        Rectangle row = new Rectangle(5, y - 2, RIGHT_WIDTH - 10, 54);
+        if (surface.isHovered(row)) {
+            paintHover(g, row, 5);
+        }
+
         int avatarWidth = 40;
         int avatarHeight = 48;
-        g.setColor(new Color(30, 27, 25, 235));
+        g.setColor(new Color(30, 27, 25, 225));
         g.fillRect(x, y, avatarWidth, avatarHeight);
         g.setColor(BORDER);
         g.drawRect(x, y, avatarWidth, avatarHeight);
@@ -553,13 +785,18 @@ public final class PlayerOwnedPortsTestOverlay {
         drawText(g, name, SMALL_BOLD_FONT, GOLD, x + 48, y + 15);
         drawText(g, state, SMALL_FONT, inPort ? GREEN : MUTED,
                 x + 48, y + 33);
-        g.setColor(new Color(89, 84, 72, 160));
+        g.setColor(ROW_DIVIDER);
         g.drawLine(x + 48, y + 43, RIGHT_WIDTH - 9, y + 43);
     }
 
-    private static void paintReward(Graphics2D g, int x, int y, Color color,
-            String amount, boolean book) {
-        g.setColor(new Color(0, 0, 0, 160));
+    private static void paintReward(Graphics2D g, OverlaySurface surface,
+            int x, int y, Color color, String amount, boolean book) {
+        Rectangle hit = new Rectangle(x - 8, y - 8, 54, 35);
+        if (surface.isHovered(hit)) {
+            paintHover(g, hit, 7);
+        }
+
+        g.setColor(new Color(0, 0, 0, 145));
         g.fillOval(x - 5, y - 5, 30, 30);
         g.setColor(color);
         if (book) {
@@ -586,15 +823,22 @@ public final class PlayerOwnedPortsTestOverlay {
         g.setFont(font);
         FontMetrics metrics = g.getFontMetrics(font);
         int textX = x + Math.max(0, (width - metrics.stringWidth(text)) / 2);
-        drawText(g, text, font, color, textX, baseline);
+        g.setColor(color);
+        g.drawString(text, textX, baseline);
     }
 
     private static void drawText(Graphics2D g, String text, Font font,
             Color color, int x, int baseline) {
         g.setFont(font);
-        g.setColor(new Color(0, 0, 0, 190));
-        g.drawString(text, x + 1, baseline + 1);
         g.setColor(color);
         g.drawString(text, x, baseline);
+    }
+
+    private static void drawRightText(Graphics2D g, String text, Font font,
+            Color color, int rightX, int baseline) {
+        g.setFont(font);
+        FontMetrics metrics = g.getFontMetrics(font);
+        g.setColor(color);
+        g.drawString(text, rightX - metrics.stringWidth(text), baseline);
     }
 }

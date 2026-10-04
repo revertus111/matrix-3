@@ -13,14 +13,14 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
 /**
- * Launch controls for the static 576x324 Player-Owned Ports UI reference.
+ * Launch controls for the interactive 576x324 Player-Owned Ports UI reference.
  */
 public final class PortsOverlayTestPanel extends JPanel {
 
     private static final long serialVersionUID = 2911086224166753057L;
 
     private final JTextArea status = ConsoleTheme.createWrappedText(
-            "Ready. The overlay uses the screenshot's exact 576x324 reference coordinate space.", 4);
+            "Ready. The overlay uses the screenshot's 576x324 reference coordinate space with interactive hover/dropdown behavior.", 4);
 
     public PortsOverlayTestPanel() {
         super(new BorderLayout());
@@ -34,14 +34,14 @@ public final class PortsOverlayTestPanel extends JPanel {
 
         content.add(ConsoleTheme.titleLabel("PORTS UI TEST"));
         content.add(Box.createVerticalStrut(4));
-        content.add(ConsoleTheme.subtitleLabel("Player-Owned Ports 576x324 overlay reference"));
+        content.add(ConsoleTheme.subtitleLabel("Player-Owned Ports 576x324 interactive overlay reference"));
         content.add(Box.createVerticalStrut(16));
 
         JPanel card = ConsoleTheme.createCard("Reference Overlay");
         card.add(Box.createVerticalStrut(9));
         card.add(ConsoleTheme.createWrappedText(
-                "Draws the left Resources panel, six-button command cluster and right Visitors panel directly over the live Matrix3 canvas at 1:1 reference coordinates. The center of the game view remains uncovered.",
-                5));
+                "Draws the left Resources panel, six-button command cluster and right Visitors panel over the live Matrix3 canvas. Port Resources are Wood, Ore, Food and Water; Trade Goods currently contains Ports Gold. Rows and controls highlight on hover, and the Resources/Visitors headers open working placeholder dropdowns.",
+                7));
         card.add(Box.createVerticalStrut(10));
 
         JButton show = new JButton("Show 1:1 Overlay");
@@ -70,7 +70,7 @@ public final class PortsOverlayTestPanel extends JPanel {
         card.add(Box.createVerticalStrut(10));
 
         JTextArea note = ConsoleTheme.createWrappedText(
-                "This first test intentionally keeps the reference geometry fixed. Icons and portraits are lightweight vector stand-ins until the original cache sprite/interface assets are identified.",
+                "Resources/trade goods are data-driven and expose narrow amount setters for future live state wiring. Icons and portraits remain lightweight vector stand-ins until cache assets are identified.",
                 4);
         note.setForeground(ConsoleTheme.MUTED_TEXT);
         card.add(note);

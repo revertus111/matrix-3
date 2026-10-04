@@ -1,3 +1,15 @@
+2026-10-03 - Ports resource model + interactive polish pass
+- Replaced the placeholder 12-resource grid with four named Port Resources: Wood, Ore, Food and Water.
+- Replaced the placeholder Trade Goods grid with one current currency: Ports Gold, rendered with a gold-coin symbol.
+- Converted Port Resources and Trade Goods to shared data-driven DisplayEntry arrays; future entries can be appended without adding new painting branches.
+- Added public amount-update seams for future live resource/trade-good state wiring while keeping this prototype presentation-only.
+- Added hover highlighting for resource rows, trade-good rows, center command buttons, visitor rows, reward items and dropdown controls.
+- Added working Resources and Visitors dropdown headers; each currently opens a placeholder Null option and closes cleanly on selection/outside click.
+- Softened panel opacity, borders and row separators for a cleaner RuneScape-style overlay over the live game scene.
+- Updated the Ports UI Test Console copy/status to describe the interactive/data-driven pass.
+- No Construction, settlement, inventory, visitor or server gameplay authority was added.
+- Status: IMPLEMENTED / NEEDS RUNTIME VISUAL + INPUT TEST.
+
 2026-10-03 - Player-Owned Ports 1:1 reference overlay test
 - Added a presentation-only Player-Owned Ports style overlay using an exact 576x324 reference coordinate space.
 - Split the overlay into left Resources, center command cluster and right Visitors owned windows so the uncovered center game canvas remains interactive.
