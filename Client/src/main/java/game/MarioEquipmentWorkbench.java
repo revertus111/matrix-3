@@ -27,6 +27,7 @@ public final class MarioEquipmentWorkbench {
 
     private static volatile long preparedMaskSequence = Long.MIN_VALUE;
     private static volatile long preparedMaskRevision = Long.MIN_VALUE;
+    private static volatile boolean preparedHelmetPresent;
     private static volatile float maskCenterX;
     private static volatile float maskCenterZ;
     private static volatile float maskStartY;
@@ -211,6 +212,7 @@ public final class MarioEquipmentWorkbench {
                 || frame.positions.length < frame.triangleCount * 9) {
             preparedMaskSequence = Long.MIN_VALUE;
             preparedMaskRevision = Long.MIN_VALUE;
+            preparedHelmetPresent = false;
             lastMaskedTriangles = 0;
             return;
         }
@@ -245,10 +247,12 @@ public final class MarioEquipmentWorkbench {
         if (!finite(height) || height <= 0.0F) {
             preparedMaskSequence = Long.MIN_VALUE;
             preparedMaskRevision = Long.MIN_VALUE;
+            preparedHelmetPresent = false;
             lastMaskedTriangles = 0;
             return;
         }
 
+        preparedHelmetPresent = findVisibleHelmet() != null;
         maskCenterX = (minX + maxX) * 0.5F;
         maskCenterZ = (minZ + maxZ) * 0.5F;
         maskStartY = minY + height * maskStartFraction;
@@ -267,7 +271,7 @@ public final class MarioEquipmentWorkbench {
                 || preparedMaskRevision != maskRevision) {
             return false;
         }
-        if (maskOnlyWithHelmet && findVisibleHelmet() == null) {
+        if (maskOnlyWithHelmet && !preparedHelmetPresent) {
             return false;
         }
         if (sourceTriangle < 0 || sourceTriangle >= frame.triangleCount) {
