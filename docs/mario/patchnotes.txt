@@ -159,3 +159,10 @@
 - Vanilla camera-relative steering now derives forward geometrically from Matrix's already-resolved viewport camera position to the exact X/Z focus point passed into `Class246.method3359(...)`: `normalize(focus - camera)`. Detached/free Class411 cameras already use the same position-to-look-point rule.
 - The older 14-bit yaw reconstruction remains only as a fallback when the resolved vanilla camera vector is unavailable. This removes the yaw handedness/sign assumption from the normal path.
 - No native sidecar rebuild or protocol change is required. Runtime gate remains N/E/S/W plus rotate-while-holding-W before Bundle 1.3 camera steering can be accepted.
+
+2026-10-04 - Bundle 1.3 read-only camera/native direction probe
+- User runtime-confirmed the resolved-vector camera fix still does not produce correct camera-relative steering.
+- Added a bounded read-only `Mario64Diagnostics` probe for pure-W movement. It compares normalized Matrix camera-forward against Mario's actual native libsm64 X/Z velocity and reports both `dot` and `cross` every 500 ms once horizontal speed is meaningful.
+- `dot ~= +1` means native travel aligns with the requested camera-forward vector, `dot ~= -1` means a 180-degree inversion, and `dot ~= 0` with large `|cross|` indicates an approximately 90-degree basis rotation/reflection.
+- The probe writes the same `DIRECTION_W` sample to the existing N64 event recorder and console as `[SM64 Direction] ...`; it does not modify input, camera, movement, native stepping, presentation, or server authority.
+- No native sidecar rebuild or protocol change is required. The next runtime action is one pure-W sample at north/east/south/west before any further transform change.
