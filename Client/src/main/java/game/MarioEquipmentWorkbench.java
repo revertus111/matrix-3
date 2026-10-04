@@ -10,15 +10,23 @@ import java.util.Locale;
 /**
  * Developer-only runtime facade for the N64 Mario equipment workbench.
  *
- * This class deliberately does not become equipment/render authority. It exposes
- * the already-owned Mario helmet calibration, presentation freeze and a temporary
- * geometric head-mask preview to the Swing developer console.
+ * Equipment/render ownership remains in the established Mario owners. This class
+ * exposes session calibration, presentation freeze and helmet coverage policy.
+ * Protocol-v2 semantic coverage is preferred; the old geometric cutter is kept
+ * only as an explicit legacy-v1 debug fallback.
  */
 public final class MarioEquipmentWorkbench {
+
+    public static final int COVERAGE_KEEP_ALL = 0;
+    public static final int COVERAGE_FULL_HELM_SAFE = 1;
 
     private static final int EQUIPMENT_SLOT_HAT = 0;
     private static final int EQUIP_SLOT_DECODE_MULTIPLIER = -917104297;
 
+    private static volatile int coverageProfile = COVERAGE_KEEP_ALL;
+    private static volatile boolean coverageOnlyWithHelmet = true;
+
+    /* Legacy protocol-v1 debug fallback. Never used when semantic metadata exists. */
     private static volatile boolean headMaskEnabled;
     private static volatile boolean maskOnlyWithHelmet = true;
     private static volatile float maskStartFraction = 0.72F;
@@ -28,11 +36,19 @@ public final class MarioEquipmentWorkbench {
     private static volatile long preparedMaskSequence = Long.MIN_VALUE;
     private static volatile long preparedMaskRevision = Long.MIN_VALUE;
     private static volatile boolean preparedHelmetPresent;
+    private static volatile boolean preparedSemanticAvailable;
     private static volatile float maskCenterX;
     private static volatile float maskCenterZ;
     private static volatile float maskStartY;
     private static volatile float maskRadiusSquared;
     private static volatile int lastMaskedTriangles;
+    private static volatile int lastFaceTriangles;
+    private static volatile int lastEyesTriangles;
+    private static volatile int lastMustacheTriangles;
+    private static volatile int lastCapTriangles;
+    private static volatile int lastSideburnTriangles;
+    private static volatile int lastBackHairTriangles;
+    private static volatile int lastUnknownTriangles;
 
     private MarioEquipmentWorkbench() {
     }
@@ -48,6 +64,8 @@ public final class MarioEquipmentWorkbench {
         Sm64BridgeSession.GeometryFrame frame = Sm64BridgeSession.getLatestGeometryFrame();
         float faceAngle = frame == null || frame.state == null
                 ? Float.NaN : frame.state.faceAngle;
+        boolean semanticAvailable = MarioSemanticGeometry.isAvailable(frame);
+        MarioSemanticGeometry.Reference reference = MarioSemanticGeometry.getReference(frame);
 
         return new Snapshot(
                 PlayerControllerMode.isMarioMode(),
@@ -61,11 +79,26 @@ public final class MarioEquipmentWorkbench {
                 Sm64BridgeSession.isPresentationFrozen(),
                 MarioHeadOrientationTracker.hasReference(),
                 faceAngle,
+                Sm64BridgeSession.getBinaryProtocolVersion(),
+                semanticAvailable,
+                coverageProfile,
+                coverageName(coverageProfile),
+                coverageOnlyWithHelmet,
+                reference == null ? Float.NaN : reference.width,
+                reference == null ? Float.NaN : reference.height,
+                reference == null ? Float.NaN : reference.depth,
                 headMaskEnabled,
                 maskOnlyWithHelmet,
                 maskStartFraction * 100.0F,
                 maskRadiusFraction * 100.0F,
-                lastMaskedTriangles);
+                lastMaskedTriangles,
+                lastFaceTriangles,
+                lastEyesTriangles,
+                lastMustacheTriangles,
+                lastCapTriangles,
+                lastSideburnTriangles,
+                lastBackHairTriangles,
+                lastUnknownTriangles);
     }
 
     public static void setScale(float value) {
@@ -106,6 +139,31 @@ public final class MarioEquipmentWorkbench {
         Sm64BridgeSession.setPresentationFrozen(frozen);
     }
 
+    public static void useKeepAllCoverage() {
+        setCoverageProfile(COVERAGE_KEEP_ALL);
+    }
+
+    public static void useFullHelmSafeCoverage() {
+        setCoverageProfile(COVERAGE_FULL_HELM_SAFE);
+    }
+
+    public static void setCoverageProfile(int profile) {
+        int next = profile == COVERAGE_FULL_HELM_SAFE
+                ? COVERAGE_FULL_HELM_SAFE : COVERAGE_KEEP_ALL;
+        if (coverageProfile != next) {
+            coverageProfile = next;
+            maskRevision++;
+        }
+    }
+
+    public static void setCoverageOnlyWithHelmet(boolean enabled) {
+        if (coverageOnlyWithHelmet != enabled) {
+            coverageOnlyWithHelmet = enabled;
+            maskRevision++;
+        }
+    }
+
+    /** Legacy protocol-v1 geometric cutter. Ignored whenever semantic v2 exists. */
     public static void setHeadMaskEnabled(boolean enabled) {
         if (headMaskEnabled != enabled) {
             headMaskEnabled = enabled;
@@ -137,6 +195,8 @@ public final class MarioEquipmentWorkbench {
     }
 
     public static void resetHeadMask() {
+        coverageProfile = COVERAGE_KEEP_ALL;
+        coverageOnlyWithHelmet = true;
         headMaskEnabled = false;
         maskOnlyWithHelmet = true;
         maskStartFraction = 0.72F;
@@ -147,7 +207,7 @@ public final class MarioEquipmentWorkbench {
 
     public static String formatProfileMarkdown() {
         Snapshot value = getSnapshot();
-        StringBuilder out = new StringBuilder(1024);
+        StringBuilder out = new StringBuilder(1536);
         out.append("# Mario Equipment Runtime Profile\n\n");
         out.append("Generated by the Matrix3 N64 Equipment Workbench.\n\n");
         out.append("## Active helmet\n\n");
@@ -161,24 +221,41 @@ public final class MarioEquipmentWorkbench {
         out.append("- Presentation frozen: ").append(value.frozen).append('\n');
         out.append("- 3D head basis available: ").append(value.head3d).append('\n');
         out.append("- Native faceAngle radians: ").append(format(value.faceAngle)).append("\n\n");
-        out.append("## Mario head mask\n\n");
+
+        out.append("## Semantic head coverage\n\n");
+        out.append("- Bridge protocol: v").append(value.protocolVersion).append('\n');
+        out.append("- Semantic metadata: ").append(value.semanticAvailable ? "AVAILABLE" : "UNAVAILABLE").append('\n');
+        out.append("- Coverage profile: ").append(value.coverageName).append('\n');
+        out.append("- Coverage only with helmet: ").append(value.coverageOnlyWithHelmet).append('\n');
+        out.append("- Shared FACE reference W/H/D: ")
+                .append(format(value.semanticWidth)).append(" / ")
+                .append(format(value.semanticHeight)).append(" / ")
+                .append(format(value.semanticDepth)).append('\n');
+        out.append("- Protected: FACE, EYES, MOUSTACHE (nose remains inside FACE)\n");
+        out.append("- FULL_HELM_SAFE hides: CAP, HAIR_SIDEBURN, HAIR_BACK\n");
+        out.append("- Last masked source triangles: ").append(value.maskedTriangles).append("\n\n");
+
+        out.append("## Native part counts\n\n");
+        out.append("- FACE: ").append(value.faceTriangles).append('\n');
+        out.append("- EYES: ").append(value.eyesTriangles).append('\n');
+        out.append("- MOUSTACHE: ").append(value.mustacheTriangles).append('\n');
+        out.append("- CAP: ").append(value.capTriangles).append('\n');
+        out.append("- HAIR_SIDEBURN: ").append(value.sideburnTriangles).append('\n');
+        out.append("- HAIR_BACK: ").append(value.backHairTriangles).append('\n');
+        out.append("- UNKNOWN/other: ").append(value.unknownTriangles).append("\n\n");
+
+        out.append("## Legacy geometric fallback\n\n");
         out.append("- Enabled: ").append(value.maskEnabled).append('\n');
         out.append("- Only with helmet: ").append(value.maskOnlyWithHelmet).append('\n');
         out.append("- Start height percent: ").append(format(value.maskStartPercent)).append('\n');
         out.append("- Radius percent: ").append(format(value.maskRadiusPercent)).append('\n');
-        out.append("- Last masked source triangles: ").append(value.maskedTriangles).append("\n\n");
+        out.append("- Note: ignored while protocol-v2 semantic metadata is available.\n\n");
+
         out.append("## Transform convention\n\n");
-        out.append("Authoritative convention notes: `docs/n64/TRANSFORM_CONVENTIONS.md`.\n\n");
-        out.append("The original V4 animated head delta was runtime-verified to move in the opposite direction. ")
-                .append("The corrected renderer therefore uses the inverse rotation (matrix transpose) for the rigid head delta.\n");
+        out.append("Authoritative convention notes: `docs/n64/TRANSFORM_CONVENTIONS.md`.\n");
         return out.toString();
     }
 
-    /**
-     * Saves a local developer snapshot beside the tracked N64 documentation.
-     * This is intentionally explicit and user-triggered; normal rendering never
-     * writes project files.
-     */
     public static String saveProfileMarkdown() {
         File file = resolveProfileFile();
         Writer writer = null;
@@ -210,17 +287,26 @@ public final class MarioEquipmentWorkbench {
         if (frame == null || frame.state == null || frame.positions == null
                 || frame.triangleCount <= 0
                 || frame.positions.length < frame.triangleCount * 9) {
-            preparedMaskSequence = Long.MIN_VALUE;
-            preparedMaskRevision = Long.MIN_VALUE;
-            preparedHelmetPresent = false;
-            lastMaskedTriangles = 0;
+            clearPreparedMask();
             return;
         }
 
         HelmetInfo helmet = findVisibleHelmet();
         boolean helmetPresent = helmet != null;
-        long revision = effectiveMaskRevision(helmetPresent);
+        boolean semanticAvailable = MarioSemanticGeometry.isAvailable(frame);
+        long revision = effectiveMaskRevision(helmetPresent, semanticAvailable);
         if (preparedMaskSequence == frame.sequence && preparedMaskRevision == revision) {
+            return;
+        }
+
+        preparedHelmetPresent = helmetPresent;
+        preparedSemanticAvailable = semanticAvailable;
+        preparedMaskSequence = frame.sequence;
+        preparedMaskRevision = revision;
+        lastMaskedTriangles = 0;
+        countSemanticParts(frame);
+
+        if (semanticAvailable || !headMaskEnabled) {
             return;
         }
 
@@ -248,35 +334,41 @@ public final class MarioEquipmentWorkbench {
         float width = maxX - minX;
         float depth = maxZ - minZ;
         if (!finite(height) || height <= 0.0F) {
-            preparedMaskSequence = Long.MIN_VALUE;
-            preparedMaskRevision = Long.MIN_VALUE;
-            preparedHelmetPresent = false;
-            lastMaskedTriangles = 0;
+            clearPreparedMask();
             return;
         }
 
-        preparedHelmetPresent = helmetPresent;
         maskCenterX = (minX + maxX) * 0.5F;
         maskCenterZ = (minZ + maxZ) * 0.5F;
         maskStartY = minY + height * maskStartFraction;
         float radius = Math.max(width, depth) * maskRadiusFraction;
         maskRadiusSquared = radius * radius;
-        preparedMaskSequence = frame.sequence;
-        preparedMaskRevision = revision;
-        lastMaskedTriangles = 0;
     }
 
     static boolean shouldMaskTriangle(
             Sm64BridgeSession.GeometryFrame frame,
             int sourceTriangle) {
-        if (!headMaskEnabled || frame == null
-                || preparedMaskSequence != frame.sequence) {
+        if (frame == null || preparedMaskSequence != frame.sequence
+                || sourceTriangle < 0 || sourceTriangle >= frame.triangleCount) {
             return false;
         }
-        if (maskOnlyWithHelmet && !preparedHelmetPresent) {
-            return false;
+
+        if (preparedSemanticAvailable) {
+            if (coverageProfile == COVERAGE_KEEP_ALL) {
+                return false;
+            }
+            if (coverageOnlyWithHelmet && !preparedHelmetPresent) {
+                return false;
+            }
+            int partId = frame.partIds[sourceTriangle] & 0xff;
+            if (MarioSemanticGeometry.isProtectedFacePart(partId)) {
+                return false;
+            }
+            return coverageProfile == COVERAGE_FULL_HELM_SAFE
+                    && MarioSemanticGeometry.isFullHelmSafeHiddenPart(partId);
         }
-        if (sourceTriangle < 0 || sourceTriangle >= frame.triangleCount) {
+
+        if (!headMaskEnabled || (maskOnlyWithHelmet && !preparedHelmetPresent)) {
             return false;
         }
         int base = sourceTriangle * 9;
@@ -295,21 +387,74 @@ public final class MarioEquipmentWorkbench {
         lastMaskedTriangles = Math.max(0, count);
     }
 
-    /**
-     * Renderer cache key. Helmet presence is folded into the key only when the
-     * mask is helmet-gated, so equipping/unequipping invalidates a frozen-frame
-     * Mario model without creating per-triangle appearance lookups.
-     */
     static long getMaskRevision() {
-        return effectiveMaskRevision(findVisibleHelmet() != null);
+        Sm64BridgeSession.GeometryFrame frame = Sm64BridgeSession.getLatestGeometryFrame();
+        boolean semanticAvailable = MarioSemanticGeometry.isAvailable(frame);
+        return effectiveMaskRevision(findVisibleHelmet() != null, semanticAvailable);
     }
 
-    private static long effectiveMaskRevision(boolean helmetPresent) {
-        long revision = maskRevision << 1;
-        if (headMaskEnabled && maskOnlyWithHelmet && helmetPresent) {
-            revision |= 1L;
+    private static long effectiveMaskRevision(boolean helmetPresent, boolean semanticAvailable) {
+        long revision = maskRevision << 4;
+        revision ^= ((long) coverageProfile & 0x3L) << 2;
+        if (semanticAvailable) revision |= 0x2L;
+        if ((semanticAvailable && coverageOnlyWithHelmet && helmetPresent)
+                || (!semanticAvailable && headMaskEnabled && maskOnlyWithHelmet && helmetPresent)) {
+            revision |= 0x1L;
         }
         return revision;
+    }
+
+    private static void countSemanticParts(Sm64BridgeSession.GeometryFrame frame) {
+        lastFaceTriangles = 0;
+        lastEyesTriangles = 0;
+        lastMustacheTriangles = 0;
+        lastCapTriangles = 0;
+        lastSideburnTriangles = 0;
+        lastBackHairTriangles = 0;
+        lastUnknownTriangles = 0;
+        if (!MarioSemanticGeometry.isAvailable(frame)) {
+            return;
+        }
+        for (int i = 0; i < frame.triangleCount; i++) {
+            switch (frame.partIds[i] & 0xff) {
+                case MarioSemanticGeometry.PART_FACE:
+                    lastFaceTriangles++;
+                    break;
+                case MarioSemanticGeometry.PART_EYES:
+                    lastEyesTriangles++;
+                    break;
+                case MarioSemanticGeometry.PART_MUSTACHE:
+                    lastMustacheTriangles++;
+                    break;
+                case MarioSemanticGeometry.PART_CAP:
+                    lastCapTriangles++;
+                    break;
+                case MarioSemanticGeometry.PART_HAIR_SIDEBURN:
+                    lastSideburnTriangles++;
+                    break;
+                case MarioSemanticGeometry.PART_HAIR_BACK:
+                    lastBackHairTriangles++;
+                    break;
+                default:
+                    lastUnknownTriangles++;
+                    break;
+            }
+        }
+    }
+
+    private static void clearPreparedMask() {
+        preparedMaskSequence = Long.MIN_VALUE;
+        preparedMaskRevision = Long.MIN_VALUE;
+        preparedHelmetPresent = false;
+        preparedSemanticAvailable = false;
+        lastMaskedTriangles = 0;
+        lastFaceTriangles = 0;
+        lastEyesTriangles = 0;
+        lastMustacheTriangles = 0;
+        lastCapTriangles = 0;
+        lastSideburnTriangles = 0;
+        lastBackHairTriangles = 0;
+        lastUnknownTriangles = 0;
     }
 
     private static void updateCalibration(
@@ -356,6 +501,10 @@ public final class MarioEquipmentWorkbench {
             }
         }
         return null;
+    }
+
+    private static String coverageName(int profile) {
+        return profile == COVERAGE_FULL_HELM_SAFE ? "FULL_HELM_SAFE" : "KEEP_ALL";
     }
 
     private static File resolveProfileFile() {
@@ -421,11 +570,26 @@ public final class MarioEquipmentWorkbench {
         public final boolean frozen;
         public final boolean head3d;
         public final float faceAngle;
+        public final int protocolVersion;
+        public final boolean semanticAvailable;
+        public final int coverageProfile;
+        public final String coverageName;
+        public final boolean coverageOnlyWithHelmet;
+        public final float semanticWidth;
+        public final float semanticHeight;
+        public final float semanticDepth;
         public final boolean maskEnabled;
         public final boolean maskOnlyWithHelmet;
         public final float maskStartPercent;
         public final float maskRadiusPercent;
         public final int maskedTriangles;
+        public final int faceTriangles;
+        public final int eyesTriangles;
+        public final int mustacheTriangles;
+        public final int capTriangles;
+        public final int sideburnTriangles;
+        public final int backHairTriangles;
+        public final int unknownTriangles;
 
         Snapshot(
                 boolean marioMode,
@@ -439,11 +603,26 @@ public final class MarioEquipmentWorkbench {
                 boolean frozen,
                 boolean head3d,
                 float faceAngle,
+                int protocolVersion,
+                boolean semanticAvailable,
+                int coverageProfile,
+                String coverageName,
+                boolean coverageOnlyWithHelmet,
+                float semanticWidth,
+                float semanticHeight,
+                float semanticDepth,
                 boolean maskEnabled,
                 boolean maskOnlyWithHelmet,
                 float maskStartPercent,
                 float maskRadiusPercent,
-                int maskedTriangles) {
+                int maskedTriangles,
+                int faceTriangles,
+                int eyesTriangles,
+                int mustacheTriangles,
+                int capTriangles,
+                int sideburnTriangles,
+                int backHairTriangles,
+                int unknownTriangles) {
             this.marioMode = marioMode;
             this.itemId = itemId;
             this.itemName = itemName;
@@ -455,11 +634,26 @@ public final class MarioEquipmentWorkbench {
             this.frozen = frozen;
             this.head3d = head3d;
             this.faceAngle = faceAngle;
+            this.protocolVersion = protocolVersion;
+            this.semanticAvailable = semanticAvailable;
+            this.coverageProfile = coverageProfile;
+            this.coverageName = coverageName;
+            this.coverageOnlyWithHelmet = coverageOnlyWithHelmet;
+            this.semanticWidth = semanticWidth;
+            this.semanticHeight = semanticHeight;
+            this.semanticDepth = semanticDepth;
             this.maskEnabled = maskEnabled;
             this.maskOnlyWithHelmet = maskOnlyWithHelmet;
             this.maskStartPercent = maskStartPercent;
             this.maskRadiusPercent = maskRadiusPercent;
             this.maskedTriangles = maskedTriangles;
+            this.faceTriangles = faceTriangles;
+            this.eyesTriangles = eyesTriangles;
+            this.mustacheTriangles = mustacheTriangles;
+            this.capTriangles = capTriangles;
+            this.sideburnTriangles = sideburnTriangles;
+            this.backHairTriangles = backHairTriangles;
+            this.unknownTriangles = unknownTriangles;
         }
     }
 }
