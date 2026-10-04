@@ -90,3 +90,11 @@
 - Mario's texture details, including the facial/eye detail lost on the native-base-colour fallback, are restored.
 - The former giant black whole-source-triangle artifact remains fixed with the micro-face atlas path.
 - Bundle 4.2A visual-fidelity gate is accepted. Sustained performance, remote-player isolation, and broader lifecycle regression remain carryover checks.
+
+2026-10-04 - Bundle 2.3 native Mario keyboard controls
+- Added complete Matrix -> libsm64 input snapshots in `Sm64BridgeSession`; fixed 30 Hz native steps now receive normalized stick X/Y plus A/B/Z while preserving binary protocol/native sidecar compatibility.
+- Mapped WASD -> libsm64 analog stick, Space -> A, F -> B attack, Shift -> Z crouch/ground-pound in `MarioJumpController`.
+- Diagonal WASD is normalized to unit magnitude to avoid diagonal input amplification.
+- Space/F/Shift held during Mario-mode entry are suppressed until released, avoiding manufactured native actions.
+- Native horizontal position remains presentation-local/anchored: Matrix X/Z, clipping, pathfinding and server authority are unchanged until the collision/XYZ handoff is deliberately implemented.
+- Existing geometry-capable `sm64_bridge.exe` does not need rebuild; runtime acceptance is pending.
