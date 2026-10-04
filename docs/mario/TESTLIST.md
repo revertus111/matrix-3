@@ -103,6 +103,8 @@ Bundle 2.3 was intentionally input-only when first implemented. The user subsequ
 
 ## Bundle 2.4 - local XYZ presentation + WASD ownership
 
+**RUNTIME VERIFIED 2026-10-04.**
+
 ### Implementation / static gate
 
 - [x] Added `MarioInputKeyboard`, a reversible wrapper around Matrix3's existing `Class549` keyboard owner; the original AWT listener remains installed and authoritative.
@@ -119,18 +121,22 @@ Bundle 2.3 was intentionally input-only when first implemented. The user subsequ
 
 ### Runtime acceptance
 
-1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch once. **Do not rebuild the native sidecar.**
-2. [ ] Enter Mario mode with Ctrl+M and confirm the console reports `Y scale 3.0, XZ scale 3.0` (unless overridden).
-3. [ ] Hold W/A/S/D: the Construction/RTS camera must **not** pan from WASD while Mario mode is active.
-4. [ ] Confirm camera arrow-key pan still works while Mario mode is active; Q/E camera rotation should remain available.
-5. [ ] Hold W: Mario physically translates away from the activation point instead of only playing the run animation.
-6. [ ] Test A/S/D and a diagonal. Direction must match the native animation/turning state and diagonal travel must remain stable.
-7. [ ] Jump while moving: native horizontal travel continues through the jump rather than snapping back to the Matrix anchor.
-8. [ ] Test backflip and ground-pound again; their already-verified native actions must still work with the new XYZ presentation.
-9. [ ] Ctrl+M back to RuneScape while displaced. The local player returns cleanly to the tracked RuneScape XYZ baseline with no stale Mario offset.
-10. [ ] Re-enter Mario mode. New native/Matrix baselines initialize at the current RuneScape location; prior Mario displacement does not leak into the new session.
-11. [ ] After exiting Mario mode, normal Construction camera WASD control returns.
-12. [ ] Keep this first test bounded near the loaded scene center; Phase 3 collision/scene-boundary behavior is not implemented yet.
+1. [x] `git pull origin main`, Eclipse Java 8 clean/build and live launch reached the Bundle 2.4 path.
+2. [x] Entering Mario mode reaches the XYZ presentation path at the default scales.
+3. [x] W/A/S/D no longer pan the Construction/RTS camera while Mario mode is active. `VERIFIED` by user.
+4. [x] Camera arrow-key pan remains usable and Q/E rotation remains available while Mario owns WASD. `VERIFIED` by user.
+5. [x] Mario physically translates away from the activation point from native X/Z instead of only playing movement animation. `VERIFIED` by user.
+6. [x] W/A/S/D and diagonal direction/scale behave correctly enough for the current presentation path. `VERIFIED` by user.
+7. [x] Jump while moving preserves native horizontal travel instead of snapping back to the Matrix anchor. `VERIFIED` by user.
+8. [x] Backflip and ground-pound remain working with XYZ presentation. `VERIFIED` by user.
+9. [x] Ctrl+M while displaced restores the tracked RuneScape XYZ baseline cleanly. `VERIFIED` by user.
+10. [x] Re-entering Mario mode starts from a clean current RuneScape baseline with no stale prior displacement. `VERIFIED` by user.
+11. [x] Normal Construction camera WASD control returns after Mario mode exits. `VERIFIED` by user.
+12. [x] Visible Mario presentation follows different RuneScape terrain elevations correctly in live play. `VERIFIED` by user.
+
+### Terrain-elevation interpretation
+
+The terrain-elevation result proves the Matrix presentation/rebase path follows live RuneScape terrain correctly. It does **not** prove that libsm64 has received RuneScape collision surfaces: the native sidecar still runs against its temporary flat floor. Phase 3 remains required for native slope/wall/object/platform collision semantics.
 
 ### Horizontal-scale calibration
 
@@ -140,7 +146,7 @@ Default local presentation scale:
 -Dmatrix3.sm64.horizontalScale=3.0
 ```
 
-If Mario visibly moves too fast/slow relative to the 830 scene, tune this value before changing architecture. Final horizontal scale/sign is a `HYPOTHESIS` until this runtime gate passes and Phase 3 establishes real RuneScape collision/coordinate conversion.
+The default `3.0` and direct native X/Z signs are runtime accepted for the current local presentation path. Collision-backed coordinate conversion remains a separate Phase 3 validation.
 
 ## Bundle 4.1 - native Mario geometry -> Matrix Model
 
@@ -213,6 +219,8 @@ If detail is good but performance is poor, retry with `-Dmatrix3.sm64.textureSub
 
 ## Bundle 4.2B - shared-topology smoothing
 
+**CORE VISUAL RUNTIME VERIFIED 2026-10-04.**
+
 ### Evidence / implementation
 
 - [x] Runtime comparison shows the working Matrix Mario is visibly more faceted/triangular than the SM64 gameplay reference. `VERIFIED` by user screenshots 2026-10-04.
@@ -225,16 +233,14 @@ If detail is good but performance is poor, retry with `-Dmatrix3.sm64.textureSub
 
 ### Runtime acceptance
 
-1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch once.
-2. [ ] Ctrl+M and confirm Mario still renders with the accepted atlas details and no giant black triangle regression.
-3. [ ] Compare face, nose, cap, gloves, arms and overalls against the prior faceted build; compatible surfaces should shade visibly rounder/smoother.
-4. [ ] Confirm hard features do not look melted or incorrectly blended together.
-5. [ ] Idle animation still works normally.
-6. [ ] Space jump animation still works normally.
-7. [ ] Watch the console for `matrixVertices=` and `smoothAngle=70.0` and confirm no model-build/render errors.
-8. [ ] Watch briefly for an obvious FPS regression from the shared-topology lookup.
-
-If the result is still too faceted, test `-Dmatrix3.sm64.smoothAngleDegrees=90`. If edges look over-smoothed, test `45` or `60` before changing the topology algorithm.
+1. [x] Pull/build/launch reached the shared-topology build.
+2. [x] Mario retains the accepted atlas details with no giant black-triangle regression. `VERIFIED` by user video.
+3. [x] Face, nose, cap, gloves, arms and body read visibly rounder/less harshly faceted. `VERIFIED` by user video.
+4. [x] No obvious melted hard-edge/mesh-collapse failure is visible in the accepted clip.
+5. [x] Existing animation remains visibly active in the accepted clip.
+6. [ ] Reconfirm Space jump animation after smoothing only if a later regression appears.
+7. [ ] Console `matrixVertices=` / `smoothAngle=70.0` log observation remains optional diagnostic carryover.
+8. [ ] Longer sustained FPS/performance observation remains carryover.
 
 ### Model-scale calibration
 
@@ -255,4 +261,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Runtime-test **Bundle 2.4 local XYZ presentation + WASD ownership** first, because the user explicitly reprioritized this slice after runtime-confirming the native action controls. Bundle 4.2B smoothing remains implemented and waiting for its visual acceptance pass afterward.
+Phase 3 Bundle 3.1 is the next architectural gate after a new AAA: convert a bounded RuneScape terrain heightfield into native SM64 collision surfaces. Visible Mario terrain-elevation following is already runtime accepted through Matrix presentation; the Phase 3 test must prove the **native SM64 collision/action machine** responds correctly to RuneScape slopes/terrain rather than merely looking aligned.
