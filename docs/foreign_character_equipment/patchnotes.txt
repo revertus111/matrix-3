@@ -55,3 +55,9 @@
 - The helper computes a desired uniform fit from width/depth, allows height to enlarge that result by at most `10%`, then converts it into the session calibration multiplier layered on top of the existing V2 adapter scale.
 - Auto-fit resolves once per helmet/session; the first manual workbench/hotkey edit locks the manual value so the math no longer fights the developer.
 - Reset re-enables mathematical auto-fit for that helmet. Runtime logging now prints Mario W/H/D, helmet outer W/H/D, cavity ratios, old auto-fit, desired auto-fit and the recommended manual multiplier.
+
+2026-10-04 - Native head geometry investigation checkpoint (documentation only)
+- Established libsm64 display-list identity/local-vertex export seam and pinned SM64 source provenance.
+- Recorded current-pose/reference-pose auto-fit mismatch and lack of nose protection in body-height masking.
+- Replaced stale Resume Here with semantic coverage/shared-fit bundle; mixed face/nose/skull segmentation remains UNKNOWN.
+- No runtime source, transform constants, native binary or equipment behavior changed.

@@ -47,9 +47,9 @@ The first proof target is Mario: equip a normal revision-830 helmet, enter Mario
 
 - Phase: 1 - Attachment foundation
 - Bundle: 1.1 - Mario helmet vertical slice / Equipment Workbench
-- Status: NEEDS TEST
+- Status: INVESTIGATION CHECKPOINT — semantic shell replacement pending
 - Approval: user supplied `SAP AAA` for the combined N64 Equipment Workbench + Mario head masking + transform-convention fix on 2026-10-04.
-- Current objective: run one consolidated client test proving the corrected head-delta direction, live workbench helmet controls, frozen-pose editing, geometric head masking, and markdown profile save; then record accepted Statius values and continue to multiple helmet families.
+- Current objective: implement nose-preserving semantic helmet coverage with a shared fit reference. User explicitly approved this continuation on 2026-10-04; no repeat AAA is needed inside the coherent helmet-fitting bundle. See `NATIVE_HEAD_GEOMETRY.md` for bounded source evidence and exact remaining uncertainty.
 
 ## Phase 1 - Attachment foundation
 
@@ -214,7 +214,7 @@ These remain global diagnostics/overrides. Use the N64 workbench for normal visu
 
 - Stable head landmark vertex-stream indices remain semantically consistent enough across libsm64 animation frames to recover a visually stable rigid head basis after the delta-direction correction.
 - A representative sample of normal/full/cosmetic helmets will cluster around a reusable Mario helmet scale/seat standard, leaving only unusual silhouettes as per-item overrides.
-- The simple height/radius mask will be sufficient for the first cap/hair/top-skull fit without needing semantic triangle groups immediately.
+- Superseded: height/radius masking is not accepted as a nose-safe shell replacement. Source inspection found no explicit nose protection; see `NATIVE_HEAD_GEOMETRY.md`.
 
 ### UNKNOWN
 
@@ -224,40 +224,13 @@ These remain global diagnostics/overrides. Use the N64 workbench for normal visu
 
 ## Resume Here
 
-**Last completed:**
+**2026-10-04 approved continuation / investigation checkpoint**
 
-- Helmet V1-V4 attachment, auto-fit, session calibration, full head tracking and presentation freeze are implemented.
-- Runtime V4 proved the head tracker moves with Mario but the direct rigid delta direction is backwards.
-- V5 now inverts that rigid delta by transpose at the tracker boundary and records the convention in `docs/n64/TRANSFORM_CONVENTIONS.md`.
-- `MarioEquipmentWorkbench` exposes the existing helmet calibration plus presentation freeze and live geometric head-mask settings to the N64 console.
-- `N64Panel` now has sibling `Runtime` and `Equipment Workbench` pages under Mario 64.
-- The workbench can explicitly save the current transform/mask snapshot to `docs/n64/MARIO_EQUIPMENT_RUNTIME.md` and copy the same markdown.
-- Head-mask changes force a Mario model rebuild even when the SM64 presentation frame is frozen.
-
-**Next checklist item:**
-
-1. `git pull origin main` and Eclipse Java 8 clean/build.
-2. Launch once; no native bridge rebuild is required for this bundle.
-3. Equip Statius's full helm, Ctrl+M, open `N64 -> Mario 64 -> Equipment Workbench`.
-4. Verify normal head motion now drives the helmet in the same direction.
-5. Freeze Pose and fit scale/XYZ/yaw from the workbench.
-6. Enable the head cut; tune height/radius until cap/hair/top-skull clears while face/moustache/nose remain.
-7. Unfreeze and test turn/jump/backflip/ground-pound.
-8. Save profile `.md` once the visual fit is accepted and report the resulting values/screenshot.
-
-**Files:**
-
-- `Client/src/main/java/game/MarioEquipmentAdapter.java`
-- `Client/src/main/java/game/MarioHeadOrientationTracker.java`
-- `Client/src/main/java/game/MarioHelmetCalibrationController.java`
-- `Client/src/main/java/game/MarioEquipmentWorkbench.java`
-- `Client/src/main/java/game/MarioVisualRenderer.java`
-- `Client/src/main/java/game/Sm64BridgeSession.java`
-- `Client/src/main/java/game/console/N64Panel.java`
-- `docs/n64/TRANSFORM_CONVENTIONS.md`
-- `docs/n64/MARIO_EQUIPMENT_WORKBENCH.md`
-- `docs/n64/TESTLIST.md`
-- `docs/n64/patchnotes.txt`
-- `docs/foreign_character_equipment/PROJECT.md`
-- `docs/foreign_character_equipment/TESTLIST.md`
-- `docs/foreign_character_equipment/patchnotes.txt`
+- V6 measured cavity-proxy auto-fit is present in source; earlier checklist omitted it.
+- User reports the current full-helmet silhouette remains unacceptable. Do not request another round of tuning the same body-height cut as the architectural solution.
+- Read `NATIVE_HEAD_GEOMETRY.md` for inspected paths, native display-list export seam, evidence classifications, implementation bundle and tests.
+- Native cap/hair/eye/moustache display-list identity exists before flattening. Nose/skull separation inside mixed face-part geometry remains UNKNOWN.
+- Next bounded trace: actual mixed face-part local vertices/connectivity in the pinned upstream source; establish protected nose/face before automatic skull removal. No broader Matrix scan.
+- Then implement native metadata, coverage profiles, shared head-local measurement and workbench together. Keep existing controller/render ownership and accepted yaw/transpose conventions.
+- Current runtime code is unchanged by this checkpoint. No pull/build/runtime test is needed for documentation alone.
+- Approval persists for the coherent helmet-fitting bundle. Remaining issue is evidence, not missing approval.
