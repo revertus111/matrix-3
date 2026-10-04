@@ -191,18 +191,11 @@ public final class MarioJumpController {
         }
         boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
-        /*
-         * AlternateCharacterController uses +moveY for camera-forward. libsm64's
-         * public test/reference uses negative stickY for forward/up input, so the
-         * Mario driver performs that API-specific sign conversion here instead of
-         * contaminating the shared controller vocabulary used by future drivers.
-         */
-        float sm64StickY = -controls.moveY;
         Sm64BridgeSession.setInput(
                 controls.cameraForward.x,
                 controls.cameraForward.z,
                 controls.moveX,
-                sm64StickY,
+                controls.moveY,
                 buttonA,
                 buttonB,
                 buttonZ);
