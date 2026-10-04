@@ -45,3 +45,15 @@
 - User runtime-confirmed the persistent 30 Hz session reaches `READY`, native-state presentation reaches `ACTIVE`, and the native-driven Matrix transform path works in the live 830 client.
 - The visible vertical movement path is now accepted as real SM64-derived state -> Matrix presentation; the old Java-gravity implementation is no longer Mario-mode movement authority.
 - Ctrl+M exit/relog/failure-fallback checks remain regression carryover before Bundle 2.2 is fully closed.
+
+2026-10-04 - Bundle 4.1 native Mario visual presentation
+- Extended the native sidecar path to binary state + `SM64MarioGeometryBuffers` transport at the fixed 30 Hz simulation rate and one-time ROM-derived RGBA atlas handshake.
+- `Sm64BridgeSession` now publishes immutable native geometry/texture snapshots while retaining native process I/O and simulation ownership on its worker thread.
+- Added `MarioVisualRenderer` to convert native animated geometry into Matrix `Class159`, build a normal Matrix `Model`, and render it through the established `Class578.method6834(...)` direct-scene seam.
+- V1 samples libsm64 ROM atlas output into per-triangle Matrix face albedo so Matrix retains renderer/texture-backend ownership; exact runtime UV texture injection is deferred polish.
+- Added `-Dmatrix3.sm64.modelScale=<positive-float>` with default `2.0` for visual calibration.
+- Added the local-player replacement gate at the shared `Player.method10696(...)` model-build seam rather than duplicating suppression across player renderer variants.
+- Suppression is fail-open: only the local player in Mario mode is hidden, and only while the native bridge is ready and `MarioVisualRenderer` has a fresh usable geometry frame after a successful Matrix render. Remote players, stale frames, bridge failure, model-build failure, and render failure retain the normal RuneScape appearance.
+- Recovered from an unsafe decompiled `Player.java` write by restoring the original file first; the final safe suppression commit changes `Player.java` by exactly 8 added lines and no deletions.
+- Static dependency/syntax inspection confirmed the gate targets same-package `MarioVisualRenderer.shouldSuppressLocalPlayer(...)`, which uses the published `Sm64BridgeSession` frame timestamp and a 500 ms freshness ceiling. This is `verified-static`, not runtime acceptance.
+- Bundle 4.1 remains `IMPLEMENTED / NEEDS TEST`: rebuild the local binary sidecar, Eclipse Java 8 clean/build, then runtime-verify actual Mario replacement, native idle/jump animation, local-only suppression, Ctrl+M restoration, and fail-open behavior.
