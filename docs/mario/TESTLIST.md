@@ -47,27 +47,16 @@ Use one client launch:
 
 1. [x] Eclipse clean/build succeeds under Java 8 and client launches normally. Runtime-accepted 2026-10-04.
 2. [x] Launch/login normally in RuneScape mode.
-3. [x] Press Ctrl+M once. Console prints:
-
-```text
-[Mario] Controller mode: MARIO
-[SM64 Bridge] Persistent session READY (30 Hz)
-[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale 3.0)
-```
-
-Runtime-confirmed by user on 2026-10-04.
-
-4. [x] Tap Space. The **visible 830 player** rises/lands from the native SM64 Y path rather than the removed Java-gravity implementation. User accepted the Bundle 2.2 path as working on 2026-10-04.
+3. [x] Press Ctrl+M once. Console prints the Mario controller/native bridge activation lines.
+4. [x] Tap Space. The visible 830 player rises/lands from the native SM64 Y path. Runtime-confirmed 2026-10-04.
 5. [ ] Tap Space again after landing. A second native jump works cleanly.
 6. [ ] Enter Mario mode while Space is already held: no jump occurs until Space is released and pressed again.
-7. [x] Ctrl+M back to RuneScape while grounded: native session stops and normal RuneScape presentation returns. Runtime-confirmed during Bundle 4.1 acceptance on 2026-10-04.
+7. [x] Ctrl+M back to RuneScape while grounded: native session stops and normal RuneScape presentation returns. Runtime-confirmed 2026-10-04.
 8. [ ] Ctrl+M back to RuneScape while airborne: player returns to the tracked Matrix ground baseline without stale height.
-9. [ ] Ordinary RuneScape X/Z movement/clicking still works before, during and after this vertical-only bridge proof.
+9. [ ] Ordinary RuneScape movement/clicking still works before and after Mario use.
 10. [x] No client hang/crash observed while the persistent native session/transform path was active in the accepted runtime test.
 
 ### Failure fallback check
-
-Do this only after the normal jump test passes:
 
 - [ ] Exit Mario mode.
 - [ ] Temporarily rename `native/sm64-bridge/dist/sm64_bridge.exe` (or use an invalid `-Dmatrix3.sm64.bridge` path).
@@ -78,8 +67,6 @@ Do this only after the normal jump test passes:
 ### Vertical-scale calibration
 
 Default presentation scale is `3.0` Matrix units per native SM64 Y unit.
-
-If the native jump is visibly too tall/short, test without another code patch using:
 
 ```text
 -Dmatrix3.sm64.verticalScale=<positive-float>
@@ -98,29 +85,62 @@ Do not treat a tuned value as final collision scale until Phase 3 establishes th
 - [x] One immutable input snapshot is published to the fixed 30 Hz worker so stick/A/B/Z values cannot be mixed across a native step.
 - [x] A/B/Z are fail-safe on Mario-mode entry: an action key already held while entering must be released before it can trigger native input.
 - [x] Existing binary sidecar packet already carried stick/A/B/Z, so this patch requires **no native bridge rebuild or protocol-version change**.
-- [x] Horizontal Matrix X/Z remains Matrix-owned for this slice. Native WASD drives authentic SM64 movement/action/animation state, but the rendered Mario remains anchored to the Matrix local-player transform until the collision/XYZ handoff is deliberately implemented.
+
+### Runtime evidence - 2026-10-04
+
+- [x] Native WASD input changes Mario into authentic movement/turning animation states. `VERIFIED` by user.
+- [x] Shift/Z crouch works. `VERIFIED` by user.
+- [x] Native backflip action works from the real libsm64 action state machine. `VERIFIED` by user.
+- [x] Airborne Shift/Z ground-pound works. `VERIFIED` by user.
+- [x] Shared-WASD conflict identified: Construction/RTS camera also moved while Mario consumed WASD. `VERIFIED` by user; addressed by Bundle 2.4.
+- [ ] F/B grounded attack behavior still needs a focused runtime check.
+- [ ] Native long-jump timing still needs a focused runtime check.
+- [ ] Held-action mode-entry guards still need a focused runtime check.
+
+### Historical boundary / supersession
+
+Bundle 2.3 was intentionally input-only when first implemented. The user subsequently explicitly reprioritized and approved Bundle 2.4 to add **temporary local-only native X/Z presentation** before the full Phase 3 collision adapter. That does not transfer server, clipping, plane or pathfinding authority to libsm64.
+
+## Bundle 2.4 - local XYZ presentation + WASD ownership
+
+### Implementation / static gate
+
+- [x] Added `MarioInputKeyboard`, a reversible wrapper around Matrix3's existing `Class549` keyboard owner; the original AWT listener remains installed and authoritative.
+- [x] While Mario mode is active, normal `method6514(...)` held-key consumers see W/A/S/D as released, so Construction Free/RTS camera polling no longer competes for those keys.
+- [x] Mario reads the original owner's raw held state through `method6518(...)`; Space/F/Shift and Ctrl+M continue through the existing owner.
+- [x] Ctrl+M exit, native failure, and local-player lifecycle replacement restore the original Matrix keyboard owner.
+- [x] `Sm64BridgeSession` publishes interpolated native X/Y/Z from one previous/latest frame pair and one shared interpolation alpha.
+- [x] `MarioJumpController` captures Matrix/native XYZ baselines on Mario-mode activation and applies native X/Z deltas plus the existing native Y height as a temporary local transform.
+- [x] Default horizontal presentation scale is `3.0`; `-Dmatrix3.sm64.horizontalScale=<positive-float>` provides runtime calibration.
+- [x] External Matrix/server corrections rebase the tracked presentation baseline per axis rather than being overwritten as a new authority source.
+- [x] Ctrl+M/fallback restores the tracked RuneScape XYZ baseline.
+- [x] No Mario movement packet, RuneScape clipping/pathfinding/plane ownership, or Phase 3 collision surface streaming is introduced by this slice.
+- [x] Existing `sm64_bridge.exe` binary protocol already supplies native XYZ; no native rebuild is required.
 
 ### Runtime acceptance
 
-Use the existing geometry-capable `sm64_bridge.exe`; do **not** rebuild it for this test.
+1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch once. **Do not rebuild the native sidecar.**
+2. [ ] Enter Mario mode with Ctrl+M and confirm the console reports `Y scale 3.0, XZ scale 3.0` (unless overridden).
+3. [ ] Hold W/A/S/D: the Construction/RTS camera must **not** pan from WASD while Mario mode is active.
+4. [ ] Confirm camera arrow-key pan still works while Mario mode is active; Q/E camera rotation should remain available.
+5. [ ] Hold W: Mario physically translates away from the activation point instead of only playing the run animation.
+6. [ ] Test A/S/D and a diagonal. Direction must match the native animation/turning state and diagonal travel must remain stable.
+7. [ ] Jump while moving: native horizontal travel continues through the jump rather than snapping back to the Matrix anchor.
+8. [ ] Test backflip and ground-pound again; their already-verified native actions must still work with the new XYZ presentation.
+9. [ ] Ctrl+M back to RuneScape while displaced. The local player returns cleanly to the tracked RuneScape XYZ baseline with no stale Mario offset.
+10. [ ] Re-enter Mario mode. New native/Matrix baselines initialize at the current RuneScape location; prior Mario displacement does not leak into the new session.
+11. [ ] After exiting Mario mode, normal Construction camera WASD control returns.
+12. [ ] Keep this first test bounded near the loaded scene center; Phase 3 collision/scene-boundary behavior is not implemented yet.
 
-1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch once.
-2. [ ] Enter Mario mode with Ctrl+M. Console prints `WASD move, Space jump, F attack, Shift crouch/ground-pound`.
-3. [ ] Hold W, then A/S/D individually. Mario visibly changes into the expected native movement/turning animation states without bridge/render errors.
-4. [ ] Hold W+D (and another diagonal). Native movement remains stable; there is no obvious diagonal input spike or animation glitch.
-5. [ ] Tap Space: the already-proven native jump still works.
-6. [ ] Tap F while grounded: Mario performs the native B-button attack chain/state (punch/kick/grab behavior as selected by libsm64 state).
-7. [ ] Hold Shift while grounded: Mario enters the native Z/crouch behavior.
-8. [ ] Jump, then press Shift in the air: Mario enters native ground-pound behavior.
-9. [ ] While moving, test Shift + Space timing for a native long-jump transition; libsm64, not Java, decides whether the action conditions are satisfied.
-10. [ ] Enter Mario mode while Space, F, or Shift is already held. None of those actions fires until that key is released and pressed again.
-11. [ ] Ctrl+M back to RuneScape. Mario input stops and normal RuneScape presentation/control returns.
-12. [ ] Ordinary RuneScape click-to-move/XZ remains usable; do not interpret the lack of native horizontal Matrix translation as a failure of this input slice.
+### Horizontal-scale calibration
 
-### Known boundary for this slice
+Default local presentation scale:
 
-- Native horizontal position is intentionally **not** written into Matrix player X/Z yet. Doing that before RuneScape terrain/object collision and the authority boundary are ready would create client/server desync.
-- The native `camLookX/camLookZ` remains the existing fixed bridge direction for this first keyboard-input pass. Matrix-camera-relative Mario steering is a separate bounded control-polish patch if runtime feel shows it is needed before collision handoff.
+```text
+-Dmatrix3.sm64.horizontalScale=3.0
+```
+
+If Mario visibly moves too fast/slow relative to the 830 scene, tune this value before changing architecture. Final horizontal scale/sign is a `HYPOTHESIS` until this runtime gate passes and Phase 3 establishes real RuneScape collision/coordinate conversion.
 
 ## Bundle 4.1 - native Mario geometry -> Matrix Model
 
@@ -235,4 +255,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Runtime-test Bundle 4.2B smoothing first. The acceptance target is a visibly rounder Mario without losing the accepted atlas details or melting true hard edges. After that, return to the pending Bundle 2.3 keyboard-control runtime gate unless the user reprioritizes again.
+Runtime-test **Bundle 2.4 local XYZ presentation + WASD ownership** first, because the user explicitly reprioritized this slice after runtime-confirming the native action controls. Bundle 4.2B smoothing remains implemented and waiting for its visual acceptance pass afterward.
