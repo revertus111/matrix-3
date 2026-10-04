@@ -23,8 +23,10 @@ public final class MarioEquipmentWorkbench {
     private static volatile boolean maskOnlyWithHelmet = true;
     private static volatile float maskStartFraction = 0.72F;
     private static volatile float maskRadiusFraction = 0.40F;
+    private static volatile long maskRevision;
 
     private static volatile long preparedMaskSequence = Long.MIN_VALUE;
+    private static volatile long preparedMaskRevision = Long.MIN_VALUE;
     private static volatile float maskCenterX;
     private static volatile float maskCenterZ;
     private static volatile float maskStartY;
@@ -104,19 +106,33 @@ public final class MarioEquipmentWorkbench {
     }
 
     public static void setHeadMaskEnabled(boolean enabled) {
-        headMaskEnabled = enabled;
+        if (headMaskEnabled != enabled) {
+            headMaskEnabled = enabled;
+            maskRevision++;
+        }
     }
 
     public static void setMaskOnlyWithHelmet(boolean enabled) {
-        maskOnlyWithHelmet = enabled;
+        if (maskOnlyWithHelmet != enabled) {
+            maskOnlyWithHelmet = enabled;
+            maskRevision++;
+        }
     }
 
     public static void setMaskStartPercent(float percent) {
-        maskStartFraction = clamp(percent / 100.0F, 0.50F, 0.95F);
+        float next = clamp(percent / 100.0F, 0.50F, 0.95F);
+        if (Math.abs(next - maskStartFraction) > 0.0001F) {
+            maskStartFraction = next;
+            maskRevision++;
+        }
     }
 
     public static void setMaskRadiusPercent(float percent) {
-        maskRadiusFraction = clamp(percent / 100.0F, 0.10F, 0.75F);
+        float next = clamp(percent / 100.0F, 0.10F, 0.75F);
+        if (Math.abs(next - maskRadiusFraction) > 0.0001F) {
+            maskRadiusFraction = next;
+            maskRevision++;
+        }
     }
 
     public static void resetHeadMask() {
@@ -125,6 +141,7 @@ public final class MarioEquipmentWorkbench {
         maskStartFraction = 0.72F;
         maskRadiusFraction = 0.40F;
         lastMaskedTriangles = 0;
+        maskRevision++;
     }
 
     public static String formatProfileMarkdown() {
@@ -193,10 +210,12 @@ public final class MarioEquipmentWorkbench {
                 || frame.triangleCount <= 0
                 || frame.positions.length < frame.triangleCount * 9) {
             preparedMaskSequence = Long.MIN_VALUE;
+            preparedMaskRevision = Long.MIN_VALUE;
             lastMaskedTriangles = 0;
             return;
         }
-        if (preparedMaskSequence == frame.sequence) {
+        long revision = maskRevision;
+        if (preparedMaskSequence == frame.sequence && preparedMaskRevision == revision) {
             return;
         }
 
@@ -225,6 +244,7 @@ public final class MarioEquipmentWorkbench {
         float depth = maxZ - minZ;
         if (!finite(height) || height <= 0.0F) {
             preparedMaskSequence = Long.MIN_VALUE;
+            preparedMaskRevision = Long.MIN_VALUE;
             lastMaskedTriangles = 0;
             return;
         }
@@ -235,13 +255,16 @@ public final class MarioEquipmentWorkbench {
         float radius = Math.max(width, depth) * maskRadiusFraction;
         maskRadiusSquared = radius * radius;
         preparedMaskSequence = frame.sequence;
+        preparedMaskRevision = revision;
         lastMaskedTriangles = 0;
     }
 
     static boolean shouldMaskTriangle(
             Sm64BridgeSession.GeometryFrame frame,
             int sourceTriangle) {
-        if (!headMaskEnabled || frame == null || preparedMaskSequence != frame.sequence) {
+        if (!headMaskEnabled || frame == null
+                || preparedMaskSequence != frame.sequence
+                || preparedMaskRevision != maskRevision) {
             return false;
         }
         if (maskOnlyWithHelmet && findVisibleHelmet() == null) {
@@ -264,6 +287,10 @@ public final class MarioEquipmentWorkbench {
 
     static void recordMaskedTriangleCount(int count) {
         lastMaskedTriangles = Math.max(0, count);
+    }
+
+    static long getMaskRevision() {
+        return maskRevision;
     }
 
     private static void updateCalibration(
