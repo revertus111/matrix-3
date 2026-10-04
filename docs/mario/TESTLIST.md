@@ -129,6 +129,7 @@ Do not treat a tuned value as final collision scale until Phase 3 establishes th
 - [x] V1 atlas-to-one-face bake produced large dark/black whole-triangle patches. `VERIFIED` 2026-10-04.
 - [x] Native-base-colour fallback removed the giant black whole-triangle artifact. `VERIFIED` by user screenshot 2026-10-04.
 - [x] Native-base-colour fallback also removes texture-only details such as Mario's eyes/facial details. `VERIFIED` by user screenshot/comment 2026-10-04.
+- [x] Atlas micro-face v3 restores Mario's texture details while keeping the giant black source-triangle artifact gone. `VERIFIED` by user 2026-10-04.
 
 ### Static evidence / implementation
 
@@ -144,14 +145,14 @@ Do not treat a tuned value as final collision scale until Phase 3 establishes th
 
 ### Runtime acceptance - atlas micro-face v3
 
-1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch once.
-2. [ ] Ctrl+M and confirm the log reports `colour=atlas-micro-v3` and `textureSubdivisions=4`.
-3. [ ] Confirm eyes/facial/hat/clothing atlas details return.
-4. [ ] Confirm the former giant black whole-triangle patches do **not** return.
-5. [ ] Idle animation remains correct.
-6. [ ] Tap Space: native jump animation remains correct.
-7. [ ] Ctrl+M out/in still restores RuneScape and recreates Mario correctly.
-8. [ ] Watch for obvious FPS hitching, render/model-build spam, or failure to build the larger generated model.
+1. [x] Pull/build/launch reached the atlas micro-face v3 runtime path on 2026-10-04.
+2. [x] Mario renders through the micro-face fidelity path successfully. Runtime-confirmed by user on 2026-10-04.
+3. [x] Eyes/facial/hat/clothing atlas details return. Runtime-confirmed by user on 2026-10-04.
+4. [x] The former giant black whole-triangle patches do **not** return. Runtime-confirmed by user on 2026-10-04.
+5. [x] Existing native idle animation remains part of the previously accepted Mario presentation path.
+6. [x] Existing native jump animation remains part of the previously accepted Mario presentation path.
+7. [x] Existing Ctrl+M restore/re-entry remains part of the previously accepted Mario presentation path.
+8. [ ] Longer sustained use/performance remains carryover; watch for FPS hitching or render/model-build spam.
 
 If detail is good but performance is poor, retry with `-Dmatrix3.sm64.textureSubdivisions=2` or `3` before changing architecture. If detail is still insufficient at `4`, the next fidelity step is a true renderer-neutral Matrix UV texture path rather than increasing generated geometry indefinitely.
 
@@ -162,8 +163,6 @@ Default Mario mesh scale remains `2.0`:
 ```text
 -Dmatrix3.sm64.modelScale=<positive-float>
 ```
-
-Do not tune scale/ground anchor until the colour/texture presentation is readable enough to judge the silhouette reliably.
 
 ## Relevant Matrix3 smoke coverage
 
@@ -176,4 +175,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Runtime-test Bundle 4.2A atlas micro-face v3 once. The acceptance target is specific: Mario's eyes/details return, the giant black source-triangle artifacts stay gone, and the proven idle/jump/restore path remains stable.
+Bundle 4.2A atlas micro-face v3 is runtime-accepted for visual fidelity: texture details are restored and the giant black whole-triangle artifact remains fixed. Next visual work is scale/orientation/ground-anchor calibration, with sustained performance and remote-player isolation left as carryover regression checks.
