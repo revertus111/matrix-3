@@ -23,15 +23,26 @@ public final class MarioEquipmentAdapter {
     private static final int FINAL_MODEL_FLAGS = BASE_MODEL_FLAGS | TRANSFORM_FLAGS;
 
     private static final float DEFAULT_MARIO_MODEL_SCALE = 2.0F;
-    private static final float DEFAULT_HELMET_FIT_PADDING = 1.12F;
-    private static final float HEAD_START_FRACTION = 0.62F;
+    private static final float DEFAULT_HELMET_FIT_PADDING = 1.0F;
+    private static final float DEFAULT_HELMET_CLEARANCE_FRACTION = 0.05F;
+    private static final float DEFAULT_HELMET_MIN_CLEARANCE = 2.0F;
+    private static final float HEAD_START_FRACTION = 0.50F;
     private static final float HEAD_RADIAL_FRACTION = 0.40F;
+    private static final float HEAD_TRIM_FRACTION = 0.06F;
     private static final int MIN_HEAD_VERTICES = 12;
 
     private static final float MARIO_MODEL_SCALE = resolvePositiveFloat(
             "matrix3.sm64.modelScale", DEFAULT_MARIO_MODEL_SCALE);
+    /*
+     * Final optional multiplier after envelope fitting. V2 defaults to 1.0 because
+     * clearance is now represented explicitly instead of hidden inside padding.
+     */
     private static final float HELMET_FIT_PADDING = resolvePositiveFloat(
             "matrix3.sm64.helmetFitPadding", DEFAULT_HELMET_FIT_PADDING);
+    private static final float HELMET_CLEARANCE_FRACTION = resolveNonNegativeFloat(
+            "matrix3.sm64.helmetClearanceFraction", DEFAULT_HELMET_CLEARANCE_FRACTION);
+    private static final float HELMET_MIN_CLEARANCE = resolveNonNegativeFloat(
+            "matrix3.sm64.helmetMinClearance", DEFAULT_HELMET_MIN_CLEARANCE);
     private static final float HELMET_VERTICAL_OFFSET = resolveFiniteFloat(
             "matrix3.sm64.helmetVerticalOffset", 0.0F);
     private static final float HELMET_YAW_OFFSET_RADIANS = (float) Math.toRadians(resolveFiniteFloat(
@@ -54,6 +65,7 @@ public final class MarioEquipmentAdapter {
 
     private static int headTopologyTriangleCount = -1;
     private static int[] headVertexIndices;
+    private static float referenceHeadHorizontalSpan;
     private static long lastFrameSequence = -1L;
 
     private MarioEquipmentAdapter() {
@@ -89,7 +101,9 @@ public final class MarioEquipmentAdapter {
         }
 
         HeadAnchor anchor = calculateHeadAnchor(frame);
-        if (anchor == null || anchor.horizontalSpan <= 0.0F || cachedHelmetHorizontalSpan <= 0.0F) {
+        if (anchor == null || anchor.horizontalSpan <= 0.0F
+                || referenceHeadHorizontalSpan <= 0.0F
+                || cachedHelmetHorizontalSpan <= 0.0F) {
             return;
         }
 
@@ -98,7 +112,19 @@ public final class MarioEquipmentAdapter {
             return;
         }
 
-        float fitScale = anchor.horizontalSpan * HELMET_FIT_PADDING / cachedHelmetHorizontalSpan;
+        /*
+         * Helmet V2 treats the Mario head as a collision envelope rather than
+         * making the two outer model bounds equal. Example: a 64-unit head with
+         * 5% clearance receives about 3.2 units on each side, so the helmet is
+         * fitted against a ~70.4-unit target shell. The robust reference bounds
+         * intentionally trim protruding extremes such as Mario's nose so his
+         * iconic face does not make every helmet enormous.
+         */
+        float clearance = Math.max(
+                HELMET_MIN_CLEARANCE,
+                referenceHeadHorizontalSpan * HELMET_CLEARANCE_FRACTION);
+        float targetHelmetSpan = referenceHeadHorizontalSpan + clearance * 2.0F;
+        float fitScale = targetHelmetSpan * HELMET_FIT_PADDING / cachedHelmetHorizontalSpan;
         if (!isFinite(fitScale)) {
             return;
         }
@@ -128,7 +154,10 @@ public final class MarioEquipmentAdapter {
                 System.out.println("[SM64 Equipment] Helmet ACTIVE item=" + cachedItemId
                         + " name=" + cachedHelmetName
                         + " fit=" + fitScale
-                        + " headSpan=" + anchor.horizontalSpan
+                        + " liveHeadSpan=" + anchor.horizontalSpan
+                        + " referenceHeadSpan=" + referenceHeadHorizontalSpan
+                        + " clearance=" + clearance
+                        + " targetSpan=" + targetHelmetSpan
                         + " helmetSpan=" + cachedHelmetHorizontalSpan
                         + " yawFlip=" + HELMET_YAW_FLIP
                         + " yawOffsetDeg=" + Math.toDegrees(HELMET_YAW_OFFSET_RADIANS));
@@ -306,13 +335,15 @@ public final class MarioEquipmentAdapter {
 
     /**
      * The binary bridge publishes final animated triangles rather than a bone
-     * skeleton. V1 therefore captures the stable vertex-stream indices belonging
-     * to Mario's head from the first upright frame and follows those same indices
-     * on later animation frames, including jumps/backflips where the head is no
-     * longer simply the highest part of the mesh.
+     * skeleton. V2 captures a broader upright head candidate set, trims the outer
+     * X/Z extremes, and then follows those stable core vertex-stream indices on
+     * later frames. The trimmed reference envelope keeps one-off protrusions such
+     * as Mario's nose from driving helmet size while still following the animated
+     * head through jumps and flips.
      */
     private static void ensureHeadSelection(Sm64BridgeSession.GeometryFrame frame) {
-        if (headVertexIndices != null && headTopologyTriangleCount == frame.triangleCount) {
+        if (headVertexIndices != null && headTopologyTriangleCount == frame.triangleCount
+                && referenceHeadHorizontalSpan > 0.0F) {
             return;
         }
 
@@ -356,8 +387,8 @@ public final class MarioEquipmentAdapter {
         float radialLimit = Math.max(bodyWidth, bodyDepth) * HEAD_RADIAL_FRACTION;
         float radialLimitSquared = radialLimit * radialLimit;
 
-        int[] selected = new int[totalVertices];
-        int selectedCount = 0;
+        int[] candidates = new int[totalVertices];
+        int candidateCount = 0;
         for (int vertex = 0; vertex < totalVertices; vertex++) {
             int base = vertex * 3;
             float x = frame.positions[base] - frame.state.x;
@@ -366,30 +397,82 @@ public final class MarioEquipmentAdapter {
             float dx = x - centerX;
             float dz = z - centerZ;
             if (y >= headStartY && dx * dx + dz * dz <= radialLimitSquared) {
-                selected[selectedCount++] = vertex;
+                candidates[candidateCount++] = vertex;
             }
         }
 
-        if (selectedCount < MIN_HEAD_VERTICES) {
-            selectedCount = 0;
+        if (candidateCount < MIN_HEAD_VERTICES) {
+            candidateCount = 0;
             for (int vertex = 0; vertex < totalVertices; vertex++) {
                 int base = vertex * 3;
                 float y = frame.positions[base + 1] - frame.state.y;
                 if (y >= headStartY) {
-                    selected[selectedCount++] = vertex;
+                    candidates[candidateCount++] = vertex;
                 }
             }
         }
 
-        if (selectedCount < MIN_HEAD_VERTICES) {
+        if (candidateCount < MIN_HEAD_VERTICES) {
             resetHeadSelection();
             return;
         }
 
-        headVertexIndices = Arrays.copyOf(selected, selectedCount);
+        float[] xs = new float[candidateCount];
+        float[] zs = new float[candidateCount];
+        for (int i = 0; i < candidateCount; i++) {
+            int base = candidates[i] * 3;
+            xs[i] = frame.positions[base] - frame.state.x;
+            zs[i] = frame.positions[base + 2] - frame.state.z;
+        }
+        Arrays.sort(xs);
+        Arrays.sort(zs);
+
+        int trimCount = (int) Math.floor(candidateCount * HEAD_TRIM_FRACTION);
+        if (trimCount * 2 >= candidateCount - MIN_HEAD_VERTICES) {
+            trimCount = 0;
+        }
+        float coreMinX = xs[trimCount];
+        float coreMaxX = xs[candidateCount - 1 - trimCount];
+        float coreMinZ = zs[trimCount];
+        float coreMaxZ = zs[candidateCount - 1 - trimCount];
+
+        int[] core = new int[candidateCount];
+        int coreCount = 0;
+        for (int i = 0; i < candidateCount; i++) {
+            int vertex = candidates[i];
+            int base = vertex * 3;
+            float x = frame.positions[base] - frame.state.x;
+            float z = frame.positions[base + 2] - frame.state.z;
+            if (x >= coreMinX && x <= coreMaxX && z >= coreMinZ && z <= coreMaxZ) {
+                core[coreCount++] = vertex;
+            }
+        }
+
+        if (coreCount < MIN_HEAD_VERTICES) {
+            core = candidates;
+            coreCount = candidateCount;
+            coreMinX = xs[0];
+            coreMaxX = xs[candidateCount - 1];
+            coreMinZ = zs[0];
+            coreMaxZ = zs[candidateCount - 1];
+        }
+
+        float referenceSpan = Math.max(coreMaxX - coreMinX, coreMaxZ - coreMinZ)
+                * MARIO_MODEL_SCALE;
+        if (!isFinite(referenceSpan) || referenceSpan <= 0.0F) {
+            resetHeadSelection();
+            return;
+        }
+
+        headVertexIndices = Arrays.copyOf(core, coreCount);
         headTopologyTriangleCount = frame.triangleCount;
-        System.out.println("[SM64 Equipment] Captured Mario HEAD anchor vertices="
-                + selectedCount + " triangles=" + frame.triangleCount);
+        referenceHeadHorizontalSpan = referenceSpan;
+        System.out.println("[SM64 Equipment] Captured Mario HEAD envelope vertices="
+                + coreCount
+                + " candidates=" + candidateCount
+                + " triangles=" + frame.triangleCount
+                + " referenceSpan=" + referenceHeadHorizontalSpan
+                + " trim=" + HEAD_TRIM_FRACTION);
     }
 
     private static boolean isUsable(Sm64BridgeSession.GeometryFrame frame) {
@@ -406,6 +489,7 @@ public final class MarioEquipmentAdapter {
     private static void resetHeadSelection() {
         headTopologyTriangleCount = -1;
         headVertexIndices = null;
+        referenceHeadHorizontalSpan = 0.0F;
     }
 
     private static void logHelmetFailure(int itemId, String reason) {
@@ -419,6 +503,11 @@ public final class MarioEquipmentAdapter {
     private static float resolvePositiveFloat(String property, float fallback) {
         float value = resolveFiniteFloat(property, fallback);
         return value > 0.0F ? value : fallback;
+    }
+
+    private static float resolveNonNegativeFloat(String property, float fallback) {
+        float value = resolveFiniteFloat(property, fallback);
+        return value >= 0.0F ? value : fallback;
     }
 
     private static float resolveFiniteFloat(String property, float fallback) {
