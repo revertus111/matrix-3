@@ -18,6 +18,8 @@
 #define BINARY_CMD_STEP 1
 #define BINARY_CMD_QUIT 2
 #define SM64_ACT_IDLE 0x0C400201u
+#define SM64_ACT_START_SLEEPING 0x0C400202u
+#define SM64_ACT_SLEEPING 0x0C000203u
 #define FLOOR_EXTENT 4096
 
 static float s_geo_positions[9 * SM64_GEO_MAX_TRIANGLES];
@@ -58,6 +60,7 @@ static const struct SM64Surface s_flat_floor[2] = {
 };
 
 static int32_t s_mario_id = -1;
+static uint32_t s_last_mario_action = SM64_ACT_IDLE;
 
 static void bridge_debug_print(const char *message)
 {
@@ -121,6 +124,7 @@ static int reset_mario(void)
     sm64_set_mario_velocity(s_mario_id, 0.0f, 0.0f, 0.0f);
     sm64_set_mario_forward_velocity(s_mario_id, 0.0f);
     sm64_set_mario_action(s_mario_id, SM64_ACT_IDLE);
+    s_last_mario_action = SM64_ACT_IDLE;
     return 1;
 }
 
@@ -131,6 +135,23 @@ static void tick_mario(
         struct SM64MarioState *state)
 {
     struct SM64MarioInputs input;
+
+    /*
+     * Matrix3 owns the surrounding game/session lifecycle, so autonomous SM64
+     * sleeping has no useful gameplay role here. Runtime evidence showed the
+     * sidecar remained alive while binary frame publication stopped immediately
+     * after libsm64 entered ACT_SLEEPING (0x0C000203). Keep the embedded Mario in
+     * the normal idle loop instead of allowing that unsupported autonomous state
+     * to become the next native tick owner.
+     */
+    if (s_last_mario_action == SM64_ACT_START_SLEEPING
+            || s_last_mario_action == SM64_ACT_SLEEPING) {
+        fprintf(stderr,
+                "[SM64 Bridge] Sleep state 0x%08X -> idle to preserve frame streaming\n",
+                (unsigned int) s_last_mario_action);
+        sm64_set_mario_action(s_mario_id, SM64_ACT_IDLE);
+        s_last_mario_action = SM64_ACT_IDLE;
+    }
 
     memset(&input, 0, sizeof(input));
     memset(state, 0, sizeof(*state));
@@ -144,6 +165,7 @@ static void tick_mario(
 
     s_geometry.numTrianglesUsed = 0;
     sm64_mario_tick(s_mario_id, &input, state, &s_geometry);
+    s_last_mario_action = state->action;
 }
 
 static void print_state(const struct SM64MarioState *state)
