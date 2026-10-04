@@ -14,7 +14,7 @@
 - User subsequently accepted the controller-mode behavior at runtime; deeper Phase 1 movement/slope/relog regression remains a carryover check.
 
 2026-10-03 - SM64 passthrough architecture + Bridge Spike A
-- Reframed the target implementation around an authentic SM64-derived native simulation core instead of recreating the full action state machine in Java.
+- Reframed the target implementation around an authentic SM64-derived native simulation core instead of recreating the full Mario action state machine in Java.
 - Added `SM64_PASSTHROUGH_ARCHITECTURE.md`; Matrix3 remains host world/input/render/server architecture while `libsm64` is the first native Mario-core candidate.
 - Selected an isolated sidecar process for V1 transport; JNI remains a measured later optimization rather than an up-front dependency.
 - Added `native/sm64-bridge/sm64_bridge.c` with protocol v1, user-ROM initialization, a temporary two-triangle flat floor, `PING`, `STEP`, `STATE`, `RESET`, and `QUIT` commands.
@@ -135,3 +135,14 @@
 - User additionally confirmed Mario already follows different RuneScape terrain elevations correctly in live play.
 - That terrain-elevation result verifies the Matrix presentation/rebase behavior, not native collision ingestion: libsm64 is still simulating against the temporary flat native floor and Phase 3 remains required for collision-authentic walls, objects, ledges/platforms, slopes/landing semantics and water.
 - Bundle 2.4 is runtime accepted; the next architectural step is Phase 3 world/collision adaptation rather than further local XYZ presentation work.
+
+2026-10-04 - Alternate-character master controller / camera / combat bridge
+- Added `AlternateCharacterController` as the single client dispatch point for imported-character drivers, with a shared WASD/Space/F/Shift control vocabulary, shared camera-forward resolution, and per-character combat-style capabilities. Mario is the first driver and currently advertises melee capability only.
+- Replaced the Mario-specific keyboard wrapper with `AlternateCharacterInputKeyboard`; it still reuses Matrix3's existing keyboard owner/listener and hides only alternate-character-owned WASD from competing normal held-key consumers.
+- `Sm64BridgeSession` now snapshots camera-look X/Z alongside stick/buttons and forwards the real Matrix camera-forward vector to libsm64 instead of hardcoded `(0,-1)`. Existing binary packet layout already carried these floats, so no sidecar rebuild/protocol bump is required.
+- Vanilla camera-forward uses the same 14-bit yaw domain as `Class246.method3359(...)`; detached/free camera modes use the actual Class411 position/look vector. libsm64's own test semantics define camLook as Mario-position minus camera-position, matching this camera->focus vector.
+- Added `AlternateCharacterCombatBridge`: Mario F/B rising edge keeps the native punch/action input and also sends Matrix3's stock NPC attack packet (opcode 32) to the nearest loaded NPC within a bounded soft-target radius.
+- Server combat remains fully authoritative: the existing `WorldPacketsDecoder -> PlayerCombatNew(npc)` path owns attack validity, range/pathing, RuneScape combat definitions/stats/equipment bonuses, damage, XP and downstream NPC death/drop behavior. No alternate-character damage formula or server combat fork was added.
+- Mario's current client capability profile is melee-only; strict server enforcement of per-character weapon/style restrictions is intentionally carryover rather than pretending the client capability is authority.
+- `MarioVisualRenderer` now keeps the last successfully rendered Mario model for a bounded 750 ms grace window across transient native geometry/model-build gaps. Cached fallback renders do not extend the deadline; real Mario-mode/bridge loss still restores the RuneScape body immediately.
+- Runtime gate: rotate camera through N/E/S/W and confirm W remains camera-forward; idle several seconds then Space and confirm no RuneScape-body pop; stand near an attackable NPC and tap F once to confirm native Mario attack plus normal RuneScape NPC combat/damage/XP.
