@@ -95,7 +95,7 @@ Do not treat a tuned value as final collision scale until Phase 3 establishes th
 - [x] ROM-derived Mario RGBA atlas is transferred once during the binary handshake.
 - [x] `Sm64BridgeSession` publishes immutable `GeometryFrame` / `TextureAtlas` snapshots; native worker does not mutate Matrix scene/model state.
 - [x] `MarioVisualRenderer` converts the current native geometry frame into `Class159`, builds a normal Matrix `Model`, and renders through the established Matrix direct-scene seam.
-- [x] V1 atlas-face approximation was implemented and runtime-proven visually lossy; Bundle 4.2A now defaults to native libsm64 base colours instead.
+- [x] V1 atlas-face approximation was implemented and runtime-proven visually lossy; Bundle 4.2 owns presentation fidelity now.
 - [x] `Player.method10696(...)` suppresses only the local RuneScape appearance and only after a fresh successful Mario replacement frame exists.
 - [x] Suppression is fail-open: remote players, RuneScape mode, bridge failure/not-ready state, failed model/render state, missing geometry, or native geometry older than 500 ms retain the normal RuneScape player path.
 - [x] Safe suppression retry diff verified: `Player.java` contains only the intended 8-line gate/comment addition after restoration of the accidental earlier write.
@@ -122,24 +122,38 @@ Do not treat a tuned value as final collision scale until Phase 3 establishes th
 - [x] Restoring the correct sidecar allows Mario mode to initialize normally again.
 - [ ] If a native/visual failure can be induced after Mario has already rendered, confirm the RuneScape player reappears once the replacement frame is no longer fresh/usable.
 
-## Bundle 4.2A - render colour fidelity
+## Bundle 4.2A - render colour + atlas detail fidelity
 
-### Evidence / implementation
+### Runtime evidence
 
-- [x] Runtime screenshot shows V1 presentation has large dark/black whole-triangle patches even though geometry and animation are correct. `VERIFIED` 2026-10-04.
-- [x] Static trace confirms V1 samples only each triangle's three UV vertices, blends those samples, and collapses the result into one RuneScape packed-HSL face colour. `verified-static`.
-- [x] libsm64's reference GL renderer draws Mario base colour/lighting first and overlays the ROM texture as a separate UV-mapped pass rather than collapsing texture detail into one triangle colour. `verified-static`.
-- [x] Default Matrix presentation now uses libsm64 base material/light colours only, removing the lossy atlas-to-whole-face bake from the normal path.
-- [x] Original atlas-face approximation remains available only for comparison with `-Dmatrix3.sm64.debugAtlasFaceBake=true`.
+- [x] V1 atlas-to-one-face bake produced large dark/black whole-triangle patches. `VERIFIED` 2026-10-04.
+- [x] Native-base-colour fallback removed the giant black whole-triangle artifact. `VERIFIED` by user screenshot 2026-10-04.
+- [x] Native-base-colour fallback also removes texture-only details such as Mario's eyes/facial details. `VERIFIED` by user screenshot/comment 2026-10-04.
 
-### Runtime acceptance
+### Static evidence / implementation
 
-1. [ ] Pull/clean-build/launch once.
-2. [ ] Ctrl+M: Mario still replaces the local RuneScape body and native idle animation still works.
-3. [ ] Confirm the giant black/dark face blocks are materially reduced or gone.
-4. [ ] Tap Space: jump animation still renders correctly with the new colour path.
-5. [ ] Ctrl+M out/in still restores and recreates presentation correctly.
-6. [ ] If Mario is still broadly too dark after the black-face artifact is gone, stop and trace Matrix model lighting/normal handling next; do not stack speculative brightness changes.
+- [x] V1 collapsed sparse ROM texture detail into one packed-HSL colour per source triangle, explaining why dark texels contaminated whole polygons. `verified-static`.
+- [x] libsm64 GL3 reference rendering uses `mix(baseColor, texture.rgb, texture.a)` with the atlas sampled as a real UV texture. `verified-static`.
+- [x] libsm64 reference texture state is `GL_CLAMP_TO_EDGE` + `GL_LINEAR`; the old Matrix sampler incorrectly wrapped UVs. `verified-static`.
+- [x] libsm64 emits `(1,1)` for all three UVs when texturing is disabled for a source triangle; Matrix now leaves those faces at native base colour. `verified-static`.
+- [x] Textured SM64 source triangles are now tessellated only for presentation and atlas-sampled per micro-face; default is 4 subdivisions per edge (16 micro-faces per textured source triangle).
+- [x] Atlas sampling now uses clamp-to-edge and bilinear RGBA sampling before the libsm64 base/texture alpha mix.
+- [x] Matrix output is budgeted under the 16-bit generated-model vertex/index ceiling; subdivision automatically reduces if a frame would exceed the budget.
+- [x] `-Dmatrix3.sm64.textureSubdivisions=0..4` controls the fidelity/cost tradeoff. `0` is the native-base-colour fallback.
+- [x] `-Dmatrix3.sm64.debugAtlasFaceBake=true` forces the coarse one-face diagnostic path for A/B comparison.
+
+### Runtime acceptance - atlas micro-face v3
+
+1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch once.
+2. [ ] Ctrl+M and confirm the log reports `colour=atlas-micro-v3` and `textureSubdivisions=4`.
+3. [ ] Confirm eyes/facial/hat/clothing atlas details return.
+4. [ ] Confirm the former giant black whole-triangle patches do **not** return.
+5. [ ] Idle animation remains correct.
+6. [ ] Tap Space: native jump animation remains correct.
+7. [ ] Ctrl+M out/in still restores RuneScape and recreates Mario correctly.
+8. [ ] Watch for obvious FPS hitching, render/model-build spam, or failure to build the larger generated model.
+
+If detail is good but performance is poor, retry with `-Dmatrix3.sm64.textureSubdivisions=2` or `3` before changing architecture. If detail is still insufficient at `4`, the next fidelity step is a true renderer-neutral Matrix UV texture path rather than increasing generated geometry indefinitely.
 
 ### Model-scale calibration
 
@@ -149,7 +163,7 @@ Default Mario mesh scale remains `2.0`:
 -Dmatrix3.sm64.modelScale=<positive-float>
 ```
 
-Do not tune scale/ground anchor until the colour/shading presentation is readable enough to judge the silhouette reliably.
+Do not tune scale/ground anchor until the colour/texture presentation is readable enough to judge the silhouette reliably.
 
 ## Relevant Matrix3 smoke coverage
 
@@ -162,4 +176,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Bundle 4.1's core body/idle/jump/restore/re-entry path is runtime-accepted. Test Bundle 4.2A's native-base-colour presentation once; if the large black face blocks persist, the next bounded trace is Matrix lighting/normal handling rather than further atlas colour guessing.
+Runtime-test Bundle 4.2A atlas micro-face v3 once. The acceptance target is specific: Mario's eyes/details return, the giant black source-triangle artifacts stay gone, and the proven idle/jump/restore path remains stable.
