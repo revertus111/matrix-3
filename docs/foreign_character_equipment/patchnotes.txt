@@ -37,3 +37,8 @@
 - Regenerated the tracked libsm64 semantic diff hunk metadata against the pinned upstream layout after `git apply` rejected the hand-authored patch as corrupt at line 61.
 - Corrected all affected unified-diff hunk counts/offsets and verified the repaired patch parses successfully with `git apply --numstat`.
 - No semantic part ids, protocol-v2 payload, fitting behavior, or coverage behavior changed.
+
+2026-10-04 - V7 Windows bootstrap normalization
+- Git-for-Windows runtime reported the repaired patch parsed but failed to match the first pinned-source hunks, consistent with CRLF worktree normalization.
+- Bootstrap now forces the private `.deps/libsm64` checkout to `core.autocrlf=false` / LF, force-checks out and cleans the pinned dependency, then applies the semantic patch with whitespace-insensitive context matching.
+- This changes dependency preparation only; semantic ids, protocol-v2 payload, fitting, and helmet coverage behavior are unchanged.
