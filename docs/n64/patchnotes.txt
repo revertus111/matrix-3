@@ -7,3 +7,9 @@
 - Added a bounded 256-entry transition log for mode, bridge, geometry, frame-sequence gaps, native action/animation, Space/A/B/Z edges, RuneScape-body suppression changes and native fallback events.
 - Added Clear Events, Copy Snapshot, Copy Events, Pause Display and Auto-scroll controls. Pausing the Swing display does not pause runtime recording.
 - The N64 tool is observation-only: Matrix3 Mario movement, libsm64 stepping, rendering, combat, player suppression and server authority remain owned by their existing runtime classes.
+
+2026-10-04 - Mario autonomous sleep bridge-stall fix
+- Runtime diagnostics captured `bridgeReady=true` with a stale native frame (`frameAgeMs=4745`) and last action `0x0C000203`; libsm64 defines that action as `ACT_SLEEPING`.
+- Updated `sm64_bridge` to keep the embedded Mario out of `ACT_START_SLEEPING` / `ACT_SLEEPING` and return him to normal `ACT_IDLE` before the next native tick.
+- This fixes the proven long-idle transition at the native state boundary instead of extending Matrix renderer/suppression grace again.
+- Normal idle, movement, jump, attack and crouch/ground-pound inputs are unchanged. A rebuilt `sm64_bridge.exe` is required for runtime verification.
