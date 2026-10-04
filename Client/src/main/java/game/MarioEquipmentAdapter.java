@@ -407,10 +407,24 @@ public final class MarioEquipmentAdapter {
             return null;
         }
 
+        float anchorX = centerX * MARIO_MODEL_SCALE;
+        float anchorY = -centerY * MARIO_MODEL_SCALE;
+        float anchorZ = centerZ * MARIO_MODEL_SCALE;
+        float[] skullCenter = MarioHeadOrientationTracker.calculateHeadCenter(frame);
+        if (skullCenter != null
+                && skullCenter.length == 3
+                && isFinite(skullCenter[0])
+                && isFinite(skullCenter[1])
+                && isFinite(skullCenter[2])) {
+            anchorX = skullCenter[0] * MARIO_MODEL_SCALE;
+            anchorY = skullCenter[1] * MARIO_MODEL_SCALE;
+            anchorZ = skullCenter[2] * MARIO_MODEL_SCALE;
+        }
+
         return new HeadAnchor(
-                centerX * MARIO_MODEL_SCALE,
-                -centerY * MARIO_MODEL_SCALE,
-                centerZ * MARIO_MODEL_SCALE,
+                anchorX,
+                anchorY,
+                anchorZ,
                 horizontalSpan,
                 MarioHeadOrientationTracker.calculateRotationDelta(frame));
     }
