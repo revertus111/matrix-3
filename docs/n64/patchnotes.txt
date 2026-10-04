@@ -20,6 +20,8 @@
 - Added a Freeze Pose control using the existing Matrix-visible SM64 presentation freeze so fitting can be done against a stable frame while the native worker stays alive.
 - Added live geometric Mario head masking before Matrix model construction, with enable, helmet-only, cut-height and cut-radius controls plus a helmet-safe preset.
 - Head-mask edits increment a revision so Mario rebuilds immediately even while the presentation frame is frozen; helmet presence is cached once per build rather than queried per triangle.
+- Helmet presence is also folded into the renderer mask cache key while helmet-only masking is enabled, so equip/unequip refreshes correctly even on a frozen presentation frame.
+- Session calibration access is synchronized between the Swing workbench and client/render paths; the lightweight active flag remains volatile for input suppression reads.
 - Runtime V4 evidence showed the first full-head rotation delta drove the helmet in the opposite direction. `MarioHeadOrientationTracker` now feeds Matrix the inverse rigid rotation (transpose) instead of adding another arbitrary yaw flip.
 - Added `docs/n64/TRANSFORM_CONVENTIONS.md` as the persistent anti-backwards reference and `MARIO_EQUIPMENT_WORKBENCH.md` as the tool guide.
 - Added explicit `Save profile .md` / `Copy markdown`; save writes the current calibration snapshot to `docs/n64/MARIO_EQUIPMENT_RUNTIME.md` only when the developer presses the button.
