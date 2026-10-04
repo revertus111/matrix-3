@@ -4,9 +4,9 @@ package game;
  * Matrix3 client-thread presentation/input adapter for Mario-mode native SM64 state.
  *
  * The legacy class name is retained because the established viewport hook calls
- * this owner. Java no longer simulates Mario gravity here: libsm64 owns Mario's
- * movement/action simulation while this class forwards Matrix input and maps the
- * published native vertical state onto Matrix3's verified local-player transform.
+ * this owner. Java does not recreate Mario physics: libsm64 owns Mario movement
+ * and action simulation while this class forwards Matrix input and presents the
+ * published native XYZ state through Matrix3's verified local-player transform.
  */
 public final class MarioJumpController {
 
@@ -20,11 +20,12 @@ public final class MarioJumpController {
     private static final int INTERNAL_SPACE_KEY = 83;  // Space -> SM64 A
     private static final float DIAGONAL_STICK_SCALE = 0.70710677F;
 
-    // Initial presentation calibration only. Native SM64 remains physics owner.
-    // Tune from runtime evidence before collision adapter work treats this as final.
+    // Presentation calibration only. libsm64 remains the movement/physics owner.
     private static final float DEFAULT_SM64_TO_MATRIX_Y_SCALE = 3.0F;
+    private static final float DEFAULT_SM64_TO_MATRIX_XZ_SCALE = 3.0F;
     private static final float SM64_TO_MATRIX_Y_SCALE = resolveVerticalScale();
-    private static final float EXTERNAL_Y_EPSILON = 0.5F;
+    private static final float SM64_TO_MATRIX_XZ_SCALE = resolveHorizontalScale();
+    private static final float EXTERNAL_POSITION_EPSILON = 0.5F;
 
     private static int lastTickCycle = Integer.MIN_VALUE;
     private static Player lastPlayer;
@@ -33,11 +34,17 @@ public final class MarioJumpController {
     private static boolean attackReleaseRequired;
     private static boolean crouchReleaseRequired;
     private static boolean baselineValid;
-    private static boolean appliedYValid;
+    private static boolean appliedPositionValid;
 
+    private static float groundX;
     private static float groundY;
+    private static float groundZ;
+    private static float nativeGroundX;
     private static float nativeGroundY;
+    private static float nativeGroundZ;
+    private static float lastAppliedX;
     private static float lastAppliedY;
+    private static float lastAppliedZ;
 
     private MarioJumpController() {
     }
@@ -45,6 +52,8 @@ public final class MarioJumpController {
     /**
      * Runs from Matrix3's established live viewport tick. Native simulation runs
      * independently at fixed 30 Hz; scene mutation remains on this client thread.
+     * Horizontal XYZ presentation is intentionally local-only at this stage: no
+     * RuneScape movement packet, clipping or server-authority path is replaced.
      */
     public static void tick() {
         if (lastTickCycle == client.cycles) {
@@ -55,6 +64,7 @@ public final class MarioJumpController {
         Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
         if (player != lastPlayer) {
             Sm64BridgeSession.stop();
+            MarioInputKeyboard.uninstall();
             resetPresentation();
             modeWasMario = false;
             spaceReleaseRequired = false;
@@ -90,52 +100,71 @@ public final class MarioJumpController {
             return;
         }
 
-        Float latestNativeY = Sm64BridgeSession.getLatestY();
+        Sm64BridgeSession.NativePosition latestNative = Sm64BridgeSession.getLatestPosition();
         if (!baselineValid) {
             // Do not feed movement/actions until Matrix and native baselines exist.
             Sm64BridgeSession.setInput(0.0F, 0.0F, false, false, false);
-            if (latestNativeY == null) {
+            if (latestNative == null) {
                 return;
             }
 
             Class240 position = player.method5394().aClass240_2647;
+            groundX = position.aFloat2653;
             groundY = position.aFloat2656;
-            nativeGroundY = latestNativeY.floatValue();
+            groundZ = position.aFloat2657;
+            nativeGroundX = latestNative.x;
+            nativeGroundY = latestNative.y;
+            nativeGroundZ = latestNative.z;
             baselineValid = true;
-            appliedYValid = false;
+            appliedPositionValid = false;
             System.out.println("[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale "
-                    + SM64_TO_MATRIX_Y_SCALE + ")");
+                    + SM64_TO_MATRIX_Y_SCALE + ", XZ scale " + SM64_TO_MATRIX_XZ_SCALE + ")");
             System.out.println("[Mario] Controls: WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
         publishControls();
 
-        Float interpolatedNativeY = Sm64BridgeSession.getInterpolatedY();
-        if (interpolatedNativeY == null) {
+        Sm64BridgeSession.NativePosition interpolatedNative =
+                Sm64BridgeSession.getInterpolatedPosition();
+        if (interpolatedNative == null) {
             return;
         }
 
         Class240 position = player.method5394().aClass240_2647;
+        float currentX = position.aFloat2653;
         float currentY = position.aFloat2656;
-        if (appliedYValid && Math.abs(currentY - lastAppliedY) > EXTERNAL_Y_EPSILON) {
+        float currentZ = position.aFloat2657;
+        if (appliedPositionValid) {
             /*
-             * Until real RuneScape terrain is streamed into libsm64, preserve
-             * Matrix's terrain/movement Y as the presentation baseline instead
-             * of fighting a normal client-owned height update.
+             * Matrix/server-owned corrections remain authoritative underneath the
+             * temporary Mario presentation offset. Rebase only the corrected axis
+             * instead of fighting normal RuneScape movement/terrain ownership.
              */
-            groundY = currentY;
+            if (Math.abs(currentX - lastAppliedX) > EXTERNAL_POSITION_EPSILON) {
+                groundX = currentX;
+            }
+            if (Math.abs(currentY - lastAppliedY) > EXTERNAL_POSITION_EPSILON) {
+                groundY = currentY;
+            }
+            if (Math.abs(currentZ - lastAppliedZ) > EXTERNAL_POSITION_EPSILON) {
+                groundZ = currentZ;
+            }
         }
 
-        float nativeHeight = interpolatedNativeY.floatValue() - nativeGroundY;
+        float nativeHeight = interpolatedNative.y - nativeGroundY;
         if (nativeHeight < 0.0F) {
             nativeHeight = 0.0F;
         }
 
+        float targetX = groundX + (interpolatedNative.x - nativeGroundX) * SM64_TO_MATRIX_XZ_SCALE;
         // Matrix altitude increases as scene-Y decreases.
         float targetY = groundY - nativeHeight * SM64_TO_MATRIX_Y_SCALE;
-        player.method5395(position.aFloat2653, targetY, position.aFloat2657);
+        float targetZ = groundZ + (interpolatedNative.z - nativeGroundZ) * SM64_TO_MATRIX_XZ_SCALE;
+        player.method5395(targetX, targetY, targetZ);
+        lastAppliedX = targetX;
         lastAppliedY = targetY;
-        appliedYValid = true;
+        lastAppliedZ = targetZ;
+        appliedPositionValid = true;
     }
 
     private static void publishControls() {
@@ -171,6 +200,7 @@ public final class MarioJumpController {
 
     private static void enterMarioMode() {
         resetPresentation();
+        MarioInputKeyboard.install();
         captureHeldActionGuards();
         Sm64BridgeSession.start();
     }
@@ -178,6 +208,7 @@ public final class MarioJumpController {
     private static void exitMarioMode(Player player) {
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
+        MarioInputKeyboard.uninstall();
         resetPresentation();
         captureHeldActionGuards();
     }
@@ -186,6 +217,7 @@ public final class MarioJumpController {
         System.out.println("[SM64 Bridge] Falling back to RuneScape control: " + reason);
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
+        MarioInputKeyboard.uninstall();
         resetPresentation();
         captureHeldActionGuards();
         modeWasMario = false;
@@ -202,14 +234,25 @@ public final class MarioJumpController {
         if (player == null || !baselineValid) {
             return;
         }
-        Class240 position = player.method5394().aClass240_2647;
-        player.method5395(position.aFloat2653, groundY, position.aFloat2657);
+        player.method5395(groundX, groundY, groundZ);
     }
 
     private static float resolveVerticalScale() {
-        String configured = System.getProperty("matrix3.sm64.verticalScale");
+        return resolvePositiveScale(
+                "matrix3.sm64.verticalScale",
+                DEFAULT_SM64_TO_MATRIX_Y_SCALE);
+    }
+
+    private static float resolveHorizontalScale() {
+        return resolvePositiveScale(
+                "matrix3.sm64.horizontalScale",
+                DEFAULT_SM64_TO_MATRIX_XZ_SCALE);
+    }
+
+    private static float resolvePositiveScale(String propertyName, float defaultValue) {
+        String configured = System.getProperty(propertyName);
         if (configured == null || configured.trim().isEmpty()) {
-            return DEFAULT_SM64_TO_MATRIX_Y_SCALE;
+            return defaultValue;
         }
         try {
             float parsed = Float.parseFloat(configured.trim());
@@ -219,22 +262,27 @@ public final class MarioJumpController {
         } catch (NumberFormatException ignored) {
             // Fall through to the safe default.
         }
-        System.out.println("[SM64 Bridge] Invalid matrix3.sm64.verticalScale='" + configured
-                + "'; using " + DEFAULT_SM64_TO_MATRIX_Y_SCALE);
-        return DEFAULT_SM64_TO_MATRIX_Y_SCALE;
+        System.out.println("[SM64 Bridge] Invalid " + propertyName + "='" + configured
+                + "'; using " + defaultValue);
+        return defaultValue;
     }
 
     private static boolean keyDown(int internalKey) {
-        return Class108.aClass549_1426 != null
-                && Class108.aClass549_1426.method6514(internalKey, (byte) 1);
+        return MarioInputKeyboard.rawKeyDown(internalKey);
     }
 
     private static void resetPresentation() {
         baselineValid = false;
-        appliedYValid = false;
+        appliedPositionValid = false;
+        groundX = 0.0F;
         groundY = 0.0F;
+        groundZ = 0.0F;
+        nativeGroundX = 0.0F;
         nativeGroundY = 0.0F;
+        nativeGroundZ = 0.0F;
+        lastAppliedX = 0.0F;
         lastAppliedY = 0.0F;
+        lastAppliedZ = 0.0F;
     }
 
     public static boolean isAirborne() {
