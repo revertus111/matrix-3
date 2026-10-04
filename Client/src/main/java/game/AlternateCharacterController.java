@@ -151,16 +151,22 @@ public final class AlternateCharacterController {
 
     /**
      * Returns the rendered Matrix camera forward direction on the X/Z ground
-     * plane. Detached/free cameras use their real Class411 position/look vector.
+     * plane. Construction Free/RTS explicitly owns the Class24 detached camera
+     * while active, even when Matrix's normal detached-camera flags do not expose
+     * that ownership. Other detached/free cameras use their normal Matrix flags.
      * Vanilla follow/orbit cameras use the already-resolved camera world position
      * written by Class246.method3359(...) and the exact X/Z focus point supplied
-     * to that solver. This avoids reconstructing Matrix's camera handedness from
-     * yaw and keeps alternate-character steering tied to the view actually drawn.
+     * to that solver. This keeps alternate-character steering tied to the view
+     * actually being rendered rather than stale vanilla camera state.
      */
     static PlanarDirection getCameraForward() {
         Class411_Sub1 detached = null;
         try {
-            if (IncomingPacket.method4113((byte) 0) && Class24.aClass411_Sub1_158 != null) {
+            if (ConstructionBuildCamera.isRequested()
+                    && Class24.aClass411_Sub1_158 != null) {
+                detached = Class24.aClass411_Sub1_158;
+            } else if (IncomingPacket.method4113((byte) 0)
+                    && Class24.aClass411_Sub1_158 != null) {
                 detached = Class24.aClass411_Sub1_158;
             } else if (Class18.anInt143 * 625220759 == 1
                     && Class133_Sub1.aClass411_Sub1_9827 != null) {
