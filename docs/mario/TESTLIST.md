@@ -87,6 +87,65 @@ If the native jump is visibly too tall/short, test without another code patch us
 
 Do not treat a tuned value as final collision scale until Phase 3 establishes the full Matrix<->SM64 XYZ/collision conversion.
 
+## Bundle 4.1 - native Mario geometry -> Matrix Model
+
+### Implementation / static gate
+
+- [x] Binary sidecar protocol publishes native state plus animated Mario geometry at the fixed 30 Hz simulation rate.
+- [x] ROM-derived Mario RGBA atlas is transferred once during the binary handshake.
+- [x] `Sm64BridgeSession` publishes immutable `GeometryFrame` / `TextureAtlas` snapshots; native worker does not mutate Matrix scene/model state.
+- [x] `MarioVisualRenderer` converts the current native geometry frame into `Class159`, builds a normal Matrix `Model`, and renders through the established Matrix direct-scene seam.
+- [x] V1 samples the ROM atlas into per-triangle Matrix face albedo; exact runtime UV texture injection remains deferred polish.
+- [x] `Player.method10696(...)` suppresses only the local RuneScape appearance and only after a fresh successful Mario replacement frame exists.
+- [x] Suppression is fail-open: remote players, RuneScape mode, bridge failure/not-ready state, failed model/render state, missing geometry, or native geometry older than 500 ms retain the normal RuneScape player path.
+- [x] Safe suppression retry diff verified: `Player.java` contains only the intended 8-line gate/comment addition after restoration of the accidental earlier write.
+- [x] `-Dmatrix3.sm64.modelScale=<positive-float>` provides runtime visual scale calibration; default is `2.0`.
+- [ ] Rebuild local `native/sm64-bridge/dist/sm64_bridge.exe` so the runtime binary matches the new binary geometry protocol.
+- [ ] Eclipse Java 8 clean/build after pulling the complete Bundle 4.1 slice.
+
+### Consolidated runtime acceptance
+
+Use one client launch after rebuilding the native sidecar and Eclipse clean/build:
+
+1. [ ] Launch/login normally in RuneScape mode; local and remote RuneScape players render normally.
+2. [ ] Press Ctrl+M. Console prints:
+
+```text
+[Mario] Controller mode: MARIO
+[SM64 Bridge] Persistent session READY (30 Hz + geometry)
+[SM64 Visual] Native Mario -> Matrix Model ACTIVE ...
+```
+
+3. [ ] Actual Mario appears at the local player's world transform.
+4. [ ] The local RuneScape body is hidden only after Mario is visibly rendering; no persistent double-body presentation remains after the first successful replacement frame.
+5. [ ] Idle native animation changes Mario's pose across successive geometry frames.
+6. [ ] Tap Space: native Mario jump pose/animation is visible while native SM64 Y still drives vertical movement.
+7. [ ] Other players remain normal RuneScape players while local Mario replacement is active.
+8. [ ] Press Ctrl+M back to RuneScape: normal local-player model returns immediately and Mario replacement stops.
+9. [ ] Re-enter Mario mode and confirm replacement still initializes cleanly a second time.
+10. [ ] No client hang/crash or sustained render/model-build error spam during the visual test.
+
+### Visual fail-open acceptance
+
+After the normal visual path passes:
+
+- [ ] While in RuneScape mode, temporarily use an invalid `-Dmatrix3.sm64.bridge` path or rename the sidecar as described in the Bundle 2.2 failure test.
+- [ ] Attempt Mario mode. The normal RuneScape player remains visible; no invisible local player is left behind.
+- [ ] Restore the sidecar/path and confirm Mario mode can initialize normally again.
+- [ ] If a native/visual failure can be induced after Mario has rendered, confirm the RuneScape player reappears once the replacement frame is no longer fresh/usable.
+
+### Model-scale calibration
+
+Default Mario mesh scale is `2.0`.
+
+If Mario is visibly too large/small, test without another code patch using:
+
+```text
+-Dmatrix3.sm64.modelScale=<positive-float>
+```
+
+Do not finalize orientation, ground anchor, interpolation, or texture-injection polish until this first direct native-body gate passes.
+
 ## Relevant Matrix3 smoke coverage
 
 From `docs/rs3/SMOKE_TEST.md`:
@@ -94,7 +153,8 @@ From `docs/rs3/SMOKE_TEST.md`:
 - [ ] Build/startup: Eclipse Java 8 clean/build and client launch.
 - [ ] Login/player lifecycle: login, expected world entry, logout, relog.
 - [ ] Movement/interfaces/utility: normal RuneScape movement remains functional.
+- [ ] Player rendering: local RuneScape presentation restores cleanly after Mario mode and remote players remain unaffected.
 
 ## Next gate
 
-The native SM64 -> visible Matrix vertical path is runtime-proven. Remaining Ctrl+M exit/relog/failure checks remain regression carryover before Bundle 2.2 can be marked fully closed.
+Bundle 4.1 is implemented and verified-static. Rebuild the native sidecar, Eclipse Java 8 clean/build, then run the consolidated visual acceptance above. Phase 3 collision remains intentionally deferred until the actual Mario body/animation path is runtime-accepted.
