@@ -46,5 +46,12 @@
 - Added `N64 -> Mario 64 -> Equipment Workbench` with live scale, head-local X/Y/Z, yaw, freeze, reset, 180-degree item flip, copy and markdown-save controls.
 - Added geometric Mario source-triangle masking before Matrix model construction with helmet-only, height-cutoff and radius controls plus a safe starting preset.
 - Mask edits carry a revision so Mario rebuilds immediately even while the SM64 presentation frame is frozen; helmet presence is cached once per build instead of queried per source triangle.
-- Added `docs/n64/TRANSFORM_CONVENTIONS.md` as the persistent transform/sign authority and `docs/n64/MARIO_EQUIPMENT_WORKBENCH.md` as the operator guide.
+- Added `docs/n64/TRANSFORM_CONVENTIONS.md` as the persistent transform/sign authority and `MARIO_EQUIPMENT_WORKBENCH.md` as the operator guide.
 - Workbench `Save profile .md` explicitly writes the current transform/mask snapshot to `docs/n64/MARIO_EQUIPMENT_RUNTIME.md`; normal rendering never writes files.
+
+2026-10-04 - Mario measured helmet auto-fit V6
+- Added `MarioHelmetAutoFit` to measure Mario's trimmed skull width/height/depth from the live libsm64 geometry and the equipped 830 worn-model outer width/height/depth.
+- Replaced the assumption that helmet outer bounds equal usable head space with a conservative cavity proxy: horizontal cavity defaults to `72%` of outer width/depth and vertical cavity defaults to `82%` of outer height.
+- The helper computes a desired uniform fit from width/depth, allows height to enlarge that result by at most `10%`, then converts it into the session calibration multiplier layered on top of the existing V2 adapter scale.
+- Auto-fit resolves once per helmet/session; the first manual workbench/hotkey edit locks the manual value so the math no longer fights the developer.
+- Reset re-enables mathematical auto-fit for that helmet. Runtime logging now prints Mario W/H/D, helmet outer W/H/D, cavity ratios, old auto-fit, desired auto-fit and the recommended manual multiplier.
