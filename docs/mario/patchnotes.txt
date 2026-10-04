@@ -22,4 +22,9 @@
 - Added Java 8 `Sm64BridgeProbe`; entering Mario mode attempts one background probe when the local sidecar/ROM exist, sends deterministic A-button native ticks, and reports PASS only if native Mario Y rises and action state changes.
 - Probe lookup supports both repository-root and Eclipse `Client/` working-directory layouts plus system-property/environment overrides.
 - C11 and Java 8 source syntax were checked locally; the Java/process protocol was exercised against a temporary stub native library. This is not SM64 runtime verification.
-- Real Bridge Spike A remains `NEEDS TEST` until the sidecar is built against actual `libsm64` and the user's US ROM produces the native PASS log.
+
+2026-10-04 - Bridge Spike A runtime VERIFIED
+- User built real `libsm64` and `sm64_bridge.exe` under MSYS2 MinGW64, initialized it from the local US ROM, and confirmed manual `READY 1` / `PONG 1` protocol operation.
+- Eclipse runtime then produced `[SM64 Bridge] PASS native SM64 state: y -0.00 -> 96.50 (rise 96.50), action 205521409 -> 205521409` after entering Mario mode.
+- The PASS gate proves Java observed both native SM64 Y movement and at least one intermediate native action-state change; the displayed final action returned to the baseline action by the end of the deterministic sequence.
+- Bridge Spike A is complete. Next implementation target is Bundle 2.2: persistent fixed-step native SM64 state driving the visible Matrix local-player transform.
