@@ -82,17 +82,20 @@ public final class MarioJumpController {
         }
 
         if (!marioMode) {
+            Mario64Diagnostics.observeRuntime(player);
             return;
         }
 
         if (player == null) {
             fallbackToRuneScape(null, "local player unavailable");
+            Mario64Diagnostics.observeRuntime(null);
             return;
         }
 
         if (Sm64BridgeSession.hasFailed()) {
             String reason = Sm64BridgeSession.getFailureReason();
             fallbackToRuneScape(player, reason == null ? "native session failed" : reason);
+            Mario64Diagnostics.observeRuntime(player);
             return;
         }
 
@@ -101,6 +104,7 @@ public final class MarioJumpController {
             // Do not feed movement/actions until Matrix and native baselines exist.
             publishIdleInput();
             if (latestNative == null) {
+                Mario64Diagnostics.observeRuntime(player);
                 return;
             }
 
@@ -123,6 +127,7 @@ public final class MarioJumpController {
         Sm64BridgeSession.NativePosition interpolatedNative =
                 Sm64BridgeSession.getInterpolatedPosition();
         if (interpolatedNative == null) {
+            Mario64Diagnostics.observeRuntime(player);
             return;
         }
 
@@ -161,15 +166,19 @@ public final class MarioJumpController {
         lastAppliedY = targetY;
         lastAppliedZ = targetZ;
         appliedPositionValid = true;
+
+        Mario64Diagnostics.observeRuntime(player);
     }
 
     private static void publishIdleInput() {
-        AlternateCharacterController.PlanarDirection camera =
-                AlternateCharacterController.getCameraForward();
+        AlternateCharacterController.ControlState controls =
+                AlternateCharacterController.sampleControls();
+        AlternateCharacterController.PlanarDirection camera = controls.cameraForward;
         Sm64BridgeSession.setInput(
                 camera.x, camera.z,
                 0.0F, 0.0F,
                 false, false, false);
+        Mario64Diagnostics.observeControls(controls, false, false, false);
     }
 
     private static void publishControls() {
@@ -199,6 +208,7 @@ public final class MarioJumpController {
                 buttonA,
                 buttonB,
                 buttonZ);
+        Mario64Diagnostics.observeControls(controls, buttonA, buttonB, buttonZ);
 
         if (buttonB && !combatAttackWasDown) {
             AlternateCharacterCombatBridge.requestPrimaryMeleeAttack();
@@ -227,6 +237,7 @@ public final class MarioJumpController {
 
     private static void fallbackToRuneScape(Player player, String reason) {
         System.out.println("[SM64 Bridge] Falling back to RuneScape control: " + reason);
+        Mario64Diagnostics.noteFallback(reason);
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
         AlternateCharacterInputKeyboard.uninstall();
