@@ -57,6 +57,8 @@ Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 - Manual native protocol returned `READY 1` / `PONG 1`.
 - Eclipse/Java produced `[SM64 Bridge] PASS native SM64 state: y -0.00 -> 96.50 (rise 96.50), action 205521409 -> 205521409`.
 - That PASS proves Matrix Java can launch the native core, send input, execute SM64-derived movement/action code and receive real native Mario state back.
+- Bundle 2.2 runtime confirmed the persistent sidecar reaches `READY (30 Hz)`, native-state presentation reaches `ACTIVE`, and the native-driven Matrix transform path works in the live 830 client.
+- The visible Mario-mode vertical presentation path is now driven by real native SM64 state rather than the removed Java-gravity implementation.
 
 ### verified-static
 
@@ -150,13 +152,13 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 - [x] Stop/reset on Mario-mode exit and local-player lifecycle change.
 - [x] Auto-fallback to RuneScape mode if the persistent native session fails or dependencies are unavailable.
 - [x] Prevent entering Mario mode while Space is already held from manufacturing a native jump.
-- [ ] Runtime prove Space causes actual SM64-derived C state to visibly move the 830 player.
+- [x] Runtime prove native SM64-derived state visibly drives the 830 player. `VERIFIED` 2026-10-04.
 - [ ] Runtime verify Ctrl+M exit restores the ground baseline and stops native ownership cleanly.
 - [ ] Runtime verify native failure returns to RuneScape mode without corrupting the player transform.
 
 ### Phase 3 - Matrix World / Collision Adapter
 
-**Purpose:** Let the SM64 core physically reason about RuneScape terrain and nearby collision instead of a temporary test floor.
+**Purpose:** Let the SM64 core physically reason about RuneScape terrain and nearby collision instead of a temporary flat native floor.
 
 **Status:** PLANNED
 
@@ -200,8 +202,8 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 - Bundle: 2.2 - Native state -> Matrix transform
 - Bundle status: NEEDS TEST
 - Approval state: `SAP AAA` approved for Bundle 2.2 on 2026-10-04.
-- Current checklist item: runtime-accept native SM64 Y driving the visible Matrix player and clean fallback/exit behavior.
-- Current objective: prove the visible 830 jump is now caused by native SM64 state rather than Java gravity.
+- Current checklist item: regression-accept Ctrl+M exit and native-failure fallback after the core visible transform path passed.
+- Current objective: preserve the now-VERIFIED native SM64 -> visible Matrix path while finishing only the remaining safety regression checks.
 
 ## Checklist / patch status
 
@@ -211,10 +213,10 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 | Passthrough architecture | 2 | 2.1 | DONE | `SM64_PASSTHROUGH_ARCHITECTURE.md`. |
 | Native `sm64_bridge` sidecar | 2 | 2.1 | DONE | Real libsm64 + user-ROM runtime verified. |
 | Java bridge proof | 2 | 2.1 | DONE | Real native PASS verified with 96.50-unit Y rise. |
-| Persistent native session | 2 | 2.2 | NEEDS TEST | 30 Hz worker/state publication implemented. |
-| Native -> visible Matrix transform | 2 | 2.2 | NEEDS TEST | Native Y presentation/fallback implemented; runtime gate next. |
-| Matrix terrain adapter | 3 | 3.1 | READY | Starts after native transform acceptance. |
-| Mario visual presentation | 4 | 4.x | READY | Choose asset-vs-direct-geometry after movement bridge is stable. |
+| Persistent native session | 2 | 2.2 | VERIFIED | 30 Hz session and published-state path accepted at runtime. |
+| Native -> visible Matrix transform | 2 | 2.2 | VERIFIED | Real native SM64 state now visibly drives the 830 vertical presentation path. |
+| Matrix terrain adapter | 3 | 3.1 | READY | Starts after native transform safety regression is closed or explicitly deferred. |
+| Mario visual presentation | 4 | 4.x | READY | Direct native geometry vs imported 830 asset path remains to be chosen. |
 
 ## Decisions / new ideas
 
@@ -231,13 +233,18 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 
 ### Bundle 2.2 quick acceptance
 
-1. Pull, Eclipse clean/build, launch/login.
-2. Ctrl+M -> `MARIO`.
-3. Confirm console prints `[SM64 Bridge] Persistent session READY (30 Hz)` and `Native state -> Matrix transform ACTIVE`.
-4. Tap Space: the visible 830 player must jump from native SM64 state.
-5. Hold/release Space and repeat once; no manufactured jump from mode entry.
-6. Ctrl+M back to RuneScape while grounded and once while airborne; player must restore cleanly and normal Space must stop driving Mario.
-7. Optional failure gate: temporarily make the sidecar unavailable before entering Mario mode; client must automatically return to RuneScape mode rather than crash or leave stale height.
+Verified in the current runtime session:
+
+1. Eclipse Java 8 build/launch path works.
+2. Ctrl+M enters Mario mode.
+3. Persistent native session reaches `READY (30 Hz)`.
+4. Native-state -> Matrix transform reaches `ACTIVE` and the native-driven presentation path works.
+
+Still carryover:
+
+5. Ctrl+M exit while grounded and airborne restores RuneScape cleanly.
+6. Deliberate missing/failed sidecar falls back to RuneScape without stale height.
+7. Logout/relog and normal RuneScape Space/chat behavior remain clean.
 
 ### Carryover
 
@@ -249,7 +256,8 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 ### CARRYOVER
 
 - Phase 1 legacy Java-proof deeper regression where still useful for Matrix lifecycle coverage.
-- Mario model/visual selection until native movement presentation is accepted.
+- Bundle 2.2 Ctrl+M exit/relog/failure-fallback regression.
+- Mario model/visual selection remains independent work after the native movement path is proven.
 
 ### BLOCKED
 
@@ -261,7 +269,7 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 
 - Bridge Spike A runtime-VERIFIED against real `libsm64` + user ROM.
 - Bundle 2.2 implementation added `Sm64BridgeSession`, fixed 30 Hz native stepping, state interpolation/publication, native-Y Matrix presentation and failure/exit fallback.
-- Retired the one-shot `Sm64BridgeProbe`; the established `MarioJumpController.tick()` hook now presents native state rather than simulating Java gravity.
+- Runtime-VERIFIED persistent `READY (30 Hz)` + `Native state -> Matrix transform ACTIVE` in the live 830 client; user accepted the native-driven path as working.
 
 **Current phase:**
 
@@ -273,7 +281,7 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 
 **Next checklist item:**
 
-- Pull/build/launch once. Enter Mario mode, confirm persistent-session logs, press Space and verify the visible player is driven by native SM64 Y; then verify Ctrl+M exit/fallback restores RuneScape cleanly.
+- Finish only the remaining Ctrl+M exit/relog/failure-fallback regression unless the user explicitly changes priority to another Mario workstream area.
 
 **Files/systems already inspected:**
 
@@ -293,7 +301,6 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 
 **Pending runtime verification:**
 
-- Native state visibly drives the 830 player.
 - Mario-mode exit restores baseline and stops native ownership cleanly.
 - Native session failure falls back to RuneScape mode.
 - Initial `3.0` vertical scale feels reasonable or needs calibration.
@@ -304,4 +311,4 @@ The Java-gravity proof is no longer Mario-mode physics authority after Bundle 2.
 
 ## Next recommended work
 
-Runtime-accept Bundle 2.2. Once native SM64 state visibly owns the 830 jump, begin Phase 3 / Bundle 3.1: Matrix terrain heightfield -> local SM64 collision surfaces.
+Finish Bundle 2.2 safety regression, then continue with the next explicitly prioritized Mario milestone.
