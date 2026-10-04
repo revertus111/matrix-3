@@ -127,3 +127,11 @@
 - Hat/head/nose/gloves/body presentation reads materially smoother while the working atlas eye/facial/clothing details remain intact.
 - No obvious mesh collapse or melted hard-edge failure is visible in the accepted clip; existing animation remains visibly active.
 - Bundle 4.2B smoothing is runtime accepted at the default `70` degree smoothing threshold. Sustained performance remains a carryover check.
+
+2026-10-04 - Bundle 2.4 local XYZ runtime VERIFIED
+- User runtime-confirmed the Bundle 2.4 acceptance gate works end-to-end: Mario owns WASD without moving the Construction/RTS camera, native X/Z visibly translates Mario with sensible direction/scale, moving actions preserve displacement, Ctrl+M restores cleanly, re-entry has no stale XYZ, and normal camera WASD returns afterward.
+- Arrow-key camera pan and Q/E camera rotation remain usable while Mario owns WASD.
+- The default horizontal presentation scale `3.0` and direct native X/Z signs are accepted for the current local presentation path.
+- User additionally confirmed Mario already follows different RuneScape terrain elevations correctly in live play.
+- That terrain-elevation result verifies the Matrix presentation/rebase behavior, not native collision ingestion: libsm64 is still simulating against the temporary flat native floor and Phase 3 remains required for collision-authentic walls, objects, ledges/platforms, slopes/landing semantics and water.
+- Bundle 2.4 is runtime accepted; the next architectural step is Phase 3 world/collision adaptation rather than further local XYZ presentation work.
