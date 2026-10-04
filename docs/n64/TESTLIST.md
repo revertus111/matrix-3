@@ -37,12 +37,12 @@
 14. [ ] `Copy markdown` places the same profile text on the clipboard.
 15. [ ] Ctrl+M back to RuneScape restores the normal player body with no floating helmet, stuck freeze or head cut.
 
-## Long-idle / sleep-state bridge-stall fix
+## Long-idle / sleep-state bridge-stall fix v2
 
-1. [ ] Rebuild `native/sm64-bridge/dist/sm64_bridge.exe` from the patched bridge source before launching Matrix3.
+1. [ ] Pull current `main`, rebuild `native/sm64-bridge/dist/sm64_bridge.exe`, and confirm the client console prints `[SM64 Bridge] sleep-guard-v2 active` when Mario mode starts. If that marker is absent, stop: an older executable is still being launched.
 2. [ ] Enter Mario mode and leave Mario completely idle longer than the previous failure window (at least 90 seconds).
 3. [ ] N64 -> Mario 64 sequence continues advancing throughout the idle period; frame age remains low instead of climbing into multi-second values.
-4. [ ] Mario does not settle into persistent action `0x0C000203`; the bridge may log `Sleep state ... -> idle to preserve frame streaming` when the autonomous sleep transition is intercepted.
+4. [ ] The published runtime stream must not remain in `0x0C400202` or `0x0C000203`. When libsm64 attempts autonomous sleep, stderr may report `[SM64 Bridge] blocked autonomous sleep ... -> idle`, and the published action should return immediately to normal idle.
 5. [ ] `Suppress RuneScape body` stays `YES` while Mario mode remains active and the normal RuneScape body never replaces Mario during long idle.
 6. [ ] After the long idle, press Space once: Mario jumps normally and no RuneScape body appears underneath/after the jump.
 7. [ ] Verify WASD movement, F/B attack input and Shift crouch/ground-pound still function after the intercepted sleep transition.
