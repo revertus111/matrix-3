@@ -1,25 +1,29 @@
 package game;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Persistent Java 8 <-> libsm64 sidecar session for Mario-mode simulation.
  *
- * The worker owns only native process I/O and fixed-step SM64 simulation. Matrix
- * scene transforms remain client-thread-owned: callers read the published native
- * state and apply presentation from the established viewport tick.
+ * The worker owns native process I/O, fixed-step SM64 simulation and immutable
+ * native frame publication. Matrix scene/model mutation stays on the client or
+ * renderer thread; callers only consume the published snapshots.
  */
 public final class Sm64BridgeSession {
 
-    private static final int PROTOCOL_VERSION = 1;
+    private static final int BINARY_PROTOCOL_VERSION = 1;
+    private static final int BINARY_CMD_STEP = 1;
     private static final long STEP_NANOS = 1000000000L / 30L;
     private static final long MAX_SCHEDULE_DRIFT_NANOS = STEP_NANOS * 4L;
+    private static final int MAX_TEXTURE_BYTES = 16 * 1024 * 1024;
+    private static final int MAX_TRIANGLES = 1024;
 
     private static volatile Worker current;
 
@@ -73,9 +77,19 @@ public final class Sm64BridgeSession {
         return state == null ? null : Float.valueOf(state.y);
     }
 
+    static GeometryFrame getLatestGeometryFrame() {
+        Worker worker = current;
+        return worker == null ? null : worker.getLatestFrame();
+    }
+
+    static TextureAtlas getTextureAtlas() {
+        Worker worker = current;
+        return worker == null ? null : worker.getTextureAtlas();
+    }
+
     /**
      * One-native-tick-delayed interpolation keeps 30 Hz simulation smooth at
-     * higher Matrix render/update rates without making physics frame dependent.
+     * higher Matrix update rates without making native physics frame dependent.
      */
     public static Float getInterpolatedY() {
         Worker worker = current;
@@ -109,8 +123,9 @@ public final class Sm64BridgeSession {
         private volatile boolean failed;
         private volatile String failureReason;
         private volatile boolean buttonA;
-        private volatile NativeState previousState;
-        private volatile NativeState latestState;
+        private volatile GeometryFrame previousFrame;
+        private volatile GeometryFrame latestFrame;
+        private volatile TextureAtlas textureAtlas;
 
         private volatile Process process;
         private Thread thread;
@@ -162,18 +177,28 @@ public final class Sm64BridgeSession {
         }
 
         NativeState getPreviousState() {
-            return previousState;
+            GeometryFrame frame = previousFrame;
+            return frame == null ? null : frame.state;
         }
 
         NativeState getLatestState() {
-            return latestState;
+            GeometryFrame frame = latestFrame;
+            return frame == null ? null : frame.state;
+        }
+
+        GeometryFrame getLatestFrame() {
+            return latestFrame;
+        }
+
+        TextureAtlas getTextureAtlas() {
+            return textureAtlas;
         }
 
         @Override
         public void run() {
             Process localProcess = null;
-            BufferedReader reader = null;
-            BufferedWriter writer = null;
+            BufferedInputStream input = null;
+            BufferedOutputStream output = null;
             try {
                 if (!bridge.isFile()) {
                     throw new IllegalStateException("sidecar not found: " + bridge.getAbsolutePath());
@@ -182,34 +207,26 @@ public final class Sm64BridgeSession {
                     throw new IllegalStateException("ROM not found: " + rom.getAbsolutePath());
                 }
 
-                ProcessBuilder builder = new ProcessBuilder(bridge.getAbsolutePath(), rom.getAbsolutePath());
+                ProcessBuilder builder = new ProcessBuilder(
+                        bridge.getAbsolutePath(), "--binary", rom.getAbsolutePath());
                 builder.redirectError(ProcessBuilder.Redirect.INHERIT);
                 localProcess = builder.start();
                 process = localProcess;
 
-                reader = new BufferedReader(new InputStreamReader(localProcess.getInputStream(), "UTF-8"));
-                writer = new BufferedWriter(new OutputStreamWriter(localProcess.getOutputStream(), "UTF-8"));
+                input = new BufferedInputStream(localProcess.getInputStream(), 256 * 1024);
+                output = new BufferedOutputStream(localProcess.getOutputStream(), 16 * 1024);
 
-                String readyLine = reader.readLine();
-                if (!("READY " + PROTOCOL_VERSION).equals(readyLine)) {
-                    throw new IllegalStateException("unexpected READY: " + readyLine);
-                }
-
-                send(writer, "PING");
-                String pong = reader.readLine();
-                if (!("PONG " + PROTOCOL_VERSION).equals(pong)) {
-                    throw new IllegalStateException("unexpected PONG: " + pong);
-                }
+                textureAtlas = readHandshake(input);
 
                 // Stabilize the freshly reset native Mario before accepting input.
-                publish(step(writer, reader, false));
-                publish(step(writer, reader, false));
+                publish(step(output, input, false));
+                publish(step(output, input, false));
                 ready = true;
-                System.out.println("[SM64 Bridge] Persistent session READY (30 Hz)");
+                System.out.println("[SM64 Bridge] Persistent session READY (30 Hz + geometry)");
 
                 long nextStep = System.nanoTime();
                 while (running) {
-                    publish(step(writer, reader, buttonA));
+                    publish(step(output, input, buttonA));
 
                     nextStep += STEP_NANOS;
                     long now = System.nanoTime();
@@ -233,8 +250,8 @@ public final class Sm64BridgeSession {
                 running = false;
                 buttonA = false;
                 process = null;
-                closeQuietly(writer);
-                closeQuietly(reader);
+                closeQuietly(output);
+                closeQuietly(input);
                 if (localProcess != null) {
                     localProcess.destroy();
                     try {
@@ -246,23 +263,143 @@ public final class Sm64BridgeSession {
             }
         }
 
-        private void publish(NativeState state) {
-            previousState = latestState;
-            latestState = state;
+        private void publish(GeometryFrame frame) {
+            previousFrame = latestFrame;
+            latestFrame = frame;
         }
     }
 
-    private static NativeState step(BufferedWriter writer, BufferedReader reader, boolean buttonA) throws Exception {
-        send(writer, String.format(Locale.ROOT,
-                "STEP 0.0 -1.0 0.0 0.0 %d 0 0",
-                buttonA ? 1 : 0));
-        return NativeState.parse(reader.readLine(), System.nanoTime());
+    private static TextureAtlas readHandshake(InputStream input) throws IOException {
+        expectMagic(input, 'M', '6', '4', 'B');
+        int version = readIntLE(input);
+        if (version != BINARY_PROTOCOL_VERSION) {
+            throw new IllegalStateException("unexpected binary protocol version: " + version);
+        }
+
+        int width = readIntLE(input);
+        int height = readIntLE(input);
+        int length = readIntLE(input);
+        if (width <= 0 || height <= 0 || width > 4096 || height > 4096
+                || length <= 0 || length > MAX_TEXTURE_BYTES
+                || length != width * height * 4) {
+            throw new IllegalStateException(
+                    "invalid native texture header: " + width + "x" + height + " bytes=" + length);
+        }
+
+        byte[] rgba = new byte[length];
+        readFully(input, rgba, 0, rgba.length);
+        return new TextureAtlas(width, height, rgba);
     }
 
-    private static void send(BufferedWriter writer, String command) throws Exception {
-        writer.write(command);
-        writer.newLine();
-        writer.flush();
+    private static GeometryFrame step(
+            OutputStream output, InputStream input, boolean buttonA) throws IOException {
+        output.write(BINARY_CMD_STEP);
+        writeFloatLE(output, 0.0F);
+        writeFloatLE(output, -1.0F);
+        writeFloatLE(output, 0.0F);
+        writeFloatLE(output, 0.0F);
+        output.write(buttonA ? 1 : 0);
+        output.write(0);
+        output.write(0);
+        output.flush();
+
+        expectMagic(input, 'M', '6', '4', 'F');
+        long sequence = readIntLE(input) & 0xffffffffL;
+        long receivedNanos = System.nanoTime();
+        NativeState state = new NativeState(
+                readFloatLE(input), readFloatLE(input), readFloatLE(input),
+                readFloatLE(input), readFloatLE(input), readFloatLE(input),
+                readFloatLE(input), readFloatLE(input),
+                readIntLE(input) & 0xffffffffL,
+                readIntLE(input),
+                readShortLE(input),
+                readIntLE(input) & 0xffffffffL,
+                readIntLE(input) & 0xffffffffL,
+                receivedNanos);
+
+        int triangleCount = readUnsignedShortLE(input);
+        if (triangleCount < 0 || triangleCount > MAX_TRIANGLES) {
+            throw new IllegalStateException("invalid native triangle count: " + triangleCount);
+        }
+
+        float[] positions = readFloatArray(input, triangleCount * 9);
+        float[] colors = readFloatArray(input, triangleCount * 9);
+        float[] uvs = readFloatArray(input, triangleCount * 6);
+        return new GeometryFrame(sequence, state, triangleCount, positions, colors, uvs);
+    }
+
+    private static float[] readFloatArray(InputStream input, int count) throws IOException {
+        float[] values = new float[count];
+        for (int i = 0; i < count; i++) {
+            values[i] = readFloatLE(input);
+        }
+        return values;
+    }
+
+    private static void expectMagic(InputStream input, char a, char b, char c, char d)
+            throws IOException {
+        int av = input.read();
+        int bv = input.read();
+        int cv = input.read();
+        int dv = input.read();
+        if (av != a || bv != b || cv != c || dv != d) {
+            throw new IllegalStateException("unexpected native binary packet magic");
+        }
+    }
+
+    private static void writeFloatLE(OutputStream output, float value) throws IOException {
+        writeIntLE(output, Float.floatToRawIntBits(value));
+    }
+
+    private static void writeIntLE(OutputStream output, int value) throws IOException {
+        output.write(value & 0xff);
+        output.write((value >>> 8) & 0xff);
+        output.write((value >>> 16) & 0xff);
+        output.write((value >>> 24) & 0xff);
+    }
+
+    private static float readFloatLE(InputStream input) throws IOException {
+        return Float.intBitsToFloat(readIntLE(input));
+    }
+
+    private static int readIntLE(InputStream input) throws IOException {
+        int b0 = readRequired(input);
+        int b1 = readRequired(input);
+        int b2 = readRequired(input);
+        int b3 = readRequired(input);
+        return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
+    }
+
+    private static int readUnsignedShortLE(InputStream input) throws IOException {
+        int b0 = readRequired(input);
+        int b1 = readRequired(input);
+        return b0 | (b1 << 8);
+    }
+
+    private static short readShortLE(InputStream input) throws IOException {
+        return (short) readUnsignedShortLE(input);
+    }
+
+    private static int readRequired(InputStream input) throws IOException {
+        int value = input.read();
+        if (value < 0) {
+            throw new IOException("native sidecar closed binary stream");
+        }
+        return value;
+    }
+
+    private static void readFully(InputStream input, byte[] data, int offset, int length)
+            throws IOException {
+        int remaining = length;
+        int cursor = offset;
+        while (remaining > 0) {
+            int read = input.read(data, cursor, remaining);
+            if (read < 0) {
+                throw new IOException("native sidecar closed binary stream");
+            }
+            cursor += read;
+            remaining -= read;
+        }
     }
 
     private static void sleepNanos(long nanos) throws InterruptedException {
@@ -324,7 +461,38 @@ public final class Sm64BridgeSession {
         };
     }
 
-    private static final class NativeState {
+    static final class TextureAtlas {
+        final int width;
+        final int height;
+        final byte[] rgba;
+
+        TextureAtlas(int width, int height, byte[] rgba) {
+            this.width = width;
+            this.height = height;
+            this.rgba = rgba;
+        }
+    }
+
+    static final class GeometryFrame {
+        final long sequence;
+        final NativeState state;
+        final int triangleCount;
+        final float[] positions;
+        final float[] colors;
+        final float[] uvs;
+
+        GeometryFrame(long sequence, NativeState state, int triangleCount,
+                float[] positions, float[] colors, float[] uvs) {
+            this.sequence = sequence;
+            this.state = state;
+            this.triangleCount = triangleCount;
+            this.positions = positions;
+            this.colors = colors;
+            this.uvs = uvs;
+        }
+    }
+
+    static final class NativeState {
         final float x;
         final float y;
         final float z;
@@ -337,14 +505,15 @@ public final class Sm64BridgeSession {
         final int animId;
         final int animFrame;
         final long flags;
+        final long particleFlags;
         final long receivedNanos;
 
         NativeState(
                 float x, float y, float z,
                 float vx, float vy, float vz,
                 float faceAngle, float forwardVelocity,
-                long action, int animId, int animFrame, long flags,
-                long receivedNanos) {
+                long action, int animId, int animFrame,
+                long flags, long particleFlags, long receivedNanos) {
             this.x = x;
             this.y = y;
             this.z = z;
@@ -357,23 +526,8 @@ public final class Sm64BridgeSession {
             this.animId = animId;
             this.animFrame = animFrame;
             this.flags = flags;
+            this.particleFlags = particleFlags;
             this.receivedNanos = receivedNanos;
-        }
-
-        static NativeState parse(String line, long receivedNanos) {
-            if (line == null) {
-                throw new IllegalStateException("sidecar closed stdout");
-            }
-            String[] tokens = line.trim().split("\\s+");
-            if (tokens.length != 13 || !"STATE".equals(tokens[0])) {
-                throw new IllegalStateException("unexpected state packet: " + line);
-            }
-            return new NativeState(
-                    Float.parseFloat(tokens[1]), Float.parseFloat(tokens[2]), Float.parseFloat(tokens[3]),
-                    Float.parseFloat(tokens[4]), Float.parseFloat(tokens[5]), Float.parseFloat(tokens[6]),
-                    Float.parseFloat(tokens[7]), Float.parseFloat(tokens[8]),
-                    Long.parseLong(tokens[9]), Integer.parseInt(tokens[10]), Integer.parseInt(tokens[11]),
-                    Long.parseLong(tokens[12]), receivedNanos);
         }
     }
 }
