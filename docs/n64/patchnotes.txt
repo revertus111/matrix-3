@@ -1,33 +1,18 @@
 2026-10-04 - N64 Client Console workspace / Mario 64 flight recorder
-- Added a main Client Console `N64` tab with a game-level tab container; Mario 64 is the first sub-tab.
-- `N64` is a first-class rail destination beside the other Client Console main panels, not a Test Console workspace.
-- Removed the temporary N64 entry from the Test Console flyout/workspace registry so there is one N64 navigation owner.
-- Added a dedicated N64 rail icon and retained lazy panel creation through `ClientConsoleShell`.
-- Added a read-only Mario64Diagnostics recorder published from the existing Mario client tick. It snapshots controller mode, bridge/native frame state, action/animation, native XYZ/velocity, camera-relative input, physical Space/F/Shift, forwarded A/B/Z, airborne/height presentation and the actual Mario local-player suppression predicate.
-- Added a bounded 256-entry transition log for mode, bridge, geometry, frame-sequence gaps, native action/animation, Space/A/B/Z edges, RuneScape-body suppression changes and native fallback events.
-- Added Clear Events, Copy Snapshot, Copy Events, Pause Display and Auto-scroll controls. Pausing the Swing display does not pause runtime recording.
-- The N64 tool is observation-only: Matrix3 Mario movement, libsm64 stepping, rendering, combat, player suppression and server authority remain owned by their existing runtime classes.
+- Added first-class N64 Client Console workspace and Mario runtime recorder.
 
-2026-10-04 - Mario autonomous sleep bridge-stall fix
-- Runtime diagnostics captured `bridgeReady=true` with a stale native frame (`frameAgeMs=4745`) and last action `0x0C000203`; libsm64 defines that action as `ACT_SLEEPING`.
-- Updated `sm64_bridge` to keep the embedded Mario out of `ACT_START_SLEEPING` / `ACT_SLEEPING` and return him to normal `ACT_IDLE` before the next native tick.
-- This fixes the proven long-idle transition at the native state boundary instead of extending Matrix renderer/suppression grace again.
-- Normal idle, movement, jump, attack and crouch/ground-pound inputs are unchanged. A rebuilt `sm64_bridge.exe` is required for runtime verification.
+2026-10-04 - Mario autonomous sleep bridge-stall fixes
+- Added native sleep-state guards; current binary startup identifies the active sleep guard.
 
 2026-10-04 - Mario Equipment Workbench / transform truth
-- Added `Runtime` and `Equipment Workbench` subtabs under N64 -> Mario 64 instead of creating another standalone tool/window.
-- Added live per-helmet scale, head-local X/Y/Z and yaw controls backed by the existing session calibration owner, plus reset/copy/180-degree flip actions.
-- Added a Freeze Pose control using the existing Matrix-visible SM64 presentation freeze so fitting can be done against a stable frame while the native worker stays alive.
-- Added live geometric Mario head masking before Matrix model construction, with enable, helmet-only, cut-height and cut-radius controls plus a helmet-safe preset.
-- Head-mask edits increment a revision so Mario rebuilds immediately even while the presentation frame is frozen; helmet presence is cached once per build rather than queried per triangle.
-- Helmet presence is also folded into the renderer mask cache key while helmet-only masking is enabled, so equip/unequip refreshes correctly even on a frozen presentation frame.
-- Session calibration access is synchronized between the Swing workbench and client/render paths; the lightweight active flag remains volatile for input suppression reads.
-- Runtime V4 evidence showed the first full-head rotation delta drove the helmet in the opposite direction. `MarioHeadOrientationTracker` now feeds Matrix the inverse rigid rotation (transpose) instead of adding another arbitrary yaw flip.
-- Added `docs/n64/TRANSFORM_CONVENTIONS.md` as the persistent anti-backwards reference and `MARIO_EQUIPMENT_WORKBENCH.md` as the tool guide.
-- Added explicit `Save profile .md` / `Copy markdown`; save writes the current calibration snapshot to `docs/n64/MARIO_EQUIPMENT_RUNTIME.md` only when the developer presses the button.
+- Added live helmet transform controls, presentation freeze, profile save/copy and persistent transform-convention documentation.
+- Corrected runtime-proven backwards head delta with the inverse/transpose rigid rotation.
 
-2026-10-04 - Mario autonomous sleep bridge-stall fix v2
-- Runtime flight-recorder evidence proved the first sleep guard did not actually prevent the active native stream from spending multiple seconds in `ACT_START_SLEEPING (0x0C400202)` before entering `ACT_SLEEPING (0x0C000203)`, after which sequence publication stopped and `SUPPRESS_RS` failed open at `frameAgeMs=1250`.
-- Hardened `sm64_bridge.c` on both sides of `sm64_mario_tick`: inherited sleep state is repaired before a tick, and any tick that itself enters START_SLEEPING/SLEEPING is immediately reset to `ACT_IDLE` and re-ticked before its frame can be published.
-- Added `[SM64 Bridge] sleep-guard-v2 active` on binary startup so the loaded executable is visibly distinguishable from a stale pre-fix build.
-- Matrix renderer freshness and local-player suppression thresholds were intentionally left unchanged; this patch targets the native frame-stall cause directly.
+2026-10-04 - Semantic Mario equipment workbench V7
+- Native bridge protocol v2 now carries stable Mario part ids and display-list-local triangle positions.
+- Workbench now reports protocol version, semantic metadata availability, shared FACE W/H/D, coverage profile and semantic part counts.
+- Added `KEEP_ALL` and nose-safe `FULL_HELM_SAFE`; the latter removes CAP + named sideburn/back hair while FACE/EYES/MOUSTACHE remain protected.
+- Mario's nose is preserved by protecting the complete mixed FACE mesh; no speculative nose/skull split is performed.
+- Old height/radius cutter is retained only as an explicit protocol-v1 debug fallback and is ignored when semantic metadata exists.
+- Adapter and auto-fit now share the same semantic FACE reference, eliminating current-pose/reference-pose fit disagreement under protocol v2.
+- Native build is reproducible: bridge Makefile pins libsm64 and applies tracked `libsm64-semantic-parts.patch` before rebuilding.
