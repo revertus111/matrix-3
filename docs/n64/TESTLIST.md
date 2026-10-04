@@ -1,71 +1,70 @@
 # N64 Client Console Runtime Test List
 
-## Workspace / navigation
+## One required V7 rebuild / acceptance session
 
-- [ ] Eclipse Java 8 clean/build succeeds and the client launches normally.
-- [ ] Client Console rail shows a dedicated `N64` main tab beside the other main console destinations.
-- [ ] Test Console flyout no longer lists `N64`.
-- [ ] Clicking the N64 main tab opens the N64 workspace directly.
-- [ ] Opening N64 shows a game-level tab strip with `Mario 64` as the first sub-tab.
-- [ ] Clicking the active N64 rail button again collapses the console consistently with the other main tabs.
-- [ ] Switching away from N64 and back during the same client session keeps the workspace usable without creating duplicate recorders or windows.
-- [ ] A saved active panel id of `n64` restores the N64 main panel through `ClientConsoleShell` normalization.
+### Build
 
-## Mario 64 live snapshot
+1. [ ] `git pull origin main`.
+2. [ ] From `native/sm64-bridge`, run `make bootstrap`.
+3. [ ] Confirm the pinned libsm64 dependency is rebuilt and the semantic bridge executable/runtime library are copied into `dist`.
+4. [ ] Eclipse Java 8 clean/build succeeds.
+5. [ ] Launch/login normally.
 
-- [ ] In RuneScape mode, Controller mode shows `RUNESCAPE`, Active character shows `NONE`, and Suppress RuneScape body shows `NO`.
-- [ ] Enter Mario mode with Ctrl+M. Bridge moves to `READY` after native startup and native Sequence/Action/Animation/XYZ fields begin updating.
-- [ ] Camera forward changes when the Matrix camera rotates; sampled movement reflects WASD.
-- [ ] Space/F/Shift physical states reflect the held keys and forwarded A/B/Z reflect the post-entry-guard values actually sent to libsm64.
-- [ ] Native frame age normally stays low while the sidecar is healthy; sequence advances without repeated gaps.
+### Semantic bridge
 
-## Mario Equipment Workbench - one-pass acceptance
+1. [ ] Enter Mario mode with Ctrl+M.
+2. [ ] Native stderr prints `[SM64 Bridge] semantic-geometry-v2 + sleep-guard-v2 active`.
+3. [ ] Java prints `[SM64 Bridge] Persistent session READY (30 Hz + semantic geometry v2)`.
+4. [ ] Open `Client Console -> N64 -> Mario 64 -> Equipment Workbench`.
+5. [ ] `Bridge protocol` shows `v2`.
+6. [ ] `Semantic geometry` shows `AVAILABLE`.
+7. [ ] `Shared FACE W/H/D` contains finite values.
+8. [ ] Protected part counts show FACE and the current eye/moustache geometry; removable counts show available CAP / SIDEBURN / BACK HAIR geometry.
 
-1. [ ] Open `N64 -> Mario 64 -> Equipment Workbench`; the original runtime recorder remains under the sibling `Runtime` tab.
-2. [ ] Equip Statius's full helm and enter Mario mode; Active Equipment reports the correct item id/name and `3D head tracking` becomes `ACTIVE` after the head basis is captured.
-3. [ ] Before freezing, move/idle Mario and confirm the V4 correction no longer drives the helmet opposite to Mario's animated head. Turn/nod/tilt should move in the same direction.
-4. [ ] Press `Freeze pose`; Mario's visible pose stops while the libsm64 bridge remains healthy.
-5. [ ] Change Scale, X, Y, Z and Yaw from the workbench using both direct text entry and -/+ controls. Helmet updates live without client restart or native bridge rebuild.
-6. [ ] `Flip helmet 180°` changes only the active helmet session yaw by 180 degrees; `Reset transform` returns scale `1.0`, XYZ `0`, yaw delta `0`.
-7. [ ] Enable `live head cut` with `Only cut while a helmet is equipped`; masked source triangle count becomes greater than zero.
-8. [ ] While still frozen, lower/raise `Cut starts at body height %` and change `Head cut radius %`; Mario model rebuilds immediately and the visible cut changes without unfreezing.
-9. [ ] Use the helmet-safe preset (`72%` / `40%`) as a starting point. Adjust until cap/hair/top-skull clipping is reduced while Mario's central face, moustache and nose remain visible.
-10. [ ] Disable the mask and confirm full Mario head geometry returns immediately.
-11. [ ] Re-enable mask, unequip the helmet with helmet-only masking enabled, and confirm the head cut no longer applies.
-12. [ ] Unfreeze and test idle, turn/run, jump, backflip and ground-pound. Helmet should follow head translation/orientation and saved head-local offsets should stay attached to the skull.
-13. [ ] Press `Save profile .md`; status reports a path ending in `docs/n64/MARIO_EQUIPMENT_RUNTIME.md` and the file contains the current item transform/mask values plus a link to `TRANSFORM_CONVENTIONS.md`.
-14. [ ] `Copy markdown` places the same profile text on the clipboard.
-15. [ ] Ctrl+M back to RuneScape restores the normal player body with no floating helmet, stuck freeze or head cut.
+### Nose-safe full helmet proof
 
-## Long-idle / sleep-state bridge-stall fix v2
+1. [ ] Equip Statius's full helm.
+2. [ ] Start with `Keep all Mario head parts`; Mario's original head remains complete.
+3. [ ] Press `Full helm safe`.
+4. [ ] Mario's tagged CAP and named hair geometry disappear.
+5. [ ] FACE, EYES and MOUSTACHE remain.
+6. [ ] Mario's nose remains because the complete mixed FACE mesh is protected.
+7. [ ] Masked source triangle count is greater than zero.
+8. [ ] Press `Keep all Mario head parts`; removed pieces return immediately.
+9. [ ] Freeze Pose, switch between Keep All / Full Helm Safe, and confirm the same frozen frame rebuilds immediately.
+10. [ ] With `Apply semantic coverage only while a helmet is equipped` enabled, unequip Statius and confirm all Mario head parts return.
 
-1. [ ] Pull current `main`, rebuild `native/sm64-bridge/dist/sm64_bridge.exe`, and confirm the client console prints `[SM64 Bridge] sleep-guard-v2 active` when Mario mode starts. If that marker is absent, stop: an older executable is still being launched.
-2. [ ] Enter Mario mode and leave Mario completely idle longer than the previous failure window (at least 90 seconds).
-3. [ ] N64 -> Mario 64 sequence continues advancing throughout the idle period; frame age remains low instead of climbing into multi-second values.
-4. [ ] The published runtime stream must not remain in `0x0C400202` or `0x0C000203`. When libsm64 attempts autonomous sleep, stderr may report `[SM64 Bridge] blocked autonomous sleep ... -> idle`, and the published action should return immediately to normal idle.
-5. [ ] `Suppress RuneScape body` stays `YES` while Mario mode remains active and the normal RuneScape body never replaces Mario during long idle.
-6. [ ] After the long idle, press Space once: Mario jumps normally and no RuneScape body appears underneath/after the jump.
-7. [ ] Verify WASD movement, F/B attack input and Shift crouch/ground-pound still function after the intercepted sleep transition.
+### Fit / animation
 
-## Idle -> Space regression flight-recorder gate
+1. [ ] Console helmet log says `fitReference=semantic-face`.
+2. [ ] Auto-fit log says `reference=semantic-face`.
+3. [ ] Initial scale is based on shared FACE width rather than full cartoon-head containment.
+4. [ ] Freeze Pose and use Scale / head-local X/Y/Z / Yaw only for small final corrections.
+5. [ ] Unfreeze and verify idle/turn/run follows the accepted head direction.
+6. [ ] Jump/backflip/ground-pound keep the helmet attached with no inverse/doubled rotation.
+7. [ ] `Reset / recalc fit` restores the mathematical baseline for the active helmet.
+8. [ ] `Save profile .md` records semantic protocol, coverage, part counts and transform values.
 
-1. [ ] Enter Mario mode and wait idle for several seconds.
-2. [ ] Clear Events in N64 -> Mario 64.
-3. [ ] Press Space once and watch for the reported RuneScape-body flash/reappearance.
-4. [ ] Event log records `SPACE_DOWN` and `A_SEND_DOWN`.
-5. [ ] Native `ACTION` and/or `ANIM` transitions are recorded as the jump begins.
-6. [ ] If the RuneScape body appears, copy the event log immediately. The critical evidence is any `SUPPRESS_RS -> false` transition and its native sequence/frame age/Space/A state.
-7. [ ] If no flash appears, keep the log long enough to confirm suppression stays continuously true through the idle -> jump transition.
+## Protocol-v1 fail-open
 
-## Recorder controls
+- [ ] An intentionally old v1 bridge still allows Mario to render.
+- [ ] Workbench reports semantic metadata unavailable rather than crashing.
+- [ ] Semantic coverage does not hide anonymous triangles on v1.
+- [ ] The old height/radius geometric cutter is available only as an explicit v1 debug fallback.
+- [ ] Unknown semantic part ids are always preserved.
 
-- [ ] `Pause display` freezes only the Swing presentation; after resuming, newly captured runtime events appear.
-- [ ] `Auto-scroll` keeps the newest event visible when enabled.
-- [ ] `Copy snapshot` places the current Mario diagnostics snapshot on the clipboard.
-- [ ] `Copy events` places the bounded event history on the clipboard.
-- [ ] `Clear events` clears history without stopping the recorder or changing Mario runtime state.
+## Long-idle / sleep-state regression
 
-## Regression boundary
+- [ ] Leave Mario idle for at least 90 seconds.
+- [ ] Native sequence keeps advancing and frame age stays low.
+- [ ] Published stream does not remain in `ACT_START_SLEEPING (0x0C400202)` or `ACT_SLEEPING (0x0C000203)`.
+- [ ] RuneScape body suppression remains active throughout Mario mode.
+- [ ] Jump/movement/attack/crouch still work after the long idle.
 
-- [ ] N64 diagnostics/workbench do not change server authority, RuneScape equipment definitions, libsm64 stepping ownership or normal RuneScape appearance outside Mario mode.
-- [ ] Ctrl+M back to RuneScape restores the normal player body/input and the N64 panel reports the transition.
+## Recorder / lifecycle regression
+
+- [ ] Runtime recorder Clear/Copy/Pause/Auto-scroll controls still work.
+- [ ] Ctrl+M back to RuneScape restores normal player body/input.
+- [ ] No floating helmet, frozen pose, stale coverage, or Mario masking remains after exit.
+- [ ] Re-enter Mario mode and semantic metadata/helmet attachment initialize cleanly.
+- [ ] Normal RuneScape appearance/server authority remain unchanged outside Mario mode.
