@@ -107,7 +107,7 @@ Bundle 2.3 was intentionally input-only when first implemented. The user subsequ
 
 ### Implementation / static gate
 
-- [x] Added `MarioInputKeyboard`, a reversible wrapper around Matrix3's existing `Class549` keyboard owner; the original AWT listener remains installed and authoritative.
+- [x] Added a reversible wrapper around Matrix3's existing `Class549` keyboard owner; the original AWT listener remains installed and authoritative.
 - [x] While Mario mode is active, normal `method6514(...)` held-key consumers see W/A/S/D as released, so Construction Free/RTS camera polling no longer competes for those keys.
 - [x] Mario reads the original owner's raw held state through `method6518(...)`; Space/F/Shift and Ctrl+M continue through the existing owner.
 - [x] Ctrl+M exit, native failure, and local-player lifecycle replacement restore the original Matrix keyboard owner.
@@ -179,7 +179,7 @@ The default `3.0` and direct native X/Z signs are runtime accepted for the curre
 
 ### Visual fail-open acceptance
 
-- [x] A native startup/protocol failure leaves the normal RuneScape player/control path available rather than trapping the client in Mario mode. Runtime-observed during the stale-sidecar binary mismatch on 2026-10-04.
+- [x] A native startup/protocol failure leaves the normal RuneScape player/control path available rather than trapping the client in Mario mode. Runtime-observed during the stale-sidecar binary-protocol mismatch on 2026-10-04.
 - [x] Restoring the correct sidecar allows Mario mode to initialize normally again.
 - [ ] If a native/visual failure can be induced after Mario has already rendered, confirm the RuneScape player reappears once the replacement frame is no longer fresh/usable.
 
@@ -250,6 +250,44 @@ Default Mario mesh scale remains `2.0`:
 -Dmatrix3.sm64.modelScale=<positive-float>
 ```
 
+## Alternate-character master controller / camera / combat bridge
+
+**Status: IMPLEMENTED / NEEDS TEST**
+
+### Static gate
+
+- [x] `AlternateCharacterController` is the single viewport-dispatch owner for imported-character drivers; Mario now runs as a driver behind the established `MarioJumpController.tick()` compatibility seam.
+- [x] Shared control vocabulary centralizes WASD movement, Space jump, F primary action, Shift modifier and camera-forward sampling. Future character drivers consume this state rather than installing another keyboard/controller path.
+- [x] `AlternateCharacterInputKeyboard` replaces the Mario-specific wrapper while preserving Matrix3's original keyboard listener/owner and the accepted WASD arbitration behavior.
+- [x] Real Matrix camera-forward X/Z is supplied to the character driver: Class411 detached/free views use their actual position/look vector; vanilla views use the `Class246.method3359(...)` 14-bit yaw domain.
+- [x] libsm64 camera-look X/Z is now part of the same immutable native input snapshot as stick/A/B/Z instead of hardcoded `(0,-1)`.
+- [x] Existing native protocol already carried camera-look floats; **no `sm64_bridge.exe` rebuild is required**.
+- [x] `AlternateCharacterCombatBridge` does not calculate client damage. Mario's F/B rising edge sends the stock Matrix3 NPC attack packet (opcode 32) to the nearest loaded NPC within 12 tiles.
+- [x] Server-side `WorldPacketsDecoder` still validates the NPC and enters the existing `PlayerCombatNew(npc)` owner, preserving RuneScape combat stats/definitions, target/range/pathing rules, damage/XP and downstream NPC death/drop behavior.
+- [x] Mario currently advertises `MELEE` only through the character capability profile. Link can later advertise `MELEE` + `RANGED` without adding another controller/combat pipeline.
+- [x] `MarioVisualRenderer` has a 750 ms last-good-model grace path for transient native geometry/model-build gaps; cached fallback renders do not extend that deadline and mode/bridge loss remains immediate fail-open.
+
+### Consolidated runtime acceptance
+
+Use one client launch; no native rebuild:
+
+1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch/login normally.
+2. [ ] Enter Mario mode. Existing visual smoothing/textures/XYZ movement still work.
+3. [ ] Rotate the camera north/east/south/west. At every heading, hold W: Mario must move **forward relative to the camera**; A/D must remain screen-relative left/right rather than reversing on the south view.
+4. [ ] Rotate the camera continuously while Mario is moving; steering should track camera heading without the old fixed `(0,-1)` inversion.
+5. [ ] Let Mario sit idle for several seconds, then tap Space. Mario remains the visible replacement throughout the jump; the normal RuneScape body must not flash/reappear on the transition.
+6. [ ] Ctrl+M still restores the RuneScape body immediately; the 750 ms grace must never keep Mario visible after mode/bridge ownership ends.
+7. [ ] Stand near one simple attackable NPC while the server-side RuneScape player is still near that NPC; tap F once. Mario performs native B/punch behavior and the console prints `[Alt Character Combat] MELEE -> stock NPC attack index=...`.
+8. [ ] The NPC enters normal RuneScape combat and receives normal server-owned hits; confirm normal Attack/Strength-style combat behavior/XP rather than a client-only fake hit.
+9. [ ] Hold F: the bridge must not spam a new stock attack packet every client tick; only the F rising edge starts/restarts the server combat action.
+10. [ ] Move far enough that the local-only Mario presentation no longer matches the server position, then treat combat range/pathing as **Phase 3/server-authority carryover**, not as proof that client-local XYZ is authoritative.
+11. [ ] Ctrl+M out/in after combat; normal RuneScape input/combat remains usable and alternate-character target state does not leak across sessions.
+
+### Known first-slice boundary
+
+- The current Mario capability profile is client-side routing metadata, not a server-enforced equipment restriction. The stock server combat engine can still derive style/bonuses from the player's real RuneScape equipment; strict per-character weapon-family enforcement belongs in the later server-aware character capability layer.
+- Native Mario XYZ is still local presentation. Combat is authoritative at the server player's RuneScape position until Phase 3 and later multiplayer/server-authority work establish a validated movement handoff.
+
 ## Relevant Matrix3 smoke coverage
 
 From `docs/rs3/SMOKE_TEST.md`:
@@ -258,7 +296,8 @@ From `docs/rs3/SMOKE_TEST.md`:
 - [ ] Login/player lifecycle: login, expected world entry, logout, relog.
 - [ ] Movement/interfaces/utility: normal RuneScape movement remains functional.
 - [ ] Player rendering: local RuneScape presentation restores cleanly after Mario mode and remote players remain unaffected.
+- [ ] Combat: stock NPC attack remains functional outside alternate-character mode.
 
 ## Next gate
 
-Phase 3 Bundle 3.1 is the next architectural gate after a new AAA: convert a bounded RuneScape terrain heightfield into native SM64 collision surfaces. Visible Mario terrain-elevation following is already runtime accepted through Matrix presentation; the Phase 3 test must prove the **native SM64 collision/action machine** responds correctly to RuneScape slopes/terrain rather than merely looking aligned.
+Runtime-test the master-controller bundle in one launch: camera-relative movement at four headings, idle-to-jump replacement stability, then one nearby NPC F/punch -> stock RuneScape combat proof. If those pass, the generic controller/combat foundation is strong enough to add Link capabilities without another control or damage system.
