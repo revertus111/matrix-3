@@ -6,7 +6,7 @@ The canonical Construction phase, main-goal status table and overall roadmap rem
 
 ## Current direction
 
-**Status: DESIGN LOCKED / IMPLEMENTATION NEXT**
+**Status: PIO-1 IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD; PIO-2 NEXT**
 
 Conveyor visual polish is intentionally **deferred / non-blocking**. The current straight 1-tile repeated visual is good enough to continue gameplay development. Custom corner, splitter, merger, supports and seam polish can return later.
 
@@ -114,6 +114,21 @@ Potential endpoint owners:
 - future furnace/smelter/cooker/etc.
 
 The conveyor transport layer should not need special recipe logic for Lumberyard vs Sawmill vs Chest.
+
+### PIO-1 implementation state
+
+PIO-1 now exists as a server-owned adapter framework:
+
+- `SettlementLogisticsEndpointRef` is the serializable stable identity: owner type + persistent owner id + stable port key. Runtime world coordinates are not persisted as endpoint identity.
+- `SettlementLogisticsEndpoint` exposes INPUT/OUTPUT direction, plot position, facing, item compatibility, available amount/capacity, extract and accept operations.
+- `SettlementLogisticsPortDefinition` owns prefab-local offset/facing/item-filter metadata and resolves those through placed-piece quarter-turn rotation.
+- `SettlementLogisticsEndpointResolver` resolves the current persistent owners without replacing them: `SettlementStorageContainer`, `SettlementMachineBuffer`, and `SettlementConveyorRun` remain authoritative.
+- Chest keys are `INPUT` / `OUTPUT`; the first Sawmill/workbench keys are `INPUT_LOGS` / `OUTPUT_PLANKS`; ConveyorRun exposes stable `OUTPUT`.
+- Conveyor OUTPUT exposes only `physicalInventoryOwned` payloads through the production endpoint contract so developer-only synthetic payloads cannot leak into physical factory ownership.
+- Missing/deleted piece or ConveyorRun refs resolve to blocked/null without mutating the source inventory or payload.
+- PIO-1 deliberately does **not** replace the current live conveyor tick yet. PIO-2 owns that integration so the framework can be clean-built before the proven transport path is changed.
+
+Current Sawmill port definitions are temporarily anchor-local `(0,0)` while the endpoint identity/API stabilizes. PIO-3 may move those ports to authored prefab-local offsets without changing their stable port keys.
 
 ---
 
@@ -519,12 +534,16 @@ Transport topology and item ownership must remain independent from whichever vis
 
 ## PIO-1 — Generic endpoint/port framework
 
-- stable INPUT/OUTPUT endpoint identity,
-- local/world position + facing,
-- compatible item filter,
-- extract/accept contract,
-- prefab rotation transform,
-- safe persistence reference.
+**Status: IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD — 2026-10-03.**
+
+- stable INPUT/OUTPUT endpoint identity — implemented,
+- local/world position + facing — implemented at server plot-position level; runtime world projection stays outside persistent identity,
+- compatible item filter — implemented,
+- extract/accept contract — implemented,
+- prefab rotation transform — implemented / runtime rotation sanity still required before non-zero authored offsets,
+- safe persistence reference — implemented,
+- chest/machine/conveyor adapters — implemented without replacing existing inventory/payload owners,
+- live conveyor tick integration — intentionally deferred to PIO-2.
 
 ## PIO-2 — Conveyor endpoint integration
 
@@ -636,6 +655,6 @@ Acceptance requires:
 
 # Resume Here
 
-**Resume Here — Prefab I/O Logistics:** stop visual conveyor tuning. Start PIO-1 by introducing the smallest server-owned generic INPUT/OUTPUT endpoint contract and stable prefab-port identity that can wrap the existing Sawmill machine buffers, physical chests and ConveyorRun transport without replacing their proven ownership.
+**Resume Here — Prefab I/O Logistics:** PIO-1 is implemented on `main`: stable endpoint refs, generic INPUT/OUTPUT semantics, prefab-local port metadata/rotation and resolver adapters now wrap the existing Sawmill machine buffer, physical chest inventory and ConveyorRun OUTPUT without replacing their ownership.
 
-Then wire PIO-2 immediately so a belt OUTPUT can feed another belt at any valid rear/left/right contact position along the receiver. After that, expose real Sawmill INPUT/OUTPUT ports and build the first Lumberyard prefab.
+First run one Eclipse Java 8 clean/build of Server. If clean, continue directly with PIO-2: wire the live conveyor OUTPUT transfer seam through the endpoint framework, add the straight-run distributed INPUT surface, and validate rear/left/right approach while rejecting forward-side entry. Reuse the existing insertion-distance spacing/backpressure implementation; do not reopen conveyor visuals or rewrite payload ownership.
