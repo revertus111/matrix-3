@@ -38,3 +38,13 @@
 - F6 calibration now freezes/unfreezes Mario's visible pose in addition to freezing gameplay input; mode exit, helmet unequip and bridge stop clear the presentation freeze.
 - Updated live calibration XYZ semantics to head-local axes; session values and permanent-default strategy remain unchanged.
 - Mario cap/hair/skull masking is still deferred until orientation/transform runtime acceptance; face/moustache/nose remain untouched.
+
+2026-10-04 - Mario Equipment Workbench / head mask V5
+- User video runtime-verified that V4 full-head tracking follows Mario but the direct rigid head delta rotates the helmet in the opposite direction.
+- Corrected the Matrix attachment direction by consuming the inverse rigid rotation (`transpose(rawDelta)`) instead of adding another arbitrary axis/yaw sign hack.
+- Added `MarioEquipmentWorkbench` as a developer-only facade over the existing session calibrator, presentation freeze and new head-mask preview state.
+- Added `N64 -> Mario 64 -> Equipment Workbench` with live scale, head-local X/Y/Z, yaw, freeze, reset, 180-degree item flip, copy and markdown-save controls.
+- Added geometric Mario source-triangle masking before Matrix model construction with helmet-only, height-cutoff and radius controls plus a safe starting preset.
+- Mask edits carry a revision so Mario rebuilds immediately even while the SM64 presentation frame is frozen; helmet presence is cached once per build instead of queried per source triangle.
+- Added `docs/n64/TRANSFORM_CONVENTIONS.md` as the persistent transform/sign authority and `docs/n64/MARIO_EQUIPMENT_WORKBENCH.md` as the operator guide.
+- Workbench `Save profile .md` explicitly writes the current transform/mask snapshot to `docs/n64/MARIO_EQUIPMENT_RUNTIME.md`; normal rendering never writes files.
