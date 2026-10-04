@@ -119,7 +119,7 @@
 - `MarioJumpController` now applies native SM64 X/Z deltas as temporary local Matrix presentation alongside the existing native Y jump path.
 - Horizontal presentation defaults to `3.0` Matrix units per native SM64 unit and can be calibrated with `-Dmatrix3.sm64.horizontalScale=<positive-float>`; final scale/sign remains a runtime `HYPOTHESIS` until the first visible movement test.
 - Matrix/server corrections rebase the tracked presentation baseline per axis; Ctrl+M/native failure restores the tracked RuneScape XYZ baseline rather than leaving Mario displacement behind.
-- This slice does not send Mario movement packets, replace RuneScape clipping/pathfinding/plane authority, or stream RuneScape collision into libsm64. The native sidecar still simulates against its temporary flat floor.
+- This slice does not send Mario movement packets, replace RuneScape clipping/pathfinding/plane ownership, or stream RuneScape collision into libsm64. The native sidecar still simulates against its temporary flat floor.
 - Runtime gate pending: verify WASD no longer pans the Construction camera, Mario visibly translates, direction/scale feel correct, jump/backflip/ground-pound carry horizontal displacement, and Ctrl+M restores the RuneScape position cleanly.
 
 2026-10-04 - Bundle 4.2B shared-topology smoothing runtime VERIFIED
@@ -180,3 +180,11 @@
 - `AlternateCharacterController` keeps its generic Matrix camera-forward semantics unchanged for future imported-character drivers.
 - `MarioJumpController` now negates only the camera-look X/Z vector at the Mario/libsm64 adapter boundary for both idle and active input snapshots. Stick X/Y, buttons, Matrix camera ownership, XYZ presentation, protocol and server authority are unchanged.
 - No native sidecar rebuild or protocol change is required. Runtime gate: north-facing W/S/A/D must now map forward/back/left/right correctly, then rotate through east/south/west and while holding W to confirm the 180-degree correction is stable across headings.
+
+2026-10-04 - Bundle 1.3 canonical RTS-yaw steering source
+- Runtime after the 180-degree libsm64 camera-basis correction confirmed the north-facing controls are now correct, but the south-facing view still reverses all four WASD directions together.
+- That heading-dependent result proves the remaining fault is not another individual Mario stick sign. The sampled RTS camera direction is disagreeing with Construction's rendered heading across the 180-degree boundary.
+- `AlternateCharacterController.getCameraForward()` now uses `ConstructionBuildCamera.getRtsMinimapYawUnits()` first while Construction RTS is active. That value is derived from the same `rtsYawRadians` that `applyRtsOrientation(...)` uses to render/pan the RTS camera and has already been accepted by the minimap/compass path.
+- The accepted minimap heading stores `-rtsYaw` in Matrix's 14-bit turn domain; alternate-character steering converts it back to `rtsYaw` and derives planar forward as `(sin(yaw), cos(yaw))`.
+- Construction Free/other detached cameras retain the existing position/look-point fallback. Mario/libsm64 stick axes and the established Mario-only 180-degree camera-look conversion are unchanged.
+- No native sidecar rebuild or protocol change is required. Runtime gate remains N/E/S/W plus rotate-while-holding-W; north and south must now both preserve forward/back/left/right screen-relative controls.
