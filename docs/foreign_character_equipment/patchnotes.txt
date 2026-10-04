@@ -1,63 +1,34 @@
 2026-10-04 - Mario helmet attachment V1
-- Added `MarioEquipmentAdapter` as the first foreign-character equipment slice.
-- Reads the local player's visible revision-830 helmet from decoded appearance state and loads the normal worn raw model through `ItemDefinitions.method7531(...)`.
-- Preserves current gender/customization inputs, measures/normalizes the worn model once, then caches the built Matrix `Model`.
-- Captures stable Mario head vertex-stream indices from the first upright libsm64 geometry frame so later animation frames can reuse the same head attachment region.
-- Auto-fits helmet scale from Mario head span versus helmet worn-model span and follows the animated head translation plus native facing yaw.
-- Added fit/vertical/yaw calibration system properties for the first runtime acceptance pass.
-- Hooks helmet rendering immediately after a successful `MarioVisualRenderer` body pass in `Class578.method6834(...)`.
-- Fail-open: missing/invalid helmet/model/attachment state never suppresses or replaces the already-working Mario body.
-- Full head pitch/roll, other equipment slots, chest/leg fitting, and additional foreign-character profiles remain later bundles.
+- Added real revision-830 helmet rendering on Mario through the normal worn-model path and cached Matrix model attachment.
 
 2026-10-04 - Mario helmet head-envelope fitting V2
-- User screenshots runtime-verified that V1 renders the equipped helmet, but the helmet is undersized/high and visually competes with Mario's cap/hair.
-- Broadened the initial Mario head candidate capture from the upper crown toward the full head region.
-- Added trimmed X/Z reference bounds so protruding extremes such as Mario's nose do not drive helmet sizing; the nose remains visually untouched.
-- Replaced hidden `1.12` default fit padding with an explicit head-clearance shell: default `5%` of reference head span per side with a `2.0` Matrix-unit minimum.
-- Helmet target span is now `referenceHeadSpan + 2 * clearance`; uniform model scaling still preserves 830 helmet proportions.
-- `matrix3.sm64.helmetFitPadding` remains as an optional final multiplier with default `1.0`; added `helmetClearanceFraction` and `helmetMinClearance` calibration properties.
-- Expanded ACTIVE logging with live/reference head span, clearance, target span and helmet span for one-pass runtime diagnosis.
-- Mario cap/hair/skull masking remains intentionally deferred until the corrected envelope fit is runtime evaluated.
+- Added trimmed Mario head envelope, explicit clearance and uniform auto-fit; runtime Statius result still proved outer helmet bounds were a poor cavity proxy.
 
 2026-10-04 - Mario live helmet calibration V3
-- Runtime Statius data (`targetSpan=150.9768`, `helmetSpan=190.0`, `fit=0.7946148`) confirmed outer helmet bounds are not a reliable inner-cavity fit proxy for all full helms.
-- Added `MarioHelmetCalibrationController` for session-only per-item visual tuning without changing cache/equipment definitions or rebuilding the helmet model.
-- Added live scale multiplier, head-local X/Z, Matrix Y and yaw-delta controls; Shift provides 5x coarse steps, reset/print controls are included.
-- Calibration mode freezes Mario gameplay input and suppresses calibration keys from the established Matrix held-key camera seam while still reading the raw keyboard delegate.
-- Manual X/Z offsets rotate through the helmet yaw so corrections stay character-local when Mario turns.
-- Changed the default Mario helmet yaw correction from `0` to `180` degrees after the runtime Statius helmet was confirmed backwards.
-- Session values remain active after exiting calibration and are kept independently per helmet for the current client session only.
-- Permanent Mario defaults/per-item overrides remain deferred until several distinct helmet families are visually calibrated and compared.
+- Added session scale/XYZ/yaw calibration, 180-degree helmet base yaw and input isolation.
 
 2026-10-04 - Mario full animated head attachment V4
-- Added `MarioHeadOrientationTracker` to derive a relative 3D head basis from stable top/bottom and side vertex groups inside the captured libsm64 head core.
-- Helmet orientation now composes the animated head rotation delta with the accepted 180-degree reference helmet yaw, allowing yaw/pitch/roll to follow Mario's skull instead of remaining upright.
-- Head attachment translation now uses the stable selected-head centroid; manual XYZ calibration is transformed through the same full head matrix so all offsets remain head-local during turns/tilts/flips.
-- Uses `Class261.method3572(...)` + `method3578(...)` for full 3x3 rotation and uniform scale, with yaw-only fail-open fallback when the head basis is invalid.
-- Added Matrix-visible SM64 presentation freeze in `Sm64BridgeSession`: F6 captures one immutable geometry/state snapshot while the native 30 Hz worker keeps running, and refreshes only the presentation timestamp for the existing stale-frame guard.
-- F6 calibration now freezes/unfreezes Mario's visible pose in addition to freezing gameplay input; mode exit, helmet unequip and bridge stop clear the presentation freeze.
-- Updated live calibration XYZ semantics to head-local axes; session values and permanent-default strategy remain unchanged.
-- Mario cap/hair/skull masking is still deferred until orientation/transform runtime acceptance; face/moustache/nose remain untouched.
+- Added animated 3D head tracking and frozen-pose calibration.
 
 2026-10-04 - Mario Equipment Workbench / head mask V5
-- User video runtime-verified that V4 full-head tracking follows Mario but the direct rigid head delta rotates the helmet in the opposite direction.
-- Corrected the Matrix attachment direction by consuming the inverse rigid rotation (`transpose(rawDelta)`) instead of adding another arbitrary axis/yaw sign hack.
-- Added `MarioEquipmentWorkbench` as a developer-only facade over the existing session calibrator, presentation freeze and new head-mask preview state.
-- Added `N64 -> Mario 64 -> Equipment Workbench` with live scale, head-local X/Y/Z, yaw, freeze, reset, 180-degree item flip, copy and markdown-save controls.
-- Added geometric Mario source-triangle masking before Matrix model construction with helmet-only, height-cutoff and radius controls plus a safe starting preset.
-- Mask edits carry a revision so Mario rebuilds immediately even while the SM64 presentation frame is frozen; helmet presence is cached once per build instead of queried per source triangle.
-- Added `docs/n64/TRANSFORM_CONVENTIONS.md` as the persistent transform/sign authority and `MARIO_EQUIPMENT_WORKBENCH.md` as the operator guide.
-- Workbench `Save profile .md` explicitly writes the current transform/mask snapshot to `docs/n64/MARIO_EQUIPMENT_RUNTIME.md`; normal rendering never writes files.
+- Added N64 Equipment Workbench, inverse/transpose correction for the runtime-proven backwards head delta, profile save/copy and geometric mask preview.
 
 2026-10-04 - Mario measured helmet auto-fit V6
-- Added `MarioHelmetAutoFit` to measure Mario's trimmed skull width/height/depth from the live libsm64 geometry and the equipped 830 worn-model outer width/height/depth.
-- Replaced the assumption that helmet outer bounds equal usable head space with a conservative cavity proxy: horizontal cavity defaults to `72%` of outer width/depth and vertical cavity defaults to `82%` of outer height.
-- The helper computes a desired uniform fit from width/depth, allows height to enlarge that result by at most `10%`, then converts it into the session calibration multiplier layered on top of the existing V2 adapter scale.
-- Auto-fit resolves once per helmet/session; the first manual workbench/hotkey edit locks the manual value so the math no longer fights the developer.
-- Reset re-enables mathematical auto-fit for that helmet. Runtime logging now prints Mario W/H/D, helmet outer W/H/D, cavity ratios, old auto-fit, desired auto-fit and the recommended manual multiplier.
+- Added W/H/D cavity-proxy auto-fit. Runtime silhouette remained unacceptable when treating Mario's whole original head as geometry a full helmet must contain.
 
-2026-10-04 - Native head geometry investigation checkpoint (documentation only)
-- Established libsm64 display-list identity/local-vertex export seam and pinned SM64 source provenance.
-- Recorded current-pose/reference-pose auto-fit mismatch and lack of nose protection in body-height masking.
-- Replaced stale Resume Here with semantic coverage/shared-fit bundle; mixed face/nose/skull segmentation remains UNKNOWN.
-- No runtime source, transform constants, native binary or equipment behavior changed.
+2026-10-04 - Native head geometry investigation checkpoint
+- Established the libsm64 display-list/local-vertex export seam and verified distinct cap/hair/eyes/moustache/mixed-face source geometry.
+- Kept the entire mixed FACE mesh protected because no independent nose display list exists.
+
+2026-10-04 - Mario semantic helmet coverage / shared fit V7
+- Pinned libsm64 `fd11813208272b4271d92bd92feb8f3fdbe61be5` in the bridge Makefile and added tracked `libsm64-semantic-parts.patch`.
+- Extended libsm64 geometry buffers with original display-list-local triangle positions and one stable semantic part id per source triangle.
+- Added bridge binary protocol v2 publication for local positions + part ids while retaining Java protocol-v1 compatibility.
+- Added semantic ids for protected FACE/EYES/MOUSTACHE and removable CAP/HAIR_SIDEBURN/HAIR_BACK; UNKNOWN is always preserved.
+- Added `MarioSemanticGeometry` as the shared head-local FACE measurement owner. Adapter and auto-fit now consume the same FACE width when protocol v2 metadata exists.
+- FACE local Z is used as left/right width; protected nose depth along face-out +Y no longer forces full-helmet scale larger.
+- Added nose-safe `FULL_HELM_SAFE` coverage: remove cap and named hair only, never FACE/EYES/MOUSTACHE.
+- Kept the previous height/radius cutter only as explicit protocol-v1 debug fallback; semantic v2 ignores it.
+- Updated N64 Equipment Workbench with bridge protocol, semantic availability, coverage profile, shared FACE W/H/D, protected/removable part counts, Keep All and Full Helm Safe controls.
+- Frozen presentation frames preserve semantic metadata; coverage revision still rebuilds Mario immediately while frozen.
+- Native rebuild is required for V7 acceptance: `make bootstrap` under `native/sm64-bridge`, then one Eclipse Java 8/runtime test.
