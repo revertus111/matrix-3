@@ -10,11 +10,10 @@ import java.util.Arrays;
  * geometry, builds a normal renderer Model, and draws it through the same direct
  * scene-render seam used by other Matrix developer previews.
  *
- * Matrix currently uses libsm64's native per-face material/light colour as the
- * stable base presentation. The old V1 ROM-atlas-to-one-face-colour approximation
- * is retained only as a diagnostic override until a true Matrix UV texture path is
- * proven; collapsing texture details into one colour per triangle produced visible
- * dark/black blocks at runtime.
+ * Matrix cannot yet bind libsm64's ROM atlas as a renderer-native runtime texture.
+ * Instead, textured SM64 triangles are split into small Matrix faces and the atlas
+ * is sampled per micro-face. This preserves facial/clothing texture detail without
+ * collapsing one dark texel across an entire low-poly source triangle.
  */
 public final class MarioVisualRenderer {
 
@@ -22,9 +21,14 @@ public final class MarioVisualRenderer {
     private static final int TRANSFORM_FLAGS = 0x0f;
     private static final int RAW_BUILD_FLAGS = BASE_MODEL_FLAGS | TRANSFORM_FLAGS | 0x1f01f | 0x80000;
     private static final int FINAL_MODEL_FLAGS = BASE_MODEL_FLAGS | TRANSFORM_FLAGS;
+    private static final int MAX_MATRIX_VERTICES = 65535;
+    private static final int MAX_MATRIX_TRIANGLES = MAX_MATRIX_VERTICES / 3;
+    private static final int DEFAULT_TEXTURE_SUBDIVISIONS = 4;
+    private static final int MAX_TEXTURE_SUBDIVISIONS = 4;
     private static final long MAX_FRAME_AGE_NANOS = 500000000L;
     private static final float DEFAULT_MODEL_SCALE = 2.0F;
     private static final float MODEL_SCALE = resolveModelScale();
+    private static final int TEXTURE_SUBDIVISIONS = resolveTextureSubdivisions();
     private static final boolean DEBUG_ATLAS_FACE_BAKE = resolveAtlasFaceBake();
 
     private static final Class261 TRANSFORM = new Class261();
@@ -37,6 +41,8 @@ public final class MarioVisualRenderer {
     private static int lastRenderedCycle = Integer.MIN_VALUE;
     private static long lastLoggedSequence = -1L;
     private static long lastFailedSequence = -1L;
+    private static int lastBuiltOutputTriangles;
+    private static int lastBuiltTextureSubdivisions;
 
     private MarioVisualRenderer() {
     }
@@ -93,13 +99,19 @@ public final class MarioVisualRenderer {
             replacementReady = true;
             if (lastLoggedSequence < 0L) {
                 lastLoggedSequence = frame.sequence;
+                String colourMode = lastBuiltTextureSubdivisions <= 0
+                        ? "libsm64-base-v2"
+                        : lastBuiltTextureSubdivisions == 1
+                                ? "atlas-face-bake-debug"
+                                : "atlas-micro-v3";
                 System.out.println("[SM64 Visual] Native Mario -> Matrix Model ACTIVE"
                         + " triangles=" + frame.triangleCount
+                        + " matrixTriangles=" + lastBuiltOutputTriangles
                         + " anim=" + frame.state.animId
                         + " frame=" + frame.state.animFrame
                         + " scale=" + MODEL_SCALE
-                        + " colour=" + (DEBUG_ATLAS_FACE_BAKE
-                                ? "atlas-face-bake-debug" : "libsm64-base-v2"));
+                        + " colour=" + colourMode
+                        + " textureSubdivisions=" + lastBuiltTextureSubdivisions);
             }
         } catch (RuntimeException ex) {
             replacementReady = false;
@@ -141,16 +153,23 @@ public final class MarioVisualRenderer {
     private static Model buildModel(Class106 renderer,
             Sm64BridgeSession.GeometryFrame frame,
             Sm64BridgeSession.TextureAtlas atlas) {
-        int triangles = frame.triangleCount;
-        int vertices = triangles * 3;
-        if (triangles <= 0 || vertices > 65535) {
+        int sourceTriangles = frame.triangleCount;
+        if (sourceTriangles <= 0) {
             return null;
         }
 
-        Class159 raw = new Class159(vertices, triangles, 0);
+        int textureSubdivisions = chooseTextureSubdivisions(frame, atlas);
+        int outputTriangles = countOutputTriangles(frame, atlas, textureSubdivisions);
+        int vertices = outputTriangles * 3;
+        if (outputTriangles <= 0 || outputTriangles > MAX_MATRIX_TRIANGLES
+                || vertices > MAX_MATRIX_VERTICES) {
+            return null;
+        }
+
+        Class159 raw = new Class159(vertices, outputTriangles, 0);
         raw.anInt1791 = vertices;
         raw.anInt1775 = vertices;
-        raw.anInt1778 = triangles;
+        raw.anInt1778 = outputTriangles;
 
         Arrays.fill(raw.anIntArray1813, -1);
         Arrays.fill(raw.anIntArray1780, -1);
@@ -160,57 +179,55 @@ public final class MarioVisualRenderer {
         float stateX = frame.state.x;
         float stateY = frame.state.y;
         float stateZ = frame.state.z;
+        int outputTriangle = 0;
 
-        for (int triangle = 0; triangle < triangles; triangle++) {
-            int vertexBase = triangle * 3;
-            int positionBase = triangle * 9;
-            int colorBase = triangle * 9;
-            int uvBase = triangle * 6;
-
-            int sumR = 0;
-            int sumG = 0;
-            int sumB = 0;
-
-            for (int vertex = 0; vertex < 3; vertex++) {
-                int rawVertex = vertexBase + vertex;
-                int p = positionBase + vertex * 3;
-                int c = colorBase + vertex * 3;
-                int uv = uvBase + vertex * 2;
-
-                raw.anIntArray1782[rawVertex] = Math.round(
-                        (frame.positions[p] - stateX) * MODEL_SCALE);
-                // SM64 altitude is +Y; Matrix model-space altitude is -Y.
-                raw.anIntArray1777[rawVertex] = Math.round(
-                        -(frame.positions[p + 1] - stateY) * MODEL_SCALE);
-                raw.anIntArray1797[rawVertex] = Math.round(
-                        (frame.positions[p + 2] - stateZ) * MODEL_SCALE);
-
-                int baseR = unitColor(frame.colors[c]);
-                int baseG = unitColor(frame.colors[c + 1]);
-                int baseB = unitColor(frame.colors[c + 2]);
-                int rgb;
-                if (DEBUG_ATLAS_FACE_BAKE) {
-                    rgb = sampleMarioColor(
-                            atlas, frame.uvs[uv], frame.uvs[uv + 1],
-                            baseR, baseG, baseB);
-                } else {
-                    rgb = baseR << 16 | baseG << 8 | baseB;
-                }
-                sumR += (rgb >>> 16) & 0xff;
-                sumG += (rgb >>> 8) & 0xff;
-                sumB += rgb & 0xff;
+        for (int sourceTriangle = 0; sourceTriangle < sourceTriangles; sourceTriangle++) {
+            boolean textured = textureSubdivisions > 0
+                    && isTexturedTriangle(frame, atlas, sourceTriangle);
+            if (!textured) {
+                outputTriangle = emitBakedTriangle(
+                        raw, outputTriangle, frame, atlas, sourceTriangle,
+                        0.0F, 0.0F,
+                        1.0F, 0.0F,
+                        0.0F, 1.0F,
+                        false, stateX, stateY, stateZ);
+                continue;
             }
 
-            /*
-             * Negating model Y mirrors one axis, so B/C are swapped to preserve
-             * the native triangle winding for Matrix back-face culling.
-             */
-            raw.aShortArray1786[triangle] = (short) vertexBase;
-            raw.aShortArray1787[triangle] = (short) (vertexBase + 2);
-            raw.aShortArray1789[triangle] = (short) (vertexBase + 1);
-            raw.faceColours[triangle] = rgbToRsHsl(
-                    sumR / 3, sumG / 3, sumB / 3);
+            float step = 1.0F / textureSubdivisions;
+            for (int b = 0; b < textureSubdivisions; b++) {
+                for (int c = 0; c < textureSubdivisions - b; c++) {
+                    float b0 = b * step;
+                    float c0 = c * step;
+                    float b1 = (b + 1) * step;
+                    float c1 = c * step;
+                    float b2 = b * step;
+                    float c2 = (c + 1) * step;
+                    outputTriangle = emitBakedTriangle(
+                            raw, outputTriangle, frame, atlas, sourceTriangle,
+                            b0, c0, b1, c1, b2, c2,
+                            true, stateX, stateY, stateZ);
+
+                    if (b + c + 1 < textureSubdivisions) {
+                        float b3 = (b + 1) * step;
+                        float c3 = (c + 1) * step;
+                        outputTriangle = emitBakedTriangle(
+                                raw, outputTriangle, frame, atlas, sourceTriangle,
+                                b1, c1, b3, c3, b2, c2,
+                                true, stateX, stateY, stateZ);
+                    }
+                }
+            }
         }
+
+        if (outputTriangle != outputTriangles) {
+            System.err.println("[SM64 Visual] Texture tessellation count mismatch expected="
+                    + outputTriangles + " actual=" + outputTriangle);
+            return null;
+        }
+
+        lastBuiltOutputTriangles = outputTriangles;
+        lastBuiltTextureSubdivisions = textureSubdivisions;
 
         try {
             Model model = renderer.method1755(raw, RAW_BUILD_FLAGS, 0, 64, 850);
@@ -225,36 +242,198 @@ public final class MarioVisualRenderer {
         }
     }
 
+    private static int emitBakedTriangle(
+            Class159 raw,
+            int outputTriangle,
+            Sm64BridgeSession.GeometryFrame frame,
+            Sm64BridgeSession.TextureAtlas atlas,
+            int sourceTriangle,
+            float b0, float c0,
+            float b1, float c1,
+            float b2, float c2,
+            boolean sampleTexture,
+            float stateX, float stateY, float stateZ) {
+        int vertexBase = outputTriangle * 3;
+        int positionBase = sourceTriangle * 9;
+        int colorBase = sourceTriangle * 9;
+        int uvBase = sourceTriangle * 6;
+
+        writeVertex(raw, vertexBase, frame, positionBase, b0, c0, stateX, stateY, stateZ);
+        writeVertex(raw, vertexBase + 1, frame, positionBase, b1, c1, stateX, stateY, stateZ);
+        writeVertex(raw, vertexBase + 2, frame, positionBase, b2, c2, stateX, stateY, stateZ);
+
+        float centerB = (b0 + b1 + b2) / 3.0F;
+        float centerC = (c0 + c1 + c2) / 3.0F;
+        int baseR = unitColor(interpolate(frame.colors, colorBase, 3, 0, centerB, centerC));
+        int baseG = unitColor(interpolate(frame.colors, colorBase, 3, 1, centerB, centerC));
+        int baseB = unitColor(interpolate(frame.colors, colorBase, 3, 2, centerB, centerC));
+        int rgb;
+        if (sampleTexture) {
+            float u = interpolate(frame.uvs, uvBase, 2, 0, centerB, centerC);
+            float v = interpolate(frame.uvs, uvBase, 2, 1, centerB, centerC);
+            rgb = sampleMarioColor(atlas, u, v, baseR, baseG, baseB);
+        } else {
+            rgb = baseR << 16 | baseG << 8 | baseB;
+        }
+
+        /*
+         * Negating model Y mirrors one axis, so B/C are swapped to preserve
+         * the native triangle winding for Matrix back-face culling.
+         */
+        raw.aShortArray1786[outputTriangle] = (short) vertexBase;
+        raw.aShortArray1787[outputTriangle] = (short) (vertexBase + 2);
+        raw.aShortArray1789[outputTriangle] = (short) (vertexBase + 1);
+        raw.faceColours[outputTriangle] = rgbToRsHsl(
+                (rgb >>> 16) & 0xff,
+                (rgb >>> 8) & 0xff,
+                rgb & 0xff);
+        return outputTriangle + 1;
+    }
+
+    private static void writeVertex(
+            Class159 raw,
+            int rawVertex,
+            Sm64BridgeSession.GeometryFrame frame,
+            int positionBase,
+            float b,
+            float c,
+            float stateX,
+            float stateY,
+            float stateZ) {
+        float x = interpolate(frame.positions, positionBase, 3, 0, b, c);
+        float y = interpolate(frame.positions, positionBase, 3, 1, b, c);
+        float z = interpolate(frame.positions, positionBase, 3, 2, b, c);
+        raw.anIntArray1782[rawVertex] = Math.round((x - stateX) * MODEL_SCALE);
+        // SM64 altitude is +Y; Matrix model-space altitude is -Y.
+        raw.anIntArray1777[rawVertex] = Math.round(-(y - stateY) * MODEL_SCALE);
+        raw.anIntArray1797[rawVertex] = Math.round((z - stateZ) * MODEL_SCALE);
+    }
+
+    private static float interpolate(float[] values, int base, int stride, int component,
+            float b, float c) {
+        float a = 1.0F - b - c;
+        return values[base + component] * a
+                + values[base + stride + component] * b
+                + values[base + stride * 2 + component] * c;
+    }
+
+    private static int chooseTextureSubdivisions(
+            Sm64BridgeSession.GeometryFrame frame,
+            Sm64BridgeSession.TextureAtlas atlas) {
+        if (!atlasReady(atlas) || TEXTURE_SUBDIVISIONS <= 0) {
+            return 0;
+        }
+        int subdivisions = DEBUG_ATLAS_FACE_BAKE ? 1 : TEXTURE_SUBDIVISIONS;
+        while (subdivisions > 1
+                && countOutputTriangles(frame, atlas, subdivisions) > MAX_MATRIX_TRIANGLES) {
+            subdivisions--;
+        }
+        if (countOutputTriangles(frame, atlas, subdivisions) > MAX_MATRIX_TRIANGLES) {
+            return 0;
+        }
+        return subdivisions;
+    }
+
+    private static int countOutputTriangles(
+            Sm64BridgeSession.GeometryFrame frame,
+            Sm64BridgeSession.TextureAtlas atlas,
+            int textureSubdivisions) {
+        if (textureSubdivisions <= 0 || !atlasReady(atlas)) {
+            return frame.triangleCount;
+        }
+        int texturedMultiplier = textureSubdivisions * textureSubdivisions;
+        int total = 0;
+        for (int triangle = 0; triangle < frame.triangleCount; triangle++) {
+            total += isTexturedTriangle(frame, atlas, triangle) ? texturedMultiplier : 1;
+        }
+        return total;
+    }
+
     /**
-     * Diagnostic reproduction of the original V1 approximation. libsm64's test
-     * renderer overlays the atlas as a separate UV-mapped pass; Matrix cannot
-     * reproduce that by collapsing three UV texels into one flat face colour.
+     * libsm64 writes (1,1) for all three UVs when texturing is disabled for a
+     * source triangle. Any other finite UV set represents an atlas-textured face.
+     */
+    private static boolean isTexturedTriangle(
+            Sm64BridgeSession.GeometryFrame frame,
+            Sm64BridgeSession.TextureAtlas atlas,
+            int triangle) {
+        if (!atlasReady(atlas)) {
+            return false;
+        }
+        int uvBase = triangle * 6;
+        boolean differsFromUntexturedSentinel = false;
+        for (int i = 0; i < 6; i++) {
+            float value = frame.uvs[uvBase + i];
+            if (Float.isNaN(value) || Float.isInfinite(value)) {
+                return false;
+            }
+            if (Math.abs(value - 1.0F) > 0.0001F) {
+                differsFromUntexturedSentinel = true;
+            }
+        }
+        return differsFromUntexturedSentinel;
+    }
+
+    private static boolean atlasReady(Sm64BridgeSession.TextureAtlas atlas) {
+        return atlas != null && atlas.rgba != null
+                && atlas.width > 0 && atlas.height > 0
+                && atlas.rgba.length >= atlas.width * atlas.height * 4;
+    }
+
+    /**
+     * Bakes the same albedo decision as libsm64's GL3 shader:
+     * mix(baseColor, texture.rgb, texture.a). Sampling follows the reference
+     * texture state: GL_CLAMP_TO_EDGE + GL_LINEAR.
      */
     private static int sampleMarioColor(Sm64BridgeSession.TextureAtlas atlas,
             float u, float v, int baseR, int baseG, int baseB) {
-        if (atlas == null || atlas.rgba == null || atlas.width <= 0 || atlas.height <= 0
-                || Float.isNaN(u) || Float.isNaN(v) || u < 0.0F) {
+        if (!atlasReady(atlas) || Float.isNaN(u) || Float.isNaN(v)
+                || Float.isInfinite(u) || Float.isInfinite(v)) {
             return baseR << 16 | baseG << 8 | baseB;
         }
 
-        float wrappedU = u - (float) Math.floor(u);
-        float wrappedV = v - (float) Math.floor(v);
-        int x = clamp((int) (wrappedU * atlas.width), 0, atlas.width - 1);
-        int y = clamp((int) (wrappedV * atlas.height), 0, atlas.height - 1);
-        int index = (y * atlas.width + x) * 4;
-        if (index < 0 || index + 3 >= atlas.rgba.length) {
-            return baseR << 16 | baseG << 8 | baseB;
-        }
+        float clampedU = clamp(u, 0.0F, 1.0F);
+        float clampedV = clamp(v, 0.0F, 1.0F);
+        float x = clampedU * (atlas.width - 1);
+        float y = clampedV * (atlas.height - 1);
+        int x0 = (int) Math.floor(x);
+        int y0 = (int) Math.floor(y);
+        int x1 = Math.min(x0 + 1, atlas.width - 1);
+        int y1 = Math.min(y0 + 1, atlas.height - 1);
+        float tx = x - x0;
+        float ty = y - y0;
 
-        int texR = atlas.rgba[index] & 0xff;
-        int texG = atlas.rgba[index + 1] & 0xff;
-        int texB = atlas.rgba[index + 2] & 0xff;
-        int alpha = atlas.rgba[index + 3] & 0xff;
+        int texR = Math.round(bilinearChannel(atlas, x0, y0, x1, y1, tx, ty, 0));
+        int texG = Math.round(bilinearChannel(atlas, x0, y0, x1, y1, tx, ty, 1));
+        int texB = Math.round(bilinearChannel(atlas, x0, y0, x1, y1, tx, ty, 2));
+        int alpha = Math.round(bilinearChannel(atlas, x0, y0, x1, y1, tx, ty, 3));
         int inv = 255 - alpha;
         int r = (baseR * inv + texR * alpha + 127) / 255;
         int g = (baseG * inv + texG * alpha + 127) / 255;
         int b = (baseB * inv + texB * alpha + 127) / 255;
         return r << 16 | g << 8 | b;
+    }
+
+    private static float bilinearChannel(
+            Sm64BridgeSession.TextureAtlas atlas,
+            int x0, int y0, int x1, int y1,
+            float tx, float ty,
+            int channel) {
+        float top = lerp(atlasChannel(atlas, x0, y0, channel),
+                atlasChannel(atlas, x1, y0, channel), tx);
+        float bottom = lerp(atlasChannel(atlas, x0, y1, channel),
+                atlasChannel(atlas, x1, y1, channel), tx);
+        return lerp(top, bottom, ty);
+    }
+
+    private static int atlasChannel(Sm64BridgeSession.TextureAtlas atlas,
+            int x, int y, int channel) {
+        int index = (y * atlas.width + x) * 4 + channel;
+        return atlas.rgba[index] & 0xff;
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
     }
 
     private static int unitColor(float value) {
@@ -321,12 +500,34 @@ public final class MarioVisualRenderer {
         return DEFAULT_MODEL_SCALE;
     }
 
+    private static int resolveTextureSubdivisions() {
+        String configured = System.getProperty("matrix3.sm64.textureSubdivisions");
+        if (configured == null || configured.trim().isEmpty()) {
+            return DEFAULT_TEXTURE_SUBDIVISIONS;
+        }
+        try {
+            int parsed = Integer.parseInt(configured.trim());
+            if (parsed >= 0 && parsed <= MAX_TEXTURE_SUBDIVISIONS) {
+                return parsed;
+            }
+        } catch (NumberFormatException ignored) {
+            // Fall through to default.
+        }
+        System.out.println("[SM64 Visual] Invalid matrix3.sm64.textureSubdivisions='"
+                + configured + "'; using " + DEFAULT_TEXTURE_SUBDIVISIONS);
+        return DEFAULT_TEXTURE_SUBDIVISIONS;
+    }
+
     private static boolean resolveAtlasFaceBake() {
         String configured = System.getProperty("matrix3.sm64.debugAtlasFaceBake");
         return configured != null && Boolean.parseBoolean(configured.trim());
     }
 
     private static int clamp(int value, int min, int max) {
+        return value < min ? min : value > max ? max : value;
+    }
+
+    private static float clamp(float value, float min, float max) {
         return value < min ? min : value > max ? max : value;
     }
 }
