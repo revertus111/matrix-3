@@ -7,7 +7,6 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.FocusAdapter;
@@ -78,10 +77,20 @@ public final class N64Panel extends JPanel {
     private final JLabel frozenValue = valueLabel();
     private final JLabel faceAngleValue = valueLabel();
     private final JLabel maskCountValue = valueLabel();
+    private final JLabel protocolValue = valueLabel();
+    private final JLabel semanticValue = valueLabel();
+    private final JLabel coverageValue = valueLabel();
+    private final JLabel semanticReferenceValue = valueLabel();
+    private final JLabel protectedPartsValue = valueLabel();
+    private final JLabel removablePartsValue = valueLabel();
     private final JLabel workbenchStatus = new JLabel("Ready");
     private final JToggleButton freezePose = new JToggleButton("Freeze pose");
-    private final JCheckBox enableHeadMask = new JCheckBox("Enable live head cut");
-    private final JCheckBox maskOnlyWithHelmet = new JCheckBox("Only cut while a helmet is equipped", true);
+    private final JCheckBox coverageOnlyWithHelmet = new JCheckBox(
+            "Apply semantic coverage only while a helmet is equipped", true);
+
+    // Legacy protocol-v1 geometric fallback controls.
+    private final JCheckBox enableHeadMask = new JCheckBox("Enable legacy geometric cut");
+    private final JCheckBox maskOnlyWithHelmet = new JCheckBox("Legacy cut only with helmet", true);
 
     private NumericControl scaleControl;
     private NumericControl xControl;
@@ -326,6 +335,10 @@ public final class N64Panel extends JPanel {
         card.add(ConsoleTheme.createValueRow("Helmet", helmetItemValue));
         card.add(ConsoleTheme.createValueRow("3D head tracking", head3dValue));
         card.add(ConsoleTheme.createValueRow("Presentation frozen", frozenValue));
+        card.add(ConsoleTheme.createValueRow("Bridge protocol", protocolValue));
+        card.add(ConsoleTheme.createValueRow("Semantic geometry", semanticValue));
+        card.add(ConsoleTheme.createValueRow("Coverage profile", coverageValue));
+        card.add(ConsoleTheme.createValueRow("Shared FACE W/H/D", semanticReferenceValue));
         card.add(ConsoleTheme.createValueRow("Masked source triangles", maskCountValue));
         card.add(Box.createVerticalStrut(8));
 
@@ -347,8 +360,7 @@ public final class N64Panel extends JPanel {
         JPanel card = ConsoleTheme.createCard("Helmet transform calibration");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "These are live session values layered on top of the automatic helmet fit. "
-                + "Type an exact value or use -/+ for controlled steps.", 2));
+                "The semantic FACE reference seeds the automatic fit. These live session values are only the final visual correction.", 2));
         card.add(Box.createVerticalStrut(8));
 
         scaleControl = new NumericControl(
@@ -376,7 +388,7 @@ public final class N64Panel extends JPanel {
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         actions.setOpaque(false);
-        JButton reset = new JButton("Reset transform");
+        JButton reset = new JButton("Reset / recalc fit");
         JButton flip = new JButton("Flip helmet 180°");
         JButton copy = new JButton("Copy profile");
         ConsoleTheme.styleButton(reset);
@@ -384,7 +396,7 @@ public final class N64Panel extends JPanel {
         ConsoleTheme.styleButton(copy);
         reset.addActionListener(e -> {
             MarioEquipmentWorkbench.resetHelmetTransform();
-            workbenchStatus.setText("Helmet transform reset");
+            workbenchStatus.setText("Helmet transform reset; automatic fit will recalculate");
         });
         flip.addActionListener(e -> {
             MarioEquipmentWorkbench.flipHelmetYaw180();
@@ -401,61 +413,75 @@ public final class N64Panel extends JPanel {
     }
 
     private JPanel createHeadMaskCard() {
-        JPanel card = ConsoleTheme.createCard("Mario head masking / helmet clearance");
+        JPanel card = ConsoleTheme.createCard("Semantic helmet coverage / nose protection");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "This removes Mario source triangles before the Matrix model is built. "
-                + "Start high and lower the cut until the cap/hair clears the helmet. "
-                + "Keep the cutoff above the face so the eyes, moustache and sacred nose survive.", 3));
+                "Protocol v2 tags Mario geometry before libsm64 flattens it. FULL_HELM_SAFE removes only the cap and named hair parts. FACE, EYES and MOUSTACHE are always protected, so Mario's nose stays with the face mesh.", 4));
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createValueRow("Protected native parts", protectedPartsValue));
+        card.add(ConsoleTheme.createValueRow("Removable native parts", removablePartsValue));
         card.add(Box.createVerticalStrut(8));
 
+        styleCheckBox(coverageOnlyWithHelmet);
+        coverageOnlyWithHelmet.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        coverageOnlyWithHelmet.addActionListener(e ->
+                MarioEquipmentWorkbench.setCoverageOnlyWithHelmet(coverageOnlyWithHelmet.isSelected()));
+        card.add(coverageOnlyWithHelmet);
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel coverageActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        coverageActions.setOpaque(false);
+        JButton keepAll = new JButton("Keep all Mario head parts");
+        JButton fullHelm = new JButton("Full helm safe");
+        JButton reset = new JButton("Reset coverage");
+        ConsoleTheme.styleButton(keepAll);
+        ConsoleTheme.styleButton(fullHelm);
+        ConsoleTheme.styleButton(reset);
+        keepAll.addActionListener(e -> {
+            MarioEquipmentWorkbench.useKeepAllCoverage();
+            workbenchStatus.setText("Semantic coverage: KEEP_ALL");
+        });
+        fullHelm.addActionListener(e -> {
+            MarioEquipmentWorkbench.useFullHelmSafeCoverage();
+            workbenchStatus.setText("Semantic coverage: FULL_HELM_SAFE - face/nose protected");
+        });
+        reset.addActionListener(e -> {
+            MarioEquipmentWorkbench.resetHeadMask();
+            workbenchStatus.setText("Coverage and legacy mask reset");
+        });
+        coverageActions.add(keepAll);
+        coverageActions.add(fullHelm);
+        coverageActions.add(reset);
+        card.add(coverageActions);
+        card.add(Box.createVerticalStrut(12));
+
+        card.add(ConsoleTheme.createWrappedText(
+                "Legacy protocol-v1 fallback only. These geometric controls are ignored whenever semantic v2 metadata is available; do not use them as the normal fitting path.", 3));
+        card.add(Box.createVerticalStrut(6));
         styleCheckBox(enableHeadMask);
         styleCheckBox(maskOnlyWithHelmet);
         enableHeadMask.addActionListener(e -> {
             MarioEquipmentWorkbench.setHeadMaskEnabled(enableHeadMask.isSelected());
             workbenchStatus.setText(enableHeadMask.isSelected()
-                    ? "Live Mario head cut enabled"
-                    : "Mario head cut disabled");
+                    ? "Legacy geometric cut enabled (v1 fallback only)"
+                    : "Legacy geometric cut disabled");
         });
         maskOnlyWithHelmet.addActionListener(e ->
                 MarioEquipmentWorkbench.setMaskOnlyWithHelmet(maskOnlyWithHelmet.isSelected()));
         enableHeadMask.setAlignmentX(JComponent.LEFT_ALIGNMENT);
         maskOnlyWithHelmet.setAlignmentX(JComponent.LEFT_ALIGNMENT);
         card.add(enableHeadMask);
-        card.add(Box.createVerticalStrut(4));
         card.add(maskOnlyWithHelmet);
-        card.add(Box.createVerticalStrut(8));
+        card.add(Box.createVerticalStrut(6));
 
         maskStartControl = new NumericControl(
-                "Cut starts at body height %", 50.0D, 95.0D, 1.0D, 0,
+                "Legacy cut body height %", 50.0D, 95.0D, 1.0D, 0,
                 value -> MarioEquipmentWorkbench.setMaskStartPercent((float) value));
         maskRadiusControl = new NumericControl(
-                "Head cut radius %", 10.0D, 75.0D, 1.0D, 0,
+                "Legacy cut radius %", 10.0D, 75.0D, 1.0D, 0,
                 value -> MarioEquipmentWorkbench.setMaskRadiusPercent((float) value));
         card.add(maskStartControl);
         card.add(maskRadiusControl);
-        card.add(Box.createVerticalStrut(8));
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        actions.setOpaque(false);
-        JButton helmetCut = new JButton("Helmet-safe preset");
-        JButton reset = new JButton("Reset mask");
-        ConsoleTheme.styleButton(helmetCut);
-        ConsoleTheme.styleButton(reset);
-        helmetCut.addActionListener(e -> {
-            MarioEquipmentWorkbench.setHeadMaskEnabled(true);
-            MarioEquipmentWorkbench.setMaskOnlyWithHelmet(true);
-            MarioEquipmentWorkbench.setMaskStartPercent(72.0F);
-            MarioEquipmentWorkbench.setMaskRadiusPercent(40.0F);
-            workbenchStatus.setText("Helmet-safe head mask preset applied");
-        });
-        reset.addActionListener(e -> {
-            MarioEquipmentWorkbench.resetHeadMask();
-            workbenchStatus.setText("Mario head mask reset");
-        });
-        actions.add(helmetCut);
-        actions.add(reset);
-        card.add(actions);
         return card;
     }
 
@@ -466,11 +492,11 @@ public final class N64Panel extends JPanel {
         card.add(ConsoleTheme.createValueRow("Animated head delta", fixedValue("INVERSE / TRANSPOSED")));
         card.add(ConsoleTheme.createValueRow("Delta evidence", fixedValue("VERIFIED V4 backwards -> corrected")));
         card.add(ConsoleTheme.createValueRow("Helmet base yaw", fixedValue("180° + item yaw delta")));
-        card.add(ConsoleTheme.createValueRow("Coordinate Y", fixedValue("libsm64 Y -> Matrix -Y")));
+        card.add(ConsoleTheme.createValueRow("Matrix presentation Y", fixedValue("libsm64 Y -> Matrix -Y")));
+        card.add(ConsoleTheme.createValueRow("Native face-local axes", fixedValue("Z left/right; +Y face-out (static source)")));
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createWrappedText(
-                "Do not guess a sign or forward axis again. Runtime-proven conventions are tracked in "
-                + "docs/n64/TRANSFORM_CONVENTIONS.md and the workbench profile can be saved beside it.", 2));
+                "Runtime-proven transform signs live in docs/n64/TRANSFORM_CONVENTIONS.md. Native face-local axes are source-derived and are not substitutes for faceAngle when validating world-facing direction.", 3));
         return card;
     }
 
@@ -478,8 +504,7 @@ public final class N64Panel extends JPanel {
         JPanel card = ConsoleTheme.createCard("Save / handoff");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Save writes the current helmet and mask values to docs/n64/MARIO_EQUIPMENT_RUNTIME.md. "
-                + "It is a developer snapshot, not gameplay persistence.", 2));
+                "Save writes the current helmet transform, semantic coverage, part counts and fallback settings to docs/n64/MARIO_EQUIPMENT_RUNTIME.md.", 2));
         card.add(Box.createVerticalStrut(8));
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
@@ -553,9 +578,22 @@ public final class N64Panel extends JPanel {
         head3dValue.setText(value.head3d ? "ACTIVE" : "WAITING / FALLBACK");
         frozenValue.setText(value.frozen ? "YES" : "NO");
         faceAngleValue.setText(formatFloat(value.faceAngle));
+        protocolValue.setText(value.protocolVersion <= 0 ? "-" : "v" + value.protocolVersion);
+        semanticValue.setText(value.semanticAvailable ? "AVAILABLE" : "UNAVAILABLE / LEGACY V1");
+        coverageValue.setText(value.coverageName);
+        semanticReferenceValue.setText(formatVector(
+                value.semanticWidth, value.semanticHeight, value.semanticDepth));
         maskCountValue.setText(Integer.toString(value.maskedTriangles));
+        protectedPartsValue.setText("FACE " + value.faceTriangles
+                + " / EYES " + value.eyesTriangles
+                + " / MOUSTACHE " + value.mustacheTriangles);
+        removablePartsValue.setText("CAP " + value.capTriangles
+                + " / SIDEBURN " + value.sideburnTriangles
+                + " / BACK HAIR " + value.backHairTriangles
+                + " / OTHER " + value.unknownTriangles);
 
         freezePose.setSelected(value.frozen);
+        coverageOnlyWithHelmet.setSelected(value.coverageOnlyWithHelmet);
         enableHeadMask.setSelected(value.maskEnabled);
         maskOnlyWithHelmet.setSelected(value.maskOnlyWithHelmet);
 
