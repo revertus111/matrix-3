@@ -166,3 +166,10 @@
 - `dot ~= +1` means native travel aligns with the requested camera-forward vector, `dot ~= -1` means a 180-degree inversion, and `dot ~= 0` with large `|cross|` indicates an approximately 90-degree basis rotation/reflection.
 - The probe writes the same `DIRECTION_W` sample to the existing N64 event recorder and console as `[SM64 Direction] ...`; it does not modify input, camera, movement, native stepping, presentation, or server authority.
 - No native sidecar rebuild or protocol change is required. The next runtime action is one pure-W sample at north/east/south/west before any further transform change.
+
+2026-10-04 - Bundle 1.3 Construction detached-camera ownership fix
+- User video plus diagnostics proved the rendered Construction/RTS camera rotated while sampled `cameraForward` stayed effectively frozen near `(-0.006, 1.000)`, so the steering fault was upstream of libsm64 rather than another stick-axis sign issue.
+- `ConstructionBuildCamera` owns the live `Class24.aClass411_Sub1_158` detached camera while Construction Free/RTS is active, even when Matrix's normal detached-camera flags are not the ownership signal used by `AlternateCharacterController`.
+- `AlternateCharacterController.getCameraForward()` now prioritizes the active Construction camera before normal detached/vanilla camera detection and reuses the existing real position -> look-point vector path.
+- Mario/libsm64 stick axes, binary protocol, sidecar, XYZ presentation and server authority are unchanged; no native rebuild is required.
+- Runtime gate: rotate the Construction camera and confirm `cameraForward` now changes with the rendered view, then confirm W stays camera-forward at north/east/south/west and the pure-W probe trends toward `dot ~= +1`, `cross ~= 0` after Mario settles into each heading.
