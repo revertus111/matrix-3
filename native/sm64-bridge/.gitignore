@@ -1,0 +1,6 @@
+.deps/
+dist/
+baserom.us.z64
+*.z64
+*.n64
+*.v64
