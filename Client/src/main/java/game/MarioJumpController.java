@@ -1,12 +1,14 @@
 package game;
 
 /**
- * Experimental Matrix3-native vertical movement proof for the future Mario
- * controller workstream.
+ * Matrix3-native vertical movement proof for the Mario controller workstream.
  *
- * This is deliberately presentation-only: it moves the local client's player
- * transform above the existing RuneScape terrain baseline. It does not change
- * plane, pathfinding, clipping, server position authority, animation, or combat.
+ * This remains presentation-only: it moves the local client's player transform
+ * above the existing RuneScape terrain baseline. It does not change plane,
+ * pathfinding, clipping, server position authority, animation, or combat.
+ *
+ * Mario behavior is gated by PlayerControllerMode; normal RuneScape control is
+ * the default and Space does nothing here until Mario mode is explicitly active.
  */
 public final class MarioJumpController {
 
@@ -24,6 +26,8 @@ public final class MarioJumpController {
     private static int lastTickCycle = Integer.MIN_VALUE;
     private static long lastTickNanos;
 
+    private static Player lastPlayer;
+    private static boolean modeWasMario;
     private static boolean spaceWasDown;
     private static boolean airborne;
     private static boolean baselineValid;
@@ -49,8 +53,35 @@ public final class MarioJumpController {
         }
         lastTickCycle = client.cycles;
 
-        boolean spaceDown = keyDown(INTERNAL_SPACE_KEY);
         Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
+        if (player != lastPlayer) {
+            /*
+             * A newly created local-player object is a controller lifecycle
+             * boundary. Never carry Mario/airborne state across login/relog.
+             */
+            resetPhysics();
+            spaceWasDown = keyDown(INTERNAL_SPACE_KEY);
+            modeWasMario = false;
+            PlayerControllerMode.resetForPlayerLifecycle();
+            lastPlayer = player;
+        }
+
+        PlayerControllerMode.tick();
+        boolean marioMode = PlayerControllerMode.isMarioMode();
+        if (marioMode != modeWasMario) {
+            if (marioMode) {
+                enterMarioMode();
+            } else {
+                exitMarioMode(player);
+            }
+            modeWasMario = marioMode;
+        }
+
+        if (!marioMode) {
+            return;
+        }
+
+        boolean spaceDown = keyDown(INTERNAL_SPACE_KEY);
         if (player == null) {
             resetPhysics();
             spaceWasDown = spaceDown;
@@ -101,6 +132,21 @@ public final class MarioJumpController {
             baselineValid = false;
             appliedYValid = false;
         }
+    }
+
+    private static void enterMarioMode() {
+        resetPhysics();
+        // Enabling while Space is already held must not manufacture a jump.
+        spaceWasDown = keyDown(INTERNAL_SPACE_KEY);
+    }
+
+    private static void exitMarioMode(Player player) {
+        if (player != null && airborne && baselineValid) {
+            Class240 position = player.method5394().aClass240_2647;
+            player.method5395(position.aFloat2653, groundY, position.aFloat2657);
+        }
+        resetPhysics();
+        spaceWasDown = keyDown(INTERNAL_SPACE_KEY);
     }
 
     private static void beginJump(Player player) {
