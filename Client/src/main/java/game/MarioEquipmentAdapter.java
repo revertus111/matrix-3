@@ -92,15 +92,26 @@ public final class MarioEquipmentAdapter {
         if (!isUsable(frame)) {
             return;
         }
-        if (lastFrameSequence >= 0L && frame.sequence < lastFrameSequence) {
-            resetHeadSelection();
-        }
-        lastFrameSequence = frame.sequence;
 
         HelmetAppearance helmet = findVisibleHelmet(player);
         MarioHelmetCalibrationController.tick(
                 helmet == null ? -1 : helmet.itemId,
                 helmet == null ? null : helmet.definition.aString8180);
+
+        /*
+         * F6 may have frozen/unfrozen presentation during tick(...). Re-read the
+         * bridge presentation frame so Mario body, head tracking and helmet all
+         * consume the same frozen/live snapshot from this point onward.
+         */
+        frame = Sm64BridgeSession.getLatestGeometryFrame();
+        if (!isUsable(frame)) {
+            return;
+        }
+        if (lastFrameSequence >= 0L && frame.sequence < lastFrameSequence) {
+            resetHeadSelection();
+        }
+        lastFrameSequence = frame.sequence;
+
         if (helmet == null) {
             return;
         }
@@ -145,33 +156,57 @@ public final class MarioEquipmentAdapter {
         }
         fitScale = clamp(fitScale, 0.05F, 20.0F);
 
-        float yaw = frame.state.faceAngle;
-        if (!isFinite(yaw)) {
-            yaw = 0.0F;
+        float yawOffsetDegrees = HELMET_YAW_OFFSET_DEGREES + calibration.yawDegrees;
+        float baseFaceYaw;
+        if (anchor.rotationDelta != null && MarioHeadOrientationTracker.hasReference()) {
+            baseFaceYaw = MarioHeadOrientationTracker.getReferenceFaceAngle();
+        } else {
+            baseFaceYaw = frame.state.faceAngle;
+        }
+        if (!isFinite(baseFaceYaw)) {
+            baseFaceYaw = 0.0F;
         }
         if (HELMET_YAW_FLIP) {
-            yaw = -yaw;
+            baseFaceYaw = -baseFaceYaw;
         }
-        float yawOffsetDegrees = HELMET_YAW_OFFSET_DEGREES + calibration.yawDegrees;
-        yaw += (float) Math.toRadians(yawOffsetDegrees);
+
+        float[] baseYawRotation = rotationY(
+                baseFaceYaw + (float) Math.toRadians(yawOffsetDegrees));
+        float[] finalRotation = anchor.rotationDelta == null
+                ? baseYawRotation
+                : multiply3x3(anchor.rotationDelta, baseYawRotation);
+        if (finalRotation == null) {
+            return;
+        }
 
         /*
-         * Manual X/Z corrections are defined in helmet/head-local space. Rotate
-         * them through the same yaw used by the helmet so a front/back correction
-         * stays attached to Mario's face as he turns instead of becoming a fixed
-         * world-space displacement.
+         * V4 treats all manual XYZ calibration as helmet/head-local offsets.
+         * Transforming the offset through the same full head matrix keeps seat,
+         * forward/back and side corrections attached during nods, tilts and flips.
          */
-        float yawCos = (float) Math.cos(yaw);
-        float yawSin = (float) Math.sin(yaw);
-        float worldOffsetX = calibration.offsetX * yawCos + calibration.offsetZ * yawSin;
-        float worldOffsetZ = -calibration.offsetX * yawSin + calibration.offsetZ * yawCos;
+        float worldOffsetX = finalRotation[0] * calibration.offsetX
+                + finalRotation[1] * calibration.offsetY
+                + finalRotation[2] * calibration.offsetZ;
+        float worldOffsetY = finalRotation[3] * calibration.offsetX
+                + finalRotation[4] * calibration.offsetY
+                + finalRotation[5] * calibration.offsetZ;
+        float worldOffsetZ = finalRotation[6] * calibration.offsetX
+                + finalRotation[7] * calibration.offsetY
+                + finalRotation[8] * calibration.offsetZ;
 
         Class240 position = playerTransform.aClass240_2647;
-        HELMET_TRANSFORM.method3577(fitScale, fitScale, fitScale);
-        HELMET_TRANSFORM.method3576(0.0F, 1.0F, 0.0F, yaw);
+        /*
+         * verified-static: Class261.method3572(...) writes the full 3x3 transform
+         * basis and method3578(...) applies scale without replacing that basis.
+         */
+        HELMET_TRANSFORM.method3572(
+                finalRotation[0], finalRotation[1], finalRotation[2],
+                finalRotation[3], finalRotation[4], finalRotation[5],
+                finalRotation[6], finalRotation[7], finalRotation[8]);
+        HELMET_TRANSFORM.method3578(fitScale, fitScale, fitScale);
         HELMET_TRANSFORM.method3580(
                 position.aFloat2653 + anchor.x + worldOffsetX,
-                position.aFloat2656 + anchor.y + HELMET_VERTICAL_OFFSET + calibration.offsetY,
+                position.aFloat2656 + anchor.y + HELMET_VERTICAL_OFFSET + worldOffsetY,
                 position.aFloat2657 + anchor.z + worldOffsetZ);
 
         try {
@@ -191,6 +226,8 @@ public final class MarioEquipmentAdapter {
                         + " x=" + calibration.offsetX
                         + " y=" + calibration.offsetY
                         + " z=" + calibration.offsetZ
+                        + " head3d=" + (anchor.rotationDelta != null)
+                        + " frozen=" + Sm64BridgeSession.isPresentationFrozen()
                         + " yawFlip=" + HELMET_YAW_FLIP
                         + " yawOffsetDeg=" + yawOffsetDegrees);
             }
@@ -331,6 +368,10 @@ public final class MarioEquipmentAdapter {
         float maxX = Float.NEGATIVE_INFINITY;
         float maxY = Float.NEGATIVE_INFINITY;
         float maxZ = Float.NEGATIVE_INFINITY;
+        float sumX = 0.0F;
+        float sumY = 0.0F;
+        float sumZ = 0.0F;
+        int count = 0;
 
         for (int vertexIndex : headVertexIndices) {
             if (vertexIndex < 0 || vertexIndex >= totalVertices) {
@@ -347,11 +388,19 @@ public final class MarioEquipmentAdapter {
             if (y > maxY) maxY = y;
             if (z < minZ) minZ = z;
             if (z > maxZ) maxZ = z;
+            sumX += x;
+            sumY += y;
+            sumZ += z;
+            count++;
         }
 
-        float centerX = (minX + maxX) * 0.5F;
-        float centerY = (minY + maxY) * 0.5F;
-        float centerZ = (minZ + maxZ) * 0.5F;
+        if (count <= 0) {
+            return null;
+        }
+        float inverseCount = 1.0F / count;
+        float centerX = sumX * inverseCount;
+        float centerY = sumY * inverseCount;
+        float centerZ = sumZ * inverseCount;
         float horizontalSpan = Math.max(maxX - minX, maxZ - minZ) * MARIO_MODEL_SCALE;
         if (!isFinite(centerX) || !isFinite(centerY) || !isFinite(centerZ)
                 || !isFinite(horizontalSpan) || horizontalSpan <= 0.0F) {
@@ -362,16 +411,16 @@ public final class MarioEquipmentAdapter {
                 centerX * MARIO_MODEL_SCALE,
                 -centerY * MARIO_MODEL_SCALE,
                 centerZ * MARIO_MODEL_SCALE,
-                horizontalSpan);
+                horizontalSpan,
+                MarioHeadOrientationTracker.calculateRotationDelta(frame));
     }
 
     /**
      * The binary bridge publishes final animated triangles rather than a bone
      * skeleton. V2 captures a broader upright head candidate set, trims the outer
      * X/Z extremes, and then follows those stable core vertex-stream indices on
-     * later frames. The trimmed reference envelope keeps one-off protrusions such
-     * as Mario's nose from driving helmet size while still following the animated
-     * head through jumps and flips.
+     * later frames. V4 also captures stable landmark groups inside this core so a
+     * relative 3D head orientation can be recovered for equipment attachment.
      */
     private static void ensureHeadSelection(Sm64BridgeSession.GeometryFrame frame) {
         if (headVertexIndices != null && headTopologyTriangleCount == frame.triangleCount
@@ -499,12 +548,45 @@ public final class MarioEquipmentAdapter {
         headVertexIndices = Arrays.copyOf(core, coreCount);
         headTopologyTriangleCount = frame.triangleCount;
         referenceHeadHorizontalSpan = referenceSpan;
+        boolean orientationCaptured = MarioHeadOrientationTracker.captureReference(
+                frame, headVertexIndices);
         System.out.println("[SM64 Equipment] Captured Mario HEAD envelope vertices="
                 + coreCount
                 + " candidates=" + candidateCount
                 + " triangles=" + frame.triangleCount
                 + " referenceSpan=" + referenceHeadHorizontalSpan
-                + " trim=" + HEAD_TRIM_FRACTION);
+                + " trim=" + HEAD_TRIM_FRACTION
+                + " head3d=" + orientationCaptured);
+    }
+
+    private static float[] rotationY(float radians) {
+        float cosine = (float) Math.cos(radians);
+        float sine = (float) Math.sin(radians);
+        return new float[] {
+                cosine, 0.0F, -sine,
+                0.0F, 1.0F, 0.0F,
+                sine, 0.0F, cosine
+        };
+    }
+
+    private static float[] multiply3x3(float[] left, float[] right) {
+        if (left == null || right == null || left.length != 9 || right.length != 9) {
+            return null;
+        }
+        float[] result = new float[9];
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                float value = 0.0F;
+                for (int k = 0; k < 3; k++) {
+                    value += left[row * 3 + k] * right[k * 3 + col];
+                }
+                if (!isFinite(value)) {
+                    return null;
+                }
+                result[row * 3 + col] = value;
+            }
+        }
+        return result;
     }
 
     private static boolean isUsable(Sm64BridgeSession.GeometryFrame frame) {
@@ -522,6 +604,7 @@ public final class MarioEquipmentAdapter {
         headTopologyTriangleCount = -1;
         headVertexIndices = null;
         referenceHeadHorizontalSpan = 0.0F;
+        MarioHeadOrientationTracker.reset();
     }
 
     private static void logHelmetFailure(int itemId, String reason) {
@@ -597,12 +680,15 @@ public final class MarioEquipmentAdapter {
         final float y;
         final float z;
         final float horizontalSpan;
+        final float[] rotationDelta;
 
-        HeadAnchor(float x, float y, float z, float horizontalSpan) {
+        HeadAnchor(float x, float y, float z, float horizontalSpan,
+                float[] rotationDelta) {
             this.x = x;
             this.y = y;
             this.z = z;
             this.horizontalSpan = horizontalSpan;
+            this.rotationDelta = rotationDelta;
         }
     }
 }
