@@ -1,3 +1,14 @@
+2026-10-03 - PIO-1 generic INPUT/OUTPUT endpoint framework
+- Added SettlementLogisticsEndpointRef as the stable serializable endpoint identity: owner type + persistent owner id + stable port key; runtime world coordinates are never identity.
+- Added SettlementLogisticsEndpoint with INPUT/OUTPUT direction, plot position, facing, item compatibility, capacity/amount, extract and accept semantics.
+- Added SettlementLogisticsPortDefinition for prefab-local offsets/facing/item filters with quarter-turn placement rotation transforms.
+- Added SettlementLogisticsEndpointResolver adapters over the existing owners instead of introducing duplicate inventory: physical chests -> SettlementStorageContainer, Sawmill/workbench -> SettlementMachineBuffer, Conveyor OUTPUT -> SettlementConveyorRun payload ownership.
+- Chest INPUT/OUTPUT and Sawmill INPUT_LOGS/OUTPUT_PLANKS now have stable endpoint keys. Sawmill ports remain anchor-local at 0,0 until PIO-3 assigns final prefab-local physical offsets; the keys will not change.
+- Conveyor OUTPUT exposes only physicalInventoryOwned payloads to the production endpoint contract; development-only synthetic payloads cannot leak into physical factory inventory through this layer.
+- Deleted/missing piece/run references resolve to null/blocked without mutating or deleting owned items.
+- Existing live conveyor tick/special-case transfer path is intentionally unchanged in PIO-1; PIO-2 will wire the production transport path through the endpoint framework and add distributed belt INPUT semantics.
+- Status: IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD. PIO-2 NEXT.
+
 2026-10-03 - Conveyor V2 direction reset: Prefab I/O Logistics
 - Rewrote the scoped Conveyor V2 PROJECT around real production INPUT/OUTPUT mechanics instead of command-button linking and visual-first conveyor work.
 - Conveyor visual polish is explicitly deferred/non-blocking; current STRAIGHT_1T rendering remains sufficient for gameplay development.
