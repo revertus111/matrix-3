@@ -106,3 +106,18 @@
 - Micro-face atlas sampling, face colours, animation geometry, movement/controller behavior and replacement ownership are unchanged by this slice.
 - ACTIVE logging now includes generated `matrixVertices` and `smoothAngle` so topology cost/calibration are visible during runtime testing.
 - Runtime acceptance pending: Mario should look rounder/less faceted without losing texture detail, melting intended edges, or causing an obvious performance regression.
+
+2026-10-04 - Bundle 2.3 native control runtime proof
+- User runtime-confirmed Mario-mode keyboard input reaches the real libsm64 action state machine: movement input drives native movement animations, crouch works, backflip works, and airborne ground-pound works.
+- This verifies the native stick/A/Z action path strongly enough to proceed with visible horizontal presentation; F/B attack, long-jump timing, and held-entry guards remain focused runtime checks.
+- User also confirmed the integration conflict that Construction/RTS camera WASD was consuming the same held keys while Mario mode was active.
+
+2026-10-04 - Bundle 2.4 local XYZ presentation + WASD ownership
+- Added `MarioInputKeyboard`, a reversible wrapper around Matrix3's existing keyboard owner. The original AWT listener remains authoritative and continues tracking physical state; normal `method6514(...)` consumers see WASD released while Mario mode is active, while Mario reads the original raw held state. No second keyboard listener was added.
+- Mario-mode exit, native failure, and local-player lifecycle changes restore the original Matrix keyboard owner.
+- `Sm64BridgeSession` now exposes one-native-tick-delayed interpolated XYZ from the same previous/latest state pair and shared interpolation alpha.
+- `MarioJumpController` now applies native SM64 X/Z deltas as temporary local Matrix presentation alongside the existing native Y jump path.
+- Horizontal presentation defaults to `3.0` Matrix units per native SM64 unit and can be calibrated with `-Dmatrix3.sm64.horizontalScale=<positive-float>`; final scale/sign remains a runtime `HYPOTHESIS` until the first visible movement test.
+- Matrix/server corrections rebase the tracked presentation baseline per axis; Ctrl+M/native failure restores the tracked RuneScape XYZ baseline rather than leaving Mario displacement behind.
+- This slice does not send Mario movement packets, replace RuneScape clipping/pathfinding/plane authority, or stream RuneScape collision into libsm64. The native sidecar still simulates against its temporary flat floor.
+- Runtime gate pending: verify WASD no longer pans the Construction camera, Mario visibly translates, direction/scale feel correct, jump/backflip/ground-pound carry horizontal displacement, and Ctrl+M restores the RuneScape position cleanly.
