@@ -6,9 +6,20 @@
 - No Mario model/animations, platform collision, wall/roof landing, server physics, or multiplayer replication are included in this POC.
 
 2026-10-03 - Mario jump runtime proof + controller mode boundary v1
-- User runtime-confirmed that the actual revision-830 local player visibly leaves the terrain with the Mario jump POC; deeper slope/hold/relog regression checks remain pending.
+- User runtime-confirmed that the actual revision-830 local player visibly leaves the terrain with the Mario jump POC.
 - Added `PlayerControllerMode` with `RUNESCAPE` default and developer `Ctrl+M` toggle into `MARIO` mode.
-- Space-driven Mario jumping now runs only while Mario mode is active, preventing the POC from being global RuneScape-player behavior.
+- Space-driven Mario jumping runs only while Mario mode is active, preventing the POC from being global RuneScape-player behavior.
 - Disabling Mario mode while airborne restores the tracked ground baseline and clears jump state.
 - Local-player object changes reset controller mode to RuneScape and clear stale airborne state so login/relog cannot inherit an old Mario session.
-- Controller-mode behavior is `verified-static` until the new toggle/reset test list is runtime-accepted.
+- User subsequently accepted the controller-mode behavior at runtime; deeper Phase 1 movement/slope/relog regression remains a carryover check.
+
+2026-10-03 - SM64 passthrough architecture + Bridge Spike A
+- Reframed the target implementation around an authentic SM64-derived native simulation core instead of recreating the full Mario action state machine in Java.
+- Added `SM64_PASSTHROUGH_ARCHITECTURE.md`; Matrix3 remains host world/input/render/server architecture while `libsm64` is the first native Mario-core candidate.
+- Selected an isolated sidecar process for V1 transport; JNI remains a measured later optimization rather than an up-front dependency.
+- Added `native/sm64-bridge/sm64_bridge.c` with protocol v1, user-ROM initialization, a temporary two-triangle flat floor, `PING`, `STEP`, `STATE`, `RESET`, and `QUIT` commands.
+- Added the sidecar Makefile/README/.gitignore; ROMs, built binaries, and local libsm64 dependencies are excluded from Git.
+- Added Java 8 `Sm64BridgeProbe`; entering Mario mode attempts one background probe when the local sidecar/ROM exist, sends deterministic A-button native ticks, and reports PASS only if native Mario Y rises and action state changes.
+- Probe lookup supports both repository-root and Eclipse `Client/` working-directory layouts plus system-property/environment overrides.
+- C11 and Java 8 source syntax were checked locally; the Java/process protocol was exercised against a temporary stub native library. This is not SM64 runtime verification.
+- Real Bridge Spike A remains `NEEDS TEST` until the sidecar is built against actual `libsm64` and the user's US ROM produces the native PASS log.
