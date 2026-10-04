@@ -1,57 +1,641 @@
-# Conveyor V2 — Scoped Implementation Notes
+# Conveyor V2 — Prefab I/O Logistics Architecture
 
-This file is a narrow Conveyor V2 implementation/resume document. The canonical Construction phase, main-goal status table and overall roadmap remain in `docs/construction_revamp/PROJECT.md`.
+This is the authoritative scoped design/resume document for Conveyor V2 and prefab factory logistics.
 
-## Goal
+The canonical Construction phase, main-goal status table and overall roadmap remain in `docs/construction_revamp/PROJECT.md`.
 
-Keep one server-owned persistent `SettlementConveyorRun` per player-authored straight segment while letting the client compose professional factory-style visuals from reusable one-tile authored modules.
+## Current direction
 
-Transport ownership remains server-side: payload identity, speed, spacing, backpressure, physical inventory provenance, belt-to-belt transfers, chest/machine endpoints and persistence must never move into the client visual generator.
+**Status: DESIGN LOCKED / IMPLEMENTATION NEXT**
 
-## Current state
+Conveyor visual polish is intentionally **deferred / non-blocking**. The current straight 1-tile repeated visual is good enough to continue gameplay development. Custom corner, splitter, merger, supports and seam polish can return later.
 
-**Conveyor V2.0 Straight Runs + Belt Connections:** IMPLEMENTED / NEEDS RUNTIME TEST.
+The active goal is no longer "make belts link with command buttons." The active goal is a real production/logistics contract:
 
-Current client/player-facing corrections:
-- Continuous chain authoring retains committed B as the next A.
-- Each current segment locks E/W or N/S from its first meaningful movement so the preview does not flip when the mouse crosses the diagonal threshold.
-- Right-click/Escape ends the active chain and clears the segment-axis lock.
+> **Production buildings expose physical INPUT and OUTPUT ports. Conveyors move physical items from compatible OUTPUTs into compatible INPUTs.**
 
-Current straight visual architecture:
-- `STRAIGHT_1T` is the canonical visual primitive.
-- The complete visible authored conveyor assembly is normalized to exactly 512 model units along its long axis.
-- A logical N-tile straight run repeats that intact module N times at exact 512-unit spacing.
-- Repeated raw modules are merged into one generated raw / cached renderer `Model` per straight segment.
-- The logical run is still one server-owned ConveyorRun; repeated modules are not world objects, persistent build pieces or collision owners.
-- Matrix3 `Class159(Class159[], int)` is the verified-static clone/merge path used so source face/texture/UV structures survive repetition.
-- The old straight renderer strategy that stretched BELT_SURFACE while separately spreading caps/details/supports is superseded.
-- Live Model Editor roles currently decide which authored source parts participate in the repeated straight module; `IGNORE` and untouched/unassigned original sawmill parts remain excluded.
-- The fresh-client fallback authored set remains source parts 4,5,8,16,17,18,19,21 and goes through the same 1T module pipeline.
+The first real factory loop is:
 
-## Visual kit direction
+```text
+finite trees
+    |
+    v
+[LUMBERYARD]
+ OUTPUT: Logs
+    |
+    v
+ CONVEYOR
+    |
+    v
+ INPUT: Logs
+  [SAWMILL]
+ OUTPUT: Planks
+    |
+    v
+ CONVEYOR
+    |
+    v
+ [CHEST]
+    |
+    v
+ WORKERS
+    |
+    v
+ BUILD MORE
+```
 
-Planned client visual primitives:
-1. `STRAIGHT_1T` — current active acceptance target.
-2. `CORNER_1T` — the user's authored 90-degree corner, selected/rotated from source/receiver heading difference.
-3. `SPLITTER_1T` — explicit future graph-node visual.
-4. `MERGER_1T` — optional explicit merge presentation when needed.
-5. Endpoint/machine connector/support polish only after the primitive kit is stable.
+No normal gameplay step in that loop should require `Link First Two Chests`, `Build Sawmill Test Line`, or another command-button topology shortcut. Those may remain developer diagnostics only.
 
-The server connection graph remains authoritative regardless of which client junction visual is chosen.
+---
 
-## Runtime acceptance order
+# 1. Ownership rules
 
-1. Pull latest `main`; Eclipse Clean/Build **Client**. Server rebuild is not required for the 1T visual-only renderer patch if current V2.0 server code is already running.
-2. Show Conveyor A->B Demo and inspect 2/5/9-tile runs.
-3. Verify every repeated tile preserves identical belt/roller/rail alignment with no progressive drift, gaps, growing overlap or texture loss.
-4. Verify E/W and N/S runs rotate the complete module correctly.
-5. Verify Build Palette preview uses the same repeated module at several lengths.
-6. Recheck per-segment axis lock and continuous A->B->C chaining.
-7. Recheck a real payload moving/transferring across connected runs; visual repetition must not change transport speed, spacing or ownership.
-8. Observe one reasonably long run in RTS view for model-build/render performance.
+## Server owns gameplay
 
-## Resume Here
+The server remains authoritative for:
 
-**Resume Here — Conveyor:** runtime-test `STRAIGHT_1T` first. If the 2/5/9-tile visual gate passes, mark it accepted and implement `CORNER_1T`: detect a 90-degree source-output -> receiver heading change from the existing synchronized V2.0 connection metadata, suppress/trim the conflicting straight-module seam as needed, and render/rotate the authored corner visual without changing server transport ownership.
+- persistent `SettlementConveyorRun` identity and geometry,
+- payload item id / amount / physical-inventory provenance,
+- belt speed,
+- payload spacing,
+- backpressure,
+- production-building buffers,
+- input/output port identity,
+- machine recipes,
+- finite resource-node consumption,
+- chest inventory,
+- port/conveyor connections,
+- persistence and recovery after re-entry/relog.
 
-Do not return to stretch-based straight-belt rendering unless new runtime evidence specifically requires it.
+The client owns only:
+
+- placement preview,
+- port highlighting/snapping presentation,
+- conveyor visual generation,
+- payload rendering/interpolation,
+- prefab visual presentation.
+
+Never move item ownership or production authority into the client renderer/editor.
+
+---
+
+# 2. Generic logistics endpoint contract
+
+All logistics participants should expose a common server-side endpoint abstraction instead of conveyor code knowing every building type.
+
+Conceptual endpoint operations:
+
+```text
+canExtract(item / request)
+extract(...)
+
+canAccept(itemId, amount)
+accept(itemId, amount)
+```
+
+An endpoint also exposes stable metadata:
+
+```text
+endpointId / portKey
+owner persistent id
+direction = INPUT | OUTPUT
+world tile
+facing
+accepted/provided item filter
+buffer/capacity ownership
+```
+
+Potential endpoint owners:
+
+- prefab production building,
+- physical chest/storage,
+- conveyor run,
+- future minecart loader/unloader,
+- future furnace/smelter/cooker/etc.
+
+The conveyor transport layer should not need special recipe logic for Lumberyard vs Sawmill vs Chest.
+
+---
+
+# 3. Prefab building port definition
+
+A prefabbed production building owns its port definitions relative to one stable prefab anchor.
+
+Conceptual definition:
+
+```text
+Prefab: SAWMILL
+Anchor: local 0,0
+Footprint: authored prefab footprint
+
+Port INPUT_LOGS
+  local offset: (-3, 0)
+  type: INPUT
+  facing: WEST
+  accepts: Logs 1511
+  buffer: machine input
+
+Port OUTPUT_PLANKS
+  local offset: (+3, 0)
+  type: OUTPUT
+  facing: EAST
+  provides: Planks 960
+  buffer: machine output
+```
+
+Prefab rotation rotates all of the following together:
+
+- visual components,
+- footprint,
+- port local offsets,
+- port facing,
+- work-area orientation if orientation-specific.
+
+A port must be addressable by stable prefab/piece identity + stable port key. Do not persist only a temporary runtime world coordinate as port identity.
+
+---
+
+# 4. Conveyor I/O rules
+
+## 4.1 One forward OUTPUT
+
+Every conveyor run has exactly one normal forward flow direction.
+
+Point B / the forward end is its OUTPUT.
+
+```text
+A ===============================> B
+                                    OUTPUT
+```
+
+Items move only toward that forward output.
+
+## 4.2 Distributed INPUT surface
+
+A conveyor may accept an incoming conveyor at **any valid position along the receiving belt**, including:
+
+- its rear/start,
+- its middle,
+- near its end.
+
+The receiving belt does not need a special dedicated input object for every possible merge point.
+
+The entire straight run acts as a distributed input surface with one directional rule:
+
+> **An item may enter from any side except through the receiver's forward/output side.**
+
+Example receiver flowing EAST:
+
+```text
+                     receiver flow / OUTPUT ->
+WEST/rear input  ->  ============================>
+                           ^             ^
+                           |             |
+                       south input   south input
+
+                       north input
+                           |
+                           v
+                    =============================>
+```
+
+Allowed approach sides relative to receiver heading:
+
+- rear,
+- left,
+- right.
+
+Rejected approach:
+
+- through the receiver's forward/output side.
+
+This keeps flow ownership unambiguous.
+
+## 4.3 Belt-to-belt insertion anywhere
+
+A source conveyor output can terminate on the receiving run at any valid insertion distance:
+
+```text
+Source Run #14 output
+        |
+        v
+==================+====================> Receiver Run #7
+                  ^
+             insertionDistance
+```
+
+Persistent/logical connection:
+
+```text
+sourceRunId -> receiverRunId @ insertionDistance
+```
+
+When the source payload reaches its output:
+
+1. resolve the receiver and insertion distance,
+2. validate approach direction,
+3. validate spacing around that insertion point,
+4. if accepted, transfer payload ownership to receiver,
+5. receiver now owns direction/speed/progress,
+6. if blocked, payload remains at source output and backpressures the source run.
+
+This is the temporary turn system too.
+
+A 90-degree turn does **not** require custom curved transport logic:
+
+```text
+A ==========>+
+             |
+             v
+             B
+             |
+             v
+```
+
+Run A outputs into the side/rear input surface of Run B. Later `CORNER_1T` can hide/polish the visual seam without changing transport behavior.
+
+## 4.4 Multiple inputs / merges
+
+Multiple source runs may feed one receiver at different positions.
+
+```text
+              v source B
+              |
+==============+==========================> MAIN
+         ^
+         |
+      source A
+```
+
+If two sources contend for the same insertion space, acceptance is deterministic. The accepted payload transfers; the other source remains backpressured until spacing opens.
+
+No payload may overlap, teleport through another payload, duplicate, or disappear.
+
+## 4.5 Crossing is not connection
+
+Two conveyor spans crossing visually do not connect by themselves.
+
+A connection exists only when a source OUTPUT actually terminates on a valid receiver INPUT surface/port.
+
+---
+
+# 5. Backpressure contract
+
+Backpressure must propagate through the complete factory.
+
+Example:
+
+```text
+Chest full
+   ^
+Plank belt blocked
+   ^
+Sawmill output buffer full
+   ^
+Sawmill stops processing
+   ^
+Sawmill input fills
+   ^
+Log belt backs up
+   ^
+Lumberyard output fills
+   ^
+Lumberyard stops chopping
+```
+
+Rules:
+
+- output inventory is never deleted because downstream is blocked,
+- a belt payload remains belt-owned until the destination accepts it,
+- a building does not consume recipe input unless its output transaction can remain safely owned,
+- Lumberyard does not consume finite tree resource when its produced Logs cannot remain safely owned,
+- reopening capacity naturally resumes the chain.
+
+---
+
+# 6. Lumberyard prefab V1
+
+The Lumberyard is the first resource-production prefab.
+
+## Purpose
+
+- owns a configurable work radius,
+- finds valid finite persistent tree nodes in that radius,
+- reserves one valid node while operating,
+- consumes the same authoritative finite tree-node state already used by player/worker gathering,
+- produces physical Logs item `1511`,
+- stores produced Logs in a machine-local/output buffer,
+- exposes one `OUTPUT_LOGS` port.
+
+Conceptual flow:
+
+```text
+      trees inside work radius
+        T       T
+     T    T  T
+          |
+          v
+   +---------------+
+   |  LUMBERYARD   |
+   +-------+-------+
+           |
+      OUTPUT_LOGS
+           |
+           v
+        conveyor
+```
+
+Important rules:
+
+- do not create a second fake tree-resource system,
+- do not directly spawn Logs onto a belt without output-buffer ownership,
+- if output is full/backpressured, chopping pauses before unsafe resource consumption,
+- exact chop duration/yield tuning is balance data and can be tuned later without changing the port framework.
+
+---
+
+# 7. Sawmill prefab V1
+
+The Sawmill is the first processor prefab.
+
+Ports:
+
+```text
+INPUT_LOGS -> machine input buffer
+OUTPUT_PLANKS -> machine output buffer
+```
+
+Current accepted physical recipe remains:
+
+```text
+1 x Logs 1511 -> 2 x Planks 960
+```
+
+The existing machine-buffer / atomic-processing work should be reused rather than replaced.
+
+Processing contract:
+
+1. belt delivers Logs through `INPUT_LOGS`,
+2. machine input owns accepted Logs,
+3. when recipe input exists and output has safe capacity, processing runs,
+4. one Log is atomically consumed,
+5. two Planks are created in machine output,
+6. `OUTPUT_PLANKS` exposes those Planks to a connected conveyor,
+7. downstream blockage fills output and eventually pauses processing.
+
+Worker-operated and automated ownership must not double-process the same machine at the same time.
+
+---
+
+# 8. Physical chest endpoint
+
+A physical settlement chest remains real inventory storage.
+
+For the first factory vertical slice it must support:
+
+- conveyor INPUT depositing physical items,
+- existing player storage UI,
+- worker withdrawal of physical materials.
+
+A later/optional chest OUTPUT may expose chest inventory back to conveyor logistics, but the first Lumberyard -> Sawmill -> Chest loop only requires the destination input plus worker withdrawal.
+
+Example:
+
+```text
+Sawmill OUTPUT_PLANKS
+        |
+        v
+     conveyor
+        |
+        v
+   CHEST INPUT
+        |
+   Planks x N
+        |
+        v
+     workers
+```
+
+The chest inventory is the single owner. Do not mirror the same Planks into a legacy settlement-resource counter.
+
+---
+
+# 9. Worker/build integration target
+
+The eventual Construction material loop is physical:
+
+```text
+factory -> chest -> worker -> construction job
+```
+
+Workers should be able to acquire required physical materials from eligible settlement chests and carry/use them for prefab/build jobs.
+
+The port/logistics framework must not hardcode worker building into conveyor logic. Workers consume from storage through the storage/Construction job layer.
+
+This is a follow-on after the first production chain is mechanically accepted.
+
+---
+
+# 10. Player-facing conveyor placement
+
+Normal gameplay should connect endpoints spatially, not through debug buttons.
+
+Intended Build Palette flow:
+
+1. choose Conveyor,
+2. hover/click near a compatible OUTPUT port to choose source,
+3. drag/extend the belt,
+4. hover a compatible building/chest INPUT port or valid existing conveyor input surface,
+5. target highlights/snaps,
+6. click to commit,
+7. server validates endpoint identity, direction, item compatibility, territory and geometry,
+8. persistent connection is created.
+
+Valid source examples:
+
+- Lumberyard `OUTPUT_LOGS`,
+- Sawmill `OUTPUT_PLANKS`,
+- Chest OUTPUT later,
+- Conveyor forward OUTPUT.
+
+Valid destination examples:
+
+- Sawmill `INPUT_LOGS`,
+- Chest INPUT,
+- Conveyor rear/left/right distributed input surface.
+
+Developer commands may create diagnostic topology, but they are not the gameplay contract and should not be required for acceptance.
+
+---
+
+# 11. Persistence model
+
+Connections need stable references.
+
+Building-port reference concept:
+
+```text
+ownerPieceId
+portKey
+```
+
+Conveyor connection concept:
+
+```text
+sourceRunId
+receiverRunId
+receiverInsertionDistance
+```
+
+A persisted connection must safely recover when:
+
+- settlement instance rebuilds,
+- player exits/re-enters,
+- player logout/relog occurs,
+- target building/belt was removed,
+- prefab was rotated/moved through an approved gameplay edit.
+
+If a destination no longer resolves, upstream ownership must become safely blocked/disconnected. Never delete the item as repair behavior.
+
+---
+
+# 12. Conveyor visuals are deferred
+
+Current visual rule is intentionally sufficient, not final:
+
+- `STRAIGHT_1T` repeated module stays as the current straight visual baseline,
+- ugly 90-degree side connections are acceptable temporarily,
+- custom `CORNER_1T` can return later,
+- splitter/merger/support/end-cap polish is deferred,
+- visual seams must not block I/O mechanics work.
+
+Do not return to stretch-based straight-belt rendering unless runtime evidence specifically requires it.
+
+Transport topology and item ownership must remain independent from whichever visual mesh is eventually used.
+
+---
+
+# 13. Implementation order
+
+## PIO-1 — Generic endpoint/port framework
+
+- stable INPUT/OUTPUT endpoint identity,
+- local/world position + facing,
+- compatible item filter,
+- extract/accept contract,
+- prefab rotation transform,
+- safe persistence reference.
+
+## PIO-2 — Conveyor endpoint integration
+
+- forward belt OUTPUT,
+- distributed rear/left/right INPUT surface,
+- arbitrary receiver insertion distance,
+- approach-direction validation,
+- existing spacing/backpressure reused,
+- belt-to-belt turns/merges without special corner transport.
+
+## PIO-3 — Sawmill physical ports
+
+- `INPUT_LOGS`,
+- `OUTPUT_PLANKS`,
+- reuse existing persistent machine buffers,
+- preserve `1 Log -> 2 Planks`,
+- no debug-line command required.
+
+## PIO-4 — Chest input adapter
+
+- belt -> real chest inventory,
+- capacity/filter rejection backpressures belt,
+- worker/player storage ownership unchanged.
+
+## PIO-5 — Lumberyard prefab
+
+- persistent prefab identity/footprint,
+- work radius,
+- finite tree-node reservation/consumption,
+- physical Log output buffer,
+- `OUTPUT_LOGS` port,
+- output backpressure pauses harvesting.
+
+## PIO-6 — Build Palette port snapping
+
+- output source highlighting,
+- input destination highlighting,
+- conveyor input-surface highlighting,
+- server-authoritative commit,
+- remove command-button dependency from normal test flow.
+
+## PIO-7 — Worker material/build bridge
+
+- workers withdraw physical construction materials from eligible chests,
+- carry them to approved construction job,
+- consume only through authoritative build transaction.
+
+## Deferred polish
+
+- `CORNER_1T`,
+- splitters/filters,
+- mergers,
+- supports,
+- final prefab artwork,
+- belt tiers/speeds,
+- advanced UI/throughput overlays.
+
+---
+
+# 14. First real factory acceptance target
+
+The first end-to-end acceptance is:
+
+```text
+finite tree node
+      |
+      v
+ LUMBERYARD
+      |
+ physical Logs 1511
+      |
+      v
+   CONVEYOR
+      |
+      v
+ SAWMILL INPUT
+      |
+ 1 Log -> 2 Planks
+      |
+ SAWMILL OUTPUT
+      |
+      v
+   CONVEYOR
+      |
+      v
+    CHEST
+      |
+ physical Planks 960
+      |
+      v
+    WORKER
+```
+
+Acceptance requires:
+
+- finite tree amount decreases only for real Lumberyard harvest,
+- Logs become physical owned items,
+- belt transfer conserves item ownership,
+- Sawmill receives only compatible Logs,
+- exact `1 Log -> 2 Planks` processing remains atomic,
+- Planks leave through Sawmill output,
+- destination chest owns the final physical Planks,
+- downstream blockage propagates backward without loss/duplication,
+- no command-button link/build-line action is required,
+- exit/re-entry and relog preserve all durable inventories/connections,
+- workers can later withdraw those chest materials without conveyor special-casing.
+
+---
+
+# Resume Here
+
+**Resume Here — Prefab I/O Logistics:** stop visual conveyor tuning. Start PIO-1 by introducing the smallest server-owned generic INPUT/OUTPUT endpoint contract and stable prefab-port identity that can wrap the existing Sawmill machine buffers, physical chests and ConveyorRun transport without replacing their proven ownership.
+
+Then wire PIO-2 immediately so a belt OUTPUT can feed another belt at any valid rear/left/right contact position along the receiver. After that, expose real Sawmill INPUT/OUTPUT ports and build the first Lumberyard prefab.
