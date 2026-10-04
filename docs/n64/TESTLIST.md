@@ -19,6 +19,24 @@
 - [ ] Space/F/Shift physical states reflect the held keys and forwarded A/B/Z reflect the post-entry-guard values actually sent to libsm64.
 - [ ] Native frame age normally stays low while the sidecar is healthy; sequence advances without repeated gaps.
 
+## Mario Equipment Workbench - one-pass acceptance
+
+1. [ ] Open `N64 -> Mario 64 -> Equipment Workbench`; the original runtime recorder remains under the sibling `Runtime` tab.
+2. [ ] Equip Statius's full helm and enter Mario mode; Active Equipment reports the correct item id/name and `3D head tracking` becomes `ACTIVE` after the head basis is captured.
+3. [ ] Before freezing, move/idle Mario and confirm the V4 correction no longer drives the helmet opposite to Mario's animated head. Turn/nod/tilt should move in the same direction.
+4. [ ] Press `Freeze pose`; Mario's visible pose stops while the libsm64 bridge remains healthy.
+5. [ ] Change Scale, X, Y, Z and Yaw from the workbench using both direct text entry and -/+ controls. Helmet updates live without client restart or native bridge rebuild.
+6. [ ] `Flip helmet 180°` changes only the active helmet session yaw by 180 degrees; `Reset transform` returns scale `1.0`, XYZ `0`, yaw delta `0`.
+7. [ ] Enable `live head cut` with `Only cut while a helmet is equipped`; masked source triangle count becomes greater than zero.
+8. [ ] While still frozen, lower/raise `Cut starts at body height %` and change `Head cut radius %`; Mario model rebuilds immediately and the visible cut changes without unfreezing.
+9. [ ] Use the helmet-safe preset (`72%` / `40%`) as a starting point. Adjust until cap/hair/top-skull clipping is reduced while Mario's central face, moustache and nose remain visible.
+10. [ ] Disable the mask and confirm full Mario head geometry returns immediately.
+11. [ ] Re-enable mask, unequip the helmet with helmet-only masking enabled, and confirm the head cut no longer applies.
+12. [ ] Unfreeze and test idle, turn/run, jump, backflip and ground-pound. Helmet should follow head translation/orientation and saved head-local offsets should stay attached to the skull.
+13. [ ] Press `Save profile .md`; status reports a path ending in `docs/n64/MARIO_EQUIPMENT_RUNTIME.md` and the file contains the current item transform/mask values plus a link to `TRANSFORM_CONVENTIONS.md`.
+14. [ ] `Copy markdown` places the same profile text on the clipboard.
+15. [ ] Ctrl+M back to RuneScape restores the normal player body with no floating helmet, stuck freeze or head cut.
+
 ## Long-idle / sleep-state bridge-stall fix
 
 1. [ ] Rebuild `native/sm64-bridge/dist/sm64_bridge.exe` from the patched bridge source before launching Matrix3.
@@ -49,5 +67,5 @@
 
 ## Regression boundary
 
-- [ ] N64 diagnostics do not alter Ctrl+M lifecycle, movement, jump, attack/crouch controls, Mario rendering, RuneScape combat, sidecar stepping or server authority.
+- [ ] N64 diagnostics/workbench do not change server authority, RuneScape equipment definitions, libsm64 stepping ownership or normal RuneScape appearance outside Mario mode.
 - [ ] Ctrl+M back to RuneScape restores the normal player body/input and the N64 panel reports the transition.
