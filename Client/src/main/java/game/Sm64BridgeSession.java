@@ -57,14 +57,28 @@ public final class Sm64BridgeSession {
     }
 
     /**
-     * Publishes one normalized Matrix input snapshot for the fixed-rate native
-     * simulation worker. Stick values are clamped to libsm64's -1..1 range.
+     * Compatibility overload preserving the original fixed camera direction.
+     * New alternate-character input should use the camera-aware overload below.
      */
     public static void setInput(float stickX, float stickY,
             boolean buttonA, boolean buttonB, boolean buttonZ) {
+        setInput(0.0F, -1.0F, stickX, stickY, buttonA, buttonB, buttonZ);
+    }
+
+    /**
+     * Publishes one normalized Matrix input snapshot for the fixed-rate native
+     * simulation worker. Camera look and stick values are captured together so a
+     * native step cannot combine input from different client frames.
+     */
+    public static void setInput(float cameraLookX, float cameraLookZ,
+            float stickX, float stickY,
+            boolean buttonA, boolean buttonB, boolean buttonZ) {
         Worker worker = current;
         if (worker != null) {
-            worker.setInput(stickX, stickY, buttonA, buttonB, buttonZ);
+            worker.setInput(
+                    cameraLookX, cameraLookZ,
+                    stickX, stickY,
+                    buttonA, buttonB, buttonZ);
         }
     }
 
@@ -208,12 +222,17 @@ public final class Sm64BridgeSession {
         void setButtonA(boolean down) {
             InputState input = inputState;
             inputState = new InputState(
-                    input.stickX, input.stickY, down, input.buttonB, input.buttonZ);
+                    input.cameraLookX, input.cameraLookZ,
+                    input.stickX, input.stickY,
+                    down, input.buttonB, input.buttonZ);
         }
 
-        void setInput(float stickX, float stickY,
+        void setInput(float cameraLookX, float cameraLookZ,
+                float stickX, float stickY,
                 boolean buttonA, boolean buttonB, boolean buttonZ) {
+            float[] camera = normalizeCamera(cameraLookX, cameraLookZ);
             inputState = new InputState(
+                    camera[0], camera[1],
                     clampStick(stickX), clampStick(stickY),
                     buttonA, buttonB, buttonZ);
         }
@@ -337,8 +356,8 @@ public final class Sm64BridgeSession {
     private static GeometryFrame step(
             OutputStream output, InputStream input, InputState controls) throws IOException {
         output.write(BINARY_CMD_STEP);
-        writeFloatLE(output, 0.0F);
-        writeFloatLE(output, -1.0F);
+        writeFloatLE(output, controls.cameraLookX);
+        writeFloatLE(output, controls.cameraLookZ);
         writeFloatLE(output, controls.stickX);
         writeFloatLE(output, controls.stickY);
         output.write(controls.buttonA ? 1 : 0);
@@ -369,6 +388,18 @@ public final class Sm64BridgeSession {
         float[] colors = readFloatArray(input, triangleCount * 9);
         float[] uvs = readFloatArray(input, triangleCount * 6);
         return new GeometryFrame(sequence, state, triangleCount, positions, colors, uvs);
+    }
+
+    private static float[] normalizeCamera(float x, float z) {
+        if (Float.isNaN(x) || Float.isNaN(z)
+                || Float.isInfinite(x) || Float.isInfinite(z)) {
+            return new float[] { 0.0F, -1.0F };
+        }
+        float length = (float) Math.sqrt(x * x + z * z);
+        if (length < 0.001F || Float.isNaN(length) || Float.isInfinite(length)) {
+            return new float[] { 0.0F, -1.0F };
+        }
+        return new float[] { x / length, z / length };
     }
 
     private static float clampStick(float value) {
@@ -518,16 +549,24 @@ public final class Sm64BridgeSession {
     }
 
     private static final class InputState {
-        static final InputState IDLE = new InputState(0.0F, 0.0F, false, false, false);
+        static final InputState IDLE = new InputState(
+                0.0F, -1.0F,
+                0.0F, 0.0F,
+                false, false, false);
 
+        final float cameraLookX;
+        final float cameraLookZ;
         final float stickX;
         final float stickY;
         final boolean buttonA;
         final boolean buttonB;
         final boolean buttonZ;
 
-        InputState(float stickX, float stickY,
+        InputState(float cameraLookX, float cameraLookZ,
+                float stickX, float stickY,
                 boolean buttonA, boolean buttonB, boolean buttonZ) {
+            this.cameraLookX = cameraLookX;
+            this.cameraLookZ = cameraLookZ;
             this.stickX = stickX;
             this.stickY = stickY;
             this.buttonA = buttonA;
