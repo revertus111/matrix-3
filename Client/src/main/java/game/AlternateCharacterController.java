@@ -109,6 +109,13 @@ public final class AlternateCharacterController {
     }
 
     static ControlState sampleControls() {
+        if (MarioHelmetCalibrationController.isActive()) {
+            return new ControlState(
+                    0.0F, 0.0F,
+                    false, false, false,
+                    getCameraForward());
+        }
+
         float moveX = (rawKeyDown(INTERNAL_D_KEY) ? 1.0F : 0.0F)
                 - (rawKeyDown(INTERNAL_A_KEY) ? 1.0F : 0.0F);
         float moveY = (rawKeyDown(INTERNAL_W_KEY) ? 1.0F : 0.0F)
