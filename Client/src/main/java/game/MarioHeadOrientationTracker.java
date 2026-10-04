@@ -8,18 +8,20 @@ import java.util.Arrays;
  *
  * libsm64 does not currently expose a bone matrix through the Matrix bridge, so
  * equipment cannot attach to a named head joint directly. This tracker captures
- * stable top/bottom and side landmark vertex groups from the already-selected
- * Mario head region, then compares those same physical vertex groups on later
- * frames. The result is a relative 3x3 rotation matrix that follows head yaw,
- * pitch and roll without reconstructing Mario animation semantics in Java.
+ * stable top/bottom and side landmark vertex groups from the upper skull inside
+ * the already-selected Mario head region, then compares those same physical
+ * vertex groups on later frames. The result is a relative 3x3 rotation matrix
+ * that follows head yaw, pitch and roll without recreating animation in Java.
  */
 final class MarioHeadOrientationTracker {
 
+    private static final float ORIENTATION_HEAD_START_FRACTION = 0.58F;
     private static final float LANDMARK_FRACTION = 0.20F;
     private static final int MIN_LANDMARK_VERTICES = 6;
     private static final float MIN_VECTOR_LENGTH = 0.001F;
 
     private static int topologyTriangleCount = -1;
+    private static int[] orientationVertices;
     private static int[] topVertices;
     private static int[] bottomVertices;
     private static int[] sideLowVertices;
@@ -40,27 +42,54 @@ final class MarioHeadOrientationTracker {
         }
 
         int totalVertices = frame.triangleCount * 3;
-        int count = 0;
-        int[] valid = new int[headVertices.length];
+        int broadCount = 0;
+        int[] broad = new int[headVertices.length];
+        float minY = Float.POSITIVE_INFINITY;
+        float maxY = Float.NEGATIVE_INFINITY;
         for (int vertex : headVertices) {
-            if (vertex >= 0 && vertex < totalVertices) {
-                valid[count++] = vertex;
+            if (vertex < 0 || vertex >= totalVertices) {
+                continue;
             }
+            broad[broadCount++] = vertex;
+            float y = frame.positions[vertex * 3 + 1] - frame.state.y;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
         }
-        if (count < MIN_LANDMARK_VERTICES * 2) {
+        if (broadCount < MIN_LANDMARK_VERTICES * 2
+                || !finite(minY) || !finite(maxY) || maxY <= minY) {
             return false;
         }
-        valid = Arrays.copyOf(valid, count);
 
-        float[] ys = new float[count];
-        float[] xs = new float[count];
-        float[] zs = new float[count];
+        /*
+         * The V2 fit region is intentionally broad. Orientation must not use that
+         * entire region or shoulders/upper torso can steer the helmet. Capture the
+         * stable upper-skull vertices once from the initial upright/reference pose.
+         */
+        float orientationStartY = minY
+                + (maxY - minY) * ORIENTATION_HEAD_START_FRACTION;
+        int[] skull = new int[broadCount];
+        int skullCount = 0;
+        for (int i = 0; i < broadCount; i++) {
+            int vertex = broad[i];
+            float y = frame.positions[vertex * 3 + 1] - frame.state.y;
+            if (y >= orientationStartY) {
+                skull[skullCount++] = vertex;
+            }
+        }
+        if (skullCount < MIN_LANDMARK_VERTICES * 2) {
+            return false;
+        }
+        orientationVertices = Arrays.copyOf(skull, skullCount);
+
+        float[] ys = new float[skullCount];
+        float[] xs = new float[skullCount];
+        float[] zs = new float[skullCount];
         float minX = Float.POSITIVE_INFINITY;
         float maxX = Float.NEGATIVE_INFINITY;
         float minZ = Float.POSITIVE_INFINITY;
         float maxZ = Float.NEGATIVE_INFINITY;
-        for (int i = 0; i < count; i++) {
-            int base = valid[i] * 3;
+        for (int i = 0; i < skullCount; i++) {
+            int base = orientationVertices[i] * 3;
             float x = frame.positions[base] - frame.state.x;
             float y = frame.positions[base + 1] - frame.state.y;
             float z = frame.positions[base + 2] - frame.state.z;
@@ -73,32 +102,32 @@ final class MarioHeadOrientationTracker {
             if (z > maxZ) maxZ = z;
         }
 
-        float[] sortedY = Arrays.copyOf(ys, count);
+        float[] sortedY = Arrays.copyOf(ys, skullCount);
         Arrays.sort(sortedY);
         boolean sideUsesX = maxX - minX >= maxZ - minZ;
-        float[] sortedSide = Arrays.copyOf(sideUsesX ? xs : zs, count);
+        float[] sortedSide = Arrays.copyOf(sideUsesX ? xs : zs, skullCount);
         Arrays.sort(sortedSide);
 
         int lowIndex = clampIndex(
-                Math.round((count - 1) * LANDMARK_FRACTION), count);
+                Math.round((skullCount - 1) * LANDMARK_FRACTION), skullCount);
         int highIndex = clampIndex(
-                Math.round((count - 1) * (1.0F - LANDMARK_FRACTION)), count);
+                Math.round((skullCount - 1) * (1.0F - LANDMARK_FRACTION)), skullCount);
         float bottomThreshold = sortedY[lowIndex];
         float topThreshold = sortedY[highIndex];
         float sideLowThreshold = sortedSide[lowIndex];
         float sideHighThreshold = sortedSide[highIndex];
 
-        int[] top = new int[count];
-        int[] bottom = new int[count];
-        int[] sideLow = new int[count];
-        int[] sideHigh = new int[count];
+        int[] top = new int[skullCount];
+        int[] bottom = new int[skullCount];
+        int[] sideLow = new int[skullCount];
+        int[] sideHigh = new int[skullCount];
         int topCount = 0;
         int bottomCount = 0;
         int sideLowCount = 0;
         int sideHighCount = 0;
 
-        for (int i = 0; i < count; i++) {
-            int vertex = valid[i];
+        for (int i = 0; i < skullCount; i++) {
+            int vertex = orientationVertices[i];
             if (ys[i] >= topThreshold) {
                 top[topCount++] = vertex;
             }
@@ -118,6 +147,7 @@ final class MarioHeadOrientationTracker {
                 || bottomCount < MIN_LANDMARK_VERTICES
                 || sideLowCount < MIN_LANDMARK_VERTICES
                 || sideHighCount < MIN_LANDMARK_VERTICES) {
+            reset();
             return false;
         }
 
@@ -134,11 +164,13 @@ final class MarioHeadOrientationTracker {
         }
 
         System.out.println("[SM64 Equipment] HEAD orientation landmarks"
+                + " skull=" + orientationVertices.length
                 + " top=" + topVertices.length
                 + " bottom=" + bottomVertices.length
                 + " sideLow=" + sideLowVertices.length
                 + " sideHigh=" + sideHighVertices.length
-                + " sideAxis=" + (sideUsesX ? "X" : "Z"));
+                + " sideAxis=" + (sideUsesX ? "X" : "Z")
+                + " skullStart=" + ORIENTATION_HEAD_START_FRACTION);
         return true;
     }
 
@@ -177,6 +209,12 @@ final class MarioHeadOrientationTracker {
         return isRotationUsable(delta) ? delta : null;
     }
 
+    /** Returns the tracked upper-skull centroid in Matrix-local X/Y/Z units. */
+    static float[] calculateHeadCenter(Sm64BridgeSession.GeometryFrame frame) {
+        Vec3 center = centroid(frame, orientationVertices);
+        return center == null ? null : new float[] { center.x, center.y, center.z };
+    }
+
     static float getReferenceFaceAngle() {
         return referenceFaceAngle;
     }
@@ -187,6 +225,7 @@ final class MarioHeadOrientationTracker {
 
     static void reset() {
         topologyTriangleCount = -1;
+        orientationVertices = null;
         topVertices = null;
         bottomVertices = null;
         sideLowVertices = null;
