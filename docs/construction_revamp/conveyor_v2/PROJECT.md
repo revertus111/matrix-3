@@ -6,7 +6,7 @@ The canonical Construction phase, main-goal status table and overall roadmap rem
 
 ## Current direction
 
-**Status: PIO-1 IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD; PIO-2 NEXT**
+**Status: PIO-1 COMPILE VERIFIED; PIO-2A IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD; PIO-2B LIVE TICK WIRING NEXT**
 
 Conveyor visual polish is intentionally **deferred / non-blocking**. The current straight 1-tile repeated visual is good enough to continue gameplay development. Custom corner, splitter, merger, supports and seam polish can return later.
 
@@ -126,7 +126,8 @@ PIO-1 now exists as a server-owned adapter framework:
 - Chest keys are `INPUT` / `OUTPUT`; the first Sawmill/workbench keys are `INPUT_LOGS` / `OUTPUT_PLANKS`; ConveyorRun exposes stable `OUTPUT`.
 - Conveyor OUTPUT exposes only `physicalInventoryOwned` payloads through the production endpoint contract so developer-only synthetic payloads cannot leak into physical factory ownership.
 - Missing/deleted piece or ConveyorRun refs resolve to blocked/null without mutating the source inventory or payload.
-- PIO-1 deliberately does **not** replace the current live conveyor tick yet. PIO-2 owns that integration so the framework can be clean-built before the proven transport path is changed.
+- Eclipse Java 8 Server clean/build was user-verified with zero errors on 2026-10-03.
+- PIO-1 deliberately does **not** replace the current live conveyor tick yet. PIO-2 owns that integration so the framework can be validated before the proven transport path is changed.
 
 Current Sawmill port definitions are temporarily anchor-local `(0,0)` while the endpoint identity/API stabilizes. PIO-3 may move those ports to authored prefab-local offsets without changing their stable port keys.
 
@@ -291,6 +292,21 @@ No payload may overlap, teleport through another payload, duplicate, or disappea
 Two conveyor spans crossing visually do not connect by themselves.
 
 A connection exists only when a source OUTPUT actually terminates on a valid receiver INPUT surface/port.
+
+### PIO-2A implementation state
+
+PIO-2A now establishes the server-side conveyor endpoint semantics without touching the proven live tick yet:
+
+- `SettlementLogisticsEndpoint.Facing` now exposes `opposite()` and endpoint acceptance can be source-aware through `canAcceptFrom(...)`.
+- a straight ConveyorRun has a stable `CONVEYOR:<runId>/INPUT` distributed-input identity; the concrete insertion point is resolved from the current persistent run geometry rather than persisted as a temporary world coordinate.
+- `resolveConveyorInput(...)` resolves start/middle/near-end contact points and reuses `SettlementConveyorRun.canAcceptPayloadAt(...)` for the existing 0.85-tile spacing/backpressure rule.
+- source flow matching receiver flow is valid rear entry; perpendicular source flow is valid left/right entry; source flow opposite receiver flow is rejected as forward/output-side entry.
+- `canConnectConveyorRuns(...)` requires source Point B to actually lie on the receiver, so visual span crossings remain non-connections.
+- `connectConveyorRuns(...)` persists the existing receiver run id + insertion distance only after geometry/approach validation.
+- `transferConnectedConveyorOutput(...)` stages a physical receiver payload at the exact insertion distance, then extracts the source payload; failed extraction rolls the staged payload back, preserving single ownership.
+- synthetic development payloads remain excluded from the production endpoint transfer helper.
+
+PIO-2B is the remaining live seam: replace the direct belt-to-belt branch in `SettlementInstance.processConveyorOutput(...)` and connection creation helpers with these endpoint methods after the PIO-2A clean-build is confirmed.
 
 ---
 
@@ -479,6 +495,8 @@ Valid destination examples:
 - Chest INPUT,
 - Conveyor rear/left/right distributed input surface.
 
+Player-facing presentation decision: use simple green/red directional arrows to distinguish INPUT and OUTPUT ports rather than another large overlay. Exact color-to-direction assignment can remain presentation data until PIO-6; server endpoint direction is authoritative.
+
 Developer commands may create diagnostic topology, but they are not the gameplay contract and should not be required for acceptance.
 
 ---
@@ -534,7 +552,7 @@ Transport topology and item ownership must remain independent from whichever vis
 
 ## PIO-1 — Generic endpoint/port framework
 
-**Status: IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD — 2026-10-03.**
+**Status: IMPLEMENTED / ECLIPSE SERVER CLEAN-BUILD VERIFIED — 2026-10-03.**
 
 - stable INPUT/OUTPUT endpoint identity — implemented,
 - local/world position + facing — implemented at server plot-position level; runtime world projection stays outside persistent identity,
@@ -543,16 +561,27 @@ Transport topology and item ownership must remain independent from whichever vis
 - prefab rotation transform — implemented / runtime rotation sanity still required before non-zero authored offsets,
 - safe persistence reference — implemented,
 - chest/machine/conveyor adapters — implemented without replacing existing inventory/payload owners,
-- live conveyor tick integration — intentionally deferred to PIO-2.
+- Eclipse Java 8 Server clean/build — user-verified zero errors,
+- live conveyor tick integration — owned by PIO-2.
 
 ## PIO-2 — Conveyor endpoint integration
 
-- forward belt OUTPUT,
-- distributed rear/left/right INPUT surface,
-- arbitrary receiver insertion distance,
-- approach-direction validation,
-- existing spacing/backpressure reused,
-- belt-to-belt turns/merges without special corner transport.
+**Status: PIO-2A IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD; PIO-2B LIVE WIRING NEXT — 2026-10-03.**
+
+PIO-2A implemented:
+- forward belt OUTPUT endpoint metadata,
+- distributed straight-run INPUT contact resolution,
+- arbitrary receiver insertion distance from persistent geometry,
+- rear/left/right approach validation,
+- receiver forward/output-side rejection,
+- existing spacing/backpressure reuse,
+- atomic physical belt handoff helper with rollback,
+- crossing-without-output-contact rejection.
+
+PIO-2B next:
+- route the live `SettlementInstance` belt-to-belt output branch through `transferConnectedConveyorOutput(...)`,
+- route new/existing run connection creation through `connectConveyorRuns(...)`,
+- runtime-test straight chaining, 90-degree transfers, mid-belt merge, forward-side rejection, merge contention and crossing safety.
 
 ## PIO-3 — Sawmill physical ports
 
@@ -582,6 +611,7 @@ Transport topology and item ownership must remain independent from whichever vis
 - output source highlighting,
 - input destination highlighting,
 - conveyor input-surface highlighting,
+- simple red/green directional-arrow presentation instead of a large port overlay,
 - server-authoritative commit,
 - remove command-button dependency from normal test flow.
 
@@ -655,6 +685,6 @@ Acceptance requires:
 
 # Resume Here
 
-**Resume Here — Prefab I/O Logistics:** PIO-1 is implemented on `main`: stable endpoint refs, generic INPUT/OUTPUT semantics, prefab-local port metadata/rotation and resolver adapters now wrap the existing Sawmill machine buffer, physical chest inventory and ConveyorRun OUTPUT without replacing their ownership.
+**Resume Here — Prefab I/O Logistics:** PIO-1 is Eclipse Java 8 Server clean-build verified. PIO-2A is implemented on `main`: generic endpoint semantics now include distributed ConveyorRun INPUT contacts, source-aware rear/left/right approach validation, forward-side rejection, validated connection helpers and rollback-safe physical belt handoff while preserving existing payload ownership.
 
-First run one Eclipse Java 8 clean/build of Server. If clean, continue directly with PIO-2: wire the live conveyor OUTPUT transfer seam through the endpoint framework, add the straight-run distributed INPUT surface, and validate rear/left/right approach while rejecting forward-side entry. Reuse the existing insertion-distance spacing/backpressure implementation; do not reopen conveyor visuals or rewrite payload ownership.
+Next: Eclipse Java 8 clean/build Server once. If clean, execute PIO-2B only: replace the existing direct belt-to-belt transfer branch and run-link creation calls in `SettlementInstance` with the new resolver helpers. Do not reopen chest/machine I/O yet; PIO-3/PIO-4 own those adapters. After PIO-2B, runtime-test straight chaining, 90-degree transfer, mid-belt merge, forward-side rejection, merge backpressure and crossing safety in one session.
