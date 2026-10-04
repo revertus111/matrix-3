@@ -60,7 +60,7 @@ Runtime-confirmed by user on 2026-10-04.
 4. [x] Tap Space. The **visible 830 player** rises/lands from the native SM64 Y path rather than the removed Java-gravity implementation. User accepted the Bundle 2.2 path as working on 2026-10-04.
 5. [ ] Tap Space again after landing. A second native jump works cleanly.
 6. [ ] Enter Mario mode while Space is already held: no jump occurs until Space is released and pressed again.
-7. [ ] Ctrl+M back to RuneScape while grounded: native session stops and Space no longer drives Mario.
+7. [x] Ctrl+M back to RuneScape while grounded: native session stops and normal RuneScape presentation returns. Runtime-confirmed during Bundle 4.1 acceptance on 2026-10-04.
 8. [ ] Ctrl+M back to RuneScape while airborne: player returns to the tracked Matrix ground baseline without stale height.
 9. [ ] Ordinary RuneScape X/Z movement/clicking still works before, during and after this vertical-only bridge proof.
 10. [x] No client hang/crash observed while the persistent native session/transform path was active in the accepted runtime test.
@@ -72,8 +72,8 @@ Do this only after the normal jump test passes:
 - [ ] Exit Mario mode.
 - [ ] Temporarily rename `native/sm64-bridge/dist/sm64_bridge.exe` (or use an invalid `-Dmatrix3.sm64.bridge` path).
 - [ ] Enter Mario mode.
-- [ ] Console reports persistent-session failure/fallback and controller returns to `RUNESCAPE` without changing plane/X/Z or leaving stale Y.
-- [ ] Restore the executable name/path afterward.
+- [x] Console reports persistent-session failure/fallback and controller returns to `RUNESCAPE`; observed during the pre-rebuild binary-protocol mismatch on 2026-10-04.
+- [x] Restore/rebuild the executable afterward; normal Mario initialization recovered on 2026-10-04.
 
 ### Vertical-scale calibration
 
@@ -95,56 +95,61 @@ Do not treat a tuned value as final collision scale until Phase 3 establishes th
 - [x] ROM-derived Mario RGBA atlas is transferred once during the binary handshake.
 - [x] `Sm64BridgeSession` publishes immutable `GeometryFrame` / `TextureAtlas` snapshots; native worker does not mutate Matrix scene/model state.
 - [x] `MarioVisualRenderer` converts the current native geometry frame into `Class159`, builds a normal Matrix `Model`, and renders through the established Matrix direct-scene seam.
-- [x] V1 samples the ROM atlas into per-triangle Matrix face albedo; exact runtime UV texture injection remains deferred polish.
+- [x] V1 atlas-face approximation was implemented and runtime-proven visually lossy; Bundle 4.2A now defaults to native libsm64 base colours instead.
 - [x] `Player.method10696(...)` suppresses only the local RuneScape appearance and only after a fresh successful Mario replacement frame exists.
 - [x] Suppression is fail-open: remote players, RuneScape mode, bridge failure/not-ready state, failed model/render state, missing geometry, or native geometry older than 500 ms retain the normal RuneScape player path.
 - [x] Safe suppression retry diff verified: `Player.java` contains only the intended 8-line gate/comment addition after restoration of the accidental earlier write.
 - [x] `-Dmatrix3.sm64.modelScale=<positive-float>` provides runtime visual scale calibration; default is `2.0`.
 - [x] Rebuilt local `native/sm64-bridge/dist/sm64_bridge.exe` with the binary geometry protocol under MSYS2 MinGW64 on 2026-10-04; the rebuilt executable reports `[--binary]` usage as expected.
-- [ ] Eclipse Java 8 clean/build after pulling the complete Bundle 4.1 slice.
+- [x] Java source compiled/launched successfully enough to run the complete native Mario body/animation path in the live client on 2026-10-04.
 
 ### Consolidated runtime acceptance
 
-Use one client launch after rebuilding the native sidecar and Eclipse clean/build:
-
-1. [ ] Launch/login normally in RuneScape mode; local and remote RuneScape players render normally.
-2. [ ] Press Ctrl+M. Console prints:
-
-```text
-[Mario] Controller mode: MARIO
-[SM64 Bridge] Persistent session READY (30 Hz + geometry)
-[SM64 Visual] Native Mario -> Matrix Model ACTIVE ...
-```
-
+1. [x] Launch/login normally in RuneScape mode and enter Mario mode successfully.
+2. [x] Binary geometry session reaches the working render path; actual Mario geometry is visible in-world.
 3. [x] Actual Mario appears at the local player's world transform. Runtime-confirmed by user screenshot on 2026-10-04.
 4. [x] The local RuneScape body is replaced by the rendered Mario body in-world. Runtime-confirmed by user screenshot on 2026-10-04.
 5. [x] Idle native animation changes Mario's pose across successive geometry frames. Runtime-confirmed by user on 2026-10-04.
-6. [ ] Tap Space: native Mario jump pose/animation is visible while native SM64 Y still drives vertical movement.
+6. [x] Space visibly uses Mario's native jump pose/animation while native SM64 Y drives vertical movement. Runtime-confirmed by user on 2026-10-04.
 7. [ ] Other players remain normal RuneScape players while local Mario replacement is active.
-8. [ ] Press Ctrl+M back to RuneScape: normal local-player model returns immediately and Mario replacement stops.
-9. [ ] Re-enter Mario mode and confirm replacement still initializes cleanly a second time.
-10. [ ] No client hang/crash or sustained render/model-build error spam during the visual test.
+8. [x] Ctrl+M back to RuneScape restores the normal local-player model and stops Mario replacement. Runtime-confirmed by user on 2026-10-04.
+9. [x] Re-entering Mario mode initializes the replacement/idle path cleanly again. Runtime-confirmed by user on 2026-10-04.
+10. [ ] Longer sustained runtime remains to be observed for render/model-build error spam or performance issues.
 
 ### Visual fail-open acceptance
 
-After the normal visual path passes:
+- [x] A native startup/protocol failure leaves the normal RuneScape player/control path available rather than trapping the client in Mario mode. Runtime-observed during the stale-sidecar binary mismatch on 2026-10-04.
+- [x] Restoring the correct sidecar allows Mario mode to initialize normally again.
+- [ ] If a native/visual failure can be induced after Mario has already rendered, confirm the RuneScape player reappears once the replacement frame is no longer fresh/usable.
 
-- [ ] While in RuneScape mode, temporarily use an invalid `-Dmatrix3.sm64.bridge` path or rename the sidecar as described in the Bundle 2.2 failure test.
-- [ ] Attempt Mario mode. The normal RuneScape player remains visible; no invisible local player is left behind.
-- [ ] Restore the sidecar/path and confirm Mario mode can initialize normally again.
-- [ ] If a native/visual failure can be induced after Mario has rendered, confirm the RuneScape player reappears once the replacement frame is no longer fresh/usable.
+## Bundle 4.2A - render colour fidelity
+
+### Evidence / implementation
+
+- [x] Runtime screenshot shows V1 presentation has large dark/black whole-triangle patches even though geometry and animation are correct. `VERIFIED` 2026-10-04.
+- [x] Static trace confirms V1 samples only each triangle's three UV vertices, blends those samples, and collapses the result into one RuneScape packed-HSL face colour. `verified-static`.
+- [x] libsm64's reference GL renderer draws Mario base colour/lighting first and overlays the ROM texture as a separate UV-mapped pass rather than collapsing texture detail into one triangle colour. `verified-static`.
+- [x] Default Matrix presentation now uses libsm64 base material/light colours only, removing the lossy atlas-to-whole-face bake from the normal path.
+- [x] Original atlas-face approximation remains available only for comparison with `-Dmatrix3.sm64.debugAtlasFaceBake=true`.
+
+### Runtime acceptance
+
+1. [ ] Pull/clean-build/launch once.
+2. [ ] Ctrl+M: Mario still replaces the local RuneScape body and native idle animation still works.
+3. [ ] Confirm the giant black/dark face blocks are materially reduced or gone.
+4. [ ] Tap Space: jump animation still renders correctly with the new colour path.
+5. [ ] Ctrl+M out/in still restores and recreates presentation correctly.
+6. [ ] If Mario is still broadly too dark after the black-face artifact is gone, stop and trace Matrix model lighting/normal handling next; do not stack speculative brightness changes.
 
 ### Model-scale calibration
 
-Default Mario mesh scale is `2.0`.
-
-If Mario is visibly too large/small, test without another code patch using:
+Default Mario mesh scale remains `2.0`:
 
 ```text
 -Dmatrix3.sm64.modelScale=<positive-float>
 ```
 
-Do not finalize orientation, ground anchor, interpolation, or texture-injection polish until this first direct native-body gate passes.
+Do not tune scale/ground anchor until the colour/shading presentation is readable enough to judge the silhouette reliably.
 
 ## Relevant Matrix3 smoke coverage
 
@@ -157,4 +162,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Bundle 4.1 now has runtime proof for the rebuilt binary sidecar, actual Mario body replacement, and native idle animation. Finish the remaining visual acceptance: jump animation, remote-player isolation, Ctrl+M restoration/re-entry, and sustained stability. Phase 3 collision remains intentionally deferred until Bundle 4.1 closes.
+Bundle 4.1's core body/idle/jump/restore/re-entry path is runtime-accepted. Test Bundle 4.2A's native-base-colour presentation once; if the large black face blocks persist, the next bounded trace is Matrix lighting/normal handling rather than further atlas colour guessing.
