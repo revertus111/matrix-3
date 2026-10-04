@@ -1,3 +1,11 @@
+2026-10-04 - Test Console heavyweight flyout correction
+- Runtime screenshots confirmed the lightweight Swing flyouts could be clipped/painted behind the heavyweight Matrix3 game canvas and the Test tooltip could overlap the console hover path.
+- Replaced both Test Console JPopupMenu flyouts with non-focusable owned JWindow menus so the primary and Con Revamp cascades can render above the AWT game canvas without resizing it.
+- Added a short pointer-bound dismiss delay so moving from the Test rail button -> primary flyout -> Con Revamp flyout stays stable while leaving all three areas closes the menus.
+- Primary tool hover now dismisses the Con Revamp submenu; Con Revamp hover/click opens the second-level menu in the same left-cascade direction.
+- The Test rail tooltip is disabled when the flyout is shown because the flyout itself is the hover affordance.
+- Status: IMPLEMENTED / NEEDS RUNTIME UI RETEST.
+
 2026-10-03 - Test Console flyout navigation + 830-era console skin
 - Replaced the Test Console horizontal workspace tab strip with a RuneScape-style rail flyout opened from the Test rail button.
 - Added a second Con Revamp flyout for Settlement, Workers, Production, Conveyors, Debug and Tools.
