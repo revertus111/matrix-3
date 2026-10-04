@@ -47,11 +47,12 @@ final class AlternateCharacterInputKeyboard extends Class549 {
         return current != null && current.method6518(internalKey);
     }
 
-    private static boolean isOwnedMovementKey(int internalKey) {
+    private static boolean isOwnedAlternateCharacterKey(int internalKey) {
         return internalKey == INTERNAL_W_KEY
                 || internalKey == INTERNAL_A_KEY
                 || internalKey == INTERNAL_S_KEY
-                || internalKey == INTERNAL_D_KEY;
+                || internalKey == INTERNAL_D_KEY
+                || MarioHelmetCalibrationController.shouldSuppressMatrixKey(internalKey);
     }
 
     @Override
@@ -66,7 +67,7 @@ final class AlternateCharacterInputKeyboard extends Class549 {
 
     @Override
     public boolean method6514(int i, byte i_0_) {
-        if (isOwnedMovementKey(i)) {
+        if (isOwnedAlternateCharacterKey(i)) {
             return false;
         }
         return delegate.method6514(i, i_0_);
