@@ -67,6 +67,7 @@ public final class TestConsoleFlyoutMenu {
     private JWindow conRevampWindow;
     private JComponent anchor;
     private JButton conRevampButton;
+    private MouseAdapter anchorHoverListener;
 
     public TestConsoleFlyoutMenu(Handler handler) {
         this.handler = handler;
@@ -86,7 +87,7 @@ public final class TestConsoleFlyoutMenu {
         }
 
         source.setToolTipText(null);
-        anchor = source;
+        attachAnchor(source);
         cancelScheduledHide();
         rebuildRoot();
         conRevampWindow.setVisible(false);
@@ -102,6 +103,28 @@ public final class TestConsoleFlyoutMenu {
         rootWindow.setLocation(x, y);
         rootWindow.setVisible(true);
         rootWindow.toFront();
+    }
+
+    private void attachAnchor(JComponent source) {
+        if (anchor == source && anchorHoverListener != null) {
+            return;
+        }
+        if (anchor != null && anchorHoverListener != null) {
+            anchor.removeMouseListener(anchorHoverListener);
+        }
+        anchor = source;
+        anchorHoverListener = new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                cancelScheduledHide();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                scheduleHide();
+            }
+        };
+        anchor.addMouseListener(anchorHoverListener);
     }
 
     public void scheduleHide() {
