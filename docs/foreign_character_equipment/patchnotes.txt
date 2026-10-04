@@ -8,3 +8,13 @@
 - Hooks helmet rendering immediately after a successful `MarioVisualRenderer` body pass in `Class578.method6834(...)`.
 - Fail-open: missing/invalid helmet/model/attachment state never suppresses or replaces the already-working Mario body.
 - Full head pitch/roll, other equipment slots, chest/leg fitting, and additional foreign-character profiles remain later bundles.
+
+2026-10-04 - Mario helmet head-envelope fitting V2
+- User screenshots runtime-verified that V1 renders the equipped helmet, but the helmet is undersized/high and visually competes with Mario's cap/hair.
+- Broadened the initial Mario head candidate capture from the upper crown toward the full head region.
+- Added trimmed X/Z reference bounds so protruding extremes such as Mario's nose do not drive helmet sizing; the nose remains visually untouched.
+- Replaced hidden `1.12` default fit padding with an explicit head-clearance shell: default `5%` of reference head span per side with a `2.0` Matrix-unit minimum.
+- Helmet target span is now `referenceHeadSpan + 2 * clearance`; uniform model scaling still preserves 830 helmet proportions.
+- `matrix3.sm64.helmetFitPadding` remains as an optional final multiplier with default `1.0`; added `helmetClearanceFraction` and `helmetMinClearance` calibration properties.
+- Expanded ACTIVE logging with live/reference head span, clearance, target span and helmet span for one-pass runtime diagnosis.
+- Mario cap/hair/skull masking remains intentionally deferred until the corrected envelope fit is runtime evaluated.
