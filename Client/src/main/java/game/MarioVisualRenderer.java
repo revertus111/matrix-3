@@ -394,14 +394,18 @@ public final class MarioVisualRenderer {
 
         float clampedU = clamp(u, 0.0F, 1.0F);
         float clampedV = clamp(v, 0.0F, 1.0F);
-        float x = clampedU * (atlas.width - 1);
-        float y = clampedV * (atlas.height - 1);
-        int x0 = (int) Math.floor(x);
-        int y0 = (int) Math.floor(y);
-        int x1 = Math.min(x0 + 1, atlas.width - 1);
-        int y1 = Math.min(y0 + 1, atlas.height - 1);
-        float tx = x - x0;
-        float ty = y - y0;
+        float x = clampedU * atlas.width - 0.5F;
+        float y = clampedV * atlas.height - 0.5F;
+        int rawX0 = (int) Math.floor(x);
+        int rawY0 = (int) Math.floor(y);
+        int rawX1 = rawX0 + 1;
+        int rawY1 = rawY0 + 1;
+        float tx = x - rawX0;
+        float ty = y - rawY0;
+        int x0 = clamp(rawX0, 0, atlas.width - 1);
+        int y0 = clamp(rawY0, 0, atlas.height - 1);
+        int x1 = clamp(rawX1, 0, atlas.width - 1);
+        int y1 = clamp(rawY1, 0, atlas.height - 1);
 
         int texR = Math.round(bilinearChannel(atlas, x0, y0, x1, y1, tx, ty, 0));
         int texG = Math.round(bilinearChannel(atlas, x0, y0, x1, y1, tx, ty, 1));
