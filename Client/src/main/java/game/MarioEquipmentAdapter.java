@@ -5,11 +5,11 @@ import java.util.Arrays;
 /**
  * Matrix-native equipment attachment adapter for the foreign Mario presentation.
  *
- * V1 deliberately proves one slot only: the visible local player's revision-830
- * helmet is loaded through the normal ItemDefinitions worn-model path, measured,
- * cached, fitted to an animated Mario head anchor, and rendered through Matrix's
- * existing Model path. The libsm64 geometry remains the Mario pose/animation
- * authority and RuneScape equipment/definitions remain the item-model authority.
+ * The visible revision-830 helmet is loaded through the normal worn-model path,
+ * cached, fitted to Mario's established head attachment, and rendered through the
+ * existing Matrix model seam. Protocol-v2 semantic geometry supplies a stable
+ * head-local FACE width shared with auto-fit; protocol v1 keeps the legacy broad
+ * animated-head measurement as a fail-open fallback.
  */
 public final class MarioEquipmentAdapter {
 
@@ -34,10 +34,6 @@ public final class MarioEquipmentAdapter {
 
     private static final float MARIO_MODEL_SCALE = resolvePositiveFloat(
             "matrix3.sm64.modelScale", DEFAULT_MARIO_MODEL_SCALE);
-    /*
-     * Final optional multiplier after envelope fitting. V2 defaults to 1.0 because
-     * clearance is now represented explicitly instead of hidden inside padding.
-     */
     private static final float HELMET_FIT_PADDING = resolvePositiveFloat(
             "matrix3.sm64.helmetFitPadding", DEFAULT_HELMET_FIT_PADDING);
     private static final float HELMET_CLEARANCE_FRACTION = resolveNonNegativeFloat(
@@ -98,11 +94,7 @@ public final class MarioEquipmentAdapter {
                 helmet == null ? -1 : helmet.itemId,
                 helmet == null ? null : helmet.definition.aString8180);
 
-        /*
-         * F6 may have frozen/unfrozen presentation during tick(...). Re-read the
-         * bridge presentation frame so Mario body, head tracking and helmet all
-         * consume the same frozen/live snapshot from this point onward.
-         */
+        /* F6 may have changed the presentation snapshot during tick(...). */
         frame = Sm64BridgeSession.getLatestGeometryFrame();
         if (!isUsable(frame)) {
             return;
@@ -112,10 +104,7 @@ public final class MarioEquipmentAdapter {
         }
         lastFrameSequence = frame.sequence;
 
-        if (helmet == null) {
-            return;
-        }
-        if (!ensureHelmetModel(renderer, helmet)) {
+        if (helmet == null || !ensureHelmetModel(renderer, helmet)) {
             return;
         }
 
@@ -131,18 +120,25 @@ public final class MarioEquipmentAdapter {
             return;
         }
 
+        MarioSemanticGeometry.Reference semanticReference =
+                MarioSemanticGeometry.getReference(frame);
+        float fitReferenceSpan = semanticReference == null
+                ? referenceHeadHorizontalSpan
+                : semanticReference.width;
+        if (!isFinite(fitReferenceSpan) || fitReferenceSpan <= 0.0F) {
+            return;
+        }
+
         /*
-         * Helmet V2 treats the Mario head as a collision envelope rather than
-         * making the two outer model bounds equal. Example: a 64-unit head with
-         * 5% clearance receives about 3.2 units on each side, so the helmet is
-         * fitted against a ~70.4-unit target shell. The robust reference bounds
-         * intentionally trim protruding extremes such as Mario's nose so his
-         * iconic face does not make every helmet enormous.
+         * Protocol v2 uses the same display-list-local FACE width as
+         * MarioHelmetAutoFit. The protected nose projects along face-local depth,
+         * so it no longer enlarges the helmet's baseline width. Legacy protocol
+         * v1 keeps the previous trimmed animated-head envelope.
          */
         float clearance = Math.max(
                 HELMET_MIN_CLEARANCE,
-                referenceHeadHorizontalSpan * HELMET_CLEARANCE_FRACTION);
-        float targetHelmetSpan = referenceHeadHorizontalSpan + clearance * 2.0F;
+                fitReferenceSpan * HELMET_CLEARANCE_FRACTION);
+        float targetHelmetSpan = fitReferenceSpan + clearance * 2.0F;
         float autoFitScale = targetHelmetSpan * HELMET_FIT_PADDING / cachedHelmetHorizontalSpan;
         if (!isFinite(autoFitScale)) {
             return;
@@ -179,11 +175,6 @@ public final class MarioEquipmentAdapter {
             return;
         }
 
-        /*
-         * V4 treats all manual XYZ calibration as helmet/head-local offsets.
-         * Transforming the offset through the same full head matrix keeps seat,
-         * forward/back and side corrections attached during nods, tilts and flips.
-         */
         float worldOffsetX = finalRotation[0] * calibration.offsetX
                 + finalRotation[1] * calibration.offsetY
                 + finalRotation[2] * calibration.offsetZ;
@@ -195,10 +186,6 @@ public final class MarioEquipmentAdapter {
                 + finalRotation[8] * calibration.offsetZ;
 
         Class240 position = playerTransform.aClass240_2647;
-        /*
-         * verified-static: Class261.method3572(...) writes the full 3x3 transform
-         * basis and method3578(...) applies scale without replacing that basis.
-         */
         HELMET_TRANSFORM.method3572(
                 finalRotation[0], finalRotation[1], finalRotation[2],
                 finalRotation[3], finalRotation[4], finalRotation[5],
@@ -215,11 +202,13 @@ public final class MarioEquipmentAdapter {
                 cachedHelmetLogged = true;
                 System.out.println("[SM64 Equipment] Helmet ACTIVE item=" + cachedItemId
                         + " name=" + cachedHelmetName
+                        + " fitReference=" + (semanticReference == null ? "legacy-head" : "semantic-face")
                         + " autoFit=" + autoFitScale
                         + " manualScale=" + calibration.scaleMultiplier
                         + " fit=" + fitScale
                         + " liveHeadSpan=" + anchor.horizontalSpan
-                        + " referenceHeadSpan=" + referenceHeadHorizontalSpan
+                        + " fitReferenceSpan=" + fitReferenceSpan
+                        + " legacyReferenceSpan=" + referenceHeadHorizontalSpan
                         + " clearance=" + clearance
                         + " targetSpan=" + targetHelmetSpan
                         + " helmetSpan=" + cachedHelmetHorizontalSpan
@@ -429,13 +418,6 @@ public final class MarioEquipmentAdapter {
                 MarioHeadOrientationTracker.calculateRotationDelta(frame));
     }
 
-    /**
-     * The binary bridge publishes final animated triangles rather than a bone
-     * skeleton. V2 captures a broader upright head candidate set, trims the outer
-     * X/Z extremes, and then follows those stable core vertex-stream indices on
-     * later frames. V4 also captures stable landmark groups inside this core so a
-     * relative 3D head orientation can be recovered for equipment attachment.
-     */
     private static void ensureHeadSelection(Sm64BridgeSession.GeometryFrame frame) {
         if (headVertexIndices != null && headTopologyTriangleCount == frame.triangleCount
                 && referenceHeadHorizontalSpan > 0.0F) {
@@ -564,11 +546,13 @@ public final class MarioEquipmentAdapter {
         referenceHeadHorizontalSpan = referenceSpan;
         boolean orientationCaptured = MarioHeadOrientationTracker.captureReference(
                 frame, headVertexIndices);
+        MarioSemanticGeometry.Reference semanticReference = MarioSemanticGeometry.getReference(frame);
         System.out.println("[SM64 Equipment] Captured Mario HEAD envelope vertices="
                 + coreCount
                 + " candidates=" + candidateCount
                 + " triangles=" + frame.triangleCount
-                + " referenceSpan=" + referenceHeadHorizontalSpan
+                + " legacyReferenceSpan=" + referenceHeadHorizontalSpan
+                + " semanticFaceWidth=" + (semanticReference == null ? "-" : Float.toString(semanticReference.width))
                 + " trim=" + HEAD_TRIM_FRACTION
                 + " head3d=" + orientationCaptured);
     }
@@ -619,6 +603,7 @@ public final class MarioEquipmentAdapter {
         headVertexIndices = null;
         referenceHeadHorizontalSpan = 0.0F;
         MarioHeadOrientationTracker.reset();
+        MarioSemanticGeometry.resetReference();
     }
 
     private static void logHelmetFailure(int itemId, String reason) {
