@@ -10,9 +10,11 @@ import java.util.Arrays;
  * geometry, builds a normal renderer Model, and draws it through the same direct
  * scene-render seam used by other Matrix developer previews.
  *
- * V1 keeps Matrix texture ownership intact: the ROM-derived libsm64 RGBA atlas is
- * sampled into per-triangle Matrix face albedo. Exact runtime UV texture injection
- * is deliberately deferred until a renderer-backend-neutral texture seam is proven.
+ * Matrix currently uses libsm64's native per-face material/light colour as the
+ * stable base presentation. The old V1 ROM-atlas-to-one-face-colour approximation
+ * is retained only as a diagnostic override until a true Matrix UV texture path is
+ * proven; collapsing texture details into one colour per triangle produced visible
+ * dark/black blocks at runtime.
  */
 public final class MarioVisualRenderer {
 
@@ -23,6 +25,7 @@ public final class MarioVisualRenderer {
     private static final long MAX_FRAME_AGE_NANOS = 500000000L;
     private static final float DEFAULT_MODEL_SCALE = 2.0F;
     private static final float MODEL_SCALE = resolveModelScale();
+    private static final boolean DEBUG_ATLAS_FACE_BAKE = resolveAtlasFaceBake();
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
@@ -95,7 +98,8 @@ public final class MarioVisualRenderer {
                         + " anim=" + frame.state.animId
                         + " frame=" + frame.state.animFrame
                         + " scale=" + MODEL_SCALE
-                        + " texture=ROM-albedo-v1");
+                        + " colour=" + (DEBUG_ATLAS_FACE_BAKE
+                                ? "atlas-face-bake-debug" : "libsm64-base-v2"));
             }
         } catch (RuntimeException ex) {
             replacementReady = false;
@@ -184,9 +188,14 @@ public final class MarioVisualRenderer {
                 int baseR = unitColor(frame.colors[c]);
                 int baseG = unitColor(frame.colors[c + 1]);
                 int baseB = unitColor(frame.colors[c + 2]);
-                int rgb = sampleMarioColor(
-                        atlas, frame.uvs[uv], frame.uvs[uv + 1],
-                        baseR, baseG, baseB);
+                int rgb;
+                if (DEBUG_ATLAS_FACE_BAKE) {
+                    rgb = sampleMarioColor(
+                            atlas, frame.uvs[uv], frame.uvs[uv + 1],
+                            baseR, baseG, baseB);
+                } else {
+                    rgb = baseR << 16 | baseG << 8 | baseB;
+                }
                 sumR += (rgb >>> 16) & 0xff;
                 sumG += (rgb >>> 8) & 0xff;
                 sumB += rgb & 0xff;
@@ -217,8 +226,9 @@ public final class MarioVisualRenderer {
     }
 
     /**
-     * Mirrors libsm64's test shader: texture RGB replaces vertex color according
-     * to the atlas texel alpha. V1 bakes the result into Matrix face albedo.
+     * Diagnostic reproduction of the original V1 approximation. libsm64's test
+     * renderer overlays the atlas as a separate UV-mapped pass; Matrix cannot
+     * reproduce that by collapsing three UV texels into one flat face colour.
      */
     private static int sampleMarioColor(Sm64BridgeSession.TextureAtlas atlas,
             float u, float v, int baseR, int baseG, int baseB) {
@@ -309,6 +319,11 @@ public final class MarioVisualRenderer {
         System.out.println("[SM64 Visual] Invalid matrix3.sm64.modelScale='" + configured
                 + "'; using " + DEFAULT_MODEL_SCALE);
         return DEFAULT_MODEL_SCALE;
+    }
+
+    private static boolean resolveAtlasFaceBake() {
+        String configured = System.getProperty("matrix3.sm64.debugAtlasFaceBake");
+        return configured != null && Boolean.parseBoolean(configured.trim());
     }
 
     private static int clamp(int value, int min, int max) {
