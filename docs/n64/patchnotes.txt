@@ -25,3 +25,9 @@
 - Runtime V4 evidence showed the first full-head rotation delta drove the helmet in the opposite direction. `MarioHeadOrientationTracker` now feeds Matrix the inverse rigid rotation (transpose) instead of adding another arbitrary yaw flip.
 - Added `docs/n64/TRANSFORM_CONVENTIONS.md` as the persistent anti-backwards reference and `MARIO_EQUIPMENT_WORKBENCH.md` as the tool guide.
 - Added explicit `Save profile .md` / `Copy markdown`; save writes the current calibration snapshot to `docs/n64/MARIO_EQUIPMENT_RUNTIME.md` only when the developer presses the button.
+
+2026-10-04 - Mario autonomous sleep bridge-stall fix v2
+- Runtime flight-recorder evidence proved the first sleep guard did not actually prevent the active native stream from spending multiple seconds in `ACT_START_SLEEPING (0x0C400202)` before entering `ACT_SLEEPING (0x0C000203)`, after which sequence publication stopped and `SUPPRESS_RS` failed open at `frameAgeMs=1250`.
+- Hardened `sm64_bridge.c` on both sides of `sm64_mario_tick`: inherited sleep state is repaired before a tick, and any tick that itself enters START_SLEEPING/SLEEPING is immediately reset to `ACT_IDLE` and re-ticked before its frame can be published.
+- Added `[SM64 Bridge] sleep-guard-v2 active` on binary startup so the loaded executable is visibly distinguishable from a stale pre-fix build.
+- Matrix renderer freshness and local-player suppression thresholds were intentionally left unchanged; this patch targets the native frame-stall cause directly.
