@@ -1,34 +1,38 @@
-# Matrix3 SM64 Native Bridge Spike
+# Matrix3 SM64 Native Bridge
 
-This folder contains Bridge Spike A for `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
+This folder contains the native sidecar used by the Mario passthrough workstream in `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 
-It does **not** modify RuneScape collision or move the Matrix player yet. Its job is to prove:
+Current flow:
 
 ```text
-Matrix3 Java
-   -> native sidecar process
+Matrix3 Java / Sm64BridgeSession
+   -> stdin/stdout protocol
+   -> sm64_bridge.exe
    -> libsm64 / SM64-derived Mario tick
    -> SM64MarioState
-   -> Matrix3 Java
+   -> Matrix3 client-thread presentation
 ```
+
+The sidecar still uses temporary flat collision. Real RuneScape terrain/object surfaces are Phase 3.
 
 ## Local-only dependencies
 
 Do not commit any ROM file.
 
-The default Java probe looks for:
+Default paths:
 
 - sidecar: `native/sm64-bridge/dist/sm64_bridge.exe` on Windows
 - ROM: `native/sm64-bridge/baserom.us.z64`
 
-Both paths can be overridden:
+Overrides:
 
 ```text
 -Dmatrix3.sm64.bridge=<path>
 -Dmatrix3.sm64.rom=<path>
+-Dmatrix3.sm64.verticalScale=<positive-float>
 ```
 
-or with environment variables:
+or environment variables:
 
 ```text
 SM64_BRIDGE_EXE
@@ -37,30 +41,26 @@ SM64_ROM
 
 ## Windows build
 
-`libsm64` currently documents Windows builds through an **MSYS2 MinGW 64** shell.
+Use an **MSYS2 MinGW64** shell.
 
-The bridge itself does not require SDL/OpenGL because it does not run the libsm64 test renderer.
-
-From an MSYS2 MinGW 64 terminal, inside this folder:
+Inside this folder:
 
 ```bash
-make bootstrap
+make bootstrap CC=gcc CXX=g++
 ```
 
 `bootstrap` will:
 
-1. clone `https://github.com/libsm64/libsm64.git` into local ignored `.deps/libsm64`,
-2. run `make lib` there,
+1. clone `https://github.com/libsm64/libsm64.git` into ignored `.deps/libsm64`,
+2. build the shared library,
 3. build `dist/sm64_bridge.exe`,
-4. copy `sm64.dll` beside the executable.
+4. copy `sm64.dll` beside it.
 
-`libsm64`'s own build may require Python/Git/toolchain prerequisites documented by that project.
+The bridge does not use libsm64's SDL/OpenGL test renderer.
 
 ## ROM
 
-Use your own dumped **SM64 US** ROM.
-
-For the default path, copy it locally as:
+Use your own dumped **SM64 US** ROM and place it locally as:
 
 ```text
 native/sm64-bridge/baserom.us.z64
@@ -70,19 +70,17 @@ The folder `.gitignore` excludes ROM extensions, `.deps`, and `dist`.
 
 ## Manual protocol smoke test
 
-After building:
-
 ```bash
 ./dist/sm64_bridge.exe ./baserom.us.z64
 ```
 
-Expected first line:
+Expected:
 
 ```text
 READY 1
 ```
 
-Then type:
+Then:
 
 ```text
 PING
@@ -106,41 +104,47 @@ Example A-button press:
 STEP 0 -1 0 0 1 0 0
 ```
 
-The reply is:
+Reply:
 
 ```text
 STATE <x> <y> <z> <vx> <vy> <vz> <faceAngle> <forwardVelocity> <action> <animId> <animFrame> <flags>
 ```
 
-## Matrix3 probe
+## Matrix3 persistent session
 
-When `Ctrl+M` enters Mario mode, `Sm64BridgeProbe` attempts one background native probe per client process.
+When Ctrl+M enters Mario mode, `Sm64BridgeSession` launches one sidecar process and keeps it alive for that Mario-mode session.
 
-If the sidecar/ROM are present, it:
+The Java worker:
 
-1. launches the sidecar,
-2. verifies protocol `READY`/`PONG`,
-3. collects an idle baseline,
-4. sends one A-button press followed by release ticks,
-5. reports PASS only if native Mario Y rises and the native action changes.
+- verifies `READY` / `PONG`,
+- stabilizes a fresh idle native state,
+- advances one `STEP` every `1/30` second,
+- publishes latest/previous native state to the Matrix client thread,
+- never writes Matrix scene/player state directly.
 
-Expected success log resembles:
+`MarioJumpController.tick()` remains the established client-thread hook and now maps native SM64 Y to the visible Matrix player transform. Java gravity is no longer Mario-mode vertical-physics authority.
+
+Expected activation logs:
 
 ```text
-[SM64 Bridge] PASS native SM64 state: y ... -> ... (rise ...), action ... -> ...
+[SM64 Bridge] Persistent session READY (30 Hz)
+[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale 3.0)
 ```
 
-This probe does **not** move the visible Matrix player. That is Bridge Spike B after the native transport proof is accepted.
+Space maps to native A for the current vertical proof. RuneScape X/Z movement, plane, clipping, pathfinding and server authority remain Matrix-owned until later phases deliberately replace those seams.
+
+Leaving Mario mode or changing local-player lifecycle stops the sidecar session and restores the tracked Matrix ground baseline. Native startup/runtime failure automatically falls back to RuneScape mode.
 
 ## Protocol ownership
 
 - stdout is protocol-only.
 - native/libsm64 diagnostics go to stderr.
-- protocol version is currently `1`.
-- one `STEP` equals one native SM64 simulation tick; the long-term worker will schedule these at fixed 30 Hz.
+- protocol version is `1`.
+- one `STEP` equals one native SM64 simulation tick.
+- Java schedules persistent gameplay stepping at fixed 30 Hz.
 
 ## Temporary collision
 
-The sidecar loads two flat `SM64Surface` triangles only.
+The sidecar currently loads two flat `SM64Surface` triangles.
 
-This is intentional. Real RuneScape terrain/object conversion belongs to the Matrix collision-adapter phase after native state transport is proven.
+This is intentional. Phase 3 replaces them with a bounded local collision bubble generated from Matrix terrain/object data.
