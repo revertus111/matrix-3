@@ -27,4 +27,16 @@
 - User built real `libsm64` and `sm64_bridge.exe` under MSYS2 MinGW64, initialized it from the local US ROM, and confirmed manual `READY 1` / `PONG 1` protocol operation.
 - Eclipse runtime then produced `[SM64 Bridge] PASS native SM64 state: y -0.00 -> 96.50 (rise 96.50), action 205521409 -> 205521409` after entering Mario mode.
 - The PASS gate proves Java observed both native SM64 Y movement and at least one intermediate native action-state change; the displayed final action returned to the baseline action by the end of the deterministic sequence.
-- Bridge Spike A is complete. Next implementation target is Bundle 2.2: persistent fixed-step native SM64 state driving the visible Matrix local-player transform.
+- Bridge Spike A is complete.
+
+2026-10-04 - Bundle 2.2 persistent native state -> Matrix transform
+- Added `Sm64BridgeSession` as the persistent Java 8/native sidecar owner while Mario mode is active.
+- Native `STEP` calls run on a daemon worker at fixed 30 Hz; published native states are interpolated one native tick behind for smoother Matrix presentation.
+- Matrix scene mutation remains on the established viewport/client thread; the native worker never writes player transforms directly.
+- `MarioJumpController` no longer computes Mario gravity in Java. It now maps native SM64 Y onto the verified Matrix local-player transform while preserving RuneScape X/Z/plane/clipping/server ownership.
+- Added initial vertical presentation scale `3.0` with optional `-Dmatrix3.sm64.verticalScale=<value>` runtime override for calibration.
+- Matrix terrain/movement Y remains the temporary presentation baseline until Phase 3 supplies real RuneScape collision surfaces to SM64.
+- Mario-mode exit/player-lifecycle changes restore the tracked ground baseline and stop the native session.
+- Missing/failed native bridge automatically falls back to `RUNESCAPE` mode instead of leaving stale Mario state.
+- Entering Mario mode while Space is already held suppresses A input until release, preventing a manufactured native jump.
+- Retired the one-shot `Sm64BridgeProbe`; Bundle 2.2 is now `NEEDS TEST` for visible native-driven jump/exit/failure acceptance.
