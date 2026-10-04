@@ -3,6 +3,7 @@ package game.console;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
@@ -34,6 +35,10 @@ public final class ConsoleIcons {
         return new GlyphIcon(Glyph.TEST);
     }
 
+    public static Icon n64() {
+        return new GlyphIcon(Glyph.N64);
+    }
+
     public static Icon player() {
         return new GlyphIcon(Glyph.PLAYER);
     }
@@ -63,6 +68,7 @@ public final class ConsoleIcons {
         OWNER,
         COMMANDS,
         TEST,
+        N64,
         PLAYER,
         ITEMS,
         INTERFACE_EDITOR,
@@ -110,6 +116,9 @@ public final class ConsoleIcons {
                     break;
                 case TEST:
                     paintTest(g, x, y);
+                    break;
+                case N64:
+                    paintN64(g, x, y);
                     break;
                 case PLAYER:
                     paintPlayer(g, x, y);
@@ -190,6 +199,16 @@ public final class ConsoleIcons {
             g.drawLine(x + 17, y + 17, x + 17, y + 19);
             g.drawLine(x + 5, y + 19, x + 17, y + 19);
             g.drawLine(x + 7, y + 15, x + 15, y + 15);
+        }
+
+        private void paintN64(Graphics2D g, int x, int y) {
+            g.drawRoundRect(x + 2, y + 3, 18, 16, 3, 3);
+            g.drawLine(x + 5, y + 18, x + 7, y + 20);
+            g.drawLine(x + 15, y + 18, x + 17, y + 20);
+            Font old = g.getFont();
+            g.setFont(new Font("SansSerif", Font.BOLD, 9));
+            g.drawString("64", x + 6, y + 15);
+            g.setFont(old);
         }
 
         private void paintPlayer(Graphics2D g, int x, int y) {
