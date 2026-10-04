@@ -4,9 +4,8 @@ package game;
  * Matrix3 client-thread presentation/input adapter for Mario-mode native SM64 state.
  *
  * The legacy class name is retained because the established viewport hook calls
- * this owner. Java does not recreate Mario physics: libsm64 owns Mario movement
- * and action simulation while this class forwards Matrix input and presents the
- * published native XYZ state through Matrix3's verified local-player transform.
+ * this owner. Generic alternate-character ownership now lives in
+ * {@link AlternateCharacterController}; this class is the Mario/libsm64 driver.
  */
 public final class MarioJumpController {
 
@@ -33,6 +32,7 @@ public final class MarioJumpController {
     private static boolean spaceReleaseRequired;
     private static boolean attackReleaseRequired;
     private static boolean crouchReleaseRequired;
+    private static boolean combatAttackWasDown;
     private static boolean baselineValid;
     private static boolean appliedPositionValid;
 
@@ -50,12 +50,16 @@ public final class MarioJumpController {
     }
 
     /**
-     * Runs from Matrix3's established live viewport tick. Native simulation runs
-     * independently at fixed 30 Hz; scene mutation remains on this client thread.
-     * Horizontal XYZ presentation is intentionally local-only at this stage: no
-     * RuneScape movement packet, clipping or server-authority path is replaced.
+     * Compatibility seam retained for Class343.method4302(...). New imported
+     * characters dispatch through one master controller instead of adding new
+     * viewport hooks/controllers per game.
      */
     public static void tick() {
+        AlternateCharacterController.tick();
+    }
+
+    /** Mario/libsm64 driver invoked by AlternateCharacterController. */
+    static void tickMarioDriver() {
         if (lastTickCycle == client.cycles) {
             return;
         }
@@ -65,11 +69,13 @@ public final class MarioJumpController {
         if (player != lastPlayer) {
             Sm64BridgeSession.stop();
             MarioInputKeyboard.uninstall();
+            AlternateCharacterCombatBridge.reset();
             resetPresentation();
             modeWasMario = false;
             spaceReleaseRequired = false;
             attackReleaseRequired = false;
             crouchReleaseRequired = false;
+            combatAttackWasDown = false;
             PlayerControllerMode.resetForPlayerLifecycle();
             lastPlayer = player;
         }
@@ -103,7 +109,7 @@ public final class MarioJumpController {
         Sm64BridgeSession.NativePosition latestNative = Sm64BridgeSession.getLatestPosition();
         if (!baselineValid) {
             // Do not feed movement/actions until Matrix and native baselines exist.
-            Sm64BridgeSession.setInput(0.0F, 0.0F, false, false, false);
+            publishIdleInput();
             if (latestNative == null) {
                 return;
             }
@@ -119,7 +125,7 @@ public final class MarioJumpController {
             appliedPositionValid = false;
             System.out.println("[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale "
                     + SM64_TO_MATRIX_Y_SCALE + ", XZ scale " + SM64_TO_MATRIX_XZ_SCALE + ")");
-            System.out.println("[Mario] Controls: WASD move, Space jump, F attack, Shift crouch/ground-pound");
+            System.out.println("[Mario] Controls: camera-relative WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
         publishControls();
@@ -167,6 +173,15 @@ public final class MarioJumpController {
         appliedPositionValid = true;
     }
 
+    private static void publishIdleInput() {
+        AlternateCharacterController.PlanarDirection camera =
+                AlternateCharacterController.getCameraForward();
+        Sm64BridgeSession.setInput(
+                camera.x, camera.z,
+                0.0F, 0.0F,
+                false, false, false);
+    }
+
     private static void publishControls() {
         float stickX = (keyDown(INTERNAL_D_KEY) ? 1.0F : 0.0F)
                 - (keyDown(INTERNAL_A_KEY) ? 1.0F : 0.0F);
@@ -195,11 +210,23 @@ public final class MarioJumpController {
         }
         boolean buttonZ = !crouchReleaseRequired && crouchDown;
 
-        Sm64BridgeSession.setInput(stickX, stickY, buttonA, buttonB, buttonZ);
+        AlternateCharacterController.PlanarDirection camera =
+                AlternateCharacterController.getCameraForward();
+        Sm64BridgeSession.setInput(
+                camera.x, camera.z,
+                stickX, stickY,
+                buttonA, buttonB, buttonZ);
+
+        if (buttonB && !combatAttackWasDown) {
+            AlternateCharacterCombatBridge.requestPrimaryMeleeAttack();
+        }
+        combatAttackWasDown = buttonB;
     }
 
     private static void enterMarioMode() {
         resetPresentation();
+        AlternateCharacterCombatBridge.reset();
+        combatAttackWasDown = false;
         MarioInputKeyboard.install();
         captureHeldActionGuards();
         Sm64BridgeSession.start();
@@ -209,7 +236,9 @@ public final class MarioJumpController {
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
         MarioInputKeyboard.uninstall();
+        AlternateCharacterCombatBridge.reset();
         resetPresentation();
+        combatAttackWasDown = false;
         captureHeldActionGuards();
     }
 
@@ -218,7 +247,9 @@ public final class MarioJumpController {
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
         MarioInputKeyboard.uninstall();
+        AlternateCharacterCombatBridge.reset();
         resetPresentation();
+        combatAttackWasDown = false;
         captureHeldActionGuards();
         modeWasMario = false;
         PlayerControllerMode.setMode(PlayerControllerMode.Mode.RUNESCAPE);
