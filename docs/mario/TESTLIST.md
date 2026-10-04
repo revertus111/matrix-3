@@ -260,10 +260,11 @@ Default Mario mesh scale remains `2.0`:
 - [x] Shared control vocabulary centralizes WASD movement, Space jump, F primary action, Shift modifier and camera-forward sampling. Future character drivers consume this state rather than installing another keyboard/controller path.
 - [x] `AlternateCharacterInputKeyboard` replaces the Mario-specific wrapper while preserving Matrix3's original keyboard listener/owner and the accepted WASD arbitration behavior.
 - [x] Matrix camera-forward X/Z is supplied to the character driver: Class411 detached/free views use actual position/look geometry; vanilla views normally use resolved viewport camera-position -> focus-position geometry with yaw retained only as fallback.
-- [x] Active Construction Free/RTS explicitly owns `Class24.aClass411_Sub1_158`; the shared camera sampler now prioritizes that live detached camera instead of falling through to stale vanilla state.
+- [x] Construction RTS now uses Construction's canonical 14-bit yaw source (`getRtsMinimapYawUnits()` -> restored `rtsYaw`) before detached-camera reconstruction, so alternate-character steering follows the same heading that renders/pans the RTS view across the full 360-degree orbit. Construction Free/other detached cameras retain the position/look fallback. `verified-static`.
 - [x] Existing native protocol already carries camera-look floats; **no `sm64_bridge.exe` rebuild is required**.
-- [x] User runtime evidence with the correctly owned Construction camera classified the remaining steering failure as a full 180-degree basis reversal: W/S and A/D were both reversed together. `VERIFIED` 2026-10-04.
+- [x] User runtime evidence with the correctly owned Construction camera classified the first remaining steering failure as a full 180-degree basis reversal: W/S and A/D were both reversed together. `VERIFIED` 2026-10-04.
 - [x] `MarioJumpController` therefore keeps shared Matrix camera semantics unchanged and negates only `camLookX/camLookZ` at the Mario/libsm64 adapter boundary; stick X/Y remain untouched.
+- [x] After that correction, north-facing W/S/A/D became correct while south-facing W/S/A/D remained exactly reversed. This heading-dependent result is `VERIFIED` runtime evidence that the remaining problem is the RTS heading source rather than another Mario stick-axis sign.
 - [x] `Mario64Diagnostics` retains the read-only pure-W alignment probe as a verification aid; it no longer blocks the correction on a four-heading capture.
 - [x] `AlternateCharacterCombatBridge` does not calculate client damage. Mario's F/B rising edge sends the stock Matrix3 NPC attack packet (opcode 32) to the nearest loaded NPC within 12 tiles.
 - [x] Server-side `WorldPacketsDecoder` still validates the NPC and enters the existing `PlayerCombatNew(npc)` owner, preserving RuneScape combat stats/definitions, target/range/pathing rules, damage/XP and downstream NPC death/drop behavior.
@@ -276,18 +277,19 @@ Use one client launch; no native rebuild:
 
 1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch/login normally.
 2. [ ] Enter Mario mode with Construction RTS/Free camera active.
-3. [ ] Facing north: W = forward/up-screen, S = backward/down-screen, A = left, D = right.
-4. [ ] Rotate east/south/west and confirm the same screen-relative W/S/A/D behavior at every heading.
-5. [ ] Hold W while continuously rotating the camera; Mario curves with the live view instead of preserving an old heading or flipping at south.
-6. [ ] Optional diagnostic sanity: `cameraForward=(x,z)` changes as the Construction camera rotates and pure-W `dot` trends toward positive alignment after Mario settles.
-7. [ ] Existing visual smoothing/textures/XYZ movement remain intact.
-8. [ ] Let Mario sit idle for several seconds, then tap Space. Mario remains the visible replacement throughout the jump; the normal RuneScape body must not flash/reappear on the transition.
-9. [ ] Ctrl+M still restores the RuneScape body immediately; the 750 ms grace must never keep Mario visible after mode/bridge ownership ends.
-10. [ ] Stand near one simple attackable NPC while the server-side RuneScape player is still near that NPC; tap F once. Mario performs native B/punch behavior and the console prints `[Alt Character Combat] MELEE -> stock NPC attack index=...`.
-11. [ ] The NPC enters normal RuneScape combat and receives normal server-owned hits; confirm normal Attack/Strength-style combat behavior/XP rather than a client-only fake hit.
-12. [ ] Hold F: the bridge must not spam a new stock attack packet every client tick; only the F rising edge starts/restarts the server combat action.
-13. [ ] Move far enough that the local-only Mario presentation no longer matches the server position, then treat combat range/pathing as **Phase 3/server-authority carryover**, not as proof that client-local XYZ is authoritative.
-14. [ ] Ctrl+M out/in after combat; normal RuneScape input/combat remains usable and alternate-character target state does not leak across sessions.
+3. [x] Facing north: W = forward/up-screen, S = backward/down-screen, A = left, D = right. `VERIFIED` by user after the Mario/libsm64 180-degree camera-basis correction.
+4. [ ] Facing south: W = forward/up-screen, S = backward/down-screen, A = left, D = right. This is the primary acceptance check for the canonical RTS-yaw source patch.
+5. [ ] Rotate east/west and confirm the same screen-relative W/S/A/D behavior.
+6. [ ] Hold W while continuously rotating the camera; Mario curves with the live view instead of preserving an old heading or flipping at south.
+7. [ ] Optional diagnostic sanity: `cameraForward=(x,z)` changes continuously with RTS yaw and pure-W `dot` trends toward positive alignment after Mario settles.
+8. [ ] Existing visual smoothing/textures/XYZ movement remain intact.
+9. [ ] Let Mario sit idle for several seconds, then tap Space. Mario remains the visible replacement throughout the jump; the normal RuneScape body must not flash/reappear on the transition.
+10. [ ] Ctrl+M still restores the RuneScape body immediately; the 750 ms grace must never keep Mario visible after mode/bridge ownership ends.
+11. [ ] Stand near one simple attackable NPC while the server-side RuneScape player is still near that NPC; tap F once. Mario performs native B/punch behavior and the console prints `[Alt Character Combat] MELEE -> stock NPC attack index=...`.
+12. [ ] The NPC enters normal RuneScape combat and receives normal server-owned hits; confirm normal Attack/Strength-style combat behavior/XP rather than a client-only fake hit.
+13. [ ] Hold F: the bridge must not spam a new stock attack packet every client tick; only the F rising edge starts/restarts the server combat action.
+14. [ ] Move far enough that the local-only Mario presentation no longer matches the server position, then treat combat range/pathing as **Phase 3/server-authority carryover**, not as proof that client-local XYZ is authoritative.
+15. [ ] Ctrl+M out/in after combat; normal RuneScape input/combat remains usable and alternate-character target state does not leak across sessions.
 
 ### Known first-slice boundary
 
@@ -306,4 +308,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Pull/build once and verify the corrected camera-relative W/S/A/D mapping at north/east/south/west plus rotate-while-holding-W. If steering passes, return immediately to the saved idle-to-jump replacement regression and one nearby NPC F/punch -> stock RuneScape combat proof.
+Pull/build once and verify south-facing W/S/A/D first, then east/west and rotate-while-holding-W. If steering passes, return immediately to the saved idle-to-jump replacement regression and one nearby NPC F/punch -> stock RuneScape combat proof.
