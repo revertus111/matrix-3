@@ -9,16 +9,6 @@ package game;
  */
 public final class MarioJumpController {
 
-    // Class549_Sub1 normalized-key mappings, verified from anIntArray8901.
-    private static final int INTERNAL_W_KEY = 33;
-    private static final int INTERNAL_A_KEY = 48;
-    private static final int INTERNAL_S_KEY = 49;
-    private static final int INTERNAL_D_KEY = 50;
-    private static final int INTERNAL_ATTACK_KEY = 51; // F -> SM64 B
-    private static final int INTERNAL_CROUCH_KEY = 81; // Shift -> SM64 Z
-    private static final int INTERNAL_SPACE_KEY = 83;  // Space -> SM64 A
-    private static final float DIAGONAL_STICK_SCALE = 0.70710677F;
-
     // Presentation calibration only. libsm64 remains the movement/physics owner.
     private static final float DEFAULT_SM64_TO_MATRIX_Y_SCALE = 3.0F;
     private static final float DEFAULT_SM64_TO_MATRIX_XZ_SCALE = 3.0F;
@@ -68,7 +58,7 @@ public final class MarioJumpController {
         Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
         if (player != lastPlayer) {
             Sm64BridgeSession.stop();
-            MarioInputKeyboard.uninstall();
+            AlternateCharacterInputKeyboard.uninstall();
             AlternateCharacterCombatBridge.reset();
             resetPresentation();
             modeWasMario = false;
@@ -183,39 +173,32 @@ public final class MarioJumpController {
     }
 
     private static void publishControls() {
-        float stickX = (keyDown(INTERNAL_D_KEY) ? 1.0F : 0.0F)
-                - (keyDown(INTERNAL_A_KEY) ? 1.0F : 0.0F);
-        float stickY = (keyDown(INTERNAL_W_KEY) ? 1.0F : 0.0F)
-                - (keyDown(INTERNAL_S_KEY) ? 1.0F : 0.0F);
-        if (stickX != 0.0F && stickY != 0.0F) {
-            stickX *= DIAGONAL_STICK_SCALE;
-            stickY *= DIAGONAL_STICK_SCALE;
-        }
+        AlternateCharacterController.ControlState controls =
+                AlternateCharacterController.sampleControls();
 
-        boolean spaceDown = keyDown(INTERNAL_SPACE_KEY);
-        if (spaceReleaseRequired && !spaceDown) {
+        if (spaceReleaseRequired && !controls.jump) {
             spaceReleaseRequired = false;
         }
-        boolean buttonA = !spaceReleaseRequired && spaceDown;
+        boolean buttonA = !spaceReleaseRequired && controls.jump;
 
-        boolean attackDown = keyDown(INTERNAL_ATTACK_KEY);
-        if (attackReleaseRequired && !attackDown) {
+        if (attackReleaseRequired && !controls.primaryAction) {
             attackReleaseRequired = false;
         }
-        boolean buttonB = !attackReleaseRequired && attackDown;
+        boolean buttonB = !attackReleaseRequired && controls.primaryAction;
 
-        boolean crouchDown = keyDown(INTERNAL_CROUCH_KEY);
-        if (crouchReleaseRequired && !crouchDown) {
+        if (crouchReleaseRequired && !controls.modifierAction) {
             crouchReleaseRequired = false;
         }
-        boolean buttonZ = !crouchReleaseRequired && crouchDown;
+        boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
-        AlternateCharacterController.PlanarDirection camera =
-                AlternateCharacterController.getCameraForward();
         Sm64BridgeSession.setInput(
-                camera.x, camera.z,
-                stickX, stickY,
-                buttonA, buttonB, buttonZ);
+                controls.cameraForward.x,
+                controls.cameraForward.z,
+                controls.moveX,
+                controls.moveY,
+                buttonA,
+                buttonB,
+                buttonZ);
 
         if (buttonB && !combatAttackWasDown) {
             AlternateCharacterCombatBridge.requestPrimaryMeleeAttack();
@@ -227,7 +210,7 @@ public final class MarioJumpController {
         resetPresentation();
         AlternateCharacterCombatBridge.reset();
         combatAttackWasDown = false;
-        MarioInputKeyboard.install();
+        AlternateCharacterInputKeyboard.install();
         captureHeldActionGuards();
         Sm64BridgeSession.start();
     }
@@ -235,7 +218,7 @@ public final class MarioJumpController {
     private static void exitMarioMode(Player player) {
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
-        MarioInputKeyboard.uninstall();
+        AlternateCharacterInputKeyboard.uninstall();
         AlternateCharacterCombatBridge.reset();
         resetPresentation();
         combatAttackWasDown = false;
@@ -246,7 +229,7 @@ public final class MarioJumpController {
         System.out.println("[SM64 Bridge] Falling back to RuneScape control: " + reason);
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
-        MarioInputKeyboard.uninstall();
+        AlternateCharacterInputKeyboard.uninstall();
         AlternateCharacterCombatBridge.reset();
         resetPresentation();
         combatAttackWasDown = false;
@@ -256,9 +239,9 @@ public final class MarioJumpController {
     }
 
     private static void captureHeldActionGuards() {
-        spaceReleaseRequired = keyDown(INTERNAL_SPACE_KEY);
-        attackReleaseRequired = keyDown(INTERNAL_ATTACK_KEY);
-        crouchReleaseRequired = keyDown(INTERNAL_CROUCH_KEY);
+        spaceReleaseRequired = AlternateCharacterController.rawJumpDown();
+        attackReleaseRequired = AlternateCharacterController.rawPrimaryDown();
+        crouchReleaseRequired = AlternateCharacterController.rawModifierDown();
     }
 
     private static void restoreGroundBaseline(Player player) {
@@ -296,10 +279,6 @@ public final class MarioJumpController {
         System.out.println("[SM64 Bridge] Invalid " + propertyName + "='" + configured
                 + "'; using " + defaultValue);
         return defaultValue;
-    }
-
-    private static boolean keyDown(int internalKey) {
-        return MarioInputKeyboard.rawKeyDown(internalKey);
     }
 
     private static void resetPresentation() {
