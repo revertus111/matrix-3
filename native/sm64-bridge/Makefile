@@ -28,11 +28,16 @@ deps:
 	@if [ ! -d "$(LIBSM64_ROOT)/.git" ]; then \
 		git clone https://github.com/libsm64/libsm64.git "$(LIBSM64_ROOT)"; \
 	fi
+	@# Keep the pinned dependency byte-compatible with the tracked LF patch even
+	@# when the user's global Git-for-Windows config enables CRLF checkout.
+	@git -C "$(LIBSM64_ROOT)" config core.autocrlf false
+	@git -C "$(LIBSM64_ROOT)" config core.eol lf
 	@git -C "$(LIBSM64_ROOT)" fetch --quiet origin "$(LIBSM64_COMMIT)"
-	@git -C "$(LIBSM64_ROOT)" checkout --quiet --detach "$(LIBSM64_COMMIT)"
+	@git -C "$(LIBSM64_ROOT)" checkout --quiet --force --detach "$(LIBSM64_COMMIT)"
 	@git -C "$(LIBSM64_ROOT)" reset --quiet --hard "$(LIBSM64_COMMIT)"
-	@git -C "$(LIBSM64_ROOT)" apply --check "$(LIBSM64_PATCH)"
-	@git -C "$(LIBSM64_ROOT)" apply "$(LIBSM64_PATCH)"
+	@git -C "$(LIBSM64_ROOT)" clean -fdx >/dev/null
+	@git -C "$(LIBSM64_ROOT)" apply --check --ignore-space-change --ignore-whitespace "$(LIBSM64_PATCH)"
+	@git -C "$(LIBSM64_ROOT)" apply --ignore-space-change --ignore-whitespace "$(LIBSM64_PATCH)"
 	$(MAKE) -C "$(LIBSM64_ROOT)" clean
 	$(MAKE) -C "$(LIBSM64_ROOT)" lib
 
