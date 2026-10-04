@@ -149,6 +149,51 @@ Copy this structure when adding a reusable mapping. Remove fields that genuinely
 - Local-player scene transform — `Class611` / `Class456`
 - Matrix3 held-key state — `Class549_Sub1`
 
+### Construction detached camera ownership — ConstructionBuildCamera / Class24
+
+**Subsystem:** Camera / viewport  
+**Evidence:** VERIFIED  
+**Tags:** ConstructionBuildCamera, Class24, Class411_Sub1, aClass411_Sub1_158, RTS camera, Free Build camera, detached camera, camera forward, AlternateCharacterController
+
+**Exact symbols / IDs**
+- Construction owner: `ConstructionBuildCamera`
+- Active/requested state: `ConstructionBuildCamera.isRequested()`
+- Rendered detached camera: `Class24.aClass411_Sub1_158`
+- Camera position controller: `Class411_Sub1.method4990(...) -> Class423_Sub2`
+- Camera look controller: `Class411_Sub1.method4991(...) -> Class658_Sub2`
+- Look point: `Class658_Sub2.method7736(...)`
+
+**Established responsibility**
+- While Construction Free/RTS camera mode is active, the rendered Construction view is owned by `Class24.aClass411_Sub1_158`.
+- That ownership is independent of the normal Matrix detached-camera flags used by stock camera-mode detection; consumers that need the *rendered* Construction view must check Construction ownership explicitly before falling back to vanilla camera state.
+- The real ground-plane camera-forward direction is obtained from the detached camera's actual look point minus its actual position, then normalized.
+
+**Relationships / call flow**
+- `ConstructionBuildCamera.tick()` -> mutate/manage `Class24.aClass411_Sub1_158` -> viewport renders detached camera.
+- camera-relative consumer -> if Construction active, select `Class24.aClass411_Sub1_158` -> position/look controllers -> normalized look-minus-position vector.
+- `AlternateCharacterController.getCameraForward()` now follows this ownership order before normal detached/vanilla fallback.
+
+**Runtime evidence**
+- 2026-10-04 Mario steering video showed the rendered Construction/RTS camera rotating while the old alternate-character sampler stayed effectively frozen near `cameraForward=(-0.006, 1.000)`.
+- This proved stale vanilla camera sampling was the active steering defect; the rendered Construction camera itself was rotating correctly.
+
+**Static evidence**
+- `ConstructionBuildCamera` directly manages the Class24 detached camera and already derives screen-relative editor movement from its real position/look direction.
+- `Class343.method4302(...)` ticks `ConstructionBuildCamera` immediately before consuming/rendering the active scene camera.
+
+**Matrix3 usage / ownership notes**
+- Camera-relative gameplay/editor consumers should use the camera that actually owns the rendered view, not infer ownership solely from stock camera-mode flags.
+- This mapping is reusable for Mario, Link, and future imported-character drivers through the shared alternate-character controller.
+
+**Do not assume**
+- Construction detached-camera ownership does not grant server movement, collision, pathfinding, or gameplay authority.
+- This does not imply every detached camera is Construction-owned; outside active Construction mode, normal Matrix detached/vanilla ownership rules still apply.
+
+**Related entries**
+- Live world viewport update seam — `Class343.method4302(...)`
+- Stock world minimap renderer — `Class464.method5484(...)`
+- Stock compass renderer — `Class107.method2061(...)`
+
 ## Scene / renderer
 
 ### Scene-entry release/recycle seam — Class578.method6834(...)
