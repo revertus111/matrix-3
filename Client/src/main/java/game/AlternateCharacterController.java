@@ -35,6 +35,40 @@ public final class AlternateCharacterController {
         }
     }
 
+    /**
+     * One generic control vocabulary shared by all alternate-character drivers.
+     * A driver decides what Jump/Primary/Modifier mean for that character.
+     */
+    static final class ControlState {
+        final float moveX;
+        final float moveY;
+        final boolean jump;
+        final boolean primaryAction;
+        final boolean modifierAction;
+        final PlanarDirection cameraForward;
+
+        ControlState(float moveX, float moveY,
+                boolean jump, boolean primaryAction, boolean modifierAction,
+                PlanarDirection cameraForward) {
+            this.moveX = moveX;
+            this.moveY = moveY;
+            this.jump = jump;
+            this.primaryAction = primaryAction;
+            this.modifierAction = modifierAction;
+            this.cameraForward = cameraForward;
+        }
+    }
+
+    // Class549_Sub1 normalized-key mappings, verified from anIntArray8901.
+    private static final int INTERNAL_W_KEY = 33;
+    private static final int INTERNAL_A_KEY = 48;
+    private static final int INTERNAL_S_KEY = 49;
+    private static final int INTERNAL_D_KEY = 50;
+    private static final int INTERNAL_PRIMARY_KEY = 51; // F
+    private static final int INTERNAL_MODIFIER_KEY = 81; // Shift
+    private static final int INTERNAL_JUMP_KEY = 83; // Space
+    private static final float DIAGONAL_STICK_SCALE = 0.70710677F;
+
     private static final PlanarDirection DEFAULT_FORWARD = new PlanarDirection(0.0F, -1.0F);
 
     private static final CharacterDriver MARIO_DRIVER = new CharacterDriver() {
@@ -74,10 +108,46 @@ public final class AlternateCharacterController {
         return active == CharacterId.MARIO && MARIO_DRIVER.supportsCombatStyle(style);
     }
 
+    static ControlState sampleControls() {
+        float moveX = (rawKeyDown(INTERNAL_D_KEY) ? 1.0F : 0.0F)
+                - (rawKeyDown(INTERNAL_A_KEY) ? 1.0F : 0.0F);
+        float moveY = (rawKeyDown(INTERNAL_W_KEY) ? 1.0F : 0.0F)
+                - (rawKeyDown(INTERNAL_S_KEY) ? 1.0F : 0.0F);
+        if (moveX != 0.0F && moveY != 0.0F) {
+            moveX *= DIAGONAL_STICK_SCALE;
+            moveY *= DIAGONAL_STICK_SCALE;
+        }
+        return new ControlState(
+                moveX,
+                moveY,
+                rawKeyDown(INTERNAL_JUMP_KEY),
+                rawKeyDown(INTERNAL_PRIMARY_KEY),
+                rawKeyDown(INTERNAL_MODIFIER_KEY),
+                getCameraForward());
+    }
+
+    static boolean rawJumpDown() {
+        return rawKeyDown(INTERNAL_JUMP_KEY);
+    }
+
+    static boolean rawPrimaryDown() {
+        return rawKeyDown(INTERNAL_PRIMARY_KEY);
+    }
+
+    static boolean rawModifierDown() {
+        return rawKeyDown(INTERNAL_MODIFIER_KEY);
+    }
+
+    private static boolean rawKeyDown(int internalKey) {
+        return AlternateCharacterInputKeyboard.rawKeyDown(internalKey);
+    }
+
     /**
      * Returns the actual rendered Matrix camera forward direction on the X/Z
-     * ground plane. Detached/free cameras use their real Class411 look vector;
-     * vanilla camera modes mirror the yaw domain consumed by Class246.method3359.
+     * ground plane. libsm64 defines camLook as Mario-position minus camera-position,
+     * so this same camera->focus vector is the correct native camera reference.
+     * Detached/free cameras use their real Class411 look vector; vanilla camera
+     * modes mirror the yaw domain consumed by Class246.method3359.
      */
     static PlanarDirection getCameraForward() {
         Class411_Sub1 detached = null;
