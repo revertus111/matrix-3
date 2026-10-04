@@ -163,6 +163,14 @@ public class Player extends Entity {
 	}
 
 	boolean method10696(Class106 class106, int i, byte i_16_) {
+		/*
+		 * verified-static: Mario replacement is presentation-only. Suppress the
+		 * local RuneScape appearance only after the Matrix-native Mario renderer
+		 * has a fresh, successfully rendered native geometry frame. Remote players
+		 * and fail-open/fallback frames keep the normal RuneScape model path.
+		 */
+		if (MarioVisualRenderer.shouldSuppressLocalPlayer(this))
+			return false;
 		int i_17_ = i;
 		Class538 class538 = method10554((byte) 6);
 		Class663 class663 = ((aClass663_11670.method7786(630124839) && !aClass663_11670.method7793(-1995738754)) ? aClass663_11670 : null);
