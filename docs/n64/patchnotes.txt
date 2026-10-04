@@ -13,3 +13,13 @@
 - Updated `sm64_bridge` to keep the embedded Mario out of `ACT_START_SLEEPING` / `ACT_SLEEPING` and return him to normal `ACT_IDLE` before the next native tick.
 - This fixes the proven long-idle transition at the native state boundary instead of extending Matrix renderer/suppression grace again.
 - Normal idle, movement, jump, attack and crouch/ground-pound inputs are unchanged. A rebuilt `sm64_bridge.exe` is required for runtime verification.
+
+2026-10-04 - Mario Equipment Workbench / transform truth
+- Added `Runtime` and `Equipment Workbench` subtabs under N64 -> Mario 64 instead of creating another standalone tool/window.
+- Added live per-helmet scale, head-local X/Y/Z and yaw controls backed by the existing session calibration owner, plus reset/copy/180-degree flip actions.
+- Added a Freeze Pose control using the existing Matrix-visible SM64 presentation freeze so fitting can be done against a stable frame while the native worker stays alive.
+- Added live geometric Mario head masking before Matrix model construction, with enable, helmet-only, cut-height and cut-radius controls plus a helmet-safe preset.
+- Head-mask edits increment a revision so Mario rebuilds immediately even while the presentation frame is frozen; helmet presence is cached once per build rather than queried per triangle.
+- Runtime V4 evidence showed the first full-head rotation delta drove the helmet in the opposite direction. `MarioHeadOrientationTracker` now feeds Matrix the inverse rigid rotation (transpose) instead of adding another arbitrary yaw flip.
+- Added `docs/n64/TRANSFORM_CONVENTIONS.md` as the persistent anti-backwards reference and `MARIO_EQUIPMENT_WORKBENCH.md` as the tool guide.
+- Added explicit `Save profile .md` / `Copy markdown`; save writes the current calibration snapshot to `docs/n64/MARIO_EQUIPMENT_RUNTIME.md` only when the developer presses the button.
