@@ -57,3 +57,10 @@
 - Recovered from an unsafe decompiled `Player.java` write by restoring the original file first; the final safe suppression commit changes `Player.java` by exactly 8 added lines and no deletions.
 - Static dependency/syntax inspection confirmed the gate targets same-package `MarioVisualRenderer.shouldSuppressLocalPlayer(...)`, which uses the published `Sm64BridgeSession` frame timestamp and a 500 ms freshness ceiling. This is `verified-static`, not runtime acceptance.
 - Bundle 4.1 remains `IMPLEMENTED / NEEDS TEST`: rebuild the local binary sidecar, Eclipse Java 8 clean/build, then runtime-verify actual Mario replacement, native idle/jump animation, local-only suppression, Ctrl+M restoration, and fail-open behavior.
+
+2026-10-04 - Bundle 4.1 Mario body + idle animation runtime proof
+- User rebuilt `sm64_bridge.exe` under MSYS2 MinGW64; the rebuilt binary reports the expected `[--binary] <path-to-sm64-us-rom>` usage, confirming the geometry-capable executable is installed locally.
+- Runtime screenshot confirms actual Mario geometry is rendered inside the revision-830 world at the local player position and replaces the RuneScape body.
+- User explicitly runtime-confirmed Mario's native idle animation is working, proving successive libsm64 geometry/animation frames are reaching Matrix and rebuilding/rendering visibly.
+- Binary geometry transport, Matrix `Class159 -> Model` presentation, local replacement presentation, and native idle animation are now `VERIFIED` for this runtime path.
+- Bundle 4.1 remains open only for jump-animation acceptance, remote-player isolation, Ctrl+M restoration/re-entry, sustained stability, and visual calibration/polish.
