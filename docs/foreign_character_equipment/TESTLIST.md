@@ -12,21 +12,28 @@
 
 1. [ ] Equip one normal visible revision-830 helmet before entering Mario mode.
 2. [ ] Press Ctrl+M.
-3. [ ] Console prints `[SM64 Equipment] Captured Mario HEAD anchor ...`.
-4. [ ] Console prints `[SM64 Equipment] Helmet ACTIVE item=...` for the equipped helmet.
-5. [ ] The exact equipped helmet is visible on Mario rather than the RuneScape player body.
+3. [ ] Console prints `[SM64 Equipment] Captured Mario HEAD envelope ... referenceSpan=...`.
+4. [ ] Console prints `[SM64 Equipment] Helmet ACTIVE item=... referenceHeadSpan=... clearance=... targetSpan=...` for the equipped helmet.
+5. [x] The equipped helmet is visible on Mario. Runtime-confirmed by user screenshots 2026-10-04.
 6. [ ] Helmet textures/recolours/customization look consistent with its normal worn appearance.
 
-### Fit / attachment
+### V2 fit / clearance
 
-- [ ] Helmet size is plausible on Mario's head.
+V1 runtime evidence: the helmet rendered successfully but looked undersized/high and visually competed with Mario's existing cap/hair. V2 changes only fit measurement/clearance; Mario body masking is intentionally deferred until this corrected shell is evaluated.
+
+- [ ] `targetSpan` in the ACTIVE log is greater than `referenceHeadSpan`.
+- [ ] Default clearance is roughly `5%` of the reference head span per side, or at least `2.0` Matrix units per side.
+- [ ] Helmet is materially larger/better seated than the V1 screenshot.
+- [ ] Helmet clears the main skull envelope with little/no obvious clipping at idle.
+- [ ] Mario's nose remains visually untouched and does not make the helmet oversized.
 - [ ] Helmet center/height does not visibly float far above or clip deeply through the head.
 - [ ] Mario idle animation does not detach the helmet.
 - [ ] Turning/running keeps the helmet centered on the head.
 - [ ] Helmet yaw follows Mario facing; if it is mirrored or rotated, record the direction/error before changing code.
 - [ ] Jump keeps the helmet attached.
-- [ ] Backflip keeps the helmet translated with the head. V1 currently uses yaw-only orientation, so note whether missing pitch/roll is visibly unacceptable.
+- [ ] Backflip keeps the helmet translated with the head. V2 still uses yaw-only orientation, so note whether missing pitch/roll is visibly unacceptable.
 - [ ] Ground-pound keeps the helmet translated with the head.
+- [ ] If scale/placement are now correct but cap/hair still visibly intersect the helmet, record that as the masking gate rather than increasing helmet scale again.
 
 ### Equipment changes / lifecycle
 
@@ -45,10 +52,12 @@
 ## Calibration only if needed
 
 ```text
--Dmatrix3.sm64.helmetFitPadding=<positive-float>      # default 1.12
--Dmatrix3.sm64.helmetVerticalOffset=<float>          # default 0
--Dmatrix3.sm64.helmetYawOffsetDegrees=<float>        # default 0
--Dmatrix3.sm64.helmetYawFlip=true|false              # default false
+-Dmatrix3.sm64.helmetClearanceFraction=<non-negative-float>  # default 0.05 per side
+-Dmatrix3.sm64.helmetMinClearance=<non-negative-float>       # default 2.0 per side
+-Dmatrix3.sm64.helmetFitPadding=<positive-float>             # default 1.0 final multiplier
+-Dmatrix3.sm64.helmetVerticalOffset=<float>                  # default 0
+-Dmatrix3.sm64.helmetYawOffsetDegrees=<float>                # default 0
+-Dmatrix3.sm64.helmetYawFlip=true|false                      # default false
 ```
 
 Use these only to classify first-pass fit/orientation. Do not add per-item overrides until generic fitting has been runtime evaluated across several helmets.
