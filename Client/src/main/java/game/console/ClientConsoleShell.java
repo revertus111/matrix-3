@@ -31,6 +31,7 @@ public final class ClientConsoleShell extends JPanel {
     public static final String PANEL_OWNER = "owner";
     public static final String PANEL_COMMANDS = "commands";
     public static final String PANEL_TESTS = "tests";
+    public static final String PANEL_N64 = "n64";
     // Legacy ids retained so saved console layouts migrate into Test Console.
     public static final String PANEL_PLAYER = "player";
     public static final String PANEL_ITEMS = "items";
@@ -50,6 +51,7 @@ public final class ClientConsoleShell extends JPanel {
     private final JToggleButton ownerButton = new JToggleButton(ConsoleIcons.owner());
     private final JToggleButton commandsButton = new JToggleButton(ConsoleIcons.commands());
     private final JToggleButton testButton = new JToggleButton(ConsoleIcons.test());
+    private final JToggleButton n64Button = new JToggleButton(ConsoleIcons.n64());
     private final JToggleButton settingsButton = new JToggleButton(ConsoleIcons.settings());
 
     private final DashboardPanel shellPanel;
@@ -58,6 +60,7 @@ public final class ClientConsoleShell extends JPanel {
     private JComponent commandsPanel;
     private TestConsolePanel testConsolePanel;
     private JComponent testConsoleErrorPanel;
+    private JComponent n64Panel;
     private JComponent settingsPanel;
 
     private boolean consoleOpen = true;
@@ -154,6 +157,7 @@ public final class ClientConsoleShell extends JPanel {
         configureRailButton(ownerButton, "Owner", PANEL_OWNER);
         configureRailButton(commandsButton, "Commands", PANEL_COMMANDS);
         configureRailButton(testButton, "Test Console", PANEL_TESTS);
+        configureRailButton(n64Button, "N64", PANEL_N64);
         configureRailButton(settingsButton, "Settings", PANEL_SETTINGS);
 
         rail.add(Box.createVerticalStrut(8));
@@ -166,6 +170,8 @@ public final class ClientConsoleShell extends JPanel {
         rail.add(commandsButton);
         rail.add(Box.createVerticalStrut(4));
         rail.add(testButton);
+        rail.add(Box.createVerticalStrut(4));
+        rail.add(n64Button);
         rail.add(Box.createVerticalStrut(4));
         rail.add(settingsButton);
         rail.add(Box.createVerticalGlue());
@@ -318,6 +324,17 @@ public final class ClientConsoleShell extends JPanel {
             TestConsolePanel panel = getOrCreateTestConsolePanel();
             return panel != null ? panel : testConsoleErrorPanel;
         }
+        if (PANEL_N64.equals(panelId)) {
+            if (n64Panel == null) {
+                try {
+                    n64Panel = new N64Panel();
+                } catch (RuntimeException ex) {
+                    ex.printStackTrace();
+                    n64Panel = createPanelError("N64 panel failed to initialize.");
+                }
+            }
+            return n64Panel;
+        }
         if (PANEL_SETTINGS.equals(panelId)) {
             if (settingsPanel == null) {
                 try {
@@ -363,6 +380,9 @@ public final class ClientConsoleShell extends JPanel {
         }
         if (PANEL_COMMANDS.equals(panelId)) {
             return PANEL_COMMANDS;
+        }
+        if (PANEL_N64.equals(panelId)) {
+            return PANEL_N64;
         }
         if (PANEL_SETTINGS.equals(panelId)) {
             return PANEL_SETTINGS;
@@ -448,6 +468,7 @@ public final class ClientConsoleShell extends JPanel {
         ownerButton.setSelected(consoleOpen && PANEL_OWNER.equals(activePanelId));
         commandsButton.setSelected(consoleOpen && PANEL_COMMANDS.equals(activePanelId));
         testButton.setSelected(consoleOpen && PANEL_TESTS.equals(activePanelId));
+        n64Button.setSelected(consoleOpen && PANEL_N64.equals(activePanelId));
         settingsButton.setSelected(consoleOpen && PANEL_SETTINGS.equals(activePanelId));
     }
 
