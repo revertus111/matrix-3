@@ -83,10 +83,15 @@ public final class Sm64BridgeSession {
         return worker == null ? null : worker.getFailureReason();
     }
 
-    public static Float getLatestY() {
+    static NativePosition getLatestPosition() {
         Worker worker = current;
         NativeState state = worker == null ? null : worker.getLatestState();
-        return state == null ? null : Float.valueOf(state.y);
+        return state == null ? null : new NativePosition(state.x, state.y, state.z);
+    }
+
+    public static Float getLatestY() {
+        NativePosition position = getLatestPosition();
+        return position == null ? null : Float.valueOf(position.y);
     }
 
     static GeometryFrame getLatestGeometryFrame() {
@@ -100,10 +105,12 @@ public final class Sm64BridgeSession {
     }
 
     /**
-     * One-native-tick-delayed interpolation keeps 30 Hz simulation smooth at
-     * higher Matrix update rates without making native physics frame dependent.
+     * One-native-tick-delayed interpolation keeps the fixed 30 Hz simulation
+     * smooth at higher Matrix update rates without making physics frame dependent.
+     * XYZ is sampled with one shared alpha so horizontal and vertical presentation
+     * cannot drift onto different native interpolation phases.
      */
-    public static Float getInterpolatedY() {
+    static NativePosition getInterpolatedPosition() {
         Worker worker = current;
         if (worker == null) {
             return null;
@@ -114,16 +121,30 @@ public final class Sm64BridgeSession {
         }
         NativeState previous = worker.getPreviousState();
         if (previous == null) {
-            return Float.valueOf(latest.y);
+            return new NativePosition(latest.x, latest.y, latest.z);
         }
 
+        float alpha = interpolationAlpha(latest);
+        return new NativePosition(
+                previous.x + (latest.x - previous.x) * alpha,
+                previous.y + (latest.y - previous.y) * alpha,
+                previous.z + (latest.z - previous.z) * alpha);
+    }
+
+    public static Float getInterpolatedY() {
+        NativePosition position = getInterpolatedPosition();
+        return position == null ? null : Float.valueOf(position.y);
+    }
+
+    private static float interpolationAlpha(NativeState latest) {
         float alpha = (float) (System.nanoTime() - latest.receivedNanos) / (float) STEP_NANOS;
         if (alpha < 0.0F) {
-            alpha = 0.0F;
-        } else if (alpha > 1.0F) {
-            alpha = 1.0F;
+            return 0.0F;
         }
-        return Float.valueOf(previous.y + (latest.y - previous.y) * alpha);
+        if (alpha > 1.0F) {
+            return 1.0F;
+        }
+        return alpha;
     }
 
     private static final class Worker implements Runnable {
@@ -512,6 +533,18 @@ public final class Sm64BridgeSession {
             this.buttonA = buttonA;
             this.buttonB = buttonB;
             this.buttonZ = buttonZ;
+        }
+    }
+
+    static final class NativePosition {
+        final float x;
+        final float y;
+        final float z;
+
+        NativePosition(float x, float y, float z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
         }
     }
 
