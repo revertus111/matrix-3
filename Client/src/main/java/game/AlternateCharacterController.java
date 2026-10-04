@@ -150,11 +150,12 @@ public final class AlternateCharacterController {
     }
 
     /**
-     * Returns the actual rendered Matrix camera forward direction on the X/Z
-     * ground plane. libsm64 defines camLook as Mario-position minus camera-position,
-     * so this same camera->focus vector is the correct native camera reference.
-     * Detached/free cameras use their real Class411 look vector; vanilla camera
-     * modes mirror the yaw domain consumed by Class246.method3359.
+     * Returns the rendered Matrix camera forward direction on the X/Z ground
+     * plane. Detached/free cameras use their real Class411 position/look vector.
+     * Vanilla follow/orbit cameras use the already-resolved camera world position
+     * written by Class246.method3359(...) and the exact X/Z focus point supplied
+     * to that solver. This avoids reconstructing Matrix's camera handedness from
+     * yaw and keeps alternate-character steering tied to the view actually drawn.
      */
     static PlanarDirection getCameraForward() {
         Class411_Sub1 detached = null;
@@ -166,7 +167,7 @@ public final class AlternateCharacterController {
                 detached = Class133_Sub1.aClass411_Sub1_9827;
             }
         } catch (RuntimeException ignored) {
-            // Fall through to vanilla yaw/fixed-safe fallback.
+            // Fall through to vanilla resolved-camera/fixed-safe fallback.
         }
 
         PlanarDirection direction = detached == null ? null : getDetachedCameraForward(detached);
@@ -175,23 +176,38 @@ public final class AlternateCharacterController {
         }
 
         try {
+            int cameraMode = Class18.anInt143 * 625220759;
+            if (cameraMode == 4 || cameraMode == 6) {
+                float focusX = Entity.anInt11674 * 1007135537;
+                float focusZ = Class165.anInt2050 * -1126693191;
+                float cameraX = Class36.anInt387 * 386814715;
+                float cameraZ = Class49.anInt490 * -999214779;
+                PlanarDirection vanilla = normalize(
+                        focusX - cameraX,
+                        focusZ - cameraZ);
+                if (vanilla != null) {
+                    return vanilla;
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // Fall through to the established yaw fallback below.
+        }
+
+        try {
             int yawUnits = (int) client.aFloat8678;
             if (Class18.anInt143 * 625220759 == 4) {
-                // Match the yaw submitted to Class246.method3359 in the live viewport.
                 yawUnits += client.anInt8665 * -706438965;
             }
             yawUnits &= 0x3fff;
             double radians = yawUnits * (Math.PI * 2.0 / 16384.0);
-
-            // Class246.method3359 positions the camera behind this forward vector.
-            float x = -(float) Math.sin(radians);
-            float z = (float) Math.cos(radians);
-            PlanarDirection vanilla = normalize(x, z);
-            if (vanilla != null) {
-                return vanilla;
+            PlanarDirection fallback = normalize(
+                    -(float) Math.sin(radians),
+                    (float) Math.cos(radians));
+            if (fallback != null) {
+                return fallback;
             }
         } catch (RuntimeException ignored) {
-            // Preserve the previous known-working north reference on uncertainty.
+            // Preserve a deterministic fixed-safe fallback on uncertainty.
         }
         return DEFAULT_FORWARD;
     }
