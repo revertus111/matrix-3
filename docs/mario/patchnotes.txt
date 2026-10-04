@@ -72,7 +72,15 @@
 - Runtime screenshots showed large dark/black whole-triangle patches despite correct geometry and animation.
 - Static trace found the V1 approximation sampled only each triangle's three atlas UV vertices, alpha-blended those texels with libsm64 base colour, then collapsed the result into one RuneScape packed-HSL face colour.
 - libsm64's reference GL renderer instead draws Mario base colour/lighting first, then overlays the ROM texture as a separate UV-mapped pass; the V1 Matrix face bake therefore cannot faithfully represent small black/opaque texture details and can spread them over an entire triangle.
-- `MarioVisualRenderer` now defaults to libsm64 base material/light colours for Matrix face albedo, removing the lossy atlas-to-whole-face bake from normal presentation without changing geometry, animation, movement, or replacement ownership.
+- `MarioVisualRenderer` switched temporarily to libsm64 base material/light colours for Matrix face albedo, removing the lossy atlas-to-whole-face bake from normal presentation without changing geometry, animation, movement, or replacement ownership.
 - The original atlas-face approximation remains available only for A/B diagnosis through `-Dmatrix3.sm64.debugAtlasFaceBake=true`.
-- New log output identifies `colour=libsm64-base-v2` or the diagnostic `atlas-face-bake-debug` path.
-- Runtime acceptance is pending: confirm the black face blocks are materially reduced/gone while idle/jump/restore behavior remains intact. If broad darkness remains after this artifact is removed, the next bounded trace is Matrix lighting/normal handling rather than speculative brightness tuning.
+- Runtime screenshot confirmed the giant black whole-triangle artifact is gone on the native-base-colour path, but eyes and other texture-only details disappear as expected.
+
+2026-10-04 - Bundle 4.2A atlas micro-face detail pass
+- Reintroduced ROM atlas detail without returning to one colour per low-poly source triangle: only textured SM64 triangles are tessellated into smaller generated Matrix faces and sampled per micro-face.
+- Default texture tessellation is 4 subdivisions per source-triangle edge (16 micro-faces per textured triangle); untextured libsm64 `(1,1)` UV-sentinel faces remain native base colour.
+- Atlas sampling now matches libsm64 reference semantics more closely: `mix(baseColor, texture.rgb, texture.a)` with clamp-to-edge and bilinear RGBA sampling.
+- Generated output is kept under Matrix's 16-bit vertex/index budget; subdivision automatically reduces if a frame would exceed the safe generated-model limit.
+- Added `-Dmatrix3.sm64.textureSubdivisions=0..4`; `0` is the native-base-colour fallback, while `2`/`3` can be used if the default `4` is visually sufficient but too expensive.
+- ACTIVE log now reports source triangle count, generated Matrix triangle count, colour mode and effective texture subdivision count.
+- Runtime gate: eyes/facial/hat/clothing details should return without the former giant black source-triangle blocks; idle/jump/restore and sustained render performance must remain stable.
