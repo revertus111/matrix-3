@@ -30,45 +30,43 @@ Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 
 ### Current priority
 
-The user runtime-confirmed on 2026-10-04 that the native keyboard/action path is genuinely alive: WASD produces native movement animation states, crouch works, backflip works, and airborne ground-pound works. The same runtime test exposed two integration gaps: Construction/RTS camera also consumed WASD, and native SM64 X/Z movement was still visually anchored to the Matrix player.
+Bundle 2.4 is runtime accepted. The user confirmed Mario owns WASD without moving the Construction/RTS camera, native X/Z visibly translates Mario with sensible direction/scale, moving actions preserve horizontal displacement, Ctrl+M restore/re-entry is clean, and normal camera WASD returns afterward.
 
-The user then explicitly reprioritized and approved Bundle 2.4 with `SAP AAA`: Mario mode owns WASD, and native SM64 X/Z is temporarily presented through the local Matrix transform so Mario can visibly run/jump/backflip/ground-pound across the loaded 830 scene. This remains a local presentation proof only; Phase 3 still owns real RuneScape terrain/object collision and the final coordinate/authority handoff.
+The user also confirmed Mario already follows different RuneScape terrain elevations correctly in live play. That is accepted as **Matrix presentation/rebase behavior**, not proof that libsm64 is consuming RuneScape collision: the native core still simulates against its temporary flat floor.
 
-Bundle 4.2B shared-topology smoothing remains implemented and waiting for its visual acceptance pass after this movement gate.
+Bundle 4.2B shared-topology smoothing is also runtime accepted at the default `70` degree threshold. The next architectural target is Phase 3: make libsm64 itself understand RuneScape terrain/object collision so the authentic SM64 action machine reacts to walls, slopes, ledges, platforms and later water rather than only receiving visually-correct Matrix presentation.
 
-### Out of scope for the current Bundle 2.4 slice
+### Out of scope for the accepted local XYZ proof / next Phase 3 boundary
 
 - Sending Mario movement packets or making the sidecar authoritative for persistent player position.
 - Replacing RuneScape clipping, pathfinding, plane ownership or server correction behavior.
-- Treating the temporary flat libsm64 floor as RuneScape collision.
-- Full RuneScape terrain/object collision conversion.
+- Treating visually-correct terrain elevation as proof that the native flat-floor collision has been replaced.
 - Server-authoritative Mario movement or remote-player replication.
 - JNI/in-process native loading before sidecar transport is measured under sustained runtime use.
-- Additional visual smoothing/texture changes; Bundle 4.2B remains a separate pending acceptance slice.
 
 ## Architecture / ownership
 
 - Matrix3 remains host architecture and world/server authority.
 - `PlayerControllerMode` owns deliberate local RuneScape/Mario activation; RuneScape remains default.
 - `Sm64BridgeSession` owns the persistent sidecar process, fixed 30 Hz SM64 tick, immutable control snapshots, and immutable native state/geometry publication.
-- `Sm64BridgeSession` now publishes one-native-tick-delayed interpolated native X/Y/Z from the same previous/latest frame pair and shared interpolation alpha.
+- `Sm64BridgeSession` publishes one-native-tick-delayed interpolated native X/Y/Z from the same previous/latest frame pair and shared interpolation alpha.
 - `MarioInputKeyboard` is a reversible view over Matrix3's existing `Class549` keyboard owner. The original AWT listener remains installed and tracks physical keys; while Mario mode is active normal `method6514(...)` consumers see W/A/S/D released, while Mario reads the original raw held state through `method6518(...)`. No second keyboard listener is installed.
 - `MarioJumpController` retains its legacy hook-facing name but is the Matrix client-thread Mario input/presentation adapter. It forwards held Matrix keys to libsm64 and presents native XYZ through the verified Matrix player transform; it does not recreate Mario movement physics in Java.
 - Current keyboard mapping is WASD -> native analog stick, Space -> A, F -> B, Shift -> Z. Diagonal WASD is normalized to unit magnitude.
 - A/B/Z held while Mario mode is entered are suppressed until released so mode activation cannot manufacture a jump/attack/crouch action.
 - Bundle 2.4 captures Matrix/native XYZ baselines when Mario mode starts. Native X/Z deltas are applied locally at the horizontal presentation scale while native Y retains the established positive-up -> Matrix negative-Y conversion.
-- Default horizontal presentation scale is `3.0`; `-Dmatrix3.sm64.horizontalScale=<positive-float>` provides runtime calibration. Final horizontal scale/sign remains a runtime hypothesis until tested.
-- Matrix/server corrections remain authoritative beneath the temporary presentation offset. If Matrix changes an axis externally, the presentation baseline rebases to that correction instead of fighting it.
+- Default horizontal presentation scale is `3.0`; `-Dmatrix3.sm64.horizontalScale=<positive-float>` provides runtime calibration. The default `3.0` and direct X/Z signs are runtime accepted for the current local presentation path.
+- Matrix/server corrections remain authoritative beneath the temporary presentation offset. If Matrix changes an axis externally, the presentation baseline rebases to that correction instead of fighting it. This runtime behavior is sufficient for Mario to follow differing visible RuneScape terrain elevations cleanly.
 - Ctrl+M exit, native failure and local-player lifecycle replacement restore the tracked RuneScape XYZ baseline and restore the original Matrix keyboard owner.
 - No Bundle 2.4 code sends Mario movement packets, replaces RuneScape clipping/pathfinding/plane authority, or streams RuneScape collision into libsm64.
 - `MarioVisualRenderer` owns local Mario visual presentation from native geometry. It consumes immutable libsm64 frames on Matrix's render thread, converts them to `Class159`, builds a normal Matrix `Model`, and renders through the established direct scene-preview seam.
-- Textured Mario faces keep the accepted micro-face atlas approximation. Bundle 4.2B changes generated topology only: coincident source-triangle boundary vertices may be shared when source-face normals fall within the smoothing threshold, allowing Matrix's normal generation to shade compatible surfaces more smoothly without indiscriminately welding hard edges.
-- Default smoothing threshold is `70` degrees; `-Dmatrix3.sm64.smoothAngleDegrees=0..180` provides runtime calibration without another patch.
+- Textured Mario faces keep the accepted micro-face atlas approximation. Bundle 4.2B shares compatible coincident source-triangle boundary vertices through an angle-gated topology path so Matrix normal generation shades compatible surfaces more smoothly without indiscriminately welding hard edges.
+- Default smoothing threshold is `70` degrees; `-Dmatrix3.sm64.smoothAngleDegrees=0..180` provides runtime calibration. The default `70` degree path is runtime accepted.
 - `Class578.method6834(...)` remains the established Matrix direct-preview render seam; Mario is another consumer rather than a second renderer.
 - `Player.method10696(...)` remains the normal player model-build owner. A narrow fail-open gate suppresses only the local RuneScape appearance after `MarioVisualRenderer` has a fresh successful replacement frame. Remote players remain unchanged; stale/native-failure frames fall back to the RuneScape player.
 - Native-state vertical presentation uses initial `3.0` SM64-to-Matrix Y scale; `-Dmatrix3.sm64.verticalScale=<value>` can override it.
 - Mario mesh scale uses initial `2.0`; `-Dmatrix3.sm64.modelScale=<value>` can override it for visual calibration.
-- Matrix collision is converted into SM64 surfaces in Phase 3; until then the sidecar uses the temporary flat native floor.
+- Matrix collision is converted into SM64 surfaces in Phase 3; until then the sidecar uses the temporary flat native floor even though Matrix presentation already follows visible terrain elevations correctly.
 
 ## Verified foundation
 
@@ -84,14 +82,18 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 - The visible Mario-mode vertical presentation path is driven by real native SM64 state rather than Java gravity.
 - Bundle 2.3 runtime confirms WASD reaches native movement/action state: Mario visibly enters movement/turning animations.
 - Bundle 2.3 runtime confirms native Z/crouch behavior, native backflip, and airborne ground-pound work through the real libsm64 action machine.
-- The pre-2.4 integration conflict is runtime-confirmed: Construction/RTS camera WASD competed with Mario WASD while Mario mode was active.
+- Bundle 2.4 runtime confirms Mario-mode WASD no longer drives the Construction/RTS camera while raw WASD still reaches Mario.
+- Bundle 2.4 runtime confirms native X/Z visibly translates Mario with sensible direction/scale, including during moving actions.
+- Bundle 2.4 runtime confirms Ctrl+M restore/re-entry and normal camera-WASD restoration work without stale XYZ displacement.
+- Bundle 2.4 runtime confirms arrow-key camera pan and Q/E rotation remain available while Mario owns WASD.
+- Bundle 2.4 runtime confirms the current Matrix presentation/rebase path follows different RuneScape terrain elevations correctly in live play.
 - Bundle 4.1 binary geometry-capable `sm64_bridge.exe` was rebuilt locally under MSYS2 MinGW64 and reports the expected `[--binary]` usage.
 - Actual libsm64 Mario geometry is visibly rendered inside the revision-830 world at the local player position and replaces the RuneScape body.
 - Native Mario idle animation visibly updates in-world across successive geometry frames.
 - Native Mario jump animation visibly plays while native SM64 Y drives the visible jump.
 - Ctrl+M restores the normal RuneScape local-player presentation, and re-entering Mario mode recreates the animated Mario replacement cleanly.
 - The atlas micro-face v3 path restores Mario's texture details while keeping the former giant black whole-source-triangle artifact fixed. Bundle 4.2A visual fidelity is runtime accepted 2026-10-04.
-- Runtime screenshots show the accepted textured Mario is still visibly more faceted/triangular than the SM64 gameplay reference, motivating Bundle 4.2B smoothing.
+- Bundle 4.2B shared-topology smoothing is runtime accepted at the default `70` degree threshold: Mario reads visibly rounder/less faceted while accepted atlas detail and hard-edge presentation remain intact.
 
 ### verified-static
 
@@ -114,7 +116,7 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 - `Player.method10696(...)` is the shared player model-build path consumed by the player's render/picking variants, so the local Mario replacement gate does not require duplicating suppression across renderer variants.
 - The binary bridge sends the ROM atlas once at handshake, then each fixed 30 Hz step sends native state plus positions/colors/UVs for the triangles used by the current SM64 animation frame.
 - Native simulation/geometry publication happens on the worker; Matrix model construction/rendering remains on Matrix's render/client ownership path.
-- `MarioVisualRenderer` generates model-local vertices from `(geometry position - native state position)` before anchoring the Model to Matrix player position; with Bundle 2.4 the anchor itself now follows the temporary local native XYZ presentation.
+- `MarioVisualRenderer` generates model-local vertices from `(geometry position - native state position)` before anchoring the Model to Matrix player position; with Bundle 2.4 the anchor itself follows the accepted temporary local native XYZ presentation.
 - libsm64's reference GL renderer draws Mario base colour/lighting first, then overlays the ROM texture as a separate UV-mapped pass; the accepted micro-face presentation approximates those texture details inside Matrix without creating a second renderer.
 - Bundle 4.2B shares only generated boundary vertices whose transformed geometric face normals are within the configured smooth-angle threshold; atlas face colours remain per-face and are not merged.
 
@@ -122,18 +124,15 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 
 ### HYPOTHESIS
 
-- Default horizontal presentation scale `3.0` and direct SM64 X->Matrix X / Z->Matrix Z signs will feel correct enough for the first local movement proof; runtime decides this before Phase 3 treats any conversion as final.
 - Sidecar binary transport is fast enough for sustained 30 Hz state + geometry + full control input; runtime measurement is required before considering JNI.
 - Nearby RuneScape terrain can be represented efficiently as two SM64 collision triangles per tile inside a bounded local bubble.
 
 ### UNKNOWN
 
-- Whether Bundle 2.4 WASD filtering is fully transparent to all non-camera Matrix input consumers during Mario mode; the targeted camera path is statically covered and runtime acceptance is required.
-- Final Matrix<->SM64 coordinate scale/sign calibration for collision-backed XYZ movement.
+- Final Matrix<->SM64 coordinate conversion for **collision-backed** XYZ movement. The current local presentation scale/sign is runtime accepted but does not by itself prove the native collision-space conversion.
 - Whether fixed native camera-look `(0,-1)` feels acceptable for keyboard steering or should become Matrix-camera-relative.
-- Whether the default `70` degree smoothing threshold best matches the original SM64 gameplay look in Matrix; runtime comparison may prefer roughly `45-90` degrees.
-- Whether vertical scale `3.0` and model scale `2.0` are the best game-feel/visual calibration.
 - Final collision-bubble radius/rebuild threshold.
+- Correct terrain triangle winding/material selection for RuneScape slopes when translated into SM64 surfaces.
 - Runtime cost of rebuilding one Matrix `Model` per native 30 Hz animated geometry frame under sustained use.
 - Runtime cost of object collision proxy extraction.
 - Final client/server reconciliation model.
@@ -143,7 +142,7 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 - Matrix3 client input/player-transform/renderer ownership.
 - Local `libsm64`/`sm64_bridge` build.
 - User-owned SM64 US ROM as a local runtime dependency only; never committed.
-- User runtime testing for native XYZ movement, input arbitration, visual smoothing, collision/movement feel and regression acceptance.
+- User runtime testing for collision-backed terrain/object behavior and regression acceptance.
 
 ## Development plan
 
@@ -172,7 +171,7 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 
 ### Phase 2 - SM64 Passthrough Core Bridge
 
-**Status:** ACTIVE / NEEDS TEST
+**Status:** ACTIVE / CARRYOVER CHECKS
 
 #### Bundle 2.1 - Sidecar transport/native-core spike
 
@@ -220,7 +219,7 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 
 #### Bundle 2.4 - Local XYZ presentation + WASD ownership
 
-**Status:** ACTIVE / NEEDS TEST
+**Status:** RUNTIME ACCEPTED
 
 - [x] Add reversible Mario keyboard view that reserves W/A/S/D from normal `method6514(...)` consumers without adding another AWT listener.
 - [x] Preserve raw W/A/S/D state for Mario input through the original held-key owner.
@@ -231,23 +230,28 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 - [x] Add `-Dmatrix3.sm64.horizontalScale=<positive-float>`; default `3.0`.
 - [x] Rebase external Matrix/server corrections per axis and restore tracked RuneScape XYZ on exit/fallback.
 - [x] Preserve networking, clipping, pathfinding, plane and persistent server authority.
-- [ ] Runtime verify Mario-mode WASD no longer pans the Construction Free/RTS camera.
-- [ ] Runtime verify arrow-key pan and Q/E camera rotation remain usable while Mario owns WASD.
-- [ ] Runtime verify Mario visibly translates from native X/Z and direction/scale are sensible.
-- [ ] Runtime verify moving jump/backflip/ground-pound retain horizontal displacement.
-- [ ] Runtime verify Ctrl+M restore/re-entry has no stale XYZ offset and normal camera WASD returns afterward.
+- [x] Runtime verify Mario-mode WASD no longer pans the Construction Free/RTS camera. `VERIFIED` 2026-10-04.
+- [x] Runtime verify arrow-key pan and Q/E camera rotation remain usable while Mario owns WASD. `VERIFIED` 2026-10-04.
+- [x] Runtime verify Mario visibly translates from native X/Z and direction/scale are sensible. `VERIFIED` 2026-10-04.
+- [x] Runtime verify moving jump/backflip/ground-pound retain horizontal displacement. `VERIFIED` 2026-10-04.
+- [x] Runtime verify Ctrl+M restore/re-entry has no stale XYZ offset and normal camera WASD returns afterward. `VERIFIED` 2026-10-04.
+- [x] Runtime verify visible Mario presentation follows different RuneScape terrain elevations correctly. `VERIFIED` 2026-10-04; this is presentation evidence, not native collision ingestion.
 
 ### Phase 3 - Matrix World / Collision Adapter
 
-**Status:** READY AFTER LOCAL XYZ GATE
+**Status:** READY / NEXT
 
 #### Bundle 3.1 - Terrain heightfield -> SM64 surfaces
+
+**Status:** READY
 
 - [ ] Establish Matrix terrain-corner height sampler.
 - [ ] Convert nearby RuneScape tile quads into correctly wound SM64 triangles.
 - [ ] Add local origin/scale conversion and bounded collision bubble.
-- [ ] Replace temporary flat-floor assumptions with RuneScape terrain-backed native movement.
-- [ ] Runtime verify native SM64 stand/run/jump across RuneScape hills.
+- [ ] Replace temporary flat-floor assumptions with RuneScape terrain-backed native collision.
+- [ ] Runtime verify the **native SM64 action/collision machine**, not only Matrix presentation, reacts correctly to RuneScape slopes/terrain.
+
+Runtime note: visible Mario already traverses different RuneScape terrain elevations correctly through Matrix presentation/rebasing. Bundle 3.1 therefore focuses on collision authenticity rather than fixing visible terrain height following.
 
 #### Bundle 3.2 - Objects / walls / platforms
 
@@ -283,7 +287,7 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 
 #### Bundle 4.2 - Visual fidelity / animation polish
 
-**Status:** 4.2A RUNTIME ACCEPTED / 4.2B NEEDS TEST
+**Status:** 4.2A RUNTIME ACCEPTED / 4.2B RUNTIME ACCEPTED
 
 - [x] Runtime-identify V1 giant dark/black whole-triangle colour artifacts. `VERIFIED` 2026-10-04.
 - [x] Trace the artifact to the lossy atlas-UV-to-single-face-colour approximation. `verified-static`.
@@ -293,8 +297,8 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 - [x] Runtime-accept atlas micro-face v3: facial/eye/clothing texture details restored and giant black source-triangle blocks remain gone. `VERIFIED` 2026-10-04.
 - [x] Implement 4.2B angle-gated shared boundary topology for smoother Matrix normal generation. `verified-static`.
 - [x] Add `-Dmatrix3.sm64.smoothAngleDegrees=0..180`; default `70`.
-- [ ] Runtime-accept 4.2B: Mario looks visibly rounder/less faceted without melted hard edges, texture regression, render errors or obvious FPS loss.
-- [ ] Calibrate model scale/orientation/ground anchor after smoothing acceptance.
+- [x] Runtime-accept 4.2B: Mario looks visibly rounder/less faceted without melted hard edges or texture regression. `VERIFIED` 2026-10-04.
+- [ ] Calibrate model scale/orientation/ground anchor if later runtime evidence shows it is needed.
 - [ ] Add geometry interpolation only if 30 Hz pose stepping is visibly objectionable.
 - [ ] Map/forward native visual events such as sounds/particles after movement/collision ownership is stable.
 
@@ -309,13 +313,13 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 
 ## Current execution state
 
-- Phase: 2 - SM64 Passthrough Core Bridge
-- Phase status: ACTIVE / NEEDS TEST
-- Bundle: 2.4 - Local XYZ presentation + WASD ownership
-- Bundle status: ACTIVE / NEEDS TEST
-- Approval state: user runtime-confirmed Bundle 2.3 native actions, then explicitly requested WASD camera arbitration + visible Mario movement and supplied `SAP AAA` on 2026-10-04.
-- Current checklist item: pull/build once and runtime-test the local XYZ/WASD ownership gate.
-- Current objective: make the already-authentic native movement/action state visibly translate Mario in the 830 while keeping RuneScape networking/collision/server authority intact and stopping Construction camera WASD competition.
+- Phase: 3 - Matrix World / Collision Adapter
+- Phase status: READY / NEXT
+- Bundle: 3.1 - Terrain heightfield -> SM64 surfaces
+- Bundle status: READY
+- Approval state: Bundle 2.4 was approved with `SAP AAA` and is runtime accepted. Phase 3 implementation has **not** received a new AAA yet.
+- Current checklist item: start Bundle 3.1 only after approval; first establish the Matrix terrain-corner height sampler and the Matrix<->SM64 local collision-space conversion.
+- Current objective: replace libsm64's temporary flat native floor with bounded RuneScape terrain collision while preserving the already-accepted visible XYZ/terrain-elevation presentation path.
 
 ## Checklist / patch status
 
@@ -324,13 +328,13 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 | Matrix transform/input/controller foundation | 1 | 1.x | NEEDS TEST | Controller boundary and native jump are runtime-proven; deeper lifecycle regression remains. |
 | Passthrough architecture | 2 | 2.1 | DONE | `SM64_PASSTHROUGH_ARCHITECTURE.md`. |
 | Native `sm64_bridge` sidecar | 2/4 | 2.1/4.1 | VERIFIED | State + binary geometry executable runtime-proven locally. |
-| Native -> visible Matrix transform | 2 | 2.2/2.4 | Y VERIFIED / XYZ NEEDS TEST | Native Y is accepted; local-only native X/Z presentation is implemented and awaiting runtime acceptance. |
+| Native -> visible Matrix transform | 2 | 2.2/2.4 | VERIFIED | Native XYZ local presentation is runtime accepted; visible terrain elevation following also works. |
 | Mario keyboard/action controls | 2 | 2.3 | RUNTIME PARTIAL | Movement states, crouch, backflip and ground-pound verified; B attack/long-jump/entry guards remain. |
-| Mario WASD ownership | 2 | 2.4 | NEEDS TEST | Mario keyboard view filters WASD from normal held-key consumers while preserving raw Mario input. |
+| Mario WASD ownership | 2 | 2.4 | VERIFIED | Mario owns WASD without moving the Construction/RTS camera; camera controls restore cleanly. |
 | Mario native geometry transport | 4 | 4.1 | VERIFIED | Actual Mario geometry and successive native animation frames reach Matrix at runtime. |
 | Matrix Mario visual renderer | 4 | 4.1 | VERIFIED / CARRYOVER REGRESSION | Body replacement, idle, jump, restore and re-entry work; remote-player/stability checks remain. |
-| Mario visual fidelity | 4 | 4.2 | NEEDS TEST | Atlas micro-face v3 is runtime accepted; 4.2B shared-topology smoothing is implemented and awaiting runtime comparison. |
-| Matrix terrain adapter | 3 | 3.1 | READY AFTER LOCAL XYZ GATE | Required to replace the temporary flat native floor with real RuneScape terrain collision. |
+| Mario visual fidelity | 4 | 4.2 | VERIFIED / POLISH CARRYOVER | Atlas micro-face v3 and shared-topology smoothing are runtime accepted. |
+| Matrix terrain adapter | 3 | 3.1 | READY | Next architectural step: native SM64 collision surfaces from RuneScape terrain. |
 
 ## Decisions / new ideas
 
@@ -339,12 +343,12 @@ Bundle 4.2B shared-topology smoothing remains implemented and waiting for its vi
 - Sidecar process remains transport until measurement gives a reason for JNI.
 - Matrix scene/model mutation stays on Matrix's client/render ownership path even though native simulation runs on a worker.
 - WASD/Space/F/Shift are the first developer keyboard mapping: analog stick/A/B/Z respectively.
-- The user explicitly approved a temporary **local-only** native X/Z presentation proof before Phase 3. This changes presentation, not networking/clipping/pathfinding/server authority.
+- The user explicitly approved and runtime-accepted a temporary **local-only** native X/Z presentation proof before Phase 3. This changes presentation, not networking/clipping/pathfinding/server authority.
 - Mario mode owns WASD through a reversible view of the existing Matrix keyboard owner; do not add a second keyboard listener or fork Construction camera controls.
+- Visible terrain elevation following is already accepted through Matrix presentation/rebasing. Phase 3 should not redo that visual behavior; it should make the native SM64 collision/action machine consume equivalent RuneScape surfaces.
 - Phase 3 remains the required boundary for authentic RuneScape terrain/object collision and final movement/coordinate authority.
 - Direct libsm64 animated geometry is the selected Mario visual path.
-- The accepted micro-face atlas path remains the texture-detail solution for now; smoothing is a topology/normal-generation concern, not another texture rewrite.
-- Shared smoothing is angle-gated rather than global so low-poly hard edges remain available where source face normals diverge.
+- The accepted micro-face atlas path and shared-topology smoothing remain the visual solution unless new runtime evidence regresses them.
 - RuneScape control/presentation remains the safe default and fail-open fallback.
 - Matrix terrain will be adapted to local SM64 collision surfaces; do not convert all of Gielinor at once.
 
@@ -360,13 +364,12 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 - Bundle 2.2 airborne exit/relog/stale-transform regression.
 - Bundle 2.3 F/B attack, long-jump timing and held-action entry-guard checks.
 - Bundle 4.1 remote-player isolation and sustained-runtime/performance regression.
-- Bundle 4.2B shared-topology smoothing runtime acceptance.
-- Bundle 4.2 scale/orientation/ground-anchor polish after smoothing acceptance.
-- Separate reported idle->Space fallback-to-RuneScape-player bug; intentionally not mixed into Bundle 2.4.
+- Bundle 4.2 scale/orientation/ground-anchor polish only if later runtime evidence requires it.
+- Separate reported idle->Space fallback-to-RuneScape-player bug.
 
 ### BLOCKED
 
-- None. Phase 3 is a planned dependency for collision-authentic/world-authoritative Mario movement, not a blocker for the approved local XYZ presentation proof.
+- None. Phase 3 is ready but intentionally awaits a new AAA before source changes.
 
 ## Resume Here
 
@@ -376,29 +379,29 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 - Native Y -> Matrix transform runtime-VERIFIED.
 - Actual libsm64 Mario geometry, idle and jump animations, RuneScape restore and Mario re-entry are runtime-VERIFIED.
 - Atlas micro-face v3 visual fidelity is runtime-VERIFIED: texture details restored without the giant black source-triangle artifact.
+- Bundle 4.2B shared-topology smoothing is runtime-VERIFIED at the default `70` degree threshold.
 - Bundle 2.3 native controls are runtime-partially accepted: movement animations, crouch, backflip and ground-pound work through libsm64.
-- Bundle 4.2B shared-topology smoothing is implemented statically and remains pending visual acceptance.
-- Bundle 2.4 implementation is complete statically: reversible WASD ownership, shared interpolated XYZ, local-only native X/Z presentation, per-axis baseline rebasing, and XYZ restore/fallback behavior.
+- Bundle 2.4 is runtime-VERIFIED: reversible WASD ownership, shared interpolated XYZ, visible native X/Z translation, moving actions, Ctrl+M restore/re-entry and camera-control restoration all work.
+- Bundle 2.4 visible Matrix presentation also follows different RuneScape terrain elevations correctly. Do not mistake that for native SM64 collision ingestion.
 
 **Current phase:**
 
-- Phase 2 - SM64 Passthrough Core Bridge (`ACTIVE / NEEDS TEST`).
+- Phase 3 - Matrix World / Collision Adapter (`READY / NEXT`).
 
 **Active bundle:**
 
-- Bundle 2.4 - Local XYZ presentation + WASD ownership (`ACTIVE / NEEDS TEST`).
+- Bundle 3.1 - Terrain heightfield -> SM64 surfaces (`READY`).
 
 **Next checklist item:**
 
-1. `git pull origin main`, Eclipse Java 8 clean/build, launch once. No native sidecar rebuild is required.
-2. Ctrl+M and confirm the bridge activation log reports both Y and XZ scale.
-3. Hold WASD: Mario should physically translate while Construction/RTS camera no longer pans from those keys.
-4. Confirm arrow-key camera pan and Q/E camera rotation remain usable.
-5. Test W/A/S/D + diagonal direction and speed.
-6. Test moving jump, backflip and ground-pound; horizontal displacement should remain native-driven.
-7. Ctrl+M out while displaced; RuneScape XYZ baseline should restore cleanly and normal camera WASD should return.
-8. Re-enter Mario mode and confirm no stale prior X/Z displacement.
-9. Keep the test near the loaded scene center because Phase 3 collision/scene-boundary handling is not implemented yet.
+1. Wait for AAA for Phase 3 source changes.
+2. Establish the Matrix terrain-corner height sampler at the local player/collision bubble.
+3. Define the local Matrix<->SM64 coordinate conversion using the already-accepted presentation orientation as evidence, while independently validating native collision-space signs/winding.
+4. Convert nearby RuneScape tile quads into two correctly wound SM64 terrain triangles each.
+5. Feed only a bounded local collision bubble to libsm64; do not convert the whole map.
+6. Replace the temporary flat-floor native assumption with those RuneScape terrain surfaces.
+7. Runtime-test stand/run/jump on slopes and elevation transitions, specifically verifying **native collision/action behavior**, not merely visible Matrix height following.
+8. After terrain surfaces are accepted, continue into objects/walls/platform collision proxies.
 
 **Files/systems already inspected:**
 
@@ -423,7 +426,8 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 
 - Local-player transform/input/viewport ownership.
 - Matrix held-key owner and W/A/S/D/F/Shift/Space internal mappings.
-- Construction camera's W/A/S/D held-key seam; Bundle 2.4 targets it through the shared keyboard owner rather than modifying Construction camera source.
+- Construction camera's W/A/S/D held-key seam; Bundle 2.4 runtime accepted the shared-keyboard-owner solution.
+- Bundle 2.4 local XYZ interpolation/presentation/restore behavior unless a new runtime regression appears.
 - Binary input/state packet structure; it already carries stick X/Y + A/B/Z and returns native XYZ.
 - `Class159 -> Model` generated geometry ownership.
 - `Class159.method2560(...)` coincident-vertex reuse precedent.
@@ -431,18 +435,12 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 - `Player.method10696(...)` shared player model-build suppression seam.
 - libsm64 geometry buffer/ROM atlas availability.
 - Atlas micro-face v3 artifact cause/fix unless runtime regresses.
-- Bundle 4.2B shared-boundary topology path unless runtime shows a new defect.
+- Bundle 4.2B shared-boundary topology unless runtime shows a new defect.
 
 **Pending runtime verification:**
 
-- Bundle 2.4 WASD camera arbitration.
-- Bundle 2.4 visible native X/Z translation and horizontal scale/sign.
-- Moving jump/backflip/ground-pound horizontal behavior.
-- Ctrl+M XYZ restore, re-entry baseline reset and normal camera-WASD restoration.
-- Arrow/QE camera controls while Mario owns WASD.
 - Bundle 2.3 F/B attack behavior, long-jump timing and held-entry guards.
 - Fixed-camera-look steering feel.
-- Bundle 4.2B visual smoothing quality at default 70 degrees.
 - Remote-player isolation.
 - Sustained stability / render-model error and performance behavior.
 - Airborne exit/relog lifecycle carryover.
@@ -450,11 +448,10 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 
 **Important remaining uncertainty:**
 
-- Final horizontal scale/sign is still `HYPOTHESIS`; the first visible XYZ test decides whether `3.0` and direct X/Z signs are sensible.
-- Temporary local XYZ still runs against libsm64's flat floor. Phase 3 must replace that with RuneScape terrain/object surfaces before movement can be treated as collision-authentic.
+- The current `3.0` horizontal scale/direct X/Z signs are runtime accepted for local presentation, but native collision-space conversion/winding still needs independent Phase 3 validation.
+- Temporary local XYZ still runs against libsm64's flat floor. The fact that visible Mario follows RuneScape terrain elevations does not mean the native action/collision machine understands those surfaces yet.
 - Whether the existing fixed native camera-look vector feels natural enough for WASD or needs a Matrix-camera-relative adapter.
-- Whether `70` degrees best approximates SM64's original vertex-normal look through Matrix's generated-model normal builder; smoothing remains a separate pending runtime gate.
 
 ## Next recommended work
 
-Runtime-test Bundle 2.4 once. If WASD is exclusive to Mario and native X/Z visibly moves Mario with a sensible scale/direction while Ctrl+M restores RuneScape cleanly, accept the local XYZ proof and move directly into Phase 3 terrain-surface collision. Bundle 4.2B smoothing can then be visually accepted independently without mixing movement/collision ownership into renderer polish.
+Phase 3 Bundle 3.1: stream a bounded RuneScape terrain heightfield into libsm64 as native collision surfaces. Preserve the already-working Matrix terrain-elevation presentation, and use the new surfaces specifically to make authentic SM64 collision/action logic react to RuneScape slopes and terrain. After terrain is accepted, move into object/wall/platform collision.
