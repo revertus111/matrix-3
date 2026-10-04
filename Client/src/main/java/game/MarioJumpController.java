@@ -175,7 +175,7 @@ public final class MarioJumpController {
                 AlternateCharacterController.sampleControls();
         AlternateCharacterController.PlanarDirection camera = controls.cameraForward;
         Sm64BridgeSession.setInput(
-                camera.x, camera.z,
+                -camera.x, -camera.z,
                 0.0F, 0.0F,
                 false, false, false);
         Mario64Diagnostics.observeControls(controls, false, false, false);
@@ -200,9 +200,16 @@ public final class MarioJumpController {
         }
         boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
+        /*
+         * Runtime evidence with the correctly owned Construction camera proved
+         * the entire SM64 steering basis was 180 degrees reversed: W/S and A/D
+         * were both inverted together. Keep the shared Matrix camera-forward
+         * semantic unchanged for future character drivers and adapt only the
+         * libsm64 camera-look convention here.
+         */
         Sm64BridgeSession.setInput(
-                controls.cameraForward.x,
-                controls.cameraForward.z,
+                -controls.cameraForward.x,
+                -controls.cameraForward.z,
                 controls.moveX,
                 controls.moveY,
                 buttonA,
