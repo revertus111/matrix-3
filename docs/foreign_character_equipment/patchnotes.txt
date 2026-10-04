@@ -28,3 +28,13 @@
 - Changed the default Mario helmet yaw correction from `0` to `180` degrees after the runtime Statius helmet was confirmed backwards.
 - Session values remain active after exiting calibration and are kept independently per helmet for the current client session only.
 - Permanent Mario defaults/per-item overrides remain deferred until several distinct helmet families are visually calibrated and compared.
+
+2026-10-04 - Mario full animated head attachment V4
+- Added `MarioHeadOrientationTracker` to derive a relative 3D head basis from stable top/bottom and side vertex groups inside the captured libsm64 head core.
+- Helmet orientation now composes the animated head rotation delta with the accepted 180-degree reference helmet yaw, allowing yaw/pitch/roll to follow Mario's skull instead of remaining upright.
+- Head attachment translation now uses the stable selected-head centroid; manual XYZ calibration is transformed through the same full head matrix so all offsets remain head-local during turns/tilts/flips.
+- Uses `Class261.method3572(...)` + `method3578(...)` for full 3x3 rotation and uniform scale, with yaw-only fail-open fallback when the head basis is invalid.
+- Added Matrix-visible SM64 presentation freeze in `Sm64BridgeSession`: F6 captures one immutable geometry/state snapshot while the native 30 Hz worker keeps running, and refreshes only the presentation timestamp for the existing stale-frame guard.
+- F6 calibration now freezes/unfreezes Mario's visible pose in addition to freezing gameplay input; mode exit, helmet unequip and bridge stop clear the presentation freeze.
+- Updated live calibration XYZ semantics to head-local axes; session values and permanent-default strategy remain unchanged.
+- Mario cap/hair/skull masking is still deferred until orientation/transform runtime acceptance; face/moustache/nose remain untouched.
