@@ -186,14 +186,13 @@ final class MarioHeadOrientationTracker {
         }
 
         /*
-         * Bases are stored row-major with semantic axes as columns:
-         * [ side.x up.x forward.x ]
-         * [ side.y up.y forward.y ]
-         * [ side.z up.z forward.z ]
-         *
-         * Rdelta = Bcurrent * transpose(Breference). At the capture frame this is
-         * identity; later it is the rigid rotation carrying the reference head
-         * orientation into the current animated head orientation.
+         * Mathematical column-vector delta is Bcurrent * transpose(Breference).
+         * Runtime V4 testing on 2026-10-04 verified that feeding that delta into
+         * Matrix's equipment transform makes the helmet rotate in the opposite
+         * direction from Mario's animated head. A rigid rotation's inverse is its
+         * transpose, so Matrix consumes transpose(delta) for this attachment seam.
+         * This convention is intentionally documented in docs/n64/
+         * TRANSFORM_CONVENTIONS.md instead of being rediscovered by sign guessing.
          */
         float[] delta = new float[9];
         for (int row = 0; row < 3; row++) {
@@ -206,7 +205,14 @@ final class MarioHeadOrientationTracker {
                 delta[row * 3 + col] = value;
             }
         }
-        return isRotationUsable(delta) ? delta : null;
+        if (!isRotationUsable(delta)) {
+            return null;
+        }
+        return new float[] {
+                delta[0], delta[3], delta[6],
+                delta[1], delta[4], delta[7],
+                delta[2], delta[5], delta[8]
+        };
     }
 
     /** Returns the tracked upper-skull centroid in Matrix-local X/Y/Z units. */
