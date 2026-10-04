@@ -1,8 +1,10 @@
-2026-10-03 - Test Console flyout navigation
+2026-10-03 - Test Console flyout navigation + 830-era console skin
 - Replaced the Test Console horizontal workspace tab strip with a RuneScape-style rail flyout opened from the Test rail button.
 - Added a second Con Revamp flyout for Settlement, Workers, Production, Conveyors, Debug and Tools.
 - Selecting a flyout item swaps the existing lazy-loaded Test Console content; no gameplay/runtime ownership moved into the navigator.
 - Suppressed the visible Con Revamp JTabbedPane header while preserving its existing section pages and selection ownership.
 - Added gold/bronze selected and hover states, compact separators, and left-cascading subnavigation so the main content area stays clear.
+- Reskinned the shared Client Console theme toward the selected revision-830-era mockup: near-black recessed surfaces, bronze borders, warm gold active/title treatment, cream body text, and blue secondary/status text.
+- Updated shared buttons, cards, rail states, fields, lists and popup borders through ConsoleTheme rather than duplicating per-panel styling.
 - Resizing/collapsing the console closes open flyouts to prevent detached popup placement.
 - Status: IMPLEMENTED / NEEDS RUNTIME UI TEST.

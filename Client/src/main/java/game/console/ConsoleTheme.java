@@ -23,21 +23,24 @@ import javax.swing.border.Border;
 
 public final class ConsoleTheme {
 
-    public static final Color WINDOW = new Color(20, 23, 28);
-    public static final Color RAIL = new Color(24, 28, 34);
-    public static final Color PANEL = new Color(28, 32, 39);
-    public static final Color CARD = new Color(34, 39, 47);
-    public static final Color CARD_HOVER = new Color(42, 48, 58);
-    public static final Color INPUT = new Color(23, 27, 33);
-    public static final Color BORDER = new Color(52, 59, 69);
-    public static final Color TEXT = new Color(232, 235, 239);
-    public static final Color MUTED_TEXT = new Color(153, 162, 173);
-    public static final Color ACCENT = new Color(92, 155, 230);
-    public static final Color ACCENT_DARK = new Color(67, 117, 178);
+    public static final Color WINDOW = new Color(11, 14, 18);
+    public static final Color RAIL = new Color(15, 18, 22);
+    public static final Color PANEL = new Color(16, 20, 25);
+    public static final Color CARD = new Color(21, 25, 30);
+    public static final Color CARD_HOVER = new Color(55, 42, 25);
+    public static final Color INPUT = new Color(12, 16, 20);
+    public static final Color BORDER = new Color(112, 82, 40);
+    public static final Color TEXT = new Color(235, 227, 205);
+    public static final Color MUTED_TEXT = new Color(158, 164, 171);
+    public static final Color ACCENT = new Color(111, 169, 221);
+    public static final Color ACCENT_DARK = new Color(67, 111, 153);
+    public static final Color GOLD = new Color(224, 177, 77);
+    public static final Color GOLD_BRIGHT = new Color(246, 208, 119);
+    public static final Color GOLD_DARK = new Color(88, 59, 26);
 
-    public static final Font TITLE_FONT = new Font("SansSerif", Font.BOLD, 17);
-    public static final Font SECTION_FONT = new Font("SansSerif", Font.BOLD, 13);
-    public static final Font BODY_FONT = new Font("SansSerif", Font.PLAIN, 13);
+    public static final Font TITLE_FONT = new Font("Serif", Font.BOLD, 18);
+    public static final Font SECTION_FONT = new Font("Serif", Font.BOLD, 14);
+    public static final Font BODY_FONT = new Font("Serif", Font.PLAIN, 13);
     public static final Font SMALL_FONT = new Font("SansSerif", Font.PLAIN, 12);
 
     private ConsoleTheme() {
@@ -50,7 +53,7 @@ public final class ConsoleTheme {
     public static JLabel titleLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(TITLE_FONT);
-        label.setForeground(TEXT);
+        label.setForeground(GOLD_BRIGHT);
         label.setAlignmentX(JComponent.LEFT_ALIGNMENT);
         return label;
     }
@@ -75,7 +78,7 @@ public final class ConsoleTheme {
 
         JLabel title = new JLabel(titleText);
         title.setFont(SECTION_FONT);
-        title.setForeground(TEXT);
+        title.setForeground(GOLD_BRIGHT);
         title.setAlignmentX(JComponent.LEFT_ALIGNMENT);
         card.add(title);
         return card;
@@ -124,18 +127,22 @@ public final class ConsoleTheme {
         button.setForeground(TEXT);
         button.setBackground(CARD);
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
+        button.setBorderPainted(true);
         button.setOpaque(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER),
+                BorderFactory.createEmptyBorder(7, 10, 7, 10)));
         button.getModel().addChangeListener(e -> refreshButton(button));
         refreshButton(button);
     }
 
     public static void styleRailButton(final AbstractButton button) {
         styleButton(button);
-        button.setFont(new Font("SansSerif", Font.BOLD, 14));
-        button.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        button.setFont(new Font("Serif", Font.BOLD, 14));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER),
+                BorderFactory.createEmptyBorder(9, 0, 9, 0)));
     }
 
     private static void refreshButton(AbstractButton button) {
@@ -143,13 +150,13 @@ public final class ConsoleTheme {
             button.setForeground(MUTED_TEXT);
             button.setBackground(PANEL);
         } else if (button.getModel().isPressed()) {
-            button.setForeground(TEXT);
-            button.setBackground(ACCENT_DARK);
+            button.setForeground(GOLD_BRIGHT);
+            button.setBackground(GOLD_DARK);
         } else if (button.getModel().isSelected()) {
-            button.setForeground(TEXT);
-            button.setBackground(ACCENT);
+            button.setForeground(GOLD_BRIGHT);
+            button.setBackground(new Color(67, 48, 27));
         } else if (button.getModel().isRollover()) {
-            button.setForeground(TEXT);
+            button.setForeground(GOLD_BRIGHT);
             button.setBackground(CARD_HOVER);
         } else {
             button.setForeground(TEXT);
@@ -192,8 +199,8 @@ public final class ConsoleTheme {
         list.setFont(BODY_FONT);
         list.setForeground(TEXT);
         list.setBackground(PANEL);
-        list.setSelectionForeground(TEXT);
-        list.setSelectionBackground(ACCENT_DARK);
+        list.setSelectionForeground(GOLD_BRIGHT);
+        list.setSelectionBackground(GOLD_DARK);
         list.setBorder(BorderFactory.createEmptyBorder());
         list.setOpaque(true);
     }
