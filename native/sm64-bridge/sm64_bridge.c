@@ -128,6 +128,27 @@ static int reset_mario(void)
     return 1;
 }
 
+static int is_sleep_action(uint32_t action)
+{
+    return action == SM64_ACT_START_SLEEPING || action == SM64_ACT_SLEEPING;
+}
+
+static void fill_mario_input(
+        struct SM64MarioInputs *input,
+        float cam_look_x, float cam_look_z,
+        float stick_x, float stick_y,
+        int button_a, int button_b, int button_z)
+{
+    memset(input, 0, sizeof(*input));
+    input->camLookX = cam_look_x;
+    input->camLookZ = cam_look_z;
+    input->stickX = stick_x;
+    input->stickY = stick_y;
+    input->buttonA = button_a != 0;
+    input->buttonB = button_b != 0;
+    input->buttonZ = button_z != 0;
+}
+
 static void tick_mario(
         float cam_look_x, float cam_look_z,
         float stick_x, float stick_y,
@@ -139,32 +160,41 @@ static void tick_mario(
     /*
      * Matrix3 owns the surrounding game/session lifecycle, so autonomous SM64
      * sleeping has no useful gameplay role here. Runtime evidence showed the
-     * sidecar remained alive while binary frame publication stopped immediately
-     * after libsm64 entered ACT_SLEEPING (0x0C000203). Keep the embedded Mario in
-     * the normal idle loop instead of allowing that unsupported autonomous state
-     * to become the next native tick owner.
+     * sidecar remained alive while binary frame publication stopped after
+     * libsm64 entered ACT_SLEEPING (0x0C000203).
+     *
+     * Guard both sides of the native tick. The pre-tick guard repairs any sleep
+     * action inherited from the previous frame. The post-tick guard catches the
+     * transition on the exact tick where libsm64 decides to start sleeping, resets
+     * to normal idle, and immediately re-ticks before a frame is published. That
+     * means Matrix never receives a long-lived START_SLEEPING/SLEEPING frame.
      */
-    if (s_last_mario_action == SM64_ACT_START_SLEEPING
-            || s_last_mario_action == SM64_ACT_SLEEPING) {
-        fprintf(stderr,
-                "[SM64 Bridge] Sleep state 0x%08X -> idle to preserve frame streaming\n",
-                (unsigned int) s_last_mario_action);
+    if (is_sleep_action(s_last_mario_action)) {
         sm64_set_mario_action(s_mario_id, SM64_ACT_IDLE);
         s_last_mario_action = SM64_ACT_IDLE;
     }
 
-    memset(&input, 0, sizeof(input));
-    memset(state, 0, sizeof(*state));
-    input.camLookX = cam_look_x;
-    input.camLookZ = cam_look_z;
-    input.stickX = stick_x;
-    input.stickY = stick_y;
-    input.buttonA = button_a != 0;
-    input.buttonB = button_b != 0;
-    input.buttonZ = button_z != 0;
+    fill_mario_input(&input,
+            cam_look_x, cam_look_z,
+            stick_x, stick_y,
+            button_a, button_b, button_z);
 
+    memset(state, 0, sizeof(*state));
     s_geometry.numTrianglesUsed = 0;
     sm64_mario_tick(s_mario_id, &input, state, &s_geometry);
+
+    if (is_sleep_action(state->action)) {
+        uint32_t blocked_action = state->action;
+        fprintf(stderr,
+                "[SM64 Bridge] blocked autonomous sleep 0x%08X -> idle\n",
+                (unsigned int) blocked_action);
+        sm64_set_mario_action(s_mario_id, SM64_ACT_IDLE);
+
+        memset(state, 0, sizeof(*state));
+        s_geometry.numTrianglesUsed = 0;
+        sm64_mario_tick(s_mario_id, &input, state, &s_geometry);
+    }
+
     s_last_mario_action = state->action;
 }
 
@@ -308,6 +338,8 @@ static int run_binary_bridge(const uint8_t *texture)
     _setmode(_fileno(stdin), _O_BINARY);
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
+
+    fprintf(stderr, "[SM64 Bridge] sleep-guard-v2 active\n");
 
     if (!write_binary_handshake(texture)) {
         return 0;
