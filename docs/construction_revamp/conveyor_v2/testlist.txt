@@ -1,27 +1,84 @@
-Conveyor V2.0 one-tile repeated visual module — 2026-10-03
-[x] RUNTIME REJECTED: stretch/fixed rendering let the belt surface move progressively farther from rollers/rails as the logical run became longer.
-[x] verified-static: one server-owned SettlementConveyorRun remains the gameplay/persistence owner; the client does not create per-tile Construction objects or save records.
-[x] verified-static: the complete visible authored straight assembly is normalized once to exactly 512 model units on its long axis.
-[x] verified-static: one intact raw module is cloned at exact 512-unit stations for each logical tile, then merged into one generated raw / cached Model per straight segment.
-[x] verified-static: module cloning/merging uses Matrix3 Class159 merge ownership so source face/texture/UV structures are copied with the intact module.
-[x] verified-static: old straight-run BELT_SURFACE stretch, cap spreading, detail repetition and support-spacing generation are no longer the active renderer path.
-[x] verified-static: payload interpolation, RUN/PAYLOAD sync, V2.0 output connection metadata, server speed/spacing/backpressure and physical-inventory ownership were not changed by this visual patch.
-[x] verified-static: editor-authored recipe parts that are visible/non-IGNORE become part of the repeated straight module; untouched/unassigned source sawmill geometry remains excluded.
-[x] verified-static: fresh-client fallback parts 4,5,8,16,17,18,19,21 use the same one-tile repetition path.
-[ ] Pull latest main and Eclipse Clean/Build the Client. Server rebuild is not required for this visual-only patch if the current V2.0 server is already running.
-[ ] DEMO 1T SHAPE: Show Conveyor A->B Demo and inspect the shortest run. One tile/module must look like the authored straight conveyor with no unwanted sawmill geometry.
-[ ] DEMO LENGTHS: inspect SHORT/MEDIUM/LONG (2/5/9 tiles). Every station must remain the same shape/width; belt surface, rollers, rails and braces must stay aligned from start to end with no progressive drift.
-[ ] MODULE SEAMS: repeated 512-unit modules must meet cleanly without visible gaps, overlap growth, cumulative offset or texture stretch.
-[ ] TEXTURE DETAIL: compare the repeated module to the Live Model Editor authored source; textures/details must remain present instead of degrading from compact-copy UV loss.
-[ ] BUILD PALETTE: Logistics -> Conveyor preview at 1/2/5/9 tile lengths must use the same repeated-module appearance before commit.
-[ ] ORIENTATION: build one E/W and one N/S straight run; the complete module rotates as one assembly and remains correctly centered on the logical path.
-[ ] AXIS-LOCK REGRESSION: after Point A chooses E/W or N/S, moving across the diagonal must not flip the current segment; committing B resets the lock for an intentional 90-degree next segment.
-[ ] CHAIN REGRESSION: A->B->C authoring keeps B/C as the next anchors without requiring a second click on the seam.
-[ ] PAYLOAD REGRESSION: real payload models still travel along the logical belt centerline and transfer between connected runs; repeated visual modules do not alter speed/spacing/backpressure.
-[ ] PERSISTENT VISUAL: exit/re-enter with a saved straight ConveyorRun; its logical endpoints and module count rebuild identically from sync.
-[ ] LIVE EDITOR: apply an authored conveyor recipe to the demo; visible tagged parts form the repeated module and IGNORE/untouched original-sawmill parts remain absent.
-[ ] PERFORMANCE: inspect at least one reasonably long straight run in RTS view; no material hitching or renderer failure from the merged repeated raw.
-[ ] If these visual checks pass, accept STRAIGHT_1T and move to CORNER_1T selection/rotation from existing V2.0 connection headings.
+Prefab I/O Logistics architecture — 2026-10-03
+[x] DESIGN LOCKED: production buildings expose explicit INPUT/OUTPUT ports; conveyors are transport between compatible endpoints rather than command-button-linked demo lines.
+[x] DESIGN LOCKED: conveyor has one forward OUTPUT and accepts incoming conveyor flow from rear/left/right, never through its forward/output side.
+[x] DESIGN LOCKED: conveyor input is distributed along the receiver; a source OUTPUT may connect at start/middle/near-end using receiver insertion distance.
+[x] DESIGN LOCKED: visual span crossings do not connect unless a source OUTPUT actually terminates on a valid receiver input surface/port.
+[x] DESIGN LOCKED: 90-degree turns may temporarily be represented as one straight belt output feeding the side/rear of another straight belt; custom corner visuals are deferred.
+[x] DESIGN LOCKED: factory-wide backpressure preserves ownership; blocked downstream capacity must never delete/duplicate payloads or consume finite resources unsafely.
+[x] DESIGN LOCKED: Lumberyard uses existing finite tree-node authority and produces physical Logs 1511 into an output buffer/port.
+[x] DESIGN LOCKED: Sawmill exposes INPUT_LOGS + OUTPUT_PLANKS and reuses existing atomic 1 Logs 1511 -> 2 Planks 960 processing ownership.
+[x] DESIGN LOCKED: destination Chest accepts physical conveyor items into the real chest inventory; workers later withdraw physical construction materials from eligible chests.
+[x] DESIGN LOCKED: prefab ports persist by stable prefab/piece identity + port key; local offset/facing rotate with the prefab.
+[x] DESIGN LOCKED: normal gameplay must not require Link First Two Chests / Build Sawmill Test Line or other debug topology commands.
+[x] DESIGN LOCKED: conveyor visual polish is deferred/non-blocking; STRAIGHT_1T remains the temporary visual baseline.
+
+PIO-1 — Generic endpoint framework
+[ ] Introduce one server-owned logistics endpoint abstraction supporting stable id, INPUT/OUTPUT direction, owner identity, world tile, facing, item compatibility, capacity, extract and accept semantics.
+[ ] Endpoint resolution survives settlement instance rebuild without persisting temporary runtime coordinates as identity.
+[ ] Prefab-local port offsets/facing rotate correctly with prefab rotation.
+[ ] Missing/deleted endpoint resolves to blocked/disconnected state without deleting owned items.
+
+PIO-2 — Conveyor endpoint integration
+[ ] Conveyor Point B exposes the one forward OUTPUT.
+[ ] A straight ConveyorRun exposes a distributed receiver input surface at arbitrary valid insertion distance.
+[ ] Incoming approach from receiver rear/left/right is accepted when spacing permits.
+[ ] Incoming approach through receiver forward/output side is rejected.
+[ ] Source OUTPUT -> receiver middle transfers payload ownership at exact insertion distance, then receiver direction/speed owns movement.
+[ ] Source OUTPUT -> perpendicular receiver produces a functional 90-degree transport turn without custom corner transport code.
+[ ] Two or more source runs merging into one receiver serialize deterministically through spacing/backpressure with no duplication/loss.
+[ ] Two crossing spans remain independent unless a source OUTPUT terminates on the receiver.
+
+PIO-3 — Sawmill physical ports
+[ ] Persistent Sawmill/workstation exposes INPUT_LOGS and OUTPUT_PLANKS through the generic endpoint framework.
+[ ] Conveyor-delivered Logs 1511 enter the existing machine input buffer.
+[ ] Existing atomic recipe remains exactly 1 Log -> 2 Planks 960.
+[ ] Planks remain machine-output-owned until OUTPUT_PLANKS can hand them to a connected conveyor.
+[ ] Full/blocked output safely stops further processing without consuming another Log.
+[ ] Worker-operated and automated processing cannot double-process the same machine ownership seam.
+
+PIO-4 — Chest input adapter
+[ ] Conveyor output deposits accepted physical item into the exact persistent chest inventory.
+[ ] Chest capacity/filter rejection leaves payload belt-owned and backpressures upstream.
+[ ] Player chest UI still shows the same authoritative inventory.
+[ ] Worker withdrawal uses the same chest inventory; no duplicate legacy SettlementResource mirror is created.
+
+PIO-5 — Lumberyard prefab
+[ ] Prefab has persistent identity/footprint/rotation and one OUTPUT_LOGS port.
+[ ] Lumberyard searches only its configured work radius for valid existing finite tree nodes.
+[ ] Tree selection/reservation prevents competing harvest from exceeding remaining node amount.
+[ ] Completed Lumberyard harvest consumes the same persistent node authority used by player/worker gathering.
+[ ] Produced Logs 1511 enter Lumberyard output buffer first, never spawn ownerless directly onto a belt.
+[ ] Full/backpressured Lumberyard output pauses harvesting before unsafe finite-node consumption.
+[ ] Tree depletion still removes/persists through the existing Resource World lifecycle.
+
+PIO-6 — Build Palette endpoint snapping
+[ ] Selecting Conveyor highlights/snaps to compatible OUTPUT sources spatially.
+[ ] Compatible building/chest INPUT ports highlight/snap as destinations.
+[ ] Existing conveyor rear/left/right input surface highlights at the actual insertion point.
+[ ] Forward/output-side receiver contact is visibly/authoritatively rejected.
+[ ] Server validates endpoint identity, direction, compatibility, territory and geometry before persistence.
+[ ] Complete Lumberyard -> Conveyor -> Sawmill -> Conveyor -> Chest topology can be authored without debug link/build-line commands.
+
+PIO-7 — Worker material/build bridge
+[ ] Worker can obtain physical required material from an eligible chest.
+[ ] Worker carries material to an approved Construction/prefab build job.
+[ ] Material is consumed only through the authoritative build transaction.
+[ ] Failure/interruption leaves material owned by worker/chest/build transaction with no disappearance or duplication.
+
+First factory vertical slice acceptance
+[ ] Finite tree amount decreases from real Lumberyard work.
+[ ] Lumberyard output owns corresponding physical Logs 1511.
+[ ] Logs travel through conveyor I/O into Sawmill input.
+[ ] Sawmill converts exactly 1 Log -> 2 Planks.
+[ ] Planks leave through Sawmill output and travel through conveyor into physical Chest inventory.
+[ ] Blocking the Chest propagates back through plank belt -> Sawmill output -> processing -> log belt -> Lumberyard output -> Lumberyard harvest stop.
+[ ] Restoring capacity resumes the same chain without recreation or item loss.
+[ ] Exit/re-enter preserves durable prefab/port/buffer/chest/conveyor state.
+[ ] Logout/relog preserves durable prefab/port/buffer/chest/conveyor state.
+[ ] Physical item reconciliation shows no unexplained duplication/loss across the chain.
+
+Resume Here
+[ ] Start PIO-1 with the smallest generic server endpoint contract that wraps existing Sawmill buffers, physical Chest inventory and ConveyorRun transport without replacing proven owners.
 
 Conveyor V2.0 per-segment axis lock correction — 2026-10-03
 [x] RUNTIME REJECTED: video showed the preview repeatedly flipping between E/W and N/S while moving the cursor around one Point A.
