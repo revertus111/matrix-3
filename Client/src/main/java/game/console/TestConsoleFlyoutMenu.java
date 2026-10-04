@@ -218,8 +218,6 @@ public final class TestConsoleFlyoutMenu {
         rows.add(createToolRow("Visual Explorer",
                 TestConsolePanel.TOOL_VISUAL_EXPLORER, selectedTool));
         rows.add(createDivider(ROOT_WIDTH));
-        rows.add(createToolRow("N64",
-                TestConsolePanel.TOOL_N64, selectedTool));
         rows.add(createToolRow("Atlas",
                 TestConsolePanel.TOOL_ATLAS, selectedTool));
         rows.add(createToolRow("Boss Research",
