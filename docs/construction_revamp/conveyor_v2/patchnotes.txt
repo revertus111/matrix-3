@@ -1,14 +1,15 @@
-2026-10-03 - Conveyor V2.0 one-tile repeated visual module
-- Runtime screenshots rejected the stretch/fixed visual strategy: as straight runs became longer, the stretched belt surface drifted visibly away from rollers/rails and several authored details began to distort.
-- ConveyorRunPreview now treats the complete visible authored straight assembly as one module instead of stretching selected roles across the logical run.
-- The authored module is normalized once to exactly 512 model units along its long axis, then cloned once per logical conveyor tile at exact 512-unit intervals.
-- Module copies use Matrix3's Class159 merge constructor so the source face, texture and UV structures stay attached to each intact module; all repeated modules are then merged into one generated raw and one cached renderer Model per straight segment.
-- One logical SettlementConveyorRun remains the server/persistence/transport owner. No per-tile Construction objects, scene registrations, collision entries or save records were introduced.
-- Live Model Editor conveyor roles currently act as inclusion/exclusion for the straight module; the old role-specific belt stretch, endpoint-cap spreading, repeat-detail spacing and automatic support-spacing renderer paths are superseded for straight belts.
-- The hardcoded fallback authored assembly uses the same one-tile module pipeline after a fresh client launch when no live editor recipe has been applied.
-- V2.0 payload interpolation, belt-to-belt connection metadata, backpressure, physical inventory ownership and server transport are unchanged.
-- Custom CORNER_1T / splitter / merger visuals remain later client presentation driven by the existing server-owned connection graph.
-- Status: IMPLEMENTED / NEEDS RUNTIME TEST.
+2026-10-03 - Conveyor V2 direction reset: Prefab I/O Logistics
+- Rewrote the scoped Conveyor V2 PROJECT around real production INPUT/OUTPUT mechanics instead of command-button linking and visual-first conveyor work.
+- Conveyor visual polish is explicitly deferred/non-blocking; current STRAIGHT_1T rendering remains sufficient for gameplay development.
+- Locked the core factory contract: production buildings expose stable INPUT/OUTPUT ports; conveyors move physical items between compatible endpoints; gameplay topology must be created spatially through Build Palette placement rather than Link First Two Chests / Build Sawmill Test Line shortcuts.
+- Locked conveyor direction semantics: one forward OUTPUT; rear/left/right are valid INPUT approaches; the receiver's forward/output side is not an input.
+- Locked distributed belt input: a source conveyor OUTPUT may terminate at the receiver start, middle, or near end using receiver insertion distance, enabling temporary turns and merges without special curved transport logic.
+- Span crossings do not auto-connect; connection requires a source OUTPUT terminating on a valid receiver input surface/port.
+- Backpressure is factory-wide: full chest -> blocked belt -> full machine output -> processing stop -> backed-up input -> Lumberyard output full -> harvesting stop, with no item loss/duplication.
+- Defined first prefab targets: Lumberyard work-radius harvesting of existing finite tree nodes -> physical Logs 1511 output, Sawmill physical INPUT_LOGS / OUTPUT_PLANKS using the existing 1 Log -> 2 Planks recipe, and Chest conveyor input -> real chest inventory -> worker withdrawal.
+- Prefab port metadata rotates with prefab anchor/rotation and persists by stable owner identity + port key, not temporary world coordinates.
+- Ordered implementation as PIO-1 endpoint framework -> PIO-2 conveyor integration -> PIO-3 Sawmill ports -> PIO-4 chest adapter -> PIO-5 Lumberyard prefab -> PIO-6 Build Palette snapping -> PIO-7 worker material/build bridge.
+- Status: DESIGN LOCKED / IMPLEMENTATION NEXT.
 
 2026-10-03 - Conveyor V2.0 per-segment axis lock correction
 - Runtime video showed the straight preview re-evaluating dominant X/Y movement on every hover update, causing the entire belt to snap repeatedly between horizontal and vertical as the cursor crossed the diagonal threshold.
