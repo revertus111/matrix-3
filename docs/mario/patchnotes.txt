@@ -146,3 +146,9 @@
 - Mario's current client capability profile is melee-only; strict server enforcement of per-character weapon/style restrictions is intentionally carryover rather than pretending the client capability is authority.
 - `MarioVisualRenderer` now keeps the last successfully rendered Mario model for a bounded 750 ms grace window across transient native geometry/model-build gaps. Cached fallback renders do not extend the deadline; real Mario-mode/bridge loss still restores the RuneScape body immediately.
 - Runtime gate: rotate camera through N/E/S/W and confirm W remains camera-forward; idle several seconds then Space and confirm no RuneScape-body pop; stand near an attackable NPC and tap F once to confirm native Mario attack plus normal RuneScape NPC combat/damage/XP.
+
+2026-10-04 - Bundle 1.3 camera-relative Mario forward-axis correction
+- Runtime showed the new camera-relative path was inverted at the north-facing case even though the Matrix camera-forward vector itself matched the rendered camera.
+- libsm64's own test/reference feeds forward/up as **negative** `stickY`; the shared `AlternateCharacterController` intentionally keeps generic `+moveY = forward` semantics for future character drivers.
+- `MarioJumpController` now converts only the Mario driver's generic `moveY` to `-stickY` when publishing the libsm64 input snapshot. Horizontal stick X/camera-look fields and the shared controller remain unchanged.
+- No native sidecar rebuild or protocol change is required. Runtime gate remains N/E/S/W plus live camera rotation: W must always move camera-forward and S camera-backward.
