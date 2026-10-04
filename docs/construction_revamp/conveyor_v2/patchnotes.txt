@@ -1,3 +1,16 @@
+2026-10-03 - PIO-2A distributed Conveyor INPUT endpoint semantics
+- User verified the PIO-1 Eclipse Java 8 Server clean/build with zero errors; PIO-1 compile gate is accepted.
+- Extended SettlementLogisticsEndpoint with Facing.opposite() and source-aware canAcceptFrom(...) semantics so INPUT endpoints can validate where a payload is coming from without taking ownership away from the underlying inventory/transport owner.
+- Added stable Conveyor INPUT identity (`CONVEYOR:<runId>/INPUT`) with concrete contact/insertion derived from the current straight-run persistent geometry.
+- Distributed Conveyor INPUT now reuses the existing canAcceptPayloadAt(insertionDistance) spacing/backpressure owner instead of introducing a second belt-capacity implementation.
+- Locked cardinal approach validation in code: source flow matching receiver flow = rear input; perpendicular flow = left/right input; source flow opposite receiver flow = rejected forward/output-side entry.
+- Added canConnectConveyorRuns/connectConveyorRuns helpers; source Point B must actually lie on the receiver so visual crossings remain non-connections.
+- Added transferConnectedConveyorOutput(...) for physical payloads: receiver payload is staged at the exact insertion distance, source extraction commits ownership, and failed extraction rolls the staged receiver payload back.
+- Synthetic development payloads remain excluded from the production endpoint handoff.
+- Player-facing PIO-6 presentation direction recorded: use simple red/green directional arrows for INPUT/OUTPUT instead of another large overlay; server endpoint direction remains authoritative.
+- Existing SettlementInstance live belt branch is intentionally unchanged in PIO-2A. PIO-2B will replace only that proven live transfer/link-creation seam after this patch clean-builds.
+- Status: PIO-2A IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD; PIO-2B NEXT.
+
 2026-10-03 - PIO-1 generic INPUT/OUTPUT endpoint framework
 - Added SettlementLogisticsEndpointRef as the stable serializable endpoint identity: owner type + persistent owner id + stable port key; runtime world coordinates are never identity.
 - Added SettlementLogisticsEndpoint with INPUT/OUTPUT direction, plot position, facing, item compatibility, capacity/amount, extract and accept semantics.
@@ -7,7 +20,7 @@
 - Conveyor OUTPUT exposes only physicalInventoryOwned payloads to the production endpoint contract; development-only synthetic payloads cannot leak into physical factory inventory through this layer.
 - Deleted/missing piece/run references resolve to null/blocked without mutating or deleting owned items.
 - Existing live conveyor tick/special-case transfer path is intentionally unchanged in PIO-1; PIO-2 will wire the production transport path through the endpoint framework and add distributed belt INPUT semantics.
-- Status: IMPLEMENTED / NEEDS ECLIPSE SERVER CLEAN-BUILD. PIO-2 NEXT.
+- Status: IMPLEMENTED / ECLIPSE JAVA 8 SERVER CLEAN-BUILD VERIFIED 2026-10-03.
 
 2026-10-03 - Conveyor V2 direction reset: Prefab I/O Logistics
 - Rewrote the scoped Conveyor V2 PROJECT around real production INPUT/OUTPUT mechanics instead of command-button linking and visual-first conveyor work.
