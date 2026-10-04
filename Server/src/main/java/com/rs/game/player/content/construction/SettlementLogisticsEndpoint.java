@@ -23,6 +23,10 @@ public interface SettlementLogisticsEndpoint {
             int turns = quarterTurns & 0x3;
             return values()[(ordinal() + turns) & 0x3];
         }
+
+        public Facing opposite() {
+            return values()[(ordinal() + 2) & 0x3];
+        }
     }
 
     SettlementLogisticsEndpointRef getRef();
@@ -50,4 +54,17 @@ public interface SettlementLogisticsEndpoint {
     boolean canAccept(int itemId, int amount);
 
     int accept(int itemId, int amount);
+
+    /**
+     * Direction-aware acceptance seam. Normal piece endpoints use their existing
+     * item/capacity rules; distributed conveyor inputs override this to reject an
+     * approach through the receiver's forward/output side.
+     */
+    default boolean canAcceptFrom(
+            SettlementLogisticsEndpoint source, int itemId, int amount) {
+        return source != null
+                && source.getDirection() == Direction.OUTPUT
+                && source.getPlane() == getPlane()
+                && canAccept(itemId, amount);
+    }
 }
