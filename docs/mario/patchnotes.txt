@@ -152,3 +152,10 @@
 - libsm64's own test/reference feeds forward/up as **negative** `stickY`; the shared `AlternateCharacterController` intentionally keeps generic `+moveY = forward` semantics for future character drivers.
 - `MarioJumpController` now converts only the Mario driver's generic `moveY` to `-stickY` when publishing the libsm64 input snapshot. Horizontal stick X/camera-look fields and the shared controller remain unchanged.
 - No native sidecar rebuild or protocol change is required. Runtime gate remains N/E/S/W plus live camera rotation: W must always move camera-forward and S camera-backward.
+
+2026-10-04 - Bundle 1.3 camera-steering regression rollback + resolved-vector fix
+- User runtime reported the Mario-only `stickY` inversion made steering broadly worse. That change was immediately reverted; the Mario driver again publishes the shared controller's original stick axes unchanged.
+- Root cause handling moved to the camera reference instead of changing source-game stick semantics.
+- Vanilla camera-relative steering now derives forward geometrically from Matrix's already-resolved viewport camera position to the exact X/Z focus point passed into `Class246.method3359(...)`: `normalize(focus - camera)`. Detached/free Class411 cameras already use the same position-to-look-point rule.
+- The older 14-bit yaw reconstruction remains only as a fallback when the resolved vanilla camera vector is unavailable. This removes the yaw handedness/sign assumption from the normal path.
+- No native sidecar rebuild or protocol change is required. Runtime gate remains N/E/S/W plus rotate-while-holding-W before Bundle 1.3 camera steering can be accepted.
