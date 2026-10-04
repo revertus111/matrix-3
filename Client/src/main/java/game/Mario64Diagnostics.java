@@ -12,6 +12,8 @@ import java.util.Locale;
 public final class Mario64Diagnostics {
 
     private static final int MAX_EVENTS = 256;
+    private static final long DIRECTION_PROBE_INTERVAL_MILLIS = 500L;
+    private static final float DIRECTION_PROBE_MIN_SPEED = 0.5F;
     private static final Object EVENT_LOCK = new Object();
     private static final Deque<String> EVENTS = new ArrayDeque<String>(MAX_EVENTS);
 
@@ -45,6 +47,7 @@ public final class Mario64Diagnostics {
     private static boolean lastSentB;
     private static boolean lastSentZ;
     private static String lastFailureReason;
+    private static long lastDirectionProbeMillis;
 
     private Mario64Diagnostics() {
     }
@@ -171,6 +174,7 @@ public final class Mario64Diagnostics {
         snapshot = next;
 
         recordRuntimeTransitions(next);
+        recordDirectionProbe(next);
     }
 
     static void noteFallback(String reason) {
@@ -308,6 +312,45 @@ public final class Mario64Diagnostics {
                     + " sentA=" + value.sentA);
             lastSuppressRuneScape = value.suppressRuneScape;
         }
+    }
+
+    /**
+     * Pure-W diagnostic for the unresolved Matrix-camera/libsm64 coordinate seam.
+     * It compares the requested camera-forward direction with Mario's actual
+     * horizontal native velocity. dot~=+1 is aligned, -1 is reversed, and dot~=0
+     * with a large cross magnitude indicates an approximately 90-degree rotation.
+     * This is read-only and deliberately rate-limited so it cannot become a new
+     * movement/control owner or flood the console/event recorder.
+     */
+    private static void recordDirectionProbe(Snapshot value) {
+        if (value == null || !"MARIO".equals(value.mode) || !value.bridgeReady
+                || !value.geometryPresent || Math.abs(value.moveX) > 0.05F
+                || value.moveY < 0.95F) {
+            return;
+        }
+
+        float speed = (float) Math.sqrt(value.vx * value.vx + value.vz * value.vz);
+        if (Float.isNaN(speed) || Float.isInfinite(speed) || speed < DIRECTION_PROBE_MIN_SPEED) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now - lastDirectionProbeMillis < DIRECTION_PROBE_INTERVAL_MILLIS) {
+            return;
+        }
+        lastDirectionProbeMillis = now;
+
+        float velocityX = value.vx / speed;
+        float velocityZ = value.vz / speed;
+        float dot = value.cameraForwardX * velocityX + value.cameraForwardZ * velocityZ;
+        float cross = value.cameraForwardX * velocityZ - value.cameraForwardZ * velocityX;
+        String message = "DIRECTION_W cam="
+                + formatVector2(value.cameraForwardX, value.cameraForwardZ)
+                + " nativeVel=" + formatVector2(velocityX, velocityZ)
+                + " dot=" + formatFloat(dot)
+                + " cross=" + formatFloat(cross);
+        appendEvent(message);
+        System.out.println("[SM64 Direction] " + message);
     }
 
     private static void appendEvent(String message) {
