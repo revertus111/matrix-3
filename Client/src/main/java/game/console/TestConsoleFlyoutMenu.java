@@ -67,7 +67,6 @@ public final class TestConsoleFlyoutMenu {
     private JWindow conRevampWindow;
     private JComponent anchor;
     private JButton conRevampButton;
-    private MouseAdapter anchorHoverListener;
 
     public TestConsoleFlyoutMenu(Handler handler) {
         this.handler = handler;
@@ -87,7 +86,7 @@ public final class TestConsoleFlyoutMenu {
         }
 
         source.setToolTipText(null);
-        attachAnchor(source);
+        anchor = source;
         cancelScheduledHide();
         rebuildRoot();
         conRevampWindow.setVisible(false);
@@ -103,28 +102,6 @@ public final class TestConsoleFlyoutMenu {
         rootWindow.setLocation(x, y);
         rootWindow.setVisible(true);
         rootWindow.toFront();
-    }
-
-    private void attachAnchor(JComponent source) {
-        if (anchor == source && anchorHoverListener != null) {
-            return;
-        }
-        if (anchor != null && anchorHoverListener != null) {
-            anchor.removeMouseListener(anchorHoverListener);
-        }
-        anchor = source;
-        anchorHoverListener = new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                cancelScheduledHide();
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                scheduleHide();
-            }
-        };
-        anchor.addMouseListener(anchorHoverListener);
     }
 
     public void scheduleHide() {
@@ -369,7 +346,6 @@ public final class TestConsoleFlyoutMenu {
                 java.awt.Cursor.HAND_CURSOR));
         button.setBorder(rowBorder(selected));
 
-        button.addActionListener(e -> clickAction.run());
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -382,7 +358,33 @@ public final class TestConsoleFlyoutMenu {
             }
 
             @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    cancelScheduledHide();
+                    button.getModel().setArmed(true);
+                    button.getModel().setPressed(true);
+                    e.consume();
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e)) {
+                    return;
+                }
+                boolean inside = button.contains(e.getPoint());
+                button.getModel().setPressed(false);
+                button.getModel().setArmed(false);
+                if (inside && clickAction != null) {
+                    clickAction.run();
+                }
+                e.consume();
+            }
+
+            @Override
             public void mouseExited(MouseEvent e) {
+                button.getModel().setPressed(false);
+                button.getModel().setArmed(false);
                 button.setBackground(selected ? ROW_SELECTED : ROW_BG);
                 button.setForeground(selected ? GOLD_BRIGHT : TEXT);
                 scheduleHide();
