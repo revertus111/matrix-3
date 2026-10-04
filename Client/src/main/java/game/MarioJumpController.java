@@ -1,17 +1,24 @@
 package game;
 
 /**
- * Matrix3 client-thread presentation adapter for Mario-mode native SM64 state.
+ * Matrix3 client-thread presentation/input adapter for Mario-mode native SM64 state.
  *
  * The legacy class name is retained because the established viewport hook calls
- * this owner. Java no longer simulates Mario gravity here: libsm64 owns the
- * Mario vertical/action simulation, while this class maps published native Y
- * onto Matrix3's already-verified local-player scene transform.
+ * this owner. Java no longer simulates Mario gravity here: libsm64 owns Mario's
+ * movement/action simulation while this class forwards Matrix input and maps the
+ * published native vertical state onto Matrix3's verified local-player transform.
  */
 public final class MarioJumpController {
 
-    // Class549_Sub1 maps java.awt.event.KeyEvent.VK_SPACE (32) to Matrix3 key 83.
-    private static final int INTERNAL_SPACE_KEY = 83;
+    // Class549_Sub1 normalized-key mappings, verified from anIntArray8901.
+    private static final int INTERNAL_W_KEY = 33;
+    private static final int INTERNAL_A_KEY = 48;
+    private static final int INTERNAL_S_KEY = 49;
+    private static final int INTERNAL_D_KEY = 50;
+    private static final int INTERNAL_ATTACK_KEY = 51; // F -> SM64 B
+    private static final int INTERNAL_CROUCH_KEY = 81; // Shift -> SM64 Z
+    private static final int INTERNAL_SPACE_KEY = 83;  // Space -> SM64 A
+    private static final float DIAGONAL_STICK_SCALE = 0.70710677F;
 
     // Initial presentation calibration only. Native SM64 remains physics owner.
     // Tune from runtime evidence before collision adapter work treats this as final.
@@ -23,6 +30,8 @@ public final class MarioJumpController {
     private static Player lastPlayer;
     private static boolean modeWasMario;
     private static boolean spaceReleaseRequired;
+    private static boolean attackReleaseRequired;
+    private static boolean crouchReleaseRequired;
     private static boolean baselineValid;
     private static boolean appliedYValid;
 
@@ -49,6 +58,8 @@ public final class MarioJumpController {
             resetPresentation();
             modeWasMario = false;
             spaceReleaseRequired = false;
+            attackReleaseRequired = false;
+            crouchReleaseRequired = false;
             PlayerControllerMode.resetForPlayerLifecycle();
             lastPlayer = player;
         }
@@ -81,8 +92,8 @@ public final class MarioJumpController {
 
         Float latestNativeY = Sm64BridgeSession.getLatestY();
         if (!baselineValid) {
-            // Do not feed jump input until both Matrix and native baselines exist.
-            Sm64BridgeSession.setButtonA(false);
+            // Do not feed movement/actions until Matrix and native baselines exist.
+            Sm64BridgeSession.setInput(0.0F, 0.0F, false, false, false);
             if (latestNativeY == null) {
                 return;
             }
@@ -94,17 +105,10 @@ public final class MarioJumpController {
             appliedYValid = false;
             System.out.println("[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale "
                     + SM64_TO_MATRIX_Y_SCALE + ")");
+            System.out.println("[Mario] Controls: WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
-        boolean spaceDown = keyDown(INTERNAL_SPACE_KEY);
-        if (spaceReleaseRequired) {
-            Sm64BridgeSession.setButtonA(false);
-            if (!spaceDown) {
-                spaceReleaseRequired = false;
-            }
-        } else {
-            Sm64BridgeSession.setButtonA(spaceDown);
-        }
+        publishControls();
 
         Float interpolatedNativeY = Sm64BridgeSession.getInterpolatedY();
         if (interpolatedNativeY == null) {
@@ -134,9 +138,40 @@ public final class MarioJumpController {
         appliedYValid = true;
     }
 
+    private static void publishControls() {
+        float stickX = (keyDown(INTERNAL_D_KEY) ? 1.0F : 0.0F)
+                - (keyDown(INTERNAL_A_KEY) ? 1.0F : 0.0F);
+        float stickY = (keyDown(INTERNAL_W_KEY) ? 1.0F : 0.0F)
+                - (keyDown(INTERNAL_S_KEY) ? 1.0F : 0.0F);
+        if (stickX != 0.0F && stickY != 0.0F) {
+            stickX *= DIAGONAL_STICK_SCALE;
+            stickY *= DIAGONAL_STICK_SCALE;
+        }
+
+        boolean spaceDown = keyDown(INTERNAL_SPACE_KEY);
+        if (spaceReleaseRequired && !spaceDown) {
+            spaceReleaseRequired = false;
+        }
+        boolean buttonA = !spaceReleaseRequired && spaceDown;
+
+        boolean attackDown = keyDown(INTERNAL_ATTACK_KEY);
+        if (attackReleaseRequired && !attackDown) {
+            attackReleaseRequired = false;
+        }
+        boolean buttonB = !attackReleaseRequired && attackDown;
+
+        boolean crouchDown = keyDown(INTERNAL_CROUCH_KEY);
+        if (crouchReleaseRequired && !crouchDown) {
+            crouchReleaseRequired = false;
+        }
+        boolean buttonZ = !crouchReleaseRequired && crouchDown;
+
+        Sm64BridgeSession.setInput(stickX, stickY, buttonA, buttonB, buttonZ);
+    }
+
     private static void enterMarioMode() {
         resetPresentation();
-        spaceReleaseRequired = keyDown(INTERNAL_SPACE_KEY);
+        captureHeldActionGuards();
         Sm64BridgeSession.start();
     }
 
@@ -144,7 +179,7 @@ public final class MarioJumpController {
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
         resetPresentation();
-        spaceReleaseRequired = keyDown(INTERNAL_SPACE_KEY);
+        captureHeldActionGuards();
     }
 
     private static void fallbackToRuneScape(Player player, String reason) {
@@ -152,9 +187,15 @@ public final class MarioJumpController {
         restoreGroundBaseline(player);
         Sm64BridgeSession.stop();
         resetPresentation();
-        spaceReleaseRequired = keyDown(INTERNAL_SPACE_KEY);
+        captureHeldActionGuards();
         modeWasMario = false;
         PlayerControllerMode.setMode(PlayerControllerMode.Mode.RUNESCAPE);
+    }
+
+    private static void captureHeldActionGuards() {
+        spaceReleaseRequired = keyDown(INTERNAL_SPACE_KEY);
+        attackReleaseRequired = keyDown(INTERNAL_ATTACK_KEY);
+        crouchReleaseRequired = keyDown(INTERNAL_CROUCH_KEY);
     }
 
     private static void restoreGroundBaseline(Player player) {
