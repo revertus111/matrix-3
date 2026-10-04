@@ -175,7 +175,7 @@ public final class MarioJumpController {
                 AlternateCharacterController.sampleControls();
         AlternateCharacterController.PlanarDirection camera = controls.cameraForward;
         Sm64BridgeSession.setInput(
-                camera.x, camera.z,
+                -camera.x, -camera.z,
                 0.0F, 0.0F,
                 false, false, false);
         Mario64Diagnostics.observeControls(controls, false, false, false);
@@ -201,17 +201,17 @@ public final class MarioJumpController {
         boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
         /*
-         * verified-static against libsm64's reference test and input math:
-         * camLook is camera -> Mario/focus, keyboard forward is stickY=-1,
-         * and libsm64 already negates public stickX before SM64 consumes it.
-         * Keep Matrix's generic +moveY=forward vocabulary intact and adapt only
-         * the Mario/libsm64 stick-Y convention here.
+         * VERIFIED runtime failure classification: with the correct live
+         * Construction camera selected, W/S and A/D were both reversed together.
+         * That is a 180-degree basis error, not an individual stick-axis error.
+         * Keep the shared Matrix camera-forward semantic untouched and rotate the
+         * Mario/libsm64 camera-look basis by 180 degrees at this adapter boundary.
          */
         Sm64BridgeSession.setInput(
-                controls.cameraForward.x,
-                controls.cameraForward.z,
+                -controls.cameraForward.x,
+                -controls.cameraForward.z,
                 controls.moveX,
-                -controls.moveY,
+                controls.moveY,
                 buttonA,
                 buttonB,
                 buttonZ);
