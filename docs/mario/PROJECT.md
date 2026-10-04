@@ -34,7 +34,9 @@ Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 
 The user explicitly reprioritized from Phase 3 collision work to a reusable imported-character foundation before adding more games. The approved current bundle introduced `AlternateCharacterController` as the shared viewport/control owner, `AlternateCharacterInputKeyboard` as the shared Matrix keyboard view, camera-relative movement input, a generic RuneScape combat-intent bridge, and a bounded Mario replacement-grace attempt for the reported idle->Space RuneScape-body pop.
 
-Runtime video + diagnostics on 2026-10-04 established the steering root cause: while the rendered Construction/RTS camera rotated, sampled `cameraForward` remained effectively frozen near `(-0.006, 1.000)`. `ConstructionBuildCamera` owns the live `Class24.aClass411_Sub1_158` detached camera independently of the normal Matrix detached-camera flags previously consulted by `AlternateCharacterController`. The approved fix now prioritizes the active Construction camera and reuses its real position -> look-point vector. No Mario/libsm64 stick-axis transform was changed. Runtime acceptance is pending.
+Runtime evidence on 2026-10-04 narrowed the steering regression in stages. Video/diagnostics first proved the rendered Construction/RTS camera could rotate while the old sampler stayed effectively frozen near `(-0.006, 1.000)`, establishing Construction camera ownership as the upstream fault. After the live Construction camera was selected and the Mario/libsm64 camera-look basis was corrected by 180 degrees at the Mario adapter boundary, the user runtime-confirmed north-facing W/S/A/D became correct while south-facing W/S/A/D remained exactly reversed. That heading-dependent result rejects another stick-axis fix: the remaining fault is the RTS heading source itself.
+
+`AlternateCharacterController.getCameraForward()` now uses `ConstructionBuildCamera.getRtsMinimapYawUnits()` first while Construction RTS is active. That accepted minimap/compass heading is derived from the same `rtsYawRadians` used by `applyRtsOrientation(...)`; alternate steering restores `rtsYaw` from the 14-bit value and derives forward as `(sin(yaw), cos(yaw))`. Construction Free and other detached cameras retain the established position/look-point fallback. Mario stick X/Y and the accepted Mario-only 180-degree camera-look conversion are unchanged. Runtime acceptance is pending south/east/west/live rotation; north is already runtime-confirmed correct.
 
 The user also runtime-confirmed on 2026-10-04 that the 750 ms replacement grace did **not** eliminate the idle->Space RuneScape-body reappearance. Do not treat that grace as an accepted fix. The Test Console -> `N64` workspace with a `Mario 64` sub-tab and client-tick flight recorder remains available for that presentation regression after the active steering gate passes.
 
@@ -59,11 +61,12 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - `AlternateCharacterController` is the single client-side dispatch/input/camera foundation for imported-character drivers. Future characters plug into this owner rather than adding another viewport tick or keyboard/controller path.
 - `AlternateCharacterController.ControlState` provides one shared vocabulary: camera-relative WASD movement, Space jump, F primary action and Shift modifier action. Character drivers decide how those actions map into their native/game-specific state machine.
 - `AlternateCharacterInputKeyboard` is a reversible view over Matrix3's existing `Class549` keyboard owner. The original AWT listener remains installed and tracks physical keys; while an alternate character owns movement normal `method6514(...)` consumers see W/A/S/D released while the master controller reads the original raw held state through `method6518(...)`. No second keyboard listener is installed.
-- `AlternateCharacterController.getCameraForward()` resolves the actual Matrix camera forward vector. When Construction Free/RTS is active it now explicitly prioritizes `Class24.aClass411_Sub1_158`, because that camera owns the rendered Construction view even when normal Matrix detached-camera flags do not expose ownership. Other detached/free Class411 cameras use their normal Matrix ownership flags. Vanilla cameras use resolved viewport camera-position -> focus-position geometry, with the older 14-bit yaw derivation retained only as fallback.
+- `AlternateCharacterController.getCameraForward()` resolves the actual Matrix camera forward vector. Construction RTS uses Construction's canonical 14-bit RTS yaw (`getRtsMinimapYawUnits()` restored back to `rtsYaw`) because that heading is generated from the same `rtsYawRadians` that renders/pans the RTS view. Construction Free and other detached/free Class411 cameras use actual position/look geometry. Vanilla cameras use resolved viewport camera-position -> focus-position geometry, with the older 14-bit vanilla yaw derivation retained only as fallback.
 - `Sm64BridgeSession` owns the persistent sidecar process, fixed 30 Hz SM64 tick, immutable control snapshots, and immutable native state/geometry publication.
 - The native input snapshot now includes dynamic `camLookX/camLookZ` alongside stick/A/B/Z. The binary protocol already carried those fields, so the camera-relative fix requires no sidecar rebuild/protocol bump.
 - `Sm64BridgeSession` publishes one-native-tick-delayed interpolated native X/Y/Z from the same previous/latest frame pair and shared interpolation alpha.
 - `MarioJumpController.tick()` is retained only as the established viewport compatibility seam; it delegates to `AlternateCharacterController`, which dispatches into `MarioJumpController.tickMarioDriver()` for the Mario/libsm64 implementation.
+- Mario/libsm64 camera-relative movement uses a Mario-driver-only 180-degree camera-look conversion: shared Matrix `cameraForward` remains generic, while `MarioJumpController` forwards `-cameraForward` to libsm64. Stick X/Y remain the shared raw control axes.
 - A/B/Z held while Mario mode is entered are suppressed until released so mode activation cannot manufacture a jump/attack/crouch action.
 - Bundle 2.4 captures Matrix/native XYZ baselines when Mario mode starts. Native X/Z deltas are applied locally at the horizontal presentation scale while native Y retains the established positive-up -> Matrix negative-Y conversion.
 - Default horizontal presentation scale is `3.0`; `-Dmatrix3.sm64.horizontalScale=<positive-float>` provides runtime calibration. The default `3.0` and direct X/Z signs are runtime accepted for the current local presentation path.
@@ -75,7 +78,7 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - `MarioVisualRenderer` owns local Mario visual presentation from native geometry. It consumes immutable libsm64 frames on Matrix's render thread, converts them to `Class159`, builds a normal Matrix `Model`, and renders through the established direct scene-preview seam.
 - Textured Mario faces keep the accepted micro-face atlas approximation. Bundle 4.2B shares compatible coincident source-triangle boundary vertices through an angle-gated topology path so Matrix normal generation shades compatible surfaces more smoothly without indiscriminately welding hard edges together.
 - `MarioVisualRenderer` allows a bounded 750 ms last-good-model grace across transient geometry/model-build gaps. Cached fallback renders do not extend the deadline. Runtime evidence now proves this grace alone does not eliminate the reported idle->Space RuneScape-body pop.
-- `Mario64Diagnostics` is a read-only developer recorder attached to the established Mario client tick. It snapshots the existing controller, bridge/native frame, action/animation, sampled/forwarded controls, airborne presentation and actual `MarioVisualRenderer.shouldSuppressLocalPlayer(...)` predicate into a bounded event history. It also has a rate-limited pure-W direction probe comparing sampled camera-forward against actual native libsm64 X/Z velocity; the probe remains only as a runtime verification aid after the Construction camera ownership fix.
+- `Mario64Diagnostics` is a read-only developer recorder attached to the established Mario client tick. It snapshots the existing controller, bridge/native frame, action/animation, sampled/forwarded controls, airborne presentation and actual `MarioVisualRenderer.shouldSuppressLocalPlayer(...)` predicate into a bounded event history. It also has a rate-limited pure-W direction probe comparing sampled camera-forward against actual native libsm64 X/Z velocity; the probe remains only as a runtime verification aid after the steering-source fixes.
 - Test Console -> `N64` is the reusable developer workspace for imported N64 games; `Mario 64` is the first game sub-tab and later games should add sibling sub-tabs instead of mixing game-specific diagnostics together.
 - Default smoothing threshold is `70` degrees; `-Dmatrix3.sm64.smoothAngleDegrees=0..180` provides runtime calibration. The default `70` degree path is runtime accepted.
 - `Class578.method6834(...)` remains the established Matrix direct-preview render seam; Mario is another consumer rather than a second renderer.
@@ -113,6 +116,7 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - The reported idle->Space RuneScape-body reappearance still occurs with the 750 ms replacement grace in place. `VERIFIED` regression report from the user on 2026-10-04; the grace is not an accepted fix.
 - Bundle 1.3 camera-relative steering remained incorrect after the resolved vanilla camera-position -> focus-position change. `VERIFIED` regression report from the user on 2026-10-04.
 - User video + diagnostics prove the rendered Construction/RTS camera can rotate while the old alternate-character sampler reports an effectively frozen camera-forward vector near `(-0.006, 1.000)`. `VERIFIED` 2026-10-04.
+- After the Mario/libsm64 180-degree camera-look correction, north-facing W/S/A/D is correct while south-facing W/S/A/D is exactly reversed. `VERIFIED` 2026-10-04; this heading-dependent result is the evidence for replacing RTS detached-vector reconstruction with Construction's canonical RTS yaw.
 
 ### verified-static
 
@@ -124,8 +128,9 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - Construction Free Build and RTS camera paths both poll W/A/S/D through the shared `method6514(...)` held-key seam; arrows are separate camera movement keys and Q/E remain separate camera controls.
 - `AlternateCharacterInputKeyboard` delegates the full `Class549` contract to the original owner and filters only W/A/S/D from `method6514(...)`; the master controller reads original raw held state rather than installing another listener.
 - `ConstructionBuildCamera` owns the rendered Construction detached camera through `Class24.aClass411_Sub1_158` while active. That ownership does not require the normal detached-camera flags checked by the prior alternate-character sampler, so Construction activity must be checked explicitly before vanilla camera fallback.
+- Construction RTS orientation is canonically owned by `rtsYawRadians`; `applyRtsOrientation(...)` renders it as planar `(sin(yaw), cos(yaw))`, while `getRtsMinimapYawUnits()` exposes the runtime-accepted opposite-handed Matrix minimap representation `-rtsYaw` in a 14-bit turn domain. Alternate steering now restores `rtsYaw` from that accepted public seam before detached-camera fallback.
 - `Class246.method3359(...)` uses a 14-bit yaw domain; the older yaw-derived camera->focus planar direction is `(-sin(yaw), cos(yaw))`. The normal vanilla path prefers resolved camera-position -> focus-position geometry; detached Class411 cameras use their actual position/look point.
-- libsm64 defines `camLookX/camLookZ` as the Mario-position minus camera-position direction in its reference test. The active Construction camera now supplies that direction through the same detached-camera path; runtime acceptance is pending.
+- libsm64 defines `camLookX/camLookZ` as the Mario-position minus camera-position direction in its reference test. Mario's driver converts generic Matrix forward to libsm64's effective camera-relative basis by forwarding the negated shared camera-forward vector; stick X/Y remain unchanged.
 - `libsm64` exposes Mario input/state, collision surfaces, dynamic surface objects and already-animated `SM64MarioGeometryBuffers`.
 - The existing binary bridge command already carries `camLookX`, `camLookZ`, `stickX`, `stickY`, A, B and Z, and every binary frame already returns native X/Y/Z; no native protocol version change or sidecar rebuild is required for the camera fix.
 - `Sm64BridgeSession.NativePosition` uses one shared interpolation alpha for X/Y/Z, preventing presentation axes from sampling different native phases.
@@ -155,7 +160,7 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 
 ### UNKNOWN
 
-- Runtime acceptance of the new Construction-camera ownership fix: `cameraForward` must rotate with the rendered Construction view and Mario must remain camera-relative across N/E/S/W and live camera rotation.
+- Runtime acceptance of the canonical RTS-yaw steering source: north is already correct; south/east/west and rotate-while-holding-W must confirm the heading remains camera-relative across the full orbit.
 - The exact condition that makes RuneScape local-player suppression drop during the idle->Space transition. The 750 ms grace did not solve it; N64 flight-recorder evidence remains required after the active steering gate.
 - Runtime acceptance of the first Mario F/B -> stock RuneScape NPC combat bridge.
 - Runtime UI/recorder acceptance of Test Console -> N64 -> Mario 64 under Eclipse Java 8.
@@ -218,9 +223,12 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - [x] Reject/revert the Mario-only stick-Y inversion after runtime evidence showed it made steering broadly worse. `VERIFIED` 2026-10-04.
 - [x] Replace normal vanilla yaw reconstruction with resolved camera-position -> focus-position direction; runtime evidence still reports incorrect steering. `VERIFIED` regression 2026-10-04.
 - [x] Add read-only pure-W direction alignment probe (`cameraForward` vs native `vx/vz`, `dot/cross`) before any further coordinate transform change. `verified-static`.
-- [x] Runtime video/diagnostics identify stale Construction-camera ownership as the active steering fault: rendered RTS camera rotates while sampled `cameraForward` remains frozen. `VERIFIED` 2026-10-04.
-- [x] Patch `AlternateCharacterController` to prioritize the active Construction `Class24` detached camera before normal detached/vanilla fallback. `verified-static`.
-- [ ] Runtime verify Construction camera rotation changes `cameraForward` and W remains camera-forward at north/east/south/west headings.
+- [x] Runtime video/diagnostics identify stale Construction-camera ownership as an upstream steering fault: rendered RTS camera rotates while sampled `cameraForward` remains frozen. `VERIFIED` 2026-10-04.
+- [x] Patch `AlternateCharacterController` to recognize active Construction ownership before normal detached/vanilla fallback. `verified-static`.
+- [x] Runtime classify the post-ownership Mario/libsm64 basis as 180 degrees reversed and correct only the Mario camera-look boundary; north-facing W/S/A/D is now correct. `VERIFIED` 2026-10-04.
+- [x] Runtime prove south-facing W/S/A/D remains exactly reversed while north is correct, classifying the remaining failure as heading-source-specific rather than a stick-axis sign. `VERIFIED` 2026-10-04.
+- [x] Make Construction RTS steering use Construction's canonical accepted 14-bit yaw source and derive forward as `(sin(rtsYaw), cos(rtsYaw))`; retain detached position/look fallback for Construction Free/other detached cameras. `verified-static`.
+- [ ] Runtime verify south/east/west W/S/A/D after the canonical RTS-yaw patch; north is already verified correct.
 - [ ] Runtime verify live Construction camera rotation while moving remains camera-relative; use the pure-W probe as confirmation rather than a new transform-discovery step.
 - [ ] Diagnose the exact idle->Space suppression/frame transition with the N64 recorder and patch only the proven presentation seam.
 - [ ] Runtime acceptance after evidence-driven fix: idle several seconds -> Space keeps Mario visible with no RuneScape-body pop.
@@ -376,16 +384,16 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 - Phase status: ACTIVE / NEEDS TEST
 - Bundle: 1.3 - Universal alternate-character controller + combat bridge
 - Bundle status: IMPLEMENTED / NEEDS TEST
-- Approval state: user supplied explicit `AAA` for the master-controller/camera/fallback/combat bundle, explicit `SAP AAA` for N64 diagnostics, explicit `SAP AAA` for the read-only steering direction probe, and explicit `SAP AAA` for the Construction detached-camera ownership fix on 2026-10-04.
-- Current checklist item: runtime-verify that Construction camera rotation now changes sampled `cameraForward` and that Mario remains camera-relative across N/E/S/W and live rotation.
-- Current objective: accept the proven Construction camera ownership fix without changing source-game stick semantics, then return to the remaining Bundle 1.3 presentation/combat gates.
+- Approval state: user supplied explicit `AAA` for the master-controller/camera/fallback/combat bundle plus repeated explicit `SAP AAA` continuation approvals for the steering regression fixes on 2026-10-04.
+- Current checklist item: runtime-verify the canonical Construction RTS-yaw steering source, starting with south-facing W/S/A/D because north is already runtime-correct.
+- Current objective: accept south/east/west plus live-rotation camera-relative steering without changing Mario stick axes again, then return to the remaining Bundle 1.3 presentation/combat gates.
 
 ## Checklist / patch status
 
 | Item | Phase | Bundle | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Matrix transform/input/controller foundation | 1 | 1.x | 🔵 In Progress | Master alternate-character controller implemented; runtime gate pending. |
-| Universal character input/camera | 1 | 1.3 | NEEDS TEST | Construction detached-camera ownership bug is patched; N/E/S/W + live-rotation runtime acceptance pending. |
+| Universal character input/camera | 1 | 1.3 | NEEDS TEST | Canonical Construction RTS-yaw source is patched; north is VERIFIED, south/east/west/live rotation pending. |
 | Universal character combat bridge | 1/5 | 1.3 | NEEDS TEST | Mario melee intent routes to stock NPC attack; server `PlayerCombatNew` remains authority. |
 | Passthrough architecture | 2 | 2.1 | DONE | `SM64_PASSTHROUGH_ARCHITECTURE.md`. |
 | Native `sm64_bridge` sidecar | 2/4 | 2.1/4.1 | VERIFIED | State + binary geometry executable runtime-proven locally. |
@@ -410,7 +418,8 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 - Matrix scene/model mutation stays on Matrix's client/render ownership path even though native simulation runs on a worker.
 - The user explicitly approved and runtime-accepted a temporary **local-only** native X/Z presentation proof before Phase 3. This changes presentation, not networking/clipping/pathfinding/server authority.
 - Imported-character mode owns WASD through a reversible view of the existing Matrix keyboard owner; do not add a second keyboard listener or fork Construction camera controls.
-- Construction Free/RTS camera ownership must be resolved from `ConstructionBuildCamera`/`Class24` before normal detached/vanilla camera fallback. Do not reintroduce stick-axis or yaw-sign guesses for this bug.
+- Construction camera ownership must be resolved before normal detached/vanilla fallback. While Construction RTS is active, use Construction's canonical accepted RTS yaw rather than re-deriving heading from the detached look controller. Construction Free/other detached views retain position/look reconstruction.
+- Do not reintroduce Mario stick-axis sign guesses for the current steering bug. North-correct/south-reversed runtime evidence proves the remaining issue was heading-source-specific.
 - Visible terrain elevation following is already accepted through Matrix presentation/rebasing. Phase 3 should not redo that visual behavior; it should make the native SM64 collision/action machine consume equivalent RuneScape surfaces.
 - Phase 3 remains the required boundary for authentic RuneScape terrain/object collision and final movement/coordinate authority.
 - Direct libsm64 animated geometry is the selected Mario visual path.
@@ -441,7 +450,7 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 ### BLOCKED
 
-- None. The Construction camera ownership bug is patched; Bundle 1.3 camera steering now needs one focused runtime acceptance pass.
+- None. The canonical RTS-yaw steering source is patched; Bundle 1.3 camera steering needs one focused south/east/west/live-rotation acceptance pass.
 
 ## Resume Here
 
@@ -457,10 +466,11 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 - Bundle 2.4 visible Matrix presentation also follows different RuneScape terrain elevations correctly. Do not mistake that for native SM64 collision ingestion.
 - Bundle 1.3 master alternate-character dispatch/input, generic keyboard ownership, Matrix-camera-forward -> libsm64 camera input and stock RuneScape NPC combat intent bridge remain implemented and need runtime acceptance.
 - The speculative Mario-only stick-Y inversion was runtime-rejected and reverted.
-- The resolved vanilla camera-position -> focus-position steering change also remained runtime-incorrect because Construction RTS was rendering through a separately owned detached `Class24` camera.
-- User video + diagnostics proved the rendered Construction camera rotated while sampled `cameraForward` stayed near `(-0.006, 1.000)`. That establishes the active-camera ownership bug rather than another libsm64 stick-axis bug.
-- `AlternateCharacterController.getCameraForward()` now explicitly prioritizes the active Construction `Class24.aClass411_Sub1_158` camera and reuses the existing detached-camera position -> look-point vector. No stick/native/protocol change was made.
-- The read-only pure-W direction probe remains available only to confirm the corrected camera vector and native travel alignment.
+- User video + diagnostics proved stale/wrong Construction camera heading input was upstream of libsm64.
+- The Mario/libsm64 adapter now keeps shared Matrix camera semantics generic and applies the required 180-degree camera-look conversion only for Mario.
+- User runtime-confirmed that correction makes north-facing W/S/A/D correct, while south-facing W/S/A/D remained exactly reversed. That heading-dependent evidence rejects another stick-axis change.
+- `AlternateCharacterController.getCameraForward()` now uses Construction RTS's canonical accepted yaw (`getRtsMinimapYawUnits()` restored to `rtsYaw`) and derives forward as `(sin(yaw), cos(yaw))`; Construction Free/other detached cameras retain position/look fallback.
+- The read-only pure-W direction probe remains available only as confirmation of corrected travel alignment.
 - User runtime evidence confirms the bounded 750 ms Mario replacement grace did not solve the idle->Space RuneScape-body pop. Do not repeat that grace-only fix.
 - Test Console -> N64 -> Mario 64 flight-recorder infrastructure is implemented in `main`; its presentation-regression capture remains carryover after steering acceptance.
 
@@ -475,11 +485,11 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 **Next checklist item:**
 
 1. `git pull origin main`, Eclipse Java 8 clean/build, launch once. No native sidecar rebuild is required.
-2. Enter Construction Free/RTS camera mode and Mario mode.
-3. Rotate the rendered Construction camera through clearly different headings while watching the N64 diagnostics. `cameraForward=(x,z)` must visibly change with the view instead of staying near one frozen vector.
-4. Hold **only W** at north/east/south/west. Mario should move camera-forward at every heading.
-5. Rotate the Construction camera while holding W. Steering should follow the live rendered view continuously.
-6. Use `[SM64 Direction]` only as confirmation: after Mario settles into each direction, samples should trend toward `dot ~= +1`, `cross ~= 0` rather than showing a frozen camera vector.
+2. Enter Construction RTS camera mode and Mario mode.
+3. Test **south first**: W must be forward/up-screen, S backward/down-screen, A left, D right. North is already runtime-verified correct on the current Mario camera-basis conversion.
+4. Test east and west with the same screen-relative mapping.
+5. Hold W while rotating the Construction RTS camera through north/east/south/west; steering must follow continuously with no 180-degree flip.
+6. Use `cameraForward=(x,z)` / `[SM64 Direction]` only as confirmation if needed; do not change stick signs again unless new post-yaw-source evidence proves a different failure.
 7. If steering passes, return immediately to the saved idle->Space N64 flight-recorder capture and then the F -> stock RuneScape NPC combat proof.
 8. Only after Bundle 1.3 passes return the architectural main path to Phase 3.1 terrain collision.
 
@@ -520,7 +530,7 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 - Local-player transform/input/viewport ownership.
 - Matrix held-key owner and W/A/S/D/F/Shift/Space internal mappings.
 - Construction camera's W/A/S/D held-key seam; Bundle 2.4 runtime accepted the shared-keyboard-owner solution.
-- Construction active-camera ownership: runtime + source evidence now establish that Construction Free/RTS uses `Class24.aClass411_Sub1_158` and must be prioritized explicitly by alternate-character steering.
+- Construction active-camera ownership and RTS heading source: runtime/source evidence establish Construction owns the detached Class24 camera, but RTS steering should consume the canonical `rtsYawRadians` path exposed through `getRtsMinimapYawUnits()` rather than reconstructing the RTS heading from the detached look point.
 - Stock NPC attack packet/server `PlayerCombatNew` ownership unless the first combat runtime test fails.
 - Bundle 2.4 local XYZ interpolation/presentation/restore behavior unless a new runtime regression appears.
 - Binary input/state packet structure; it already carries camLook X/Z + stick X/Y + A/B/Z and returns native XYZ.
@@ -535,8 +545,8 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 **Pending runtime verification:**
 
-- Construction camera rotation updates sampled `cameraForward` instead of leaving it frozen.
-- Bundle 1.3 camera-relative movement across north/east/south/west and live Construction camera rotation after the ownership fix.
+- South/east/west camera-relative W/S/A/D after the canonical Construction RTS-yaw source patch; north is already VERIFIED correct.
+- Live rotate-while-holding-W across the full RTS orbit.
 - Test Console -> N64 -> Mario 64 Java 8 compile/UI/recorder gate.
 - Exact idle->Space suppression/native-frame event sequence using the N64 flight recorder.
 - Bundle 1.3 Mario F -> stock RuneScape NPC combat/RS stats proof.
@@ -547,7 +557,7 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 **Important remaining uncertainty:**
 
-- The Construction active-camera ownership bug is now `VERIFIED` and patched. Runtime still needs to prove that feeding that real camera vector fully resolves Mario/libsm64 steering in all headings; do not change stick signs again unless new post-fix evidence demands it.
+- The heading-dependent north-correct/south-reversed regression is `VERIFIED`; the canonical RTS-yaw source is now patched but still needs runtime acceptance across south/east/west/live rotation. Do not change Mario stick signs again unless new evidence after this patch demands it.
 - The 750 ms replacement grace is implemented but runtime-rejected as a complete idle->Space fix. The exact suppression/render condition causing the body pop is still `UNKNOWN` until the N64 recorder captures the transition.
 - The current `3.0` horizontal scale/direct X/Z signs are runtime accepted for local presentation, but native collision-space conversion/winding still needs independent Phase 3 validation.
 - Temporary local XYZ still runs against libsm64's flat floor and is not the server player's authoritative position. The first combat proof should be done near the underlying server position.
@@ -555,4 +565,4 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 ## Next recommended work
 
-Runtime-verify the Construction camera ownership fix in one launch: confirm `cameraForward` rotates with the rendered Construction camera, W remains camera-forward at north/east/south/west, and live rotation while holding W remains correct. If that passes, return immediately to the saved idle->Space N64 recorder capture and the nearby-NPC F/punch -> stock RuneScape combat proof. Only after Bundle 1.3 passes should the main architectural path return to Phase 3 Bundle 3.1 and stream a bounded RuneScape terrain heightfield into libsm64 as native collision surfaces. Link can then be added as another driver/capability profile without creating another input/camera/damage framework.
+Runtime-verify the canonical Construction RTS-yaw steering source in one launch: test south first, then east/west, then rotate continuously while holding W. North-facing controls are already runtime-confirmed correct. If the full-orbit steering passes, return immediately to the saved idle->Space N64 recorder capture and the nearby-NPC F/punch -> stock RuneScape combat proof. Only after Bundle 1.3 passes should the main architectural path return to Phase 3 Bundle 3.1 and stream a bounded RuneScape terrain heightfield into libsm64 as native collision surfaces. Link can then be added as another driver/capability profile without creating another input/camera/damage framework.
