@@ -2,7 +2,7 @@
 
 This file is the authoritative transform/sign reference for imported N64 character presentation in Matrix3.
 
-The purpose is simple: **do not rediscover axis direction by guessing.** If runtime evidence changes a convention, update this file in the same approved work.
+**Do not rediscover axis direction by guessing.** Runtime/world-facing conventions and source-local mesh conventions are documented separately because they are not interchangeable.
 
 ## Evidence labels
 
@@ -11,127 +11,144 @@ The purpose is simple: **do not rediscover axis direction by guessing.** If runt
 - `HYPOTHESIS` = plausible but not proven.
 - `UNKNOWN` = deliberately not assumed.
 
-## Current Mario presentation conventions
-
-### libsm64 geometry -> Matrix model
+## Matrix presentation geometry
 
 `VERIFIED / verified-static`
 
-- libsm64 publishes final animated triangle geometry, not a Matrix-compatible bone skeleton.
-- Matrix builds Mario from that final geometry every native frame.
-- Mario model X is copied into Matrix model X.
-- Mario model Z is copied into Matrix model Z.
-- libsm64 Y is mirrored for Matrix presentation: `matrixY = -libsm64Y`.
-- The Y mirror reverses triangle winding, so Mario visual faces are emitted as A/C/B rather than A/B/C.
+- libsm64 publishes final animated triangle geometry.
+- Matrix model X receives libsm64 X.
+- Matrix model Z receives libsm64 Z.
+- libsm64 Y is mirrored: `matrixY = -libsm64Y`.
+- The Y mirror reverses winding, so Mario visual faces are emitted A/C/B rather than A/B/C.
 
-### Native facing
-
-`VERIFIED`
-
-- `Sm64BridgeSession.NativeState.faceAngle` is the native Mario facing authority used by the equipment adapter.
-- Do **not** infer forward from a cross-product alone when `faceAngle` provides an independent runtime reference.
-- Exact human-readable world labels such as “+X is east” or “+Z is north” are intentionally not asserted here until separately runtime-proven. They are not needed for the attachment contract.
-
-### RuneScape helmet base yaw
+## Native Mario world-facing authority
 
 `VERIFIED`
 
-- Statius's full helm rendered backwards when the Mario helmet base yaw offset was `0°`.
-- Mario helmet presentation therefore uses a base worn-model yaw correction of `180°` before any per-item yaw delta.
-- Per-item/workbench yaw is an additive correction on top of that base.
+- `Sm64BridgeSession.NativeState.faceAngle` is the runtime Mario facing authority used by the equipment adapter.
+- Do not infer world forward from a cross product or source-local mesh coordinate when `faceAngle` provides the independent runtime reference.
+- Human-readable labels such as “+X is east” remain intentionally unstated until independently proven; the attachment contract does not require them.
 
-### Animated Mario head delta
+## RuneScape helmet base yaw
+
+`VERIFIED`
+
+- Statius's full helm rendered backwards with a zero-degree Mario helmet base yaw.
+- Mario helmet presentation therefore uses the accepted `180°` worn-model base correction before per-item yaw delta.
+- Per-item/workbench yaw is additive on top of that base.
+
+## Animated Mario head delta
 
 `VERIFIED 2026-10-04`
 
-V4 originally derived the rigid head rotation mathematically as:
+The original V4 rigid delta was derived as:
 
 ```text
 rawDelta = currentHeadBasis * transpose(referenceHeadBasis)
 ```
 
-That matrix followed Mario's motion but drove the Matrix helmet in the **opposite direction** at runtime.
+It followed Mario's motion but drove the Matrix helmet in the opposite direction at runtime.
 
-For the Matrix equipment transform seam, the accepted correction is therefore:
+The accepted Matrix attachment seam consumes:
 
 ```text
 matrixHeadDelta = inverse(rawDelta)
                 = transpose(rawDelta)
 ```
 
-This is not a cosmetic `+180°` patch. It is the inverse rigid rotation required by the Matrix transform convention used at this attachment seam.
+This is a matrix-direction correction, not another cosmetic yaw hack.
 
-**Rule:** if a future attachment follows motion but moves opposite to the source joint/head, check matrix direction/order first. Do not blindly add another yaw flip.
+**Rule:** when an attachment follows the correct motion but in the opposite direction, check `R` versus `R^-1`, multiplication order and local/world interpretation before adding a sign or 180-degree offset.
 
-### Head-local calibration
-
-`verified-static`
-
-Helmet calibration values are defined in Mario head-local space:
-
-- X = local side offset.
-- Y = local vertical offset.
-- Z = local forward/back seating offset.
-- Yaw delta = item correction layered on the `180°` Mario helmet base yaw.
-
-The final local offset is transformed through the same animated head rotation used by the helmet, so seating corrections move with the skull rather than staying world-fixed.
-
-## Mario head masking
+## Head-local calibration
 
 `verified-static`
 
-The N64 Equipment Workbench can remove Mario source triangles before `MarioVisualRenderer` builds the Matrix model.
+Existing helmet calibration values are transformed through the same animated head matrix:
 
-Current mask controls are geometric and intentionally simple:
+- local X = side seating correction;
+- local Y = vertical seating correction;
+- local Z = forward/back seating correction;
+- yaw delta = item correction on top of the accepted base yaw.
 
-- **Cut starts at body height %**: higher values remove only the top of Mario; lowering the value removes farther down the head/body.
-- **Head cut radius %**: limits the cut to the central head region instead of removing every high triangle in the animation.
-- **Only while a helmet is equipped**: prevents the saved mask preview from affecting normal helmetless Mario.
+These are Matrix attachment-space semantics. Do not conflate them with the raw SM64 face display-list axes below.
 
-The default helmet-safe preset is:
+## SM64 semantic FACE local axes
+
+`verified-static — pinned source geometry`
+
+Protocol v2 preserves original display-list-local coordinates before libsm64 applies the animated matrix.
+
+For the pinned Mario mixed FACE mesh:
+
+- **local Z = face left/right** — geometry is symmetric across ±Z;
+- **local +Y = face-out/front** — eye/moustache/front projection evidence points outward in +Y;
+- the remaining local axis supplies face vertical extent.
+
+These facts are used only for semantic FACE measurement:
 
 ```text
-start height = 72%
-radius       = 40%
-helmet only  = true
+fit width  = FACE local-Z span
+fit height = FACE remaining vertical span
+face depth = FACE local-Y span
 ```
 
-The initial workflow is to remove cap/hair/top-skull geometry while keeping the face below the cut line. Mario's nose is intentionally treated as a visual feature to preserve rather than a helmet-fit dimension.
+Mario's nose projects into FACE local depth. Full-helmet auto-fit deliberately does **not** enlarge helmet width just to contain that protected forward projection.
 
-## Validation procedure for any new transform
+**Critical rule:** source-local +Y face-out is not automatically Matrix world forward. `faceAngle` remains world-facing truth.
 
-Before accepting a new N64/Matrix transform convention, check all of these in one runtime session:
+## Semantic helmet coverage
 
-1. Reference/idle orientation looks correct.
-2. Turn left and right: destination moves the same direction as source.
-3. Pitch/nod: destination pitches the same direction.
-4. Roll/tilt: destination rolls the same direction.
-5. Full-body flip: no inverse/doubled rotation appears.
-6. Local X/Y/Z offset stays attached to the source part while it rotates.
-7. Freeze the presentation and confirm calibration controls no longer fight animation.
+`verified-static; runtime acceptance pending`
 
-If one axis is wrong, identify whether the problem is:
+Protocol-v2 stable parts:
 
-- basis handedness,
-- matrix direction (`R` vs `R^-1`),
-- multiplication order,
-- local/world-space confusion,
-- or an actual fixed model-axis correction.
+```text
+FACE             protected
+EYES             protected
+MOUSTACHE        protected
+CAP              removable
+HAIR_SIDEBURN    removable
+HAIR_BACK        removable
+UNKNOWN          preserved
+```
 
-Do not classify an axis/sign as `VERIFIED` until the runtime behavior proves it.
+`FULL_HELM_SAFE` hides only CAP + named hair. The complete FACE mesh remains, guaranteeing the nose is preserved.
+
+The old height/radius cylinder is now only a protocol-v1 debug fallback and is ignored while semantic metadata is available.
+
+## Validation procedure for new transforms
+
+Before accepting any new transform convention, check in one runtime session:
+
+1. Idle/reference orientation.
+2. Turn left/right — destination follows same direction.
+3. Pitch/nod — same direction.
+4. Roll/tilt — same direction.
+5. Full-body flip — no inverse/doubled rotation.
+6. Local XYZ correction stays attached while rotating.
+7. Frozen presentation remains stable while editing.
+
+If wrong, classify the cause before patching:
+
+- basis handedness;
+- matrix direction (`R` vs `R^-1`);
+- multiplication order;
+- local/world-space mismatch;
+- fixed worn-model axis correction.
+
+Do not classify a runtime transform sign as `VERIFIED` from static intuition alone.
 
 ## Developer workbench
-
-The live controls are in:
 
 ```text
 Client Console -> N64 -> Mario 64 -> Equipment Workbench
 ```
 
-Current runtime values can be explicitly written from the tool to:
+Runtime profile snapshots may be explicitly written to:
 
 ```text
 docs/n64/MARIO_EQUIPMENT_RUNTIME.md
 ```
 
-That runtime file is a calibration snapshot. This file (`TRANSFORM_CONVENTIONS.md`) remains the authoritative explanation of why transforms/signs are applied the way they are.
+That file records calibration state. This file remains the authoritative explanation of transform/sign conventions.
