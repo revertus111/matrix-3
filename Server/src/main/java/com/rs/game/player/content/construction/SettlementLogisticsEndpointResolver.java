@@ -18,6 +18,7 @@ public final class SettlementLogisticsEndpointResolver {
     public static final String CHEST_OUTPUT = "OUTPUT";
     public static final String SAWMILL_INPUT_LOGS = "INPUT_LOGS";
     public static final String SAWMILL_OUTPUT_PLANKS = "OUTPUT_PLANKS";
+    public static final String CONVEYOR_INPUT = "INPUT";
     public static final String CONVEYOR_OUTPUT = "OUTPUT";
 
     /*
@@ -69,6 +70,132 @@ public final class SettlementLogisticsEndpointResolver {
         default:
             return null;
         }
+    }
+
+    /**
+     * Resolves one contact point on a straight ConveyorRun's distributed INPUT
+     * surface. The stable endpoint identity remains CONVEYOR:<runId>/INPUT while
+     * the insertion distance is derived from the current persistent geometry.
+     */
+    public static SettlementLogisticsEndpoint resolveConveyorInput(
+            SettlementState state, long runId,
+            int plotX, int plotY, int plane) {
+        if (state == null || runId <= 0L) {
+            return null;
+        }
+        state.normalize();
+        SettlementConveyorRun run = state.findConveyorRun(runId);
+        if (run == null || !run.isValid() || !run.isStraight()
+                || run.getPlane() != plane) {
+            return null;
+        }
+        double insertion = run.getDistanceAtPlotTile(plotX, plotY);
+        if (insertion < 0.0) {
+            return null;
+        }
+        return new ConveyorInputEndpoint(
+                SettlementLogisticsEndpointRef.conveyor(runId, CONVEYOR_INPUT),
+                run, plotX, plotY, insertion);
+    }
+
+    /**
+     * Geometry-only connection validation for one source belt OUTPUT terminating
+     * on another straight belt's distributed INPUT surface.
+     *
+     * Receiver flow EAST accepts source flow EAST/NORTH/SOUTH and rejects source
+     * flow WEST, which is the receiver's forward/output-side approach. The same
+     * cardinal rule rotates with every receiver heading.
+     */
+    public static boolean canConnectConveyorRuns(
+            SettlementConveyorRun source, SettlementConveyorRun receiver) {
+        if (source == null || receiver == null || source == receiver
+                || source.getRunId() == receiver.getRunId()
+                || !source.isValid() || !receiver.isValid()
+                || !source.isStraight() || !receiver.isStraight()
+                || source.getPlane() != receiver.getPlane()) {
+            return false;
+        }
+        double insertion = receiver.getDistanceAtPlotTile(
+                source.getEndPlotX(), source.getEndPlotY());
+        if (insertion < 0.0) {
+            return false;
+        }
+        SettlementLogisticsEndpoint.Facing sourceFacing = getRunForwardFacing(source);
+        SettlementLogisticsEndpoint.Facing receiverFacing = getRunForwardFacing(receiver);
+        return sourceFacing != null && receiverFacing != null
+                && sourceFacing != receiverFacing.opposite();
+    }
+
+    /**
+     * Persists a valid source OUTPUT -> receiver distributed INPUT connection.
+     * Crossing spans are not enough: the source Point B must actually lie on the
+     * receiver and the source approach may not enter through receiver-forward.
+     */
+    public static boolean connectConveyorRuns(
+            SettlementConveyorRun source, SettlementConveyorRun receiver) {
+        if (!canConnectConveyorRuns(source, receiver)) {
+            return false;
+        }
+        double insertion = receiver.getDistanceAtPlotTile(
+                source.getEndPlotX(), source.getEndPlotY());
+        return source.setOutputConnection(receiver.getRunId(), insertion);
+    }
+
+    /**
+     * Atomic production-path belt handoff using the generic endpoint metadata.
+     *
+     * The destination payload is staged first. Source extraction then commits the
+     * ownership handoff; if extraction unexpectedly fails, the staged receiver
+     * payload is removed so ownership cannot duplicate.
+     *
+     * Only physical inventory payloads are exposed by Conveyor OUTPUT endpoints.
+     * Developer-only synthetic payloads remain outside the production contract.
+     */
+    public static boolean transferConnectedConveyorOutput(
+            SettlementState state, SettlementConveyorRun source) {
+        if (state == null || source == null || !source.hasOutputConnection()) {
+            return false;
+        }
+        SettlementConveyorRun receiver = state.findConveyorRun(source.getOutputRunId());
+        if (!canConnectConveyorRuns(source, receiver)) {
+            return false;
+        }
+
+        SettlementLogisticsEndpoint output = resolve(
+                state,
+                SettlementLogisticsEndpointRef.conveyor(
+                        source.getRunId(), CONVEYOR_OUTPUT));
+        SettlementLogisticsEndpoint input = resolveConveyorInput(
+                state,
+                receiver.getRunId(),
+                source.getEndPlotX(), source.getEndPlotY(), source.getPlane());
+        if (!(input instanceof ConveyorInputEndpoint) || output == null) {
+            return false;
+        }
+
+        SettlementConveyorPayload payload = source.getFrontPayloadAtOutput();
+        if (payload == null || !payload.isPhysicalInventoryOwned()) {
+            return false;
+        }
+        int itemId = payload.getItemId();
+        int amount = payload.getAmount();
+        if (!output.canExtract(itemId, amount)
+                || !input.canAcceptFrom(output, itemId, amount)) {
+            return false;
+        }
+
+        ConveyorInputEndpoint conveyorInput = (ConveyorInputEndpoint) input;
+        SettlementConveyorPayload accepted =
+                conveyorInput.acceptTransferred(itemId, amount, true);
+        if (accepted == null) {
+            return false;
+        }
+        int extracted = output.extract(itemId, amount);
+        if (extracted != amount) {
+            conveyorInput.rollbackAccepted(accepted.getPayloadId());
+            return false;
+        }
+        return true;
     }
 
     public static List<SettlementLogisticsPortDefinition> getPortDefinitions(
@@ -142,6 +269,10 @@ public final class SettlementLogisticsEndpointResolver {
     private static SettlementLogisticsEndpoint resolveConveyorEndpoint(
             SettlementState state, SettlementLogisticsEndpointRef ref) {
         if (!CONVEYOR_OUTPUT.equals(ref.getPortKey())) {
+            /*
+             * Distributed INPUT contacts require a concrete contact coordinate;
+             * use resolveConveyorInput(...) instead of resolving INPUT by ref only.
+             */
             return null;
         }
         SettlementConveyorRun run = state.findConveyorRun(ref.getOwnerId());
@@ -160,6 +291,30 @@ public final class SettlementLogisticsEndpointResolver {
             if (piece != null && piece.getPieceId() == pieceId) {
                 return piece;
             }
+        }
+        return null;
+    }
+
+    private static SettlementLogisticsEndpoint.Facing getRunForwardFacing(
+            SettlementConveyorRun run) {
+        if (run == null || !run.isValid()) {
+            return null;
+        }
+        int fromX = run.isStraight() ? run.getStartPlotX() : run.getBendPlotX();
+        int fromY = run.isStraight() ? run.getStartPlotY() : run.getBendPlotY();
+        int dx = run.getEndPlotX() - fromX;
+        int dy = run.getEndPlotY() - fromY;
+        if (dx > 0) {
+            return SettlementLogisticsEndpoint.Facing.EAST;
+        }
+        if (dx < 0) {
+            return SettlementLogisticsEndpoint.Facing.WEST;
+        }
+        if (dy > 0) {
+            return SettlementLogisticsEndpoint.Facing.NORTH;
+        }
+        if (dy < 0) {
+            return SettlementLogisticsEndpoint.Facing.SOUTH;
         }
         return null;
     }
@@ -328,6 +483,134 @@ public final class SettlementLogisticsEndpointResolver {
         }
     }
 
+    private static final class ConveyorInputEndpoint
+            implements SettlementLogisticsEndpoint {
+
+        private final SettlementLogisticsEndpointRef ref;
+        private final SettlementConveyorRun run;
+        private final int plotX;
+        private final int plotY;
+        private final double insertionDistanceTiles;
+
+        private ConveyorInputEndpoint(
+                SettlementLogisticsEndpointRef ref,
+                SettlementConveyorRun run,
+                int plotX, int plotY,
+                double insertionDistanceTiles) {
+            this.ref = ref;
+            this.run = run;
+            this.plotX = plotX;
+            this.plotY = plotY;
+            this.insertionDistanceTiles = insertionDistanceTiles;
+        }
+
+        @Override
+        public SettlementLogisticsEndpointRef getRef() {
+            return ref;
+        }
+
+        @Override
+        public Direction getDirection() {
+            return Direction.INPUT;
+        }
+
+        @Override
+        public int getPlotX() {
+            return plotX;
+        }
+
+        @Override
+        public int getPlotY() {
+            return plotY;
+        }
+
+        @Override
+        public int getPlane() {
+            return run.getPlane();
+        }
+
+        /**
+         * Distributed conveyor INPUT uses the receiver flow heading as its
+         * orientation reference. rear/left/right are derived relative to this
+         * heading rather than pretending the full belt has one physical input face.
+         */
+        @Override
+        public Facing getFacing() {
+            return getRunForwardFacing(run);
+        }
+
+        @Override
+        public boolean supportsItem(int itemId) {
+            return itemId >= 0;
+        }
+
+        @Override
+        public long getAvailableAmount(int itemId) {
+            return 0L;
+        }
+
+        @Override
+        public long getAvailableCapacity(int itemId) {
+            return supportsItem(itemId)
+                    && run.canAcceptPayloadAt(insertionDistanceTiles)
+                    ? Long.MAX_VALUE : 0L;
+        }
+
+        @Override
+        public boolean canExtract(int itemId, int amount) {
+            return false;
+        }
+
+        @Override
+        public int extract(int itemId, int amount) {
+            return 0;
+        }
+
+        @Override
+        public boolean canAccept(int itemId, int amount) {
+            return amount > 0 && supportsItem(itemId)
+                    && run.canAcceptPayloadAt(insertionDistanceTiles);
+        }
+
+        @Override
+        public boolean canAcceptFrom(
+                SettlementLogisticsEndpoint source, int itemId, int amount) {
+            if (source == null
+                    || source.getDirection() != Direction.OUTPUT
+                    || source.getPlane() != getPlane()
+                    || source.getPlotX() != plotX
+                    || source.getPlotY() != plotY
+                    || !canAccept(itemId, amount)) {
+                return false;
+            }
+            Facing sourceFacing = source.getFacing();
+            Facing receiverFacing = getFacing();
+            return sourceFacing != null && receiverFacing != null
+                    && sourceFacing != receiverFacing.opposite();
+        }
+
+        @Override
+        public int accept(int itemId, int amount) {
+            SettlementConveyorPayload payload =
+                    acceptTransferred(itemId, amount, true);
+            return payload == null ? 0 : amount;
+        }
+
+        private SettlementConveyorPayload acceptTransferred(
+                int itemId, int amount, boolean physicalInventoryOwned) {
+            if (!canAccept(itemId, amount)) {
+                return null;
+            }
+            return run.addTransferredPayload(
+                    itemId, amount, physicalInventoryOwned,
+                    insertionDistanceTiles);
+        }
+
+        private void rollbackAccepted(long payloadId) {
+            run.removePayload(payloadId);
+        }
+    }
+
     private static final class ConveyorOutputEndpoint
             implements SettlementLogisticsEndpoint {
 
@@ -367,20 +650,7 @@ public final class SettlementLogisticsEndpointResolver {
 
         @Override
         public Facing getFacing() {
-            int fromX = run.isStraight() ? run.getStartPlotX() : run.getBendPlotX();
-            int fromY = run.isStraight() ? run.getStartPlotY() : run.getBendPlotY();
-            int dx = run.getEndPlotX() - fromX;
-            int dy = run.getEndPlotY() - fromY;
-            if (dx > 0) {
-                return Facing.EAST;
-            }
-            if (dx < 0) {
-                return Facing.WEST;
-            }
-            if (dy > 0) {
-                return Facing.NORTH;
-            }
-            return Facing.SOUTH;
+            return getRunForwardFacing(run);
         }
 
         @Override
