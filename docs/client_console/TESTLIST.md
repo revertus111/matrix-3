@@ -10,6 +10,7 @@
 - Hover a different primary tool after opening Con Revamp; the second-level Con Revamp flyout must close.
 - Move the pointer completely outside the Test button and both flyouts; both menus should dismiss after the short hover grace period.
 - Verify selected rows use the gold/bronze active treatment and hovered rows highlight without clipping.
+- From a different active rail panel such as Settings, open Test -> Con Revamp -> Settlement and click Settlement; the rail must switch to Test Console and the Settlement page must become active.
 - Click Settlement, Workers, Production, Conveyors, Debug and Tools in turn; each must load the existing Con Revamp page with no horizontal Con Revamp tab strip visible.
 - Click Rail Studio, Rail Classifier, Object Explorer, Live Inspect, Construction, Player, Items, Interfaces, Visual Explorer, Atlas, Boss Research and Ports UI; each must load its existing workspace with no top Test Console tab strip.
 - Resize the Client Console while a flyout is open; both flyouts should close and the console should remain usable.
@@ -20,4 +21,5 @@
 - Existing buttons, cards, fields, lists and popup menus outside Test Console must remain readable after the shared ConsoleTheme reskin.
 - Game canvas/camera input outside the flyout rectangles must remain unchanged.
 - Opening a Test flyout must not resize, black out or permanently cover any part of the game canvas.
+- Clicking a heavyweight flyout row must work without giving keyboard focus to the flyout window or breaking normal game input afterward.
 - Existing Con Revamp buttons, scroll panes and Output status must still function.
