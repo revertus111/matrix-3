@@ -40,3 +40,8 @@
 - Missing/failed native bridge automatically falls back to `RUNESCAPE` mode instead of leaving stale Mario state.
 - Entering Mario mode while Space is already held suppresses A input until release, preventing a manufactured native jump.
 - Retired the one-shot `Sm64BridgeProbe`; Bundle 2.2 is now `NEEDS TEST` for visible native-driven jump/exit/failure acceptance.
+
+2026-10-04 - Bundle 2.2 native transform runtime proof
+- User runtime-confirmed the persistent 30 Hz session reaches `READY`, native-state presentation reaches `ACTIVE`, and the native-driven Matrix transform path works in the live 830 client.
+- The visible vertical movement path is now accepted as real SM64-derived state -> Matrix presentation; the old Java-gravity implementation is no longer Mario-mode movement authority.
+- Ctrl+M exit/relog/failure-fallback checks remain regression carryover before Bundle 2.2 is fully closed.
