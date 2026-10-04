@@ -136,6 +136,7 @@ public final class MarioJumpController {
 
     private static void enterMarioMode() {
         resetPhysics();
+        Sm64BridgeProbe.startOnce();
         // Enabling while Space is already held must not manufacture a jump.
         spaceWasDown = keyDown(INTERNAL_SPACE_KEY);
     }
