@@ -35,7 +35,6 @@ public final class TestConsolePanel extends JPanel {
     public static final String TOOL_ITEMS = "items";
     public static final String TOOL_INTERFACES = "interfaces";
     public static final String TOOL_VISUAL_EXPLORER = "visualExplorer";
-    public static final String TOOL_N64 = "n64";
     public static final String TOOL_ATLAS = "atlas";
     public static final String TOOL_BOSS_RESEARCH = "bossResearch";
     public static final String TOOL_PORTS_UI = "portsUi";
@@ -65,7 +64,6 @@ public final class TestConsolePanel extends JPanel {
     private JComponent itemPanel;
     private JComponent interfacePanel;
     private JComponent visualExplorerPanel;
-    private JComponent n64Panel;
     private JComponent atlasPanel;
     private JComponent bossResearchPanel;
     private JComponent portsUiPanel;
@@ -204,12 +202,6 @@ public final class TestConsolePanel extends JPanel {
                 }
                 return visualExplorerPanel;
             }
-            if (TOOL_N64.equals(toolId)) {
-                if (n64Panel == null) {
-                    n64Panel = new N64Panel();
-                }
-                return n64Panel;
-            }
             if (TOOL_ATLAS.equals(toolId)) {
                 if (atlasPanel == null) {
                     atlasPanel = new AtlasWorkspacePanel();
@@ -292,7 +284,6 @@ public final class TestConsolePanel extends JPanel {
                 || TOOL_ITEMS.equals(toolId)
                 || TOOL_INTERFACES.equals(toolId)
                 || TOOL_VISUAL_EXPLORER.equals(toolId)
-                || TOOL_N64.equals(toolId)
                 || TOOL_ATLAS.equals(toolId)
                 || TOOL_BOSS_RESEARCH.equals(toolId)
                 || TOOL_PORTS_UI.equals(toolId)) {
