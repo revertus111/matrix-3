@@ -2,330 +2,293 @@
 
 ## Goal
 
-Bring an actual Mario character experience into Matrix3/revision-830: imported Mario-compatible visual assets plus Mario 64-style movement/action behavior, implemented through Matrix3-native client/server ownership while using the SM64 decomp as the behavior reference.
+Run an authentic Mario experience inside Matrix3/revision-830: Matrix3 owns the RuneScape world, input, rendering and eventual server authority, while an SM64-derived native core owns Mario's movement/action state machine through a narrow passthrough bridge.
+
+Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 
 ## Canonical Main-Goal Status
 
-This table is the authoritative user-facing status table for this workstream across chats.
-
 | Main-goal area | Status |
 | --- | --- |
-| Character asset pipeline | ❌ Not started |
-| Alternate movement/controller foundation | 🔵 In Progress |
-| Mario 64 movement/action parity | ❌ Not started |
-| Platform collision / level interaction | ❌ Not started |
-| Multiplayer / server authority integration | ❌ Not started |
+| Alternate movement/controller foundation | 🟡 Foundation |
+| SM64 passthrough core bridge | 🔵 In Progress |
+| Matrix world/collision adapter | ❌ Not started |
+| Mario visual/animation presentation | ❌ Not started |
+| Multiplayer/server authority integration | ❌ Not started |
 
 ## Scope
 
 ### In scope
 
-- Matrix3-native alternate player/controller seams for Mario-style behavior.
-- Mario model/texture/skeleton/animation conversion and revision-830 presentation once the asset path is investigated.
-- Movement/action behavior translated from the SM64 decomp instead of guessed from gameplay footage.
-- Progressive support for jump families, running/acceleration, air control, long jump, backflip, side flip, triple jump, wall kick, ground pound, ledges and other selected SM64 actions.
-- Platform collision/interaction only when the movement foundation proves it is required.
-- Correct client/server authority and multiplayer synchronization after local game feel is established.
+- Matrix3-native alternate controller activation and lifecycle.
+- Native SM64-derived Mario simulation through a bridge rather than reimplementing the full action state machine in Java.
+- `libsm64` as the first native-core candidate because it exposes SM64 decomp movement/rendering to external engines.
+- Matrix terrain/object/water conversion into collision surfaces the SM64 core can consume.
+- Mario visual presentation through either revision-830 assets or a later direct native-geometry adapter.
+- Eventual multiplayer/server validation after local behavior is stable.
 
-### Out of scope for the current controller-foundation slice
+### Out of scope for the current bridge spike
 
-- Importing the Mario model or animations.
-- SM64 action parity beyond one basic vertical jump.
-- Wall/ceiling/platform collision.
-- Jumping over RuneScape clipping or landing on roofs/objects.
-- Server-authoritative Mario physics or multiplayer replication.
-- Replacing normal RuneScape movement globally.
+- Full RuneScape collision conversion.
+- Mario model replacement in the 830 scene.
+- Server-authoritative Mario movement.
+- Remote-player Mario replication.
+- JNI/in-process native loading before sidecar transport is measured.
+- Rewriting long jump/triple jump/wall kick/etc. in Java unless a specific Matrix-only behavior later requires an adapter.
 
 ## Architecture / ownership
 
-- Matrix3 remains the engine and architecture authority.
-- Revision-830 cache/data remains the asset/data authority where applicable.
-- The SM64 decomp is a behavior/reference source, not a second runtime engine embedded into Matrix3.
-- Local presentation uses Matrix3's existing player transform and live viewport tick.
-- Normal RuneScape X/Z movement, plane, pathfinding, clipping and server position authority remain untouched by the current client-side proof.
-- `PlayerControllerMode` owns deliberate local controller selection; RuneScape is the default and Mario is opt-in.
-- `MarioJumpController` owns only the current Mario vertical-jump proof and lifecycle/reset behavior.
-- Future Mario control should continue behind this alternate-controller boundary instead of scattering Mario-specific branches throughout `Player`/renderer code.
+- Matrix3 remains host architecture and world authority.
+- `PlayerControllerMode` owns deliberate local RuneScape/Mario activation; RuneScape remains default.
+- The existing Java vertical jump proof establishes that the 830 local player transform can leave terrain; it is not the final Mario physics implementation.
+- `libsm64` is the first native-core candidate. It is derived from the SM64 decomp and is designed to expose Mario movement/rendering to external engines while loading the user's own US ROM at runtime.
+- V1 transport is an isolated native sidecar process driven from Java 8 through `ProcessBuilder` + stdin/stdout.
+- Matrix input is normalized and sent to the bridge. Native `SM64MarioState` returns to Matrix for presentation.
+- Matrix collision is converted into SM64 surfaces by a future adapter; the first bridge spike uses a temporary flat native floor only.
+- Sidecar/native failures must never replace normal RuneScape control, server authority, plane, persistence or clipping.
 
 ## Verified foundation
 
 ### VERIFIED
 
-- User runtime testing on 2026-10-03 confirmed the actual revision-830 local player visibly leaves RuneScape terrain with the Matrix3-native jump proof.
-- This runtime result confirms the existing local-player transform can present temporary vertical displacement without changing RuneScape plane ownership.
-- Deeper movement/slope/hold/relog regression checks remain pending and are not implied by the visual proof.
+- User runtime testing confirmed the actual revision-830 local player visibly leaves RuneScape terrain with the Matrix3-native vertical proof.
+- User runtime acceptance confirmed the explicit RuneScape/Mario controller boundary works.
+- This proves Matrix3 can host foreign local movement/presentation behind an opt-in controller mode.
 
 ### verified-static
 
-- Local player is `Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976`, typed `Player`.
-- `Class456.method5394().aClass240_2647` exposes the current player scene transform.
-- `Class456.method5395(float,float,float)` writes entity translation and invalidates dependent transform caches.
-- `Class611.method7272(...)` is one movement interpolation path that updates X/Z while preserving the current Y value.
-- `Class343.method4302(...)` is an established live viewport/render update seam and drives `MarioJumpController.tick()`.
-- Matrix3 keyboard state is available through `Class108.aClass549_1426.method6514(...)`; Space maps to internal key `83`, Ctrl to `82`, and M to `70` in `Class549_Sub1.anIntArray8901`.
-- The current client coordinate convention supports higher altitude through a smaller scene-Y value; stock camera math uses terrain height minus camera height.
-- `PlayerControllerMode` defaults to `RUNESCAPE`, toggles `MARIO` with Ctrl+M using rising-edge detection, and exposes an explicit mode API for later UI/tool activation.
-- `MarioJumpController` resets controller/jump state when the local `Player` object changes and restores the tracked ground baseline when Mario mode is disabled midair.
-- The old 718 jump remains reference-only; Matrix3 owns the current implementation.
+- Local player: `Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976` (`Player`).
+- Player scene transform is available through `Class456.method5394().aClass240_2647` and writable through `Class456.method5395(float,float,float)`.
+- `Class343.method4302(...)` is the established live viewport update seam already driving Mario controller presentation.
+- Matrix keyboard held-state ownership is `Class108.aClass549_1426`; Space/Ctrl/M mappings are established.
+- `libsm64` exposes `SM64MarioInputs`, `SM64MarioState`, `SM64Surface`, native Mario create/tick/delete calls, static surfaces, dynamic surface objects and geometry buffers.
+- The `libsm64` example advances Mario in fixed 30 Hz steps and uses caller-provided collision surfaces.
+- `libsm64` loads Mario texture/animation data from a user-supplied SM64 US ROM at runtime.
 
 ## Unknown / research needed
 
 ### HYPOTHESIS
 
-- The SM64 action state machine can be translated incrementally into Matrix3 units while retaining recognizable Mario 64 feel.
-- The current controller-mode boundary can remain the local activation owner while later movement behaviors are split into dedicated Mario action/state components.
+- A sidecar process with a tiny line protocol is sufficient for the first 30 Hz native-state proof and keeps native failure isolated during development.
+- Nearby RuneScape terrain can be represented efficiently as two SM64 collision triangles per tile inside a bounded local bubble.
 
 ### UNKNOWN
 
-- Whether all remaining Matrix3 movement/grounding paths coexist cleanly with custom airborne Y while walking/running across slopes.
-- Exact revision-830 model/skeleton/animation conversion path for the Mario asset set.
-- Which camera ownership seam is best for platforming without changing vanilla RuneScape camera behavior outside Mario mode.
-- Which collision owner is the best long-term foundation for walls, ceilings, ledges and moving platforms.
-- Final client/server reconciliation model for responsive multiplayer Mario movement.
+- Final Matrix<->SM64 coordinate scale/sign calibration beyond the already-proven Matrix vertical direction.
+- Final collision-bubble radius/rebuild threshold.
+- Best final Mario visual path: revision-830 imported asset/animation mapping vs direct `SM64MarioGeometryBuffers` rendering.
+- Runtime cost of object collision proxy extraction.
+- Final client/server reconciliation model.
 
 ## Dependencies
 
-- Matrix3 client scene/player transform ownership.
-- Matrix3 keyboard/input state.
-- Revision-830 model/animation/cache tooling for later asset work.
-- SM64 decomp for behavior/action reference.
-- User runtime testing for visual movement/game-feel acceptance.
+- Matrix3 client input/player-transform ownership.
+- `libsm64` built externally from `https://github.com/libsm64/libsm64`.
+- User-owned SM64 US ROM as a local runtime dependency only; never committed.
+- User runtime testing for native bridge and game-feel acceptance.
 
 ## Development plan
 
 ### Phase 1 - Alternate Controller Foundation
 
-**Purpose:** Prove Matrix3 can support local player behavior that temporarily departs from normal ground-bound RuneScape presentation without replacing the engine.
-
-**Status:** ACTIVE
-
-**Exit conditions:**
-
-- Basic jump visibly raises and lands the actual local player model.
-- Normal X/Z movement remains usable.
-- Slopes/terrain updates do not create persistent height drift.
-- Holding Space does not auto-bunny-hop without a release/repress.
-- Normal movement remains intact after landing and after relog.
-- Mario behavior is opt-in behind an explicit controller-mode lifecycle boundary.
-
-#### Bundle 1.1 - Vertical Jump POC
-
-**Purpose:** Smallest possible proof that the revision-830 client can render the local player above the terrain baseline with time-based gravity.
+**Purpose:** Prove Matrix3 can safely host alternate local-player behavior without replacing vanilla RuneScape control.
 
 **Status:** NEEDS TEST
 
-**Checklist / patches:**
+#### Bundle 1.1 - Vertical Jump POC
 
-- [x] Trace Matrix3 local-player transform owner. `verified-static`
-- [x] Trace live viewport tick and held-key input seam. `verified-static`
-- [x] Add isolated `MarioJumpController` with Space edge detection, time-based velocity/gravity and local Y displacement.
-- [x] Tick the controller from the established `Class343.method4302(...)` live viewport seam.
-- [x] Runtime-confirm the core visual proof: actual local player visibly leaves terrain. `VERIFIED`
-- [ ] Finish regression acceptance: movement while airborne, slopes, hold/repress behavior, post-landing movement and relog.
+**Status:** NEEDS TEST
 
-**Runtime tests:** See `docs/mario/TESTLIST.md`.
+- [x] Trace local-player transform/input/tick seams. `verified-static`
+- [x] Add isolated Java vertical jump proof.
+- [x] Runtime-confirm visible vertical displacement. `VERIFIED`
+- [ ] Carryover regression: airborne X/Z movement, slopes, hold/repress, post-landing behavior, relog.
 
 #### Bundle 1.2 - Controller Mode Boundary
 
-**Purpose:** Prevent Mario mechanics from becoming global RuneScape-player behavior and establish a deliberate alternate-controller activation/lifecycle boundary.
+**Status:** DONE
+
+- [x] Add `PlayerControllerMode`.
+- [x] RuneScape default / Ctrl+M Mario activation.
+- [x] Gate Mario proof behind mode.
+- [x] Clean mode/lifecycle reset behavior.
+- [x] User runtime acceptance that the mode boundary works. `VERIFIED`
+
+Phase 1 carryover regression does not block the independent native-bridge transport spike; preserve it for the next consolidated runtime session.
+
+### Phase 2 - SM64 Passthrough Core Bridge
+
+**Purpose:** Make actual SM64-derived native code advance Mario state and return it to Matrix3.
 
 **Status:** ACTIVE
 
-**Checklist / patches:**
+#### Bundle 2.1 - Sidecar transport/native-core spike
 
-- [x] Define Matrix3-native controller activation/lifecycle ownership with `PlayerControllerMode`.
-- [x] Default to `RUNESCAPE`; add developer Ctrl+M rising-edge toggle for `MARIO` mode.
-- [x] Gate Space-driven Mario jump behavior behind Mario mode.
-- [x] Add clean midair disable reset and local-player lifecycle reset to RuneScape mode.
-- [ ] Runtime verify mode gating, midair disable and relog lifecycle.
-- [ ] Decide camera ownership required for platforming without replacing vanilla camera behavior outside Mario mode.
+**Status:** ACTIVE
 
-### Phase 2 - Mario Character Asset Pipeline
+- [x] Record passthrough architecture and responsibility split.
+- [x] Select sidecar-first transport; JNI remains a later optimization only if measured need exists.
+- [x] Select `libsm64` as the first headless SM64 core candidate.
+- [ ] Add `sm64_bridge` native sidecar source and deterministic flat-floor protocol.
+- [ ] Add Java 8 bridge probe/client wrapper.
+- [ ] Runtime prove Java can send A-button input and receive a real native Mario Y/action change.
 
-**Purpose:** Render the actual Mario-compatible character asset and its animations through revision-830/Matrix3 presentation.
+**Acceptance:** Java reports PASS only after native SM64-derived state changes from deterministic input. No Matrix player movement is required yet.
 
-**Status:** PLANNED
-
-**Checklist / patches:**
-
-- [ ] Trace existing Matrix3/revision-830 custom NPC/model/animation import path.
-- [ ] Convert/import the Mario model, textures and skeleton/rig representation.
-- [ ] Prove idle/run/jump animation playback on the imported character.
-- [ ] Establish repeatable asset conversion documentation/tooling only where the real import exposes a need.
-
-### Phase 3 - SM64 Movement / Action State Machine
-
-**Purpose:** Translate selected SM64 movement/action behavior into the established Matrix3 alternate controller.
+#### Bundle 2.2 - Native state -> Matrix transform
 
 **Status:** PLANNED
 
-**Checklist / patches:**
+- [ ] Run native simulation at fixed 30 Hz.
+- [ ] Map native vertical state onto the already-VERIFIED Matrix transform baseline.
+- [ ] Preserve normal RuneScape mode/failure fallback.
+- [ ] Runtime prove an SM64-derived tick causes the visible 830 player/Mario presentation to jump.
 
-- [ ] Ground acceleration/deceleration and facing.
-- [ ] Air control and normal jump.
-- [ ] Double/triple jump chain.
-- [ ] Long jump, backflip and side flip.
-- [ ] Ground pound and landing states.
-- [ ] Wall kick and other actions only after collision ownership is established.
+### Phase 3 - Matrix World / Collision Adapter
 
-### Phase 4 - Platform Collision / Interaction
-
-**Purpose:** Support the world interactions required by real platforming rather than visual-only vertical displacement.
+**Purpose:** Let the SM64 core physically reason about RuneScape terrain and nearby collision instead of a temporary test floor.
 
 **Status:** PLANNED
 
-**Checklist / patches:**
+#### Bundle 3.1 - Terrain heightfield -> SM64 surfaces
 
-- [ ] Establish floor/wall/ceiling collision ownership.
-- [ ] Slopes and collision normals.
-- [ ] Ledges and platform landing.
-- [ ] Moving platforms/object interactions where required.
-- [ ] Preserve RuneScape clipping/pathing ownership outside Mario control.
+- [ ] Establish the Matrix terrain-corner height sampler.
+- [ ] Convert nearby 512-unit RuneScape tile quads into two correctly wound SM64 triangles each.
+- [ ] Add local origin/scale conversion.
+- [ ] Keep a bounded collision bubble around Mario.
+- [ ] Runtime verify standing/running/jumping across real RuneScape hills using native SM64 collision.
+
+#### Bundle 3.2 - Objects / walls / platforms
+
+- [ ] Add low-cost collision proxies for nearby solid objects.
+- [ ] Add walls/ceilings/bridges/platform floors as required by test content.
+- [ ] Use `SM64SurfaceObject` for moving platforms when needed.
+- [ ] Add water-level bridging when content requires it.
+
+### Phase 4 - Mario Visual / Animation Presentation
+
+**Purpose:** Replace the temporary RuneScape player presentation with Mario.
+
+**Status:** PLANNED
+
+- [ ] Evaluate revision-830 imported Mario model/animation path.
+- [ ] Evaluate direct `SM64MarioGeometryBuffers` dynamic render path.
+- [ ] Choose one based on real renderer/asset evidence, not preference alone.
+- [ ] Prove idle/run/jump visual state driven from native Mario state.
 
 ### Phase 5 - Multiplayer / Server Authority
 
-**Purpose:** Keep responsive Mario movement while restoring authoritative multiplayer/gameplay validation.
+**Purpose:** Keep responsive native Mario behavior while restoring authoritative multiplayer/world validation.
 
 **Status:** PLANNED
 
-**Checklist / patches:**
-
-- [ ] Define movement state sent to/validated by the server.
+- [ ] Define legal Mario movement/state sent to server.
 - [ ] Remote-player replication/interpolation.
 - [ ] Reconciliation/correction behavior.
-- [ ] Combat/world-interaction authority boundaries.
+- [ ] Combat/world interaction authority boundaries.
 
 ## Current execution state
 
-- Phase: 1 - Alternate Controller Foundation
+- Phase: 2 - SM64 Passthrough Core Bridge
 - Phase status: ACTIVE
-- Bundle: 1.2 - Controller Mode Boundary
+- Bundle: 2.1 - Sidecar transport/native-core spike
 - Bundle status: ACTIVE
-- Approval state: `SAP AAA` approved for the next controller-boundary slice on 2026-10-03.
-- Current checklist item: Runtime verify controller-mode gating/lifecycle, then decide Mario-mode camera ownership.
-- Current objective: Keep normal RuneScape behavior default while proving Mario mechanics can be deliberately entered/exited without stale airborne state.
+- Approval state: `SAP AAA` approved for architecture documentation + bridge spike on 2026-10-03.
+- Current checklist item: add native sidecar + Java probe.
+- Current objective: prove actual SM64-derived native code can receive Matrix-side input and return Mario state before touching RuneScape collision.
 
 ## Checklist / patch status
 
 | Item | Phase | Bundle | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Matrix3 transform/input/tick trace | 1 | 1.1 | DONE | Static ownership established; transform jump now has runtime visual proof. |
-| Basic vertical jump controller | 1 | 1.1 | NEEDS TEST | Core visual lift is `VERIFIED`; movement/slope/hold/relog regression remains. |
-| Controller mode/lifecycle | 1 | 1.2 | NEEDS TEST | `PlayerControllerMode`, Ctrl+M gate, midair reset and player-lifecycle reset implemented statically. |
-| Mario-mode camera ownership | 1 | 1.2 | READY | Decide after controller-mode runtime acceptance. |
-| Mario asset import | 2 | 2.x | READY | Not started; trace actual 830 asset path first. |
+| Matrix transform/input/controller foundation | 1 | 1.x | NEEDS TEST | Core lift and controller mode are runtime-proven; deeper movement/relog regression remains. |
+| Passthrough architecture | 2 | 2.1 | DONE | `SM64_PASSTHROUGH_ARCHITECTURE.md`. |
+| Native `sm64_bridge` sidecar | 2 | 2.1 | ACTIVE | Flat-floor protocol spike. |
+| Java bridge probe | 2 | 2.1 | READY | Launch sidecar, send deterministic A input, verify native state. |
+| Native -> visible Matrix transform | 2 | 2.2 | READY | Starts after transport proof. |
+| Matrix terrain adapter | 3 | 3.1 | READY | Starts after native transform proof. |
+| Mario visual presentation | 4 | 4.x | READY | Choose asset-vs-direct-geometry path after bridge evidence. |
 
 ## Decisions / new ideas
 
 ### Decision log
 
-- Use Matrix3 as host architecture; SM64 decomp supplies behavior reference.
-- Do not embed/run the SM64 C engine inside Matrix3.
-- Prove local vertical movement before importing the character or translating the full action state machine.
-- Preserve normal RuneScape X/Z movement, plane, clipping and server authority during the controller foundation.
-- RuneScape control is the default; Mario behavior is opt-in rather than global.
-- Ctrl+M is a developer activation seam for the current foundation, not a final player-facing UX commitment.
-- Keep Mario work as a separate workstream; Construction Revamp remains the repository's current main workstream unless priority is explicitly changed.
+- Matrix3 is the host world/renderer/input/server architecture.
+- The target architecture now runs authentic SM64-derived Mario logic alongside Matrix rather than recreating the full action state machine in Java.
+- `libsm64` is the first native-core candidate because its API already matches the required external-engine contract.
+- Sidecar process first; JNI only after a measured reason.
+- The Java jump proof remains useful as host-transform evidence/fallback but is not the target Mario mechanics engine.
+- Matrix terrain will be adapted to local SM64 collision surfaces; do not convert all of Gielinor at once.
+- RuneScape control remains the safe default.
+- Construction Revamp remains the repository's separate main workstream unless priority is explicitly changed.
 
 ## Testing
 
-### Quick/high-value checks
+### Current quick checks
 
-1. Default/login state: Space does not Mario-jump.
-2. Ctrl+M -> `MARIO`; Space performs the already-proven vertical jump.
-3. Ctrl+M again -> `RUNESCAPE`; Space no longer Mario-jumps.
-4. Disable Mario mode while airborne: player returns to the tracked ground baseline cleanly.
-5. Logout/relog after Mario use: controller starts in RuneScape mode with no stale airborne state.
-6. Finish Bundle 1.1 carryover checks for airborne X/Z movement, slopes and hold/repress behavior during the same session.
+1. Existing: normal RuneScape mode remains safe and Mario mode can still be toggled.
+2. Bridge Spike A: sidecar starts with user ROM and prints protocol `READY`.
+3. Java probe gets `PONG`.
+4. Java sends deterministic 30 Hz A-button sequence.
+5. PASS only if returned native Mario Y/action changes from the baseline.
 
-### Deeper checks
+### Carryover checks
 
-1. Repeat jumps at multiple terrain elevations.
-2. Verify no plane/floor transition is caused by the POC.
-3. Verify normal camera/interactions remain unchanged in RuneScape mode.
+- Java jump proof: airborne X/Z movement, slopes, hold/repress, post-landing movement, relog/reset.
 
 ### Smoke/regression checks
 
-- Relevant `docs/rs3/SMOKE_TEST.md`: Eclipse Java 8 clean/build, client startup/login, normal movement, logout/relog.
+- Relevant `docs/rs3/SMOKE_TEST.md`: Eclipse Java 8 clean/build, client startup/login, normal movement, logout/relog after runtime-affecting bridge integration.
 
 ## Carryover / blockers
 
 ### CARRYOVER
 
-- Task: Jump POC deeper regression
-- Phase/bundle: Phase 1 / Bundle 1.1
-- Current state: Core visual lift is runtime-confirmed.
-- Remaining work: hold/repress, X/Z movement while airborne, slopes, post-landing movement, plane and relog checks.
-- Next action: Consolidate with Bundle 1.2 runtime test session.
-
-- Task: Mario model/animations
-- Phase/bundle: Phase 2
-- Current state: Not investigated in Matrix3 yet.
-- Remaining work: Trace the actual revision-830 asset import/render path before choosing a conversion format.
-- Next action: Begin after the controller foundation/camera boundary is accepted unless the user explicitly reprioritizes.
+- Phase 1 jump deeper regression: does not block isolated sidecar/protocol development; finish during the next consolidated client runtime test.
+- Mario model/visual selection: intentionally deferred until native bridge state is real.
 
 ### BLOCKED
 
-- None.
+- Runtime native bridge verification requires a locally built `libsm64`/sidecar and the user's US ROM. The ROM remains outside Git.
 
 ## Resume Here
 
 **Last completed:**
 
-- Runtime-confirmed the core vertical jump proof.
-- Implemented `PlayerControllerMode` plus Ctrl+M Mario-mode gating, midair reset and local-player lifecycle reset.
+- Runtime-accepted RuneScape/Mario mode boundary.
+- Reframed the target architecture around an authentic native SM64 passthrough core.
+- Added `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md` and selected `libsm64` + sidecar-first transport.
 
 **Current phase:**
 
-- Phase 1 - Alternate Controller Foundation (`ACTIVE`).
+- Phase 2 - SM64 Passthrough Core Bridge (`ACTIVE`).
 
 **Active bundle:**
 
-- Bundle 1.2 - Controller Mode Boundary (`ACTIVE`).
+- Bundle 2.1 - Sidecar transport/native-core spike (`ACTIVE`).
 
 **Next checklist item:**
 
-- Runtime-verify Ctrl+M gating/reset/lifecycle and finish the short Bundle 1.1 regression carryover in the same launch.
-
-**Current state / next action:**
-
-- Pull/build/launch. Confirm Space is inert in RuneScape mode, Ctrl+M enables Mario jumping, disabling midair restores ground, and relog returns to RuneScape mode. If accepted, decide the Mario-mode camera boundary next.
-
-**Files/systems already inspected:**
-
-- `Client/src/main/java/game/Class456.java`
-- `Client/src/main/java/game/Class611.java`
-- `Client/src/main/java/game/Player.java`
-- `Client/src/main/java/game/Entity.java`
-- `Client/src/main/java/game/Class343.java`
-- `Client/src/main/java/game/Class549_Sub1.java`
-- `Client/src/main/java/game/ConstructionBuildCamera.java`
-- `Client/src/main/java/game/MarioJumpController.java`
-- `Client/src/main/java/game/PlayerControllerMode.java`
-- Old 718 `FPSJump` implementation as reference only.
+- Add native `sm64_bridge` flat-floor protocol and Java bridge probe.
 
 **Do not re-scan without new evidence:**
 
-- Local-player transform ownership (`Class611` -> `Player` -> `Class456`).
-- Live viewport tick (`Class343.method4302`).
-- Held-key state and normalized Space/Ctrl/M mappings (`Class549_Sub1`).
-- Basic vertical-displacement feasibility in revision 830; the actual player visibly left terrain at runtime.
+- Matrix local-player transform/input/viewport ownership.
+- Basic vertical-displacement feasibility.
+- Controller-mode activation boundary.
+- `libsm64` public input/state/surface API and 30 Hz example behavior.
 
 **Pending runtime verification:**
 
-- Ctrl+M mode gating and rising-edge behavior.
-- Midair Mario-mode disable baseline restore.
-- Player-lifecycle/relog reset to RuneScape mode.
-- Bundle 1.1 airborne movement/slope/hold/repress regression carryover.
-
-**Blockers:**
-
-- None.
+- Native sidecar can initialize from the user ROM.
+- Java <-> sidecar protocol works.
+- Deterministic A input changes actual native Mario state.
+- Phase 1 deeper movement/relog carryover.
 
 **Important remaining uncertainty:**
 
-- Sloped-terrain movement may expose a different Y writer while airborne; this remains a focused runtime regression question rather than a reason to reopen the transform trace.
+- Final coordinate scale and collision conversion are intentionally deferred until the native transport proof succeeds.
 
 ## Next recommended work
 
-Runtime-accept the controller-mode boundary, then decide Mario-mode camera ownership before expanding into the character asset pipeline or full SM64 action controller.
+Finish Bridge Spike A: native sidecar + Java probe, then runtime-test one deterministic native Mario jump before applying native state to the visible Matrix player.
