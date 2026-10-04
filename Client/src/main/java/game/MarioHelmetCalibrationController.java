@@ -212,6 +212,26 @@ final class MarioHelmetCalibrationController {
                 calibration.yawDegrees);
     }
 
+    /** N64 developer workbench seam. Values remain session-only. */
+    static void setSnapshot(int itemId, Snapshot snapshot) {
+        if (itemId < 0 || snapshot == null) {
+            return;
+        }
+        Calibration calibration = getOrCreate(itemId);
+        calibration.scaleMultiplier = clamp(snapshot.scaleMultiplier, 0.10F, 5.00F);
+        calibration.offsetX = finiteOrZero(snapshot.offsetX);
+        calibration.offsetY = finiteOrZero(snapshot.offsetY);
+        calibration.offsetZ = finiteOrZero(snapshot.offsetZ);
+        calibration.yawDegrees = finiteOrZero(snapshot.yawDegrees);
+    }
+
+    static void resetItem(int itemId) {
+        if (itemId < 0) {
+            return;
+        }
+        getOrCreate(itemId).reset();
+    }
+
     private static Calibration getOrCreate(int itemId) {
         Integer key = Integer.valueOf(itemId);
         Calibration calibration = SESSION_CALIBRATIONS.get(key);
@@ -257,6 +277,17 @@ final class MarioHelmetCalibrationController {
 
     private static String safeName(String value) {
         return value == null || value.trim().isEmpty() ? "unknown" : value;
+    }
+
+    private static float finiteOrZero(float value) {
+        return Float.isNaN(value) || Float.isInfinite(value) ? 0.0F : value;
+    }
+
+    private static float clamp(float value, float min, float max) {
+        if (Float.isNaN(value) || Float.isInfinite(value)) {
+            return min;
+        }
+        return value < min ? min : value > max ? max : value;
     }
 
     static final class Snapshot {
