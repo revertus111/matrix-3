@@ -18,7 +18,8 @@ import java.util.concurrent.TimeUnit;
  */
 public final class Sm64BridgeSession {
 
-    private static final int BINARY_PROTOCOL_VERSION = 1;
+    private static final int MIN_BINARY_PROTOCOL_VERSION = 1;
+    private static final int MAX_BINARY_PROTOCOL_VERSION = 2;
     private static final int BINARY_CMD_STEP = 1;
     private static final long STEP_NANOS = 1000000000L / 30L;
     private static final long MAX_SCHEDULE_DRIFT_NANOS = STEP_NANOS * 4L;
@@ -98,6 +99,11 @@ public final class Sm64BridgeSession {
     public static String getFailureReason() {
         Worker worker = current;
         return worker == null ? null : worker.getFailureReason();
+    }
+
+    static int getBinaryProtocolVersion() {
+        Worker worker = current;
+        return worker == null ? 0 : worker.getProtocolVersion();
     }
 
     /**
@@ -202,7 +208,7 @@ public final class Sm64BridgeSession {
      * MarioVisualRenderer rejects stale frames after a bounded age. A calibration
      * freeze intentionally reuses one geometry snapshot, so only its immutable
      * NativeState timestamp is refreshed for presentation freshness; geometry,
-     * sequence, animation state and native worker publication remain untouched.
+     * semantic metadata, sequence and native worker publication remain untouched.
      */
     private static GeometryFrame refreshPresentationTimestamp(GeometryFrame frame) {
         NativeState state = frame.state;
@@ -217,12 +223,15 @@ public final class Sm64BridgeSession {
                 state.flags, state.particleFlags,
                 System.nanoTime());
         return new GeometryFrame(
+                frame.protocolVersion,
                 frame.sequence,
                 freshState,
                 frame.triangleCount,
                 frame.positions,
                 frame.colors,
-                frame.uvs);
+                frame.uvs,
+                frame.localPositions,
+                frame.partIds);
     }
 
     private static final class Worker implements Runnable {
@@ -237,6 +246,7 @@ public final class Sm64BridgeSession {
         private volatile GeometryFrame previousFrame;
         private volatile GeometryFrame latestFrame;
         private volatile TextureAtlas textureAtlas;
+        private volatile int protocolVersion;
 
         private volatile Process process;
         private Thread thread;
@@ -281,6 +291,10 @@ public final class Sm64BridgeSession {
 
         String getFailureReason() {
             return failureReason;
+        }
+
+        int getProtocolVersion() {
+            return protocolVersion;
         }
 
         void setButtonA(boolean down) {
@@ -341,18 +355,25 @@ public final class Sm64BridgeSession {
                 input = new BufferedInputStream(localProcess.getInputStream(), 256 * 1024);
                 output = new BufferedOutputStream(localProcess.getOutputStream(), 16 * 1024);
 
-                textureAtlas = readHandshake(input);
+                Handshake handshake = readHandshake(input);
+                protocolVersion = handshake.protocolVersion;
+                textureAtlas = handshake.textureAtlas;
 
                 // Stabilize the freshly reset native Mario before accepting input.
-                publish(step(output, input, InputState.IDLE));
-                publish(step(output, input, InputState.IDLE));
+                publish(step(output, input, InputState.IDLE, protocolVersion));
+                publish(step(output, input, InputState.IDLE, protocolVersion));
                 ready = true;
-                System.out.println("[SM64 Bridge] Persistent session READY (30 Hz + geometry)");
+                if (protocolVersion >= 2) {
+                    System.out.println("[SM64 Bridge] Persistent session READY (30 Hz + semantic geometry v2)");
+                } else {
+                    System.out.println("[SM64 Bridge] Persistent session READY (30 Hz + geometry, protocol v1)");
+                    System.out.println("[SM64 Bridge] Semantic equipment metadata unavailable; rebuild native/sm64-bridge with make bootstrap.");
+                }
 
                 long nextStep = System.nanoTime();
                 while (running) {
                     InputState inputSnapshot = inputState;
-                    publish(step(output, input, inputSnapshot));
+                    publish(step(output, input, inputSnapshot, protocolVersion));
 
                     nextStep += STEP_NANOS;
                     long now = System.nanoTime();
@@ -395,11 +416,12 @@ public final class Sm64BridgeSession {
         }
     }
 
-    private static TextureAtlas readHandshake(InputStream input) throws IOException {
+    private static Handshake readHandshake(InputStream input) throws IOException {
         expectMagic(input, 'M', '6', '4', 'B');
         int version = readIntLE(input);
-        if (version != BINARY_PROTOCOL_VERSION) {
-            throw new IllegalStateException("unexpected binary protocol version: " + version);
+        if (version < MIN_BINARY_PROTOCOL_VERSION || version > MAX_BINARY_PROTOCOL_VERSION) {
+            throw new IllegalStateException("unsupported native binary protocol version: " + version
+                    + " (supported " + MIN_BINARY_PROTOCOL_VERSION + "-" + MAX_BINARY_PROTOCOL_VERSION + ")");
         }
 
         int width = readIntLE(input);
@@ -414,11 +436,12 @@ public final class Sm64BridgeSession {
 
         byte[] rgba = new byte[length];
         readFully(input, rgba, 0, rgba.length);
-        return new TextureAtlas(width, height, rgba);
+        return new Handshake(version, new TextureAtlas(width, height, rgba));
     }
 
     private static GeometryFrame step(
-            OutputStream output, InputStream input, InputState controls) throws IOException {
+            OutputStream output, InputStream input, InputState controls,
+            int protocolVersion) throws IOException {
         output.write(BINARY_CMD_STEP);
         writeFloatLE(output, controls.cameraLookX);
         writeFloatLE(output, controls.cameraLookZ);
@@ -451,7 +474,15 @@ public final class Sm64BridgeSession {
         float[] positions = readFloatArray(input, triangleCount * 9);
         float[] colors = readFloatArray(input, triangleCount * 9);
         float[] uvs = readFloatArray(input, triangleCount * 6);
-        return new GeometryFrame(sequence, state, triangleCount, positions, colors, uvs);
+        float[] localPositions = null;
+        byte[] partIds = null;
+        if (protocolVersion >= 2) {
+            localPositions = readFloatArray(input, triangleCount * 9);
+            partIds = readByteArray(input, triangleCount);
+        }
+        return new GeometryFrame(
+                protocolVersion, sequence, state, triangleCount,
+                positions, colors, uvs, localPositions, partIds);
     }
 
     private static float[] normalizeCamera(float x, float z) {
@@ -484,6 +515,12 @@ public final class Sm64BridgeSession {
         for (int i = 0; i < count; i++) {
             values[i] = readFloatLE(input);
         }
+        return values;
+    }
+
+    private static byte[] readByteArray(InputStream input, int count) throws IOException {
+        byte[] values = new byte[count];
+        readFully(input, values, 0, count);
         return values;
     }
 
@@ -612,6 +649,16 @@ public final class Sm64BridgeSession {
         };
     }
 
+    private static final class Handshake {
+        final int protocolVersion;
+        final TextureAtlas textureAtlas;
+
+        Handshake(int protocolVersion, TextureAtlas textureAtlas) {
+            this.protocolVersion = protocolVersion;
+            this.textureAtlas = textureAtlas;
+        }
+    }
+
     private static final class InputState {
         static final InputState IDLE = new InputState(
                 0.0F, -1.0F,
@@ -664,21 +711,36 @@ public final class Sm64BridgeSession {
     }
 
     static final class GeometryFrame {
+        final int protocolVersion;
         final long sequence;
         final NativeState state;
         final int triangleCount;
         final float[] positions;
         final float[] colors;
         final float[] uvs;
+        final float[] localPositions;
+        final byte[] partIds;
 
-        GeometryFrame(long sequence, NativeState state, int triangleCount,
-                float[] positions, float[] colors, float[] uvs) {
+        GeometryFrame(int protocolVersion, long sequence, NativeState state, int triangleCount,
+                float[] positions, float[] colors, float[] uvs,
+                float[] localPositions, byte[] partIds) {
+            this.protocolVersion = protocolVersion;
             this.sequence = sequence;
             this.state = state;
             this.triangleCount = triangleCount;
             this.positions = positions;
             this.colors = colors;
             this.uvs = uvs;
+            this.localPositions = localPositions;
+            this.partIds = partIds;
+        }
+
+        boolean hasSemanticGeometry() {
+            return protocolVersion >= 2
+                    && localPositions != null
+                    && localPositions.length >= triangleCount * 9
+                    && partIds != null
+                    && partIds.length >= triangleCount;
         }
     }
 
