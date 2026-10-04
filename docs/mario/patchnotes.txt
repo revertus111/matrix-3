@@ -121,3 +121,9 @@
 - Matrix/server corrections rebase the tracked presentation baseline per axis; Ctrl+M/native failure restores the tracked RuneScape XYZ baseline rather than leaving Mario displacement behind.
 - This slice does not send Mario movement packets, replace RuneScape clipping/pathfinding/plane authority, or stream RuneScape collision into libsm64. The native sidecar still simulates against its temporary flat floor.
 - Runtime gate pending: verify WASD no longer pans the Construction camera, Mario visibly translates, direction/scale feel correct, jump/backflip/ground-pound carry horizontal displacement, and Ctrl+M restores the RuneScape position cleanly.
+
+2026-10-04 - Bundle 4.2B shared-topology smoothing runtime VERIFIED
+- User-provided runtime video confirms Mario is visibly rounder and less harshly faceted after shared-topology smoothing.
+- Hat/head/nose/gloves/body presentation reads materially smoother while the working atlas eye/facial/clothing details remain intact.
+- No obvious mesh collapse or melted hard-edge failure is visible in the accepted clip; existing animation remains visibly active.
+- Bundle 4.2B smoothing is runtime accepted at the default `70` degree smoothing threshold. Sustained performance remains a carryover check.
