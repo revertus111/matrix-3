@@ -3,9 +3,13 @@
 ## Workspace / navigation
 
 - [ ] Eclipse Java 8 clean/build succeeds and the client launches normally.
-- [ ] Test Console flyout shows `N64`.
+- [ ] Client Console rail shows a dedicated `N64` main tab beside the other main console destinations.
+- [ ] Test Console flyout no longer lists `N64`.
+- [ ] Clicking the N64 main tab opens the N64 workspace directly.
 - [ ] Opening N64 shows a game-level tab strip with `Mario 64` as the first sub-tab.
+- [ ] Clicking the active N64 rail button again collapses the console consistently with the other main tabs.
 - [ ] Switching away from N64 and back during the same client session keeps the workspace usable without creating duplicate recorders or windows.
+- [ ] A saved active panel id of `n64` restores the N64 main panel through `ClientConsoleShell` normalization.
 
 ## Mario 64 live snapshot
 
