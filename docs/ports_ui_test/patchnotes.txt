@@ -1,0 +1,7 @@
+2026-10-03 - Player-Owned Ports 1:1 reference overlay test
+- Added a presentation-only Player-Owned Ports style overlay using an exact 576x324 reference coordinate space.
+- Split the overlay into left Resources, center command cluster and right Visitors owned windows so the uncovered center game canvas remains interactive.
+- Added a lazy Ports UI tab to the Client Console Test Console with Show/Hide controls and live status.
+- The first pass matches reference geometry, panel treatment, labels, values and button/visitor composition with lightweight vector stand-ins for the original cache icons and portraits.
+- No Construction, settlement, inventory, visitor, input-command or server gameplay authority was added.
+- Status: IMPLEMENTED / NEEDS RUNTIME VISUAL TEST.

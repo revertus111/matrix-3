@@ -30,6 +30,7 @@ public final class TestConsolePanel extends JPanel {
     private static final int TAB_VISUAL_EXPLORER = 9;
     private static final int TAB_ATLAS = 10;
     private static final int TAB_BOSS_RESEARCH = 11;
+    private static final int TAB_PORTS_UI = 12;
 
     private final JTabbedPane tabs = new JTabbedPane();
 
@@ -45,6 +46,7 @@ public final class TestConsolePanel extends JPanel {
     private JComponent visualExplorerPanel;
     private JComponent atlasPanel;
     private JComponent bossResearchPanel;
+    private JComponent portsUiPanel;
 
     public TestConsolePanel() {
         super(new BorderLayout());
@@ -71,6 +73,7 @@ public final class TestConsolePanel extends JPanel {
         tabs.addTab("Visual Explorer", placeholder());
         tabs.addTab("Atlas", placeholder());
         tabs.addTab("Boss Research", placeholder());
+        tabs.addTab("Ports UI", placeholder());
 
         tabs.addChangeListener(e -> ensureSelectedTab());
         add(tabs, BorderLayout.CENTER);
@@ -181,6 +184,11 @@ public final class TestConsolePanel extends JPanel {
                     bossResearchPanel = new BossResearchPanel();
                 }
                 return bossResearchPanel;
+            case TAB_PORTS_UI:
+                if (portsUiPanel == null) {
+                    portsUiPanel = new PortsOverlayTestPanel();
+                }
+                return portsUiPanel;
             default:
                 return placeholder();
             }
