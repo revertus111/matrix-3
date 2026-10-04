@@ -5,12 +5,10 @@ import java.util.Arrays;
 /**
  * One-shot mathematical default for Mario helmet scale.
  *
- * The live equipment adapter already owns rendering/attachment. This helper only
- * calculates the initial per-item calibration multiplier. It measures Mario's
- * trimmed skull box in the current libsm64 frame and compares it with the active
- * 830 worn helmet. Because 830 models expose the outer shell rather than an inner
- * head cavity, a conservative cavity proxy is used. Manual workbench calibration
- * remains the final visual authority after this initial estimate.
+ * Protocol-v2 semantic geometry supplies a stable display-list-local FACE
+ * reference shared with the equipment adapter. Legacy protocol-v1 frames keep the
+ * older current-pose measurement only as a fail-open fallback. Manual workbench
+ * calibration remains the final visual authority after this initial estimate.
  */
 final class MarioHelmetAutoFit {
 
@@ -49,7 +47,11 @@ final class MarioHelmetAutoFit {
             return Float.NaN;
         }
 
-        Dimensions head = measureHead(frame);
+        MarioSemanticGeometry.Reference semantic = MarioSemanticGeometry.getReference(frame);
+        boolean semanticReference = semantic != null;
+        Dimensions head = semanticReference
+                ? dimensions(semantic.width, semantic.height, semantic.depth)
+                : measureHead(frame);
         Dimensions outer = measureHelmet(helmet);
         if (head == null || outer == null) {
             return Float.NaN;
@@ -69,9 +71,12 @@ final class MarioHelmetAutoFit {
                 "matrix3.sm64.helmetVerticalAssistLimit",
                 DEFAULT_VERTICAL_ASSIST_LIMIT);
 
-        /* Match the current V2 base scale exactly so this helper returns only the
-         * correction multiplier that the existing adapter should layer on top. */
-        float headSpan = Math.max(head.width, head.depth);
+        /*
+         * Match MarioEquipmentAdapter's base scale so this helper returns only the
+         * calibration multiplier layered on top. With protocol v2 both sides use
+         * the same semantic FACE width. Legacy v1 keeps the old broad head span.
+         */
+        float headSpan = semanticReference ? head.width : Math.max(head.width, head.depth);
         float helmetSpan = Math.max(outer.width, outer.depth);
         float oldClearance = Math.max(minimumClearance, headSpan * clearanceFraction);
         float oldTargetSpan = headSpan + oldClearance * 2.0F;
@@ -81,25 +86,42 @@ final class MarioHelmetAutoFit {
         }
 
         float widthClearance = Math.max(minimumClearance, head.width * clearanceFraction);
-        float depthClearance = Math.max(minimumClearance, head.depth * clearanceFraction);
         float heightClearance = Math.max(minimumClearance, head.height * clearanceFraction);
         float targetWidth = head.width + widthClearance * 2.0F;
-        float targetDepth = head.depth + depthClearance * 2.0F;
         float targetHeight = head.height + heightClearance * 2.0F;
 
         float cavityWidth = outer.width * cavityHorizontal;
-        float cavityDepth = outer.depth * cavityHorizontal;
         float cavityHeight = outer.height * cavityVertical;
-        if (cavityWidth <= 0.0F || cavityDepth <= 0.0F || cavityHeight <= 0.0F) {
+        if (cavityWidth <= 0.0F || cavityHeight <= 0.0F) {
             return Float.NaN;
         }
 
         float widthFit = targetWidth / cavityWidth;
-        float depthFit = targetDepth / cavityDepth;
         float heightFit = targetHeight / cavityHeight;
-        float horizontalFit = Math.max(widthFit, depthFit);
-        float verticalFit = Math.min(heightFit, horizontalFit * verticalAssistLimit);
-        float desiredAutoFit = Math.max(horizontalFit, verticalFit);
+        float desiredAutoFit;
+        float depthFit = Float.NaN;
+
+        if (semanticReference) {
+            /*
+             * FACE local +Y contains Mario's protected nose projection. A full
+             * helmet must not scale up just to contain that depth; the nose/face is
+             * intentionally allowed to project through the helmet opening.
+             */
+            float verticalFit = Math.min(heightFit, widthFit * verticalAssistLimit);
+            desiredAutoFit = Math.max(widthFit, verticalFit);
+        } else {
+            float depthClearance = Math.max(minimumClearance, head.depth * clearanceFraction);
+            float targetDepth = head.depth + depthClearance * 2.0F;
+            float cavityDepth = outer.depth * cavityHorizontal;
+            if (cavityDepth <= 0.0F) {
+                return Float.NaN;
+            }
+            depthFit = targetDepth / cavityDepth;
+            float horizontalFit = Math.max(widthFit, depthFit);
+            float verticalFit = Math.min(heightFit, horizontalFit * verticalAssistLimit);
+            desiredAutoFit = Math.max(horizontalFit, verticalFit);
+        }
+
         float multiplier = desiredAutoFit / oldAutoFit;
         if (!finite(multiplier) || multiplier <= 0.0F) {
             return Float.NaN;
@@ -110,11 +132,15 @@ final class MarioHelmetAutoFit {
             lastLoggedItemId = itemId;
             System.out.println("[SM64 Equipment AutoFit] item=" + itemId
                     + " name=" + helmet.name
+                    + " reference=" + (semanticReference ? "semantic-face" : "legacy-current-pose")
                     + " headW/H/D=" + head.width + "/" + head.height + "/" + head.depth
                     + " helmetOuterW/H/D=" + outer.width + "/" + outer.height + "/" + outer.depth
                     + " cavityH=" + cavityHorizontal
                     + " cavityV=" + cavityVertical
-                    + " oldAutoFit=" + oldAutoFit
+                    + " widthFit=" + widthFit
+                    + " heightFit=" + heightFit
+                    + " depthFit=" + depthFit
+                    + " baseAutoFit=" + oldAutoFit
                     + " desiredAutoFit=" + desiredAutoFit
                     + " manualScale=" + multiplier);
         }
