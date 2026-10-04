@@ -26,6 +26,7 @@ public final class Sm64BridgeSession {
     private static final int MAX_TRIANGLES = 1024;
 
     private static volatile Worker current;
+    private static volatile GeometryFrame presentationFrozenFrame;
 
     private Sm64BridgeSession() {
     }
@@ -36,6 +37,7 @@ public final class Sm64BridgeSession {
             return;
         }
 
+        presentationFrozenFrame = null;
         Worker worker = new Worker(resolveBridgePath(), resolveRomPath());
         current = worker;
         worker.start();
@@ -44,6 +46,7 @@ public final class Sm64BridgeSession {
     public static synchronized void stop() {
         Worker worker = current;
         current = null;
+        presentationFrozenFrame = null;
         if (worker != null) {
             worker.stop();
         }
@@ -97,7 +100,32 @@ public final class Sm64BridgeSession {
         return worker == null ? null : worker.getFailureReason();
     }
 
+    /**
+     * Freezes/unfreezes Matrix's visible SM64 snapshot without pausing the native
+     * worker. Helmet calibration uses this so Mario's body/head stop animating
+     * while the sidecar remains healthy and keeps its fixed 30 Hz ownership.
+     */
+    static void setPresentationFrozen(boolean frozen) {
+        if (!frozen) {
+            presentationFrozenFrame = null;
+            return;
+        }
+        Worker worker = current;
+        GeometryFrame frame = worker == null ? null : worker.getLatestFrame();
+        if (frame != null) {
+            presentationFrozenFrame = frame;
+        }
+    }
+
+    static boolean isPresentationFrozen() {
+        return presentationFrozenFrame != null;
+    }
+
     static NativePosition getLatestPosition() {
+        GeometryFrame frozen = presentationFrozenFrame;
+        if (frozen != null && frozen.state != null) {
+            return new NativePosition(frozen.state.x, frozen.state.y, frozen.state.z);
+        }
         Worker worker = current;
         NativeState state = worker == null ? null : worker.getLatestState();
         return state == null ? null : new NativePosition(state.x, state.y, state.z);
@@ -109,6 +137,10 @@ public final class Sm64BridgeSession {
     }
 
     static GeometryFrame getLatestGeometryFrame() {
+        GeometryFrame frozen = presentationFrozenFrame;
+        if (frozen != null) {
+            return refreshPresentationTimestamp(frozen);
+        }
         Worker worker = current;
         return worker == null ? null : worker.getLatestFrame();
     }
@@ -125,6 +157,11 @@ public final class Sm64BridgeSession {
      * cannot drift onto different native interpolation phases.
      */
     static NativePosition getInterpolatedPosition() {
+        GeometryFrame frozen = presentationFrozenFrame;
+        if (frozen != null && frozen.state != null) {
+            return new NativePosition(frozen.state.x, frozen.state.y, frozen.state.z);
+        }
+
         Worker worker = current;
         if (worker == null) {
             return null;
@@ -159,6 +196,33 @@ public final class Sm64BridgeSession {
             return 1.0F;
         }
         return alpha;
+    }
+
+    /**
+     * MarioVisualRenderer rejects stale frames after a bounded age. A calibration
+     * freeze intentionally reuses one geometry snapshot, so only its immutable
+     * NativeState timestamp is refreshed for presentation freshness; geometry,
+     * sequence, animation state and native worker publication remain untouched.
+     */
+    private static GeometryFrame refreshPresentationTimestamp(GeometryFrame frame) {
+        NativeState state = frame.state;
+        if (state == null) {
+            return frame;
+        }
+        NativeState freshState = new NativeState(
+                state.x, state.y, state.z,
+                state.vx, state.vy, state.vz,
+                state.faceAngle, state.forwardVelocity,
+                state.action, state.animId, state.animFrame,
+                state.flags, state.particleFlags,
+                System.nanoTime());
+        return new GeometryFrame(
+                frame.sequence,
+                freshState,
+                frame.triangleCount,
+                frame.positions,
+                frame.colors,
+                frame.uvs);
     }
 
     private static final class Worker implements Runnable {
