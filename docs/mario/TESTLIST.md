@@ -191,6 +191,31 @@ Use the existing geometry-capable `sm64_bridge.exe`; do **not** rebuild it for t
 
 If detail is good but performance is poor, retry with `-Dmatrix3.sm64.textureSubdivisions=2` or `3` before changing architecture. If detail is still insufficient at `4`, the next fidelity step is a true renderer-neutral Matrix UV texture path rather than increasing generated geometry indefinitely.
 
+## Bundle 4.2B - shared-topology smoothing
+
+### Evidence / implementation
+
+- [x] Runtime comparison shows the working Matrix Mario is visibly more faceted/triangular than the SM64 gameplay reference. `VERIFIED` by user screenshots 2026-10-04.
+- [x] The generated Matrix path previously emitted three independent vertices for every output face, leaving compatible neighboring source faces disconnected. `verified-static`.
+- [x] `Class159` supports coincident vertex reuse; generated Mario now uses shared boundary topology instead of unconditional per-face duplication. `verified-static`.
+- [x] Only coincident boundary vertices from source faces whose geometric normals fall within the smoothing threshold are welded; genuine sharper edges remain split.
+- [x] Default smoothing threshold is `70` degrees and can be calibrated without another patch through `-Dmatrix3.sm64.smoothAngleDegrees=0..180`.
+- [x] Atlas micro-face colour/detail logic is unchanged; smoothing alters generated topology only.
+- [x] ACTIVE log now reports `matrixVertices=` and `smoothAngle=` for the generated frame.
+
+### Runtime acceptance
+
+1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch once.
+2. [ ] Ctrl+M and confirm Mario still renders with the accepted atlas details and no giant black triangle regression.
+3. [ ] Compare face, nose, cap, gloves, arms and overalls against the prior faceted build; compatible surfaces should shade visibly rounder/smoother.
+4. [ ] Confirm hard features do not look melted or incorrectly blended together.
+5. [ ] Idle animation still works normally.
+6. [ ] Space jump animation still works normally.
+7. [ ] Watch the console for `matrixVertices=` and `smoothAngle=70.0` and confirm no model-build/render errors.
+8. [ ] Watch briefly for an obvious FPS regression from the shared-topology lookup.
+
+If the result is still too faceted, test `-Dmatrix3.sm64.smoothAngleDegrees=90`. If edges look over-smoothed, test `45` or `60` before changing the topology algorithm.
+
 ### Model-scale calibration
 
 Default Mario mesh scale remains `2.0`:
@@ -210,4 +235,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Runtime-test Bundle 2.3 once. The acceptance target is specific: WASD changes native Mario movement/turning states, Space still jumps, F drives native B attacks, Shift drives native Z crouch/ground-pound behavior, held-action entry guards work, and RuneScape horizontal authority remains unchanged. Bundle 4.2A atlas micro-face v3 is already runtime-accepted; sustained performance and remote-player isolation remain carryover regression checks.
+Runtime-test Bundle 4.2B smoothing first. The acceptance target is a visibly rounder Mario without losing the accepted atlas details or melting true hard edges. After that, return to the pending Bundle 2.3 keyboard-control runtime gate unless the user reprioritizes again.
