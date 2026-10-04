@@ -53,16 +53,18 @@ final class MarioHelmetCalibrationController {
                 active = false;
                 activeItemId = -1;
                 activeItemName = null;
+                Sm64BridgeSession.setPresentationFrozen(false);
                 clearAdjustmentEdges();
             } else if (itemId >= 0) {
                 active = true;
                 activeItemId = itemId;
                 activeItemName = safeName(itemName);
+                Sm64BridgeSession.setPresentationFrozen(true);
                 clearAdjustmentEdges();
                 System.out.println("[SM64 Equipment Calibration] ON item=" + itemId
-                        + " name=" + activeItemName);
+                        + " name=" + activeItemName + " presentation=FROZEN");
                 System.out.println("[SM64 Equipment Calibration] Controls:"
-                        + " Left/Right=X, Up/Down=Y, PgUp/PgDn=Z,"
+                        + " Left/Right=local X, Up/Down=local Y, PgUp/PgDn=local Z,"
                         + " Home/End=scale -/+, [/]=yaw -/+5deg,"
                         + " Shift=5x step, R=reset item, P=print, F6=done");
                 printCurrent("CURRENT");
@@ -79,6 +81,7 @@ final class MarioHelmetCalibrationController {
             active = false;
             activeItemId = -1;
             activeItemName = null;
+            Sm64BridgeSession.setPresentationFrozen(false);
             clearAdjustmentEdges();
             return;
         }
@@ -105,7 +108,6 @@ final class MarioHelmetCalibrationController {
             changed = true;
         }
         if (pressedEdge(INTERNAL_UP_KEY)) {
-            // Matrix scene Y is positive downward for this presentation path.
             calibration.offsetY -= POSITION_STEP * coarse;
             changed = true;
         }
@@ -159,6 +161,7 @@ final class MarioHelmetCalibrationController {
         active = false;
         activeItemId = -1;
         activeItemName = null;
+        Sm64BridgeSession.setPresentationFrozen(false);
         for (int i = 0; i < KEY_WAS_DOWN.length; i++) {
             KEY_WAS_DOWN[i] = false;
         }
