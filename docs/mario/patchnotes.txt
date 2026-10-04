@@ -84,3 +84,9 @@
 - Added `-Dmatrix3.sm64.textureSubdivisions=0..4`; `0` is the native-base-colour fallback, while `2`/`3` can be used if the default `4` is visually sufficient but too expensive.
 - ACTIVE log now reports source triangle count, generated Matrix triangle count, colour mode and effective texture subdivision count.
 - Runtime gate: eyes/facial/hat/clothing details should return without the former giant black source-triangle blocks; idle/jump/restore and sustained render performance must remain stable.
+
+2026-10-04 - Bundle 4.2A atlas micro-face runtime VERIFIED
+- User confirmed the atlas micro-face v3 presentation works at runtime.
+- Mario's texture details, including the facial/eye detail lost on the native-base-colour fallback, are restored.
+- The former giant black whole-source-triangle artifact remains fixed with the micro-face atlas path.
+- Bundle 4.2A visual-fidelity gate is accepted. Sustained performance, remote-player isolation, and broader lifecycle regression remain carryover checks.
