@@ -26,6 +26,7 @@ public final class MarioEquipmentAdapter {
     private static final float DEFAULT_HELMET_FIT_PADDING = 1.0F;
     private static final float DEFAULT_HELMET_CLEARANCE_FRACTION = 0.05F;
     private static final float DEFAULT_HELMET_MIN_CLEARANCE = 2.0F;
+    private static final float DEFAULT_HELMET_YAW_OFFSET_DEGREES = 180.0F;
     private static final float HEAD_START_FRACTION = 0.50F;
     private static final float HEAD_RADIAL_FRACTION = 0.40F;
     private static final float HEAD_TRIM_FRACTION = 0.06F;
@@ -45,8 +46,8 @@ public final class MarioEquipmentAdapter {
             "matrix3.sm64.helmetMinClearance", DEFAULT_HELMET_MIN_CLEARANCE);
     private static final float HELMET_VERTICAL_OFFSET = resolveFiniteFloat(
             "matrix3.sm64.helmetVerticalOffset", 0.0F);
-    private static final float HELMET_YAW_OFFSET_RADIANS = (float) Math.toRadians(resolveFiniteFloat(
-            "matrix3.sm64.helmetYawOffsetDegrees", 0.0F));
+    private static final float HELMET_YAW_OFFSET_DEGREES = resolveFiniteFloat(
+            "matrix3.sm64.helmetYawOffsetDegrees", DEFAULT_HELMET_YAW_OFFSET_DEGREES);
     private static final boolean HELMET_YAW_FLIP = Boolean.parseBoolean(
             System.getProperty("matrix3.sm64.helmetYawFlip", "false"));
 
@@ -72,8 +73,12 @@ public final class MarioEquipmentAdapter {
     }
 
     static void render(Class523 scene, Class106 renderer) {
-        if (scene == null || renderer == null || !PlayerControllerMode.isMarioMode()
-                || !Sm64BridgeSession.isReady()) {
+        if (!PlayerControllerMode.isMarioMode()) {
+            MarioHelmetCalibrationController.onMarioModeInactive();
+            resetFrameTracking();
+            return;
+        }
+        if (scene == null || renderer == null || !Sm64BridgeSession.isReady()) {
             resetFrameTracking();
             return;
         }
@@ -93,6 +98,9 @@ public final class MarioEquipmentAdapter {
         lastFrameSequence = frame.sequence;
 
         HelmetAppearance helmet = findVisibleHelmet(player);
+        MarioHelmetCalibrationController.tick(
+                helmet == null ? -1 : helmet.itemId,
+                helmet == null ? null : helmet.definition.aString8180);
         if (helmet == null) {
             return;
         }
@@ -124,7 +132,14 @@ public final class MarioEquipmentAdapter {
                 HELMET_MIN_CLEARANCE,
                 referenceHeadHorizontalSpan * HELMET_CLEARANCE_FRACTION);
         float targetHelmetSpan = referenceHeadHorizontalSpan + clearance * 2.0F;
-        float fitScale = targetHelmetSpan * HELMET_FIT_PADDING / cachedHelmetHorizontalSpan;
+        float autoFitScale = targetHelmetSpan * HELMET_FIT_PADDING / cachedHelmetHorizontalSpan;
+        if (!isFinite(autoFitScale)) {
+            return;
+        }
+
+        MarioHelmetCalibrationController.Snapshot calibration =
+                MarioHelmetCalibrationController.getSnapshot(helmet.itemId);
+        float fitScale = autoFitScale * calibration.scaleMultiplier;
         if (!isFinite(fitScale)) {
             return;
         }
@@ -137,15 +152,27 @@ public final class MarioEquipmentAdapter {
         if (HELMET_YAW_FLIP) {
             yaw = -yaw;
         }
-        yaw += HELMET_YAW_OFFSET_RADIANS;
+        float yawOffsetDegrees = HELMET_YAW_OFFSET_DEGREES + calibration.yawDegrees;
+        yaw += (float) Math.toRadians(yawOffsetDegrees);
+
+        /*
+         * Manual X/Z corrections are defined in helmet/head-local space. Rotate
+         * them through the same yaw used by the helmet so a front/back correction
+         * stays attached to Mario's face as he turns instead of becoming a fixed
+         * world-space displacement.
+         */
+        float yawCos = (float) Math.cos(yaw);
+        float yawSin = (float) Math.sin(yaw);
+        float worldOffsetX = calibration.offsetX * yawCos + calibration.offsetZ * yawSin;
+        float worldOffsetZ = -calibration.offsetX * yawSin + calibration.offsetZ * yawCos;
 
         Class240 position = playerTransform.aClass240_2647;
         HELMET_TRANSFORM.method3577(fitScale, fitScale, fitScale);
         HELMET_TRANSFORM.method3576(0.0F, 1.0F, 0.0F, yaw);
         HELMET_TRANSFORM.method3580(
-                position.aFloat2653 + anchor.x,
-                position.aFloat2656 + anchor.y + HELMET_VERTICAL_OFFSET,
-                position.aFloat2657 + anchor.z);
+                position.aFloat2653 + anchor.x + worldOffsetX,
+                position.aFloat2656 + anchor.y + HELMET_VERTICAL_OFFSET + calibration.offsetY,
+                position.aFloat2657 + anchor.z + worldOffsetZ);
 
         try {
             cachedHelmetModel.method1375(HELMET_TRANSFORM, HELMET_BOUNDS, 0);
@@ -153,14 +180,19 @@ public final class MarioEquipmentAdapter {
                 cachedHelmetLogged = true;
                 System.out.println("[SM64 Equipment] Helmet ACTIVE item=" + cachedItemId
                         + " name=" + cachedHelmetName
+                        + " autoFit=" + autoFitScale
+                        + " manualScale=" + calibration.scaleMultiplier
                         + " fit=" + fitScale
                         + " liveHeadSpan=" + anchor.horizontalSpan
                         + " referenceHeadSpan=" + referenceHeadHorizontalSpan
                         + " clearance=" + clearance
                         + " targetSpan=" + targetHelmetSpan
                         + " helmetSpan=" + cachedHelmetHorizontalSpan
+                        + " x=" + calibration.offsetX
+                        + " y=" + calibration.offsetY
+                        + " z=" + calibration.offsetZ
                         + " yawFlip=" + HELMET_YAW_FLIP
-                        + " yawOffsetDeg=" + Math.toDegrees(HELMET_YAW_OFFSET_RADIANS));
+                        + " yawOffsetDeg=" + yawOffsetDegrees);
             }
         } catch (RuntimeException ex) {
             logHelmetFailure(helmet.itemId,
