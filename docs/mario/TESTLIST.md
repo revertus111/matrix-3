@@ -87,6 +87,41 @@ If the native jump is visibly too tall/short, test without another code patch us
 
 Do not treat a tuned value as final collision scale until Phase 3 establishes the full Matrix<->SM64 XYZ/collision conversion.
 
+## Bundle 2.3 - native Mario keyboard controls
+
+### Implementation / static gate
+
+- [x] Matrix held-key owner remains `Class108.aClass549_1426`; no second AWT keyboard listener was added.
+- [x] `Class549_Sub1.anIntArray8901` mappings used by the controller are `W=33`, `A=48`, `S=49`, `D=50`, `F=51`, `Shift=81`, `Space=83`. `verified-static`.
+- [x] WASD is normalized into libsm64 analog `stickX/stickY`; diagonals use `0.70710677` per axis so diagonal magnitude remains 1.0.
+- [x] Space -> SM64 A, F -> SM64 B, Shift -> SM64 Z.
+- [x] One immutable input snapshot is published to the fixed 30 Hz worker so stick/A/B/Z values cannot be mixed across a native step.
+- [x] A/B/Z are fail-safe on Mario-mode entry: an action key already held while entering must be released before it can trigger native input.
+- [x] Existing binary sidecar packet already carried stick/A/B/Z, so this patch requires **no native bridge rebuild or protocol-version change**.
+- [x] Horizontal Matrix X/Z remains Matrix-owned for this slice. Native WASD drives authentic SM64 movement/action/animation state, but the rendered Mario remains anchored to the Matrix local-player transform until the collision/XYZ handoff is deliberately implemented.
+
+### Runtime acceptance
+
+Use the existing geometry-capable `sm64_bridge.exe`; do **not** rebuild it for this test.
+
+1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch once.
+2. [ ] Enter Mario mode with Ctrl+M. Console prints `WASD move, Space jump, F attack, Shift crouch/ground-pound`.
+3. [ ] Hold W, then A/S/D individually. Mario visibly changes into the expected native movement/turning animation states without bridge/render errors.
+4. [ ] Hold W+D (and another diagonal). Native movement remains stable; there is no obvious diagonal input spike or animation glitch.
+5. [ ] Tap Space: the already-proven native jump still works.
+6. [ ] Tap F while grounded: Mario performs the native B-button attack chain/state (punch/kick/grab behavior as selected by libsm64 state).
+7. [ ] Hold Shift while grounded: Mario enters the native Z/crouch behavior.
+8. [ ] Jump, then press Shift in the air: Mario enters native ground-pound behavior.
+9. [ ] While moving, test Shift + Space timing for a native long-jump transition; libsm64, not Java, decides whether the action conditions are satisfied.
+10. [ ] Enter Mario mode while Space, F, or Shift is already held. None of those actions fires until that key is released and pressed again.
+11. [ ] Ctrl+M back to RuneScape. Mario input stops and normal RuneScape presentation/control returns.
+12. [ ] Ordinary RuneScape click-to-move/XZ remains usable; do not interpret the lack of native horizontal Matrix translation as a failure of this input slice.
+
+### Known boundary for this slice
+
+- Native horizontal position is intentionally **not** written into Matrix player X/Z yet. Doing that before RuneScape terrain/object collision and the authority boundary are ready would create client/server desync.
+- The native `camLookX/camLookZ` remains the existing fixed bridge direction for this first keyboard-input pass. Matrix-camera-relative Mario steering is a separate bounded control-polish patch if runtime feel shows it is needed before collision handoff.
+
 ## Bundle 4.1 - native Mario geometry -> Matrix Model
 
 ### Implementation / static gate
@@ -175,4 +210,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Bundle 4.2A atlas micro-face v3 is runtime-accepted for visual fidelity: texture details are restored and the giant black whole-triangle artifact remains fixed. Next visual work is scale/orientation/ground-anchor calibration, with sustained performance and remote-player isolation left as carryover regression checks.
+Runtime-test Bundle 2.3 once. The acceptance target is specific: WASD changes native Mario movement/turning states, Space still jumps, F drives native B attacks, Shift drives native Z crouch/ground-pound behavior, held-action entry guards work, and RuneScape horizontal authority remains unchanged. Bundle 4.2A atlas micro-face v3 is already runtime-accepted; sustained performance and remote-player isolation remain carryover regression checks.
