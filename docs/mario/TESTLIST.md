@@ -45,9 +45,9 @@ The printed final action returned to the baseline by the end of the deterministi
 
 Use one client launch:
 
-1. [ ] Eclipse clean/build succeeds under Java 8.
-2. [ ] Launch/login normally in RuneScape mode.
-3. [ ] Press Ctrl+M once. Console prints:
+1. [x] Eclipse clean/build succeeds under Java 8 and client launches normally. Runtime-accepted 2026-10-04.
+2. [x] Launch/login normally in RuneScape mode.
+3. [x] Press Ctrl+M once. Console prints:
 
 ```text
 [Mario] Controller mode: MARIO
@@ -55,13 +55,15 @@ Use one client launch:
 [SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale 3.0)
 ```
 
-4. [ ] Tap Space. The **visible 830 player** rises/lands. This must now come from native SM64 Y, not Java gravity.
+Runtime-confirmed by user on 2026-10-04.
+
+4. [x] Tap Space. The **visible 830 player** rises/lands from the native SM64 Y path rather than the removed Java-gravity implementation. User accepted the Bundle 2.2 path as working on 2026-10-04.
 5. [ ] Tap Space again after landing. A second native jump works cleanly.
 6. [ ] Enter Mario mode while Space is already held: no jump occurs until Space is released and pressed again.
 7. [ ] Ctrl+M back to RuneScape while grounded: native session stops and Space no longer drives Mario.
 8. [ ] Ctrl+M back to RuneScape while airborne: player returns to the tracked Matrix ground baseline without stale height.
 9. [ ] Ordinary RuneScape X/Z movement/clicking still works before, during and after this vertical-only bridge proof.
-10. [ ] No client hang/crash while persistent native stepping is active.
+10. [x] No client hang/crash observed while the persistent native session/transform path was active in the accepted runtime test.
 
 ### Failure fallback check
 
@@ -95,4 +97,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-After Bundle 2.2 is runtime-accepted, begin Phase 3 / Bundle 3.1: convert the nearby Matrix terrain heightfield into local `SM64Surface` triangles so the native core can stand, run and jump on real RuneScape hills instead of the temporary flat floor.
+The native SM64 -> visible Matrix vertical path is runtime-proven. Remaining Ctrl+M exit/relog/failure checks remain regression carryover before Bundle 2.2 can be marked fully closed.
