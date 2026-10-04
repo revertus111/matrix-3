@@ -19,6 +19,16 @@
 - [ ] Space/F/Shift physical states reflect the held keys and forwarded A/B/Z reflect the post-entry-guard values actually sent to libsm64.
 - [ ] Native frame age normally stays low while the sidecar is healthy; sequence advances without repeated gaps.
 
+## Long-idle / sleep-state bridge-stall fix
+
+1. [ ] Rebuild `native/sm64-bridge/dist/sm64_bridge.exe` from the patched bridge source before launching Matrix3.
+2. [ ] Enter Mario mode and leave Mario completely idle longer than the previous failure window (at least 90 seconds).
+3. [ ] N64 -> Mario 64 sequence continues advancing throughout the idle period; frame age remains low instead of climbing into multi-second values.
+4. [ ] Mario does not settle into persistent action `0x0C000203`; the bridge may log `Sleep state ... -> idle to preserve frame streaming` when the autonomous sleep transition is intercepted.
+5. [ ] `Suppress RuneScape body` stays `YES` while Mario mode remains active and the normal RuneScape body never replaces Mario during long idle.
+6. [ ] After the long idle, press Space once: Mario jumps normally and no RuneScape body appears underneath/after the jump.
+7. [ ] Verify WASD movement, F/B attack input and Shift crouch/ground-pound still function after the intercepted sleep transition.
+
 ## Idle -> Space regression flight-recorder gate
 
 1. [ ] Enter Mario mode and wait idle for several seconds.
