@@ -99,48 +99,59 @@ final class MarioHelmetCalibrationController {
         float coarse = AlternateCharacterInputKeyboard.rawKeyDown(INTERNAL_SHIFT_KEY)
                 ? COARSE_MULTIPLIER : 1.0F;
         boolean changed = false;
+        boolean manualOverride = false;
 
         if (pressedEdge(INTERNAL_LEFT_KEY)) {
             calibration.offsetX -= POSITION_STEP * coarse;
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_RIGHT_KEY)) {
             calibration.offsetX += POSITION_STEP * coarse;
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_UP_KEY)) {
             calibration.offsetY -= POSITION_STEP * coarse;
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_DOWN_KEY)) {
             calibration.offsetY += POSITION_STEP * coarse;
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_PAGE_UP_KEY)) {
             calibration.offsetZ += POSITION_STEP * coarse;
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_PAGE_DOWN_KEY)) {
             calibration.offsetZ -= POSITION_STEP * coarse;
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_HOME_KEY)) {
             calibration.scaleMultiplier = Math.max(
                     0.10F, calibration.scaleMultiplier - SCALE_STEP * coarse);
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_END_KEY)) {
             calibration.scaleMultiplier = Math.min(
                     5.00F, calibration.scaleMultiplier + SCALE_STEP * coarse);
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_OPEN_BRACKET_KEY)) {
             calibration.yawDegrees -= YAW_STEP_DEGREES * coarse;
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_CLOSE_BRACKET_KEY)) {
             calibration.yawDegrees += YAW_STEP_DEGREES * coarse;
             changed = true;
+            manualOverride = true;
         }
         if (pressedEdge(INTERNAL_R_KEY)) {
             calibration.reset();
@@ -151,6 +162,9 @@ final class MarioHelmetCalibrationController {
         }
 
         if (changed) {
+            if (manualOverride) {
+                calibration.autoFitResolved = true;
+            }
             printCurrent("ADJUST");
         }
     }
@@ -201,10 +215,10 @@ final class MarioHelmetCalibrationController {
     }
 
     static synchronized Snapshot getSnapshot(int itemId) {
-        Calibration calibration = SESSION_CALIBRATIONS.get(Integer.valueOf(itemId));
-        if (calibration == null) {
+        if (itemId < 0) {
             return Snapshot.DEFAULT;
         }
+        Calibration calibration = getOrCreate(itemId);
         return new Snapshot(
                 calibration.scaleMultiplier,
                 calibration.offsetX,
@@ -224,6 +238,7 @@ final class MarioHelmetCalibrationController {
         calibration.offsetY = finiteOrZero(snapshot.offsetY);
         calibration.offsetZ = finiteOrZero(snapshot.offsetZ);
         calibration.yawDegrees = finiteOrZero(snapshot.yawDegrees);
+        calibration.autoFitResolved = true;
     }
 
     static synchronized void resetItem(int itemId) {
@@ -239,6 +254,14 @@ final class MarioHelmetCalibrationController {
         if (calibration == null) {
             calibration = new Calibration();
             SESSION_CALIBRATIONS.put(key, calibration);
+        }
+        if (!calibration.autoFitResolved) {
+            float recommended = MarioHelmetAutoFit.recommendScaleMultiplier(itemId);
+            if (!Float.isNaN(recommended) && !Float.isInfinite(recommended)
+                    && recommended > 0.0F) {
+                calibration.scaleMultiplier = clamp(recommended, 0.10F, 5.00F);
+                calibration.autoFitResolved = true;
+            }
         }
         return calibration;
     }
@@ -316,6 +339,7 @@ final class MarioHelmetCalibrationController {
         float offsetY;
         float offsetZ;
         float yawDegrees;
+        boolean autoFitResolved;
 
         void reset() {
             scaleMultiplier = 1.0F;
@@ -323,6 +347,7 @@ final class MarioHelmetCalibrationController {
             offsetY = 0.0F;
             offsetZ = 0.0F;
             yawDegrees = 0.0F;
+            autoFitResolved = false;
         }
     }
 }
