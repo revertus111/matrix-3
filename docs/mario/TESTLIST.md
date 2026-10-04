@@ -30,35 +30,44 @@ The following lifecycle/deeper checks remain useful regression coverage even tho
 
 ### One-time local setup
 
-- [ ] In `native/sm64-bridge`, build the sidecar against real `libsm64` (`make bootstrap` from an MSYS2 MinGW 64 shell on Windows).
-- [ ] Keep your own SM64 US ROM outside Git. Default local path: `native/sm64-bridge/baserom.us.z64`.
-- [ ] Confirm `native/sm64-bridge/dist/sm64_bridge.exe` and `sm64.dll` exist locally.
+- [x] In `native/sm64-bridge`, build the sidecar against real `libsm64` (`make bootstrap` from an MSYS2 MinGW 64 shell on Windows). Runtime-confirmed 2026-10-04.
+- [x] Keep your own SM64 US ROM outside Git. Default local path: `native/sm64-bridge/baserom.us.z64`.
+- [x] Confirm `native/sm64-bridge/dist/sm64_bridge.exe` and `sm64.dll` exist locally.
 
 ### Native transport acceptance
 
-- [ ] Manual optional smoke: sidecar starts and prints `READY 1`; `PING` returns `PONG 1`.
-- [ ] Eclipse Java 8 clean/build still succeeds with `Sm64BridgeProbe` present.
-- [ ] Launch/login normally; existing RuneScape mode behavior remains unchanged.
-- [ ] Press Ctrl+M to enter Mario mode once.
-- [ ] Console prints a bridge PASS resembling:
+- [x] Manual smoke: sidecar starts and prints `READY 1`; `PING` returns `PONG 1`.
+- [x] Launch/login succeeds with `Sm64BridgeProbe` present.
+- [x] Existing RuneScape/Mario controller-mode activation still works.
+- [x] Press Ctrl+M to enter Mario mode once.
+- [x] Console prints a real bridge PASS from actual `libsm64` + user ROM:
 
 ```text
-[SM64 Bridge] PASS native SM64 state: y ... -> ... (rise ...), action ... -> ...
+[SM64 Bridge] PASS native SM64 state: y -0.00 -> 96.50 (rise 96.50), action 205521409 -> 205521409
 ```
 
-- [ ] No client hang/crash occurs while the background probe runs.
-- [ ] The visible Matrix player is still controlled by the existing Java jump proof during Spike A; native state does **not** move the player yet.
+- [x] No client hang/crash occurred while the background probe ran.
+- [x] Java observed an intermediate native action-state change during the deterministic sequence; the displayed final action returned to the baseline action by the end of the test.
+- [ ] The visible Matrix player remains on the temporary Java jump proof until Bridge Spike B explicitly replaces Mario-mode vertical physics with returned native state.
 
 ### Bridge Spike A acceptance rule
 
-Do not mark Bundle 2.1 complete from `READY`/`PONG` alone.
+**VERIFIED on 2026-10-04.**
 
-PASS requires Java to observe both:
+PASS required Java to observe both:
 
 1. native Mario Y rising above the idle baseline after the A-button sequence, and
 2. at least one native action-state change during the sequence.
 
-A local stub/protocol test is useful static verification but does not count. The process must be linked against actual `libsm64` and initialized from the user's US ROM.
+The real runtime produced a 96.50-unit native Y rise and the probe PASS gate succeeded while linked against actual `libsm64` and initialized from the user's US ROM. `READY`/`PONG` alone were not used as acceptance.
+
+## Bridge Spike B - native state drives visible Matrix transform
+
+- [ ] Replace Mario-mode vertical simulation ownership from `MarioJumpController` Java gravity to the persistent native bridge state.
+- [ ] Advance the native simulation on a fixed 30 Hz step.
+- [ ] Convert native SM64 Y into the established Matrix local-player vertical transform convention.
+- [ ] Preserve RuneScape mode as the safe default and cleanly stop/reset native state when leaving Mario mode.
+- [ ] Runtime prove that pressing Space/A causes actual SM64-derived C state to visibly move the 830 player.
 
 ## Deeper regression carryover
 
@@ -74,6 +83,6 @@ From `docs/rs3/SMOKE_TEST.md`:
 - [ ] Login / player lifecycle: login, expected world entry, logout, relog.
 - [ ] Movement / interfaces / utility: normal movement remains functional.
 
-## Next gate after native PASS
+## Next gate
 
-Bridge Spike B maps the returned native Mario vertical state onto the already-VERIFIED Matrix local-player transform. That is the first test where actual SM64-derived C, rather than `MarioJumpController`'s Java gravity, causes the visible 830-side player to jump.
+Bridge Spike B maps returned native Mario state onto the already-VERIFIED Matrix local-player transform. That is the first test where actual SM64-derived C, rather than `MarioJumpController`'s Java gravity, causes the visible 830-side player to jump.
