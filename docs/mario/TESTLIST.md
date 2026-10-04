@@ -13,18 +13,56 @@
 
 ## Controller Mode Boundary - Bundle 1.2
 
-- [ ] On login/default RuneScape mode, pressing Space does not trigger the Mario jump.
-- [ ] Press Ctrl+M once: client console/stdout reports `[Mario] Controller mode: MARIO`.
-- [ ] In Mario mode, Space triggers the same working vertical jump.
-- [ ] Hold Ctrl+M: the mode toggles only once; it does not oscillate every tick.
-- [ ] Press Ctrl+M again while grounded: mode reports `RUNESCAPE` and Space no longer jumps.
+User accepted the controller-mode behavior at runtime on 2026-10-03.
+
+- [x] On login/default RuneScape mode, pressing Space does not trigger the Mario jump.
+- [x] Press Ctrl+M once: client reports `[Mario] Controller mode: MARIO`.
+- [x] In Mario mode, Space triggers the working vertical proof.
+- [x] Ctrl+M toggles back to RuneScape mode rather than making Mario behavior global.
+
+The following lifecycle/deeper checks remain useful regression coverage even though the controller-boundary slice is accepted:
+
 - [ ] Press Ctrl+M while airborne: the player returns to the tracked ground baseline and Mario airborne state clears.
 - [ ] Enable Mario mode while Space is already held: no manufactured jump occurs until Space is released and pressed again.
 - [ ] Logout/relog after using Mario mode: the new local-player lifecycle starts in RuneScape mode with no stale jump height/state.
 
-## Deeper regression
+## Bridge Spike A - actual SM64-derived native state
 
-- [ ] Repeat jumps at multiple terrain elevations.
+### One-time local setup
+
+- [ ] In `native/sm64-bridge`, build the sidecar against real `libsm64` (`make bootstrap` from an MSYS2 MinGW 64 shell on Windows).
+- [ ] Keep your own SM64 US ROM outside Git. Default local path: `native/sm64-bridge/baserom.us.z64`.
+- [ ] Confirm `native/sm64-bridge/dist/sm64_bridge.exe` and `sm64.dll` exist locally.
+
+### Native transport acceptance
+
+- [ ] Manual optional smoke: sidecar starts and prints `READY 1`; `PING` returns `PONG 1`.
+- [ ] Eclipse Java 8 clean/build still succeeds with `Sm64BridgeProbe` present.
+- [ ] Launch/login normally; existing RuneScape mode behavior remains unchanged.
+- [ ] Press Ctrl+M to enter Mario mode once.
+- [ ] Console prints a bridge PASS resembling:
+
+```text
+[SM64 Bridge] PASS native SM64 state: y ... -> ... (rise ...), action ... -> ...
+```
+
+- [ ] No client hang/crash occurs while the background probe runs.
+- [ ] The visible Matrix player is still controlled by the existing Java jump proof during Spike A; native state does **not** move the player yet.
+
+### Bridge Spike A acceptance rule
+
+Do not mark Bundle 2.1 complete from `READY`/`PONG` alone.
+
+PASS requires Java to observe both:
+
+1. native Mario Y rising above the idle baseline after the A-button sequence, and
+2. at least one native action-state change during the sequence.
+
+A local stub/protocol test is useful static verification but does not count. The process must be linked against actual `libsm64` and initialized from the user's US ROM.
+
+## Deeper regression carryover
+
+- [ ] Repeat Java proof jumps at multiple RuneScape terrain elevations.
 - [ ] Normal movement after relog remains unchanged.
 - [ ] Verify Space still types normally in chat/text entry while RuneScape mode is active.
 
@@ -36,8 +74,6 @@ From `docs/rs3/SMOKE_TEST.md`:
 - [ ] Login / player lifecycle: login, expected world entry, logout, relog.
 - [ ] Movement / interfaces / utility: normal movement remains functional.
 
-## Acceptance rule
+## Next gate after native PASS
 
-- The core vertical-transform proof is now runtime-confirmed: the actual player can visibly leave RuneScape terrain.
-- Keep Bundle 1.1 regression carryover open until movement/slope/hold/relog checks above are accepted.
-- Do not mark Bundle 1.2 complete until Mario behavior is gated behind Ctrl+M, disabling midair restores the baseline cleanly, and a relog returns to RuneScape mode.
+Bridge Spike B maps the returned native Mario vertical state onto the already-VERIFIED Matrix local-player transform. That is the first test where actual SM64-derived C, rather than `MarioJumpController`'s Java gravity, causes the visible 830-side player to jump.
