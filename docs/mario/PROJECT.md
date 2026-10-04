@@ -67,6 +67,9 @@ The user explicitly moved Mario visual/animation presentation ahead of the world
 - That PASS proves Matrix Java can launch the native core, send input, execute SM64-derived movement/action code and receive real native Mario state back.
 - Bundle 2.2 runtime confirmed the persistent sidecar reaches `READY (30 Hz)`, native-state presentation reaches `ACTIVE`, and the native-driven Matrix transform path works in the live 830 client.
 - The visible Mario-mode vertical presentation path is driven by real native SM64 state rather than Java gravity.
+- Bundle 4.1 binary geometry-capable `sm64_bridge.exe` was rebuilt locally under MSYS2 MinGW64 and reports the expected `[--binary]` usage.
+- Actual libsm64 Mario geometry is visibly rendered inside the revision-830 world at the local player position and replaces the RuneScape body.
+- Native Mario idle animation visibly updates in-world across successive geometry frames.
 
 ### verified-static
 
@@ -96,7 +99,7 @@ The user explicitly moved Mario visual/animation presentation ahead of the world
 - Whether vertical scale `3.0` and model scale `2.0` are the best game-feel/visual calibration.
 - Final collision-bubble radius/rebuild threshold.
 - Whether V1 face-albedo atlas sampling is visually sufficient or exact runtime UV texture injection is worth a renderer-backend-neutral extension.
-- Runtime cost of rebuilding one Matrix `Model` per native 30 Hz animated geometry frame.
+- Runtime cost of rebuilding one Matrix `Model` per native 30 Hz animated geometry frame under sustained use.
 - Runtime cost of object collision proxy extraction.
 - Final client/server reconciliation model.
 
@@ -188,7 +191,7 @@ The remaining Bundle 2.2 safety checks are carryover and do not block the explic
 
 #### Bundle 4.1 - Direct native Mario geometry -> Matrix Model
 
-**Status:** IMPLEMENTED / NEEDS TEST
+**Status:** RUNTIME PARTIAL VERIFIED / NEEDS TEST
 
 - [x] Select direct `SM64MarioGeometryBuffers` presentation for the first authentic Mario visual path.
 - [x] Extend `sm64_bridge` with binary mode so animated geometry can cross the sidecar without text-float serialization.
@@ -201,12 +204,12 @@ The remaining Bundle 2.2 safety checks are carryover and do not block the explic
 - [x] V1 ROM atlas presentation: sample libsm64 UV/texture output into per-triangle Matrix face albedo without taking ownership of Matrix texture backends.
 - [x] Add local-player fail-open replacement gate in `Player.method10696(...)`; remote players are untouched and RuneScape reappears if Mario has no fresh successful render frame.
 - [x] Add `-Dmatrix3.sm64.modelScale=<positive-float>` calibration override.
-- [ ] Rebuild local `sm64_bridge.exe` for binary protocol.
+- [x] Rebuild local `sm64_bridge.exe` for binary protocol. `VERIFIED` 2026-10-04.
 - [ ] Eclipse Java 8 clean-build.
 - [ ] Runtime: Ctrl+M produces `[SM64 Bridge] Persistent session READY (30 Hz + geometry)`.
 - [ ] Runtime: console produces `[SM64 Visual] Native Mario -> Matrix Model ACTIVE ...`.
-- [ ] Runtime: actual Mario replaces the local RuneScape player at the same world transform.
-- [ ] Runtime: idle native animation visibly changes pose over successive frames.
+- [x] Runtime: actual Mario replaces the local RuneScape player at the same world transform. `VERIFIED` 2026-10-04.
+- [x] Runtime: idle native animation visibly changes pose over successive frames. `VERIFIED` 2026-10-04.
 - [ ] Runtime: Space jump visibly uses native Mario jump pose/animation while native Y drives height.
 - [ ] Runtime: Ctrl+M back to RuneScape restores the normal local-player model immediately.
 - [ ] Runtime: other players remain normal RuneScape players.
@@ -234,10 +237,10 @@ The remaining Bundle 2.2 safety checks are carryover and do not block the explic
 - Phase: 4 - Mario Visual / Animation Presentation
 - Phase status: ACTIVE
 - Bundle: 4.1 - Direct native Mario geometry -> Matrix Model
-- Bundle status: IMPLEMENTED / NEEDS TEST
+- Bundle status: RUNTIME PARTIAL VERIFIED / NEEDS TEST
 - Approval state: user explicitly reprioritized Mario visuals/animations and supplied `SAP AAA` for Bundle 4.1 on 2026-10-04.
-- Current checklist item: rebuild the local native sidecar, clean/build Java 8, then runtime-accept the first actual Mario replacement/animation frame.
-- Current objective: show actual libsm64-animated Mario in the revision-830 world using Matrix's renderer while preserving fail-open RuneScape presentation.
+- Current checklist item: finish Bundle 4.1 runtime acceptance: jump animation, remote-player isolation, Ctrl+M restoration/re-entry, sustained stability, then visual calibration.
+- Current objective: close the first authentic Mario body/animation presentation slice now that the body and native idle animation are runtime-proven.
 
 ## Checklist / patch status
 
@@ -245,10 +248,10 @@ The remaining Bundle 2.2 safety checks are carryover and do not block the explic
 | --- | --- | --- | --- | --- |
 | Matrix transform/input/controller foundation | 1 | 1.x | NEEDS TEST | Core lift/controller are runtime-proven; deeper lifecycle regression remains. |
 | Passthrough architecture | 2 | 2.1 | DONE | `SM64_PASSTHROUGH_ARCHITECTURE.md`. |
-| Native `sm64_bridge` sidecar | 2/4 | 2.1/4.1 | NEEDS TEST | Original state bridge verified; binary geometry extension now needs local rebuild/runtime acceptance. |
+| Native `sm64_bridge` sidecar | 2/4 | 2.1/4.1 | VERIFIED | Original state bridge and rebuilt binary-geometry executable are runtime-proven locally. |
 | Native -> visible Matrix transform | 2 | 2.2 | VERIFIED | Native SM64 Y visibly drives 830 vertical presentation. |
-| Mario native geometry transport | 4 | 4.1 | NEEDS TEST | Binary state/texture/geometry protocol implemented statically. |
-| Matrix Mario visual renderer | 4 | 4.1 | NEEDS TEST | `Class159 -> Model -> Matrix scene` replacement path implemented statically. |
+| Mario native geometry transport | 4 | 4.1 | VERIFIED | Actual Mario geometry and successive native idle-animation frames reach Matrix at runtime. |
+| Matrix Mario visual renderer | 4 | 4.1 | VERIFIED / NEEDS REGRESSION | Actual Mario replaces the local RuneScape body and visibly idles; exit/remote/stability checks remain. |
 | Matrix terrain adapter | 3 | 3.1 | READY / DEFERRED | Explicitly moved behind Mario visual priority. |
 
 ## Decisions / new ideas
@@ -284,7 +287,9 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 
 - Bridge Spike A runtime-VERIFIED against real `libsm64` + user ROM.
 - Native Y -> Matrix transform runtime-VERIFIED.
-- Bundle 4.1 implementation now extends the native bridge to binary state + ROM atlas + animated geometry, converts native frames into Matrix `Class159/Model`, renders them through the established scene seam, and fail-open suppresses only the local RuneScape player after a valid Mario replacement exists.
+- Bundle 4.1 binary sidecar rebuild runtime-VERIFIED.
+- Actual libsm64 Mario geometry is now visibly rendered inside Matrix3 and replaces the local RuneScape body. `VERIFIED` 2026-10-04.
+- Native Mario idle animation visibly updates in-world from successive geometry frames. `VERIFIED` 2026-10-04.
 
 **Current phase:**
 
@@ -292,14 +297,16 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 
 **Active bundle:**
 
-- Bundle 4.1 - Direct native Mario geometry -> Matrix Model (`IMPLEMENTED / NEEDS TEST`).
+- Bundle 4.1 - Direct native Mario geometry -> Matrix Model (`RUNTIME PARTIAL VERIFIED / NEEDS TEST`).
 
 **Next checklist item:**
 
-1. Pull current `main`.
-2. In the existing MSYS2 MINGW64 bridge directory run `make CC=gcc CXX=g++` to rebuild `sm64_bridge.exe` for the binary geometry protocol.
-3. Eclipse clean/build + launch.
-4. Ctrl+M and verify actual Mario replacement + native idle/jump animation.
+1. Verify Space uses Mario's native jump pose/animation while native Y drives the jump.
+2. Verify other players remain normal RuneScape players.
+3. Ctrl+M back to RuneScape and confirm the normal local model restores immediately.
+4. Re-enter Mario mode and confirm replacement/idle animation initializes cleanly again.
+5. Observe sustained runtime for crashes or render/model-build error spam.
+6. Calibrate model scale/orientation/ground anchor only from runtime evidence after the acceptance checks above.
 
 **Files/systems already inspected:**
 
@@ -325,17 +332,17 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 
 **Pending runtime verification:**
 
-- Local native sidecar rebuild succeeds.
-- Binary geometry handshake/session reaches READY.
-- Matrix builds/renders actual Mario geometry.
-- Local RuneScape body is replaced only after Mario render succeeds.
-- Native idle/jump poses visibly animate.
-- Ctrl+M restores RuneScape model cleanly.
+- Eclipse Java 8 clean-build for the completed Bundle 4.1 source slice.
+- Exact READY/ACTIVE console strings if they are needed for log-level acceptance.
+- Native jump pose/animation while native Y drives height.
+- Remote-player isolation.
+- Ctrl+M restoration and clean Mario re-entry.
+- Sustained stability / render-model error behavior.
 
 **Important remaining uncertainty:**
 
-- Visual scale/orientation/ground anchor and whether baked atlas face albedo is sufficient should be calibrated from the first actual Mario render rather than guessed statically.
+- Visual scale/orientation/ground anchor and whether baked atlas face albedo is sufficient should be calibrated from the now-working Mario render rather than guessed statically.
 
 ## Next recommended work
 
-Runtime-accept Bundle 4.1, then tune Mario scale/orientation/visual fidelity before returning to the collision adapter.
+Finish Bundle 4.1 runtime acceptance (jump animation, remote-player isolation, Ctrl+M restore/re-entry, sustained stability), then tune Mario scale/orientation/visual fidelity before returning to the collision adapter.
