@@ -1,88 +1,98 @@
 # Mario 830 Runtime Test List
 
-## Jump POC #1 - quick acceptance
+## Controller / legacy foundation
 
-- [ ] Eclipse clean/build succeeds under the protected Java 8 setup.
-- [x] Client launches and login succeeds normally.
-- [x] Standing still, press/release Space: the actual local player model visibly rises above terrain. Runtime-confirmed by user on 2026-10-03.
-- [ ] Hold Space through landing: no repeated jump occurs until Space is released and pressed again.
-- [ ] Click-walk/run while airborne: normal X/Z movement continues and the player lands cleanly.
-- [ ] Jump while moving uphill and downhill: no permanent hovering, burial, snap-to-wrong-height, or cumulative vertical drift.
-- [ ] After landing, ordinary RuneScape movement, turning, camera and interaction input still behave normally.
-- [ ] Jumping does not change the player's RuneScape plane/floor.
-
-## Controller Mode Boundary - Bundle 1.2
-
-User accepted the controller-mode behavior at runtime on 2026-10-03.
-
-- [x] On login/default RuneScape mode, pressing Space does not trigger the Mario jump.
-- [x] Press Ctrl+M once: client reports `[Mario] Controller mode: MARIO`.
-- [x] In Mario mode, Space triggers the working vertical proof.
-- [x] Ctrl+M toggles back to RuneScape mode rather than making Mario behavior global.
-
-The following lifecycle/deeper checks remain useful regression coverage even though the controller-boundary slice is accepted:
-
-- [ ] Press Ctrl+M while airborne: the player returns to the tracked ground baseline and Mario airborne state clears.
-- [ ] Enable Mario mode while Space is already held: no manufactured jump occurs until Space is released and pressed again.
-- [ ] Logout/relog after using Mario mode: the new local-player lifecycle starts in RuneScape mode with no stale jump height/state.
+- [x] Client launches/login succeeds normally.
+- [x] Actual local player can visibly leave terrain through the established Matrix transform. Runtime-confirmed 2026-10-03.
+- [x] Ctrl+M enables/disables Mario mode rather than making alternate behavior global.
+- [ ] Logout/relog after Mario use returns to RuneScape mode with no stale height/state.
+- [ ] Space behaves normally in RuneScape mode/chat contexts.
 
 ## Bridge Spike A - actual SM64-derived native state
 
-### One-time local setup
+**VERIFIED 2026-10-04.**
 
-- [x] In `native/sm64-bridge`, build the sidecar against real `libsm64` (`make bootstrap` from an MSYS2 MinGW 64 shell on Windows). Runtime-confirmed 2026-10-04.
-- [x] Keep your own SM64 US ROM outside Git. Default local path: `native/sm64-bridge/baserom.us.z64`.
-- [x] Confirm `native/sm64-bridge/dist/sm64_bridge.exe` and `sm64.dll` exist locally.
+- [x] Build real `libsm64` + `sm64_bridge.exe` under MSYS2 MinGW64.
+- [x] Use local user-owned US ROM at `native/sm64-bridge/baserom.us.z64`.
+- [x] Manual sidecar `READY 1` / `PONG 1`.
+- [x] Eclipse Java bridge receives real native state.
+- [x] PASS gate observed a 96.50-unit native Y rise and at least one intermediate native action-state change.
+- [x] No client hang/crash during the one-shot native proof.
 
-### Native transport acceptance
-
-- [x] Manual smoke: sidecar starts and prints `READY 1`; `PING` returns `PONG 1`.
-- [x] Launch/login succeeds with `Sm64BridgeProbe` present.
-- [x] Existing RuneScape/Mario controller-mode activation still works.
-- [x] Press Ctrl+M to enter Mario mode once.
-- [x] Console prints a real bridge PASS from actual `libsm64` + user ROM:
+Reference PASS:
 
 ```text
 [SM64 Bridge] PASS native SM64 state: y -0.00 -> 96.50 (rise 96.50), action 205521409 -> 205521409
 ```
 
-- [x] No client hang/crash occurred while the background probe ran.
-- [x] Java observed an intermediate native action-state change during the deterministic sequence; the displayed final action returned to the baseline action by the end of the test.
-- [ ] The visible Matrix player remains on the temporary Java jump proof until Bridge Spike B explicitly replaces Mario-mode vertical physics with returned native state.
+The printed final action returned to the baseline by the end of the deterministic sequence; the PASS gate had already observed an intermediate action change.
 
-### Bridge Spike A acceptance rule
+## Bridge Spike B / Bundle 2.2 - native state drives visible Matrix transform
 
-**VERIFIED on 2026-10-04.**
+### Implementation state
 
-PASS required Java to observe both:
+- [x] Replace one-shot `Sm64BridgeProbe` ownership with persistent `Sm64BridgeSession`.
+- [x] Fixed 30 Hz native `STEP` worker.
+- [x] Native process/thread publishes state only; Matrix transform mutation stays on the established client/viewport thread.
+- [x] Replace Java gravity with native SM64 Y presentation in Mario mode.
+- [x] One-native-tick delayed interpolation between published states.
+- [x] Preserve Matrix terrain/movement Y as the temporary baseline until RuneScape collision is streamed into SM64.
+- [x] Restore ground baseline and stop native session on Ctrl+M exit / local-player lifecycle change.
+- [x] Auto-fallback to RuneScape mode on missing sidecar/ROM or native-session failure.
+- [x] Suppress manufactured A/jump when entering Mario mode while Space is already held.
 
-1. native Mario Y rising above the idle baseline after the A-button sequence, and
-2. at least one native action-state change during the sequence.
+### Quick runtime acceptance
 
-The real runtime produced a 96.50-unit native Y rise and the probe PASS gate succeeded while linked against actual `libsm64` and initialized from the user's US ROM. `READY`/`PONG` alone were not used as acceptance.
+Use one client launch:
 
-## Bridge Spike B - native state drives visible Matrix transform
+1. [ ] Eclipse clean/build succeeds under Java 8.
+2. [ ] Launch/login normally in RuneScape mode.
+3. [ ] Press Ctrl+M once. Console prints:
 
-- [ ] Replace Mario-mode vertical simulation ownership from `MarioJumpController` Java gravity to the persistent native bridge state.
-- [ ] Advance the native simulation on a fixed 30 Hz step.
-- [ ] Convert native SM64 Y into the established Matrix local-player vertical transform convention.
-- [ ] Preserve RuneScape mode as the safe default and cleanly stop/reset native state when leaving Mario mode.
-- [ ] Runtime prove that pressing Space/A causes actual SM64-derived C state to visibly move the 830 player.
+```text
+[Mario] Controller mode: MARIO
+[SM64 Bridge] Persistent session READY (30 Hz)
+[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale 3.0)
+```
 
-## Deeper regression carryover
+4. [ ] Tap Space. The **visible 830 player** rises/lands. This must now come from native SM64 Y, not Java gravity.
+5. [ ] Tap Space again after landing. A second native jump works cleanly.
+6. [ ] Enter Mario mode while Space is already held: no jump occurs until Space is released and pressed again.
+7. [ ] Ctrl+M back to RuneScape while grounded: native session stops and Space no longer drives Mario.
+8. [ ] Ctrl+M back to RuneScape while airborne: player returns to the tracked Matrix ground baseline without stale height.
+9. [ ] Ordinary RuneScape X/Z movement/clicking still works before, during and after this vertical-only bridge proof.
+10. [ ] No client hang/crash while persistent native stepping is active.
 
-- [ ] Repeat Java proof jumps at multiple RuneScape terrain elevations.
-- [ ] Normal movement after relog remains unchanged.
-- [ ] Verify Space still types normally in chat/text entry while RuneScape mode is active.
+### Failure fallback check
+
+Do this only after the normal jump test passes:
+
+- [ ] Exit Mario mode.
+- [ ] Temporarily rename `native/sm64-bridge/dist/sm64_bridge.exe` (or use an invalid `-Dmatrix3.sm64.bridge` path).
+- [ ] Enter Mario mode.
+- [ ] Console reports persistent-session failure/fallback and controller returns to `RUNESCAPE` without changing plane/X/Z or leaving stale Y.
+- [ ] Restore the executable name/path afterward.
+
+### Vertical-scale calibration
+
+Default presentation scale is `3.0` Matrix units per native SM64 Y unit.
+
+If the native jump is visibly too tall/short, test without another code patch using:
+
+```text
+-Dmatrix3.sm64.verticalScale=<positive-float>
+```
+
+Do not treat a tuned value as final collision scale until Phase 3 establishes the full Matrix<->SM64 XYZ/collision conversion.
 
 ## Relevant Matrix3 smoke coverage
 
 From `docs/rs3/SMOKE_TEST.md`:
 
-- [ ] Build / startup: Eclipse Java 8 clean/build and client launch.
-- [ ] Login / player lifecycle: login, expected world entry, logout, relog.
-- [ ] Movement / interfaces / utility: normal movement remains functional.
+- [ ] Build/startup: Eclipse Java 8 clean/build and client launch.
+- [ ] Login/player lifecycle: login, expected world entry, logout, relog.
+- [ ] Movement/interfaces/utility: normal RuneScape movement remains functional.
 
 ## Next gate
 
-Bridge Spike B maps returned native Mario state onto the already-VERIFIED Matrix local-player transform. That is the first test where actual SM64-derived C, rather than `MarioJumpController`'s Java gravity, causes the visible 830-side player to jump.
+After Bundle 2.2 is runtime-accepted, begin Phase 3 / Bundle 3.1: convert the nearby Matrix terrain heightfield into local `SM64Surface` triangles so the native core can stand, run and jump on real RuneScape hills instead of the temporary flat floor.
