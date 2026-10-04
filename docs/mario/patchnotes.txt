@@ -50,17 +50,29 @@
 - Extended the native sidecar path to binary state + `SM64MarioGeometryBuffers` transport at the fixed 30 Hz simulation rate and one-time ROM-derived RGBA atlas handshake.
 - `Sm64BridgeSession` now publishes immutable native geometry/texture snapshots while retaining native process I/O and simulation ownership on its worker thread.
 - Added `MarioVisualRenderer` to convert native animated geometry into Matrix `Class159`, build a normal Matrix `Model`, and render it through the established `Class578.method6834(...)` direct-scene seam.
-- V1 samples libsm64 ROM atlas output into per-triangle Matrix face albedo so Matrix retains renderer/texture-backend ownership; exact runtime UV texture injection is deferred polish.
+- V1 sampled libsm64 ROM atlas output into per-triangle Matrix face albedo so Matrix retained renderer/texture-backend ownership; exact runtime UV texture injection was deferred polish.
 - Added `-Dmatrix3.sm64.modelScale=<positive-float>` with default `2.0` for visual calibration.
 - Added the local-player replacement gate at the shared `Player.method10696(...)` model-build seam rather than duplicating suppression across player renderer variants.
 - Suppression is fail-open: only the local player in Mario mode is hidden, and only while the native bridge is ready and `MarioVisualRenderer` has a fresh usable geometry frame after a successful Matrix render. Remote players, stale frames, bridge failure, model-build failure, and render failure retain the normal RuneScape appearance.
 - Recovered from an unsafe decompiled `Player.java` write by restoring the original file first; the final safe suppression commit changes `Player.java` by exactly 8 added lines and no deletions.
 - Static dependency/syntax inspection confirmed the gate targets same-package `MarioVisualRenderer.shouldSuppressLocalPlayer(...)`, which uses the published `Sm64BridgeSession` frame timestamp and a 500 ms freshness ceiling. This is `verified-static`, not runtime acceptance.
-- Bundle 4.1 remains `IMPLEMENTED / NEEDS TEST`: rebuild the local binary sidecar, Eclipse Java 8 clean/build, then runtime-verify actual Mario replacement, native idle/jump animation, local-only suppression, Ctrl+M restoration, and fail-open behavior.
 
 2026-10-04 - Bundle 4.1 Mario body + idle animation runtime proof
 - User rebuilt `sm64_bridge.exe` under MSYS2 MinGW64; the rebuilt binary reports the expected `[--binary] <path-to-sm64-us-rom>` usage, confirming the geometry-capable executable is installed locally.
 - Runtime screenshot confirms actual Mario geometry is rendered inside the revision-830 world at the local player position and replaces the RuneScape body.
 - User explicitly runtime-confirmed Mario's native idle animation is working, proving successive libsm64 geometry/animation frames are reaching Matrix and rebuilding/rendering visibly.
 - Binary geometry transport, Matrix `Class159 -> Model` presentation, local replacement presentation, and native idle animation are now `VERIFIED` for this runtime path.
-- Bundle 4.1 remains open only for jump-animation acceptance, remote-player isolation, Ctrl+M restoration/re-entry, sustained stability, and visual calibration/polish.
+
+2026-10-04 - Bundle 4.1 jump/restore/re-entry runtime proof
+- User confirmed the native SM64 jump animation renders correctly while the native SM64 Y path drives the visible jump.
+- User confirmed Ctrl+M restores the normal RuneScape local-player presentation and that re-entering Mario mode recreates the animated Mario replacement cleanly.
+- Bundle 4.1 core body/idle/jump/restore/re-entry presentation is runtime-accepted. Remote-player isolation and longer sustained-runtime regression remain carryover checks.
+
+2026-10-04 - Bundle 4.2A Mario render colour fidelity
+- Runtime screenshots showed large dark/black whole-triangle patches despite correct geometry and animation.
+- Static trace found the V1 approximation sampled only each triangle's three atlas UV vertices, alpha-blended those texels with libsm64 base colour, then collapsed the result into one RuneScape packed-HSL face colour.
+- libsm64's reference GL renderer instead draws Mario base colour/lighting first, then overlays the ROM texture as a separate UV-mapped pass; the V1 Matrix face bake therefore cannot faithfully represent small black/opaque texture details and can spread them over an entire triangle.
+- `MarioVisualRenderer` now defaults to libsm64 base material/light colours for Matrix face albedo, removing the lossy atlas-to-whole-face bake from normal presentation without changing geometry, animation, movement, or replacement ownership.
+- The original atlas-face approximation remains available only for A/B diagnosis through `-Dmatrix3.sm64.debugAtlasFaceBake=true`.
+- New log output identifies `colour=libsm64-base-v2` or the diagnostic `atlas-face-bake-debug` path.
+- Runtime acceptance is pending: confirm the black face blocks are materially reduced/gone while idle/jump/restore behavior remains intact. If broad darkness remains after this artifact is removed, the next bounded trace is Matrix lighting/normal handling rather than speculative brightness tuning.
