@@ -151,15 +151,41 @@ public final class AlternateCharacterController {
 
     /**
      * Returns the rendered Matrix camera forward direction on the X/Z ground
-     * plane. Construction Free/RTS explicitly owns the Class24 detached camera
-     * while active, even when Matrix's normal detached-camera flags do not expose
-     * that ownership. Other detached/free cameras use their normal Matrix flags.
-     * Vanilla follow/orbit cameras use the already-resolved camera world position
-     * written by Class246.method3359(...) and the exact X/Z focus point supplied
-     * to that solver. This keeps alternate-character steering tied to the view
-     * actually being rendered rather than stale vanilla camera state.
+     * plane. Construction RTS owns a canonical continuous yaw that already drives
+     * its rendered orbit/minimap; use that heading directly so alternate-character
+     * steering cannot disagree with the view at the 180-degree boundary.
+     * Construction Free and other detached/free cameras fall back to their actual
+     * Class411 position/look geometry. Vanilla follow/orbit cameras use the
+     * already-resolved camera world position written by Class246.method3359(...)
+     * and the exact X/Z focus point supplied to that solver.
      */
     static PlanarDirection getCameraForward() {
+        /*
+         * VERIFIED runtime symptom: north can be correct while south is exactly
+         * reversed when steering is reconstructed from the detached look owner.
+         * Construction's accepted minimap yaw is derived from the same
+         * rtsYawRadians that applyRtsOrientation(...) uses, so it is the canonical
+         * RTS heading source. getRtsMinimapYawUnits() stores -rtsYaw in Matrix's
+         * 14-bit turn domain; negate it back here before deriving X/Z forward.
+         */
+        try {
+            if (ConstructionBuildCamera.isRequested()
+                    && ConstructionBuildCamera.isRtsMode()) {
+                int rtsYawUnits = ConstructionBuildCamera.getRtsMinimapYawUnits();
+                if (rtsYawUnits >= 0) {
+                    double radians = -rtsYawUnits * (Math.PI * 2.0 / 16384.0);
+                    PlanarDirection rts = normalize(
+                            (float) Math.sin(radians),
+                            (float) Math.cos(radians));
+                    if (rts != null) {
+                        return rts;
+                    }
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // Fall through to the detached-camera path below.
+        }
+
         Class411_Sub1 detached = null;
         try {
             if (ConstructionBuildCamera.isRequested()
