@@ -29,6 +29,7 @@ public final class MarioVisualRenderer {
     private static final int MAX_TEXTURE_SUBDIVISIONS = 4;
     private static final float DEFAULT_SMOOTH_ANGLE_DEGREES = 70.0F;
     private static final long MAX_FRAME_AGE_NANOS = 500000000L;
+    private static final long REPLACEMENT_GRACE_NANOS = 750000000L;
     private static final float DEFAULT_MODEL_SCALE = 2.0F;
     private static final float MODEL_SCALE = resolveModelScale();
     private static final int TEXTURE_SUBDIVISIONS = resolveTextureSubdivisions();
@@ -44,6 +45,7 @@ public final class MarioVisualRenderer {
     private static long cachedSequence = -1L;
     private static Model cachedModel;
     private static volatile boolean replacementReady;
+    private static volatile long lastFreshRenderSuccessNanos = Long.MIN_VALUE;
     private static int lastRenderedCycle = Integer.MIN_VALUE;
     private static long lastLoggedSequence = -1L;
     private static long lastFailedSequence = -1L;
@@ -57,7 +59,7 @@ public final class MarioVisualRenderer {
     static void render(Class523 scene, Class106 renderer) {
         if (!PlayerControllerMode.isMarioMode() || scene == null || renderer == null
                 || !Sm64BridgeSession.isReady()) {
-            replacementReady = false;
+            clearReplacementReadiness();
             return;
         }
 
@@ -68,16 +70,25 @@ public final class MarioVisualRenderer {
         lastRenderedCycle = cycle;
 
         Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
+        if (player == null) {
+            clearReplacementReadiness();
+            return;
+        }
+
         Sm64BridgeSession.GeometryFrame frame = Sm64BridgeSession.getLatestGeometryFrame();
-        if (player == null || !isUsable(frame)) {
-            replacementReady = false;
+        if (!isUsable(frame)) {
+            if (!renderCachedGrace(player, renderer)) {
+                replacementReady = false;
+            }
             return;
         }
 
         if (cachedRenderer != renderer || cachedSequence != frame.sequence || cachedModel == null) {
             Model rebuilt = buildModel(renderer, frame, Sm64BridgeSession.getTextureAtlas());
             if (rebuilt == null) {
-                replacementReady = false;
+                if (!renderCachedGrace(player, renderer)) {
+                    replacementReady = false;
+                }
                 if (lastFailedSequence != frame.sequence) {
                     lastFailedSequence = frame.sequence;
                     System.err.println("[SM64 Visual] Matrix model build failed for native frame "
@@ -90,20 +101,13 @@ public final class MarioVisualRenderer {
             cachedModel = rebuilt;
         }
 
-        Class238 playerTransform = player.method5394();
-        if (playerTransform == null || playerTransform.aClass240_2647 == null) {
-            replacementReady = false;
-            return;
-        }
-
-        Class240 position = playerTransform.aClass240_2647;
-        TRANSFORM.method3588(
-                Math.round(position.aFloat2653),
-                Math.round(position.aFloat2656),
-                Math.round(position.aFloat2657));
         try {
-            cachedModel.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+            if (!renderModelAtPlayer(player, cachedModel)) {
+                replacementReady = false;
+                return;
+            }
             replacementReady = true;
+            lastFreshRenderSuccessNanos = System.nanoTime();
             if (lastLoggedSequence < 0L) {
                 lastLoggedSequence = frame.sequence;
                 String colourMode = lastBuiltTextureSubdivisions <= 0
@@ -133,9 +137,9 @@ public final class MarioVisualRenderer {
     }
 
     /**
-     * Local-player suppression is presentation-only and fail-open. The normal
-     * RuneScape player disappears only after a fresh native frame has actually
-     * built and rendered successfully through Matrix's renderer.
+     * Local-player suppression is presentation-only and fail-open. A brief native
+     * geometry/build gap may keep the last successfully rendered Mario model for a
+     * bounded grace period; real mode/bridge loss still restores RuneScape at once.
      */
     static boolean shouldSuppressLocalPlayer(Player player) {
         if (player == null || player != Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976
@@ -144,7 +148,60 @@ public final class MarioVisualRenderer {
                 || !replacementReady) {
             return false;
         }
-        return isUsable(Sm64BridgeSession.getLatestGeometryFrame());
+        return isUsable(Sm64BridgeSession.getLatestGeometryFrame())
+                || isWithinReplacementGrace();
+    }
+
+    private static void clearReplacementReadiness() {
+        replacementReady = false;
+        lastFreshRenderSuccessNanos = Long.MIN_VALUE;
+    }
+
+    /**
+     * Keeps presentation continuous through one/few missing native frames without
+     * turning a stale model into permanent authority. The grace deadline is based
+     * only on the last genuinely fresh successful render and is never extended by
+     * cached fallback renders.
+     */
+    private static boolean renderCachedGrace(Player player, Class106 renderer) {
+        if (cachedModel == null || cachedRenderer != renderer || !isWithinReplacementGrace()) {
+            return false;
+        }
+        try {
+            if (!renderModelAtPlayer(player, cachedModel)) {
+                return false;
+            }
+            replacementReady = true;
+            return true;
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    private static boolean renderModelAtPlayer(Player player, Model model) {
+        if (player == null || model == null) {
+            return false;
+        }
+        Class238 playerTransform = player.method5394();
+        if (playerTransform == null || playerTransform.aClass240_2647 == null) {
+            return false;
+        }
+        Class240 position = playerTransform.aClass240_2647;
+        TRANSFORM.method3588(
+                Math.round(position.aFloat2653),
+                Math.round(position.aFloat2656),
+                Math.round(position.aFloat2657));
+        model.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+        return true;
+    }
+
+    private static boolean isWithinReplacementGrace() {
+        long last = lastFreshRenderSuccessNanos;
+        if (last == Long.MIN_VALUE) {
+            return false;
+        }
+        long age = System.nanoTime() - last;
+        return age >= 0L && age <= REPLACEMENT_GRACE_NANOS;
     }
 
     private static boolean isUsable(Sm64BridgeSession.GeometryFrame frame) {
