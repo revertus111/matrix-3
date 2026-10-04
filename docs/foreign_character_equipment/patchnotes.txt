@@ -1,0 +1,10 @@
+2026-10-04 - Mario helmet attachment V1
+- Added `MarioEquipmentAdapter` as the first foreign-character equipment slice.
+- Reads the local player's visible revision-830 helmet from decoded appearance state and loads the normal worn raw model through `ItemDefinitions.method7531(...)`.
+- Preserves current gender/customization inputs, measures/normalizes the worn model once, then caches the built Matrix `Model`.
+- Captures stable Mario head vertex-stream indices from the first upright libsm64 geometry frame so later animation frames can reuse the same head attachment region.
+- Auto-fits helmet scale from Mario head span versus helmet worn-model span and follows the animated head translation plus native facing yaw.
+- Added fit/vertical/yaw calibration system properties for the first runtime acceptance pass.
+- Hooks helmet rendering immediately after a successful `MarioVisualRenderer` body pass in `Class578.method6834(...)`.
+- Fail-open: missing/invalid helmet/model/attachment state never suppresses or replaces the already-working Mario body.
+- Full head pitch/roll, other equipment slots, chest/leg fitting, and additional foreign-character profiles remain later bundles.
