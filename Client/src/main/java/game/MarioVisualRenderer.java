@@ -1,6 +1,7 @@
 package game;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * Matrix-native presentation adapter for libsm64's already-animated Mario mesh.
@@ -12,8 +13,9 @@ import java.util.Arrays;
  *
  * Matrix cannot yet bind libsm64's ROM atlas as a renderer-native runtime texture.
  * Instead, textured SM64 triangles are split into small Matrix faces and the atlas
- * is sampled per micro-face. This preserves facial/clothing texture detail without
- * collapsing one dark texel across an entire low-poly source triangle.
+ * is sampled per micro-face. Boundary vertices are shared across compatible source
+ * faces so Matrix can produce smooth vertex-normal shading without welding genuine
+ * hard edges together.
  */
 public final class MarioVisualRenderer {
 
@@ -25,10 +27,14 @@ public final class MarioVisualRenderer {
     private static final int MAX_MATRIX_TRIANGLES = MAX_MATRIX_VERTICES / 3;
     private static final int DEFAULT_TEXTURE_SUBDIVISIONS = 4;
     private static final int MAX_TEXTURE_SUBDIVISIONS = 4;
+    private static final float DEFAULT_SMOOTH_ANGLE_DEGREES = 70.0F;
     private static final long MAX_FRAME_AGE_NANOS = 500000000L;
     private static final float DEFAULT_MODEL_SCALE = 2.0F;
     private static final float MODEL_SCALE = resolveModelScale();
     private static final int TEXTURE_SUBDIVISIONS = resolveTextureSubdivisions();
+    private static final float SMOOTH_ANGLE_DEGREES = resolveSmoothAngleDegrees();
+    private static final float SMOOTH_DOT_THRESHOLD =
+            (float) Math.cos(Math.toRadians(SMOOTH_ANGLE_DEGREES));
     private static final boolean DEBUG_ATLAS_FACE_BAKE = resolveAtlasFaceBake();
 
     private static final Class261 TRANSFORM = new Class261();
@@ -42,6 +48,7 @@ public final class MarioVisualRenderer {
     private static long lastLoggedSequence = -1L;
     private static long lastFailedSequence = -1L;
     private static int lastBuiltOutputTriangles;
+    private static int lastBuiltOutputVertices;
     private static int lastBuiltTextureSubdivisions;
 
     private MarioVisualRenderer() {
@@ -107,11 +114,13 @@ public final class MarioVisualRenderer {
                 System.out.println("[SM64 Visual] Native Mario -> Matrix Model ACTIVE"
                         + " triangles=" + frame.triangleCount
                         + " matrixTriangles=" + lastBuiltOutputTriangles
+                        + " matrixVertices=" + lastBuiltOutputVertices
                         + " anim=" + frame.state.animId
                         + " frame=" + frame.state.animFrame
                         + " scale=" + MODEL_SCALE
                         + " colour=" + colourMode
-                        + " textureSubdivisions=" + lastBuiltTextureSubdivisions);
+                        + " textureSubdivisions=" + lastBuiltTextureSubdivisions
+                        + " smoothAngle=" + SMOOTH_ANGLE_DEGREES);
             }
         } catch (RuntimeException ex) {
             replacementReady = false;
@@ -160,15 +169,15 @@ public final class MarioVisualRenderer {
 
         int textureSubdivisions = chooseTextureSubdivisions(frame, atlas);
         int outputTriangles = countOutputTriangles(frame, atlas, textureSubdivisions);
-        int vertices = outputTriangles * 3;
+        int vertexCapacity = outputTriangles * 3;
         if (outputTriangles <= 0 || outputTriangles > MAX_MATRIX_TRIANGLES
-                || vertices > MAX_MATRIX_VERTICES) {
+                || vertexCapacity > MAX_MATRIX_VERTICES) {
             return null;
         }
 
-        Class159 raw = new Class159(vertices, outputTriangles, 0);
-        raw.anInt1791 = vertices;
-        raw.anInt1775 = vertices;
+        Class159 raw = new Class159(vertexCapacity, outputTriangles, 0);
+        raw.anInt1791 = 0;
+        raw.anInt1775 = 0;
         raw.anInt1778 = outputTriangles;
 
         Arrays.fill(raw.anIntArray1813, -1);
@@ -179,18 +188,24 @@ public final class MarioVisualRenderer {
         float stateX = frame.state.x;
         float stateY = frame.state.y;
         float stateZ = frame.state.z;
+        SmoothVertexPool vertexPool =
+                new SmoothVertexPool(raw, vertexCapacity, SMOOTH_DOT_THRESHOLD);
+        float[] sourceNormal = new float[3];
         int outputTriangle = 0;
 
         for (int sourceTriangle = 0; sourceTriangle < sourceTriangles; sourceTriangle++) {
+            int positionBase = sourceTriangle * 9;
+            calculateSourceNormal(frame, positionBase, sourceNormal);
+
             boolean textured = textureSubdivisions > 0
                     && isTexturedTriangle(frame, atlas, sourceTriangle);
             if (!textured) {
                 outputTriangle = emitBakedTriangle(
-                        raw, outputTriangle, frame, atlas, sourceTriangle,
+                        raw, vertexPool, outputTriangle, frame, atlas, sourceTriangle,
                         0.0F, 0.0F,
                         1.0F, 0.0F,
                         0.0F, 1.0F,
-                        false, stateX, stateY, stateZ);
+                        false, sourceNormal, stateX, stateY, stateZ);
                 continue;
             }
 
@@ -204,17 +219,17 @@ public final class MarioVisualRenderer {
                     float b2 = b * step;
                     float c2 = (c + 1) * step;
                     outputTriangle = emitBakedTriangle(
-                            raw, outputTriangle, frame, atlas, sourceTriangle,
+                            raw, vertexPool, outputTriangle, frame, atlas, sourceTriangle,
                             b0, c0, b1, c1, b2, c2,
-                            true, stateX, stateY, stateZ);
+                            true, sourceNormal, stateX, stateY, stateZ);
 
                     if (b + c + 1 < textureSubdivisions) {
                         float b3 = (b + 1) * step;
                         float c3 = (c + 1) * step;
                         outputTriangle = emitBakedTriangle(
-                                raw, outputTriangle, frame, atlas, sourceTriangle,
+                                raw, vertexPool, outputTriangle, frame, atlas, sourceTriangle,
                                 b1, c1, b3, c3, b2, c2,
-                                true, stateX, stateY, stateZ);
+                                true, sourceNormal, stateX, stateY, stateZ);
                     }
                 }
             }
@@ -227,6 +242,7 @@ public final class MarioVisualRenderer {
         }
 
         lastBuiltOutputTriangles = outputTriangles;
+        lastBuiltOutputVertices = raw.anInt1791;
         lastBuiltTextureSubdivisions = textureSubdivisions;
 
         try {
@@ -244,6 +260,7 @@ public final class MarioVisualRenderer {
 
     private static int emitBakedTriangle(
             Class159 raw,
+            SmoothVertexPool vertexPool,
             int outputTriangle,
             Sm64BridgeSession.GeometryFrame frame,
             Sm64BridgeSession.TextureAtlas atlas,
@@ -252,15 +269,18 @@ public final class MarioVisualRenderer {
             float b1, float c1,
             float b2, float c2,
             boolean sampleTexture,
+            float[] sourceNormal,
             float stateX, float stateY, float stateZ) {
-        int vertexBase = outputTriangle * 3;
         int positionBase = sourceTriangle * 9;
         int colorBase = sourceTriangle * 9;
         int uvBase = sourceTriangle * 6;
 
-        writeVertex(raw, vertexBase, frame, positionBase, b0, c0, stateX, stateY, stateZ);
-        writeVertex(raw, vertexBase + 1, frame, positionBase, b1, c1, stateX, stateY, stateZ);
-        writeVertex(raw, vertexBase + 2, frame, positionBase, b2, c2, stateX, stateY, stateZ);
+        int vertexA = writeVertex(vertexPool, frame, positionBase, b0, c0,
+                sourceNormal, stateX, stateY, stateZ);
+        int vertexB = writeVertex(vertexPool, frame, positionBase, b1, c1,
+                sourceNormal, stateX, stateY, stateZ);
+        int vertexC = writeVertex(vertexPool, frame, positionBase, b2, c2,
+                sourceNormal, stateX, stateY, stateZ);
 
         float centerB = (b0 + b1 + b2) / 3.0F;
         float centerC = (c0 + c1 + c2) / 3.0F;
@@ -280,9 +300,9 @@ public final class MarioVisualRenderer {
          * Negating model Y mirrors one axis, so B/C are swapped to preserve
          * the native triangle winding for Matrix back-face culling.
          */
-        raw.aShortArray1786[outputTriangle] = (short) vertexBase;
-        raw.aShortArray1787[outputTriangle] = (short) (vertexBase + 2);
-        raw.aShortArray1789[outputTriangle] = (short) (vertexBase + 1);
+        raw.aShortArray1786[outputTriangle] = (short) vertexA;
+        raw.aShortArray1787[outputTriangle] = (short) vertexC;
+        raw.aShortArray1789[outputTriangle] = (short) vertexB;
         raw.faceColours[outputTriangle] = rgbToRsHsl(
                 (rgb >>> 16) & 0xff,
                 (rgb >>> 8) & 0xff,
@@ -290,23 +310,71 @@ public final class MarioVisualRenderer {
         return outputTriangle + 1;
     }
 
-    private static void writeVertex(
-            Class159 raw,
-            int rawVertex,
+    private static int writeVertex(
+            SmoothVertexPool vertexPool,
             Sm64BridgeSession.GeometryFrame frame,
             int positionBase,
             float b,
             float c,
+            float[] sourceNormal,
             float stateX,
             float stateY,
             float stateZ) {
         float x = interpolate(frame.positions, positionBase, 3, 0, b, c);
         float y = interpolate(frame.positions, positionBase, 3, 1, b, c);
         float z = interpolate(frame.positions, positionBase, 3, 2, b, c);
-        raw.anIntArray1782[rawVertex] = Math.round((x - stateX) * MODEL_SCALE);
-        // SM64 altitude is +Y; Matrix model-space altitude is -Y.
-        raw.anIntArray1777[rawVertex] = Math.round(-(y - stateY) * MODEL_SCALE);
-        raw.anIntArray1797[rawVertex] = Math.round((z - stateZ) * MODEL_SCALE);
+        int modelX = Math.round((x - stateX) * MODEL_SCALE);
+        int modelY = Math.round(-(y - stateY) * MODEL_SCALE);
+        int modelZ = Math.round((z - stateZ) * MODEL_SCALE);
+
+        if (isTriangleBoundaryPoint(b, c)) {
+            return vertexPool.getOrCreateSmooth(
+                    modelX, modelY, modelZ,
+                    sourceNormal[0], sourceNormal[1], sourceNormal[2]);
+        }
+        return vertexPool.addUnique(modelX, modelY, modelZ);
+    }
+
+    private static boolean isTriangleBoundaryPoint(float b, float c) {
+        float a = 1.0F - b - c;
+        final float epsilon = 0.0001F;
+        return Math.abs(a) <= epsilon || Math.abs(b) <= epsilon || Math.abs(c) <= epsilon;
+    }
+
+    /**
+     * Geometric normal for the source SM64 triangle after Matrix's Y-axis mirror
+     * and B/C winding correction. It is used only to decide which coincident
+     * boundary vertices may share Matrix normal smoothing.
+     */
+    private static void calculateSourceNormal(
+            Sm64BridgeSession.GeometryFrame frame,
+            int positionBase,
+            float[] out) {
+        float ax = frame.positions[positionBase];
+        float ay = -frame.positions[positionBase + 1];
+        float az = frame.positions[positionBase + 2];
+
+        // Matrix face order is A,C,B after the Y mirror.
+        float bx = frame.positions[positionBase + 6] - ax;
+        float by = -frame.positions[positionBase + 7] - ay;
+        float bz = frame.positions[positionBase + 8] - az;
+        float cx = frame.positions[positionBase + 3] - ax;
+        float cy = -frame.positions[positionBase + 4] - ay;
+        float cz = frame.positions[positionBase + 5] - az;
+
+        float nx = by * cz - bz * cy;
+        float ny = bz * cx - bx * cz;
+        float nz = bx * cy - by * cx;
+        float length = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (length <= 0.000001F || Float.isNaN(length) || Float.isInfinite(length)) {
+            out[0] = 0.0F;
+            out[1] = 0.0F;
+            out[2] = 0.0F;
+            return;
+        }
+        out[0] = nx / length;
+        out[1] = ny / length;
+        out[2] = nz / length;
     }
 
     private static float interpolate(float[] values, int base, int stride, int component,
@@ -522,6 +590,25 @@ public final class MarioVisualRenderer {
         return DEFAULT_TEXTURE_SUBDIVISIONS;
     }
 
+    private static float resolveSmoothAngleDegrees() {
+        String configured = System.getProperty("matrix3.sm64.smoothAngleDegrees");
+        if (configured == null || configured.trim().isEmpty()) {
+            return DEFAULT_SMOOTH_ANGLE_DEGREES;
+        }
+        try {
+            float parsed = Float.parseFloat(configured.trim());
+            if (parsed >= 0.0F && parsed <= 180.0F
+                    && !Float.isNaN(parsed) && !Float.isInfinite(parsed)) {
+                return parsed;
+            }
+        } catch (NumberFormatException ignored) {
+            // Fall through to default.
+        }
+        System.out.println("[SM64 Visual] Invalid matrix3.sm64.smoothAngleDegrees='"
+                + configured + "'; using " + DEFAULT_SMOOTH_ANGLE_DEGREES);
+        return DEFAULT_SMOOTH_ANGLE_DEGREES;
+    }
+
     private static boolean resolveAtlasFaceBake() {
         String configured = System.getProperty("matrix3.sm64.debugAtlasFaceBake");
         return configured != null && Boolean.parseBoolean(configured.trim());
@@ -533,5 +620,131 @@ public final class MarioVisualRenderer {
 
     private static float clamp(float value, float min, float max) {
         return value < min ? min : value > max ? max : value;
+    }
+
+    /**
+     * Reuses only coincident boundary vertices whose source-face normals fall
+     * within the configured smoothing angle. This keeps low-poly hard edges while
+     * allowing Matrix's generated model path to average compatible shared normals.
+     */
+    private static final class SmoothVertexPool {
+        private final Class159 raw;
+        private final int capacity;
+        private final float dotThreshold;
+        private final HashMap<PositionKey, SmoothVertex> buckets =
+                new HashMap<PositionKey, SmoothVertex>();
+
+        SmoothVertexPool(Class159 raw, int capacity, float dotThreshold) {
+            this.raw = raw;
+            this.capacity = capacity;
+            this.dotThreshold = dotThreshold;
+        }
+
+        int addUnique(int x, int y, int z) {
+            return appendVertex(x, y, z);
+        }
+
+        int getOrCreateSmooth(int x, int y, int z, float nx, float ny, float nz) {
+            PositionKey key = new PositionKey(x, y, z);
+            SmoothVertex candidate = buckets.get(key);
+            for (SmoothVertex current = candidate; current != null; current = current.next) {
+                if (compatibleNormal(current, nx, ny, nz)) {
+                    current.addNormal(nx, ny, nz);
+                    return current.index;
+                }
+            }
+
+            int index = appendVertex(x, y, z);
+            buckets.put(key, new SmoothVertex(index, nx, ny, nz, candidate));
+            return index;
+        }
+
+        private int appendVertex(int x, int y, int z) {
+            int index = raw.anInt1791;
+            if (index >= capacity) {
+                throw new IllegalStateException("Mario generated vertex capacity exceeded");
+            }
+            raw.anIntArray1782[index] = x;
+            raw.anIntArray1777[index] = y;
+            raw.anIntArray1797[index] = z;
+            raw.anInt1791 = index + 1;
+            raw.anInt1775 = raw.anInt1791;
+            return index;
+        }
+
+        private boolean compatibleNormal(SmoothVertex vertex, float nx, float ny, float nz) {
+            if (isZeroNormal(vertex.nx, vertex.ny, vertex.nz)
+                    || isZeroNormal(nx, ny, nz)) {
+                return false;
+            }
+            float dot = vertex.nx * nx + vertex.ny * ny + vertex.nz * nz;
+            return dot >= dotThreshold;
+        }
+    }
+
+    private static final class SmoothVertex {
+        final int index;
+        final SmoothVertex next;
+        float nx;
+        float ny;
+        float nz;
+
+        SmoothVertex(int index, float nx, float ny, float nz, SmoothVertex next) {
+            this.index = index;
+            this.next = next;
+            this.nx = nx;
+            this.ny = ny;
+            this.nz = nz;
+        }
+
+        void addNormal(float addX, float addY, float addZ) {
+            float x = nx + addX;
+            float y = ny + addY;
+            float z = nz + addZ;
+            float length = (float) Math.sqrt(x * x + y * y + z * z);
+            if (length > 0.000001F && !Float.isNaN(length) && !Float.isInfinite(length)) {
+                nx = x / length;
+                ny = y / length;
+                nz = z / length;
+            }
+        }
+    }
+
+    private static final class PositionKey {
+        final int x;
+        final int y;
+        final int z;
+
+        PositionKey(int x, int y, int z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = x;
+            result = 31 * result + y;
+            result = 31 * result + z;
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object) {
+                return true;
+            }
+            if (!(object instanceof PositionKey)) {
+                return false;
+            }
+            PositionKey other = (PositionKey) object;
+            return x == other.x && y == other.y && z == other.z;
+        }
+    }
+
+    private static boolean isZeroNormal(float x, float y, float z) {
+        return Math.abs(x) <= 0.000001F
+                && Math.abs(y) <= 0.000001F
+                && Math.abs(z) <= 0.000001F;
     }
 }
