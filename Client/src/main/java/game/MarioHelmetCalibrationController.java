@@ -38,14 +38,15 @@ final class MarioHelmetCalibrationController {
     private static final Map<Integer, Calibration> SESSION_CALIBRATIONS =
             new HashMap<Integer, Calibration>();
 
-    private static boolean active;
+    /* Swing workbench reads this outside the client thread. */
+    private static volatile boolean active;
     private static int activeItemId = -1;
     private static String activeItemName;
 
     private MarioHelmetCalibrationController() {
     }
 
-    static void tick(int itemId, String itemName) {
+    static synchronized void tick(int itemId, String itemName) {
         boolean togglePressed = pressedEdge(INTERNAL_F6_KEY);
         if (togglePressed) {
             if (active) {
@@ -154,7 +155,7 @@ final class MarioHelmetCalibrationController {
         }
     }
 
-    static void onMarioModeInactive() {
+    static synchronized void onMarioModeInactive() {
         if (active) {
             printCurrent("CALIBRATION OFF");
         }
@@ -199,7 +200,7 @@ final class MarioHelmetCalibrationController {
                 || internalKey == INTERNAL_P_KEY;
     }
 
-    static Snapshot getSnapshot(int itemId) {
+    static synchronized Snapshot getSnapshot(int itemId) {
         Calibration calibration = SESSION_CALIBRATIONS.get(Integer.valueOf(itemId));
         if (calibration == null) {
             return Snapshot.DEFAULT;
@@ -213,7 +214,7 @@ final class MarioHelmetCalibrationController {
     }
 
     /** N64 developer workbench seam. Values remain session-only. */
-    static void setSnapshot(int itemId, Snapshot snapshot) {
+    static synchronized void setSnapshot(int itemId, Snapshot snapshot) {
         if (itemId < 0 || snapshot == null) {
             return;
         }
@@ -225,7 +226,7 @@ final class MarioHelmetCalibrationController {
         calibration.yawDegrees = finiteOrZero(snapshot.yawDegrees);
     }
 
-    static void resetItem(int itemId) {
+    static synchronized void resetItem(int itemId) {
         if (itemId < 0) {
             return;
         }
