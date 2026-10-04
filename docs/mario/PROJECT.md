@@ -27,13 +27,13 @@ Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 - Mario visual presentation through either revision-830 assets or a later direct native-geometry adapter.
 - Eventual multiplayer/server validation after local behavior is stable.
 
-### Out of scope for the current bridge spike
+### Out of scope for the current bridge slice
 
 - Full RuneScape collision conversion.
 - Mario model replacement in the 830 scene.
 - Server-authoritative Mario movement.
 - Remote-player Mario replication.
-- JNI/in-process native loading before sidecar transport is measured.
+- JNI/in-process native loading before sidecar transport is measured under sustained runtime use.
 - Rewriting long jump/triple jump/wall kick/etc. in Java unless a specific Matrix-only behavior later requires an adapter.
 
 ## Architecture / ownership
@@ -53,7 +53,11 @@ Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 
 - User runtime testing confirmed the actual revision-830 local player visibly leaves RuneScape terrain with the Matrix3-native vertical proof.
 - User runtime acceptance confirmed the explicit RuneScape/Mario controller boundary works.
-- This proves Matrix3 can host foreign local movement/presentation behind an opt-in controller mode.
+- Bridge Spike A is runtime-confirmed against real `libsm64` + the user's local US ROM on Windows/MSYS2 MinGW64.
+- Manual native protocol startup returned `READY 1` and `PONG 1`.
+- The Eclipse/Java bridge probe produced `[SM64 Bridge] PASS native SM64 state: y -0.00 -> 96.50 (rise 96.50), action 205521409 -> 205521409` after entering Mario mode.
+- The PASS gate proves Java observed both real native Mario Y movement and at least one intermediate native action-state change during the deterministic sequence. The printed final action had returned to the baseline action by the end of the probe.
+- Matrix3 can therefore launch the native SM64 sidecar, send input, execute SM64-derived movement/action code, and receive native Mario state back into Java.
 
 ### verified-static
 
@@ -66,19 +70,17 @@ Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 - `libsm64` loads Mario texture/animation data from a user-supplied SM64 US ROM at runtime.
 - Bridge Spike A C source passes a local C11 syntax check.
 - `Sm64BridgeProbe` passes a local Java 8 source check.
-- The Java/process protocol path was exercised against a temporary stub native implementation. This verifies our process/protocol/parser plumbing only; it is not native SM64 runtime proof.
 
 ## Unknown / research needed
 
 ### HYPOTHESIS
 
-- A sidecar process with a tiny line protocol is sufficient for the first 30 Hz native-state proof and keeps native failure isolated during development.
+- The sidecar transport remains suitable for persistent fixed-30-Hz gameplay ticks without requiring JNI; measure before changing transport.
 - Nearby RuneScape terrain can be represented efficiently as two SM64 collision triangles per tile inside a bounded local bubble.
 
 ### UNKNOWN
 
-- Whether the current sidecar build/run path succeeds against real `libsm64` on the user's Windows toolchain.
-- Final Matrix<->SM64 coordinate scale/sign calibration beyond the already-proven Matrix vertical direction.
+- Final Matrix<->SM64 coordinate scale/sign calibration beyond the proven native vertical-state round trip and the established Matrix vertical transform direction.
 - Final collision-bubble radius/rebuild threshold.
 - Best final Mario visual path: revision-830 imported asset/animation mapping vs direct `SM64MarioGeometryBuffers` rendering.
 - Runtime cost of object collision proxy extraction.
@@ -118,17 +120,17 @@ Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 - [x] Clean mode/lifecycle reset behavior.
 - [x] User runtime acceptance that the mode boundary works. `VERIFIED`
 
-Phase 1 carryover regression does not block the independent native-bridge transport spike; preserve it for the next consolidated runtime session.
+Phase 1 carryover regression does not block the independent native-bridge work; preserve it for a consolidated runtime session.
 
 ### Phase 2 - SM64 Passthrough Core Bridge
 
 **Purpose:** Make actual SM64-derived native code advance Mario state and return it to Matrix3.
 
-**Status:** NEEDS TEST
+**Status:** ACTIVE
 
 #### Bundle 2.1 - Sidecar transport/native-core spike
 
-**Status:** NEEDS TEST
+**Status:** DONE
 
 - [x] Record passthrough architecture and responsibility split.
 - [x] Select sidecar-first transport; JNI remains a later optimization only if measured need exists.
@@ -136,17 +138,18 @@ Phase 1 carryover regression does not block the independent native-bridge transp
 - [x] Add `sm64_bridge` native sidecar source and deterministic flat-floor protocol.
 - [x] Add Java 8 `Sm64BridgeProbe` wrapper and one-shot Mario-mode probe trigger.
 - [x] Add ignored local dependency/ROM layout and reproducible bridge build instructions.
-- [ ] Runtime prove Java can send A-button input and receive a real native Mario Y/action change from actual `libsm64`.
+- [x] Runtime prove Java can send A-button input and receive real native Mario Y/action changes from actual `libsm64`. `VERIFIED` 2026-10-04.
 
-**Acceptance:** Java reports PASS only after actual `libsm64` native state changes from deterministic input. A local stub/protocol test does not count. No Matrix player movement is required yet.
+**Acceptance:** PASSED. Real `libsm64` initialized from the user's ROM and the Java probe reported a 96.50-unit native Y rise while its action-change gate also succeeded.
 
 #### Bundle 2.2 - Native state -> Matrix transform
 
-**Status:** PLANNED
+**Status:** ACTIVE
 
+- [ ] Replace one-shot probe ownership with a persistent bridge session while Mario mode is active.
 - [ ] Run native simulation at fixed 30 Hz.
 - [ ] Map native vertical state onto the already-VERIFIED Matrix transform baseline.
-- [ ] Preserve normal RuneScape mode/failure fallback.
+- [ ] Preserve normal RuneScape mode/failure fallback and clean native reset/lifecycle behavior.
 - [ ] Runtime prove an SM64-derived tick causes the visible 830 player/Mario presentation to jump.
 
 ### Phase 3 - Matrix World / Collision Adapter
@@ -195,12 +198,12 @@ Phase 1 carryover regression does not block the independent native-bridge transp
 ## Current execution state
 
 - Phase: 2 - SM64 Passthrough Core Bridge
-- Phase status: NEEDS TEST
-- Bundle: 2.1 - Sidecar transport/native-core spike
-- Bundle status: NEEDS TEST
-- Approval state: `SAP AAA` approved for architecture documentation + Bridge Spike A on 2026-10-03.
-- Current checklist item: real `libsm64` + user-ROM native runtime acceptance.
-- Current objective: obtain one deterministic PASS proving Matrix Java can send A input and receive real SM64-derived Y/action state before native state is allowed to move the visible player.
+- Phase status: ACTIVE
+- Bundle: 2.2 - Native state -> Matrix transform
+- Bundle status: ACTIVE
+- Approval state: Bridge Spike A runtime verification recorded under the existing approved bundle; new Bundle 2.2 behavior requires fresh AAA before patching.
+- Current checklist item: replace the one-shot probe with a persistent Mario-mode bridge session and fixed-step native simulation.
+- Current objective: make returned native SM64 state, rather than Java gravity, drive the visible 830 local-player vertical transform while preserving RuneScape fallback.
 
 ## Checklist / patch status
 
@@ -208,9 +211,9 @@ Phase 1 carryover regression does not block the independent native-bridge transp
 | --- | --- | --- | --- | --- |
 | Matrix transform/input/controller foundation | 1 | 1.x | NEEDS TEST | Core lift and controller mode are runtime-proven; deeper movement/relog regression remains. |
 | Passthrough architecture | 2 | 2.1 | DONE | `SM64_PASSTHROUGH_ARCHITECTURE.md`. |
-| Native `sm64_bridge` sidecar | 2 | 2.1 | NEEDS TEST | Protocol/build source implemented; real libsm64 runtime pending. |
-| Java bridge probe | 2 | 2.1 | NEEDS TEST | Java 8/protocol plumbing checked; real native PASS pending. |
-| Native -> visible Matrix transform | 2 | 2.2 | READY | Starts after real native transport proof. |
+| Native `sm64_bridge` sidecar | 2 | 2.1 | DONE | Real libsm64 + user-ROM runtime verified. |
+| Java bridge probe | 2 | 2.1 | DONE | Real native PASS verified with 96.50-unit Y rise. |
+| Native -> visible Matrix transform | 2 | 2.2 | ACTIVE | Next patch target; requires fresh AAA. |
 | Matrix terrain adapter | 3 | 3.1 | READY | Starts after native transform proof. |
 | Mario visual presentation | 4 | 4.x | READY | Choose asset-vs-direct-geometry path after bridge evidence. |
 
@@ -220,7 +223,7 @@ Phase 1 carryover regression does not block the independent native-bridge transp
 
 - Matrix3 is the host world/renderer/input/server architecture.
 - The target architecture runs authentic SM64-derived Mario logic alongside Matrix rather than recreating the full action state machine in Java.
-- `libsm64` is the first native-core candidate because its API already matches the required external-engine contract.
+- `libsm64` is the first native-core candidate because its API already matches the required external-engine contract and Bridge Spike A is now runtime-proven.
 - Sidecar process first; JNI only after a measured reason.
 - The Java jump proof remains useful as host-transform evidence/fallback but is not the target Mario mechanics engine.
 - Matrix terrain will be adapted to local SM64 collision surfaces; do not convert all of Gielinor at once.
@@ -231,11 +234,13 @@ Phase 1 carryover regression does not block the independent native-bridge transp
 
 ### Current quick checks
 
-1. Build the bridge locally against real `libsm64` and keep the user's ROM outside Git.
-2. Existing RuneScape mode remains safe and Mario mode still toggles.
-3. Enter Mario mode once; background probe starts only when sidecar + ROM exist.
-4. PASS only if actual native Mario Y rises and action state changes after the deterministic A sequence.
-5. No client hang/crash while the native probe runs.
+Bridge Spike A is runtime-accepted. Bundle 2.2 will require:
+
+1. Enter Mario mode and establish one persistent native session.
+2. Space/A input advances real SM64 state at fixed 30 Hz.
+3. Returned native Y drives the visible 830 player transform.
+4. Leaving Mario mode restores normal RuneScape control and clears/stops native session state.
+5. Native bridge failure falls back safely without corrupting player position or normal input.
 
 Detailed runtime checklist: `docs/mario/TESTLIST.md`.
 
@@ -251,12 +256,12 @@ Detailed runtime checklist: `docs/mario/TESTLIST.md`.
 
 ### CARRYOVER
 
-- Phase 1 jump deeper regression: does not block isolated sidecar/protocol development; finish during the next consolidated client runtime test.
-- Mario model/visual selection: intentionally deferred until native bridge state is real.
+- Phase 1 jump deeper regression: preserve for a consolidated client runtime test; the Java proof will be superseded for Mario vertical physics once Bundle 2.2 is accepted.
+- Mario model/visual selection: intentionally deferred until native bridge state visibly drives Matrix presentation.
 
 ### BLOCKED
 
-- Bridge Spike A cannot be promoted beyond `NEEDS TEST` until the local sidecar is built against actual `libsm64` and run with the user's US ROM. ROM bytes remain outside Git.
+- None.
 
 ## Resume Here
 
@@ -264,21 +269,21 @@ Detailed runtime checklist: `docs/mario/TESTLIST.md`.
 
 - Runtime-accepted RuneScape/Mario mode boundary.
 - Reframed the target architecture around an authentic native SM64 passthrough core.
-- Added `SM64_PASSTHROUGH_ARCHITECTURE.md`.
-- Implemented `native/sm64-bridge` protocol/build source and Java 8 `Sm64BridgeProbe`.
-- Local C11/Java 8 syntax and stub process/protocol checks passed; real SM64 runtime remains unverified.
+- Implemented the native `sm64_bridge` protocol/build source and Java 8 `Sm64BridgeProbe`.
+- Built real `libsm64`/sidecar under Windows MSYS2 MinGW64 with the user's local US ROM.
+- Runtime-VERIFIED Bridge Spike A: manual `READY`/`PONG`, then Eclipse produced native PASS with a 96.50-unit Mario Y rise and intermediate native action-state change.
 
 **Current phase:**
 
-- Phase 2 - SM64 Passthrough Core Bridge (`NEEDS TEST`).
+- Phase 2 - SM64 Passthrough Core Bridge (`ACTIVE`).
 
 **Active bundle:**
 
-- Bundle 2.1 - Sidecar transport/native-core spike (`NEEDS TEST`).
+- Bundle 2.2 - Native state -> Matrix transform (`ACTIVE`).
 
 **Next checklist item:**
 
-- Build/run the sidecar against real `libsm64` + the user's US ROM and obtain the Java `[SM64 Bridge] PASS ...` output.
+- With fresh AAA, replace one-shot probe ownership with a persistent Mario-mode bridge session, fixed 30 Hz native ticks, and native Y -> Matrix transform presentation.
 
 **Do not re-scan without new evidence:**
 
@@ -286,19 +291,18 @@ Detailed runtime checklist: `docs/mario/TESTLIST.md`.
 - Basic vertical-displacement feasibility.
 - Controller-mode activation boundary.
 - `libsm64` public input/state/surface API and 30 Hz example behavior.
-- Bridge protocol/parser design unless runtime evidence contradicts it.
+- Bridge protocol/parser design and Windows sidecar/toolchain viability; Bridge Spike A is runtime-VERIFIED.
 
 **Pending runtime verification:**
 
-- Native sidecar initializes from the user ROM using real `libsm64`.
-- Java <-> sidecar protocol works with the real native library.
-- Deterministic A input changes actual native Mario state.
+- Bundle 2.2 native state visibly drives the 830 player.
+- Mario-mode exit/failure fallback remains clean with a persistent native session.
 - Phase 1 deeper movement/relog carryover.
 
 **Important remaining uncertainty:**
 
-- Final coordinate scale and collision conversion are intentionally deferred until the native transport proof succeeds.
+- Final Matrix<->SM64 scale/sign calibration for visible movement and later collision still needs Bundle 2.2 runtime tuning.
 
 ## Next recommended work
 
-Runtime-accept Bridge Spike A. After the real native PASS, move immediately to Bundle 2.2 so returned SM64 state drives the already-VERIFIED visible Matrix player transform.
+Bundle 2.2: make the persistent native SM64 simulation drive the visible Matrix player transform, replacing `MarioJumpController` Java gravity as Mario-mode vertical-physics ownership.
