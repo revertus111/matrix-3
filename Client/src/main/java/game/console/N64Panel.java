@@ -1,6 +1,7 @@
 package game.console;
 
 import game.Mario64Diagnostics;
+import game.MarioEquipmentWorkbench;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -9,25 +10,31 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.util.Locale;
+import java.util.function.DoubleConsumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.Timer;
 
 /**
  * N64 developer workspace. Each imported N64 game owns a sub-tab while Matrix3
- * remains the host runtime. The first tab is a read-only Mario 64 flight recorder.
+ * remains the host runtime. Mario currently exposes both the flight recorder and
+ * the live foreign-character equipment workbench.
  */
 public final class N64Panel extends JPanel {
 
@@ -63,6 +70,26 @@ public final class N64Panel extends JPanel {
     private final JLabel recorderStatus = new JLabel("Recorder live");
     private final JToggleButton pauseDisplay = new JToggleButton("Pause display");
     private final JCheckBox autoScroll = new JCheckBox("Auto-scroll", true);
+
+    // Mario equipment workbench.
+    private final JLabel workbenchModeValue = valueLabel();
+    private final JLabel helmetItemValue = valueLabel();
+    private final JLabel head3dValue = valueLabel();
+    private final JLabel frozenValue = valueLabel();
+    private final JLabel faceAngleValue = valueLabel();
+    private final JLabel maskCountValue = valueLabel();
+    private final JLabel workbenchStatus = new JLabel("Ready");
+    private final JToggleButton freezePose = new JToggleButton("Freeze pose");
+    private final JCheckBox enableHeadMask = new JCheckBox("Enable live head cut");
+    private final JCheckBox maskOnlyWithHelmet = new JCheckBox("Only cut while a helmet is equipped", true);
+
+    private NumericControl scaleControl;
+    private NumericControl xControl;
+    private NumericControl yControl;
+    private NumericControl zControl;
+    private NumericControl yawControl;
+    private NumericControl maskStartControl;
+    private NumericControl maskRadiusControl;
 
     private long renderedEventVersion = Long.MIN_VALUE;
 
@@ -114,6 +141,21 @@ public final class N64Panel extends JPanel {
     }
 
     private JPanel createMarioTab() {
+        JPanel host = new JPanel(new BorderLayout());
+        host.setBackground(ConsoleTheme.PANEL);
+
+        JTabbedPane marioTabs = new JTabbedPane();
+        marioTabs.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+        marioTabs.setFont(ConsoleTheme.SMALL_FONT);
+        marioTabs.setForeground(ConsoleTheme.TEXT);
+        marioTabs.setBackground(ConsoleTheme.PANEL);
+        marioTabs.addTab("Runtime", createMarioRuntimeTab());
+        marioTabs.addTab("Equipment Workbench", createEquipmentWorkbenchTab());
+        host.add(marioTabs, BorderLayout.CENTER);
+        return host;
+    }
+
+    private JPanel createMarioRuntimeTab() {
         JPanel host = new JPanel(new BorderLayout());
         host.setBackground(ConsoleTheme.PANEL);
 
@@ -204,12 +246,7 @@ public final class N64Panel extends JPanel {
         ConsoleTheme.styleButton(copyEvents);
         ConsoleTheme.styleButton(pauseDisplay);
 
-        autoScroll.setFont(ConsoleTheme.SMALL_FONT);
-        autoScroll.setForeground(ConsoleTheme.TEXT);
-        autoScroll.setBackground(ConsoleTheme.PANEL);
-        autoScroll.setOpaque(true);
-        autoScroll.setFocusPainted(false);
-
+        styleCheckBox(autoScroll);
         ConsoleTheme.styleStatus(recorderStatus, true);
 
         clear.addActionListener(e -> {
@@ -254,7 +291,224 @@ public final class N64Panel extends JPanel {
         return host;
     }
 
+    private JPanel createEquipmentWorkbenchTab() {
+        JPanel host = new JPanel(new BorderLayout());
+        host.setBackground(ConsoleTheme.PANEL);
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(ConsoleTheme.PANEL);
+        content.setBorder(ConsoleTheme.panelPadding(10, 8, 14, 8));
+
+        content.add(createEquipmentStateCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createHelmetTransformCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createHeadMaskCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createOrientationCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createWorkbenchSaveCard());
+        content.add(Box.createVerticalGlue());
+
+        JScrollPane scroll = new JScrollPane(content);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        ConsoleTheme.styleScrollPane(scroll);
+        host.add(scroll, BorderLayout.CENTER);
+        return host;
+    }
+
+    private JPanel createEquipmentStateCard() {
+        JPanel card = ConsoleTheme.createCard("Active equipment / preview state");
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createValueRow("Mario mode", workbenchModeValue));
+        card.add(ConsoleTheme.createValueRow("Helmet", helmetItemValue));
+        card.add(ConsoleTheme.createValueRow("3D head tracking", head3dValue));
+        card.add(ConsoleTheme.createValueRow("Presentation frozen", frozenValue));
+        card.add(ConsoleTheme.createValueRow("Masked source triangles", maskCountValue));
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        actions.setOpaque(false);
+        ConsoleTheme.styleButton(freezePose);
+        freezePose.addActionListener(e -> {
+            MarioEquipmentWorkbench.setPresentationFrozen(freezePose.isSelected());
+            workbenchStatus.setText(freezePose.isSelected()
+                    ? "Pose frozen for calibration"
+                    : "Live Mario presentation resumed");
+        });
+        actions.add(freezePose);
+        card.add(actions);
+        return card;
+    }
+
+    private JPanel createHelmetTransformCard() {
+        JPanel card = ConsoleTheme.createCard("Helmet transform calibration");
+        card.add(Box.createVerticalStrut(6));
+        card.add(ConsoleTheme.createWrappedText(
+                "These are live session values layered on top of the automatic helmet fit. "
+                + "Type an exact value or use -/+ for controlled steps.", 2));
+        card.add(Box.createVerticalStrut(8));
+
+        scaleControl = new NumericControl(
+                "Scale multiplier", 0.10D, 5.00D, 0.02D, 2,
+                value -> MarioEquipmentWorkbench.setScale((float) value));
+        xControl = new NumericControl(
+                "Head-local X", -300.0D, 300.0D, 2.0D, 1,
+                value -> MarioEquipmentWorkbench.setOffsetX((float) value));
+        yControl = new NumericControl(
+                "Head-local Y", -300.0D, 300.0D, 2.0D, 1,
+                value -> MarioEquipmentWorkbench.setOffsetY((float) value));
+        zControl = new NumericControl(
+                "Head-local Z", -300.0D, 300.0D, 2.0D, 1,
+                value -> MarioEquipmentWorkbench.setOffsetZ((float) value));
+        yawControl = new NumericControl(
+                "Yaw delta (degrees)", -360.0D, 360.0D, 5.0D, 1,
+                value -> MarioEquipmentWorkbench.setYawDegrees((float) value));
+
+        card.add(scaleControl);
+        card.add(xControl);
+        card.add(yControl);
+        card.add(zControl);
+        card.add(yawControl);
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        actions.setOpaque(false);
+        JButton reset = new JButton("Reset transform");
+        JButton flip = new JButton("Flip helmet 180°");
+        JButton copy = new JButton("Copy profile");
+        ConsoleTheme.styleButton(reset);
+        ConsoleTheme.styleButton(flip);
+        ConsoleTheme.styleButton(copy);
+        reset.addActionListener(e -> {
+            MarioEquipmentWorkbench.resetHelmetTransform();
+            workbenchStatus.setText("Helmet transform reset");
+        });
+        flip.addActionListener(e -> {
+            MarioEquipmentWorkbench.flipHelmetYaw180();
+            workbenchStatus.setText("Helmet yaw changed by 180°");
+        });
+        copy.addActionListener(e -> copyToClipboard(
+                MarioEquipmentWorkbench.formatProfileMarkdown(),
+                "Mario equipment profile copied"));
+        actions.add(reset);
+        actions.add(flip);
+        actions.add(copy);
+        card.add(actions);
+        return card;
+    }
+
+    private JPanel createHeadMaskCard() {
+        JPanel card = ConsoleTheme.createCard("Mario head masking / helmet clearance");
+        card.add(Box.createVerticalStrut(6));
+        card.add(ConsoleTheme.createWrappedText(
+                "This removes Mario source triangles before the Matrix model is built. "
+                + "Start high and lower the cut until the cap/hair clears the helmet. "
+                + "Keep the cutoff above the face so the eyes, moustache and sacred nose survive.", 3));
+        card.add(Box.createVerticalStrut(8));
+
+        styleCheckBox(enableHeadMask);
+        styleCheckBox(maskOnlyWithHelmet);
+        enableHeadMask.addActionListener(e -> {
+            MarioEquipmentWorkbench.setHeadMaskEnabled(enableHeadMask.isSelected());
+            workbenchStatus.setText(enableHeadMask.isSelected()
+                    ? "Live Mario head cut enabled"
+                    : "Mario head cut disabled");
+        });
+        maskOnlyWithHelmet.addActionListener(e ->
+                MarioEquipmentWorkbench.setMaskOnlyWithHelmet(maskOnlyWithHelmet.isSelected()));
+        enableHeadMask.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        maskOnlyWithHelmet.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        card.add(enableHeadMask);
+        card.add(Box.createVerticalStrut(4));
+        card.add(maskOnlyWithHelmet);
+        card.add(Box.createVerticalStrut(8));
+
+        maskStartControl = new NumericControl(
+                "Cut starts at body height %", 50.0D, 95.0D, 1.0D, 0,
+                value -> MarioEquipmentWorkbench.setMaskStartPercent((float) value));
+        maskRadiusControl = new NumericControl(
+                "Head cut radius %", 10.0D, 75.0D, 1.0D, 0,
+                value -> MarioEquipmentWorkbench.setMaskRadiusPercent((float) value));
+        card.add(maskStartControl);
+        card.add(maskRadiusControl);
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        actions.setOpaque(false);
+        JButton helmetCut = new JButton("Helmet-safe preset");
+        JButton reset = new JButton("Reset mask");
+        ConsoleTheme.styleButton(helmetCut);
+        ConsoleTheme.styleButton(reset);
+        helmetCut.addActionListener(e -> {
+            MarioEquipmentWorkbench.setHeadMaskEnabled(true);
+            MarioEquipmentWorkbench.setMaskOnlyWithHelmet(true);
+            MarioEquipmentWorkbench.setMaskStartPercent(72.0F);
+            MarioEquipmentWorkbench.setMaskRadiusPercent(40.0F);
+            workbenchStatus.setText("Helmet-safe head mask preset applied");
+        });
+        reset.addActionListener(e -> {
+            MarioEquipmentWorkbench.resetHeadMask();
+            workbenchStatus.setText("Mario head mask reset");
+        });
+        actions.add(helmetCut);
+        actions.add(reset);
+        card.add(actions);
+        return card;
+    }
+
+    private JPanel createOrientationCard() {
+        JPanel card = ConsoleTheme.createCard("Orientation truth / anti-backwards diagnostics");
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createValueRow("Native faceAngle", faceAngleValue));
+        card.add(ConsoleTheme.createValueRow("Animated head delta", fixedValue("INVERSE / TRANSPOSED")));
+        card.add(ConsoleTheme.createValueRow("Delta evidence", fixedValue("VERIFIED V4 backwards -> corrected")));
+        card.add(ConsoleTheme.createValueRow("Helmet base yaw", fixedValue("180° + item yaw delta")));
+        card.add(ConsoleTheme.createValueRow("Coordinate Y", fixedValue("libsm64 Y -> Matrix -Y")));
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createWrappedText(
+                "Do not guess a sign or forward axis again. Runtime-proven conventions are tracked in "
+                + "docs/n64/TRANSFORM_CONVENTIONS.md and the workbench profile can be saved beside it.", 2));
+        return card;
+    }
+
+    private JPanel createWorkbenchSaveCard() {
+        JPanel card = ConsoleTheme.createCard("Save / handoff");
+        card.add(Box.createVerticalStrut(6));
+        card.add(ConsoleTheme.createWrappedText(
+                "Save writes the current helmet and mask values to docs/n64/MARIO_EQUIPMENT_RUNTIME.md. "
+                + "It is a developer snapshot, not gameplay persistence.", 2));
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        actions.setOpaque(false);
+        JButton save = new JButton("Save profile .md");
+        JButton copy = new JButton("Copy markdown");
+        ConsoleTheme.styleButton(save);
+        ConsoleTheme.styleButton(copy);
+        save.addActionListener(e -> {
+            String result = MarioEquipmentWorkbench.saveProfileMarkdown();
+            workbenchStatus.setText(result.startsWith("Save failed") || result.startsWith("Could not")
+                    ? result : "Saved: " + result);
+        });
+        copy.addActionListener(e -> copyToClipboard(
+                MarioEquipmentWorkbench.formatProfileMarkdown(),
+                "Mario equipment markdown copied"));
+        actions.add(save);
+        actions.add(copy);
+        card.add(actions);
+        card.add(Box.createVerticalStrut(8));
+        ConsoleTheme.styleStatus(workbenchStatus, true);
+        workbenchStatus.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        card.add(workbenchStatus);
+        return card;
+    }
+
     private void refresh() {
+        refreshWorkbench();
+
         if (pauseDisplay.isSelected()) {
             return;
         }
@@ -290,6 +544,30 @@ public final class N64Panel extends JPanel {
         refreshEvents(false);
     }
 
+    private void refreshWorkbench() {
+        MarioEquipmentWorkbench.Snapshot value = MarioEquipmentWorkbench.getSnapshot();
+        workbenchModeValue.setText(value.marioMode ? "MARIO" : "OFF");
+        helmetItemValue.setText(value.itemId < 0
+                ? "NONE"
+                : value.itemId + " - " + value.itemName);
+        head3dValue.setText(value.head3d ? "ACTIVE" : "WAITING / FALLBACK");
+        frozenValue.setText(value.frozen ? "YES" : "NO");
+        faceAngleValue.setText(formatFloat(value.faceAngle));
+        maskCountValue.setText(Integer.toString(value.maskedTriangles));
+
+        freezePose.setSelected(value.frozen);
+        enableHeadMask.setSelected(value.maskEnabled);
+        maskOnlyWithHelmet.setSelected(value.maskOnlyWithHelmet);
+
+        if (scaleControl != null) scaleControl.setValue(value.scale);
+        if (xControl != null) xControl.setValue(value.x);
+        if (yControl != null) yControl.setValue(value.y);
+        if (zControl != null) zControl.setValue(value.z);
+        if (yawControl != null) yawControl.setValue(value.yawDegrees);
+        if (maskStartControl != null) maskStartControl.setValue(value.maskStartPercent);
+        if (maskRadiusControl != null) maskRadiusControl.setValue(value.maskRadiusPercent);
+    }
+
     private void refreshEvents(boolean force) {
         long version = Mario64Diagnostics.getEventVersion();
         if (!force && version == renderedEventVersion) {
@@ -307,14 +585,31 @@ public final class N64Panel extends JPanel {
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(
                     new StringSelection(text == null ? "" : text), null);
             recorderStatus.setText(successMessage);
+            workbenchStatus.setText(successMessage);
         } catch (RuntimeException ex) {
-            recorderStatus.setText("Clipboard unavailable: " + ex.getClass().getSimpleName());
+            String message = "Clipboard unavailable: " + ex.getClass().getSimpleName();
+            recorderStatus.setText(message);
+            workbenchStatus.setText(message);
         }
+    }
+
+    private static void styleCheckBox(JCheckBox box) {
+        box.setFont(ConsoleTheme.SMALL_FONT);
+        box.setForeground(ConsoleTheme.TEXT);
+        box.setBackground(ConsoleTheme.CARD);
+        box.setOpaque(true);
+        box.setFocusPainted(false);
     }
 
     private static JLabel valueLabel() {
         JLabel label = ConsoleTheme.createValueLabel();
         label.setText("-");
+        return label;
+    }
+
+    private static JLabel fixedValue(String text) {
+        JLabel label = valueLabel();
+        label.setText(text);
         return label;
     }
 
@@ -354,5 +649,102 @@ public final class N64Panel extends JPanel {
 
     private static boolean finite(float value) {
         return !Float.isNaN(value) && !Float.isInfinite(value);
+    }
+
+    /** Compact RuneScape-console styled numeric editor with direct-entry support. */
+    private final class NumericControl extends JPanel {
+        private static final long serialVersionUID = 1L;
+
+        private final double min;
+        private final double max;
+        private final double step;
+        private final int decimals;
+        private final DoubleConsumer consumer;
+        private final JTextField field = new JTextField();
+
+        NumericControl(
+                String labelText,
+                double min,
+                double max,
+                double step,
+                int decimals,
+                DoubleConsumer consumer) {
+            super(new BorderLayout(8, 0));
+            this.min = min;
+            this.max = max;
+            this.step = step;
+            this.decimals = decimals;
+            this.consumer = consumer;
+
+            setBackground(ConsoleTheme.CARD);
+            setOpaque(true);
+            setAlignmentX(JComponent.LEFT_ALIGNMENT);
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+
+            JLabel label = new JLabel(labelText);
+            label.setFont(ConsoleTheme.SMALL_FONT);
+            label.setForeground(ConsoleTheme.MUTED_TEXT);
+            add(label, BorderLayout.CENTER);
+
+            JPanel editor = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+            editor.setOpaque(false);
+            JButton minus = new JButton("-");
+            JButton plus = new JButton("+");
+            ConsoleTheme.styleButton(minus);
+            ConsoleTheme.styleButton(plus);
+            minus.setPreferredSize(new Dimension(38, 28));
+            plus.setPreferredSize(new Dimension(38, 28));
+
+            field.setPreferredSize(new Dimension(84, 29));
+            field.setHorizontalAlignment(JTextField.RIGHT);
+            ConsoleTheme.styleTextField(field);
+            field.addActionListener(e -> commitField());
+            field.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    commitField();
+                }
+            });
+            minus.addActionListener(e -> adjust(-step));
+            plus.addActionListener(e -> adjust(step));
+
+            editor.add(minus);
+            editor.add(field);
+            editor.add(plus);
+            add(editor, BorderLayout.EAST);
+        }
+
+        void setValue(double value) {
+            if (!field.hasFocus()) {
+                field.setText(formatNumber(value));
+            }
+        }
+
+        private void adjust(double delta) {
+            double current = parseField();
+            apply(current + delta);
+        }
+
+        private void commitField() {
+            apply(parseField());
+        }
+
+        private double parseField() {
+            try {
+                return Double.parseDouble(field.getText().trim());
+            } catch (Exception ignored) {
+                return min;
+            }
+        }
+
+        private void apply(double value) {
+            double clamped = value < min ? min : value > max ? max : value;
+            field.setText(formatNumber(clamped));
+            consumer.accept(clamped);
+        }
+
+        private String formatNumber(double value) {
+            return String.format(Locale.ROOT, "% ." + decimals + "f", Double.valueOf(value)).trim();
+        }
     }
 }
