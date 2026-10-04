@@ -157,6 +157,7 @@ public class Class343 {
 				Class472 class472 = client.aClass613_8605.method7306(-1042067865).method5957(1941635118);
 				int i_26_ = class472.method5573((byte) 3);
 				ConstructionBuildCamera.tick();
+				MarioJumpController.tick();
 				Class403 class403 = new Class403();
 				Class497 class497 = client.aClass613_8605.method7280((byte) -1);
 				if (IncomingPacket.method4113((byte) -101))
@@ -182,6 +183,9 @@ public class Class343 {
 					} else
 						class472.method5568((byte) -12).method6854(Class272_Sub2.aClass106_9517, Class190.anInt2246 * -960906585 << 3, i, i_9_, i_10_, i_11_, Class455.anInt5187 * 1406555935, 426389501 * Class406.anInt4765, Class88.anInt1225 * -1744889819, i_26_, true, false, -1726244689);
 					Class272_Sub2.aClass106_9517.method1747();
+				} else
+					class472.method5568((byte) -12).method6854(Class272_Sub2.aClass106_9517, Class190.anInt2246 * -960906585 << 3, i, i_9_, i_10_, i_11_, Class455.anInt5187 * 1406555935, 426389501 * Class406.anInt4765, Class88.anInt1225 * -1744889819, i_26_, true, false, -1726244689);
+				Class272_Sub2.aClass106_9517.method1747();
 				} else
 					Class272_Sub2.aClass106_9517.method1719(3, i_26_);
 				Class272_Sub2.aClass106_9517.method1717(false);
