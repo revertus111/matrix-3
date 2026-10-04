@@ -32,3 +32,8 @@
 - Updated N64 Equipment Workbench with bridge protocol, semantic availability, coverage profile, shared FACE W/H/D, protected/removable part counts, Keep All and Full Helm Safe controls.
 - Frozen presentation frames preserve semantic metadata; coverage revision still rebuilds Mario immediately while frozen.
 - Native rebuild is required for V7 acceptance: `make bootstrap` under `native/sm64-bridge`, then one Eclipse Java 8/runtime test.
+
+2026-10-04 - V7 semantic bootstrap repair
+- Regenerated the tracked libsm64 semantic diff hunk metadata against the pinned upstream layout after `git apply` rejected the hand-authored patch as corrupt at line 61.
+- Corrected all affected unified-diff hunk counts/offsets and verified the repaired patch parses successfully with `git apply --numstat`.
+- No semantic part ids, protocol-v2 payload, fitting behavior, or coverage behavior changed.
