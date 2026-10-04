@@ -163,14 +163,6 @@ public class Player extends Entity {
 	}
 
 	boolean method10696(Class106 class106, int i, byte i_16_) {
-		/*
-		 * verified-static: Mario replacement is presentation-only. Suppress the
-		 * local RuneScape appearance only after the Matrix-native Mario renderer
-		 * has a fresh, successfully rendered native geometry frame. Remote players
-		 * and fail-open/fallback frames keep the normal RuneScape model path.
-		 */
-		if (MarioVisualRenderer.shouldSuppressLocalPlayer(this))
-			return false;
 		int i_17_ = i;
 		Class538 class538 = method10554((byte) 6);
 		Class663 class663 = ((aClass663_11670.method7786(630124839) && !aClass663_11670.method7793(-1995738754)) ? aClass663_11670 : null);
@@ -418,6 +410,7 @@ public class Player extends Entity {
 					Class672.aClass639_Sub5_8533.method8903(-139461998);
 					break;
 				}
+			}
 		}
 		if (aClass485_11659 != null)
 			aClass485_11659.method5764();
@@ -1087,7 +1080,7 @@ public class Player extends Entity {
 							Class240 class240 = (Class240.method3277(class456_sub1_sub2_sub3_sub2_121_.method5394().aClass240_2647, Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976.method5394().aClass240_2647));
 							int i_122_ = (int) class240.aFloat2653;
 							int i_123_ = (int) class240.aFloat2657;
-							method10706(class106, class261, models[0], (long) i_122_, (long) i_123_, class193.anInt2318 * 1404054527, l_120_);
+							method10706(class106, class261, models[0], (long) i_122_, (long) i_123_, class193.anInt2318 * 1404054527, 92160000L);
 						}
 					}
 				}
