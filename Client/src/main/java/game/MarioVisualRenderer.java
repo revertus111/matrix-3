@@ -43,6 +43,7 @@ public final class MarioVisualRenderer {
 
     private static Class106 cachedRenderer;
     private static long cachedSequence = -1L;
+    private static long cachedMaskRevision = Long.MIN_VALUE;
     private static Model cachedModel;
     private static volatile boolean replacementReady;
     private static volatile long lastFreshRenderSuccessNanos = Long.MIN_VALUE;
@@ -83,7 +84,11 @@ public final class MarioVisualRenderer {
             return;
         }
 
-        if (cachedRenderer != renderer || cachedSequence != frame.sequence || cachedModel == null) {
+        long maskRevision = MarioEquipmentWorkbench.getMaskRevision();
+        if (cachedRenderer != renderer
+                || cachedSequence != frame.sequence
+                || cachedMaskRevision != maskRevision
+                || cachedModel == null) {
             Model rebuilt = buildModel(renderer, frame, Sm64BridgeSession.getTextureAtlas());
             if (rebuilt == null) {
                 if (!renderCachedGrace(player, renderer)) {
@@ -98,6 +103,7 @@ public final class MarioVisualRenderer {
             }
             cachedRenderer = renderer;
             cachedSequence = frame.sequence;
+            cachedMaskRevision = maskRevision;
             cachedModel = rebuilt;
         }
 
@@ -224,6 +230,7 @@ public final class MarioVisualRenderer {
             return null;
         }
 
+        MarioEquipmentWorkbench.prepareMaskFrame(frame);
         int textureSubdivisions = chooseTextureSubdivisions(frame, atlas);
         int outputTriangles = countOutputTriangles(frame, atlas, textureSubdivisions);
         int vertexCapacity = outputTriangles * 3;
@@ -249,8 +256,14 @@ public final class MarioVisualRenderer {
                 new SmoothVertexPool(raw, vertexCapacity, SMOOTH_DOT_THRESHOLD);
         float[] sourceNormal = new float[3];
         int outputTriangle = 0;
+        int maskedSourceTriangles = 0;
 
         for (int sourceTriangle = 0; sourceTriangle < sourceTriangles; sourceTriangle++) {
+            if (MarioEquipmentWorkbench.shouldMaskTriangle(frame, sourceTriangle)) {
+                maskedSourceTriangles++;
+                continue;
+            }
+
             int positionBase = sourceTriangle * 9;
             calculateSourceNormal(frame, positionBase, sourceNormal);
 
@@ -292,6 +305,7 @@ public final class MarioVisualRenderer {
             }
         }
 
+        MarioEquipmentWorkbench.recordMaskedTriangleCount(maskedSourceTriangles);
         if (outputTriangle != outputTriangles) {
             System.err.println("[SM64 Visual] Texture tessellation count mismatch expected="
                     + outputTriangles + " actual=" + outputTriangle);
@@ -463,13 +477,15 @@ public final class MarioVisualRenderer {
             Sm64BridgeSession.GeometryFrame frame,
             Sm64BridgeSession.TextureAtlas atlas,
             int textureSubdivisions) {
-        if (textureSubdivisions <= 0 || !atlasReady(atlas)) {
-            return frame.triangleCount;
-        }
-        int texturedMultiplier = textureSubdivisions * textureSubdivisions;
+        boolean canTexture = textureSubdivisions > 0 && atlasReady(atlas);
+        int texturedMultiplier = canTexture ? textureSubdivisions * textureSubdivisions : 1;
         int total = 0;
         for (int triangle = 0; triangle < frame.triangleCount; triangle++) {
-            total += isTexturedTriangle(frame, atlas, triangle) ? texturedMultiplier : 1;
+            if (MarioEquipmentWorkbench.shouldMaskTriangle(frame, triangle)) {
+                continue;
+            }
+            total += canTexture && isTexturedTriangle(frame, atlas, triangle)
+                    ? texturedMultiplier : 1;
         }
         return total;
     }
