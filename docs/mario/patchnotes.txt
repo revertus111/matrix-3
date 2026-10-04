@@ -1,0 +1,7 @@
+2026-10-03 - Mario vertical jump POC v1
+- Added `MarioJumpController` as an isolated client-side proof using Matrix3's existing local-player transform, held-key state, and live viewport tick.
+- Space uses Matrix3 internal key 83 with rising-edge detection; holding Space does not intentionally auto-bunny-hop.
+- Added time-based vertical velocity/gravity and terrain-baseline-relative scene-Y displacement while preserving normal X/Z movement, plane, clipping, pathfinding, and server position authority.
+- External player-Y changes while airborne are treated as a new terrain baseline so normal Matrix3 terrain/movement ownership can remain authoritative.
+- No Mario model/animations, platform collision, wall/roof landing, server physics, or multiplayer replication are included in this POC.
+- Runtime acceptance is pending; this patch is `verified-static` only.
