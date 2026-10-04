@@ -32,11 +32,13 @@ Detailed architecture: `docs/mario/SM64_PASSTHROUGH_ARCHITECTURE.md`.
 
 ### Current priority
 
-The user explicitly reprioritized from Phase 3 collision work to a reusable imported-character foundation before adding more games. The approved current bundle introduces `AlternateCharacterController` as the shared viewport/control owner, `AlternateCharacterInputKeyboard` as the shared Matrix keyboard view, camera-relative movement input, a generic RuneScape combat-intent bridge, and a bounded Mario replacement-grace fix for the reported idle->Space RuneScape-body pop.
+The user explicitly reprioritized from Phase 3 collision work to a reusable imported-character foundation before adding more games. The approved current bundle introduced `AlternateCharacterController` as the shared viewport/control owner, `AlternateCharacterInputKeyboard` as the shared Matrix keyboard view, camera-relative movement input, a generic RuneScape combat-intent bridge, and a bounded Mario replacement-grace attempt for the reported idle->Space RuneScape-body pop.
+
+The user runtime-confirmed on 2026-10-04 that the 750 ms replacement grace did **not** eliminate the idle->Space RuneScape-body reappearance. Do not treat that grace as an accepted fix. The current approved diagnostic slice adds a Test Console -> `N64` workspace with a `Mario 64` sub-tab and a client-tick flight recorder so the next patch can be driven by the exact bridge/frame/action/suppression transition rather than another speculative renderer change.
 
 Mario is the first driver. Its current capability profile advertises melee only. The architecture deliberately leaves room for a later Link driver to advertise melee + ranged while reusing the same camera, keyboard and RuneScape combat pipeline rather than adding a second controller/damage system.
 
-Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 is still the next collision architecture milestone after this framework bundle is runtime accepted.
+Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 is still the next collision architecture milestone after the current framework/presentation regression gate is accepted.
 
 ### Out of scope for the current master-controller/combat slice
 
@@ -69,8 +71,10 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - The server remains combat authority: `WorldPacketsDecoder` validates the NPC/packet and starts the existing `PlayerCombatNew(npc)` action, which keeps RuneScape target/range/pathing rules, combat definitions/stats/equipment bonuses, damage, XP and downstream death/drop behavior.
 - Mario's first capability profile advertises `MELEE`; a future Link driver can advertise `MELEE` + `RANGED` against the same combat bridge. Strict server-side enforcement of character/weapon-family compatibility remains future work.
 - `MarioVisualRenderer` owns local Mario visual presentation from native geometry. It consumes immutable libsm64 frames on Matrix's render thread, converts them to `Class159`, builds a normal Matrix `Model`, and renders through the established direct scene-preview seam.
-- Textured Mario faces keep the accepted micro-face atlas approximation. Bundle 4.2B shares compatible coincident source-triangle boundary vertices through an angle-gated topology path so Matrix normal generation shades compatible surfaces more smoothly without indiscriminately welding hard edges.
-- `MarioVisualRenderer` now allows a bounded 750 ms last-good-model grace across transient geometry/model-build gaps. Cached fallback renders do not extend the deadline. Mode loss, bridge loss, or an expired grace immediately restores normal fail-open RuneScape presentation.
+- Textured Mario faces keep the accepted micro-face atlas approximation. Bundle 4.2B shares compatible coincident source-triangle boundary vertices through an angle-gated topology path so Matrix normal generation shades compatible surfaces more smoothly without indiscriminately welding hard edges together.
+- `MarioVisualRenderer` allows a bounded 750 ms last-good-model grace across transient geometry/model-build gaps. Cached fallback renders do not extend the deadline. Runtime evidence now proves this grace alone does not eliminate the reported idle->Space RuneScape-body pop.
+- `Mario64Diagnostics` is a read-only developer recorder attached to the established Mario client tick. It snapshots the existing controller, bridge/native frame, action/animation, sampled/forwarded controls, airborne presentation and actual `MarioVisualRenderer.shouldSuppressLocalPlayer(...)` predicate into a bounded event history. It does not become an owner of input, rendering, movement, combat, native stepping, player suppression or server state.
+- Test Console -> `N64` is the reusable developer workspace for imported N64 games; `Mario 64` is the first game sub-tab and later games should add sibling sub-tabs instead of mixing game-specific diagnostics together.
 - Default smoothing threshold is `70` degrees; `-Dmatrix3.sm64.smoothAngleDegrees=0..180` provides runtime calibration. The default `70` degree path is runtime accepted.
 - `Class578.method6834(...)` remains the established Matrix direct-preview render seam; Mario is another consumer rather than a second renderer.
 - `Player.method10696(...)` remains the normal player model-build owner. A narrow fail-open gate suppresses only the local RuneScape appearance after `MarioVisualRenderer` has a successful replacement path. Remote players remain unchanged.
@@ -104,6 +108,7 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - Ctrl+M restores the normal RuneScape local-player presentation, and re-entering Mario mode recreates the animated Mario replacement cleanly.
 - The atlas micro-face v3 path restores Mario's texture details while keeping the former giant black whole-source-triangle artifact fixed. Bundle 4.2A visual fidelity is runtime accepted 2026-10-04.
 - Bundle 4.2B shared-topology smoothing is runtime accepted at the default `70` degree threshold: Mario reads visibly rounder/less faceted while accepted atlas detail and hard-edge presentation remain intact.
+- The reported idle->Space RuneScape-body reappearance still occurs with the 750 ms replacement grace in place. `VERIFIED` regression report from the user on 2026-10-04; the grace is not an accepted fix.
 
 ### verified-static
 
@@ -133,6 +138,7 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - `MarioVisualRenderer` generates model-local vertices from `(geometry position - native state position)` before anchoring the Model to Matrix player position; with Bundle 2.4 the anchor itself follows the accepted temporary local native XYZ presentation.
 - libsm64's reference GL renderer draws Mario base colour/lighting first, then overlays the ROM texture as a separate UV-mapped pass; the accepted micro-face presentation approximates those texture details inside Matrix without creating a second renderer.
 - Bundle 4.2B shares only generated boundary vertices whose transformed geometric face normals are within the configured smooth-angle threshold; atlas face colours remain per-face and are not merged.
+- `Mario64Diagnostics` samples its runtime evidence on the established Mario client tick and the N64 Swing panel only reads immutable snapshots/event text on a 100 ms UI timer. The diagnostics path does not create a second input/render/native-step owner.
 
 ## Unknown / research needed
 
@@ -144,8 +150,9 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 ### UNKNOWN
 
 - Runtime feel/correctness of the new master camera-relative control vector across north/east/south/west and live camera rotation.
-- Runtime acceptance of the 750 ms last-good Mario replacement grace on the reported idle->Space transition.
+- The exact condition that makes RuneScape local-player suppression drop during the idle->Space transition. The 750 ms grace did not solve it; N64 flight-recorder evidence is now the next gate.
 - Runtime acceptance of the first Mario F/B -> stock RuneScape NPC combat bridge.
+- Runtime UI/recorder acceptance of Test Console -> N64 -> Mario 64 under Eclipse Java 8.
 - Final Matrix<->SM64 coordinate conversion for **collision-backed** XYZ movement. The current local presentation scale/sign is runtime accepted but does not by itself prove the native collision-space conversion.
 - Final collision-bubble radius/rebuild threshold.
 - Correct terrain triangle winding/material selection for RuneScape slopes when translated into SM64 surfaces.
@@ -160,7 +167,7 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - Existing Matrix3 client NPC action packet and server `PlayerCombatNew` combat owner.
 - Local `libsm64`/`sm64_bridge` build.
 - User-owned SM64 US ROM as a local runtime dependency only; never committed.
-- User runtime testing for master camera controls, replacement stability, first NPC combat proof, later collision-backed terrain/object behavior and regression acceptance.
+- User runtime testing for N64 diagnostics, master camera controls, replacement stability, first NPC combat proof, later collision-backed terrain/object behavior and regression acceptance.
 
 ## Development plan
 
@@ -200,9 +207,12 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - [x] Add `AlternateCharacterCombatBridge` that translates Mario primary melee intent into the stock NPC attack packet while preserving server `PlayerCombatNew` authority.
 - [x] Trigger RuneScape combat only on the F/B rising edge rather than every held client tick.
 - [x] Add bounded last-good Mario render grace for transient frame/model gaps without weakening mode/bridge fail-open behavior.
+- [x] Runtime regression: the 750 ms grace does not eliminate the idle->Space RuneScape-body pop. `VERIFIED` 2026-10-04.
+- [x] Add Test Console -> N64 -> Mario 64 read-only flight recorder for exact client-tick evidence. `verified-static`; runtime UI gate pending.
+- [ ] Diagnose the exact idle->Space suppression/frame transition with the N64 recorder and patch only the proven presentation seam.
 - [ ] Runtime: W remains camera-forward and A/D remain screen-relative at north/east/south/west headings.
 - [ ] Runtime: live camera rotation while moving does not reproduce the south-facing inversion.
-- [ ] Runtime: idle several seconds -> Space keeps Mario visible with no RuneScape-body pop.
+- [ ] Runtime acceptance after evidence-driven fix: idle several seconds -> Space keeps Mario visible with no RuneScape-body pop.
 - [ ] Runtime: nearby simple NPC + F produces native Mario B action plus normal RuneScape server combat/damage/XP.
 - [ ] Regression: Ctrl+M restores normal input/model immediately; no target/input state leaks across re-entry.
 
@@ -355,9 +365,9 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 - Phase status: ACTIVE / NEEDS TEST
 - Bundle: 1.3 - Universal alternate-character controller + combat bridge
 - Bundle status: IMPLEMENTED / NEEDS TEST
-- Approval state: user supplied explicit `AAA` for the master-controller/camera/fallback/combat bundle on 2026-10-04.
-- Current checklist item: one consolidated runtime launch for camera-relative steering, idle->Space presentation continuity, and Mario F -> stock RuneScape NPC combat.
-- Current objective: prove Mario is now one driver of a reusable imported-character framework while RuneScape remains authoritative for combat/game state.
+- Approval state: user supplied explicit `AAA` for the master-controller/camera/fallback/combat bundle and explicit `SAP AAA` for the N64 diagnostics slice on 2026-10-04.
+- Current checklist item: runtime-open Test Console -> N64 -> Mario 64, reproduce idle->Space once, and capture the exact suppression/native-frame transition before any further presentation fix.
+- Current objective: identify the proven idle->Space presentation failure condition while preserving the reusable imported-character framework and RuneScape combat/game-state authority.
 
 ## Checklist / patch status
 
@@ -372,9 +382,9 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 | Mario keyboard/action controls | 2 | 2.3 | RUNTIME PARTIAL | Movement states, crouch, backflip and ground-pound verified; long-jump/entry guards remain. |
 | Mario WASD ownership | 2 | 2.4 | VERIFIED | Mario owns WASD without moving the Construction/RTS camera; generalized wrapper now replaces Mario-specific wrapper. |
 | Mario native geometry transport | 4 | 4.1 | VERIFIED | Actual Mario geometry and successive native animation frames reach Matrix at runtime. |
-| Matrix Mario visual renderer | 4 | 4.1 | VERIFIED / NEW REGRESSION TEST | Core accepted; 750 ms transient-frame grace now needs idle->Space verification. |
+| Matrix Mario visual renderer | 4 | 4.1 | VERIFIED CORE / REGRESSION ACTIVE | 750 ms grace did not eliminate idle->Space body pop; N64 flight recorder is ready for exact evidence. |
 | Mario visual fidelity | 4 | 4.2 | VERIFIED / POLISH CARRYOVER | Atlas micro-face v3 and shared-topology smoothing are runtime accepted. |
-| Matrix terrain adapter | 3 | 3.1 | READY AFTER CURRENT GATE | Next architectural step after master-controller runtime acceptance. |
+| Matrix terrain adapter | 3 | 3.1 | READY AFTER CURRENT GATE | Next architectural step after master-controller/runtime presentation acceptance. |
 
 ## Decisions / new ideas
 
@@ -394,11 +404,15 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 - Direct libsm64 animated geometry is the selected Mario visual path.
 - The accepted micro-face atlas path and shared-topology smoothing remain the visual solution unless new runtime evidence regresses them.
 - RuneScape control/presentation remains the safe default and fail-open fallback.
+- Test Console -> N64 is developer-only diagnostics infrastructure. Add one sub-tab per imported N64 game; game tabs observe existing owners and must not become parallel gameplay/render/input owners.
+- For the active idle->Space regression, collect recorder evidence before changing `MarioVisualRenderer` or `Player.method10696(...)` again.
 - Matrix terrain will be adapted to local SM64 collision surfaces; do not convert all of Gielinor at once.
 
 ## Testing
 
-See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
+See `docs/mario/TESTLIST.md` for the broader Mario runtime gate.
+
+See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder diagnostic gate.
 
 ## Carryover / blockers
 
@@ -414,7 +428,7 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 
 ### BLOCKED
 
-- None. Current Bundle 1.3 is implemented and awaiting one runtime acceptance pass.
+- None. Current Bundle 1.3 is implemented, but idle->Space continuity remains a confirmed regression and now requires one diagnostic capture before the next presentation patch.
 
 ## Resume Here
 
@@ -428,7 +442,9 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 - Bundle 2.3 native controls are runtime-partially accepted: movement animations, crouch, backflip and ground-pound work through libsm64.
 - Bundle 2.4 is runtime-VERIFIED: reversible WASD ownership, shared interpolated XYZ, visible native X/Z translation, moving actions, Ctrl+M restore/re-entry and camera-control restoration all work.
 - Bundle 2.4 visible Matrix presentation also follows different RuneScape terrain elevations correctly. Do not mistake that for native SM64 collision ingestion.
-- Bundle 1.3 implementation is complete statically: master alternate-character dispatch/input, generic keyboard ownership, Matrix-camera-forward -> libsm64 camera input, stock RuneScape NPC combat intent bridge, and bounded Mario replacement grace are in `main` and need one runtime pass.
+- Bundle 1.3 master alternate-character dispatch/input, generic keyboard ownership, Matrix-camera-forward -> libsm64 camera input and stock RuneScape NPC combat intent bridge remain implemented and need runtime acceptance.
+- User runtime evidence confirms the bounded 750 ms Mario replacement grace did not solve the idle->Space RuneScape-body pop. Do not repeat that grace-only fix.
+- Test Console -> N64 -> Mario 64 flight-recorder infrastructure is implemented in `main` and statically inspected; Eclipse Java 8 compile/UI/runtime acceptance is pending.
 
 **Current phase:**
 
@@ -441,16 +457,13 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 **Next checklist item:**
 
 1. `git pull origin main`, Eclipse Java 8 clean/build, launch once. No native sidecar rebuild is required.
-2. Enter Mario mode and confirm existing smoothed/textured Mario + XYZ movement still initializes.
-3. Rotate camera north/east/south/west; at every heading W must be camera-forward and A/D screen-relative.
-4. Rotate the camera while holding W and confirm steering tracks the view without the old south-facing inversion.
-5. Idle several seconds, press Space, and confirm the RuneScape body does not flash/reappear during the Mario jump transition.
-6. Ctrl+M out once and confirm RuneScape body/input returns immediately despite the 750 ms cached-render grace.
-7. Re-enter Mario near one simple attackable NPC while the underlying server player is also close enough; tap F once.
-8. Confirm native Mario B/punch behavior plus `[Alt Character Combat] MELEE -> stock NPC attack index=...`, then confirm normal RuneScape server combat/hits/XP occur.
-9. Hold F briefly and confirm no attack-packet spam/new combat restart every client tick.
-10. Ctrl+M out/in and confirm target/input state does not leak.
-11. If all pass, mark Bundle 1.3 runtime accepted and return the architectural main path to Phase 3.1 terrain collision.
+2. Open Test Console -> N64 -> Mario 64 and confirm the live fields/event recorder render correctly.
+3. Enter Mario mode and confirm Bridge becomes `READY`, sequence/action/animation/XYZ begin updating, and `Suppress RuneScape body` becomes `YES` after Mario presentation is active.
+4. Let Mario idle several seconds, click `Clear events`, then press Space once.
+5. If the RuneScape body flashes/reappears, click `Copy events` immediately and preserve the `SPACE_DOWN`, `A_SEND_DOWN`, native `ACTION`/`ANIM`, and especially any `SUPPRESS_RS -> false` line with its sequence/frame-age values.
+6. If the body flashes but the recorder never reports `SUPPRESS_RS -> false`, treat that as evidence that the failure is occurring later/intra-render than the current controller-tick predicate sample; instrument the `MarioVisualRenderer` render branch next rather than guessing at grace timing again.
+7. After the idle->Space failure condition is identified and fixed, finish the remaining Bundle 1.3 runtime checks: camera-relative steering, Ctrl+M lifecycle, and Mario F -> stock RuneScape NPC combat.
+8. Only after Bundle 1.3 passes return the architectural main path to Phase 3.1 terrain collision.
 
 **Files/systems already inspected:**
 
@@ -458,9 +471,13 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 - `Client/src/main/java/game/AlternateCharacterInputKeyboard.java`
 - `Client/src/main/java/game/AlternateCharacterCombatBridge.java`
 - `Client/src/main/java/game/MarioJumpController.java`
+- `Client/src/main/java/game/Mario64Diagnostics.java`
 - `Client/src/main/java/game/PlayerControllerMode.java`
 - `Client/src/main/java/game/Sm64BridgeSession.java`
 - `Client/src/main/java/game/MarioVisualRenderer.java`
+- `Client/src/main/java/game/console/N64Panel.java`
+- `Client/src/main/java/game/console/TestConsolePanel.java`
+- `Client/src/main/java/game/console/TestConsoleFlyoutMenu.java`
 - `Client/src/main/java/game/Class549.java`
 - `Client/src/main/java/game/Class549_Sub1.java`
 - `Client/src/main/java/game/Class108.java`
@@ -489,18 +506,20 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 - Stock NPC attack packet/server `PlayerCombatNew` ownership unless the first combat runtime test fails.
 - Bundle 2.4 local XYZ interpolation/presentation/restore behavior unless a new runtime regression appears.
 - Binary input/state packet structure; it already carries camLook X/Z + stick X/Y + A/B/Z and returns native XYZ.
+- Test Console lazy-workspace/flyout architecture; N64 now uses the established `TestConsolePanel`/`TestConsoleFlyoutMenu` path.
 - `Class159 -> Model` generated geometry ownership.
 - `Class159.method2560(...)` coincident-vertex reuse precedent.
 - `Class578.method6834(...)` direct scene-preview seam.
-- `Player.method10696(...)` shared player model-build suppression seam.
+- `Player.method10696(...)` shared player model-build suppression seam; do not modify it again without recorder/render-time evidence.
 - libsm64 geometry buffer/ROM atlas availability.
 - Atlas micro-face v3 artifact cause/fix unless runtime regresses.
 - Bundle 4.2B shared-boundary topology unless runtime shows a new defect.
 
 **Pending runtime verification:**
 
+- Test Console -> N64 -> Mario 64 Java 8 compile/UI/recorder gate.
+- Exact idle->Space suppression/native-frame event sequence using the N64 flight recorder.
 - Bundle 1.3 camera-relative movement across four headings/live rotation.
-- Bundle 1.3 idle->Space replacement continuity.
 - Bundle 1.3 Mario F -> stock RuneScape NPC combat/RS stats proof.
 - Bundle 2.3 long-jump timing and held-entry guards.
 - Remote-player isolation.
@@ -510,11 +529,11 @@ See `docs/mario/TESTLIST.md` for the consolidated runtime gate.
 **Important remaining uncertainty:**
 
 - The master camera-forward path is `verified-static`; only runtime can confirm every Matrix camera mode's handedness feels correct with libsm64.
-- The 750 ms replacement grace is intentionally bounded and fail-open, but the reported idle->Space regression is not resolved until runtime confirms no body pop.
+- The 750 ms replacement grace is implemented but runtime-rejected as a complete idle->Space fix. The exact suppression/render condition causing the body pop is still `UNKNOWN` until the N64 recorder captures the transition.
 - The current `3.0` horizontal scale/direct X/Z signs are runtime accepted for local presentation, but native collision-space conversion/winding still needs independent Phase 3 validation.
 - Temporary local XYZ still runs against libsm64's flat floor and is not the server player's authoritative position. The first combat proof should be done near the underlying server position.
 - Mario's melee-only capability is not yet a server-enforced equipment/style restriction.
 
 ## Next recommended work
 
-Runtime-test Bundle 1.3 once. If camera-relative movement, idle->Space presentation continuity, and Mario F -> stock RuneScape NPC combat all pass, return to Phase 3 Bundle 3.1 and stream a bounded RuneScape terrain heightfield into libsm64 as native collision surfaces. Link can then be added as another driver/capability profile without creating another input/camera/damage framework.
+Runtime-open Test Console -> N64 -> Mario 64 and reproduce the idle->Space body pop once. Use that event evidence to patch the exact presentation/suppression seam; if the body flashes without a recorded `SUPPRESS_RS -> false`, instrument the render-time branch next. Then finish the remaining Bundle 1.3 camera/combat/lifecycle runtime checks. Only after that gate passes should the main architectural path return to Phase 3 Bundle 3.1 and stream a bounded RuneScape terrain heightfield into libsm64 as native collision surfaces. Link can then be added as another driver/capability profile without creating another input/camera/damage framework.
