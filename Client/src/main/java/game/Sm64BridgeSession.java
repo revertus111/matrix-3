@@ -56,6 +56,18 @@ public final class Sm64BridgeSession {
         }
     }
 
+    /**
+     * Publishes one normalized Matrix input snapshot for the fixed-rate native
+     * simulation worker. Stick values are clamped to libsm64's -1..1 range.
+     */
+    public static void setInput(float stickX, float stickY,
+            boolean buttonA, boolean buttonB, boolean buttonZ) {
+        Worker worker = current;
+        if (worker != null) {
+            worker.setInput(stickX, stickY, buttonA, buttonB, buttonZ);
+        }
+    }
+
     public static boolean isReady() {
         Worker worker = current;
         return worker != null && worker.isReady();
@@ -122,7 +134,7 @@ public final class Sm64BridgeSession {
         private volatile boolean ready;
         private volatile boolean failed;
         private volatile String failureReason;
-        private volatile boolean buttonA;
+        private volatile InputState inputState = InputState.IDLE;
         private volatile GeometryFrame previousFrame;
         private volatile GeometryFrame latestFrame;
         private volatile TextureAtlas textureAtlas;
@@ -143,7 +155,7 @@ public final class Sm64BridgeSession {
 
         void stop() {
             running = false;
-            buttonA = false;
+            inputState = InputState.IDLE;
             ready = false;
 
             Process localProcess = process;
@@ -173,7 +185,16 @@ public final class Sm64BridgeSession {
         }
 
         void setButtonA(boolean down) {
-            buttonA = down;
+            InputState input = inputState;
+            inputState = new InputState(
+                    input.stickX, input.stickY, down, input.buttonB, input.buttonZ);
+        }
+
+        void setInput(float stickX, float stickY,
+                boolean buttonA, boolean buttonB, boolean buttonZ) {
+            inputState = new InputState(
+                    clampStick(stickX), clampStick(stickY),
+                    buttonA, buttonB, buttonZ);
         }
 
         NativeState getPreviousState() {
@@ -219,14 +240,15 @@ public final class Sm64BridgeSession {
                 textureAtlas = readHandshake(input);
 
                 // Stabilize the freshly reset native Mario before accepting input.
-                publish(step(output, input, false));
-                publish(step(output, input, false));
+                publish(step(output, input, InputState.IDLE));
+                publish(step(output, input, InputState.IDLE));
                 ready = true;
                 System.out.println("[SM64 Bridge] Persistent session READY (30 Hz + geometry)");
 
                 long nextStep = System.nanoTime();
                 while (running) {
-                    publish(step(output, input, buttonA));
+                    InputState inputSnapshot = inputState;
+                    publish(step(output, input, inputSnapshot));
 
                     nextStep += STEP_NANOS;
                     long now = System.nanoTime();
@@ -248,7 +270,7 @@ public final class Sm64BridgeSession {
             } finally {
                 ready = false;
                 running = false;
-                buttonA = false;
+                inputState = InputState.IDLE;
                 process = null;
                 closeQuietly(output);
                 closeQuietly(input);
@@ -292,15 +314,15 @@ public final class Sm64BridgeSession {
     }
 
     private static GeometryFrame step(
-            OutputStream output, InputStream input, boolean buttonA) throws IOException {
+            OutputStream output, InputStream input, InputState controls) throws IOException {
         output.write(BINARY_CMD_STEP);
         writeFloatLE(output, 0.0F);
         writeFloatLE(output, -1.0F);
-        writeFloatLE(output, 0.0F);
-        writeFloatLE(output, 0.0F);
-        output.write(buttonA ? 1 : 0);
-        output.write(0);
-        output.write(0);
+        writeFloatLE(output, controls.stickX);
+        writeFloatLE(output, controls.stickY);
+        output.write(controls.buttonA ? 1 : 0);
+        output.write(controls.buttonB ? 1 : 0);
+        output.write(controls.buttonZ ? 1 : 0);
         output.flush();
 
         expectMagic(input, 'M', '6', '4', 'F');
@@ -326,6 +348,19 @@ public final class Sm64BridgeSession {
         float[] colors = readFloatArray(input, triangleCount * 9);
         float[] uvs = readFloatArray(input, triangleCount * 6);
         return new GeometryFrame(sequence, state, triangleCount, positions, colors, uvs);
+    }
+
+    private static float clampStick(float value) {
+        if (Float.isNaN(value) || Float.isInfinite(value)) {
+            return 0.0F;
+        }
+        if (value < -1.0F) {
+            return -1.0F;
+        }
+        if (value > 1.0F) {
+            return 1.0F;
+        }
+        return value;
     }
 
     private static float[] readFloatArray(InputStream input, int count) throws IOException {
@@ -459,6 +494,25 @@ public final class Sm64BridgeSession {
                 "native/sm64-bridge/baserom.us.z64",
                 "../native/sm64-bridge/baserom.us.z64"
         };
+    }
+
+    private static final class InputState {
+        static final InputState IDLE = new InputState(0.0F, 0.0F, false, false, false);
+
+        final float stickX;
+        final float stickY;
+        final boolean buttonA;
+        final boolean buttonB;
+        final boolean buttonZ;
+
+        InputState(float stickX, float stickY,
+                boolean buttonA, boolean buttonB, boolean buttonZ) {
+            this.stickX = stickX;
+            this.stickY = stickY;
+            this.buttonA = buttonA;
+            this.buttonB = buttonB;
+            this.buttonZ = buttonZ;
+        }
     }
 
     static final class TextureAtlas {
