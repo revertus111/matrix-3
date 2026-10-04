@@ -31,11 +31,11 @@ public final class Sm64BridgeProbe {
         final File bridge = resolvePath(
                 "matrix3.sm64.bridge",
                 "SM64_BRIDGE_EXE",
-                defaultBridgePath());
+                defaultBridgePaths());
         final File rom = resolvePath(
                 "matrix3.sm64.rom",
                 "SM64_ROM",
-                "native/sm64-bridge/baserom.us.z64");
+                defaultRomPaths());
 
         if (!bridge.isFile()) {
             System.out.println("[SM64 Bridge] Probe skipped; sidecar not found: " + bridge.getAbsolutePath());
@@ -151,22 +151,38 @@ public final class Sm64BridgeProbe {
         writer.flush();
     }
 
-    private static File resolvePath(String propertyName, String environmentName, String fallback) {
+    private static File resolvePath(String propertyName, String environmentName, String... fallbacks) {
         String value = System.getProperty(propertyName);
         if (value == null || value.trim().isEmpty()) {
             value = System.getenv(environmentName);
         }
-        if (value == null || value.trim().isEmpty()) {
-            value = fallback;
+        if (value != null && !value.trim().isEmpty()) {
+            return new File(value);
         }
-        return new File(value);
+
+        for (String fallback : fallbacks) {
+            File candidate = new File(fallback);
+            if (candidate.isFile()) {
+                return candidate;
+            }
+        }
+        return new File(fallbacks[0]);
     }
 
-    private static String defaultBridgePath() {
+    private static String[] defaultBridgePaths() {
         String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        return osName.contains("win")
-                ? "native/sm64-bridge/dist/sm64_bridge.exe"
-                : "native/sm64-bridge/dist/sm64_bridge";
+        String executable = osName.contains("win") ? "sm64_bridge.exe" : "sm64_bridge";
+        return new String[] {
+                "native/sm64-bridge/dist/" + executable,
+                "../native/sm64-bridge/dist/" + executable
+        };
+    }
+
+    private static String[] defaultRomPaths() {
+        return new String[] {
+                "native/sm64-bridge/baserom.us.z64",
+                "../native/sm64-bridge/baserom.us.z64"
+        };
     }
 
     private static final class NativeState {
