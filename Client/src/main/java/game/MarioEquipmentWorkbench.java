@@ -216,7 +216,10 @@ public final class MarioEquipmentWorkbench {
             lastMaskedTriangles = 0;
             return;
         }
-        long revision = maskRevision;
+
+        HelmetInfo helmet = findVisibleHelmet();
+        boolean helmetPresent = helmet != null;
+        long revision = effectiveMaskRevision(helmetPresent);
         if (preparedMaskSequence == frame.sequence && preparedMaskRevision == revision) {
             return;
         }
@@ -252,7 +255,7 @@ public final class MarioEquipmentWorkbench {
             return;
         }
 
-        preparedHelmetPresent = findVisibleHelmet() != null;
+        preparedHelmetPresent = helmetPresent;
         maskCenterX = (minX + maxX) * 0.5F;
         maskCenterZ = (minZ + maxZ) * 0.5F;
         maskStartY = minY + height * maskStartFraction;
@@ -267,8 +270,7 @@ public final class MarioEquipmentWorkbench {
             Sm64BridgeSession.GeometryFrame frame,
             int sourceTriangle) {
         if (!headMaskEnabled || frame == null
-                || preparedMaskSequence != frame.sequence
-                || preparedMaskRevision != maskRevision) {
+                || preparedMaskSequence != frame.sequence) {
             return false;
         }
         if (maskOnlyWithHelmet && !preparedHelmetPresent) {
@@ -293,8 +295,21 @@ public final class MarioEquipmentWorkbench {
         lastMaskedTriangles = Math.max(0, count);
     }
 
+    /**
+     * Renderer cache key. Helmet presence is folded into the key only when the
+     * mask is helmet-gated, so equipping/unequipping invalidates a frozen-frame
+     * Mario model without creating per-triangle appearance lookups.
+     */
     static long getMaskRevision() {
-        return maskRevision;
+        return effectiveMaskRevision(findVisibleHelmet() != null);
+    }
+
+    private static long effectiveMaskRevision(boolean helmetPresent) {
+        long revision = maskRevision << 1;
+        if (headMaskEnabled && maskOnlyWithHelmet && helmetPresent) {
+            revision |= 1L;
+        }
+        return revision;
     }
 
     private static void updateCalibration(
