@@ -18,3 +18,13 @@
 - `matrix3.sm64.helmetFitPadding` remains as an optional final multiplier with default `1.0`; added `helmetClearanceFraction` and `helmetMinClearance` calibration properties.
 - Expanded ACTIVE logging with live/reference head span, clearance, target span and helmet span for one-pass runtime diagnosis.
 - Mario cap/hair/skull masking remains intentionally deferred until the corrected envelope fit is runtime evaluated.
+
+2026-10-04 - Mario live helmet calibration V3
+- Runtime Statius data (`targetSpan=150.9768`, `helmetSpan=190.0`, `fit=0.7946148`) confirmed outer helmet bounds are not a reliable inner-cavity fit proxy for all full helms.
+- Added `MarioHelmetCalibrationController` for session-only per-item visual tuning without changing cache/equipment definitions or rebuilding the helmet model.
+- Added live scale multiplier, head-local X/Z, Matrix Y and yaw-delta controls; Shift provides 5x coarse steps, reset/print controls are included.
+- Calibration mode freezes Mario gameplay input and suppresses calibration keys from the established Matrix held-key camera seam while still reading the raw keyboard delegate.
+- Manual X/Z offsets rotate through the helmet yaw so corrections stay character-local when Mario turns.
+- Changed the default Mario helmet yaw correction from `0` to `180` degrees after the runtime Statius helmet was confirmed backwards.
+- Session values remain active after exiting calibration and are kept independently per helmet for the current client session only.
+- Permanent Mario defaults/per-item overrides remain deferred until several distinct helmet families are visually calibrated and compared.
