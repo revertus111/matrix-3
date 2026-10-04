@@ -14,7 +14,7 @@
 #include "libsm64.h"
 
 #define BRIDGE_PROTOCOL_VERSION 1
-#define BINARY_PROTOCOL_VERSION 1
+#define BINARY_PROTOCOL_VERSION 2
 #define BINARY_CMD_STEP 1
 #define BINARY_CMD_QUIT 2
 #define SM64_ACT_IDLE 0x0C400201u
@@ -26,12 +26,16 @@ static float s_geo_positions[9 * SM64_GEO_MAX_TRIANGLES];
 static float s_geo_normals[9 * SM64_GEO_MAX_TRIANGLES];
 static float s_geo_colors[9 * SM64_GEO_MAX_TRIANGLES];
 static float s_geo_uvs[6 * SM64_GEO_MAX_TRIANGLES];
+static float s_geo_local_positions[9 * SM64_GEO_MAX_TRIANGLES];
+static uint8_t s_geo_part_ids[SM64_GEO_MAX_TRIANGLES];
 
 static struct SM64MarioGeometryBuffers s_geometry = {
     s_geo_positions,
     s_geo_normals,
     s_geo_colors,
     s_geo_uvs,
+    s_geo_local_positions,
+    s_geo_part_ids,
     0
 };
 
@@ -324,7 +328,9 @@ static int write_binary_frame(
             || !write_u16_le(triangles)
             || !write_float_array(s_geometry.position, position_count)
             || !write_float_array(s_geometry.color, color_count)
-            || !write_float_array(s_geometry.uv, uv_count)) {
+            || !write_float_array(s_geometry.uv, uv_count)
+            || !write_float_array(s_geometry.localPosition, position_count)
+            || !write_bytes(s_geometry.partId, (size_t) triangles)) {
         return 0;
     }
     return fflush(stdout) == 0;
@@ -339,7 +345,7 @@ static int run_binary_bridge(const uint8_t *texture)
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
 
-    fprintf(stderr, "[SM64 Bridge] sleep-guard-v2 active\n");
+    fprintf(stderr, "[SM64 Bridge] semantic-geometry-v2 + sleep-guard-v2 active\n");
 
     if (!write_binary_handshake(texture)) {
         return 0;
