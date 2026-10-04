@@ -13,13 +13,19 @@ Prefab I/O Logistics architecture — 2026-10-03
 [x] DESIGN LOCKED: conveyor visual polish is deferred/non-blocking; STRAIGHT_1T remains the temporary visual baseline.
 
 PIO-1 — Generic endpoint framework
-[ ] Introduce one server-owned logistics endpoint abstraction supporting stable id, INPUT/OUTPUT direction, owner identity, world tile, facing, item compatibility, capacity, extract and accept semantics.
-[ ] Endpoint resolution survives settlement instance rebuild without persisting temporary runtime coordinates as identity.
-[ ] Prefab-local port offsets/facing rotate correctly with prefab rotation.
-[ ] Missing/deleted endpoint resolves to blocked/disconnected state without deleting owned items.
+[x] IMPLEMENTED / verified-static: SettlementLogisticsEndpoint provides stable ref, INPUT/OUTPUT direction, plot position, facing, item compatibility, available amount/capacity, extract and accept semantics.
+[x] IMPLEMENTED / verified-static: SettlementLogisticsEndpointRef persists only owner type + persistent owner id + stable port key; no runtime world coordinate is part of identity.
+[x] IMPLEMENTED / verified-static: SettlementLogisticsPortDefinition rotates prefab-local offsets and facing through the placed piece quarter-turn rotation.
+[x] IMPLEMENTED / verified-static: resolver wraps existing SettlementStorageContainer and SettlementMachineBuffer owners; no duplicate chest/machine inventory is introduced.
+[x] IMPLEMENTED / verified-static: Conveyor OUTPUT resolves onto the existing SettlementConveyorRun and exposes only physicalInventoryOwned front payloads.
+[x] IMPLEMENTED / verified-static: missing/deleted piece or run refs resolve null/blocked and do not mutate owned inventory/payloads.
+[x] IMPLEMENTED / verified-static: chest stable keys are INPUT/OUTPUT; Sawmill stable keys are INPUT_LOGS/OUTPUT_PLANKS.
+[x] IMPLEMENTED / verified-static: Sawmill ports are deliberately anchor-local at 0,0 for PIO-1; PIO-3 may move prefab-local offsets without changing endpoint identity.
+[ ] Eclipse clean/build Server with Java 8; zero compile errors in the four new SettlementLogistics* classes.
+[ ] Rotation sanity: place/rotate a test workstation through rotations 0/1/2/3 and confirm resolved local port facing/offset follows the same quarter-turn convention as the placed object before PIO-3 assigns non-zero offsets.
 
 PIO-2 — Conveyor endpoint integration
-[ ] Conveyor Point B exposes the one forward OUTPUT.
+[ ] Conveyor Point B exposes the one forward OUTPUT through the live production transport path.
 [ ] A straight ConveyorRun exposes a distributed receiver input surface at arbitrary valid insertion distance.
 [ ] Incoming approach from receiver rear/left/right is accepted when spacing permits.
 [ ] Incoming approach through receiver forward/output side is rejected.
@@ -29,7 +35,7 @@ PIO-2 — Conveyor endpoint integration
 [ ] Two crossing spans remain independent unless a source OUTPUT terminates on the receiver.
 
 PIO-3 — Sawmill physical ports
-[ ] Persistent Sawmill/workstation exposes INPUT_LOGS and OUTPUT_PLANKS through the generic endpoint framework.
+[ ] Persistent Sawmill/workstation exposes INPUT_LOGS and OUTPUT_PLANKS through the generic endpoint framework at final prefab-local offsets.
 [ ] Conveyor-delivered Logs 1511 enter the existing machine input buffer.
 [ ] Existing atomic recipe remains exactly 1 Log -> 2 Planks 960.
 [ ] Planks remain machine-output-owned until OUTPUT_PLANKS can hand them to a connected conveyor.
@@ -37,7 +43,7 @@ PIO-3 — Sawmill physical ports
 [ ] Worker-operated and automated processing cannot double-process the same machine ownership seam.
 
 PIO-4 — Chest input adapter
-[ ] Conveyor output deposits accepted physical item into the exact persistent chest inventory.
+[ ] Conveyor output deposits accepted physical item into the exact persistent chest inventory through the endpoint framework.
 [ ] Chest capacity/filter rejection leaves payload belt-owned and backpressures upstream.
 [ ] Player chest UI still shows the same authoritative inventory.
 [ ] Worker withdrawal uses the same chest inventory; no duplicate legacy SettlementResource mirror is created.
@@ -78,7 +84,9 @@ First factory vertical slice acceptance
 [ ] Physical item reconciliation shows no unexplained duplication/loss across the chain.
 
 Resume Here
-[ ] Start PIO-1 with the smallest generic server endpoint contract that wraps existing Sawmill buffers, physical Chest inventory and ConveyorRun transport without replacing proven owners.
+[x] PIO-1 implementation committed: stable refs, endpoint contract, prefab-local port metadata and chest/machine/conveyor resolver adapters exist without replacing proven owners.
+[ ] Pull latest main and Eclipse clean/build Server.
+[ ] If clean, start PIO-2: route live conveyor OUTPUT transfer through the endpoint framework, then add distributed conveyor INPUT surface + rear/left/right approach validation while preserving existing spacing/backpressure.
 
 Conveyor V2.0 per-segment axis lock correction — 2026-10-03
 [x] RUNTIME REJECTED: video showed the preview repeatedly flipping between E/W and N/S while moving the cursor around one Point A.
