@@ -1,6 +1,6 @@
 # Mario custom combat proof
 
-Status: RUNTIME PROOF ACCEPTED / V2 VISUAL TUNING PENDING. Approved by the 2026-10-04 SAP AAA handoff.
+Status: RUNTIME PROOF ACCEPTED / V3 VISUAL TUNING PENDING. Approved by the 2026-10-04 SAP AAA handoff.
 Primary target: MARIO_COMBAT_1H_SLASH (wire family 1) is runtime-VERIFIED 2026-10-04. Stab remains deferred until explicitly selected as the next scope.
 
 ## Source-established ownership (verified-static)
@@ -24,9 +24,13 @@ Torso/arm/forearm display-list identity guards cover normal, metal and LOD varia
 
 ## Implementation and boundaries
 
-`combat_overlay.h` owns the keyframed slash. The runtime-proven V1 proof used 24 ticks (0.8 seconds at 30 Hz) and was reported visually as a slow punch. The V2 tuning profile uses 16 ticks (~0.53 seconds), moves the hit earlier, increases torso/shoulder travel, and gives the right forearm/wrist explicit motion so the attached weapon should read as a sword cut rather than a punch. The V2 angles are still HYPOTHESIS / visual tuning values until runtime-accepted. Smoothstep segments begin and end with zero offsets. Native request numbers latch short Java attack edges; held requests cannot replay. Requests while the slash is active are consumed without restart or queuing. Disabling mode cancels the overlay.
+`combat_overlay.h` owns the keyframed slash. V1 used 24 ticks (0.8 seconds) and was runtime-reported as a slow punch. V2 reduced that to 16 ticks (~0.53 seconds) and added more forearm/wrist motion, but runtime feedback still classified the result as a custom punch rather than a sword cut.
 
-Bridge protocol 3 retains all v2 semantic fields. After A/B/Z, STEP adds mode u8 and request u32 LE. After frame part ids, FRAME adds socket available u32, 16 float32 matrix elements in native Mat4 memory order, animation u32, normalized time float32, and weight float32. Java still accepts v1/v2 and sends their original 20-byte STEP. V3 STEP is 25 bytes. Rebuild library AND sidecar together with `make bootstrap`.
+V3 corrects the pose using the established local geometry rather than another arbitrary axis mix. The right-hand node translation is `(60,0,0)`, so the articulated right-arm chain advances along local +X. Rotation around local X therefore primarily rolls/twists that chain, while local Y/Z produce visible hand displacement arcs. V2 over-weighted X/vertical motion and under-weighted Y sweep. V3 uses a large local-Y shoulder/forearm sweep for the cross-body cut, Z for lift/drop, and X mainly for forearm/wrist blade roll. Duration is 14 ticks (~0.47 seconds). These V3 artistic angles remain HYPOTHESIS until runtime-accepted.
+
+Smoothstep segments begin and end with zero offsets. Native request numbers latch short Java attack edges; held requests cannot replay. Requests while the slash is active are consumed without restart or queuing. Disabling mode cancels the overlay.
+
+Bridge protocol 3 retains all v2 semantic fields. After A/B/Z, STEP adds mode u8 and request u32 LE. After frame part ids, FRAME adds socket available u32, 16 float32 matrix elements in native Mat4 memory order, animation u32, normalized time float32, and weight float32. Java still accepts v1/v2 and sends their original 20-byte STEP. V3 STEP is 25 bytes. Rebuild library AND sidecar together with the root `Native Builder.bat` -> `BUILD + TEST MARIO` button.
 
 `MarioWeaponCombat` uses the existing equipped appearance, slot 3 and `ItemDefinitions.method7531` worn-model/customization path. V1 automatically selects conservative sword/longsword/scimitar names; this is a temporary proof policy, NOT a verified cache combat-family mapping. The explicit developer override permits other equipped weapons for preview. No item-ID list or invented sword mesh is used.
 
@@ -47,19 +51,13 @@ Grip origin from worn-model bounds (85% down Y), initial length and artistic sla
 - First Windows `make bootstrap` attempt failed at the final sidecar link because `dist/sm64_bridge.exe` was locked (`Permission denied`), so that first in-game attempt did not exercise v3 custom combat.
 - Runtime 2026-10-04: equipped revision-830 sword renders attached to Mario's hand in the live Matrix3 client. `VERIFIED`.
 - Runtime 2026-10-04: pressing F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED`.
-- Runtime 2026-10-04: the first slash profile works but reads as a slow punch rather than a convincing sword swing. `VERIFIED` visual feedback; V2 tuning is pending acceptance.
-- Because Java only routes custom weapon combat when protocol v3, a live hand socket, and a rendered weapon model are ready, the successful slash proves the core v3/socket/request integration path is active at runtime.
-- V2 curve harness: 16-tick profile reaches bounded time/weight, animates arm + forearm + hand, returns to zero, preserves no-replay behavior, and cancels cleanly when mode is disabled. `verified-static`.
+- Runtime 2026-10-04: V1 works but reads as a slow punch. `VERIFIED` visual feedback.
+- Runtime 2026-10-05: after rebuilding the V2 profile successfully through the verified Native Builder, the attack still reads as a custom punch. `VERIFIED` visual rejection of V2.
+- Source follow-up for V3: hand translation `(60,0,0)` plus the established XYZ composition proves the arm chain is +X-aligned; dominant local-Y sweep is therefore the correct axis family for a horizontal cross-body hand arc. `verified-static`.
 - Moving-slash leg continuity, held-F no-replay, freeze/unfreeze, unequip fallback, Ctrl+M/relog cleanup, remote-player isolation, NPC damage/XP integration and sustained stability remain pending unless separately runtime-confirmed.
 
 ## Optional repeatable checks
 
-From `native/sm64-bridge`: `make test-combat` produces `dist/combat-frame.bin` without a ROM.
-From repository root with Java 8 JDK:
-
-```
-javac -source 8 -target 8 -d native/sm64-bridge/dist/test-classes Client/src/main/java/game/Sm64BridgeSession.java native/sm64-bridge/tests/Sm64CombatProtocolTest.java
-java -cp native/sm64-bridge/dist/test-classes game.Sm64CombatProtocolTest native/sm64-bridge/dist/combat-frame.bin
-```
+Use root `Native Builder.bat` -> `BUILD + TEST MARIO`; the launcher rebuilds the patched library + sidecar and runs `make test-combat` automatically.
 
 Runtime checklist: `docs/n64/TESTLIST.md`, custom combat section. Resume state: `docs/mario/PROJECT.md`.
