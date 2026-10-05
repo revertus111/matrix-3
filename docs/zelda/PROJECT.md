@@ -18,9 +18,11 @@ Add Link as an imported character in Matrix3 with Ocarina of Time movement, acti
 
 The user-provided 32 MiB ROM matches the NTSC-U 1.2 profile (MD5 `57a9719ad547c516342e1a15d5c28c3d`). The official `zeldaret/oot` decompilation has an `ntsc-1.2` build target for that revision. This gives us the source revision needed to adapt the candidate engine-neutral Link SDK, `Cycl0o0/liboot`.
 
-A Matrix-owned compatibility harness now exists under `native/oot-bridge/`. It pins liboot and the matching zeldaret source revision, applies a tracked downstream patch that makes the liboot source revision configurable, selects `NTSC_1_2` / revision `2`, and supplies the NTSC-U 1.2 `gameplay_keep` offsets derived from the pinned zeldaret XML. The bridge regenerates asset/animation metadata locally and keeps dependency checkouts under ignored `.deps/` directories.
+A Matrix-owned compatibility harness exists under `native/oot-bridge/`. It pins liboot and the matching zeldaret source revision, applies a tracked downstream patch that makes the liboot source revision configurable, selects `NTSC_1_2` / revision `2`, and supplies the NTSC-U 1.2 `gameplay_keep` offsets derived from the pinned zeldaret XML. The bridge regenerates asset/animation metadata locally and keeps dependency checkouts under ignored `.deps/` directories.
 
-The NTSC offset derivation and build/probe wiring are `verified-static`. Compilation and ROM-backed behavior are still `UNKNOWN` until the local probe is run. The probe deliberately checks more than engine creation: adult/child Link skeletons, nonzero animated geometry, movement, animation-state advancement, equipment calls, simulation ticks, and clean destruction.
+The NTSC offset derivation, build wiring, and ROM-backed bridge proof are now runtime verified on Windows under MSYS2 UCRT64. The exact local ROM was identified as NTSC-U 1.2 / revision 2 with the expected MD5. In one acceptance run, engine creation, static collision, adult Link creation/equipment, adult skeleton and animated geometry, movement, animation-state advancement, child age/equipment switching, child skeleton and geometry, simulation-tick advancement, and clean destruction all passed. The probe reported 757 adult triangles, 717 child triangles, and finished with `[OoT NTSC12] RESULT: PASS`.
+
+Phase 0.2 and 0.3 are therefore complete. The Windows UCRT64 build/probe path is proven; Phase 0.4 remains open for dependency license/provenance/distribution review before Matrix gameplay integration.
 
 The SDK is not integrated into Matrix3 gameplay yet. Its project is AGPL-3.0-or-later and includes selected vendored decompilation files without a repository-wide license declaration. Review dependency and distribution implications before vendoring or redistributing it.
 
@@ -39,9 +41,9 @@ These Matrix seam findings are `verified-static`; Link source integration is not
 ### Phase 0 — NTSC-U 1.2 native compatibility and bridge proof
 
 - [x] 0.1 Identify the local ROM as NTSC-U 1.2 and locate the matching `zeldaret/oot` build target.
-- [ ] 0.2 Generate or adapt NTSC-U 1.2 asset symbols and build settings for liboot from the matching decompilation. Implementation staged; local build/probe acceptance pending.
-- [ ] 0.3 Build a bounded native bridge proof that creates Link, advances the OoT fixed-step update, and returns Link state plus animated geometry using the exact local ROM. Harness staged; ROM-backed acceptance pending.
-- [ ] 0.4 Confirm the native dependency's license/provenance and reproducible Windows build path before adding it to Matrix3.
+- [x] 0.2 Generate/adapt NTSC-U 1.2 asset symbols and build settings for liboot from the matching decompilation. Runtime verified in MSYS2 UCRT64 against the exact local ROM.
+- [x] 0.3 Build a bounded native bridge proof that creates Link, advances the OoT fixed-step update, and returns Link state plus animated geometry using the exact local ROM. Runtime acceptance PASS: adult/child Link, geometry, movement, animation-state advancement, simulation ticks, and clean destroy verified.
+- [ ] 0.4 Confirm the native dependency's license/provenance and distribution implications before adding it to Matrix3. The reproducible Windows UCRT64 build/probe path is already verified.
 
 ### Phase 1 — Playable Link foundation
 
@@ -71,4 +73,4 @@ These Matrix seam findings are `verified-static`; Link source integration is not
 
 ## Resume Here
 
-Run the single local acceptance command in `docs/zelda/TESTLIST.md` against the exact NTSC-U 1.2 ROM. Do not mark Phase 0.2 or 0.3 runtime-verified from compilation alone. If the final native result is PASS, record the runtime proof and then proceed to the Phase 0.4 Windows/provenance gate before adding a Link driver to Matrix3 gameplay.
+Phase 0.2 and 0.3 are runtime verified against the exact NTSC-U 1.2 ROM. Continue with Phase 0.4: document the liboot/zeldaret license and provenance boundary, confirm what may be built/distributed versus what must remain local, and preserve the proven MSYS2 UCRT64 build path. Do not add a Link driver to Matrix3 gameplay until the Phase 0.4 gate is complete and the next implementation bundle has explicit AAA approval.
