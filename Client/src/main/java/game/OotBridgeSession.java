@@ -23,10 +23,11 @@ public final class OotBridgeSession {
     static final int BUTTON_Z = 1 << 2;
     static final int BUTTON_R = 1 << 3;
 
-    private static final int BINARY_PROTOCOL_VERSION = 2;
+    private static final int BINARY_PROTOCOL_VERSION = 3;
     private static final int BINARY_CMD_STEP = 1;
     private static final int MAX_TRIANGLES = 4096;
     private static final int MAX_TEXTURES = 1024;
+    private static final int MAX_SKELETON_JOINTS = 21;
     private static final int MAX_TEXTURE_DIMENSION = 1024;
     private static final int MAX_TEXTURE_BYTES = 16 * 1024 * 1024;
     private static final long STEP_NANOS = 1000000000L / 20L;
@@ -242,7 +243,7 @@ public final class OotBridgeSession {
                 publishFrame(retainTextureCatalog(step(output, input, InputState.IDLE)));
                 ready = true;
                 System.out.println(
-                        "[OoT Bridge] Persistent session READY (20 Hz + Link materials, protocol v2)");
+                        "[OoT Bridge] Persistent session READY (20 Hz + Link materials + skeleton, protocol v3)");
 
                 long nextStep = System.nanoTime();
                 while (running) {
@@ -290,7 +291,7 @@ public final class OotBridgeSession {
         if (version != BINARY_PROTOCOL_VERSION) {
             throw new IllegalStateException(
                     "unsupported OoT bridge protocol version: " + version
-                    + " (rebuild native/oot-bridge for protocol v2)");
+                    + " (rebuild native/oot-bridge for protocol v3)");
         }
     }
 
@@ -318,6 +319,26 @@ public final class OotBridgeSession {
         boolean geometryTruncated = readUnsignedByte(input) != 0;
         readUnsignedByte(input);
         readUnsignedByte(input);
+
+        int skeletonJointCount = readIntLE(input);
+        if (skeletonJointCount < 0 || skeletonJointCount > MAX_SKELETON_JOINTS) {
+            throw new IllegalStateException(
+                    "invalid OoT skeleton joint count: " + skeletonJointCount);
+        }
+        if (skeletonAvailable && skeletonJointCount <= 0) {
+            throw new IllegalStateException("OoT skeleton marked available with no joints");
+        }
+        int[] skeletonParents = new int[skeletonJointCount];
+        for (int i = 0; i < skeletonJointCount; i++) {
+            int parent = readIntLE(input);
+            if (parent != 0xff && (parent < 0 || parent >= skeletonJointCount)) {
+                throw new IllegalStateException(
+                        "invalid OoT skeleton parent at joint " + i + ": " + parent);
+            }
+            skeletonParents[i] = parent;
+        }
+        float[] skeletonJointPositions = readFloatArray(input, skeletonJointCount * 3);
+
         int triangleCount = readIntLE(input);
         if (triangleCount <= 0 || triangleCount > MAX_TRIANGLES) {
             throw new IllegalStateException(
@@ -382,7 +403,9 @@ public final class OotBridgeSession {
                 sequence, simulationTick,
                 x, y, z,
                 faceAngle, action, animId, animFrame,
-                skeletonAvailable, triangleCount,
+                skeletonAvailable,
+                skeletonJointCount, skeletonParents, skeletonJointPositions,
+                triangleCount,
                 positions, normals, colors, uvs, triangleTextures,
                 updates, System.nanoTime());
     }
@@ -589,6 +612,9 @@ public final class OotBridgeSession {
         final int animId;
         final float animFrame;
         final boolean skeletonAvailable;
+        final int skeletonJointCount;
+        final int[] skeletonParents;
+        final float[] skeletonJointPositions;
         final int triangleCount;
         final float[] positions;
         final float[] normals;
@@ -601,7 +627,10 @@ public final class OotBridgeSession {
         LinkFrame(long sequence, long simulationTick,
                 float x, float y, float z,
                 int faceAngle, int action, int animId, float animFrame,
-                boolean skeletonAvailable, int triangleCount,
+                boolean skeletonAvailable,
+                int skeletonJointCount, int[] skeletonParents,
+                float[] skeletonJointPositions,
+                int triangleCount,
                 float[] positions, float[] normals, float[] colors,
                 float[] uvs, int[] triangleTextures,
                 TextureUpdate[] textureUpdates, long receivedNanos) {
@@ -615,6 +644,9 @@ public final class OotBridgeSession {
             this.animId = animId;
             this.animFrame = animFrame;
             this.skeletonAvailable = skeletonAvailable;
+            this.skeletonJointCount = skeletonJointCount;
+            this.skeletonParents = skeletonParents;
+            this.skeletonJointPositions = skeletonJointPositions;
             this.triangleCount = triangleCount;
             this.positions = positions;
             this.normals = normals;
@@ -625,12 +657,33 @@ public final class OotBridgeSession {
             this.receivedNanos = receivedNanos;
         }
 
+        boolean hasJoint(int joint) {
+            return skeletonAvailable
+                    && joint >= 0 && joint < skeletonJointCount
+                    && skeletonJointPositions != null
+                    && skeletonJointPositions.length >= skeletonJointCount * 3;
+        }
+
+        float jointX(int joint) {
+            return skeletonJointPositions[joint * 3];
+        }
+
+        float jointY(int joint) {
+            return skeletonJointPositions[joint * 3 + 1];
+        }
+
+        float jointZ(int joint) {
+            return skeletonJointPositions[joint * 3 + 2];
+        }
+
         LinkFrame withTextures(TextureUpdate[] textures) {
             return new LinkFrame(
                     sequence, simulationTick,
                     x, y, z,
                     faceAngle, action, animId, animFrame,
-                    skeletonAvailable, triangleCount,
+                    skeletonAvailable,
+                    skeletonJointCount, skeletonParents, skeletonJointPositions,
+                    triangleCount,
                     positions, normals, colors, uvs, triangleTextures,
                     textures, receivedNanos);
         }
