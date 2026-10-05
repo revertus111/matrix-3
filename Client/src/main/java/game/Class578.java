@@ -80,6 +80,7 @@ public class Class578 {
 				ObjectLabPreview.render(scene, Class272_Sub2.aClass106_9517);
 				MarioVisualRenderer.render(scene, Class272_Sub2.aClass106_9517);
 				LinkVisualRenderer.render(scene, Class272_Sub2.aClass106_9517);
+				LinkEquipmentAdapter.render(scene, Class272_Sub2.aClass106_9517);
 				MarioEquipmentAdapter.render(scene, Class272_Sub2.aClass106_9517);
 				LiveModelEditorPreview.render(scene, Class272_Sub2.aClass106_9517);
 				ObjectCompositePreview.render(scene, Class272_Sub2.aClass106_9517);
