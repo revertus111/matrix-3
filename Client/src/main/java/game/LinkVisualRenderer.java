@@ -24,8 +24,8 @@ public final class LinkVisualRenderer {
     private static final int FINAL_MODEL_FLAGS = BASE_MODEL_FLAGS | TRANSFORM_FLAGS;
     private static final int MAX_MATRIX_VERTICES = 65535;
     private static final int MAX_MATRIX_TRIANGLES = MAX_MATRIX_VERTICES / 3;
-    private static final int DEFAULT_TEXTURE_SUBDIVISIONS = 6;
-    private static final int MAX_TEXTURE_SUBDIVISIONS = 8;
+    private static final int DEFAULT_TEXTURE_SUBDIVISIONS = 4;
+    private static final int MAX_TEXTURE_SUBDIVISIONS = 4;
     private static final float DEFAULT_SMOOTH_ANGLE_DEGREES = 70.0F;
     private static final long MAX_FRAME_AGE_NANOS = 500000000L;
 
