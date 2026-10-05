@@ -145,11 +145,15 @@ public final class MarioVisualRenderer {
     }
 
     /**
-     * Local-player suppression is presentation-only and fail-open. A brief native
-     * geometry/build gap may keep the last successfully rendered Mario model for a
-     * bounded grace period; real mode/bridge loss still restores RuneScape at once.
+     * Shared local-player presentation suppression seam. Player.method10696(...)
+     * already calls this gate for Mario; Link delegates through the same proven
+     * seam so the decompiled Player renderer does not need a second invasive hook.
+     * Both character renderers remain independently fail-open.
      */
     static boolean shouldSuppressLocalPlayer(Player player) {
+        if (LinkVisualRenderer.shouldSuppressLocalPlayer(player)) {
+            return true;
+        }
         if (player == null || player != Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976
                 || !PlayerControllerMode.isMarioMode()
                 || !Sm64BridgeSession.isReady()
