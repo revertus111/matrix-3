@@ -188,3 +188,10 @@
 - The accepted minimap heading stores `-rtsYaw` in Matrix's 14-bit turn domain; alternate-character steering converts it back to `rtsYaw` and derives planar forward as `(sin(yaw), cos(yaw))`.
 - Construction Free/other detached cameras retain the existing position/look-point fallback. Mario/libsm64 stick axes and the established Mario-only 180-degree camera-look conversion are unchanged.
 - No native sidecar rebuild or protocol change is required. Runtime gate remains N/E/S/W plus rotate-while-holding-W; north and south must now both preserve forward/back/left/right screen-relative controls.
+
+2026-10-04 - Bundle 1.3 Matrix-world steering adapter
+- Runtime still reported the south-facing controls reversed after using Construction's canonical RTS yaw, so the remaining risk was the second Matrix-camera -> libsm64-camera handedness conversion itself.
+- `MarioJumpController` now uses the same screen-to-world basis as Construction: `right=(forwardZ,-forwardX)` and `worldMove=moveX*right + moveY*forward`.
+- The libsm64 camera is fixed at neutral `(0,+1)`. Matrix world movement is encoded directly as libsm64 stick `(-worldX,-worldZ)`, which follows libsm64's actual `cameraYaw`, `stickX`, `stickY`, and `intendedYaw` equations.
+- This removes dynamic Matrix camera yaw/sign interpretation from the native boundary while retaining native Mario movement/action physics, normalized diagonal magnitude, buttons, XYZ presentation, protocol, and server authority.
+- No native sidecar rebuild or protocol change is required. Runtime gate is now simply N/E/S/W plus continuous rotation while holding W; all headings must preserve screen-relative forward/back/left/right behavior.
