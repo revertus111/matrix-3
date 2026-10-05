@@ -13,7 +13,7 @@
 2026-10-05 - Fix TP donor bootstrap after first runtime failure
 - User runtime log showed the Windows App Execution Alias python.exe stub returning exit code 9009 while Ninja was missing; the bootstrap incorrectly treated that alias as a usable Python installation.
 - The TP builder now rejects the WindowsApps Python alias, checks py/native/MSYS2 Python candidates, checks PATH/MSYS2 Ninja, and when required installs UCRT64 Python + Ninja through the existing Matrix3 MSYS2 toolchain.
-- The builder now scans Matrix3/native first and automatically uses a single Twilight Princess image placed there, so the user's local donor file does not need to be browsed to manually.
+- The TP builder now scans Matrix3/native first and automatically uses a single Twilight Princess image placed there, so the user's local donor file does not need to be browsed to manually.
 - Added explicit early rejection for .nkit.iso. zeldaret/tp documents ISO/GCM, RVZ, WIA, WBFS, CISO, NFS, GCZ and TGC inputs, not NKit v1; the builder now explains this before cloning/installing/building instead of failing later inside donor tooling.
 - Status: bootstrap recovery is verified-static. Donor build still needs a runtime rerun with a supported image.
 
@@ -76,3 +76,11 @@
 - Native visual Python discovery now also checks 32-bit/alternate PythonCore registry locations, per-user/system install paths, the per-user Python launcher, `python3.13.exe`/`python3.12.exe` app aliases, and a narrow scan of `%LOCALAPPDATA%\Programs\Python`.
 - The Python install step is now idempotent: a nonzero `winget` status is tolerated when a valid native CPython 3.12/3.13 interpreter can be resolved afterward; only the combination of a failed install status and no usable interpreter remains fatal.
 - Donor extraction/model/BCK/socket remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
+
+2026-10-05 - Replace host-Python discovery with private visual bootstrap
+- Sixth Bundle 1.2 runtime probe still passed the authentic Link asset/BCK/socket stage, but Windows reported Python 3.13 installed while none of the native interpreter locations/aliases/registry paths resolved to a usable executable. This confirmed the remaining failure was host Python registration, not TP data or the renderer.
+- Added `native/tools/ensure-tp-visual-python.ps1` and made `probe-tp-link.cmd` run it before the main probe.
+- The bootstrap owns an exact private CPython 3.12.10 under `%LOCALAPPDATA%\Matrix3\TPLinkTools\python312`, downloaded directly from `python.org`; the downloaded installer must pass Authenticode verification and does not modify PATH or install a launcher.
+- The bootstrap recreates `%LOCALAPPDATA%\Matrix3\TPLinkTools\venv` as a native `Scripts\python.exe` environment, installs NumPy/Pillow there, and verifies both imports before the main probe starts.
+- Because the main probe now begins with a ready native visual venv, it bypasses the `winget`/registry/PATH discovery branch entirely. Existing system/MSYS2 Python installs remain untouched and the verified donor extraction path is unchanged.
+- Status: deterministic private visual-Python bootstrap is verified-static; authentic model/BCK/socket extraction remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
