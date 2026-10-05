@@ -1,177 +1,173 @@
 # Zelda / OoT Test List
 
-## Phase 0 — NTSC-U 1.2 native compatibility
+## Runtime baseline already accepted
 
-Phase 0.2/0.3 already passed against the user's exact 32 MiB NTSC-U 1.2 ROM (MD5 `57a9719ad547c516342e1a15d5c28c3d`).
+The user's exact NTSC-U 1.2 ROM remains the local OoT source. ROM bytes and ROM-derived textures must never be committed.
 
-Pinned dependencies:
+Verified runtime baseline:
 
-- `Cycl0o0/liboot` — `25208734c8ca388638f0ce63841e166fac9e5acb`
-- `zeldaret/oot` — `269d03016cd0e3d7a0b8925e02b97a319c1d0e8d`
+- adult OoT Link renders inside Matrix3;
+- Adult Link is uniformly scaled into approximately the revision-830 player height/floor envelope;
+- the local 830 player body is suppressed only while Link presentation is healthy and returns fail-open on exit/failure;
+- protocol V2 geometry/material transport works;
+- the active CPU RGBA bake visibly uses real OoT texture data;
+- the later V4 filter/smoothing pass did not materially improve the look, but the signed-short overflow correction restored stable Link rendering;
+- Link B/sword still does not issue Matrix NPC damage/XP.
 
-ROM bytes and ROM-derived textures remain local and must never be committed.
+The current equipment work deliberately leaves Adult Link at this larger 830-compatible scale. The point is to keep revision-830 equipment close to native Matrix scale rather than heavily shrinking every item around native-size OoT Link.
 
-To repeat the native compatibility proof if needed:
+---
 
-```sh
-cd native/oot-bridge
-make probe OOT_ROM="Legend of Zelda, The - Ocarina of Time (U) (V1.2) [!].z64"
-```
+## Adult Link skeleton sockets + first 830 helmet proof
 
-Acceptance remains:
+### Architecture under test
 
-```text
-[OoT NTSC12] RESULT: PASS
-```
+This is **not** the Mario equipment architecture.
 
-## Phase 1 — Adult Link RGBA micro-bake V3 runtime proof
+liboot already exports Adult Link's real animated skeleton pose in world space. Its joint array is indexed as `PLAYER_LIMB_* - 1`, specifically for semantic host attachments. Protocol V3 now streams that parent table + all world-space joint positions every native frame.
 
-### Runtime baseline already accepted
-
-- recognizable adult OoT Link renders inside Matrix3;
-- adult auto-fit places Link approximately in the 830 player height/floor envelope;
-- the user considers Link slightly large and his OoT head proportionally large, but this is not a blocker for the equipment-fit architecture;
-- the local 830 player body is successfully suppressed while fresh Link presentation is healthy;
-- the 830 body returns through the fail-open path rather than being deleted/mutated;
-- the user's root `Native Builder.bat` -> **BUILD OOT** path is valid and successfully rebuilt the protocol-V2 sidecar under MSYS2 UCRT64.
-
-The native sidecar must continue to use:
+Current semantic indices include:
 
 ```text
-OOT_AGE_ADULT
+HEAD       = 10
+HAT        = 11
+COLLAR     = 12
+L_SHOULDER = 13
+L_HAND     = 15
+R_SHOULDER = 16
+R_HAND     = 18
+SHEATH     = 19
+TORSO      = 20
 ```
 
-### Why this V3 test exists
+`LinkSkeletonSockets` converts those native joints through the same `LinkCharacterFit` transform used by the body renderer. The first equipment proof uses the live HEAD/HAT/COLLAR/shoulder pose to place/orient the currently equipped revision-830 hat-slot item.
 
-The first protocol-V2 renderer attempted to bind local-ROM OoT RGBA textures as synthetic Matrix runtime materials using direct UV mode. Runtime screenshot rejected that approach: Link was visible alone, but his face was nearly solid white and the body remained broad flat green/white/gray polygons.
+The helmet model itself remains near native Matrix scale:
 
-That screenshot proves the 830 suppression/geometry/fit paths work, but the synthetic Matrix material presentation did not visibly apply OoT textures.
+```text
+matrix3.oot.helmetScale = 1.0   (default)
+```
 
-V3 bypasses that material registration path. It subdivides textured OoT triangles, samples the actual retained RGBA texture with the original UVs/wrap mode, multiplies it by liboot's vertex RGB lighting/tint, then emits normal Matrix face colours.
+The worn model is recentered, but it is **not** auto-fitted through Mario's geometry envelope or Mario equipment workbench.
 
-### Build steps for this exact recovery patch
+### Native rebuild required once
 
-The user's latest Native Builder log already ended in `OOT BUILD SUCCESS` with protocol V2. **This V3 recovery patch is Java-side only. Do not rebuild native again unless the client reports protocol V1 or the sidecar binary is missing.**
+Protocol changed from V2 -> **V3** to carry the skeleton pose, so the local OoT sidecar must be rebuilt once after pulling.
 
-Pull:
+1. Pull:
 
 ```sh
 git pull origin main
 ```
 
-Then in Eclipse/Java 8:
+2. Run the repository's root **Native Builder.bat**.
+3. Choose **BUILD OOT**.
+4. Confirm the OoT build ends successfully and produces the fresh `native/oot-bridge/build/dist/oot_bridge.exe`.
+5. In Eclipse/Java 8: Refresh Client -> Clean Client -> Run.
 
-1. Refresh the Client project.
-2. Clean the Client project.
-3. Run normally.
-4. Toggle adult Link with **Ctrl+L**.
+Do not manually open MSYS2 unless the one-click builder itself reports a toolchain failure; the builder already launches the proven UCRT64 environment.
 
-### Controls
+### Before Ctrl+L
 
-- **Ctrl+L** — Link mode on/off.
-- **WASD** — screen-relative N64 movement request; Matrix/server walking remains actual X/Z authority for this phase.
-- **Space** — OoT A/action.
-- **F** — OoT B/sword; must not issue Matrix NPC damage yet.
-- **Shift** — OoT Z input; host target binding is not implemented yet.
-- **Ctrl+M** — Mario remains separate.
+Equip a normal revision-830 **hat/head-slot item** on the RuneScape player. The proof intentionally reads the actual currently equipped visible hat-slot worn model.
 
-### Expected console proof
+Then press **Ctrl+L**.
 
-The native/Java session should still report protocol V2:
+### Expected protocol proof
 
 ```text
 [Alternate Character] Controller mode: LINK
-[OoT] Controls: camera-relative WASD move, Space A/action, F B/sword, Shift Z-target
-[OoT Bridge] persistent NTSC-U 1.2 session READY (20 Hz, protocol v2 + materials)
-[OoT Bridge] Persistent session READY (20 Hz + Link materials, protocol v2)
-[OoT Fit] ADULT Link profile source=830-auto matrixHeight=... nativeH/W/D=... floorLocalY=... scale=...
+[OoT Bridge] persistent NTSC-U 1.2 session READY (20 Hz, protocol v3 + materials + skeleton)
+[OoT Bridge] Persistent session READY (20 Hz + Link materials + skeleton, protocol v3)
+[OoT Fit] ADULT Link profile source=830-auto ...
 ```
 
-The important new renderer line is:
+If the equipped item is recognized and the real OoT HEAD socket resolves, expect:
 
 ```text
-[OoT Visual] Native ADULT Link -> Matrix Model ACTIVE triangles=... matrixTriangles=... uniqueVerts=... texturedSource=... textureCatalog=... textureSubdivisions=... anim=... action=... scale=... fit=830-auto material=oot-rgba-micro-v3
+[OoT Equipment] 830 HELMET -> ADULT Link HEAD ACTIVE item=... name=... joint=10 skeletonJoints=21 scale=1.0 rawW/H/D=... offset=0.0/0.0/0.0 rotDeg=0.0/180.0/0.0 source=liboot-skeleton-v1
 ```
 
-For a successful texture bake:
+If no valid hat-slot item is equipped, expect:
 
-- `textureCatalog > 0`
-- `texturedSource > 0`
-- `textureSubdivisions > 0`
-- `matrixTriangles > triangles` for the normal textured adult-Link frame
+```text
+[OoT Equipment] No revision-830 hat-slot item equipped; equip a helmet to test the Adult Link HEAD socket
+```
 
-The old `[OoT Material] Runtime texture bridge ACTIVE ...` line is **not required** by V3 because the active renderer no longer depends on the synthetic runtime-material registry.
+### Acceptance
 
-### RGBA micro-bake V3 acceptance
+In one session verify:
 
-Verify in one runtime session:
+- [ ] Both native and Java READY lines report **protocol v3**.
+- [ ] Adult Link still renders alone at the previously accepted 830-compatible scale.
+- [ ] `skeletonJoints=21` is reported for the normal Adult Link frame.
+- [ ] A currently equipped revision-830 helmet appears with Link.
+- [ ] Helmet starts near native Matrix size (`scale=1.0`) rather than being heavily auto-shrunk.
+- [ ] Helmet is anchored to Link's head rather than the RuneScape player's hidden body origin.
+- [ ] Idle/turn/action motion moves the helmet with the animated OoT head socket instead of leaving it world-fixed.
+- [ ] Ctrl+L exit restores the normal 830 player and its normal equipment presentation.
+- [ ] Mario Ctrl+M behavior is unchanged.
 
-- [ ] Both native and Java READY lines report **protocol v2**.
-- [ ] New `[OoT Visual] ... material=oot-rgba-micro-v3` line appears.
-- [ ] `textureCatalog > 0`.
-- [ ] `texturedSource > 0`.
-- [ ] `matrixTriangles > triangles` and `textureSubdivisions > 0`.
-- [ ] Adult Link remains at approximately the accepted 830 height/floor alignment.
-- [ ] The local 830 body disappears after Link successfully renders, leaving Link alone.
-- [ ] Link's face has recognizable OoT facial texture detail instead of the previous blank-white polygon face.
-- [ ] Tunic/body shows texture variation rather than only broad flat green triangles.
-- [ ] Boots/sword/shield surfaces show recognizable source detail where the current OoT pose/equipment exposes them.
-- [ ] Triangle-by-triangle/crystalline appearance is substantially reduced compared with the failed V2 screenshot.
-- [ ] Intended silhouettes remain stable; no model explosion, pumping scale, or texture swimming during idle/movement.
-- [ ] Space and F still change native Link action/animation state where the flat proof world allows it.
-- [ ] F still causes **no Matrix NPC damage/XP**.
-- [ ] Ctrl+L exit restores the normal 830 player body immediately.
+For this first proof, **visual misalignment is not a compatibility failure**. If the helmet is visibly present but slightly too high/low/rotated, capture the screenshot before calibration.
 
-### What to capture
+### Calibration knobs (only after preserving the first screenshot)
 
-Preserve:
+```text
+-Dmatrix3.oot.helmetScale=<positive float>
+-Dmatrix3.oot.helmetOffsetX=<float>
+-Dmatrix3.oot.helmetOffsetY=<float>
+-Dmatrix3.oot.helmetOffsetZ=<float>
+-Dmatrix3.oot.helmetPitchDegrees=<float>
+-Dmatrix3.oot.helmetYawDegrees=<float>
+-Dmatrix3.oot.helmetRollDegrees=<float>
+-Dmatrix3.oot.headSocketHatBlend=<float from -1 to 2>
+```
 
-1. the console output from Ctrl+L activation through the first new `[OoT Visual]` line;
-2. one close front/three-quarter screenshot of Link alone;
-3. if texture detail appears but looks flipped/mirrored, one close screenshot of the face/tunic/shield before another patch.
+Defaults:
 
-Do not make random UV tweaks before preserving the first V3 result.
+```text
+scale = 1.0
+X/Y/Z offset = 0
+pitch = 0 degrees
+yaw = 180 degrees
+roll = 0 degrees
+head->hat anchor blend = 0.35
+```
+
+Do not randomly tune multiple values at once. A screenshot showing where the helmet lands relative to Link's head is enough to make a targeted correction.
 
 ### Failure distinctions
 
-- Java compile error -> fix the exact V3 renderer compile seam; do not rebuild native first.
-- `unsupported OoT bridge protocol version: 1 ... rebuild ... protocol v2` -> old native sidecar; use root `Native Builder.bat` -> **BUILD OOT**.
-- `OoT sidecar not found` -> native build/path problem.
-- `OoT NTSC-U 1.2 ROM not found` -> local ROM path problem.
-- `invalid OoT sidecar protocol magic` -> protocol/stdout corruption; preserve full output.
-- `material geometry unavailable` -> liboot did not provide normals/UVs/texture indices for the frame.
-- `textureCatalog=0` -> Java did not retain any local-ROM texture payloads; inspect bridge texture delivery/catalog next.
-- `textureCatalog>0` but `texturedSource=0` -> triangle texture indices do not resolve against the retained texture catalog; inspect native texture-index delivery next.
-- `texturedSource>0`, `matrixTriangles>triangles`, but Link still looks completely flat -> CPU texture sample/tint path is wrong; inspect sampled RGBA/UV values next.
-- texture detail is visible but vertically inverted -> V-axis convention issue; preserve screenshot, then flip only V sampling.
-- texture detail is visible but mirrored/repeated incorrectly -> wrap-mode convention issue; preserve screenshot, then fix only repeat/mirror/clamp handling.
-- texture detail is recognizable but still too coarse -> raise/retune micro-bake sampling only after correctness is proven; default is 4 subdivisions.
-- Link visible + 830 body visible continuously -> suppression readiness/gate regression.
-- both Link and 830 body disappear -> suppression failed closed; exit Ctrl+L and preserve console before patching.
+- Java reports `unsupported OoT bridge protocol version: 2 ... protocol v3` -> the old sidecar is still present; rerun Native Builder -> BUILD OOT.
+- native build fails -> preserve the builder output; do not patch Java first.
+- `Adult Link HEAD socket unavailable joints=...` -> inspect streamed skeleton count/semantic joint data; do not fall back to Mario geometry fitting.
+- no helmet message -> equip an actual hat-slot item and retest.
+- `worn raw model unavailable` -> test a different normal 830 helmet and preserve the item ID/name.
+- helmet appears at roughly correct location but faces backward -> orientation calibration only; preserve screenshot, then adjust yaw.
+- helmet tracks position but rolls/pitches strangely -> head basis calibration; preserve screenshot and animation/action used.
+- helmet stays fixed while Link animates -> skeleton/socket consumption regression.
+- Link disappears and normal 830 body returns -> fail-open presentation activated because Link render became unhealthy; preserve the first preceding OoT error.
 
-### Diagnostic override
+---
 
-V3 subdivision density can be overridden without code changes:
+## Next equipment sockets after helmet proof
 
-```text
--Dmatrix3.oot.textureSubdivisions=0..4
-```
+Do not implement these until the HEAD proof is runtime accepted/calibrated:
 
-Default is `4`. `0` intentionally disables texture micro-baking and returns to source-triangle vertex-colour fallback for diagnosis only.
+- [ ] Right hand -> 830 weapon.
+- [ ] Left hand/forearm -> 830 shield.
+- [ ] Feet -> boots.
+- [ ] Upper back/sheath -> cape/back equipment.
+- [ ] Hands -> gloves.
+- [ ] Neck/collar -> amulet.
+- [ ] Torso/waist multi-joint fitting for body/legs last.
 
-## Remaining Phase 1 behavior checks
+The goal remains: **Adult Link stays OoT-shaped and 830-scale; 830 gear stays near native scale and follows real OoT skeleton sockets, with only small saved corrections where an item needs them.**
 
-After V3 texture fidelity is accepted:
-
-- [ ] Verify screen-relative WASD does not drive the detached/RTS camera while Link owns input.
-- [ ] Verify actual X/Z travel continues through Matrix/server walking and collision.
-- [ ] Consolidate idle, movement/turn, one A/action/jump, and B/sword animation in one session.
-- [ ] Expose stable adult-Link skeleton/socket transforms for helmet, sword, shield, gloves, boots, amulet, cape, then torso/legs fitting.
-
-## Later combat and menu acceptance
+## Later combat/menu acceptance
 
 - [ ] Sword contact requires an active swing window and valid reach/target contact.
-- [ ] Weapon speed changes attack cadence while RuneScape stats determine hit and damage outcomes.
+- [ ] Weapon speed changes Zelda-style attack cadence while RuneScape stats determine hit/damage outcomes.
 - [ ] Valid damage grants configured per-hit skill XP; misses/blocks follow explicit XP rules.
 - [ ] Inventory opens/closes while the Matrix world continues.
 - [ ] Ranged, magic, and item actions remain usable through the same Link control owner.
