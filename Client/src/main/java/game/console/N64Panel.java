@@ -81,6 +81,7 @@ public final class N64Panel extends JPanel {
     private final JLabel semanticValue = valueLabel();
     private final JLabel coverageValue = valueLabel();
     private final JLabel semanticReferenceValue = valueLabel();
+    private final JLabel faceInsertValue = valueLabel();
     private final JLabel protectedPartsValue = valueLabel();
     private final JLabel removablePartsValue = valueLabel();
     private final JLabel workbenchStatus = new JLabel("Ready");
@@ -97,6 +98,7 @@ public final class N64Panel extends JPanel {
     private NumericControl yControl;
     private NumericControl zControl;
     private NumericControl yawControl;
+    private NumericControl faceFrontControl;
     private NumericControl maskStartControl;
     private NumericControl maskRadiusControl;
 
@@ -339,6 +341,7 @@ public final class N64Panel extends JPanel {
         card.add(ConsoleTheme.createValueRow("Semantic geometry", semanticValue));
         card.add(ConsoleTheme.createValueRow("Coverage profile", coverageValue));
         card.add(ConsoleTheme.createValueRow("Shared FACE W/H/D", semanticReferenceValue));
+        card.add(ConsoleTheme.createValueRow("Face-insert source triangles", faceInsertValue));
         card.add(ConsoleTheme.createValueRow("Masked source triangles", maskCountValue));
         card.add(Box.createVerticalStrut(8));
 
@@ -360,7 +363,7 @@ public final class N64Panel extends JPanel {
         JPanel card = ConsoleTheme.createCard("Helmet transform calibration");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "The semantic FACE reference seeds the automatic fit. These live session values are only the final visual correction.", 2));
+                "Replacement-shell profiles size the worn model as Mario's visible head shell instead of trying to contain his original skull. These values remain the final visual correction.", 3));
         card.add(Box.createVerticalStrut(8));
 
         scaleControl = new NumericControl(
@@ -413,10 +416,10 @@ public final class N64Panel extends JPanel {
     }
 
     private JPanel createHeadMaskCard() {
-        JPanel card = ConsoleTheme.createCard("Semantic helmet coverage / nose protection");
+        JPanel card = ConsoleTheme.createCard("Mario head replacement / equipment shell");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Protocol v2 tags Mario geometry before libsm64 flattens it. FULL_HELM_SAFE removes only the cap and named hair parts. FACE, EYES and MOUSTACHE are always protected, so Mario's nose stays with the face mesh.", 4));
+                "Replacement-shell mode stops pretending the RuneScape helmet must physically contain Mario's cartoon skull. The equipment becomes the visible head shell. Closed removes every known semantic head part; Face insert keeps only Mario's front face slice, eyes and moustache inside the shell opening.", 5));
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createValueRow("Protected native parts", protectedPartsValue));
         card.add(ConsoleTheme.createValueRow("Removable native parts", removablePartsValue));
@@ -431,11 +434,15 @@ public final class N64Panel extends JPanel {
 
         JPanel coverageActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         coverageActions.setOpaque(false);
-        JButton keepAll = new JButton("Keep all Mario head parts");
-        JButton fullHelm = new JButton("Full helm safe");
+        JButton keepAll = new JButton("Keep all");
+        JButton fullHelm = new JButton("Cap/hair only");
+        JButton closedShell = new JButton("Head shell closed");
+        JButton faceShell = new JButton("Head shell + Mario face");
         JButton reset = new JButton("Reset coverage");
         ConsoleTheme.styleButton(keepAll);
         ConsoleTheme.styleButton(fullHelm);
+        ConsoleTheme.styleButton(closedShell);
+        ConsoleTheme.styleButton(faceShell);
         ConsoleTheme.styleButton(reset);
         keepAll.addActionListener(e -> {
             MarioEquipmentWorkbench.useKeepAllCoverage();
@@ -443,7 +450,15 @@ public final class N64Panel extends JPanel {
         });
         fullHelm.addActionListener(e -> {
             MarioEquipmentWorkbench.useFullHelmSafeCoverage();
-            workbenchStatus.setText("Semantic coverage: FULL_HELM_SAFE - face/nose protected");
+            workbenchStatus.setText("Semantic coverage: FULL_HELM_SAFE - cap/hair removed");
+        });
+        closedShell.addActionListener(e -> {
+            MarioEquipmentWorkbench.useHeadShellClosedCoverage();
+            workbenchStatus.setText("Replacement shell: CLOSED - Mario head replaced by helmet");
+        });
+        faceShell.addActionListener(e -> {
+            MarioEquipmentWorkbench.useHeadShellFaceCoverage();
+            workbenchStatus.setText("Replacement shell: FACE - Mario front face inserted");
         });
         reset.addActionListener(e -> {
             MarioEquipmentWorkbench.resetHeadMask();
@@ -451,12 +466,23 @@ public final class N64Panel extends JPanel {
         });
         coverageActions.add(keepAll);
         coverageActions.add(fullHelm);
+        coverageActions.add(closedShell);
+        coverageActions.add(faceShell);
         coverageActions.add(reset);
         card.add(coverageActions);
+        card.add(Box.createVerticalStrut(10));
+
+        faceFrontControl = new NumericControl(
+                "Mario FACE front slice %", 25.0D, 90.0D, 1.0D, 0,
+                value -> MarioEquipmentWorkbench.setFaceFrontPercent((float) value));
+        card.add(faceFrontControl);
+        card.add(Box.createVerticalStrut(4));
+        card.add(ConsoleTheme.createWrappedText(
+                "For HEAD_SHELL_FACE, raise this to keep only farther-forward nose/face geometry; lower it to include more cheeks/side face. Eyes and moustache stay included. This first proof keeps Mario's face at its native animated scale; only add independent face scale/XYZ if the visual test proves we need it.", 4));
         card.add(Box.createVerticalStrut(12));
 
         card.add(ConsoleTheme.createWrappedText(
-                "Legacy protocol-v1 fallback only. These geometric controls are ignored whenever semantic v2 metadata is available; do not use them as the normal fitting path.", 3));
+                "Legacy protocol-v1 fallback only. These geometric controls are ignored whenever semantic v2 metadata is available.", 2));
         card.add(Box.createVerticalStrut(6));
         styleCheckBox(enableHeadMask);
         styleCheckBox(maskOnlyWithHelmet);
@@ -504,7 +530,7 @@ public final class N64Panel extends JPanel {
         JPanel card = ConsoleTheme.createCard("Save / handoff");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Save writes the current helmet transform, semantic coverage, part counts and fallback settings to docs/n64/MARIO_EQUIPMENT_RUNTIME.md.", 2));
+                "Save writes the current helmet transform, replacement/coverage profile, face-slice setting, semantic part counts and fallback settings to docs/n64/MARIO_EQUIPMENT_RUNTIME.md.", 3));
         card.add(Box.createVerticalStrut(8));
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
@@ -583,6 +609,7 @@ public final class N64Panel extends JPanel {
         coverageValue.setText(value.coverageName);
         semanticReferenceValue.setText(formatVector(
                 value.semanticWidth, value.semanticHeight, value.semanticDepth));
+        faceInsertValue.setText(Integer.toString(value.faceInsertTriangles));
         maskCountValue.setText(Integer.toString(value.maskedTriangles));
         protectedPartsValue.setText("FACE " + value.faceTriangles
                 + " / EYES " + value.eyesTriangles
@@ -602,6 +629,7 @@ public final class N64Panel extends JPanel {
         if (yControl != null) yControl.setValue(value.y);
         if (zControl != null) zControl.setValue(value.z);
         if (yawControl != null) yawControl.setValue(value.yawDegrees);
+        if (faceFrontControl != null) faceFrontControl.setValue(value.faceFrontPercent);
         if (maskStartControl != null) maskStartControl.setValue(value.maskStartPercent);
         if (maskRadiusControl != null) maskRadiusControl.setValue(value.maskRadiusPercent);
     }
