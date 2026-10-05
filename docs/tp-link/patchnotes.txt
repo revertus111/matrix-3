@@ -14,6 +14,13 @@
 - User runtime log showed the Windows App Execution Alias python.exe stub returning exit code 9009 while Ninja was missing; the bootstrap incorrectly treated that alias as a usable Python installation.
 - The TP builder now rejects the WindowsApps Python alias, checks py/native/MSYS2 Python candidates, checks PATH/MSYS2 Ninja, and when required installs UCRT64 Python + Ninja through the existing Matrix3 MSYS2 toolchain.
 - The builder now scans Matrix3/native first and automatically uses a single Twilight Princess image placed there, so the user's local donor file does not need to be browsed to manually.
-- Added explicit early rejection for .nkit.iso. zeldaret/tp documents ISO/GCM, RVZ, WIA, WBFS, CISO, NFS, GCZ and TGC inputs, not NKit v1; Dolphin also cannot convert NKit to a non-NKit image. The builder now explains this before cloning/installing/building instead of failing later inside donor tooling.
-- The current user file `native/Legend of Zelda, The - Twilight Princess (USA).nkit.iso` is therefore a known input-format blocker; replacing it with a supported GZ2E01 image in the same native folder is sufficient for the next one-click attempt.
+- Added explicit early rejection for .nkit.iso. zeldaret/tp documents ISO/GCM, RVZ, WIA, WBFS, CISO, NFS, GCZ and TGC inputs, not NKit v1; the builder now explains this before cloning/installing/building instead of failing later inside donor tooling.
 - Status: bootstrap recovery is verified-static. Donor build still needs a runtime rerun with a supported image.
+
+2026-10-05 - Fix TP decomp-toolkit object-base layout after CISO runtime failure
+- User runtime rerun with a supported `.ciso` proved automatic image discovery, MSYS2 Python/Ninja reuse, donor clone and pinned checkout all work.
+- `dtk dol split` then failed with `orig/GZ2E01/files/RELS.arc not found`.
+- Root cause: the builder created `orig/GZ2E01` as the disc-image file itself. The pinned TP config defines `object_base: orig/GZ2E01`, while decomp-toolkit treats that object base as a directory and searches for disc images inside it before exposing `sys/` and `files/` through its VFS.
+- The builder now creates `orig/GZ2E01/` as a directory and places the donor image inside it with its original filename/extension, allowing decomp-toolkit to detect the CISO/RVZ/ISO container correctly.
+- Reruns automatically repair the malformed local workspace from the previous builder by deleting only the builder-created `orig/GZ2E01` link/copy before creating the correct directory layout; the user's source image under Matrix3/native is untouched.
+- Status: object-base fix is verified-static; donor build still needs one runtime rerun.
