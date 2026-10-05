@@ -23,9 +23,12 @@ public final class OotBridgeSession {
     static final int BUTTON_Z = 1 << 2;
     static final int BUTTON_R = 1 << 3;
 
-    private static final int BINARY_PROTOCOL_VERSION = 1;
+    private static final int BINARY_PROTOCOL_VERSION = 2;
     private static final int BINARY_CMD_STEP = 1;
     private static final int MAX_TRIANGLES = 4096;
+    private static final int MAX_TEXTURES = 1024;
+    private static final int MAX_TEXTURE_DIMENSION = 1024;
+    private static final int MAX_TEXTURE_BYTES = 16 * 1024 * 1024;
     private static final long STEP_NANOS = 1000000000L / 20L;
     private static final long MAX_SCHEDULE_DRIFT_NANOS = STEP_NANOS * 4L;
     private static final String ROM_FILE_NAME =
@@ -94,6 +97,7 @@ public final class OotBridgeSession {
     private static final class Worker implements Runnable {
         private final File bridge;
         private final File rom;
+        private final TextureUpdate[] textureCatalog = new TextureUpdate[MAX_TEXTURES];
 
         private volatile boolean running = true;
         private volatile boolean ready;
@@ -153,6 +157,27 @@ public final class OotBridgeSession {
             inputState = input;
         }
 
+        private LinkFrame retainTextureCatalog(LinkFrame frame) {
+            for (int i = 0; i < frame.textureUpdates.length; i++) {
+                TextureUpdate update = frame.textureUpdates[i];
+                textureCatalog[update.index] = update;
+            }
+            int count = 0;
+            for (int i = 0; i < textureCatalog.length; i++) {
+                if (textureCatalog[i] != null) {
+                    count++;
+                }
+            }
+            TextureUpdate[] catalog = new TextureUpdate[count];
+            int out = 0;
+            for (int i = 0; i < textureCatalog.length; i++) {
+                if (textureCatalog[i] != null) {
+                    catalog[out++] = textureCatalog[i];
+                }
+            }
+            return frame.withTextures(catalog);
+        }
+
         @Override
         public void run() {
             Process localProcess = null;
@@ -173,19 +198,19 @@ public final class OotBridgeSession {
                 builder.redirectError(ProcessBuilder.Redirect.INHERIT);
                 localProcess = builder.start();
                 process = localProcess;
-                input = new BufferedInputStream(localProcess.getInputStream(), 256 * 1024);
+                input = new BufferedInputStream(localProcess.getInputStream(), 512 * 1024);
                 output = new BufferedOutputStream(localProcess.getOutputStream(), 16 * 1024);
 
                 readHandshake(input);
-                latestFrame = step(output, input, InputState.IDLE);
-                latestFrame = step(output, input, InputState.IDLE);
+                latestFrame = retainTextureCatalog(step(output, input, InputState.IDLE));
+                latestFrame = retainTextureCatalog(step(output, input, InputState.IDLE));
                 ready = true;
                 System.out.println(
-                        "[OoT Bridge] Persistent session READY (20 Hz + Link geometry, protocol v1)");
+                        "[OoT Bridge] Persistent session READY (20 Hz + Link materials, protocol v2)");
 
                 long nextStep = System.nanoTime();
                 while (running) {
-                    latestFrame = step(output, input, inputState);
+                    latestFrame = retainTextureCatalog(step(output, input, inputState));
                     nextStep += STEP_NANOS;
                     long now = System.nanoTime();
                     long waitNanos = nextStep - now;
@@ -228,7 +253,8 @@ public final class OotBridgeSession {
         int version = readIntLE(input);
         if (version != BINARY_PROTOCOL_VERSION) {
             throw new IllegalStateException(
-                    "unsupported OoT bridge protocol version: " + version);
+                    "unsupported OoT bridge protocol version: " + version
+                    + " (rebuild native/oot-bridge for protocol v2)");
         }
     }
 
@@ -264,15 +290,65 @@ public final class OotBridgeSession {
         if (geometryTruncated) {
             throw new IllegalStateException("OoT Link geometry truncated");
         }
-        int floatCount = triangleCount * 9;
-        float[] positions = readFloatArray(input, floatCount);
-        float[] colors = readFloatArray(input, floatCount);
+
+        int xyzFloatCount = triangleCount * 9;
+        int uvFloatCount = triangleCount * 6;
+        float[] positions = readFloatArray(input, xyzFloatCount);
+        float[] normals = readFloatArray(input, xyzFloatCount);
+        float[] colors = readFloatArray(input, xyzFloatCount);
+        float[] uvs = readFloatArray(input, uvFloatCount);
+        int[] triangleTextures = new int[triangleCount];
+        for (int i = 0; i < triangleCount; i++) {
+            int texture = readIntLE(input);
+            if (texture != 0xffff && (texture < 0 || texture >= MAX_TEXTURES)) {
+                throw new IllegalStateException("invalid OoT texture index: " + texture);
+            }
+            triangleTextures[i] = texture;
+        }
+
+        int updateCount = readIntLE(input);
+        if (updateCount < 0 || updateCount > MAX_TEXTURES) {
+            throw new IllegalStateException("invalid OoT texture update count: " + updateCount);
+        }
+        TextureUpdate[] updates = new TextureUpdate[updateCount];
+        for (int i = 0; i < updateCount; i++) {
+            int index = readIntLE(input);
+            int width = readIntLE(input);
+            int height = readIntLE(input);
+            int wrapS = readIntLE(input);
+            int wrapT = readIntLE(input);
+            int revision = readIntLE(input);
+            int rgbaSize = readIntLE(input);
+            if (index < 0 || index >= MAX_TEXTURES) {
+                throw new IllegalStateException("invalid OoT texture update index: " + index);
+            }
+            if (width <= 0 || height <= 0
+                    || width > MAX_TEXTURE_DIMENSION || height > MAX_TEXTURE_DIMENSION) {
+                throw new IllegalStateException(
+                        "invalid OoT texture dimensions: " + width + "x" + height);
+            }
+            long expected = (long) width * (long) height * 4L;
+            if (rgbaSize <= 0 || rgbaSize > MAX_TEXTURE_BYTES || expected != rgbaSize) {
+                throw new IllegalStateException(
+                        "invalid OoT texture payload size: " + rgbaSize
+                        + " expected=" + expected);
+            }
+            if (wrapS < 0 || wrapS > 2 || wrapT < 0 || wrapT > 2) {
+                throw new IllegalStateException(
+                        "invalid OoT texture wrap mode: " + wrapS + "/" + wrapT);
+            }
+            updates[i] = new TextureUpdate(
+                    index, width, height, wrapS, wrapT, revision,
+                    readByteArray(input, rgbaSize));
+        }
+
         return new LinkFrame(
                 sequence, simulationTick,
                 x, y, z,
                 faceAngle, action, animId, animFrame,
                 skeletonAvailable, triangleCount,
-                positions, colors, System.nanoTime());
+                positions, normals, colors, uvs, triangleTextures,
+                updates, System.nanoTime());
     }
 
     private static File resolveBridgePath() {
@@ -380,6 +456,19 @@ public final class OotBridgeSession {
         return values;
     }
 
+    private static byte[] readByteArray(InputStream input, int length) throws IOException {
+        byte[] values = new byte[length];
+        int offset = 0;
+        while (offset < length) {
+            int read = input.read(values, offset, length - offset);
+            if (read < 0) {
+                throw new IOException("unexpected EOF from OoT texture payload");
+            }
+            offset += read;
+        }
+        return values;
+    }
+
     private static void writeIntLE(OutputStream output, int value) throws IOException {
         output.write(value & 0xff);
         output.write(value >>> 8 & 0xff);
@@ -432,6 +521,27 @@ public final class OotBridgeSession {
         }
     }
 
+    static final class TextureUpdate {
+        final int index;
+        final int width;
+        final int height;
+        final int wrapS;
+        final int wrapT;
+        final int revision;
+        final byte[] rgba;
+
+        TextureUpdate(int index, int width, int height,
+                int wrapS, int wrapT, int revision, byte[] rgba) {
+            this.index = index;
+            this.width = width;
+            this.height = height;
+            this.wrapS = wrapS;
+            this.wrapT = wrapT;
+            this.revision = revision;
+            this.rgba = rgba;
+        }
+    }
+
     static final class LinkFrame {
         final long sequence;
         final long simulationTick;
@@ -445,14 +555,20 @@ public final class OotBridgeSession {
         final boolean skeletonAvailable;
         final int triangleCount;
         final float[] positions;
+        final float[] normals;
         final float[] colors;
+        final float[] uvs;
+        final int[] triangleTextures;
+        final TextureUpdate[] textureUpdates;
         final long receivedNanos;
 
         LinkFrame(long sequence, long simulationTick,
                 float x, float y, float z,
                 int faceAngle, int action, int animId, float animFrame,
                 boolean skeletonAvailable, int triangleCount,
-                float[] positions, float[] colors, long receivedNanos) {
+                float[] positions, float[] normals, float[] colors,
+                float[] uvs, int[] triangleTextures,
+                TextureUpdate[] textureUpdates, long receivedNanos) {
             this.sequence = sequence;
             this.simulationTick = simulationTick;
             this.x = x;
@@ -465,8 +581,22 @@ public final class OotBridgeSession {
             this.skeletonAvailable = skeletonAvailable;
             this.triangleCount = triangleCount;
             this.positions = positions;
+            this.normals = normals;
             this.colors = colors;
+            this.uvs = uvs;
+            this.triangleTextures = triangleTextures;
+            this.textureUpdates = textureUpdates;
             this.receivedNanos = receivedNanos;
+        }
+
+        LinkFrame withTextures(TextureUpdate[] textures) {
+            return new LinkFrame(
+                    sequence, simulationTick,
+                    x, y, z,
+                    faceAngle, action, animId, animFrame,
+                    skeletonAvailable, triangleCount,
+                    positions, normals, colors, uvs, triangleTextures,
+                    textures, receivedNanos);
         }
     }
 }
