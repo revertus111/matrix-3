@@ -1,7 +1,7 @@
 2026-10-05 - OoT integration workstream initialized
 - Recorded liboot as a candidate native Link gameplay SDK and mapped the Matrix3 alternate-character seam.
 - Identified the supplied ROM as NTSC-U 1.2; upstream liboot documents this revision as identification-only, with PAL 1.1 as its gameplay-tested target.
-- Recorded native dependency license/provenance review as a Phase 0 gate. ROM bytes and ROM-extracted assets remain local-only.
+- Recorded native dependency license/provenance review as a Phase 0 gate. ROM bytes and extracted assets remain local-only.
 - User supplied the official zeldaret/oot source link; confirmed its ntsc-1.2 build target matches the supplied ROM revision.
 - Updated Phase 0 to adapt liboot's PAL-specific build settings and generated asset symbols for NTSC-U 1.2, then prove Link state and animated geometry against the local ROM before Matrix3 integration.
 
@@ -59,3 +59,18 @@
 - Eclipse reported `method8310(byte)` was called without its required decompiler byte argument in `LinkCharacterFit`.
 - Updated the live 830 height read to `player.method8310((byte) 0)`. Static inspection confirms the byte parameter is unused by the accessor, so this preserves the intended stored minimum-Y height reference without changing behavior.
 - Status: compile fix is `verified-static`; Eclipse rebuild/runtime acceptance still required.
+
+2026-10-05 - Adult Link auto-fit accepted + OoT material fidelity protocol V2 staged
+- User runtime screenshot verified the adult auto-fit places Link approximately in the live 830 player height/floor envelope. User considers the model slightly large and OoT Link's head proportionally large, but accepted that as non-blocking so long as 830 equipment is fitted to Link instead of deforming Link into RuneScape proportions.
+- Root cause of the remaining crystalline/triangled appearance was the V1 renderer: it streamed positions + vertex colours only, then collapsed each triangle to one averaged RuneScape face colour.
+- Upgraded the native sidecar/Java binary protocol from V1 to V2. V2 carries Link positions, liboot vertex normals, vertex colours, normalized UVs, and one liboot texture index per triangle.
+- Added referenced-texture revision tracking in the native sidecar. Only Link textures referenced by the current frame are queried from liboot; new/changed textures stream as RGBA8 width/height/wrap/revision payloads.
+- `OotBridgeSession` now validates V2 material payloads and retains a per-session Java texture catalog, preserving first-frame texture uploads across sidecar warm-up frames.
+- Added `LinkTextureRegistry`: OoT texture pixels are uploaded at runtime through Matrix's existing hardware texture creation/cache seam, with synthetic Matrix material IDs appended to the live material table. No ROM-derived pixels are written to the revision-830 cache or repository.
+- Synthetic material IDs are guarded below Matrix's signed-short material boundary. Runtime materials are re-uploaded if Matrix's normal LRU texture cache evicts them, and material availability/revisions reset across fresh OoT sessions.
+- `LinkVisualRenderer` now uses Matrix `Class159` direct-UV mode (`32766`) with liboot's normalized UVs and assigns runtime OoT materials per triangle.
+- Renderer topology now shares vertices only when transformed position + quantized liboot normal + UV + material agree. This lets Matrix accumulate smooth shading across intended surfaces while preserving hard/UV/material seams, reducing the old triangle-by-triangle look.
+- Untextured or unavailable-material faces retain the safe vertex-colour fallback.
+- Known V2 approximation: liboot mirror wrap currently degrades to Matrix repeat; repeat/clamp are mapped. Full N64 alpha-test/decal/cull parity is deferred until the core texture/UV proof is runtime accepted.
+- Native rebuild is mandatory because V1 and V2 deliberately reject protocol mismatches.
+- Status: adult auto-fit is runtime accepted as close enough for the equipment architecture. Material/UV V2 is `verified-static`; native compile and in-game texture/UV orientation remain `UNKNOWN` pending the next runtime session.
