@@ -13,12 +13,13 @@ Run Adult Link from Ocarina of Time as a playable alternate character inside Mat
 - Do **not** reuse Mario's geometry-envelope equipment architecture for Link.
 - Link equipment should attach to liboot's real animated skeleton/socket data.
 - Small per-item scale/offset/rotation corrections are acceptable after the base socket system is proven.
-- Manual Zelda-style combat stays separate from RuneScape progression authority: Matrix stats/NPC health/XP/drops remain authoritative once hit-contact integration is enabled.
+- Manual Zelda-style combat uses the **shared imported-character combat controller**; Link-specific code supplies liboot animation/contact state only. Matrix stats/NPC health/XP/drops remain authoritative.
+- Mario, Link and future imported characters must reuse the shared Matrix input/camera/movement/combat owners documented in `docs/n64/PROJECT.md`; do not create a second Link gameplay controller for common behavior.
 - ROM bytes and ROM-derived textures stay local and untracked.
 
 ## Current status
 
-**Phase 1 foundation: runtime proven. Phase 4 equipment foundation: ACTIVE.**
+**Phase 1 foundation: runtime proven. Phase 4 equipment foundation: ACTIVE. Shared combat ownership: verified-static / runtime pending.**
 
 Runtime-proven baseline:
 
@@ -32,7 +33,12 @@ Runtime-proven baseline:
 - the V4 signed-short vertex overflow was fixed by returning to the verified-safe subdivision budget.
 - current priority is revision-830 equipment, not further base-Link texture polishing.
 
-No Matrix NPC damage/XP authority is connected to Link B/sword yet.
+Shared combat baseline now implemented (`verified-static`, runtime acceptance pending):
+
+- Shift/Z target acquisition and held-target retention are owned by `AlternateCharacterCombatBridge`, not a Link-only combat controller;
+- Link feeds liboot action/animation/frame evidence into the shared native-contact gate;
+- Link and Mario use the same imported-character manual-melee packet route and the same server `PlayerCombatNew` one-shot authority path;
+- exact Link sword contact-frame timing and in-game lock/strafe feel remain runtime `HYPOTHESIS` until tested.
 
 ## Native/provenance boundary
 
@@ -219,15 +225,17 @@ small saved corrections only where needed
 ### Phase 2 — OoT movement/world interaction
 
 - [ ] Feed Matrix terrain/objects into OoT collision.
-- [ ] Z-targeting/roll/contextual interactions.
+- [x] Shared Matrix Z-target acquisition/target-relative liboot basis implemented (`verified-static`).
+- [ ] Runtime-accept Z-target strafing/lock feel and contextual interactions.
 - [ ] Preserve Matrix world progression while Link inventory is open.
 
 ### Phase 3 — combat/progression
 
-- [ ] Sword swing windows/contact -> Matrix NPC target.
-- [ ] RuneScape Attack/Strength/Defence/Constitution authority.
-- [ ] data-driven weapon speed/reach/recovery.
-- [ ] ranged/magic under same authority boundary.
+- [x] Sword native-action/contact gate -> shared Matrix NPC target/manual-melee intent (`verified-static`).
+- [x] Existing RuneScape combat engine remains Attack/Strength/Defence/Constitution, accuracy, damage, XP, NPC death/drop authority (`verified-static`).
+- [ ] Runtime-accept Link contact timing, one-shot behavior and NPC damage/XP.
+- [ ] data-driven weapon speed/reach/recovery integration/polish beyond existing server weapon-delay authority.
+- [ ] ranged/magic under the same shared combat authority boundary.
 
 ### Phase 4 — equipment/items/inventory
 
@@ -250,4 +258,6 @@ Run the **Adult Link skeleton + 830 helmet proof** in `docs/zelda/TESTLIST.md`.
 6. Preserve the protocol READY lines and the first `[OoT Equipment]` line.
 7. Capture a front/three-quarter screenshot before changing any calibration property.
 
-Immediate acceptance target: `protocol v3`, `skeletonJoints=21`, a revision-830 helmet visibly attached near Adult Link's head at `scale=1.0`, and the helmet following Link's animated head/socket instead of remaining at the hidden RuneScape avatar origin.
+Immediate equipment acceptance target: `protocol v3`, `skeletonJoints=21`, a revision-830 helmet visibly attached near Adult Link's head at `scale=1.0`, and the helmet following Link's animated head/socket instead of remaining at the hidden RuneScape avatar origin.
+
+Shared-controller/combat acceptance is tracked separately in `docs/n64/SHARED_CONTROLLERS_TESTLIST.md`; do not mark Link combat runtime `VERIFIED` until that checklist passes.
