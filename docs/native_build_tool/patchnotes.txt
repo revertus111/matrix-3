@@ -3,3 +3,4 @@
 - Mario build always runs from `native/sm64-bridge`, force-stops stale `sm64_bridge.exe`, runs `make bootstrap`, then `make test-combat`.
 - OoT build always runs from `native/oot-bridge` and reports missing MSYS2 CMake before invoking its bootstrap target.
 - Build windows remain open with explicit SUCCESS/FAILED output; current terminal directory is irrelevant.
+- Runtime 2026-10-05: `BUILD + TEST MARIO` completed successfully and reported `MARIO BUILD + TEST SUCCESS`; one-click Mario path is VERIFIED.
