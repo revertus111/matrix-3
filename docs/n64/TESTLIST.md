@@ -29,7 +29,10 @@ Acceptance note: this remains an interim Matrix/server collision owner. It does 
 - [x] F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED`.
 - [x] Core protocol-v3/socket/request path is active at runtime; Java cannot enter custom weapon combat without v3 + live hand socket + rendered weapon readiness.
 - [x] V1 visual result: slash works but reads as a slow little punch. `VERIFIED`.
-- [x] V2 was rebuilt successfully with the Native Builder but still reads as a custom punch. `VERIFIED` rejection; V3 arc correction is pending.
+- [x] V2 was rebuilt successfully with the Native Builder but still reads as a custom punch. `VERIFIED` rejection.
+- [x] V3 runtime video shows Mario folding forward and the weapon hand collapsing toward the floor. `VERIFIED` rejection.
+- [x] Source follow-up confirms native B is already suppressed while custom weapon mode is active; the V3 deform is the custom pose, not stock punch leakage. `verified-static`.
+- [ ] V4 visual acceptance: torso remains upright while the shoulder/forearm/wrist produce a readable one-handed sword cut.
 - [ ] Moving slash / native leg continuity is still pending unless separately confirmed.
 - [ ] Held-F no-replay, preview-only button behavior, freeze/unfreeze, unequip fallback and Ctrl+M/relog cleanup remain pending.
 - [ ] Remote-player isolation, nearby-NPC server combat/damage/XP and sustained stability remain pending.
@@ -42,7 +45,7 @@ The first attempted acceptance run did **not** exercise v3: Windows failed to re
 4. [ ] Equip a normal one-handed sword, longsword or scimitar; Ctrl+M into Mario.
 5. [ ] Console startup reports `combat-socket-v3`; N64 -> Mario 64 -> Custom combat shows RIGHT_HAND AVAILABLE and weapon ID/name.
 6. [ ] Sword follows the right wrist while idle/turning/running. Adjust grip scale/XYZ/angles if needed; the bounds-based starting grip is NOT visually verified.
-7. [ ] Press F once: V3 should finish in roughly half a second and show a visibly lateral/cross-body hand path, with the weapon tracing a sword arc instead of the hand driving straight forward like a punch. Holding F must not loop or restart it.
+7. [ ] Press F once: V4 should finish in about half a second. Mario's torso must stay upright; the right shoulder should carry the main sweep, with only a restrained forearm bend and wrist roll. The weapon must no longer dive toward the floor or fold Mario's upper body.
 8. [ ] Run and press F: legs continue native running; sword follows hand through the complete swing and recovery.
 9. [ ] Play 1H slash button previews only (no new server attack request); optional equipped-weapon override is explicit.
 10. [ ] Freeze in Equipment Workbench: body and sword freeze together. Unfreeze before further attacks.
