@@ -4,17 +4,19 @@
 ## Active priority override - 2026-10-04 custom combat proof
 
 The user supplied SAP AAA for custom native animation overlay + 830 weapon attachment.
-This is the active next runtime gate; prior steering/collision and equipment carryovers below remain preserved.
+The core proof is now runtime-accepted; remaining 4.3 work is bounded regression/calibration only. Prior steering/collision and equipment carryovers below remain preserved.
 
-- Phase 4, Bundle 4.3: native 1H slash + right-hand socket (`IMPLEMENTED / NEEDS RUNTIME ACCEPTANCE`).
+- Phase 4, Bundle 4.3: native 1H slash + right-hand socket (`RUNTIME PROOF ACCEPTED / REGRESSION CHECKS PENDING`).
 - [x] Establish pinned pose/joint/matrix ownership (`verified-static`); details in `docs/n64/CUSTOM_COMBAT.md`.
 - [x] Native additive torso/right-arm slash and socket export; v3 Java bridge with v1/v2 compatibility.
 - [x] Equipped 830 weapon attachment, conditional F trigger, small Custom combat tab and grip controls.
 - [x] Linux native build and focused protocol/curve/transform checks.
-- [ ] Windows/MSYS2 + Eclipse Java 8 build; consolidated runtime acceptance in `docs/n64/TESTLIST.md`.
-- [ ] Visually accept/tune slash and sword grip before considering 1H stab.
+- [x] Runtime 2026-10-04: equipped revision-830 sword visibly attaches to Mario's hand. `VERIFIED`.
+- [x] Runtime 2026-10-04: F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED`.
+- [ ] Finish bounded 4.3 regressions: moving slash/leg continuity, held-F no-replay, freeze/unequip/exit/relog cleanup, remote-player isolation, NPC combat integration and sustained stability.
+- [ ] Tune grip/aesthetics only if the user wants visual polish before selecting another combat family.
 
-Runtime state is UNKNOWN until tested. No collision, damage/contact timing, 830 retargeting or stab expansion is included.
+Core Bundle 4.3 architecture is runtime-VERIFIED. No collision, damage/contact timing, 830 retargeting or stab expansion is included. Stab is not started by this verification update.
 
 
 ## Goal
@@ -59,14 +61,13 @@ The user also runtime-confirmed on 2026-10-04 that the 750 ms replacement grace 
 
 Mario is the first driver. Its current capability profile advertises melee only. The architecture deliberately leaves room for a later Link driver to advertise melee + ranged while reusing the same camera, keyboard and RuneScape combat pipeline rather than adding a second controller/damage system.
 
-Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 is still the next collision architecture milestone after the current framework/presentation regression gate is accepted.
+Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Bundle 4.3's custom 1H slash + 830 hand attachment core proof is also runtime accepted; only its bounded regressions/calibration remain. Phase 3 is still the next collision architecture milestone after the current framework/presentation regression gate is accepted.
 
 ### Out of scope for the current master-controller/combat slice
 
 - Making client-local Mario XYZ authoritative at the server.
 - Replacing RuneScape clipping, pathfinding, plane ownership or server correction behavior.
 - Full per-character server-enforced weapon-family restrictions; the first capability profile is client routing metadata only.
-- Visual weapon attachment sockets/models; those belong after the shared controller/combat foundation is proven.
 - Treating visually-correct terrain elevation as proof that the native flat-floor collision has been replaced.
 - Server-authoritative imported-character movement or remote-player replication.
 - JNI/in-process native loading before sidecar transport is measured under sustained runtime use.
@@ -103,6 +104,7 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - Native-state vertical presentation uses initial `3.0` SM64-to-Matrix Y scale; `-Dmatrix3.sm64.verticalScale=<value>` can override it.
 - Mario mesh scale uses initial `2.0`; `-Dmatrix3.sm64.modelScale=<value>` can override it for visual calibration.
 - Matrix collision is converted into SM64 surfaces in Phase 3; until then the sidecar uses the temporary flat native floor even though Matrix presentation already follows visible terrain elevations correctly.
+- Bundle 4.3 protocol v3 adds a latched combat request and same-frame native right-hand matrix; Java routes custom weapon F only when protocol v3, live hand socket and rendered weapon readiness are all present. The successful runtime slash therefore proves that core native->bridge->Java combat path is live.
 
 ## Verified foundation
 
@@ -130,6 +132,8 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - Ctrl+M restores the normal RuneScape local-player presentation, and re-entering Mario mode recreates the animated Mario replacement cleanly.
 - The atlas micro-face v3 path restores Mario's texture details while keeping the former giant black whole-source-triangle artifact fixed. Bundle 4.2A visual fidelity is runtime accepted 2026-10-04.
 - Bundle 4.2B shared-topology smoothing is runtime accepted at the default `70` degree threshold: Mario reads visibly rounder/less faceted while accepted atlas detail and hard-edge presentation remain intact.
+- Bundle 4.3 runtime confirms an equipped revision-830 sword visibly attaches to Mario's hand in live Mario mode. `VERIFIED` 2026-10-04.
+- Bundle 4.3 runtime confirms F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED` 2026-10-04.
 - The reported idle->Space RuneScape-body reappearance still occurs with the 750 ms replacement grace in place. `VERIFIED` regression report from the user on 2026-10-04; the grace is not an accepted fix.
 - Bundle 1.3 camera-relative steering remained incorrect after the resolved vanilla camera-position -> focus-position change. `VERIFIED` regression report from the user on 2026-10-04.
 - User video + diagnostics prove the rendered Construction/RTS camera can rotate while the old alternate-character sampler reports an effectively frozen camera-forward vector near `(-0.006, 1.000)`. `VERIFIED` 2026-10-04.
@@ -184,6 +188,7 @@ Bundle 2.4 local XYZ and Bundle 4.2B smoothing remain runtime accepted. Phase 3 
 - The exact condition that makes RuneScape local-player suppression drop during the idle->Space transition. The 750 ms grace did not solve it; N64 flight-recorder evidence remains required after the active steering gate.
 - Runtime acceptance of the first Mario F/B -> stock RuneScape NPC combat bridge.
 - Runtime UI/recorder acceptance of Test Console -> N64 -> Mario 64 under Eclipse Java 8.
+- Bundle 4.3 moving-slash leg continuity, held-F no-replay, cleanup/re-entry, remote-player isolation and sustained stability remain pending.
 - Final Matrix<->SM64 coordinate conversion for **collision-backed** XYZ movement. The current local presentation scale/sign is runtime accepted but does not by itself prove the native collision-space conversion.
 - Final collision-bubble radius/rebuild threshold.
 - Correct terrain triangle winding/material selection for RuneScape slopes when translated into SM64 surfaces.
@@ -389,6 +394,21 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 - [ ] Add geometry interpolation only if 30 Hz pose stepping is visibly objectionable.
 - [ ] Map/forward native visual events such as sounds/particles after movement/collision ownership is stable.
 
+#### Bundle 4.3 - Native custom combat overlay + right-hand weapon socket
+
+**Status:** RUNTIME PROOF ACCEPTED / REGRESSION CHECKS PENDING
+
+- [x] Native additive 1H slash overlay layered over normal libsm64 pose evaluation. `verified-static`.
+- [x] Protocol-v3 combat request + same-frame right-hand socket transport. `verified-static`.
+- [x] Revision-830 worn weapon model attachment through the native hand socket. `VERIFIED` 2026-10-04.
+- [x] F triggers the custom native MARIO_COMBAT_1H_SLASH. `VERIFIED` 2026-10-04.
+- [ ] Runtime verify moving slash preserves native leg locomotion through the complete swing/recovery.
+- [ ] Runtime verify held-F cannot replay/restart the slash.
+- [ ] Runtime verify freeze/unfreeze, unequip/disable fallback, Ctrl+M/re-entry and logout/relog cleanup.
+- [ ] Runtime verify remote-player rendering and sustained stability remain unaffected.
+- [ ] Runtime verify nearby-NPC F still reaches stock server combat/damage/XP authority.
+- [ ] Grip/aesthetic calibration only as needed; no stab/retargeting expansion is included yet.
+
 ### Phase 5 - Multiplayer / Server Authority
 
 **Status:** PLANNED
@@ -405,9 +425,9 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 - Phase status: ACTIVE / NEEDS TEST
 - Bundle: 1.3 - Universal alternate-character controller + combat bridge
 - Bundle status: IMPLEMENTED / NEEDS TEST
-- Approval state: user supplied explicit `AAA` for the master-controller/camera/fallback/combat bundle plus repeated explicit `SAP AAA` continuation approvals for this steering regression on 2026-10-04; user also stated proven bugs in this workstream should be fixed directly without repeated approval stops.
-- Current checklist item: runtime-verify the Matrix-world steering adapter across north/east/south/west and live camera rotation.
-- Current objective: close camera-relative steering without another Matrix/libsm64 camera sign experiment, then return to the remaining Bundle 1.3 presentation/combat gates.
+- Approval state: user supplied explicit `AAA` for the master-controller/camera/fallback/combat bundle plus repeated explicit `SAP AAA` continuation approvals for this steering regression on 2026-10-04; Bundle 4.3 custom-combat proof was separately SAP-AAA approved and its core runtime proof is now accepted.
+- Current checklist item: runtime-verify the Matrix-world steering adapter across north/east/south/west and live camera rotation after the active 4.3 regression/polish decision.
+- Current objective: preserve the accepted 4.3 custom-combat proof, finish only its bounded regressions if desired, then return to the remaining Bundle 1.3 presentation/combat gates.
 
 ## Checklist / patch status
 
@@ -424,6 +444,7 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 | Mario native geometry transport | 4 | 4.1 | VERIFIED | Actual Mario geometry and successive native animation frames reach Matrix at runtime. |
 | Matrix Mario visual renderer | 4 | 4.1 | VERIFIED CORE / REGRESSION ACTIVE | 750 ms grace did not eliminate idle->Space body pop; N64 flight recorder remains ready for exact evidence. |
 | Mario visual fidelity | 4 | 4.2 | VERIFIED / POLISH CARRYOVER | Atlas micro-face v3 and shared-topology smoothing are runtime accepted. |
+| Mario custom 1H combat | 4 | 4.3 | VERIFIED CORE / REGRESSION PENDING | Equipped 830 hand attachment and custom F slash runtime-proven; movement/cleanup/NPC/stability regressions remain. |
 | Matrix terrain adapter | 3 | 3.1 | READY AFTER CURRENT GATE | Next architectural step after master-controller/runtime presentation acceptance. |
 
 ## Decisions / new ideas
@@ -445,6 +466,7 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 - Phase 3 remains the required boundary for authentic RuneScape terrain/object collision and final movement/coordinate authority.
 - Direct libsm64 animated geometry is the selected Mario visual path.
 - The accepted micro-face atlas path and shared-topology smoothing remain the visual solution unless new runtime evidence regresses them.
+- Bundle 4.3 proves custom articulated combat overlays + native hand sockets + real 830 weapon models can coexist with libsm64 locomotion. Do not replace this with Java triangle animation or generic 830 retargeting for the first combat families.
 - RuneScape control/presentation remains the safe default and fail-open fallback.
 - Test Console -> N64 is developer-only diagnostics infrastructure. Add one sub-tab per imported N64 game; game tabs observe existing owners and must not become parallel gameplay/render/input owners.
 - For the idle->Space regression, collect recorder evidence before changing `MarioVisualRenderer` or `Player.method10696(...)` again.
@@ -454,32 +476,34 @@ Runtime note: visible Mario already traverses different RuneScape terrain elevat
 
 See `docs/mario/TESTLIST.md` for the broader Mario runtime gate.
 
-See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder diagnostic gate.
+See `docs/n64/TESTLIST.md` for the N64 workspace, custom-combat regressions and idle->Space flight-recorder diagnostic gate.
 
 ## Carryover / blockers
 
 ### CARRYOVER
 
+- Bundle 4.3 custom-combat regressions: moving slash/leg continuity, held-F no-replay, freeze/unequip/exit/relog cleanup, remote-player isolation, nearby-NPC combat authority and sustained stability.
 - Idle->Space body-pop recorder capture/evidence-driven presentation fix after the active steering gate.
 - Phase 1 deeper lifecycle regression where still useful.
 - Bundle 2.2 airborne exit/relog/stale-transform regression.
 - Bundle 2.3 long-jump timing and held-action entry-guard checks.
 - Bundle 4.1 remote-player isolation and sustained-runtime/performance regression.
 - Bundle 4.2 scale/orientation/ground-anchor polish only if later runtime evidence requires it.
-- Server-aware per-character equipment/weapon-family restrictions and visual weapon sockets.
+- Server-aware per-character equipment/weapon-family restrictions.
 - Local-only Mario XYZ versus authoritative server position remains a known limitation for combat range until later movement/server integration.
 
 ### BLOCKED
 
-- None. The Mario world-space steering adapter is implemented; Bundle 1.3 needs one focused N/E/S/W + live-rotation runtime acceptance pass.
+- None. Bundle 4.3 core proof is runtime accepted. Remaining 4.3 work is bounded regression/polish, not an architecture blocker.
 
 ## Resume Here
 
-**Current override: Bundle 4.3 custom combat proof.** Pull main, run `make bootstrap` in native/sm64-bridge, Eclipse refresh/clean/build, equip a one-handed sword, Ctrl+M, open N64 -> Mario 64 -> Custom combat, then test F idle/running and exit cleanup. Follow the single custom-combat section in `docs/n64/TESTLIST.md`. Native/frame/transform seam is established; do not retrace it. Grip defaults and slash aesthetics await runtime calibration. Stab is deferred until slash acceptance. Files: native bridge/semantic patch/combat_overlay.h; Sm64BridgeSession; MarioWeaponCombat; MarioJumpController; MarioVisualRenderer; N64Panel. Prior checkpoint below is carryover, not the active first task.
+**Bundle 4.3 core proof is runtime-VERIFIED.** The equipped revision-830 sword is visibly attached to Mario's hand and F triggers the custom native MARIO_COMBAT_1H_SLASH. Do not retrace the native pose/socket/bridge architecture and do not add stab/retargeting automatically. If continuing 4.3, run only the remaining bounded regression pass in `docs/n64/TESTLIST.md`: moving slash/leg continuity, held-F no-replay, freeze/unequip/exit/relog cleanup, remote-player isolation, nearby-NPC stock-combat authority and sustained stability. Grip tuning is optional visual polish. The prior Bundle 1.3 steering/presentation checkpoint remains preserved below for return after this override.
 
 
 **Last completed:**
 
+- Bundle 4.3 core custom-combat proof is runtime-VERIFIED: equipped 830 weapon attachment is visible on Mario and F triggers the custom native 1H slash.
 - Bridge Spike A runtime-VERIFIED against real `libsm64` + user ROM.
 - Native Y -> Matrix transform runtime-VERIFIED.
 - Actual libsm64 Mario geometry, idle and jump animations, RuneScape restore and Mario re-entry are runtime-VERIFIED.
@@ -504,12 +528,12 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 **Active bundle:**
 
-- Bundle 1.3 - Universal alternate-character controller + combat bridge (`IMPLEMENTED / NEEDS TEST`).
+- Bundle 1.3 - Universal alternate-character controller + combat bridge (`IMPLEMENTED / NEEDS TEST`), with Bundle 4.3 core proof accepted as the completed priority override.
 
 **Next checklist item:**
 
-1. `git pull origin main`, Eclipse Java 8 clean/build, launch once. No native sidecar rebuild is required.
-2. Enter Mario mode with the Construction RTS/Free camera context used for the regression.
+1. If the user wants to close Bundle 4.3 first, run the remaining custom-combat regression checks in `docs/n64/TESTLIST.md`; do not expand into a new animation family during that pass.
+2. Then return to the Construction RTS/Free camera context used for the steering regression.
 3. Test W/S/A/D at north, east, south and west. Every heading must remain screen-relative: W forward/up-screen, S backward/down-screen, A left, D right.
 4. Hold W while rotating through the full camera circle. Mario should curve continuously with the view and never flip at south.
 5. Use `[SM64 Direction]` only as confirmation if needed; the active adapter no longer sends Matrix camera heading into libsm64.
@@ -550,6 +574,7 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 **Do not re-scan without new evidence:**
 
+- Bundle 4.3 native custom-animation seam, right-hand socket export, protocol-v3 request/frame layout and Matrix weapon-render ownership; core path is now runtime-proven.
 - Local-player transform/input/viewport ownership.
 - Matrix held-key owner and W/A/S/D/F/Shift/Space internal mappings.
 - Construction camera's W/A/S/D held-key seam; Bundle 2.4 runtime accepted the shared-keyboard-owner solution.
@@ -569,6 +594,8 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 **Pending runtime verification:**
 
+- Bundle 4.3 moving slash/leg continuity, held-F no-replay and cleanup/re-entry regression checks.
+- Bundle 4.3 remote-player isolation, nearby-NPC stock-combat authority and sustained stability.
 - Matrix-world Mario steering at north/east/south/west.
 - Live rotate-while-holding-W through the full camera orbit.
 - Test Console -> N64 -> Mario 64 Java 8 compile/UI/recorder gate.
@@ -581,6 +608,7 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 **Important remaining uncertainty:**
 
+- Bundle 4.3's core slash + weapon-attachment architecture is no longer uncertain; it is runtime-VERIFIED. Remaining uncertainty is limited to regression coverage, exact grip polish, and stock-combat integration timing/behavior.
 - The previous heading-dependent north-correct/south-reversed regression is `VERIFIED`. The active world-space adapter is `verified-static` from Construction's screen basis plus libsm64's input equations, but still needs runtime N/E/S/W/live-rotation acceptance.
 - The 750 ms replacement grace is implemented but runtime-rejected as a complete idle->Space fix. The exact suppression/render condition causing the body pop is still `UNKNOWN` until the N64 recorder captures the transition.
 - The current `3.0` horizontal scale/direct X/Z signs are runtime accepted for local presentation, but native collision-space conversion/winding still needs independent Phase 3 validation.
@@ -589,5 +617,5 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 ## Next recommended work
 
-Runtime-verify the Matrix-world steering adapter in one launch: N/E/S/W first, then rotate continuously while holding W. This adapter no longer sends Matrix camera heading into libsm64; it sends the desired Matrix world movement direction directly. If full-orbit steering passes, return immediately to the saved idle->Space N64 recorder capture and the nearby-NPC F/punch -> stock RuneScape combat proof. Only after Bundle 1.3 passes should the main architectural path return to Phase 3 Bundle 3.1 and stream a bounded RuneScape terrain heightfield into libsm64 as native collision surfaces. Link can then be added as another driver/capability profile without creating another input/camera/damage framework.
+Close Bundle 4.3 with one short regression pass if desired: attack while moving, hold F, freeze/unfreeze, unequip/re-equip, Ctrl+M/re-entry, logout/relog, remote-player sanity, nearby-NPC stock-combat authority and sustained stability. Do not add stab during that pass. After 4.3 is clean, return to the preserved Bundle 1.3 steering/body-pop gates, then Phase 3 terrain collision. The accepted custom-overlay/socket architecture can later support another Mario combat family or another imported character without replacing libsm64 locomotion.
 
