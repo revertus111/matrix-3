@@ -62,7 +62,7 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
    - uses decomp-toolkit VFS to extract only the `Kmdl` and `AlAnm` Link resource archives into `%LOCALAPPDATA%\Matrix3\TPLinkProof`;
    - does not copy Nintendo assets into the Matrix3 repository.
 6. Expected static asset proof:
-   - finds `al.bmd`, `al_head.bmd`, `al_hands.bmd`, `al_face.bmd`;
+   - finds `al.bmd`, `al_head.bmd`, `al_hands.bmd`, `al_face.bmd` and the Kmdl `al_swb.bmd` sword resource;
    - selects a real WAIT-family idle BCK;
    - selects a real WALK/DASH-family locomotion BCK;
    - selects a real CUT-family sword BCK;
@@ -82,13 +82,22 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.gif`
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\visual-proof.json`
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\visual-summary.txt`
-9. The combined `tp-link-proof.gif` should open automatically.
+9. The combined `tp-link-proof.gif` should open automatically. A successful script exit ends with `TP LINK VISUAL PROOF GENERATED`, not `PASS`; generation alone is not visual acceptance.
 10. Visually accept only if all of these are true:
-    - TP Link's authentic body/head/hands/face render coherently;
+    - TP Link's authentic body/head/hands/face render coherently enough to verify the skeleton/animation path; the software proof renderer does not need final-game material quality;
     - the idle segment animates rather than remaining bind-pose/static;
     - the walk/run segment visibly animates as locomotion;
     - the sword segment visibly plays a real TP sword cut;
-    - the red cross/circle labeled `0xF` stays on Link's animated right weapon socket through all three segments.
+    - the cyan `0xE handR` marker follows Link's animated right hand;
+    - the red `0xF weaponR` marker follows the animated right-item/weapon joint;
+    - `al_swb.bmd` is visibly present and remains rigidly attached to the red `0xF` joint through the animation, proving the same seam can host a replacement RuneScape weapon later.
+
+### Bundle 1.2 runtime evidence
+
+- The MSYS2/UCRT64 dependency bootstrap is runtime VERIFIED: pacman installed prebuilt NumPy/Pillow and the renderer ran to completion.
+- Authentic donor extraction remains runtime VERIFIED: `al.bmd` has 35 joints, `0xE = handR`, `0xF = weaponR`, and real `waitb.bck`, `dasha.bck`, `cutl.bck` clips were selected.
+- The first successfully generated GIF was **not accepted visually**. It rendered animated Link but did not render a sword model, the only socket indicator was the red `0xF` debug cross, and the launcher incorrectly labeled successful artifact generation as `PASS`.
+- The proof was tightened so `al_swb.bmd` is attached directly to `0xF`, both `0xE` and `0xF` are shown simultaneously, and successful generation now remains `NEEDS VISUAL ACCEPTANCE` until the GIF is inspected.
 
 ### Acceptance boundary
 
@@ -98,9 +107,9 @@ FAIL should be classified before patching:
 
 - **asset/extraction failure:** missing BMD/BCK or wrong archive path;
 - **decoder failure:** BMD/BCK parser/converter rejects authentic TP data;
-- **geometry/material failure:** Link animates but parts/texture/mesh look wrong;
+- **geometry/material failure:** Link animates but parts/texture/mesh are too broken to validate the character;
 - **animation failure:** mesh renders but BCK pose/playback is wrong;
-- **socket failure:** Link animates correctly but red `0xF` marker does not stay on the weapon joint.
+- **socket failure:** `0xE` tracks the hand but the red `0xF` / attached `al_swb.bmd` does not remain on the intended item socket.
 
 Do not call Matrix3 in-client rendering verified from this test. Bundle 1.2 is a local donor-model/animation/socket proof only.
 
@@ -114,4 +123,4 @@ Do not call Matrix3 in-client rendering verified from this test. Bundle 1.2 is a
 
 ## Current acceptance boundary
 
-Bundle 1.1 is runtime VERIFIED. Bundle 1.2 is implemented at `verified-static` level and is awaiting the first runtime/visual PASS/FAIL. Movement, combat, equipment and Matrix3 in-client TP Link rendering remain later gates.
+Bundle 1.1 is runtime VERIFIED. Bundle 1.2 has runtime-verified extraction and visual-tool execution, but the corrected visual/socket proof still requires user acceptance. Movement, combat, equipment and Matrix3 in-client TP Link rendering remain later gates.
