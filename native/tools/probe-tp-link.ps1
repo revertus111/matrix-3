@@ -20,6 +20,7 @@ $demakeRoot = Join-Path $toolRoot 'demake-engine'
 $demakeRepo = 'https://github.com/snuri00/demake-engine.git'
 $demakePin = 'a134ff49cc74585c6b11f881293796e45c973c75'
 $venvDir = Join-Path $toolRoot 'venv'
+$wingetPythonPackage = 'Python.Python.3.13'
 
 function Invoke-External {
     param(
@@ -51,17 +52,11 @@ function Invoke-External {
 
 function Test-PythonSpec {
     param(
-        [Parameter(Mandatory = $true)][hashtable]$Spec,
-        [switch]$Require312
+        [Parameter(Mandatory = $true)][hashtable]$Spec
     )
 
     try {
-        if ($Require312) {
-            & $Spec.Exe @($Spec.Prefix) -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)' *> $null
-        }
-        else {
-            & $Spec.Exe @($Spec.Prefix) --version *> $null
-        }
+        & $Spec.Exe @($Spec.Prefix) --version *> $null
         return ($LASTEXITCODE -eq 0)
     }
     catch {
@@ -100,24 +95,86 @@ function Find-Python {
     return $null
 }
 
-function Find-Python312 {
-    foreach ($spec in (Get-PythonCandidates)) {
-        if (Test-PythonSpec -Spec $spec -Require312) {
+function Get-NativeVisualPythonCandidates {
+    $result = @()
+
+    foreach ($path in @(
+        (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python313\python.exe'),
+        (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe')
+    )) {
+        if (Test-Path $path) {
+            $result += @{ Exe = $path; Prefix = @() }
+        }
+    }
+
+    $py = Get-Command py.exe -ErrorAction SilentlyContinue
+    if ($py) {
+        $result += @{ Exe = $py.Source; Prefix = @('-3.13') }
+        $result += @{ Exe = $py.Source; Prefix = @('-3.12') }
+    }
+
+    $python = Get-Command python.exe -ErrorAction SilentlyContinue
+    if ($python -and
+        $python.Source -notmatch '\\WindowsApps\\python\.exe$' -and
+        $python.Source -notmatch '\\msys64\\') {
+        $result += @{ Exe = $python.Source; Prefix = @() }
+    }
+
+    return $result
+}
+
+function Test-NativeVisualPythonSpec {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Spec
+    )
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'SilentlyContinue'
+        & $Spec.Exe @($Spec.Prefix) -c 'import sys, sysconfig; ok = (3, 12) <= sys.version_info[:2] < (3, 14) and sysconfig.get_platform().lower().startswith("win-"); raise SystemExit(0 if ok else 1)' *> $null
+        return ($LASTEXITCODE -eq 0)
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+}
+
+function Find-NativeVisualPython {
+    foreach ($spec in (Get-NativeVisualPythonCandidates)) {
+        if (Test-NativeVisualPythonSpec -Spec $spec) {
             return $spec
         }
     }
     return $null
 }
 
+function Install-NativeVisualPython {
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if (-not $winget) {
+        throw 'Windows CPython 3.12/3.13 is required for the TP Link visual proof, and Windows Package Manager (winget) was not found for automatic installation.'
+    }
+
+    Write-Host 'Installing Windows CPython 3.13 for the TP Link visual proof...' -ForegroundColor Cyan
+    Invoke-External -FilePath $winget.Source -Arguments @(
+        'install', '--id', $wingetPythonPackage, '--exact',
+        '--scope', 'user', '--silent',
+        '--accept-package-agreements', '--accept-source-agreements'
+    ) | Out-Host
+
+    $python = Find-NativeVisualPython
+    if (-not $python) {
+        throw 'Windows CPython 3.13 installation completed, but the interpreter could not be resolved. Close/reopen Native Builder and rerun PROBE TP LINK.'
+    }
+    return $python
+}
+
 function Resolve-VenvPython {
-    foreach ($candidate in @(
-        (Join-Path $venvDir 'Scripts\python.exe'),
-        (Join-Path $venvDir 'bin\python.exe'),
-        (Join-Path $venvDir 'bin\python3.exe')
-    )) {
-        if (Test-Path $candidate) {
-            return $candidate
-        }
+    $candidate = Join-Path $venvDir 'Scripts\python.exe'
+    if (Test-Path $candidate) {
+        return $candidate
     }
     return $null
 }
@@ -168,19 +225,25 @@ function Ensure-VisualToolchain {
     }
 
     $visualPython = Resolve-VenvPython
+    if (-not $visualPython -and (Test-Path $venvDir)) {
+        Write-Host 'Replacing incompatible MSYS2/POSIX TP Link visual-proof venv...' -ForegroundColor Yellow
+        Remove-Item -LiteralPath $venvDir -Recurse -Force
+    }
+
     if (-not $visualPython) {
-        $python312 = Find-Python312
-        if (-not $python312) {
-            throw 'Python 3.12+ is required for the visual TP Link proof. The donor build may use an older Python, but this pinned J3D converter requires 3.12+.'
+        $nativePython = Find-NativeVisualPython
+        if (-not $nativePython) {
+            $nativePython = Install-NativeVisualPython
         }
+
         Write-Host 'Creating isolated TP Link visual-proof Python environment...' -ForegroundColor Cyan
-        $venvArgs = @($python312.Prefix) + @('-m', 'venv', $venvDir)
-        Invoke-External -FilePath $python312.Exe -Arguments $venvArgs | Out-Host
+        $venvArgs = @($nativePython.Prefix) + @('-m', 'venv', $venvDir)
+        Invoke-External -FilePath $nativePython.Exe -Arguments $venvArgs | Out-Host
         $visualPython = Resolve-VenvPython
     }
 
     if (-not $visualPython) {
-        throw "TP Link visual-proof venv was created but no Python executable was found under $venvDir (checked Scripts and bin layouts)."
+        throw "TP Link visual-proof venv was created but no native Windows Python executable was found under $venvDir\Scripts."
     }
 
     if (-not (Test-VisualDependencies -PythonPath $visualPython)) {
