@@ -4,8 +4,9 @@ $tpRepo = 'https://github.com/zeldaret/tp.git'
 $tpPin = 'c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0'
 $tpTarget = 'GZ2E01'
 $workspace = Join-Path $env:LOCALAPPDATA 'Matrix3\TPDecomp'
-$discTarget = Join-Path $workspace "orig\$tpTarget"
+$discBaseDir = Join-Path $workspace "orig\$tpTarget"
 $nativeDir = Split-Path $PSScriptRoot -Parent
+$supportedDiscExtensions = @('.iso', '.gcm', '.rvz', '.wia', '.wbfs', '.ciso', '.nfs', '.gcz', '.tgc')
 $msys2Shell = $env:MATRIX3_MSYS2_SHELL
 if (-not $msys2Shell) {
     $msys2Shell = 'C:\msys64\msys2_shell.cmd'
@@ -152,14 +153,36 @@ function Test-IsNkitV1Name {
     return [System.IO.Path]::GetFileName($Path).ToLowerInvariant().EndsWith('.nkit.iso')
 }
 
+function Find-SingleSupportedDisc {
+    param([Parameter(Mandatory = $true)][string]$Directory)
+
+    if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
+        return $null
+    }
+
+    $files = @(Get-ChildItem -LiteralPath $Directory -File -ErrorAction SilentlyContinue | Where-Object {
+        ($supportedDiscExtensions -contains $_.Extension.ToLowerInvariant()) -and
+        (-not (Test-IsNkitV1Name -Path $_.FullName))
+    })
+
+    if ($files.Count -eq 1) {
+        return $files[0].FullName
+    }
+
+    if ($files.Count -gt 1) {
+        throw "Multiple supported TP disc images were found in '$Directory'. Keep one prepared donor image there and rerun the builder."
+    }
+
+    return $null
+}
+
 function Find-LocalTpDisc {
     if (-not (Test-Path $nativeDir)) {
         return $null
     }
 
-    $extensions = @('.iso', '.gcm', '.rvz', '.wia', '.wbfs', '.ciso', '.nfs', '.gcz', '.tgc')
     $all = @(Get-ChildItem -LiteralPath $nativeDir -File -ErrorAction SilentlyContinue | Where-Object {
-        $extensions -contains $_.Extension.ToLowerInvariant()
+        $supportedDiscExtensions -contains $_.Extension.ToLowerInvariant()
     })
 
     if ($all.Count -eq 0) {
@@ -213,7 +236,7 @@ function Assert-SupportedTpImage {
 Found your Twilight Princess file automatically, but it is an NKit v1 image:
   $Path
 
-zeldaret/tp does not document .nkit.iso as a supported donor format, and converting it with Dolphin would still leave it as NKit.
+zeldaret/tp does not document .nkit.iso as a supported donor format.
 Use a normal GZ2E01 ISO/GCM, RVZ, WIA, WBFS, CISO, NFS, GCZ or TGC image instead.
 You can place the replacement directly in:
   $nativeDir
@@ -250,14 +273,16 @@ function Assert-RawDiscId {
     Write-Host "Disc identity VERIFIED: $gameId (GameCube North America)." -ForegroundColor Green
 }
 
+$preparedDisc = Find-SingleSupportedDisc -Directory $discBaseDir
 $discPath = $null
-if (-not (Test-Path $discTarget)) {
+if ($preparedDisc) {
+    Write-Host 'Reusing the already prepared local GZ2E01 donor image:' -ForegroundColor Green
+    Write-Host "  $preparedDisc"
+}
+else {
     $discPath = Select-TpDisc
     Assert-SupportedTpImage -Path $discPath
     Assert-RawDiscId -Path $discPath
-}
-else {
-    Write-Host 'Reusing the already prepared local GZ2E01 image.' -ForegroundColor Green
 }
 
 $git = Get-Command git.exe -ErrorAction SilentlyContinue
@@ -297,22 +322,41 @@ if ($LASTEXITCODE -ne 0) {
 
 Invoke-External -FilePath $git.Source -Arguments @('-C', $workspace, 'checkout', '--detach', $tpPin)
 
-if (-not (Test-Path $discTarget)) {
-    $origDir = Split-Path $discTarget -Parent
-    if (-not (Test-Path $origDir)) {
-        New-Item -ItemType Directory -Path $origDir -Force | Out-Null
+if (Test-Path -LiteralPath $discBaseDir -PathType Leaf) {
+    Write-Host 'Repairing the previous TP donor layout (disc image was placed where decomp-toolkit expects a directory)...' -ForegroundColor Yellow
+    Remove-Item -LiteralPath $discBaseDir -Force
+}
+
+$preparedDisc = Find-SingleSupportedDisc -Directory $discBaseDir
+if (-not $preparedDisc) {
+    if (-not $discPath) {
+        $discPath = Select-TpDisc
+        Assert-SupportedTpImage -Path $discPath
+        Assert-RawDiscId -Path $discPath
     }
 
-    Write-Host 'Preparing the local GZ2E01 image for the decomp...' -ForegroundColor Cyan
+    if (-not (Test-Path $discBaseDir)) {
+        New-Item -ItemType Directory -Path $discBaseDir -Force | Out-Null
+    }
+
+    $discTarget = Join-Path $discBaseDir ([System.IO.Path]::GetFileName($discPath))
+    Write-Host 'Preparing the local GZ2E01 image for decomp-toolkit...' -ForegroundColor Cyan
     try {
         New-Item -ItemType HardLink -Path $discTarget -Target $discPath -ErrorAction Stop | Out-Null
-        Write-Host 'Used an NTFS hard link, so no second 1.35 GB copy was needed.' -ForegroundColor Green
+        Write-Host 'Used an NTFS hard link, so no second disc-image copy was needed.' -ForegroundColor Green
     }
     catch {
         Write-Host 'Hard link was unavailable; copying the image once into the local TP workspace...' -ForegroundColor Yellow
         Copy-Item -LiteralPath $discPath -Destination $discTarget -Force
     }
+
+    $preparedDisc = $discTarget
 }
+
+Write-Host 'decomp-toolkit object base:' -ForegroundColor DarkGray
+Write-Host "  $discBaseDir"
+Write-Host 'Prepared donor image:' -ForegroundColor DarkGray
+Write-Host "  $preparedDisc"
 
 Write-Host ''
 Write-Host 'Configuring the pinned Twilight Princess decomp...' -ForegroundColor Cyan
