@@ -22,6 +22,7 @@ Acceptance note: this is intentionally an interim Matrix/server collision owner.
 - [x] Equipped revision-830 sword visibly renders attached to Mario's hand in live Mario mode. `VERIFIED`.
 - [x] F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED`.
 - [x] Core protocol-v3/socket/request path is active at runtime; Java cannot enter custom weapon combat without v3 + live hand socket + rendered weapon readiness.
+- [x] V1 visual result: slash works but reads as a slow little punch. `VERIFIED` user feedback; V2 sword-swing tuning is pending.
 - [ ] Moving slash / native leg continuity is still pending unless separately confirmed.
 - [ ] Held-F no-replay, preview-only button behavior, freeze/unfreeze, unequip fallback and Ctrl+M/relog cleanup remain pending.
 - [ ] Remote-player isolation, nearby-NPC server combat/damage/XP and sustained stability remain pending.
@@ -34,7 +35,7 @@ The first attempted acceptance run did **not** exercise v3: Windows failed to re
 4. [ ] Equip a normal one-handed sword, longsword or scimitar; Ctrl+M into Mario.
 5. [ ] Console startup reports `combat-socket-v3`; N64 -> Mario 64 -> Custom combat shows RIGHT_HAND AVAILABLE and weapon ID/name.
 6. [ ] Sword follows the right wrist while idle/turning/running. Adjust grip scale/XYZ/angles if needed; the bounds-based starting grip is NOT visually verified.
-7. [ ] Press F once: torso/right arm wind up, slash, recover; holding F does not loop or restart the slash.
+7. [ ] Press F once: the V2 slash should finish in roughly half a second, show a clear wind-up, fast cross-body sword cut, forearm/wrist follow-through and recovery, and no longer read as the old slow punch. Holding F must not loop or restart it.
 8. [ ] Run and press F: legs continue native running; sword follows hand through the complete swing and recovery.
 9. [ ] Play 1H slash button previews only (no new server attack request); optional equipped-weapon override is explicit.
 10. [ ] Freeze in Equipment Workbench: body and sword freeze together. Unfreeze before further attacks.

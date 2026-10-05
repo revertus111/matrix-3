@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define COMBAT_SLASH_TICKS 24
+#define COMBAT_SLASH_TICKS 16
 struct CombatOverlay {
     uint32_t lastRequest;
     int tick;
@@ -14,16 +14,17 @@ struct CombatOverlay {
 
 /* XYZ Euler channel offsets, degrees. The native evaluator retains its own
  * XYZ matrix order and parent composition. All four curves start/end at zero.
- * These are deliberately tunable proof keyframes, not a verified visual fit. */
+ * V2 keeps the proven additive seam but reads as a faster sword cut: stronger
+ * torso/shoulder wind-up, visible forearm/wrist participation and earlier hit. */
 static void combat_overlay_evaluate(struct CombatOverlay *state, int mode,
         uint32_t request, int16_t rotation[4][3])
 {
-    static const float times[5] = {0, .25f, .50f, .75f, 1};
+    static const float times[5] = {0, .18f, .42f, .68f, 1};
     static const float poses[5][4][3] = {
         {{0,0,0},{0,0,0},{0,0,0},{0,0,0}},
-        {{-18,0,-8},{-35,-25,-65},{0,0,-45},{15,0,0}},
-        {{24,0,10},{60,35,55},{0,0,-10},{-15,0,0}},
-        {{15,0,5},{35,20,35},{0,0,-20},{-5,0,0}},
+        {{-24,6,-18},{-58,-30,-90},{32,10,-58},{20,0,28}},
+        {{28,-6,20},{72,38,92},{-30,-8,42},{-24,0,-30}},
+        {{18,-3,12},{45,24,66},{-16,-4,24},{-12,0,-18}},
         {{0,0,0},{0,0,0},{0,0,0},{0,0,0}}
     };
     memset(rotation, 0, 4 * 3 * sizeof(int16_t));

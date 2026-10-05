@@ -1,6 +1,6 @@
 # Mario custom combat proof
 
-Status: RUNTIME PROOF ACCEPTED / REGRESSION CHECKS PENDING. Approved by the 2026-10-04 SAP AAA handoff.
+Status: RUNTIME PROOF ACCEPTED / V2 VISUAL TUNING PENDING. Approved by the 2026-10-04 SAP AAA handoff.
 Primary target: MARIO_COMBAT_1H_SLASH (wire family 1) is runtime-VERIFIED 2026-10-04. Stab remains deferred until explicitly selected as the next scope.
 
 ## Source-established ownership (verified-static)
@@ -24,7 +24,7 @@ Torso/arm/forearm display-list identity guards cover normal, metal and LOD varia
 
 ## Implementation and boundaries
 
-`combat_overlay.h` owns a 24-tick (0.8-second at 30 Hz) keyframed slash. Smoothstep segments begin and end with zero offsets. Native request numbers latch short Java attack edges; held requests cannot replay. Requests while the slash is active are consumed without restart or queuing. Disabling mode cancels the overlay.
+`combat_overlay.h` owns the keyframed slash. The runtime-proven V1 proof used 24 ticks (0.8 seconds at 30 Hz) and was reported visually as a slow punch. The V2 tuning profile uses 16 ticks (~0.53 seconds), moves the hit earlier, increases torso/shoulder travel, and gives the right forearm/wrist explicit motion so the attached weapon should read as a sword cut rather than a punch. The V2 angles are still HYPOTHESIS / visual tuning values until runtime-accepted. Smoothstep segments begin and end with zero offsets. Native request numbers latch short Java attack edges; held requests cannot replay. Requests while the slash is active are consumed without restart or queuing. Disabling mode cancels the overlay.
 
 Bridge protocol 3 retains all v2 semantic fields. After A/B/Z, STEP adds mode u8 and request u32 LE. After frame part ids, FRAME adds socket available u32, 16 float32 matrix elements in native Mat4 memory order, animation u32, normalized time float32, and weight float32. Java still accepts v1/v2 and sends their original 20-byte STEP. V3 STEP is 25 bytes. Rebuild library AND sidecar together with `make bootstrap`.
 
@@ -47,7 +47,9 @@ Grip origin from worn-model bounds (85% down Y), initial length and artistic sla
 - First Windows `make bootstrap` attempt failed at the final sidecar link because `dist/sm64_bridge.exe` was locked (`Permission denied`), so that first in-game attempt did not exercise v3 custom combat.
 - Runtime 2026-10-04: equipped revision-830 sword renders attached to Mario's hand in the live Matrix3 client. `VERIFIED`.
 - Runtime 2026-10-04: pressing F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED`.
+- Runtime 2026-10-04: the first slash profile works but reads as a slow punch rather than a convincing sword swing. `VERIFIED` visual feedback; V2 tuning is pending acceptance.
 - Because Java only routes custom weapon combat when protocol v3, a live hand socket, and a rendered weapon model are ready, the successful slash proves the core v3/socket/request integration path is active at runtime.
+- V2 curve harness: 16-tick profile reaches bounded time/weight, animates arm + forearm + hand, returns to zero, preserves no-replay behavior, and cancels cleanly when mode is disabled. `verified-static`.
 - Moving-slash leg continuity, held-F no-replay, freeze/unfreeze, unequip fallback, Ctrl+M/relog cleanup, remote-player isolation, NPC damage/XP integration and sustained stability remain pending unless separately runtime-confirmed.
 
 ## Optional repeatable checks
