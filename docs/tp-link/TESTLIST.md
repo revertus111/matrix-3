@@ -11,11 +11,8 @@ Use the shortest path only. Do not manually extract the whole disc.
    - Supported donor formats: `.iso` / `.gcm`, `.rvz`, `.wia`, `.wbfs`, `.ciso`, `.nfs`, `.gcz`, `.tgc`.
    - `.nkit.iso` is intentionally rejected before dependency setup because the TP decomp does not document NKit v1 as a supported donor input.
 3. Double-click root `Native Builder.bat`.
-4. Confirm all three buttons are visible:
-   - `BUILD + TEST MARIO`
-   - `BUILD OOT`
-   - `PREP + BUILD TP LINK`
-5. Click `PREP + BUILD TP LINK`.
+4. Confirm the donor-build buttons are visible, including `PREP + BUILD TP LINK`.
+5. Click `PREP + BUILD TP LINK` only if the donor workspace must be rebuilt.
 6. Expected image behavior:
    - if exactly one matching TP image is in `native`, the builder finds it automatically and prints its path;
    - otherwise the picker opens in `native`;
@@ -37,7 +34,7 @@ Use the shortest path only. Do not manually extract the whole disc.
 9. Optional regression check: close and click `PREP + BUILD TP LINK` a second time.
 10. Expected: it reuses the prepared local source/image and does not ask the user to locate the disc again.
 
-## Runtime evidence
+## Bundle 1.1 runtime evidence
 
 - First runtime attempt failed before disc selection because Windows resolved `python.exe` to the Microsoft Store alias and returned exit code `9009` while Ninja was missing. Builder recovery was patched.
 - NKit v1 input was correctly rejected early on the next attempt.
@@ -48,12 +45,71 @@ Use the shortest path only. Do not manually extract the whole disc.
 - Build report reported all code/data `100.00% matched`; overall linking was `87.13%` (`2583 / 2608 files`).
 - Builder ended with `TP LINK DONOR BUILD SUCCESS`.
 
+## Bundle 1.2 - Link asset + animation proof
+
+Status: `NEEDS TEST`
+
+This is the first actually-visible TP Link acceptance gate. Do not manually extract archives and do not start Matrix3 client integration until this passes.
+
+### One-click test
+
+1. Pull current `main` once.
+2. Double-click root `Native Builder.bat`.
+3. Confirm the new `PROBE TP LINK` button is visible.
+4. Click `PROBE TP LINK`.
+5. Expected extraction behavior:
+   - reuses the already-verified donor workspace at `%LOCALAPPDATA%\Matrix3\TPDecomp`;
+   - uses decomp-toolkit VFS to extract only the `Kmdl` and `AlAnm` Link resource archives into `%LOCALAPPDATA%\Matrix3\TPLinkProof`;
+   - does not copy Nintendo assets into the Matrix3 repository.
+6. Expected static asset proof:
+   - finds `al.bmd`, `al_head.bmd`, `al_hands.bmd`, `al_face.bmd`;
+   - selects a real WAIT-family idle BCK;
+   - selects a real WALK/DASH-family locomotion BCK;
+   - selects a real CUT-family sword BCK;
+   - validates body right hand `0xE` and right weapon/item joint `0xF`;
+   - rejects any selected BCK that does not contain joint `0xF`.
+7. Expected first-run visual-tool behavior:
+   - clones `snuri00/demake-engine` outside Matrix3 under `%LOCALAPPDATA%\Matrix3\TPLinkTools\demake-engine`;
+   - checks out exact commit `a134ff49cc74585c6b11f881293796e45c973c75`;
+   - creates an isolated Python 3.12+ venv under `%LOCALAPPDATA%\Matrix3\TPLinkTools\venv`;
+   - installs only NumPy + Pillow into that venv when missing.
+8. Expected visual output:
+   - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\idle.gif`
+   - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\walk.gif`
+   - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\sword.gif`
+   - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.gif`
+   - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\visual-proof.json`
+   - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\visual-summary.txt`
+9. The combined `tp-link-proof.gif` should open automatically.
+10. Visually accept only if all of these are true:
+    - TP Link's authentic body/head/hands/face render coherently;
+    - the idle segment animates rather than remaining bind-pose/static;
+    - the walk/run segment visibly animates as locomotion;
+    - the sword segment visibly plays a real TP sword cut;
+    - the red cross/circle labeled `0xF` stays on Link's animated right weapon socket through all three segments.
+
+### Acceptance boundary
+
+PASS means Bundle 1.2 can be promoted to `VERIFIED` and Phase 2 may use this exact proven character/animation representation for the first revision-830 render.
+
+FAIL should be classified before patching:
+
+- **asset/extraction failure:** missing BMD/BCK or wrong archive path;
+- **decoder failure:** BMD/BCK parser/converter rejects authentic TP data;
+- **geometry/material failure:** Link animates but parts/texture/mesh look wrong;
+- **animation failure:** mesh renders but BCK pose/playback is wrong;
+- **socket failure:** Link animates correctly but red `0xF` marker does not stay on the weapon joint.
+
+Do not call Matrix3 in-client rendering verified from this test. Bundle 1.2 is a local donor-model/animation/socket proof only.
+
 ## Regression sanity
 
 - Mario button still launches the Mario builder.
 - OoT button still launches the OoT builder.
+- `PREP + BUILD TP LINK` still launches donor prep/build.
+- `PROBE TP LINK` launches only the local visual proof.
 - Closing Native Builder still works normally.
 
-## Acceptance boundary
+## Current acceptance boundary
 
-Bundle 1.1 is runtime VERIFIED. This proves only the pinned TP source/build foundation. It does **not** prove TP Link rendering, animation, movement, combat or equipment inside Matrix3. Those remain later bundle gates.
+Bundle 1.1 is runtime VERIFIED. Bundle 1.2 is implemented at `verified-static` level and is awaiting the first runtime/visual PASS/FAIL. Movement, combat, equipment and Matrix3 in-client TP Link rendering remain later gates.
