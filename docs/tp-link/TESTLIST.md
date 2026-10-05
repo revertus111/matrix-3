@@ -2,7 +2,7 @@
 
 ## Bundle 1.1 - Donor bootstrap
 
-Status: `NEEDS TEST`
+Status: `VERIFIED`
 
 Use the shortest path only. Do not manually extract the whole disc.
 
@@ -30,23 +30,23 @@ Use the shortest path only. Do not manually extract the whole disc.
    - source is detached at `c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0`;
    - `orig\GZ2E01` is a directory, matching decomp-toolkit's `object_base` contract;
    - the selected image keeps its filename/extension inside `orig\GZ2E01` and is hard-linked when possible, otherwise copied once;
-   - if a previous builder version left `orig\GZ2E01` as a file, the new builder removes only that local workspace link/copy and repairs the layout automatically;
+   - if a previous builder version left `orig\GZ2E01` as a file, the builder removes only that local workspace link/copy and repairs the layout automatically;
    - `configure.py` completes;
    - `ninja` completes;
    - window ends with `TP LINK DONOR BUILD SUCCESS`.
-9. Close and click `PREP + BUILD TP LINK` a second time.
+9. Optional regression check: close and click `PREP + BUILD TP LINK` a second time.
 10. Expected: it reuses the prepared local source/image and does not ask the user to locate the disc again.
 
-## Known runtime evidence
+## Runtime evidence
 
-- First runtime attempt failed before disc selection because Windows resolved `python.exe` to the Microsoft Store alias and returned exit code `9009` while Ninja was missing. Builder recovery is patched.
+- First runtime attempt failed before disc selection because Windows resolved `python.exe` to the Microsoft Store alias and returned exit code `9009` while Ninja was missing. Builder recovery was patched.
 - NKit v1 input was correctly rejected early on the next attempt.
 - A supported `.ciso` was then found automatically; Python, Ninja, donor clone and pinned checkout all succeeded.
-- That attempt failed at `dtk dol split` with `orig/GZ2E01/files/RELS.arc not found` because the builder had incorrectly made `orig/GZ2E01` itself the disc-image file. decomp-toolkit treats the configured `object_base` as a directory and searches for disc images inside it. The builder now preserves the donor filename/extension inside that directory and repairs the old local layout on rerun.
-
-## Failure evidence
-
-If it fails, send the build window log only. Do not start manually extracting folders or copying random TP files.
+- That attempt failed at `dtk dol split` with `orig/GZ2E01/files/RELS.arc not found` because the builder had incorrectly made `orig/GZ2E01` itself the disc-image file. The object-base layout was repaired.
+- Final user rerun completed the full pinned `GZ2E01` donor build.
+- `CHECK config\GZ2E01\build.sha1` reported `758 files OK`.
+- Build report reported all code/data `100.00% matched`; overall linking was `87.13%` (`2583 / 2608 files`).
+- Builder ended with `TP LINK DONOR BUILD SUCCESS`.
 
 ## Regression sanity
 
@@ -54,6 +54,6 @@ If it fails, send the build window log only. Do not start manually extracting fo
 - OoT button still launches the OoT builder.
 - Closing Native Builder still works normally.
 
-## Not yet a runtime acceptance
+## Acceptance boundary
 
-A successful donor build proves only the pinned TP source/build foundation. It does **not** prove TP Link rendering, animation, movement, combat or equipment inside Matrix3. Those remain later bundle gates.
+Bundle 1.1 is runtime VERIFIED. This proves only the pinned TP source/build foundation. It does **not** prove TP Link rendering, animation, movement, combat or equipment inside Matrix3. Those remain later bundle gates.
