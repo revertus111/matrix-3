@@ -74,3 +74,12 @@
 - Known V2 approximation: liboot mirror wrap currently degrades to Matrix repeat; repeat/clamp are mapped. Full N64 alpha-test/decal/cull parity is deferred until the core texture/UV proof is runtime accepted.
 - Native rebuild is mandatory because V1 and V2 deliberately reject protocol mismatches.
 - Status: adult auto-fit is runtime accepted as close enough for the equipment architecture. Material/UV V2 is `verified-static`; native compile and in-game texture/UV orientation remain `UNKNOWN` pending the next runtime session.
+
+2026-10-05 - Fail-open Link local-player replacement staged
+- User approved removing the visible revision-830 local-player body while Link is active.
+- Added strict replacement readiness to `LinkVisualRenderer`: suppression is eligible only after a successful Link Matrix draw, while both the latest liboot frame and latest successful Link render remain fresh (<= 500 ms).
+- Link replacement readiness clears immediately on mode/bridge loss, stale geometry, fit failure, model-build failure, invalid local-player transform, or render exception. Link intentionally has no cached suppression grace period.
+- Reused the already-proven local-player suppression seam instead of editing/deleting the RuneScape appearance. `Player.method10696(...)` still calls `MarioVisualRenderer.shouldSuppressLocalPlayer(...)`; that shared gate now delegates to `LinkVisualRenderer.shouldSuppressLocalPlayer(...)` before evaluating Mario.
+- Remote players remain untouched and the local RuneScape appearance/equipment object is not nulled or rewritten.
+- Updated Zelda PROJECT/TESTLIST so the combined V2 runtime proof now expects Link to render alone, with the 830 body returning immediately on Ctrl+L exit or any fail-open condition.
+- Status: `verified-static`; in-game Link-only visibility and fail-open restoration remain `UNKNOWN` pending runtime acceptance.
