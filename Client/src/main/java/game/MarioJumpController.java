@@ -423,11 +423,8 @@ public final class MarioJumpController {
         }
         boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
-        /*
-         * Shared controller already resolved screen input into Matrix world X/Z.
-         * The existing neutral-camera libsm64 adapter encodes (-X, -Z).
-         * Keep source-game physics native; do not rotate by camera or actor again.
-         */
+        /* Native libsm64 resolves the screen-relative stick against cameraLook;
+         * a neutral camera would lock movement to one heading. */
         float worldMoveX = controls.worldMoveX;
         float worldMoveZ = controls.worldMoveZ;
         requestedWorldMoveX = worldMoveX;
@@ -435,10 +432,10 @@ public final class MarioJumpController {
 
         boolean weaponCombat = MarioWeaponCombat.updateInput(buttonB && !combatAttackWasDown);
         Sm64BridgeSession.setCombatInput(
-                LIBSM64_NEUTRAL_CAMERA_X,
-                LIBSM64_NEUTRAL_CAMERA_Z,
-                -worldMoveX,
-                -worldMoveZ,
+                controls.cameraForward.x,
+                controls.cameraForward.z,
+                controls.moveX,
+                controls.moveY,
                 buttonA,
                 weaponCombat ? false : buttonB,
                 buttonZ,

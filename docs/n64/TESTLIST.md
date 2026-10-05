@@ -170,3 +170,7 @@ Older v1/v2 sidecar: Java connects with original STEP layout, custom combat repo
 - [ ] No floating helmet, frozen pose, stale coverage, or Mario masking remains after exit.
 - [ ] Re-enter Mario mode and semantic metadata/helmet attachment initialize cleanly.
 - [ ] Normal RuneScape appearance/server authority remain unchanged outside Mario mode.
+## Camera-relative movement regression
+
+- [ ] Hold W, rotate the RTS camera 90 degrees, and confirm Link follows screen-up immediately.
+- [ ] Repeat with A/S/D and Mario; no direction may continue along the previous world heading.

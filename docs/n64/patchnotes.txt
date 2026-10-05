@@ -96,3 +96,5 @@
 - This removes stale Construction/minimap heading priority while the RTS camera is orbiting, so held W and A/D recompute against the current view every tick.
 - Mario/Link native movement, free/clipping toggle and action mappings remain unchanged.
 - Runtime acceptance pending after pull/build.
+2026-10-05 - Keep native N64 movement camera-relative
+- Link and Mario now pass the live RTS camera basis together with the shared screen-relative WASD stick. The previous neutral-camera plus pre-rotated world-vector handoff could lock native movement to one heading while the camera orbited.

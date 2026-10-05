@@ -94,17 +94,13 @@ public final class LinkController {
         boolean buttonB = !attackReleaseRequired && controls.primaryAction;
         boolean buttonZ = !targetReleaseRequired && controls.modifierAction;
 
-        /*
-         * verified-static: liboot 25208734 uses host yaw atan2(camX, camZ)
-         * plus Lib_GetControlStickData -> Math_Atan2S(relY, -relX).
-         * Neutral camera and stick (-worldX, +worldZ) therefore target the
-         * shared Matrix world vector without a second camera transform.
-         */
+        /* Native OoT resolves the stick against cameraLook. Keep both live so
+         * orbiting the RTS camera changes W/A/S/D immediately. */
         OotBridgeSession.setInput(
-                0.0F,
-                1.0F,
-                -controls.worldMoveX,
-                controls.worldMoveZ,
+                controls.cameraForward.x,
+                controls.cameraForward.z,
+                controls.moveX,
+                controls.moveY,
                 buttonA,
                 buttonB,
                 buttonZ);
