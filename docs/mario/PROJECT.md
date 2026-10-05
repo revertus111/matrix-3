@@ -1,5 +1,15 @@
 # Mario 64 in Matrix3 / Revision 830
 
+## Current native-axis steering checkpoint - 2026-10-05
+
+- Completing the user's already-AAA-approved movement fix against current main, preserving newer Link combat. Earlier steering commit 67f29afc existed but was not on main; its existence was not proof of delivery.
+- The remaining native fault is sign mismatch, not double rotation: main's Mario live-camera/raw-positive-stick adapter reversed both screen axes; Link's positive horizontal stick reversed left/right.
+- Corrected Mario: shared worldMoveX/worldMoveZ, neutral libsm64 camera (0,+1), native stick (-X,-Z). Corrected Link: native stick (-moveX,+moveY), retaining live camera/locked-target inputForward and native Z. Source contracts verified-static at libsm64 fd118132, liboot 25208734 and OoT 269d0301.
+- ROM-free Java 8-targeted checks: 81,638 steering assertions pass, including decoded native yaw/XZ, 361 camera headings/all key combinations and Z-target basis coverage. Updated tests reproduce original-main Mario W reversal and Link A reversal before the adapter corrections. Free-movement checks pass: 6,017 production-driver assertions and 112 production OoT interpolation samples.
+- Default continuous free movement, shared clipping toggle, camera sampler, native actions, combat and server authority remain unchanged. No native rebuild required. Full Eclipse build/rendered native gameplay acceptance remains pending.
+- Resume here: pull current main, refresh/clean/build/restart the client, then run the native-axis section at the top of docs/n64/TESTLIST.md. Test ordinary directions with Shift/Z released before testing Link's existing target-relative movement.
+- This checkpoint supersedes older Link neutral-camera/input descriptions below. Historical evidence remains preserved; automated equation tests are not runtime acceptance.
+
 ## Steering correction - 2026-10-05
 
 Runtime video showed Link continuing on one fixed world vector while the visible camera orbited. The shared controller now samples the rendered detached Class411 position/look transform before Construction/minimap/yaw fallbacks, so screen-relative W/A/S/D updates with the actual view every client tick. Runtime acceptance remains pending.
@@ -646,4 +656,3 @@ See `docs/n64/TESTLIST.md` for the N64 workspace, custom-combat regressions and 
 ## Next recommended work
 
 Close Bundle 4.3 with one short regression pass if desired: attack while moving, hold F, freeze/unfreeze, unequip/re-equip, Ctrl+M/re-entry, logout/relog, remote-player sanity, nearby-NPC stock-combat authority and sustained stability. Do not add stab during that pass. After 4.3 is clean, return to the preserved Bundle 1.3 steering/body-pop gates, then Phase 3 terrain collision. The accepted custom-overlay/socket architecture can later support another Mario combat family or another imported character without replacing libsm64 locomotion.
-

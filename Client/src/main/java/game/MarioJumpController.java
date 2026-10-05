@@ -423,8 +423,10 @@ public final class MarioJumpController {
         }
         boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
-        /* Native libsm64 resolves the screen-relative stick against cameraLook;
-         * a neutral camera would lock movement to one heading. */
+        /* verified-static, libsm64 fd118132: ControlState already resolves the
+         * live Matrix camera into world X/Z. With camera (0,+1), stick (-X,-Z)
+         * yields native intendedYaw toward that vector. Raw (+moveX,+moveY)
+         * with a live camera reverses both screen axes in libsm64. */
         float worldMoveX = controls.worldMoveX;
         float worldMoveZ = controls.worldMoveZ;
         requestedWorldMoveX = worldMoveX;
@@ -432,10 +434,10 @@ public final class MarioJumpController {
 
         boolean weaponCombat = MarioWeaponCombat.updateInput(buttonB && !combatAttackWasDown);
         Sm64BridgeSession.setCombatInput(
-                controls.cameraForward.x,
-                controls.cameraForward.z,
-                controls.moveX,
-                controls.moveY,
+                LIBSM64_NEUTRAL_CAMERA_X,
+                LIBSM64_NEUTRAL_CAMERA_Z,
+                -worldMoveX,
+                -worldMoveZ,
                 buttonA,
                 weaponCombat ? false : buttonB,
                 buttonZ,

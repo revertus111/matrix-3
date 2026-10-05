@@ -62,6 +62,11 @@ class OotBridgeSession {
     static void setInput(float a,float b,float c,float d,boolean e,boolean f,boolean g){}
 }
 class LinkCharacterFit { static final class Profile {float scale=3;} static Profile resolve(Player p,OotBridgeSession.LinkFrame f){return new Profile();} }
+class LinkCombatController {
+    static void reset(){}
+    static AlternateCharacterController.PlanarDirection update(Player p,boolean b,boolean z,
+            AlternateCharacterController.PlanarDirection forward){return forward;}
+}
 class ConstructionBuildCamera { static float[] getMovementForward(){return new float[]{0,1};} static boolean isRequested(){return false;} }
 class Class423_Sub2 { Class240 method5159(byte b){return new Class240();} }
 class Class658_Sub2 { Class240 method7736(int n){return new Class240();} }

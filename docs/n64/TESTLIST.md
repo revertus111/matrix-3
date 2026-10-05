@@ -1,5 +1,16 @@
 # N64 Client Console Runtime Test List
 
+## Native-axis steering correction - 2026-10-05
+
+Status: `verified-static`; full client/native gameplay acceptance pending. Mario now sends neutral-camera world input (-X,-Z); Link negates only horizontal stick input and preserves its live camera/Z-target basis. Free movement and the clipping toggle are unchanged.
+
+1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build the client, fully restart and login. No native rebuild is required for this input-only patch.
+2. [ ] Keep `RuneScape clipping (tile-based)` OFF and release Shift/Z. Ctrl+M: separately test W/S/A/D at north/east/south/west camera headings. Travel must be screen-up/down/left/right regardless of initial character facing; allow native turning/acceleration.
+3. [ ] Ctrl+L: repeat the same four directions and camera headings. Specifically verify A goes left and D goes right; W/S must retain their correct directions.
+4. [ ] For both characters, hold W and orbit the rendered camera in both directions. Travel must follow the visible view, not keep one fixed world heading. Test all diagonals and opposing keys.
+5. [ ] In Link, hold Shift/Z on an NPC and repeat A/D plus W/S. Target-relative input and native Z must remain intact. Release Shift/Z and verify ordinary camera-relative directions immediately resume.
+6. [ ] Recheck sub-tile stops/long free travel, clipping ON/OFF, and native actions using the sections below. Do not mark gameplay accepted solely from the ROM-free checks.
+
 ## OoT Link Z-targeting / manual melee - 2026-10-05
 
 Status: `verified-static`; runtime acceptance pending. Exact native sword-contact frame is a `HYPOTHESIS` until visually tested.
@@ -43,11 +54,11 @@ Automated: `python3 tests/n64/test_free_movement.py` with JDK on PATH (or JAVA/J
 
 Status: implemented / verified-static; runtime acceptance pending. This steering patch does not fix the separately tracked tile-handoff hitching.
 
-Automated check: `python3 tests/n64/test_shared_movement.py` with a JDK available (`JAVA`/`JAVAC` overrides supported). Compiles the complete shared controller and extracts the actual Construction/native-input methods into dependency stubs. 63,540 assertions pass for 361 headings and all 16 key combinations. This does not exercise the complete client, native simulation, rendered camera or server.
+Automated check: `python3 tests/n64/test_shared_movement.py` with a JDK available (`JAVA`/`JAVAC` overrides supported). Compiles the complete shared controller and extracts the actual Construction/native-input methods into dependency stubs. 81,638 checks pass, including 361 camera headings with all 16 key combinations, native-equation decoding to screen axes, and 12 Z-target headings with all key combinations. The updated test rejects original-main Mario W and Link A input signs. This does not exercise the complete client, native simulation, rendered camera or server.
 
 One runtime session; repeat for both Mario and Link:
 1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build, then launch/login. No native rebuild for this patch.
-2. [ ] In RTS camera, face north/east/south/west and an intermediate heading. W/S/A/D must request up/down/left/right on screen regardless of the character's initial facing. Link still uses eight-direction Matrix tile walking.
+2. [ ] With clipping OFF, in RTS camera face north/east/south/west and an intermediate heading. W/S/A/D must request up/down/left/right on screen regardless of the character's initial facing. Both characters use continuous native X/Z by default, not Matrix tile walking.
 3. [ ] Hold W and rotate the camera through a full circle in both directions. Direction follows the view without a south-facing reversal; allow native turn/acceleration behavior.
 4. [ ] Test W+D, W+A, S+D, S+A, then W+S and A+D. Diagonal input has unit magnitude; opposing keys cancel their axis.
 5. [ ] Repeat cardinal directions in Construction Free and ordinary RuneScape camera. Rotate while moving; verify both travel and native facing/animation agree.
@@ -55,10 +66,12 @@ One runtime session; repeat for both Mario and Link:
 7. [ ] Check Space/F/Shift actions, collision blocking and release/re-entry. Record native lock-on/action-specific steering separately; this patch preserves source-game action rules.
 
 ### Contract for future character drivers
-Use `ControlState.worldMoveX/worldMoveZ` for movement intent. Do not rotate by character facing or reapply Matrix camera yaw. Only the native boundary converts world axes to that engine's input convention.
-- Mario: neutral camera (0,+1), stick (-worldX,-worldZ), existing verified-static libsm64 input contract.
-- Link: neutral camera (0,+1), stick (-worldX,+worldZ). Pinned liboot 25208734 `src/liboot.c` scales stick by +67; `z_player.c` adds camera yaw to the control-stick angle; `z_lib.c` computes `Math_Atan2S(relY,-relX)`; `sys_math_atan.c` uses arguments (x,y), unlike C atan2(y,x). verified-static; source-game lock-on can still alter native camera yaw.
-- Camera basis: Construction live position -> look point, matching its RTS pan path; other existing Matrix camera fallbacks retained.
+
+Use shared `ControlState` for screen input, camera basis and `worldMoveX/worldMoveZ` movement intent. Never rotate by character facing. At the native boundary, encode either world intent with a neutral native camera or local input with the matching native camera basis; verify that engine's actual yaw/sign equations rather than assuming axes match.
+
+- Mario: neutral camera (0,+1), stick (-worldX,-worldZ), verified-static libsm64 fd118132 input contract.
+- Link: live camera/locked-target `inputForward`, stick (-moveX,+moveY). Pinned liboot 25208734 `src/liboot.c` scales stick by +67; `z_player.c` adds camera yaw to the control-stick angle; `z_lib.c` computes `Math_Atan2S(relY,-relX)`; `sys_math_atan.c` uses arguments (x,y), unlike C atan2(y,x). This yields the shared world intent when freely moving and preserves the existing target-relative basis with Z held. verified-static; native lock-on/action behavior still needs gameplay acceptance.
+- Camera basis: rendered detached camera transform first, then Construction live position -> look point matching its RTS pan path; existing Matrix camera fallbacks retained.
 
 
 ## Temporary vanilla RS3 collision handoff

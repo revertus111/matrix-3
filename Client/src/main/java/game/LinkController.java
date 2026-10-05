@@ -109,10 +109,14 @@ public final class LinkController {
             inputForward = controls.cameraForward;
         }
 
+        /* verified-static, liboot 25208734 / OoT 269d0301:
+         * Lib_GetControlStickData uses Math_Atan2S(relY,-relX). Negate the
+         * screen-right stick so its yaw follows right=(forwardZ,-forwardX).
+         * Keep the live camera/locked-target basis and native Z action intact. */
         OotBridgeSession.setInput(
                 inputForward.x,
                 inputForward.z,
-                controls.moveX,
+                -controls.moveX,
                 controls.moveY,
                 buttonA,
                 buttonB,

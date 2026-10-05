@@ -1,3 +1,11 @@
+2026-10-05 - Native-axis steering correction / current-main delivery
+- Corrected Mario's native adapter to camera (0,+1), stick (-worldMoveX,-worldMoveZ). Pinned libsm64 fd118132 equations show the previous live-camera/raw-positive-stick input reversed both screen axes.
+- Corrected Link's horizontal native stick to -moveX while retaining +moveY, the live camera/locked-target inputForward and native Z action. Pinned liboot 25208734 / OoT 269d0301 equations show the previous positive horizontal stick reversed left/right.
+- Shared keyboard/camera ownership, default continuous free movement, optional tile clipping, Link combat and server authority are unchanged. This is a native input-sign correction, not a double-rotation diagnosis.
+- Extended production-method tests to decode native yaw/XZ equations: original main fails Mario W; fixing only Mario exposes reversed Link A. Both adapters corrected: 81,638 checks pass across full orbit, all key combinations, screen axes, Z-target basis and camera fallback.
+- Java 8-targeted free-movement checks also pass: 6,017 production-driver assertions and 112 OoT interpolation samples. Full Eclipse build/native gameplay acceptance remains pending; no native rebuild required.
+- Earlier steering commit 67f29afc exists as a Git object but was not on main. This patch is based on current main and preserves the newer Link combat implementation.
+
 2026-10-05 - OoT Link Z-targeting / manual melee contact bridge
 - Added Matrix-owned Shift/Z NPC lock with held-target tracking, target-relative liboot steering, and forward-target fallback when Z is not held.
 - F/B now arms one server intent only after the native OoT action/animation changes and reaches the configurable contact frame (`matrix3.oot.combatContactFrame`, default 2.0).
