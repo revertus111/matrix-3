@@ -10,7 +10,7 @@ package game;
  */
 final class LinkCombatController {
 
-    private static final int LINK_MANUAL_MELEE_SUBTYPE = 1;
+    private static final int LINK_MANUAL_MELEE_EXAMINE_FLAG = 2;
     private static final float Z_TARGET_MAX_DISTANCE = 12.0F * 512.0F;
     private static final float Z_TARGET_DROP_DISTANCE = 14.0F * 512.0F;
     private static final float MELEE_FALLBACK_DISTANCE = 3.0F * 512.0F;
@@ -178,22 +178,23 @@ final class LinkCombatController {
     }
 
     /**
-     * Uses Matrix3's previously-unused variable packet 26 as a custom-action
-     * envelope. Subtype 1 is Link manual melee. Stock ATTACK_NPC_PACKET remains
-     * untouched so this cannot accidentally start the repeating RS combat loop.
+     * Reuses the stock three-byte NPC-examine envelope with reserved run-flag
+     * value 2. Normal examine packets use only 0/1, so the server can divert the
+     * reserved value into Link's one-shot melee bridge without changing the
+     * normal ATTACK_NPC packet or starting RuneScape auto-combat.
      */
     private static boolean sendManualMeleeIntent(int targetIndex) {
         if (targetIndex < 0 || client.aClass195_8589 == null) {
             return false;
         }
         Class572_Sub25 packet = Class378.sendOutPacket(
-                OutgoingPacket.aClass312_3672,
+                OutgoingPacket.aClass312_3683,
                 client.aClass195_8589.aClass650_2340,
                 -923633357);
         if (packet == null || packet.aRsByteBuffer == null) {
             return false;
         }
-        packet.aRsByteBuffer.writeByteC(LINK_MANUAL_MELEE_SUBTYPE, (byte) -8);
+        packet.aRsByteBuffer.writeByteC(LINK_MANUAL_MELEE_EXAMINE_FLAG, (byte) -8);
         packet.aRsByteBuffer.writeShort128(targetIndex, -16711936);
         client.aClass195_8589.method2929(packet, (byte) -28);
         return true;
