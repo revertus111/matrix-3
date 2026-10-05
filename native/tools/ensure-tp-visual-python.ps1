@@ -78,10 +78,10 @@ if (-not (Test-NativePython -PythonPath $pythonExe)) {
     }
 
     Write-Host "Installing private CPython $pythonVersion under TPLinkTools..." -ForegroundColor Cyan
-    & $installer @(
+    $installerArgs = @(
         '/quiet',
         'InstallAllUsers=0',
-        "TargetDir=$pythonRoot",
+        "TargetDir=`"$pythonRoot`"",
         'Include_launcher=0',
         'Include_pip=1',
         'Include_test=0',
@@ -90,8 +90,13 @@ if (-not (Test-NativePython -PythonPath $pythonExe)) {
         'PrependPath=0',
         'Shortcuts=0'
     )
-    if ($LASTEXITCODE -ne 0) {
-        throw "Private CPython installer exited with code $LASTEXITCODE."
+    $installerProcess = Start-Process -FilePath $installer -ArgumentList $installerArgs -Wait -PassThru
+    $installerCode = $installerProcess.ExitCode
+    if ($installerCode -ne 0 -and $installerCode -ne 3010) {
+        throw "Private CPython installer exited with code $installerCode."
+    }
+    if ($installerCode -eq 3010) {
+        Write-Host 'Private CPython installer requested a restart, but setup will continue only if the interpreter is immediately usable.' -ForegroundColor Yellow
     }
 }
 
