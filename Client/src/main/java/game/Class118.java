@@ -46,8 +46,10 @@ public class Class118 {
 	}
 
 	public static void method2154(String string, int i) {
-		// verified-static: BossLabs type-99 replies are tool protocol messages,
-		// not normal client-console output.
+		// verified-static: Matrix3 type-99 replies may be hidden developer
+		// protocol messages rather than normal client-console output.
+		if (MarioRs3CollisionMap.handleServerCommand(string))
+			return;
 		if (game.console.bosslabs.BossLabsClientBridge.handleServerCommand(string))
 			return;
 		if (LinkableInt.aStringArray9257 == null)
