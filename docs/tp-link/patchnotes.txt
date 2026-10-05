@@ -90,3 +90,10 @@
 - `ensure-tp-visual-python.ps1` now launches the installer with `Start-Process -Wait -PassThru`, reads the process object's real `ExitCode`, and does not continue until the installer process has actually completed.
 - Exit code `0` is accepted as success; `3010` is tolerated only provisionally and the bootstrap still requires `%LOCALAPPDATA%\Matrix3\TPLinkTools\python312\python.exe` to pass the native Windows CPython validation immediately afterward.
 - Status: installer process handling is verified-static; private Python/venv and visible GIF rendering remain NEEDS TEST.
+
+2026-10-05 - Reuse verified MSYS2 visual Python with binary packages
+- Eighth Bundle 1.2 runtime probe showed the signed private CPython installer could return an accepted status while the requested `%LOCALAPPDATA%\Matrix3\TPLinkTools\python312\python.exe` remained unusable/missing. The remaining blocker was Windows installer/toolchain behavior, not Twilight Princess data or the renderer.
+- Abandoned the private Windows CPython path for the active visual proof. `ensure-tp-visual-python.ps1` now reuses the Matrix3 MSYS2/UCRT64 Python already proven by the successful TP donor build.
+- Missing visual dependencies are installed through MSYS2 `pacman` as prebuilt `mingw-w64-ucrt-x86_64-python-numpy` and `mingw-w64-ucrt-x86_64-python-pillow` packages; no `pip` source build, `winget`, registry discovery, private Python installer, or visual venv is required.
+- `probe-tp-link.ps1` now prefers the verified MSYS2 interpreter as soon as NumPy/Pillow imports pass, before any dormant native-Windows-Python fallback logic.
+- Status: MSYS2 visual dependency bootstrap is verified-static; authentic model/BCK/socket extraction remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
