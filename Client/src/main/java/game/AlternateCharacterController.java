@@ -201,19 +201,16 @@ public final class AlternateCharacterController {
 
     /**
      * Resolve the ground-plane basis from the camera that owns the view.
-     * Construction exposes the same live position/look basis used by RTS pan;
-     * never reconstruct this direction from minimap/display yaw.
+     * Prefer the live rendered detached position/look transform used by RTS orbit;
+     * Construction's helper and vanilla camera geometry remain fallbacks.
      */
     static PlanarDirection getCameraForward() {
-        float[] constructionForward = ConstructionBuildCamera.getMovementForward();
-        if (constructionForward != null) {
-            PlanarDirection direction = normalize(
-                    constructionForward[0], constructionForward[1]);
-            if (direction != null) {
-                return direction;
-            }
-        }
-
+        /*
+         * The detached Class411 transform is the rendered camera. Read it first
+         * every tick so mouse/Q/E orbit changes reach WASD immediately. The
+         * Construction helper remains a fallback for frames where the camera
+         * owner is being created or torn down.
+         */
         Class411_Sub1 detached = null;
         try {
             if (ConstructionBuildCamera.isRequested()
@@ -233,6 +230,19 @@ public final class AlternateCharacterController {
         PlanarDirection direction = detached == null ? null : getDetachedCameraForward(detached);
         if (direction != null) {
             return direction;
+        }
+
+        try {
+            float[] constructionForward = ConstructionBuildCamera.getMovementForward();
+            if (constructionForward != null) {
+                PlanarDirection construction = normalize(
+                        constructionForward[0], constructionForward[1]);
+                if (construction != null) {
+                    return construction;
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // Continue to the vanilla resolved-camera fallback.
         }
 
         try {

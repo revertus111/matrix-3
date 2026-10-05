@@ -90,3 +90,9 @@
 - Mario uses shared world intent with neutral libsm64 stick (-X,-Z); Link uses it for vanilla walking and neutral liboot stick (-X,+Z), correcting native horizontal handedness.
 - Preserved keyboard ownership, native actions/physics, collision handoff and bridge protocols; no native rebuild required.
 - Added ROM-free production-method full-orbit regression test: 63,540 assertions pass, Java 8 API/language target. Full client build and in-game acceptance remain pending.
+
+2026-10-05 - Live camera basis steering correction
+- Alternate-character WASD now samples the rendered detached Class411 position/look transform before helper/yaw fallbacks.
+- This removes stale Construction/minimap heading priority while the RTS camera is orbiting, so held W and A/D recompute against the current view every tick.
+- Mario/Link native movement, free/clipping toggle and action mappings remain unchanged.
+- Runtime acceptance pending after pull/build.

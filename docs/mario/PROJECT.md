@@ -1,5 +1,9 @@
 # Mario 64 in Matrix3 / Revision 830
 
+## Steering correction - 2026-10-05
+
+Runtime video showed Link continuing on one fixed world vector while the visible camera orbited. The shared controller now samples the rendered detached Class411 position/look transform before Construction/minimap/yaw fallbacks, so screen-relative W/A/S/D updates with the actual view every client tick. Runtime acceptance remains pending.
+
 ## Active priority - 2026-10-05 restore free movement and clipping toggle
 
 - User runtime report rejects tile-bound movement; AAA approved restoring the pre-clipping movement feel and a small shared clipping toggle for Mario and Link.

@@ -1,5 +1,9 @@
 # N64 Client Console Runtime Test List
 
+## Live camera-relative steering correction - 2026-10-05
+
+The controller now reads the rendered detached camera transform first. Verify held W while orbiting with mouse/Q/E; the travel vector must curve with the visible camera each tick.
+
 ## Default free movement / optional RuneScape clipping - 2026-10-05
 
 Current priority: restore continuous native X/Z for Mario AND Link. The earlier tile handoff is runtime-rejected for free-movement feel; it remains available only through the optional checkbox.
