@@ -97,3 +97,10 @@
 - Missing visual dependencies are installed through MSYS2 `pacman` as prebuilt `mingw-w64-ucrt-x86_64-python-numpy` and `mingw-w64-ucrt-x86_64-python-pillow` packages; no `pip` source build, `winget`, registry discovery, private Python installer, or visual venv is required.
 - `probe-tp-link.ps1` now prefers the verified MSYS2 interpreter as soon as NumPy/Pillow imports pass, before any dormant native-Windows-Python fallback logic.
 - Status: MSYS2 visual dependency bootstrap is verified-static; authentic model/BCK/socket extraction remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
+
+2026-10-05 - Correct false visual PASS and add a real socket attachment proof
+- The next Bundle 1.2 run finally completed the full MSYS2 renderer path and generated all GIF/manifest outputs. The user-visible GIF was not accepted: it showed animated Link but no sword model, while the launcher mislabeled successful artifact generation as a visual `PASS`.
+- `tp-link-visual-proof.py` now loads the authentic extracted `al_swb.bmd` rigid one-joint weapon model and attaches it directly to body joint `0xF weaponR` through the same pinned converter attachment path intended to prove future RuneScape weapon replacement.
+- The proof now renders both socket references simultaneously: cyan `0xE handR` and red `0xF weaponR`, making a hand-vs-item-joint mismatch visible instead of hiding it behind one floating marker.
+- Generated manifests/summaries now use `NEEDS_VISUAL_ACCEPTANCE`; `probe-tp-link.cmd` reports `TP LINK VISUAL PROOF GENERATED` rather than PASS. Exit code 0 proves only that artifacts were generated successfully.
+- Status: extraction, MSYS2 dependencies and renderer execution are runtime VERIFIED. Corrected sword/socket visual acceptance remains NEEDS TEST.
