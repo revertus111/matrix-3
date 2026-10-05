@@ -35,8 +35,11 @@ public final class LinkVisualRenderer {
     }
 
     static void render(Class523 scene, Class106 renderer) {
-        if (!PlayerControllerMode.isLinkMode() || scene == null || renderer == null
-                || !OotBridgeSession.isReady()) {
+        if (!PlayerControllerMode.isLinkMode()) {
+            resetPresentationCache();
+            return;
+        }
+        if (scene == null || renderer == null || !OotBridgeSession.isReady()) {
             return;
         }
 
@@ -94,6 +97,15 @@ public final class LinkVisualRenderer {
                         + ex.getClass().getSimpleName() + ": " + ex.getMessage());
             }
         }
+    }
+
+    private static void resetPresentationCache() {
+        cachedRenderer = null;
+        cachedSequence = -1L;
+        cachedModel = null;
+        lastRenderedCycle = Integer.MIN_VALUE;
+        lastLoggedSequence = -1L;
+        lastFailedSequence = -1L;
     }
 
     private static boolean isUsable(OotBridgeSession.LinkFrame frame) {
