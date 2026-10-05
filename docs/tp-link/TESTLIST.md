@@ -71,6 +71,7 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
 7. Expected first-run visual-tool behavior:
    - `probe-tp-link.cmd` first prepares a private native Windows CPython 3.12.10 under `%LOCALAPPDATA%\Matrix3\TPLinkTools\python312` when missing;
    - the private installer is downloaded directly from `python.org`, its Authenticode signature must validate, and it does not modify PATH or install a Python launcher;
+   - installer execution is awaited explicitly and its real process exit code is checked; `0` is success and `3010` is tolerated only if the private interpreter is immediately usable afterward;
    - this visual-tool Python is intentionally independent from MSYS2, Windows Store aliases, `winget`, registry discovery, and any system Python install;
    - clones `snuri00/demake-engine` outside Matrix3 under `%LOCALAPPDATA%\Matrix3\TPLinkTools\demake-engine`;
    - checks out exact commit `a134ff49cc74585c6b11f881293796e45c973c75`;
