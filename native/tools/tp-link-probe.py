@@ -1,0 +1,271 @@
+import argparse
+import json
+import shutil
+import struct
+from pathlib import Path
+
+
+def be_u16(data, off):
+    if off < 0 or off + 2 > len(data):
+        raise ValueError(f"read u16 out of range at 0x{off:X}")
+    return struct.unpack_from(">H", data, off)[0]
+
+
+def be_u32(data, off):
+    if off < 0 or off + 4 > len(data):
+        raise ValueError(f"read u32 out of range at 0x{off:X}")
+    return struct.unpack_from(">I", data, off)[0]
+
+
+def c_string(data, off):
+    if off < 0 or off >= len(data):
+        raise ValueError(f"string offset out of range at 0x{off:X}")
+    end = data.find(b"\x00", off)
+    if end < 0:
+        raise ValueError(f"unterminated string at 0x{off:X}")
+    return data[off:end].decode("shift_jis", errors="replace")
+
+
+def find_section(data, tag):
+    if len(tag) != 4:
+        raise ValueError("section tag must be 4 bytes")
+    pos = 0x20
+    while pos + 8 <= len(data):
+        section_tag = data[pos : pos + 4]
+        size = be_u32(data, pos + 4)
+        if section_tag == tag:
+            if size < 8 or pos + size > len(data):
+                raise ValueError(f"{tag.decode()} section has invalid size {size}")
+            return pos, size
+        if size < 8:
+            break
+        pos += size
+    return None
+
+
+def parse_name_table(data, table_off):
+    count = be_u16(data, table_off)
+    entries = table_off + 4
+    names = []
+    for i in range(count):
+        entry = entries + i * 4
+        string_rel = be_u16(data, entry + 2)
+        names.append(c_string(data, table_off + string_rel))
+    return names
+
+
+def parse_bmd(path):
+    data = path.read_bytes()
+    magic = data[:8].decode("ascii", errors="replace")
+    if magic not in ("J3D1bmd3", "J3D2bmd3"):
+        raise ValueError(f"unexpected BMD magic {magic!r}")
+
+    section = find_section(data, b"JNT1")
+    if not section:
+        raise ValueError("JNT1 section not found")
+
+    base, size = section
+    joint_count = be_u16(data, base + 8)
+    names_rel = be_u32(data, base + 0x14)
+    names = parse_name_table(data, base + names_rel)
+    if len(names) != joint_count:
+        raise ValueError(f"JNT1 name count {len(names)} != joint count {joint_count}")
+
+    return {
+        "file": str(path),
+        "magic": magic,
+        "bytes": len(data),
+        "jnt1_bytes": size,
+        "joint_count": joint_count,
+        "joint_names": names,
+    }
+
+
+def parse_bck(path):
+    data = path.read_bytes()
+    magic = data[:8].decode("ascii", errors="replace")
+    if magic not in ("J3D1bck1", "J3D2bck1"):
+        raise ValueError(f"unexpected BCK magic {magic!r}")
+
+    section = find_section(data, b"ANK1")
+    if not section:
+        raise ValueError("ANK1 section not found")
+
+    base, size = section
+    return {
+        "file": str(path),
+        "magic": magic,
+        "bytes": len(data),
+        "ank1_bytes": size,
+        "loop_mode": data[base + 8],
+        "rotation_decimal_shift": data[base + 9],
+        "duration_frames": be_u16(data, base + 0x0A),
+        "joint_count": be_u16(data, base + 0x0C),
+    }
+
+
+def normalize_name(name):
+    return "".join(ch.lower() for ch in name if ch.isalnum())
+
+
+def find_named_file(root, wanted):
+    wanted_lower = wanted.lower()
+    matches = [p for p in root.rglob("*") if p.is_file() and p.name.lower() == wanted_lower]
+    if not matches:
+        raise FileNotFoundError(f"{wanted} was not found under {root}")
+    return sorted(matches, key=lambda p: str(p).lower())[0]
+
+
+def find_bck_candidates(root):
+    return sorted(
+        [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() == ".bck"],
+        key=lambda p: str(p).lower(),
+    )
+
+
+def choose_idle(candidates):
+    exact = ["wait.bck", "waita.bck", "waitb.bck", "waitatos.bck"]
+    by_name = {p.name.lower(): p for p in candidates}
+    for name in exact:
+        if name in by_name:
+            return by_name[name]
+    for path in candidates:
+        if path.stem.lower().startswith("wait"):
+            return path
+    return None
+
+
+def choose_sword(candidates):
+    exact = ["cutl.bck", "cutr.bck", "cutu.bck", "cutt.bck", "cuta.bck"]
+    by_name = {p.name.lower(): p for p in candidates}
+    for name in exact:
+        if name in by_name:
+            return by_name[name]
+    for path in candidates:
+        if path.stem.lower().startswith("cut"):
+            return path
+    return None
+
+
+def copy_named(src, dest_dir, out_name=None):
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / (out_name or src.name)
+    shutil.copy2(src, dest)
+    return dest
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Probe extracted Twilight Princess Link J3D assets.")
+    parser.add_argument("--kmdl", required=True, type=Path)
+    parser.add_argument("--alanm", required=True, type=Path)
+    parser.add_argument("--out", required=True, type=Path)
+    args = parser.parse_args()
+
+    kmdl = args.kmdl.resolve()
+    alanm = args.alanm.resolve()
+    out = args.out.resolve()
+    selected = out / "selected"
+    selected.mkdir(parents=True, exist_ok=True)
+
+    model_files = {}
+    for name in ("al.bmd", "al_head.bmd", "al_hands.bmd", "al_face.bmd"):
+        path = find_named_file(kmdl, name)
+        model_files[name] = path
+        copy_named(path, selected)
+
+    model = parse_bmd(model_files["al.bmd"])
+    if model["joint_count"] <= 0x0F:
+        raise RuntimeError(
+            f"al.bmd has only {model['joint_count']} joints; expected right weapon joint 0xF"
+        )
+
+    joint_0e = model["joint_names"][0x0E]
+    joint_0f = model["joint_names"][0x0F]
+    if "handr" not in normalize_name(joint_0e):
+        raise RuntimeError(f"joint 0xE is {joint_0e!r}, expected a right-hand joint")
+    if "weaponr" not in normalize_name(joint_0f):
+        raise RuntimeError(f"joint 0xF is {joint_0f!r}, expected a right-weapon/item joint")
+
+    bcks = find_bck_candidates(alanm)
+    if not bcks:
+        raise FileNotFoundError(f"no .bck files found under {alanm}")
+
+    idle_path = choose_idle(bcks)
+    sword_path = choose_sword(bcks)
+    if not idle_path:
+        raise FileNotFoundError("no WAIT-family BCK animation found")
+    if not sword_path:
+        raise FileNotFoundError("no CUT-family BCK animation found")
+
+    idle = parse_bck(idle_path)
+    sword = parse_bck(sword_path)
+    if idle["joint_count"] <= 0x0F:
+        raise RuntimeError(
+            f"idle BCK has only {idle['joint_count']} joints; it does not reach joint 0xF"
+        )
+    if sword["joint_count"] <= 0x0F:
+        raise RuntimeError(
+            f"sword BCK has only {sword['joint_count']} joints; it does not reach joint 0xF"
+        )
+
+    idle_copy = copy_named(idle_path, selected, f"idle_{idle_path.name}")
+    sword_copy = copy_named(sword_path, selected, f"sword_{sword_path.name}")
+
+    manifest = {
+        "status": "PASS",
+        "model": model,
+        "socket_contract": {
+            "right_hand_index": 0x0E,
+            "right_hand_name": joint_0e,
+            "right_weapon_index": 0x0F,
+            "right_weapon_name": joint_0f,
+        },
+        "animations": {
+            "idle": idle,
+            "sword": sword,
+            "total_bck_files": len(bcks),
+        },
+        "selected_files": {
+            "body": str(selected / "al.bmd"),
+            "head": str(selected / "al_head.bmd"),
+            "hands": str(selected / "al_hands.bmd"),
+            "face": str(selected / "al_face.bmd"),
+            "idle": str(idle_copy),
+            "sword": str(sword_copy),
+        },
+    }
+
+    manifest_path = out / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    summary = [
+        "Matrix3 Twilight Princess Link asset proof: PASS",
+        "",
+        f"Body model: {model_files['al.bmd']}",
+        f"Joints: {model['joint_count']}",
+        f"Right hand 0xE: {joint_0e}",
+        f"Right weapon 0xF: {joint_0f}",
+        f"Idle clip: {idle_path.name} ({idle['duration_frames']} frames, {idle['joint_count']} joints)",
+        f"Sword clip: {sword_path.name} ({sword['duration_frames']} frames, {sword['joint_count']} joints)",
+        f"BCK clips discovered: {len(bcks)}",
+        "",
+        f"Selected proof files: {selected}",
+        f"Manifest: {manifest_path}",
+        "",
+        "This proves authentic TP Link model/skeleton + real BCK animation assets + weapon socket identity.",
+        "It does not yet prove rendering/playback inside Matrix3.",
+    ]
+    (out / "summary.txt").write_text("\n".join(summary) + "\n", encoding="utf-8")
+
+    print("TP LINK ASSET PROOF PASS")
+    print(f"Body: {model_files['al.bmd']}")
+    print(f"Joints: {model['joint_count']}")
+    print(f"Right hand 0xE: {joint_0e}")
+    print(f"Right weapon 0xF: {joint_0f}")
+    print(f"Idle: {idle_path.name} - {idle['duration_frames']} frames")
+    print(f"Sword: {sword_path.name} - {sword['duration_frames']} frames")
+    print(f"Manifest: {manifest_path}")
+
+
+if __name__ == "__main__":
+    main()
