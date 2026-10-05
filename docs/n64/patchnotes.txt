@@ -72,3 +72,7 @@
 - Confirmed custom weapon mode already suppresses native libsm64 B while active, so the bad motion was the custom pose itself rather than the stock punch leaking through.
 - Zeroed torso offsets and reduced the slash to one restrained shoulder sweep with modest forearm bend and wrist roll; duration is 15 ticks (~0.50 seconds).
 - Existing v3 protocol, right-hand socket, weapon attachment and combat authority are unchanged.
+
+2026-10-05 - Mario V4 combat-test repair
+- Fixed the ROM-free slash test after V4 intentionally zeroed shoulder X; the old frame-12 X-axis assertion falsely failed a successful build.
+- Test now verifies neutral torso, real right-limb/shoulder motion, bounded timing/weight, endpoint reset and request lifecycle without hard-coding the retired V3 axis mix.
