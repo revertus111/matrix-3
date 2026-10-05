@@ -19,14 +19,13 @@ public final class MarioJumpController {
     private static final float MOVE_DIRECTION_DEADZONE = 0.20F;
 
     /*
-     * Temporary hybrid collision mode. The RuneScape player/server remains the
-     * authority for legal tile crossings, while native Mario deltas are allowed
-     * to move continuously inside a bounded envelope around that authoritative
-     * position. 256 Matrix units is half a tile; stay just inside it so a blocked
-     * crossing cannot visually carry Mario through the neighboring tile.
+     * Temporary hybrid collision mode. RuneScape decides whether the next tile is
+     * legal, but native Mario remains continuous inside the accepted corridor.
+     * Exactly half a tile is the legal edge: without an accepted adjacent tile,
+     * Mario may reach that boundary but never cross it visually.
      */
-    private static final float COLLISION_PRESENTATION_LEAD = 240.0F;
-    private static final float WALK_REQUEST_LEAD = 192.0F;
+    private static final float COLLISION_PRESENTATION_LEAD = 256.0F;
+    private static final float WALK_REQUEST_LEAD = 128.0F;
 
     /*
      * Keep libsm64's camera basis fixed and encode Matrix's already-resolved
@@ -46,6 +45,7 @@ public final class MarioJumpController {
     private static boolean baselineValid;
     private static boolean appliedPositionValid;
     private static boolean nativePresentationValid;
+    private static boolean pendingAuthorityTileValid;
 
     private static float groundX;
     private static float groundY;
@@ -58,6 +58,10 @@ public final class MarioJumpController {
     private static float lastNativePresentationZ;
     private static float requestedWorldMoveX;
     private static float requestedWorldMoveZ;
+    private static int collisionTileX = Integer.MIN_VALUE;
+    private static int collisionTileY = Integer.MIN_VALUE;
+    private static int pendingAuthorityTileX = Integer.MIN_VALUE;
+    private static int pendingAuthorityTileY = Integer.MIN_VALUE;
     private static int lastWalkTargetX = Integer.MIN_VALUE;
     private static int lastWalkTargetY = Integer.MIN_VALUE;
     private static int lastWalkRequestCycle = Integer.MIN_VALUE;
@@ -135,16 +139,19 @@ public final class MarioJumpController {
             }
 
             Class240 position = player.method5394().aClass240_2647;
-            groundX = position.aFloat2653;
+            collisionTileX = player.screenX[0];
+            collisionTileY = player.screenY[0];
+            groundX = tileCenter(player, collisionTileX);
             groundY = position.aFloat2656;
-            groundZ = position.aFloat2657;
+            groundZ = tileCenter(player, collisionTileY);
             nativeGroundY = latestNative.y;
             baselineValid = true;
             appliedPositionValid = false;
             nativePresentationValid = false;
+            pendingAuthorityTileValid = false;
             System.out.println("[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale "
                     + SM64_TO_MATRIX_Y_SCALE + ", XZ scale " + SM64_TO_MATRIX_XZ_SCALE
-                    + ", collision owner vanilla RS3)");
+                    + ", collision owner vanilla RS3 / continuous handoff)");
             System.out.println("[Mario] Controls: camera-relative WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
@@ -161,22 +168,13 @@ public final class MarioJumpController {
         float currentX = position.aFloat2653;
         float currentY = position.aFloat2656;
         float currentZ = position.aFloat2657;
-        if (appliedPositionValid) {
+        if (appliedPositionValid && Math.abs(currentY - lastAppliedY) > EXTERNAL_POSITION_EPSILON) {
             /*
-             * Any position the stock Matrix movement/update path writes between
-             * our client ticks is authoritative. Preserve that as the collision /
-             * server baseline, but do not drag Mario back to the tile centre; his
-             * visible X/Z continues from the last native presentation position.
+             * Terrain/plane corrections remain Matrix-owned. Horizontal stock
+             * movement is intentionally NOT copied directly into groundX/Z here:
+             * doing that every accepted tile was the source of the visible hitch.
              */
-            if (Math.abs(currentX - lastAppliedX) > EXTERNAL_POSITION_EPSILON) {
-                groundX = currentX;
-            }
-            if (Math.abs(currentY - lastAppliedY) > EXTERNAL_POSITION_EPSILON) {
-                groundY = currentY;
-            }
-            if (Math.abs(currentZ - lastAppliedZ) > EXTERNAL_POSITION_EPSILON) {
-                groundZ = currentZ;
-            }
+            groundY = currentY;
         }
 
         float nativeDeltaX = 0.0F;
@@ -195,11 +193,13 @@ public final class MarioJumpController {
         float desiredZ = presentationBaseZ + nativeDeltaZ;
 
         /*
-         * Request a vanilla step only as the continuous Mario presentation nears
-         * the edge of the currently authoritative RuneScape position. Short taps
-         * therefore remain genuinely sub-tile instead of committing an entire RS
-         * walk step immediately.
+         * Stock RuneScape may approve the requested adjacent tile before Mario's
+         * continuous presentation reaches the shared boundary. Keep that approval
+         * pending. Only switch the collision anchor when the visible native motion
+         * reaches the boundary, where old-tile +256 and new-tile -256 are the exact
+         * same world coordinate. This makes the handoff mathematically continuous.
          */
+        syncVanillaAuthority(player, desiredX, desiredZ);
         requestVanillaRuneScapeStep(player, desiredX, desiredZ);
 
         float targetX = clamp(desiredX,
@@ -226,13 +226,87 @@ public final class MarioJumpController {
     }
 
     /**
+     * Observe the stock player tile as collision approval, but defer adopting an
+     * adjacent approved tile until continuous Mario motion reaches the shared tile
+     * boundary. Larger stock corrections are treated as teleports/rebases and are
+     * adopted immediately rather than hidden behind presentation smoothing.
+     */
+    private static void syncVanillaAuthority(Player player, float desiredX, float desiredZ) {
+        int authorityTileX = player.screenX[0];
+        int authorityTileY = player.screenY[0];
+
+        if (collisionTileX == Integer.MIN_VALUE || collisionTileY == Integer.MIN_VALUE) {
+            collisionTileX = authorityTileX;
+            collisionTileY = authorityTileY;
+            groundX = tileCenter(player, collisionTileX);
+            groundZ = tileCenter(player, collisionTileY);
+            pendingAuthorityTileValid = false;
+            return;
+        }
+
+        if (authorityTileX == collisionTileX && authorityTileY == collisionTileY) {
+            pendingAuthorityTileValid = false;
+            return;
+        }
+
+        int tileDeltaX = authorityTileX - collisionTileX;
+        int tileDeltaY = authorityTileY - collisionTileY;
+        if (Math.abs(tileDeltaX) > 1 || Math.abs(tileDeltaY) > 1) {
+            hardRebaseHorizontalAuthority(player, authorityTileX, authorityTileY);
+            return;
+        }
+
+        pendingAuthorityTileX = authorityTileX;
+        pendingAuthorityTileY = authorityTileY;
+        pendingAuthorityTileValid = true;
+
+        float boundaryX = groundX + tileDeltaX * COLLISION_PRESENTATION_LEAD;
+        float boundaryZ = groundZ + tileDeltaY * COLLISION_PRESENTATION_LEAD;
+        boolean crossedX = tileDeltaX == 0
+                || (tileDeltaX > 0 ? desiredX >= boundaryX : desiredX <= boundaryX);
+        boolean crossedZ = tileDeltaY == 0
+                || (tileDeltaY > 0 ? desiredZ >= boundaryZ : desiredZ <= boundaryZ);
+
+        if (!crossedX || !crossedZ) {
+            return;
+        }
+
+        collisionTileX = pendingAuthorityTileX;
+        collisionTileY = pendingAuthorityTileY;
+        groundX = tileCenter(player, collisionTileX);
+        groundZ = tileCenter(player, collisionTileY);
+        pendingAuthorityTileValid = false;
+        lastWalkTargetX = Integer.MIN_VALUE;
+        lastWalkTargetY = Integer.MIN_VALUE;
+        lastWalkRequestCycle = Integer.MIN_VALUE;
+    }
+
+    private static void hardRebaseHorizontalAuthority(Player player, int tileX, int tileY) {
+        collisionTileX = tileX;
+        collisionTileY = tileY;
+        groundX = tileCenter(player, collisionTileX);
+        groundZ = tileCenter(player, collisionTileY);
+        pendingAuthorityTileValid = false;
+        lastWalkTargetX = Integer.MIN_VALUE;
+        lastWalkTargetY = Integer.MIN_VALUE;
+        lastWalkRequestCycle = Integer.MIN_VALUE;
+        lastAppliedX = groundX;
+        lastAppliedZ = groundZ;
+        nativePresentationValid = false;
+    }
+
+    private static float tileCenter(Player player, int tile) {
+        return tile * 512.0F + player.method10556((short) -23679) * 256.0F;
+    }
+
+    /**
      * Temporary collision handoff. Native Mario owns the continuous presentation,
-     * but crossing out of the local sub-tile envelope requires a normal Matrix3
-     * walk request. The existing server route/collision owner therefore remains
-     * authoritative for walls, solid objects, blocked floors and diagonal legality.
+     * but crossing the local tile boundary requires a normal Matrix3 walk request.
+     * Once the server/client stock path approves that adjacent tile, the approval
+     * remains pending until Mario visibly reaches the boundary.
      */
     private static void requestVanillaRuneScapeStep(Player player, float desiredX, float desiredZ) {
-        if (player == null || client.aClass195_8589 == null) {
+        if (player == null || client.aClass195_8589 == null || pendingAuthorityTileValid) {
             return;
         }
 
@@ -256,10 +330,8 @@ public final class MarioJumpController {
             return;
         }
 
-        int currentTileX = player.screenX[0];
-        int currentTileY = player.screenY[0];
-        int targetTileX = currentTileX + dx;
-        int targetTileY = currentTileY + dz;
+        int targetTileX = collisionTileX + dx;
+        int targetTileY = collisionTileY + dz;
 
         if (targetTileX < 0 || targetTileY < 0
                 || targetTileX >= client.aClass613_8605.method7347(-520836217)
@@ -450,6 +522,7 @@ public final class MarioJumpController {
         baselineValid = false;
         appliedPositionValid = false;
         nativePresentationValid = false;
+        pendingAuthorityTileValid = false;
         groundX = 0.0F;
         groundY = 0.0F;
         groundZ = 0.0F;
@@ -461,6 +534,10 @@ public final class MarioJumpController {
         lastNativePresentationZ = 0.0F;
         requestedWorldMoveX = 0.0F;
         requestedWorldMoveZ = 0.0F;
+        collisionTileX = Integer.MIN_VALUE;
+        collisionTileY = Integer.MIN_VALUE;
+        pendingAuthorityTileX = Integer.MIN_VALUE;
+        pendingAuthorityTileY = Integer.MIN_VALUE;
         lastWalkTargetX = Integer.MIN_VALUE;
         lastWalkTargetY = Integer.MIN_VALUE;
         lastWalkRequestCycle = Integer.MIN_VALUE;
