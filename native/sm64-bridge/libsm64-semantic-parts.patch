@@ -120,7 +120,7 @@ index ba7fc1d..71d5770 100644
  }
  
  void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffers )
-@@ -213,5 +275,49 @@ void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffer
+@@ -213,5 +275,51 @@ void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffer
      s_colorPtr = s_outBuffers->color;
      s_normalPtr = s_outBuffers->normal;
      s_uvPtr = s_outBuffers->uv;
