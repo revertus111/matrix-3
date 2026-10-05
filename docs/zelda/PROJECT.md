@@ -48,8 +48,9 @@ Current integration seams:
 - `AlternateCharacterController` — shared alternate-character input dispatch.
 - `LinkController` — camera-relative WASD/A/B/Z input while Matrix/server walking remains X/Z authority.
 - `LinkCharacterFit` — adult Link world-scale/floor calibration against the live 830 player.
-- `LinkVisualRenderer` — animated Link -> Matrix `Model` conversion.
+- `LinkVisualRenderer` — animated Link -> Matrix `Model` conversion plus strict fail-open replacement readiness.
 - `LinkTextureRegistry` — runtime-only OoT RGBA -> Matrix GPU/material bridge.
+- `Player.method10696(...)` — existing local RuneScape appearance suppression seam, reached through the shared `MarioVisualRenderer.shouldSuppressLocalPlayer(...)` gate for both Mario and Link.
 - `Class578.method6834(...)` — established Matrix preview/render submission seam.
 
 No Link combat authority is connected yet. F/B can drive liboot's sword/action state but must not issue Matrix NPC damage/XP until hit-window/contact integration is implemented.
@@ -97,6 +98,24 @@ Known V2 approximation: liboot wrap mode `mirror` currently degrades to Matrix r
 
 Status: material V2 is **verified-static only**. Native compilation and in-game texture/UV orientation are `UNKNOWN` until the next runtime test. A native rebuild is mandatory because protocol V1 and V2 intentionally reject each other.
 
+## Fail-open local-player replacement — IMPLEMENTATION STAGED
+
+The RuneScape local-player appearance is no longer intended to remain visible once Link is healthy.
+
+Replacement policy:
+
+- Link must successfully draw through Matrix before suppression can activate;
+- the latest liboot frame must remain fresh (<= 500 ms);
+- the latest successful Matrix Link draw must also remain fresh (<= 500 ms);
+- Link mode, bridge readiness, usable geometry, and replacement readiness are all required;
+- any mode exit, bridge loss, stale frame, failed fit, failed model build, invalid player transform, or render exception fails open to the normal RuneScape body;
+- only the local player's RuneScape appearance is suppressed; remote players are untouched;
+- the actual RuneScape appearance/equipment object is not deleted, nulled, or rewritten.
+
+Implementation deliberately reuses the existing `Player.method10696(...) -> MarioVisualRenderer.shouldSuppressLocalPlayer(...)` presentation seam. The Mario gate delegates to `LinkVisualRenderer.shouldSuppressLocalPlayer(...)` first, avoiding a second invasive edit to the decompiled Player renderer.
+
+Status: **verified-static only**. Runtime acceptance requires Link to remain visible while the 830 body disappears after the first healthy Link frame, then reappear immediately on Ctrl+L exit or Link failure.
+
 ## Matrix3 implementation seam
 
 - Matrix remains host renderer/world/server authority.
@@ -123,7 +142,8 @@ Status: material V2 is **verified-static only**. Native compilation and in-game 
 - [ ] Runtime-verify OoT material V2: real texture pixels + UVs and reduced faceted/triangled appearance.
 - [ ] Prove movement/turn, one action/jump, and B/sword animation in one consolidated runtime session.
 - [ ] Give Link mode fully accepted exclusive movement input while preserving intended Matrix camera controls.
-- [ ] Add fail-open local RuneScape model suppression/restoration after Link presentation is stable.
+- [x] Implement fail-open local RuneScape model suppression/restoration for Link; runtime acceptance pending.
+- [ ] Runtime-verify suppression: 830 body hidden only while Link is fresh/healthy and restored immediately on exit/failure.
 - [ ] Expose stable Link skeleton/socket transforms for 830 equipment fitting.
 
 ### Phase 2 — OoT movement and world interaction
@@ -149,12 +169,14 @@ Status: material V2 is **verified-static only**. Native compilation and in-game 
 
 ## Resume Here
 
-Run the **material V2** checklist in `docs/zelda/TESTLIST.md`.
+Run the **material V2 + fail-open replacement** checklist in `docs/zelda/TESTLIST.md`.
 
 1. Pull `main`.
 2. Rebuild `native/oot-bridge` because the binary protocol is now V2.
 3. Refresh/clean the Eclipse client.
 4. Enter Link mode with Ctrl+L.
 5. Preserve the console lines for protocol/material activation and capture a screenshot.
+6. Confirm the normal 830 local-player body disappears after Link has rendered successfully.
+7. Exit Ctrl+L and confirm the RuneScape body returns immediately.
 
-Immediate acceptance target: adult Link remains correctly fitted/animated, but now shows recognizably mapped OoT textures and substantially less obvious triangle-by-triangle shading. Do not suppress the visible RuneScape reference player yet; keep it for this material proof. If V2 passes, the next presentation slice is fail-open RS-player suppression, then stable adult-Link skeleton sockets for 830 equipment fitting.
+Immediate acceptance target: adult Link remains correctly fitted/animated, shows recognizably mapped OoT textures with substantially less triangle-by-triangle shading, and replaces the local 830 body without making the player invisible on failure. If this passes, the next presentation slice is stable adult-Link skeleton sockets for 830 equipment fitting.
