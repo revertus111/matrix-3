@@ -1,7 +1,17 @@
-# Mario custom combat proof
+# Imported-character combat architecture / Mario native slash proof
 
 Status: RUNTIME PROOF ACCEPTED / V4 VISUAL TUNING PENDING. Approved by the 2026-10-04 SAP AAA handoff.
 Primary target: MARIO_COMBAT_1H_SLASH (wire family 1) is runtime-VERIFIED 2026-10-04. Stab remains deferred until explicitly selected as the next scope.
+
+## Mandatory shared combat ownership
+
+`docs/n64/PROJECT.md` is authoritative: Mario, Link and future imported characters do **not** own separate Matrix combat systems.
+
+- `AlternateCharacterCombatBridge` is the single client owner for imported-character target selection, target lock, melee fallback, attack one-shot lifecycle and manual-melee packet routing.
+- Character-native code supplies only native action/animation/contact evidence and presentation state.
+- `AlternateCharacterCombatPacketBridge` is the single server entry for imported-character manual melee and delegates authoritative validation/damage/XP/death/drop behavior to the existing RuneScape combat engine.
+- A character-specific combat class must not duplicate NPC scanning, packet routing, RuneScape damage formulas or cooldown authority.
+- Mario's native slash implementation in this document is therefore an animation/socket adapter and presentation proof, not a second combat controller.
 
 ## Source-established ownership (verified-static)
 
@@ -38,7 +48,7 @@ Bridge protocol 3 retains all v2 semantic fields. After A/B/Z, STEP adds mode u8
 
 `MarioWeaponCombat` uses the existing equipped appearance, slot 3 and `ItemDefinitions.method7531` worn-model/customization path. V1 automatically selects conservative sword/longsword/scimitar names; this is a temporary proof policy, NOT a verified cache combat-family mapping. The explicit developer override permits other equipped weapons for preview. No item-ID list or invented sword mesh is used.
 
-F suppresses native B only when v3/socket/weapon rendering are ready. The existing server combat-intent call remains in place; this proof does NOT synchronize damage to blade contact or add a new damage formula. Play slash is presentation-only. No supported weapon or an old bridge retains native B behavior.
+F suppresses native B only when v3/socket/weapon rendering are ready. Mario's rising attack edge now enters the shared `AlternateCharacterCombatBridge` manual-melee path used by imported characters; it no longer starts stock RuneScape repeating click-to-attack. This native slash proof still does NOT synchronize Mario server damage to an exact blade-contact frame or add a parallel damage formula. Play slash remains presentation-only. No supported weapon or an old bridge retains native B behavior.
 
 Matrix transform is `S * handBasis * calibrationRotation * S`, where `S=diag(1,-1,1)`. Native translation is rebased against the SAME frame's native Mario position and uses the existing Mario mesh scale. `Class261.method3572` takes columns; `method3582` establishes the actual point multiplication. Two Y mirrors preserve weapon handedness. Rendering occurs immediately after Mario's successful body render using that exact immutable GeometryFrame; freeze preserves the socket too.
 
@@ -60,10 +70,11 @@ Grip origin from worn-model bounds (85% down Y), initial length and artistic sla
 - Runtime video 2026-10-05: V3 visibly folds Mario forward and drives the weapon hand down beside the body; V3 is visually rejected. `VERIFIED`.
 - Source follow-up 2026-10-05: custom weapon combat suppresses native B while active, so V3's bad motion is attributable to the custom additive pose rather than stock punch input. `verified-static`.
 - V4 zeroes torso offsets and reduces the attack to shoulder/forearm/wrist motion only. Runtime visual acceptance is pending.
-- Moving-slash leg continuity, held-F no-replay, freeze/unfreeze, unequip fallback, Ctrl+M/relog cleanup, remote-player isolation, NPC damage/XP integration and sustained stability remain pending unless separately runtime-confirmed.
+- Shared imported-character combat targeting/packet/server ownership is `verified-static`; runtime Mario/Link NPC damage/XP acceptance remains pending.
+- Moving-slash leg continuity, held-F no-replay, freeze/unfreeze, unequip fallback, Ctrl+M/relog cleanup, remote-player isolation and sustained stability remain pending unless separately runtime-confirmed.
 
 ## Optional repeatable checks
 
 Use root `Native Builder.bat` -> `BUILD + TEST MARIO`; the launcher rebuilds the patched library + sidecar and runs `make test-combat` automatically.
 
-Runtime checklist: `docs/n64/TESTLIST.md`, custom combat section. Resume state: `docs/mario/PROJECT.md`.
+Runtime checklist: `docs/n64/SHARED_CONTROLLERS_TESTLIST.md` for shared combat ownership, then `docs/n64/TESTLIST.md` for Mario custom-combat visual regression. Resume state: `docs/mario/PROJECT.md`.
