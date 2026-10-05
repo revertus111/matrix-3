@@ -42,3 +42,8 @@
 - Native Y remains the Mario jump/presentation overlay, so jump/backflip/ground-pound animation can continue while RS3 collision owns horizontal travel.
 - Requests are de-duplicated and retried at a bounded cadence while a direction is held; no custom clip-mask table or parallel Mario collision map was introduced.
 - This is an interim collision handoff only. It does not implement the planned Phase 3 RuneScape-surface -> libsm64 collision adapter.
+
+2026-10-04 - Mario 1H slash V2 visual tuning
+- Shortened the proven native slash overlay from 24 to 16 ticks (~0.53 seconds at 30 Hz) so it reads as an attack instead of a slow punch.
+- Reworked torso/right-arm keyframes with stronger wind-up, faster cross-body contact, and explicit forearm/wrist participation while preserving the existing additive locomotion overlay and right-hand socket.
+- No bridge/protocol, weapon-selection, damage, collision, or grip-transform ownership changed; runtime visual acceptance is pending.
