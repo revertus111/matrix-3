@@ -2,205 +2,252 @@
 
 ## Goal
 
-Add Link as an imported character in Matrix3 with Ocarina of Time movement, actions, animations, items, and combat feel. Matrix3 remains the host world, camera, renderer, and server authority. Link's combat progression uses RuneScape skills and NPC systems. The OoT-style inventory menu is local to Link; the Matrix world continues while it is open.
+Run Adult Link from Ocarina of Time as a playable alternate character inside Matrix3 revision 830. liboot owns Link simulation/pose/action state; Matrix3 remains host world, camera, renderer, server and RuneScape progression authority.
 
 ## Accepted design
 
-- Manual action combat: sword/shield input, targeting, dodging, and weapon contact; no click-to-attack control.
-- RuneScape stats govern accuracy, damage, equipment requirements, NPC health, XP, and progression.
-- Weapon speed affects Link's attack timing and recovery. Weapon reach and attack animation determine whether the swing connects.
-- Items and equipment can be tested incrementally, then organized into an OoT-style inventory.
-- Keep ROM bytes and ROM-extracted assets out of the Matrix3 repository.
-- Adult Link is the active playable/fitting target for the current Matrix integration slice.
-- Preserve OoT body proportions with uniform character scaling; adapt 830 equipment to Link later instead of stretching Link independently on X/Y/Z.
-- OoT texture pixels remain local/runtime-only. Do not import ROM-derived texture files into the revision-830 cache or Git history.
+- Adult Link is the active Matrix integration target.
+- Preserve OoT body proportions with one uniform world-scale fit.
+- Adult Link intentionally occupies roughly the same height/floor envelope as the 830 player so revision-830 equipment can remain near native Matrix scale.
+- Do **not** deform Link into the RuneScape skeleton just to make gear fit.
+- Do **not** reuse Mario's geometry-envelope equipment architecture for Link.
+- Link equipment should attach to liboot's real animated skeleton/socket data.
+- Small per-item scale/offset/rotation corrections are acceptable after the base socket system is proven.
+- Manual Zelda-style combat stays separate from RuneScape progression authority: Matrix stats/NPC health/XP/drops remain authoritative once hit-contact integration is enabled.
+- ROM bytes and ROM-derived textures stay local and untracked.
 
 ## Current status
 
-**Phase 1 — Playable adult Link foundation: ACTIVE**
+**Phase 1 foundation: runtime proven. Phase 4 equipment foundation: ACTIVE.**
 
-The user-provided 32 MiB ROM matches the NTSC-U 1.2 profile (MD5 `57a9719ad547c516342e1a15d5c28c3d`). The Matrix-owned bridge under `native/oot-bridge/` pins liboot and the matching zeldaret source revision, applies the tracked NTSC-U 1.2 compatibility patch, regenerates asset/animation metadata locally, and keeps dependency checkouts/build outputs under ignored local directories.
+Runtime-proven baseline:
 
-Phase 0.2/0.3 are runtime verified under MSYS2 UCRT64 against the exact local ROM. The probe passed engine creation, static collision, adult/child Link creation/equipment/skeleton/geometry, movement, animation-state advancement, simulation ticks, and clean destruction. It reported 757 adult triangles and 717 child triangles and ended with `[OoT NTSC12] RESULT: PASS`.
+- NTSC-U 1.2 ROM compatibility probe passes.
+- Adult Link geometry renders inside Matrix3.
+- Adult Link is auto-fitted into the 830 character-scale envelope.
+- local RuneScape body suppression is fail-open and runtime accepted.
+- OoT RGBA texture data is visibly reaching the Matrix presentation path.
+- the synthetic Matrix runtime-material path was rejected; the active renderer uses CPU texture micro-baking.
+- V4 filtering/smoothing did not visibly improve the OoT look enough to keep tuning right now.
+- the V4 signed-short vertex overflow was fixed by returning to the verified-safe subdivision budget.
+- current priority is revision-830 equipment, not further base-Link texture polishing.
 
-### Phase 0.4 provenance boundary
+No Matrix NPC damage/XP authority is connected to Link B/sword yet.
 
-Phase 0.4 review is complete for local experimental development:
+## Native/provenance boundary
 
-- liboot original code is AGPL-3.0-or-later.
-- selected `src/decomp/` material derives from pinned `zeldaret/oot` and is not relicensed by liboot.
-- redistribution/shipping of the native dependency/decompilation material remains a separate legal/provenance review requirement.
-- ROM bytes and ROM-extracted assets remain local and untracked.
+Pinned local native baseline:
 
-This is an engineering boundary, not legal advice or distribution clearance.
+- `Cycl0o0/liboot` commit `25208734c8ca388638f0ce63841e166fac9e5acb`
+- `zeldaret/oot` commit `269d03016cd0e3d7a0b8925e02b97a319c1d0e8d`
+- user ROM: NTSC-U 1.2, 32 MiB, MD5 `57a9719ad547c516342e1a15d5c28c3d`
 
-## Phase 1 runtime proof
+liboot original code is AGPL-3.0-or-later; selected vendored/decomp material has separate provenance. Local experimental integration may continue, but redistribution/shipping remains a separate review requirement. ROM bytes/assets remain local-only.
 
-The first Matrix Link renderer is **runtime observed**. User screenshots verified recognizable adult OoT Link geometry inside the 830 scene at the local-player transform.
+## Adult Link world fit — RUNTIME ACCEPTED
 
-The native sidecar explicitly calls `oot_engine_link_set_age(..., OOT_AGE_ADULT)`; current presentation and future equipment fitting remain adult-Link targets.
+`LinkCharacterFit` measures the live 830 local-player rendered height and uniformly scales Adult Link to that envelope.
 
-Current integration seams:
+Key rules:
 
-- `native/oot-bridge/oot_bridge.c` — persistent 20 Hz NTSC-U 1.2 sidecar, protocol V2.
-- `OotBridgeSession` — Java 8 process/session owner and immutable frame/texture publisher.
-- `PlayerControllerMode` — `LINK` on Ctrl+L; Mario remains separate on Ctrl+M.
-- `AlternateCharacterController` — shared alternate-character input dispatch.
-- `LinkController` — screen-relative WASD/A/B/Z input while Matrix/server walking remains X/Z authority.
-- `LinkCharacterFit` — adult Link world-scale/floor calibration against the live 830 player.
-- `LinkVisualRenderer` — animated Link -> Matrix `Model` conversion, OoT RGBA micro-bake, and strict fail-open replacement readiness.
-- `LinkTextureRegistry` — retained experimental synthetic Matrix material adapter; no longer used by the active Link render path after runtime rejection of that approach.
-- `Player.method10696(...)` — existing local RuneScape appearance suppression seam, reached through the shared `MarioVisualRenderer.shouldSuppressLocalPlayer(...)` gate for both Mario and Link.
-- `Class578.method6834(...)` — established Matrix preview/render submission seam.
-
-No Link combat authority is connected yet. F/B can drive liboot's sword/action state but must not issue Matrix NPC damage/XP until hit-window/contact integration is implemented.
-
-## Adult Link character-fit V1 — RUNTIME ACCEPTED
-
-The second runtime screenshot verified the auto-fit is working:
-
-- adult Link now occupies approximately the same world-scale envelope as the 830 player;
-- feet are close to the same Matrix ground plane;
-- overall head/character height is close enough for the imported-character equipment-fit architecture;
-- the user considers Link slightly large and OoT Link's head proportionally large, but neither is a blocker while equipment is adapted to Link rather than deforming Link into RuneScape proportions.
-
-Fit architecture:
-
-- live 830 height comes from the local player's persisted rendered minimum-Y bound (`Player.method8310((byte) 0)` -> stored `Model.method1382()` minimum Y);
-- adult Link standing floor/top use a trimmed native geometry span relative to Link's root;
 - one uniform scale preserves OoT proportions;
-- calibrated standing floor maps to Matrix local Y=0 while native root-height deltas remain visible;
-- native adult-Link height/width/depth are retained as groundwork for helmet/body/glove/boot/cape fitting;
-- `matrix3.oot.modelScale` remains a forced diagnostic override and `matrix3.oot.fitMultiplier` remains optional fine tuning.
+- calibrated Link floor maps to Matrix local ground;
+- native root-height motion remains visible;
+- Link's comparatively large OoT head is not a blocker;
+- Link is intentionally large because 830 gear should begin close to native Matrix size.
 
-Do not spend the next slice deforming Link's head/body. Future 830 gear should fit Link through body dimensions + stable skeleton sockets.
+Do not reopen body/head deformation before the equipment socket proof.
 
-## OoT material fidelity V2 — NATIVE/PROTOCOL VERIFIED, MATRIX DIRECT-MATERIAL PATH REJECTED
+## Link renderer baseline
 
-Protocol V2 is now locally built and running. The user's Native Builder log proved the correct OoT bridge folder, MSYS2 UCRT64 toolchain, CMake generation/build, fresh `dist/oot_bridge.exe`, and `OOT BUILD SUCCESS`.
+Current renderer stack:
 
-V2 successfully carries the data required for a faithful host renderer:
+- `native/oot-bridge/oot_bridge.c` — persistent native sidecar;
+- `OotBridgeSession` — Java 8 bridge/session owner;
+- `LinkCharacterFit` — Adult Link 830-scale calibration;
+- `LinkVisualRenderer` — OoT geometry/texture presentation + fail-open replacement readiness;
+- `Player.method10696(...)` — existing local body-suppression seam;
+- `Class578.method6834(...)` — direct Matrix presentation seam.
 
-- positions;
-- original vertex normals;
-- vertex colours / lighting tint;
-- normalized UVs;
-- per-triangle liboot texture index;
-- local-ROM RGBA8 texture updates with dimensions/wrap/revision;
-- Java-retained texture catalog across frames.
+The current CPU RGBA bake is visually recognizable but still looks like low-poly OoT rendered through Matrix face colours. User explicitly chose to move on to equipment rather than keep spending time polishing this renderer now.
 
-The first Matrix implementation attempted to register OoT pixels as synthetic runtime Matrix materials and use `Class159` direct UV mode. Runtime screenshot rejected that path: Link rendered and the 830 body was correctly suppressed, but Link remained broad flat green/white/gray polygons with a nearly blank white face. That is a material binding failure, not acceptable OoT fidelity.
+## Adult Link skeleton/socket V1 — STAGED
 
-Do not treat that screenshot as an N64-quality limitation. It proved:
+This is the equipment architecture for Link.
 
-- OoT geometry: working;
-- adult fit: working;
-- fail-open 830 replacement: working;
-- V2 native build: working;
-- synthetic Matrix runtime-material/direct-UV presentation: not working visibly.
+liboot exports `OoTSkeletonPose` as:
 
-## OoT RGBA micro-bake V3 — IMPLEMENTATION STAGED
+- up to 21 world-space joints;
+- a parent index for each joint;
+- `jointPos[21][3]` world-space positions;
+- semantic indexing deliberately stored as `PLAYER_LIMB_* - 1` for host attachments.
 
-The active Link renderer now bypasses the rejected synthetic runtime-material seam and uses the same general strategy already proven for Mario's imported texture presentation.
+Relevant Adult Link socket indices:
 
-For every textured OoT source triangle:
+```text
+ROOT       0
+WAIST      1
+LOWER      2
+R_THIGH    3
+R_SHIN     4
+R_FOOT     5
+L_THIGH    6
+L_SHIN     7
+L_FOOT     8
+UPPER      9
+HEAD      10
+HAT       11
+COLLAR    12
+L_SHOULDER 13
+L_FOREARM 14
+L_HAND    15
+R_SHOULDER 16
+R_FOREARM 17
+R_HAND    18
+SHEATH    19
+TORSO     20
+```
 
-1. resolve the retained liboot texture by `triTexture` index;
-2. subdivide the source triangle (default 4x -> up to 16 micro-faces);
-3. barycentrically interpolate original OoT position, normal, colour/tint, and UV;
-4. bilinearly sample the actual local-ROM RGBA texture with liboot repeat/mirror/clamp wrap behavior;
-5. multiply sampled texture RGB by liboot's interpolated vertex RGB, matching liboot's documented host-render rule;
-6. bake the resulting colour into ordinary Matrix face colour;
-7. share transformed vertices only when position + quantized liboot normal agree so intended smooth surfaces can share Matrix normal accumulation without welding hard edges.
+### Protocol V3
 
-This intentionally avoids dependence on Matrix synthetic material registration while still using the real OoT texture pixels. It also reduces the old crystalline appearance because one large OoT polygon becomes multiple smaller Matrix faces carrying varying texture samples.
+The Matrix sidecar protocol is upgraded from V2 -> V3 for equipment sockets.
 
-Safety/limits:
+Every frame now carries:
 
-- no ROM-derived pixels are written into the cache or Git;
-- untextured/unavailable texture faces retain vertex-colour fallback;
-- subdivisions automatically reduce if the generated model would exceed Matrix's 65,535-vertex / signed-short-safe face budget;
-- `-Dmatrix3.oot.textureSubdivisions=0..4` is available for diagnostics, default 4;
-- the V2 native protocol is unchanged by this recovery patch, so a user who already rebuilt the V2 sidecar does **not** need another native rebuild for the Java-only micro-bake test.
+1. existing Link state;
+2. skeleton availability;
+3. skeleton joint count;
+4. skeleton parent table;
+5. world-space skeleton joint positions;
+6. existing geometry/material payload.
 
-Status: V3 is **verified-static only** until Eclipse compile + runtime screenshot. The first runtime diagnostic must report `textureCatalog > 0`, `texturedSource > 0`, and `material=oot-rgba-micro-v3`.
+The Java bridge validates the joint count/parents and publishes the skeleton arrays inside the immutable `LinkFrame`.
 
-## Fail-open local-player replacement — RUNTIME ACCEPTED
+A native rebuild is required once after pulling this protocol change.
 
-The latest screenshot verified the RuneScape local-player body is removed while Link is healthy. Link remained visible alone, proving the replacement gate is functioning.
+### `LinkSkeletonSockets`
 
-Replacement policy remains:
+`LinkSkeletonSockets` is intentionally independent from Mario equipment code.
 
-- Link must successfully draw through Matrix before suppression can activate;
-- the latest liboot frame must remain fresh (<= 500 ms);
-- the latest successful Matrix Link draw must also remain fresh (<= 500 ms);
-- Link mode, bridge readiness, usable geometry, and replacement readiness are all required;
-- any mode exit, bridge loss, stale frame, failed fit, failed model build, invalid player transform, or render exception fails open to the normal RuneScape body;
-- only the local player's RuneScape appearance is suppressed; remote players are untouched;
-- the actual RuneScape appearance/equipment object is not deleted, nulled, or rewritten.
+It converts liboot world-space joints into the same Matrix-local coordinate system used by `LinkVisualRenderer`/`LinkCharacterFit`.
 
-Implementation deliberately reuses the existing `Player.method10696(...) -> MarioVisualRenderer.shouldSuppressLocalPlayer(...)` presentation seam. The Mario gate delegates to `LinkVisualRenderer.shouldSuppressLocalPlayer(...)` first, avoiding a second invasive edit to the decompiled Player renderer.
+The first HEAD socket uses:
 
-## Matrix3 implementation seam
+- `HEAD` for the primary skull anchor;
+- `HAT` for animated head-depth/head-pose information;
+- `COLLAR` for the head-up chain;
+- left/right shoulder joints for a stable fallback plane;
+- OoT actor yaw only to resolve axis sign when the positional basis is ambiguous.
 
-- Matrix remains host renderer/world/server authority.
-- liboot owns Link simulation/pose/action state.
-- Link native state remains separate from Mario/libsm64 state.
-- Matrix stock walking remains the temporary actual X/Z movement/collision path until Phase 2.
-- Future 830 equipment fitting should consume stable Link skeleton/socket transforms plus `LinkCharacterFit` dimensions.
-- OoT texture fidelity currently uses runtime CPU sampling/micro-baking into Matrix face colours rather than persistent cache assets.
+This is a real skeleton attachment path, not a geometry bounding-box guess.
 
-## Phases and bundles
+## Revision-830 helmet proof — STAGED
 
-### Phase 0 — NTSC-U 1.2 native compatibility and bridge proof
+`LinkEquipmentAdapter` is the first consumer of the skeleton socket system.
 
-- [x] 0.1 Identify exact NTSC-U 1.2 ROM and matching zeldaret target.
-- [x] 0.2 Adapt/generate NTSC-U 1.2 liboot bindings. Runtime verified.
-- [x] 0.3 Native Link state + animated geometry bridge proof. Runtime PASS.
-- [x] 0.4 Record local-development provenance boundary and reproducible Windows build path.
+Behavior:
 
-### Phase 1 — Playable Link foundation
+- reads the local RuneScape player's currently equipped visible hat-slot item;
+- loads that item's normal revision-830 worn raw model;
+- recenters the equipment mesh only;
+- keeps default equipment scale at **1.0**;
+- attaches the model to Adult Link's live OoT HEAD socket;
+- follows the animated skeleton pose while Link moves/acts;
+- renders only while Link's own fail-open replacement is healthy;
+- does not call `MarioEquipmentAdapter`, `MarioEquipmentWorkbench`, or Mario head-envelope calibration.
 
-- [x] Add Link under the shared alternate-character controller.
-- [x] Render recognizable animated adult Link geometry inside Matrix3.
-- [x] Auto-fit adult Link height/floor to the live 830 player; runtime screenshot accepted as close enough for the equipment-fit architecture.
-- [x] Runtime-prove protocol V2 native sidecar and identify direct Matrix runtime-material presentation as visually failed.
-- [ ] Runtime-verify OoT RGBA micro-bake V3: recognizable real texture detail + reduced faceted/triangled appearance.
-- [ ] Prove movement/turn, one action/jump, and B/sword animation in one consolidated runtime session.
-- [ ] Give Link mode fully accepted exclusive movement input while preserving intended Matrix camera controls.
-- [x] Fail-open local RuneScape model suppression/restoration for Link; Link-only screenshot runtime accepted.
-- [ ] Expose stable Link skeleton/socket transforms for 830 equipment fitting.
+First-proof calibration properties:
 
-### Phase 2 — OoT movement and world interaction
+```text
+matrix3.oot.helmetScale=1.0
+matrix3.oot.helmetOffsetX=0
+matrix3.oot.helmetOffsetY=0
+matrix3.oot.helmetOffsetZ=0
+matrix3.oot.helmetPitchDegrees=0
+matrix3.oot.helmetYawDegrees=180
+matrix3.oot.helmetRollDegrees=0
+matrix3.oot.headSocketHatBlend=0.35
+```
 
-- [ ] Adapt Matrix terrain and relevant objects to OoT collision.
-- [ ] Add Z-targeting, face-target movement, shield positioning, rolling, and contextual actions.
-- [ ] Keep world/camera ownership stable while Link inventory is open.
+These are diagnostic/calibration knobs, not the intended permanent user workflow. Preserve the first runtime screenshot before tuning them.
 
-### Phase 3 — Combat and RuneScape progression
+## Equipment roadmap
 
-- [ ] Connect sword hit windows/contact to Matrix NPC targets.
-- [ ] Use Matrix Attack, Strength, Defence, Constitution, equipment, NPC health, XP, and drops as progression authority.
-- [ ] Make weapon speed/reach/damage/recovery data-driven.
-- [ ] Add ranged and magic styles through the same authority boundary.
+Order after HEAD socket runtime acceptance:
 
-### Phase 4 — Equipment, items, and inventory
+1. helmet / head;
+2. right hand -> revision-830 weapon;
+3. left hand/forearm -> revision-830 shield;
+4. boots -> foot sockets;
+5. cape/back item -> sheath/upper-back socket;
+6. gloves -> hand sockets;
+7. amulet -> collar/upper socket;
+8. torso and legs last, using multi-joint fit rather than one rigid socket.
 
-- [ ] Add generic imported-character equipment fit layer built on body dimensions + stable skeleton sockets.
-- [ ] Start Link adaptation with helmet, sword, shield, gloves, boots, amulet, and cape before torso/legs fitting.
-- [ ] Add Link equipment slots and visible gear state.
-- [ ] Add OoT item groups: bow, bombs, hookshot, boomerang, hammer, magic.
-- [ ] Add non-pausing OoT-style inventory/equipment pages.
+Long-term rule:
+
+```text
+Adult Link stays OoT-shaped + 830-sized
+        +
+830 equipment stays near native Matrix scale
+        +
+real OoT skeleton sockets drive animation
+        +
+small saved corrections only where needed
+```
+
+## Phases
+
+### Phase 0 — native compatibility
+
+- [x] Exact NTSC-U 1.2 ROM/profile identified.
+- [x] NTSC-U 1.2 liboot adaptation/probe.
+- [x] Adult/child Link state, geometry, skeleton and animation native proof.
+- [x] Local-development provenance boundary recorded.
+
+### Phase 1 — playable Adult Link foundation
+
+- [x] Ctrl+L Link mode.
+- [x] Recognizable animated Adult Link in Matrix3.
+- [x] Adult Link 830-scale auto-fit.
+- [x] fail-open local RuneScape body replacement.
+- [x] real OoT texture data visibly reaches Link presentation.
+- [x] V4 signed-short renderer overflow corrected.
+- [ ] Runtime-prove protocol V3 skeleton stream.
+- [ ] Runtime-prove stable HEAD socket during idle/turn/action.
+
+### Phase 2 — OoT movement/world interaction
+
+- [ ] Feed Matrix terrain/objects into OoT collision.
+- [ ] Z-targeting/roll/contextual interactions.
+- [ ] Preserve Matrix world progression while Link inventory is open.
+
+### Phase 3 — combat/progression
+
+- [ ] Sword swing windows/contact -> Matrix NPC target.
+- [ ] RuneScape Attack/Strength/Defence/Constitution authority.
+- [ ] data-driven weapon speed/reach/recovery.
+- [ ] ranged/magic under same authority boundary.
+
+### Phase 4 — equipment/items/inventory
+
+- [ ] Runtime-accept first revision-830 helmet on real OoT HEAD socket.
+- [ ] Weapon socket.
+- [ ] Shield socket.
+- [ ] Boots/gloves/cape/amulet.
+- [ ] Multi-joint torso/legs fitting.
+- [ ] Visible Link equipment state + OoT-style non-pausing equipment UI.
 
 ## Resume Here
 
-Run the **OoT RGBA micro-bake V3** checklist in `docs/zelda/TESTLIST.md`.
+Run the **Adult Link skeleton + 830 helmet proof** in `docs/zelda/TESTLIST.md`.
 
-1. Pull `main`.
-2. Do **not** rebuild native if the local bridge already reports protocol V2; the user's latest Native Builder run already succeeded.
-3. Refresh/clean the Eclipse client.
-4. Enter Link mode with Ctrl+L.
-5. Preserve the new `[OoT Visual]` diagnostic line.
-6. Capture a close front/three-quarter screenshot of Link alone.
+1. `git pull origin main`.
+2. Run root `Native Builder.bat` -> **BUILD OOT** once because protocol is now V3.
+3. Equip a normal revision-830 helmet/head-slot item before entering Link mode.
+4. Eclipse Refresh -> Clean -> Run.
+5. Press Ctrl+L.
+6. Preserve the protocol READY lines and the first `[OoT Equipment]` line.
+7. Capture a front/three-quarter screenshot before changing any calibration property.
 
-Immediate acceptance target: `textureCatalog > 0`, `texturedSource > 0`, `matrixTriangles > triangles`, and visibly recognizable OoT face/tunic/equipment texture detail with substantially less triangle-by-triangle shading. If the pixels are present but vertically flipped or mirrored, fix only the UV/wrap convention next; do not reopen the native compatibility or auto-fit work.
+Immediate acceptance target: `protocol v3`, `skeletonJoints=21`, a revision-830 helmet visibly attached near Adult Link's head at `scale=1.0`, and the helmet following Link's animated head/socket instead of remaining at the hidden RuneScape avatar origin.
