@@ -2,15 +2,14 @@
 
 ## Mario helmet semantic coverage bundle
 
-Run this as **one rebuild + one client session**.
+Run this as **one client session**. The semantic FACE unit correction is Java-only; if the protocol-v2 bridge was already rebuilt successfully, do **not** rebuild it again for this correction.
 
 ### Build
 
 1. [ ] `git pull origin main`.
-2. [ ] From `native/sm64-bridge`, run `make bootstrap`.
-3. [ ] Bootstrap checks out pinned libsm64 `fd11813208272b4271d92bd92feb8f3fdbe61be5`, applies `libsm64-semantic-parts.patch`, rebuilds libsm64 and rebuilds/copies the bridge runtime.
-4. [ ] Eclipse clean/build succeeds under Java 8.
-5. [ ] Client launches/login succeeds normally.
+2. [ ] If protocol-v2 bridge has never been built on this checkout, run `make bootstrap` from `native/sm64-bridge`; otherwise keep the already-built semantic bridge.
+3. [ ] Eclipse clean/build succeeds under Java 8.
+4. [ ] Client launches/login succeeds normally.
 
 ### Protocol / metadata
 
@@ -21,8 +20,9 @@ Run this as **one rebuild + one client session**.
 5. [ ] `Semantic geometry = AVAILABLE`.
 6. [ ] Native part counts show non-zero FACE and expected head-part counts; unknown/other may remain non-zero because only helmet-relevant parts are tagged.
 7. [ ] Shared FACE W/H/D displays finite values.
-8. [ ] Helmet log reports `fitReference=semantic-face`.
-9. [ ] Auto-fit log reports `reference=semantic-face`.
+8. [ ] Shared FACE width is in the same Matrix-space neighborhood as the established ~137-unit Mario head span, not the previous raw-local `538` value.
+9. [ ] Helmet log reports `fitReference=semantic-face`.
+10. [ ] Auto-fit log reports `reference=semantic-face`.
 
 ### Nose-safe full-helm coverage
 
@@ -42,13 +42,14 @@ Run this as **one rebuild + one client session**.
 
 ### Fit / transform
 
-1. [ ] Initial Statius scale is materially closer to useful than the old full-head containment result.
-2. [ ] Nose depth does not force the helmet to scale larger; semantic fit width comes from FACE left/right span.
-3. [ ] Freeze Pose works while bridge sequencing remains healthy.
-4. [ ] Scale/X/Y/Z/yaw controls make small final corrections without rebuilding the helmet model.
-5. [ ] Idle/turn motion keeps helmet attached in the accepted direction.
-6. [ ] Jump/backflip/ground-pound preserve head attachment/orientation.
-7. [ ] Reset/Recalc fit re-enables the mathematical baseline for the active helmet.
+1. [ ] Initial Statius scale is materially closer to useful than the raw-local semantic result that produced `fit=5.20218`.
+2. [ ] Semantic FACE width is converted from display-list-local units through the native posed-head scale before Matrix helmet fitting.
+3. [ ] Nose depth does not force the helmet to scale larger; semantic fit width comes from FACE left/right span.
+4. [ ] Freeze Pose works while bridge sequencing remains healthy.
+5. [ ] Scale/X/Y/Z/yaw controls make small final corrections without rebuilding the helmet model.
+6. [ ] Idle/turn motion keeps helmet attached in the accepted direction.
+7. [ ] Jump/backflip/ground-pound preserve head attachment/orientation.
+8. [ ] Reset/Recalc fit re-enables the mathematical baseline for the active helmet.
 
 ### Legacy compatibility / fail-open
 
@@ -66,3 +67,5 @@ Run this as **one rebuild + one client session**.
 - [x] Old Statius fit logged `referenceHeadSpan=137.25165`, `targetSpan=150.9768`, `helmetSpan=190.0`, `fit=0.7946148` and looked wrong.
 - [x] Full-head containment creates an unacceptable oversized silhouette.
 - [x] First V4 head delta tracked in the opposite direction; inverse/transpose correction is retained.
+- [x] Protocol-v2 semantic bridge rebuilt and launched successfully on Windows.
+- [x] First semantic fit exposed a unit mismatch: raw FACE local W/H/D `538/320/530` versus legacy posed head span about `137`, causing Statius `fit=5.20218` and similarly oversized helmets across multiple items.
