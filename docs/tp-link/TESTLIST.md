@@ -69,9 +69,12 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
    - validates body right hand `0xE` and right weapon/item joint `0xF`;
    - rejects any selected BCK that does not contain joint `0xF`.
 7. Expected first-run visual-tool behavior:
+   - `probe-tp-link.cmd` first prepares a private native Windows CPython 3.12.10 under `%LOCALAPPDATA%\Matrix3\TPLinkTools\python312` when missing;
+   - the private installer is downloaded directly from `python.org`, its Authenticode signature must validate, and it does not modify PATH or install a Python launcher;
+   - this visual-tool Python is intentionally independent from MSYS2, Windows Store aliases, `winget`, registry discovery, and any system Python install;
    - clones `snuri00/demake-engine` outside Matrix3 under `%LOCALAPPDATA%\Matrix3\TPLinkTools\demake-engine`;
    - checks out exact commit `a134ff49cc74585c6b11f881293796e45c973c75`;
-   - creates an isolated Python 3.12+ venv under `%LOCALAPPDATA%\Matrix3\TPLinkTools\venv`;
+   - creates an isolated native Windows venv at `%LOCALAPPDATA%\Matrix3\TPLinkTools\venv` with `Scripts\python.exe`;
    - installs only NumPy + Pillow into that venv when missing.
 8. Expected visual output:
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\idle.gif`
