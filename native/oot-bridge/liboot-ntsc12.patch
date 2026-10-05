@@ -1,0 +1,90 @@
+diff --git a/Makefile b/Makefile
+--- a/Makefile
++++ b/Makefile
+@@ -1,9 +1,11 @@
+ default: lib
+ 
+ CC      := cc
+ PYTHON3 ?= python3
++OOT_VERSION ?= PAL_1_1
++OOT_REVISION ?= 1
+ OOT_DEFINES := -DLIBOOT_HOST_BUILD=1 -D_LANGUAGE_C -DNON_MATCHING -DAVOID_UB -DDEBUG_FEATURES=0 \
+-               -DOOT_VERSION=PAL_1_1 -DOOT_REVISION=1 \
++               -DOOT_VERSION=$(OOT_VERSION) -DOOT_REVISION=$(OOT_REVISION) \
+                -DPLATFORM_N64=1 -DPLATFORM_GC=0 -DPLATFORM_IQUE=0 \
+                -DF3DEX_GBI_2
+ CFLAGS  := -g -Wall -Wno-unused-function -Wno-unused-variable \
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -22,6 +22,13 @@ set(LIBOOT_SANITIZERS "address,undefined" CACHE STRING
+     "Comma-separated sanitizer list used when LIBOOT_ENABLE_SANITIZERS is ON"
+ )
+ 
++set(LIBOOT_OOT_VERSION "PAL_1_1" CACHE STRING
++    "OoT source revision macro used by the vendored decompilation"
++)
++set(LIBOOT_OOT_REVISION "1" CACHE STRING
++    "OoT numeric revision used by the vendored decompilation"
++)
++
+ file(GLOB_RECURSE LIBOOT_SOURCES CONFIGURE_DEPENDS
+     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
+ )
+@@ -78,8 +84,8 @@ target_compile_definitions(oot PRIVATE
+     NON_MATCHING
+     AVOID_UB
+     DEBUG_FEATURES=0
+-    OOT_VERSION=PAL_1_1
+-    OOT_REVISION=1
++    OOT_VERSION=${LIBOOT_OOT_VERSION}
++    OOT_REVISION=${LIBOOT_OOT_REVISION}
+     PLATFORM_N64=1
+     PLATFORM_GC=0
+     PLATFORM_IQUE=0
+diff --git a/tools/gen_asset_symbols.py b/tools/gen_asset_symbols.py
+--- a/tools/gen_asset_symbols.py
++++ b/tools/gen_asset_symbols.py
+@@ -16,6 +16,8 @@ BPT = {"rgba32": 32, "rgba16": 16, "ia16": 16, "ia8": 8, "ia4": 4,
+ wanted = [l.strip() for l in open(f"{HERE}/undef-assets.txt") if l.strip()]
+ found = {}   # name -> ("dl"|"tex"|..., segment, offset, size)
+ 
++ASSET_PROFILE = os.environ.get("LIBOOT_ASSET_PROFILE", "pal-1.1")
++
+ # gameplay_keep symbols absent from the XML's version-independent section.
+ # Offsets are the PAL/gc-eu layout (liboot's supported ROM family), derived by
+ # walking gameplay_keep.xml in Length order filtered to pal-1.1 <Version>
+@@ -37,7 +39,32 @@ PAL_GAMEPLAY_KEEP = {
+     "gHorseShadowDL":            ("dl",  4, 0x49AD0, 0x50),
+     "gLockOnReticleTriangleDL":  ("dl",  4, 0x4D450, 0x18),
+ }
+-found.update(PAL_GAMEPLAY_KEEP)
++
++# NTSC-U 1.2 layout derived from zeldaret/oot gameplay_keep.xml at
++# 269d03016cd0e3d7a0b8925e02b97a319c1d0e8d. The XML's NTSC-only Version
++# blocks make this non-uniform: the early deltas are +0xA0/+0x4A0, followed
++# by additional NTSC-only geometry/icon blocks before the shadow/reticle data.
++NTSC12_GAMEPLAY_KEEP = {
++    "gLockOnArrowDL":            ("dl",  4, 0xCC10,  0x110),
++    "gEffFlash1DL":              ("dl",  4, 0x105D0, 0x78),
++    "gEffSparklesDL":            ("dl",  4, 0x37D20, 0x60),
++    "gLensOfTruthMaskTex":       ("tex", 4, 0x1E810, 0x1000),
++    "gEffIceFragment3DL":        ("dl",  4, 0x34380, 0x170),
++    "gHoverBootsCircleDL":       ("dl",  4, 0x382D0, 0xD0),
++    "gFootShadowDL":             ("dl",  4, 0x4D6B0, 0x60),
++    "gCircleShadowDL":           ("dl",  4, 0x4E740, 0x50),
++    "gHorseShadowDL":            ("dl",  4, 0x4F000, 0x50),
++    "gLockOnReticleTriangleDL":  ("dl",  4, 0x52980, 0x18),
++}
++
++GAMEPLAY_KEEP_BY_PROFILE = {
++    "pal-1.1": PAL_GAMEPLAY_KEEP,
++    "ntsc-1.2": NTSC12_GAMEPLAY_KEEP,
++}
++if ASSET_PROFILE not in GAMEPLAY_KEEP_BY_PROFILE:
++    print(f"unsupported LIBOOT_ASSET_PROFILE: {ASSET_PROFILE}", file=sys.stderr)
++    sys.exit(2)
++found.update(GAMEPLAY_KEEP_BY_PROFILE[ASSET_PROFILE])
+ 
+ for path, seg in XMLS:
+     if not os.path.exists(path):

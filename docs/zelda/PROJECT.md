@@ -18,9 +18,11 @@ Add Link as an imported character in Matrix3 with Ocarina of Time movement, acti
 
 The user-provided 32 MiB ROM matches the NTSC-U 1.2 profile (MD5 `57a9719ad547c516342e1a15d5c28c3d`). The official `zeldaret/oot` decompilation has an `ntsc-1.2` build target for that revision. This gives us the source revision needed to adapt the candidate engine-neutral Link SDK, `Cycl0o0/liboot`.
 
-The SDK is not plug-and-play for this ROM yet: its Makefile selects PAL 1.1, and its generated asset symbols/keep offsets are PAL-specific. Its compatibility matrix previously marked NTSC-U 1.2 as identification-only, while PAL 1.1 is the compiled and ROM-backed tested target. The first technical bundle is therefore to generate/use NTSC-U 1.2 asset data from the matching decompilation, build liboot for this exact revision, and prove Link state plus animated geometry against the local ROM. ROM identity is established; gameplay compatibility is not yet runtime verified.
+A Matrix-owned compatibility harness now exists under `native/oot-bridge/`. It pins liboot and the matching zeldaret source revision, applies a tracked downstream patch that makes the liboot source revision configurable, selects `NTSC_1_2` / revision `2`, and supplies the NTSC-U 1.2 `gameplay_keep` offsets derived from the pinned zeldaret XML. The bridge regenerates asset/animation metadata locally and keeps dependency checkouts under ignored `.deps/` directories.
 
-The SDK is not integrated into Matrix3. Its project is AGPL-3.0-or-later and includes selected vendored decompilation files without a repository-wide license declaration. Review dependency and distribution implications before vendoring or redistributing it.
+The NTSC offset derivation and build/probe wiring are `verified-static`. Compilation and ROM-backed behavior are still `UNKNOWN` until the local probe is run. The probe deliberately checks more than engine creation: adult/child Link skeletons, nonzero animated geometry, movement, animation-state advancement, equipment calls, simulation ticks, and clean destruction.
+
+The SDK is not integrated into Matrix3 gameplay yet. Its project is AGPL-3.0-or-later and includes selected vendored decompilation files without a repository-wide license declaration. Review dependency and distribution implications before vendoring or redistributing it.
 
 ## Matrix3 implementation seam
 
@@ -30,15 +32,15 @@ The SDK is not integrated into Matrix3. Its project is AGPL-3.0-or-later and inc
 - `MarioJumpController` and `MarioVisualRenderer` are tied to libsm64 state and geometry. Link needs a distinct native session/driver and an OoT geometry presentation path, while reusing Matrix camera/input ownership where the contracts fit.
 - The Mario native bridge is a pinned, reproducible sidecar build. Use a separate OoT bridge contract rather than sharing Mario-specific binary state.
 
-These findings are `verified-static`; the source integration is not runtime verified.
+These Matrix seam findings are `verified-static`; Link source integration is not runtime verified.
 
 ## Phases and bundles
 
 ### Phase 0 — NTSC-U 1.2 native compatibility and bridge proof
 
 - [x] 0.1 Identify the local ROM as NTSC-U 1.2 and locate the matching `zeldaret/oot` build target.
-- [ ] 0.2 Generate or adapt NTSC-U 1.2 asset symbols and build settings for liboot from the matching decompilation.
-- [ ] 0.3 Build a bounded native bridge proof that creates Link, advances the OoT fixed-step update, and returns Link state plus animated geometry using the exact local ROM.
+- [ ] 0.2 Generate or adapt NTSC-U 1.2 asset symbols and build settings for liboot from the matching decompilation. Implementation staged; local build/probe acceptance pending.
+- [ ] 0.3 Build a bounded native bridge proof that creates Link, advances the OoT fixed-step update, and returns Link state plus animated geometry using the exact local ROM. Harness staged; ROM-backed acceptance pending.
 - [ ] 0.4 Confirm the native dependency's license/provenance and reproducible Windows build path before adding it to Matrix3.
 
 ### Phase 1 — Playable Link foundation
@@ -69,4 +71,4 @@ These findings are `verified-static`; the source integration is not runtime veri
 
 ## Resume Here
 
-The exact local ROM and matching zeldaret build target are known. No Matrix3 gameplay source or ROM data has been changed. Next: adapt liboot's PAL-specific build and generated assets for NTSC-U 1.2, then validate Link state and animated geometry against the local ROM before integrating a Link driver. Keep ROM bytes and extracted assets local.
+Run the single local acceptance command in `docs/zelda/TESTLIST.md` against the exact NTSC-U 1.2 ROM. Do not mark Phase 0.2 or 0.3 runtime-verified from compilation alone. If the final native result is PASS, record the runtime proof and then proceed to the Phase 0.4 Windows/provenance gate before adding a Link driver to Matrix3 gameplay.

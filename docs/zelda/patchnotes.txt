@@ -4,3 +4,12 @@
 - Recorded native dependency license/provenance review as a Phase 0 gate. ROM bytes and extracted assets remain local-only.
 - User supplied the official zeldaret/oot source link; confirmed its ntsc-1.2 build target matches the supplied ROM revision.
 - Updated Phase 0 to adapt liboot's PAL-specific build settings and generated asset symbols for NTSC-U 1.2, then prove Link state and animated geometry against the local ROM before Matrix3 integration.
+
+2026-10-05 - NTSC-U 1.2 compatibility harness staged
+- Added `native/oot-bridge` as an isolated native proof; no Matrix3 gameplay source was changed.
+- Pinned liboot `25208734c8ca388638f0ce63841e166fac9e5acb` and zeldaret/oot `269d03016cd0e3d7a0b8925e02b97a319c1d0e8d`; dependency checkouts/build outputs are ignored and remain local.
+- Added a tracked liboot patch that makes the OoT compile revision configurable and selects NTSC-U 1.2 through the bridge CMake build.
+- Added NTSC-U 1.2 `gameplay_keep` bindings derived from the pinned version-conditional XML instead of reusing PAL offsets.
+- Added a ROM-local native probe covering engine create, adult/child Link, equipment calls, skeleton availability, nonzero geometry, movement, animation-state advancement, simulation ticks, and clean destroy.
+- Added `docs/zelda/TESTLIST.md` with the single acceptance command and explicit no-false-positive rule: compile/engine-create alone do not complete Phase 0.2/0.3.
+- Status: implementation is `verified-static`; compilation and ROM-backed behavior remain `UNKNOWN` pending the user's local probe.
