@@ -11,7 +11,7 @@ This table is the authoritative user-facing status table for this workstream acr
 | Main-goal area | Status |
 | --- | --- |
 | TP source/decomp bootstrap | ✅ VERIFIED |
-| TP Link model + native animation playback | ⚠️ Active - asset proof next |
+| TP Link model + native animation playback | ⚠️ Bundle 1.2 visible proof ready - runtime test next |
 | Matrix3 movement/controller integration | ❌ Not started |
 | Zelda action combat + RuneScape gameplay authority | ❌ Not started |
 | RuneScape equipment adaptation | ❌ Not started |
@@ -59,6 +59,16 @@ The donor bootstrap keeps its checkout outside the Matrix3 Git tree at:
 
 This avoids polluting Matrix3 with the large external source checkout or user-owned disc image.
 
+The Bundle 1.2 visual proof uses a second local-only external checkout:
+
+`%LOCALAPPDATA%\Matrix3\TPLinkTools\demake-engine`
+
+Pinned visual converter:
+
+`snuri00/demake-engine@a134ff49cc74585c6b11f881293796e45c973c75`
+
+The converter is MIT licensed and is never copied into the Matrix3 Git tree. The proof creates its own isolated Python environment under `%LOCALAPPDATA%\Matrix3\TPLinkTools\venv`.
+
 ## Verified foundation
 
 ### VERIFIED
@@ -88,28 +98,33 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 - Link's main body animation resources are J3D BCK animation resources cataloged through `AlAnm.h`.
 - Link animation metadata supports distinct under/upper animation IDs plus left/right hand indices and face animation metadata (`daAlink_AnmData`), confirming a layered animation system rather than a single flat clip stream.
 - `d_a_alink_cut.inc` owns sword-action handling and configures real sword attack collision objects; those collision/damage rules are donor reference only and must not replace Matrix3 gameplay authority.
+- Bundle 1.2 now has a deterministic local extractor/probe path for `Kmdl.arc` and `AlAnm.arc` using the already-built donor image through decomp-toolkit VFS; no whole-disc manual extraction is required.
+- The asset probe selects `al.bmd`, `al_head.bmd`, `al_hands.bmd`, `al_face.bmd`, one WAIT-family idle BCK, one WALK/DASH-family locomotion BCK and one CUT-family sword BCK, and validates that all selected clips reach joint `0xF`.
+- The visual proof path uses a pinned J3D converter that decodes TP BMD mesh/skeleton/skin data and real BCK Hermite animation tracks, then generates local animated GIFs.
+- The visible `0xF` marker is projected from the sampled right-weapon joint world transform for every rendered proof frame rather than being placed at a hard-coded screen coordinate.
 
 ## Unknown / research needed
 
 ### HYPOTHESIS
 
-- A Matrix-native conversion of TP's BMD skeleton + selected BCK clips is likely the lowest-risk first presentation path because the necessary skeleton, attachment and animation semantics are already explicit in donor source.
-- Existing J3D/SuperBMD tooling may reduce the amount of custom BMD/BCK decoding required, but the exact TP-compatible extraction/conversion path still needs validation against the user's successful `GZ2E01` workspace.
+- If the Bundle 1.2 local visual proof passes on the user's real extracted TP assets, the same converted skeleton/skin/animation representation should be a viable source format for the first Matrix3 presentation slice.
 
 ### UNKNOWN
 
-- Exact local build/extraction output paths for the `Kmdl` and `AlAnm` disc archives after the successful donor bootstrap.
-- Whether an existing tool can preserve all TP Link skin weights/materials/BCK semantics well enough for direct Matrix3 ingestion without a custom converter.
+- Runtime compatibility of the pinned converter with the user's exact `GZ2E01` `al.bmd`/BCK files until `PROBE TP LINK` is run.
+- Whether the first proof's body/head/hands/face attachment aliasing needs TP-specific correction after visual inspection.
 - Final Matrix3 render representation for TP Link and whether it should be converted into Matrix model structures or rendered through a narrow external/native/J3D presentation seam.
-- Coordinate, scale, animation tick-rate and handedness conversion constants.
+- Coordinate, scale, animation tick-rate and handedness conversion constants for the revision-830 client.
 - The minimum subset of TP's action state machine worth reusing versus re-expressing around Matrix3 input/gameplay ownership.
 
 ## Dependencies
 
 - User-owned Twilight Princess GameCube North America image (`GZ2E01`) in one of the donor formats documented by zeldaret/tp. A working `.ciso` donor is now runtime proven.
 - Git for Windows.
-- Python 3 and Ninja. The one-click bootstrap reuses valid native/MSYS2 tools or provisions UCRT64 Python + Ninja through the existing Matrix3 MSYS2 installation when missing.
+- Python 3 and Ninja for the donor bootstrap.
+- Python 3.12+ for the Bundle 1.2 visual proof. Its isolated local venv installs only NumPy and Pillow for the pinned converter/renderer.
 - zeldaret/tp pinned source above.
+- `snuri00/demake-engine` pinned visual converter above; local-only dependency, not shipped in Matrix3.
 - Existing Matrix3 Native Builder UI.
 
 ## Development plan
@@ -118,14 +133,14 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 **Purpose:** establish a repeatable local `GZ2E01` donor build and prove one real TP Link model/animation/socket path before any broad integration.
 
-**Status:** IN PROGRESS
+**Status:** IN PROGRESS - Bundle 1.2 NEEDS TEST
 
 **Exit conditions:**
 
 - One-click TP donor build passes on the user's PC. `DONE / VERIFIED`.
 - Exact Link body and animation asset extraction path is established.
-- One authentic TP Link skeleton/model and at least one authentic BCK clip can be decoded/converted deterministically.
-- Right-hand/right-item transform is preserved in the proof.
+- One authentic TP Link skeleton/model plus authentic idle/locomotion/sword BCK clips render correctly through the proof.
+- Right-hand/right-item transform is visibly preserved through animation.
 
 #### Bundle 1.1 - One-click donor bootstrap
 
@@ -149,15 +164,18 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 #### Bundle 1.2 - Link asset extraction + animation proof
 
-**Status:** ACTIVE
+**Status:** NEEDS TEST
 
 **Checklist / patches:**
 
-- [ ] Establish exact local `Kmdl` and `AlAnm` asset locations from the successful donor workspace.
-- [ ] Extract/convert `al.bmd` without manual whole-disc extraction.
-- [ ] Extract one low-risk BCK locomotion clip and one sword-cut BCK clip.
-- [ ] Preserve/verify the `0xE` right-hand and `0xF` right-item joints through conversion.
-- [ ] Produce a deterministic local preview/probe before wiring Matrix3 rendering.
+- [x] Establish deterministic local `Kmdl` and `AlAnm` resource access from the successful donor workspace through decomp-toolkit VFS. `DONE` verified-static.
+- [x] Extract/select `al.bmd`, `al_head.bmd`, `al_hands.bmd` and `al_face.bmd` without manual whole-disc extraction. `DONE` verified-static.
+- [x] Select authentic WAIT-family idle, WALK/DASH-family locomotion and CUT-family sword BCK clips. `DONE` verified-static.
+- [x] Preserve/validate the `0xE` right-hand and `0xF` right-item joint contract and reject clips that do not reach `0xF`. `DONE` verified-static.
+- [x] Add a deterministic local visual renderer producing idle/walk/sword GIFs and a combined proof GIF. `DONE` verified-static.
+- [x] Add a visible per-frame marker sourced from the animated `0xF` right-weapon joint transform. `DONE` verified-static.
+- [x] Add one-click `PROBE TP LINK` to Matrix3 Native Builder. `DONE` verified-static.
+- [ ] Runtime acceptance: TP Link renders correctly, the authentic clips visibly animate correctly, and the red `0xF` marker remains attached to the weapon joint. `NEEDS TEST`.
 
 ### Phase 2 - Matrix3 TP Link presentation
 
@@ -197,39 +215,44 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 - Phase: 1 - Donor bootstrap and asset proof
 - Phase status: IN PROGRESS
 - Bundle: 1.2 - Link asset extraction + animation proof
-- Bundle status: ACTIVE
-- Approval state: SAP AAA approved by user on 2026-10-05 for TP Link startup/bootstrap workstream
-- Current checklist item: establish exact local `Kmdl` and `AlAnm` asset locations from the successful donor workspace
-- Current objective: smallest deterministic `al.bmd` + authentic BCK + right-item-joint proof with no manual whole-disc extraction
+- Bundle status: NEEDS TEST
+- Approval state: SAP AAA approved by user on 2026-10-05 for Bundle 1.2 continuation
+- Current checklist item: runtime acceptance of the visible Link idle/walk/sword/socket proof
+- Current objective: one user test proving the authentic TP model, BCK playback and animated `0xF` weapon socket before any revision-830 renderer integration
 
 ## Testing
 
 ### Quick/high-value checks
 
-1. Bundle 1.1 donor build is already runtime VERIFIED.
-2. For Bundle 1.2, prefer an automated local probe/extractor over asking the user to navigate or extract the full disc manually.
-3. First asset proof must identify `al.bmd`, at least one authentic BCK clip, and preserve right-hand/right-item joint identity.
+1. Pull current `main` once.
+2. Double-click root `Native Builder.bat`.
+3. Click `PROBE TP LINK`.
+4. First run may clone the pinned MIT visual converter and create an isolated Python venv under `%LOCALAPPDATA%\Matrix3\TPLinkTools`.
+5. Expected output is `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.gif`; it should auto-open.
+6. Visually verify all three segments: idle, walk/run and sword.
+7. Verify the red `0xF` marker moves with Link's right weapon socket through the animations.
+8. Report PASS or the exact visual/error failure. Do not manually extract donor archives.
 
 ### Deeper checks
 
-- Confirm no TP source/assets/disc image appear inside the Matrix3 Git tree.
-- Verify model skeleton/weights/materials survive conversion well enough for the intended rendering route.
-- Verify animation frame rate, looping metadata, coordinate system and socket transforms against donor source.
+- Confirm `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\visual-proof.json` reports three animations, a skeleton/skin and weapon socket index `15`.
+- Confirm no TP source/assets/disc image or third-party converter source appears inside the Matrix3 Git tree.
+- If the render is geometrically correct but materials/attachments are visually wrong, classify that separately from BCK/skeleton/socket failure.
+- Matrix3 in-client rendering is not part of Bundle 1.2 acceptance.
 
 ## Carryover / blockers
 
 ### BLOCKED
 
-- None for Bundle 1.1; donor bootstrap is complete.
-- Bundle 1.2 is not blocked, but the exact smallest extraction/conversion route remains unproven.
+- None known. Bundle 1.2 implementation is ready for the user's runtime/visual acceptance test.
 
 ## Resume Here
 
 **Last completed:**
 
-- Supported `.ciso` donor was automatically discovered and the complete pinned `GZ2E01` build passed.
-- `758 files OK`; all donor code/data reported `100.00% matched`; builder ended `TP LINK DONOR BUILD SUCCESS`.
-- Bundle 1.1 is runtime VERIFIED.
+- Bundle 1.1 donor bootstrap is runtime VERIFIED.
+- Bundle 1.2 one-click extraction, real idle/walk/sword BCK selection, local software rendering and animated `0xF` socket-marker implementation are complete at verified-static level.
+- Matrix3 Native Builder now exposes `PROBE TP LINK` for the consolidated visual test.
 
 **Current phase:**
 
@@ -237,15 +260,15 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 **Active bundle:**
 
-- Bundle 1.2 - Link asset extraction + animation proof (`ACTIVE`).
+- Bundle 1.2 - Link asset extraction + animation proof (`NEEDS TEST`).
 
 **Next checklist item:**
 
-- Establish exact local `Kmdl` / `AlAnm` resource access from `%LOCALAPPDATA%\Matrix3\TPDecomp` and automate the smallest Link asset proof.
+- Run `PROBE TP LINK` once and visually accept/reject the combined GIF.
 
 **Current state / next action:**
 
-- Donor build foundation is solved. Do not rerun bootstrap research or ask the user to manually extract the whole disc. Continue directly into real Link model/animation/socket extraction proof.
+- Do not rerun donor bootstrap research and do not manually extract the whole disc. Pull current `main`, open `Native Builder.bat`, click `PROBE TP LINK`, then inspect the automatically opened combined GIF.
 
 **Files/systems already inspected:**
 
@@ -259,23 +282,25 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 - `assets/GZ2E01/res/Object/Alink.h`
 - `assets/GZ2E01/res/Object/AlAnm.h`
 - Matrix3 Native Builder scripts.
+- `snuri00/demake-engine` BMD/BCK/DMK/software-preview path at the pinned commit above.
 
 **Do not re-scan without new evidence:**
 
 - Human right-hand/right-item joint identity (`0xE` / `0xF`).
 - Core `Kmdl` human resource names.
-- Existence of the TP sword animation family in `daAlink_ANM`.
+- Existence of WAIT, WALK/DASH and CUT animation families in `AlAnm`.
 - zeldaret/tp's status as a matching decomp rather than a ready PC library.
-- Bootstrap failure history; Bundle 1.1 is now complete.
+- Bootstrap failure history; Bundle 1.1 is complete.
+- The local-only visual converter choice unless runtime evidence shows it cannot decode/render the actual selected TP assets.
 
 **Pending runtime verification:**
 
-- Bundle 1.2 asset extraction/preview proof only.
+- Bundle 1.2 visual acceptance only: authentic model appearance, authentic idle/walk/sword playback and `0xF` socket tracking.
 
 **Important remaining uncertainty:**
 
-- Exact smallest extraction/conversion route from the successful local `GZ2E01` workspace to Matrix3-compatible model + BCK animation data.
+- Actual visual correctness on the user's extracted TP files. Static/API compatibility is established, but this cannot be promoted to VERIFIED until the generated proof is seen running.
 
 ## Next recommended work
 
-Continue Bundle 1.2: automate the smallest possible `al.bmd` + authentic BCK + right-item-joint proof from the successful local donor workspace. Do not manually extract the entire disc.
+Run the consolidated Bundle 1.2 visual proof. If it passes, promote Bundle 1.2 to VERIFIED and start Phase 2 with the exact proven converted character/animation data rather than inventing a separate Link pipeline.
