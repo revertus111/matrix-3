@@ -30,6 +30,8 @@ public final class LinkVisualRenderer {
     private static long cachedSequence = -1L;
     private static long cachedFitRevision = -1L;
     private static Model cachedModel;
+    private static volatile boolean replacementReady;
+    private static volatile long lastFreshRenderSuccessNanos = Long.MIN_VALUE;
     private static int lastRenderedCycle = Integer.MIN_VALUE;
     private static long lastLoggedSequence = -1L;
     private static long lastFailedSequence = -1L;
@@ -45,6 +47,7 @@ public final class LinkVisualRenderer {
             return;
         }
         if (scene == null || renderer == null || !OotBridgeSession.isReady()) {
+            clearReplacementReadiness();
             return;
         }
 
@@ -57,11 +60,13 @@ public final class LinkVisualRenderer {
         Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
         OotBridgeSession.LinkFrame frame = OotBridgeSession.getLatestFrame();
         if (player == null || !isUsable(frame)) {
+            clearReplacementReadiness();
             return;
         }
 
         LinkCharacterFit.Profile fit = LinkCharacterFit.resolve(player, frame);
         if (fit == null) {
+            clearReplacementReadiness();
             return;
         }
 
@@ -73,6 +78,7 @@ public final class LinkVisualRenderer {
                 || cachedModel == null) {
             Model rebuilt = buildModel(renderer, frame, fit);
             if (rebuilt == null) {
+                clearReplacementReadiness();
                 if (lastFailedSequence != frame.sequence) {
                     lastFailedSequence = frame.sequence;
                     System.err.println("[OoT Visual] Matrix model build failed for native frame "
@@ -89,6 +95,7 @@ public final class LinkVisualRenderer {
         try {
             Class238 playerTransform = player.method5394();
             if (playerTransform == null || playerTransform.aClass240_2647 == null) {
+                clearReplacementReadiness();
                 return;
             }
             Class240 position = playerTransform.aClass240_2647;
@@ -97,6 +104,8 @@ public final class LinkVisualRenderer {
                     Math.round(position.aFloat2656),
                     Math.round(position.aFloat2657));
             cachedModel.method1375(TRANSFORM, RENDER_BOUNDS, 0);
+            replacementReady = true;
+            lastFreshRenderSuccessNanos = System.nanoTime();
             if (lastLoggedSequence < 0L) {
                 lastLoggedSequence = frame.sequence;
                 System.out.println("[OoT Visual] Native ADULT Link -> Matrix Model ACTIVE"
@@ -110,12 +119,40 @@ public final class LinkVisualRenderer {
                         + " material=oot-uv-texture-v2");
             }
         } catch (RuntimeException ex) {
+            clearReplacementReadiness();
             if (lastFailedSequence != frame.sequence) {
                 lastFailedSequence = frame.sequence;
                 System.err.println("[OoT Visual] Render failed: "
                         + ex.getClass().getSimpleName() + ": " + ex.getMessage());
             }
         }
+    }
+
+    /**
+     * Local-player suppression is presentation-only and strictly fail-open.
+     * Unlike Mario's short cached grace path, Link only replaces the 830 body
+     * while both the latest liboot frame and the latest successful Matrix draw
+     * remain fresh. Any mode/bridge/build/render failure restores RuneScape.
+     */
+    static boolean shouldSuppressLocalPlayer(Player player) {
+        if (player == null || player != Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976
+                || !PlayerControllerMode.isLinkMode()
+                || !OotBridgeSession.isReady()
+                || !replacementReady
+                || !isUsable(OotBridgeSession.getLatestFrame())) {
+            return false;
+        }
+        long last = lastFreshRenderSuccessNanos;
+        if (last == Long.MIN_VALUE) {
+            return false;
+        }
+        long age = System.nanoTime() - last;
+        return age >= 0L && age <= MAX_FRAME_AGE_NANOS;
+    }
+
+    private static void clearReplacementReadiness() {
+        replacementReady = false;
+        lastFreshRenderSuccessNanos = Long.MIN_VALUE;
     }
 
     private static void resetPresentationCache() {
@@ -128,6 +165,7 @@ public final class LinkVisualRenderer {
         lastRenderedCycle = Integer.MIN_VALUE;
         lastLoggedSequence = -1L;
         lastFailedSequence = -1L;
+        clearReplacementReadiness();
         LinkCharacterFit.resetSession();
         LinkTextureRegistry.resetSession();
     }
