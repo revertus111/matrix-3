@@ -98,6 +98,26 @@ function Find-Python {
 function Get-NativeVisualPythonCandidates {
     $result = @()
 
+    foreach ($registryPath in @(
+        'HKCU:\Software\Python\PythonCore\3.13\InstallPath',
+        'HKCU:\Software\Python\PythonCore\3.12\InstallPath',
+        'HKLM:\Software\Python\PythonCore\3.13\InstallPath',
+        'HKLM:\Software\Python\PythonCore\3.12\InstallPath'
+    )) {
+        try {
+            $installKey = Get-Item -LiteralPath $registryPath -ErrorAction Stop
+            $installDir = [string]$installKey.GetValue('')
+            if ($installDir) {
+                $registryPython = Join-Path $installDir 'python.exe'
+                if (Test-Path $registryPython) {
+                    $result += @{ Exe = $registryPython; Prefix = @() }
+                }
+            }
+        }
+        catch {
+        }
+    }
+
     foreach ($path in @(
         (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python313\python.exe'),
         (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe')
@@ -164,11 +184,15 @@ function Install-NativeVisualPython {
         '--accept-package-agreements', '--accept-source-agreements'
     ) | Out-Host
 
-    $python = Find-NativeVisualPython
-    if (-not $python) {
-        throw 'Windows CPython 3.13 installation completed, but the interpreter could not be resolved. Close/reopen Native Builder and rerun PROBE TP LINK.'
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        $python = Find-NativeVisualPython
+        if ($python) {
+            return $python
+        }
+        Start-Sleep -Milliseconds 500
     }
-    return $python
+
+    throw 'Windows CPython 3.13 installation completed, but the interpreter could not be resolved from the Python registry, known per-user install paths, launcher, or native PATH.'
 }
 
 function Resolve-VenvPython {
