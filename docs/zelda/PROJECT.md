@@ -36,20 +36,20 @@ This is an engineering boundary, not legal advice or distribution clearance.
 
 ## Phase 1 runtime proof
 
-The first Matrix Link renderer is **runtime observed**. A user screenshot verified recognizable adult OoT Link geometry inside the 830 scene at the local-player transform.
+The first Matrix Link renderer is **runtime observed**. User screenshots verified recognizable adult OoT Link geometry inside the 830 scene at the local-player transform.
 
 The native sidecar explicitly calls `oot_engine_link_set_age(..., OOT_AGE_ADULT)`; current presentation and future equipment fitting remain adult-Link targets.
 
 Current integration seams:
 
-- `native/oot-bridge/oot_bridge.c` — persistent 20 Hz NTSC-U 1.2 sidecar.
-- `OotBridgeSession` — Java 8 process/session owner and immutable frame publisher.
+- `native/oot-bridge/oot_bridge.c` — persistent 20 Hz NTSC-U 1.2 sidecar, protocol V2.
+- `OotBridgeSession` — Java 8 process/session owner and immutable frame/texture publisher.
 - `PlayerControllerMode` — `LINK` on Ctrl+L; Mario remains separate on Ctrl+M.
 - `AlternateCharacterController` — shared alternate-character input dispatch.
-- `LinkController` — camera-relative WASD/A/B/Z input while Matrix/server walking remains X/Z authority.
+- `LinkController` — screen-relative WASD/A/B/Z input while Matrix/server walking remains X/Z authority.
 - `LinkCharacterFit` — adult Link world-scale/floor calibration against the live 830 player.
-- `LinkVisualRenderer` — animated Link -> Matrix `Model` conversion plus strict fail-open replacement readiness.
-- `LinkTextureRegistry` — runtime-only OoT RGBA -> Matrix GPU/material bridge.
+- `LinkVisualRenderer` — animated Link -> Matrix `Model` conversion, OoT RGBA micro-bake, and strict fail-open replacement readiness.
+- `LinkTextureRegistry` — retained experimental synthetic Matrix material adapter; no longer used by the active Link render path after runtime rejection of that approach.
 - `Player.method10696(...)` — existing local RuneScape appearance suppression seam, reached through the shared `MarioVisualRenderer.shouldSuppressLocalPlayer(...)` gate for both Mario and Link.
 - `Class578.method6834(...)` — established Matrix preview/render submission seam.
 
@@ -59,7 +59,7 @@ No Link combat authority is connected yet. F/B can drive liboot's sword/action s
 
 The second runtime screenshot verified the auto-fit is working:
 
-- adult Link now occupies approximately the same world-scale envelope as the visible 830 player;
+- adult Link now occupies approximately the same world-scale envelope as the 830 player;
 - feet are close to the same Matrix ground plane;
 - overall head/character height is close enough for the imported-character equipment-fit architecture;
 - the user considers Link slightly large and OoT Link's head proportionally large, but neither is a blocker while equipment is adapted to Link rather than deforming Link into RuneScape proportions.
@@ -75,34 +75,61 @@ Fit architecture:
 
 Do not spend the next slice deforming Link's head/body. Future 830 gear should fit Link through body dimensions + stable skeleton sockets.
 
-## OoT material fidelity V2 — IMPLEMENTATION STAGED
+## OoT material fidelity V2 — NATIVE/PROTOCOL VERIFIED, MATRIX DIRECT-MATERIAL PATH REJECTED
 
-The original V1 presentation used one averaged RuneScape face colour per OoT triangle. That made the low-poly topology visually obvious even though the geometry itself was valid.
+Protocol V2 is now locally built and running. The user's Native Builder log proved the correct OoT bridge folder, MSYS2 UCRT64 toolchain, CMake generation/build, fresh `dist/oot_bridge.exe`, and `OOT BUILD SUCCESS`.
 
-Protocol/material V2 now stages the real OoT rendering data:
+V2 successfully carries the data required for a faithful host renderer:
 
-- bridge protocol upgraded from V1 to **V2**;
-- native frame stream now includes Link positions, original vertex normals, vertex colours, normalized UVs, and per-triangle liboot texture indices;
-- only textures referenced by the current Link frame are queried from liboot's texture cache;
-- texture revision tracking sends RGBA8 pixels only when a referenced texture is new/changed;
-- Java retains the local texture catalog across frames so warm-up frames cannot drop the first material uploads;
-- `LinkTextureRegistry` appends a runtime-only synthetic material block to the live Matrix material table and uploads RGBA pixels through Matrix's existing GPU texture creation/cache path;
-- synthetic material IDs are kept below the signed-short boundary used by Matrix models;
-- runtime OoT textures are re-uploaded if Matrix's LRU texture cache evicts them;
-- no OoT texture pixels are persisted to the cache or repository;
-- `LinkVisualRenderer` uses Matrix `Class159` direct-UV mode (`faceTextureIndexes = 32766`) with the original normalized liboot UVs;
-- Link vertices are shared when transformed position + quantized liboot normal + UV + material agree, allowing Matrix's normal accumulation to smooth intended surfaces rather than treating every triangle as isolated geometry;
-- untextured or unavailable-material faces retain the safe vertex-colour fallback.
+- positions;
+- original vertex normals;
+- vertex colours / lighting tint;
+- normalized UVs;
+- per-triangle liboot texture index;
+- local-ROM RGBA8 texture updates with dimensions/wrap/revision;
+- Java-retained texture catalog across frames.
 
-Known V2 approximation: liboot wrap mode `mirror` currently degrades to Matrix repeat at this adapter seam; repeat and clamp are mapped directly. If a visible Link material exposes this limitation, add an explicit mirror emulation pass rather than importing texture files.
+The first Matrix implementation attempted to register OoT pixels as synthetic runtime Matrix materials and use `Class159` direct UV mode. Runtime screenshot rejected that path: Link rendered and the 830 body was correctly suppressed, but Link remained broad flat green/white/gray polygons with a nearly blank white face. That is a material binding failure, not acceptable OoT fidelity.
 
-Status: material V2 is **verified-static only**. Native compilation and in-game texture/UV orientation are `UNKNOWN` until the next runtime test. A native rebuild is mandatory because protocol V1 and V2 intentionally reject each other.
+Do not treat that screenshot as an N64-quality limitation. It proved:
 
-## Fail-open local-player replacement — IMPLEMENTATION STAGED
+- OoT geometry: working;
+- adult fit: working;
+- fail-open 830 replacement: working;
+- V2 native build: working;
+- synthetic Matrix runtime-material/direct-UV presentation: not working visibly.
 
-The RuneScape local-player appearance is no longer intended to remain visible once Link is healthy.
+## OoT RGBA micro-bake V3 — IMPLEMENTATION STAGED
 
-Replacement policy:
+The active Link renderer now bypasses the rejected synthetic runtime-material seam and uses the same general strategy already proven for Mario's imported texture presentation.
+
+For every textured OoT source triangle:
+
+1. resolve the retained liboot texture by `triTexture` index;
+2. subdivide the source triangle (default 4x -> up to 16 micro-faces);
+3. barycentrically interpolate original OoT position, normal, colour/tint, and UV;
+4. bilinearly sample the actual local-ROM RGBA texture with liboot repeat/mirror/clamp wrap behavior;
+5. multiply sampled texture RGB by liboot's interpolated vertex RGB, matching liboot's documented host-render rule;
+6. bake the resulting colour into ordinary Matrix face colour;
+7. share transformed vertices only when position + quantized liboot normal agree so intended smooth surfaces can share Matrix normal accumulation without welding hard edges.
+
+This intentionally avoids dependence on Matrix synthetic material registration while still using the real OoT texture pixels. It also reduces the old crystalline appearance because one large OoT polygon becomes multiple smaller Matrix faces carrying varying texture samples.
+
+Safety/limits:
+
+- no ROM-derived pixels are written into the cache or Git;
+- untextured/unavailable texture faces retain vertex-colour fallback;
+- subdivisions automatically reduce if the generated model would exceed Matrix's 65,535-vertex / signed-short-safe face budget;
+- `-Dmatrix3.oot.textureSubdivisions=0..4` is available for diagnostics, default 4;
+- the V2 native protocol is unchanged by this recovery patch, so a user who already rebuilt the V2 sidecar does **not** need another native rebuild for the Java-only micro-bake test.
+
+Status: V3 is **verified-static only** until Eclipse compile + runtime screenshot. The first runtime diagnostic must report `textureCatalog > 0`, `texturedSource > 0`, and `material=oot-rgba-micro-v3`.
+
+## Fail-open local-player replacement — RUNTIME ACCEPTED
+
+The latest screenshot verified the RuneScape local-player body is removed while Link is healthy. Link remained visible alone, proving the replacement gate is functioning.
+
+Replacement policy remains:
 
 - Link must successfully draw through Matrix before suppression can activate;
 - the latest liboot frame must remain fresh (<= 500 ms);
@@ -114,8 +141,6 @@ Replacement policy:
 
 Implementation deliberately reuses the existing `Player.method10696(...) -> MarioVisualRenderer.shouldSuppressLocalPlayer(...)` presentation seam. The Mario gate delegates to `LinkVisualRenderer.shouldSuppressLocalPlayer(...)` first, avoiding a second invasive edit to the decompiled Player renderer.
 
-Status: **verified-static only**. Runtime acceptance requires Link to remain visible while the 830 body disappears after the first healthy Link frame, then reappear immediately on Ctrl+L exit or Link failure.
-
 ## Matrix3 implementation seam
 
 - Matrix remains host renderer/world/server authority.
@@ -123,7 +148,7 @@ Status: **verified-static only**. Runtime acceptance requires Link to remain vis
 - Link native state remains separate from Mario/libsm64 state.
 - Matrix stock walking remains the temporary actual X/Z movement/collision path until Phase 2.
 - Future 830 equipment fitting should consume stable Link skeleton/socket transforms plus `LinkCharacterFit` dimensions.
-- Runtime OoT materials are presentation-only and must fail back to vertex colours if the hardware texture seam is unavailable.
+- OoT texture fidelity currently uses runtime CPU sampling/micro-baking into Matrix face colours rather than persistent cache assets.
 
 ## Phases and bundles
 
@@ -139,11 +164,11 @@ Status: **verified-static only**. Runtime acceptance requires Link to remain vis
 - [x] Add Link under the shared alternate-character controller.
 - [x] Render recognizable animated adult Link geometry inside Matrix3.
 - [x] Auto-fit adult Link height/floor to the live 830 player; runtime screenshot accepted as close enough for the equipment-fit architecture.
-- [ ] Runtime-verify OoT material V2: real texture pixels + UVs and reduced faceted/triangled appearance.
+- [x] Runtime-prove protocol V2 native sidecar and identify direct Matrix runtime-material presentation as visually failed.
+- [ ] Runtime-verify OoT RGBA micro-bake V3: recognizable real texture detail + reduced faceted/triangled appearance.
 - [ ] Prove movement/turn, one action/jump, and B/sword animation in one consolidated runtime session.
 - [ ] Give Link mode fully accepted exclusive movement input while preserving intended Matrix camera controls.
-- [x] Implement fail-open local RuneScape model suppression/restoration for Link; runtime acceptance pending.
-- [ ] Runtime-verify suppression: 830 body hidden only while Link is fresh/healthy and restored immediately on exit/failure.
+- [x] Fail-open local RuneScape model suppression/restoration for Link; Link-only screenshot runtime accepted.
 - [ ] Expose stable Link skeleton/socket transforms for 830 equipment fitting.
 
 ### Phase 2 — OoT movement and world interaction
@@ -169,14 +194,13 @@ Status: **verified-static only**. Runtime acceptance requires Link to remain vis
 
 ## Resume Here
 
-Run the **material V2 + fail-open replacement** checklist in `docs/zelda/TESTLIST.md`.
+Run the **OoT RGBA micro-bake V3** checklist in `docs/zelda/TESTLIST.md`.
 
 1. Pull `main`.
-2. Rebuild `native/oot-bridge` because the binary protocol is now V2.
+2. Do **not** rebuild native if the local bridge already reports protocol V2; the user's latest Native Builder run already succeeded.
 3. Refresh/clean the Eclipse client.
 4. Enter Link mode with Ctrl+L.
-5. Preserve the console lines for protocol/material activation and capture a screenshot.
-6. Confirm the normal 830 local-player body disappears after Link has rendered successfully.
-7. Exit Ctrl+L and confirm the RuneScape body returns immediately.
+5. Preserve the new `[OoT Visual]` diagnostic line.
+6. Capture a close front/three-quarter screenshot of Link alone.
 
-Immediate acceptance target: adult Link remains correctly fitted/animated, shows recognizably mapped OoT textures with substantially less triangle-by-triangle shading, and replaces the local 830 body without making the player invisible on failure. If this passes, the next presentation slice is stable adult-Link skeleton sockets for 830 equipment fitting.
+Immediate acceptance target: `textureCatalog > 0`, `texturedSource > 0`, `matrixTriangles > triangles`, and visibly recognizable OoT face/tunic/equipment texture detail with substantially less triangle-by-triangle shading. If the pixels are present but vertically flipped or mirrored, fix only the UV/wrap convention next; do not reopen the native compatibility or auto-fit work.
