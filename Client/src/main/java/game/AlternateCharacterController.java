@@ -10,7 +10,8 @@ package game;
 public final class AlternateCharacterController {
 
     public enum CharacterId {
-        MARIO
+        MARIO,
+        LINK
     }
 
     public enum CombatStyle {
@@ -88,28 +89,59 @@ public final class AlternateCharacterController {
         }
     };
 
+    private static final CharacterDriver LINK_DRIVER = new CharacterDriver() {
+        @Override
+        public CharacterId getId() {
+            return CharacterId.LINK;
+        }
+
+        @Override
+        public void tick() {
+            LinkController.tickLinkDriver();
+        }
+
+        @Override
+        public boolean supportsCombatStyle(CombatStyle style) {
+            // Phase 1 deliberately does not expose Matrix combat authority yet.
+            return false;
+        }
+    };
+
     private AlternateCharacterController() {
     }
 
     /**
-     * Compatibility entry used by the established viewport hook. Future imported
-     * characters register/dispatch here rather than adding another viewport tick.
+     * Compatibility entry used by the established viewport hook. Imported
+     * characters dispatch here instead of adding per-game viewport ticks.
      */
     public static void tick() {
         MARIO_DRIVER.tick();
+        LINK_DRIVER.tick();
     }
 
     static CharacterId getActiveCharacter() {
-        return PlayerControllerMode.isMarioMode() ? CharacterId.MARIO : null;
+        if (PlayerControllerMode.isMarioMode()) {
+            return CharacterId.MARIO;
+        }
+        if (PlayerControllerMode.isLinkMode()) {
+            return CharacterId.LINK;
+        }
+        return null;
     }
 
     static boolean supportsCombatStyle(CombatStyle style) {
         CharacterId active = getActiveCharacter();
-        return active == CharacterId.MARIO && MARIO_DRIVER.supportsCombatStyle(style);
+        if (active == CharacterId.MARIO) {
+            return MARIO_DRIVER.supportsCombatStyle(style);
+        }
+        if (active == CharacterId.LINK) {
+            return LINK_DRIVER.supportsCombatStyle(style);
+        }
+        return false;
     }
 
     static ControlState sampleControls() {
-        if (MarioHelmetCalibrationController.isActive()) {
+        if (PlayerControllerMode.isMarioMode() && MarioHelmetCalibrationController.isActive()) {
             return new ControlState(
                     0.0F, 0.0F,
                     false, false, false,
