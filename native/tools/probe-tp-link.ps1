@@ -122,6 +122,25 @@ function Resolve-VenvPython {
     return $null
 }
 
+function Test-VisualDependencies {
+    param(
+        [Parameter(Mandatory = $true)][string]$PythonPath
+    )
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'SilentlyContinue'
+        & $PythonPath -c 'import numpy; from PIL import Image' *> $null
+        return ($LASTEXITCODE -eq 0)
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+}
+
 function Ensure-VisualToolchain {
     $git = Get-Command git.exe -ErrorAction SilentlyContinue
     if (-not $git) {
@@ -164,13 +183,16 @@ function Ensure-VisualToolchain {
         throw "TP Link visual-proof venv was created but no Python executable was found under $venvDir (checked Scripts and bin layouts)."
     }
 
-    & $visualPython -c 'import numpy; from PIL import Image' *> $null
-    if ($LASTEXITCODE -ne 0) {
+    if (-not (Test-VisualDependencies -PythonPath $visualPython)) {
         Write-Host 'Installing isolated visual-proof dependencies (numpy + Pillow)...' -ForegroundColor Cyan
         Invoke-External -FilePath $visualPython -Arguments @(
             '-m', 'pip', 'install', '--disable-pip-version-check',
             'numpy>=1.26,<3', 'Pillow>=10,<13'
         ) | Out-Host
+    }
+
+    if (-not (Test-VisualDependencies -PythonPath $visualPython)) {
+        throw 'TP Link visual-proof Python environment is available, but NumPy/Pillow still cannot be imported after dependency setup.'
     }
 
     return @{ Root = $demakeRoot; Python = $visualPython }
