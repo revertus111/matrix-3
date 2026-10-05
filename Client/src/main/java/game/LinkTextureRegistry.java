@@ -57,7 +57,8 @@ final class LinkTextureRegistry {
                 continue;
             }
             if (!available[texture.index]
-                    || uploadedRevision[texture.index] != texture.revision) {
+                    || uploadedRevision[texture.index] != texture.revision
+                    || !isCacheResident(nativeRenderer, texture.index)) {
                 install(nativeRenderer, texture);
             }
         }
@@ -105,6 +106,16 @@ final class LinkTextureRegistry {
         materialBase = existing;
         mapSize.textures = Arrays.copyOf(mapSize.textures, existing + MAX_OOT_TEXTURES);
         return true;
+    }
+
+    private static boolean isCacheResident(Class106_Sub3 renderer, int textureIndex) {
+        if (!available[textureIndex] || uploadedSize[textureIndex] <= 0) {
+            return false;
+        }
+        int materialId = materialBase + textureIndex;
+        Object cached = renderer.aClass360_10487.aClass127_4430.method2246(
+                cacheKey(uploadedSize[textureIndex], materialId));
+        return cached != null;
     }
 
     private static void install(Class106_Sub3 renderer,
