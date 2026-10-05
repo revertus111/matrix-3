@@ -100,3 +100,14 @@
 - Added `-Dmatrix3.oot.textureSubdivisions=0..4` diagnostic override; default is 4.
 - This recovery patch does not change the V2 native protocol. Because the user's latest Native Builder run already produced a successful protocol-V2 sidecar, the next test is Java-only: pull, Eclipse refresh/clean/run, Ctrl+L.
 - Status: V3 is `verified-static`; Eclipse compile/runtime texture orientation and visual fidelity remain `UNKNOWN` pending the next user test.
+
+2026-10-05 - OoT RGBA micro-bake V3 runtime proof + V4 smoothing/filter pass
+- User runtime screenshots verified the V3 CPU texture bake is reading real OoT texture data: adult Link's tunic, hair, boots, sword/shield, eyes, and Hylian shield colours/details are now visibly present inside revision 830.
+- V3 is therefore a renderer/data-path PASS, but the user rejected its presentation quality: the face is noisy/harsh and broad textured surfaces have a flashy stained-glass/mosaic look.
+- Kept protocol V2 and the successful local-ROM texture catalog unchanged; no native rebuild is required for this correction.
+- Replaced exact quantized-normal vertex sharing with the same angle-aware source-boundary smoothing strategy proven by the Mario renderer. Default Link smoothing angle is 70 degrees and can be diagnosed with `-Dmatrix3.oot.smoothAngleDegrees=0..180`.
+- Increased the requested texture subdivision quality from 4 to 6 per edge, with an allowed diagnostic range of 0..8. The existing Matrix 65,535-vertex / 21,845-triangle guard automatically backs the requested level down when the live pose would exceed capacity.
+- Added deterministic four-tap barycentric supersampling per generated micro-face before the RGB result is quantized into Matrix packed HSL. This is intended to reduce noisy single-sample colour spikes across Link's face and shield while keeping texture samples anchored to stable OoT UV space.
+- Runtime diagnostics now report `smoothAngle=...`, `textureFilter=4tap`, and `material=oot-rgba-micro-v4`.
+- Scope remains presentation-only: no Link movement, collision, combat authority, or native protocol behavior changed.
+- Status: texture/data path is runtime proven; V4 smoothing/filter fidelity is `verified-static` pending the next Eclipse compile/runtime screenshot.
