@@ -88,6 +88,17 @@ final class LinkTextureRegistry {
         return materialBase + ootTextureIndex;
     }
 
+    /**
+     * A fresh native process starts a fresh texture-revision catalog. Keep the
+     * synthetic Matrix material IDs, but force the next Link session to re-check
+     * and replace GPU pixels even if a revision number happens to repeat.
+     */
+    static void resetSession() {
+        Arrays.fill(uploadedRevision, Integer.MIN_VALUE);
+        Arrays.fill(available, false);
+        loggedReady = false;
+    }
+
     private static boolean ensureMaterialBlock(Class106_Sub3 renderer) {
         if (materialBase >= 0) {
             return true;
